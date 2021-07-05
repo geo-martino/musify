@@ -1,11 +1,9 @@
-*.egg-info
-.coverage
-.ipynb_checkpoints/
+**/.egg-info
+**/.coverage
 **/.ipynb_checkpoints/
-.DS_Store
-__pycache__/
+**/.DS_Store/
 **/__pycache__/
-raw_data/
+**/raw_data/
+**/data/
 .env
-data/
 .secrets

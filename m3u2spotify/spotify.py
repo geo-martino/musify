@@ -24,15 +24,15 @@ class Spotify:
         self.SEARCH_URL = f'{self.API_URL}/search/'
 
     def auth_basic(self):
-        print('Authorising basic API access...', end='')
+        print('Authorising basic API access...', end=' ', flush=True)
         auth_response = requests.post(self.TOKEN_URL, {
             'grant_type': 'client_credentials',
             'client_id': self.CLIENT_ID,
             'client_secret': self.CLIENT_SECRET,
         }).json()
 
-        print('\33[92m', 'Done', '\33[0m')
-        return {'Authorization': f"{auth_response['token_type']} {auth_response['access_token']}"}
+        print('\33[92m', 'Done', '\33[0m', sep='')
+        return auth_response
 
     def auth_user(self):
         print('Authorising user privilege access...')
@@ -54,11 +54,40 @@ class Spotify:
             'client_secret': self.CLIENT_SECRET,
         }).json()
 
-        print('\33[92m', 'Done', '\33[0m')
-        return {'Authorization': f"{auth_response['token_type']} {auth_response['access_token']}"}
+        print('\33[92m', 'Done', '\33[0m', sep='')
 
-    def get_spotify_metadata(self, playlist_names, authorisation):
-        print('Extracting Spotify playlist track information...', end='')
+        return auth_response
+
+    def refresh_token(self, token):
+        print('Refreshing access token...', end=' ', flush=True)
+        auth_response = requests.post(self.TOKEN_URL, {
+            'grant_type': 'refresh_token',
+            'refresh_token': token['refresh_token'],
+            'client_id': self.CLIENT_ID,
+            'client_secret': self.CLIENT_SECRET,
+        }).json()
+
+        if 'refresh_token' not in auth_response:
+            auth_response['refresh_token'] = token['refresh_token']
+
+        print('\33[92m', 'Done', '\33[0m', sep='')
+        return auth_response
+
+    def get_headers(self, token):
+        if token is None:
+            return None
+        
+        headers = {'Authorization': f"{token['token_type']} {token['access_token']}"}
+
+        if 'error' in requests.get(f'{self.API_URL}/me', headers=headers).json():
+            token = self.refresh_token(token)
+            headers = {'Authorization': f"{token['token_type']} {token['access_token']}"}
+            
+        return headers, token
+
+    def get_spotify_metadata(self, playlist_names, authorisation, verbose=True):
+        if verbose:
+            print('Extracting Spotify playlist track information...', end=' ', flush=True)
 
         playlist_results = {'next': f'{self.API_URL}/me/playlists'}
         playlists = {}
@@ -78,36 +107,46 @@ class Spotify:
                         tracks = [self.get_track_metadata(i, result['track']) for i, result in
                                   enumerate(results['items'])]
                         playlists[name]['tracks'].extend(tracks)
+        if verbose:
+            print('\33[92m', 'Done', '\33[0m', sep='')
 
-        print('\33[92m', 'Done', '\33[0m')
-
-        print('Found the following playlists:')
-        max_width = len(max(playlists.keys(), key=len))
-        for name, playlist in sorted(playlists.items(), key=lambda x: x[0].lower()):
-            length = str(len(playlist['tracks'])) + ' tracks'
-            print(f'{name : <{max_width}}', ':', '\33[92m', f'{length : >9} ', '\33[0m')
+            print('Found the following playlists:')
+            max_width = len(max(playlists.keys(), key=len))
+            for name, playlist in sorted(playlists.items(), key=lambda x: x[0].lower()):
+                length = str(len(playlist['tracks'])) + ' tracks'
+                print(f'{name : <{max_width}}', ':', '\33[92m', f'{length : >9} ', '\33[0m', sep='')
 
         return playlists
 
     @staticmethod
     def get_track_metadata(position, track):
+        max_height = 0
+        for image in track['album']['images']:
+            if image['height'] > max_height:
+                image_url = image['url']
+                max_height = image['height']
+
         song = {'position': position,
                 'title': track['name'],
                 'artist': ' '.join(artist['name'] for artist in track['artists']),
                 'album': track['album']['name'],
                 'track': int(track['track_number']),
                 'year': int(re.sub('[^0-9]', '', track['album']['release_date'])[:4]),
-                'length': track['duration_ms'] / 1000, 'uri': track['uri']}
+                'length': track['duration_ms'] / 1000,
+                'image': image_url,
+                'image_height': max_height,
+                'uri': track['uri']}
         return song
 
-    def update_uris(self, m3u, spotify):
+    def update_uris(self, m3u, spotify, verbose=True):
         max_width = len(max(spotify.keys(), key=len))
-        updated_uris = []
+        updated_uris = {}
         for name, songs in m3u.items():
             if name in spotify:
                 i = 0
-                text = f'Attempting to find URIs in Spotify playlist: {name}...'
-                print(f"{text : <{len(text) + max_width - len(name)}}", end='')
+                if verbose:
+                    text = f'Attempting to find URIs in Spotify playlist: {name}...'
+                    print(f"{text : <{len(text) + max_width - len(name)}}", end=' ', flush=True)
 
                 spotify_uris = [*[track['uri'] for track in spotify[name]['tracks']], None]
                 m3u_uris = [song['uri'] for song in songs if 'uri' in song]
@@ -119,31 +158,36 @@ class Spotify:
                             title_match = all([word in track_title for word in title.split(' ')])
                             if title_match and track['uri'] not in m3u_uris:
                                 i += 1
-                                song['playlist'] = name
+                                updated_uris[name] = updated_uris.get(name, [])
                                 song['old_uri'] = song['uri']
                                 song['uri'] = track['uri']
-                                updated_uris.append(song)
+                                updated_uris[name].append(song)
                                 break
-
-                print('\33[92m', f'Done. Updated {i} URIs.', '\33[0m')
+                if verbose:
+                    print('\33[92m', f'Done. Updated {i} URIs.', '\33[0m', sep='')
         return {'updated': updated_uris}
 
-    def update_playlist(self, m3u, spotify, authorisation, limit=50):
+    def update_playlist(self, m3u, spotify, authorisation, limit=50, verbose=True):
+        if len(m3u) == 0:
+            return False
+        
         user_id = requests.get(f'{self.API_URL}/me', headers=authorisation).json()['id']
         max_width = len(max(spotify.keys(), key=len))
 
         for name, songs in reversed(m3u.items()):
             if name in spotify:
-                text = f'Updating Spotify playlist: {name}...'
-                print(f"{text : <{len(text) + max_width - len(name)}}", end='')
+                if verbose:
+                    text = f'Updating Spotify playlist: {name}...'
+                    print(f"{text : <{len(text) + max_width - len(name)}}", end=' ', flush=True)
 
                 url = spotify[name]['url']
                 spotify_uris = [*[track['uri'] for track in spotify[name]['tracks']], None]
                 uri_list = [song['uri'] for song in songs if
                             'uri' in song and song.get('uri', None) not in spotify_uris]
             else:
-                text = f'Creating Spotify playlist: {name}...'
-                print(f"{text : <{len(text) + max_width - len(name)}}", end='')
+                if verbose:
+                    text = f'Creating Spotify playlist: {name}...'
+                    print(f"{text : <{len(text) + max_width - len(name)}}", end=' ', flush=True)
 
                 url = self.create_playlist(name, user_id, authorisation)
                 uri_list = [song['uri'] for song in songs if 'uri' in song and song.get('uri', None) is not None]
@@ -152,7 +196,10 @@ class Spotify:
                 uri_string = ','.join(uri_list[limit * i: limit * (i + 1)])
                 requests.post(url, params={'uris': uri_string}, headers=authorisation)
 
-            print('\33[92m', f'Done. Added {len(uri_list)} songs', '\33[0m')
+            if verbose:
+                print('\33[92m', f'Done. Added {len(uri_list)} songs', '\33[0m', sep='')
+        
+        return True
 
     def create_playlist(self, playlist_name, user_id, authorisation):
         body = {
@@ -164,28 +211,32 @@ class Spotify:
         playlist = requests.post(f'{self.API_URL}/users/{user_id}/playlists', json=body, headers=authorisation).json()
         return playlist['tracks']['href']
 
-    def search_all(self, m3u_playlists, authorisation):
+    def search_all(self, m3u_playlists, authorisation, verbose=True):
         results = {}
-        missing = {}
+        not_found = {}
         max_width = len(max(m3u_playlists.keys(), key=len)) + len(str(len(max(m3u_playlists.values(), key=len))))
+        searched = False
 
         for name, songs in m3u_playlists.items():
             search_songs = [song for song in songs if 'uri' not in song]
             if len(search_songs) == 0:
                 continue
+            
+            if verbose:
+                text = f'Searching for {len(search_songs)} songs from {name}.m3u...'
+                print(f"{text : <{len(text) + max_width - len(str(len(search_songs))) - len(name)}}", end=' ', flush=True)
 
-            text = f'Searching for {len(search_songs)} songs from {name}.m3u...'
-            print(f"{text : <{len(text) + max_width - len(str(len(search_songs))) - len(name)}}", end='')
-
+            searched = True
             results[name] = [self.get_uri(song, authorisation) for song in search_songs]
-            missing[name] = [result for result in results[name] if 'uri' not in result]
+            not_found[name] = [result for result in results[name] if 'uri' not in result]
 
-            for track in missing[name]:
+            for track in not_found[name]:
                 track['uri'] = None
 
-            print('\33[92m', f'Done. {len(missing[name])} songs not found.', '\33[0m')
+            if verbose:
+                print('\33[92m', f'Done. {len(not_found[name])} songs not found.', '\33[0m', sep='')
 
-        return results, missing
+        return results, not_found, searched
 
     def get_uri(self, song, authorisation):
         title_clean, artist_clean, album_clean = self.clean_tags(song)
@@ -286,3 +337,31 @@ class Spotify:
                 min_length_diff = length_diff
                 song['uri'] = track['uri']
         return song.get('uri', None)
+
+    def get_differences(self, m3u, authorisation):
+        print('Getting information on differences between m3u and Spotify...', end=' ', flush=True)
+
+        spotify = self.get_spotify_metadata(m3u, authorisation, verbose=False)
+        extra = {}
+        missing = {}
+        extra_len = 0
+        missing_len = 0
+
+        for name, songs in m3u.items():
+            m3u_uris = [song['uri'] for song in songs if 'uri' in song and song['uri'] is not None]
+            extra_songs = [track for track in spotify[name]['tracks'] if track['uri'] not in m3u_uris]
+
+            missing_songs = [song for song in songs if song.get('uri', None) is None]
+
+            if len(extra_songs) != 0:
+                extra[name] = extra_songs
+                extra_len += len(extra_songs)
+            
+            if len(missing_songs) != 0:
+                missing[name] = missing_songs
+                missing_len += len(missing_songs)
+
+        print('\33[92m', 'Done', '\33[0m', sep='')
+        print('\33[92m', f'Spotify playlists have {extra_len} extra songs and {missing_len} missing songs', '\33[0m', sep='')
+
+        return extra, missing
