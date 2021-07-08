@@ -63,7 +63,7 @@ class Spotify(Authorise, Endpoints, Search):
         return song
 
     def update_uris(self, m3u, spotify, verbose=True):
-        max_width = len(max(spotify.keys(), key=len))
+        max_width = len(max(spotify.keys(), key=len)) + 1
         updated_uris = {}
         for name, songs in m3u.items():
             if name in spotify:
@@ -97,8 +97,7 @@ class Spotify(Authorise, Endpoints, Search):
         if len(m3u) == 0:
             return False
 
-        user_id = ['id']
-        max_width = len(max(spotify.keys(), key=len))
+        max_width = len(max(spotify.keys(), key=len)) + 1
 
         playlist_bar = tqdm(reversed(m3u.items()),
                             desc='Adding to Spotify: ',
@@ -122,7 +121,7 @@ class Spotify(Authorise, Endpoints, Search):
                     text = f'Creating {name}...'
                     print(f"{text : <{len(text) + max_width - len(name)}}", end=' ', flush=True)
 
-                url = self.create_playlist(name, user_id, authorisation)
+                url = self.create_playlist(name, authorisation)
                 uri_list = [song['uri'] for song in songs if 'uri' in song and song.get('uri', None)]
 
             self.add_to_playlist(url, uri_list, authorisation, skip_dupes=True)

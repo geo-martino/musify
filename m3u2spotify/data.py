@@ -41,7 +41,7 @@ class Data:
 
         if verbose:
             print('Found the following playlists:')
-            max_width = len(max(playlists.keys(), key=len))
+            max_width = len(max(playlists.keys(), key=len)) + 1
 
             for name, playlist in sorted(playlists.items(), key=lambda x: x[0].lower()):
                 length = str(len(playlist)) + ' tracks'
