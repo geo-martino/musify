@@ -1,44 +1,42 @@
 import os
 import re
 import sys
-from os.path import dirname, join
+from os.path import join
 
 from tqdm.auto import tqdm
 
-from m3u2spotify.authorise import Authorise
-from m3u2spotify.endpoints import Endpoints
-from m3u2spotify.search import Search
+from syncify.authorise import Authorise
+from syncify.endpoints import Endpoints
+from syncify.search import Search
 
 
 class Spotify(Authorise, Endpoints, Search):
 
-    def __init__(self, base_api='https://api.spotify.com/v1'):
-        
-        self.BASE_API = base_api
-        
-        Authorise.__init__(self, verbose=False)
+    def __init__(self):
+
+        Authorise.__init__(self)
         Endpoints.__init__(self)
         Search.__init__(self)
 
-    def get_playlists_metadata(self, playlist_names, authorisation, verbose=True):
-        playlists = self.get_all_playlists(authorisation, names=playlist_names)
-        
+    def get_playlists_metadata(self, authorisation, in_playlists=None, verbose=True):
+        playlists = self.get_all_playlists(authorisation, names=in_playlists)
+
         for values in playlists.values():
             values['tracks'] = [self.extract_track_metadata(track['track'], i)
                                 for i, track in enumerate(values['tracks'])]
-        
+
         if verbose:
             print('Found the following playlists:')
             max_width = len(max(playlists.keys(), key=len)) + 1
 
             for name, playlist in sorted(playlists.items(), key=lambda x: x[0].lower()):
                 length = str(len(playlist['tracks'])) + ' tracks'
-                print(f'{name : <{max_width}}', ': ', '\33[92m', f'{length : >10} ', '\33[0m', sep='')
+                print(f'{name : <{max_width}}', ': ', '\33[92m', f'{length : >11} ', '\33[0m', sep='')
 
         return playlists
 
     def get_tracks_metadata(self, uri_list, authorisation, verbose=True):
-        tracks = self.get_tracks(uri_list, authorisation, verbose)
+        tracks = self.get_tracks(uri_list, authorisation, verbose=verbose)
         return [self.extract_track_metadata(track) for track in tracks]
 
     @staticmethod
@@ -55,7 +53,7 @@ class Spotify(Authorise, Endpoints, Search):
                 'artist': ' '.join(artist['name'] for artist in track['artists']),
                 'album': track['album']['name'],
                 'track': int(track['track_number']),
-                'year': int(re.sub('[^0-9]', '', track['album']['release_date'])[:4]),
+                'year': int(re.sub('[^0-9]', '', str(track['album']['release_date']))[:4]),
                 'length': track['duration_ms'] / 1000,
                 'image': image_url,
                 'image_height': max_height,
@@ -75,7 +73,7 @@ class Spotify(Authorise, Endpoints, Search):
                 spotify_uris = [*[track['uri'] for track in spotify[name]['tracks']], None]
                 m3u_uris = [song['uri'] for song in songs if 'uri' in song]
                 for song in songs:
-                    if 'uri' in song and song.get('uri', None) not in spotify_uris:
+                    if 'uri' in song and song.get('uri') not in spotify_uris:
                         title, _, _ = self.clean_tags(song)
 
                         for track in spotify[name]['tracks']:
@@ -90,10 +88,10 @@ class Spotify(Authorise, Endpoints, Search):
                                 updated_uris[name].append(song)
                                 break
                 if verbose:
-                    print('\33[92m', f'Done. Updated {i + 1} URIs', '\33[0m', sep='')
+                    print('\33[92m', f'Done. Updated {i} URIs', '\33[0m', sep='')
         return {'updated': updated_uris}
 
-    def update_playlist(self, m3u, spotify, authorisation, limit=50, verbose=True):
+    def update_playlist(self, m3u, spotify, authorisation, verbose=True):
         if len(m3u) == 0:
             return False
 
@@ -115,14 +113,14 @@ class Spotify(Authorise, Endpoints, Search):
                 url = spotify[name]['url']
                 spotify_uris = [*[track['uri'] for track in spotify[name]['tracks']], None]
                 uri_list = [song['uri'] for song in songs if
-                            'uri' in song and song.get('uri', None) not in spotify_uris]
+                            'uri' in song and song.get('uri') not in spotify_uris]
             else:
                 if verbose:
                     text = f'Creating {name}...'
                     print(f"{text : <{len(text) + max_width - len(name)}}", end=' ', flush=True)
 
                 url = self.create_playlist(name, authorisation)
-                uri_list = [song['uri'] for song in songs if 'uri' in song and song.get('uri', None)]
+                uri_list = [song['uri'] for song in songs if 'uri' in song and song.get('uri')]
 
             self.add_to_playlist(url, uri_list, authorisation, skip_dupes=True)
 
@@ -132,7 +130,7 @@ class Spotify(Authorise, Endpoints, Search):
         return True
 
     @staticmethod
-    def get_differences(local, spotify):
+    def get_differences(local, spotify, verbose=True):
         print('Getting information on differences between local and Spotify...')
 
         extra = {}
@@ -143,8 +141,9 @@ class Spotify(Authorise, Endpoints, Search):
         for name, songs in local.items():
             local_uris = [song['uri'] for song in songs if 'uri' in song and song['uri']]
             extra_songs = [track for track in spotify[name]['tracks'] if track['uri'] not in local_uris]
-
-            missing_songs = [song for song in songs if not song.get('uri', None)]
+            
+            spotify_uris = [track['uri'] for track in spotify[name]['tracks']]
+            missing_songs = [song for song in songs if not song.get('uri') and song['uri'] not in spotify_uris]
 
             if len(extra_songs) != 0:
                 extra[name] = extra_songs
@@ -154,13 +153,32 @@ class Spotify(Authorise, Endpoints, Search):
                 missing[name] = missing_songs
                 missing_len += len(missing_songs)
 
-        text = f'Spotify playlists have {extra_len} extra songs and {missing_len} missing songs'
+        text = f'Spotify playlists have {extra_len} extra songs and \33[91m{missing_len} missing songs'
         print('\33[92m', text, '\33[0m', sep='')
+
+        if verbose:
+            max_width = len(max(missing.keys(), key=len)) + 1
+
+            for name, playlist in sorted(missing.items(), key=lambda x: x[0].lower()):
+                extra_songs = f'\33[92m+{len(extra.get(name, []))}\33[0m'
+                missing_songs = f'\33[91m-{len(playlist)}\33[0m'
+                print(f'{name : <{max_width}}', ':', f'{extra_songs : >14}', f'{missing_songs : >14}')
 
         return extra, missing
 
     def check_uris_on_spotify(self, playlists, authorisation, uri_file=None, verbose=True):
-        playlist_bar = tqdm(playlists.items(),
+        if not playlists:
+            if verbose:
+                print('No URIs to check.')
+            return
+        elif isinstance(list(playlists.items())[0][1], list):
+            playlists = {name: tracks for name, tracks in playlists.items() if
+                         sum(['uri' in track and track.get('uri') is not None for track in tracks]) != 0}
+        else:
+            playlists = {name: {title: uri for title, uri in tracks.items() if uri} for name, tracks in
+                         playlists.items()}
+
+        playlist_bar = tqdm(range(len(playlists)),
                             desc='Adding to Spotify: ',
                             unit='playlists',
                             leave=verbose,
@@ -168,25 +186,47 @@ class Spotify(Authorise, Endpoints, Search):
         url_list = []
         max_stops = (len(playlists) // 10) + (len(playlists) % 10 > 0)
 
-        if sys.platform == "linux" and uri_file:
-            os.system(f'xdg-open {uri_file}')
-        elif sys.platform == "darwin" and uri_file:
-            os.system(f'open {uri_file}')
-        elif sys.platform == "win32" and uri_file:
-            os.startfile(uri_file)
+        if uri_file:
+            uri_file = join(self.DATA_PATH, uri_file + '.json')
+            if sys.platform == "linux":
+                os.system(f'xdg-open {uri_file}')
+            elif sys.platform == "darwin":
+                os.system(f'open {uri_file}')
+            elif sys.platform == "win32":
+                os.startfile(uri_file)
 
-        for n, (playlist_name, songs) in enumerate(playlist_bar):
-            url = self.create_playlist(playlist_name, authorisation)
+        for n, (playlist_name, songs) in enumerate(playlists.items(), 1):
+            if isinstance(songs, list):
+                uri_list = [song['uri'] for song in songs if 'uri' in song and song.get('uri')]
+            else:
+                uri_list = list(songs.values())
+
+            if len(uri_list) == 0:
+                continue
+
+            url = f'{self.create_playlist(playlist_name, authorisation)}/tracks'
             url_list.append(url.replace('tracks', 'followers'))
 
-            uri_list = [song['uri'] for song in songs if 'uri' in song and song.get('uri', None)]
             self.add_to_playlist(url, uri_list, authorisation, skip_dupes=False)
 
-            if len(url_list) % 10 == 0:
-                input(f'Check playlists and hit enter to continue ({((n + 1) // 10)}/{max_stops})')
+            playlist_bar.update(1)
+
+            if len(url_list) % 10 == 0 or n == len(playlist_bar):
+                text = f"\rCheck playlists and hit return to continue ({(n + 1) // 10}/{max_stops}) (enter 'q' to stop)"
+
+                stop = input(text).strip().lower() == 'q'
+                print('Deleting temporary playlists...', end='\r')
                 for url in url_list:
                     if 'error' in self.delete_playlist(url, authorisation):
                         print('Refreshing token...')
                         authorisation = self.auth()
                         self.delete_playlist(url, authorisation)
                 url_list = []
+
+                if stop or n == len(playlist_bar):
+                    break
+                else:
+                    print('Creating temporary playlists...', end='\r')
+                    
+        print('\33[92m', 'Check complete', ' ' * 20, '\33[0m', sep='')
+        playlist_bar.close()

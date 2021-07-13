@@ -1,3 +1,3 @@
-# m3uSpotify
+# Syncify
 
 Instructions coming soon.
