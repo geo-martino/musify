@@ -12,7 +12,13 @@ class Endpoints:
         self.user_id = None
 
     def convert(self, string, get='id', kind=None):
-        """converts id to required format - api/user URL, URI, or ID"""
+        """
+        Converts id to required format - api/user URL, URI, or ID
+        :param string: str. URL/URI/ID to convert.
+        :param get: str, default='id'. Type of string to return. Can be 'open', 'api', 'uri', 'id'.
+        :param kind: str, default=None. ID type if given string is ID. 
+            Examples: 'album', 'playlist', 'track', 'artist'. Refer to Spotify API for other types.
+        :return: str. Formatted string"""
         if not string:  # if string is None, skip checks
             return
 
@@ -21,17 +27,17 @@ class Endpoints:
         uri_check = string.split(':')  # URIs are always 3 strings separated by :
 
         # extract id and id types
-        if 'open' in url_check or 'api' in url_check:
+        if 'open' in url_check or 'api' in url_check:  # url
             # ensure splits give all useful information at the same indices
             url = string.replace('/v1/', '/')
             url = [i for i in url.split('/') if 'http' not in i.lower() and len(i) > 1]
 
             kind = url[1][:-1] if url[1][-1].lower() == 's' else url[1]
             key = url[2].split('?')[0]
-        elif len(uri_check) == 3:
+        elif len(uri_check) == 3:  # uri
             kind = uri_check[1]
             key = uri_check[2]
-        elif kind:
+        elif kind:  # use manually defined kind for a given id
             kind = str(kind)[:-1] if str(kind)[-1].lower() == 's' else str(kind)
             key = string
         else:
@@ -49,20 +55,39 @@ class Endpoints:
             return key
 
     @staticmethod
-    def get_request(url, headers):
-        return requests.get(url, headers=headers).json()
+    def get_request(url, authorisation):
+        """
+        Simple get request for given url
+        
+        :param url: str. URL to send get request.
+        :param authorisation: dict. Headers for authorisation.
+        :returns: dict. JSON response.
+        """
+        return requests.get(url, headers=authorisation).json()
 
     def search(self, query, kind, authorisation):
-        """query end point, modify result types return with kind parameter"""
+        """
+        Query end point, modify result types return with kind parameter
+        
+        :param query: str. Search query.
+        :param kind: str, default=None. Examples: 'album', 'track', 'artist'. Refer to Spotify API for other types.
+        :param authorisation: dict. Headers for authorisation.
+        :returns: dict. JSON response.
+        """
         url = f'{self.BASE_API}/search'  # search endpoint
         params = {'q': query, 'type': kind, 'limit': 10}
         return requests.get(url, params=params, headers=authorisation).json()[f'{kind}s']['items']
 
     def get_user(self, authorisation, user='self'):
-        """get information on given or current user"""
-        if user == 'self':
+        """
+        Get information on given or current user
+        
+        :param authorisation: dict. Headers for authorisation.
+        :param user: str, default='self'. User ID to get, 'self' uses currently authorised user.
+        :returns: dict. JSON response."""
+        if user == 'self':  # use current user
             url = f'{self.BASE_API}/me'
-        else:
+        else:  # use given user
             url = f'{self.BASE_API}/users/{user}'
 
         r = requests.get(url, headers=authorisation).json()
@@ -72,7 +97,15 @@ class Endpoints:
         return r
 
     def get_tracks(self, track_list, authorisation, limit=50, verbose=False):
-        """get information for given list of tracks"""
+        """
+        Get information for given list of tracks
+        
+        :param track_list: list. List of tracks to get. URL/URI/ID formats accepted.
+        :param authorisation: dict. Headers for authorisation.
+        :param limit: int, default=50. Size of batches to request.
+        :param verbose: bool, default=True. Persist progress bars if True.
+        :returns: list. List of information received for each track.
+        """
         url = f'{self.BASE_API}/tracks'  # tracks endpoint
         results = []
 
@@ -84,7 +117,7 @@ class Endpoints:
 
         # add progress bar for very large lists of over 50 iterations
         if len(id_list) > 50:
-            bar = tqdm(bar, desc=f'Getting tracks from Spotify: ',
+            bar = tqdm(bar, desc='Getting tracks from Spotify: ',
                        unit='songs', leave=verbose, file=sys.stdout)
 
         # format to comma-separated list of ids and get results
@@ -95,7 +128,15 @@ class Endpoints:
         return results
 
     def get_all_playlists(self, authorisation, names=None, user='self', verbose=False):
-        # get all information on all tracks for all given user's playlists
+        """
+        Get all information on all tracks for all given user's playlists
+        
+        :param authorisation: dict. Headers for authorisation.
+        :param names: list, default=None. Return only these named playlists.
+        :param user: str, default='self'. User ID to get, 'self' uses currently authorised user.
+        :param verbose: bool, default=True. Print extra information on function running.
+        :returns: dict. <playlist name>: <dict of playlist url and response for tracks in playlist>
+        """
         if user == 'self':
             if self.user_id is None:  # get user id if not already stored
                 self.get_user(authorisation)
@@ -127,7 +168,13 @@ class Endpoints:
         return playlists
 
     def get_playlist_tracks(self, playlist, authorisation):
-        """get all tracks from a given playlist"""
+        """
+        Get all tracks from a given playlist.
+        
+        :param playlist: str. Playlist URL/URI/ID to get.
+        :param authorisation: dict. Headers for authorisation.
+        :returns: list. List of API information received for each track in playlist.
+        """
         # reformat to api link
         if 'api' not in playlist.split('.')[0] or 'tracks' not in playlist.split('/')[-1].lower():
             playlist = f"{self.convert(playlist, get='api')}/tracks"
@@ -144,7 +191,14 @@ class Endpoints:
         return tracks
 
     def create_playlist(self, playlist_name, authorisation, give='url'):
-        """create an empty playlist for the current user"""
+        """
+        Create an empty playlist for the current user.
+        
+        :param playlist_name. str. Name of playlist to create.
+        :param authorisation: dict. Headers for authorisation.
+        :param give: str, default='url'. Convert link to generated playlist to this given type.
+        :return: str. Link as defined above.
+        """
         if self.user_id is None:  # get user id if not already stored
             self.get_user(authorisation)
         url = f'{self.BASE_API}/users/{self.user_id}/playlists'  # user playlists end point
@@ -164,28 +218,52 @@ class Endpoints:
             return playlist
 
     def delete_playlist(self, playlist, authorisation):
-        """unfollow a given playlist"""
+        """
+        Unfollow a given playlist.
+        
+        :param playlist. str. Name of playlist to unfollow.
+        :param authorisation: dict. Headers for authorisation.
+        :return: str. HTML response.
+        """
         playlist = f"{self.convert(playlist, get='api')}/followers"
         r = requests.delete(playlist, headers=authorisation)
         return r.text
 
-    @staticmethod
-    def clear_playlist(playlist, authorisation, limit=100):
-        playlist_url = f"{playlist['url']}/tracks"
+    def clear_playlist(self, playlist, authorisation, limit=100):
+        """
+        Clear all songs from a given playlist.
+        
+        :param playlist: str. Playlist URL/URI/ID to clear.
+        :param authorisation: dict. Headers for authorisation.
+        :param limit: int, default=100. Size of batches to clear at once, max=100.
+        :return: str. HTML response.
+        """
+        playlist_url = f"{self.convert(playlist, get='api')}/tracks"  # playlists tracks endpoint
+
+        # formatting required for body
         tracks_list = [{'uri': song['uri']} for song in playlist['tracks']]
         body = []
 
+        # split up tracks into batches of size 'limit'
         for i in range(len(tracks_list) // limit + 1):
             body.append(tracks_list[limit * i: limit * (i + 1)])
 
         r = None
-        for tracks in body:
+        for tracks in body:  # delete tracks in batches
             r = requests.delete(playlist_url, json={'tracks': tracks}, headers=authorisation)
 
         return r.text
 
     def add_to_playlist(self, playlist, track_list, authorisation, limit=50, skip_dupes=True):
-        """add list of tracks to a given playlist"""
+        """
+        Add list of tracks to a given playlist.
+        
+        :param playlist: str. Playlist URL/URI/ID to add to.
+        :param track_list: list. List of tracks to add. URL/URI/ID formats accepted.
+        :param authorisation: dict. Headers for authorisation.
+        :param limit: int, default=50. Size of batches to add.
+        :param skip_dupes: bool, default=True. Skip duplicates.
+        """
         if len(track_list) == 0:
             return
 
@@ -207,17 +285,23 @@ class Endpoints:
             requests.post(playlist, params={'uris': uri_string}, headers=authorisation)
 
     def uri_from_link(self, authorisation, link=None):
-        if not link:
+        """returns tracks from a given link in "<track> - <title>": "<URI>" format for a given link.
+        Useful for manual entry of URIs into stored .json file.
+        
+        :param authorisation: dict. Headers for authorisation.
+        :param link: str, default=None. Link to print information for. Tested on 'album' and 'playlist' types only.
+        """
+        if not link:  # get user to paste in link
             link = input('link: ')
-        link = f"{self.convert(link, get='api')}/tracks"
+        link = f"{self.convert(link, get='api')}/tracks"  # reformat and tracks endpoint
         r = {'next': link}
         i = 1
 
         while r['next']:
-            r = requests.get(r['next'], headers=authorisation).json()
+            r = requests.get(r['next'], headers=authorisation).json()  # get tracks information
             print()
             for i, track in enumerate(r['items'], i):
-                i = f"0{i}" if len(str(i)) == 1 else i
-                if 'playlist' in link:
+                n = f"0{i}" if len(str(i)) == 1 else i  # add leading 0 to track
+                if 'playlist' in link:  # if given link is playlist, reindex
                     track = track['track']
-                print(f"\t\"{i} - {track['name'].split(' - ')[0].strip()}\": \"{track['uri']}\",")
+                print(f"\t\"{n} - {track['name'].split(' - ')[0].strip()}\": \"{track['uri']}\",")

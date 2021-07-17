@@ -11,15 +11,27 @@ class Authorise:
 
     def __init__(self):
 
+        # scopes of Spotify api access required by the functions in this program
         self.scopes = ['playlist-modify-public', 'playlist-modify-private', 'playlist-read-collaborative']
+
+        # store token and headers
         self.TOKEN = None
         self.headers = None
 
     def auth(self, kind='user', scopes=None, force=False, lines=True, verbose=True):
-        """main method for authentication, tests/refreshes/reauthorises as needed"""
+        """
+        Main method for authentication, tests/refreshes/reauthorises as needed
+        
+        :param kind: str, default='user'. 'user' or 'basic' authorisation.
+        :param scopes: list, default=None. List of scopes to authorise for user. If None, uses defaults.
+        :param force: bool, default=False. Ignore stored token and reauthorise new user or basic access token.
+        :param lines: bool, default=True. Print lines around verbose.
+        :param verbose: bool, default=True. Print extra information on function running.
+        :return: dict. Headers for requests authorisation.
+        """
         if verbose and lines:  # page break
             print('\n', '-' * 88, '\n', sep='')
-        
+
         # load stored token
         if not self.TOKEN:
             self.TOKEN = self.load_spotify_token(verbose)
@@ -41,16 +53,21 @@ class Authorise:
         elif 'error' in requests.get(f'{self.BASE_API}/markets', headers=self.headers).json():
             self.TOKEN = self.refresh_token()
             self.headers = {'Authorization': f"{self.TOKEN['token_type']} {self.TOKEN['access_token']}"}
-        
+
         self.save_spotify_token()
 
         if verbose and lines:
             print('\n', '-' * 88, '\n', sep='')
-            
+
         return self.headers
 
     def refresh_token(self, verbose=True):
-        """refreshes token once it has expired"""
+        """
+        Refreshes token once it has expired
+
+        :param verbose: bool, default=True. Print extra information on function running.
+        :return: dict. Authorisation response.
+        """
         if verbose:
             print('Refreshing access token...', end=' ', flush=True)
 
@@ -71,11 +88,16 @@ class Authorise:
         return auth_response
 
     def get_token_user(self, scopes=None, verbose=True):
-        """authenticates access to API with given user scopes"""
+        """
+        Authenticates access to API with given user scopes
+        
+        :param scopes: list, default=None. List of scopes to authorise for user. If None, uses defaults.
+        :param verbose: bool, default=True. Print extra information on function running.
+        :return: dict. Authorisation response."""
         if verbose:
             print('Authorising user privilege access...')
 
-        # scopes for authentication as defined in spotify documentation
+        # get scopes for authentication
         if not scopes:
             scopes = self.scopes
         scopes = ' '.join(scopes)  # must be a list of space delimited strings
@@ -83,7 +105,7 @@ class Authorise:
         params = {'client_id': os.environ['CLIENT_ID'],
                   'response_type': 'code',
                   'redirect_uri': 'http://localhost/',
-                  'state': 'm3u2spotify',
+                  'state': 'syncify',
                   'scope': scopes}
 
         # opens in user's browser to authenticate, user must wait for redirect and input the given link
@@ -108,7 +130,12 @@ class Authorise:
         return auth_response
 
     def get_token_basic(self, verbose=True):
-        """authenticates for basic API access, no user authorisation required"""
+        """
+        Authenticates for basic API access, no user authorisation required
+        
+        :param verbose: bool, default=True. Print extra information on function running.
+        :return: dict. Authorisation response.
+        """
         if verbose:
             print('Authorising basic API access...', end=' ', flush=True)
 
@@ -125,7 +152,12 @@ class Authorise:
         return auth_response
 
     def load_spotify_token(self, verbose=True):
-        """load stored spotify token from data folder"""
+        """
+        Load stored spotify token from data folder
+        
+        :param verbose: bool, default=True. Print extra information on function running.
+        :return: dict. Access token.
+        """
         json_path = join(self.DATA_PATH, 'token.json')
         if not exists(json_path):
             return None
@@ -139,7 +171,7 @@ class Authorise:
         return token
 
     def save_spotify_token(self):
-        """save new/updated token"""
+        """Save new/updated token"""
         json_path = join(self.DATA_PATH, 'token.json')
         with open(json_path, 'w') as file:
             json.dump(self.TOKEN, file, indent=2)
