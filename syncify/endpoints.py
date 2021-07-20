@@ -62,7 +62,7 @@ class Endpoints:
         
         :param url: str. URL to send get request.
         :param authorisation: dict. Headers for authorisation.
-        :returns: dict. JSON response.
+        :return: dict. JSON response.
         """
         return requests.get(url, headers=authorisation).json()
 
@@ -73,7 +73,7 @@ class Endpoints:
         :param query: str. Search query.
         :param kind: str, default=None. Examples: 'album', 'track', 'artist'. Refer to Spotify API for other types.
         :param authorisation: dict. Headers for authorisation.
-        :returns: dict. JSON response.
+        :return: dict. JSON response.
         """
         url = f'{self.BASE_API}/search'  # search endpoint
         params = {'q': query, 'type': kind, 'limit': 10}
@@ -85,7 +85,7 @@ class Endpoints:
         
         :param authorisation: dict. Headers for authorisation.
         :param user: str, default='self'. User ID to get, 'self' uses currently authorised user.
-        :returns: dict. JSON response.
+        :return: dict. JSON response.
         """
         if user == 'self':  # use current user
             url = f'{self.BASE_API}/me'
@@ -106,7 +106,7 @@ class Endpoints:
         :param authorisation: dict. Headers for authorisation.
         :param limit: int, default=50. Size of batches to request.
         :param verbose: bool, default=True. Persist progress bars if True.
-        :returns: list. List of information received for each track.
+        :return: list. List of information received for each track.
         """
         url = f'{self.BASE_API}/tracks'  # tracks endpoint
         results = []
@@ -137,7 +137,7 @@ class Endpoints:
         :param names: list, default=None. Return only these named playlists.
         :param user: str, default='self'. User ID to get, 'self' uses currently authorised user.
         :param verbose: bool, default=True. Print extra information on function running.
-        :returns: dict. <playlist name>: <dict of playlist url and response for tracks in playlist>
+        :return: dict. <playlist name>: <dict of playlist url and response for tracks in playlist>
         """
         if user == 'self':
             if self.user_id is None:  # get user id if not already stored
@@ -175,7 +175,7 @@ class Endpoints:
         
         :param playlist: str. Playlist URL/URI/ID to get.
         :param authorisation: dict. Headers for authorisation.
-        :returns: list. List of API information received for each track in playlist.
+        :return: list. List of API information received for each track in playlist.
         """
         # reformat to api link
         if 'api' not in playlist.split('.')[0] or 'tracks' not in playlist.split('/')[-1].lower():
