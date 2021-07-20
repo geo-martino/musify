@@ -101,7 +101,7 @@ class Spotify(Authorise, Endpoints, Search):
         :param local: dict. Local playlists in form <playlist name>: <list of track's metadata> (incl. URIs)
         :param spotify: dict. Spotify playlists in form <playlist name>: <dict of <url> and <track's metadata (incl. URIs)>>
         :param verbose: bool, default=True. Print extra info on playlists if True.
-        :result: dict. Metadata for updated tracks including old and new URIs.
+        :return: dict. Metadata for updated tracks including old and new URIs.
         """
         # for appropriately aligned formatting
         max_width = len(max(spotify.keys(), key=len)) + 1
