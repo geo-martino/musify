@@ -264,7 +264,7 @@ class Data(Process):
         :param local: dict. Metadata in form <name>: <dict of metadata incl. path, and album>
         :param filename: str, default='URIs'. Filename of file to import from data path.
         :return: dict. Same dict as given with added keys for URIs if found.
-        :"""
+        """
         # get path to file from data path, return if it doesn't exist
         json_path = join(self.DATA_PATH, filename + '.json')
         if not exists(json_path):
@@ -332,7 +332,8 @@ class Data(Process):
         Save dict to json file in data path.
         
         :param file: dict. Data to save.
-        :param filename: str, default='data'. Filename to save under."""
+        :param filename: str, default='data'. Filename to save under.
+        """
 
         print(f'Saving {filename}.json...', end=' ', flush=True)
 
@@ -347,7 +348,8 @@ class Data(Process):
         """
         Load json from data path.
         
-        :param filename: str. Filename to load from."""
+        :param filename: str. Filename to load from.
+        """
 
         # get filepath and load
         json_path = join(self.DATA_PATH, filename + '.json')

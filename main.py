@@ -8,11 +8,11 @@ from syncify.data import Data
 from syncify.spotify import Spotify
 
 
-class SpotifySync(Data, Spotify):
+class Syncify(Data, Spotify):
 
     def __init__(self, base_api=None, base_auth=None, open_url=None,
-                 c_id=None, c_secret=None, playlists=None,
-                 music_path=None, win_path=None, mac_path=None, lin_path=None,
+                 c_id=None, c_secret=None, music_path=None, playlists=None, 
+                 win_path=None, mac_path=None, lin_path=None,
                  data=None, uri_file=None, token_file=None, verbose=False, auth=True):
         """
         :param base_api: str, default=None. Base link to access Spotify API.
@@ -21,8 +21,8 @@ class SpotifySync(Data, Spotify):
         :param c_id: str, default=None. ID of developer API access.
         :param c_secret: str, default=None. Secret code for developer API access.
         
-        :param playlists: str, default=None. Relative path to folder containing .m3u playlists, must be in music folder.
         :param music_path: str, default=None. Base path to all music files
+        :param playlists: str, default=None. Relative path to folder containing .m3u playlists, must be in music folder.
         :param win_path: str, default=None. Windows specific path to all music files.
         :param mac_path: str, default=None. Mac specific path to all music files.
         :param lin_path: str, default=None. Linux specific path to all music files.
@@ -92,7 +92,7 @@ class SpotifySync(Data, Spotify):
         if self.DATA_PATH == '.':
             self.DATA_PATH = join(dirname(__file__), 'data')
         self.URI_FILENAME = uri_file if uri_file else os.environ.get('URI_FILENAME')
-        self.TOKEN = token_file if token_file else os.environ.get('token')
+        self.TOKEN_FILENAME = token_file if token_file else os.environ.get('TOKEN_FILENAME')
 
         # Instantiate objects
         Data.__init__(self)
@@ -124,7 +124,7 @@ class SpotifySync(Data, Spotify):
         
         # required keys
         env_vars = ['BASE_API', 'BASE_AUTH', 'OPEN_URL', 'CLIENT_ID', 'CLIENT_SECRET',
-                    'PLAYLISTS', 'WIN_PATH', 'MAC_PATH', 'LIN_PATH', 'DATA_PATH', 'URI_FILENAME']
+                    'PLAYLISTS', 'WIN_PATH', 'MAC_PATH', 'LIN_PATH', 'DATA_PATH', 'URI_FILENAME', 'TOKEN']
         if current_state:  # update variables from current object
             env.update({var: getattr(self, var) for var in env_vars if var in self.__dict__ and getattr(self, var)})
             
@@ -232,9 +232,9 @@ class SpotifySync(Data, Spotify):
             if refresh:  # clear playlists
                 print('Clearing playlists...', end='')
                 for name, playlist in self.spotify_metadata.items():
-                    self.clear_playlist(playlist['url'], self.headers)
+                    self.clear_playlist(playlist, self.headers)
                     self.spotify_metadata[name]['tracks'] = []
-                print('\33[92m', f'Done', '\33[0m')
+                print('\33[92m', 'Done', '\33[0m')
 
             # search for missing URIs
             added, not_found, searched = self.search_all(self.m3u_metadata, self.headers,
@@ -258,7 +258,6 @@ class SpotifySync(Data, Spotify):
             self.save_json(added, 'search_added')
             self.save_json(not_found, 'search_not_found')
             self.export_uri(added, self.URI_FILENAME)
-            self.load_spotify(in_playlists='m3u')
         return self
 
     def differences(self):
@@ -392,7 +391,7 @@ class SpotifySync(Data, Spotify):
 
 if __name__ == "__main__":
     # instantiate main object
-    main = SpotifySync(verbose=True, auth=False)
+    main = Syncify(verbose=True, auth=False)
     kwargs = {}
 
     if len(sys.argv) <= 1:  # error, return
@@ -409,16 +408,16 @@ if __name__ == "__main__":
         main.auth(**{k: v for k, v in {**kwargs}.items() if k in main.auth.__code__.co_varnames})
         main.update_uri_from_spotify_playlists(
             **{k: v for k, v in {**kwargs}.items() if k in main.update_uri_from_spotify_playlists.__code__.co_varnames})
-        main.search_m3u_to_spotify(refresh=True, **{k: v for k, v in {**kwargs}.items() if
-                                                    k in main.search_m3u_to_spotify.__code__.co_varnames})
+        main.search_m3u_to_spotify(refresh=False, **{k: v for k, v in {**kwargs}.items() 
+                                                     if k in main.search_m3u_to_spotify.__code__.co_varnames})
         main.differences(**{k: v for k, v in {**kwargs}.items() if k in main.differences.__code__.co_varnames})
 
     elif sys.argv[1] == 'refresh':  # run functions for clearing and updating Spotify playlists with new songs
         main.auth(**{k: v for k, v in {**kwargs}.items() if k in main.auth.__code__.co_varnames})
         main.update_uri_from_spotify_playlists(
             **{k: v for k, v in {**kwargs}.items() if k in main.update_uri_from_spotify_playlists.__code__.co_varnames})
-        main.search_m3u_to_spotify(refresh=True, **{k: v for k, v in {**kwargs}.items() if
-                                                    k in main.search_m3u_to_spotify.__code__.co_varnames})
+        main.search_m3u_to_spotify(refresh=True, **{k: v for k, v in {**kwargs}.items() 
+                                                    if k in main.search_m3u_to_spotify.__code__.co_varnames})
         main.differences(**{k: v for k, v in {**kwargs}.items() if k in main.differences.__code__.co_varnames})
 
     elif sys.argv[1] == 'differences':  # run functions to produce report on differences between local and Spotify

@@ -37,7 +37,7 @@ class Authorise:
             self.TOKEN = self.load_spotify_token(verbose)
 
         # if no token, re-authorise and generate new tokens
-        if not self.TOKEN or (scopes and scopes != self.scopes) or force:
+        if not self.TOKEN or (scopes and scopes != self.scopes) or 'refresh_token' not in self.TOKEN or force:
             if kind == 'user':
                 self.TOKEN = self.get_token_user(scopes)
             else:
@@ -93,7 +93,8 @@ class Authorise:
         
         :param scopes: list, default=None. List of scopes to authorise for user. If None, uses defaults.
         :param verbose: bool, default=True. Print extra information on function running.
-        :return: dict. Authorisation response."""
+        :return: dict. Authorisation response.
+        """
         if verbose:
             print('Authorising user privilege access...')
 
@@ -158,7 +159,7 @@ class Authorise:
         :param verbose: bool, default=True. Print extra information on function running.
         :return: dict. Access token.
         """
-        json_path = join(self.DATA_PATH, 'token.json')
+        json_path = join(self.DATA_PATH, self.TOKEN_FILENAME + '.json')
         if not exists(json_path):
             return None
 
@@ -172,6 +173,6 @@ class Authorise:
 
     def save_spotify_token(self):
         """Save new/updated token"""
-        json_path = join(self.DATA_PATH, 'token.json')
+        json_path = join(self.DATA_PATH, self.TOKEN_FILENAME + '.json')
         with open(json_path, 'w') as file:
             json.dump(self.TOKEN, file, indent=2)

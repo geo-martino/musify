@@ -18,7 +18,8 @@ class Endpoints:
         :param get: str, default='id'. Type of string to return. Can be 'open', 'api', 'uri', 'id'.
         :param kind: str, default=None. ID type if given string is ID. 
             Examples: 'album', 'playlist', 'track', 'artist'. Refer to Spotify API for other types.
-        :return: str. Formatted string"""
+        :return: str. Formatted string
+        """
         if not string:  # if string is None, skip checks
             return
 
@@ -84,7 +85,8 @@ class Endpoints:
         
         :param authorisation: dict. Headers for authorisation.
         :param user: str, default='self'. User ID to get, 'self' uses currently authorised user.
-        :returns: dict. JSON response."""
+        :returns: dict. JSON response.
+        """
         if user == 'self':  # use current user
             url = f'{self.BASE_API}/me'
         else:  # use given user
@@ -233,15 +235,21 @@ class Endpoints:
         """
         Clear all songs from a given playlist.
         
-        :param playlist: str. Playlist URL/URI/ID to clear.
+        :param playlist: str/dict. Playlist URL/URI/ID to clear OR dict of metadata with keys 'url' and 'tracks'.
         :param authorisation: dict. Headers for authorisation.
         :param limit: int, default=100. Size of batches to clear at once, max=100.
         :return: str. HTML response.
         """
-        playlist_url = f"{self.convert(playlist, get='api')}/tracks"  # playlists tracks endpoint
+        # playlists tracks endpoint
+        if 'url' in playlist and 'tracks' in playlist:
+            playlist_url = f"{playlist['url']}/tracks"
+            tracks = playlist['tracks']
+        else:
+            playlist_url = f"{playlist.get('url', self.convert(playlist, get='api'))}/tracks"
+            tracks = [item['track'] for item in self.get_playlist_tracks(playlist_url, authorisation)]
 
         # formatting required for body
-        tracks_list = [{'uri': song['uri']} for song in playlist['tracks']]
+        tracks_list = [{'uri': song['uri']} for song in tracks]
         body = []
 
         # split up tracks into batches of size 'limit'
@@ -304,4 +312,4 @@ class Endpoints:
                 n = f"0{i}" if len(str(i)) == 1 else i  # add leading 0 to track
                 if 'playlist' in link:  # if given link is playlist, reindex
                     track = track['track']
-                print(f"\t\"{n} - {track['name'].split(' - ')[0].strip()}\": \"{track['uri']}\",")
+                print(f"\t\"{n} - {track['name'].split(' - ')[0].strip().lower()}\": \"{track['uri']}\",")

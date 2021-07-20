@@ -19,6 +19,9 @@ generate_report:
 add_artwork:
 	@python main.py artwork
 
+no_images:
+	@python main.py no_images
+
 extract_local_images:
 	@python main.py extract_local
 
