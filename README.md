@@ -12,6 +12,8 @@ The package is completely open-source and reproducible. Use as you like, but be 
 
 ## First time run
 
+Clone this repo to your Python package directory and run ```pip install .``` from the command line while in the package root directory.
+
 The program is intended for use from the command line. To run the program in this way, you will need to set the environment variables. This can be most easily achieved in a Python CLI, Jupyter Notebook, or manually by saving the variables to a '.env' file in the package root directory.
 
 ### Get Spotify Developer access
@@ -57,7 +59,7 @@ main.set_env(current_state=False, **kwargs)
 
 ### Manually create .env
 
-Create a file named '.env' with the following variables.
+Create a file named '.env' in the package root directory with the following variables.
 
 > - BASE_API: 		Base link to access Spotify API.
 > - BASE_AUTH:		Base link to authorise through Spotify API.
