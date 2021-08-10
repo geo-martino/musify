@@ -87,7 +87,7 @@ Create a file named '.env' in the package root directory with the following vari
 > MAC_PATH=/media/music<br>
 > DATA_PATH=D:\Data<br>
 > URI_FILENAME=URIs<br>
-> TOKEN=token<br>
+> TOKEN_FILENAME=token<br>
 
 ### User Authorisation
 
