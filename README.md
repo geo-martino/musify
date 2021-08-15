@@ -42,7 +42,7 @@ Upon instantiation of the main Syncify object, you may define the necessary vari
 Run the following code to import and instantiate the main Syncify object with the necessary variables as keyword arguments (\*\*kwargs).
 
 ```py
-from syncify.Syncify import Syncify
+from syncify.main import Syncify
 main = Syncify(**kwargs, verbose=True, auth=False)
 main.set_env()
 ```
@@ -52,7 +52,7 @@ main.set_env()
 Alternatively, you may also set environment variables separate to those of the current object by setting them as parameters of the set_env() method. In this case, the environment variable names of the kwargs must be given as they are listed in the manual list below.
 
 ```py
-from syncify.Syncify import Syncify
+from syncify.main import Syncify
 main = Syncify(verbose=True, auth=False)
 main.set_env(current_state=False, **kwargs)
 ```
@@ -72,7 +72,7 @@ Create a file named '.env' in the package root directory with the following vari
 > - LIN_PATH:		Linux specific path to all music files.
 > - DATA_PATH:		Path to folder containing json and image files.
 > - URI_FILENAME:	Filename of URI json file.
-> - TOKEN:			Filename of Spotify access token json file.
+> - TOKEN_FILENAME:			Filename of Spotify access token json file.
 
 #### Example
 
@@ -94,7 +94,7 @@ Create a file named '.env' in the package root directory with the following vari
 You will also need to authorise this app with your personal user profile on Spotify to enable it to make changes to your playlists. By default, the app has access to read and write to your public and private playlists, and read your collaborative playlists. Run the function below, it will open your browser so that you can authorise it. It will redirect you to a new web page that will give you an error. This is fine, just copy the link to the input box provided. Your token will now be saved to your data folder where it will automatically refresh everytime you run the app.
 
 ```py
-from syncify.Syncify import Syncify
+from syncify.main import Syncify
 main = Syncify(verbose=True, auth=False)
 main.auth()
 ```

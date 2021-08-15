@@ -140,9 +140,9 @@ class Process:
 
         # progress bar
         bar = tqdm(local.items(), desc='Embedding images: ', unit='songs', leave=False, file=sys.stdout)
-        i = 0
+        i = 1
 
-        for i, (uri, song) in enumerate(bar):
+        for i, (uri, song) in enumerate(bar, 1):
             # skip if not replacing embedded images
             if not replace and song['has_image']:
                 continue

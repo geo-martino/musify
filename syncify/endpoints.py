@@ -56,15 +56,15 @@ class Endpoints:
             return key
 
     @staticmethod
-    def get_request(url, authorisation):
+    def get_request(url, headers):
         """
         Simple get request for given url
         
         :param url: str. URL to send get request.
-        :param authorisation: dict. Headers for authorisation.
+        :param headers: dict. Headers for authorisation.
         :return: dict. JSON response.
         """
-        return requests.get(url, headers=authorisation).json()
+        return requests.get(url, headers=headers).json()
 
     def search(self, query, kind, authorisation):
         """
@@ -302,14 +302,21 @@ class Endpoints:
         if not link:  # get user to paste in link
             link = input('link: ')
         link = f"{self.convert(link, get='api')}/tracks"  # reformat and tracks endpoint
+        limit = 20
         r = {'next': link}
-        i = 1
+        i = 0
+        j = 0
 
         while r['next']:
-            r = requests.get(r['next'], headers=authorisation).json()  # get tracks information
+            r = requests.get(r['next'], params={'limit': limit}, headers=authorisation).json()  # get tracks information
             print()
-            for i, track in enumerate(r['items'], i):
+            for i, track in enumerate(r['items'], i+1):
                 n = f"0{i}" if len(str(i)) == 1 else i  # add leading 0 to track
                 if 'playlist' in link:  # if given link is playlist, reindex
                     track = track['track']
-                print(f"\t\"{n} - {track['name'].split(' - ')[0].strip().lower()}\": \"{track['uri']}\",")
+                if (i - j * limit) != len(r['items']) or r['next']:
+                    print(f"\t\"{n} - {track['name'].split(' - ')[0].strip().lower()}\": \"{track['uri']}\",")
+                else:
+                    print(f"\t\"{n} - {track['name'].split(' - ')[0].strip().lower()}\": \"{track['uri']}\"\n")
+            
+            j += 1

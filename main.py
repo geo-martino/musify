@@ -1,3 +1,4 @@
+import ast
 import os
 import sys
 from os.path import join, dirname, exists, normpath, splitext, basename
@@ -91,6 +92,9 @@ class Syncify(Data, Spotify):
         self.DATA_PATH = normpath(data) if data else normpath(os.environ.get('DATA_PATH', ''))
         if self.DATA_PATH == '.':
             self.DATA_PATH = join(dirname(__file__), 'data')
+        if not exists(self.DATA_PATH):
+            os.mkdir(self.DATA_PATH)
+        
         self.URI_FILENAME = uri_file if uri_file else os.environ.get('URI_FILENAME')
         self.TOKEN_FILENAME = token_file if token_file else os.environ.get('TOKEN_FILENAME')
 
@@ -294,24 +298,28 @@ class Syncify(Data, Spotify):
         :return: self.
         """
         # load metadata if not yet done
-        if self.m3u_metadata is None:
-            self.load_m3u()
-
+        if self.all_metadata is None:
+            self.load_all_local()
+        
         # get latest Spotify metadata for local files and reformat dict to <URI>: <metadata> format for each
-        m3u_uri = self.uri_as_key(self.m3u_metadata)
-        spotify = self.get_tracks_metadata(list(m3u_uri.keys()), self.headers, verbose=self.verbose)
-        spotify_uri = self.uri_as_key(spotify)
+        local_uri = self.uri_as_key(self.all_metadata)
+        if not replace:
+            local_uri = {uri: track for uri, track in local_uri.items() if not track['has_image']}
+        spotify = self.get_tracks_metadata(list(local_uri.keys()), self.headers, verbose=self.verbose)
+        spotify_uri = {uri: metadata for uri, metadata in zip(list(local_uri.keys()), spotify)}
 
         if album_prefix:  # filter to only albums that start with album_prefix
+            if isinstance(album_prefix, list):
+                album_prefix = album_prefix[0]
             m3u_filtered = {}
-            for uri, song in m3u_uri.items():
-                if song['album'].lower().startswith(album_prefix):
+            for uri, song in local_uri.items():
+                if song['album'].lower().startswith(album_prefix.lower()):
                     m3u_filtered[uri] = song
         else:  # use all
-            m3u_filtered = m3u_uri
+            m3u_filtered = local_uri
 
         if report:  # produce report on local songs with missing embedded images
-            no_images = self.no_images(m3u_filtered)
+            no_images = self.no_images(m3u_filtered, 'uri')
             self.save_json(no_images, 'no_images')
 
         # embed images
@@ -333,7 +341,7 @@ class Syncify(Data, Spotify):
             hence skipping a search for new URIs.
         :param null_folders: list, default=None. Give all songs in these folders the URI value of 'None', hence
             skipping all searches and additions to playlist for these songs. Useful for albums not on Spotify.
-        :param start_folder: str, default=None. Start creation of temporary playlists from this folder.
+        :param start_folder: str, default=None. Start creation of temporary playlists from folder starting with this string.
         :param add_back: bool, default=False. Add back tracks which already have URIs on input. 
             False returns only search results.
         :return: self.        
@@ -348,7 +356,7 @@ class Syncify(Data, Spotify):
         if import_uri:  # import locally stored URIs
             folders = self.import_uri(folders, self.URI_FILENAME)
             if drop:  # drop files with no URIs
-                folders = {folder: [track for track in tracks if 'uri' not in track]
+                folders = {folder: [track for track in tracks if 'uri' in track]
                            for folder, tracks in folders.items()}
 
         if null_folders:  # set all URIs for songs in these folders to None, effectively blacklisting them
@@ -359,7 +367,7 @@ class Syncify(Data, Spotify):
 
         if start_folder:  # remove all folders before start_folder
             for folder in folders.copy():
-                if folder == start_folder:
+                if folder.lower().strip().startswith(start_folder):
                     break
                 del folders[folder]
 
@@ -394,15 +402,23 @@ if __name__ == "__main__":
     main = Syncify(verbose=True, auth=False)
     kwargs = {}
 
-    if len(sys.argv) <= 1:  # error, return
-        options = ', '.join(['update', 'refresh', 'differences', 'artwork', 'no_images', 
-                             'extract_local', 'extract_spotify', 'check', 'simplecheck'])
+    options = ', '.join(['update', 'refresh', 'differences', 'artwork', 'no_images', 
+                        'extract_local', 'extract_spotify', 'check', 'simplecheck', 'comment'])
+
+    if len(sys.argv) <= 1:  # no function given
         exit(f'Define run function. Options: {options}')
+    elif sys.argv[1] not in options:  # function name error
+        exit(f'Run function not recognised. Options: {options}')
     elif len(sys.argv) > 2:  # extract kwargs
-        try:
-            kwargs = {kwarg.split("=")[0]: eval(kwarg.split("=")[1]) for kwarg in sys.argv[2:]}
-        except NameError:
-            kwargs = {kwarg.split("=")[0]: kwarg.split("=")[1].split(",") for kwarg in sys.argv[2:]}
+        for kwarg in sys.argv[2:]:
+            kw = kwarg.split("=")[0]
+            try:
+                kwargs[kw] = eval(kwarg.split("=")[1])
+            except NameError:
+                if len(kwarg.split("=")[1].split(",")) == 1:
+                    kwargs[kw] = kwarg.split("=")[1]
+                else:
+                    kwargs[kw] = kwarg.split("=")[1].split(",")
 
     if sys.argv[1] == 'update':  # run functions for updating Spotify playlists with new songs
         main.auth(**{k: v for k, v in {**kwargs}.items() if k in main.auth.__code__.co_varnames})
@@ -429,12 +445,13 @@ if __name__ == "__main__":
         main.update_artwork(**{k: v for k, v in {**kwargs}.items() if k in main.update_artwork.__code__.co_varnames})
 
     elif sys.argv[1] == 'no_images':  # run functions to produce report on local songs with missing artwork
-        m3u = main.load_m3u()
-        main.no_images(m3u)
+        main.load_all_local()
+        report = main.no_images(main.all_metadata, kind='album')
+        main.save_json(report, 'no_images')
 
     elif sys.argv[1] == 'extract_local':  # run functions to extract all embedded images from locally stored songs
-        m3u = main.load_all_local()
-        main.extract_images(m3u, kind='local', foldername='local',
+        main.load_all_local()
+        main.extract_images(main.all_metadata, kind='local', foldername='local',
                             **{k: v for k, v in {**kwargs}.items() if k in main.extract_images.__code__.co_varnames})
 
     elif sys.argv[1] == 'extract_spotify':  # run functions to extract all artwork from locally listed Spotify URIs
@@ -450,12 +467,16 @@ if __name__ == "__main__":
                 'Maturity (Instrumentals)', 'Miss Saigon - OLC (Act 1)', 'Miss Saigon - OLC (Act 1)',
                 'Muppet Treasure Island', 'Real Ideas', 'Real OLD Ideas', 'Release', 'Remakes', 'Safe', "Safe '20",
                 'Safe (Extras)', 'Safe The Second', 'Safe The Second (Extras)', 'Z', 'Resting State']
-        main.get_missing_uri(import_uri=True, null_folders=null,
+        main.get_missing_uri(import_uri=True, null_folders=null, drop=False,
                              **{k: v for k, v in {**kwargs}.items() if k in main.get_missing_uri.__code__.co_varnames})
 
     elif sys.argv[1] == 'simplecheck':  # run functions to just check all already associated URIs with no search
         URIs = main.load_json(main.URI_FILENAME)
         main.auth(lines=False, verbose=True)
         main.check_uris_on_spotify(URIs, main.headers)
+    
+    elif sys.argv[1] == 'comment':
+        main.load_all_local()
+        main.uri_to_tag(main.all_metadata, main.verbose)
 
     print()

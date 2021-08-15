@@ -225,7 +225,7 @@ class Spotify(Authorise, Endpoints, Search):
 
             # get spotify URIs and determine which local playlist URIs are not on Spotify
             spotify_uris = [track['uri'] for track in spotify[name]['tracks']]
-            missing_songs = [song for song in songs if not song.get('uri') and song['uri'] not in spotify_uris]
+            missing_songs = [song for song in songs if not song.get('uri') and song.get('uri') not in spotify_uris]
 
             # update counts and list
             if len(extra_songs) != 0:
@@ -313,8 +313,13 @@ class Spotify(Authorise, Endpoints, Search):
             playlist_bar.update(1)
 
             if len(url_list) % pause == 0 or n == len(playlist_bar):  # once pause amount has been reached
-                text = f"\rCheck playlists and hit return to continue ({(n + 1) // 10}/{max_stops}) (enter 'q' to stop)"
-                stop = input(text).strip().lower() == 'q'
+                text = f"\rCheck playlists and hit return to continue ({(n + 1) // 10}/{max_stops}) (enter 'q' to stop) "
+                inp = input(text)
+                while self.OPEN_URL in inp:
+                    self.uri_from_link(authorisation, inp)
+                    inp = input(f"\n{text}")
+                
+                stop = inp.strip().lower() == 'q'
 
                 print('Deleting temporary playlists...', end='\r')
                 for url in url_list:  # delete playlists
