@@ -18,6 +18,21 @@ class Spotify(Authorise, Endpoints, Search):
         Endpoints.__init__(self)
         Search.__init__(self)
 
+        self.song_keys = {
+            0: 'C', 
+            1: 'C#/Db', 
+            2: 'D',
+            3: 'D#/Eb',
+            4: 'E',
+            5: 'F',
+            6: 'F#/Gb',
+            7: 'G',
+            8: 'G#/Ab',
+            9: 'A',
+            10: 'A#/Bb',
+            11: 'B'
+            }
+
     def get_playlists_metadata(self, authorisation, in_playlists=None, verbose=True):
         """
         Get metadata from all current user's playlists on Spotify.
@@ -61,8 +76,7 @@ class Spotify(Authorise, Endpoints, Search):
         tracks = self.get_tracks(uri_list, authorisation, verbose=verbose)
         return [self.extract_track_metadata(track) for track in tracks]
 
-    @staticmethod
-    def extract_track_metadata(track, position=None):
+    def extract_track_metadata(self, track, position=None, add_features=True):
         """
         Extract metadata for a given track from spotify API results.
         
@@ -81,17 +95,40 @@ class Spotify(Authorise, Endpoints, Search):
                 max_height = image['height']
 
         # create dict of metadata
-        song = {'position': position,
-                'title': track['name'],
-                'artist': ' '.join(artist['name'] for artist in track['artists']),
-                'album': track['album']['name'],
-                'track': int(track['track_number']),
-                'year': int(re.sub('[^0-9]', '', str(track['album']['release_date']))[:4]),
-                'length': track['duration_ms'] / 1000,
-                'image': image_url,
-                'image_height': max_height,
-                'uri': track['uri']}
-
+        song = {
+            'position': position,
+            'title': track['name'],
+            'artist': ' '.join(artist['name'] for artist in track['artists']),
+            'album': track['album']['name'],
+            'track': int(track['track_number']),
+            'year': re.sub('[^0-9]', '', str(track['album']['release_date']))[:4],
+            'length': track['duration_ms'] / 1000,
+            'image': image_url,
+            'image_height': max_height,
+            'uri': track['uri'],
+            'bpm': track.get('tempo'),
+            'key': self.song_keys.get(track.get('key'))
+        }
+        
+        if add_features:
+            features = {
+                'danceability': track.get('danceability'),
+                'energy': track.get('energy'),
+                'loudness': track.get('loudness'),
+                'mode': track.get('mode'),
+                'speechiness': track.get('speechiness'),
+                'acousticness': track.get('acousticness'),
+                'instrumentalness': track.get('instrumentalness'),
+                'liveness': track.get('liveness'),
+                'valence': track.get('valence')
+            }
+            song.update(features)
+            
+        try:
+            song['year'] = int(song['year'])
+        except ValueError:
+            pass
+        
         return song
 
     def update_uris(self, local, spotify, verbose=True):

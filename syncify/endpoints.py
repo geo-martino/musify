@@ -108,7 +108,8 @@ class Endpoints:
         :param verbose: bool, default=True. Persist progress bars if True.
         :return: list. List of information received for each track.
         """
-        url = f'{self.BASE_API}/tracks'  # tracks endpoint
+        metadata_url = f'{self.BASE_API}/tracks'  # tracks endpoint
+        features_url = f'{self.BASE_API}/audio-features'  # audio features endpoint
         results = []
 
         # reformat to ids only as required by API
@@ -125,7 +126,10 @@ class Endpoints:
         # format to comma-separated list of ids and get results
         for i in bar:
             id_string = ','.join([track for track in id_list[limit * i: limit * (i + 1)]])
-            results.extend(requests.get(url, params={'ids': id_string}, headers=authorisation).json()['tracks'])
+            metadata = requests.get(metadata_url, params={'ids': id_string}, headers=authorisation).json()['tracks']
+            features = requests.get(features_url, params={'ids': id_string}, headers=authorisation).json()['audio_features']
+            [m.update(f) for (m, f) in zip(metadata, features)]
+            results.extend(metadata)
 
         return results
 
@@ -169,7 +173,7 @@ class Endpoints:
 
         return playlists
 
-    def get_playlist_tracks(self, playlist, authorisation):
+    def get_playlist_tracks(self, playlist, authorisation, add_features=False):
         """
         Get all tracks from a given playlist.
         
@@ -184,10 +188,16 @@ class Endpoints:
         # set up for loop
         results = {'next': playlist}
         tracks = []
+        features_url = f'{self.BASE_API}/audio-features'  # audio features endpoint
 
         # get results and add to list
         while results['next']:
             results = requests.get(results['next'], headers=authorisation).json()
+
+            # reformat to ids only as required by API for getting audio features
+            id_string = ','.join([track['track']['id'] for track in results['items']])
+            features = requests.get(features_url, params={'ids': id_string}, headers=authorisation).json()['audio_features']
+            [m['track'].update(f) for (m, f) in zip(results['items'], features)]
             tracks.extend(results['items'])
 
         return tracks

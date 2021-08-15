@@ -286,15 +286,13 @@ class Syncify(Data, Spotify):
         self.save_json(missing, 'spotify_missing')
         return self
 
-    def update_artwork(self, album_prefix=None, replace=False, report=True):
+    def update_artwork(self, album_prefix=None, replace=False):
         """
         Update locally embedded images with associated URIs' artwork.
         
         :param album_prefix: str, default=None. If defined, only replace artwork for albums that start with this string.
         :param replace: bool, default=False. Replace locally embedded images if True. 
             Otherwise, only add images to files with no embedded image.
-        :param report: bool, default=True. Export 'no_images.json' file with information on which files had missing
-            images before running the program.
         :return: self.
         """
         # load metadata if not yet done
@@ -318,12 +316,9 @@ class Syncify(Data, Spotify):
         else:  # use all
             m3u_filtered = local_uri
 
-        if report:  # produce report on local songs with missing embedded images
-            no_images = self.no_images(m3u_filtered, 'uri')
-            self.save_json(no_images, 'no_images')
-
-        # embed images
+        # embed images and produce report listing which songs have been updated
         self.embed_images(m3u_filtered, spotify_uri, replace=replace)
+        self.save_json(m3u_filtered, 'updated_artwork')
 
         return self
 
@@ -396,14 +391,30 @@ class Syncify(Data, Spotify):
 
         return self
 
+    def spotify_to_tag(self, tags):
+        """
+        
+        """
+        # load metadata if not yet done
+        if self.all_metadata is None:
+            self.load_all_local()
+
+        uri_list = [track['uri'] for tracks in self.all_metadata.values() for track in tracks]
+        spotify_metadata = self.get_tracks_metadata(uri_list, self.headers, self.verbose)
+        uri_tags = {track['uri']: {k: v for k, v in track.items() if k in tags and k != 'uri'} for track in spotify_metadata}
+        if 'uri' in tags:
+            [tag_dict.update({'comment': uri}) for uri, tag_dict in uri_tags.items()]
+
+        self.update_tags(self.all_metadata, uri_tags)
+
 
 if __name__ == "__main__":
     # instantiate main object
     main = Syncify(verbose=True, auth=False)
     kwargs = {}
 
-    options = ', '.join(['update', 'refresh', 'differences', 'artwork', 'no_images', 
-                        'extract_local', 'extract_spotify', 'check', 'simplecheck', 'comment'])
+    options = ', '.join(['update', 'refresh', 'differences', 'artwork', 'no_artwork', 
+                        'extract_local', 'extract_spotify', 'check', 'simplecheck', 'update_tags'])
 
     if len(sys.argv) <= 1:  # no function given
         exit(f'Define run function. Options: {options}')
@@ -444,10 +455,10 @@ if __name__ == "__main__":
         main.auth(**{k: v for k, v in {**kwargs}.items() if k in main.auth.__code__.co_varnames})
         main.update_artwork(**{k: v for k, v in {**kwargs}.items() if k in main.update_artwork.__code__.co_varnames})
 
-    elif sys.argv[1] == 'no_images':  # run functions to produce report on local songs with missing artwork
+    elif sys.argv[1] == 'no_artwork':  # run functions to produce report on local songs with missing artwork
         main.load_all_local()
-        report = main.no_images(main.all_metadata, kind='album')
-        main.save_json(report, 'no_images')
+        report = main.no_artwork(main.all_metadata, kind='album')
+        main.save_json(report, 'no_artwork')
 
     elif sys.argv[1] == 'extract_local':  # run functions to extract all embedded images from locally stored songs
         main.load_all_local()
@@ -475,8 +486,10 @@ if __name__ == "__main__":
         main.auth(lines=False, verbose=True)
         main.check_uris_on_spotify(URIs, main.headers)
     
-    elif sys.argv[1] == 'comment':
+    elif sys.argv[1] == 'update_tags':
         main.load_all_local()
-        main.uri_to_tag(main.all_metadata, main.verbose)
+        tags = ['bpm', 'key', 'uri']
+        main.spotify_to_tag(tags)
+
 
     print()

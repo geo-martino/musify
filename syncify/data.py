@@ -28,28 +28,36 @@ class Data(Process):
                       'track': ['tracknumber'],
                       'genre': ['genre'],
                       'year': ['year', 'date'],
-                      'comment': ['comment']},
+                      'comment': ['comment'],
+                      'bpm': ['bpm'],
+                      'key': ['initialkey']},
             '.mp3': {'title': ['TIT2'],
                      'artist': ['TPE1', 'TPE2'],
                      'album': ['TALB'],
                      'track': ['TRCK'],
                      'genre': ['TCON'],
                      'year': ['TDRC', 'TYER', 'TDAT'],
-                     'comment': ['COMM']},
+                     'comment': ['COMM'],
+                     'bpm': ['TBPM'],
+                     'key': ['TKEY']},
             '.m4a': {'title': ['©nam'],
                      'artist': ['©ART', 'aART'],
                      'album': ['©alb'],
                      'track': ['trkn'],
                      'genre': ['©gen'],
                      'year': ['©day'],
-                     'comment': ['©cmt']},
+                     'comment': ['©cmt'],
+                     'bpm': ['tmpo'],
+                     'key': ['NULL']},
             '.wma': {'title': ['Title'],
                      'artist': ['Author', 'WM/AlbumArtist'],
                      'album': ['WM/AlbumTitle'],
                      'track': ['WM/TrackNumber'],
                      'genre': ['WM/Genre'],
                      'year': ['WM/Year'],
-                     'comment': ['Description']},
+                     'comment': ['Description'],
+                     'bpm': ['WM/BeatsPerMinute'],
+                     'key': ['WM/InitialKey']},
             'IMAGE': ['APIC', 'covr', 'WM/Picture']
         }
 
@@ -382,43 +390,47 @@ class Data(Process):
         return songs
 
     @staticmethod
-    def no_images(local, kind='uri'):
+    def no_artwork(local, kind='uri'):
         """
         Returns lists of dicts of song metadata for songs with no images embedded.
         
         :param local: dict. Metadata in form <URI>: <dict of metadata>
         :return: dict. <URI>: <metadata of song with no image>
         """
-        no_images = {}
+        no_artwork = {}
         if kind == 'uri':
             for uri, song in local.items():  # loop through all songs
-                # if no image, add to no_images dict
+                # if no image, add to no_artwork dict
                 if not song['has_image']:
-                    no_images[uri] = song
+                    no_artwork[uri] = song
         else:
             for item, songs in local.items():
-                no_images[item] = [song for song in songs if not song['has_image']]
-                if len(no_images[item]) == 0:
-                    del no_images[item]
+                no_artwork[item] = [song for song in songs if not song['has_image']]
+                if len(no_artwork[item]) == 0:
+                    del no_artwork[item]
 
-        return no_images
+        return no_artwork
 
-    def uri_to_tag(self, local, verbose=True):
+    def update_tags(self, local, tags, verbose=True):
         """
-        Adds URIs to each file's comment tags.
+        Adds update file's tags from dictionary.
         
         :param local: dict. Metadata in form <name>: <list of dicts of metadata with URIs>
+        :param tags: dict. Tags to be updated in form <URI>: <<tag name>: <tag value>>
         """
 
         # progress bar
         playlist_bar = tqdm(local.items(),
-                            desc='Saving URIs to file tags: ',
+                            desc='Updating file tags: ',
                             unit='albums',
                             leave=verbose,
                             file=sys.stdout)
 
         for album, songs in playlist_bar:
             for song in songs:  # iterate through each track in this album
+                if song.get('uri') not in tags:
+                    continue
+                
                 # extract file extension and confirm file type is listed in self.filetype_tags dict
                 path = song['path']
                 file_ext = splitext(path)[1].lower()
@@ -440,27 +452,26 @@ class Data(Process):
                         print('\nERROR: Could not load', path, end=' ', flush=True)
                         continue
 
-                # get URI, update loaded metadata for new tag
-                uri = song.get('uri')
-                if not uri:
-                    uri = ''
-                song['comment'] = uri
+                if 'comment' in tags[song['uri']]:  # clear all comment tags
+                    clear_comments = [tag for tag in file if self.filetype_tags[file_ext]['comment'][0] in tag]
+                    for tag in clear_comments:
+                        del file[tag]
 
-                # define file specific tag variable name and clean tags by clearing all tags of this type
-                tag_var = self.filetype_tags[file_ext]['comment'][0]
-                clear_tags = [tag for tag in file if tag_var in tag]
-                for tag in clear_tags:
-                    del file[tag]
+                for tag, value in tags[song['uri']].items():
+                    tag_var = self.filetype_tags[file_ext][tag][0]
+                    # file extension specific tag update and save updated file tags
+                    if file_ext == '.flac':
+                        file[tag_var] = str(value)
+                    elif file_ext == '.mp3':
+                        file[tag_var] = getattr(mutagen.id3, tag_var)(3, text=str(value))
+                    elif file_ext == '.m4a':
+                        if tag != 'bpm':
+                            file[tag_var] = [str(value)]
+                    elif file_ext == '.wma':
+                        file[tag_var] = mutagen.asf.ASFUnicodeAttribute(str(value))
                 
-                # file extension specific tag update and save updated file tags
-                if file_ext == '.flac':
-                    file[tag_var] = uri
-                elif file_ext == '.mp3':
-                    file[tag_var] = getattr(mutagen.id3, 'COMM')(3, text=uri)
-                elif file_ext == '.m4a':
-                    file[tag_var] = [uri]
-                elif file_ext == '.wma':
-                    file[tag_var] = mutagen.asf.ASFUnicodeAttribute(uri)
-                
-                file.save()
+                try:
+                    file.save()
+                except mutagen.MutagenError:
+                    print('\nERROR: Could not save', path, end=' ', flush=True)
 
