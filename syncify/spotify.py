@@ -85,7 +85,7 @@ class Spotify(Authorise, Endpoints, Search):
         :param position: int, default=None. Add position of track in playlist to returned metadata.
         :param add_features: bool, default=True. Add extra information on audio features.
         :return: dict. Metadata dict: position, title, artist, album, track, year, length, 
-            image_url, image_height, URI, BPM, song key, time signature, AUDIO_FEATURES.
+            image_url, image_height, URI, BPM, song key, time_signature, AUDIO_FEATURES.
         """
         # in case of no available information
         image_url = None
@@ -118,7 +118,7 @@ class Spotify(Authorise, Endpoints, Search):
             'uri': track['uri'],
             'bpm': track.get('tempo'),
             'key': key,
-            'time signature': track.get('time signature'),
+            'time_signature': track.get('time_signature'),
         }
         
         if add_features:

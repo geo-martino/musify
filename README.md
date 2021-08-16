@@ -169,7 +169,7 @@ python main.py missing_artwork
 *This function produces the following files in the data folder:*
 
 - **missing_artwork.json**: Songs with no embedded image by album.
-- **m3u_metadata.json**: Metadata of every song in each m3u playlist.
+- **all_metadata.json**: Metadata of every song in the library.
 
 ### Extract images
 
@@ -241,7 +241,8 @@ python main.py missing_tags tags=title,album,artist,track,year,genre
 *This function produces the following files in the data folder:*
 
 - **missing_tags.json**: Songs with missing tags by album.
-- **m3u_metadata.json**: Metadata of every song in each m3u playlist.
+- **all_metadata.json**: Metadata of every song in the library.
+- **all_spotify_metadata.json**: Spotify Metadata of associated URIs of every song in the library.
 
 ## Contributions/reporting issues
 

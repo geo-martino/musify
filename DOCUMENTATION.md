@@ -132,7 +132,7 @@ Loads metadata from all local songs to the object, exports this json to the data
 
 ### **load_all_spotify** *(self, ex_playlists=None, ex_folders=None, in_folders=None)*<a id="load_all_spotify"></a>
 
-Checks API authorisation, runs ***load_all_local*** and gets Spotify metadata from the URIs associated to all local files.
+Checks API authorisation, runs ***load_all_local***, gets Spotify metadata from the URIs associated to all local files and exports this json to the data folder with filename 'all_spotify_metadata.json'.
 
 > *Parameters*
 > - ex_playlists: list, default=None. Exclude songs with paths listed in playlists in this playlist folder. Excludes every song from playlists in the default playlist path if True. Ignored if None.
@@ -492,7 +492,7 @@ Extract metadata for a given track from spotify API results.
 > - position: int, default=None. Add position of track in playlist to returned metadata.
 > - add_features: bool, default=True. Add extra information on audio features.
 
-> *Return*: dict. Metadata dict: position, title, artist, album, track, year, length, image_url, image_height, URI, BPM, song key, time signature, AUDIO_FEATURES.
+> *Return*: dict. Metadata dict: position, title, artist, album, track, year, length, image_url, image_height, URI, BPM, song key, time_signature, AUDIO_FEATURES.
 
 
 ### **update_uris** *(self, local, spotify, verbose=True)*<a id="update_uris"></a>

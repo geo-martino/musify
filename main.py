@@ -180,6 +180,7 @@ class Syncify(Data, Spotify):
         # extract uri list and get spotify metadata
         uri_list = [track['uri'] for tracks in self.all_metadata.values() for track in tracks]
         self.all_spotify_metadata = self.get_tracks_metadata(uri_list, self.headers, self.verbose)
+        self.save_json(self.all_spotify_metadata, 'all_spotify_metadata')
 
         return self
 
@@ -419,9 +420,8 @@ class Syncify(Data, Spotify):
 
         :param tags: list. List of tags to update.
         """
-        
         # load metadata if not yet done
-        if self.all_metadata is None:
+        if self.all_spotify_metadata is None:
             self.load_all_spotify()
 
         spotify_metadata = {}
@@ -519,7 +519,7 @@ if __name__ == "__main__":
         main.save_json(report, 'missing_tags')
     
     elif sys.argv[1] == 'update_tags':
-        main.load_all_local()
+        main.load_all_spotify()
         tags = ['bpm', 'key', 'uri'] if 'tags' not in kwargs else kwargs.pop('tags')
         main.spotify_to_tag(tags, **{k: v for k, v in {**kwargs}.items() if k in main.spotify_to_tag.__code__.co_varnames})
 
