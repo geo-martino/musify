@@ -4,6 +4,7 @@
 	* [\_\_init\_\_](#init)
 	* [set_env](#set_env)
 	* [load_all_local](#load_all_local)
+	* [load_all_spotify](#load_all_spotify)
 	* [load_m3u](#load_m3u)
 	* [load_spotify](#load_spotify)
 	* [update_uri_from_spotify_playlists](#update_uri_from_spotify_playlists)
@@ -11,7 +12,9 @@
 	* [differences](#differences)
 	* [update_artwork](#update_artwork)
 	* [get_missing_uri](#get_missing_uri)
+	* [spotify_to_tag](#spotify_to_tag)
 - [**Data**](#data)
+	* [load_file](#load_file)
 	* [get_m3u_metadata](#get_m3u_metadata)
 	* [get_all_metadata](#get_all_metadata)
 	* [get_song_metadata](#get_song_metadata)
@@ -20,7 +23,8 @@
 	* [save_json](#save_json)
 	* [load_json](#load_json)
 	* [uri_as_key](#uri_as_key)
-	* [no_images](#no_images)
+	* [missing_tags](#missing_tags)
+	* [update_tags](#update_tags)
 - [**Process**](#process)
 	* [extract_images](#extract_images)
 	* [embed_images](#embed_images)
@@ -126,6 +130,18 @@ Loads metadata from all local songs to the object, exports this json to the data
 > *Return*: self.
 
 
+### **load_all_spotify** *(self, ex_playlists=None, ex_folders=None, in_folders=None)*<a id="load_all_spotify"></a>
+
+Checks API authorisation, runs ***load_all_local*** and gets Spotify metadata from the URIs associated to all local files.
+
+> *Parameters*
+> - ex_playlists: list, default=None. Exclude songs with paths listed in playlists in this playlist folder. Excludes every song from playlists in the default playlist path if True. Ignored if None.
+> - ex_folders: list, default=None. Exclude songs in these folders. Ignored if None.
+> - in_folders: list, default=None. Only include songs in these folders. Ignored if None.
+
+> *Return*: self.
+
+
 ### **load_m3u** *(self, in_playlists=None)*<a id="load_m3u"></a>
 
 Loads metadata from all local playlists to the object, exports this json to the data folder 
@@ -204,7 +220,15 @@ checking temporary playlists.
 > - start_folder: str, default=None. Start creation of temporary playlists from this folder.
 > - add_back: bool, default=False. Add back tracks which already have URIs on input. False returns only search results.
 
-> *Return*: self.        
+> *Return*: self.   
+
+
+### **spotify_to_tag** *(self, tags, refresh=False)*<a id="spotify_to_tag"></a>
+
+Updates local file tags with tags from Spotify metadata. Tag names for each file extension viewable in self.filetype_tags\[FILE_EXT\].keys()
+
+> *Parameters*
+> - tags: list. List of tags to update.
 
 
 [Back to top](#top)
@@ -221,6 +245,17 @@ Methods for loading, saving, and analysing local data.
 * [load_json](#load_json)
 * [uri_as_key](#uri_as_key)
 * [no_images](#no_images)
+
+
+### **load_file** *(self, song)*<a id="load_file"></a>
+
+Load local file using mutagen and extract file extension as string. Searches for case-insensitive path if file is not found from given path.
+
+> *Parameters*
+> - song: str or dict. A string of the song's path or a dict containing 'path' as key
+
+> *Return*: (object, str). Mutagen file object and file extension as string.
+
 
 ### **get_m3u_metadata** *(self, in_playlists=None, verbose=True)*<a id="get_m3u_metadata"></a>
 
@@ -306,14 +341,28 @@ Convert dict from {\<name\>: \<list of dicts of metadata\>} to {\<song URI\>: \<
 > *Return*: dict. {\<song URI\>: \<song metadata\>}
 
 
-### **no_images** *(local)*<a id="no_images"></a>
+### **missing_tags** *(local, tags=None, kind='uri', ignore=None)*<a id="no_images"></a>
 
-Returns lists of dicts of song metadata for songs with no images embedded.
+Returns lists of dicts of song metadata for songs with missing tags.
 
 > *Parameters*
-> - local: dict. Metadata in form {\<URI\>: \<dict of metadata\>}
+> - local: dict. Metadata in form <URI>: <dict of metadata>
+> - tags: list, default=None. List of tags to consider missing.
+> - ignore: list, default=None. List of albums of playlists to exclude in search.
 
-> *Return*: dict. {\<URI\>: \<metadata of song with no image\>}
+> *Return*: dict. {\<URI\>: \<metadata of song with missing tags\>} OR {\<album/playlist name\>: \<list of metadata of songs with missing tag\>}
+
+
+### **update_tags** *(self, local, tags, refresh=False, verbose=True)*<a id="update_tags"></a>
+
+Update file's tags from given dictionary of tags.
+
+> *Parameters*
+> - local: dict. Metadata in form {\<name\>: \<list of dicts of metadata with URIs\>}
+> - tags: dict. Tags to be updated in form {\<URI\>: {\<tag name\>: \<tag value\>}}
+> - refresh: bool, default=False. Destructively replace tags in each file.
+> - verbose: Persist progress bars if True.
+
 
 
 [Back to top](#top)
@@ -424,25 +473,26 @@ Get metadata from all current user's playlists on Spotify.
 
 ### **get_tracks_metadata** *(self, uri_list, authorisation, verbose=True)*<a id="get_tracks_metadata"></a>
 
-Get metadata from list given URIs
+Get metadata from list of given URIs
 
 > *Parameters*
 > - uri_list: list. List of URIs to get metadata for.
 > - authorisation: dict. Headers for authorisation.
 > - verbose: bool, default=True. Persist progress bars if True.
 
-> *Return*: list. Metadata for each track.
+> *Return*: dict. {\<song URI\>: \<song metadata\>}
 
 
-### **extract_track_metadata** *(track, position=None)*<a id="extract_track_metadata"></a>
+### **extract_track_metadata** *(track, position=None, add_features=True)*<a id="extract_track_metadata"></a>
 
 Extract metadata for a given track from spotify API results.
 
 > *Parameters*
 > - track: dict. Response from Spotify API.
 > - position: int, default=None. Add position of track in playlist to returned metadata.
+> - add_features: bool, default=True. Add extra information on audio features.
 
-> *Return*: dict. Metadata dict: position, title, artist, album, track, year, length, image_url, image_height, URI.
+> *Return*: dict. Metadata dict: position, title, artist, album, track, year, length, image_url, image_height, URI, BPM, song key, time signature, AUDIO_FEATURES.
 
 
 ### **update_uris** *(self, local, spotify, verbose=True)*<a id="update_uris"></a>

@@ -65,16 +65,17 @@ class Spotify(Authorise, Endpoints, Search):
 
     def get_tracks_metadata(self, uri_list, authorisation, verbose=True):
         """
-        Get metadata from list given URIs
+        Get metadata from list of given URIs
         
         :param uri_list: list. List of URIs to get metadata for.
         :param authorisation: dict. Headers for authorisation.
         :param verbose: bool, default=True. Persist progress bars if True.
-        :return: list. Metadata for each track.
+        :return: dict. <song URI>: <song metadata>
         """
         # request information on tracks from Spotify API and extract key metadata
         tracks = self.get_tracks(uri_list, authorisation, verbose=verbose)
-        return [self.extract_track_metadata(track) for track in tracks]
+        metadata = [self.extract_track_metadata(track) for track in tracks]
+        return {track['uri']: track for track in metadata}
 
     def extract_track_metadata(self, track, position=None, add_features=True):
         """
@@ -82,7 +83,9 @@ class Spotify(Authorise, Endpoints, Search):
         
         :param track: dict. Response from Spotify API.
         :param position: int, default=None. Add position of track in playlist to returned metadata.
-        :return: dict. Metadata dict: position, title, artist, album, track, year, length, image_url, image_height, URI.
+        :param add_features: bool, default=True. Add extra information on audio features.
+        :return: dict. Metadata dict: position, title, artist, album, track, year, length, 
+            image_url, image_height, URI, BPM, song key, time signature, AUDIO_FEATURES.
         """
         # in case of no available information
         image_url = None
@@ -93,6 +96,13 @@ class Spotify(Authorise, Endpoints, Search):
             if image['height'] > max_height:
                 image_url = image['url']
                 max_height = image['height']
+
+        # correctly formatted song key string
+        if '/' in self.song_keys.get(track.get('key')):
+            key = self.song_keys.get(track.get('key')).split('/')
+            key = f"{key[0]}{'m'*track.get('mode', 0)}/{key[1]}{'m'*track.get('mode', 0)}"
+        else:
+            key = f"{self.song_keys.get(track.get('key'))}{'m'*track.get('mode', 0)}"
 
         # create dict of metadata
         song = {
@@ -107,7 +117,8 @@ class Spotify(Authorise, Endpoints, Search):
             'image_height': max_height,
             'uri': track['uri'],
             'bpm': track.get('tempo'),
-            'key': self.song_keys.get(track.get('key'))
+            'key': key,
+            'time signature': track.get('time signature'),
         }
         
         if add_features:
@@ -115,7 +126,6 @@ class Spotify(Authorise, Endpoints, Search):
                 'danceability': track.get('danceability'),
                 'energy': track.get('energy'),
                 'loudness': track.get('loudness'),
-                'mode': track.get('mode'),
                 'speechiness': track.get('speechiness'),
                 'acousticness': track.get('acousticness'),
                 'instrumentalness': track.get('instrumentalness'),

@@ -19,8 +19,8 @@ generate_report:
 add_artwork:
 	@python main.py artwork
 
-no_images:
-	@python main.py no_images
+missing_artwork:
+	@python main.py missing_artwork
 
 extract_local_images:
 	@python main.py extract_local
@@ -33,3 +33,12 @@ check_uri:
 
 check_uri_simple:
 	@python main.py simplecheck
+
+missing_tags:
+	@python main.py missing_tags
+
+update_tags:
+	@python main.py update_tags
+
+replace_tags:
+	@python main.py update_tags refresh=True

@@ -32,23 +32,10 @@ class Process:
         if kind == 'local':  # if extracting images from local data
             for name, songs in bar:
                 for song in songs:
-                    path = song['path']
-                    try:  # load filepath and get file extension
-                        file = mutagen.File(path)
-                        file_ext = splitext(path)[1].lower()
-                    except mutagen.MutagenError:
-                        # check if given path is case-insensitive, replace with case-sensitive path
-                        for file_path in self.all_files:
-                            if file_path.lower() == path.lower():
-                                path = file_path
-                                break
-
-                        try:  # load case-sensitive path
-                            file = mutagen.File(path)
-                        except mutagen.MutagenError:  # give up
-                            if verbose:
-                                print('\nERROR: Could not load', path, end=' ', flush=True)
-                            continue
+                    # load file as mutagen object
+                    file_data, file_ext = self.load_file(song)
+                    if not file_data or not file_ext:
+                        continue
 
                     # define save path for this song image
                     save_path = splitext(song['path'].replace(self.MUSIC_PATH, '').lstrip(sep))[0]
@@ -60,18 +47,18 @@ class Process:
 
                     # extension specific processing                  
                     if file_ext == '.flac':
-                        if len(file.pictures) > 0:
-                            img = file.pictures[0].data
+                        if len(file_data.pictures) > 0:
+                            img = file_data.pictures[0].data
                     else:
                         for tag in tags:
-                            for file_tag in file:
+                            for file_tag in file_data:
                                 if tag in file_tag and not img:
                                     if '.mp3' in file_ext:
-                                        img = file[file_tag].data
+                                        img = file_data[file_tag].data
                                     elif '.m4a' in file_ext:
-                                        img = bytes(file[file_tag][0])
+                                        img = bytes(file_data[file_tag][0])
                                     elif '.wma' in file_ext:
-                                        img = file[file_tag][0].value
+                                        img = file_data[file_tag][0].value
                                     break
 
                     # if no image found, skip
@@ -147,22 +134,10 @@ class Process:
             if not replace and song['has_image']:
                 continue
 
-            path = song['path']
-            try:  # load filepath and get file extension
-                file = mutagen.File(path)
-                file_ext = splitext(path)[1].lower()
-            except mutagen.MutagenError:
-                # check if given path is case-insensitive, replace with case-sensitive path
-                for file_path in self.all_files:
-                    if file_path.lower() == path.lower():
-                        path = file_path
-                        break
-
-                try:  # load case-sensitive path
-                    file = mutagen.File(path)
-                except mutagen.MutagenError:  # give up
-                    print('\nERROR: Could not load', path, end=' ', flush=True)
-                    continue
+            # load file as mutagen object
+            file_data, file_ext = self.load_file(song)
+            if not file_data or not file_ext:
+                continue
 
             try:  # open image from link
                 albumart = urlopen(spotify[uri]['image'])
@@ -170,13 +145,13 @@ class Process:
                 continue
 
             # delete embedded images for .mp3 and .m4a files
-            for tag in dict(file.tags).copy():
+            for tag in dict(file_data.tags).copy():
                 if any([t in tag for t in ['APIC', 'covr']]):
-                    del file[tag]
+                    del file_data[tag]
 
             # file extension specific embedding
             if file_ext == '.mp3':
-                file['APIC'] = mutagen.id3.APIC(
+                file_data['APIC'] = mutagen.id3.APIC(
                     mime='image/jpeg',
                     type=mutagen.id3.PictureType.COVER_FRONT,
                     data=albumart.read()
@@ -188,10 +163,10 @@ class Process:
                 image.data = albumart.read()
 
                 # replace embedded image
-                file.clear_pictures()
-                file.add_picture(image)
+                file_data.clear_pictures()
+                file_data.add_picture(image)
             elif file_ext == '.m4a':
-                file["covr"] = [
+                file_data["covr"] = [
                     mutagen.mp4.MP4Cover(albumart.read(), imageformat=mutagen.mp4.MP4Cover.FORMAT_JPEG)
                 ]
             elif file_ext == '.wma':
@@ -200,7 +175,7 @@ class Process:
 
             # close link and save updated file tags
             albumart.close()
-            file.save()
+            file_data.save()
 
         print('\33[92m', f'Modified {i} files', '\33[0m', sep='')
 
@@ -368,7 +343,9 @@ class Process:
                     d['album'] = titlecase(song['album'].replace('"', "'"), callback=self.caps).strip()
 
                 # open file, extract file extension, and define tag names for this file type
-                file = mutagen.File(song['path'])
+                file_data, file_ext = self.load_file(path)
+                if not file_data or not file_ext:
+                    continue
                 ext = d['ext'].lower()
                 tags = self.filetype_tags[d.pop('ext').lower()]
                 changed = {}
@@ -377,26 +354,26 @@ class Process:
                     if tag:  # if tag found in filename
                         tag = tag.strip()  # strip whitespace
                         for tag_var in tags[name]:  # loop through possible tag type names for this file type
-                            # print(tag_var, file[tag_var], tag)
+                            # print(tag_var, file_data[tag_var], tag)
 
                             # if tag type name in this file's tags
-                            if tag_var in file and re.sub(r'[\\/:*?"<>|\-_]+', '', tag) not in re.sub(
-                                    r'[\\/:*?"<>|\-_]+', '', str(file[tag_var])):
+                            if tag_var in file_data and re.sub(r'[\\/:*?"<>|\-_]+', '', tag) not in re.sub(
+                                    r'[\\/:*?"<>|\-_]+', '', str(file_data[tag_var])):
                                 # store changed tags for this file
-                                changed[name] = file[tag_var]
+                                changed[name] = file_data[tag_var]
 
                                 # file type specific tag modification
                                 if ext == '.flac':
-                                    file[tag_var] = tag
+                                    file_data[tag_var] = tag
                                 elif ext == '.mp3':
-                                    file[tag_var] = getattr(mutagen.id3, tag_var)(3, tag)
+                                    file_data[tag_var] = getattr(mutagen.id3, tag_var)(3, tag)
                                 elif ext == '.m4a':
                                     if name == 'track':
-                                        file[tag_var] = [(int(tag), len(songs))]
+                                        file_data[tag_var] = [(int(tag), len(songs))]
                                     else:
-                                        file[tag_var] = [tag]
+                                        file_data[tag_var] = [tag]
                                 elif ext == '.wma':
-                                    file[tag_var] = mutagen.asf.ASFUnicodeAttribute(tag)
+                                    file_data[tag_var] = mutagen.asf.ASFUnicodeAttribute(tag)
 
                                 break
                 if changed:  # if a tag has been modified
@@ -432,5 +409,5 @@ class Process:
 
                     if not skip:  # save tags
                         print('\33[92;1m SAVED \33[0m')
-                        file.save()
+                        file_data.save()
                     print()

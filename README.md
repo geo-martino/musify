@@ -162,13 +162,13 @@ Embeds the largest image from Spotify for each associated URI to each song in yo
 **Report which files have missing embedded artwork** - Produce a report on which songs in your local library do not have embedded images.
 
 ```sh
-make no_images
-python main.py no_images
+make missing_artwork
+python main.py missing_artwork
 ```
 
 *This function produces the following files in the data folder:*
 
-- **no_images.json**: Songs with no embedded image by album.
+- **missing_artwork.json**: Songs with no embedded image by album.
 - **m3u_metadata.json**: Metadata of every song in each m3u playlist.
 
 ### Extract images
@@ -214,6 +214,34 @@ python main.py simplecheck
 - **search_not_found.json**: All songs not found during the search phase.
 - **search_added.json**: All songs added to each playlist.
 - **<URI_FILENAME>.json**: Creates/updates associated URIs in this json.
+
+### Update/replace tags for local files with Spotify metadata
+
+**Update missing tags only**
+```sh
+make update_tags
+python main.py update_tags tags=bpm,uri,key
+```
+
+**Replace all tags**
+```sh
+make replace_tags
+python main.py update_tags tags=bpm,uri,key replace=True
+```
+
+Updates the tags of local files with those from Spotify. Update only adds tags to missing fields. Replace destructively replaces current values. Define which tags to update by adding ```tags=title,album,artist``` to a python bash call. Default values listed. Adding ```uri``` will replace this files comments tag with the associated Spotify URI.
+
+**Report which files have missing tags** - Produce a report on which songs in your local library do not have values for certain tags.
+
+```sh
+make missing_tags
+python main.py missing_tags tags=title,album,artist,track,year,genre
+```
+
+*This function produces the following files in the data folder:*
+
+- **missing_tags.json**: Songs with missing tags by album.
+- **m3u_metadata.json**: Metadata of every song in each m3u playlist.
 
 ## Contributions/reporting issues
 

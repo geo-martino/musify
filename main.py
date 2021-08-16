@@ -109,6 +109,7 @@ class Syncify(Data, Spotify):
 
         # Metadata placeholders
         self.all_metadata = None
+        self.all_spotify_metadata = None
         self.m3u_metadata = None
         self.spotify_metadata = None
 
@@ -161,6 +162,27 @@ class Syncify(Data, Spotify):
 
         return self
 
+    def load_all_spotify(self, ex_playlists=None, ex_folders=None, in_folders=None):
+        """
+        Checks API authorisation and loads Spotify metadata for all local files to the object.
+
+        :param ex_playlists: list, default=None. Exclude songs with paths listed in playlists in this playlist folder.
+            Excludes every song from playlists in the default playlist path if True. Ignored if None.
+        :param ex_folders: list, default=None. Exclude songs in these folders. Ignored if None.
+        :param in_folders: list, default=None. Only include songs in these folders. Ignored if None.
+        """
+        # authorise
+        self.headers = self.auth(lines=False, verbose=True)
+
+        # load local metadata
+        self.load_all_local(ex_playlists=None, ex_folders=None, in_folders=None)
+
+        # extract uri list and get spotify metadata
+        uri_list = [track['uri'] for tracks in self.all_metadata.values() for track in tracks]
+        self.all_spotify_metadata = self.get_tracks_metadata(uri_list, self.headers, self.verbose)
+
+        return self
+
     def load_m3u(self, in_playlists=None):
         """
         Loads metadata from all local playlists to the object, exports this json to the data folder 
@@ -183,7 +205,7 @@ class Syncify(Data, Spotify):
             Only returns matching local playlist names if 'm3u'.
         :return: self.
         """
-        # authorise and get required playlist
+        # authorise and get required playlists
         self.headers = self.auth(lines=False, verbose=True)
         if in_playlists and 'm3u' in in_playlists:
             in_playlists = [splitext(playlist)[0] for playlist in os.listdir(self.PLAYLISTS_PATH)]
@@ -299,12 +321,11 @@ class Syncify(Data, Spotify):
         if self.all_metadata is None:
             self.load_all_local()
         
-        # get latest Spotify metadata for local files and reformat dict to <URI>: <metadata> format for each
+        # get latest Spotify metadata for local files
         local_uri = self.uri_as_key(self.all_metadata)
         if not replace:
             local_uri = {uri: track for uri, track in local_uri.items() if not track['has_image']}
-        spotify = self.get_tracks_metadata(list(local_uri.keys()), self.headers, verbose=self.verbose)
-        spotify_uri = {uri: metadata for uri, metadata in zip(list(local_uri.keys()), spotify)}
+        spotify_uri = self.get_tracks_metadata(list(local_uri.keys()), self.headers, verbose=self.verbose)
 
         if album_prefix:  # filter to only albums that start with album_prefix
             if isinstance(album_prefix, list):
@@ -391,21 +412,25 @@ class Syncify(Data, Spotify):
 
         return self
 
-    def spotify_to_tag(self, tags):
+    def spotify_to_tag(self, tags, refresh=False):
+        """
+        Updates local file tags with tags from Spotify metadata. 
+        Tag names for each file extension viewable in self.filetype_tags[FILE_EXT].keys()
+
+        :param tags: list. List of tags to update.
         """
         
-        """
         # load metadata if not yet done
         if self.all_metadata is None:
-            self.load_all_local()
+            self.load_all_spotify()
 
-        uri_list = [track['uri'] for tracks in self.all_metadata.values() for track in tracks]
-        spotify_metadata = self.get_tracks_metadata(uri_list, self.headers, self.verbose)
-        uri_tags = {track['uri']: {k: v for k, v in track.items() if k in tags and k != 'uri'} for track in spotify_metadata}
-        if 'uri' in tags:
-            [tag_dict.update({'comment': uri}) for uri, tag_dict in uri_tags.items()]
+        spotify_metadata = {}
+        for uri, track in self.all_spotify_metadata.items():
+            spotify_metadata[uri] = {k: v for k, v in track.items() if k in tags}
+            if 'uri' in spotify_metadata[uri]:
+                spotify_metadata[uri]['comment'] = spotify_metadata[uri].pop('uri')
 
-        self.update_tags(self.all_metadata, uri_tags)
+        self.update_tags(self.all_metadata, spotify_metadata, refresh, verbose=self.verbose)
 
 
 if __name__ == "__main__":
@@ -413,7 +438,7 @@ if __name__ == "__main__":
     main = Syncify(verbose=True, auth=False)
     kwargs = {}
 
-    options = ', '.join(['update', 'refresh', 'differences', 'artwork', 'no_artwork', 
+    options = ', '.join(['update', 'refresh', 'differences', 'artwork', 'missing_artwork', 'missing_tags', 
                         'extract_local', 'extract_spotify', 'check', 'simplecheck', 'update_tags'])
 
     if len(sys.argv) <= 1:  # no function given
@@ -455,10 +480,10 @@ if __name__ == "__main__":
         main.auth(**{k: v for k, v in {**kwargs}.items() if k in main.auth.__code__.co_varnames})
         main.update_artwork(**{k: v for k, v in {**kwargs}.items() if k in main.update_artwork.__code__.co_varnames})
 
-    elif sys.argv[1] == 'no_artwork':  # run functions to produce report on local songs with missing artwork
+    elif sys.argv[1] == 'missing_artwork':  # run functions to produce report on local songs with missing artwork
         main.load_all_local()
-        report = main.no_artwork(main.all_metadata, kind='album')
-        main.save_json(report, 'no_artwork')
+        report = main.missing_tags(main.all_metadata, tags=['has_image'], kind='album')
+        main.save_json(report, 'missing_artwork')
 
     elif sys.argv[1] == 'extract_local':  # run functions to extract all embedded images from locally stored songs
         main.load_all_local()
@@ -476,8 +501,8 @@ if __name__ == "__main__":
         null = ['_Covers', '_Piano', 'Backings', 'Backings NSFW', 'Final Fantasy VII - Piano Collections',
                 'Final Fantasy X - Piano Collections', 'Final Fantasy X-2 - Piano Collections',
                 'Maturity (Instrumentals)', 'Miss Saigon - OLC (Act 1)', 'Miss Saigon - OLC (Act 1)',
-                'Muppet Treasure Island', 'Real Ideas', 'Real OLD Ideas', 'Release', 'Remakes', 'Safe', "Safe '20",
-                'Safe (Extras)', 'Safe The Second', 'Safe The Second (Extras)', 'Z', 'Resting State']
+                'Muppet Treasure Island', 'Old Ideas', 'Real Ideas', 'Real OLD Ideas', 'Release', 'Remakes', 
+                'Safe', "Safe '20", 'Safe (Extras)', 'Safe The Second', 'Safe The Second (Extras)', 'Z', 'Resting State']
         main.get_missing_uri(import_uri=True, null_folders=null, drop=False,
                              **{k: v for k, v in {**kwargs}.items() if k in main.get_missing_uri.__code__.co_varnames})
 
@@ -485,11 +510,18 @@ if __name__ == "__main__":
         URIs = main.load_json(main.URI_FILENAME)
         main.auth(lines=False, verbose=True)
         main.check_uris_on_spotify(URIs, main.headers)
+
+    elif sys.argv[1] == 'missing_tags':  # run functions to produce report on local songs with missing tags
+        main.load_all_local()
+        tags = ['title', 'artist', 'album', 'track', 'year', 'genre'] if 'tags' not in kwargs else kwargs.pop('tags')
+        ignore =  ['Backings', 'Backings NSFW', 'Old Ideas', 'Real Ideas', 'Real OLD Ideas', 'Release', 'Remakes']
+        report = main.missing_tags(main.all_metadata, tags=tags, kind='album', ignore=ignore)
+        main.save_json(report, 'missing_tags')
     
     elif sys.argv[1] == 'update_tags':
         main.load_all_local()
-        tags = ['bpm', 'key', 'uri']
-        main.spotify_to_tag(tags)
+        tags = ['bpm', 'key', 'uri'] if 'tags' not in kwargs else kwargs.pop('tags')
+        main.spotify_to_tag(tags, **{k: v for k, v in {**kwargs}.items() if k in main.spotify_to_tag.__code__.co_varnames})
 
 
     print()
