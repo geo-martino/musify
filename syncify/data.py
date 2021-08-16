@@ -252,6 +252,12 @@ class Data(Process):
                     metadata[key] = file_data.get(tag, [mutagen.asf.ASFUnicodeAttribute(None)])[0].value
                 elif file_ext == '.m4a' and key == 'track':
                     metadata[key] = file_data.get(tag, [[None]])[0][0]
+                elif file_ext == '.mp3' and key == 'comment':
+                    metadata[key] = None
+                    for file_tag in file_data:
+                        if tag in file_tag:
+                            metadata[key] = file_data.get(file_tag, [None])[0]
+                            break
                 else:
                     metadata[key] = file_data.get(tag, [None])[0]
 
@@ -317,8 +323,9 @@ class Data(Process):
 
                 # check if filename in URI json file, add URI to song metadata if found
                 if filename.lower().strip() in album:
-                    i += 1
                     song['uri'] = album.get(filename.lower().strip())
+                    if song['uri']:
+                        i += 1
 
         print('\33[92m', f'Done. Imported {i} URIs', '\33[0m')
         return local
@@ -472,7 +479,7 @@ class Data(Process):
 
                 # loop through each tag for this song
                 for tag, value in tags[song['uri']].items():
-                    if not value:  # skip missing tags
+                    if not value or tag not in self.filetype_tags[file_ext]:  # skip missing tags
                         continue
                     
                     # get file type specific tag identifier, determine if exists, skip if not replacing
@@ -509,3 +516,22 @@ class Data(Process):
                 except mutagen.MutagenError:
                     print('\nERROR: Could not save', path, end=' ', flush=True)
 
+    def rebuild_uri_from_tag(self, local, tag='comment', filename='URIs'):
+        """
+        Build URI json file database with URIs tagged in local files. Replaces json file if found.
+
+        :param local: dict. Metadata in form <name>: <list of dicts of metadata>
+        :param tag: str, default='comment'. Type of tag containing URI.
+        :param filename: str, default='URIs'. Filename of file to export to in data path.
+        """
+        uri_dict = {}
+        for item, songs in local.items():
+            uri_dict[songs[0]['album']] = {}
+            for song in songs:
+                uri = song.get(tag) if str(song.get(tag)).strip().startswith("spotify:track:") else None
+                uri_dict[songs[0]['album']][splitext(basename(song['path']))[0].lower()] = uri
+
+        uri_dict = {k: {k: v for k, v in sorted(v.items(), key=lambda x: x[0].lower())} for k, v in sorted(uri_dict.items(), key=lambda x: x[0].lower())}
+
+        self.save_json(uri_dict, filename)
+        return uri_dict

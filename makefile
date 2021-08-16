@@ -42,3 +42,6 @@ update_tags:
 
 replace_tags:
 	@python main.py update_tags refresh=True
+
+rebuild_uri:
+	@python main.py rebuild_uri_from_tag

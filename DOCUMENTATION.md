@@ -25,6 +25,7 @@
 	* [uri_as_key](#uri_as_key)
 	* [missing_tags](#missing_tags)
 	* [update_tags](#update_tags)
+	* [rebuild_uri_from_tag](#rebuild_uri_from_tag)
 - [**Process**](#process)
 	* [extract_images](#extract_images)
 	* [embed_images](#embed_images)
@@ -363,7 +364,16 @@ Update file's tags from given dictionary of tags.
 > - refresh: bool, default=False. Destructively replace tags in each file.
 > - verbose: Persist progress bars if True.
 
+### **rebuild_uri_from_tag** *(self, local, tag='comment')*<a id="rebuild_uri_from_tag"></a>
 
+Rebuild stored URI json file database with URIs tagged in local files. Replaces json file if found.
+
+> *Parameters*
+> - local: dict. Metadata in form <name>: <list of dicts of metadata>
+> - tag: str, default='comment'. Type of tag containing URI.
+> - filename: str, default='URIs'. Filename of file to export to in data path.
+
+> *Return*: dict. {\<item\>: \[{\<filename\>: \<URI\>}\]}
 
 [Back to top](#top)
 ## *class* **Process**<a id="process"></a>

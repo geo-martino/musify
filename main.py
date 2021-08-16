@@ -1,5 +1,6 @@
 import ast
 import os
+import shutil
 import sys
 from os.path import join, dirname, exists, normpath, splitext, basename
 
@@ -439,7 +440,7 @@ if __name__ == "__main__":
     kwargs = {}
 
     options = ', '.join(['update', 'refresh', 'differences', 'artwork', 'missing_artwork', 'missing_tags', 
-                        'extract_local', 'extract_spotify', 'check', 'simplecheck', 'update_tags'])
+                        'extract_local', 'extract_spotify', 'check', 'simplecheck', 'update_tags', 'rebuild_uri'])
 
     if len(sys.argv) <= 1:  # no function given
         exit(f'Define run function. Options: {options}')
@@ -522,6 +523,13 @@ if __name__ == "__main__":
         main.load_all_spotify()
         tags = ['bpm', 'key', 'uri'] if 'tags' not in kwargs else kwargs.pop('tags')
         main.spotify_to_tag(tags, **{k: v for k, v in {**kwargs}.items() if k in main.spotify_to_tag.__code__.co_varnames})
+
+    elif sys.argv[1] == 'rebuild_uri':
+        main.load_all_local()
+        json_path = join(main.DATA_PATH, main.URI_FILENAME)
+        if exists(json_path + '.json'):
+            shutil.copy(json_path + '.json', json_path + '_OLD.json')
+        main.rebuild_uri_from_tag(main.all_metadata, 'comment', main.URI_FILENAME)
 
 
     print()

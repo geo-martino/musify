@@ -131,8 +131,8 @@ python main.py refresh
 - **search_found.json**: All songs found during the search phase.
 - **search_not_found.json**: All songs not found during the search phase.
 - **search_added.json**: All songs added to each playlist.
-- **<URI_FILENAME>.json**: Creates/updates associated URIs in this json.
-- **<URI_FILENAME>_updated.json**: List of songs that have had their associated URIs modified by manual user replacement.
+- **\<URI_FILENAME\>.json**: Creates/updates associated URIs in this json.
+- **\<URI_FILENAME\>_updated.json**: List of songs that have had their associated URIs modified by manual user replacement.
 - **spotify_extra.json**: Extra URIs in Spotify playlists not found in local playlists.
 - **spotify_missing.json**: Songs found in local playlists that do not have an associated URI to add to Spotify.
 
@@ -213,7 +213,7 @@ python main.py simplecheck
 - **search_found.json**: All songs found during the search phase.
 - **search_not_found.json**: All songs not found during the search phase.
 - **search_added.json**: All songs added to each playlist.
-- **<URI_FILENAME>.json**: Creates/updates associated URIs in this json.
+- **\<URI_FILENAME\>.json**: Creates/updates associated URIs in this json.
 
 ### Update/replace tags for local files with Spotify metadata
 
@@ -243,6 +243,21 @@ python main.py missing_tags tags=title,album,artist,track,year,genre
 - **missing_tags.json**: Songs with missing tags by album.
 - **all_metadata.json**: Metadata of every song in the library.
 - **all_spotify_metadata.json**: Spotify Metadata of associated URIs of every song in the library.
+
+### Rebuild URI json file from tagged URIs
+
+```sh
+make rebuild_uri
+python main.py rebuild_uri
+```
+
+Replace the json file of URIs with URIs embedded in tags of local files. Copies the original json file first with suffix '_OLD' before replacement
+
+*This function produces the following files in the data folder:*
+
+- **\<URI_FILENAME\>.json**: Songs with missing tags by album.
+- **\<URI_FILENAME\>_OLD.json**: Metadata of every song in the library.
+- **all_metadata.json**: Metadata of every song in the library.
 
 ## Contributions/reporting issues
 
