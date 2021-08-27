@@ -207,7 +207,7 @@ Update locally embedded images with associated URIs' artwork.
 > *Return*: self.
 
 
-### **get_missing_uri** *(self, ex_playlists=False, quick_load=False, import_uri=True, drop=True, null_folders=None, start_folder=None, add_back=False)*<a id="get_missing_uri"></a>
+### **get_missing_uri** *(self, ex_playlists=False, quick_load=False, import_uri=True, drop=True, null_folders=None, start_folder=None, add_back=False, tags=None)*<a id="get_missing_uri"></a>
 
 Search for URIs for files missing them and review through Spotify by means of creating and manually 
 checking temporary playlists.
@@ -220,16 +220,19 @@ checking temporary playlists.
 > - null_folders: list, default=None. Give all songs in these folders the URI value of 'None', hence skipping all searches and additions to playlist for these songs. Useful for albums not on Spotify.
 > - start_folder: str, default=None. Start creation of temporary playlists from this folder.
 > - add_back: bool, default=False. Add back tracks which already have URIs on input. False returns only search results.
+> - tags: list, default=None. List of tags to update for local song metadata.
 
 > *Return*: self.   
 
 
-### **spotify_to_tag** *(self, tags, refresh=False)*<a id="spotify_to_tag"></a>
+### **spotify_to_tag** *(self, tags, metadata=None, refresh=False)*<a id="spotify_to_tag"></a>
 
 Updates local file tags with tags from Spotify metadata. Tag names for each file extension viewable in self.filetype_tags\[FILE_EXT\].keys()
 
 > *Parameters*
 > - tags: list. List of tags to update.
+> - metadata: dict, default=None. Metadata of songs to update in form <URI>: <Spotify metadata>
+> - refresh: bool, default=False. Destructively replace tags in each file.
 
 
 [Back to top](#top)

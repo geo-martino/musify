@@ -242,6 +242,7 @@ class Data(Process):
             return
 
         # record given track position
+        uri = None
         metadata = {'position': position}
 
         # extract all tags found in filetype_tags for this filetype
@@ -269,6 +270,8 @@ class Data(Process):
                     # strip whitespaces from string based tags
                     if isinstance(metadata[key], str):
                         metadata[key] = metadata[key].strip()
+                        if metadata[key].startswith('spotify:track:'):
+                            uri = metadata[key]
                     break
 
         # convert track number tags to integers
@@ -293,14 +296,19 @@ class Data(Process):
         # add song path to metadata
         metadata['path'] = path
 
+        # add uri if found
+        if uri:
+            metadata['uri'] = uri
+
         return metadata
 
-    def import_uri(self, local, filename='URIs'):
+    def import_uri(self, local, filename='URIs', refresh=False):
         """
         Import URIs from stored json file. File must be in format <album name: <<title>: <URI>> format.
         
         :param local: dict. Metadata in form <name>: <dict of metadata incl. path, and album>
         :param filename: str, default='URIs'. Filename of file to import from data path.
+        :param refresh: bool, default=False. Overwrite current URIs with those imported from json file.
         :return: dict. Same dict as given with added keys for URIs if found.
         """
         # get path to file from data path, return if it doesn't exist
@@ -317,6 +325,10 @@ class Data(Process):
 
         for playlist in local.values():
             for song in playlist:  # loop through each song in each playlist
+                # skip songs with URI when refresh disabled
+                if 'uri' in song and not refresh:
+                    continue
+
                 # get filename and album name
                 filename = splitext(basename(song['path']))[0]
                 album = {k.lower().strip(): v for k, v in uri.get(song.get('album'), {}).items()}

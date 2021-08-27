@@ -145,7 +145,7 @@ class Syncify(Data, Spotify):
         # return dict of updated variables
         return {var: env[var] for var in env_vars if var in self.__dict__ and getattr(self, var)}
 
-    def load_all_local(self, ex_playlists=None, ex_folders=None, in_folders=None):
+    def load_all_local(self, ex_playlists=None, ex_folders=None, in_folders=None, refresh=False):
         """
         Loads metadata from all local songs to the object, exports this json to the data folder 
         with filename 'all_metadata.json', and imports URIs from user-defined URIs.json file.
@@ -154,12 +154,13 @@ class Syncify(Data, Spotify):
             Excludes every song from playlists in the default playlist path if True. Ignored if None.
         :param ex_folders: list, default=None. Exclude songs in these folders. Ignored if None.
         :param in_folders: list, default=None. Only include songs in these folders. Ignored if None.
+        :param refresh: bool, default=False. Overwrite current URIs with those imported from json file.
         :return: self.
         """
         all_pl = self.get_all_metadata(ex_playlists=ex_playlists, ex_folders=ex_folders,
                                        in_folders=in_folders, verbose=self.verbose)
         self.save_json(all_pl, 'all_metadata')
-        self.all_metadata = self.import_uri(all_pl, self.URI_FILENAME)
+        self.all_metadata = self.import_uri(all_pl, self.URI_FILENAME, refresh)
 
         return self
 
@@ -346,7 +347,7 @@ class Syncify(Data, Spotify):
         return self
 
     def get_missing_uri(self, ex_playlists=False, quick_load=False, import_uri=True, drop=True, null_folders=None,
-                        start_folder=None, add_back=False):
+                        start_folder=None, add_back=False, tags=None):
         """
         Search for URIs for files missing them and review through Spotify by means of creating and manually 
         checking temporary playlists.
@@ -362,17 +363,18 @@ class Syncify(Data, Spotify):
         :param start_folder: str, default=None. Start creation of temporary playlists from folder starting with this string.
         :param add_back: bool, default=False. Add back tracks which already have URIs on input. 
             False returns only search results.
+        :param tags: list, default=None. List of tags to update for local song metadata.
         :return: self.        
         """
         if quick_load:  # load from last search
             folders = self.load_json('search_found')
-        elif self.all_metadata is None:  # load metadata if not yet done
-            folders = self.get_all_metadata(ex_playlists=ex_playlists, verbose=False)
         else:
+            if self.all_metadata is None:  # load metadata if not yet done
+                self.all_metadata = self.get_all_metadata(ex_playlists=ex_playlists, verbose=False)
             folders = self.all_metadata
 
         if import_uri:  # import locally stored URIs
-            folders = self.import_uri(folders, self.URI_FILENAME)
+            folders = self.import_uri(folders, self.URI_FILENAME, refresh=True)
             if drop:  # drop files with no URIs
                 folders = {folder: [track for track in tracks if 'uri' in track]
                            for folder, tracks in folders.items()}
@@ -390,7 +392,7 @@ class Syncify(Data, Spotify):
                 del folders[folder]
 
         self.auth(lines=False, verbose=True)
-
+        
         if quick_load:  # set variables for quick_load
             found = folders
             not_found = self.load_json('search_not_found')
@@ -412,26 +414,37 @@ class Syncify(Data, Spotify):
         # begin creation of temporary playlists and check
         self.check_uris_on_spotify(found, self.headers, self.URI_FILENAME, verbose=self.verbose)
 
+        if tags and found:
+            # import new uris, get spotify metadata, and update tags of songs
+            found = self.import_uri(found, self.URI_FILENAME, refresh=True)
+            uri_list = [song['uri'] for songs in found.values() for song in songs]
+            spotify_metadata = self.get_tracks_metadata(uri_list, self.headers)
+            self.spotify_to_tag(tags, spotify_metadata)
+
         return self
 
-    def spotify_to_tag(self, tags, refresh=False):
+    def spotify_to_tag(self, tags, metadata=None, refresh=False):
         """
         Updates local file tags with tags from Spotify metadata. 
         Tag names for each file extension viewable in self.filetype_tags[FILE_EXT].keys()
 
         :param tags: list. List of tags to update.
+        :param metadata: dict, default=None. Metadata of songs to update in form <URI>: <Spotify metadata>
+        :param refresh: bool, default=False. Destructively replace tags in each file.
         """
-        # load metadata if not yet done
-        if self.all_spotify_metadata is None:
-            self.load_all_spotify()
+        if not metadata:
+            # load metadata if not yet done
+            if self.all_spotify_metadata is None:
+                self.load_all_spotify()
+            metadata = self.all_spotify_metadata
+        
+        reduced_metadata = {}
+        for uri, track in metadata.items():
+            reduced_metadata[uri] = {k: v for k, v in track.items() if k in tags}
+            if 'uri' in reduced_metadata[uri]:
+                reduced_metadata[uri]['comment'] = reduced_metadata[uri].pop('uri')
 
-        spotify_metadata = {}
-        for uri, track in self.all_spotify_metadata.items():
-            spotify_metadata[uri] = {k: v for k, v in track.items() if k in tags}
-            if 'uri' in spotify_metadata[uri]:
-                spotify_metadata[uri]['comment'] = spotify_metadata[uri].pop('uri')
-
-        self.update_tags(self.all_metadata, spotify_metadata, refresh, verbose=self.verbose)
+        self.update_tags(self.all_metadata, reduced_metadata, refresh, verbose=self.verbose)
 
 
 if __name__ == "__main__":
@@ -504,7 +517,8 @@ if __name__ == "__main__":
                 'Maturity (Instrumentals)', 'Miss Saigon - OLC (Act 1)', 'Miss Saigon - OLC (Act 1)',
                 'Muppet Treasure Island', 'Old Ideas', 'Real Ideas', 'Real OLD Ideas', 'Release', 'Remakes', 
                 'Safe', "Safe '20", 'Safe (Extras)', 'Safe The Second', 'Safe The Second (Extras)', 'Z', 'Resting State']
-        main.get_missing_uri(import_uri=True, null_folders=null, drop=False,
+        tags = ['bpm', 'key', 'uri'] if 'tags' not in kwargs else kwargs.pop('tags')
+        main.get_missing_uri(import_uri=True, null_folders=null, drop=False, tags=tags,
                              **{k: v for k, v in {**kwargs}.items() if k in main.get_missing_uri.__code__.co_varnames})
 
     elif sys.argv[1] == 'simplecheck':  # run functions to just check all already associated URIs with no search
