@@ -225,13 +225,14 @@ checking temporary playlists.
 > *Return*: self.   
 
 
-### **spotify_to_tag** *(self, tags, metadata=None, refresh=False)*<a id="spotify_to_tag"></a>
+### **spotify_to_tag** *(self, tags, metadata=None, reduce=True, refresh=False)*<a id="spotify_to_tag"></a>
 
 Updates local file tags with tags from Spotify metadata. Tag names for each file extension viewable in self.filetype_tags\[FILE_EXT\].keys()
 
 > *Parameters*
 > - tags: list. List of tags to update.
 > - metadata: dict, default=None. Metadata of songs to update in form <URI>: <Spotify metadata>
+> - reduce: bool, default=True. Reduce the list of songs to update to only those with missing tags.
 > - refresh: bool, default=False. Destructively replace tags in each file.
 
 
@@ -352,6 +353,7 @@ Returns lists of dicts of song metadata for songs with missing tags.
 > *Parameters*
 > - local: dict. Metadata in form <URI>: <dict of metadata>
 > - tags: list, default=None. List of tags to consider missing.
+> - kind: str, default='uri'. Kind of dict fed to function through local - <album>: <dict of metadata> OR <URI>: <dict of metadata>
 > - ignore: list, default=None. List of albums of playlists to exclude in search.
 
 > *Return*: dict. {\<URI\>: \<metadata of song with missing tags\>} OR {\<album/playlist name\>: \<list of metadata of songs with missing tag\>}
@@ -362,7 +364,7 @@ Returns lists of dicts of song metadata for songs with missing tags.
 Update file's tags from given dictionary of tags.
 
 > *Parameters*
-> - local: dict. Metadata in form {\<name\>: \<list of dicts of metadata with URIs\>}
+> - local: dict. Metadata in form {\<URI\>: \<dict of local song metadata\>}
 > - tags: dict. Tags to be updated in form {\<URI\>: {\<tag name\>: \<tag value\>}}
 > - refresh: bool, default=False. Destructively replace tags in each file.
 > - verbose: Persist progress bars if True.

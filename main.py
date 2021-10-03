@@ -180,7 +180,7 @@ class Syncify(Data, Spotify):
         self.load_all_local(ex_playlists=None, ex_folders=None, in_folders=None)
 
         # extract uri list and get spotify metadata
-        uri_list = [track['uri'] for tracks in self.all_metadata.values() for track in tracks]
+        uri_list = [track['uri'] for tracks in self.all_metadata.values() for track in tracks if 'uri' in track]
         self.all_spotify_metadata = self.get_tracks_metadata(uri_list, self.headers, self.verbose)
         self.save_json(self.all_spotify_metadata, 'all_spotify_metadata')
 
@@ -423,28 +423,42 @@ class Syncify(Data, Spotify):
 
         return self
 
-    def spotify_to_tag(self, tags, metadata=None, refresh=False):
+    def spotify_to_tag(self, tags, metadata=None, reduce=True, refresh=False):
         """
-        Updates local file tags with tags from Spotify metadata. 
+        Updates local file tags with tags from Spotify metadata.
         Tag names for each file extension viewable in self.filetype_tags[FILE_EXT].keys()
 
         :param tags: list. List of tags to update.
         :param metadata: dict, default=None. Metadata of songs to update in form <URI>: <Spotify metadata>
+        :param reduce: bool, default=True. Reduce the list of songs to update to only those with missing tags.
         :param refresh: bool, default=False. Destructively replace tags in each file.
         """
-        if not metadata:
-            # load metadata if not yet done
-            if self.all_spotify_metadata is None:
-                self.load_all_spotify()
-            metadata = self.all_spotify_metadata
-        
-        reduced_metadata = {}
-        for uri, track in metadata.items():
-            reduced_metadata[uri] = {k: v for k, v in track.items() if k in tags}
-            if 'uri' in reduced_metadata[uri]:
-                reduced_metadata[uri]['comment'] = reduced_metadata[uri].pop('uri')
+        # load metadata if not yet done
+        if self.all_metadata is None:
+            self.load_all_local()
 
-        self.update_tags(self.all_metadata, reduced_metadata, refresh, verbose=self.verbose)
+        get_tags = {}
+        if reduce:
+            for folder, songs in self.all_metadata.items():
+                for song in songs:
+                    if not ('.m4a' in song['path'] and any([t in tags for t in ['bpm', 'key']])):
+                        if any([song[tag] is None and song['uri'] for tag in tags if tag in song]):
+                            get_tags[song['uri']] = song
+        else:
+            get_tags = self.uri_as_key(self.all_metadata)
+        
+        if not get_tags:
+            return
+        
+        self.auth(lines=False, verbose=True)
+        metadata = self.get_tracks_metadata(get_tags.keys(), self.headers, verbose=self.verbose)
+        
+        for uri, track in metadata.items():
+            metadata[uri] = {k: v for k, v in track.items() if k in tags}
+            if 'uri' in get_tags[uri]:
+                metadata[uri]['comment'] = get_tags[uri].pop('uri')
+
+        self.update_tags(get_tags, metadata, refresh, verbose=self.verbose)
 
 
 if __name__ == "__main__":
@@ -469,7 +483,8 @@ if __name__ == "__main__":
                     kwargs[kw] = kwarg.split("=")[1]
                 else:
                     kwargs[kw] = kwarg.split("=")[1].split(",")
-
+    
+    ### UPDATE NOT CURRENTLY WORKING, USE REFRESH INSTEAD ###
     if sys.argv[1] == 'update':  # run functions for updating Spotify playlists with new songs
         main.auth(**{k: v for k, v in {**kwargs}.items() if k in main.auth.__code__.co_varnames})
         main.update_uri_from_spotify_playlists(
@@ -534,7 +549,7 @@ if __name__ == "__main__":
         main.save_json(report, 'missing_tags')
     
     elif sys.argv[1] == 'update_tags':
-        main.load_all_spotify()
+        # main.load_all_spotify()
         tags = ['bpm', 'key', 'uri'] if 'tags' not in kwargs else kwargs.pop('tags')
         main.spotify_to_tag(tags, **{k: v for k, v in {**kwargs}.items() if k in main.spotify_to_tag.__code__.co_varnames})
 

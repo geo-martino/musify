@@ -8,6 +8,8 @@ Supports cross platform for all features apart from data folder storage. If you 
 
 I developed this program for my own use so I can share my local playlists with friends online. In the process however, the program branched out to a package that now helps me manage other aspects of my library through Spotify including tagging and embedded images. I am planning on implementing more features in the future, but if there's something you would like to see added please do let me know! I'm hoping to make it as general-use as possible, so any ideas or contributions you have will be greatly appreciated!
 
+> Currently, this program only supports .mp3, .flac, .wma, and .m4a files. .m4a files are not fully supported by the update tag function as they cannot store tempo or key tags.
+
 The package is completely open-source and reproducible. Use as you like, but be sure to credit your sources! More information on each function can be found in the [documentation](https://github.com/jor-mar/syncify/blob/master/DOCUMENTATION.md).
 
 ## First time run
@@ -106,6 +108,7 @@ The following commands cover the main functions of the package through the comma
 Each function is listed as a make function (if installed) and Python command. You need only use one. Ensure you are in the root directory of the package when running these functions.
 
 ### Update Spotify playlists
+Update function is still in production, please use Refresh instead
 
 ```sh
 make update_playlists
@@ -217,6 +220,8 @@ python main.py simplecheck
 
 ### Update/replace tags for local files with Spotify metadata
 
+> WARNING: The following functions do not work for .m4a files if you try to update bpm or key tags as they cannot store tempo or key tags. The function will skip any .m4a files if these tags are included.
+
 **Update missing tags only**
 ```sh
 make update_tags
@@ -230,6 +235,8 @@ python main.py update_tags tags=bpm,uri,key replace=True
 ```
 
 Updates the tags of local files with those from Spotify. Update only adds tags to missing fields. Replace destructively replaces current values. Define which tags to update by adding ```tags=title,album,artist``` to a python bash call. Default values listed. Adding ```uri``` will replace this files comments tag with the associated Spotify URI.
+
+
 
 **Report which files have missing tags** - Produce a report on which songs in your local library do not have values for certain tags.
 

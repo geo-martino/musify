@@ -433,8 +433,10 @@ class Data(Process):
         """
         Returns lists of dicts of song metadata for songs with missing tags.
         
-        :param local: dict. Metadata in form <URI>: <dict of metadata>
+        :param local: dict. Metadata in form <key>: <dict of metadata>
         :param tags: list, default=None. List of tags to consider missing.
+        :param kind: str, default='uri'. Kind of dict fed to function through local 
+            - <album>: <dict of metadata> OR <URI>: <dict of metadata>
         :param ignore: list, default=None. List of albums of playlists to exclude in search.
         :return: dict. <URI>: <metadata of song with missing tags> 
             OR <album/playlist name>: <list of metadata of songs with missing tag>
@@ -466,7 +468,7 @@ class Data(Process):
         """
         Update file's tags from given dictionary of tags.
         
-        :param local: dict. Metadata in form <name>: <list of dicts of metadata with URIs>
+        :param local: dict. Metadata in form <URI>: <dict of local song metadata>
         :param tags: dict. Tags to be updated in form <URI>: <<tag name>: <tag value>>
         :param refresh: bool, default=False. Destructively replace tags in each file.
         :param verbose: Persist progress bars if True.
@@ -479,54 +481,50 @@ class Data(Process):
                             leave=verbose,
                             file=sys.stdout)
 
-        for album, songs in playlist_bar:
-            for song in songs:  # iterate through each track in this album
-                if song.get('uri') not in tags:
+        for uri, song in playlist_bar:        
+            # load file as mutagen object
+            file_data, file_ext = self.load_file(song)
+            if not file_data or not file_ext:
+                continue
+
+            # loop through each tag for this song
+            for tag, value in tags[uri].items():
+                if not value or tag not in self.filetype_tags[file_ext]:  # skip missing tags
                     continue
                 
-                # load file as mutagen object
-                file_data, file_ext = self.load_file(song)
-                if not file_data or not file_ext:
+                # get file type specific tag identifier, determine if exists, skip if not replacing
+                tag_var = self.filetype_tags[file_ext][tag]
+                if not refresh and tag != 'comment' and any(t in file_data for t in tag_var):
                     continue
-
-                # loop through each tag for this song
-                for tag, value in tags[song['uri']].items():
-                    if not value or tag not in self.filetype_tags[file_ext]:  # skip missing tags
-                        continue
-                    
-                    # get file type specific tag identifier, determine if exists, skip if not replacing
-                    tag_var = self.filetype_tags[file_ext][tag]
-                    if not refresh and tag != 'comment' and any(t in file_data for t in tag_var):
-                        continue
-                    
-                    # clear up tags
-                    if any(t in tag for t in ['year', 'comment']):
-                        clear = []
-
-                        # produce list of tags to be deleted
-                        for base_t in tag_var:
-                            for file_t in file_data:
-                                if base_t in file_t:
-                                    clear.append(file_t)
-                        for file_t in clear:  # delete tag
-                            del file_data[file_t]
-
-                    tag_var = tag_var[0]
-                    # file extension specific tag update and save updated file tags
-                    if file_ext == '.flac':
-                        file_data[tag_var] = str(value)
-                    elif file_ext == '.mp3':
-                        file_data[tag_var] = getattr(mutagen.id3, tag_var)(3, text=str(value))
-                    elif file_ext == '.m4a':
-                        if tag != 'bpm':
-                            file_data[tag_var] = [str(value)]
-                    elif file_ext == '.wma':
-                        file_data[tag_var] = mutagen.asf.ASFUnicodeAttribute(str(value))
                 
-                try:  # try to save tags, skip if error and display path
-                    file_data.save()
-                except mutagen.MutagenError:
-                    print('\nERROR: Could not save', path, end=' ', flush=True)
+                # clear up tags
+                if any(t in tag for t in ['year', 'comment']):
+                    clear = []
+
+                    # produce list of tags to be deleted
+                    for base_t in tag_var:
+                        for file_t in file_data:
+                            if base_t in file_t:
+                                clear.append(file_t)
+                    for file_t in clear:  # delete tag
+                        del file_data[file_t]
+
+                tag_var = tag_var[0]
+                # file extension specific tag update and save updated file tags
+                if file_ext == '.flac':
+                    file_data[tag_var] = str(value)
+                elif file_ext == '.mp3':
+                    file_data[tag_var] = getattr(mutagen.id3, tag_var)(3, text=str(value))
+                elif file_ext == '.m4a':
+                    if tag != 'bpm':
+                        file_data[tag_var] = [str(value)]
+                elif file_ext == '.wma':
+                    file_data[tag_var] = mutagen.asf.ASFUnicodeAttribute(str(value))
+            
+            try:  # try to save tags, skip if error and display path
+                file_data.save()
+            except mutagen.MutagenError:
+                print('\nERROR: Could not save', path, end=' ', flush=True)
 
     def rebuild_uri_from_tag(self, local, tag='comment', filename='URIs'):
         """
