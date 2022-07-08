@@ -270,7 +270,7 @@ class Data(Process):
                     # strip whitespaces from string based tags
                     if isinstance(metadata[key], str):
                         metadata[key] = metadata[key].strip()
-                        if metadata[key].startswith('spotify:track:'):
+                        if metadata[key].startswith('spotify:track:') and len(metadata[key]) >= 36:
                             uri = metadata[key]
                     break
 
@@ -299,6 +299,7 @@ class Data(Process):
         # add uri if found
         if uri:
             metadata['uri'] = uri
+
 
         return metadata
 

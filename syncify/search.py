@@ -210,18 +210,18 @@ class Search:
 
         # remove punctuation, strings in parentheses, feat. artists, some unnecessary words
         # make lower case, strip whitespace
-        if 'title' in song:
+        if 'title' in song and title is not None:
             title = re.sub("[\(\[].*?[\)\]]", "", title).replace('part ', ' ').replace('the ', ' ')
             title = title.lower().replace('featuring', '').split('feat.')[0].split('ft.')[0].split(' / ')[0]
             title = re.sub("[^A-Za-z0-9']+", ' ', title).strip()
 
-        if 'artist' in song:
+        if 'artist' in song and artist is not None:
             artist = re.sub("[\(\[].*?[\)\]]", "", artist).replace('the ', ' ')
             artist = artist.lower().replace(' featuring', '').split(' feat.')[0].split(' ft.')[0]
             artist = artist.split('&')[0].split(' and ')[0].split(' vs')[0]
             artist = re.sub("[^A-Za-z0-9']+", ' ', artist).strip()
 
-        if 'album' in song:
+        if 'album' in song and album is not None:
             album = album.split('-')[0].lower().replace('ep', '')
             album = re.sub("[\(\[].*?[\)\]]", "", album).replace('the ', ' ')
             album = re.sub("[^A-Za-z0-9']+", ' ', album).strip()

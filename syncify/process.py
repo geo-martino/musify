@@ -7,10 +7,9 @@ from urllib.error import URLError
 from urllib.request import urlopen
 
 import mutagen
-from PIL import Image
+import image
 from titlecase import titlecase
 from tqdm.auto import tqdm
-
 
 class Process:
 
@@ -70,7 +69,7 @@ class Process:
                         os.makedirs(split(save_path)[0])
 
                     # load image
-                    img = Image.open(BytesIO(img))
+                    img = image.open(BytesIO(img))
 
                     # determine embedded image file type
                     if 'png' in img.format.lower():
@@ -94,7 +93,7 @@ class Process:
                 name = re.sub(r'[\\/*?:"<>|]', '', name)
                 for song in songs:
                     try:  # open image from link
-                        img = Image.open(BytesIO(urlopen(song['image']).read()))
+                        img = image.open(BytesIO(urlopen(song['image']).read()))
                     except URLError:
                         continue
 

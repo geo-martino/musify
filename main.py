@@ -441,6 +441,8 @@ class Syncify(Data, Spotify):
         if reduce:
             for folder, songs in self.all_metadata.items():
                 for song in songs:
+                    if not 'uri' in song:
+                        continue
                     if not ('.m4a' in song['path'] and any([t in tags for t in ['bpm', 'key']])):
                         if any([song[tag] is None and song['uri'] for tag in tags if tag in song]):
                             get_tags[song['uri']] = song
