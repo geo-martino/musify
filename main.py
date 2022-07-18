@@ -1,566 +1,431 @@
-import ast
+import argparse
+from ast import literal_eval
+import json
 import os
-import shutil
-import sys
-from os.path import join, dirname, exists, normpath, splitext, basename
+import traceback
+from datetime import datetime as dt
+from os.path import basename, dirname
+from time import perf_counter
 
 from dotenv import load_dotenv
 
-from syncify.data import Data
-from syncify.spotify import Spotify
+# load stored environment variables from .env
+load_dotenv()
+
+from local.io import LocalIO
+from spotify.spotify import Spotify
+from utils.authorise import AUTH_ARGS_USER as AUTH_ARGS
+from utils.authorise import ApiAuthoriser
+from utils.environment import Environment
+from utils.io import IO
+from utils.report import Report
 
 
-class Syncify(Data, Spotify):
+class Syncify(Environment, ApiAuthoriser, IO, Report, LocalIO, Spotify):
+    def __init__(self, verbose: bool=True, auth: bool=True, dry_run: bool=False):
+        self._verbose = verbose
+        self._dry_run = dry_run
+        self._start_time = perf_counter()  # for measURIng total runtime
+        self._start_time_filename = dt.strftime(dt.now(), '%Y-%m-%d_%H.%M.%S')
 
-    def __init__(self, base_api=None, base_auth=None, open_url=None,
-                 c_id=None, c_secret=None, music_path=None, playlists=None, 
-                 win_path=None, mac_path=None, lin_path=None,
-                 data=None, uri_file=None, token_file=None, verbose=False, auth=True):
-        """
-        :param base_api: str, default=None. Base link to access Spotify API.
-        :param base_auth: str, default=None. Base link to authorise through Spotify API.
-        :param open_url: str, default=None. Base link for user facing links to Spotify items.
-        :param c_id: str, default=None. ID of developer API access.
-        :param c_secret: str, default=None. Secret code for developer API access.
-        
-        :param music_path: str, default=None. Base path to all music files
-        :param playlists: str, default=None. Relative path to folder containing .m3u playlists, must be in music folder.
-        :param win_path: str, default=None. Windows specific path to all music files.
-        :param mac_path: str, default=None. Mac specific path to all music files.
-        :param lin_path: str, default=None. Linux specific path to all music files.
-        
-        :param data: str, default=None. Path to folder containing json and image files.
-        :param uri_file: str, default=None. Filename of URI json file.
-        :param token_file: str, default=None. Filename of Spotify access token json file.
-        
-        :param verbose: bool, default=False. Print extra information and persist progress bars if True.
-        :param auth: bool, default=True. Perform initial authorisation on instantiation if True
-        """
-        
-        # load stored environment variables
-        load_dotenv()
+        # set up logging and attributes from environment
+        Environment.__init__(self)
+        self._log_path = None
+        self._log_file = None
+        self._auth = AUTH_ARGS
+        self._logger = self.get_logger()
+        self.get_env_vars(dry_run)
+        self._last_runs = sorted([basename(rd[0]) for rd in os.walk(dirname(self.DATA_PATH))][1:])
 
-        # Spotify URLs
-        self.BASE_API = base_api if base_api else os.environ.get('BASE_API')
-        self.BASE_AUTH = base_auth if base_auth else os.environ.get('BASE_AUTH')
-        self.OPEN_URL = open_url if open_url else os.environ.get('OPEN_URL')
-
-        # Developer API access
-        self.CLIENT_ID = c_id if c_id else os.environ.get('CLIENT_ID')
-        self.CLIENT_SECRET = c_secret if c_secret else os.environ.get('CLIENT_SECRET')
-
-        # Paths for other operating systems
-        self.OTHER_PATHS = {'win': normpath(os.environ.get('WIN_PATH', '')),
-                            'lin': normpath(os.environ.get('LIN_PATH', '')),
-                            'mac': normpath(os.environ.get('MAC_PATH', ''))}
-        self.OTHER_PATHS = {k: path for k, path in self.OTHER_PATHS.items() if len(path) > 1}
-
-        # Get this system's associated paths, and store other system's paths
-        if sys.platform == "win32":
-            music_path = music_path if music_path else win_path
-            self.WIN_PATH = normpath(music_path) if music_path else self.OTHER_PATHS.get('win')
-            self.MUSIC_PATH = self.WIN_PATH
-
-            self.LIN_PATH = normpath(lin_path) if lin_path else self.OTHER_PATHS.get('lin')
-            self.MAC_PATH = normpath(mac_path) if mac_path else self.OTHER_PATHS.get('mac')
-
-            self.OTHER_PATHS = [path for path in [self.LIN_PATH, self.MAC_PATH] if path]
-        elif sys.platform == "linux":
-            music_path = music_path if music_path else lin_path
-            self.LIN_PATH = normpath(music_path) if music_path else self.OTHER_PATHS.get('lin')
-            self.MUSIC_PATH = self.LIN_PATH
-
-            self.WIN_PATH = normpath(win_path) if win_path else self.OTHER_PATHS.get('win')
-            self.MAC_PATH = normpath(mac_path) if mac_path else self.OTHER_PATHS.get('mac')
-
-            self.OTHER_PATHS = [path for path in [self.WIN_PATH, self.MAC_PATH] if path]
-        elif sys.platform == "darwin":
-            music_path = music_path if music_path else mac_path
-            self.MAC_PATH = normpath(music_path) if music_path else self.OTHER_PATHS.get('mac')
-            self.MUSIC_PATH = self.MAC_PATH
-
-            self.WIN_PATH = normpath(win_path) if win_path else self.OTHER_PATHS.get('win')
-            self.LIN_PATH = normpath(lin_path) if lin_path else self.OTHER_PATHS.get('lin')
-
-            self.OTHER_PATHS = [path for path in [self.WIN_PATH, self.LIN_PATH] if path]
-
-        # Build full path to playlist folder from this system's music path
-        self.PLAYLISTS = playlists if playlists else os.environ.get('PLAYLISTS')
-        playlists = normpath(self.PLAYLISTS.replace('\\', '/')).split('/')
-        self.PLAYLISTS_PATH = join(self.MUSIC_PATH, *playlists)
-
-        # Path to data folder and names of URI and token files inside
-        self.DATA_PATH = normpath(data) if data else normpath(os.environ.get('DATA_PATH', ''))
-        if self.DATA_PATH == '.':
-            self.DATA_PATH = join(dirname(__file__), 'data')
-        if not exists(self.DATA_PATH):
-            os.mkdir(self.DATA_PATH)
-        
-        self.URI_FILENAME = uri_file if uri_file else os.environ.get('URI_FILENAME')
-        self.TOKEN_FILENAME = token_file if token_file else os.environ.get('TOKEN_FILENAME')
-
-        # Instantiate objects
-        Data.__init__(self)
+        # instantiate objects
+        ApiAuthoriser.__init__(self, **self._auth)
+        IO.__init__(self)
+        Report.__init__(self)
+        LocalIO.__init__(self)
         Spotify.__init__(self)
 
-        # Define verbosity and authorise if required
-        self.verbose = verbose
-        if auth:
-            self.headers = self.auth(verbose)
+        if auth:  # get authorisation headers
+            self._headers = self.auth()
 
-        # Metadata placeholders
-        self.all_metadata = None
-        self.all_spotify_metadata = None
-        self.m3u_metadata = None
-        self.spotify_metadata = None
+        # metadata placeholders
+        self._library_local = None
+        self._library_spotify = None
+        self._playlists_local = None
+        self._playlists_spotify = None
+    
+    #############################################################
+    ### Utilities/Misc.
+    #############################################################
+    def backup(self, **kwargs) -> None:
+        """Backup all URI lists for local files/playlists and Spotify playlists"""
 
-    def set_env(self, current_state=True, **kwargs):
-        """
-        Save settings to default environment variables. Loads any saved variables and updates as appropriate.
-        
-        :param current_state: bool, default=True. Use current object variables to update.
-        :param **kwargs: pass kwargs for variables to update. Overrides current_state if True.
-        :return: dict. Dict of the variables saved.
-        """
-        if exists('.env'):  # load stored environment variables if they exist
-            with open('.env', 'r') as file:
-                env = {line.rstrip().split('=')[0]: line.rstrip().split('=')[1] for line in file}
+        # backup local library
+        self._library_local = self.get_local_metadata(**kwargs)
+        self.save_json(self._library_local, "01_library__initial", **kwargs)
+        path_uri = self.convert_metadata(self._library_local, key="path", value="uri", **kwargs)
+        self.save_json(path_uri, "URIs__local_library", **kwargs)
+
+        # backup list of tracks per playlist
+        self._playlists_local = self.get_m3u_metadata(**kwargs)
+        self.save_json(self._playlists_local, "10_playlists__local", **kwargs)
+        local_uri = self.convert_metadata(self._playlists_local, key="name", value="uri", **kwargs)
+        self.save_json(local_uri, "URIs__local_playlists", **kwargs)
+
+        # backup list of tracks per Spotify playlist
+        self._playlists_spotify = self.get_playlists_metadata('local', **kwargs)
+        self.save_json(self._playlists_spotify, "11_playlists__spotify", **kwargs)
+        spotify_uri = self.convert_metadata(self._playlists_spotify, key="name", value="uri", **kwargs)
+        self.save_json(spotify_uri, "URIs__spotify_playlists", **kwargs)
+
+    def restore(self, kind: str, **kwargs) -> None:
+        # TODO: restore local URI tags from backup + restore spotify playlists from backup
+        pass
+
+    def missing_tags(self, **kwargs) -> None:
+        """Produces report on local tracks with defined set of missing tags"""
+
+        # loads filtered library if filtering given, entire library if not
+        self._library_local = self.get_local_metadata(**kwargs)
+        self.save_json(self._library_local, "01_library__initial", **kwargs)
+
+        missing_tags = self.report_missing_tags(self._library_local, **kwargs)
+        self.save_json(missing_tags, "14_library__missing_tags", **kwargs)
+
+    def extract(self, kind: str, playlists: bool=False, **kwargs):
+        """Extract and save images from local files or Spotify"""
+
+        extract = []
+        if kind == 'local':
+            if not playlists:  # extract from entire local library
+                extract = self.get_local_metadata(**kwargs)
+                self.save_json(extract, "01_library__initial", **kwargs)
+            else:  # extract from local playlists
+                extract = self.get_m3u_metadata(**kwargs)
+                self.save_json(extract, "10_playlists__local", **kwargs) 
+        elif kind == 'spotify':  # TODO: Does not work fix
+            # extract from Spotify playlists
+            extract = self.get_playlists_metadata('local', **kwargs)
+            self.save_json(self._playlists_spotify, "11_playlists__spotify_intial", **kwargs)
+
+        self.extract_images(extract)
+
+    def get_data(self, name: str, **kwargs) -> None:
+        """Get tracks from Spotify for a given name/URI/URL/ID"""
+
+        if not self.check_spotify_valid(name):
+            url = self.get_user_playlists(name).get(name, {}).get('href')
+            if not url:
+                self._logger.warning(f"\33[91m{name} not found in user's playlists\33[0m")
+                return
+        elif any(kind in name for kind in ['album', 'playlist']):
+            self.print_track_uri(name, **kwargs)
+        elif 'artist' in name:
+            print(json.dumps(self.get_items([name], kind='artist', **kwargs), indent=2))
+        elif 'track' in name:
+            print(json.dumps(self.get_tracks_metadata([name], **kwargs), indent=2))
         else:
-            env = {}
+            self._logger.warning(f"{name} is not a valid track, album, artist, or playlist")
+
+    def check(self, **kwargs) -> None:
+        """Run check on entire library and update stored URIs tags"""
+
+        # loads filtered library if filtering given, entire library if not
+        self._library_local = self.get_local_metadata(**kwargs)
+        self.save_json(self._library_local, "01_library__initial", **kwargs)
+        path_uri = self.convert_metadata(self._library_local, key="path", value="uri", **kwargs)
+        self.save_json(path_uri, "URIs_initial", **kwargs)
+
+        self.check_tracks(self._library_local, report_file="04_report__updated_uris", **kwargs)
+        self.save_json(self._library_local, "05_report__check_matches", **kwargs)
+        self.save_json(self._library_local, "06_library__checked", **kwargs)
+
+        kwargs['tags'] = ['uri']
+        self.update_file_tags(self._library_local, **kwargs)
+
+        # create backup of new URIs
+        path_uri = self.convert_metadata(self._library_local, key="path", value="uri", **kwargs)
+        self.save_json(path_uri, "URIs", **kwargs)
+
+    #############################################################
+    ### Main runtime functions
+    #############################################################
+    def convert_kwargs(self, functions, args, kwargs) -> dict:
+        """Process kwargs based on user input at command line"""
+        # convert all 'prefix_' kwargs lists to strings
+        for k, v in kwargs.copy().items():
+            if k.startswith('prefix_') and isinstance(v, list):
+                kwargs[k] = ' '.join(v)
+        if kwargs["filter_tags"]:
+            kwargs["filter_tags"] = self.load_json(kwargs["filter_tags"], parent=True)
+        if not kwargs["filter_tags"]:
+            kwargs["filter_tags"] = {}
         
-        # required keys
-        env_vars = ['BASE_API', 'BASE_AUTH', 'OPEN_URL', 'CLIENT_ID', 'CLIENT_SECRET',
-                    'PLAYLISTS', 'WIN_PATH', 'MAC_PATH', 'LIN_PATH', 'DATA_PATH', 'URI_FILENAME', 'TOKEN']
-        if current_state:  # update variables from current object
-            env.update({var: getattr(self, var) for var in env_vars if var in self.__dict__ and getattr(self, var)})
-            
-        # update with given kwargs
-        env.update({k: v for k, v in {**kwargs}.items() if k in env_vars})
+        # quickload specified, get required run as quickload folder
+        if isinstance(kwargs["quickload"], str):
+            kwargs["quickload"] = [r for r in self._last_runs if r.startswith(kwargs["quickload"])][0]
+        elif kwargs["quickload"]:
+            kwargs["quickload"] = self._last_runs[-2]
 
-        # build line by line strings each variable and write new .env file
-        save_vars = [f'{var}={env[var]}\n' for var in env_vars if env.get(var)]
-        with open('.env', 'w') as file:
-            file.writelines(save_vars)
+        kwargs["compilation_check"] = not kwargs["compilation"]
+
+        # parse function specific arguments
+        func_args = list(functions[kwargs["function"]].values())[0]
+        for k, v in zip(func_args, args):
+            try:
+                kwargs[k] = literal_eval(v)
+            except (ValueError, SyntaxError):
+                kwargs[k] = v
+
+        return kwargs
+
+    def search(self, quickload, **kwargs) -> None:
+        """Run all main steps up to search and check
         
-        # return dict of updated variables
-        return {var: env[var] for var in env_vars if var in self.__dict__ and getattr(self, var)}
-
-    def load_all_local(self, ex_playlists=None, ex_folders=None, in_folders=None, refresh=False):
+        :param quickload: str, default=None. Date string. If set, load files from the 
+            folder with the given date.
         """
-        Loads metadata from all local songs to the object, exports this json to the data folder 
-        with filename 'all_metadata.json', and imports URIs from user-defined URIs.json file.
-        
-        :param ex_playlists: list, default=None. Exclude songs with paths listed in playlists in this playlist folder.
-            Excludes every song from playlists in the default playlist path if True. Ignored if None.
-        :param ex_folders: list, default=None. Exclude songs in these folders. Ignored if None.
-        :param in_folders: list, default=None. Only include songs in these folders. Ignored if None.
-        :param refresh: bool, default=False. Overwrite current URIs with those imported from json file.
-        :return: self.
-        """
-        all_pl = self.get_all_metadata(ex_playlists=ex_playlists, ex_folders=ex_folders,
-                                       in_folders=in_folders, verbose=self.verbose)
-        self.save_json(all_pl, 'all_metadata')
-        self.all_metadata = self.import_uri(all_pl, self.URI_FILENAME, refresh)
-
-        return self
-
-    def load_all_spotify(self, ex_playlists=None, ex_folders=None, in_folders=None):
-        """
-        Checks API authorisation and loads Spotify metadata for all local files to the object.
-
-        :param ex_playlists: list, default=None. Exclude songs with paths listed in playlists in this playlist folder.
-            Excludes every song from playlists in the default playlist path if True. Ignored if None.
-        :param ex_folders: list, default=None. Exclude songs in these folders. Ignored if None.
-        :param in_folders: list, default=None. Only include songs in these folders. Ignored if None.
-        """
-        # authorise
-        self.headers = self.auth(lines=False, verbose=True)
-
-        # load local metadata
-        self.load_all_local(ex_playlists=None, ex_folders=None, in_folders=None)
-
-        # extract uri list and get spotify metadata
-        uri_list = [track['uri'] for tracks in self.all_metadata.values() for track in tracks if 'uri' in track]
-        self.all_spotify_metadata = self.get_tracks_metadata(uri_list, self.headers, self.verbose)
-        self.save_json(self.all_spotify_metadata, 'all_spotify_metadata')
-
-        return self
-
-    def load_m3u(self, in_playlists=None):
-        """
-        Loads metadata from all local playlists to the object, exports this json to the data folder 
-        with filename 'm3u_metadata.json', and imports URIs from user-defined URIs.json file.
-        
-        :param in_playlists: list, default=None. List of playlist names to include, returns all if None.
-        :return: self.
-        """
-        m3u = self.get_m3u_metadata(in_playlists, self.verbose)
-        self.save_json(m3u, 'm3u_metadata')
-        self.m3u_metadata = self.import_uri(m3u, self.URI_FILENAME)
-
-        return self
-
-    def load_spotify(self, in_playlists=None):
-        """
-        Checks API authorisation and loads metadata from all Spotify playlists to the object.
-        
-        :param in_playlists: str/list, default=None. List of playlist names to include, returns all if None. 
-            Only returns matching local playlist names if 'm3u'.
-        :return: self.
-        """
-        # authorise and get required playlists
-        self.headers = self.auth(lines=False, verbose=True)
-        if in_playlists and 'm3u' in in_playlists:
-            in_playlists = [splitext(playlist)[0] for playlist in os.listdir(self.PLAYLISTS_PATH)]
-
-        # get Spotify metadata
-        self.spotify_metadata = self.get_playlists_metadata(self.headers, in_playlists, self.verbose)
-        if self.verbose:
-            print('\n', '-' * 88, '\n', sep='')
-
-        return self
-
-    def update_uri_from_spotify_playlists(self):
-        """
-        Update URIs for local files from Spotify playlists.
-        Loads m3u and Spotify playlists to object if they have not been loaded.
-        
-        :return: self.
-        """
-        # load metadata if not yet done
-        if self.m3u_metadata is None:
-            self.load_m3u()
-        if self.spotify_metadata is None:
-            self.load_spotify(in_playlists='m3u')
-
-        # update URIs and save json
-        uris = self.update_uris(self.m3u_metadata, self.spotify_metadata, self.verbose)
-        self.save_json(uris, f'{self.URI_FILENAME}_updated')
-        self.export_uri(uris, self.URI_FILENAME)
-        print('\n', '-' * 88, '\n', sep='')
-        return self
-
-    def search_m3u_to_spotify(self, quick_load=False, refresh=False):
-        """
-        Search for URIs for local files that don't have one associated, and update Spotify with new URIs.
-        Saves json file for found songs ('search_found.json'), songs added to playlists ('search_added.json'),
-        and songs that still have no URI ('search_not_found.json').
-        Loads m3u and Spotify playlists to object if they have not been loaded.
-        
-        :param quick_load: bool, default=False. Load last search from 'search_found.json' file
-        :param refresh: bool, default=False. Clear Spotify playlists before updating.
-        :return: self.
-        """
-        if not quick_load:
-            # load metadata if not yet done
-            if self.m3u_metadata is None:
-                self.load_m3u()
-            if self.spotify_metadata is None:
-                self.load_spotify(in_playlists='m3u')
-                
-            if refresh:  # clear playlists
-                print('Clearing playlists...', end='')
-                for name, playlist in self.spotify_metadata.items():
-                    self.clear_playlist(playlist, self.headers)
-                    self.spotify_metadata[name]['tracks'] = []
-                print('\33[92m', 'Done', '\33[0m')
-
-            # search for missing URIs
-            added, not_found, searched = self.search_all(self.m3u_metadata, self.headers,
-                                                         add_back=refresh, verbose=self.verbose)
-            
-            if searched:  # save json of results
-                self.save_json(added, 'search_found')
-                if self.verbose:
-                    print('\n', '-' * 88, '\n', sep='')
-        else:  # load from last search
-            added = self.load_json('search_found')
-            not_found = None
-
-        # update playlists with new URIs
-        updated = self.update_playlist(added, self.spotify_metadata, self.headers, self.verbose)
-        if updated and self.verbose:
-            print('\n', '-' * 88, '\n', sep='')
-
-        # save json files, update local URIs, update this object's stored Spotify metadata
-        if updated or searched:
-            self.save_json(added, 'search_added')
-            self.save_json(not_found, 'search_not_found')
-            self.export_uri(added, self.URI_FILENAME)
-        return self
-
-    def differences(self):
-        """
-        Produces reports on differences between Spotify and local playlists.
-        Saves reports for songs on Spotify not found in local playlists 'spotify_extra.json',
-        and local songs with missing URIs and therefore not in Spotify playlists 'spotify_missing.json'.
-        
-        :return: self.
-        """
-        # load metadata if not yet done
-        if self.m3u_metadata is None:
-            self.load_m3u()
-
-        # import local URIs, load spotify metadata, get differences
-        m3u = self.import_uri(self.m3u_metadata)
-        self.spotify_metadata = self.get_playlists_metadata(self.headers, m3u, self.verbose)
-        extra, missing = self.get_differences(m3u, self.spotify_metadata, self.verbose)
-        
-        # save json files
-        self.save_json(extra, 'spotify_extra')
-        self.save_json(missing, 'spotify_missing')
-        return self
-
-    def update_artwork(self, album_prefix=None, replace=False):
-        """
-        Update locally embedded images with associated URIs' artwork.
-        
-        :param album_prefix: str, default=None. If defined, only replace artwork for albums that start with this string.
-        :param replace: bool, default=False. Replace locally embedded images if True. 
-            Otherwise, only add images to files with no embedded image.
-        :return: self.
-        """
-        # load metadata if not yet done
-        if self.all_metadata is None:
-            self.load_all_local()
-        
-        # get latest Spotify metadata for local files
-        local_uri = self.uri_as_key(self.all_metadata)
-        if not replace:
-            local_uri = {uri: track for uri, track in local_uri.items() if not track['has_image']}
-        spotify_uri = self.get_tracks_metadata(list(local_uri.keys()), self.headers, verbose=self.verbose)
-
-        if album_prefix:  # filter to only albums that start with album_prefix
-            if isinstance(album_prefix, list):
-                album_prefix = album_prefix[0]
-            m3u_filtered = {}
-            for uri, song in local_uri.items():
-                if song['album'].lower().startswith(album_prefix.lower()):
-                    m3u_filtered[uri] = song
-        else:  # use all
-            m3u_filtered = local_uri
-
-        # embed images and produce report listing which songs have been updated
-        self.embed_images(m3u_filtered, spotify_uri, replace=replace)
-        self.save_json(m3u_filtered, 'updated_artwork')
-
-        return self
-
-    def get_missing_uri(self, ex_playlists=False, quick_load=False, import_uri=True, drop=True, null_folders=None,
-                        start_folder=None, add_back=False, tags=None):
-        """
-        Search for URIs for files missing them and review through Spotify by means of creating and manually 
-        checking temporary playlists.
-        
-        :param ex_playlists: list, default=None. Exclude songs with paths listed in playlists in this playlist folder.
-            Excludes every song from playlists in the default playlist path if True. Ignored if None.
-        :param quick_load: bool, default=False. Load last search from 'search_found.json' file
-        :param import_uri: bool, default=True. Import associated URIs for each local song.
-        :param drop: bool, default=True. If import_uri is True, remove any song that doesn't have a URI, 
-            hence skipping a search for new URIs.
-        :param null_folders: list, default=None. Give all songs in these folders the URI value of 'None', hence
-            skipping all searches and additions to playlist for these songs. Useful for albums not on Spotify.
-        :param start_folder: str, default=None. Start creation of temporary playlists from folder starting with this string.
-        :param add_back: bool, default=False. Add back tracks which already have URIs on input. 
-            False returns only search results.
-        :param tags: list, default=None. List of tags to update for local song metadata.
-        :return: self.        
-        """
-        if quick_load:  # load from last search
-            folders = self.load_json('search_found')
+        #############################################################
+        ### Step 1: LOAD LOCAL METADATA FOR LIBRARY
+        #############################################################
+        if quickload:  # load results from last search
+            self._library_local = self.load_json(f"{quickload}/03_library__searched", parent=True, **kwargs)
         else:
-            if self.all_metadata is None:  # load metadata if not yet done
-                self.all_metadata = self.get_all_metadata(ex_playlists=ex_playlists, verbose=False)
-            folders = self.all_metadata
+            # loads filtered library if filtering given, entire library if not
+            self._library_local = self.get_local_metadata(**kwargs)
+            self.save_json(self._library_local, "01_library__initial", **kwargs)
 
-        if import_uri:  # import locally stored URIs
-            folders = self.import_uri(folders, self.URI_FILENAME, refresh=True)
-            if drop:  # drop files with no URIs
-                folders = {folder: [track for track in tracks if 'uri' in track]
-                           for folder, tracks in folders.items()}
+            # create backup of current URIs
+            path_uri = self.convert_metadata(self._library_local, key="path", value="uri", **kwargs)
+            self.save_json(path_uri, "URIs_initial", **kwargs)
 
-        if null_folders:  # set all URIs for songs in these folders to None, effectively blacklisting them
-            for folder, tracks in folders.items():
-                if folder in null_folders:
-                    for track in tracks:
-                        track['uri'] = None
-
-        if start_folder:  # remove all folders before start_folder
-            for folder in folders.copy():
-                if folder.lower().strip().startswith(start_folder):
-                    break
-                del folders[folder]
-
-        self.auth(lines=False, verbose=True)
-        
-        if quick_load:  # set variables for quick_load
-            found = folders
-            not_found = self.load_json('search_not_found')
-            searched = False
-        else:  # search
-            found, not_found, searched = self.search_all(folders, self.headers, 'albums', add_back, self.verbose)
-
-        if searched and self.verbose:
-            print('\n', '-' * 88, '\n', sep='')
-
-        if searched:  # save json files
-            self.save_json(found, 'search_found')
-            self.save_json(not_found, 'search_not_found')
-
-        if not quick_load and (null_folders or searched):  # export URIs if updating has occurred
-            self.export_uri(found, self.URI_FILENAME)
-            print('\n', '-' * 88, '\n', sep='')
-
-        # begin creation of temporary playlists and check
-        self.check_uris_on_spotify(found, self.headers, self.URI_FILENAME, verbose=self.verbose)
-
-        if tags and found:
-            # import new uris, get spotify metadata, and update tags of songs
-            found = self.import_uri(found, self.URI_FILENAME, refresh=True)
-            uri_list = [song['uri'] for songs in found.values() for song in songs]
-            spotify_metadata = self.get_tracks_metadata(uri_list, self.headers)
-            self.spotify_to_tag(tags, spotify_metadata)
-
-        return self
-
-    def spotify_to_tag(self, tags, metadata=None, reduce=True, refresh=False):
-        """
-        Updates local file tags with tags from Spotify metadata.
-        Tag names for each file extension viewable in self.filetype_tags[FILE_EXT].keys()
-
-        :param tags: list. List of tags to update.
-        :param metadata: dict, default=None. Metadata of songs to update in form <URI>: <Spotify metadata>
-        :param reduce: bool, default=True. Reduce the list of songs to update to only those with missing tags.
-        :param refresh: bool, default=False. Destructively replace tags in each file.
-        """
-        # load metadata if not yet done
-        if self.all_metadata is None:
-            self.load_all_local()
-
-        get_tags = {}
-        if reduce:
-            for folder, songs in self.all_metadata.items():
-                for song in songs:
-                    if not 'uri' in song:
-                        continue
-                    if not ('.m4a' in song['path'] and any([t in tags for t in ['bpm', 'key']])):
-                        if any([song[tag] is None and song['uri'] for tag in tags if tag in song]):
-                            get_tags[song['uri']] = song
+        #############################################################
+        ### Step 2-6: SEARCH/CHECK LIBRARY
+        #############################################################
+        if not quickload:  # search for missing URIs
+            search_results = self.search_all(self._library_local, report_file="02_report__search", **kwargs)
+            self.save_json(self._library_local, '03_library__searched', **kwargs)
         else:
-            get_tags = self.uri_as_key(self.all_metadata)
-        
-        if not get_tags:
-            return
-        
-        self.auth(lines=False, verbose=True)
-        metadata = self.get_tracks_metadata(get_tags.keys(), self.headers, verbose=self.verbose)
-        
-        for uri, track in metadata.items():
-            metadata[uri] = {k: v for k, v in track.items() if k in tags}
-            if 'uri' in get_tags[uri]:
-                metadata[uri]['comment'] = get_tags[uri].pop('uri')
+            search_results = self.load_json(f"{quickload}/02_report__search", parent=True, **kwargs)
 
-        self.update_tags(get_tags, metadata, refresh, verbose=self.verbose)
+        # get list of paths of tracks to check
+        found = self.convert_metadata(search_results["found"], key="path", value="uri")
+        not_found = self.convert_metadata(search_results["not_found"], key="path", value="uri")
+        search_paths = list(found.keys()) + list(not_found.keys())
+        
+        # get dict of filtered tracks to check from library metadata
+        check_results = {}
+        for name, tracks in self._library_local.items():
+            for track in tracks:
+                if track['path'] in search_paths:
+                    check_results[name] = check_results.get(name, []) + [track]
+        
+        if len(check_results) > 0:  # check URIs on Spotify and update with user input
+            self.check_tracks(check_results, report_file="04_report__updated_uris", **kwargs)
+            self.save_json(check_results, "05_report__check_matches", **kwargs)
+        self.save_json(self._library_local, "06_library__checked", **kwargs)
+
+    def update_tags(self, **kwargs) -> None:
+        """Run all main functions for updating local files"""
+
+        if self._library_local is None:  # preload if needed
+            # loads filtered library if filtering given, entire library if not
+            self._library_local = self.get_local_metadata(**kwargs)
+            self.save_json(self._library_local, "01_library__initial", **kwargs)
+
+        #############################################################
+        ### Step 7: LOAD SPOTIFY METADATA FOR ALL TRACKS/PLAYLISTS
+        #############################################################
+        # extract URI list and get Spotify metadata for all tracks with URIs in local library
+        uri_list = [track['uri'] for tracks in self._library_local.values() for track in tracks if isinstance(track['uri'], str)]
+        add_extra = {track['uri']: {"folder": track["folder"], "path": track["path"]} for tracks in self._library_local.values() for track in tracks if track['uri'] in uri_list}
+        self._library_spotify = self.get_tracks_metadata(uri_list, add_extra=add_extra, **kwargs)
+
+        save_data = {}
+        for track in self._library_spotify.values():
+            # convert to folder: track structure like local data for saving
+            folder = track["folder"]
+            save_data[folder] = save_data.get(folder, []) + [track]
+        self.save_json(save_data, '07_spotify__library', **kwargs)
+
+        #############################################################
+        ### Step 8-9: TRANSFORM LOCAL TRACK METADATA, RELOAD LIBRARY
+        #############################################################
+        # replace local tags with spotify
+        for name, tracks in self._library_local.items():
+            for track in tracks:
+                if track['uri'] in self._library_spotify:
+                    spotify_metadata = self._library_spotify[track['uri']]
+                    for tag in track:
+                        track[tag] = spotify_metadata.get(tag, track[tag])
+        
+        self.modify_compilation_tags(self._library_local, **kwargs)
+        self.update_file_tags(self._library_local, **kwargs)
+        if "image" in kwargs["tags"]:
+            self.embed_images(self._library_local, self._library_spotify, **kwargs)
+        # TODO: test save
+        self.save_json(self._library_local, '08_library__updated', **kwargs)
+
+        # loads filtered library if filtering given, entire library if not
+        self._library_local = self.get_local_metadata(**kwargs)
+        self.save_json(self._library_local, "09_library__final", **kwargs)
+
+        # create backup of new URIs
+        path_uri = self.convert_metadata(self._library_local, key="path", value="uri", **kwargs)
+        self.save_json(path_uri, "URIs", **kwargs)
+
+    def update_spotify(self, **kwargs) -> None:
+        """Run all main functions for updating Spotify playlists"""
+        #############################################################
+        ### Step 10-13: UPDATE SPOTIFY PLAYLISTS, RELOAD, REPORT
+        #############################################################
+        # get local metadata for m3u playlists
+        self._playlists_local = self.get_m3u_metadata(**kwargs)
+        self.save_json(self._playlists_local, "10_playlists__local", **kwargs)
+        local_uri = self.convert_metadata(self._playlists_local, key="name", value="uri", **kwargs)
+        self.save_json(local_uri, "URIs__local_playlists", **kwargs)
+
+        uri_list = [track['uri'] for tracks in self._playlists_local.values() for track in tracks if isinstance(track['uri'], str)]
+        add_extra = {track['uri']: {"folder": track["folder"], "path": track["path"]} for tracks in self._playlists_local.values() for track in tracks if track['uri'] in uri_list}
+        self._playlists_spotify = self.get_playlists_metadata('local', add_extra=add_extra, **kwargs)
+        self.save_json(self._playlists_spotify, "11_playlists__spotify_intial", **kwargs)
+
+        # update Spotify playlists
+        self.update_playlists(self._playlists_local, **kwargs)
+
+    def report(self, **kwargs) -> None:
+        if self._playlists_local is None:
+            # get local metadata for m3u playlists
+            self._verbose = True
+            self._playlists_local = self.get_m3u_metadata(**kwargs)
+            self.save_json(self._playlists_local, "10_playlists__local", **kwargs)
+
+        uri_list = [track['uri'] for tracks in self._playlists_local.values() for track in tracks if isinstance(track['uri'], str)]
+        add_extra = {track['uri']: {"folder": track["folder"], "path": track["path"]} for tracks in self._playlists_local.values() for track in tracks if track['uri'] in uri_list}
+        # reload metadata and report
+        self._playlists_spotify = self.get_playlists_metadata('local', add_extra=add_extra, **kwargs)
+        self.save_json(self._playlists_spotify, "12_playlists__spotify_final", **kwargs)
+        playlist_uri = self.convert_metadata(self._playlists_spotify, key="name", value="uri", **kwargs)
+        self.save_json(playlist_uri, "URIs__spotify_playlists", **kwargs)
+        report = self.report_differences(self._playlists_local, self._playlists_spotify, report_file="13_report__differences", **kwargs)
+
+    def main(self, quickload: str=None, **kwargs) -> None:
+        """Main driver function that executes primary Syncify functions"""
+        self.clean_up_env(**kwargs)
+        self.search(quickload, **kwargs)  # Steps 1-6
+        self.update_tags(**kwargs)  # Steps 7-9
+        self.update_spotify(**kwargs)  # Steps 10-12
+        self.report(**kwargs)  # Step 13
 
 
 if __name__ == "__main__":
-    # instantiate main object
-    main = Syncify(verbose=True, auth=False)
-    kwargs = {}
+    parser = argparse.ArgumentParser(description="Sync your local library to Spotify.", usage=argparse.SUPPRESS)
+    parser._positionals.title = 'Positional arguments'
+    parser._optionals.title = 'Optional arguments'
 
-    options = ', '.join(['update', 'refresh', 'differences', 'artwork', 'missing_artwork', 'missing_tags', 
-                        'extract_local', 'extract_spotify', 'check', 'simplecheck', 'update_tags', 'rebuild_uri'])
+    # cli function aliases and expected args in order user should give them
+    functions = {
+        "main": {"main": []},
+        # individual main steps
+        'check': {'check': []},
+        'search': {'search': []},
+        'update_tags': {'update_tags': []},
+        'update_spotify': {'update_spotify': []},
+        # reports/maintenance/utilities
+        'report': {'report': []},
+        'missing_tags': {'missing_tags': []},
+        'backup': {'backup': []},
+        'restore': {'restore': ['kind']},
+        'extract': {'extract': ['kind', 'playlists']},
+        "clean": {"clean_up_env": ['days', 'keep']},
+        # endpoints
+        "create": {"create_playlist": ['playlist_name', 'public', 'collaborative']},
+        "get": {"get_data": ['name']},
+        "delete": {"delete_playlist": ['playlist']},
+        "clear": {"clear_from_playlist": ['playlist']},
+    }
+    parser.add_argument('function', nargs='?', default="main", choices=list(functions.keys()),
+                        help=f"Function to run, select from: {', '.join(list(functions.keys()))}.")
 
-    if len(sys.argv) <= 1:  # no function given
-        exit(f'Define run function. Options: {options}')
-    elif sys.argv[1] not in options:  # function name error
-        exit(f'Run function not recognised. Options: {options}')
-    elif len(sys.argv) > 2:  # extract kwargs
-        for kwarg in sys.argv[2:]:
-            kw = kwarg.split("=")[0]
-            try:
-                kwargs[kw] = eval(kwarg.split("=")[1])
-            except NameError:
-                if len(kwarg.split("=")[1].split(",")) == 1:
-                    kwargs[kw] = kwarg.split("=")[1]
-                else:
-                    kwargs[kw] = kwarg.split("=")[1].split(",")
+    local = parser.add_argument_group("Local library filters and options")
+    local.add_argument('-q', '--quickload', required=False, nargs='?', default=False, const=True,
+                        help="Skip load and search to use last run's load and search output. Enter a date to define which run to load from.")
+    local.add_argument('-s', '--start', type=str, required=False, nargs='*', dest='prefix_start', metavar='',
+                        help='Start processing from the folder with this prefix i.e. <folder>:<END>')
+    local.add_argument('-e', '--end', type=str, required=False, nargs='*', dest='prefix_stop', metavar='',
+                        help='Stop processing from the folder with this prefix i.e. <START>:<folder>')
+    local.add_argument('-l', '--limit', type=str, required=False, nargs='*', dest='prefix_limit', metavar='',
+                        help="Only process albums that start with this prefix")
+    local.add_argument('-c', '--compilation', action='store_const', const=True,
+                        help="Only process albums that are compilations")
     
-    ### UPDATE NOT CURRENTLY WORKING, USE REFRESH INSTEAD ###
-    if sys.argv[1] == 'update':  # run functions for updating Spotify playlists with new songs
-        main.auth(**{k: v for k, v in {**kwargs}.items() if k in main.auth.__code__.co_varnames})
-        main.update_uri_from_spotify_playlists(
-            **{k: v for k, v in {**kwargs}.items() if k in main.update_uri_from_spotify_playlists.__code__.co_varnames})
-        main.search_m3u_to_spotify(refresh=False, **{k: v for k, v in {**kwargs}.items() 
-                                                     if k in main.search_m3u_to_spotify.__code__.co_varnames})
-        main.differences(**{k: v for k, v in {**kwargs}.items() if k in main.differences.__code__.co_varnames})
-
-    elif sys.argv[1] == 'refresh':  # run functions for clearing and updating Spotify playlists with new songs
-        main.auth(**{k: v for k, v in {**kwargs}.items() if k in main.auth.__code__.co_varnames})
-        main.update_uri_from_spotify_playlists(
-            **{k: v for k, v in {**kwargs}.items() if k in main.update_uri_from_spotify_playlists.__code__.co_varnames})
-        main.search_m3u_to_spotify(refresh=True, **{k: v for k, v in {**kwargs}.items() 
-                                                    if k in main.search_m3u_to_spotify.__code__.co_varnames})
-        main.differences(**{k: v for k, v in {**kwargs}.items() if k in main.differences.__code__.co_varnames})
-
-    elif sys.argv[1] == 'differences':  # run functions to produce report on differences between local and Spotify
-        main.auth(**{k: v for k, v in {**kwargs}.items() if k in main.auth.__code__.co_varnames})
-        main.differences(**{k: v for k, v in {**kwargs}.items() if k in main.differences.__code__.co_varnames})
-
-    elif sys.argv[1] == 'artwork':  # run functions to update artwork
-        main.auth(**{k: v for k, v in {**kwargs}.items() if k in main.auth.__code__.co_varnames})
-        main.update_artwork(**{k: v for k, v in {**kwargs}.items() if k in main.update_artwork.__code__.co_varnames})
-
-    elif sys.argv[1] == 'missing_artwork':  # run functions to produce report on local songs with missing artwork
-        main.load_all_local()
-        report = main.missing_tags(main.all_metadata, tags=['has_image'], kind='album')
-        main.save_json(report, 'missing_artwork')
-
-    elif sys.argv[1] == 'extract_local':  # run functions to extract all embedded images from locally stored songs
-        main.load_all_local()
-        main.extract_images(main.all_metadata, kind='local', foldername='local',
-                            **{k: v for k, v in {**kwargs}.items() if k in main.extract_images.__code__.co_varnames})
-
-    elif sys.argv[1] == 'extract_spotify':  # run functions to extract all artwork from locally listed Spotify URIs
-        main.auth(**{k: v for k, v in {**kwargs}.items() if k in main.auth.__code__.co_varnames})
-        spotify = main.load_spotify()
-        main.extract_images(spotify, kind='spotify', foldername='spotify',
-                            **{k: v for k, v in {**kwargs}.items() if k in main.extract_images.__code__.co_varnames})
-
-    elif sys.argv[1] == 'check':  # run functions to search for and check associated URIs for all local songs
-        main.auth(**{k: v for k, v in {**kwargs}.items() if k in main.auth.__code__.co_varnames})
-        null = ['_Covers', '_Piano', 'Backings', 'Backings NSFW', 'Final Fantasy VII - Piano Collections',
-                'Final Fantasy X - Piano Collections', 'Final Fantasy X-2 - Piano Collections',
-                'Maturity (Instrumentals)', 'Miss Saigon - OLC (Act 1)', 'Miss Saigon - OLC (Act 1)',
-                'Muppet Treasure Island', 'Old Ideas', 'Real Ideas', 'Real OLD Ideas', 'Release', 'Remakes', 
-                'Safe', "Safe '20", 'Safe (Extras)', 'Safe The Second', 'Safe The Second (Extras)', 'Z', 'Resting State']
-        tags = ['bpm', 'key', 'uri'] if 'tags' not in kwargs else kwargs.pop('tags')
-        main.get_missing_uri(import_uri=True, null_folders=null, drop=False, tags=tags,
-                             **{k: v for k, v in {**kwargs}.items() if k in main.get_missing_uri.__code__.co_varnames})
-
-    elif sys.argv[1] == 'simplecheck':  # run functions to just check all already associated URIs with no search
-        URIs = main.load_json(main.URI_FILENAME)
-        main.auth(lines=False, verbose=True)
-        main.check_uris_on_spotify(URIs, main.headers)
-
-    elif sys.argv[1] == 'missing_tags':  # run functions to produce report on local songs with missing tags
-        main.load_all_local()
-        tags = ['title', 'artist', 'album', 'track', 'year', 'genre'] if 'tags' not in kwargs else kwargs.pop('tags')
-        ignore =  ['Backings', 'Backings NSFW', 'Old Ideas', 'Real Ideas', 'Real OLD Ideas', 'Release', 'Remakes']
-        report = main.missing_tags(main.all_metadata, tags=tags, kind='album', ignore=ignore)
-        main.save_json(report, 'missing_tags')
+    spotify = parser.add_argument_group("Spotify metadata extraction options")
+    spotify.add_argument('-ag', '--add-genre', action='store_true',
+                        help="Get genres when extracting track metadata from Spotify")
+    spotify.add_argument('-af', '--add-features', action='store_true',
+                        help="Get audio features when extracting track metadata from Spotify")
+    spotify.add_argument('-aa', '--add-analysis', action='store_true',
+                        help="Get audio analysis when extracting track metadata from Spotify (long runtime)")
+    spotify.add_argument('-ar', '--add-raw', action='store_true',
+                        help="Keep raw API data back when extracting track metadata from Spotify")
     
-    elif sys.argv[1] == 'update_tags':
-        # main.load_all_spotify()
-        tags = ['bpm', 'key', 'uri'] if 'tags' not in kwargs else kwargs.pop('tags')
-        main.spotify_to_tag(tags, **{k: v for k, v in {**kwargs}.items() if k in main.spotify_to_tag.__code__.co_varnames})
+    playlists = parser.add_argument_group("Playlist processing options")
+    playlists.add_argument('-in', '--in-playlists', required=False, nargs='*', metavar='',
+                        help=f"Playlist names to include in any playlist processing")
+    playlists.add_argument('-ex', '--ex-playlists', required=False, nargs='*', metavar='',
+                        help=f"Playlist names to exclude in any playlist processing")
+    playlists.add_argument('-f', '--filter', required=False, nargs='?', dest='filter_tags', default=False, const='filter',
+                        help="Before updating Spotify playlists, filter out tracks with these tag values. Loads values from json file.")
+    playlists.add_argument('-ce', '--clear-extra', action='store_const', dest='clear', default=False, const='extra',
+                        help="Clear songs not present locally first when updating current Spotify playlists")
+    playlists.add_argument('-ca', '--clear-all', action='store_const', dest='clear', default=False, const='all',
+                        help="Clear all songs first when updating current Spotify playlists")
 
-    elif sys.argv[1] == 'rebuild_uri':
-        main.load_all_local()
-        json_path = join(main.DATA_PATH, main.URI_FILENAME)
-        if exists(json_path + '.json'):
-            shutil.copy(json_path + '.json', json_path + '_OLD.json')
-        main.rebuild_uri_from_tag(main.all_metadata, 'comment', main.URI_FILENAME)
+    tags = parser.add_argument_group("Local library tag update options")
+    tag_options = list(LocalIO._tag_ids['.flac'].keys()) + ["uri"]
+    tags.add_argument('-t', '--tags', required=False, nargs='*', metavar='',
+                        choices=tag_options,
+                        help=f"List of tags to update from Spotify to local files' metadata. Allowed values: {', '.join(tag_options)}.")
+    tags.add_argument('-r', '--replace', action='store_true',
+                        help="If set, destructively replace tags when updating local file tags")
+
+    runtime = parser.add_argument_group("Runtime options")
+    runtime.add_argument('-o', '--no-output', action='store_true',
+                        help="Suppress all json file output, apart from files saved to the parent folder i.e. API token file and URIs.json")
+    runtime.add_argument('-v', '--verbose', action='store_true',
+                        help="Set verbosity level")
+    runtime.add_argument('-x', '--execute', action='store_false', dest='dry_run',
+                        help="Modify users files and playlist. Otherwise, do not affect files and append '_dry' to data folder path.")
 
 
+    parsed_args = parser.parse_known_args()
+    kwargs = vars(parsed_args[0])
+    args = parsed_args[1]    
+
+    main = Syncify(verbose=kwargs['verbose'], auth=True, dry_run=kwargs["dry_run"])
+    main.convert_kwargs(functions, args, kwargs)
+    main._logger.debug(f"Args parsed: {args}")
+    main._logger.debug(f"Kwargs parsed: \n{json.dumps(kwargs, indent=2)}")
+    
+    
+    try:  # run the function requested by the user
+        print()
+        main._logger.info(f"\33[95mBegin running {kwargs['function']} function\33[0m")
+        main._logger.info(f"\33[90mLogs output: {main._log_file}\33[0m")
+        main._logger.info(f"\33[90mData output: {main.DATA_PATH}\33[0m")
+
+        func = list(functions[kwargs["function"]].keys())[0]
+        getattr(main, func)(**kwargs)
+    except:
+        main._logger.critical(traceback.format_exc())
+    
     print()
+    seconds = perf_counter() - main._start_time
+    main._logger.info(f"\33[95mSyncified in {int(seconds // 60)} mins {int(seconds % 60)} secs\33[0m")
+    main._logger.info(f"\33[90mLogs output: {main._log_file}\33[0m")
+    main._logger.info(f"\33[90mData output: {main.DATA_PATH}\33[0m")
+
+# TODO: reformat to pep8 etc
+# TODO: Run against actual library and process
+# TODO: Update readme
+
+# TODO: track audio recognition when searching using Shazam like service?

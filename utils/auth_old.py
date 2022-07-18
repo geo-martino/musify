@@ -6,7 +6,6 @@ from webbrowser import open as webopen
 
 import requests
 
-
 class Authorise:
 
     def __init__(self):
@@ -16,7 +15,7 @@ class Authorise:
 
         # store token and headers
         self.TOKEN = None
-        self.headers = None
+        self._headers = None
 
     def auth(self, kind='user', scopes=None, force=False, lines=True, verbose=True):
         """
@@ -44,22 +43,22 @@ class Authorise:
                 self.TOKEN = self.get_token_basic()
 
         # formatted as per spotify documentation
-        self.headers = {'Authorization': f"{self.TOKEN['token_type']} {self.TOKEN['access_token']}"}
+        self._headers = {'Authorization': f"{self.TOKEN['token_type']} {self.TOKEN['access_token']}"}
 
         # if call to user profile returns error, refresh token
-        if kind == 'user' and 'error' in requests.get(f'{self.BASE_API}/me', headers=self.headers).json():
+        if kind == 'user' and 'error' in requests.get(f'{self.BASE_API}/me', headers=self._headers).json():
             self.TOKEN = self.refresh_token()
-            self.headers = {'Authorization': f"{self.TOKEN['token_type']} {self.TOKEN['access_token']}"}
-        elif 'error' in requests.get(f'{self.BASE_API}/markets', headers=self.headers).json():
+            self._headers = {'Authorization': f"{self.TOKEN['token_type']} {self.TOKEN['access_token']}"}
+        elif 'error' in requests.get(f'{self.BASE_API}/markets', headers=self._headers).json():
             self.TOKEN = self.refresh_token()
-            self.headers = {'Authorization': f"{self.TOKEN['token_type']} {self.TOKEN['access_token']}"}
+            self._headers = {'Authorization': f"{self.TOKEN['token_type']} {self.TOKEN['access_token']}"}
 
         self.save_spotify_token()
 
         if verbose and lines:
             print('\n', '-' * 88, '\n', sep='')
 
-        return self.headers
+        return self._headers
 
     def refresh_token(self, verbose=True):
         """

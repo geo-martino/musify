@@ -1,9 +1,18 @@
-**/.egg-info
-**/.coverage
-**/.ipynb_checkpoints/
-**/.DS_Store/
-**/__pycache__/
-**/raw_data/
-**/data/
-.env
-.secrets
+# system/other folders
+**.egg-info
+**.DS_Store
+**.ipynb_checkpoints
+**__pycache__
+**.vscode
+
+# bin files
+**.coverage*
+**.env*
+**.secrets*
+**.log*
+**.bak*
+
+# large data & log folders
+raw_data/
+_data/
+_log/

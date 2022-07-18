@@ -10,7 +10,7 @@ I developed this program for my own use so I can share my local playlists with f
 
 > Currently, this program only supports .mp3, .flac, .wma, and .m4a files. .m4a files are not fully supported by the update tag function as they cannot store tempo or key tags.
 
-The package is completely open-source and reproducible. Use as you like, but be sure to credit your sources! More information on each function can be found in the [documentation](https://github.com/jor-mar/syncify/blob/master/DOCUMENTATION.md).
+The package is completely open-source and reproducible. Use as you like, but be sure to credit your sources!
 
 ## First time run
 
@@ -103,7 +103,7 @@ main.auth()
 
 ## Usage
 
-The following commands cover the main functions of the package through the command line. However, many methods go into making these functions work, through which a custom usage can be achieved. More information on these can be found in the [documentation](https://github.com/jor-mar/syncify/blob/master/DOCUMENTATION.md).
+The following commands cover the main functions of the package through the command line. However, many methods go into making these functions work, through which a custom usage can be achieved.
 
 Each function is listed as a make function (if installed) and Python command. You need only use one. Ensure you are in the root directory of the package when running these functions.
 
