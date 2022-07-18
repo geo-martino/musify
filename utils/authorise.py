@@ -149,8 +149,7 @@ class ApiAuthoriser:
         # extra information to add to the final headers
         self._extra_headers = extra_headers
 
-
-    def auth(self, force_new: bool=False, force_load: bool=False) -> dict:
+    def auth(self, force_new: bool = False, force_load: bool = False) -> dict:
         """
         Main method for authentication, tests/refreshes/reauthorises as needed
 
@@ -181,8 +180,8 @@ class ApiAuthoriser:
             and self._refresh_args is not None
         ):
             self._logger.debug(
-                "Access token is not valid and refresh data found. Refreshing token and testing..."
-            )
+                "Access token is not valid and refresh data found."
+                "Refreshing token and testing...")
 
             self._refresh_args["data"]["refresh_token"] = self._token["refresh_token"]
             self.request_token(self._refresh_args, user_args=None)
@@ -196,7 +195,8 @@ class ApiAuthoriser:
                 )
             else:
                 self._logger.debug(
-                    "Access token is not valid and and no refresh data found. Generating new token..."
+                    "Access token is not valid and and no refresh data found."
+                    "Generating new token..."
                 )
 
             self.request_token(self._auth_args, user_args=self._user_args)
@@ -246,10 +246,11 @@ class ApiAuthoriser:
         :param requests_args: dict. Authorisation data to post via requests.
         """
         # TODO: Flask server for picking up redirects for token code instead
-        if user_args:  
+        if user_args:
             self._logger.info("Authorising user privilege access...")
 
-            # opens in user's browser to authenticate, user must wait for redirect and input the given link
+            # opens in user's browser to authenticate
+            # user must wait for redirect and input the given link
             webopen(requests.post(**user_args).url)
             redirect_url = input("\33[1mAuthorise in new tab and input the returned url: \33[0m")
 
@@ -291,7 +292,7 @@ class ApiAuthoriser:
         return headers
 
     #############################################################
-    ### JSON I/O functions
+    # JSON I/O functions
     #############################################################
     def load_token(self) -> dict:
         """Load stored token from given path"""

@@ -10,9 +10,11 @@ import mutagen
 from PIL import Image
 from tqdm.auto import tqdm
 
+
 class Process():
 
-    def update_file_tags(self, playlists: dict, tags: list=None, replace: bool=False, dry_run: bool=True, **kwargs) -> None:
+    def update_file_tags(self, playlists: dict, tags: list = None,
+                         replace: bool = False, dry_run: bool = True, **kwargs) -> None:
         """
         Update file's tags from given dictionary of tags.
 
@@ -26,7 +28,8 @@ class Process():
 
         tracks_len = len([t for tracks in playlists.values() for t in tracks])
         print()
-        self._logger.info(f"\33[1;95m -> \33[1;97mUpdating tags in {tracks_len} files: {tags}\33[0m")
+        self._logger.info(
+            f"\33[1;95m -> \33[1;97mUpdating tags in {tracks_len} files: {tags}\33[0m")
 
         tags = [t for t in tags if t != 'image']
 
@@ -52,7 +55,7 @@ class Process():
                     continue
 
                 # loop through each tag to process
-                for tag_name in tags:                    
+                for tag_name in tags:
                     # get file type specific tag identifiers and new value
                     if tag_name == "uri" or tag_name == self._uri_tag:
                         tag_ids = self._tag_ids[ext].get(self._uri_tag, [])
@@ -60,10 +63,10 @@ class Process():
                     else:
                         tag_ids = self._tag_ids[ext].get(tag_name, [])
                         new_value = md_input[tag_name]
-                    
+
                     if tag_name == "compilation":
                         md_input[tag_name] = int(md_input[tag_name])
-                    
+
                     # skip conditions
                     if len(tag_ids) == 0:
                         # tag not in list of mapped tags
@@ -85,7 +88,6 @@ class Process():
                             del md_file[tag_file]
                             modified = True
 
-                    
                     if new_value is not None:
                         modified = True
                         # URI tag handling
@@ -93,7 +95,7 @@ class Process():
                             if md_input['uri'] is False:
                                 # placeholder URI for unavailable songs
                                 new_value = self._unavailable_uri_value
-                    
+
                         # file extension specific tag update and save updated file tags
                         tag_id = tag_ids[0]  # update 1st acceptable tag_id for this tag
                         if ext == ".flac":
@@ -119,14 +121,15 @@ class Process():
         if len(save_errors) > 0:
             save_errors = "\n".join(save_errors)
             self._logger.error(f"Could not save: \33[91m\n{save_errors}\33[0m")
-        
+
         logger = self._logger.info if self._verbose else self._logger.debug
         logger(f"\33[92mDone | Modified {count} files for tags: {tags}\33[0m")
 
     #############################################################
-    ### Transform
+    # Transform
     #############################################################
-    def convert_metadata(self, playlists: dict, key: str="uri", value: str=None, out: str="dict", **kwargs) -> dict:
+    def convert_metadata(self, playlists: dict, key: str = "uri",
+                         value: str = None, out: str = "dict", **kwargs) -> dict:
         """
         Convert dict from <name>: <list of dicts of track's metadata> to simpler, sorted key-value pairs.
 
@@ -134,7 +137,7 @@ class Process():
         :param key: str. Key from metadata dict to use as the key in the new dict.
         :param value: str. Value from metadata dict to use as the value in the new dict.
                         If None, keeps the whole metadata dict as the value.
-        :param out: str, default="dict". Output type as dict or dict of lists of all 
+        :param out: str, default="dict". Output type as dict or dict of lists of all
                                         available values. Can be "dict" or "list".
         :return: dict. <key>: <value> OR <track metadata>
         """
@@ -160,27 +163,29 @@ class Process():
                     elif out == "list" and value in track:
                         converted[track[key]] = converted.get(track[key], {})
                         converted[track[key]][track["path"]] = track[value]
-        
+
         if out == "list":  # sort lists by path
             for k, v in converted.items():
                 converted[k] = [v for _, v in sorted(v.items())]
 
         return dict(sorted(converted.items()))
 
-    def modify_compilation_tags(self, local: dict, compilation_check: bool=True, **kwargs) -> dict:
+    def modify_compilation_tags(
+            self, local: dict, compilation_check: bool = True, **kwargs) -> dict:
         """
         Determine if album is compilation and modify metadata:
         - Set all compilation ags to true
         - Set track number in ascending order by filename
         - Set disc number to None
-        
+
         :param local: dict. <name>: <list of dicts of local track's metadata>.
         :param compilation_check: bool, default=True. If True, determine compilation for each album.
             If False, treat all albums as compilation.
         :return: Modified albums <name>: <list of dicts of local track's metadata>.
         """
         print()
-        self._logger.info(f"\33[1;95m -> \33[1;97mSetting compilation style tags for {len(local)} albums\33[0m")
+        self._logger.info(
+            f"\33[1;95m -> \33[1;97mSetting compilation style tags for {len(local)} albums\33[0m")
         self._logger.debug(f"Compilation check: {compilation_check}")
 
         import json
@@ -200,7 +205,7 @@ class Process():
                     track['track'] = track_order.index(basename(track['path'])) + 1
                     track["disc"] = None
                     count += 1
-                
+
                 modified[name] = tracks
             else:
                 for track in tracks:  # set tags
@@ -211,18 +216,18 @@ class Process():
         logger(f"\33[92mDone | Set metadata for {count} tracks\33[0m")
         return modified
 
-    def filter_tracks(self, playlists: dict, filter_tags: dict=None, **kwargs) -> dict:
+    def filter_tracks(self, playlists: dict, filter_tags: dict = None, **kwargs) -> dict:
         """
         Filter tracks to only those with a valid uri and not including a tag in <filter_tags>.
 
         :param playlists: dict. Local playlists in form <name>: <list of dicts of track's metadata>
-        :param filter_tags: dict, default=None. <tag name>: <list of tags to filter out>. If None, skip this filter 
+        :param filter_tags: dict, default=None. <tag name>: <list of tags to filter out>. If None, skip this filter
         :return: dict. Filtered playlists.
         """
         self._logger.debug(
             f"Filtering tracks in {len(playlists)} playlists | "
             f"Filter out tags: {filter_tags}"
-            )
+        )
 
         # for appropriately aligned formatting
         max_width = len(max(playlists, key=len))
@@ -233,7 +238,7 @@ class Process():
             tracks = [track for track in tracks if isinstance(track['uri'], str)]
             filtered[name] = tracks
 
-            if filter_tags is not None:        
+            if filter_tags is not None:
                 # filter out tracks with tags in filter param
                 filtered[name] = []
                 for track in tracks:
@@ -249,20 +254,21 @@ class Process():
             self._logger.debug(
                 f"{name:<{len(name) + max_width - len(name)}} | "
                 f"Filtered out {len(tracks) - len(filtered[name]):>3} tracks"
-                )
+            )
         return filtered
 
     #############################################################
-    ### Images
+    # Images
     #############################################################
-    def embed_images(self, local: dict, spotify: dict, replace: bool=False, dry_run: bool=True, **kwargs) -> None:
+    def embed_images(self, local: dict, spotify: dict, replace: bool = False,
+                     dry_run: bool = True, **kwargs) -> None:
         """
         Embed images to local files from linked Spotify URI images.
         WARNING: This function can destructively modify your files.
-        
+
         :param local: dict. <name>: <list of dicts of local track's metadata>.
         :param spotify: dict. <uri>: <dict of spotify track's metadata>
-        :param replace: bool, default=False. Replace locally embedded images if True. 
+        :param replace: bool, default=False. Replace locally embedded images if True.
             Otherwise, only add images to files with no embedded image.
         :param dry_run: bool, default=False. Run function, but do not modify file at all.
         """
@@ -273,10 +279,16 @@ class Process():
         local = self.convert_metadata(local, key="uri", **kwargs)
 
         print()
-        self._logger.info(f"\33[1;95m -> \33[1;97mEmbedding images from Spotify for {len(local)} files\33[0m")
+        self._logger.info(
+            f"\33[1;95m -> \33[1;97mEmbedding images from Spotify for {len(local)} files\33[0m")
 
         # progress bar
-        local_bar = tqdm(local.items(), desc='Embedding images', unit='tracks', leave=self._verbose, file=sys.stdout)
+        local_bar = tqdm(
+            local.items(),
+            desc='Embedding images',
+            unit='tracks',
+            leave=self._verbose,
+            file=sys.stdout)
         count = 0
 
         for uri, track in local_bar:
@@ -298,7 +310,7 @@ class Process():
 
             # delete all embedded images
             for tag in dict(raw_data.tags).copy():
-                if dry_run or ext == '.wma':  
+                if dry_run or ext == '.wma':
                     # TODO: remove '.wma' bit after coding embed image to wma below
                     break
                 elif any(t in tag for t in self._tag_ids[ext].get("image", [])):
@@ -342,10 +354,10 @@ class Process():
         logger = self._logger.info if self._verbose else self._logger.debug
         logger(f"\33[92mDone | Modified images for {count} files\33[0m")
 
-    def extract_images(self, playlists: dict, dim: bool=True, **kwargs) -> str:
+    def extract_images(self, playlists: dict, dim: bool = True, **kwargs) -> str:
         """
         Extract and save all embedded images from local files or Spotify tracks.
-        
+
         :param playlists: dict. <parent folder name>: <list of dicts of track's metadata>
         :param dim: bool, default=True. Add dimensions to image filenames on export as suffix in parentheses.
         :return: str. Parent folder path of the exported images
@@ -357,9 +369,15 @@ class Process():
         tracks_len = len([t for tracks in playlists.values() for t in tracks])
 
         print()
-        self._logger.info(f"\33[1;95m -> \33[1;97mExtracting images for {tracks_len} tracks to {save_folder}\33[0m")
+        self._logger.info(
+            f"\33[1;95m -> \33[1;97mExtracting images for {tracks_len} tracks to {save_folder}\33[0m")
 
-        playlist_bar = tqdm(playlists.items(), desc='Extracting images', unit='folders', leave=self._verbose, file=sys.stdout)
+        playlist_bar = tqdm(
+            playlists.items(),
+            desc='Extracting images',
+            unit='folders',
+            leave=self._verbose,
+            file=sys.stdout)
         count = 0
 
         for name, tracks in playlist_bar:
@@ -375,7 +393,8 @@ class Process():
                     try:  # open image from link
                         img = Image.open(BytesIO(urlopen(track['image']).read()))
                     except URLError:
-                        self._logger.error(f"{track['title']} | Failed to open image from {track['image']}")
+                        self._logger.error(
+                            f"{track['title']} | Failed to open image from {track['image']}")
                         continue
 
                     # define save path for this track's image
@@ -398,14 +417,14 @@ class Process():
 
                 # load image and determine embedded image file type
                 img = Image.open(BytesIO(img))
-                img_ext = '.png' if 'png' in img.format.lower() else '.jpg'   
-                
+                img_ext = '.png' if 'png' in img.format.lower() else '.jpg'
+
                 # add dimensions to filename if set and save
                 save_path += f" ({'x'.join(str(n) for n in img.size)})" if dim else ''
                 img.save(save_path + img_ext)
 
                 count_current += 1
-            
+
             count += count_current
 
         logger = self._logger.info if self._verbose else self._logger.debug
@@ -424,8 +443,8 @@ class Process():
         if raw_data is None or raw_data == track["path"]:
             return None
 
-        # extension specific processing   
-        img = None               
+        # extension specific processing
+        img = None
         if ext == '.flac':
             if len(raw_data.pictures) > 0:
                 img = raw_data.pictures[0].data
@@ -441,5 +460,5 @@ class Process():
                         elif '.wma' in ext:
                             img = raw_data[file_tag][0].value
                         break
-        
+
         return img

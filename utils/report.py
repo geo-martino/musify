@@ -2,26 +2,26 @@
 class Report():
 
     #############################################################
-    ### Checks
+    # Checks
     #############################################################
-    def check_compilation(self, tracks: list, min_threshold: int=0.5, **kwargs) -> bool:
+    def check_compilation(self, tracks: list, min_threshold: int = 0.5, **kwargs) -> bool:
         """
         Check if a given set of tracks is a compilation album or not.
-        
+
         :param track: list. Metadata for locally stored tracks with 'compilation' keys.
-        :param min_threshold: int, default=0.5. Min ratio of tracks that need to be 
+        :param min_threshold: int, default=0.5. Min ratio of tracks that need to be
             compilation to return True.
         :return bool. True if compilation, False if not.
         """
         count = [t["compilation"] for t in tracks if isinstance(t["compilation"], int)]
         return sum(count) > len(tracks) * min_threshold
 
-    def check_spotify_valid(self, string: str, kind: list=None, **kwargs) -> bool:
+    def check_spotify_valid(self, string: str, kind: list = None, **kwargs) -> bool:
         """
         Check that the given string is of a valid Spotify type.
 
         :param string: str. URL/URI/ID to check.
-        :param kind: str/list, default=None. Types to check for. None checks all. 
+        :param kind: str/list, default=None. Types to check for. None checks all.
             Can be 'open', 'api', 'uri', 'id'.
         :return bool. True if valid, False if not.
         """
@@ -29,7 +29,7 @@ class Report():
             return False
         elif kind is None:
             kind = ['open', 'api', 'uri', 'id']
-        
+
         if 'open' in kind and self.OPEN_URL.lower() in string.lower():
             return True
         elif 'api' in kind and self.BASE_API.lower() in string.lower():
@@ -44,12 +44,13 @@ class Report():
         return False
 
     #############################################################
-    ### Reports
+    # Reports
     #############################################################
-    def report_differences(self, local: dict, spotify: dict, report_file: str=None, **kwargs) -> dict:
+    def report_differences(self, local: dict, spotify: dict,
+                           report_file: str = None, **kwargs) -> dict:
         """
         Produces a report on the differences between local and spotify playlists.
-        
+
         :param local: dict. Local playlists in form <name>: <list of dicts of local track's metadata>
         :param spotify: dict. Spotify playlists in form <name>: <list of dicts of spotify track's metadata>
         :param report_file: str, default=None. Name of file to output report to. If None, suppress file output.
@@ -69,7 +70,8 @@ class Report():
         max_width = len(max(local, key=len))
 
         print()
-        self._logger.info('\33[1;95m -> \33[1;97mReporting on differences between local and Spotify playlists...\33[0m')
+        self._logger.info(
+            '\33[1;95m -> \33[1;97mReporting on differences between local and Spotify playlists...\33[0m')
         for name, tracks in local.items():  # iterate through local playlists
             # preprocess URIs to lists for local and spotify
             # None and False added to factor in later check: track['uri'] not in spotify_URIs
@@ -96,7 +98,7 @@ class Report():
                 f"\33[92m{len(extra):>4} extra \33[0m|"
                 f"\33[91m{len(missing):>4} missing \33[0m|"
                 f"\33[93m{len(unavailable):>4} unavailable \33[0m"
-                )
+            )
 
             # incrementally save report
             tmp_out = {
@@ -122,11 +124,12 @@ class Report():
             f"\33[1;92m{extra_len:>4} extra \33[0m|"
             f"\33[1;91m{missing_len:>4} missing \33[0m|"
             f"\33[1;93m{unavailable_len:>4} unavailable \33[0m\n"
-            )
+        )
 
         return report
 
-    def report_missing_tags(self, playlists: dict, tags: list=None, match: str="any", **kwargs) -> dict:
+    def report_missing_tags(self, playlists: dict, tags: list = None,
+                            match: str = "any", **kwargs) -> dict:
         """
         Returns lists of dicts of track metadata for tracks with missing tags.
 
@@ -147,7 +150,7 @@ class Report():
                     missing = all(not track.get(tag) for tag in tags)
                 else:  # check if track is missing only some tags
                     missing = any(not track.get(tag) for tag in tags)
-                
+
                 if missing:  # if no tag, add to missing_tags dict
                     missing_tags[name].append(track)
 
@@ -155,7 +158,6 @@ class Report():
                 del missing_tags[name]
 
         tracks_len = len([t for tracks in missing_tags.values() for t in tracks])
-        self._logger.info(f"\33[93mFound {tracks_len} tracks with {match} missing tags\33[0m: {tags}")
+        self._logger.info(
+            f"\33[93mFound {tracks_len} tracks with {match} missing tags\33[0m: {tags}")
         return missing_tags
-
-    

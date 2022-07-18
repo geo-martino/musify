@@ -6,21 +6,32 @@ from webbrowser import open as webopen
 
 import requests
 
+
 class Authorise:
 
     def __init__(self):
 
-        # scopes of Spotify api access required by the functions in this program
-        self.scopes = ['playlist-modify-public', 'playlist-modify-private', 'playlist-read-collaborative']
+        # scopes of Spotify api access required by the functions in this
+        # program
+        self.scopes = [
+            'playlist-modify-public',
+            'playlist-modify-private',
+            'playlist-read-collaborative']
 
         # store token and headers
         self.TOKEN = None
         self._headers = None
 
-    def auth(self, kind='user', scopes=None, force=False, lines=True, verbose=True):
+    def auth(
+            self,
+            kind='user',
+            scopes=None,
+            force=False,
+            lines=True,
+            verbose=True):
         """
         Main method for authentication, tests/refreshes/reauthorises as needed
-        
+
         :param kind: str, default='user'. 'user' or 'basic' authorisation.
         :param scopes: list, default=None. List of scopes to authorise for user. If None, uses defaults.
         :param force: bool, default=False. Ignore stored token and reauthorise new user or basic access token.
@@ -36,22 +47,27 @@ class Authorise:
             self.TOKEN = self.load_spotify_token(verbose)
 
         # if no token, re-authorise and generate new tokens
-        if not self.TOKEN or (scopes and scopes != self.scopes) or 'refresh_token' not in self.TOKEN or force:
+        if not self.TOKEN or (
+                scopes and scopes != self.scopes) or 'refresh_token' not in self.TOKEN or force:
             if kind == 'user':
                 self.TOKEN = self.get_token_user(scopes)
             else:
                 self.TOKEN = self.get_token_basic()
 
         # formatted as per spotify documentation
-        self._headers = {'Authorization': f"{self.TOKEN['token_type']} {self.TOKEN['access_token']}"}
+        self._headers = {
+            'Authorization': f"{self.TOKEN['token_type']} {self.TOKEN['access_token']}"}
 
         # if call to user profile returns error, refresh token
-        if kind == 'user' and 'error' in requests.get(f'{self.BASE_API}/me', headers=self._headers).json():
+        if kind == 'user' and 'error' in requests.get(
+                f'{self.BASE_API}/me', headers=self._headers).json():
             self.TOKEN = self.refresh_token()
-            self._headers = {'Authorization': f"{self.TOKEN['token_type']} {self.TOKEN['access_token']}"}
+            self._headers = {
+                'Authorization': f"{self.TOKEN['token_type']} {self.TOKEN['access_token']}"}
         elif 'error' in requests.get(f'{self.BASE_API}/markets', headers=self._headers).json():
             self.TOKEN = self.refresh_token()
-            self._headers = {'Authorization': f"{self.TOKEN['token_type']} {self.TOKEN['access_token']}"}
+            self._headers = {
+                'Authorization': f"{self.TOKEN['token_type']} {self.TOKEN['access_token']}"}
 
         self.save_spotify_token()
 
@@ -89,7 +105,7 @@ class Authorise:
     def get_token_user(self, scopes=None, verbose=True):
         """
         Authenticates access to API with given user scopes
-        
+
         :param scopes: list, default=None. List of scopes to authorise for user. If None, uses defaults.
         :param verbose: bool, default=True. Print extra information on function running.
         :return: dict. Authorisation response.
@@ -108,9 +124,14 @@ class Authorise:
                   'state': 'syncify',
                   'scope': scopes}
 
-        # opens in user's browser to authenticate, user must wait for redirect and input the given link
-        webopen(requests.post(f'{self.BASE_AUTH}/authorize', params=params).url)
-        redirect_url = input('Authorise in new tab and input the returned url: ')
+        # opens in user's browser to authenticate, user must wait for redirect and
+        # input the given link
+        webopen(
+            requests.post(
+                f'{self.BASE_AUTH}/authorize',
+                params=params).url)
+        redirect_url = input(
+            'Authorise in new tab and input the returned url: ')
 
         # format out the access code from the returned url
         code = urlparse(redirect_url).query.split('&')[0].split('=')[1]
@@ -132,7 +153,7 @@ class Authorise:
     def get_token_basic(self, verbose=True):
         """
         Authenticates for basic API access, no user authorisation required
-        
+
         :param verbose: bool, default=True. Print extra information on function running.
         :return: dict. Authorisation response.
         """
@@ -154,7 +175,7 @@ class Authorise:
     def load_spotify_token(self, verbose=True):
         """
         Load stored spotify token from data folder
-        
+
         :param verbose: bool, default=True. Print extra information on function running.
         :return: dict. Access token.
         """

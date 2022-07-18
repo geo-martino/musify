@@ -7,7 +7,8 @@ from time import sleep
 
 class IO:
 
-    def save_json(self, data: dict, filename: str, parent: bool=False, no_output: bool=False, **kwargs) -> None:
+    def save_json(self, data: dict, filename: str, parent: bool = False,
+                  no_output: bool = False, **kwargs) -> None:
         """
         Save dict to json file in data path.
 
@@ -19,7 +20,7 @@ class IO:
         if no_output and not parent:
             # skip if no output set and not saving to parent folder
             return False
-        
+
         # get filepath and save
         if not filename.lower().endswith(".json"):
             filename += ".json"
@@ -30,20 +31,20 @@ class IO:
         with open(json_path, "w", encoding='utf8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
-    def load_json(self, filename: str, parent: bool=False, **kwargs) -> dict:
+    def load_json(self, filename: str, parent: bool = False, **kwargs) -> dict:
         """
         Load json from data path.
 
         :param filename: str. Filename to load from.
         :param parent: bool, default=False. Use parent folder of data path.
-        :return: Loaded JSON object, or False if not found. 
+        :return: Loaded JSON object, or False if not found.
         """
         # get filepath and load
         if not filename.lower().endswith(".json"):
             filename += ".json"
         json_path = dirname(self.DATA_PATH) if parent else self.DATA_PATH
         json_path = join(json_path, normpath(filename))
-        
+
         if exists(json_path):
             self._logger.debug(f"Loading: {json_path}")
             with open(json_path, "r", encoding='utf8') as f:
@@ -59,14 +60,14 @@ class IO:
         :param data: list/dict. Data to update file with.
         :param filename: str. Filename to process.
         :return: Updated JSON object, or False if failed.
-        """        
+        """
         # get filepath and load
         self._logger.debug(f"Updating: {filename}")
         loaded = self.load_json(filename, **kwargs)
         if not loaded:
             self.save_json(data, filename, **kwargs)
             return data
-        
+
         try:
             if isinstance(loaded, dict):
                 if isinstance(list(loaded.values())[0], dict):
@@ -82,11 +83,11 @@ class IO:
         except (AttributeError, ValueError):
             self._logger.error(f"{filename} update failed, skipping...")
             return False
-        
+
         self.save_json(loaded, filename, **kwargs)
         return loaded
 
-    def delete_json(self, filename: str, parent: bool=False, **kwargs) -> dict:
+    def delete_json(self, filename: str, parent: bool = False, **kwargs) -> dict:
         """
         Delete json file at for given filename.
 
@@ -99,7 +100,6 @@ class IO:
             filename += ".json"
         json_path = dirname(self.DATA_PATH) if parent else self.DATA_PATH
         json_path = join(json_path, normpath(filename))
-        
 
         if exists(json_path):
             self._logger.debug(f"Deleting: {json_path}")

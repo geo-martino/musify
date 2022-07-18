@@ -8,14 +8,15 @@ from tqdm.auto import tqdm
 
 from utils.process import Process
 
+
 class LocalIO(Process):
 
     # tag name which holds track URI
     _uri_tag = "comment"
     # placeholder URI for tracks which aren't on Spotify
-    _unavailable_uri_value = "spotify:track:unavailable" 
+    _unavailable_uri_value = "spotify:track:unavailable"
 
-    # tag type formats 
+    # tag type formats
     _int_tags = ["track", "year", "disc"]
     _float_tags = ["bpm", "length"]
 
@@ -91,7 +92,7 @@ class LocalIO(Process):
         self._all_files = sorted(self._all_files)
 
     #############################################################
-    ### Inidividual track functions
+    # Inidividual track functions
     #############################################################
     def load_file(self, track, **kwargs) -> tuple:
         """
@@ -111,9 +112,11 @@ class LocalIO(Process):
         # extract file extension and confirm file type is listed in self.filetype_tags dict
         ext = splitext(path)[1].lower()
         if ext not in self._tag_ids:
-            self._logger.warning(f"{ext} not an accepted extension. Use only: {', '.join(list(self._tag_ids.keys()))}")
+            self._logger.warning(
+                f"{ext} not an accepted extension."
+                f"Use only: {', '.join(list(self._tag_ids.keys()))}")
             return path, ext
-            
+
         try:  # load filepath and get file extension
             raw_data = mutagen.File(path)
         except mutagen.MutagenError:
@@ -128,10 +131,10 @@ class LocalIO(Process):
             except mutagen.MutagenError:  # give up
                 self._logger.error(f"File not found | {path}")
                 return path, ext
-        
+
         return raw_data, ext
 
-    def extract_local_track_metadata(self, path: str, position: int=None, **kwargs) -> dict:
+    def extract_local_track_metadata(self, path: str, position: int = None, **kwargs) -> dict:
         """
         Extract metadata for a track.
 
@@ -153,18 +156,20 @@ class LocalIO(Process):
             for tag_id in _tag_ids:
                 # each filetype has a different way of extracting tags within mutagen
                 if ext == ".mp3" and tag_name == self._uri_tag:
-                    # some tags start with the given tag_id, but often have multiple tags with extra suffixes
+                    # some tags start with the given tag_id,
+                    # but often have multiple tags with extra suffixes
                     # loop through each tag in raw_data to find all tags
                     metadata[tag_name] = []
                     for tag in raw_data:
                         if tag_id in tag and raw_data.get(tag, [None])[0] is not None:
                             metadata[tag_name].append(raw_data[tag][0].strip())
-                    
+
                     for i, value in enumerate(metadata[tag_name]):  # find valid URI
-                        if self.check_spotify_valid(value, kind="uri") or value == self._unavailable_uri_value:
+                        if self.check_spotify_valid(
+                                value, kind="uri") or value == self._unavailable_uri_value:
                             uri = value
                             break
-                    
+
                     # process remaining comments
                     if uri is not None:  # drop URI from tags list
                         del metadata[tag_name][i]
@@ -197,7 +202,7 @@ class LocalIO(Process):
                         if ext != ".mp3" and tag_name == self._uri_tag:  # get URI
                             if self.check_spotify_valid(metadata[tag_name], kind="uri"):
                                 uri = metadata[tag_name]
-                
+
                     # convert to int or float
                     if tag_name in self._int_tags:
                         metadata[tag_name] = int(re.sub('[^0-9]', '', str(metadata[tag_name])))
@@ -229,7 +234,7 @@ class LocalIO(Process):
                 metadata["uri"] = False
             elif self.check_spotify_valid(uri, kind="uri"):
                 metadata["uri"] = uri
-        
+
         # add track path and folder name to metadata
         metadata["folder"] = basename(dirname(path))
         metadata["path"] = path
@@ -237,15 +242,19 @@ class LocalIO(Process):
         return metadata
 
     #############################################################
-    ### Multiple files functions
+    # Multiple files functions
     #############################################################
-    def get_local_metadata(self, prefix_start: str=None, prefix_stop: str=None, prefix_limit: str=None, compilation: bool=None, **kwargs) -> dict:
+    def get_local_metadata(self, prefix_start: str = None, prefix_stop: str = None,
+                           prefix_limit: str = None, compilation: bool = None, **kwargs) -> dict:
         """
         Get metadata on all audio files in music folder.
 
-        :param prefix_start: str, default=None. Start processing from the folder with this prefix i.e. <start_folder>:<END>.
-        :param prefix_stop: str, default=None. Stop processing from the folder with this prefix i.e. <START>:<stop_folder>.
-        :param prefix_limit: str, default=None. Only process albums that start with this prefix.
+        :param prefix_start: str, default=None. Start processing from the folder
+            with this prefix i.e. <start_folder>:<END>.
+        :param prefix_stop: str, default=None. Stop processing from the folder
+            with this prefix i.e. <START>:<stop_folder>.
+        :param prefix_limit: str, default=None. Only process albums that start
+            with this prefix.
         :param compilation: bool, default=None. Only return compilation albums.
         :return: dict. <folder name>: <list of dicts of track's metadata>
         """
@@ -263,7 +272,7 @@ class LocalIO(Process):
             for i, folder in enumerate(folders):
                 if folder.lower().strip().startswith(prefix_stop.strip().lower()):
                     self._logger.debug(f"Folder end: {folder}")
-                    folders = folders[:i+1]
+                    folders = folders[:i + 1]
                     break
         if prefix_limit:
             folders_reduced = []
@@ -275,9 +284,10 @@ class LocalIO(Process):
 
         # filter files
         paths = [path for path in self._all_files if basename(dirname(path)) in folders]
-        
+
         print()
-        self._logger.info(f"\33[1;95m -> \33[1;97mExtracting track metadata for {len(paths)} audio paths in {len(folders)} folders\33[0m")
+        self._logger.info(
+            f"\33[1;95m -> \33[1;97mExtracting track metadata for {len(paths)} audio paths in {len(folders)} folders\33[0m")
 
         # progress bar and empty dict to fill with metadata
         folder_metadata = {}
@@ -293,11 +303,13 @@ class LocalIO(Process):
         for path in path_bar:
             # get folder name and metadata for each track
             folder = basename(dirname(path))
-            metadata = self.extract_local_track_metadata(path, **kwargs)                
+            metadata = self.extract_local_track_metadata(path, **kwargs)
 
-            if metadata is None or metadata == path:  # extract_local_track_metadata returns path if load is unsuccesful
+            if metadata is None or metadata == path:
+                # extract_local_track_metadata returns path if load is unsuccesful
                 load_errors.append(path)
-            elif metadata:  # if metadata successfully extracted, update metadata folder
+            elif metadata:
+                # if metadata successfully extracted, update metadata folder
                 folder_metadata[folder] = folder_metadata.get(folder, []) + [metadata]
 
         if compilation:
@@ -307,7 +319,7 @@ class LocalIO(Process):
                     del folder_metadata[folder]
                     count += 1
             self._logger.debug(
-                f"Removed {count} non-compilation folders." 
+                f"Removed {count} non-compilation folders."
                 f"{len(folder_metadata)} folders remaining."
             )
 
@@ -318,7 +330,8 @@ class LocalIO(Process):
         self._logger.debug('Extracting track metadata: Done')
         return folder_metadata
 
-    def get_m3u_metadata(self, in_playlists: list=None, ex_playlists: list=None, **kwargs) -> dict:
+    def get_m3u_metadata(self, in_playlists: list = None,
+                         ex_playlists: list = None, **kwargs) -> dict:
         """
         Get metadata on all tracks found in m3u playlists
 
@@ -338,12 +351,15 @@ class LocalIO(Process):
             elif ex_playlists is not None and name.lower() in ex_playlists:
                 continue
             playlists_filtered.append(path)
-        
-        self._logger.debug(f"Filtered out {len(playlist_paths) - len(playlists_filtered)} playlists from {len(playlist_paths)} local playlists\33[0m")
+
+        self._logger.debug(
+            f"Filtered out {len(playlist_paths) - len(playlists_filtered)} playlists"
+            f"from {len(playlist_paths)} local playlists\33[0m")
         playlist_paths = playlists_filtered
 
         print()
-        self._logger.info(f"\33[1;95m -> \33[1;97mExtracting track metadata for {len(playlist_paths)} playlists\33[0m")
+        self._logger.info(
+            f"\33[1;95m -> \33[1;97mExtracting track metadata for {len(playlist_paths)} playlists\33[0m")
 
         # progress bar
         playlist_bar = tqdm(
@@ -409,7 +425,7 @@ class LocalIO(Process):
         if len(load_errors) > 0:
             load_errors = "\n".join(load_errors)
             self._logger.error(f"Could not load: \33[91m\n{load_errors}\33[0m")
-        
+
         # get verbose level appropriate logger and appropriately align formatting
         logger = self._logger.info if self._verbose else self._logger.debug
         max_width = len(max(playlist_metadata, key=len))
@@ -425,8 +441,8 @@ class LocalIO(Process):
                 f"\33[91m{len([t for t in playlist if t['uri'] is None]):>4} missing\33[0m |"
                 f"\33[93m{len([t for t in playlist if t['uri'] is False]):>4} unavailable\33[0m |"
                 f"\33[1m {len(playlist):>4} total\33[0m"
-                )
-        
+            )
+
         self._logger.debug("Extrating track metadata: Done")
         return playlist_metadata
 
@@ -443,7 +459,7 @@ class LocalIO(Process):
         backup = self.load_json(backup, **kwargs)
         if not backup:
             return
-        
+
         for tracks in playlists.values():
             for track in tracks:  # loop through all tracks
                 if track['path'] in backup:

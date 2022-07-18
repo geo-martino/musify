@@ -14,9 +14,10 @@ from spotify.search import Search
 BASE_API = "https://api.spotify.com/v1"
 OPEN_URL = "https://open.spotify.com"
 
+
 class Environment:
 
-    def clean_up_env(self, days: int=60, keep: int=30, **kwargs) -> None:
+    def clean_up_env(self, days: int = 60, keep: int = 30, **kwargs) -> None:
         """
         Clears files older than {days} months if more than {leave} previous runs found
 
@@ -40,23 +41,23 @@ class Environment:
                 for file in sorted(files_list):
                     if remaining <= keep:
                         break
-                    
+
                     file_dt = dt.strptime(file[:19], "%Y-%m-%d_%H.%M.%S")
                     if file_dt < dt.now() - relativedelta(days=days):
                         remove_list.append(file)
                         remaining -= 1
-            
+
             remove[kind] = remove_list
-        
+
         if len(remove["_log"]) > 0:
             self._logger.debug(f"Removing {len(remove['_log'])} old logs in {log}")
             [os.remove(join(log, file)) for file in remove['_log']]
-        
+
         if len(remove["_data"]) > 0:
             self._logger.debug(f"Removing {len(remove['_data'])} old folders in {data}")
             [shutil.rmtree(join(data, folder)) for folder in remove['_data']]
 
-    def get_env_vars(self, dry_run: bool=False, **kwargs) -> None:
+    def get_env_vars(self, dry_run: bool = False, **kwargs) -> None:
         """
         Set object attributes from environment variables.
 
@@ -108,24 +109,34 @@ class Environment:
         self._auth["test_args"] = {"url": f"{BASE_API}/me"}
         self._auth["test_condition"] = lambda r: "error" not in r
 
-    def set_env_vars(self, current_state: bool=True, **kwargs) -> dict:
+    def set_env_vars(self, current_state: bool = True, **kwargs) -> dict:
         """
-        Save settings to default environment variables. Loads any saved variables and updates as appropriate.
-        
+        Save settings to default environment variables.
+        Loads any saved variables and updates as appropriate.
+
         :param current_state: bool, default=True. Use current object variables to update.
-        :param **kwargs: pass kwargs for variables to update. Overrides current values if current_state is True.
+        :param **kwargs: pass kwargs for variables to update.
+            Overrides current values if current_state is True.
         :return: dict. Dict of the variables saved.
         """
         env = {}
         if exists('.env'):  # load stored environment variables
             with open('.env', 'r') as file:
-                env = dict([line.rstrip().split('=') for line in file])           
-        
+                env = dict([line.rstrip().split('=') for line in file])
+
         # acccepted vars
-        env_vars = ['CLIENT_ID', 'CLIENT_SECRET', 'PLAYLISTS', 'WIN_PATH', 'MAC_PATH', 'LIN_PATH', 'DATA_PATH', 'TOKEN_FILENAME']
+        env_vars = [
+            'CLIENT_ID',
+            'CLIENT_SECRET',
+            'PLAYLISTS',
+            'WIN_PATH',
+            'MAC_PATH',
+            'LIN_PATH',
+            'DATA_PATH',
+            'TOKEN_FILENAME']
         if current_state:  # update variables from current object
             env.update({var: val for var, val in vars(self).items() if var in env_vars})
-            
+
         # update with given kwargs
         env.update({var: val for var, val in {**kwargs}.items() if var in env_vars})
 
@@ -133,7 +144,7 @@ class Environment:
         save_vars = [f'{var}={val}\n' for var, val in env.items() if var in env_vars]
         with open('.env', 'w') as file:
             file.writelines(save_vars)
-        
+
         return env
 
     def get_logger(self, **kwargs) -> logging.Logger:
@@ -159,7 +170,7 @@ class Environment:
         stdout_format = logging.Formatter(
             fmt="%(message)s",
             datefmt="%y-%b-%d %H:%M:%S"
-            )
+        )
         stdout_h.setLevel(logging.INFO)
         stdout_h.setFormatter(stdout_format)
         stdout_h.addFilter(logStdOutFilter(levels=[logging.INFO, logging.WARNING]))
@@ -170,12 +181,12 @@ class Environment:
         file_format = logging.Formatter(
             fmt="[%(asctime)s] [%(levelname)8s] [%(funcName)-40s:%(lineno)4d] --- %(message)s",
             datefmt="%y-%b-%d %H:%M:%S"
-            )
+        )
         file_h.setLevel(logging.DEBUG)
         file_h.setFormatter(file_format)
         file_h.addFilter(logFileFilter())
         logger.addHandler(file_h)
-        
+
         # return exceptions to logger
         sys.excepthook = self.handle_exception
 
@@ -189,7 +200,10 @@ class Environment:
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
             return
 
-        self._logger.critical("CRITICAL ERROR: Uncaught Exception", exc_info=(exc_type, exc_value, exc_traceback))
+        self._logger.critical(
+            "CRITICAL ERROR: Uncaught Exception", exc_info=(
+                exc_type, exc_value, exc_traceback))
+
 
 class logStdOutFilter(logging.Filter):
     def __init__(self, levels: list = None):
@@ -199,10 +213,11 @@ class logStdOutFilter(logging.Filter):
         """
 
         self.levels = levels if levels else [self.__level]
-    
+
     def filter(self, record: logging.LogRecord) -> logging.LogRecord:
         if record.levelno in self.levels:
             return record
+
 
 class logFileFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> logging.LogRecord:

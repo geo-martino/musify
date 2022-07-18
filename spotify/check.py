@@ -4,16 +4,17 @@ from time import sleep
 
 from tqdm.auto import tqdm
 
+
 class CheckMatches:
 
     #############################################################
-    ### Create playlists from tracks
+    # Create playlists from tracks
     #############################################################
-    def check_tracks(self, playlists: dict, pause: int=10, **kwargs) -> dict:
+    def check_tracks(self, playlists: dict, pause: int = 10, **kwargs) -> dict:
         """
         Creates temporary playlists from locally stored URIs to check tracks have an accurate URI attached.
         User can then manually modify incorrectly associated URIs by replacing tracks in the playlists.
-        
+
         :param playlists: dict. Local playlists in form <name>: <list of dicts of track's metadata>
         :param pause: int, default=10. Number of temporary playlists to create before pausing to allow user to check.
         :return: dict. Report on updated, unavailable, and unprocessed tracks.
@@ -21,15 +22,17 @@ class CheckMatches:
         report = {}
 
         print()
-        self._logger.info('\33[1;95m -> \33[1;97mChecking matched URIs by creating temporary Spotify playlists for the user\33[0m')
+        self._logger.info(
+            '\33[1;95m -> \33[1;97mChecking matched URIs by creating temporary Spotify playlists for the user\33[0m')
 
         # extract dict of <name>: <list of URIs> for each playlist if URIs present
-        playlist_uri_list = self.convert_metadata(playlists, key="folder", value="uri", out="list", **kwargs)
+        playlist_uri_list = self.convert_metadata(
+            playlists, key="folder", value="uri", out="list", **kwargs)
         bar = tqdm(range(len(playlist_uri_list)),
-                    desc='Creating temp playlists',
-                    unit='playlists',
-                    leave=self._verbose,
-                    file=sys.stdout)
+                   desc='Creating temp playlists',
+                   unit='playlists',
+                   leave=self._verbose,
+                   file=sys.stdout)
 
         # max stops found with round up function
         max_stops = (len(playlists) // pause) + (len(playlists) % pause > 0)
@@ -40,14 +43,15 @@ class CheckMatches:
             inp = 'start'  # reset to some value to allow while loop to start
             # handle errors while still deleting temporary playlists
 
-            try: 
+            try:
                 # create playlist and store it's URL for later unfollowing
                 url = f'{self.create_playlist(playlist_name, public=False, **kwargs)}/tracks'
                 playlist_urls[playlist_name] = url
 
-                # add URIs 
-                self.add_to_playlist(url, [uri for uri in uri_list if uri], skip_dupes=False, **kwargs)
-            except:
+                # add URIs
+                self.add_to_playlist(url, [uri for uri in uri_list if uri],
+                                     skip_dupes=False, **kwargs)
+            except BaseException:
                 self._logger.error(traceback.format_exc())
                 # run through to delete current playlists and exit
                 n = len(playlist_uri_list)
@@ -58,7 +62,8 @@ class CheckMatches:
             sleep(0.1)
             bar.update(1)
 
-            if len(playlist_urls) % pause == 0 or n == len(playlist_uri_list):  # once pause amount has been reached
+            if len(playlist_urls) % pause == 0 or n == len(
+                    playlist_uri_list):  # once pause amount has been reached
                 progress = f"{n // pause}/{max_stops}"
                 if inp != 'q':
                     try:
@@ -70,15 +75,18 @@ class CheckMatches:
                     # handle errors while still deleting temporary playlists
                     try:  # check and update URIs from any user changes
                         print()
-                        report.update(self.match_tracks_from_playlists(playlists, playlist_urls, **kwargs))
-                    except:
+                        report.update(
+                            self.match_tracks_from_playlists(
+                                playlists, playlist_urls, **kwargs))
+                    except BaseException:
                         self._logger.error(traceback.format_exc())
                         inp = 'q'
                 if not self.test_token():  # check if token has expired
                     self._logger.info('API token has expired, reauthorising...')
                     self.auth()
-                
-                self._logger.info(f'\33[93mDeleting {len(playlist_urls)} temporary playlists... \33[0m')
+
+                self._logger.info(
+                    f'\33[93mDeleting {len(playlist_urls)} temporary playlists... \33[0m')
                 for url in playlist_urls.values():  # delete playlists
                     self.delete_playlist(url.replace("tracks", "followers"), **kwargs)
 
@@ -94,10 +102,10 @@ class CheckMatches:
 
         bar.close()
         self._logger.debug('Checking matched URIs: Done')
-        
+
         return report
 
-    def input_check_playlists(self, playlists: dict,  progress: str='NA', **kwargs) -> str:
+    def input_check_playlists(self, playlists: dict, progress: str = 'NA', **kwargs) -> str:
         """
         Get user input for current loop of main check function.
 
@@ -115,7 +123,7 @@ class CheckMatches:
         }
 
         max_width = len(max(options, key=len)) + 1
-        
+
         help_text = ["\n\t\33[96mEnter one of the following options - \33[0m\n\t"]
         for k, v in options.items():
             k += ":"
@@ -124,14 +132,15 @@ class CheckMatches:
         print(help_text)
 
         inp = 'start'
-        playlists_filtered = {name: [t for t in tracks if t['uri'] is not None] for name, tracks in playlists.items()}
+        playlists_filtered = {name: [t for t in tracks if t['uri'] is not None]
+                              for name, tracks in playlists.items()}
 
         # if user has inputted an open url style link, print URIs for each track
         while inp != '':  # while user has not hit return only
             inp = input(f"\33[93mEnter ({progress}): \33[0m")
             inp = inp.strip()
             self._logger.debug(f"User input: {inp}")
-            
+
             if inp.lower() == "h":  # help text
                 print(help_text)
             elif self.check_spotify_valid(inp):  # print URL result
@@ -149,14 +158,15 @@ class CheckMatches:
                 break
 
         return inp
-    
+
     #############################################################
-    ### Match to tracks user has added or removed
+    # Match to tracks user has added or removed
     #############################################################
-    def match_tracks_from_playlists(self, local: dict, urls: dict, report_file: str=None, **kwargs) -> dict:
+    def match_tracks_from_playlists(self, local: dict, urls: dict,
+                                    report_file: str = None, **kwargs) -> dict:
         """
         Check and update locally stored URIs for given playlists against respective Spotify playlist's URIs.
-        
+
         :param local: dict. Local playlists in form <name>: <list of dicts of track's metadata>
         :param urls: dict. Spotify playlists in form <name>: <playlist url>
         :param report_file: str, default=None. Name of file to output report to. If None, suppress file output.
@@ -180,17 +190,19 @@ class CheckMatches:
                 t_switched = []
                 inp = ''  # reset for next while loop
 
-                tracks_remaining, t_switched = self.match_to_current(tracks, name=name, url=urls[name], switched=t_switched)
+                tracks_remaining, t_switched = self.match_to_current(
+                    tracks, name=name, url=urls[name], switched=t_switched)
                 if len(tracks_remaining) > 0:  # get user input for any remaining tracks
                     try:
-                        inp, t_switched = self.input_missing_uris(tracks, remainder=tracks_remaining, name=name, switched=t_switched)
+                        inp, t_switched = self.input_missing_uris(
+                            tracks, remainder=tracks_remaining, name=name, switched=t_switched)
                     except KeyboardInterrupt:
                         inp = 's'
 
                 # logging
                 t_unavailable = [t for t in tracks if t['uri'] is False]
                 t_unchanged = [t for t in tracks if t['uri'] is None]
-                
+
                 self._logger.debug(f"{name} |{len(t_switched):>4} track URIs switched")
                 self._logger.debug(f"{name} |{len(t_unavailable):>4} tracks unavailable")
                 self._logger.debug(f"{name} |{len(t_unchanged):>4} tracks unchanged")
@@ -214,7 +226,8 @@ class CheckMatches:
 
         return report
 
-    def match_to_current(self, tracks: dict, name: str, url: str, switched: list, **kwargs) -> tuple:
+    def match_to_current(self, tracks: dict, name: str, url: str,
+                         switched: list, **kwargs) -> tuple:
         """
         Attempt to match missing tracks to tracks currently in a given playlist name.
 
@@ -227,7 +240,8 @@ class CheckMatches:
         :param max_width: int, default=0. Max width for aligned logging.
         :return: (str, dict). (user's input, <list of tracks where the user has add a new URI>)
         """
-        self._logger.info(f'\33[1;95m -> \33[1;97mAttempting to find URIs for tracks in Spotify playlist: \33[94m{name}\33[0m...')
+        self._logger.info(
+            f'\33[1;95m -> \33[1;97mAttempting to find URIs for tracks in Spotify playlist: \33[94m{name}\33[0m...')
 
         # get list of current tracks in playlist
         if url is not None:
@@ -244,21 +258,23 @@ class CheckMatches:
 
         # check what tracks user has added or removed
         tracks_added = {track['uri']: track for track in spotify if track['uri'] not in local_uris}
-        tracks_removed = {track['path']: track for track in tracks if track['uri'] not in spotify_uris}
+        tracks_removed = {
+            track['path']: track for track in tracks if track['uri'] not in spotify_uris}
         tracks_missing = {track['path']: track for track in tracks if track['uri'] is None}
 
-        if len(tracks_added) + len(tracks_removed) + len(tracks_missing) == 0:  # skip if no changes
+        if len(tracks_added) + len(tracks_removed) + len(tracks_missing) == 0:
+            # skip if no changes
             self._logger.debug(f"{name} | <<< No tracks switched")
             return tracks_removed | tracks_missing, switched
 
         self._logger.debug(f"{name} |{len(tracks_added):>4} tracks added")
         self._logger.debug(f"{name} |{len(tracks_removed):>4} tracks removed")
         self._logger.debug(f"{name} |{len(tracks_missing):>4} tracks with no URI")
-        
+
         tracks_remaining = tracks_removed | tracks_missing
         start_len = len(tracks_remaining)
         if len(tracks_remaining) > 0:
-            # attempt to match tracks removed to tracks added by title                    
+            # attempt to match tracks removed to tracks added by title
             for path, track in tracks_remaining.items():
                 # reset URI and find match
                 track['uri'] = None
@@ -272,21 +288,22 @@ class CheckMatches:
                     else:
                         del tracks_missing[path]
                     switched.append(track)
-            
+
         tracks_remaining = tracks_removed | tracks_missing
         self._logger.debug(f"{name} |{start_len - len(tracks_remaining):>4} tracks switched")
         self._logger.debug(f"{name} |{len(tracks_remaining):>4} tracks still not found")
 
         return tracks_remaining, switched
 
-    def input_missing_uris(self, tracks: dict, name: str, remainder: list, switched: str, **kwargs) -> tuple:
+    def input_missing_uris(self, tracks: dict, name: str, remainder: list,
+                           switched: str, **kwargs) -> tuple:
         """
         Get user input for current loop of update URIs function.
 
         :param tracks: dict. All possible tracks for thisplaylist
             in the form <list of dicts of track's metadata>
         :param name: str. Name of the current playist for logging.
-        :param remained: list. Current list of remaining tracks to process 
+        :param remained: list. Current list of remaining tracks to process
             in the form <list of dicts of track's metadata>
         :param updated: list. Current list of tracks where the user has add a new URI
             in the form <list of dicts of track's metadata>
@@ -301,11 +318,11 @@ class CheckMatches:
             "h": "Show this dialogue again",
             "OR enter a custom URI/URL/ID for this track": "",
         }
-        
+
         help_text = [
-            "\n\t\33[1;91m{name}: \33[91mThe following tracks were removed and/or matches were not found.\33[0m".format(name=name), 
+            f"\n\t\33[1;91m{name}: \33[91mThe following tracks were removed and/or matches were not found.\33[0m",
             "\33[96mEnter one of the following:\33[0m\n\t"
-            ]
+        ]
         help_text += [f"{k}: {v}" if len(v) > 0 else k for k, v in options.items()]
         help_text = '\n\t'.join(help_text) + '\n'
         print(help_text)
@@ -367,8 +384,8 @@ class CheckMatches:
                     switched.append(track)
                 else:  # invalid input
                     inp = ''
-                
+
                 if 'a' in inp.lower():  # go to next track
                     break
-        
+
         return inp, switched
