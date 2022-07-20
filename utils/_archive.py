@@ -9,7 +9,7 @@ from titlecase import titlecase
 
 class Misc:
     #############################################################
-    ### Misc. functions
+    ## Misc. functions
     #############################################################
 
     # THESE FUNCTIONS ARE AUTHOR SPECIFIC AND HAVE NOT BEEN BUILT FOR GENERAL USE.
@@ -151,7 +151,7 @@ class Misc:
                     except FileNotFoundError:  # skip if file not found
                         continue
 
-        print('\33[92m', f'Done. Modified {i + 1} URIs', '\33[0m')
+        print(f'\33[92mDone. Modified {i + 1} URIs \33[0m')
 
     def tags_from_filename(self, folders: dict, no_rename: list = None,
                            prefix_start: str = None, **kwargs) -> None:

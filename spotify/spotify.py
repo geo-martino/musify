@@ -34,7 +34,7 @@ class Spotify(Endpoints, Search, CheckMatches):
         CheckMatches.__init__(self)
 
     #############################################################
-    # Tracks
+    ## Tracks
     #############################################################
     def extract_spotify_track_metadata(
             self, track: dict,
@@ -52,6 +52,8 @@ class Spotify(Endpoints, Search, CheckMatches):
             in the form <tag name>: <value>.
         :return: dict. Processed metadata for each track
         """
+        if not track or track['uri'] is None:
+            return {}
         # in case of no available information
         image_url = None
         max_height = 0
@@ -89,9 +91,9 @@ class Spotify(Endpoints, Search, CheckMatches):
             'bpm': track.get("audio_features", {}).get('tempo'),
             'key': key,
             'disc': track['disc_number'],
-            'length': track['duration_ms'] / 1000,
             'image': image_url,
             'image_height': max_height,
+            'length': track['duration_ms'] / 1000,
             'uri': track['uri'],
         }
 
@@ -142,7 +144,7 @@ class Spotify(Endpoints, Search, CheckMatches):
         """
         print()
         self._logger.info(
-            f"\33[1;95m -> \33[1;97mExtracting Spotify metadata for {len(tracks)} tracks\33[0m")
+            f"\33[1;95m -> \33[1;97mExtracting Spotify metadata for {len(tracks)} tracks \33[0m")
 
         # request information on tracks from Spotify API and extract key metadata
         tracks = self.get_items(tracks, "track", **kwargs)
@@ -164,14 +166,15 @@ class Spotify(Endpoints, Search, CheckMatches):
         return tracks_metadata
 
     #############################################################
-    # Playlists
+    ## Playlists
     #############################################################
-    def get_playlist_metadata(self, playlist: str, add_genre: bool = False,
+    def get_playlist_metadata(self, playlist: str, name: str = None, add_genre: bool = False,
                               add_extra: dict = None, **kwargs) -> list:
         """
         Get metadata from given playlist URI/URL/ID.
 
         :param playlist: str, default=None. Playlist/s to get metadata from.
+        :param name: str, default=None. Name of current playlist for printing.
         :param add_genre: bool, default=False. Search for artists and add genres for each track.
         :param add_extra: dict, default=None. Local metadata tags to add back to response.
         :return: list. Raw metadata for each track in the playlist
@@ -184,10 +187,10 @@ class Spotify(Endpoints, Search, CheckMatches):
             artists = {a["uri"]: a for a in artists}
 
         metadata = []
-        for i, track in enumerate(tracks):
+        for i, track in enumerate(tracks, 1):
             if add_genre:  # replace data for first given artist in each track
                 track["artists"][0] = artists.get(track["artists"][0]["uri"], track["artists"][0])
-            extra_data = add_extra.get(track['uri']) if add_extra is not None else None
+            extra_data = add_extra.get(track.get('uri')) if add_extra is not None else None
             metadata.append(
                 self.extract_spotify_track_metadata(
                     track, i, add_extra=extra_data, **kwargs))
@@ -212,19 +215,19 @@ class Spotify(Endpoints, Search, CheckMatches):
 
         playlists_filtered = []
         for name in playlists:
-            if in_playlists is not None and name.lower() not in in_playlists:
+            if in_playlists is not None and name.lower() not in [p.lower() for p in in_playlists]:
                 continue
-            elif ex_playlists is not None and name.lower() in ex_playlists:
+            elif ex_playlists is not None and name.lower() in [p.lower() for p in ex_playlists]:
                 continue
             playlists_filtered.append(name)
 
         self._logger.debug(
-            f"Filtered out {len(playlists) - len(playlists_filtered)} playlists from {len(playlists)} given playlists\33[0m")
+            f"Filtered out {len(playlists) - len(playlists_filtered)} playlists from {len(playlists)} given playlists \33[0m")
         playlists = self.get_user_playlists(names=playlists_filtered, **kwargs)
 
         print()
         self._logger.info(
-            f"\33[1;95m -> \33[1;97mGetting Spotify playlist metadata for {len(playlists)} playlists\33[0m")
+            f"\33[1;95m -> \33[1;97mGetting Spotify playlist metadata for {len(playlists)} playlists \33[0m")
 
         playlist_bar = tqdm(playlists.items(),
                             desc='Extracting metadata',
@@ -232,18 +235,20 @@ class Spotify(Endpoints, Search, CheckMatches):
 
         # extract and replace the raw response list with key metadata
         for name, playlist in playlist_bar:
-            playlists[name] = self.get_playlist_metadata(playlist, **kwargs)
+            playlists[name] = self.get_playlist_metadata(playlist, name=name, **kwargs)
 
         # get verbose level appropriate logger and appropriately align formatting
         logger = self._logger.info if self._verbose else self._logger.debug
-        max_width = len(max(playlists, key=len))
+        max_width = len(max(playlists, key=len)) if len(max(playlists, key=len)) < 50 else 50
 
         # sort playlists in alphabetical order and print
         if self._verbose:
             print()
-        logger("\33[1;96mFound the following Spotify playlists:\33[0m")
+        logger("\33[1;96mFound the following Spotify playlists: \33[0m")
         for name, playlist in sorted(playlists.items(), key=lambda x: x[0].lower()):
-            logger(f"{name:<{max_width}} |\33[92m{len(playlist):>4} total tracks\33[0m")
+            logger(
+                f"{name if len(name) < 50 else name[:47] + '...':<{max_width}} |"
+                f"\33[92m{len(playlist):>4} total tracks \33[0m")
 
         return playlists
 
@@ -264,13 +269,13 @@ class Spotify(Endpoints, Search, CheckMatches):
 
         print()
         self._logger.info(
-            f"\33[1;95m -> \33[1;97mCreating/updating {len(playlists)} Spotify playlists\33[0m")
+            f"\33[1;95m -> \33[1;97mCreating/updating {len(playlists)} Spotify playlists \33[0m")
 
         # filter tracks to those with valid URIs and not containing filter tags
         playlists = self.filter_tracks(playlists, **kwargs)
 
         # for appropriately aligned formatting
-        max_width = len(max(playlists, key=len))
+        max_width = len(max(playlists, key=len)) if len(max(playlists, key=len)) < 50 else 50
 
         # progress bar
         playlist_bar = tqdm(reversed(playlists.items()),
@@ -291,9 +296,10 @@ class Spotify(Endpoints, Search, CheckMatches):
             uris_all = [track['uri'] for track in tracks]
 
             if name in spotify:  # if playlist exists on Spotify
-                self._logger.debug(f"{name:<{len(name) + max_width - len(name)}} | Updating")
-
+                self._logger.debug(f"{name if len(name) < 50 else name[:47] + '...':<{max_width}} | Updating")
+                
                 # get playlist tracks metadata, and list of URIs currently on Spotify
+                url = spotify[name]["tracks"]["href"]
                 spotify_playlist = self.get_playlist_tracks(spotify[name])
                 uris_current = [track['uri'] for track in spotify_playlist]
 
@@ -311,13 +317,13 @@ class Spotify(Endpoints, Search, CheckMatches):
                     cleared_count = len(uris_current)
                     uris_add = uris_all
                 elif clear == 'extra':
-                    clear = [uri for uri in uris_current if uri not in uris_all]
+                    uris_clear = [uri for uri in uris_current if uri is not None and uri not in uris_all]
                     self.clear_from_playlist(
-                        spotify[name], tracks_list=clear, dry_run=dry_run, **kwargs)
-                    cleared_count = len(clear)
+                        spotify[name], tracks_list=uris_clear, dry_run=dry_run, **kwargs)
+                    cleared_count = len(uris_clear)
 
                 self._logger.debug(
-                    f"{name:<{len(name) + max_width - len(name)}} |"
+                    f"{name if len(name) < 50 else name[:47] + '...':<{max_width}} |"
                     f"{len(uris_current):>4} Spotify tracks at start |"
                     f"{cleared_count:>4} Spotify tracks cleared |"
                     f"{len(uris_add):>4} tracks to add")
@@ -325,7 +331,7 @@ class Spotify(Endpoints, Search, CheckMatches):
                 uris_add = uris_all
 
                 self._logger.debug(
-                    f"{name:<{len(name) + max_width - len(name)}} | "
+                    f"{name if len(name) < 50 else name[:47] + '...':<{max_width}} | "
                     f"Creating |"
                     f"{len(uris_add):>4} tracks to add"
                 )
@@ -340,7 +346,7 @@ class Spotify(Endpoints, Search, CheckMatches):
                 count = len(uris_add)
 
             self._logger.debug(
-                f"{name:<{len(name) + max_width - len(name)}} | Added {count} tracks")
+                f"{name if len(name) < 50 else name[:47] + '...':<{max_width}} | Added {count} tracks")
 
         self._logger.debug('Creating/updating Spotify playlists: Done')
         return True

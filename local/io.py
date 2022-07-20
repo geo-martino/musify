@@ -1,7 +1,7 @@
-from glob import glob
 import re
 import sys
-from os.path import basename, dirname, join, splitext, isdir
+from glob import glob
+from os.path import basename, dirname, isdir, join, splitext
 
 import mutagen
 from tqdm.auto import tqdm
@@ -34,12 +34,13 @@ class LocalIO(Process):
             "key": ["initialkey"],
             "disc": ["discnumber"],
             "compilation": ["compilation"],
+            "album_artist": ["albumartist"],
             "comment": ["comment"],
             "image": [],
         },
         ".mp3": {
             "title": ["TIT2"],
-            "artist": ["TPE1", "TPE2"],
+            "artist": ["TPE1"],
             "album": ["TALB"],
             "track": ["TRCK"],
             "genre": ["TCON"],
@@ -48,6 +49,7 @@ class LocalIO(Process):
             "key": ["TKEY"],
             "disc": ["TPOS"],
             "compilation": ["TCMP"],
+            "album_artist": ["TPE2"],
             "comment": ["COMM"],
             "image": ["APIC"],
         },
@@ -59,15 +61,16 @@ class LocalIO(Process):
             "genre": ["©gen"],
             "year": ["©day"],
             "bpm": ["tmpo"],
-            "key": ["NULL"],
+            "key": ["----:com.apple.iTunes:INITIALKEY"],
             "disc": ["discnumber"],
             "compilation": ["cpil"],
+            "album_artist": [],
             "comment": ["©cmt"],
             "image": ["covr"],
         },
         ".wma": {
             "title": ["Title"],
-            "artist": ["Author", "WM/AlbumArtist"],
+            "artist": ["Author"],
             "album": ["WM/AlbumTitle"],
             "track": ["WM/TrackNumber"],
             "genre": ["WM/Genre"],
@@ -76,6 +79,7 @@ class LocalIO(Process):
             "key": ["WM/InitialKey"],
             "disc": ["WM/PartOfSet"],
             "compilation": ["COMPILATION"],
+            "album_artist": ["WM/AlbumArtist"],
             "comment": ["Description"],
             "image": ["WM/Picture"],
         },
@@ -88,11 +92,14 @@ class LocalIO(Process):
         # get list of all accepted types of audio files in music path
         self._all_files = []
         for ext in self._tag_ids:
+            # first glob doesn't get filenames that start with a period
+            # second glob only picks up filenames that start with a period
             self._all_files += glob(join(self.MUSIC_PATH, "*", "**", f"*{ext}"), recursive=True)
+            self._all_files += glob(join(self.MUSIC_PATH, "*", "**", f".*{ext}"), recursive=True)
         self._all_files = sorted(self._all_files)
 
     #############################################################
-    # Inidividual track functions
+    ## Inidividual track functions
     #############################################################
     def load_file(self, track, **kwargs) -> tuple:
         """
@@ -147,6 +154,13 @@ class LocalIO(Process):
         if raw_data is None or raw_data == path:
             return path
 
+        metadata, uri = self._extract(raw_data=raw_data, ext=ext, position=position)
+        metadata = self._process(metadata=metadata, uri=uri, path=path)
+
+        return metadata
+
+    def _extract(self, raw_data, ext: str, position: int = None) -> tuple:
+        """Extension based tag extraction logic. INTERNAL USE ONLY"""
         # record given track position
         uri = None
         metadata = {"position": position}
@@ -155,35 +169,34 @@ class LocalIO(Process):
         for tag_name, _tag_ids in self._tag_ids.get(ext, {"": []}).items():
             for tag_id in _tag_ids:
                 # each filetype has a different way of extracting tags within mutagen
-                if ext == ".mp3" and tag_name == self._uri_tag:
+                if ext == ".mp3":
                     # some tags start with the given tag_id,
                     # but often have multiple tags with extra suffixes
                     # loop through each tag in raw_data to find all tags
                     metadata[tag_name] = []
                     for tag in raw_data:
-                        if tag_id in tag and raw_data.get(tag, [None])[0] is not None:
-                            metadata[tag_name].append(raw_data[tag][0].strip())
+                        if tag_id in tag and raw_data[tag] is not None:
+                            if tag_name == 'image': 
+                                metadata[tag_name].append(raw_data[tag].data)
+                            elif tag_name == "year" and hasattr(raw_data[tag], "year"):
+                                metadata[tag_name].append(raw_data[tag].year)
+                            else:
+                                metadata[tag_name].append(raw_data[tag][0])
 
+                            
                     for i, value in enumerate(metadata[tag_name]):  # find valid URI
-                        if self.check_spotify_valid(
-                                value, kind="uri") or value == self._unavailable_uri_value:
+                        if self.check_spotify_valid(value, kind="uri") or value == self._unavailable_uri_value:
+                            metadata[tag_name] = value
                             uri = value
                             break
 
-                    # process remaining comments
-                    if uri is not None:  # drop URI from tags list
-                        del metadata[tag_name][i]
-
-                    if len(metadata[tag_name]) == 0:  # no tags left
-                        metadata[tag_name] = None
-                    else:  # only keep first comment
-                        metadata[tag_name] = metadata[tag_name][0]
-
-                elif ext == ".m4a" and tag_name in ["track", "disc", "compilation"]:
+                elif ext == ".m4a" and tag_name in ["track", "disc", "compilation", "key"]:
                     if tag_name in ["track", "disc"]:
                         metadata[tag_name] = raw_data.get(tag_id, [[None]])[0][0]
                     elif tag_name == "compilation":
                         metadata[tag_name] = raw_data.get(tag_id, "")
+                    elif tag_name == "key":
+                        metadata[tag_name] = raw_data.get(tag_id, [b''])[0][:].decode("utf-8")
                 elif ext == ".wma":
                     metadata[tag_name] = raw_data.get(
                         tag_id, [mutagen.asf.ASFUnicodeAttribute(None)]
@@ -191,17 +204,21 @@ class LocalIO(Process):
                 else:
                     metadata[tag_name] = raw_data.get(tag_id, [None])[0]
 
+
                 # if no tag found, replace with null
                 if len(str(metadata[tag_name]).strip()) == 0:
                     metadata[tag_name] = None
+                
+                if isinstance(metadata[tag_name], list):  # remove lists
+                    if len(metadata[tag_name]) == 0:  # no tags left
+                        metadata[tag_name] = None
+                    else:  # only keep first tag
+                        metadata[tag_name] = metadata[tag_name][0]
 
                 if metadata[tag_name] is not None:  # type based conversion
                     # strip whitespaces from string based tags
                     if isinstance(metadata[tag_name], str):
                         metadata[tag_name] = metadata[tag_name].strip()
-                        if ext != ".mp3" and tag_name == self._uri_tag:  # get URI
-                            if self.check_spotify_valid(metadata[tag_name], kind="uri"):
-                                uri = metadata[tag_name]
 
                     # convert to int or float
                     if tag_name in self._int_tags:
@@ -209,6 +226,20 @@ class LocalIO(Process):
                     elif tag_name in self._float_tags:
                         metadata[tag_name] = float(re.sub('[^0-9.]', '', str(metadata[tag_name])))
 
+        # determine if track has image embedded
+        if ext == ".flac":
+            metadata["has_image"] = bool(raw_data.pictures)
+        else:
+            metadata["has_image"] = metadata["image"] is not None
+        metadata["image"] = None
+
+        # add track length
+        metadata["length"] = raw_data.info.length
+
+        return metadata, uri
+
+    def _process(self, metadata: dict, uri: str, path: str) -> dict:
+        """Process file metadata. INTERNAL USE ONLY"""
         if metadata["compilation"] is not None:  # convert compilation tag to bool
             metadata["compilation"] = int(metadata["compilation"])
 
@@ -217,18 +248,9 @@ class LocalIO(Process):
         except (ValueError, TypeError):
             metadata["year"] = None
 
-        # add track length
-        metadata["length"] = raw_data.info.length
-
-        # determine if track has image embedded
-        if ext == ".flac":
-            metadata["has_image"] = bool(raw_data.pictures)
-        else:
-            metadata["has_image"] = metadata["image"] is not None
-            del metadata["image"]
-
         # URI handling conditions
         metadata["uri"] = None
+        uri = metadata.get(self._uri_tag) if uri is None else uri
         if uri is not None:
             if uri == self._unavailable_uri_value:
                 metadata["uri"] = False
@@ -242,7 +264,7 @@ class LocalIO(Process):
         return metadata
 
     #############################################################
-    # Multiple files functions
+    ## Multiple files functions
     #############################################################
     def get_local_metadata(self, prefix_start: str = None, prefix_stop: str = None,
                            prefix_limit: str = None, compilation: bool = None, **kwargs) -> dict:
@@ -259,7 +281,7 @@ class LocalIO(Process):
         :return: dict. <folder name>: <list of dicts of track's metadata>
         """
         # get all folders in music path
-        folders = [basename(f) for f in glob(join(self.MUSIC_PATH, "*")) if isdir(f)]
+        folders = [basename(f) for f in glob(join(self.MUSIC_PATH, "**"), recursive=True) if isdir(f)]
 
         # filter folders to use in extraction
         if prefix_start:
@@ -287,7 +309,7 @@ class LocalIO(Process):
 
         print()
         self._logger.info(
-            f"\33[1;95m -> \33[1;97mExtracting track metadata for {len(paths)} audio paths in {len(folders)} folders\33[0m")
+            f"\33[1;95m -> \33[1;97mExtracting track metadata for {len(paths)} audio paths in {len(folders)} folders \33[0m")
 
         # progress bar and empty dict to fill with metadata
         folder_metadata = {}
@@ -323,9 +345,26 @@ class LocalIO(Process):
                 f"{len(folder_metadata)} folders remaining."
             )
 
+        # get verbose level appropriate logger and appropriately align formatting
+        logger = self._logger.info if self._verbose else self._logger.debug
+
+        # sort playlists in alphabetical order and print
+        if self._verbose:
+            print()
+        available = len([t for f in folder_metadata.values() for t in f if isinstance(t['uri'], str)])
+        missing = len([t for f in folder_metadata.values() for t in f if t['uri'] is None])
+        unavailable = len([t for f in folder_metadata.values() for t in f if t['uri'] is False])
+        logger(
+            f"\33[1;96mLIBRARY TOTALS       \33[1;0m|"
+            f"\33[92m{available:>6} available \33[0m|"
+            f"\33[91m{missing:>6} missing \33[0m|"
+            f"\33[93m{unavailable:>6} unavailable \33[0m|"
+            f"\33[1m{len(paths):>6} total \33[0m"
+        )
+
         if len(load_errors) > 0:
             load_errors = "\n".join(load_errors)
-            self._logger.error(f"Could not load: \33[91m\n{load_errors}\33[0m")
+            self._logger.error(f"Could not load: \33[91m\n{load_errors} \33[0m")
 
         self._logger.debug('Extracting track metadata: Done')
         return folder_metadata
@@ -346,20 +385,20 @@ class LocalIO(Process):
         playlists_filtered = []
         for path in playlist_paths:
             name = splitext(basename(path))[0]
-            if in_playlists is not None and name.lower() not in in_playlists:
+            if in_playlists is not None and name.lower() not in [p.lower() for p in in_playlists]:
                 continue
-            elif ex_playlists is not None and name.lower() in ex_playlists:
+            elif ex_playlists is not None and name.lower() in [p.lower() for p in ex_playlists]:
                 continue
             playlists_filtered.append(path)
 
         self._logger.debug(
-            f"Filtered out {len(playlist_paths) - len(playlists_filtered)} playlists"
-            f"from {len(playlist_paths)} local playlists\33[0m")
+            f"Filtered out {len(playlist_paths) - len(playlists_filtered)} playlists "
+            f"from {len(playlist_paths)} local playlists \33[0m")
         playlist_paths = playlists_filtered
 
         print()
         self._logger.info(
-            f"\33[1;95m -> \33[1;97mExtracting track metadata for {len(playlist_paths)} playlists\33[0m")
+            f"\33[1;95m -> \33[1;97mExtracting track metadata for {len(playlist_paths)} playlists \33[0m")
 
         # progress bar
         playlist_bar = tqdm(
@@ -371,8 +410,7 @@ class LocalIO(Process):
         )
 
         names = [splitext(basename(path))[0] for path in playlist_paths]
-        names
-        max_width = len(max(names, key=len))
+        max_width = len(max(names, key=len)) if len(max(names, key=len)) < 50 else 50
 
         load_errors = []
         for playlist_path in playlist_bar:
@@ -400,7 +438,7 @@ class LocalIO(Process):
                     track_paths = [file.replace("/", "\\") for file in track_paths]
 
             self._logger.debug(
-                f"{name:<{len(name) + max_width - len(name)}} |"
+                f"{name if len(name) < 50 else name[:47] + '...':<{max_width}} |"
                 f"{len(track_paths):>4} tracks"
             )
 
@@ -422,26 +460,26 @@ class LocalIO(Process):
                 elif metadata is not None:
                     playlist_metadata[name].append(metadata)
 
-        if len(load_errors) > 0:
-            load_errors = "\n".join(load_errors)
-            self._logger.error(f"Could not load: \33[91m\n{load_errors}\33[0m")
-
         # get verbose level appropriate logger and appropriately align formatting
         logger = self._logger.info if self._verbose else self._logger.debug
-        max_width = len(max(playlist_metadata, key=len))
+        max_width = len(max(playlist_metadata, key=len)) if len(max(playlist_metadata, key=len)) < 50 else 50
 
         # sort playlists in alphabetical order and print
         if self._verbose:
             print()
-        logger("\33[1;96mFound the following Local playlists:\33[0m")
+        logger("\33[1;96mFound the following Local playlists: \33[0m")
         for name, playlist in sorted(playlist_metadata.items(), key=lambda x: x[0].lower()):
             logger(
-                f"{name:<{max_width}} |"
-                f"\33[92m{len([t for t in playlist if isinstance(t['uri'], str)]):>4} available\33[0m |"
-                f"\33[91m{len([t for t in playlist if t['uri'] is None]):>4} missing\33[0m |"
-                f"\33[93m{len([t for t in playlist if t['uri'] is False]):>4} unavailable\33[0m |"
-                f"\33[1m {len(playlist):>4} total\33[0m"
+                f"{name if len(name) < 50 else name[:47] + '...':<{max_width}} |"
+                f"\33[92m{len([t for t in playlist if isinstance(t['uri'], str)]):>4} available \33[0m|"
+                f"\33[91m{len([t for t in playlist if t['uri'] is None]):>4} missing \33[0m|"
+                f"\33[93m{len([t for t in playlist if t['uri'] is False]):>4} unavailable \33[0m|"
+                f"\33[1m {len(playlist):>4} total \33[0m"
             )
+
+        if len(load_errors) > 0:
+            load_errors = "\n".join(load_errors)
+            logger(f"Could not load: \33[91m\n{load_errors} \33[0m")
 
         self._logger.debug("Extrating track metadata: Done")
         return playlist_metadata

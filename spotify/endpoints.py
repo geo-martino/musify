@@ -1,11 +1,11 @@
+import json
 import sys
+from datetime import datetime as dt
+from datetime import timedelta
+from time import sleep
 
 import requests
 from tqdm.auto import tqdm
-from datetime import datetime as dt, timedelta
-
-import json
-from time import sleep
 
 
 class Endpoints:
@@ -49,7 +49,7 @@ class Endpoints:
             kind = str(kind)[:-1] if str(kind).lower().endswith('s') else str(kind).lower()
             key = string
         else:
-            self._logger.error("\33[91mID given but no 'kind' defined\33[0m")
+            self._logger.error("\33[91mID given but no 'kind' defined \33[0m")
             return string
 
         # reformat
@@ -65,12 +65,12 @@ class Endpoints:
         return out
 
     def handle_request(self, kind: str, url: str, *args, **kwargs) -> dict:
-        print()
         r = getattr(requests, kind)(url, *args, **kwargs, headers=self._headers)
         while r.status_code == 429 and 'retry-after' in r.headers:
+            print()
             wait_dt = dt.now() + timedelta(seconds=int(r.headers['retry-after']))
             text = f"Rate limit exceeded. Retry again at {wait_dt.strftime('%Y-%m-%d %H:%M:%S')}"
-            self._logger.warning(f"\33[91mEndpoint: {url} | {text}\33[0m")
+            self._logger.warning(f"\33[91mEndpoint: {url} | {text} \33[0m")
 
             if int(r.headers['retry-after']) < self._test_expiry:  # wait if time is short
                 self._logger.info(f"Waiting {int(r.headers['retry-after']) // 60} minutes")
@@ -86,7 +86,7 @@ class Endpoints:
         return r
 
     #############################################################
-    # Basic get endpoints
+    ## Basic get endpoints
     #############################################################
     def query(self, query: str, kind: str, limit: int = 10, **kwargs) -> list:
         """
@@ -131,7 +131,7 @@ class Endpoints:
         return r
 
     #############################################################
-    # Advanced tracks/items endpoints
+    ## Advanced tracks/items endpoints
     #############################################################
     def get_items(self, items: list, kind: str = None, limit: int = 50,
                   add_features: bool = False, add_analysis: bool = False, **kwargs) -> list:
@@ -157,10 +157,10 @@ class Endpoints:
         # batch ids into given limit size
         item_bar = range(round(len(id_list) / limit + 0.5))
 
-        self._logger.debug(f"Endpoint: {url} |{len(id_list):>4} {kind} |{len(item_bar):>4} pages")
+        self._logger.debug(f"Endpoint: {url:<46} |{len(item_bar):>4} pages |{len(id_list):>5} {kind}")
 
         # add progress bar for large lists of over 50 iterations
-        if len(id_list) > 50:
+        if len(id_list) > 10 * limit:
             item_bar = tqdm(
                 item_bar,
                 desc=f'Getting {kind}',
@@ -171,8 +171,9 @@ class Endpoints:
         results = []
         for i in item_bar:
             # format to comma-separated list of ids and get results
-            id_string = ','.join([i for i in id_list[limit * i: limit * (i + 1)]])
-            raw_data = self.handle_request("get", url, params={'ids': id_string})
+            params = {'ids': ','.join([i for i in id_list[limit * i: limit * (i + 1)]])}
+            self._logger.debug(f"Endpoint: {url:<33} | Page:{i+1:>4} | Params: {params}")
+            raw_data = self.handle_request("get", url, params=params)[kind]
             if kind == "tracks":
                 raw_data = self.get_track_features(raw_data, **kwargs) if add_features else raw_data
                 raw_data = self.get_track_analysis(raw_data, **kwargs) if add_analysis else raw_data
@@ -191,33 +192,34 @@ class Endpoints:
 
         if isinstance(data, str):  # get features and return raw result to user
             data = self.convert(data, get="id", **kwargs)
-            self._logger.debug(f"Endpoint: {url:<87} | ID: {data}")
+            self._logger.debug(f"Endpoint: {url:<46} | ID: {data}")
             return self.handle_request("get", f"{url}/{data}")
         elif isinstance(data, dict) and 'id' in data:  # get features and update input
-            self._logger.debug(f"Endpoint: {url} | ID: {data['id']}")
+            self._logger.debug(f"Endpoint: {url:<46} | ID: {data['id']}")
             features = self.handle_request("get", f"{url}/{data['id']}")
             data['audio_features'] = features
             return data
         elif isinstance(data, list):
             if len(data) == 0:
-                self._logger.debug(f"Endpoint: {url:<87} | No data given")
+                self._logger.debug(f"Endpoint: {url:<46} | No data given")
                 return data
 
             # get correctly formatted id string for endpoint
-            id_string = ''
             if isinstance(data[0], str):
-                id_string = ','.join(self.convert(d, get="id", **kwargs) for d in data)
+                params = {'ids': ','.join(self.convert(d, get="id", **kwargs) for d in data)}
             elif isinstance(data[0], dict) and 'id' in data[0]:
-                id_string = ','.join(track['id'] for track in data)
+                params = {'ids': ','.join(track['id'] for track in data)}
+            else:
+                self._logger.warning(f"Endpoint: {url:<46} | Input data not recognised")
 
-            self._logger.debug(f"Endpoint: {url:<87} |{len(id_string.split(',')):>4} IDs")
+            self._logger.debug(f"Endpoint: {url:<46} | Params: {params}")
 
             # get features and update input metadata
-            features = self.handle_request("get", url, params={'ids': id_string})['audio_features']
+            features = self.handle_request("get", url, params=params)['audio_features']
             for m, f in zip(data, features):
                 m['audio_features'] = f
         else:
-            self._logger.warning(f"Endpoint: {url:<87} | Input data not recognised")
+            self._logger.warning(f"Endpoint: {url:<46} | Input data not recognised")
 
         return data
 
@@ -233,15 +235,15 @@ class Endpoints:
 
         if isinstance(data, str):  # get analysis and return raw result to user
             data = self.convert(data, get="id", **kwargs)
-            self._logger.debug(f"Endpoint: {url:<87} | ID: {data}")
+            self._logger.debug(f"Endpoint: {url:<46} | ID: {data}")
             return endpoint_func(data)
         elif isinstance(data, dict) and 'id' in data:  # get analysis and update input
-            self._logger.debug(f"Endpoint: {url:<87} | ID: {data['id']}")
+            self._logger.debug(f"Endpoint: {url:<46} | ID: {data['id']}")
             data.update(endpoint_func(data['id']))
             return data
         elif isinstance(data, list):
             if len(data) == 0:
-                self._logger.debug(f"Endpoint: {url:<87} | No data given")
+                self._logger.debug(f"Endpoint: {url:<46} | No data given")
                 return data
 
             # get id_list and analysis per track
@@ -251,19 +253,19 @@ class Endpoints:
             elif isinstance(data[0], dict) and 'id' in data[0]:
                 id_list = [d['id'] for d in data]
 
-            self._logger.debug(f"Endpoint: {url:<87} |{len(id_list):>4} IDs")
+            self._logger.debug(f"Endpoint: {url:<46} | IDs: {id_list}")
             analysis = [endpoint_func(id_) for id_ in id_list]
 
             # update input metadata
             for m, a in zip(data, analysis):
                 m["audio_analysis"] = a
         else:
-            self._logger.warning(f"Endpoint: {url:<87} | Input data not recognised")
+            self._logger.warning(f"Endpoint: {url:<46} | Input data not recognised")
 
         return data
 
     #############################################################
-    # Playlist read endpoints
+    ## Playlist read endpoints
     #############################################################
     def get_user_playlists(self, names: list = None, user: str = 'self',
                            limit: int = 50, **kwargs) -> dict:
@@ -288,7 +290,7 @@ class Endpoints:
 
         # get results, set up progress bar
         while r['next']:
-            self._logger.debug(f"Endpoint: {r['next']}")
+            self._logger.debug(f"Endpoint: {r['next']:<41}")
             r = self.handle_request("get", r['next'], params={'limit': limit})
 
             # extract track information from each playlist and add to dictionary
@@ -303,12 +305,13 @@ class Endpoints:
 
         return playlists
 
-    def get_playlist_tracks(self, playlist: str, limit: int = 50,
+    def get_playlist_tracks(self, playlist: str, name: str = None, limit: int = 50,
                             add_features: bool = False, add_analysis: bool = False, **kwargs) -> list:
         """
         Get all tracks from a given playlist.
 
         :param playlist: str. Playlist URL/URI/ID to get.
+        :param name: str. Name of e playlist for logging
         :param add_features: bool, default=True. Search for and add features for each track
         :param add_analysis: bool, default=False. Search for and add features for each track
         :return: list. Raw track metadata for each item in the playlist.
@@ -327,25 +330,30 @@ class Endpoints:
         # set up for loop
         r = {'next': url, "offset": 0, "total": total}
         tracks = []
+        i = 1
 
         # get results and add to list
         while r['next']:
-            self._logger.debug(f"Endpoint: {r['next']:<87} |{r['total']:>4} tracks")
+            self._logger.debug(f"Endpoint: {r['next']:<87} |{i*limit:>4}/{r['total']:<4} tracks")
             r = self.handle_request("get", r['next'], params={"limit": limit})
             raw_data = [r['track'] for r in r["items"]]
             raw_data = self.get_track_features(raw_data, **kwargs) if add_features else raw_data
             raw_data = self.get_track_analysis(raw_data, **kwargs) if add_analysis else raw_data
             tracks.extend(raw_data)
+            i += 1
 
-        for track in tracks:  # append playlist url to each track metadata
-            track["playlist_url"] = url.replace("/tracks", "")
+        if len(tracks) > 0:
+            for track in tracks:  # append playlist url to each track metadata
+                track["playlist_url"] = url.replace("/tracks", "")
+        else:
+            self._logger.debug(f"No tracks in playlist: {name}")
 
-        self._logger.debug(f"Returning raw data{len(tracks):>4} tracks")
+        self._logger.debug(f"Returning raw data for{len(tracks):>4} tracks in: {name}")
 
         return tracks
 
     #############################################################
-    # Playlist create/update/delete endpoints
+    ## Playlist create/update/delete endpoints
     #############################################################
     def create_playlist(self, playlist_name: str, public: bool = True,
                         collaborative: bool = False, **kwargs) -> str:
@@ -404,12 +412,13 @@ class Endpoints:
             current_tracks = [track['track']['uri'] for track in current_tracks]
 
         tracks = [track for track in tracks if track not in current_tracks]
-        self._logger.debug(f"Endpoint: {url:<69} | Adding {len(tracks):>3} tracks")
+        
 
         # add tracks in batches
         for i in range(len(tracks) // limit + 1):
-            uri_string = ','.join(tracks[limit * i: limit * (i + 1)])
-            self.handle_request("post", url, params={'uris': uri_string})
+            params = {'uris': ','.join(tracks[limit * i: limit * (i + 1)])}
+            self._logger.debug(f"Endpoint: {url:<69} | Adding {len(tracks):>3} tracks | Params: {params}")
+            self.handle_request("post", url, params=params)
 
         return url
 
@@ -424,7 +433,7 @@ class Endpoints:
         if not self.check_spotify_valid(playlist):
             url = self.get_user_playlists(playlist).get(playlist, {}).get('href')
             if not url:
-                self._logger.warning(f"\33[91m{playlist} not found in user's playlists\33[0m")
+                self._logger.warning(f"\33[91m{playlist} not found in user's playlists \33[0m")
                 return
             url += "/followers"
         else:
@@ -480,7 +489,7 @@ class Endpoints:
         return url
 
     #############################################################
-    # Misc endpoints
+    ## Misc endpoints
     #############################################################
     def print_track_uri(self, string: str = None, **kwargs) -> None:
         """
@@ -503,7 +512,7 @@ class Endpoints:
             r = self.handle_request("get", r['next'], params={'limit': limit})
             if r["offset"] == 0:
                 print(
-                    f"\n\t\33[96mShowing tracks for {main_info['type']}: {main_info['name']}\33[0m\n")
+                    f"\n\t\33[96mShowing tracks for {main_info['type']}: {main_info['name']} \33[0m\n")
                 pass
 
             if 'error' in r:

@@ -1,7 +1,6 @@
 import json
 import os
-from os.path import basename, dirname, exists, join, splitext, normpath
-
+from os.path import basename, dirname, exists, join, normpath, splitext
 from time import sleep
 
 

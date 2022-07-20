@@ -29,7 +29,7 @@ AUTH_ARGS_BASIC = {
             "client_secret": os.environ.get("CLIENT_SECRET"),
         },
     },
-    "test_expiry": 1800,
+    "test_expiry": 600,
     "token_path": "token.json",
     "extra_headers": {"Accept": "application/json", "Content-Type": "application/json"},
 }
@@ -70,7 +70,7 @@ AUTH_ARGS_USER = {
             "client_secret": os.environ.get("CLIENT_SECRET"),
         },
     },
-    "test_expiry": 1800,
+    "test_expiry": 600,
     "token_path": "token.json",
     "extra_headers": {"Accept": "application/json", "Content-Type": "application/json"},
 }
@@ -180,7 +180,7 @@ class ApiAuthoriser:
             and self._refresh_args is not None
         ):
             self._logger.debug(
-                "Access token is not valid and refresh data found."
+                "Access token is not valid and refresh data found. "
                 "Refreshing token and testing...")
 
             self._refresh_args["data"]["refresh_token"] = self._token["refresh_token"]
@@ -207,7 +207,7 @@ class ApiAuthoriser:
 
         self._logger.debug("Access token is valid. Saving...")
         self.save_token()
-        self._logger.info("\33[92m" "Authorisation done." "\33[0m")
+        self._logger.info("\33[92mAuthorisation done. \33[0m")
 
         return self.get_headers()
 
@@ -245,14 +245,14 @@ class ApiAuthoriser:
 
         :param requests_args: dict. Authorisation data to post via requests.
         """
-        # TODO: Flask server for picking up redirects for token code instead
-        if user_args:
+        if user_args:  # TODO: Flask server for picking up redirects for token code instead
             self._logger.info("Authorising user privilege access...")
 
             # opens in user's browser to authenticate
             # user must wait for redirect and input the given link
             webopen(requests.post(**user_args).url)
-            redirect_url = input("\33[1mAuthorise in new tab and input the returned url: \33[0m")
+            print("\33[1m\nLog in to Spotify in your browser, authorise, and type in the url once the page fails to load\33[0m")
+            redirect_url = input("URL: ")
 
             # format out the access code from the returned url
             code = urlparse(redirect_url).query.split("&")[0].split("=")[1]
@@ -292,14 +292,17 @@ class ApiAuthoriser:
         return headers
 
     #############################################################
-    # JSON I/O functions
+    ## JSON I/O functions
     #############################################################
     def load_token(self) -> dict:
         """Load stored token from given path"""
         if os.path.exists(self._token_path):
             self._logger.debug("Saved access token found. Loading stored token...")
-            with open(self._token_path, "r") as file:  # load token
-                self._token = json.load(file)
+            try:
+                with open(self._token_path, "r") as file:  # load token
+                    self._token = json.load(file)
+            except json.decoder.JSONDecodeError:
+                self._logger.debug("Failed to load token. JSON decoder error.")
 
         return self._token
 

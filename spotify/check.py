@@ -8,7 +8,7 @@ from tqdm.auto import tqdm
 class CheckMatches:
 
     #############################################################
-    # Create playlists from tracks
+    ## Create playlists from tracks
     #############################################################
     def check_tracks(self, playlists: dict, pause: int = 10, **kwargs) -> dict:
         """
@@ -23,7 +23,7 @@ class CheckMatches:
 
         print()
         self._logger.info(
-            '\33[1;95m -> \33[1;97mChecking matched URIs by creating temporary Spotify playlists for the user\33[0m')
+            '\33[1;95m -> \33[1;97mChecking matched URIs by creating temporary Spotify playlists for the user \33[0m')
 
         # extract dict of <name>: <list of URIs> for each playlist if URIs present
         playlist_uri_list = self.convert_metadata(
@@ -82,7 +82,8 @@ class CheckMatches:
                         self._logger.error(traceback.format_exc())
                         inp = 'q'
                 if not self.test_token():  # check if token has expired
-                    self._logger.info('API token has expired, reauthorising...')
+                    print()
+                    self._logger.info('\33[93mAPI token has expired, reauthorising... \33[0m')
                     self.auth()
 
                 self._logger.info(
@@ -122,12 +123,12 @@ class CheckMatches:
             "h": "Show this dialogue again",
         }
 
-        max_width = len(max(options, key=len)) + 1
+        max_width = len(max(options, key=len)) + 1 if len(max(options, key=len)) + 1 < 50 else 50
 
         help_text = ["\n\t\33[96mEnter one of the following options - \33[0m\n\t"]
         for k, v in options.items():
             k += ":"
-            help_text.append(f"{k:<{len(k) + max_width - len(k)}} {v}")
+            help_text.append(f"{k if len(k) < 50 else k[:47] + '...':<{max_width}} {v}")
         help_text = '\n\t'.join(help_text) + '\n'
         print(help_text)
 
@@ -160,7 +161,7 @@ class CheckMatches:
         return inp
 
     #############################################################
-    # Match to tracks user has added or removed
+    ## Match to tracks user has added or removed
     #############################################################
     def match_tracks_from_playlists(self, local: dict, urls: dict,
                                     report_file: str = None, **kwargs) -> dict:
@@ -277,10 +278,10 @@ class CheckMatches:
             # attempt to match tracks removed to tracks added by title
             for path, track in tracks_remaining.items():
                 # reset URI and find match
-                track['uri'] = None
+                intial_uri = track['uri']
                 result = self.title_match(track, results=tracks_added.values(), algo=2)
 
-                if result['uri'] is not None:  # match found
+                if intial_uri != result['uri']:  # uri changed, match found
                     # remove result from available tracks added/removed
                     del tracks_added[result['uri']]
                     if path in tracks_removed:
@@ -320,15 +321,15 @@ class CheckMatches:
         }
 
         help_text = [
-            f"\n\t\33[1;91m{name}: \33[91mThe following tracks were removed and/or matches were not found.\33[0m",
-            "\33[96mEnter one of the following:\33[0m\n\t"
+            f"\n\t\33[1;94m{name}: \33[91mThe following tracks were removed and/or matches were not found. \33[0m",
+            "\33[96mEnter one of the following: \33[0m\n\t"
         ]
         help_text += [f"{k}: {v}" if len(v) > 0 else k for k, v in options.items()]
         help_text = '\n\t'.join(help_text) + '\n'
         print(help_text)
 
         # for appropriately aligned formatting
-        max_width = len(max([t['title'] for t in remainder.values()], key=len))
+        max_width = len(max([t['title'] for t in remainder.values()], key=len)) if len(max([t['title'] for t in remainder.values()], key=len)) < 50 else 50
 
         self._logger.debug(f"{name} | Getting user input for {len(tracks)} tracks")
 
@@ -346,8 +347,8 @@ class CheckMatches:
 
             while inp == '' or 'a' in inp.lower():  # wait for valid input
                 if 'a' not in inp.lower():
-                    text = track['title']
-                    inp = input(f"\33[93m{text:<{len(text) + max_width - len(text)}}\33[0m | ")
+                    text = track['title'] if len(track['title']) < 50 else track['title'][:47] + '...'
+                    inp = input(f"\33[93m{text:<{max_width}} \33[0m| ")
                 inp = inp.strip()
                 self._logger.debug(f"{track['title']} | User input: {inp}")
 

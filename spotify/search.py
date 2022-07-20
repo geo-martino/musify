@@ -1,9 +1,9 @@
 import re
 import sys
+from time import sleep
 
 import requests
 from tqdm.auto import tqdm
-from time import sleep
 
 
 class Search:
@@ -92,7 +92,7 @@ class Search:
         return track_clean
 
     #############################################################
-    # Main search handler + results handler
+    ## Main search handler + results handler
     #############################################################
     def search_all(self, playlists: dict, compilation: bool = None,
                    report_file: str = None, **kwargs) -> dict:
@@ -122,7 +122,7 @@ class Search:
             -4 = Match with 3,4,1. If no matches, use _settings = 2.
             -5 = Match with 3,4,1,2. If no matches, return the first result.
 
-        :return: dict. Report on found, not found, and skipped tracks.
+        :return: dict. Report on matched, unmatched, and skipped tracks.
         """
         # prepare for report
         report = {}
@@ -130,7 +130,7 @@ class Search:
             self.delete_json(report_file, **kwargs)
 
         print()
-        self._logger.info(f"\33[1;95m -> \33[1;97mSearching for track matches on Spotify\33[0m")
+        self._logger.info(f"\33[1;95m -> \33[1;97mSearching for track matches on Spotify \33[0m")
         self._logger.debug(
             f'Max track algorithm: {self.ALGORITHM_COMP} | '
             f'Max track algorithm: {self.ALGORITHM_ALBUM} | ')
@@ -147,16 +147,16 @@ class Search:
         # start search for each playlist/album
         for name, tracks in playlists.items():
             # sorted tracks that do/do not already have a URI and are searchable
-            tracks_with_uri = [track for track in tracks if track['uri'] is not None]
+            tracks_with_uri = [track for track in tracks if isinstance(track['uri'], str)]
             tracks_search = [track for track in tracks if track['uri'] is None]
-            skipped = [track for track in tracks if track['uri'] is False]
+            skipped = [track for track in tracks if track['uri'] is False] + tracks_with_uri
 
             # if no tracks to search, continue
             if len(tracks_search) == 0:
                 # add back tracks with URI to results
                 self._logger.debug(f'{name} | Skipping search, no tracks to search')
-                found = []
-                not_found = tracks_search
+                matched = []
+                unmatched = tracks_search
             else:
                 if compilation is None:
                     compilation_search = self.check_compilation(tracks, **kwargs)
@@ -177,17 +177,17 @@ class Search:
                     self._logger.debug(f'{name} | Searching with album algorithm')
                     results = self.get_album_match(tracks_search, **kwargs)
 
-                # store tracks found, not found, and skipped
-                found = [track for track in results if track['uri'] is not None]
-                not_found = [track for track in results if track['uri'] is None]
+                # store tracks matched, unmatched, and skipped
+                matched = [track for track in results if track['uri'] is not None]
+                unmatched = [track for track in results if track['uri'] is None]
 
             # incrementally save report
             tmp_out = {
-                "found": {name: found} if len(found) > 0 else {},
-                "not_found": {name: not_found} if len(not_found) > 0 else {},
+                "matched": {name: matched} if len(matched) > 0 else {},
+                "unmatched": {name: unmatched} if len(unmatched) > 0 else {},
                 "skipped": {name: skipped} if len(skipped) > 0 else {},
             }
-            if len(found) + len(not_found) + len(skipped) > 0:
+            if len(matched) + len(unmatched) + len(skipped) > 0:
                 if isinstance(report_file, str):
                     report = self.update_json(tmp_out, report_file, **kwargs)
                 else:
@@ -212,8 +212,8 @@ class Search:
         :param playlists: dict. List of playlist names.
         :param report: dict. Report output from search
         """
-        total_found = 0
-        total_not_found = 0
+        total_matched = 0
+        total_unmatched = 0
         total_skipped = 0
         total = 0
 
@@ -221,36 +221,36 @@ class Search:
             print()
 
         logger = self._logger.info if self._verbose else self._logger.debug
-        max_width = len(max(playlists, key=len))
+        max_width = len(max(playlists, key=len)) if len(max(playlists, key=len)) < 50 else 50
         for name, tracks in playlists.items():
-            found = len(report["found"].get(name, []))
-            not_found = len(report["not_found"].get(name, []))
+            matched = len(report["matched"].get(name, []))
+            unmatched = len(report["unmatched"].get(name, []))
             skipped = len(report["skipped"].get(name, []))
 
-            total_found += found
-            total_not_found += not_found
+            total_matched += matched
+            total_unmatched += unmatched
             total_skipped += skipped
             total += len(tracks)
 
-            colour1 = '\33[92m' if found > 0 else '\33[94m'
-            colour2 = '\33[92m' if not_found == 0 else '\33[91m'
+            colour1 = '\33[92m' if matched > 0 else '\33[94m'
+            colour2 = '\33[92m' if unmatched == 0 else '\33[91m'
             colour3 = '\33[92m' if skipped == 0 else '\33[93m'
 
             logger(
-                f'{name:<{len(name) + max_width - len(name)}} |'
-                f'{colour1}{found:>4} found \33[0m|'
-                f'{colour2}{not_found:>4} not found \33[0m|'
+                f"{name if len(name) < 50 else name[:47] + '...':<{max_width}} |"
+                f'{colour1}{matched:>4} matched \33[0m|'
+                f'{colour2}{unmatched:>4} unmatched \33[0m|'
                 f'{colour3}{skipped:>4} skipped \33[0m|'
                 f'\33[1m {len(tracks):>4} total \33[0m'
             )
 
         text = "TOTALS"
         logger(
-            f'\n\33[1;96m{text:<{len(text) + max_width - len(text)}} \33[0m|'
-            f'\33[92m{total_found:>4} found \33[0m|'
-            f'\33[91m{total_not_found:>4} not found \33[0m|'
-            f'\33[93m{total_skipped:>4} skipped \33[0m|'
-            f"\33[92m {total:>4} total \33[0m\n"
+            f"\n\33[1;96m{text if len(text) < 50 else text[:47] + '...':<{max_width}} \33[0m|"
+            f'\33[92m{total_matched:>5} matched \33[0m|'
+            f'\33[91m{total_unmatched:>5} unmatched \33[0m|'
+            f'\33[93m{total_skipped:>5} skipped \33[0m|'
+            f"\33[1m{total:>6} total \33[0m\n"
         )
 
     def get_track_results(self, track: dict, title: str = None, **kwargs) -> tuple:
@@ -289,7 +289,7 @@ class Search:
         return query, results
 
     #############################################################
-    # Match groups (match algorithm handlers)
+    ## Match groups (match algorithm handlers)
     #############################################################
     def get_track_match(self, track: dict, **kwargs) -> dict:
         """
@@ -452,7 +452,7 @@ class Search:
         return tracks
 
     #############################################################
-    # Match algorithms
+    ## Match algorithms
     #############################################################
     def simple_match(self, track: dict, results: list, **kwargs) -> dict:
         """
@@ -629,7 +629,7 @@ class Search:
         return track
 
     #############################################################
-    # Match conditions
+    ## Match conditions
     #############################################################
     def karaoke_match(self, result: list, name: str = '', **kwargs) -> bool:
         """

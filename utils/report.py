@@ -2,7 +2,7 @@
 class Report():
 
     #############################################################
-    # Checks
+    ## Checks
     #############################################################
     def check_compilation(self, tracks: list, min_threshold: int = 0.5, **kwargs) -> bool:
         """
@@ -38,13 +38,13 @@ class Report():
             uri_list = string.split(":")
             if uri_list[1] != 'user' and len(uri_list[2]) == self._id_len:
                 return True
-        elif 'id' and len(string) == self._id_len:
+        elif 'id' in kind and len(string) == self._id_len:
             return True
 
         return False
 
     #############################################################
-    # Reports
+    ## Reports
     #############################################################
     def report_differences(self, local: dict, spotify: dict,
                            report_file: str = None, **kwargs) -> dict:
@@ -67,11 +67,11 @@ class Report():
 
         # get verbose level appropriate logger and appropriately align formatting
         logger = self._logger.info if self._verbose else self._logger.debug
-        max_width = len(max(local, key=len))
+        max_width = len(max(local, key=len)) if len(max(local, key=len)) < 50 else 50
 
         print()
         self._logger.info(
-            '\33[1;95m -> \33[1;97mReporting on differences between local and Spotify playlists...\33[0m')
+            '\33[1;95m -> \33[1;97mReporting on differences between local and Spotify playlists... \33[0m')
         for name, tracks in local.items():  # iterate through local playlists
             # preprocess URIs to lists for local and spotify
             # None and False added to factor in later check: track['uri'] not in spotify_URIs
@@ -94,7 +94,7 @@ class Report():
             unavailable_len += len(unavailable_tracks)
 
             logger(
-                f"{name:<{len(name) + max_width - len(name)}} |"
+                f"{name if len(name) < 50 else name[:47] + '...':<{max_width}} |"
                 f"\33[92m{len(extra):>4} extra \33[0m|"
                 f"\33[91m{len(missing):>4} missing \33[0m|"
                 f"\33[93m{len(unavailable):>4} unavailable \33[0m"
@@ -160,4 +160,5 @@ class Report():
         tracks_len = len([t for tracks in missing_tags.values() for t in tracks])
         self._logger.info(
             f"\33[93mFound {tracks_len} tracks with {match} missing tags\33[0m: {tags}")
+
         return missing_tags

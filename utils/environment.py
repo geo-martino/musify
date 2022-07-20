@@ -5,8 +5,7 @@ import shutil
 import sys
 from datetime import datetime as dt
 from glob import glob
-from os.path import basename, dirname, exists, join, normpath, isdir
-
+from os.path import basename, dirname, exists, isdir, join, normpath
 from dateutil.relativedelta import relativedelta
 
 from spotify.search import Search
@@ -19,7 +18,7 @@ class Environment:
 
     def clean_up_env(self, days: int = 60, keep: int = 30, **kwargs) -> None:
         """
-        Clears files older than {days} months if more than {leave} previous runs found
+        Clears files older than {days} months and only keeps {keep} # of runs
 
         :param days: int, default=60. Age of files in months to keep.
         :param keep: int, default=30. Number of files to keep.
@@ -32,20 +31,21 @@ class Environment:
         }
         remove = {}
 
-        keep = 1 if keep < 1 else keep
+        keep = max(keep, 1)
 
         for kind, files_list in current.items():
             remove_list = []
             if len(files_list) >= keep:
                 remaining = len(files_list)
                 for file in sorted(files_list):
-                    if remaining <= keep:
-                        break
-
                     file_dt = dt.strptime(file[:19], "%Y-%m-%d_%H.%M.%S")
-                    if file_dt < dt.now() - relativedelta(days=days):
+                    dt_diff = file_dt < dt.now() - relativedelta(days=days)
+
+                    if remaining > keep and dt_diff:
                         remove_list.append(file)
                         remaining -= 1
+                    else:
+                        break
 
             remove[kind] = remove_list
 
