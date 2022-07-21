@@ -158,9 +158,11 @@ class Process():
                     save_errors.append(track["path"])
 
         if len(load_errors) > 0:
+            print()
             load_errors = "\n".join(load_errors)
             self._logger.error(f"Could not load: \33[91m\n{load_errors} \33[0m")
         if len(save_errors) > 0:
+            print()
             save_errors = "\n".join(save_errors)
             self._logger.error(f"Could not save: \33[91m\n{save_errors} \33[0m")
 

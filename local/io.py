@@ -363,6 +363,7 @@ class LocalIO(Process):
         )
 
         if len(load_errors) > 0:
+            print()
             load_errors = "\n".join(load_errors)
             self._logger.error(f"Could not load: \33[91m\n{load_errors} \33[0m")
 
@@ -478,6 +479,7 @@ class LocalIO(Process):
             )
 
         if len(load_errors) > 0:
+            print()
             load_errors = "\n".join(load_errors)
             logger(f"Could not load: \33[91m\n{load_errors} \33[0m")
 

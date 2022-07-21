@@ -248,7 +248,7 @@ class Spotify(Endpoints, Search, CheckMatches):
         for name, playlist in sorted(playlists.items(), key=lambda x: x[0].lower()):
             logger(
                 f"{name if len(name) < 50 else name[:47] + '...':<{max_width}} |"
-                f"\33[92m{len(playlist):>4} total tracks \33[0m")
+                f"\33[92m{len(playlist):>5} total tracks \33[0m")
 
         return playlists
 

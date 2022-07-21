@@ -229,6 +229,10 @@ class Syncify(Environment, ApiAuthoriser, IO, Report, LocalIO, Spotify):
         #############################################################
         ## Step 2-6: SEARCH/CHECK LIBRARY
         #############################################################
+        if len([t for f in self._library_local.values() for t in f if t['uri'] is None]) == 0:
+            self._logger.info("All songs found or unavailable. Skipping search.")
+            return
+
         if not quickload:  # search for missing URIs
             search_results = self.search_all(
                 self._library_local, report_file="02_report__search", **kwargs)
