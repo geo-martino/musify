@@ -99,7 +99,7 @@ python main.py report [options]
 
 Save a report for tracks that have the missing tags defined with the `-t` option to _**14_library__missing_tags.json**_
 
-### Function Parameters
+#### Function Parameters
 - **match**: ["all", "any"] - Only return tracks that are missing "all" or "any" tags.
 
 ```sh
@@ -120,7 +120,7 @@ python main.py backup [options]
 
 **Restore** - Restore URIs in local library metadata, m3u playlists, or Spotify playlists from these backups.
 
-### Function Parameters
+#### Function Parameters
 - **kind**: ["local", "spotify"] - The type backup to restore
 - **mod**: - If kind='local', restore playlists from local backup if 'playlists', or restore playlists from 'spotify' playlist backup.
 
@@ -132,7 +132,7 @@ python main.py restore [kind] [mod] [options]
 ## Extract Images
 Extract and save images from local metadata or Spotify. By default, sorts by folder name for local, or by album name for Spotify unless **playlists** is set.
 
-### Function Parameters
+#### Function Parameters
 - **kind**: ["local", "spotify"] - The source of images.
 - **playlists**: - If set, only extract images for playlists and store in folders per playlist.
 
@@ -143,7 +143,7 @@ python main.py extract [kind] playlists
 
 ## Clean up data and logs folder
 
-### Function Parameters
+#### Function Parameters
 - **days**: ["local", "spotify"] - Maximum age of files allowed
 - **keep**: - Minimum number of files/folders to keep
 
@@ -154,7 +154,7 @@ python main.py clean [days] [keep]
 
 ## Create a Spotify Playlist for the current user
 
-### Function Parameters
+#### Function Parameters
 - **playlist_name** - Name of the playlist
 - **public**:  ["True", "False"] - Set playlist as public if True, or private if False
 - **collaborative**:  ["True", "False"] - Set playlist as collaborative if True, or private if False
@@ -166,7 +166,7 @@ python main.py create [playlist_name] [public] [collaborative]
 
 ## Delete a Spotify Playlist from the current user
 
-### Function Parameters
+#### Function Parameters
 - **playlist** - Playlist name/URI/URL to delete
   
 ```sh
@@ -176,7 +176,7 @@ python main.py delete [playlist]
 
 ## Clear a Spotify Playlist for the current user
 
-### Function Parameters
+#### Function Parameters
 - **playlist** - Playlist name to create
 
 ```sh
@@ -188,7 +188,7 @@ python main.py clear [playlist]
 
 Print info about tracks, artists, albums, or playlists in the terminal.
 
-### Function Parameters
+#### Function Parameters
 - **name** - Accepts name of a user's playlist, or artist/album/playlist URI/URL.
 
 ```sh
