@@ -380,7 +380,7 @@ class LocalIO(Process):
         :return: dict. <name>: <list of dicts of track's metadata>
         """
         # list of paths of .m3u files in playlists path
-        playlist_paths = glob(join(self._playlists_PATH, "*.m3u"))
+        playlist_paths = glob(join(self._PLAYLISTS_PATH, "*.m3u"))
         playlist_metadata = {}
 
         playlists_filtered = []
@@ -421,6 +421,9 @@ class LocalIO(Process):
             # get list of tracks in playlist
             with open(playlist_path, "r", encoding="utf-8") as m3u:
                 track_paths = [line.rstrip() for line in m3u]
+
+            if len(track_paths) == 0:
+                continue
 
             # replace filepath stems related to other operating systems
             if any(path in track_paths[0] for path in self.OTHER_PATHS):
@@ -494,10 +497,12 @@ class LocalIO(Process):
         :param backup: str. Filename of backup json in form <path>: <uri>.
         :return: dict. <name>: <list of dicts of track's metadata>
         """
-        self._logger.info(f"Restoring URIs from backup file: {backup}")
+        print()
+        self._logger.info(f"\33[1;95m -> \33[1;97mRestoring URIs from backup file: {backup} \33[0m")
 
-        backup = self.load_json(backup, **kwargs)
+        backup = self.load_json(backup, parent=True, **kwargs)
         if not backup:
+            self._logger.info(f"\33[91mBackup file not found.\33[0m")
             return
 
         for tracks in playlists.values():
@@ -505,4 +510,47 @@ class LocalIO(Process):
                 if track['path'] in backup:
                     track['uri'] = backup[track['path']]
 
+
+        # set clear kwarg to all
+        kwargs_mod = kwargs.copy()
+        kwargs_mod['tags'] = 'uri'
+        self.update_file_tags(playlists, **kwargs_mod)
+
+        tracks_updated = len([t for tracks in playlists.values() for t in tracks])
+        self._logger.info(f"\33[92mRestored URIs for {tracks_updated} tracks \33[0m")
+
         return playlists
+
+    def restore_local_playlists(self, backup: str, in_playlists: list=None, ex_playlists: list=None, **kwargs):
+        """
+        Restore local playlists from backup.
+
+        :param backup: str. Filename of backup json in form <name>: <list of dicts of track's metadata>
+        :param in_playlists: list, default=None. Only restore playlists in this list.
+        :param ex_playlists: list, default=None. Don't restore playlists in this list.
+        """
+
+        print()
+        self._logger.info(f"\33[1;95m -> \33[1;97mRestoring local playlists from backup file: {backup} \33[0m")
+
+        backup = self.load_json(backup, parent=True, **kwargs)
+        if not backup:
+            self._logger.info(f"\33[91mBackup file not found.\33[0m")
+            return
+
+        if isinstance(in_playlists, str):  # handle string
+            in_playlists = [in_playlists]
+
+        if in_playlists is not None:
+            for name, tracks in backup.copy().items():
+                if name.lower() not in [p.lower() for p in in_playlists]:
+                    del backup[name]
+        else:
+            in_playlists = list(backup.keys())
+
+        if ex_playlists is not None:
+            for name in backup.copy().keys():
+                if name.lower() in [p.lower() for p in ex_playlists]:
+                    del backup[name]
+
+        self.save_playlists(backup, **kwargs)

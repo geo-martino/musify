@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from os.path import basename, dirname, exists, join, normpath, splitext
 from time import sleep
 
@@ -107,3 +108,20 @@ class IO:
             return False
 
         return json_path
+
+    def save_playlists(self, backup: dict, dry_run: bool, **kwargs):
+        """
+        Save playlists from extracted metadata dict.
+
+        :param backup: dict. <name>: <list of dicts of track's metadata> with 'path' key
+        :param dry_run: bool, default=False. Skip function if true.
+        """
+        if dry_run:
+            return
+
+        for name, tracks in backup.items():
+            name = re.sub(r'[\\/*?:"<>|]', '', name)
+            with open(join(self._PLAYLISTS_PATH, f"{name}.m3u"), "w") as f:
+                f.writelines([t['path'] + '\n' for t in tracks])
+
+        self._logger.info(f"\33[92mRestored {len(backup)} local playlists \33[0m")

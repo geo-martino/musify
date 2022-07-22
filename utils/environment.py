@@ -57,7 +57,40 @@ class Environment:
             self._logger.debug(f"Removing {len(remove['_data'])} old folders in {data}")
             [shutil.rmtree(join(data, folder)) for folder in remove['_data']]
 
-    def get_env_vars(self, dry_run: bool = False, **kwargs) -> None:
+    def set_vars(self, **kwargs):
+        """Set object attributes from given kwargs"""
+        self.BASE_API = BASE_API
+        self.OPEN_URL = OPEN_URL
+        if kwargs.get("ALGORITHM_COMP") is not None:
+            self.ALGORITHM_COMP = int(kwargs["ALGORITHM_COMP"])
+        if kwargs.get("ALGORITHM_ALBUM") is not None:
+            self.ALGORITHM_ALBUM = int(kwargs["ALGORITHM_ALBUM"])
+
+        # set system appropriate path and store other system's paths
+        self._music_paths = {}
+        if kwargs.get("WIN_PATH") is not None:
+            self._music_paths["win32"] = kwargs["WIN_PATH"]
+        if kwargs.get("LIN_PATH") is not None:
+            self._music_paths["linux"] = kwargs["LIN_PATH"]
+        if kwargs.get("MAC_PATH") is not None:
+            self._music_paths["darwin"] = kwargs["MAC_PATH"]
+        self.MUSIC_PATH = self._music_paths[sys.platform]
+
+        if kwargs.get("PLAYLISTS") is not None:
+            # build full path to playlist folder from this system's music path
+            playlists = normpath(kwargs["PLAYLISTS"].replace("\\", "/")).split("/")
+            self._PLAYLISTS_PATH = join(self.MUSIC_PATH, *playlists)
+
+        # get path to date-specific data folder for this run
+        if kwargs.get("DATA_PATH") is not None:
+            self.DATA_PATH = normpath(kwargs["DATA_PATH"])
+        
+        if kwargs.get("TOKEN_FILENAME") is not None:
+            self._token_filename = normpath(kwargs["TOKEN_FILENAME"])
+
+        self.format_vars()
+
+    def get_env_vars(self, **kwargs) -> None:
         """
         Set object attributes from environment variables.
 
@@ -68,6 +101,27 @@ class Environment:
         self.ALGORITHM_COMP = int(os.getenv("ALGORITHM_COMP", 4))
         self.ALGORITHM_ALBUM = int(os.getenv("ALGORITHM_ALBUM", 2))
 
+        # set system appropriate path and store other system's paths
+        self._music_paths = {
+            "win32": normpath(os.getenv("WIN_PATH", "")),
+            "linux": normpath(os.getenv("LIN_PATH", "")),
+            "darwin": normpath(os.getenv("MAC_PATH", "")),
+        }
+        self.MUSIC_PATH = self._music_paths[sys.platform]
+
+        # build full path to playlist folder from this system's music path
+        playlists = normpath(os.getenv("PLAYLISTS", "").replace("\\", "/")).split("/")
+        self._PLAYLISTS_PATH = join(self.MUSIC_PATH, *playlists)
+
+        # get path to date-specific data folder for this run
+        self.DATA_PATH = normpath(os.getenv("DATA_PATH", ""))
+        
+        self._token_filename = normpath(os.getenv("TOKEN_FILENAME", self._auth["token_path"]))
+
+        self.format_vars()
+
+    def format_vars(self):
+        """Format vars from user input or env. INTERNAL USE ONLY"""
         # handle user input for unexpected algorithm number
         search__settings = list(Search._settings.keys())
         if self.ALGORITHM_COMP > max(search__settings):
@@ -80,32 +134,19 @@ class Environment:
         elif self.ALGORITHM_ALBUM < -max(search__settings):
             self.ALGORITHM_ALBUM = -max(search__settings)
 
-        # set system appropriate path and store other system's paths
-        paths = {
-            "win32": normpath(os.getenv("WIN_PATH", "")),
-            "linux": normpath(os.getenv("LIN_PATH", "")),
-            "darwin": normpath(os.getenv("MAC_PATH", "")),
-        }
-        self.MUSIC_PATH = paths[sys.platform]
-        self.OTHER_PATHS = [p for p in paths.values() if p != self.MUSIC_PATH and len(p) > 1]
+        self.OTHER_PATHS = [p for p in self._music_paths.values() if p != self.MUSIC_PATH and len(p) > 1]
 
-        # build full path to playlist folder from this system's music path
-        playlists = normpath(os.getenv("PLAYLISTS").replace("\\", "/")).split("/")
-        self._playlists_PATH = join(self.MUSIC_PATH, *playlists)
-
-        # get path to date-specific data folder for this run
-        self.DATA_PATH = normpath(os.getenv("DATA_PATH", ""))
         if self.DATA_PATH == ".":
-            self.DATA_PATH = join(dirname(dirname(__file__)), "_data", self._start_time_filename)
-        if dry_run:
+            self.DATA_PATH = join(dirname(dirname(__file__)), "_data")
+        self.DATA_PATH = join(self.DATA_PATH, self._start_time_filename)
+        if self._dry_run:
             self.DATA_PATH += "_dry"
         if not exists(self.DATA_PATH):
             os.makedirs(self.DATA_PATH)
 
-        # replace token path auth arg with main data path + token filename from env
+        # replace token path auth arg with main data path + token filename
         # set test args from base api
-        token_filename = normpath(os.getenv("TOKEN_FILENAME", self._auth["token_path"]))
-        self._auth["token_path"] = join(dirname(self.DATA_PATH), token_filename)
+        self._auth["token_path"] = join(dirname(self.DATA_PATH), self._token_filename)
         self._auth["test_args"] = {"url": f"{BASE_API}/me"}
         self._auth["test_condition"] = lambda r: "error" not in r
 

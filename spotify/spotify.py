@@ -211,7 +211,7 @@ class Spotify(Endpoints, Search, CheckMatches):
         """
         # get raw response from Spotify API on each playlist and its tracks
         if playlists == 'local':
-            playlists = [splitext(playlist)[0] for playlist in os.listdir(self._playlists_PATH)]
+            playlists = [splitext(playlist)[0] for playlist in os.listdir(self._PLAYLISTS_PATH)]
 
         playlists_filtered = []
         for name in playlists:
@@ -351,34 +351,41 @@ class Spotify(Endpoints, Search, CheckMatches):
         self._logger.debug('Creating/updating Spotify playlists: Done')
         return True
 
-    def restore_spotify_playlists(self, playlists: list, backup: str, **kwargs) -> dict:
+    def restore_spotify_playlists(self, backup: str, in_playlists: list=None, ex_playlists: list=None, **kwargs) -> dict:
         """
         Restore Spotify playlists from backup.
 
-        :param playlists: str/list/dict. Metadata in form <name>: <list of dicts of track's metadata>
-            None restores all from backup.
         :param backup: str. Filename of backup json in form <name>: <list of dicts of track's metadata>
-        :return: dict. <name>: <list of dicts of track's metadata>
+        :param in_playlists: list, default=None. Only restore playlists in this list.
+        :param ex_playlists: list, default=None. Don't restore playlists in this list.
         """
-        self._logger.info(f"Restoring Spotify from backup file: {backup}")
+        print()
+        self._logger.info(f"\33[1;95m -> \33[1;97mRestoring Spotify playlists from backup file: {backup} \33[0m")
 
-        backup = self.load_json(backup, **kwargs)
+        backup = self.load_json(backup, parent=True, **kwargs)
         if not backup:
+            self._logger.info(f"\33[91mBackup file not found.\33[0m")
             return
 
-        if isinstance(playlists, str):  # handle string and None
-            playlists = [playlists]
-        elif playlists is None:
-            playlists = list(backup.keys())
+        if isinstance(in_playlists, str):  # handle string
+            in_playlists = [in_playlists]
+
+        if in_playlists is not None:
+            for name, tracks in backup.copy().items():
+                if name.lower() not in [p.lower() for p in in_playlists]:
+                    del backup[name]
+        else:
+            in_playlists = list(backup.keys())
+
+        if ex_playlists is not None:
+            for name in backup.copy().keys():
+                if name.lower() in [p.lower() for p in ex_playlists]:
+                    del backup[name]
 
         # set clear kwarg to all
         kwargs_mod = kwargs.copy()
         kwargs_mod['clear'] = 'all'
 
-        for name in backup:
-            if name not in playlists:
-                continue
+        self.update_playlists(backup, **kwargs_mod)
 
-            self.update_playlists(backup, **kwargs_mod)
-
-        return playlists
+        self._logger.info(f"\33[92mRestored {len(backup)} Spotify playlists \33[0m")
