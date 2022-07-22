@@ -29,7 +29,7 @@
    - Paste the link from the address bar into the terminal
 >  This package is cross platform. If you intend to use this package across multiple platforms, it is advised to use the default data folder path in the packages root directory by not defining **DATA_PATH**
 
-> **_NOTE:_** Currently, this program only supports .mp3, .flac, .wma, and .m4a files. Image embedding for .wma files is not supported.
+> **Note**: Currently, this program only supports .mp3, .flac, .wma, and .m4a files. Image embedding for .wma files is not supported.
 
 # Primary Functions
 
