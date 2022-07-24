@@ -75,7 +75,7 @@ class Spotify(Endpoints, Search, CheckMatches):
             else:
                 key = f"{self._song_keys.get(f['key'])}{'m'*f['mode']}"
 
-        genre = ', '.join(track["artists"][0].get("genres", [])).title()
+        genre = '/'.join(track["artists"][0].get("genres", [])).title()
         if len(genre) == 0:
             genre = None
 
@@ -120,6 +120,8 @@ class Spotify(Endpoints, Search, CheckMatches):
         if "playlist_url" in track:  # add playlist_url
             metadata['playlist_url'] = track['playlist_url']
         if add_extra:  # add extra data provided
+            if 'uri' in add_extra:
+                del add_extra['uri']
             metadata.update(add_extra)
         if add_raw:  # add back raw data
             metadata["raw_data"] = track
@@ -158,7 +160,15 @@ class Spotify(Endpoints, Search, CheckMatches):
         for track in tracks:
             if add_genre:  # replace data for first given artist in each track
                 track["artists"][0] = artists.get(track["artists"][0]["uri"], track["artists"][0])
-            extra_data = add_extra.get(track['uri']) if add_extra is not None else None
+            
+            extra_data = None
+            if isinstance(add_extra, list):  # get extra data from
+                for i, extra in enumerate(add_extra):
+                    if extra.get('uri') == track['uri']:
+                        extra_data = extra
+                        del add_extra[i]
+                        break
+            
             tracks_metadata[track['uri']] = self.extract_spotify_track_metadata(
                 track, add_extra=extra_data, **kwargs)
 
@@ -176,7 +186,7 @@ class Spotify(Endpoints, Search, CheckMatches):
         :param playlist: str, default=None. Playlist/s to get metadata from.
         :param name: str, default=None. Name of current playlist for printing.
         :param add_genre: bool, default=False. Search for artists and add genres for each track.
-        :param add_extra: dict, default=None. Local metadata tags to add back to response.
+        :param add_extra: list, default=None. List of local metadata tags to add back to response (must have 'uri' key to match).
         :return: list. Raw metadata for each track in the playlist
         """
         tracks = self.get_playlist_tracks(playlist, **kwargs)
@@ -190,7 +200,15 @@ class Spotify(Endpoints, Search, CheckMatches):
         for i, track in enumerate(tracks, 1):
             if add_genre:  # replace data for first given artist in each track
                 track["artists"][0] = artists.get(track["artists"][0]["uri"], track["artists"][0])
-            extra_data = add_extra.get(track.get('uri')) if add_extra is not None else None
+            
+            extra_data = None
+            if isinstance(add_extra, list):  # get extra data from
+                for i, extra in enumerate(add_extra):
+                    if extra.get('uri') == track['uri']:
+                        extra_data = extra
+                        del add_extra[i]
+                        break
+            
             metadata.append(
                 self.extract_spotify_track_metadata(
                     track, i, add_extra=extra_data, **kwargs))

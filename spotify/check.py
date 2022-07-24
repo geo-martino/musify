@@ -4,7 +4,6 @@ from time import sleep
 
 from tqdm.auto import tqdm
 
-
 class CheckMatches:
 
     #############################################################
@@ -65,10 +64,10 @@ class CheckMatches:
             if len(playlist_urls) % pause == 0 or n == len(
                     playlist_uri_list):  # once pause amount has been reached
                 progress = f"{n // pause}/{max_stops}"
-                if inp != 'q':
+                while inp != 'q':
                     try:
-                        print()
                         inp = self.input_check_playlists(playlists, progress)
+                        break
                     except KeyboardInterrupt:
                         inp = 'q'
                 if not any(inp.lower() == i for i in ['q', 's']):  # not quit or skip
@@ -148,8 +147,8 @@ class CheckMatches:
                 if not self.test_token():  # check if token has expired
                     self.auth()
                 self.print_track_uri(inp, **kwargs)
-            elif inp.lower() in [name.lower() for name in playlists_filtered]:
-                name = [name for name in playlists_filtered if name.lower() == inp.lower()][0]
+            elif inp != '' and any([name.lower().startswith(inp.lower()) for name in playlists_filtered]):
+                name = [name for name in playlists_filtered if name.lower().startswith(inp.lower())][0]
                 print(f"\n\tShowing tracks originally added to {name}\n")
 
                 for i, track in enumerate(playlists_filtered[name], 1):  # print
@@ -260,7 +259,7 @@ class CheckMatches:
         # check what tracks user has added or removed
         tracks_added = {track['uri']: track for track in spotify if track['uri'] not in local_uris}
         tracks_removed = {
-            track['path']: track for track in tracks if track['uri'] not in spotify_uris}
+            track['uri']: track for track in tracks if track['uri'] not in spotify_uris}
         tracks_missing = {track['path']: track for track in tracks if track['uri'] is None}
 
         if len(tracks_added) + len(tracks_removed) + len(tracks_missing) == 0:
@@ -276,18 +275,17 @@ class CheckMatches:
         start_len = len(tracks_remaining)
         if len(tracks_remaining) > 0:
             # attempt to match tracks removed to tracks added by title
-            for path, track in tracks_remaining.items():
+            for intial_uri, track in tracks_remaining.items():
                 # reset URI and find match
-                intial_uri = track['uri']
-                result = self.title_match(track, results=tracks_added.values(), algo=2)
+                result = self.score_match(track, results=tracks_added.values(), max_score=1.5)
 
                 if intial_uri != result['uri']:  # uri changed, match found
                     # remove result from available tracks added/removed
                     del tracks_added[result['uri']]
-                    if path in tracks_removed:
-                        del tracks_removed[path]
+                    if intial_uri in tracks_removed:
+                        del tracks_removed[intial_uri]
                     else:
-                        del tracks_missing[path]
+                        del tracks_missing[track['path']]
                     switched.append(track)
 
         tracks_remaining = tracks_removed | tracks_missing
@@ -314,7 +312,7 @@ class CheckMatches:
             "u": "Mark track as 'Unavailable on Spotify'",
             "n": "Leave track with no URI. (Syncify will still attempt to find this track at the next run)",
             "a": "Add in addition to 'u' or 's' options to apply this setting to all tracks in this playlist",
-            "r": "Recheck playlist and reprompt for all tracks",
+            "r": "Recheck playlist for all tracks in the album",
             "s": "Skip checking process for all playlists",
             "h": "Show this dialogue again",
             "OR enter a custom URI/URL/ID for this track": "",
@@ -335,7 +333,10 @@ class CheckMatches:
 
         inp = ''
         for track in tracks:
-            if track['path'] not in remainder:
+            if track['uri'] not in remainder and isinstance(track['uri'], str):
+                # skip if track not marked as removed
+                continue
+            if track['path'] not in remainder and track['uri'] is None:
                 # skip if track not marked as removed
                 continue
             if inp == 'r' or inp == 's':
@@ -344,7 +345,7 @@ class CheckMatches:
             if 'a' not in inp.lower():
                 # reset inp value if not applying to all
                 inp = ''
-
+            
             while inp == '' or 'a' in inp.lower():  # wait for valid input
                 if 'a' not in inp.lower():
                     text = track['title'] if len(track['title']) < 50 else track['title'][:47] + '...'

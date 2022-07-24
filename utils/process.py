@@ -29,13 +29,13 @@ class Process():
         :param replace: bool, default=False. Destructively replace tags in each file.
         :param dry_run: bool, default=False. Run function, but do not modify file at all.
         """
-        if tags is None:
-            return
-
         tracks_all = [t for tracks in playlists.values() for t in tracks]
         print()
         self._logger.info(
             f"\33[1;95m -> \33[1;97mUpdating tags in {len(tracks_all)} files: {tags} \33[0m")
+        if tags is None:
+            self._logger.info(f"\33[93mSkipping: No tags given to update. \33[0m")
+            return
 
         # progress bar
         playlist_bar = tqdm(
@@ -53,6 +53,8 @@ class Process():
         for name, tracks in playlist_bar:
             for track in tracks:
                 modified = False
+                mod_image = False
+                updating_tags = []
                 # load file as mutagen object
                 file_raw, ext = self.load_file(track["path"], **kwargs)
                 if file_raw is None or file_raw == track["path"]:
@@ -65,10 +67,12 @@ class Process():
 
                 # loop through each tag to process
                 for tag_name in tags:
+                    check_value = track[tag_name]  # for skip conditions
                     # get file type specific tag identifiers and new value
                     if tag_name == "uri" or tag_name == self._uri_tag:
                         if track["uri"] is False:
                             new_value = self._unavailable_uri_value
+                            check_value = new_value
                         else:
                             new_value = track["uri"]
                         tag_name = self._uri_tag
@@ -76,38 +80,39 @@ class Process():
                         new_value = f"0{track['track']}" if len(str(track['track'])) == 1 else track['track']
                     else:
                         new_value = track[tag_name]
-                    
-                    tag_ids = self._tag_ids[ext].get(tag_name, [])
 
+                    tag_ids = self._tag_ids[ext].get(tag_name, [])
+                    
                     # skip conditions
-                    if len(tag_ids) == 0:
+                    if tag_name != "image" and len(tag_ids) == 0:
+                        self._logger.debug(f"{track['path']} | Skipping {tag_name}: len(tag_ids) == 0 - {len(tag_ids)}")
                         # tag not in list of mapped tags
                         continue
-                    elif file_metadata[tag_name] == new_value:
+                    elif tag_name == "bpm" and ext == '.m4a':
+                        # m4a files can only save bpm to the nearest whole number
+                        # compare as ints instead of floats and skip if equal
+                        if file_metadata["bpm"] and check_value:
+                            if int(file_metadata["bpm"]) == int(check_value):
+                                self._logger.debug(f"{track['path']} | Skipping {tag_name}: int(file_metadata['bpm']) == int(new_value) - {file_metadata['bpm']} = {check_value}")
+                                continue
+                    elif file_metadata[tag_name] == check_value:
+                        self._logger.debug(f"{track['path']} | Skipping {tag_name}: file_metadata[tag_name] == new_value - {file_metadata[tag_name]} = {new_value} ({check_value})")
                         # skip needlessly updating tags if they are the same
                         continue
-                    elif new_value == self._unavailable_uri_value and not file_metadata["uri"]:
-                        # same again but for unavailable uris
-                        continue
-                    elif tag_name == self._uri_tag and file_metadata["uri"] == new_value:
-                        # same again but solves an issue with some malformed,
-                        # and persistent comment tags on mp3 files
-                        continue
-                    elif tag_name == "bpm" and file_metadata["bpm"] and new_value:
-                        if int(file_metadata["bpm"]) == int(new_value):
-                            # m4a files can only save bpm to the nearest whole number
-                            # compare as ints instead of floats and skip if equal
+
+                    if not replace:
+                        # don't desctructively replace tag
+                        if tag_name == "image" and file_metadata["has_image"]:
+                            # skip if file has embedded image
+                            self._logger.debug(f"{track['path']} | Skipping {tag_name}: tag_name == 'image' and file_metadata['has_image'] - {replace} + {file_metadata['has_image']}")
                             continue
-                    elif tag_name == "track" and file_metadata["track"] == track["track"]:
-                        # handle same track numbers
-                        continue
-                    elif tag_name == "image" and not replace and file_metadata["has_image"]:
-                        # don't desctructively replace embedded images if exists and refresh is False
-                        continue
-                    elif not replace and any(t in f for f in file_raw for t in tag_ids):
-                        # don't descrtuctively replace if exists and refresh is False 
-                        if tag_name != self._uri_tag:
-                            # and not uri tag. Force replaces tag with new uri
+                        elif tag_name == self._uri_tag:
+                            if isinstance(file_metadata[tag_name], str) and not self.check_spotify_valid(file_metadata[tag_name], kind=["uri"]):
+                                # if uri tag exists in file and it is not a valid uri
+                                continue
+                        elif file_metadata[tag_name] != new_value and file_metadata[tag_name] not in ['', False, None, 0]:
+                            # skip if tag is not empty
+                            self._logger.debug(f"{track['path']} | Skipping {tag_name}: file_metadata[tag_name] not in ['', False, None, 0] - {file_metadata[tag_name]}")
                             continue
 
                     # delete tags if there are multiple possible tag_ids for this tag
@@ -117,10 +122,13 @@ class Process():
                             if not isinstance(tag, str):
                                 tag = tag[0]
                             del file_raw[tag]
+                            self._logger.debug(f"Deleted tag from file: {tag} for {tag_name}")
 
+                    self._logger.debug(f"{track['uri']} - {check_value} - {new_value}")
                     if new_value is not None:
                         # file extension specific tag update and save updated file tags
-                        tag_id = tag_ids[0]  # update 1st acceptable tag_id for this tag
+                        # update 1st acceptable tag_id for this tag
+                        tag_id = None if len(tag_ids) == 0 else tag_ids[0]
                         if tag_name == "image":
                             file_raw, mod_image = self.embed_image(file_raw, ext=ext, tag_id=tag_id, 
                                                                    image_url=new_value, **kwargs)
@@ -143,16 +151,19 @@ class Process():
                         elif ext == ".wma":
                             file_raw[tag_id] = mutagen.asf.ASFUnicodeAttribute(str(new_value))
                             modified = True
+                        
+                        if modified:
+                            updating_tags.append(tag_name)
 
                 try:  # try to save tags, skip if error and display path
                     if not dry_run and modified:
+                        self._logger.debug(f"Saving file with new tags: {updating_tags}")
                         file_raw.save()
                         count += 1
-                    elif modified and self._verbose and replace:
-                        tag_changes = " | ".join(t for t in tags if track[t] != file_metadata[t])
+                    elif modified and self._verbose:
                         name = name if len(name) < 30 else name[:27] + '...'
                         title = file_metadata['title'] if len(file_metadata['title']) < 30 else file_metadata['title'][:27] + '...'
-                        self._logger.info(f" {name:<30} : {title:<30} | {tag_changes}") 
+                        self._logger.info(f" {name:<30} : {title:<30} | {' | '.join(updating_tags)}") 
                         count += 1                  
                 except mutagen.MutagenError:
                     save_errors.append(track["path"])
@@ -172,14 +183,14 @@ class Process():
         else:
             logger(f"\33[92mDone | {count} files will be modified with '-x' flag for tags: {tags} \33[0m")
 
-    def embed_image(self, file_raw, ext: str, tag_id: str, image_url: str, **kwargs) -> None:
+    def embed_image(self, file_raw, ext: str, image_url: str, tag_id: str = None, **kwargs) -> None:
         """
         Embed image to local files from given Spotify URI images.
 
         :param local: Mutagen file object
         :param ext: str. Extension of the file given
-        :param tag_id: str. ID of the tag to update
         :param image_url: str. URL of the image to embed
+        :param tag_id: str. ID of the tag to update
         :return: Mutagen file object and bool (True if Mutagen file object modified)
         """
         if image_url is None:
@@ -234,6 +245,9 @@ class Process():
                                         available values. Can be "dict" or "list".
         :return: dict. <key>: <value> OR <track metadata>
         """
+        if len(playlists) == 0:
+            return {}
+        
         converted = {}
         # these parameter _settings should just return the same dict as input
         if out == "list" and value is None:
@@ -267,10 +281,11 @@ class Process():
             self, local: dict, compilation_check: bool = True, **kwargs) -> dict:
         """
         Determine if album is compilation and modify metadata:
-        - Set all compilation ags to true
+        - Set compilation to 1
         - Set track number in ascending order by filename
-        - Set disc number to None
+        - Set disc number to 1
         - Set album name to folder name
+        - Set album artist to 'Various'
 
         :param local: dict. <name>: <list of dicts of local track's metadata>.
         :param compilation_check: bool, default=True. If True, determine compilation for each album.
@@ -281,8 +296,6 @@ class Process():
         self._logger.info(
             f"\33[1;95m -> \33[1;97mSetting compilation style tags for {len(local)} albums \33[0m")
         self._logger.debug(f"Compilation check: {compilation_check}")
-
-        import json
 
         modified = {}
         count = 0
@@ -297,7 +310,7 @@ class Process():
                 for track in tracks:  # set tags
                     track["compilation"] = 1
                     track['track'] = track_order.index(basename(track['path'])) + 1
-                    track["disc"] = None
+                    track["disc"] = 1
                     track["album"] = track["folder"]
                     track["album_artist"] = "Various"
                     count += 1

@@ -115,11 +115,9 @@ class Syncify(Environment, ApiAuthoriser, IO, Report, LocalIO, Spotify):
         self.save_json(self._playlists_local, "backup__local_playlists", **kwargs)
 
         # backup list of tracks per Spotify playlist
-        add_extra = {}
-        for tracks in self._playlists_local.values():
-            for track in tracks:
-                if isinstance(track['uri'], str):
-                    add_extra[track['uri']] = {"folder": track["folder"], "path": track["path"]}
+        add_extra = [{"path": track["path"], "folder": track["folder"], 'uri': track['uri']}
+                    for tracks in self._library_local.values()
+                    for track in tracks if isinstance(track['uri'], str)]
         self._playlists_spotify = self.get_playlists_metadata('local', add_extra=add_extra, **kwargs)
         self.save_json(self._playlists_spotify, "backup__spotify_playlists", **kwargs)
 
@@ -129,7 +127,6 @@ class Syncify(Environment, ApiAuthoriser, IO, Report, LocalIO, Spotify):
         :param kind: str. Restore 'local' or 'spotify'.
         :param mod: str, default=None. If kind='local', restore 'playlists' from local or restore playlists from 'spotify'
         """
-        
         if not quickload:
             self._logger.warning("\n\33[91mSet a date to restore from using the -q flag\33[0m")
             return
@@ -234,7 +231,7 @@ class Syncify(Environment, ApiAuthoriser, IO, Report, LocalIO, Spotify):
         #############################################################
         ## Step 2-6: SEARCH/CHECK LIBRARY
         #############################################################
-        if len([t for f in self._library_local.values() for t in f if t['uri'] is None]) == 0:
+        if len([t for f in self._library_local.values() for t in f if t is not None]) == 0:
             self._logger.info("All songs found or unavailable. Skipping search.")
             return
 
@@ -246,21 +243,24 @@ class Syncify(Environment, ApiAuthoriser, IO, Report, LocalIO, Spotify):
             search_results = self.load_json(f"{quickload}/02_report__search", parent=True, **kwargs)
 
         # get list of paths of tracks to check
-        matched = self.convert_metadata(search_results["matched"], key="path", value="uri")
-        unmatched = self.convert_metadata(search_results["unmatched"], key="path", value="uri")
+        matched = self.convert_metadata(search_results.get("matched", []), key="path", value="uri")
+        unmatched = self.convert_metadata(search_results.get("unmatched", []), key="path", value="uri")
         search_paths = list(matched.keys()) + list(unmatched.keys())
 
-        # get dict of filtered tracks to check from library metadata
-        check_results = {}
-        for name, tracks in self._library_local.items():
-            for track in tracks:
-                if track['path'] in search_paths:
-                    check_results[name] = check_results.get(name, []) + [track]
+        if len(search_paths) > 0:
+            # get dict of filtered tracks to check from library metadata
+            check_results = {}
+            for name, tracks in self._library_local.items():
+                for track in tracks:
+                    if track['path'] in search_paths:
+                        check_results[name] = check_results.get(name, []) + [track]
 
-        if len(check_results) > 0:  # check URIs on Spotify and update with user input
-            self.check_tracks(check_results, report_file="04_report__updated_uris", **kwargs)
-            self.save_json(check_results, "05_report__check_matches", **kwargs)
-        self.save_json(self._library_local, "06_library__checked", **kwargs)
+            if len(check_results) > 0:  # check URIs on Spotify and update with user input
+                self.check_tracks(check_results, report_file="04_report__updated_uris", **kwargs)
+                self.save_json(check_results, "05_report__check_matches", **kwargs)
+            self.save_json(self._library_local, "06_library__checked", **kwargs)
+
+
 
     def _extract_all_from_spotify(self, quickload, **kwargs):
         """INTERNAL USE ONLY"""
@@ -276,28 +276,26 @@ class Syncify(Environment, ApiAuthoriser, IO, Report, LocalIO, Spotify):
         ## Step 7: LOAD SPOTIFY METADATA FOR ALL TRACKS/PLAYLISTS
         #############################################################
         # extract URI list and get Spotify metadata for all tracks with URIs in local library
-        uri_list = [track['uri'] for tracks in self._library_local.values()
+        add_extra = [{"path": track["path"], "folder": track["folder"], 'uri': track['uri']}
+                    for tracks in self._library_local.values()
                     for track in tracks if isinstance(track['uri'], str)]
-        add_extra = {}
-        for tracks in self._library_local.values():
-            for track in tracks:
-                if track['uri'] in uri_list:
-                    add_extra[track['uri']] = {"folder": track["folder"], "path": track["path"]}
+        uri_list = [metadata['uri'] for metadata in add_extra]
         self._library_spotify = self.get_tracks_metadata(uri_list, add_extra=add_extra, **kwargs)
 
-        save_data = {}
-        for track in self._library_spotify.values():
-            # convert to folder: track structure like local data for saving
-            folder = track["folder"]
-            save_data[folder] = save_data.get(folder, []) + [track]
-        self.save_json(save_data, '07_spotify__library', **kwargs)
-
-        return save_data
+        self.save_json(self._library_spotify, '07_spotify__library', **kwargs)
 
     def update_tags(self, quickload, **kwargs) -> None:
         """Run all main functions for updating local files"""
 
-        self._extract_all_from_spotify(quickload, **kwargs)
+        if kwargs['tags'] is None:
+            self._logger.debug(f"\33[93mNo tags set by the user.")
+            return
+
+        if quickload:
+            self._library_local = self.load_json(f"{quickload}/06_library__checked", parent=True, **kwargs)
+            self._library_spotify = self.load_json(f"{quickload}/07_spotify__library", parent=True, **kwargs)
+        elif self._library_local is None or self._library_spotify is None:  # load if needed
+            self._extract_all_from_spotify(False, **kwargs)
 
         #############################################################
         ## Step 8-9: TRANSFORM LOCAL TRACK METADATA, RELOAD LIBRARY
@@ -307,10 +305,10 @@ class Syncify(Environment, ApiAuthoriser, IO, Report, LocalIO, Spotify):
             for track in tracks:
                 if track['uri'] in self._library_spotify:
                     spotify_metadata = self._library_spotify[track['uri']]
-                    for tag in track:
+                    for tag in kwargs['tags']:
                         track[tag] = spotify_metadata.get(tag, track[tag])
                     track["image"] = spotify_metadata["image"]
-
+        
         self.modify_compilation_tags(self._library_local, **kwargs)
         self.update_file_tags(self._library_local, **kwargs)
         self.save_json(self._library_local, '08_library__updated', **kwargs)
@@ -325,6 +323,12 @@ class Syncify(Environment, ApiAuthoriser, IO, Report, LocalIO, Spotify):
 
     def update_spotify(self, quickload, **kwargs) -> None:
         """Run all main functions for updating Spotify playlists"""
+        if quickload:
+            self._library_local = self.load_json(f"{quickload}/09_library__final", parent=True, **kwargs)
+        elif self._library_local is None:  # load if needed
+            self._library_local = self.get_local_metadata(**kwargs)
+            self.save_json(self._library_local, "09_library__final", **kwargs)
+
         #############################################################
         ## Step 10-12: UPDATE SPOTIFY PLAYLISTS, RELOAD
         #############################################################
@@ -334,11 +338,9 @@ class Syncify(Environment, ApiAuthoriser, IO, Report, LocalIO, Spotify):
         local_uri = self.convert_metadata(self._playlists_local, key="name", value="uri", **kwargs)
         self.save_json(local_uri, "URIs__local_playlists", **kwargs)
 
-        add_extra = {}
-        for tracks in self._playlists_local.values():
-            for track in tracks:
-                if isinstance(track['uri'], str):
-                    add_extra[track['uri']] = {"folder": track["folder"], "path": track["path"]}
+        add_extra = [{"path": track["path"], "folder": track["folder"], 'uri': track['uri']}
+                    for tracks in self._library_local.values()
+                    for track in tracks if isinstance(track['uri'], str)]
         self._playlists_spotify = self.get_playlists_metadata(
             'local', add_extra=add_extra, **kwargs)
         self.save_json(self._playlists_spotify, "11_playlists__spotify_intial", **kwargs)
@@ -350,24 +352,21 @@ class Syncify(Environment, ApiAuthoriser, IO, Report, LocalIO, Spotify):
         #############################################################
         ## Step 13: REPORT
         #############################################################
-        if self._playlists_local is None:
-            # get local metadata for m3u playlists
-            self._verbose = True
+        if self._playlists_local is None:  # get local metadata for m3u playlists
             self._playlists_local = self.get_m3u_metadata(**kwargs)
             self.save_json(self._playlists_local, "10_playlists__local", **kwargs)
-
-        add_extra = {}
-        for tracks in self._playlists_local.values():
-            for track in tracks:
-                if isinstance(track['uri'], str):
-                    add_extra[track['uri']] = {"folder": track["folder"], "path": track["path"]}
+        
         # reload metadata and report
+        add_extra = [{"path": track["path"], "folder": track["folder"], 'uri': track['uri']}
+                    for tracks in self._library_local.values()
+                    for track in tracks if isinstance(track['uri'], str)]
         self._playlists_spotify = self.get_playlists_metadata(
             'local', add_extra=add_extra, **kwargs)
         self.save_json(self._playlists_spotify, "12_playlists__spotify_final", **kwargs)
         playlist_uri = self.convert_metadata(
             self._playlists_spotify, key="name", value="uri", **kwargs)
         self.save_json(playlist_uri, "URIs__spotify_playlists", **kwargs)
+        self._verbose = True
         report = self.report_differences(
             self._playlists_local,
             self._playlists_spotify,
@@ -377,7 +376,7 @@ class Syncify(Environment, ApiAuthoriser, IO, Report, LocalIO, Spotify):
     def main(self, quickload: str = None, **kwargs) -> None:
         """Main driver function that executes primary Syncify functions"""
         self.clean_up_env(**kwargs)
-        
+
         start = 0
         if quickload:
             files = glob(join(dirname(self.DATA_PATH), quickload, "*"))
@@ -386,8 +385,11 @@ class Syncify(Environment, ApiAuthoriser, IO, Report, LocalIO, Spotify):
         if start < 6:
             self.search(quickload, **kwargs)  # Steps 1-6
             quickload = False
+        if start < 7:
+            self._extract_all_from_spotify(quickload, **kwargs)  # Step 7
+            quickload = False
         if start < 9:
-            self.update_tags(quickload, **kwargs)  # Steps 7-9
+            self.update_tags(quickload, **kwargs)  # Steps 8-9
             quickload = False
         if start < 12:
             self.update_spotify(quickload, **kwargs)  # Steps 10-12

@@ -66,23 +66,29 @@ class Endpoints:
 
     def handle_request(self, kind: str, url: str, *args, **kwargs) -> dict:
         r = getattr(requests, kind)(url, *args, **kwargs, headers=self._headers)
-        while r.status_code == 429 and 'retry-after' in r.headers:
-            print()
-            wait_dt = dt.now() + timedelta(seconds=int(r.headers['retry-after']))
-            text = f"Rate limit exceeded. Retry again at {wait_dt.strftime('%Y-%m-%d %H:%M:%S')}"
-            self._logger.warning(f"\33[91mEndpoint: {url} | {text} \33[0m")
+        i = 2
+        while r.status_code >= 400:
+            
 
-            if int(r.headers['retry-after']) < self._test_expiry:  # wait if time is short
-                self._logger.info(f"Waiting {int(r.headers['retry-after']) // 60} minutes")
-                sleep(int(r.headers['retry-after']))
+            self._logger.warning(
+                f"\33[91mEndpoint: {url} | Code: {r.status_code} | {r.text}"
+                f"\n{r.headers}\33[0m"
+            )
+
+            if 'retry-after' in r.headers:  # wait if time is short
+                wait_dt = dt.now() + timedelta(seconds=int(r.headers['retry-after']))
+                self._logger.info(f"Rate limit exceeded. Retry again at {wait_dt.strftime('%Y-%m-%d %H:%M:%S')}")
                 r = getattr(requests, kind)(url, *args, **kwargs, headers=self._headers)
             else:
-                exit(f"Wait time > {self._test_expiry // 60} minutes, exiting.")
+                self._logger.info(f"Retrying in {i} seconds...")
+                sleep(i)
+                i *= 5
 
         try:
             r = r.json()
+            
         except json.decoder.JSONDecodeError:
-            self._logger.error(f"Endpoint: {url} | Response: {r.text}")
+            self._logger.error(f"Endpoint: {url} | Code: {r.status_code} | Response: {r.text}")
         return r
 
     #############################################################
@@ -413,7 +419,6 @@ class Endpoints:
 
         tracks = [track for track in tracks if track not in current_tracks]
         
-
         # add tracks in batches
         for i in range(len(tracks) // limit + 1):
             params = {'uris': ','.join(tracks[limit * i: limit * (i + 1)])}
@@ -440,7 +445,7 @@ class Endpoints:
             url = f"{self.convert(playlist, get='api', kind='playlist', **kwargs)}/followers"
 
         self._logger.debug(f"Endpoint: {url:<69}")
-        r = self.handle_request("delete", url)
+        self.handle_request("delete", url)
         return url
 
     def clear_from_playlist(self, playlist: list, tracks_list: list = None,

@@ -3,6 +3,7 @@ import json
 import traceback
 from time import perf_counter
 from dotenv import load_dotenv
+from requests import delete
 
 # load stored environment variables from .env
 load_dotenv()
@@ -124,6 +125,7 @@ if __name__ == "__main__":
     main._logger.info(f"\33[90mLogs output: {main._log_file} \33[0m")
     main._logger.info(f"\33[90mData output: {main.DATA_PATH} \33[0m")
 
+# TODO: read and modify mbp and autoxpf files directly
 # TODO: track audio recognition when searching using Shazam like service?
 # TODO: Automatically add songs added to each Spotify playlist to '2get'?
 #       Then somehow update local library playlists after...

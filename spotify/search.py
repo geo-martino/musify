@@ -13,39 +13,34 @@ class Search:
     _settings = {
         # len_diff = time difference in track length
         # min_diff + quick_match = words match threshold on album
-        # min_diff + deep_match = words match threshold on title and artist
+        # min_diff + score_match = score match threshold on title, artist, and length
         0: {"func": "simple_match"},
         1: {
             "func": "quick_match",
             "len_diff": 15,
             "min_diff": 0.8,
-            "album_title_len_match": 0.6,
-            "artist_match": True
+            "album_title_len_match": 0.8,
+            "artist_match": True,
+            "artist_search": True,
         },
         2: {
             "func": "quick_match",
             "len_diff": 30,
             "min_diff": 0.66,
             "album_title_len_match": 0.6,
-            "artist_match": False
+            "artist_match": False,
+            "artist_search": True,
         },
         3: {
-            "func": "deep_match",
-            "min_diff": 0.8,
-            "min_length_diff": 600,
+            "func": "score_match",
+            "max_score": 1.5,
             "album_title_len_match": 0.6,
-            "artist_match": False
+            "artist_match": False,
+            "artist_search": False,
         },
-        4: {
-            "func": "deep_match",
-            "min_diff": 0.66,
-            "min_length_diff": 600,
-            "album_title_len_match": 0.6,
-            "artist_match": False
-        },
-        5: {"func": "simple_match"},
+        4: {"func": "simple_match"},
     }
-    _neg_map = {-1: 3, -2: 4, -3: 1, -4: 2, -5: 5}
+    _neg_map = {-1: 3, -2: 5}
 
     @staticmethod
     def clean_tags(track: dict, **kwargs) -> dict:
@@ -114,16 +109,23 @@ class Search:
              1 = Use quick match. Use _settings = 1.
              2 = Match with 1. If no matches, use _settings = 2.
              3 = Match with 1,2. If no matches, use _settings = 3.
-             4 = Match with 1,2,3. If no matches, use _settings = 4.
-             5 = Match with 1,2,3,4. If no matches, return the first result.
+             4 = Match with 1,2,3. If no matches, return the first result.
             -1 = Match with _settings = 3 first.
-            -2 = Match with 3. If no matches, use _settings = 4.
-            -3 = Match with 3,4. If no matches, use _settings = 1.
-            -4 = Match with 3,4,1. If no matches, use _settings = 2.
-            -5 = Match with 3,4,1,2. If no matches, return the first result.
+            -2 = Match with 3. If no matches, return the first result.
 
         :return: dict. Report on matched, unmatched, and skipped tracks.
         """
+        # filter search down
+        filtered = {}
+        for name, tracks in playlists.items():
+            tracks = [track for track in tracks if track['uri'] is None]
+            if len(tracks) > 0:
+                filtered[name] = tracks
+        
+        if len(filtered) == 0:
+            self._logger.debug(f"\33[93mNo tracks to search. \33[0m")
+            return {}
+
         # prepare for report
         report = {}
         if isinstance(report_file, str):
@@ -137,15 +139,14 @@ class Search:
 
         # progress bar
         bar = tqdm(
-            range(
-                len(playlists)),
+            range(len(filtered)),
             desc='Searching',
             unit='albums',
             leave=self._verbose,
             file=sys.stdout)
 
         # start search for each playlist/album
-        for name, tracks in playlists.items():
+        for name, tracks in filtered.items():
             # sorted tracks that do/do not already have a URI and are searchable
             tracks_with_uri = [track for track in tracks if isinstance(track['uri'], str)]
             tracks_search = [track for track in tracks if track['uri'] is None]
@@ -201,7 +202,7 @@ class Search:
 
         bar.close()
 
-        self.report_log(playlists, report)
+        self.report_log(filtered, report)
 
         return report
 
@@ -212,6 +213,10 @@ class Search:
         :param playlists: dict. List of playlist names.
         :param report: dict. Report output from search
         """
+        if len(playlists) == 0:
+            self._logger.debug(f"\33[93mNo tracks searched. \33[0m")
+            return 
+        
         total_matched = 0
         total_unmatched = 0
         total_skipped = 0
@@ -245,8 +250,9 @@ class Search:
             )
 
         text = "TOTALS"
+        print()
         logger(
-            f"\n\33[1;96m{text if len(text) < 50 else text[:47] + '...':<{max_width}} \33[0m|"
+            f"\33[1;96m{text if len(text) < 50 else text[:47] + '...':<{max_width}} \33[0m|"
             f'\33[92m{total_matched:>5} matched \33[0m|'
             f'\33[91m{total_unmatched:>5} unmatched \33[0m|'
             f'\33[93m{total_skipped:>5} skipped \33[0m|'
@@ -325,17 +331,19 @@ class Search:
             )
 
             # get _settings
-            _settings = self._settings[self._neg_map[match_algo]
-                                       ] if self.ALGORITHM_COMP < 0 else self._settings[match_algo]
+            if self.ALGORITHM_COMP < 0:
+                _settings = self._settings[self._neg_map[match_algo]]
+            else:
+                _settings = self._settings[match_algo]
             match_func = getattr(self, _settings['func'])
 
             # attempt matching
             if match_algo == 2:  # special conditions for algorithm 2 match
                 results_title = results if title_search else self.query(
                     track_clean['title'], 'track', **kwargs)
-                match = match_func(track, results_title, match_algo)
+                match = match_func(track, results_title, **_settings)
             else:
-                match = match_func(track, results, match_algo)
+                match = match_func(track, results, **_settings)
 
             # increase algorithm depth
             match_algo = match_algo - 1 if self.ALGORITHM_COMP < 0 else match_algo + 1
@@ -351,6 +359,7 @@ class Search:
         """
         album_title_len_match = self._settings[self.ALGORITHM_ALBUM]["album_title_len_match"]
         match_artist = self._settings[self.ALGORITHM_ALBUM]["artist_match"]
+        search_artist = self._settings[self.ALGORITHM_ALBUM]["artist_search"]
 
         # get shortest artist name from local metadata
         artist_clean = min(set(track['artist'] for track in tracks), key=len)
@@ -361,7 +370,7 @@ class Search:
         album_clean = album_clean['album']
 
         # search for album and sort by closest track number match
-        query = f'{album_clean} {artist_clean}'
+        query = f'{album_clean} {artist_clean}' if search_artist else album_clean
         results = self.query(query, 'album', **kwargs)
         results = sorted(results, key=lambda x: abs(x['total_tracks'] - len(tracks)))
 
@@ -374,8 +383,8 @@ class Search:
 
         for result in results:
             self._logger.debug(f"{tracks[0]['album']} | >>> Testing URI: {result['uri']}")
-            if self.karaoke_match(result, tracks[0]['album']):
-                break
+            if self.karaoke_match(tracks[0], result):
+                continue
 
             # get tracks for result
             album_result = requests.get(result['href'], headers=self._headers).json()
@@ -467,22 +476,21 @@ class Search:
         track['uri'] = results[0]['uri']
         return track
 
-    def title_match(self, track: dict, results: list, algo: int, **kwargs) -> dict:
+    def title_match(self, track: dict, results: list, min_diff: int, **kwargs) -> dict:
         """
         Perform title match for a given track and its results. Useful for replacing songs in playlists.
 
         :param track: dict. Metadata for locally stored track.
         :param results: list. Results from Spotify API for given track.
-        :param algo: int, default=4. Algorithm to use for searching. Refer to search_all method documentation.
+        :param min_diff: int, default=0.8. Minimum difference in words for title matching.
         :return: dict. Metadata for locally stored track with added matched URI if found.
         """
-        min_diff = self._settings[algo]["min_diff"]
         self._logger.debug(
             f">>> {track['title']} | Begin title match algorithm on {len(results):>2} results")
 
         for result in results:
             self._logger.debug(f">>> {track['title']} | >>> Testing URI: {result['uri']}")
-            if self.karaoke_match(result, track['title']):
+            if self.karaoke_match(track, result):
                 continue
 
             # match album name by words threshold
@@ -503,24 +511,39 @@ class Search:
 
         return track
 
-    def quick_match(self, track: dict, results: list, algo: int, **kwargs) -> dict:
+    def quick_match(self, track: dict, results: list, len_diff: int = 15, min_diff: int = 0.8, **kwargs) -> dict:
         """
         Perform quick match algorithm for a given track and its results.
 
         :param track: dict. Metadata for locally stored track.
         :param results: list. Results from Spotify API for given track.
-        :param algo: int, default=4. Algorithm to use for searching. Refer to search_all method documentation.
+        :param len_diff: int, default=15. Maximum difference in length of tracks for length matching.
+        :param min_diff: int, default=15. Minimum difference in words for title and album matching
         :return: dict. Metadata for locally stored track with added matched URI if found.
         """
-        len_diff = self._settings[algo]["len_diff"]
-        min_diff = self._settings[algo]["min_diff"]
         self._logger.debug(
             f">>> {track['title']} | Begin quick match algorithm on {len(results):>2} results")
 
+        # clean tags
+        clean_track = self.clean_tags(track, **kwargs)
+        title = clean_track['title'].split(' ')
+        album = clean_track['album'].split(' ')
+
         for result in results:
             self._logger.debug(f">>> {track['title']} | >>> Testing URI: {result['uri']}")
-            if self.karaoke_match(result, track['title']):
-                break
+            if self.karaoke_match(track, result):
+                continue
+
+            # clean title from query results
+            title_r = self.clean_tags({'title': result['name']}, **kwargs)['title']
+            # title match if above threshold
+            title_match = sum([word in title_r for word in title]) >= len(title) * min_diff
+            self._logger.debug(
+                f">>> {track['title']} | "
+                f"title_match = {title_match} | "
+                f"{title} -> {title_r.encode('utf-8').decode('utf-8')} | "
+                f"min_diff = {min_diff}"
+            )
 
             # match length difference
             time_match = abs(result['duration_ms'] / 1000 - track['length']) <= len_diff
@@ -532,124 +555,139 @@ class Search:
             )
 
             # match album name by words threshold
-            album = self.clean_tags({'album': track['album']}, **kwargs)['album'].split(' ')
             album_match = sum([word in result['album']['name'].lower()
-                              for word in album]) >= len(album) * min_diff
+                            for word in album]) >= len(album) * min_diff
             self._logger.debug(
                 f">>> {track['title']} | "
                 f"album_match = {album_match} | "
                 f"{album} -> {result['album']['name'].lower().encode('utf-8').decode('utf-8')} | "
                 f"min_diff = {min_diff}"
             )
-
-            # year match
-            year_match = track['year'] == int(
-                re.sub('[^0-9]', '', result['album']['release_date'])[:4])
-            self._logger.debug(
-                f">>> {track['title']} | "
-                f"year_match = {year_match} | "
-                f"{track['year']} -> {int(re.sub('[^0-9]', '', result['album']['release_date'])[:4])}"
-            )
+            
+            # year match - NO LONGER USED
+            # year_match = track['year'] == int(
+            #     re.sub('[^0-9]', '', result['album']['release_date'])[:4])
+            # self._logger.debug(
+            #     f">>> {track['title']} | "
+            #     f"year_match = {year_match} | "
+            #     f"{track['year']} -> {int(re.sub('[^0-9]', '', result['album']['release_date'])[:4])}"
+            # )
 
             # if not karaoke and other conditions match, match track
-            if any([time_match, album_match, year_match]):
+            if title_match and any([time_match, album_match]):
                 self._logger.debug(f">>> {track['title']} | <<< Matched URI: {result['uri']}")
                 track['uri'] = result['uri']
                 break
 
         return track
 
-    def deep_match(self, track: dict, results: list, algo: int, **kwargs) -> dict:
+    def score_match(self, track: dict, results: list, max_score: int = 2, **kwargs) -> dict:
         """
-        Perform deep match algorithm for a given track and its results.
+        Perform score match algorithm for a given track and its results.
 
         :param track: dict. Cleaned metadata (use clean_track) for locally stored track.
         :param results: list. Results from Spotify API for given track.
-        :param algo: int, default=4. Algorithm to use for searching. Refer to search_all method documentation.
+        :param max_score: int, default=2. Stop matching once this score has been reached. Max score ceiling is 3.
         :return: dict. Metadata for locally stored track with added matched URI if found.
         """
-        min_length_diff = self._settings[algo]["min_length_diff"]
-        min_diff = self._settings[algo]["min_diff"]
-
-        title = track['title'].split(' ')
-        artist = track['artist'].split(' ')
 
         self._logger.debug(
-            f">>> {track['title']} | Begin deep match algorithm on {len(results):>2} results")
+            f">>> {track['title']} | Begin score match algorithm on {len(results):>2} results")
+
+        # clean tags
+        clean_track = self.clean_tags(track, **kwargs)
+        title = clean_track['title'].split(' ')
+        artist = clean_track['artist'].split(' ')
+
+        scores = {
+            "title": 0,
+            "artist": 0,
+            "length": 0
+        }
+        scores_highest = scores.copy()
+
+        
 
         for result in results:
+            scores_current = scores.copy()
             self._logger.debug(f">>> {track['title']} | >>> Testing URI: {result['uri']}")
-            if self.karaoke_match(result, track['title']):
+            if self.karaoke_match(track, result):
                 break
 
-            # clean title from query results
+            # title score difference
             title_r = self.clean_tags({'title': result['name']}, **kwargs)['title']
-
-            # title match if above threshold
-            title_match = sum([word in title_r for word in title]) >= len(title) * min_diff
+            scores_current["title"] = sum([word in title_r for word in title]) / len(title)
             self._logger.debug(
                 f">>> {track['title']} | "
-                f"title_match = {title_match} | "
-                f"{title} -> {title_r.encode('utf-8').decode('utf-8')} | "
-                f"min_diff = {min_diff}"
+                f"score_title = {scores_current['title']} | "
+                f"{title} -> {title_r.encode('utf-8').decode('utf-8')}"
             )
 
-            # difference in length
-            length_diff = abs(result['duration_ms'] / 1000 - track['length'])
-            self._logger.debug(
-                f">>> {track['title']} | "
-                f"length_diff = {length_diff} | "
-                f"{track['length']} -> {result['duration_ms'] / 1000}"
-            )
-
-            artist_match = True  # predefined as True in case of no artists
-            for artist_r in result['artists']:
+            # search through all artists for match
+            scores_current["artist"] = 0  # predefined as 0 in case of no artists
+            for i, artist_r in enumerate(result['artists'], 1):
                 artists = self.clean_tags({'artist': artist_r['name']}, **kwargs)['artist']
-                artist_match = sum([word in artists for word in artist]) >= len(artist) * min_diff
-
-                # if artists match and not karaoke, continue to check other matches
-                if artist_match:
-                    break
+                scores_current["artist"] = (sum([word in artists for word in artist]) / len(artist)) * (1 / i)
             self._logger.debug(
                 f">>> {track['title']} | "
-                f"artist_match = {artist_match} | "
+                f"score_artist = {scores_current['artist']} | "
                 f"{artist} -> {artists.encode('utf-8').decode('utf-8')}"
             )
 
+            # difference in length
+            scores_current["length"] = 1 - (abs(result['duration_ms'] / 1000 - track['length']) / track['length'])
+            self._logger.debug(
+                f">>> {track['title']} | "
+                f"score_length = {scores_current['length']} | "
+                f"{track['length']} -> {result['duration_ms'] / 1000}"
+            )
+
+            # log scores
+            log_current = ', '.join(f'{k}={v}' for k, v in scores_current.items())
+            log_highest = ', '.join(f'{k}={v}' for k, v in scores_highest.items())
+            self._logger.debug(
+                f">>> {track['title']} | "
+                f"current: {log_current} - SUM: {sum(scores_current.values())} | "
+                f"highest: {log_highest} - SUM: {sum(scores_highest.values())}"
+            )
+
             # check if conditions match and closest length match
-            if all([(artist_match or title_match), length_diff < min_length_diff]):
-                min_length_diff = length_diff
+            if sum(scores_current.values()) > sum(scores_highest.values()):
                 self._logger.debug(
                     f">>> {track['title']} | "
                     f"<<< Matched URI: {result['uri']} | "
-                    f"min_length_diff = {min_length_diff}"
+                    f"scores: {sum(scores_current.values())} > {sum(scores_highest.values())}"
                 )
+                scores_highest = scores_current.copy()
                 track['uri'] = result['uri']
+                if sum(scores_highest.values()) >= max_score:  # prevent over-fitting
+                    break
 
         return track
 
     #############################################################
     ## Match conditions
     #############################################################
-    def karaoke_match(self, result: list, name: str = '', **kwargs) -> bool:
+    def karaoke_match(self, track: dict, result: dict, **kwargs) -> bool:
         """
         Checks if a result is a karaoke track/album.
 
-        :param results: list. Result from Spotify API.
-        :param name: dict. String to print for logger.
-        :return: bool. True if match, False if not
+        :param track: dict. Local metadata for the current track. Used for logging only.
+        :param result: dict. Result from Spotify API.
+        :return: bool. True if karaoke match, False if not
         """
-        if "album" in result:
+        if "album" in result:  # this is a comp search
             album_name = result['album']['name']
-            name = f">>> {name}"
-        else:
+            name = f">>> {track['title']}"
+        else:  # this is an album search
             album_name = result['name']
+            name = f"{track['album']}"
 
         # not a karaoke track if album doesn't contain karaoke tags
         karaoke_match = all(word in album_name.lower() for word in self._karaoke_tags)
         self._logger.debug(
             f"{name} | "
-            f"karaoke_match = {karaoke_match} | "
+            f"not_karaoke = {not karaoke_match} | "
             f"{self._karaoke_tags} -> {album_name.lower().encode('utf-8').decode('utf-8')}"
         )
 
@@ -664,7 +702,7 @@ class Search:
                 break
         self._logger.debug(
             f"{name} | "
-            f"karaoke_match = {karaoke_match} | "
+            f"not_karaoke = {not karaoke_match}  | "
             f"{self._karaoke_tags} -> {artists.encode('utf-8').decode('utf-8')}"
         )
 

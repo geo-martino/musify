@@ -35,7 +35,7 @@ class LocalIO(Process):
             "disc": ["discnumber"],
             "compilation": ["compilation"],
             "album_artist": ["albumartist"],
-            "comment": ["comment"],
+            "comment": ["comment", "description"],
             "image": [],
         },
         ".mp3": {
@@ -225,6 +225,9 @@ class LocalIO(Process):
                         metadata[tag_name] = int(re.sub('[^0-9]', '', str(metadata[tag_name])))
                     elif tag_name in self._float_tags:
                         metadata[tag_name] = float(re.sub('[^0-9.]', '', str(metadata[tag_name])))
+                
+                if metadata.get(tag_name) is not None:  # break if value found
+                    break
 
         # determine if track has image embedded
         if ext == ".flac":

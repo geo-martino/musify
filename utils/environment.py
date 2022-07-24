@@ -98,7 +98,7 @@ class Environment:
         """
         self.BASE_API = BASE_API
         self.OPEN_URL = OPEN_URL
-        self.ALGORITHM_COMP = int(os.getenv("ALGORITHM_COMP", 4))
+        self.ALGORITHM_COMP = int(os.getenv("ALGORITHM_COMP", 3))
         self.ALGORITHM_ALBUM = int(os.getenv("ALGORITHM_ALBUM", 2))
 
         # set system appropriate path and store other system's paths
@@ -174,7 +174,10 @@ class Environment:
             'MAC_PATH',
             'LIN_PATH',
             'DATA_PATH',
-            'TOKEN_FILENAME']
+            'TOKEN_FILENAME',
+            'ALGORITHM_COMP',
+            'ALGORITHM_ALBUM',
+            ]
         if current_state:  # update variables from current object
             env.update({var: val for var, val in vars(self).items() if var in env_vars})
 
