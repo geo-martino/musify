@@ -357,7 +357,7 @@ class Process():
                             tag_value = track[tag].strip().lower()
                             values = [v.strip().lower() for v in values]
 
-                            if all(tag_value != v for v in values):
+                            if all(v not in tag_value for v in values):
                                 filtered[name].append(track)
                             
 

@@ -17,7 +17,7 @@ target = Executable(
 setup(
     name="Syncify",
     version="2.0",
-    description="Creates Spotify playlists from local files",
+    description="Syncronise your music library to Spotify",
     author="George M. Marino",
     options=options,
     executables=[target]
