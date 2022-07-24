@@ -167,6 +167,7 @@ class LocalIO(Process):
 
         # extract all tags found in _tag_ids for this filetype
         for tag_name, _tag_ids in self._tag_ids.get(ext, {"": []}).items():
+            metadata[tag_name] = None
             for tag_id in _tag_ids:
                 # each filetype has a different way of extracting tags within mutagen
                 if ext == ".mp3":
