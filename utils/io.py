@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import xmltodict
 from os.path import basename, dirname, exists, join, normpath, splitext
 from time import sleep
 
@@ -26,9 +27,9 @@ class IO:
             filename += ".json"
         json_path = dirname(self.DATA_PATH) if parent else self.DATA_PATH
         json_path = join(json_path, normpath(filename))
-        self._logger.debug(f"Saving {json_path}")
+        self._logger.debug(f"Saving: {json_path}")
 
-        with open(json_path, "w", encoding='utf8') as f:
+        with open(json_path, "w", encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
     def load_json(self, filename: str, parent: bool = False, **kwargs) -> dict:
@@ -47,7 +48,7 @@ class IO:
 
         if exists(json_path):
             self._logger.debug(f"Loading: {json_path}")
-            with open(json_path, "r", encoding='utf8') as f:
+            with open(json_path, "r", encoding='utf-8') as f:
                 return json.load(f)
         else:
             self._logger.debug(f"{json_path} not found")
@@ -109,19 +110,74 @@ class IO:
 
         return json_path
 
-    def save_playlists(self, backup: dict, dry_run: bool, **kwargs):
+    def save_m3u(self, data: dict, filename: str, dry_run: bool=True, **kwargs) -> list:
         """
-        Save playlists from extracted metadata dict.
+        Save list of paths to playlists folder with m3u extension.
 
-        :param backup: dict. <name>: <list of dicts of track's metadata> with 'path' key
-        :param dry_run: bool, default=False. Skip function if true.
+        :param data: dict. Data to save.
+        :param filename: str. Filename to process.
         """
-        if dry_run:
-            return
+        # get filepath and save
+        if not filename.lower().endswith(".m3u"):
+            filename += ".m3u"
+        m3u_path = join(self.PLAYLISTS_PATH, normpath(filename))
 
-        for name, tracks in backup.items():
-            name = re.sub(r'[\\/*?:"<>|]', '', name)
-            with open(join(self._PLAYLISTS_PATH, f"{name}.m3u"), "w") as f:
-                f.writelines([t['path'] + '\n' for t in tracks])
+        self._logger.debug(f"Saving: {m3u_path}")
+        with open(m3u_path, 'w', encoding='utf-8') as f:
+            f.writelines([t.strip() + '\n' for t in data])
 
-        self._logger.info(f"\33[92mRestored {len(backup)} local playlists \33[0m")
+    def load_m3u(self, filename: str, **kwargs) -> list:
+        """
+        Load m3u playlist from playlists folder to a list a paths.
+
+        :param filename: str. Filename to process.
+        :return: list.
+        """ 
+        # get filepath and save
+        if not filename.lower().endswith(".m3u"):
+            filename += ".m3u"
+        m3u_path = join(self.PLAYLISTS_PATH, normpath(filename))
+
+        if exists(m3u_path):
+            self._logger.debug(f"Loading: {m3u_path}")
+            with open(m3u_path, "r", encoding='utf-8') as f:
+                return [line.rstrip() for line in f]
+        else:
+            self._logger.debug(f"{m3u_path} not found")
+            return False
+
+    def save_xml(self, data: dict, filename: str, **kwargs) -> dict:
+        """
+        Save dict representing xml like object to playlists folder with xautopf extension.
+
+        :param data: dict. Data to save.
+        :param filename: str. Filename to process.
+        """
+        # get filepath and save
+        if not filename.lower().endswith(".xautopf"):
+            filename += ".xautopf"
+        xml_path = join(self.PLAYLISTS_PATH, normpath(filename))
+
+        self._logger.debug(f"Saving: {xml_path}")
+        with open(xml_path, 'w', encoding='utf-8') as f:
+            f.write(xmltodict.unparse(data, pretty=True, short_empty_elements=True).replace('/>', ' />').replace('\t', '  '))
+
+    def load_xml(self, filename: str, **kwargs) -> dict:
+        """
+        Load xml like object  from playlists folder with xautopf extension to dict.
+
+        :param filename: str. Filename to process.
+        :return: dict.
+        """ 
+        # get filepath and save
+        if not filename.lower().endswith(".xautopf"):
+            filename += ".xautopf"
+        xml_path = join(self.PLAYLISTS_PATH, normpath(filename))
+
+        if exists(xml_path):
+            self._logger.debug(f"Loading: {xml_path}")
+            with open(xml_path, "r", encoding='utf-8') as f:
+                return xmltodict.parse(f.read())
+        else:
+            self._logger.debug(f"{xml_path} not found")
+            return False

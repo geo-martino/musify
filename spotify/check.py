@@ -124,7 +124,7 @@ class CheckMatches:
 
         max_width = len(max(options, key=len)) + 1 if len(max(options, key=len)) + 1 < 50 else 50
 
-        help_text = ["\n\t\33[96mEnter one of the following options - \33[0m\n\t"]
+        help_text = ["\n\t\33[96mEnter one of the following options: \33[0m\n\t"]
         for k, v in options.items():
             k += ":"
             help_text.append(f"{k if len(k) < 50 else k[:47] + '...':<{max_width}} {v}")

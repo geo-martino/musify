@@ -1,7 +1,8 @@
 import re
 import sys
+import xmltodict
 from glob import glob
-from os.path import basename, dirname, isdir, join, splitext
+from os.path import basename, dirname, isdir, join, splitext, sep
 
 import mutagen
 from tqdm.auto import tqdm
@@ -345,7 +346,7 @@ class LocalIO(Process):
                     del folder_metadata[folder]
                     count += 1
             self._logger.debug(
-                f"Removed {count} non-compilation folders."
+                f"Compilation-only mode. Removed {count} non-compilation folders. "
                 f"{len(folder_metadata)} folders remaining."
             )
 
@@ -384,7 +385,7 @@ class LocalIO(Process):
         :return: dict. <name>: <list of dicts of track's metadata>
         """
         # list of paths of .m3u files in playlists path
-        playlist_paths = glob(join(self._PLAYLISTS_PATH, "*.m3u"))
+        playlist_paths = glob(join(self.PLAYLISTS_PATH, "*.m3u"))
         playlist_metadata = {}
 
         playlists_filtered = []
@@ -423,8 +424,7 @@ class LocalIO(Process):
             name = splitext(basename(playlist_path))[0]
 
             # get list of tracks in playlist
-            with open(playlist_path, "r", encoding="utf-8") as m3u:
-                track_paths = [line.rstrip() for line in m3u]
+            track_paths = self.load_m3u(playlist_path)
 
             if len(track_paths) == 0:
                 continue
@@ -525,13 +525,14 @@ class LocalIO(Process):
 
         return playlists
 
-    def restore_local_playlists(self, backup: str, in_playlists: list=None, ex_playlists: list=None, **kwargs):
+    def restore_local_playlists(self, backup: str, in_playlists: list=None, ex_playlists: list=None, dry_run: bool = True, **kwargs):
         """
         Restore local playlists from backup.
 
         :param backup: str. Filename of backup json in form <name>: <list of dicts of track's metadata>
         :param in_playlists: list, default=None. Only restore playlists in this list.
         :param ex_playlists: list, default=None. Don't restore playlists in this list.
+        :param dry_run: bool, default=True. Don't save if True, save if False.
         """
 
         print()
@@ -557,4 +558,57 @@ class LocalIO(Process):
                 if name.lower() in [p.lower() for p in ex_playlists]:
                     del backup[name]
 
-        self.save_playlists(backup, **kwargs)
+        if not dry_run:
+            for name, tracks in backup.items():
+                name = re.sub(r'[\\/*?:"<>|]', '', name)
+                self.save_m3u([t['path'] for t in tracks], name, **kwargs)
+
+            self._logger.info(f"\33[92mRestored {len(backup)} local playlists \33[0m")
+
+    def clean_playlists(self, dry_run: bool = True, **kwargs):
+        """
+        Remove dead links and fix case of links in xautopf and m3u playlists
+        
+        :param dry_run: bool, default=True. Don't save if True, save if False.
+        """
+        # get playlist paths
+        playlists = glob(join(self.PLAYLISTS_PATH, '**', '*.xautopf'), recursive=True)
+        playlists += glob(join(self.PLAYLISTS_PATH, '**', '*.m3u'), recursive=True)
+
+        for playlist_path in playlists:
+            name = playlist_path.replace(self.PLAYLISTS_PATH, '').lstrip(sep)
+            if playlist_path.endswith('.xautopf'):  # load xml like object
+                xml = self.load_xml(name)
+                paths = xml['SmartPlaylist']['Source'].get('ExceptionsInclude', None)
+                paths = paths.split('|') if isinstance(paths, str) else []
+            elif playlist_path.endswith('.m3u'):  # load list of paths
+                paths = self.load_m3u(name)
+
+            start_count = len(paths)
+            if start_count == 0:  # playlist is empty
+                continue
+
+            # get filtered list of paths to add back
+            missing = set(paths) - set(self._all_files)
+            changed_count = 0
+            for i, path in enumerate(paths):
+                if path in missing:
+                    found = False
+                    for actual_path in self._all_files:
+                        if path.lower() == actual_path.lower():
+                            paths[i] = actual_path
+                            found = True
+                            changed_count += 1
+                            break
+                    
+                    if not found:
+                        paths[i] = None
+            
+            paths = [path for path in paths if path is not None]
+            self._logger.debug(f"{basename(name)} | {start_count - len(paths)} paths removed | {changed_count} path cases changed")
+            
+            if not dry_run and playlist_path.endswith('.xautopf'):  # save xml like file
+                xml['SmartPlaylist']['Source']['ExceptionsInclude'] = '|'.join(paths)
+                self.save_xml(xml, name)
+            elif not dry_run and playlist_path.endswith('.m3u'):  # save m3u file
+                self.save_m3u(paths, name)

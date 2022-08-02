@@ -34,6 +34,7 @@ def get_parser():
         'backup': {'backup': []},
         'restore': {'restore': ['kind', 'mod']},
         'extract': {'extract': ['kind', 'playlists']},
+        "clean_playlists" : {"clean_playlists": []},
         "clean": {"clean_up_env": ['days', 'keep']},
         # endpoints
         "create": {"create_playlist": ['playlist_name', 'public', 'collaborative']},
@@ -125,7 +126,7 @@ if __name__ == "__main__":
     main._logger.info(f"\33[90mLogs output: {main._log_file} \33[0m")
     main._logger.info(f"\33[90mData output: {main.DATA_PATH} \33[0m")
 
-# TODO: read and modify mbp and autoxpf files directly
+# TODO: read and modify m3u and autoxpf files directly
 # TODO: track audio recognition when searching using Shazam like service?
 # TODO: Automatically add songs added to each Spotify playlist to '2get'?
 #       Then somehow update local library playlists after...

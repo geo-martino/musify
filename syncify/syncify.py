@@ -16,7 +16,7 @@ from utils.report import Report
 
 
 class Syncify(Environment, ApiAuthoriser, IO, Report, LocalIO, Spotify):
-    def __init__(self, verbose: bool = True, auth: bool = True, dry_run: bool = False):
+    def __init__(self, verbose: bool = True, auth: bool = True, dry_run: bool = True):
         self._verbose = verbose
         self._dry_run = dry_run
         self._start_time = perf_counter()  # for measURIng total runtime

@@ -79,7 +79,7 @@ class Environment:
         if kwargs.get("PLAYLISTS") is not None:
             # build full path to playlist folder from this system's music path
             playlists = normpath(kwargs["PLAYLISTS"].replace("\\", "/")).split("/")
-            self._PLAYLISTS_PATH = join(self.MUSIC_PATH, *playlists)
+            self.PLAYLISTS_PATH = join(self.MUSIC_PATH, *playlists)
 
         # get path to date-specific data folder for this run
         if kwargs.get("DATA_PATH") is not None:
@@ -91,11 +91,7 @@ class Environment:
         self.format_vars()
 
     def get_env_vars(self, **kwargs) -> None:
-        """
-        Set object attributes from environment variables.
-
-        :param dry_run: bool, default=False. If True, append '_dry' to data path folder name.
-        """
+        """Set object attributes from environment variables."""
         self.BASE_API = BASE_API
         self.OPEN_URL = OPEN_URL
         self.ALGORITHM_COMP = int(os.getenv("ALGORITHM_COMP", 3))
@@ -111,7 +107,7 @@ class Environment:
 
         # build full path to playlist folder from this system's music path
         playlists = normpath(os.getenv("PLAYLISTS", "").replace("\\", "/")).split("/")
-        self._PLAYLISTS_PATH = join(self.MUSIC_PATH, *playlists)
+        self.PLAYLISTS_PATH = join(self.MUSIC_PATH, *playlists)
 
         # get path to date-specific data folder for this run
         self.DATA_PATH = normpath(os.getenv("DATA_PATH", ""))

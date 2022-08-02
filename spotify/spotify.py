@@ -229,7 +229,7 @@ class Spotify(Endpoints, Search, CheckMatches):
         """
         # get raw response from Spotify API on each playlist and its tracks
         if playlists == 'local':
-            playlists = [splitext(playlist)[0] for playlist in os.listdir(self._PLAYLISTS_PATH)]
+            playlists = [splitext(playlist)[0] for playlist in os.listdir(self.PLAYLISTS_PATH)]
 
         playlists_filtered = []
         for name in playlists:
@@ -279,7 +279,7 @@ class Spotify(Endpoints, Search, CheckMatches):
         :param playlists: dict. Local playlists in form <name>: <list of dicts of track's metadata>
         :param clear: bool, default=False. If Spotify playlist exists, clear tracks before updating.
             'all' clears all, 'extra' clears only tracks that exist in Spotify playlists, but not locally.
-        :param dry_run: bool, default=False. Run function, but do not modify Spotify at all.
+        :param dry_run: bool, default=True. Run function, but do not modify Spotify at all.
         :return: bool. False if len(local) == 0, True if updated.
         """
         if len(playlists) == 0:  # return False if no playlists to update

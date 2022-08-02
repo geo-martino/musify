@@ -27,7 +27,7 @@ class Process():
         :param playlists: dict. Metadata in form <name>: <list of dicts of track's metadata>
         :param tags: list. Tag keys to be updated.
         :param replace: bool, default=False. Destructively replace tags in each file.
-        :param dry_run: bool, default=False. Run function, but do not modify file at all.
+        :param dry_run: bool, default=True. Run function, but do not modify file at all.
         """
         tracks_all = [t for tracks in playlists.values() for t in tracks]
         print()
@@ -85,7 +85,7 @@ class Process():
                     
                     # skip conditions
                     if tag_name != "image" and len(tag_ids) == 0:
-                        self._logger.debug(f"{track['path']} | Skipping {tag_name}: len(tag_ids) == 0 - {len(tag_ids)}")
+                        #self._logger.debug(f"{track['path']} | Skipping {tag_name}: len(tag_ids) == 0 - {len(tag_ids)}")
                         # tag not in list of mapped tags
                         continue
                     elif tag_name == "bpm" and ext == '.m4a':
@@ -93,10 +93,10 @@ class Process():
                         # compare as ints instead of floats and skip if equal
                         if file_metadata["bpm"] and check_value:
                             if int(file_metadata["bpm"]) == int(check_value):
-                                self._logger.debug(f"{track['path']} | Skipping {tag_name}: int(file_metadata['bpm']) == int(new_value) - {file_metadata['bpm']} = {check_value}")
+                                #self._logger.debug(f"{track['path']} | Skipping {tag_name}: int(file_metadata['bpm']) == int(new_value) - {file_metadata['bpm']} = {check_value}")
                                 continue
                     elif file_metadata[tag_name] == check_value:
-                        self._logger.debug(f"{track['path']} | Skipping {tag_name}: file_metadata[tag_name] == new_value - {file_metadata[tag_name]} = {new_value} ({check_value})")
+                        #self._logger.debug(f"{track['path']} | Skipping {tag_name}: file_metadata[tag_name] == new_value - {file_metadata[tag_name]} = {new_value} ({check_value})")
                         # skip needlessly updating tags if they are the same
                         continue
 
@@ -104,15 +104,15 @@ class Process():
                         # don't desctructively replace tag
                         if tag_name == "image" and file_metadata["has_image"]:
                             # skip if file has embedded image
-                            self._logger.debug(f"{track['path']} | Skipping {tag_name}: tag_name == 'image' and file_metadata['has_image'] - {replace} + {file_metadata['has_image']}")
+                            #self._logger.debug(f"{track['path']} | Skipping {tag_name}: tag_name == 'image' and file_metadata['has_image'] - {replace} + {file_metadata['has_image']}")
                             continue
                         elif tag_name == self._uri_tag:
-                            if isinstance(file_metadata[tag_name], str) and not self.check_spotify_valid(file_metadata[tag_name], kind=["uri"]):
-                                # if uri tag exists in file and it is not a valid uri
+                            if isinstance(file_metadata[tag_name], str) and self.check_spotify_valid(file_metadata[tag_name], kind=["uri"]):
+                                # if uri tag exists in file and is a valid uri
                                 continue
                         elif file_metadata[tag_name] != new_value and file_metadata[tag_name] not in ['', False, None, 0]:
                             # skip if tag is not empty
-                            self._logger.debug(f"{track['path']} | Skipping {tag_name}: file_metadata[tag_name] not in ['', False, None, 0] - {file_metadata[tag_name]}")
+                            #self._logger.debug(f"{track['path']} | Skipping {tag_name}: file_metadata[tag_name] not in ['', False, None, 0] - {file_metadata[tag_name]}")
                             continue
 
                     # delete tags if there are multiple possible tag_ids for this tag
@@ -122,9 +122,8 @@ class Process():
                             if not isinstance(tag, str):
                                 tag = tag[0]
                             del file_raw[tag]
-                            self._logger.debug(f"Deleted tag from file: {tag} for {tag_name}")
+                            self._logger.debug(f"{track['path']} | Deleted tag from file: {tag} for {tag_name}")
 
-                    self._logger.debug(f"{track['uri']} - {check_value} - {new_value}")
                     if new_value is not None:
                         # file extension specific tag update and save updated file tags
                         # update 1st acceptable tag_id for this tag
@@ -157,7 +156,7 @@ class Process():
 
                 try:  # try to save tags, skip if error and display path
                     if not dry_run and modified:
-                        self._logger.debug(f"Saving file with new tags: {updating_tags}")
+                        self._logger.debug(f"{track['path']} | Saving file with new tags: {updating_tags}")
                         file_raw.save()
                         count += 1
                     elif modified and self._verbose:

@@ -178,7 +178,7 @@ class Endpoints:
         for i in item_bar:
             # format to comma-separated list of ids and get results
             params = {'ids': ','.join([i for i in id_list[limit * i: limit * (i + 1)]])}
-            self._logger.debug(f"Endpoint: {url:<33} | Page:{i+1:>4} | Params: {params}")
+            self._logger.debug(f"Endpoint: {url:<34} | Page:{i+1:>4} | Params: {params}")
             raw_data = self.handle_request("get", url, params=params)[kind]
             if kind == "tracks":
                 raw_data = self.get_track_features(raw_data, **kwargs) if add_features else raw_data

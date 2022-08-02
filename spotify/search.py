@@ -592,7 +592,7 @@ class Search:
         """
 
         self._logger.debug(
-            f">>> {track['title']} | Begin score match algorithm on {len(results):>2} results")
+            f">>> {track['title']} | Begin score match algorithm on {len(results):>2} results | max_score = {max_score}")
 
         # clean tags
         clean_track = self.clean_tags(track, **kwargs)
@@ -605,8 +605,6 @@ class Search:
             "length": 0
         }
         scores_highest = scores.copy()
-
-        
 
         for result in results:
             scores_current = scores.copy()
@@ -661,6 +659,10 @@ class Search:
                 scores_highest = scores_current.copy()
                 track['uri'] = result['uri']
                 if sum(scores_highest.values()) >= max_score:  # prevent over-fitting
+                    self._logger.debug(
+                        f">>> {track['title']} | "
+                        f"<<< Max score threshold reached: {sum(scores_current.values())} > {max_score}"
+                    )
                     break
 
         return track
