@@ -11,6 +11,7 @@
 **.secrets*
 **.log*
 **.bak*
+**.yml*
 
 # large data & log folders
 raw_data/

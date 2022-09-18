@@ -133,16 +133,14 @@ class Search:
 
         print()
         self._logger.info(f"\33[1;95m -> \33[1;97mSearching for track matches on Spotify \33[0m")
-        self._logger.debug(
-            f'Max track algorithm: {self.ALGORITHM_COMP} | '
-            f'Max track algorithm: {self.ALGORITHM_ALBUM} | ')
 
         # progress bar
         bar = tqdm(
             range(len(filtered)),
             desc='Searching',
             unit='albums',
-            leave=self._verbose,
+            leave=self._verbose > 0,
+            disable=self._verbose > 2 and self._verbose < 2,
             file=sys.stdout)
 
         # start search for each playlist/album
@@ -222,11 +220,11 @@ class Search:
         total_skipped = 0
         total = 0
 
-        if self._verbose:
+        if self._verbose > 0:
             print()
 
-        logger = self._logger.info if self._verbose else self._logger.debug
-        max_width = len(max(playlists, key=len)) if len(max(playlists, key=len)) < 50 else 50
+        logger = self._logger.info if self._verbose > 0 else self._logger.debug
+        max_width = len(max(playlists, key=len)) + 1 if len(max(playlists, key=len)) + 1 < 50 else 50
         for name, tracks in playlists.items():
             matched = len(report["matched"].get(name, []))
             unmatched = len(report["unmatched"].get(name, []))
@@ -297,11 +295,12 @@ class Search:
     #############################################################
     ## Match groups (match algorithm handlers)
     #############################################################
-    def get_track_match(self, track: dict, **kwargs) -> dict:
+    def get_track_match(self, track: dict, algorithm_track: int = 3, **kwargs) -> dict:
         """
         Query Spotify to get a match for given track.
 
         :param track: dict. Metadata for locally stored track.
+        :param algorithm_track: int, default=3. The algorithm settings to use as defined above.
         :return: dict. Metadata for locally stored track with added matched URI if found.
         """
         # clean track metadata for searching/matching
@@ -319,10 +318,10 @@ class Search:
         match_algo = 0
 
         # search until match found or max algorithm depth reached
-        while not match and abs(match_algo) <= abs(self.ALGORITHM_COMP):
-            if match_algo == 0 and self.ALGORITHM_COMP != 0:
+        while not match and abs(match_algo) <= abs(algorithm_track):
+            if match_algo == 0 and algorithm_track != 0:
                 # skip over performing simple match if algorithm is not 0
-                match_algo = match_algo - 1 if self.ALGORITHM_COMP < 0 else match_algo + 1
+                match_algo = match_algo - 1 if algorithm_track < 0 else match_algo + 1
                 continue
 
             self._logger.debug(
@@ -331,7 +330,7 @@ class Search:
             )
 
             # get _settings
-            if self.ALGORITHM_COMP < 0:
+            if algorithm_track < 0:
                 _settings = self._settings[self._neg_map[match_algo]]
             else:
                 _settings = self._settings[match_algo]
@@ -346,20 +345,21 @@ class Search:
                 match = match_func(track, results, **_settings)
 
             # increase algorithm depth
-            match_algo = match_algo - 1 if self.ALGORITHM_COMP < 0 else match_algo + 1
+            match_algo = match_algo - 1 if algorithm_track < 0 else match_algo + 1
 
         return track
 
-    def get_album_match(self, tracks: list, **kwargs) -> list:
+    def get_album_match(self, tracks: list, algorithm_album: int = 2, **kwargs) -> list:
         """
         Query Spotify to get a match for given album.
 
         :param tracks: list. List of dicts of metadata for locally stored tracks.
+        :param algorithm_album: int, default=2. The algorithm settings to use as defined above.
         :return: list. List of dicts of metadata for locally stored album with added matched URIs if found.
         """
-        album_title_len_match = self._settings[self.ALGORITHM_ALBUM]["album_title_len_match"]
-        match_artist = self._settings[self.ALGORITHM_ALBUM]["artist_match"]
-        search_artist = self._settings[self.ALGORITHM_ALBUM]["artist_search"]
+        album_title_len_match = self._settings[algorithm_album]["album_title_len_match"]
+        match_artist = self._settings[algorithm_album]["artist_match"]
+        search_artist = self._settings[algorithm_album]["artist_search"]
 
         # get shortest artist name from local metadata
         artist_clean = min(set(track['artist'] for track in tracks), key=len)

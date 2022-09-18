@@ -1,12 +1,12 @@
+import json
 import re
 import sys
-import xmltodict
 from glob import glob
-from os.path import basename, dirname, isdir, join, splitext, sep
+from datetime import datetime as dt
+from os.path import basename, dirname, isdir, join, sep, splitext, getmtime, getsize
 
 import mutagen
 from tqdm.auto import tqdm
-
 from utils.process import Process
 
 
@@ -95,9 +95,18 @@ class LocalIO(Process):
         for ext in self._tag_ids:
             # first glob doesn't get filenames that start with a period
             # second glob only picks up filenames that start with a period
-            self._all_files += glob(join(self.MUSIC_PATH, "*", "**", f"*{ext}"), recursive=True)
-            self._all_files += glob(join(self.MUSIC_PATH, "*", "**", f".*{ext}"), recursive=True)
+            self._all_files += glob(join(self._music_path, "**", f"*{ext}"), recursive=True)
+            self._all_files += glob(join(self._music_path, "*", "**", f".*{ext}"), recursive=True)
         self._all_files = sorted(self._all_files)
+        self._all_files_lower = [path.lower() for path in self._all_files]
+
+    def _get_case_sensitive_path(self, path: str):
+        if path in self._all_files:
+            return path
+        elif path.lower() in self._all_files_lower:
+            return self._all_files[self._all_files_lower.index(path.lower())]
+        else:
+            raise Exception(f"Path not found in library: {path}")
 
     #############################################################
     ## Inidividual track functions
@@ -129,14 +138,15 @@ class LocalIO(Process):
             raw_data = mutagen.File(path)
         except mutagen.MutagenError:
             # check if given path is case-insensitive, replace with case-sensitive path
-            for file_path in self._all_files:
-                if file_path.lower() == path.lower():
-                    path = file_path
-                    break
+            path_cs = self._get_case_sensitive_path(path)
 
-            try:  # load case-sensitive path
-                raw_data = mutagen.File(path)
-            except mutagen.MutagenError:  # give up
+            if path_cs is not None:
+                try:  # load case-sensitive path
+                    raw_data = mutagen.File(path_cs)
+                except mutagen.MutagenError:  # give up
+                    self._logger.error(f"File not found | {path}")
+                    return path, ext
+            else:
                 self._logger.error(f"File not found | {path}")
                 return path, ext
 
@@ -263,16 +273,26 @@ class LocalIO(Process):
                 metadata["uri"] = uri
 
         # add track path and folder name to metadata
-        metadata["folder"] = basename(dirname(path))
         metadata["path"] = path
+        metadata["folder"] = basename(dirname(path))
+        metadata["filename"] = basename(path)
+        metadata["ext"] = splitext(path)[1].lower()
+        metadata["size"] = getsize(path)
+        metadata["date_modified"] = dt.fromtimestamp(getmtime(path)).strftime("%d/%m/%Y %H:%M:%S")
+        
+        # placeholders for musicbee metadata
+        metadata["date_added"] = None
+        metadata["last_played"] = None
+        metadata["play_count"] = None
+        metadata["rating"] = None
 
         return metadata
 
     #############################################################
     ## Multiple files functions
     #############################################################
-    def get_local_metadata(self, prefix_start: str = None, prefix_stop: str = None,
-                           prefix_limit: str = None, compilation: bool = None, **kwargs) -> dict:
+    def load_local_metadata(self, prefix_start: str = None, prefix_stop: str = None,
+                           prefix_limit: list = None, compilation: bool = None, **kwargs) -> dict:
         """
         Get metadata on all audio files in music folder.
 
@@ -280,13 +300,13 @@ class LocalIO(Process):
             with this prefix i.e. <start_folder>:<END>.
         :param prefix_stop: str, default=None. Stop processing from the folder
             with this prefix i.e. <START>:<stop_folder>.
-        :param prefix_limit: str, default=None. Only process albums that start
-            with this prefix.
+        :param prefix_limit: list, default=None. Only process albums that start
+            with these prefixes.
         :param compilation: bool, default=None. Only return compilation albums.
         :return: dict. <folder name>: <list of dicts of track's metadata>
         """
         # get all folders in music path
-        folders = [basename(f) for f in glob(join(self.MUSIC_PATH, "**"), recursive=True) if isdir(f)]
+        folders = [basename(f) for f in glob(join(self._music_path, "**"), recursive=True) if isdir(f)]
 
         # filter folders to use in extraction
         if prefix_start:
@@ -304,10 +324,12 @@ class LocalIO(Process):
         if prefix_limit:
             folders_reduced = []
             for folder in folders:
-                if folder.lower().strip().startswith(prefix_limit.strip().lower()):
-                    folders_reduced.append(folder)
+                for prefix in prefix_limit:
+                    if folder.lower().strip().startswith(prefix.strip().lower()):
+                        folders_reduced.append(folder)
+                        break
             folders = folders_reduced
-            self._logger.debug(f"Folder prefixes: {folder}")
+            self._logger.debug(f"Folders matching prefix: {json.dumps(folders, indent=2)}")
 
         # filter files
         paths = [path for path in self._all_files if basename(dirname(path)) in folders]
@@ -322,7 +344,8 @@ class LocalIO(Process):
             paths,
             desc="Loading library",
             unit="tracks",
-            leave=self._verbose,
+            leave=self._verbose > 0,
+            disable=self._verbose > 2 and self._verbose < 2,
             file=sys.stdout,
         )
 
@@ -351,10 +374,10 @@ class LocalIO(Process):
             )
 
         # get verbose level appropriate logger and appropriately align formatting
-        logger = self._logger.info if self._verbose else self._logger.debug
+        logger = self._logger.info if self._verbose > 0 else self._logger.debug
 
         # sort playlists in alphabetical order and print
-        if self._verbose:
+        if self._verbose > 0:
             print()
         available = len([t for f in folder_metadata.values() for t in f if isinstance(t['uri'], str)])
         missing = len([t for f in folder_metadata.values() for t in f if t['uri'] is None])
@@ -374,124 +397,6 @@ class LocalIO(Process):
 
         self._logger.debug('Extracting track metadata: Done')
         return folder_metadata
-
-    def get_m3u_metadata(self, in_playlists: list = None,
-                         ex_playlists: list = None, **kwargs) -> dict:
-        """
-        Get metadata on all tracks found in m3u playlists
-
-        :param in_playlists: list, default=None. Limit playlists to those in this list.
-        :param ex_playlists: list, default=None. Don't process playlists in this list.
-        :return: dict. <name>: <list of dicts of track's metadata>
-        """
-        # list of paths of .m3u files in playlists path
-        playlist_paths = glob(join(self.PLAYLISTS_PATH, "*.m3u"))
-        playlist_metadata = {}
-
-        playlists_filtered = []
-        for path in playlist_paths:
-            name = splitext(basename(path))[0]
-            if in_playlists is not None and name.lower() not in [p.lower() for p in in_playlists]:
-                continue
-            elif ex_playlists is not None and name.lower() in [p.lower() for p in ex_playlists]:
-                continue
-            playlists_filtered.append(path)
-
-        self._logger.debug(
-            f"Filtered out {len(playlist_paths) - len(playlists_filtered)} playlists "
-            f"from {len(playlist_paths)} local playlists \33[0m")
-        playlist_paths = playlists_filtered
-
-        print()
-        self._logger.info(
-            f"\33[1;95m -> \33[1;97mExtracting track metadata for {len(playlist_paths)} playlists \33[0m")
-
-        # progress bar
-        playlist_bar = tqdm(
-            playlist_paths,
-            desc="Loading m3u playlists",
-            unit="playlists",
-            leave=self._verbose,
-            file=sys.stdout,
-        )
-
-        names = [splitext(basename(path))[0] for path in playlist_paths]
-        max_width = len(max(names, key=len)) if len(max(names, key=len)) < 50 else 50
-
-        load_errors = []
-        for playlist_path in playlist_bar:
-            # extract filename only process if playlists not defined or in playlists list
-            name = splitext(basename(playlist_path))[0]
-
-            # get list of tracks in playlist
-            track_paths = self.load_m3u(playlist_path)
-
-            if len(track_paths) == 0:
-                continue
-
-            # replace filepath stems related to other operating systems
-            if any(path in track_paths[0] for path in self.OTHER_PATHS):
-                # determine part of filepath to replace and replace
-                sub = (
-                    self.OTHER_PATHS[0]
-                    if track_paths[0].startswith(self.OTHER_PATHS[0])
-                    else self.OTHER_PATHS[1]
-                )
-                track_paths = [file.replace(sub, self.MUSIC_PATH) for file in track_paths]
-
-                # sanitise path separators
-                if "/" in self.MUSIC_PATH:
-                    track_paths = [file.replace("\\", "/") for file in track_paths]
-                else:
-                    track_paths = [file.replace("/", "\\") for file in track_paths]
-
-            self._logger.debug(
-                f"{name if len(name) < 50 else name[:47] + '...':<{max_width}} |"
-                f"{len(track_paths):>4} tracks"
-            )
-
-            if len(track_paths) > 100:  # show progress bar for large playlists
-                track_paths = tqdm(
-                    track_paths,
-                    desc=name,
-                    unit="tracks",
-                    leave=False,
-                    file=sys.stdout,
-                )
-
-            # extract metadata for track path in playlist and add to dict of playlists
-            playlist_metadata[name] = []
-            for i, path in enumerate(track_paths):
-                metadata = self.extract_local_track_metadata(path, i, **kwargs)
-                if metadata is None or metadata == path:
-                    load_errors.append(path)
-                elif metadata is not None:
-                    playlist_metadata[name].append(metadata)
-
-        # get verbose level appropriate logger and appropriately align formatting
-        logger = self._logger.info if self._verbose else self._logger.debug
-        max_width = len(max(playlist_metadata, key=len)) if len(max(playlist_metadata, key=len)) < 50 else 50
-
-        # sort playlists in alphabetical order and print
-        if self._verbose:
-            print()
-        logger("\33[1;96mFound the following Local playlists: \33[0m")
-        for name, playlist in sorted(playlist_metadata.items(), key=lambda x: x[0].lower()):
-            logger(
-                f"{name if len(name) < 50 else name[:47] + '...':<{max_width}} |"
-                f"\33[92m{len([t for t in playlist if isinstance(t['uri'], str)]):>4} available \33[0m|"
-                f"\33[91m{len([t for t in playlist if t['uri'] is None]):>4} missing \33[0m|"
-                f"\33[93m{len([t for t in playlist if t['uri'] is False]):>4} unavailable \33[0m|"
-                f"\33[1m {len(playlist):>4} total \33[0m"
-            )
-
-        if len(load_errors) > 0:
-            print()
-            load_errors = "\n".join(load_errors)
-            logger(f"Could not load: \33[91m\n{load_errors} \33[0m")
-
-        self._logger.debug("Extrating track metadata: Done")
-        return playlist_metadata
 
     def restore_local_uris(self, playlists: dict, backup: str, **kwargs) -> dict:
         """
@@ -525,90 +430,3 @@ class LocalIO(Process):
 
         return playlists
 
-    def restore_local_playlists(self, backup: str, in_playlists: list=None, ex_playlists: list=None, dry_run: bool = True, **kwargs):
-        """
-        Restore local playlists from backup.
-
-        :param backup: str. Filename of backup json in form <name>: <list of dicts of track's metadata>
-        :param in_playlists: list, default=None. Only restore playlists in this list.
-        :param ex_playlists: list, default=None. Don't restore playlists in this list.
-        :param dry_run: bool, default=True. Don't save if True, save if False.
-        """
-
-        print()
-        self._logger.info(f"\33[1;95m -> \33[1;97mRestoring local playlists from backup file: {backup} \33[0m")
-
-        backup = self.load_json(backup, parent=True, **kwargs)
-        if not backup:
-            self._logger.info(f"\33[91mBackup file not found.\33[0m")
-            return
-
-        if isinstance(in_playlists, str):  # handle string
-            in_playlists = [in_playlists]
-
-        if in_playlists is not None:
-            for name, tracks in backup.copy().items():
-                if name.lower() not in [p.lower() for p in in_playlists]:
-                    del backup[name]
-        else:
-            in_playlists = list(backup.keys())
-
-        if ex_playlists is not None:
-            for name in backup.copy().keys():
-                if name.lower() in [p.lower() for p in ex_playlists]:
-                    del backup[name]
-
-        if not dry_run:
-            for name, tracks in backup.items():
-                name = re.sub(r'[\\/*?:"<>|]', '', name)
-                self.save_m3u([t['path'] for t in tracks], name, **kwargs)
-
-            self._logger.info(f"\33[92mRestored {len(backup)} local playlists \33[0m")
-
-    def clean_playlists(self, dry_run: bool = True, **kwargs):
-        """
-        Remove dead links and fix case of links in xautopf and m3u playlists
-        
-        :param dry_run: bool, default=True. Don't save if True, save if False.
-        """
-        # get playlist paths
-        playlists = glob(join(self.PLAYLISTS_PATH, '**', '*.xautopf'), recursive=True)
-        playlists += glob(join(self.PLAYLISTS_PATH, '**', '*.m3u'), recursive=True)
-
-        for playlist_path in playlists:
-            name = playlist_path.replace(self.PLAYLISTS_PATH, '').lstrip(sep)
-            if playlist_path.endswith('.xautopf'):  # load xml like object
-                xml = self.load_xml(name)
-                paths = xml['SmartPlaylist']['Source'].get('ExceptionsInclude', None)
-                paths = paths.split('|') if isinstance(paths, str) else []
-            elif playlist_path.endswith('.m3u'):  # load list of paths
-                paths = self.load_m3u(name)
-
-            start_count = len(paths)
-            if start_count == 0:  # playlist is empty
-                continue
-
-            # get filtered list of paths to add back
-            missing = set(paths) - set(self._all_files)
-            changed_count = 0
-            for i, path in enumerate(paths):
-                if path in missing:
-                    found = False
-                    for actual_path in self._all_files:
-                        if path.lower() == actual_path.lower():
-                            paths[i] = actual_path
-                            found = True
-                            changed_count += 1
-                            break
-                    
-                    if not found:
-                        paths[i] = None
-            
-            paths = [path for path in paths if path is not None]
-            self._logger.debug(f"{basename(name)} | {start_count - len(paths)} paths removed | {changed_count} path cases changed")
-            
-            if not dry_run and playlist_path.endswith('.xautopf'):  # save xml like file
-                xml['SmartPlaylist']['Source']['ExceptionsInclude'] = '|'.join(paths)
-                self.save_xml(xml, name)
-            elif not dry_run and playlist_path.endswith('.m3u'):  # save m3u file
-                self.save_m3u(paths, name)

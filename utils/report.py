@@ -30,9 +30,9 @@ class Report():
         elif kind is None:
             kind = ['open', 'api', 'uri', 'id']
 
-        if 'open' in kind and self.OPEN_URL.lower() in string.lower():
+        if 'open' in kind and self._open_url.lower() in string.lower():
             return True
-        elif 'api' in kind and self.BASE_API.lower() in string.lower():
+        elif 'api' in kind and self._base_api.lower() in string.lower():
             return True
         elif 'uri' in kind and len(string.split(":")) == 3:
             uri_list = string.split(":")
@@ -56,6 +56,9 @@ class Report():
         :param report_file: str, default=None. Name of file to output report to. If None, suppress file output.
         :return: dict. Report on extra, missing, and unavailable tracks from Spotify
         """
+        if len(local) == 0 or len(spotify) == 0:
+            return False
+        
         # prepare for report
         report = {}
         if isinstance(report_file, str):
@@ -66,8 +69,8 @@ class Report():
         unavailable_len = 0
 
         # get verbose level appropriate logger and appropriately align formatting
-        logger = self._logger.info if self._verbose else self._logger.debug
-        max_width = len(max(local, key=len)) if len(max(local, key=len)) < 50 else 50
+        logger = self._logger.info if self._verbose > 0 else self._logger.debug
+        max_width = len(max(local, key=len)) + 1 if len(max(local, key=len)) + 1 < 50 else 50
 
         print()
         self._logger.info(
@@ -114,7 +117,7 @@ class Report():
                         report[k] = report.get(k, {}) | tmp_out[k]
 
         # print total stats
-        if self._verbose:
+        if self._verbose > 0:
             print()
         else:
             max_width = 0

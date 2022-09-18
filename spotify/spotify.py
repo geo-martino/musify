@@ -28,7 +28,7 @@ class Spotify(Endpoints, Search, CheckMatches):
     }
 
     def __init__(self):
-
+        
         Endpoints.__init__(self)
         Search.__init__(self)
         CheckMatches.__init__(self)
@@ -133,7 +133,7 @@ class Spotify(Endpoints, Search, CheckMatches):
 
         return metadata
 
-    def get_tracks_metadata(self, tracks: list, add_genre: bool = True,
+    def get_tracks_metadata(self, tracks: list, add_genre: bool = False,
                             add_extra: dict = None, **kwargs) -> dict:
         """
         Get metadata from list of given URIs/URLs/IDs
@@ -189,7 +189,7 @@ class Spotify(Endpoints, Search, CheckMatches):
         :param add_extra: list, default=None. List of local metadata tags to add back to response (must have 'uri' key to match).
         :return: list. Raw metadata for each track in the playlist
         """
-        tracks = self.get_playlist_tracks(playlist, **kwargs)
+        tracks = self.get_playlist_tracks(playlist, name, **kwargs)
         if add_genre:  # search for the first given artist in each track
             # only search unique artists to improve runtime
             unique_artist_ids = list(set([t["artists"][0]["id"] for t in tracks]))
@@ -229,7 +229,7 @@ class Spotify(Endpoints, Search, CheckMatches):
         """
         # get raw response from Spotify API on each playlist and its tracks
         if playlists == 'local':
-            playlists = [splitext(playlist)[0] for playlist in os.listdir(self.PLAYLISTS_PATH)]
+            playlists = [splitext(playlist)[0] for playlist in os.listdir(self._playlists_path)]
 
         playlists_filtered = []
         for name in playlists:
@@ -247,20 +247,26 @@ class Spotify(Endpoints, Search, CheckMatches):
         self._logger.info(
             f"\33[1;95m -> \33[1;97mGetting Spotify playlist metadata for {len(playlists)} playlists \33[0m")
 
+        if len(playlists) == 0:
+            return {}
+
         playlist_bar = tqdm(playlists.items(),
                             desc='Extracting metadata',
-                            unit='playlists', leave=self._verbose, file=sys.stdout)
+                            unit='playlists', 
+                            leave=self._verbose > 0, 
+                            disable=self._verbose > 2 and self._verbose < 2, 
+                            file=sys.stdout)
 
         # extract and replace the raw response list with key metadata
         for name, playlist in playlist_bar:
             playlists[name] = self.get_playlist_metadata(playlist, name=name, **kwargs)
 
         # get verbose level appropriate logger and appropriately align formatting
-        logger = self._logger.info if self._verbose else self._logger.debug
-        max_width = len(max(playlists, key=len)) if len(max(playlists, key=len)) < 50 else 50
+        logger = self._logger.info if self._verbose > 0 else self._logger.debug
+        max_width = len(max(playlists, key=len)) + 1 if len(max(playlists, key=len)) + 1 < 50 else 50
 
         # sort playlists in alphabetical order and print
-        if self._verbose:
+        if self._verbose > 0:
             print()
         logger("\33[1;96mFound the following Spotify playlists: \33[0m")
         for name, playlist in sorted(playlists.items(), key=lambda x: x[0].lower()):
@@ -293,14 +299,15 @@ class Spotify(Endpoints, Search, CheckMatches):
         playlists = self.filter_tracks(playlists, **kwargs)
 
         # for appropriately aligned formatting
-        max_width = len(max(playlists, key=len)) if len(max(playlists, key=len)) < 50 else 50
+        max_width = len(max(playlists, key=len)) + 1 if len(max(playlists, key=len)) + 1 < 50 else 50
 
         # progress bar
         playlist_bar = tqdm(reversed(playlists.items()),
                             desc='Adding to Spotify',
                             unit='playlists',
                             total=len(playlists),
-                            leave=self._verbose,
+                            leave=self._verbose > 0,
+                            disable=self._verbose > 2 and self._verbose < 2, 
                             file=sys.stdout)
 
         # get raw metadata for current playlists on user profile
@@ -318,7 +325,7 @@ class Spotify(Endpoints, Search, CheckMatches):
                 
                 # get playlist tracks metadata, and list of URIs currently on Spotify
                 url = spotify[name]["tracks"]["href"]
-                spotify_playlist = self.get_playlist_tracks(spotify[name])
+                spotify_playlist = self.get_playlist_tracks(spotify[name], name)
                 uris_current = [track['uri'] for track in spotify_playlist]
 
                 # get list of URIs from local playlists that are not already in Spotify playlist

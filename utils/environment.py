@@ -1,268 +1,396 @@
-import logging
+
+import argparse
 import os
-import re
-import shutil
 import sys
-from datetime import datetime as dt
-from glob import glob
-from os.path import basename, dirname, exists, isdir, join, normpath
-from dateutil.relativedelta import relativedelta
+from copy import deepcopy
+from ast import literal_eval
+from os.path import basename, dirname, exists, join, normpath, splitext
+
+import yaml
 
 from spotify.search import Search
+from local.library import LocalIO
 
-BASE_API = "https://api.spotify.com/v1"
-OPEN_URL = "https://open.spotify.com"
+import json
+def jprint(data):
+    print(json.dumps(data, indent=2))
 
+
+AUTH_ARGS_BASIC = {
+    "auth_args": {
+        "url": "{base_auth}/api/token",
+        "data": {
+            "grant_type": "client_credentials",
+            "client_id": "{client_id}",
+            "client_secret": "{client_secret}",
+        },
+    },
+    "user_args": None,
+    "refresh_args": {
+        "url": "{base_auth}/api/token",
+        "data": {
+            "grant_type": "refresh_token",
+            "refresh_token": None,
+            "client_id": "{client_id}",
+            "client_secret": "{client_secret}",
+        },
+    },
+    "test_expiry": 600,
+    "token_path": "{token_path}",
+    "extra_headers": {"Accept": "application/json", "Content-Type": "application/json"},
+}
+
+AUTH_ARGS_USER = {
+    "auth_args": {
+        "url": "{base_auth}/api/token",
+        "data": {
+            "grant_type": "authorization_code",
+            "code": None,
+            "client_id": "{client_id}",
+            "client_secret": "{client_secret}",
+            "redirect_uri": "http://localhost/",
+        },
+    },
+    "user_args": {
+        "url": "{base_auth}/authorize",
+        "params": {
+            "response_type": "code",
+            "client_id": "{client_id}",
+            "scope": " ".join(
+                [
+                    "playlist-modify-public",
+                    "playlist-modify-private",
+                    "playlist-read-collaborative",
+                ]
+            ),
+            "redirect_uri": "http://localhost/",
+            "state": "syncify",
+        },
+    },
+    "refresh_args": {
+        "url": "{base_auth}/api/token",
+        "data": {
+            "grant_type": "refresh_token",
+            "refresh_token": None,
+            "client_id": "{client_id}",
+            "client_secret": "{client_secret}",
+        },
+    },
+    "test_expiry": 600,
+    "token_path": "{token_path}",
+    "extra_headers": {"Accept": "application/json", "Content-Type": "application/json"},
+}
+
+def _update(d, u, overwrite: bool = False):
+    for k, v in u.items():
+        if isinstance(v, dict) and isinstance(d.get(k, {}), dict):
+            d[k] = _update(d.get(k, {}), v)
+        elif d.get(k) is None or overwrite:
+            d[k] = v
+    return d
+
+def _format_dict(data, format_map: dict):
+    if isinstance(data, dict):
+        for k, v in data.items():
+            data[k] = _format_dict(v, format_map)
+    elif isinstance(data, str):
+        data = data.format_map(format_map)
+    return data
 
 class Environment:
 
-    def clean_up_env(self, days: int = 60, keep: int = 30, **kwargs) -> None:
-        """
-        Clears files older than {days} months and only keeps {keep} # of runs
+    _platform_map = {"win32": "win", "linux": "lin", "darwin": "mac"}
+    _functions = {
+        "main": {"main": []},
+        "auth": {"auth": []},
+        # individual main steps
+        'search': {'search': []},
+        'check': {'check': []},
+        'update_tags': {'update_tags': []},
+        'update_spotify': {'update_spotify': []},
+        # reports/maintenance/utilities
+        'report': {'report': []},
+        'missing_tags': {'missing_tags': ["match"]},
+        'backup': {'backup': []},
+        'restore': {'restore': ['kind', 'mod']},
+        'extract': {'extract': ['kind', 'playlists']},
+        "clean_playlists" : {"clean_playlists": []},
+        "clean": {"clean_up_env": ['days', 'keep']},
+        "sync": {"sync_playlists": ["export_alias", "ext_playlists_path", "ext_path_prefix"]},
+        # endpoints
+        "create": {"create_playlist": ['playlist_name', 'public', 'collaborative']},
+        "get": {"get_data": ['name']},
+        "delete": {"delete_playlist": ['playlist']},
+        "clear": {"clear_from_playlist": ['playlist']},
+    }
 
-        :param days: int, default=60. Age of files in months to keep.
-        :param keep: int, default=30. Number of files to keep.
-        """
-        log = self._log_path
-        data = dirname(self.DATA_PATH)
-        current = {
-            "_log": os.listdir(log),
-            "_data": [basename(d) for d in glob(join(data, "*")) if isdir(d)]
-        }
-        remove = {}
-
-        keep = max(keep, 1)
-
-        for kind, files_list in current.items():
-            remove_list = []
-            if len(files_list) >= keep:
-                remaining = len(files_list)
-                for file in sorted(files_list):
-                    file_dt = dt.strptime(file[:19], "%Y-%m-%d_%H.%M.%S")
-                    dt_diff = file_dt < dt.now() - relativedelta(days=days)
-
-                    if remaining > keep and dt_diff:
-                        remove_list.append(file)
-                        remaining -= 1
-                    else:
-                        break
-
-            remove[kind] = remove_list
-
-        if len(remove["_log"]) > 0:
-            self._logger.debug(f"Removing {len(remove['_log'])} old logs in {log}")
-            [os.remove(join(log, file)) for file in remove['_log']]
-
-        if len(remove["_data"]) > 0:
-            self._logger.debug(f"Removing {len(remove['_data'])} old folders in {data}")
-            [shutil.rmtree(join(data, folder)) for folder in remove['_data']]
-
-    def set_vars(self, **kwargs):
-        """Set object attributes from given kwargs"""
-        self.BASE_API = BASE_API
-        self.OPEN_URL = OPEN_URL
-        if kwargs.get("ALGORITHM_COMP") is not None:
-            self.ALGORITHM_COMP = int(kwargs["ALGORITHM_COMP"])
-        if kwargs.get("ALGORITHM_ALBUM") is not None:
-            self.ALGORITHM_ALBUM = int(kwargs["ALGORITHM_ALBUM"])
-
-        # set system appropriate path and store other system's paths
-        self._music_paths = {}
-        if kwargs.get("WIN_PATH") is not None:
-            self._music_paths["win32"] = kwargs["WIN_PATH"]
-        if kwargs.get("LIN_PATH") is not None:
-            self._music_paths["linux"] = kwargs["LIN_PATH"]
-        if kwargs.get("MAC_PATH") is not None:
-            self._music_paths["darwin"] = kwargs["MAC_PATH"]
-        self.MUSIC_PATH = self._music_paths[sys.platform]
-
-        if kwargs.get("PLAYLISTS") is not None:
-            # build full path to playlist folder from this system's music path
-            playlists = normpath(kwargs["PLAYLISTS"].replace("\\", "/")).split("/")
-            self.PLAYLISTS_PATH = join(self.MUSIC_PATH, *playlists)
-
-        # get path to date-specific data folder for this run
-        if kwargs.get("DATA_PATH") is not None:
-            self.DATA_PATH = normpath(kwargs["DATA_PATH"])
+    def __init__(self, config_path: str = None):
         
-        if kwargs.get("TOKEN_FILENAME") is not None:
-            self._token_filename = normpath(kwargs["TOKEN_FILENAME"])
-
-        self.format_vars()
-
-    def get_env_vars(self, **kwargs) -> None:
-        """Set object attributes from environment variables."""
-        self.BASE_API = BASE_API
-        self.OPEN_URL = OPEN_URL
-        self.ALGORITHM_COMP = int(os.getenv("ALGORITHM_COMP", 3))
-        self.ALGORITHM_ALBUM = int(os.getenv("ALGORITHM_ALBUM", 2))
-
-        # set system appropriate path and store other system's paths
-        self._music_paths = {
-            "win32": normpath(os.getenv("WIN_PATH", "")),
-            "linux": normpath(os.getenv("LIN_PATH", "")),
-            "darwin": normpath(os.getenv("MAC_PATH", "")),
+        self._empty_settings =  {
+            "_spotify_api": {}, 
+            "base_api": None,
+            "open_url": None,
+            "data_path": None, 
+            "music_path": None, 
+            "musicbee_path": None, 
+            "playlists_path": None, 
+            "other_paths": [], 
+            "kwargs": {}, 
+            "android": {}
+            }
+        self.cfg_general = {
+            "_spotify_api": {
+                "base_api": "https://api.spotify.com/v1",
+                "base_auth": "https://accounts.spotify.com",
+                "open_url": "https://open.spotify.com",
+                "token_filename": "token"
+            },
+            "data_path": join(dirname(dirname(__file__)), "_data")
         }
-        self.MUSIC_PATH = self._music_paths[sys.platform]
-
-        # build full path to playlist folder from this system's music path
-        playlists = normpath(os.getenv("PLAYLISTS", "").replace("\\", "/")).split("/")
-        self.PLAYLISTS_PATH = join(self.MUSIC_PATH, *playlists)
-
-        # get path to date-specific data folder for this run
-        self.DATA_PATH = normpath(os.getenv("DATA_PATH", ""))
         
-        self._token_filename = normpath(os.getenv("TOKEN_FILENAME", self._auth["token_path"]))
+        self.raw_config = self._load_config(config_path)
+        self.runtime_settings = None
 
-        self.format_vars()
+    def _load_config(self, config_path: str):
+        if config_path is None:
+            config_path = join(dirname(dirname(__file__)), "config.yml")
+        
+        check = splitext(config_path.lower())[1]
+        if check not in ['.yml', '.yaml'] and check:
+            config_path += '.yml'
 
-    def format_vars(self):
-        """Format vars from user input or env. INTERNAL USE ONLY"""
-        # handle user input for unexpected algorithm number
-        search__settings = list(Search._settings.keys())
-        if self.ALGORITHM_COMP > max(search__settings):
-            self.ALGORITHM_COMP = max(search__settings)
-        elif self.ALGORITHM_COMP < -max(search__settings):
-            self.ALGORITHM_COMP = -max(search__settings)
+        if exists(config_path):
+            with open(config_path, 'r') as f:
+                config = yaml.full_load(f)
+            return config
+        else:
+            raise Exception(f"Config path invalid: {config_path}")
 
-        if self.ALGORITHM_ALBUM > max(search__settings):
-            self.ALGORITHM_ALBUM = max(search__settings)
-        elif self.ALGORITHM_ALBUM < -max(search__settings):
-            self.ALGORITHM_ALBUM = -max(search__settings)
+    def get_kwargs(self):
+        function_kwargs = {}
+        self.cfg_general = self._update_from_config(self.cfg_general, self.raw_config['general'], 'general')
+        
+        for func_name, cfg_raw in self.raw_config['functions'].items():
+            func_config = self._update_from_config(deepcopy(self.cfg_general), cfg_raw, func_name)
+            self._verify(func_config, func_name)
+            function_kwargs[func_name] = func_config
+        self.runtime_settings = function_kwargs
+        return self.runtime_settings
 
-        self.OTHER_PATHS = [p for p in self._music_paths.values() if p != self.MUSIC_PATH and len(p) > 1]
+    def _update_from_config(self, cfg_general: dict, cfg_raw: dict, func_name: str) -> dict:
+        if not cfg_raw:
+            return {}
+        cfg_processed = deepcopy(self._empty_settings)
 
-        if self.DATA_PATH == ".":
-            self.DATA_PATH = join(dirname(dirname(__file__)), "_data")
-        self.DATA_PATH = join(self.DATA_PATH, self._start_time_filename)
-        if self._dry_run:
-            self.DATA_PATH += "_dry"
-        if not exists(self.DATA_PATH):
-            os.makedirs(self.DATA_PATH)
+        for setting_key, settings in cfg_raw.items():
+            if setting_key == "spotify_api":
+                [settings.pop(k) for k, v in settings.copy().items() if v is None]
+                api = settings
+                if "token_filename" in api:
+                    api["token_filename"] = normpath(api["token_filename"])
+                cfg_processed["_spotify_api"] = api
 
-        # replace token path auth arg with main data path + token filename
-        # set test args from base api
-        self._auth["token_path"] = join(dirname(self.DATA_PATH), self._token_filename)
-        self._auth["test_args"] = {"url": f"{BASE_API}/me"}
-        self._auth["test_condition"] = lambda r: "error" not in r
+            elif setting_key == "paths":
+                [settings.pop(k) for k, v in settings.copy().items() if v is None]
+                
+                paths = {}
+                paths["music_path"] = settings.pop(self._platform_map[sys.platform])
+                paths["other_paths"] = []
+                for k, v in self._platform_map.items():
+                    if k != sys.platform and settings.get(v):
+                        paths["other_paths"].append(settings.pop(v))
+                
+                for k, v in settings.items():
+                    if isinstance(v, str):
+                        split_path = normpath(v.replace("\\", "/")).split("/")
+                        paths[k + "_path"] = join(*split_path)
+                
+                paths["playlists_path"] = join(paths["music_path"], paths["playlists_path"])
+                if "musicbee_path" in paths:
+                    paths["musicbee_path"] = join(paths["music_path"], paths["musicbee_path"])
 
-    def set_env_vars(self, current_state: bool = True, **kwargs) -> dict:
-        """
-        Save settings to default environment variables.
-        Loads any saved variables and updates as appropriate.
+                cfg_processed.update(paths)
 
-        :param current_state: bool, default=True. Use current object variables to update.
-        :param **kwargs: pass kwargs for variables to update.
-            Overrides current values if current_state is True.
-        :return: dict. Dict of the variables saved.
-        """
-        env = {}
-        if exists('.env'):  # load stored environment variables
-            with open('.env', 'r') as file:
-                env = dict([line.rstrip().split('=') for line in file])
+            elif setting_key == "algorithm":
+                [settings.pop(k) for k, v in settings.copy().items() if v is None]
+                algo_values = list(Search._settings.keys())
+                clamp = lambda n: max(min(max(algo_values), n), -max(algo_values))
+                cfg_processed["kwargs"]["algorithm_track"] = clamp(settings.get("track", 3))
+                cfg_processed["kwargs"]["algorithm_album"] = clamp(settings.get("album", 2))
 
-        # acccepted vars
-        env_vars = [
-            'CLIENT_ID',
-            'CLIENT_SECRET',
-            'PLAYLISTS',
-            'WIN_PATH',
-            'MAC_PATH',
-            'LIN_PATH',
-            'DATA_PATH',
-            'TOKEN_FILENAME',
-            'ALGORITHM_COMP',
-            'ALGORITHM_ALBUM',
-            ]
-        if current_state:  # update variables from current object
-            env.update({var: val for var, val in vars(self).items() if var in env_vars})
+            elif setting_key == "playlists":
+                cfg_processed["kwargs"]["in_playlists"] = settings.get("include")
+                cfg_processed["kwargs"]["ex_playlists"] = settings.get("exclude")
+                cfg_processed["kwargs"]["filter_tags"] = settings.get("filter")
+                cfg_processed["kwargs"]["clear"] = settings.get("clear")
 
-        # update with given kwargs
-        env.update({var: val for var, val in {**kwargs}.items() if var in env_vars})
+            elif setting_key == "android":  # remove any settings already defined in general
+                [settings.pop(k) for k, v in settings.copy().items() if v is None]
+                cfg_processed["android"] = settings
 
-        # build line by line strings for each variable and write new .env file
-        save_vars = [f'{var}={val}\n' for var, val in env.items() if var in env_vars]
-        with open('.env', 'w') as file:
-            file.writelines(save_vars)
+            elif isinstance(settings, dict):  # destructively replace general
+                cfg_processed["kwargs"] = _update(cfg_processed["kwargs"] , settings)
+        
+        general_kwargs = cfg_general.get("kwargs", {})
+        cfg_processed["args"] = cfg_raw.get("args")
+        cfg_processed["verbose"] = int(cfg_raw.get("verbose", cfg_general.get('verbose', 0)))
+        if "output" in cfg_raw:
+            cfg_processed["kwargs"]["no_output"] = not cfg_raw["output"]
+        else:
+            cfg_processed["kwargs"]["no_output"] = general_kwargs.get('no_output', True)
+        if "execute" in cfg_raw:
+            cfg_processed["kwargs"]["dry_run"] = not cfg_raw["execute"]
+        else:
+            cfg_processed["kwargs"]["dry_run"] = general_kwargs.get('dry_run', True)
 
-        return env
+        cfg_processed = _update(cfg_processed, cfg_general, overwrite=False)
+        return self._configure(func_name, cfg_processed)
 
-    def get_logger(self, **kwargs) -> logging.Logger:
-        """
-        Return logger object formatted for stdout and file handlers.
+    def _configure(self, func_name: str, cfg_processed: dict) -> None:
+        data_path = cfg_processed["data_path"]
 
-        :return logging.Logger. Logger object
-        """
-        # set log file path
-        self._log_path = join(dirname(dirname(__file__)), "_log")
-        self._log_file = join(self._log_path, f"{self._start_time_filename}.log")
-        if not exists(self._log_path):  # if log folder doesn't exist
-            os.makedirs(self._log_path)  # create log folder
+        # elevate values to main settings for main Syncify object
+        cfg_processed["base_api"] = cfg_processed["_spotify_api"]["base_api"]
+        cfg_processed["open_url"] = cfg_processed["_spotify_api"]["open_url"]
+        
+        # token filename and spotify api settings
+        token_filename = cfg_processed["_spotify_api"]["token_filename"]
+        if not token_filename.endswith(".json"):
+            token_filename += ".json"
+        
+        cfg_processed["_spotify_api"]["token_path"] = join(data_path, token_filename)
+        cfg_processed["spotify_api"] = _format_dict(AUTH_ARGS_USER, cfg_processed["_spotify_api"])
 
-        # get logger and clear default handlers
-        logger = logging.getLogger(__name__)
-        logger.setLevel(logging.DEBUG)
-        for h in logger.handlers:
-            logger.removeHandler(h)
+        # quickload
+        if cfg_processed.get("kwargs", {}).get("quickload"):
+            quickload = cfg_processed["kwargs"]["quickload"]
+            last_runs = sorted([basename(rd[0]) for rd in os.walk(data_path)][1:])
+            if isinstance(quickload, str):
+                quickload = [r for r in last_runs if r.startswith(quickload)]
+                quickload = False if len(quickload) == 0 else quickload[0]
+            elif quickload and len(last_runs) > 0:
+                quickload = last_runs[-1]
+            else:
+                quickload = False
+            cfg_processed["kwargs"]["quickload"] = quickload
+        
+        cfg_processed["kwargs"]["compilation_check"] = not cfg_processed["kwargs"].get("compilation")
+        
+        cfg_processed = self._parse_args(func_name, cfg_processed)
+        return cfg_processed
 
-        # handler for sys out
-        stdout_h = logging.StreamHandler(stream=sys.stdout)
-        stdout_format = logging.Formatter(
-            fmt="%(message)s",
-            datefmt="%y-%b-%d %H:%M:%S"
-        )
-        stdout_h.setLevel(logging.INFO)
-        stdout_h.setFormatter(stdout_format)
-        stdout_h.addFilter(logStdOutFilter(levels=[logging.INFO, logging.WARNING]))
-        logger.addHandler(stdout_h)
+    def _parse_args(self, func_name: str, cfg_processed: dict):
+        # parse function specific arguments
+        if func_name in self._functions and cfg_processed["args"]:
+            func_args = list(self._functions[func_name].values())[0]
+            for k, v in zip(func_args, cfg_processed["args"]):
+                try:
+                    cfg_processed["kwargs"][k] = literal_eval(v)
+                except (ValueError, SyntaxError):
+                    cfg_processed["kwargs"][k] = v
+        elif func_name not in self._functions and func_name != 'general':
+            raise Exception(f"Function name '{func_name}' not recognised")
+        cfg_processed.pop("args")
+        return cfg_processed
 
-        # handler for file output
-        file_h = logging.FileHandler(self._log_file, 'w', encoding='utf-8')
-        file_format = logging.Formatter(
-            fmt="[%(asctime)s] [%(levelname)8s] [%(funcName)-40s:%(lineno)4d] --- %(message)s",
-            datefmt="%y-%b-%d %H:%M:%S"
-        )
-        file_h.setLevel(logging.DEBUG)
-        file_h.setFormatter(file_format)
-        file_h.addFilter(logFileFilter())
-        logger.addHandler(file_h)
+    def _verify(self, cfg_processed: dict, func_name: str) -> None:
+        mandatory_api_keys = ['client_id', 'client_secret']
+        if any(m not in cfg_processed["_spotify_api"] for m in mandatory_api_keys):
+            raise Exception(f"{func_name} | You must define {mandatory_api_keys} in the 'spotify_api' key")
+        elif cfg_processed["music_path"] is None:
+            key = self._platform_map[sys.platform].replace('_path', '')
+            raise Exception(f"{func_name} | You must define a '{key}' path in the 'paths' key for this OS")
+        elif 'playlists_path' not in cfg_processed:
+            raise Exception(f"{func_name} | You must define a 'playlists' path in the 'paths' key")
 
-        # return exceptions to logger
-        sys.excepthook = self.handle_exception
+    def parse_from_bash(self):
+        parser = self.get_parser()
+        parsed = parser.parse_known_args()
+        kwargs = vars(parsed[0])
+        args = parsed[1]
+        func_name = kwargs.pop('function')
 
-        return logger
+        if kwargs.pop('use_config'):
+            if func_name in self.runtime_settings or func_name in self._functions:
+                self.runtime_settings = {func_name: self.runtime_settings.get(func_name, self.cfg_general)}
+                if len(args) > 0:
+                    self.runtime_settings[func_name]["args"] = args
+                    self.runtime_settings[func_name] = self._parse_args(func_name,  self.runtime_settings[func_name])
+            
+            return self.runtime_settings
+        if kwargs['filter_tags']:
+            del kwargs['filter_tags']
+        
+        cfg_processed = {"kwargs": kwargs, "args": args}
+        cfg_processed = _update(deepcopy(self.cfg_general), cfg_processed)
 
-    def handle_exception(self, exc_type, exc_value, exc_traceback) -> None:
-        """
-        Custom exception handler. Handles exceptions through logger.
-        """
-        if issubclass(exc_type, KeyboardInterrupt):
-            sys.__excepthook__(exc_type, exc_value, exc_traceback)
-            return
-
-        self._logger.critical(
-            "CRITICAL ERROR: Uncaught Exception", exc_info=(
-                exc_type, exc_value, exc_traceback))
-
-
-class logStdOutFilter(logging.Filter):
-    def __init__(self, levels: list = None):
-        """
-        :param levels: str, default=None. Accepted log levels to return i.e. 'info', 'debug'
-            If None, set to current log level.
-        """
-
-        self.levels = levels if levels else [self.__level]
-
-    def filter(self, record: logging.LogRecord) -> logging.LogRecord:
-        if record.levelno in self.levels:
-            return record
+        _update(self.runtime_settings[func_name], cfg_processed)
+        self.runtime_settings = self._configure(func_name, self.runtime_settings[func_name])
+        return self.runtime_settings
 
 
-class logFileFilter(logging.Filter):
-    def filter(self, record: logging.LogRecord) -> logging.LogRecord:
-        record.msg = re.sub("\n$", "", record.msg)
-        record.msg = re.sub("\33.*?m", "", record.msg)
-        record.funcName = f"{record.module}.{record.funcName}"
+    def get_parser(self):
+        parser = argparse.ArgumentParser(
+        description="Sync your local library to Spotify.", prog="syncify",
+        usage='%(prog)s [function] [options]')
+        parser._positionals.title = 'Functions'
+        parser._optionals.title = 'Optional arguments'
 
-        return record
+        # cli function aliases and expected args in order user should give them
+        parser.add_argument('-cfg', '--use-config', action='store_true',
+                            help=f"Use saved config in config.yml instead of cli settings.")
+        parser.add_argument('function', nargs='?', choices=list(self._functions.keys()),
+                            help=f"Syncify function to run.")
+
+
+        local = parser.add_argument_group("Local library filters and options")
+        local.add_argument('-q', '--quickload', required=False, nargs='?', default=False, const=True,
+                        help="Skip search/update tags sections of main function. If set, use last run's data for these sections or enter a date to define which run to load from.")
+        local.add_argument('-s', '--start', type=str, required=False, nargs='*', dest='prefix_start', metavar='',
+                        help='Start processing from the folder with this prefix i.e. <folder>:<END>')
+        local.add_argument('-e', '--end', type=str, required=False, nargs='*', dest='prefix_stop', metavar='',
+                        help='Stop processing from the folder with this prefix i.e. <START>:<folder>')
+        local.add_argument('-l', '--limit', type=str, required=False, nargs='*', dest='prefix_limit', metavar='',
+                        help="Only process albums that start with this prefix")
+        local.add_argument('-c', '--compilation', action='store_const', const=True,
+                        help="Only process albums that are compilations")
+
+        spotify = parser.add_argument_group("Spotify metadata extraction options")
+        spotify.add_argument('-ag', '--add-genre', action='store_true',
+                            help="Get genres when extracting track metadata from Spotify")
+        spotify.add_argument('-af', '--add-features', action='store_true',
+                            help="Get audio features when extracting track metadata from Spotify")
+        spotify.add_argument('-aa', '--add-analysis', action='store_true',
+                            help="Get audio analysis when extracting track metadata from Spotify (long runtime)")
+        spotify.add_argument('-ar', '--add-raw', action='store_true',
+                            help="Keep raw API data back when extracting track metadata from Spotify")
+
+        playlists = parser.add_argument_group("Playlist processing options")
+        playlists.add_argument('-in', '--in-playlists', required=False, nargs='*', metavar='',
+                            help=f"Playlist names to include in any playlist processing")
+        playlists.add_argument('-ex', '--ex-playlists', required=False, nargs='*', metavar='',
+                            help=f"Playlist names to exclude in any playlist processing")
+        playlists.add_argument('-f', '--filter-tags', action='store_true',
+                            help=f"Enable tag filtering from playlists based on values in the config file.")
+        playlists.add_argument('-ce', '--clear-extra', action='store_const', dest='clear', default=False, const='extra',
+                            help="Clear songs not present locally first when updating current Spotify playlists")
+        playlists.add_argument('-ca', '--clear-all', action='store_const', dest='clear', default=False, const='all',
+                            help="Clear all songs first when updating current Spotify playlists")
+
+        tags = parser.add_argument_group("Local library tag update options")
+        tag_options = list(LocalIO._tag_ids['.flac'].keys()) + ["uri"]
+        tags.add_argument('-t', '--tags', required=False, nargs='*', metavar='',
+                        choices=tag_options,
+                        help=f"List of tags to update from Spotify to local files' metadata. Allowed values: {', '.join(tag_options)}.")
+        tags.add_argument('-r', '--replace', action='store_true',
+                        help="If set, destructively replace tags when updating local file tags")
+
+        runtime = parser.add_argument_group("Runtime options")
+        runtime.add_argument('-o', '--no-output', action='store_true',
+                            help="Suppress all json file output, apart from files saved to the parent folder i.e. API token file and URIs.json")
+        runtime.add_argument('-v', '--verbose', action='count', default=0,
+                            help="Add additional stats on library to terminal throughout the run")
+        runtime.add_argument('-x', '--execute', action='store_false', dest='dry_run',
+                            help="Modify users files and playlist. Otherwise, do not affect files and append '_dry' to data folder path.")
+
+        return parser

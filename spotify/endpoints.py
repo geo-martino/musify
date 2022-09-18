@@ -54,9 +54,9 @@ class Endpoints:
 
         # reformat
         if get == 'api':
-            out = f'{self.BASE_API}/{kind}s/{key}'
+            out = f'{self._base_api}/{kind}s/{key}'
         elif get == 'open':
-            out = f'{self.OPEN_URL}/{kind}/{key}'
+            out = f'{self._open_url}/{kind}/{key}'
         elif get == 'uri':
             out = f'spotify:{kind}:{key}'
         else:
@@ -68,8 +68,6 @@ class Endpoints:
         r = getattr(requests, kind)(url, *args, **kwargs, headers=self._headers)
         i = 2
         while r.status_code >= 400:
-            
-
             self._logger.warning(
                 f"\33[91mEndpoint: {url} | Code: {r.status_code} | {r.text}"
                 f"\n{r.headers}\33[0m"
@@ -79,10 +77,12 @@ class Endpoints:
                 wait_dt = dt.now() + timedelta(seconds=int(r.headers['retry-after']))
                 self._logger.info(f"Rate limit exceeded. Retry again at {wait_dt.strftime('%Y-%m-%d %H:%M:%S')}")
                 r = getattr(requests, kind)(url, *args, **kwargs, headers=self._headers)
-            else:
+            elif i < 300:
                 self._logger.info(f"Retrying in {i} seconds...")
                 sleep(i)
-                i *= 5
+                i *= 2
+            else:
+                raise Exception("Max retries exceeded")
 
         try:
             r = r.json()
@@ -104,7 +104,7 @@ class Endpoints:
         :param limit: int, default=10. Number of results to get.
         :return: dict. Raw results.
         """
-        url = f'{self.BASE_API}/search'  # search endpoint
+        url = f'{self._base_api}/search'  # search endpoint
         params = {'q': query, 'type': kind, 'limit': limit}
 
         self._logger.debug(f"Endpoint: {url} | Params: {params}")
@@ -124,9 +124,9 @@ class Endpoints:
         :return: dict. Raw user data.
         """
         if user == 'self':  # use current user
-            url = f'{self.BASE_API}/me'
+            url = f'{self._base_api}/me'
         else:  # use given user
-            url = f'{self.BASE_API}/users/{user}'
+            url = f'{self._base_api}/users/{user}'
 
         self._logger.debug(f"Endpoint {url:<87}")
         r = self.handle_request("get", url)
@@ -155,7 +155,7 @@ class Endpoints:
         # handle user input
         kind = str(kind).lower()
         kind = kind if kind.endswith('s') else kind + "s"
-        url = f'{self.BASE_API}/{kind}'  # item endpoint
+        url = f'{self._base_api}/{kind}'  # item endpoint
 
         # reformat to ids only, as required by API
         id_list = [self.convert(i, get='id', kind=kind, **kwargs) for i in items if i is not None]
@@ -171,7 +171,8 @@ class Endpoints:
                 item_bar,
                 desc=f'Getting {kind}',
                 unit=f'{kind}',
-                leave=self._verbose,
+                leave=self._verbose > 0,
+                disable=self._verbose > 2 and self._verbose < 2,
                 file=sys.stdout)
 
         results = []
@@ -194,7 +195,7 @@ class Endpoints:
         :param data: str/list/dict. Track/s to get features for. URL/URI/ID formats accepted.
         :return: list/dict. Raw audio feature metadata for each item. Same type as input.
         """
-        url = f'{self.BASE_API}/audio-features'  # audio features endpoint
+        url = f'{self._base_api}/audio-features'  # audio features endpoint
 
         if isinstance(data, str):  # get features and return raw result to user
             data = self.convert(data, get="id", **kwargs)
@@ -236,7 +237,7 @@ class Endpoints:
         :param data: str/list/dict. Track/s to get analysis for. URL/URI/ID formats accepted.
         :return: list/dict. Raw audio analysis metadata for each item. Same type as input.
         """
-        url = f'{self.BASE_API}/audio-analysis'  # audio analysis endpoint
+        url = f'{self._base_api}/audio-analysis'  # audio analysis endpoint
         def endpoint_func(x): return self.handle_request("get", f"{url}/{x}")
 
         if isinstance(data, str):  # get analysis and return raw result to user
@@ -291,7 +292,7 @@ class Endpoints:
             user = self._user_id
 
         # user playlists endpoint
-        r = {'next': f'{self.BASE_API}/users/{user}/playlists', "offset": 0}
+        r = {'next': f'{self._base_api}/users/{user}/playlists', "offset": 0}
         playlists = {}
 
         # get results, set up progress bar
@@ -370,9 +371,12 @@ class Endpoints:
         :param public: bool, default=True. Set playlist availability as public, private if False
         :return: str. API URL for playlist.
         """
+        if self._headers is None:
+            self._headers = self.auth()
+        
         if self._user_id is None:  # get user id if not already stored
             self.get_user(**kwargs)
-        url = f'{self.BASE_API}/users/{self._user_id}/playlists'  # user playlists end point
+        url = f'{self._base_api}/users/{self._user_id}/playlists'  # user playlists end point
 
         # post message
         body = {
@@ -399,6 +403,9 @@ class Endpoints:
         :param skip_dupes: bool, default=True. Skip duplicates.
         :return: str. API URL for playlist tracks.
         """
+        if self._headers is None:
+            self._headers = self.auth()
+        
         url = f"{self.convert(playlist, get='api', kind='playlist', **kwargs)}/tracks"
 
         if len(tracks) == 0:
@@ -435,6 +442,9 @@ class Endpoints:
         :param playlist. str. Playlist URL/URI/ID to unfollow.
         :return: str. API URL for playlist.
         """
+        if self._headers is None:
+            self._headers = self.auth()
+        
         if not self.check_spotify_valid(playlist):
             url = self.get_user_playlists(playlist).get(playlist, {}).get('href')
             if not url:
@@ -459,6 +469,9 @@ class Endpoints:
         :param limit: int, default=100. Size of batches to clear at once, max=100.
         :return: str. API URL for playlist.
         """
+        if self._headers is None:
+            self._headers = self.auth()
+        
         # playlists tracks endpoint
         if isinstance(playlist, dict) and 'href' in playlist.get('tracks', {}):
             url = playlist['tracks']['href']

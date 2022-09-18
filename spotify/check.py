@@ -26,11 +26,12 @@ class CheckMatches:
 
         # extract dict of <name>: <list of URIs> for each playlist if URIs present
         playlist_uri_list = self.convert_metadata(
-            playlists, key="folder", value="uri", out="list", **kwargs)
+            playlists, key="folder", fields="uri", out="list", sort_keys=True, **kwargs)
         bar = tqdm(range(len(playlist_uri_list)),
                    desc='Creating temp playlists',
                    unit='playlists',
-                   leave=self._verbose,
+                   leave=self._verbose > 0,
+                   disable=self._verbose > 2 and self._verbose < 2,
                    file=sys.stdout)
 
         # max stops found with round up function
@@ -186,7 +187,7 @@ class CheckMatches:
                 inp = 'r'
 
             while name in urls and inp == 'r':  # if playlist exists on Spotify or restart
-                self._logger.debug(f"{name} | >>> Starting loop")
+                self._logger.debug(f"    {name} | >>> Starting loop")
                 t_switched = []
                 inp = ''  # reset for next while loop
 
@@ -203,13 +204,13 @@ class CheckMatches:
                 t_unavailable = [t for t in tracks if t['uri'] is False]
                 t_unchanged = [t for t in tracks if t['uri'] is None]
 
-                self._logger.debug(f"{name} |{len(t_switched):>4} track URIs switched")
-                self._logger.debug(f"{name} |{len(t_unavailable):>4} tracks unavailable")
-                self._logger.debug(f"{name} |{len(t_unchanged):>4} tracks unchanged")
+                self._logger.debug(f"    {name} |{len(t_switched):>4} track URIs switched")
+                self._logger.debug(f"    {name} |{len(t_unavailable):>4} tracks unavailable")
+                self._logger.debug(f"    {name} |{len(t_unchanged):>4} tracks unchanged")
 
                 if inp != 'r':
                     updated = len(t_switched) + len(t_unavailable)
-                    self._logger.debug(f"<<< {name} | {updated} tracks updated")
+                    self._logger.debug(f"<<< {name} |{updated:>4} tracks updated")
 
                 # incrementally build and export report if filename set
                 tmp_out = {
@@ -223,6 +224,8 @@ class CheckMatches:
                     else:
                         for k in tmp_out:
                             report[k] = report.get(k, {}) | tmp_out[k]
+                else:
+                    self._logger.debug(f"<<< {name} | No tracks to process.")
 
         return report
 
@@ -264,12 +267,12 @@ class CheckMatches:
 
         if len(tracks_added) + len(tracks_removed) + len(tracks_missing) == 0:
             # skip if no changes
-            self._logger.debug(f"{name} | <<< No tracks switched")
+            self._logger.debug(f"    {name} | <<< No tracks switched")
             return tracks_removed | tracks_missing, switched
 
-        self._logger.debug(f"{name} |{len(tracks_added):>4} tracks added")
-        self._logger.debug(f"{name} |{len(tracks_removed):>4} tracks removed")
-        self._logger.debug(f"{name} |{len(tracks_missing):>4} tracks with no URI")
+        self._logger.debug(f"    {name} |{len(tracks_added):>4} tracks added")
+        self._logger.debug(f"    {name} |{len(tracks_removed):>4} tracks removed")
+        self._logger.debug(f"    {name} |{len(tracks_missing):>4} tracks with no URI")
 
         tracks_remaining = tracks_removed | tracks_missing
         start_len = len(tracks_remaining)
@@ -289,8 +292,8 @@ class CheckMatches:
                     switched.append(track)
 
         tracks_remaining = tracks_removed | tracks_missing
-        self._logger.debug(f"{name} |{start_len - len(tracks_remaining):>4} tracks switched")
-        self._logger.debug(f"{name} |{len(tracks_remaining):>4} tracks still not found")
+        self._logger.debug(f"    {name} |{start_len - len(tracks_remaining):>4} tracks switched")
+        self._logger.debug(f"    {name} |{len(tracks_remaining):>4} tracks still not found")
 
         return tracks_remaining, switched
 
@@ -327,9 +330,9 @@ class CheckMatches:
         print(help_text)
 
         # for appropriately aligned formatting
-        max_width = len(max([t['title'] for t in remainder.values()], key=len)) if len(max([t['title'] for t in remainder.values()], key=len)) < 50 else 50
+        max_width = len(max([t['title'] for t in remainder.values()], key=len)) + 1 if len(max([t['title'] for t in remainder.values()], key=len)) + 1 < 50 else 50
 
-        self._logger.debug(f"{name} | Getting user input for {len(tracks)} tracks")
+        self._logger.debug(f"    {name} | Getting user input for {len(tracks)} tracks")
 
         inp = ''
         for track in tracks:
@@ -351,28 +354,28 @@ class CheckMatches:
                     text = track['title'] if len(track['title']) < 50 else track['title'][:47] + '...'
                     inp = input(f"\33[93m{text:<{max_width}} \33[0m| ")
                 inp = inp.strip()
-                self._logger.debug(f"{track['title']} | User input: {inp}")
+                self._logger.debug(f"    {track['title']} | User input: {inp}")
 
                 if inp.lower() == 'h':  # print help
                     print(help_text.format(name=name))
                     inp = ''
                 elif inp.lower() == 's':  # skip
-                    self._logger.debug(f"{name} | Skipping all loops")
+                    self._logger.debug(f"    {name} | Skipping all loops")
                     inp = inp.lower()
                     break
                 elif inp.lower() == 'r':  # restart
-                    self._logger.debug(f"{name} | Refreshing playlist metadata and restarting loop")
+                    self._logger.debug(f"    {name} | Refreshing playlist metadata and restarting loop")
                     inp = inp.lower()
                     break
                 elif inp.lower().replace('a', '') == 'u':
                     # mark track as unavailable
-                    self._logger.debug(f"{track['title']} | Marking as unavailable")
+                    self._logger.debug(f"    {track['title']} | Marking as unavailable")
                     track['uri'] = False
                 elif inp.lower().replace('a', '') == 'n':
                     # leave track without URI and unprocessed
-                    self._logger.debug(f"{track['title']} | Skipping")
+                    self._logger.debug(f"    {track['title']} | Skipping")
                     if track['uri']:
-                        self._logger.debug(f"{track['title']} | Clearing URI: {track['uri']}")
+                        self._logger.debug(f"    {track['title']} | Clearing URI: {track['uri']}")
                         track['uri'] = None
                 elif len(inp) > 22:
                     # update URI and add track to updated URIs list
@@ -381,7 +384,7 @@ class CheckMatches:
                         inp = ''
                         continue
 
-                    self._logger.debug(f"{track['title']} | Updating URI: {track['uri']} -> {uri}")
+                    self._logger.debug(f"    {track['title']} | Updating URI: {track['uri']} -> {uri}")
                     track['uri'] = uri
                     switched.append(track)
                 else:  # invalid input
