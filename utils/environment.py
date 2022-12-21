@@ -1,17 +1,18 @@
 
 import argparse
+import json
 import os
 import sys
-from copy import deepcopy
 from ast import literal_eval
+from copy import deepcopy
 from os.path import basename, dirname, exists, join, normpath, splitext
 
 import yaml
 
-from spotify.search import Search
 from local.library import LocalIO
+from spotify.search import Search
 
-import json
+
 def jprint(data):
     print(json.dumps(data, indent=2))
 

@@ -1,7 +1,6 @@
 import re
 import sys
 import urllib
-
 from copy import deepcopy
 from datetime import datetime as dt
 from datetime import timedelta

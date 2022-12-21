@@ -1,177 +1,230 @@
-#!/bin/bash
+#!/bin/zsh
 
 setopt +o nomatch
+setopt CAse_glob
 
-SORT_FOLDER=$HOME/Pictures/___2sort
 PHONE_INTERNAL=/storage/self/primary
 PHONE_SD=/storage/E42C-0EA8
-LAST_EXPORT='2022-08-29 01:13:46'
+LAST_EXPORT='2022-12-20 21:09:52'
 THIS_EXPORT=$(date '+%Y-%m-%d %H:%M:%S')
 
-### CONNECT AND CREATE DIRECTORIES ###
-adb connect $ANDROID_SERIAL
-mkdir -p $SORT_FOLDER/iPhone/ \
-	$SORT_FOLDER/iPhone/Live \
-	$SORT_FOLDER/Camera/ \
-	$SORT_FOLDER/ProcessMe/ \
-	$SORT_FOLDER/WhatsApp/ \
+### FIND PORT AND CONNECT ###
+# if ANDROID_SERIAL not set or ANDROID_SERIAL is set and device not found in adb devices list
+if [ -z "$ANDROID_SERIAL" ] || [ -z "$(adb devices | grep "$ANDROID_SERIAL")" ]; then
+    export PHONE_IP=192.168.178.102
+    echo "\033[1;95m-> \033[1;97mScanning for debug port of Android device with IP address $PHONE_IP\033[0m"
+    export PHONE_PORT=$(sudo nmap -nsF ${PHONE_IP} -p 30000-49999 | awk -F/ '/tcp open/{print $1}')
+    export ANDROID_SERIAL=$PHONE_IP:$PHONE_PORT
+    adb connect $ANDROID_SERIAL
+fi
 
-### COPY ###
+### CREATE DIRECTORIES ###
+SORT_FOLDER=$HOME/Pictures/___2sort
+SORT_IPHONE=$SORT_FOLDER/iPhone
+SORT_IPHONE_LIVE=$SORT_IPHONE/Live
+SORT_LIVE=$SORT_FOLDER/Live
+SORT_CAMERA=$SORT_FOLDER/Camera
+SORT_WHATSAPP=$SORT_FOLDER/WhatsApp
+SORT_OTHER=$SORT_FOLDER/ProcessMe
+mkdir -p $SORT_IPHONE/ $SORT_IPHONE_LIVE $SORT_CAMERA/ $SORT_WHATSAPP/ $SORT_OTHER/
+
+echo "\033[1;95m-> \033[1;97mExtracting files created since $LAST_EXPORT\033[0m"
+# ### COPY ###
 adb shell "find '$PHONE_INTERNAL/DCIM/Camera' \
 	-mindepth 1 -maxdepth 1 -type f -newerct '$LAST_EXPORT' 2>/dev/null" | \
-	xargs -i sh -c 'adb pull {} $SORT_FOLDER/Camera/ \
+	xargs -i sh -c 'adb pull {} $SORT_CAMERA/ \
 	&& adb shell "rm \"{}\""'
 adb shell "find '$PHONE_SD/DCIM/Camera' \
 	-mindepth 1 -maxdepth 1 -type f -newerct '$LAST_EXPORT' 2>/dev/null" | \
-	xargs -i sh -c 'adb pull {} $SORT_FOLDER/Camera/ \
+	xargs -i sh -c 'adb pull {} $SORT_CAMERA/ \
 	&& adb shell "rm \"{}\""'
 adb shell "find '$PHONE_INTERNAL/DCIM/Screenshots' \
 	-mindepth 1 -maxdepth 1 -type f -newerct '$LAST_EXPORT' 2>/dev/null" | \
-	xargs -i sh -c 'adb pull {} $SORT_FOLDER/ProcessMe/ \
+	xargs -i sh -c 'adb pull {} $SORT_OTHER/ \
 	&& adb shell "rm \"{}\""'
 adb shell "find '$PHONE_SD/DCIM/Screenshots' \
 	-mindepth 1 -maxdepth 1 -type f -newerct '$LAST_EXPORT' 2>/dev/null" | \
-	xargs -i sh -c 'adb pull {} $SORT_FOLDER/ProcessMe/ \
+	xargs -i sh -c 'adb pull {} $SORT_OTHER/ \
 	&& adb shell "rm \"{}\""'
 adb shell "find '$PHONE_INTERNAL/DCIM/Facebook' \
 	-mindepth 1 -maxdepth 1 -type f -newerct '$LAST_EXPORT' 2>/dev/null" | \
-	xargs -i sh -c 'adb pull {} $SORT_FOLDER/ProcessMe/ \
+	xargs -i sh -c 'adb pull {} $SORT_OTHER/ \
 	&& adb shell "rm \"{}\""'
 adb shell "find '$PHONE_INTERNAL/Movies/Instagram' \
 	-mindepth 1 -maxdepth 1 -type f -newerct '$LAST_EXPORT' 2>/dev/null" | \
-	xargs -i sh -c 'adb pull {} $SORT_FOLDER/ProcessMe/ \
+	xargs -i sh -c 'adb pull {} $SORT_OTHER/ \
 	&& adb shell "rm \"{}\""'
 adb shell "find '$PHONE_INTERNAL/Movies/Messenger' \
 	-mindepth 1 -maxdepth 1 -type f -newerct '$LAST_EXPORT' 2>/dev/null" | \
-	xargs -i sh -c 'adb pull {} $SORT_FOLDER/ProcessMe/ \
+	xargs -i sh -c 'adb pull {} $SORT_OTHER/ \
 	&& adb shell "rm \"{}\""'
 adb shell "find '$PHONE_INTERNAL/Pictures/Instagram' \
 	-mindepth 1 -maxdepth 1 -type f -newerct '$LAST_EXPORT' 2>/dev/null" | \
-	xargs -i sh -c 'adb pull {} $SORT_FOLDER/ProcessMe/ \
+	xargs -i sh -c 'adb pull {} $SORT_OTHER/ \
 	&& adb shell "rm \"{}\""'
 adb shell "find '$PHONE_INTERNAL/Pictures/Messenger' \
 	-mindepth 1 -maxdepth 1 -type f -newerct '$LAST_EXPORT' 2>/dev/null" | \
-	xargs -i sh -c 'adb pull {} $SORT_FOLDER/ProcessMe/ \
+	xargs -i sh -c 'adb pull {} $SORT_OTHER/ \
 	&& adb shell "rm \"{}\""'
 adb shell "find '$PHONE_INTERNAL/Pictures/Slack' \
 	-mindepth 1 -maxdepth 1 -type f -newerct '$LAST_EXPORT' 2>/dev/null" | \
-	xargs -i sh -c 'adb pull {} $SORT_FOLDER/ProcessMe/ \
+	xargs -i sh -c 'adb pull {} $SORT_OTHER/ \
 	&& adb shell "rm \"{}\""'
 adb shell "find '$PHONE_INTERNAL/Pictures/Whatsapp' \
 	-mindepth 1 -maxdepth 1 -type f -newerct '$LAST_EXPORT' 2>/dev/null" | \
-	xargs -i sh -c 'adb pull {} $SORT_FOLDER/ProcessMe/ \
+	xargs -i sh -c 'adb pull {} $SORT_OTHER/ \
 	&& adb shell "rm \"{}\""'
 adb shell "find '$PHONE_INTERNAL/Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Images' \
 	-mindepth 1 -maxdepth 1 -type f -iname '*.jpg' -o -iname '*.jpeg' -newerct '$LAST_EXPORT'" | \
-	xargs -i sh -c 'adb pull "{}" $SORT_FOLDER/WhatsApp \
+	xargs -i sh -c 'adb pull "{}" $SORT_WHATSAPP \
 	&& adb shell "rm \"{}\""'
 adb shell "find '$PHONE_INTERNAL/Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Video' \
 	-mindepth 1 -maxdepth 1 -type f -iname '*.mp4' -o -iname '*.mpeg4' -newerct '$LAST_EXPORT'" | \
-	xargs -i sh -c 'adb pull "{}" $SORT_FOLDER/WhatsApp \
+	xargs -i sh -c 'adb pull "{}" $SORT_WHATSAPP \
 	&& adb shell "rm \"{}\""'
 
 ### PROCESS ###
-TIMESTAMP_PATTERN_FINAL='[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}\.[0-9]{2}\.[0-9]{2}_[0-9]{4}'
-TIMESTAMP_PATTERN_PHONE='([0-9]{4})([0-9]{2})([0-9]{2})_([0-9]{2})([0-9]{2})([0-9]{2})'
+export TIMESTAMP_PATTERN_FINAL='([0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}\.[0-9]{2}\.[0-9]{2})'
+export TIMESTAMP_PATTERN_PHONE='([0-9]{4})([0-9]{2})([0-9]{2})_([0-9]{2})([0-9]{2})([0-9]{2})'
+export TIMESTAMP_PATTERN_INDEX="${TIMESTAMP_PATTERN_FINAL}_([0-9]{4})"
 
 # remove empty folders
 rmdir --ignore-fail-on-non-empty \
-	$SORT_FOLDER/Camera \
-	$SORT_FOLDER/iPhone/Live \
-	$SORT_FOLDER/iPhone \
-	$SORT_FOLDER/Live \
-	$SORT_FOLDER/ProcessMe \
-	$SORT_FOLDER/WhatsApp \
+	$SORT_CAMERA \
+	$SORT_IPHONE_LIVE \
+	$SORT_IPHONE \
+	$SORT_LIVE \
+	$SORT_OTHER \
+	$SORT_WHATSAPP \
 	2>/dev/null
 
-if [ -d $SORT_FOLDER/Camera ] 
+if [ -d $SORT_CAMERA ] 
 then
+	echo "\033[1;95m-> \033[1;97mProcessing $(ls -1 $SORT_CAMERA | wc -l) files in Camera\033[0m"
 	# Rename from %Y%m%d_%H%M%S.(EXT) to %Y-%m-%d_%H.%M.%S.(EXT)
-	find $SORT_FOLDER/Camera -mindepth 1 -maxdepth 1 \
+	find $SORT_CAMERA -mindepth 1 -maxdepth 1 \
 		-type f -regextype posix-egrep -regex '.*/[0-9]{8}_[0-9]{6}.*' | \
 		sed -r "s|(.*)/$TIMESTAMP_PATTERN_PHONE.*\.([a-zA-Z0-9]{2,})|& \1/\2-\3-\4_\5.\6.\7\.\8|g" | \
 		xargs -n 2 mv
 	
 	# Move timestamped files to main sort folder safely
-	find $SORT_FOLDER/Camera -mindepth 1 -exec mv -n {} $SORT_FOLDER \; 2>/dev/null
+	find $SORT_CAMERA -mindepth 1 -exec mv -n {} $SORT_FOLDER \; 2>/dev/null
 fi
 
 
-if [ -d $SORT_FOLDER/iPhone ] 
+if [ -d $SORT_IPHONE ]
 then
-	rm -f $SORT_FOLDER/iPhone/*.AAE
-	LIVE_FOLDER=$SORT_FOLDER/iPhone/Live
-	mkdir -p $LIVE_FOLDER
+	echo "\033[1;95m-> \033[1;97mProcessing $(ls -1 $SORT_IPHONE | wc -l) files in iPhone\033[0m"
+	rm -f $SORT_IPHONE/*.AAE
+	mkdir -p $SORT_IPHONE_LIVE
 
-	# Move live photos to 'Live' folder
-	ls $SORT_FOLDER/iPhone | \
+	# move live photos
+	echo "\033[1;95m > \033[1;97mMoving $(find $SORT_IPHONE -mindepth 1 -maxdepth 1 -type f -iname '*.MOV' | wc -l) live videos\033[0m"
+	ls $SORT_IPHONE | \
 		cut -f1 -d. | \
 		uniq -d | \
-		xargs -i echo $SORT_FOLDER/iPhone/{}.MOV | \
-		xargs -i mv {} $LIVE_FOLDER
+		xargs -i echo $SORT_IPHONE/{}.MOV | \
+		xargs -i mv {} $SORT_IPHONE_LIVE
 	
-	# Rename live photos based on original photo's original date taken
-	rmdir --ignore-fail-on-non-empty $SORT_FOLDER/Live
-	if [ -d $LIVE_FOLDER ] 
+	# rename live photos based on original photo's metadata
+	rmdir --ignore-fail-on-non-empty $SORT_IPHONE_LIVE
+	if [ -d $SORT_IPHONE_LIVE ] 
 	then
-		
+		echo "\033[1;95m > \033[1;97mProcessing live photos/videos\033[0m"
 		exiftool -csv -ext jpg -FileName -CreateDate \
-			-d %Y-%m-%d_%H.%M.%S $SORT_FOLDER/iPhone > $SORT_FOLDER/iPhone/rename.csv
-		cut -d , -f 2-3 $SORT_FOLDER/iPhone/rename.csv | \
+			-d %Y-%m-%d_%H.%M.%S $SORT_IPHONE > $SORT_IPHONE/rename.csv
+		cut -d , -f 2-3 $SORT_IPHONE/rename.csv | \
 			sed 's|,| |g' | \
 			sed '/FileName/d' | \
-			sed -r "s|(\S+)\.\w+ (\S+)|$LIVE_FOLDER/\1.MOV $LIVE_FOLDER/\2\.MOV|gI" | \
+			sed -r "s|(\S+)\.\w+ (\S+)|$SORT_IPHONE_LIVE/\1.MOV $SORT_IPHONE_LIVE/\2\.MOV|gI" | \
 			xargs -n2 sh -c '[ -f $0 ] && mv $0 $1'
-		rm -f $SORT_FOLDER/iPhone/rename.csv
+		rm -f $SORT_IPHONE/rename.csv
 	fi
 
-	# Rename photos based on original date taken
+	# rename image files based on metadata
+	echo "\033[1;95m > \033[1;97mAttempting to rename images based on metadata\033[0m"
 	exiftool -ext jpg '-FileName<${CreateDate}_${filename;$_=substr($_,4,4)}.%e' \
-		-d %Y-%m-%d_%H.%M.%S $SORT_FOLDER/iPhone
+		-d %Y-%m-%d_%H.%M.%S $SORT_IPHONE
+	exiftool -ext jpeg '-FileName<${CreateDate}_${filename;$_=substr($_,4,4)}.%e' \
+		-d %Y-%m-%d_%H.%M.%S $SORT_IPHONE
 	exiftool -ext png '-FileName<${DateCreated}_${filename;$_=substr($_,4,4)}.%e' \
-		-d %Y-%m-%d_%H.%M.%S $SORT_FOLDER/iPhone
+		-d %Y-%m-%d_%H.%M.%S $SORT_IPHONE
+	exiftool -ext heic '-FileName<${DateCreated}_${filename;$_=substr($_,4,4)}.%e' \
+		-d %Y-%m-%d_%H.%M.%S $SORT_IPHONE
+	exiftool -ext heic '-FileName<${DateTimeOriginal}_${filename;$_=substr($_,4,4)}.%e' \
+        -d %Y-%m-%d_%H.%M.%S $SORT_IPHONE
 
-	# Rename videos based on Apple original date taken
-	ls $SORT_FOLDER/iPhone/*.MOV | \
-		xargs -i sh -c 'echo {} $(mediainfo {} | \
-		grep com.apple.quicktime.creationdate | \
-		sed -r "s/.*: (.*)+.*$/\1/g" | \
+	# rename video files based on metadata
+	echo "\033[1;95m > \033[1;97mAttempting to rename videos based on metadata\033[0m"
+	find $SORT_IPHONE -mindepth 1 -maxdepth 1 \
+		-type f -iname '*.MOV' | \
+		xargs -i sh -c 'echo {} $(mediainfo \
+		--Inform="General;%com.apple.quicktime.creationdate%" {} | \
+		sed -r "s|-[0-9]{2}.?[0-9]{2}$||g" | \
 		xargs -I {} date -d {} +%Y-%m-%d_%H.%M.%S) | \
-		sed -r "s|(\S+) (\S+)|\1 $SORT_FOLDER/iPhone/\2.MOV|g"' | \
-		xargs -n 2 mv
+		sed -r "s|(\S+) (\S+)|\1 $SORT_IPHONE/\2.MOV|g"' | \
+		xargs -n2 mv
 
-	# Attempt to remove indexes from files that have them
+	# convert heic files to jpg and remove original
+	echo "\033[1;95m > \033[1;97mConverting $(find $SORT_IPHONE -mindepth 1 -maxdepth 1 -type f -iname '*.HEIC' | wc -l) HEIC images to JPG\033[0m"
+	find $SORT_IPHONE -mindepth 1 -maxdepth 1 \
+		-type f -iname '*.HEIC' | \
+		sed -r "s|(.*)\.(\S+)|\1.\2 \1.jpg|g" | \
+		xargs -n2 bash -c 'heif-convert -q 100 $0 $1 && rm -f $0'
+
+	echo "\033[1;95m > \033[1;97mAttempting to remove indexes from files if present\033[0m"
 	# Do not rename files if file with the same timestamp already exists
-	find $SORT_FOLDER/iPhone -mindepth 1 -maxdepth 1 \
-		-type f -regextype posix-egrep -regex ".*/.*" | \
-		sed -r "s|(.*)/$TIMESTAMP_PATTERN_FINAL(.*)_([0-9]{4})(.*)|\1/\2_\3\4 \1/\2\4|g" | \
+	find $SORT_IPHONE -mindepth 1 -maxdepth 1 \
+		-type f -regextype posix-egrep -regex ".*/$TIMESTAMP_PATTERN_INDEX.*" | \
+		sed -r "s|(.*)/$TIMESTAMP_PATTERN_INDEX(.*)|\1/\2_\3\4 \1/\2\4|g" | \
 		xargs -n2 mv -n
 
 	# Move all that do not match expected timestamp filename pattern
-	find $SORT_FOLDER/iPhone -mindepth 1 -maxdepth 1 \
-		-type f -regextype posix-egrep -regex ".*/$TIMESTAMP_PATTERN_FINAL.*" | \
-		xargs -i mv -i {} $SORT_FOLDER/ProcessMe
+	echo "\033[1;95m > \033[1;97mMoving files with invalid filenames\033[0m"
+	find $SORT_IPHONE -mindepth 1 -maxdepth 1 \
+		-type f -regextype posix-egrep -not -regex ".*/$TIMESTAMP_PATTERN_FINAL.*" | \
+		xargs -i mv -i {} $SORT_OTHER
 	
 	# Move timestamped files to main sort folder safely
-	find $SORT_FOLDER/iPhone -mindepth 1 -exec mv -n {} $SORT_FOLDER \; 2>/dev/null
+	echo "\033[1;95m > \033[1;97mMoving files with valid filenames\033[0m"
+	find $SORT_IPHONE -mindepth 1 -maxdepth 1 -exec mv -n {} $SORT_FOLDER \; 2>/dev/null
 fi
 
 ### CLEAN UP ###
 # Move files left behind to folder for further processing and cleanup
-[ -d $SORT_FOLDER/Camera ] && find $SORT_FOLDER/Camera -mindepth 1 \
-	-exec mv -n {} $SORT_FOLDER/ProcessMe \; 2>/dev/null
-[ -d $SORT_FOLDER/iPhone ] && find $SORT_FOLDER/iPhone -mindepth 1 \
-	-exec mv -n {} $SORT_FOLDER/ProcessMe \; 2>/dev/null
+[ -d $SORT_CAMERA ] && find $SORT_CAMERA -mindepth 1 \
+	-exec mv -n {} $SORT_OTHER \; 2>/dev/null
+[ -d $SORT_IPHONE ] && find $SORT_IPHONE -mindepth 1 \
+	-exec mv -n {} $SORT_OTHER \; 2>/dev/null
 
 rmdir --ignore-fail-on-non-empty \
-	$SORT_FOLDER/Camera \
-	$SORT_FOLDER/iPhone/Live \
-	$SORT_FOLDER/iPhone \
-	$SORT_FOLDER/Live \
-	$SORT_FOLDER/ProcessMe \
+	$SORT_CAMERA \
+	$SORT_IPHONE_LIVE \
+	$SORT_IPHONE \
+	$SORT_LIVE \
+	$SORT_OTHER \
 	$SORT_FOLDER \
 	2>/dev/null
 
-# Update script's store of last run timestamp
-sed -r -i "s|^LAST_EXPORT=.*|LAST_EXPORT='$THIS_EXPORT'|g" ${BASH_SOURCE[0]}
+if [ -d $SORT_FOLDER ] 
+then
+	echo " · \033[92m$(ls -1 $SORT_FOLDER | wc -l) files processed with timestamps\033[0m"
+	if [ -d $SORT_LIVE ] 
+	then
+		echo " · \033[92m$(ls -1 $SORT_LIVE | wc -l) live videos processed\033[0m"
+	fi
+	if [ -d $SORT_WHATSAPP ] 
+	then
+		echo " · \033[91m$(ls -1 $SORT_WHATSAPP | wc -l) WhatsApp files need manual processing\033[0m"
+	fi
+	if [ -d $SORT_OTHER ] 
+	then
+		echo " · \033[91m$(ls -1 $SORT_OTHER | wc -l) other files need manual processing\033[0m"
+	fi
+else
+	echo " · \033[93mNo files processed\033[0m" 
+fi
+
+echo "\033[1;95m-> \033[1;97mUpdating last export time to $THIS_EXPORT\033[0m"
+sed -r -i "s|^LAST_EXPORT=.*|LAST_EXPORT='$THIS_EXPORT'|g" ${0:a}
 

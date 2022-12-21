@@ -9,6 +9,7 @@ from os.path import basename, dirname, isdir, join
 from time import perf_counter
 
 from dateutil.relativedelta import relativedelta
+
 from local.playlists import Playlists
 from spotify.spotify import Spotify
 from utils.authorise import ApiAuthoriser
@@ -449,9 +450,6 @@ class Syncify(Logger, ApiAuthoriser, IO, Report, Spotify, Playlists):
         self.enrich_metadata(library_path_metadata)
         self.save_json(self._library_local, "09_library__final", **kwargs)
 
-        #############################################################
-        ## Step 10-12: UPDATE SPOTIFY PLAYLISTS, RELOAD
-        #############################################################
         # get local metadata for m3u playlists
         self._playlists_local = self.get_local_playlists_metadata(tracks=library_path_metadata, **kwargs)
         self.save_json(self._playlists_local, "10_playlists__local", **kwargs)
@@ -466,6 +464,7 @@ class Syncify(Logger, ApiAuthoriser, IO, Report, Spotify, Playlists):
 
         # update Spotify playlists
         self.update_playlists(self._playlists_local, **kwargs)
+        self.report(False, **kwargs)
 
     def report(self, quickload, **kwargs) -> None:
         if self._headers is None:
@@ -479,9 +478,6 @@ class Syncify(Logger, ApiAuthoriser, IO, Report, Spotify, Playlists):
         self.enrich_metadata(library_path_metadata)
         self.save_json(self._library_local, "09_library__final", **kwargs)
 
-        #############################################################
-        ## Step 13: REPORT
-        #############################################################
         if self._playlists_local is None:  # get local metadata for m3u playlists
             self._playlists_local = self.get_local_playlists_metadata(tracks=library_path_metadata, **kwargs)
             self.save_json(self._playlists_local, "10_playlists__local", **kwargs)
@@ -520,19 +516,14 @@ class Syncify(Logger, ApiAuthoriser, IO, Report, Spotify, Playlists):
         if start < 9:
             self.update_tags(quickload, **kwargs)  # Steps 8-9
             quickload = False
-        if start < 12:
-            self.update_spotify(quickload, **kwargs)  # Steps 10-12
-            self.report(quickload, **kwargs)  # Step 13
-            quickload = False
 
 if __name__ == "__main__":
-    from utils.environment import jprint
     env = Environment()
     env.get_kwargs()
     env.parse_from_bash()
     
     for func, settings in env.runtime_settings.items():
-        print()        
+        print()
         try:  # run the functions requested by the user
             main = Syncify(func=func, **settings)
             main._logger.info(f"\33[95mBegin running \33[1;95m{func}\33[0;95m function \33[0m")
