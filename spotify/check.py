@@ -44,7 +44,7 @@ class CheckMatches:
             # handle errors while still deleting temporary playlists
 
             try:
-                # create playlist and store it's URL for later unfollowing
+                # create playlist and store its URL for later unfollowing
                 url = f'{self.create_playlist(playlist_name, public=False, **kwargs)}/tracks'
                 playlist_urls[playlist_name] = url
 

@@ -55,29 +55,31 @@ class Spotify(Endpoints, Search, CheckMatches):
         if not track or track['uri'] is None:
             return {}
         # in case of no available information
-        image_url = None
-        max_height = 0
         key = None
+        image_url = None
+        image_height = 0
 
-        # determine largest image and get its url
-        for image in track['album']['images']:
-            if image['height'] > max_height:
-                image_url = image['url']
-                max_height = image['height']
+        genre = [genre.title() for genre in track["artists"][0].get("genres", [])]
+        if len(genre) == 0:
+            genre = None
 
         if "audio_features" in track:
             f = track["audio_features"]
+            key_raw = self._song_keys.get(f['key'])
+            is_minor = f['mode'] == 0
 
             # correctly formatted song key string
-            if '/' in self._song_keys.get(f['key']):
-                key = self._song_keys.get(f['key']).split('/')
-                key = f"{key[0]}{'m'*f['mode']}/{key[1]}{'m'*f['mode']}"
+            if '/' in key_raw:
+                key_sep = key_raw.split('/')
+                key = f"{key_sep[0]}{'m'*is_minor}/{key_sep[1]}{'m'*is_minor}"
             else:
-                key = f"{self._song_keys.get(f['key'])}{'m'*f['mode']}"
+                key = f"{key_raw}{'m'*is_minor}"
 
-        genre = '/'.join(track["artists"][0].get("genres", [])).title()
-        if len(genre) == 0:
-            genre = None
+        # determine largest image and get its url
+        for image in track['album']['images']:
+            if image['height'] > image_height:
+                image_url = image['url']
+                image_height = image['height']
 
         # create dict of metadata
         metadata = {
@@ -87,12 +89,12 @@ class Spotify(Endpoints, Search, CheckMatches):
             'album': track['album']['name'],
             'track': int(track['track_number']),
             "genre": genre,
-            'year': re.sub('[^0-9]', '', str(track['album']['release_date']))[:4],
+            'year': int(re.sub('\D', '', str(track['album']['release_date']))[:4]),
             'bpm': track.get("audio_features", {}).get('tempo'),
             'key': key,
             'disc': track['disc_number'],
             'image': image_url,
-            'image_height': max_height,
+            'image_height': image_height,
             'length': track['duration_ms'] / 1000,
             'uri': track['uri'],
         }
@@ -117,19 +119,17 @@ class Spotify(Endpoints, Search, CheckMatches):
         if "audio_analysis" in track:  # add analysis
             metadata["audio_analysis"] = track["audio_analysis"]
             del track["audio_analysis"]
+
         if "playlist_url" in track:  # add playlist_url
             metadata['playlist_url'] = track['playlist_url']
+
         if add_extra:  # add extra data provided
             if 'uri' in add_extra:
                 del add_extra['uri']
             metadata.update(add_extra)
+
         if add_raw:  # add back raw data
             metadata["raw_data"] = track
-
-        try:  # make year value int
-            metadata['year'] = int(metadata['year'])
-        except ValueError:
-            pass
 
         return metadata
 

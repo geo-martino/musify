@@ -82,13 +82,13 @@ class Endpoints:
                 sleep(i)
                 i *= 2
             else:
-                raise Exception("Max retries exceeded")
+                raise ConnectionError("Max retries exceeded")
 
         try:
             r = r.json()
-            
         except json.decoder.JSONDecodeError:
             self._logger.error(f"Endpoint: {url} | Code: {r.status_code} | Response: {r.text}")
+
         return r
 
     #############################################################
@@ -179,6 +179,9 @@ class Endpoints:
         for i in item_bar:
             # format to comma-separated list of ids and get results
             params = {'ids': ','.join([i for i in id_list[limit * i: limit * (i + 1)]])}
+            if not params['ids']:
+                continue
+            
             self._logger.debug(f"Endpoint: {url:<34} | Page:{i+1:>4} | Params: {params}")
             raw_data = self.handle_request("get", url, params=params)[kind]
             if kind == "tracks":

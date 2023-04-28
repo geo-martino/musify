@@ -153,7 +153,7 @@ class Playlists(MusicBee):
             for stem in stems:
                 if path.lower() == stem.lower():
                     return stem
-            raise Exception(f"Stem not found: {path}")
+            raise FileNotFoundError(f"Stem not found: {path}")
         
         return path
     

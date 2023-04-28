@@ -487,7 +487,10 @@ class MusicBee(LocalIO):
             path = urllib.parse.unquote(track['Location'].replace("file://localhost/", ""))
             path = normpath(path)
             if path not in tracks:
-                path = self._get_case_sensitive_path(path)
+                try:
+                    path = self._get_case_sensitive_path(path)
+                except FileNotFoundError:
+                    continue
             
             if path is None or path not in tracks:
                 continue

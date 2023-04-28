@@ -6,11 +6,11 @@
 @REM adb shell "mkdir -p /storage/E42C-0EA8/Music/___Playlists"
 @REM adb pull "/storage/E42C-0EA8/Music/___Playlists" D:\Music
 
-py "D:\Coding\syncify\main.py" -cfg main
-py "D:\Coding\syncify\main.py" -cfg update_tags
+"D:\Coding\syncify\.venv\Scripts\python.exe" "D:\Coding\syncify\main.py" -cfg main
+"D:\Coding\syncify\.venv\Scripts\python.exe" "D:\Coding\syncify\main.py" -cfg update_tags
 echo Metadata sync complete. Update playlists now, then press any key to sync playlists with Spotify
 pause
-py "D:\Coding\syncify\main.py" -cfg update_spotify
+"D:\Coding\syncify\.venv\Scripts\python.exe" "D:\Coding\syncify\main.py" -cfg update_spotify
 
 @REM adb shell "rm -rf /storage/E42C-0EA8/Music/___Playlists"
 @REM adb push D:\Music\___Playlists "/storage/E42C-0EA8/Music"

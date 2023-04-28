@@ -136,7 +136,7 @@ class ApiAuthoriser:
             valid = self.test_token()
             if not valid:
                 self._logger.critical(json.dumps(self.format_token(), indent=2))
-                raise Exception("Token is still not valid.")
+                raise RuntimeError("Token is still not valid.")
 
         self._logger.debug("Access token is valid. Saving...")
         self.save_token()

@@ -106,7 +106,7 @@ class LocalIO(Process):
         elif path.lower() in self._all_files_lower:
             return self._all_files[self._all_files_lower.index(path.lower())]
         else:
-            raise Exception(f"Path not found in library: {path}")
+            raise FileNotFoundError(f"Path not found in library: {path}")
 
     #############################################################
     ## Inidividual track functions
@@ -192,6 +192,8 @@ class LocalIO(Process):
                                 metadata[tag_name].append(raw_data[tag].data)
                             elif tag_name == "year" and hasattr(raw_data[tag], "year"):
                                 metadata[tag_name].append(raw_data[tag].year)
+                            elif tag_name == "genre":
+                                metadata[tag_name].extend(raw_data[tag][0].split(";"))
                             else:
                                 metadata[tag_name].append(raw_data[tag][0])
 
@@ -210,9 +212,14 @@ class LocalIO(Process):
                     elif tag_name == "key":
                         metadata[tag_name] = raw_data.get(tag_id, [b''])[0][:].decode("utf-8")
                 elif ext == ".wma":
-                    metadata[tag_name] = raw_data.get(
-                        tag_id, [mutagen.asf.ASFUnicodeAttribute(None)]
-                    )[0].value
+                    if tag_name == "genre":
+                        metadata[tag_name] = [t.value for t in raw_data.get(tag_id, [mutagen.asf.ASFUnicodeAttribute(None)])]
+                    else:
+                        metadata[tag_name] = raw_data.get(
+                            tag_id, [mutagen.asf.ASFUnicodeAttribute(None)]
+                        )[0].value
+                elif tag_name == "genre":
+                    metadata[tag_name] = raw_data.get(tag_id, None)
                 else:
                     metadata[tag_name] = raw_data.get(tag_id, [None])[0]
 
@@ -224,7 +231,7 @@ class LocalIO(Process):
                 if isinstance(metadata[tag_name], list):  # remove lists
                     if len(metadata[tag_name]) == 0:  # no tags left
                         metadata[tag_name] = None
-                    else:  # only keep first tag
+                    elif tag_name != "genre":  # only keep first tag
                         metadata[tag_name] = metadata[tag_name][0]
 
                 if metadata[tag_name] is not None:  # type based conversion

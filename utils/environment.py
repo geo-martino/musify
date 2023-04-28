@@ -165,7 +165,7 @@ class Environment:
                 config = yaml.full_load(f)
             return config
         else:
-            raise Exception(f"Config path invalid: {config_path}")
+            raise FileNotFoundError(f"Config path invalid: {config_path}")
 
     def get_kwargs(self):
         function_kwargs = {}
@@ -290,19 +290,19 @@ class Environment:
                 except (ValueError, SyntaxError):
                     cfg_processed["kwargs"][k] = v
         elif func_name not in self._functions and func_name != 'general':
-            raise Exception(f"Function name '{func_name}' not recognised")
+            raise NotImplementedError(f"Function name '{func_name}' not recognised")
         cfg_processed.pop("args")
         return cfg_processed
 
     def _verify(self, cfg_processed: dict, func_name: str) -> None:
         mandatory_api_keys = ['client_id', 'client_secret']
         if any(m not in cfg_processed["_spotify_api"] for m in mandatory_api_keys):
-            raise Exception(f"{func_name} | You must define {mandatory_api_keys} in the 'spotify_api' key")
+            raise RuntimeError(f"{func_name} | You must define {mandatory_api_keys} in the 'spotify_api' key")
         elif cfg_processed["music_path"] is None:
             key = self._platform_map[sys.platform].replace('_path', '')
-            raise Exception(f"{func_name} | You must define a '{key}' path in the 'paths' key for this OS")
+            raise RuntimeError(f"{func_name} | You must define a '{key}' path in the 'paths' key for this OS")
         elif 'playlists_path' not in cfg_processed:
-            raise Exception(f"{func_name} | You must define a 'playlists' path in the 'paths' key")
+            raise RuntimeError(f"{func_name} | You must define a 'playlists' path in the 'paths' key")
 
     def parse_from_bash(self):
         parser = self.get_parser()

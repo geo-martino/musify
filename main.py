@@ -547,6 +547,11 @@ if __name__ == "__main__":
 
 # TODO: track audio recognition when searching using Shazam like service?
 # TODO: Automatically add songs added to each Spotify playlist to '2get'?
-#       Then somehow update local library playlists after...
-#       Maybe add a final step that syncs Spotify back to library if 
-#       uris for extra songs in Spotify playlists found in library
+#  Then somehow update local library playlists after...
+#  Maybe add a final step that syncs Spotify back to library if
+#  uris for extra songs in Spotify playlists found in library
+# TODO: cache responses from API calls to improve speed and reduce API load
+#  pip install requests-cache
+#  replace 'requests' with 'requests_cache.CachedSession()' object
+# TODO: function to open search website tabs for all songs in 2get playlist
+#  on common music stores/torrent sites

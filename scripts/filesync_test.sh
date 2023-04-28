@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # adb shell "find /storage/E42C-0EA8/Music/ -mindepth 1 \
-#     -iname '*.flac' -print0 -o -iname '*.mp3' -print0 \
-#     -iname '*.m4a' -print0  -iname '*.wma' -print0 | \
+#     -iname '*.flac' -print0 -o -iname '*.mp3' -print0 -o \
+#     -iname '*.m4a' -print0 -o -iname '*.wma' -print0 | \
 #     xargs -n1 -0 stat --format='%Y %n' | \
 #     sed 's|/storage/E42C-0EA8/Music/||'" | \
 #     sed -r -e "s|/mnt/d/Music/||" -e "s|.mp3$||" -e "s|.flac$||" -e "s|.m4a$||" -e "s|.wma$||"

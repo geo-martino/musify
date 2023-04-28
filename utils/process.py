@@ -1,14 +1,13 @@
+import json
 import os
 import re
 import sys
-from io import BytesIO
 from datetime import datetime as dt
+from io import BytesIO
 from os.path import basename, dirname, exists, join, split, splitext
+from time import sleep
 from urllib.error import URLError
 from urllib.request import urlopen
-
-import json
-from time import sleep
 
 import mutagen
 from PIL import Image
@@ -137,11 +136,9 @@ class Process():
                             continue
 
                     # delete tags if there are multiple possible tag_ids for this tag
-                    for tag in list(file_raw.tags).copy():
-                        if any(t in tag for t in tag_ids):
+                    for tag in set(t if isinstance(t, str) else t[0] for t in file_raw.tags).copy():
+                        if any(t.lower() in tag.lower() for t in tag_ids):
                             modified = True
-                            if not isinstance(tag, str):
-                                tag = tag[0]
                             del file_raw[tag]
                             self._logger.debug(f"{track['path']} | Deleted tag from file: {tag} for {tag_name}")
 
@@ -155,21 +152,32 @@ class Process():
                             track["has_image"] = modified
                             modified = modified or mod_image
                         elif ext == ".flac":
-                            file_raw[tag_id] = str(new_value)
+                            if tag_name == "genre":
+                                file_raw[tag_id] = [str(v) for v in new_value]
+                            else:
+                                file_raw[tag_id] = str(new_value)
                             modified = True
                         elif ext == ".mp3":
-                            file_raw[tag_id] = getattr(mutagen.id3, tag_id)(3, text=str(new_value))
+                            if tag_name == "genre":
+                                file_raw[tag_id] = getattr(mutagen.id3, tag_id)(3, text=";".join(new_value))
+                            else:
+                                file_raw[tag_id] = getattr(mutagen.id3, tag_id)(3, text=str(new_value))
                             modified = True
                         elif ext == ".m4a":
                             if tag_name == "key":
                                 file_raw[tag_id] = mutagen.mp4.MP4FreeForm(new_value.encode("utf-8"), 1)
                             elif tag_name == 'bpm':
                                 file_raw[tag_id] = [int(new_value)]
+                            elif tag_name == 'genre':
+                                file_raw[tag_id] = [str(v) for v in new_value]
                             else:
                                 file_raw[tag_id] = [str(new_value)]
                             modified = True
                         elif ext == ".wma":
-                            file_raw[tag_id] = mutagen.asf.ASFUnicodeAttribute(str(new_value))
+                            if tag_name == 'genre':
+                                file_raw[tag_id] = [mutagen.asf.ASFUnicodeAttribute(str(v)) for v in new_value]
+                            else:
+                                file_raw[tag_id] = mutagen.asf.ASFUnicodeAttribute(str(new_value))
                             modified = True
                         
                         if modified:
