@@ -351,7 +351,6 @@ class MusicBee(LocalIO):
         
         return tracks
         
-        
     def get_tracks_from_autoplaylist(self, tracks: dict, playlist_path: str) -> list:
         """
         Get metadata on all tracks found in xautopf playlists

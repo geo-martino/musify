@@ -2,24 +2,26 @@ import logging
 import os
 import re
 import sys
-from datetime import datetime as dt
+from datetime import datetime
 from os.path import join, dirname, exists
+from typing import Literal, Optional
 
-class logStdOutFilter(logging.Filter):
-    def __init__(self, levels: list = None):
+
+class LogStdOutFilter(logging.Filter):
+    def __init__(self, levels: list[int] = None):
         """
         :param levels: str, default=None. Accepted log levels to return i.e. 'info', 'debug'
             If None, set to current log level.
         """
-
-        self.levels = levels if levels else [self.__level]
+        super().__init__()
+        self.levels = levels
 
     def filter(self, record: logging.LogRecord) -> logging.LogRecord:
         if record.levelno in self.levels:
             return record
 
 
-class logFileFilter(logging.Filter):
+class LogFileFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> logging.LogRecord:
         record.msg = re.sub("\n$", "", record.msg)
         record.msg = re.sub("\33.*?m", "", record.msg)
@@ -27,17 +29,34 @@ class logFileFilter(logging.Filter):
 
         return record
 
+
 class Logger:
 
+    _log_folder: str = None
+    _verbose: int = 0
+
     def __init__(self):
-        self._log_path = None
-        self._log_file = None
+        self._log_filename = ".".join((self.__class__.__module__, self.__class__.__qualname__))
+        self._log_path = join(self._log_folder, f"{self._log_filename}.log")
+
         self._logger = None
+        self._set_logger()
+
+    @classmethod
+    def set_log_path(cls, folder: Optional[str], run_name: Optional[str], run_dt: datetime = datetime.now()):
+        if folder is None:
+            folder = join(dirname(dirname(__file__)), "_log")
+        if run_name is None:
+            run_name = "unknown"
+
+        cls.log_folder = join(folder, run_name, run_dt.strftime("%Y-%m-%d_%H.%M.%S"))
+
+    @classmethod
+    def set_verbosity(cls, verbose: int):
+        cls._verbose = verbose
 
     def _handle_exception(self, exc_type, exc_value, exc_traceback) -> None:
-        """
-        Custom exception handler. Handles exceptions through logger.
-        """
+        """Custom exception handler. Handles exceptions through logger."""
         if issubclass(exc_type, KeyboardInterrupt):
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
             return
@@ -46,25 +65,19 @@ class Logger:
             "CRITICAL ERROR: Uncaught Exception", exc_info=(
                 exc_type, exc_value, exc_traceback))
 
-    def _get_logger(self) -> logging.Logger:
-        """
-        Return logger object formatted for stdout and file handlers.
-
-        :return logging.Logger. Logger object
-        """
+    def _set_logger(self) -> None:
+        """Set logger object formatted for stdout and file handlers."""
         # set log file path
-        self._log_path = join(dirname(dirname(__file__)), "_log")
-        self._log_file = join(self._log_path, f"{self._output_name}.log")
-        if not exists(self._log_path):  # if log folder doesn't exist
-            os.makedirs(self._log_path)  # create log folder
+        if not exists(self._log_folder):  # if log folder doesn't exist
+            os.makedirs(self._log_folder)  # create log folder
 
-        levels = [logging.INFO, logging.WARNING]
+        levels: list[Literal] = [logging.INFO, logging.WARNING]
         if self._verbose < 2:
-            filter = logStdOutFilter(levels=levels)
+            log_filter = LogStdOutFilter(levels=levels)
         elif self._verbose == 2:
-            filter = logStdOutFilter(levels=levels + [logging.DEBUG])
+            log_filter = LogStdOutFilter(levels=levels + [logging.DEBUG])
         else:
-            filter = logFileFilter()
+            log_filter = LogFileFilter()
 
         # logging formats
         stdout_format = logging.Formatter(
@@ -79,29 +92,27 @@ class Logger:
             stdout_format = file_format
         
         # get logger and clear default handlers
-        logger = logging.getLogger(__name__)
-        logger.setLevel(logging.DEBUG)
-        for h in logger.handlers:
-            logger.removeHandler(h)
+        self._logger = logging.getLogger(self._log_filename)
+        self._logger.setLevel(logging.DEBUG)
+        for h in self._logger.handlers:
+            self._logger.removeHandler(h)
 
         # handler for stdout
         stdout_h = logging.StreamHandler(stream=sys.stdout)
         stdout_h.setLevel(logging.INFO if self._verbose < 2 else logging.DEBUG)
         stdout_h.setFormatter(stdout_format)
-        stdout_h.addFilter(filter)
-        logger.addHandler(stdout_h)
+        stdout_h.addFilter(log_filter)
+        self._logger.addHandler(stdout_h)
 
         # handler for file output
-        file_h = logging.FileHandler(self._log_file, 'w', encoding='utf-8')
+        file_h = logging.FileHandler(self._log_path, 'w', encoding='utf-8')
         file_h.setLevel(logging.DEBUG)
         file_h.setFormatter(file_format)
-        file_h.addFilter(logFileFilter())
-        logger.addHandler(file_h)
+        file_h.addFilter(LogFileFilter())
+        self._logger.addHandler(file_h)
 
         # return exceptions to logger
         sys.excepthook = self._handle_exception
-
-        self._logger = logger
 
     def _close_handlers(self):
         handlers = self._logger.handlers[:]
