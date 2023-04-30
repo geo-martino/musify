@@ -5,8 +5,7 @@ from typing import List, Optional, Union
 from urllib.error import URLError
 from urllib.request import urlopen
 
-from helpers import TagEnums
-from helpers import TrackBase
+from syncify.local.files.tags.helpers import TagEnums, TrackBase
 from syncify.utils.helpers import make_list
 
 
@@ -45,22 +44,22 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
 
         if TagEnums.TITLE in tags:
             conditionals = [file.title is None, replace and self.title != file.title]
-            if any(conditionals) and self.update_title(dry_run):
+            if any(conditionals) and self._update_title(dry_run):
                 updated.append(TagEnums.TITLE)
                     
         if TagEnums.ARTIST in tags:
             conditionals = [file.artist is None, replace and self.artist != file.artist]
-            if any(conditionals) and self.update_artist(dry_run):
+            if any(conditionals) and self._update_artist(dry_run):
                 updated.append(TagEnums.ARTIST)
 
         if TagEnums.ALBUM in tags:
             conditionals = [file.album is None, replace and self.album != file.album]
-            if any(conditionals) and self.update_album(dry_run):
+            if any(conditionals) and self._update_album(dry_run):
                 updated.append(TagEnums.ALBUM)
 
         if TagEnums.ALBUM_ARTIST in tags:
             conditionals = [file.album_artist is None, replace and self.album_artist != file.album_artist]
-            if any(conditionals) and self.update_album_artist(dry_run):
+            if any(conditionals) and self._update_album_artist(dry_run):
                 updated.append(TagEnums.ALBUM_ARTIST)
 
         if TagEnums.TRACK in tags:
@@ -68,17 +67,17 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
                 file.track_number is None and file.track_total is None,
                 replace and (self.track_number != file.track_number or self.track_total != file.track_total)
             ]
-            if any(conditionals) and self.update_track(dry_run):
+            if any(conditionals) and self._update_track(dry_run):
                 updated.append(TagEnums.TRACK)
 
         if TagEnums.GENRES in tags:
             conditionals = [file.genres is None, replace and self.genres != file.genres]
-            if any(conditionals) and self.update_genres(dry_run):
+            if any(conditionals) and self._update_genres(dry_run):
                 updated.append(TagEnums.GENRES)
 
         if TagEnums.YEAR in tags:
             conditionals = [file.year is None, replace and self.year != file.year]
-            if any(conditionals) and self.update_year(dry_run):
+            if any(conditionals) and self._update_year(dry_run):
                 updated.append(TagEnums.YEAR)
 
         if TagEnums.BPM in tags:
@@ -87,12 +86,12 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
                 int(getattr(file, "bpm", 0)) < 30,
                 replace and int(getattr(self, "bpm", 0)) != int(getattr(file, "bpm", 0))
             ]
-            if any(conditionals) and self.update_bpm(dry_run):
+            if any(conditionals) and self._update_bpm(dry_run):
                 updated.append(TagEnums.BPM)
 
         if TagEnums.KEY in tags:
             conditionals = [file.key is None, replace and self.key != file.key]
-            if any(conditionals) and self.update_key(dry_run):
+            if any(conditionals) and self._update_key(dry_run):
                 updated.append(TagEnums.KEY)
 
         if TagEnums.DISC in tags:
@@ -100,27 +99,27 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
                 file.disc_number is None and file.disc_number is None,
                 replace and (self.disc_number != file.disc_number or self.disc_total != file.disc_total)
             ]
-            if any(conditionals) and self.update_disc(dry_run):
+            if any(conditionals) and self._update_disc(dry_run):
                 updated.append(TagEnums.DISC)
 
         if TagEnums.COMPILATION in tags:
             conditionals = [file.compilation is None, replace and self.compilation != file.compilation]
-            if any(conditionals) and self.update_compilation(dry_run):
+            if any(conditionals) and self._update_compilation(dry_run):
                 updated.append(TagEnums.COMPILATION)
 
         if TagEnums.IMAGE in tags:  # needs deeper comparison
             conditionals = [file.has_image is None, replace and self.has_image != file.has_image]
-            if any(conditionals) and self.update_images(dry_run):
+            if any(conditionals) and self._update_images(dry_run):
                 updated.append(TagEnums.IMAGE)
 
         if TagEnums.COMMENTS in tags:
             conditionals = [file.comments is None, replace and self.comments != file.comments]
-            if any(conditionals) and self.update_comments(dry_run):
+            if any(conditionals) and self._update_comments(dry_run):
                 updated.append(TagEnums.COMMENTS)
 
         if TagEnums.URI in tags:  # needs deeper comparison
             conditionals = [file.uri is None, self.has_uri is False, replace and self.uri != file.uri]
-            if any(conditionals) and self.update_uri(dry_run):
+            if any(conditionals) and self._update_uri(dry_run):
                 updated.append(TagEnums.URI)
         
         return updated
@@ -136,7 +135,7 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
         :returns: True if the file was updated or would have been if dry_run is True, False otherwise.
         """
     
-    def update_title(self, dry_run: bool = True) -> bool:
+    def _update_title(self, dry_run: bool = True) -> bool:
         """
         Update metadata in file for track title
         
@@ -145,7 +144,7 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
         """
         return self._update_tag_value(next(iter(self.tag_map.title), None), self.title, dry_run)
 
-    def update_artist(self, dry_run: bool = True) -> bool:
+    def _update_artist(self, dry_run: bool = True) -> bool:
         """
         Update metadata in file for artist
         
@@ -154,7 +153,7 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
         """
         return self._update_tag_value(next(iter(self.tag_map.artist), None), self.artist, dry_run)
 
-    def update_album(self, dry_run: bool = True) -> bool:
+    def _update_album(self, dry_run: bool = True) -> bool:
         """
         Update metadata in file for album
         
@@ -163,7 +162,7 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
         """
         return self._update_tag_value(next(iter(self.tag_map.album), None), self.album, dry_run)
 
-    def update_album_artist(self, dry_run: bool = True) -> bool:
+    def _update_album_artist(self, dry_run: bool = True) -> bool:
         """
         Update metadata in file for album artist
         
@@ -172,7 +171,7 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
         """
         return self._update_tag_value(next(iter(self.tag_map.album_artist), None), self.album_artist, dry_run)
 
-    def update_track(self, dry_run: bool = True) -> bool:
+    def _update_track(self, dry_run: bool = True) -> bool:
         """
         Update metadata in file for track number
         
@@ -193,7 +192,7 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
 
         return self._update_tag_value(tag_id_number, tag_value, dry_run)
 
-    def update_genres(self, dry_run: bool = True) -> bool:
+    def _update_genres(self, dry_run: bool = True) -> bool:
         """
         Update metadata in file for genre
         
@@ -202,7 +201,7 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
         """
         return self._update_tag_value(next(iter(self.tag_map.genres), None), self.genres, dry_run)
 
-    def update_year(self, dry_run: bool = True) -> bool:
+    def _update_year(self, dry_run: bool = True) -> bool:
         """
         Update metadata in file for year
         
@@ -211,7 +210,7 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
         """
         return self._update_tag_value(next(iter(self.tag_map.year), None), self.year, dry_run)
 
-    def update_bpm(self, dry_run: bool = True) -> bool:
+    def _update_bpm(self, dry_run: bool = True) -> bool:
         """
         Update metadata in file for bpm
         
@@ -220,7 +219,7 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
         """
         return self._update_tag_value(next(iter(self.tag_map.bpm), None), self.bpm, dry_run)
 
-    def update_key(self, dry_run: bool = True) -> bool:
+    def _update_key(self, dry_run: bool = True) -> bool:
         """
         Update metadata in file for key
         
@@ -229,7 +228,7 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
         """
         return self._update_tag_value(next(iter(self.tag_map.key), None), self.key, dry_run)
 
-    def update_disc(self, dry_run: bool = True) -> bool:
+    def _update_disc(self, dry_run: bool = True) -> bool:
         """
         Update metadata in file for disc number
         
@@ -250,7 +249,7 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
 
         return self._update_tag_value(tag_id_number, tag_value, dry_run)
 
-    def update_compilation(self, dry_run: bool = True) -> bool:
+    def _update_compilation(self, dry_run: bool = True) -> bool:
         """
         Update metadata in file for compilation
         
@@ -260,7 +259,7 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
         return self._update_tag_value(next(iter(self.tag_map.compilation), None), self.compilation, dry_run)
 
     @abstractmethod
-    def update_images(self, dry_run: bool = True) -> bool:
+    def _update_images(self, dry_run: bool = True) -> bool:
         """
         Update image in file
         
@@ -268,7 +267,7 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
         :returns: True if the file was updated or would have been if dry_run is True, False otherwise.
         """
 
-    def update_comments(self, dry_run: bool = True) -> bool:
+    def _update_comments(self, dry_run: bool = True) -> bool:
         """
         Update metadata in file for comment
         
@@ -277,7 +276,7 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
         """
         return self._update_tag_value(next(iter(self.tag_map.comments), None), self.comments, dry_run)
 
-    def update_uri(self, dry_run: bool = True) -> bool:
+    def _update_uri(self, dry_run: bool = True) -> bool:
         """
         Update metadata in file for URI
         

@@ -4,13 +4,13 @@ from abc import ABC
 from datetime import datetime
 from glob import glob
 from os.path import join, splitext, exists
-from typing import Optional, List, Union, Mapping
+from typing import Optional, List, Union, Mapping, MutableMapping
 
 import mutagen
 
-from tags.extract import TagExtractor
-from tags.helpers import Tags, Properties
-from tags.update import TagUpdater
+from syncify.local.files.tags.extract import TagExtractor
+from syncify.local.files.tags.helpers import Tags, Properties
+from syncify.local.files.tags.update import TagUpdater
 from syncify.utils.logger import Logger
 
 
@@ -155,7 +155,7 @@ class Track(ABC, TagExtractor, TagUpdater):
         """
         return {
             tag_name: getattr(self, tag_name, None)
-            for tag_name in list(Tags.__annotations__) + list(Properties.__annotations__)
+            for tag_name in ["position"] + list(Tags.__annotations__) + list(Properties.__annotations__)
         }
 
     def as_json(self) -> Mapping[str, object]:
@@ -176,7 +176,9 @@ class Track(ABC, TagExtractor, TagUpdater):
 
     def __repr__(self) -> str:
         result = f"{self.__class__.__name__}(\n{{}}\n)"
-        tags = self.as_dict()
+        tags: MutableMapping[str, object] = {"valid": self.valid}
+        tags.update(self.as_dict())
+
         max_width = max(len(tag_name) for tag_name in tags)
         tags_repr = []
         for tag_name, tag_value in tags.items():

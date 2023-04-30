@@ -1,11 +1,11 @@
 from typing import Optional, List, Union
 
-from tags.helpers import TagMap
-from _track import Track
-
 import mutagen
 import mutagen.mp3
 import mutagen.id3
+
+from syncify.local.files._track import Track
+from syncify.local.files.tags.helpers import TagMap
 
 
 class MP3(Track):
@@ -57,7 +57,7 @@ class MP3(Track):
 
         return values if len(values) > 0 else None
 
-    def extract_genres(self) -> Optional[List[str]]:
+    def _extract_genres(self) -> Optional[List[str]]:
         """Extract metadata from file for genre"""
         values = self._get_tag_values(self.tag_map.genres)
         if values is None:
@@ -65,7 +65,7 @@ class MP3(Track):
 
         return [genre for value in values for genre in value.split(";")]
 
-    def extract_images(self) -> Optional[List[bytes]]:
+    def _extract_images(self) -> Optional[List[bytes]]:
         values = self._get_tag_values(self.tag_map.images)
         return [value.data for value in values] if values is not None else None
 
@@ -74,11 +74,11 @@ class MP3(Track):
             self._file[tag_id] = getattr(mutagen.id3, tag_id)(3, text=str(tag_value))
         return tag_id is not None
 
-    def update_genres(self, dry_run: bool = True) -> bool:
+    def _update_genres(self, dry_run: bool = True) -> bool:
         values = ";".join(self.genres)
         return self._update_tag_value(next(iter(self.tag_map.genres), None), values, dry_run)
 
-    def update_images(self, dry_run: bool = True) -> bool:
+    def _update_images(self, dry_run: bool = True) -> bool:
         tag_id = next(iter(self.tag_map.key), None)
 
         image_type, image_url = next(iter(self.image_urls.items()), (None, None))

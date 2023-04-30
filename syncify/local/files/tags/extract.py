@@ -7,7 +7,7 @@ from typing import Optional, List, Tuple
 
 from PIL import Image
 
-from helpers import TrackBase
+from syncify.local.files.tags.helpers import TrackBase
 from syncify.spotify.helpers import check_spotify_type, SpotifyType
 
 
@@ -16,23 +16,23 @@ class TagExtractor(TrackBase, metaclass=ABCMeta):
     def _extract_metadata(self) -> None:
         """Driver for extracting metadata from a loaded file"""
 
-        self.title = self.extract_title()
-        self.artist = self.extract_artist()
-        self.album = self.extract_album()
-        self.album_artist = self.extract_album_artist()
-        self.track_number = self.extract_track_number()
-        self.track_total = self.extract_track_total()
-        self.genres = self.extract_genres()
-        self.year = self.extract_year()
-        self.bpm = self.extract_bpm()
-        self.key = self.extract_key()
-        self.disc_number = self.extract_disc_number()
-        self.disc_total = self.extract_disc_total()
-        self.compilation = self.extract_compilation()
-        self.has_image = self.extract_images() is not None
-        self.comments = self.extract_comments()
+        self.title = self._extract_title()
+        self.artist = self._extract_artist()
+        self.album = self._extract_album()
+        self.album_artist = self._extract_album_artist()
+        self.track_number = self._extract_track_number()
+        self.track_total = self._extract_track_total()
+        self.genres = self._extract_genres()
+        self.year = self._extract_year()
+        self.bpm = self._extract_bpm()
+        self.key = self._extract_key()
+        self.disc_number = self._extract_disc_number()
+        self.disc_total = self._extract_disc_total()
+        self.compilation = self._extract_compilation()
+        self.has_image = self._extract_images() is not None
+        self.comments = self._extract_comments()
 
-        self.uri, self.has_uri, remaining_values = self.extract_uri()
+        self.uri, self.has_uri, remaining_values = self._extract_uri()
         setattr(self, self.uri_tag.name.lower(), remaining_values)
 
         self.folder = basename(dirname(self.path))
@@ -55,27 +55,27 @@ class TagExtractor(TrackBase, metaclass=ABCMeta):
 
         return values if len(values) > 0 else None
 
-    def extract_title(self) -> Optional[str]:
+    def _extract_title(self) -> Optional[str]:
         """Extract metadata from file for track title"""
         values = self._get_tag_values(self.tag_map.title)
         return str(values[0]) if values is not None else None
 
-    def extract_artist(self) -> Optional[str]:
+    def _extract_artist(self) -> Optional[str]:
         """Extract metadata from file for artist"""
         values = self._get_tag_values(self.tag_map.artist)
         return str(values[0]) if values is not None else None
 
-    def extract_album(self) -> Optional[str]:
+    def _extract_album(self) -> Optional[str]:
         """Extract metadata from file for album"""
         values = self._get_tag_values(self.tag_map.album)
         return str(values[0]) if values is not None else None
 
-    def extract_album_artist(self) -> Optional[str]:
+    def _extract_album_artist(self) -> Optional[str]:
         """Extract metadata from file for album artist"""
         values = self._get_tag_values(self.tag_map.album_artist)
         return str(values[0]) if values is not None else None
 
-    def extract_track_number(self) -> Optional[int]:
+    def _extract_track_number(self) -> Optional[int]:
         """Extract metadata from file for track number"""
         values = self._get_tag_values(self.tag_map.track_number)
         if values is None:
@@ -84,7 +84,7 @@ class TagExtractor(TrackBase, metaclass=ABCMeta):
         value = str(values[0])
         return int(value.split(self._num_sep)[0]) if self._num_sep in value else int(value)
 
-    def extract_track_total(self) -> Optional[int]:
+    def _extract_track_total(self) -> Optional[int]:
         """Extract metadata from file for total track count"""
         values = self._get_tag_values(self.tag_map.track_total)
         if values is None:
@@ -93,12 +93,12 @@ class TagExtractor(TrackBase, metaclass=ABCMeta):
         value = str(values[0])
         return int(value.split(self._num_sep)[1]) if self._num_sep in value else int(value)
 
-    def extract_genres(self) -> Optional[List[str]]:
+    def _extract_genres(self) -> Optional[List[str]]:
         """Extract metadata from file for genre"""
         values = self._get_tag_values(self.tag_map.genres)
         return [str(value) for value in values] if values is not None else None
 
-    def extract_year(self) -> Optional[int]:
+    def _extract_year(self) -> Optional[int]:
         """Extract metadata from file for year"""
         values = self._get_tag_values(self.tag_map.year)
         if values is None:
@@ -110,17 +110,17 @@ class TagExtractor(TrackBase, metaclass=ABCMeta):
         except (ValueError, TypeError):
             return
 
-    def extract_bpm(self) -> Optional[float]:
+    def _extract_bpm(self) -> Optional[float]:
         """Extract metadata from file for bpm"""
         values = self._get_tag_values(self.tag_map.bpm)
         return float(values[0]) if values is not None else None
 
-    def extract_key(self) -> Optional[str]:
+    def _extract_key(self) -> Optional[str]:
         """Extract metadata from file for key"""
         values = self._get_tag_values(self.tag_map.key)
         return str(values[0]) if values is not None else None
 
-    def extract_disc_number(self) -> Optional[int]:
+    def _extract_disc_number(self) -> Optional[int]:
         """Extract metadata from file for disc number"""
         values = self._get_tag_values(self.tag_map.disc_number)
         if values is None:
@@ -129,7 +129,7 @@ class TagExtractor(TrackBase, metaclass=ABCMeta):
         value = str(values[0])
         return int(value.split(self._num_sep)[0]) if self._num_sep in value else int(value)
 
-    def extract_disc_total(self) -> Optional[int]:
+    def _extract_disc_total(self) -> Optional[int]:
         """Extract metadata from file for total disc count"""
         values = self._get_tag_values(self.tag_map.disc_total)
         if values is None:
@@ -138,22 +138,22 @@ class TagExtractor(TrackBase, metaclass=ABCMeta):
         value = str(values[0])
         return int(value.split(self._num_sep)[1]) if self._num_sep in value else int(value)
 
-    def extract_compilation(self) -> bool:
+    def _extract_compilation(self) -> bool:
         """Extract metadata from file for compilation"""
         values = self._get_tag_values(self.tag_map.compilation)
         return bool(values[0]) if values is not None else None
 
-    def extract_images(self) -> Optional[List[bytes]]:
+    def _extract_images(self) -> Optional[List[bytes]]:
         """Extract image from file"""
         values = self._get_tag_values(self.tag_map.images)
         return [bytes(value) for value in values] if values is not None else None
 
-    def extract_comments(self) -> Optional[List[str]]:
+    def _extract_comments(self) -> Optional[List[str]]:
         """Extract metadata from file for comment"""
         values = self._get_tag_values(self.tag_map.comments)
         return list(set(str(value) for value in values)) if values is not None else None
 
-    def extract_uri(self) -> Tuple[Optional[str], bool, Optional[List[str]]]:
+    def _extract_uri(self) -> Tuple[Optional[str], bool, Optional[List[str]]]:
         """
         Extract metadata relating to Spotify URI from current object metadata
 
@@ -185,7 +185,7 @@ class TagExtractor(TrackBase, metaclass=ABCMeta):
 
         :returns: Number of images extracted.
         """
-        images = self.extract_images()
+        images = self._extract_images()
         if images is None:
             return False
         count = 0

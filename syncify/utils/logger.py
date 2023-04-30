@@ -37,6 +37,9 @@ class Logger:
     _is_dev: bool = False
 
     def __init__(self):
+        if self._log_folder is None:
+            self.set_dev()
+
         self._log_filename = ".".join((self.__class__.__module__, self.__class__.__qualname__))
         self._log_path = join(self._log_folder, f"{self._log_filename}.log")
 

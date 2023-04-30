@@ -1,20 +1,15 @@
-import importlib
-import inspect
-import sys
-from os import listdir
-from os.path import splitext, dirname, basename
-from types import ModuleType
-from typing import Optional, List
+from os.path import splitext
+from typing import Optional
 
-from _track import Track
-from flac import FLAC
-from m4a import M4A
-from mp3 import MP3
-from wma import WMA
+from syncify.local.files.flac import FLAC
+from syncify.local.files.m4a import M4A
+from syncify.local.files.mp3 import MP3
+from syncify.local.files.wma import WMA
 
 
 def load_track(path: str, position: Optional[int] = None):
     ext = splitext(path)[1].lower()
+    track_classes = [FLAC, MP3, M4A, WMA]
 
     if ext in FLAC.filetypes:
         return FLAC(file=path, position=position)
@@ -25,30 +20,12 @@ def load_track(path: str, position: Optional[int] = None):
     elif ext in WMA.filetypes:
         return WMA(file=path, position=position)
     else:
+        all_filetypes = [filetype for c in track_classes for filetype in c.filetypes]
         raise NotImplementedError(
             f"{ext} not an accepted extension. "
-            f"Use only: {', '.join(filetypes)}"
+            f"Use only: {', '.join(all_filetypes)}"
         )
 
-
-filetype_scripts: List[str] = [
-    splitext(f)[0]
-    for f in listdir(dirname(__file__))
-    if f.endswith("py") and f != basename(Track.__name__) and not f.startswith("_")
-]
-
-filetype_modules: List[ModuleType] = [
-    importlib.import_module(script) if script not in sys.modules else importlib.reload(sys.modules[script])
-    for script in filetype_scripts
-]
-
-filetypes: List[str] = [
-    filetype
-    for module in filetype_modules
-    for class_, obj in inspect.getmembers(module, inspect.isclass)
-    if issubclass(obj.__class__, Track.__class__) and class_ != Track.__name__
-    for filetype in obj.filetypes
-]
 
 if __name__ == "__main__":
     from syncify.utils.logger import Logger
@@ -67,7 +44,6 @@ if __name__ == "__main__":
 
     wma = load_track(f"{music_folder}/noise.wma")
     print(repr(wma))
-
 
     music_folder = "/mnt/d/Music"
 

@@ -1,10 +1,10 @@
 from typing import Optional, List, Union
 
-from tags.helpers import TagMap
-from _track import Track
-
 import mutagen
 import mutagen.asf
+
+from syncify.local.files._track import Track
+from syncify.local.files.tags.helpers import TagMap
 
 
 class WMA(Track):
@@ -53,7 +53,7 @@ class WMA(Track):
                 self._file[tag_id] = mutagen.asf.ASFUnicodeAttribute(str(tag_value))
         return tag_id is not None
 
-    def update_images(self, dry_run: bool = True) -> bool:
+    def _update_images(self, dry_run: bool = True) -> bool:
         raise NotImplementedError("WMA Image embedding not currently supported")
 
         tag_id = next(iter(self.tag_map.key), None)

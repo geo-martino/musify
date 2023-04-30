@@ -5,8 +5,8 @@ import mutagen.flac
 import mutagen.flac
 from mutagen.id3 import PictureType
 
-from _track import Track
-from tags.helpers import TagMap
+from syncify.local.files._track import Track
+from syncify.local.files.tags.helpers import TagMap
 
 
 class FLAC(Track):
@@ -34,7 +34,7 @@ class FLAC(Track):
         Track.__init__(self, file=file, position=position)
         self._file: mutagen.flac.FLAC = self._file
 
-    def extract_images(self) -> Optional[List[bytes]]:
+    def _extract_images(self) -> Optional[List[bytes]]:
         images = self._file.pictures
         return [image.data for image in images] if len(images) > 0 else None
 
@@ -43,7 +43,7 @@ class FLAC(Track):
             self._file[tag_id] = str(tag_value)
         return tag_id is not None
 
-    def update_images(self, dry_run: bool = True) -> bool:
+    def _update_images(self, dry_run: bool = True) -> bool:
         # replace embedded images
         if not dry_run:
             self._file.clear_pictures()
