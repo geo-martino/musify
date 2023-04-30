@@ -1,7 +1,7 @@
 from typing import Optional, List, Union
 
-from local.files.tags.helpers import TagMap
-from local.files._track import Track
+from tags.helpers import TagMap
+from _track import Track
 
 import mutagen
 import mutagen.mp3
@@ -26,7 +26,7 @@ class MP3(Track):
         compilation=["TCMP"],
         album_artist=["TPE2"],
         comments=["COMM"],
-        image=["APIC"],
+        images=["APIC"],
     )
 
     def __init__(self, file: Union[str, mutagen.File], position: Optional[int] = None):
@@ -66,21 +66,33 @@ class MP3(Track):
         return [genre for value in values for genre in value.split(";")]
 
     def extract_images(self) -> Optional[List[bytes]]:
-        values = self._get_tag_values(self.tag_map.image)
+        values = self._get_tag_values(self.tag_map.images)
         return [value.data for value in values] if values is not None else None
 
+    def _update_tag_value(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
+        if not dry_run and tag_id is not None:
+            self._file[tag_id] = getattr(mutagen.id3, tag_id)(3, text=str(tag_value))
+        return tag_id is not None
 
-if __name__ == "__main__":
-    import json
-    from utils.logger import Logger
+    def update_genres(self, dry_run: bool = True) -> bool:
+        values = ";".join(self.genres)
+        return self._update_tag_value(next(iter(self.tag_map.genres), None), values, dry_run)
 
-    Logger.set_dev()
-    MP3.set_file_paths("/mnt/d/Music")
-    mp3 = MP3("/mnt/d/Music/Come From Away - OBC/01 - Welcome to the Rock.mp3")
+    def update_images(self, dry_run: bool = True) -> bool:
+        tag_id = next(iter(self.tag_map.key), None)
 
-    data = vars(mp3)
-    for k, v in data.copy().items():
-        if k in ["_logger", "_file", "date_modified"]:
-            del data[k]
+        image_type, image_url = next(iter(self.image_urls.items()), (None, None))
+        img = self._open_image_url(image_url)
+        if img is None:
+            return False
 
-    print(json.dumps(data, indent=2))
+        if not dry_run and tag_id is not None:
+            self._file[tag_id] = mutagen.id3.APIC(
+                mime='image/jpeg',
+                type=getattr(mutagen.id3.PictureType, image_type.upper(), mutagen.id3.PictureType.COVER_FRONT),
+                data=img.read()
+            )
+
+        img.close()
+        self.has_image = tag_id is not None or self.has_image
+        return tag_id is not None

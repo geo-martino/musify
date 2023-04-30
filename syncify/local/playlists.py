@@ -1,18 +1,10 @@
-from cmath import exp
-import json
 import os
 import re
-import shutil
-import sys
-from copy import deepcopy
 from glob import glob
-from os.path import (basename, dirname, exists, isdir, join, normpath, sep,
+from os.path import (basename, dirname, exists, join, normpath, sep,
                      splitext)
 
-from tqdm.auto import tqdm
-from utils.environment import jprint
-
-from local.musicbee import MusicBee
+from syncify.local.musicbee import MusicBee
 
 
 class Playlists(MusicBee):

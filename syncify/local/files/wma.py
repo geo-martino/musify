@@ -1,7 +1,7 @@
 from typing import Optional, List, Union
 
-from local.files.tags.helpers import TagMap
-from local.files._track import Track
+from tags.helpers import TagMap
+from _track import Track
 
 import mutagen
 import mutagen.asf
@@ -25,7 +25,7 @@ class WMA(Track):
         compilation=["COMPILATION"],
         album_artist=["WM/AlbumArtist"],
         comments=["Description"],
-        image=["WM/Picture"],
+        images=["WM/Picture"],
     )
 
     def __init__(self, file: Union[str, mutagen.File], position: Optional[int] = None):
@@ -45,18 +45,27 @@ class WMA(Track):
 
         return values if len(values) > 0 else None
 
+    def _update_tag_value(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
+        if not dry_run and tag_id is not None:
+            if isinstance(tag_value, list):
+                self._file[tag_id] = [mutagen.asf.ASFUnicodeAttribute(str(v)) for v in tag_value]
+            else:
+                self._file[tag_id] = mutagen.asf.ASFUnicodeAttribute(str(tag_value))
+        return tag_id is not None
 
-if __name__ == "__main__":
-    import json
-    from utils.logger import Logger
+    def update_images(self, dry_run: bool = True) -> bool:
+        raise NotImplementedError("WMA Image embedding not currently supported")
 
-    Logger.set_dev()
-    WMA.set_file_paths("/mnt/d/Music")
-    wma = WMA("/mnt/d/Music/Little Shop of Horrors - 2003 Broadway Revival Cast/1-01 - Prologue - Little Shop of Horrors.wma")
+        tag_id = next(iter(self.tag_map.key), None)
 
-    data = vars(wma)
-    for k, v in data.copy().items():
-        if k in ["_logger", "_file", "date_modified"]:
-            del data[k]
+        image_type, image_url = next(iter(self.image_urls.items()), (None, None))
+        img = self._open_image_url(image_url)
+        if img is None:
+            return False
 
-    print(json.dumps(data, indent=2))
+        if not dry_run and tag_id is not None:
+            file_raw[tag_id] = mutagen.asf.ASFByteArrayAttribute(data=img.read())
+
+        img.close()
+        self.has_image = tag_id is not None or self.has_image
+        return tag_id is not None

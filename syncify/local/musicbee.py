@@ -7,13 +7,13 @@ from datetime import timedelta
 from functools import reduce
 from glob import glob
 from operator import mul
-from os.path import basename, dirname, isdir, join, normpath, sep, splitext
+from os.path import basename, join, normpath, splitext
 from random import shuffle
 
 from dateutil.relativedelta import relativedelta
 from tqdm.auto import tqdm
 
-from local.library import LocalIO
+from syncify.local.library import LocalIO
 
 
 class Compare:

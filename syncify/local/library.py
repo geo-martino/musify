@@ -3,11 +3,11 @@ import re
 import sys
 from glob import glob
 from datetime import datetime as dt
-from os.path import basename, dirname, isdir, join, sep, splitext, getmtime, getsize
+from os.path import basename, dirname, isdir, join, splitext, getmtime, getsize
 
 import mutagen
 from tqdm.auto import tqdm
-from utils.process import Process
+from syncify.utils.process import Process
 
 
 class LocalIO(Process):

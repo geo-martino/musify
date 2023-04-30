@@ -2,9 +2,11 @@ from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Optional, List
+from typing import Optional, List, Mapping
 
 import mutagen
+
+from syncify.utils.logger import Logger
 
 
 @dataclass
@@ -22,30 +24,8 @@ class TagMap:
     disc_number: List[str]
     disc_total: List[str]
     compilation: List[str]
-    image: List[str]
+    images: List[str]
     comments: List[str]
-
-
-@dataclass
-class Tags:
-    title: Optional[str]
-    artist: Optional[str]
-    album: Optional[str]
-    album_artist: Optional[str]
-    track_number: Optional[int]
-    track_total: Optional[int]
-    genres: Optional[List[str]]
-    year: Optional[int]
-    bpm: Optional[float]
-    key: Optional[str]
-    disc_number: Optional[int]
-    disc_total: Optional[int]
-    compilation: bool
-    has_image: bool
-    comments: Optional[List[str]]
-
-    uri: Optional[str]
-    has_uri: bool
 
 
 class TagEnums(Enum):
@@ -66,6 +46,29 @@ class TagEnums(Enum):
 
 
 @dataclass
+class Tags:
+    title: Optional[str]
+    artist: Optional[str]
+    album: Optional[str]
+    album_artist: Optional[str]
+    track_number: Optional[int]
+    track_total: Optional[int]
+    genres: Optional[List[str]]
+    year: Optional[int]
+    bpm: Optional[float]
+    key: Optional[str]
+    disc_number: Optional[int]
+    disc_total: Optional[int]
+    compilation: bool
+    image_urls: Optional[Mapping[str, str]]
+    has_image: bool
+    comments: Optional[List[str]]
+
+    uri: Optional[str]
+    has_uri: bool
+
+
+@dataclass
 class Properties:
     # file properties
     path: Optional[str]
@@ -83,7 +86,9 @@ class Properties:
     rating: Optional[int]
 
 
-class TagBase(Tags, Properties, metaclass=ABCMeta):
+class TrackBase(Logger, Tags, Properties, metaclass=ABCMeta):
+
+    uri_tag = TagEnums.COMMENTS
 
     @property
     @abstractmethod
@@ -114,3 +119,11 @@ class TagBase(Tags, Properties, metaclass=ABCMeta):
     @abstractmethod
     def file(self) -> Optional[mutagen.File]:
         raise NotImplementedError
+
+    @abstractmethod
+    def load_file(self) -> Optional[mutagen.File]:
+        """
+        Load local file using mutagen and set object file path and extension properties.
+
+        :returns: Mutagen file object or None if load error.
+        """

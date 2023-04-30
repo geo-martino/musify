@@ -9,8 +9,8 @@ from os.path import basename, dirname, exists, join, normpath, splitext
 
 import yaml
 
-from local.library import LocalIO
-from spotify.search import Search
+from syncify.local.library import LocalIO
+from syncify.spotify.search import Search
 
 
 def jprint(data):

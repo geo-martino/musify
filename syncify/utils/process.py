@@ -104,7 +104,7 @@ class Process():
                             new_value = track["uri"]
                         tag_name = self._uri_tag
                     elif tag_name == "track":  # add leading 0
-                        new_value = f"0{track['track']}" if len(str(track['track'])) == 1 else track['track']
+                        new_value = str(track['track']).zfill(2)
                     else:
                         new_value = track[tag_name]
 

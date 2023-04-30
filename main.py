@@ -10,13 +10,13 @@ from time import perf_counter
 
 from dateutil.relativedelta import relativedelta
 
-from local.playlists import Playlists
-from spotify.spotify import Spotify
-from utils.authorise import ApiAuthoriser
-from utils.environment import Environment
-from utils.io import IO
-from utils.logger import Logger
-from utils.report import Report
+from syncify.local.playlists import Playlists
+from syncify.spotify.spotify import Spotify
+from syncify.utils.authorise import ApiAuthoriser
+from syncify.utils.environment import Environment
+from syncify.utils.io import IO
+from syncify.utils.logger import Logger
+from syncify.utils.report import Report
 
 
 class Syncify(Logger, ApiAuthoriser, IO, Report, Spotify, Playlists):

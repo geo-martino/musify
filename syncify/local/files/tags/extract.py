@@ -1,14 +1,17 @@
+import os
 import re
 from abc import ABCMeta
 from datetime import datetime
-from os.path import basename, dirname, getmtime, splitext, getsize
+from os.path import basename, dirname, getmtime, splitext, getsize, join, exists
 from typing import Optional, List, Tuple
 
-from local.files.tags.helpers import TagBase, TagEnums
-from spotify.utils import check_valid_spotify_type, SpotifyTypes
+from PIL import Image
+
+from helpers import TrackBase
+from syncify.spotify.helpers import check_spotify_type, SpotifyType
 
 
-class TagExtractor(TagBase, metaclass=ABCMeta):
+class TagExtractor(TrackBase, metaclass=ABCMeta):
 
     def _extract_metadata(self) -> None:
         """Driver for extracting metadata from a loaded file"""
@@ -28,7 +31,9 @@ class TagExtractor(TagBase, metaclass=ABCMeta):
         self.compilation = self.extract_compilation()
         self.has_image = self.extract_images() is not None
         self.comments = self.extract_comments()
-        self.uri, self.has_uri, self.comments = self.extract_uri(TagEnums.COMMENTS)
+
+        self.uri, self.has_uri, remaining_values = self.extract_uri()
+        setattr(self, self.uri_tag.name.lower(), remaining_values)
 
         self.folder = basename(dirname(self.path))
         self.filename = basename(self.path)
@@ -100,7 +105,8 @@ class TagExtractor(TagBase, metaclass=ABCMeta):
             return
 
         try:
-            return int(re.sub("\D+", "", str(values[0]))[:4])
+            year = int(re.sub("\D+", "", str(values[0]))[:4])
+            return year if year > 1000 else None
         except (ValueError, TypeError):
             return
 
@@ -139,7 +145,7 @@ class TagExtractor(TagBase, metaclass=ABCMeta):
 
     def extract_images(self) -> Optional[List[bytes]]:
         """Extract image from file"""
-        values = self._get_tag_values(self.tag_map.image)
+        values = self._get_tag_values(self.tag_map.images)
         return [bytes(value) for value in values] if values is not None else None
 
     def extract_comments(self) -> Optional[List[str]]:
@@ -147,28 +153,54 @@ class TagExtractor(TagBase, metaclass=ABCMeta):
         values = self._get_tag_values(self.tag_map.comments)
         return list(set(str(value) for value in values)) if values is not None else None
 
-    def extract_uri(self, tag_name: TagEnums) -> Tuple[str, bool, Optional[List[str]]]:
+    def extract_uri(self) -> Tuple[Optional[str], bool, Optional[List[str]]]:
         """
-        Set properties relating to Spotify URI
+        Extract metadata relating to Spotify URI from current object metadata
 
-        :param tag_name: name of the tag that contains possible values.
         :return: URI, if the track is available on remote server i.e. has_uri on remote server,
                 and remaining values from given tag name.
         """
         has_uri = False
         uri = None
-        possible_values: List[str] = getattr(self, tag_name.name.lower())
+        possible_values: Optional[List[str]] = getattr(self, self.uri_tag.name.lower())
+        if possible_values is None or len(possible_values) == 0:
+            return uri, has_uri, None
 
-        if possible_values is not None and len(possible_values) > 0:
-            for uri in possible_values:
-                if uri == self._unavailable_uri_value:
-                    possible_values.remove(uri)
-                    has_uri = False
-                    uri = None
-                    break
-                elif check_valid_spotify_type(uri, types=SpotifyTypes.URI):
-                    possible_values.remove(uri)
-                    has_uri = True
-                    break
+        for uri in possible_values:
+            if uri == self._unavailable_uri_value:
+                possible_values.remove(uri)
+                has_uri = False
+                uri = None
+                break
+            elif check_spotify_type(uri, types=SpotifyType.URI):
+                possible_values.remove(uri)
+                has_uri = True
+                break
 
         return uri, has_uri, possible_values if len(possible_values) > 0 else None
+
+    def save_images_to_file(self, output_folder: str) -> int:
+        """
+        Extract and save all embedded images from file
+
+        :returns: Number of images extracted.
+        """
+        images = self.extract_images()
+        if images is None:
+            return False
+        count = 0
+
+        for i, image_bytes in enumerate(images):
+            img = Image.open(image_bytes)
+            if img is None:
+                continue
+
+            img_ext = '.png' if 'png' in img.format.lower() else '.jpg'
+            output_path = join(output_folder, self.filename + f"_{str(i).zfill(2)}" + img_ext)
+            if not exists(dirname(output_path)):
+                os.makedirs(dirname(output_path))
+
+            img.save(output_path)
+            count += 1
+
+        return count
