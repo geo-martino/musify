@@ -4,11 +4,11 @@ import re
 import sys
 from datetime import datetime
 from os.path import join, dirname, exists
-from typing import Literal, Optional
+from typing import Literal, Optional, List
 
 
 class LogStdOutFilter(logging.Filter):
-    def __init__(self, levels: list[int] = None):
+    def __init__(self, levels: List[int] = None):
         """
         :param levels: str, default=None. Accepted log levels to return i.e. 'info', 'debug'
             If None, set to current log level.
@@ -34,6 +34,7 @@ class Logger:
 
     _log_folder: str = None
     _verbose: int = 0
+    _is_dev: bool = False
 
     def __init__(self):
         self._log_filename = ".".join((self.__class__.__module__, self.__class__.__qualname__))
@@ -43,17 +44,23 @@ class Logger:
         self._set_logger()
 
     @classmethod
-    def set_log_path(cls, folder: Optional[str], run_name: Optional[str], run_dt: datetime = datetime.now()):
+    def set_log_folder(
+            cls, folder: Optional[str], run_name: str = "unknown", run_dt: datetime = datetime.now()
+    ) -> None:
         if folder is None:
             folder = join(dirname(dirname(__file__)), "_log")
-        if run_name is None:
-            run_name = "unknown"
 
-        cls.log_folder = join(folder, run_name, run_dt.strftime("%Y-%m-%d_%H.%M.%S"))
+        cls._log_folder = join(folder, run_name, run_dt.strftime("%Y-%m-%d_%H.%M.%S"))
 
     @classmethod
-    def set_verbosity(cls, verbose: int):
+    def set_verbosity(cls, verbose: int) -> None:
         cls._verbose = verbose
+
+    @classmethod
+    def set_dev(cls) -> None:
+        cls.set_log_folder("___log_dev", "dev")
+        cls.set_verbosity(5)
+        cls._is_dev = True
 
     def _handle_exception(self, exc_type, exc_value, exc_traceback) -> None:
         """Custom exception handler. Handles exceptions through logger."""
@@ -68,10 +75,10 @@ class Logger:
     def _set_logger(self) -> None:
         """Set logger object formatted for stdout and file handlers."""
         # set log file path
-        if not exists(self._log_folder):  # if log folder doesn't exist
+        if not self._is_dev and not exists(self._log_folder):  # if log folder doesn't exist
             os.makedirs(self._log_folder)  # create log folder
 
-        levels: list[Literal] = [logging.INFO, logging.WARNING]
+        levels: List[Literal] = [logging.INFO, logging.WARNING]
         if self._verbose < 2:
             log_filter = LogStdOutFilter(levels=levels)
         elif self._verbose == 2:
@@ -105,11 +112,12 @@ class Logger:
         self._logger.addHandler(stdout_h)
 
         # handler for file output
-        file_h = logging.FileHandler(self._log_path, 'w', encoding='utf-8')
-        file_h.setLevel(logging.DEBUG)
-        file_h.setFormatter(file_format)
-        file_h.addFilter(LogFileFilter())
-        self._logger.addHandler(file_h)
+        if not self._is_dev:
+            file_h = logging.FileHandler(self._log_path, 'w', encoding='utf-8')
+            file_h.setLevel(logging.DEBUG)
+            file_h.setFormatter(file_format)
+            file_h.addFilter(LogFileFilter())
+            self._logger.addHandler(file_h)
 
         # return exceptions to logger
         sys.excepthook = self._handle_exception

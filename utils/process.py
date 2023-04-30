@@ -81,6 +81,7 @@ class Process():
                 modified = False
                 mod_image = False
                 updating_tags = []
+
                 # load file as mutagen object
                 file_raw, ext = self.load_file(track["path"], **kwargs)
                 if file_raw is None or file_raw == track["path"]:
