@@ -1,7 +1,7 @@
 from os.path import splitext
 from typing import Optional
 
-from syncify.local.files.tags.exception import IllegalFileTypeError
+from syncify.local.files.utils.exception import IllegalFileTypeError
 from syncify.local.files.flac import FLAC
 from syncify.local.files.m4a import M4A
 from syncify.local.files.mp3 import MP3

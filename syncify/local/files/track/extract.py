@@ -7,11 +7,11 @@ from typing import Optional, List, Tuple
 
 from PIL import Image
 
-from syncify.local.files.tags.helpers import TrackBase
+from syncify.local.files.track.processor import TagProcessor
 from syncify.spotify.helpers import check_spotify_type, SpotifyType, __UNAVAILABLE_URI_VALUE__
 
 
-class TagExtractor(TrackBase, metaclass=ABCMeta):
+class TagExtractor(TagProcessor, metaclass=ABCMeta):
 
     def _extract_metadata(self, position: Optional[int] = None) -> None:
         """

@@ -7,8 +7,9 @@ import mutagen.flac
 from PIL import Image
 from mutagen.id3 import PictureType
 
-from syncify.local.files._track import Track
-from syncify.local.files.tags.helpers import TagMap, TagEnums, open_image, get_image_bytes
+from syncify.local.files.track.track import Track
+from syncify.local.files.utils.tags import TagMap, TagEnums
+from syncify.local.files.utils.helpers import open_image, get_image_bytes
 
 
 class FLAC(Track):

@@ -5,8 +5,9 @@ import mutagen
 import mutagen.asf
 from PIL import Image
 
-from syncify.local.files._track import Track
-from syncify.local.files.tags.helpers import TagMap, open_image
+from syncify.local.files.track.track import Track
+from syncify.local.files.utils.tags import TagMap
+from syncify.local.files.utils.helpers import open_image, get_image_bytes
 
 
 class WMA(Track):

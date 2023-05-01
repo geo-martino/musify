@@ -2,12 +2,13 @@ from abc import ABCMeta, abstractmethod
 from copy import copy
 from typing import List, Optional, Union, Set
 
-from syncify.local.files.tags.helpers import TagEnums, TrackBase
+from syncify.local.files.track.processor import TagProcessor
+from syncify.local.files.utils.tags import TagEnums
 from syncify.spotify.helpers import __UNAVAILABLE_URI_VALUE__
 from syncify.utils.helpers import make_list
 
 
-class TagUpdater(TrackBase, metaclass=ABCMeta):
+class TagUpdater(TagProcessor, metaclass=ABCMeta):
 
     def update_file_tags(
             self, 

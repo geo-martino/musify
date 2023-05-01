@@ -8,10 +8,10 @@ from typing import Optional, List, Union, Mapping, MutableMapping, Set
 
 import mutagen
 
-from syncify.local.files.tags.exception import IllegalFileTypeError
-from syncify.local.files.tags.extract import TagExtractor
-from syncify.local.files.tags.helpers import Tags, Properties
-from syncify.local.files.tags.update import TagUpdater
+from syncify.local.files.track.extract import TagExtractor
+from syncify.local.files.track.update import TagUpdater
+from syncify.local.files.utils.exception import IllegalFileTypeError
+from syncify.local.files.utils.tags import Tags, Properties
 from syncify.utils.logger import Logger
 
 
