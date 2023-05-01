@@ -8,6 +8,8 @@
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/_log" />
       <excludeFolder url="file://$MODULE_DIR$/_data" />
+      <excludeFolder url="file://$MODULE_DIR$/.test_cache" />
+      <excludeFolder url="file://$MODULE_DIR$/.pytest_cache" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

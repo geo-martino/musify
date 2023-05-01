@@ -13,7 +13,9 @@
 **.bak*
 **.yml*
 
+# caches
+**.test_cache
+
 # large data & log folders
-raw_data/
 _data/
 _log/
