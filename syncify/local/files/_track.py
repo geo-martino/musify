@@ -4,10 +4,11 @@ from abc import ABC
 from datetime import datetime
 from glob import glob
 from os.path import join, splitext, exists
-from typing import Optional, List, Union, Mapping, MutableMapping
+from typing import Optional, List, Union, Mapping, MutableMapping, Set
 
 import mutagen
 
+from syncify.local.files.tags.exception import IllegalFileTypeError
 from syncify.local.files.tags.extract import TagExtractor
 from syncify.local.files.tags.helpers import Tags, Properties
 from syncify.local.files.tags.update import TagUpdater
@@ -17,82 +18,71 @@ from syncify.utils.logger import Logger
 class Track(ABC, TagExtractor, TagUpdater):
 
     _num_sep = "/"
-    _unavailable_uri_value = "spotify:track:unavailable"
 
     filetypes: List[str] = None  # allowed extensions in lowercase
-    _filepaths: List[str] = None  # all file paths in library
-    _filepaths_lower: List[str] = None  # all file paths in library in lowercase
+    filepaths: Set[str] = None  # all file paths in library for this file type
+    _filepaths_lower_map: Mapping[str, str] = None  # all file paths in library mapped as lower case to actual
 
     def __init__(self, file: Union[str, mutagen.File], position: Optional[int] = None):
+        """
+        :param file: The path or Mutagen object of the file to load.
+        :param position: A position to assign to this track e.g. for playlist order.
+        """
         Logger.__init__(self)
 
         self.valid: bool = False
-        self.position: Optional[int] = position
+        self.position = None
         self._file: Optional[mutagen.File] = None
 
         if isinstance(file, str):
-            self.path = file
+            self._path = file
             self.load_file()
         else:
-            self.path = file.filename
-            self.file = file
+            self._path = file.filename
+            self._file = file
 
         if self._file is not None:
-            self.load_metadata()
+            self.load_metadata(position=position)
+
+        self.date_added = None
+        self.last_played = None
+        self.play_count = None
+        self.rating = None
 
     @property
     def path(self):
         return self._path
 
-    @path.setter
-    def path(self, value):
-        self._path = value
-
     @property
     def file(self):
         return self._file
 
-    @file.setter
-    def file(self, value):
-        self._file = value
-
     @classmethod
-    def set_file_paths(cls, music_folder: str) -> None:
-        """Set class property for all available file paths. Necessary for loading with case-sensitive logic."""
-        cls._filepaths = []
+    def set_file_paths(cls, library_folder: str) -> None:
+        """
+        Set class property for all available file paths. Necessary for loading with case-sensitive logic.
+
+        :param library_folder: Path of the music library to search.
+        """
+        cls.filepaths = set()
         for ext in cls.filetypes:
             # first glob doesn't get filenames that start with a period
-            cls._filepaths += glob(join(music_folder, "**", f"*{ext}"), recursive=True)
+            cls.filepaths.update(glob(join(library_folder, "**", f"*{ext}"), recursive=True))
             # second glob only picks up filenames that start with a period
-            cls._filepaths += glob(join(music_folder, "*", "**", f".*{ext}"), recursive=True)
+            cls.filepaths.update(glob(join(library_folder, "*", "**", f".*{ext}"), recursive=True))
 
-        cls._filepaths.sort()
-        cls._filepaths_lower = [path.lower() for path in cls._filepaths]
+        cls._filepaths_lower_map = {path.lower(): path for path in cls.filepaths}
 
-    def _get_case_sensitive_path(self, path: str) -> str:
-        """
-        Try to find a case-sensitive path from the list of available paths.
-
-        :returns: Case-sensitive path if found
-        :raises: FileNotFoundError. If there are no available file paths or a case-sensitive path cannot be found.
-        """
-        if len(self._filepaths) != len(self._filepaths_lower):
-            raise AssertionError("Number of paths in file path lists does not match")
-
-        try:
-            return self._filepaths[self._filepaths_lower.index(path.lower())]
-        except (ValueError, TypeError):
-            raise FileNotFoundError(f"Path not found in library: {path}")
-
-    def load(self) -> Track:
+    def load(self, position: Optional[int] = None) -> Track:
         """
         General method for loading file and metadata from a track,
 
+        :param position: A position to assign to this track e.g. for playlist order.
         :returns: self.
         """
         self.load_file()
         if self._file is not None:
-            self.load_metadata()
+            self.load_metadata(position=position if position is not None else self.position)
         return self
 
     def load_file(self) -> Optional[mutagen.File]:
@@ -101,36 +91,35 @@ class Track(ABC, TagExtractor, TagUpdater):
         # extract file extension and confirm file type is listed in accepted file types list
         ext = splitext(self.path)[1].lower()
         if ext not in self.filetypes:
-            self._logger.warning(
-                f"{ext} not an accepted {self.__class__.__qualname__} file extension. "
-                f"Use only: {', '.join(self.filetypes)}")
-            return
+            raise IllegalFileTypeError(
+                ext,
+                f"Not an accepted {self.__class__.__qualname__} file extension. "
+                f"Use only: {', '.join(self.filetypes)}"
+            )
 
-        if self._filepaths is not None and self._path not in self._filepaths:
-            # correct case-insensitive path to case-sensitive
-            path = self._get_case_sensitive_path(self._path)
-            if not exists(path):
-                self._logger.error(f"File not found | {self._path}")
-                return
+        if self.filepaths is not None and self._path not in self.filepaths:
+            # attempt to correct case-insensitive path to case-sensitive
+            path = self._filepaths_lower_map.get(self._path.lower())
+            if path is not None and exists(path):
+                self._path = path
 
-            self._path = path
-        elif not exists(self._path):
-            self._logger.error(f"File not found | {self._path}")
-            return
+        if not exists(self._path):
+            raise FileNotFoundError(f"File not found | {self._path}")
 
-        self._file = mutagen.File(self.path)
+        self._file = mutagen.File(self._path)
         self.ext = ext
 
-    def load_metadata(self) -> Track:
+    def load_metadata(self, position: Optional[int] = None) -> Track:
         """
         General method for extracting metadata from loaded file and declaring track object valid
 
+        :param position: A position to assign to this track e.g. for playlist order.
         :returns: self.
         """
         self.valid = False
 
         if self._file is not None:
-            self._extract_metadata()
+            self._extract_metadata(position=position if position is not None else self.position)
             self.valid = True
 
         return self
@@ -143,8 +132,8 @@ class Track(ABC, TagExtractor, TagUpdater):
         """
         try:
             self._file.save()
-        except Exception:
-            return False
+        except mutagen.MutagenError as ex:
+            raise ex
         return True
 
     def as_dict(self) -> Mapping[str, object]:
@@ -191,12 +180,9 @@ class Track(ABC, TagExtractor, TagUpdater):
         return repr(self)
 
     def __copy__(self):
-        """Copy Track object by generating new Track from the currently loaded file"""
-        cls = self.__class__
-        return cls(file=self.file, position=self.position)
+        """Copy Track object by reloading from the file object in memory"""
+        return self.__class__(file=self.file, position=self.position)
 
     def __deepcopy__(self, memodict: dict = None):
-        """Deepcopy Track object by generating new Track from the current path"""
-        cls = self.__class__
-        return cls(file=self.path, position=self.position)
-
+        """Deepcopy Track object by reloading from the disk"""
+        return self.__class__(file=self.path, position=self.position)

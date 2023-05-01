@@ -8,14 +8,19 @@ from typing import Optional, List, Tuple
 from PIL import Image
 
 from syncify.local.files.tags.helpers import TrackBase
-from syncify.spotify.helpers import check_spotify_type, SpotifyType
+from syncify.spotify.helpers import check_spotify_type, SpotifyType, __UNAVAILABLE_URI_VALUE__
 
 
 class TagExtractor(TrackBase, metaclass=ABCMeta):
 
-    def _extract_metadata(self) -> None:
-        """Driver for extracting metadata from a loaded file"""
+    def _extract_metadata(self, position: Optional[int] = None) -> None:
+        """
+        Driver for extracting metadata from a loaded file
 
+        :param position: A position to assign to this track e.g. for playlist order.
+        """
+
+        self.position = position
         self.title = self._extract_title()
         self.artist = self._extract_artist()
         self.album = self._extract_album()
@@ -29,11 +34,12 @@ class TagExtractor(TrackBase, metaclass=ABCMeta):
         self.disc_number = self._extract_disc_number()
         self.disc_total = self._extract_disc_total()
         self.compilation = self._extract_compilation()
-        self.has_image = self._extract_images() is not None
         self.comments = self._extract_comments()
 
-        self.uri, self.has_uri, remaining_values = self._extract_uri()
-        setattr(self, self.uri_tag.name.lower(), remaining_values)
+        self.uri, self.has_uri = self._extract_uri()
+
+        self.image_links = None
+        self.has_image = self._check_for_images()
 
         self.folder = basename(dirname(self.path))
         self.filename = basename(self.path)
@@ -42,11 +48,11 @@ class TagExtractor(TrackBase, metaclass=ABCMeta):
         self.length = self.file.info.length
         self.date_modified = datetime.fromtimestamp(getmtime(self.path))
 
-    def _get_tag_values(self, tag_names: List[str]) -> Optional[list]:
+    def _get_tag_values(self, tag_ids: List[str]) -> Optional[list]:
         """Extract all tag values for a given list of tag IDs"""
         values = []
-        for tag_name in tag_names:
-            value = self.file.get(tag_name)
+        for tag_id in tag_ids:
+            value = self.file.get(tag_id)
             if value is None or (isinstance(value, str) and len(value.strip()) == 0):
                 # skip null or empty/blank strings
                 continue
@@ -141,43 +147,44 @@ class TagExtractor(TrackBase, metaclass=ABCMeta):
     def _extract_compilation(self) -> bool:
         """Extract metadata from file for compilation"""
         values = self._get_tag_values(self.tag_map.compilation)
-        return bool(values[0]) if values is not None else None
-
-    def _extract_images(self) -> Optional[List[bytes]]:
-        """Extract image from file"""
-        values = self._get_tag_values(self.tag_map.images)
-        return [bytes(value) for value in values] if values is not None else None
+        return bool(int(values[0])) if values is not None else None
 
     def _extract_comments(self) -> Optional[List[str]]:
         """Extract metadata from file for comment"""
         values = self._get_tag_values(self.tag_map.comments)
         return list(set(str(value) for value in values)) if values is not None else None
 
-    def _extract_uri(self) -> Tuple[Optional[str], bool, Optional[List[str]]]:
+    def _extract_uri(self) -> Tuple[Optional[str], bool]:
         """
         Extract metadata relating to Spotify URI from current object metadata
 
-        :return: URI, if the track is available on remote server i.e. has_uri on remote server,
-                and remaining values from given tag name.
+        :return: URI, if the track is available on remote server i.e. has_uri on remote server.
         """
         has_uri = False
         uri = None
         possible_values: Optional[List[str]] = getattr(self, self.uri_tag.name.lower())
         if possible_values is None or len(possible_values) == 0:
-            return uri, has_uri, None
+            return uri, has_uri
 
         for uri in possible_values:
-            if uri == self._unavailable_uri_value:
-                possible_values.remove(uri)
+            if uri == __UNAVAILABLE_URI_VALUE__:
                 has_uri = False
                 uri = None
                 break
             elif check_spotify_type(uri, types=SpotifyType.URI):
-                possible_values.remove(uri)
                 has_uri = True
                 break
 
-        return uri, has_uri, possible_values if len(possible_values) > 0 else None
+        return uri, has_uri
+
+    def _extract_images(self) -> Optional[List[Image.Image]]:
+        """Extract image from file"""
+        values = self._get_tag_values(self.tag_map.images)
+        return [Image.open(bytes(value)) for value in values] if values is not None else None
+
+    def _check_for_images(self) -> bool:
+        """Check if file has embedded images"""
+        return self._get_tag_values(self.tag_map.images) is not None
 
     def save_images_to_file(self, output_folder: str) -> int:
         """
@@ -190,17 +197,12 @@ class TagExtractor(TrackBase, metaclass=ABCMeta):
             return False
         count = 0
 
-        for i, image_bytes in enumerate(images):
-            img = Image.open(image_bytes)
-            if img is None:
-                continue
-
-            img_ext = '.png' if 'png' in img.format.lower() else '.jpg'
-            output_path = join(output_folder, self.filename + f"_{str(i).zfill(2)}" + img_ext)
+        for i, image in enumerate(images):
+            output_path = join(output_folder, self.filename + f"_{str(i).zfill(2)}" + image.format.lower())
             if not exists(dirname(output_path)):
                 os.makedirs(dirname(output_path))
 
-            img.save(output_path)
+            image.save(output_path)
             count += 1
 
         return count

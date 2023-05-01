@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
-from typing import Optional, List, Mapping
+from enum import IntEnum
+from typing import Optional, List, Mapping, Set
 
 import mutagen
 
@@ -24,25 +26,32 @@ class TagMap:
     disc_number: List[str]
     disc_total: List[str]
     compilation: List[str]
-    images: List[str]
     comments: List[str]
+    images: List[str]
 
 
-class TagEnums(Enum):
-    TITLE = 0
-    ARTIST = 1
-    ALBUM = 2
-    ALBUM_ARTIST = 3
-    TRACK = 4
-    GENRES = 5
-    YEAR = 6
-    BPM = 7
-    KEY = 8
-    DISC = 9
-    COMPILATION = 10
-    IMAGE = 11
+class TagEnums(IntEnum):
+    ALL = 0
+    TITLE = 1
+    ARTIST = 2
+    ALBUM = 3
+    ALBUM_ARTIST = 4
+    TRACK = 5
+    GENRES = 6
+    YEAR = 7
+    BPM = 8
+    KEY = 9
+    DISC = 10
+    COMPILATION = 11
     COMMENTS = 12
     URI = 13
+    IMAGE = 14
+
+    @classmethod
+    def all(cls) -> Set[TagEnums]:
+        all_enums = set(cls)
+        all_enums.remove(cls.ALL)
+        return all_enums
 
 
 @dataclass
@@ -60,12 +69,13 @@ class Tags:
     disc_number: Optional[int]
     disc_total: Optional[int]
     compilation: bool
-    image_urls: Optional[Mapping[str, str]]
-    has_image: bool
     comments: Optional[List[str]]
 
     uri: Optional[str]
     has_uri: bool
+
+    image_links: Optional[Mapping[str, str]]
+    has_image: bool
 
 
 @dataclass
@@ -97,12 +107,6 @@ class TrackBase(Logger, Tags, Properties, metaclass=ABCMeta):
         Some number values come as a combined string i.e. track number/track total
         Define the separator to use when representing both values as a combined string
         """
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def _unavailable_uri_value(self) -> str:
-        """Placeholder URI tag for tracks which aren't on Spotify"""
         raise NotImplementedError
 
     @property

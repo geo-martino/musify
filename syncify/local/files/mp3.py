@@ -1,11 +1,15 @@
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Set
 
 import mutagen
-import mutagen.mp3
 import mutagen.id3
+import mutagen.mp3
+from PIL import Image
+from mutagen.id3 import Encoding
 
 from syncify.local.files._track import Track
-from syncify.local.files.tags.helpers import TagMap
+from syncify.local.files.tags.helpers import TagMap, TagEnums
+from syncify.spotify.helpers import __UNAVAILABLE_URI_VALUE__
+from syncify.utils.helpers import make_list
 
 
 class MP3(Track):
@@ -33,17 +37,14 @@ class MP3(Track):
         Track.__init__(self, file=file, position=position)
         self._file: mutagen.mp3.MP3 = self._file
 
-    def _get_tag_values(self, tag_names: List[str]) -> Optional[list]:
-        # mp3 tag ids can have extra suffixes to them i.e. 'COMM:ID3v1 Comment:eng'
-        # need to search all actual mp3 tag ids to check if they contain some part of the given base tag ids
-        base_ids = tag_names.copy()
-        tag_names.clear()
-        for tag_name in base_ids:
-            tag_names.extend([mp3_id for mp3_id in self._file.keys() if tag_name in mp3_id])
+    def _get_tag_values(self, tag_ids: List[str]) -> Optional[list]:
+        # mp3 tag ids come in parts separated by : i.e. 'COMM:ID3v1 Comment:eng'
+        # need to search all actual mp3 tag ids to check if the first part equals any of the given base tag ids
+        tag_ids = [mp3_id for mp3_id in self._file.keys() for tag_id in tag_ids if mp3_id.split(":")[0] == tag_id]
 
         values = []
-        for tag_name in tag_names:
-            value = self._file.get(tag_name)
+        for tag_id in tag_ids:
+            value = self._file.get(tag_id)
             if value is None:
                 continue
 
@@ -65,9 +66,30 @@ class MP3(Track):
 
         return [genre for value in values for genre in value.split(";")]
 
-    def _extract_images(self) -> Optional[List[bytes]]:
+    def _extract_images(self) -> Optional[List[Image.Image]]:
         values = self._get_tag_values(self.tag_map.images)
-        return [value.data for value in values] if values is not None else None
+        return [Image.open(value.data) for value in values] if values is not None else None
+
+    def clear_tags(self, tags: Optional[Union[TagEnums, List[TagEnums]]] = None, dry_run: bool = True) -> Set[TagEnums]:
+        removed: Set[TagEnums] = set()
+
+        tags: Set[TagEnums] = set(make_list(tags))
+        if TagEnums.ALL in tags:
+            tags = TagEnums.all()
+
+        for tag in tags:
+            tag_ids = getattr(self.tag_map, tag.name.lower(), None)
+            if tag_ids is None or len(tag_ids) is None:
+                continue
+
+            for tag_id_prefix in tag_ids:
+                for mp3_id in list(self.file.keys()).copy():
+                    if mp3_id.split(":")[0] == tag_id_prefix:
+                        if not dry_run:
+                            del self._file[mp3_id]
+                        removed.add(tag)
+
+        return removed
 
     def _update_tag_value(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
         if not dry_run and tag_id is not None:
@@ -79,20 +101,59 @@ class MP3(Track):
         return self._update_tag_value(next(iter(self.tag_map.genres), None), values, dry_run)
 
     def _update_images(self, dry_run: bool = True) -> bool:
-        tag_id = next(iter(self.tag_map.key), None)
+        tag_id_prefix = next(iter(self.tag_map.key), None)
 
-        image_type, image_url = next(iter(self.image_urls.items()), (None, None))
-        img = self._open_image_url(image_url)
-        if img is None:
-            return False
+        updated = False
+        for image_kind, image_link in self.image_links.items():
+            image: Image.Image = self._open_image(image_link)
+            if image is None:
+                continue
 
-        if not dry_run and tag_id is not None:
-            self._file[tag_id] = mutagen.id3.APIC(
-                mime='image/jpeg',
-                type=getattr(mutagen.id3.PictureType, image_type.upper(), mutagen.id3.PictureType.COVER_FRONT),
-                data=img.read()
-            )
+            if not dry_run and tag_id_prefix is not None:
+                image_type: mutagen.id3.PictureType = getattr(
+                    mutagen.id3.PictureType, image_kind.upper(), mutagen.id3.PictureType.COVER_FRONT
+                )
+                tag_id = f"{tag_id_prefix}:{image_type.name}"
 
-        img.close()
-        self.has_image = tag_id is not None or self.has_image
-        return tag_id is not None
+                self._file[tag_id] = mutagen.id3.APIC(
+                    encoding=Encoding.UTF8,
+                    desc=image_kind,
+                    mime=Image.MIME[image.format],
+                    type=image_type,
+                    data=image.tobytes()
+                )
+
+            image.close()
+            self.has_image = tag_id_prefix is not None or self.has_image
+            updated = tag_id_prefix is not None
+        return updated
+
+    def _update_comments(self, dry_run: bool = True) -> bool:
+        tag_id_prefix = next(iter(self.tag_map.comments), None)
+        self.clear_tags(tags=TagEnums.COMMENTS, dry_run=dry_run)
+
+        for i, comment in enumerate(self.comments, 1):
+            comm = mutagen.id3.COMM(encoding=Encoding.UTF8, desc=f'ID3v1 Comment {i}', lang='eng', text=[comment])
+            tag_id = f"{tag_id_prefix}:{comm.desc}:{comm.lang}"
+            if not dry_run and tag_id is not None:
+                self._file[tag_id] = comm
+
+        return tag_id_prefix is not None
+
+    def _update_uri(self, dry_run: bool = True) -> bool:
+        tag_value = __UNAVAILABLE_URI_VALUE__ if not self.has_uri else self.uri
+
+        # if applying uri as comment, clear comments and add manually with custom description
+        if self.uri_tag == TagEnums.COMMENTS:
+            tag_id_prefix = next(iter(self.tag_map.comments), None)
+            self.clear_tags(tags=self.uri_tag, dry_run=dry_run)
+
+            comm = mutagen.id3.COMM(encoding=Encoding.UTF8, lang='eng', desc='URI', text=[tag_value])
+            tag_id = f"{tag_id_prefix}:{comm.desc}:{comm.lang}"
+            if not dry_run and tag_id is not None:
+                self._file[tag_id] = comm
+
+            return tag_id is not None
+        else:
+            tag_id = next(iter(getattr(self.tag_map, self.uri_tag.name.lower(), [])), None)
+            return self._update_tag_value(tag_id, tag_value, dry_run)

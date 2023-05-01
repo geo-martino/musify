@@ -1,6 +1,7 @@
 from os.path import splitext
 from typing import Optional
 
+from syncify.local.files.tags.exception import IllegalFileTypeError
 from syncify.local.files.flac import FLAC
 from syncify.local.files.m4a import M4A
 from syncify.local.files.mp3 import MP3
@@ -21,10 +22,7 @@ def load_track(path: str, position: Optional[int] = None):
         return WMA(file=path, position=position)
     else:
         all_filetypes = [filetype for c in track_classes for filetype in c.filetypes]
-        raise NotImplementedError(
-            f"{ext} not an accepted extension. "
-            f"Use only: {', '.join(all_filetypes)}"
-        )
+        raise IllegalFileTypeError(ext, f"Not an accepted extension. Use only: {', '.join(all_filetypes)}")
 
 
 if __name__ == "__main__":
@@ -33,40 +31,43 @@ if __name__ == "__main__":
     Logger.set_dev()
     music_folder = "tests/__resources"
 
-    flac = load_track(f"{music_folder}/noise.flac")
-    print(repr(flac))
+    flac = load_track(f"{music_folder}/noise_flac.flac")
+    print(flac)
 
-    mp3 = load_track(f"{music_folder}/noise.mp3")
-    print(repr(mp3))
+    mp3 = load_track(f"{music_folder}/noise_mp3.mp3")
+    # print({k: v for k, v in mp3.file.items() if not k.startswith('APIC')})
+    print(mp3)
 
-    m4a = load_track(f"{music_folder}/noise.m4a")
-    print(repr(m4a))
+    m4a = load_track(f"{music_folder}/noise_m4a.m4a")
+    print(m4a)
 
-    wma = load_track(f"{music_folder}/noise.wma")
-    print(repr(wma))
+    wma = load_track(f"{music_folder}/noise_wma.wma")
+    print(wma)
+
+    exit()
 
     music_folder = "/mnt/d/Music"
 
     FLAC.set_file_paths(music_folder)
-    for path in FLAC._filepaths:
+    for path in FLAC.filepaths:
         file = load_track(path)
         if not file.valid:
             print(repr(file))
 
     MP3.set_file_paths(music_folder)
-    for path in MP3._filepaths:
+    for path in MP3.filepaths:
         file = load_track(path)
         if not file.valid:
             print(repr(file))
 
     M4A.set_file_paths(music_folder)
-    for path in M4A._filepaths:
+    for path in M4A.filepaths:
         file = load_track(path)
         if not file.valid:
             print(repr(file))
 
     WMA.set_file_paths(music_folder)
-    for path in WMA._filepaths:
+    for path in WMA.filepaths:
         file = load_track(path)
         if not file.valid:
             print(repr(file))

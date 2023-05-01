@@ -1,33 +1,74 @@
 from abc import ABCMeta, abstractmethod
 from copy import copy
 from http.client import HTTPResponse
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Set
 from urllib.error import URLError
 from urllib.request import urlopen
 
+import PIL
+from PIL import Image
+
 from syncify.local.files.tags.helpers import TagEnums, TrackBase
+from syncify.spotify.helpers import __UNAVAILABLE_URI_VALUE__
 from syncify.utils.helpers import make_list
 
 
 class TagUpdater(TrackBase, metaclass=ABCMeta):
 
-    def _open_image_url(self, image_url: Optional[str]) -> Optional[HTTPResponse]:
-        """Open HTTPResponse object from a given URL for downloading images"""
-        if image_url is None:
+    def _open_image(self, image_link: Optional[str]) -> Optional[Image.Image]:
+        """
+        Open Image object from a given URL or file path
+
+        :param image_link: URL or file path of the image
+        """
+        if image_link is None:
             return
 
         try:  # open image from link
-            return urlopen(image_url)
-        except URLError:
-            self._logger.error(f"{image_url} | Failed to open image")
+            if image_link.startswith("http"):
+                response: HTTPResponse = urlopen(image_link)
+                image = Image.open(response.read())
+                response.close()
+            else:
+                image = Image.open(image_link)
+            return image
+        except (URLError, FileNotFoundError, PIL.UnidentifiedImageError):
+            self._logger.error(f"{image_link} | Failed to open image")
             return
-    
+
+    def clear_tags(self, tags: Optional[Union[TagEnums, List[TagEnums]]] = None, dry_run: bool = True) -> Set[TagEnums]:
+        """
+        Remove tags from file.
+
+        :param tags: Tags to remove.
+        :param dry_run: Run function, but do not modify file at all.
+        :returns: List of tags that have been removed.
+        """
+        removed: Set[TagEnums] = set()
+
+        tags: Set[TagEnums] = set(make_list(tags))
+        if TagEnums.ALL in tags:
+            tags = TagEnums.all()
+
+        for tag in tags:
+            tag_ids = getattr(self.tag_map, tag.name)
+            if tag_ids is None or len(tag_ids) is None:
+                continue
+
+            for tag_id in tag_ids:
+                if tag_id in self.file:
+                    if not dry_run:
+                        del self.file[tag_id]
+                    removed.add(tag)
+
+        return removed
+
     def update_file_tags(
             self, 
             tags: Optional[Union[TagEnums, List[TagEnums]]] = None, 
             replace: bool = False, 
             dry_run: bool = True
-    ) -> List[TagEnums]:
+    ) -> Set[TagEnums]:
         """
         Update file's tags from given dictionary of tags.
 
@@ -38,29 +79,31 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
         """
         self.load_file()
         file = copy(self)
-        
-        tags: List[TagEnums] = make_list(tags)
-        updated: List[TagEnums] = []
+        updated: Set[TagEnums] = set()
+
+        tags: Set[TagEnums] = set(make_list(tags))
+        if TagEnums.ALL in tags:
+            tags = TagEnums.all()
 
         if TagEnums.TITLE in tags:
             conditionals = [file.title is None, replace and self.title != file.title]
             if any(conditionals) and self._update_title(dry_run):
-                updated.append(TagEnums.TITLE)
+                updated.add(TagEnums.TITLE)
                     
         if TagEnums.ARTIST in tags:
             conditionals = [file.artist is None, replace and self.artist != file.artist]
             if any(conditionals) and self._update_artist(dry_run):
-                updated.append(TagEnums.ARTIST)
+                updated.add(TagEnums.ARTIST)
 
         if TagEnums.ALBUM in tags:
             conditionals = [file.album is None, replace and self.album != file.album]
             if any(conditionals) and self._update_album(dry_run):
-                updated.append(TagEnums.ALBUM)
+                updated.add(TagEnums.ALBUM)
 
         if TagEnums.ALBUM_ARTIST in tags:
             conditionals = [file.album_artist is None, replace and self.album_artist != file.album_artist]
             if any(conditionals) and self._update_album_artist(dry_run):
-                updated.append(TagEnums.ALBUM_ARTIST)
+                updated.add(TagEnums.ALBUM_ARTIST)
 
         if TagEnums.TRACK in tags:
             conditionals = [
@@ -68,17 +111,17 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
                 replace and (self.track_number != file.track_number or self.track_total != file.track_total)
             ]
             if any(conditionals) and self._update_track(dry_run):
-                updated.append(TagEnums.TRACK)
+                updated.add(TagEnums.TRACK)
 
         if TagEnums.GENRES in tags:
             conditionals = [file.genres is None, replace and self.genres != file.genres]
             if any(conditionals) and self._update_genres(dry_run):
-                updated.append(TagEnums.GENRES)
+                updated.add(TagEnums.GENRES)
 
         if TagEnums.YEAR in tags:
             conditionals = [file.year is None, replace and self.year != file.year]
             if any(conditionals) and self._update_year(dry_run):
-                updated.append(TagEnums.YEAR)
+                updated.add(TagEnums.YEAR)
 
         if TagEnums.BPM in tags:
             conditionals = [
@@ -87,12 +130,12 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
                 replace and int(getattr(self, "bpm", 0)) != int(getattr(file, "bpm", 0))
             ]
             if any(conditionals) and self._update_bpm(dry_run):
-                updated.append(TagEnums.BPM)
+                updated.add(TagEnums.BPM)
 
         if TagEnums.KEY in tags:
             conditionals = [file.key is None, replace and self.key != file.key]
             if any(conditionals) and self._update_key(dry_run):
-                updated.append(TagEnums.KEY)
+                updated.add(TagEnums.KEY)
 
         if TagEnums.DISC in tags:
             conditionals = [
@@ -100,28 +143,31 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
                 replace and (self.disc_number != file.disc_number or self.disc_total != file.disc_total)
             ]
             if any(conditionals) and self._update_disc(dry_run):
-                updated.append(TagEnums.DISC)
+                updated.add(TagEnums.DISC)
 
         if TagEnums.COMPILATION in tags:
             conditionals = [file.compilation is None, replace and self.compilation != file.compilation]
             if any(conditionals) and self._update_compilation(dry_run):
-                updated.append(TagEnums.COMPILATION)
-
-        if TagEnums.IMAGE in tags:  # needs deeper comparison
-            conditionals = [file.has_image is None, replace and self.has_image != file.has_image]
-            if any(conditionals) and self._update_images(dry_run):
-                updated.append(TagEnums.IMAGE)
+                updated.add(TagEnums.COMPILATION)
 
         if TagEnums.COMMENTS in tags:
             conditionals = [file.comments is None, replace and self.comments != file.comments]
             if any(conditionals) and self._update_comments(dry_run):
-                updated.append(TagEnums.COMMENTS)
+                updated.add(TagEnums.COMMENTS)
 
         if TagEnums.URI in tags:  # needs deeper comparison
             conditionals = [file.uri is None, self.has_uri is False, replace and self.uri != file.uri]
             if any(conditionals) and self._update_uri(dry_run):
-                updated.append(TagEnums.URI)
-        
+                updated.add(TagEnums.URI)
+
+        if TagEnums.IMAGE in tags:  # needs deeper comparison
+            conditionals = [file.has_image is None, replace and self.has_image != file.has_image]
+            if any(conditionals) and self._update_images(dry_run):
+                updated.add(TagEnums.IMAGE)
+
+        if not dry_run and len(updated) > 0:
+            self.file.save()
+
         return updated
                     
     @abstractmethod
@@ -256,16 +302,7 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
         :param dry_run: Run function, but do not modify file at all.
         :returns: True if the file was updated or would have been if dry_run is True, False otherwise.
         """
-        return self._update_tag_value(next(iter(self.tag_map.compilation), None), self.compilation, dry_run)
-
-    @abstractmethod
-    def _update_images(self, dry_run: bool = True) -> bool:
-        """
-        Update image in file
-        
-        :param dry_run: Run function, but do not modify file at all.
-        :returns: True if the file was updated or would have been if dry_run is True, False otherwise.
-        """
+        return self._update_tag_value(next(iter(self.tag_map.compilation), None), int(self.compilation), dry_run)
 
     def _update_comments(self, dry_run: bool = True) -> bool:
         """
@@ -283,5 +320,16 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
         :param dry_run: Run function, but do not modify file at all.
         :returns: True if the file was updated or would have been if dry_run is True, False otherwise.
         """
-        return self._update_tag_value(self.uri_tag.name.lower(), self.uri, dry_run)
+        tag_id = next(iter(getattr(self.tag_map, self.uri_tag.name.lower(), [])), None)
+        tag_value = __UNAVAILABLE_URI_VALUE__ if not self.has_uri else self.uri
+        return self._update_tag_value(tag_id, tag_value, dry_run)
+
+    @abstractmethod
+    def _update_images(self, dry_run: bool = True) -> bool:
+        """
+        Update image in file
+
+        :param dry_run: Run function, but do not modify file at all.
+        :returns: True if the file was updated or would have been if dry_run is True, False otherwise.
+        """
     

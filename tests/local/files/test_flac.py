@@ -2,8 +2,12 @@ from copy import copy, deepcopy
 from datetime import datetime
 from os.path import basename, dirname
 
-from common import path_file_flac, path_root, path_resources
-from local.files.flac import FLAC
+import pytest
+
+from syncify.local.files.flac import FLAC
+from syncify.local.files.tags.exception import IllegalFileTypeError
+from tests.common import path_file_flac, path_resources, path_file_txt
+from tests.local.files.test_track import update_tags_test, clear_tags_test, update_images_test
 
 
 def test_load():
@@ -17,7 +21,16 @@ def test_load():
     track.load()
     track_reload_2 = track.file
 
+    # has actually reloaded the file in each reload
     assert id(track_file) != id(track_reload_1) != id(track_reload_2)
+
+    # raises error on unrecognised file type
+    with pytest.raises(IllegalFileTypeError):
+        FLAC(path_file_txt)
+
+    # raises error on files that do not exist
+    with pytest.raises(FileNotFoundError):
+        FLAC("does_not_exist.flac")
 
 
 def test_copy():
@@ -37,12 +50,13 @@ def test_copy():
         assert value == getattr(track_deepcopy, key)
 
 
-def test_set_file_paths():
+def test_set_and_find_file_paths():
     track = FLAC(file=path_file_flac.upper())
     assert track.path == path_file_flac.upper()
 
     FLAC.set_file_paths(path_resources)
-    assert FLAC._filepaths == [path_file_flac]
+    assert FLAC.filepaths == {path_file_flac}
+    assert FLAC._filepaths_lower_map == {path_file_flac.lower(): path_file_flac}
 
     track = FLAC(file=path_file_flac.upper())
     assert track.path != path_file_flac.upper()
@@ -53,40 +67,53 @@ def test_loaded_attributes():
 
     # metadata
     assert track.position == 1
-#     assert track.title == ""
-#     assert track.artist == ""
-#     assert track.album == ""
-#     assert track.album_artist == ""
-#     assert track.track_number == 0
-#     assert track.track_total == 0
-#     assert track.genres == []
-#     assert track.year == 0
-#     assert track.bpm == 0
-#     assert track.key == ""
-#     assert track.disc_number == 1
-#     assert track.disc_total == 1
-#     assert not track.compilation
-#     assert track.image_urls is None
-#     assert not track.has_image
-#     assert track.comments == []
-#
-#     assert track.uri == ""
-#     assert not track.has_uri
-#
-#     # file properties
-#     assert track.path == path_file_flac
-#     assert track.folder == basename(dirname(path_file_flac))
-#     assert track.filename == basename(path_file_flac)
-#     assert track.ext == ".flac"
-#     assert track.size == 123
-#     assert track.length == 20
-#     assert track.date_modified == datetime.now()
-#
-#     # library properties
-#     assert track.date_added is None
-#     assert track.last_played is None
-#     assert track.play_count is None
-#     assert track.rating is None
+    assert track.title == 'title 1'
+    assert track.artist == 'artist 1'
+    assert track.album == 'album artist 1'
+    assert track.album_artist == 'various'
+    assert track.track_number == 1
+    assert track.track_total == 4
+    assert track.genres == ['Pop', 'Rock', 'Jazz']
+    assert track.year == 2020
+    assert track.bpm == 120.12
+    assert track.key == 'A'
+    assert track.disc_number == 1
+    assert track.disc_total == 3
+    assert track.compilation
+    assert track.comments == ['spotify:track:6fWoFduMpBem73DMLCOh1Z']
 
-def test_updated_attributes():
+    assert track.uri == track.comments[0]
+    assert track.has_uri
+
+    assert track.image_links is None
+    assert track.has_image
+
+    # file properties
+    assert track.path == path_file_flac
+    assert track.folder == basename(dirname(path_file_flac))
+    assert track.filename == basename(path_file_flac)
+    assert track.ext == '.flac'
+    assert track.size == 1818191
+    assert int(track.length) == 20
+    assert track.date_modified == datetime(2023, 5, 1, 10, 24, 14, 903000)
+
+    # library properties
+    assert track.date_added is None
+    assert track.last_played is None
+    assert track.play_count is None
+    assert track.rating is None
+
+
+def test_cleared_tags():
     track = FLAC(file=path_file_flac, position=1)
+    clear_tags_test(track)
+
+
+def test_updated_tags():
+    track = FLAC(file=path_file_flac, position=1)
+    update_tags_test(track)
+
+
+def test_updated_images():
+    track = FLAC(file=path_file_flac, position=1)
+    update_images_test(track)

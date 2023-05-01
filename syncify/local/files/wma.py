@@ -32,11 +32,11 @@ class WMA(Track):
         Track.__init__(self, file=file, position=position)
         self._file: mutagen.asf.ASF = self._file
 
-    def _get_tag_values(self, tag_names: List[str]) -> Optional[list]:
+    def _get_tag_values(self, tag_ids: List[str]) -> Optional[list]:
         # wma tag values are return as mutagen.asf._attrs.ASFUnicodeAttribute
         values = []
-        for tag_name in tag_names:
-            value: List[mutagen.asf.ASFBaseAttribute] = self._file.get(tag_name)
+        for tag_id in tag_ids:
+            value: List[mutagen.asf.ASFBaseAttribute] = self._file.get(tag_id)
             if value is None:
                 # skip null or empty/blank strings
                 continue
@@ -58,14 +58,18 @@ class WMA(Track):
 
         tag_id = next(iter(self.tag_map.key), None)
 
-        image_type, image_url = next(iter(self.image_urls.items()), (None, None))
-        img = self._open_image_url(image_url)
-        if img is None:
-            return False
+        updated = False
+        tag_value = []
+        for image_link in self.image_links.values():
+            image: Image.Image = self._open_image(image_link)
+            if image is None:
+                continue
 
-        if not dry_run and tag_id is not None:
-            file_raw[tag_id] = mutagen.asf.ASFByteArrayAttribute(data=img.read())
+            tag_value.append(mutagen.asf.ASFByteArrayAttribute(data=image.tobytes()))
+            image.close()
 
-        img.close()
-        self.has_image = tag_id is not None or self.has_image
-        return tag_id is not None
+        if len(tag_value) > 0:
+            updated = self._update_tag_value(tag_id, tag_value, dry_run)
+
+        self.has_image = updated or self.has_image
+        return updated

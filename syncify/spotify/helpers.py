@@ -1,18 +1,30 @@
+from __future__ import annotations
+
 from enum import Enum
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Set
 
 from syncify.utils.helpers import make_list
+
+
+__UNAVAILABLE_URI_VALUE__ = "spotify:track:unavailable"
 
 
 class SpotifyType(Enum):
     OPEN_URL: str = "https://open.spotify.com"
     API_URL: str = "https://api.spotify.com/v1"
+    ALL: int = 0
     URI: int = 3
     ID: int = 22
 
+    @classmethod
+    def all(cls) -> Set[SpotifyType]:
+        all_enums = set(cls)
+        all_enums.remove(cls.ALL)
+        return all_enums
+
 
 def check_spotify_type(
-        value: str, types: Optional[Union[SpotifyType, List[SpotifyType]]] = None
+        value: str, types: Union[SpotifyType, List[SpotifyType]] = SpotifyType.ALL
 ) -> Optional[SpotifyType]:
     """
     Check that the given value is of a valid Spotify type.
@@ -23,7 +35,10 @@ def check_spotify_type(
     """
     if not isinstance(value, str):
         return
-    types: List[SpotifyType] = make_list(types, list(SpotifyType))
+
+    types: Set[SpotifyType] = set(make_list(types))
+    if SpotifyType.ALL in types:
+        types = SpotifyType.all()
 
     if SpotifyType.OPEN_URL in types and SpotifyType.OPEN_URL.value.lower() in value.lower():
         return SpotifyType.OPEN_URL

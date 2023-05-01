@@ -1,7 +1,8 @@
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 import mutagen
 import mutagen.mp4
+from PIL import Image
 
 from syncify.local.files._track import Track
 from syncify.local.files.tags.helpers import TagMap
@@ -18,7 +19,7 @@ class M4A(Track):
         album=["©alb"],
         track_number=["trkn"],
         track_total=["trkn"],
-        genres=["©gen"],
+        genres=["----:com.apple.iTunes:genre", "©gen", "gnre"],
         year=["©day"],
         bpm=["tmpo"],
         key=["----:com.apple.iTunes:INITIALKEY"],
@@ -34,6 +35,24 @@ class M4A(Track):
         Track.__init__(self, file=file, position=position)
         self._file: mutagen.mp4.MP4 = self._file
 
+    def _get_tag_values(self, tag_ids: List[str]) -> Optional[list]:
+        """Extract all tag values for a given list of tag IDs"""
+        values = []
+        for tag_id in tag_ids:
+            value = self.file.get(tag_id)
+            if value is None or (isinstance(value, str) and len(value.strip()) == 0):
+                # skip null or empty/blank strings
+                continue
+
+            if tag_id.startswith("----:com.apple.iTunes") and isinstance(value, list):
+                value = [v.decode("utf-8") for v in value]
+            elif isinstance(value, bytes):
+                value = value.decode("utf-8")
+
+            values.extend(value) if isinstance(value, list) else values.append(value)
+
+        return values if len(values) > 0 else None
+
     def _extract_track_number(self) -> Optional[int]:
         values = self._get_tag_values(self.tag_map.track_number)
         return int(values[0][0]) if values is not None else None
@@ -44,7 +63,7 @@ class M4A(Track):
 
     def _extract_key(self) -> Optional[str]:
         values = self._get_tag_values(self.tag_map.key)
-        return str(values[0][:].decode("utf-8")) if values is not None else None
+        return str(values[0][:]) if values is not None else None
 
     def _extract_disc_number(self) -> Optional[int]:
         values = self._get_tag_values(self.tag_map.disc_number)
@@ -56,7 +75,12 @@ class M4A(Track):
 
     def _update_tag_value(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
         if not dry_run and tag_id is not None:
-            self._file[tag_id] = make_list(tag_value)
+            if tag_id.startswith("----:com.apple.iTunes"):
+                self._file[tag_id] = [mutagen.mp4.MP4FreeForm(str(v).encode("utf-8"), 1) for v in make_list(tag_value)]
+            elif isinstance(tag_value, bool):
+                self._file[tag_id] = tag_value
+            else:
+                self._file[tag_id] = make_list(tag_value)
         return tag_id is not None
 
     def _update_track(self, dry_run: bool = True) -> bool:
@@ -64,28 +88,40 @@ class M4A(Track):
         tag_value = (self.track_number, self.track_total)
         return self._update_tag_value(tag_id, tag_value, dry_run)
 
+    def _update_year(self, dry_run: bool = True) -> bool:
+        return self._update_tag_value(next(iter(self.tag_map.year), None), str(self.year), dry_run)
+
+    def _update_bpm(self, dry_run: bool = True) -> bool:
+        return self._update_tag_value(next(iter(self.tag_map.bpm), None), int(self.bpm), dry_run)
+
     def _update_disc(self, dry_run: bool = True) -> bool:
         tag_id = next(iter(self.tag_map.disc_number), None)
         tag_value = (self.disc_number, self.disc_total)
         return self._update_tag_value(tag_id, tag_value, dry_run)
 
-    def _update_key(self, dry_run: bool = True) -> bool:
-        tag_id = next(iter(self.tag_map.key), None)
-        if not dry_run and tag_id is not None:
-            self._file[tag_id] = mutagen.mp4.MP4FreeForm(self.key.encode("utf-8"), 1)
-        return tag_id is not None
+    def _update_compilation(self, dry_run: bool = True) -> bool:
+        return self._update_tag_value(next(iter(self.tag_map.compilation), None), self.compilation, dry_run)
 
     def _update_images(self, dry_run: bool = True) -> bool:
         tag_id = next(iter(self.tag_map.key), None)
 
-        image_type, image_url = next(iter(self.image_urls.items()), (None, None))
-        img = self._open_image_url(image_url)
-        if img is None:
-            return False
+        updated = False
+        tag_value = []
+        for image_link in self.image_links.values():
+            image: Image.Image = self._open_image(image_link)
+            if image is None:
+                continue
 
-        tag_value = [mutagen.mp4.MP4Cover(img.read(), imageformat=mutagen.mp4.MP4Cover.FORMAT_JPEG)]
-        updated = self._update_tag_value(tag_id, tag_value, dry_run)
+            if image.format == 'PNG':
+                image_format = mutagen.mp4.MP4Cover.FORMAT_PNG
+            else:
+                image_format = mutagen.mp4.MP4Cover.FORMAT_JPEG
 
-        img.close()
+            tag_value.append(mutagen.mp4.MP4Cover(image.tobytes(), imageformat=image_format))
+            image.close()
+
+        if len(tag_value) > 0:
+            updated = self._update_tag_value(tag_id, tag_value, dry_run)
+
         self.has_image = updated or self.has_image
         return updated
