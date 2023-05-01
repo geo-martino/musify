@@ -1,4 +1,5 @@
-from typing import Optional, List, Union, Set
+from io import BytesIO
+from typing import Optional, List, Union
 
 import mutagen
 import mutagen.id3
@@ -7,9 +8,8 @@ from PIL import Image
 from mutagen.id3 import Encoding
 
 from syncify.local.files._track import Track
-from syncify.local.files.tags.helpers import TagMap, TagEnums
+from syncify.local.files.tags.helpers import TagMap, TagEnums, open_image, get_image_bytes
 from syncify.spotify.helpers import __UNAVAILABLE_URI_VALUE__
-from syncify.utils.helpers import make_list
 
 
 class MP3(Track):
@@ -68,28 +68,7 @@ class MP3(Track):
 
     def _extract_images(self) -> Optional[List[Image.Image]]:
         values = self._get_tag_values(self.tag_map.images)
-        return [Image.open(value.data) for value in values] if values is not None else None
-
-    def clear_tags(self, tags: Optional[Union[TagEnums, List[TagEnums]]] = None, dry_run: bool = True) -> Set[TagEnums]:
-        removed: Set[TagEnums] = set()
-
-        tags: Set[TagEnums] = set(make_list(tags))
-        if TagEnums.ALL in tags:
-            tags = TagEnums.all()
-
-        for tag in tags:
-            tag_ids = getattr(self.tag_map, tag.name.lower(), None)
-            if tag_ids is None or len(tag_ids) is None:
-                continue
-
-            for tag_id_prefix in tag_ids:
-                for mp3_id in list(self.file.keys()).copy():
-                    if mp3_id.split(":")[0] == tag_id_prefix:
-                        if not dry_run:
-                            del self._file[mp3_id]
-                        removed.add(tag)
-
-        return removed
+        return [Image.open(BytesIO(value.data)) for value in values] if values is not None else None
 
     def _update_tag_value(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
         if not dry_run and tag_id is not None:
@@ -101,26 +80,25 @@ class MP3(Track):
         return self._update_tag_value(next(iter(self.tag_map.genres), None), values, dry_run)
 
     def _update_images(self, dry_run: bool = True) -> bool:
-        tag_id_prefix = next(iter(self.tag_map.key), None)
+        tag_id_prefix = next(iter(self.tag_map.images), None)
 
         updated = False
         for image_kind, image_link in self.image_links.items():
-            image: Image.Image = self._open_image(image_link)
-            if image is None:
-                continue
+            image = open_image(image_link)
 
             if not dry_run and tag_id_prefix is not None:
+                image_kind_attr = image_kind.upper().replace(" ", "_")
                 image_type: mutagen.id3.PictureType = getattr(
-                    mutagen.id3.PictureType, image_kind.upper(), mutagen.id3.PictureType.COVER_FRONT
+                    mutagen.id3.PictureType, image_kind_attr, mutagen.id3.PictureType.COVER_FRONT
                 )
-                tag_id = f"{tag_id_prefix}:{image_type.name}"
+                tag_id = f"{tag_id_prefix}:{image_kind}"
 
                 self._file[tag_id] = mutagen.id3.APIC(
                     encoding=Encoding.UTF8,
                     desc=image_kind,
                     mime=Image.MIME[image.format],
                     type=image_type,
-                    data=image.tobytes()
+                    data=get_image_bytes(image)
                 )
 
             image.close()
@@ -157,3 +135,19 @@ class MP3(Track):
         else:
             tag_id = next(iter(getattr(self.tag_map, self.uri_tag.name.lower(), [])), None)
             return self._update_tag_value(tag_id, tag_value, dry_run)
+
+    def _clear_tag(self, tag_name: str, dry_run: bool = True) -> bool:
+        removed = False
+
+        tag_ids = getattr(self.tag_map, tag_name, None)
+        if tag_ids is None or len(tag_ids) is None:
+            return removed
+
+        for tag_id_prefix in tag_ids:
+            for mp3_id in list(self.file.keys()).copy():
+                if mp3_id.split(":")[0] == tag_id_prefix:
+                    if not dry_run:
+                        del self._file[mp3_id]
+                    removed = True
+
+        return removed

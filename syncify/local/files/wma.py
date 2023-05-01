@@ -1,10 +1,12 @@
+from io import BytesIO
 from typing import Optional, List, Union
 
 import mutagen
 import mutagen.asf
+from PIL import Image
 
 from syncify.local.files._track import Track
-from syncify.local.files.tags.helpers import TagMap
+from syncify.local.files.tags.helpers import TagMap, open_image
 
 
 class WMA(Track):
@@ -45,6 +47,13 @@ class WMA(Track):
 
         return values if len(values) > 0 else None
 
+    def _extract_images(self) -> Optional[List[Image.Image]]:
+        """Extract image from file"""
+        raise NotImplementedError("Image extraction not supported for WMA files")
+
+        values = self._get_tag_values(self.tag_map.images)
+        return [Image.open(BytesIO(value)) for value in values] if values is not None else None
+
     def _update_tag_value(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
         if not dry_run and tag_id is not None:
             if isinstance(tag_value, list):
@@ -54,18 +63,16 @@ class WMA(Track):
         return tag_id is not None
 
     def _update_images(self, dry_run: bool = True) -> bool:
-        raise NotImplementedError("WMA Image embedding not currently supported")
+        raise NotImplementedError("Image embedding not supported for WMA files")
 
         tag_id = next(iter(self.tag_map.key), None)
 
         updated = False
         tag_value = []
         for image_link in self.image_links.values():
-            image: Image.Image = self._open_image(image_link)
-            if image is None:
-                continue
+            image = open_image(image_link)
 
-            tag_value.append(mutagen.asf.ASFByteArrayAttribute(data=image.tobytes()))
+            tag_value.append(mutagen.asf.ASFByteArrayAttribute(data=get_image_bytes(image)))
             image.close()
 
         if len(tag_value) > 0:

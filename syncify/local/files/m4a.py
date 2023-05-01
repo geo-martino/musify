@@ -1,3 +1,4 @@
+from io import BytesIO
 from typing import Optional, Union, List
 
 import mutagen
@@ -5,7 +6,7 @@ import mutagen.mp4
 from PIL import Image
 
 from syncify.local.files._track import Track
-from syncify.local.files.tags.helpers import TagMap
+from syncify.local.files.tags.helpers import TagMap, open_image, get_image_bytes
 from syncify.utils.helpers import make_list
 
 
@@ -73,6 +74,10 @@ class M4A(Track):
         values = self._get_tag_values(self.tag_map.disc_total)
         return int(values[0][1]) if values is not None else None
 
+    def _extract_images(self) -> Optional[List[Image.Image]]:
+        values = self._get_tag_values(self.tag_map.images)
+        return [Image.open(BytesIO(bytes(value))) for value in values] if values is not None else None
+
     def _update_tag_value(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
         if not dry_run and tag_id is not None:
             if tag_id.startswith("----:com.apple.iTunes"):
@@ -103,21 +108,19 @@ class M4A(Track):
         return self._update_tag_value(next(iter(self.tag_map.compilation), None), self.compilation, dry_run)
 
     def _update_images(self, dry_run: bool = True) -> bool:
-        tag_id = next(iter(self.tag_map.key), None)
+        tag_id = next(iter(self.tag_map.images), None)
 
         updated = False
         tag_value = []
         for image_link in self.image_links.values():
-            image: Image.Image = self._open_image(image_link)
-            if image is None:
-                continue
+            image = open_image(image_link)
 
             if image.format == 'PNG':
                 image_format = mutagen.mp4.MP4Cover.FORMAT_PNG
             else:
                 image_format = mutagen.mp4.MP4Cover.FORMAT_JPEG
 
-            tag_value.append(mutagen.mp4.MP4Cover(image.tobytes(), imageformat=image_format))
+            tag_value.append(mutagen.mp4.MP4Cover(get_image_bytes(image), imageformat=image_format))
             image.close()
 
         if len(tag_value) > 0:

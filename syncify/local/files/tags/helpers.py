@@ -4,10 +4,16 @@ from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from enum import IntEnum
+from http.client import HTTPResponse
+from io import BytesIO
 from typing import Optional, List, Mapping, Set
+from urllib.error import URLError
+from urllib.request import urlopen
 
 import mutagen
+from PIL import Image, UnidentifiedImageError
 
+from syncify.local.files.tags.exception import ImageLoadError, EnumNotFoundError
 from syncify.utils.logger import Logger
 
 
@@ -45,13 +51,24 @@ class TagEnums(IntEnum):
     COMPILATION = 11
     COMMENTS = 12
     URI = 13
-    IMAGE = 14
+    IMAGES = 14
 
     @classmethod
     def all(cls) -> Set[TagEnums]:
         all_enums = set(cls)
         all_enums.remove(cls.ALL)
         return all_enums
+
+    @classmethod
+    def to_tag(cls, enum: TagEnums) -> Set[str]:
+        return set(tag for tag in TagMap.__annotations__ if tag.startswith(enum.name.lower()))
+
+    @classmethod
+    def to_enum(cls, name: str) -> TagEnums:
+        results = [enum for enum in cls if enum.name.startswith(name.split("_")[0].upper())]
+        if len(results) == 0:
+            raise EnumNotFoundError(name)
+        return results[0]
 
 
 @dataclass
@@ -131,3 +148,30 @@ class TrackBase(Logger, Tags, Properties, metaclass=ABCMeta):
 
         :returns: Mutagen file object or None if load error.
         """
+
+
+def open_image(image_link: str) -> Image.Image:
+    """
+    Open Image object from a given URL or file path
+
+    :param image_link: URL or file path of the image
+    :returns: The loaded image, image bytes
+    """
+
+    try:  # open image from link
+        if image_link.startswith("http"):
+            response: HTTPResponse = urlopen(image_link)
+            image = Image.open(response.read())
+            response.close()
+        else:
+            image = Image.open(image_link)
+
+        return image
+    except (URLError, FileNotFoundError, UnidentifiedImageError):
+        raise ImageLoadError(f"{image_link} | Failed to open image")
+
+
+def get_image_bytes(image: Image.Image) -> bytes:
+    image_bytes_arr = BytesIO()
+    image.save(image_bytes_arr, format=image.format)
+    return image_bytes_arr.getvalue()

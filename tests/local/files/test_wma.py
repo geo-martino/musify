@@ -8,7 +8,7 @@ from syncify.local.files.wma import WMA
 from syncify.local.files.tags.exception import IllegalFileTypeError
 from syncify.spotify.helpers import __UNAVAILABLE_URI_VALUE__
 from tests.common import path_file_wma, path_resources, path_file_txt
-from tests.local.files.test_track import update_tags_test, clear_tags_test, update_images_test
+from tests.local.files.test_track import update_tags_test, clear_tags_test
 
 
 def test_load():
@@ -94,9 +94,9 @@ def test_loaded_attributes():
     assert track.folder == basename(dirname(path_file_wma))
     assert track.filename == basename(path_file_wma)
     assert track.ext == '.wma'
-    assert track.size == 468915
+    assert track.size == 1193637
     assert int(track.length) == 32
-    assert track.date_modified == datetime(2023, 5, 1, 10, 22, 58, 191000)
+    assert track.date_modified == datetime(2023, 5, 1, 19, 27, 19, 440000)
 
     # library properties
     assert track.date_added is None
@@ -113,8 +113,3 @@ def test_cleared_tags():
 def test_updated_tags():
     track = WMA(file=path_file_wma, position=1)
     update_tags_test(track)
-
-
-def test_updated_images():
-    track = WMA(file=path_file_wma, position=1)
-    update_images_test(track)

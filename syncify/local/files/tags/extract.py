@@ -1,6 +1,6 @@
 import os
 import re
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 from datetime import datetime
 from os.path import basename, dirname, getmtime, splitext, getsize, join, exists
 from typing import Optional, List, Tuple
@@ -177,16 +177,15 @@ class TagExtractor(TrackBase, metaclass=ABCMeta):
 
         return uri, has_uri
 
+    @abstractmethod
     def _extract_images(self) -> Optional[List[Image.Image]]:
         """Extract image from file"""
-        values = self._get_tag_values(self.tag_map.images)
-        return [Image.open(bytes(value)) for value in values] if values is not None else None
 
     def _check_for_images(self) -> bool:
         """Check if file has embedded images"""
         return self._get_tag_values(self.tag_map.images) is not None
 
-    def save_images_to_file(self, output_folder: str) -> int:
+    def extract_images_to_file(self, output_folder: str) -> int:
         """
         Extract and save all embedded images from file
 

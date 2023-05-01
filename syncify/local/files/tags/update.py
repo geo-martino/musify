@@ -1,12 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from copy import copy
-from http.client import HTTPResponse
 from typing import List, Optional, Union, Set
-from urllib.error import URLError
-from urllib.request import urlopen
-
-import PIL
-from PIL import Image
 
 from syncify.local.files.tags.helpers import TagEnums, TrackBase
 from syncify.spotify.helpers import __UNAVAILABLE_URI_VALUE__
@@ -14,54 +8,6 @@ from syncify.utils.helpers import make_list
 
 
 class TagUpdater(TrackBase, metaclass=ABCMeta):
-
-    def _open_image(self, image_link: Optional[str]) -> Optional[Image.Image]:
-        """
-        Open Image object from a given URL or file path
-
-        :param image_link: URL or file path of the image
-        """
-        if image_link is None:
-            return
-
-        try:  # open image from link
-            if image_link.startswith("http"):
-                response: HTTPResponse = urlopen(image_link)
-                image = Image.open(response.read())
-                response.close()
-            else:
-                image = Image.open(image_link)
-            return image
-        except (URLError, FileNotFoundError, PIL.UnidentifiedImageError):
-            self._logger.error(f"{image_link} | Failed to open image")
-            return
-
-    def clear_tags(self, tags: Optional[Union[TagEnums, List[TagEnums]]] = None, dry_run: bool = True) -> Set[TagEnums]:
-        """
-        Remove tags from file.
-
-        :param tags: Tags to remove.
-        :param dry_run: Run function, but do not modify file at all.
-        :returns: List of tags that have been removed.
-        """
-        removed: Set[TagEnums] = set()
-
-        tags: Set[TagEnums] = set(make_list(tags))
-        if TagEnums.ALL in tags:
-            tags = TagEnums.all()
-
-        for tag in tags:
-            tag_ids = getattr(self.tag_map, tag.name)
-            if tag_ids is None or len(tag_ids) is None:
-                continue
-
-            for tag_id in tag_ids:
-                if tag_id in self.file:
-                    if not dry_run:
-                        del self.file[tag_id]
-                    removed.add(tag)
-
-        return removed
 
     def update_file_tags(
             self, 
@@ -160,10 +106,10 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
             if any(conditionals) and self._update_uri(dry_run):
                 updated.add(TagEnums.URI)
 
-        if TagEnums.IMAGE in tags:  # needs deeper comparison
-            conditionals = [file.has_image is None, replace and self.has_image != file.has_image]
+        if TagEnums.IMAGES in tags:  # needs deeper comparison
+            conditionals = [file.has_image is False, replace and self.has_image != file.has_image]
             if any(conditionals) and self._update_images(dry_run):
-                updated.add(TagEnums.IMAGE)
+                updated.add(TagEnums.IMAGES)
 
         if not dry_run and len(updated) > 0:
             self.file.save()
@@ -332,4 +278,49 @@ class TagUpdater(TrackBase, metaclass=ABCMeta):
         :param dry_run: Run function, but do not modify file at all.
         :returns: True if the file was updated or would have been if dry_run is True, False otherwise.
         """
+
+    def clear_tags(self, tags: Optional[Union[TagEnums, List[TagEnums]]] = None, dry_run: bool = True) -> Set[TagEnums]:
+        """
+        Remove tags from file.
+
+        :param tags: Tags to remove.
+        :param dry_run: Run function, but do not modify file at all.
+        :returns: List of tags that have been removed.
+        """
+        tags: Set[TagEnums] = set(make_list(tags))
+        if TagEnums.ALL in tags:
+            tags = TagEnums.all()
+
+        tag_names = set(tag_name for tag in tags for tag_name in TagEnums.to_tag(tag))
+        removed = set(TagEnums.to_enum(tag_name) for tag_name in tag_names if self._clear_tag(tag_name, dry_run))
+
+        if TagEnums.IMAGES in removed:
+            self.has_image = False
+
+        if not dry_run and len(removed) > 0:
+            self.file.save()
+
+        return removed
+
+    def _clear_tag(self, tag_name: str, dry_run: bool = True) -> bool:
+        """
+        Remove a tag by its tag name.
+
+        :param tag_name: Tag ID to remove.
+        :param dry_run: Run function, but do not modify file at all.
+        :returns: True if tag has been remove, False otherwise.
+        """
+        removed = False
+
+        tag_ids = getattr(self.tag_map, tag_name, None)
+        if tag_ids is None or len(tag_ids) is None:
+            return removed
+
+        for tag_id in tag_ids:
+            if tag_id in self.file:
+                if not dry_run:
+                    del self.file[tag_id]
+                removed = True
+
+        return removed
     
