@@ -5,12 +5,13 @@ from typing import Optional
 
 import mutagen
 
-from syncify.local.files.utils.tags import Tags, Properties, TagEnums, TagMap
+from syncify.local.files.track.tags import Tags, Properties, TagNames, TagMap
 
 
 class TagProcessor(Tags, Properties, metaclass=ABCMeta):
+    """Generic base class for tag processing"""
 
-    uri_tag = TagEnums.COMMENTS
+    uri_tag = TagNames.COMMENTS
 
     @property
     @abstractmethod
@@ -42,4 +43,6 @@ class TagProcessor(Tags, Properties, metaclass=ABCMeta):
         Load local file using mutagen and set object file path and extension properties.
 
         :returns: Mutagen file object or None if load error.
+        :exception FileNotFoundError: If the file cannot be found.
+        :exception IllegalFileTypeError: If the file type is not supported.
         """

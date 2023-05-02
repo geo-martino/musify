@@ -8,12 +8,18 @@ from PIL import Image
 from mutagen.id3 import PictureType
 
 from syncify.local.files.track.track import Track
-from syncify.local.files.utils.tags import TagMap, TagEnums
-from syncify.local.files.utils.helpers import open_image, get_image_bytes
+from syncify.local.files.track.tags import TagMap, TagNames
+from syncify.local.files.utils.image import open_image, get_image_bytes
 
 
 class FLAC(Track):
-    filetypes = [".flac"]
+    """
+    Track object for extracting, modifying, and saving tags from FLAC files.
+
+    :param file: The path or Mutagen object of the file to load.
+    """
+
+    track_ext = [".flac"]
 
     tag_map = TagMap(
         title=["title"],
@@ -33,18 +39,18 @@ class FLAC(Track):
         images=[],
     )
 
-    def __init__(self, file: Union[str, mutagen.File], position: Optional[int] = None):
-        Track.__init__(self, file=file, position=position)
+    def __init__(self, file: Union[str, mutagen.File]):
+        Track.__init__(self, file=file)
         self._file: mutagen.flac.FLAC = self._file
 
-    def _extract_images(self) -> Optional[List[Image.Image]]:
+    def _read_images(self) -> Optional[List[Image.Image]]:
         values = self._file.pictures
         return [Image.open(io.BytesIO(value.data)) for value in values] if len(values) > 0 else None
 
     def _check_for_images(self) -> bool:
         return len(self._file.pictures) > 0
 
-    def _update_tag_value(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
+    def _write_tag(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
         if not dry_run and tag_id is not None:
             if isinstance(tag_value, list):
                 self._file[tag_id] = [str(v) for v in tag_value]
@@ -52,7 +58,7 @@ class FLAC(Track):
                 self._file[tag_id] = str(tag_value)
         return tag_id is not None
 
-    def _update_images(self, dry_run: bool = True) -> bool:
+    def _write_images(self, dry_run: bool = True) -> bool:
         updated = False
         for image_type, image_link in self.image_links.items():
             image = open_image(image_link)
@@ -76,8 +82,8 @@ class FLAC(Track):
 
         return updated
 
-    def _clear_tag(self, tag_name: str, dry_run: bool = True) -> bool:
-        if tag_name == TagEnums.IMAGES.name.lower():
+    def _delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:
+        if tag_name == TagNames.IMAGES.name.lower():
             self._file.clear_pictures()
             return True
 

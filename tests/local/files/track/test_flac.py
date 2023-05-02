@@ -4,10 +4,10 @@ from os.path import basename, dirname
 
 import pytest
 
-from syncify.local.files.flac import FLAC
-from syncify.local.files.tags.exception import IllegalFileTypeError
+from syncify.local.files.track.files.flac import FLAC
+from syncify.local.files.utils.exception import IllegalFileTypeError
 from tests.common import path_file_flac, path_resources, path_file_txt
-from tests.local.files.test_track import update_tags_test, clear_tags_test, update_images_test
+from tests.local.files.track.test_track import update_tags_test, clear_tags_test, update_images_test
 
 
 def test_load():
@@ -55,18 +55,17 @@ def test_set_and_find_file_paths():
     assert track.path == path_file_flac.upper()
 
     FLAC.set_file_paths(path_resources)
-    assert FLAC.filepaths == {path_file_flac}
-    assert FLAC._filepaths_lower_map == {path_file_flac.lower(): path_file_flac}
+    assert FLAC.available_track_paths == {path_file_flac}
+    assert FLAC._available_track_paths_lower_map == {path_file_flac.lower(): path_file_flac}
 
     track = FLAC(file=path_file_flac.upper())
     assert track.path != path_file_flac.upper()
 
 
 def test_loaded_attributes():
-    track = FLAC(file=path_file_flac, position=1)
+    track = FLAC(file=path_file_flac)
 
     # metadata
-    assert track.position == 1
     assert track.title == 'title 1'
     assert track.artist == 'artist 1'
     assert track.album == 'album artist 1'
@@ -105,15 +104,15 @@ def test_loaded_attributes():
 
 
 def test_cleared_tags():
-    track = FLAC(file=path_file_flac, position=1)
+    track = FLAC(file=path_file_flac)
     clear_tags_test(track)
 
 
 def test_updated_tags():
-    track = FLAC(file=path_file_flac, position=1)
+    track = FLAC(file=path_file_flac)
     update_tags_test(track)
 
 
 def test_updated_images():
-    track = FLAC(file=path_file_flac, position=1)
+    track = FLAC(file=path_file_flac)
     update_images_test(track)

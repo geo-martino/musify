@@ -4,11 +4,11 @@ from os.path import basename, dirname
 
 import pytest
 
-from syncify.local.files.wma import WMA
-from syncify.local.files.tags.exception import IllegalFileTypeError
+from syncify.local.files.track.files.wma import WMA
+from syncify.local.files.utils.exception import IllegalFileTypeError
 from syncify.spotify.helpers import __UNAVAILABLE_URI_VALUE__
 from tests.common import path_file_wma, path_resources, path_file_txt
-from tests.local.files.test_track import update_tags_test, clear_tags_test
+from tests.local.files.track.test_track import update_tags_test, clear_tags_test
 
 
 def test_load():
@@ -56,18 +56,17 @@ def test_set_and_find_file_paths():
     assert track.path == path_file_wma.upper()
 
     WMA.set_file_paths(path_resources)
-    assert WMA.filepaths == {path_file_wma}
-    assert WMA._filepaths_lower_map == {path_file_wma.lower(): path_file_wma}
+    assert WMA.available_track_paths == {path_file_wma}
+    assert WMA._available_track_paths_lower_map == {path_file_wma.lower(): path_file_wma}
 
     track = WMA(file=path_file_wma.upper())
     assert track.path != path_file_wma.upper()
 
 
 def test_loaded_attributes():
-    track = WMA(file=path_file_wma, position=1)
+    track = WMA(file=path_file_wma)
 
     # metadata
-    assert track.position == 1
     assert track.title == 'title 4'
     assert track.artist == 'artist 4'
     assert track.album == 'album artist 4'
@@ -106,10 +105,10 @@ def test_loaded_attributes():
 
 
 def test_cleared_tags():
-    track = WMA(file=path_file_wma, position=1)
+    track = WMA(file=path_file_wma)
     clear_tags_test(track)
 
 
 def test_updated_tags():
-    track = WMA(file=path_file_wma, position=1)
+    track = WMA(file=path_file_wma)
     update_tags_test(track)

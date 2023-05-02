@@ -6,12 +6,18 @@ import mutagen.asf
 from PIL import Image
 
 from syncify.local.files.track.track import Track
-from syncify.local.files.utils.tags import TagMap
-from syncify.local.files.utils.helpers import open_image, get_image_bytes
+from syncify.local.files.track.tags import TagMap
+from syncify.local.files.utils.image import open_image, get_image_bytes
 
 
 class WMA(Track):
-    filetypes = [".wma"]
+    """
+    Track object for extracting, modifying, and saving tags from WMA files.
+
+    :param file: The path or Mutagen object of the file to load.
+    """
+
+    track_ext = [".wma"]
 
     tag_map = TagMap(
         title=["Title"],
@@ -31,11 +37,11 @@ class WMA(Track):
         images=["WM/Picture"],
     )
 
-    def __init__(self, file: Union[str, mutagen.File], position: Optional[int] = None):
-        Track.__init__(self, file=file, position=position)
+    def __init__(self, file: Union[str, mutagen.File]):
+        Track.__init__(self, file=file)
         self._file: mutagen.asf.ASF = self._file
 
-    def _get_tag_values(self, tag_ids: List[str]) -> Optional[list]:
+    def _read_tag(self, tag_ids: List[str]) -> Optional[list]:
         # wma tag values are return as mutagen.asf._attrs.ASFUnicodeAttribute
         values = []
         for tag_id in tag_ids:
@@ -48,14 +54,13 @@ class WMA(Track):
 
         return values if len(values) > 0 else None
 
-    def _extract_images(self) -> Optional[List[Image.Image]]:
-        """Extract image from file"""
+    def _read_images(self) -> Optional[List[Image.Image]]:
         raise NotImplementedError("Image extraction not supported for WMA files")
 
-        values = self._get_tag_values(self.tag_map.images)
+        values = self._read_tag(self.tag_map.images)
         return [Image.open(BytesIO(value)) for value in values] if values is not None else None
 
-    def _update_tag_value(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
+    def _write_tag(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
         if not dry_run and tag_id is not None:
             if isinstance(tag_value, list):
                 self._file[tag_id] = [mutagen.asf.ASFUnicodeAttribute(str(v)) for v in tag_value]
@@ -63,7 +68,7 @@ class WMA(Track):
                 self._file[tag_id] = mutagen.asf.ASFUnicodeAttribute(str(tag_value))
         return tag_id is not None
 
-    def _update_images(self, dry_run: bool = True) -> bool:
+    def _write_images(self, dry_run: bool = True) -> bool:
         raise NotImplementedError("Image embedding not supported for WMA files")
 
         tag_id = next(iter(self.tag_map.key), None)
@@ -77,7 +82,7 @@ class WMA(Track):
             image.close()
 
         if len(tag_value) > 0:
-            updated = self._update_tag_value(tag_id, tag_value, dry_run)
+            updated = self._write_tag(tag_id, tag_value, dry_run)
 
         self.has_image = updated or self.has_image
         return updated

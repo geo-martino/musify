@@ -4,10 +4,10 @@ from os.path import basename, dirname
 
 import pytest
 
-from syncify.local.files.m4a import M4A
-from syncify.local.files.tags.exception import IllegalFileTypeError
+from local.files.track.files.m4a import M4A
+from syncify.local.files.utils.exception import IllegalFileTypeError
 from tests.common import path_file_m4a, path_resources, path_file_txt
-from tests.local.files.test_track import update_tags_test, clear_tags_test, update_images_test
+from tests.local.files.track.test_track import update_tags_test, clear_tags_test, update_images_test
 
 
 def test_load():
@@ -55,18 +55,17 @@ def test_set_and_find_file_paths():
     assert track.path == path_file_m4a.upper()
 
     M4A.set_file_paths(path_resources)
-    assert M4A.filepaths == {path_file_m4a}
-    assert M4A._filepaths_lower_map == {path_file_m4a.lower(): path_file_m4a}
+    assert M4A.available_track_paths == {path_file_m4a}
+    assert M4A._available_track_paths_lower_map == {path_file_m4a.lower(): path_file_m4a}
 
     track = M4A(file=path_file_m4a.upper())
     assert track.path != path_file_m4a.upper()
 
 
 def test_loaded_attributes():
-    track = M4A(file=path_file_m4a, position=1)
+    track = M4A(file=path_file_m4a)
 
     # metadata
-    assert track.position == 1
     assert track.title == 'title 3'
     assert track.artist == 'artist 3'
     assert track.album == 'album artist 3'
@@ -105,15 +104,15 @@ def test_loaded_attributes():
 
 
 def test_cleared_tags():
-    track = M4A(file=path_file_m4a, position=1)
+    track = M4A(file=path_file_m4a)
     clear_tags_test(track)
 
 
 def test_updated_tags():
-    track = M4A(file=path_file_m4a, position=1)
+    track = M4A(file=path_file_m4a)
     update_tags_test(track)
 
 
 def test_updated_images():
-    track = M4A(file=path_file_m4a, position=1)
+    track = M4A(file=path_file_m4a)
     update_images_test(track)

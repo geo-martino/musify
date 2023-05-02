@@ -1,3 +1,6 @@
+from typing import Any
+
+
 class IllegalFileTypeError(Exception):
     """Exception raised for unrecognised file types.
 
@@ -29,6 +32,6 @@ class EnumNotFoundError(Exception):
     :param message: Explanation of the error.
     """
 
-    def __init__(self, value: str, message: str = "Could not find enum"):
+    def __init__(self, value: Any, message: str = "Could not find enum"):
         self.message = message
         super().__init__(f"{self.message}: {value}")

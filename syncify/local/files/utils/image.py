@@ -13,8 +13,7 @@ def open_image(image_link: str) -> Image.Image:
     """
     Open Image object from a given URL or file path
 
-    :param image_link: URL or file path of the image
-    :returns: The loaded image, image bytes
+    :exception ImageLoadError: If the image cannot be loaded.
     """
 
     try:  # open image from link
@@ -31,6 +30,7 @@ def open_image(image_link: str) -> Image.Image:
 
 
 def get_image_bytes(image: Image.Image) -> bytes:
+    """Extracts bytes from a given Image file"""
     image_bytes_arr = BytesIO()
     image.save(image_bytes_arr, format=image.format)
     return image_bytes_arr.getvalue()

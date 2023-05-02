@@ -4,10 +4,10 @@ from os.path import basename, dirname
 
 import pytest
 
-from syncify.local.files.mp3 import MP3
-from syncify.local.files.tags.exception import IllegalFileTypeError
+from local.files.track.files.mp3 import MP3
+from syncify.local.files.utils.exception import IllegalFileTypeError
 from tests.common import path_file_mp3, path_resources, path_file_txt
-from tests.local.files.test_track import update_tags_test, clear_tags_test, update_images_test
+from tests.local.files.track.test_track import update_tags_test, clear_tags_test, update_images_test
 
 
 def test_load():
@@ -55,18 +55,17 @@ def test_set_and_find_file_paths():
     assert track.path == path_file_mp3.upper()
 
     MP3.set_file_paths(path_resources)
-    assert MP3.filepaths == {path_file_mp3}
-    assert MP3._filepaths_lower_map == {path_file_mp3.lower(): path_file_mp3}
+    assert MP3.available_track_paths == {path_file_mp3}
+    assert MP3._available_track_paths_lower_map == {path_file_mp3.lower(): path_file_mp3}
 
     track = MP3(file=path_file_mp3.upper())
     assert track.path != path_file_mp3.upper()
 
 
 def test_loaded_attributes():
-    track = MP3(file=path_file_mp3, position=1)
+    track = MP3(file=path_file_mp3)
 
     # metadata
-    assert track.position == 1
     assert track.title == 'title 2'
     assert track.artist == 'artist 2'
     assert track.album == 'album artist 2'
@@ -105,15 +104,15 @@ def test_loaded_attributes():
 
 
 def test_cleared_tags():
-    track = MP3(file=path_file_mp3, position=1)
+    track = MP3(file=path_file_mp3)
     clear_tags_test(track)
 
 
 def test_updated_tags():
-    track = MP3(file=path_file_mp3, position=1)
+    track = MP3(file=path_file_mp3)
     update_tags_test(track)
 
 
 def test_updated_images():
-    track = MP3(file=path_file_mp3, position=1)
+    track = MP3(file=path_file_mp3)
     update_images_test(track)

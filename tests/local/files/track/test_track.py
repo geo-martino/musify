@@ -4,8 +4,9 @@ from copy import copy, deepcopy
 from os.path import join, basename, dirname, exists
 from typing import Tuple
 
-from syncify.local.files._track import Track
-from syncify.local.files.tags.helpers import TagEnums, open_image
+from syncify.local.files.track.track import Track
+from syncify.local.files.track.tags import TagNames
+from syncify.local.files.utils.image import open_image
 from syncify.spotify.helpers import __UNAVAILABLE_URI_VALUE__
 from tests.common import path_cache, path_file_img
 
@@ -19,7 +20,7 @@ def copy_track(track: Track) -> Tuple[str, str]:
     shutil.copyfile(path_file_base, path_file_copy)
 
     track._path = path_file_copy
-    track.load(track.position)
+    track.load()
 
     return path_file_base, path_file_copy
 
@@ -29,7 +30,7 @@ def clear_tags_test(track: Track) -> None:
     track_original = copy(track)
 
     # dry run, no updates should happen
-    track.clear_tags(tags=TagEnums.ALL, dry_run=True)
+    track.delete_tags(tags=TagNames.ALL, dry_run=True)
     track_update_dry = deepcopy(track)
 
     assert track_update_dry.title == track_original.title
@@ -52,7 +53,7 @@ def clear_tags_test(track: Track) -> None:
     assert track_update_dry.has_image == track_original.has_image
 
     # clear
-    track.clear_tags(tags=TagEnums.ALL, dry_run=False)
+    track.delete_tags(tags=TagNames.ALL, dry_run=False)
     track_update = deepcopy(track)
 
     assert track_update.title is None
@@ -98,7 +99,7 @@ def update_tags_test(track: Track) -> None:
     track.image_links = None
 
     # dry run, no updates should happen
-    track.update_file_tags(tags=TagEnums.ALL, replace=False, dry_run=True)
+    track.write_tags(tags=TagNames.ALL, replace=False, dry_run=True)
     track_update_dry = deepcopy(track)
 
     assert track_update_dry.title == track_original.title
@@ -122,7 +123,7 @@ def update_tags_test(track: Track) -> None:
 
     # update and don't replace current tags (except uri if uri is False)
     shutil.copyfile(path_file_base, path_file_copy)
-    track.update_file_tags(tags=TagEnums.ALL, replace=False, dry_run=False)
+    track.write_tags(tags=TagNames.ALL, replace=False, dry_run=False)
     track_update = deepcopy(track)
 
     assert track_update.title == track_original.title
@@ -146,7 +147,7 @@ def update_tags_test(track: Track) -> None:
 
     # update and replace
     shutil.copyfile(path_file_base, path_file_copy)
-    track.update_file_tags(tags=TagEnums.ALL, replace=True, dry_run=False)
+    track.write_tags(tags=TagNames.ALL, replace=True, dry_run=False)
     track_update_replace = deepcopy(track)
 
     assert track_update_replace.title == track.title
@@ -176,34 +177,34 @@ def update_images_test(track: Track) -> None:
     track_original = copy(track)
 
     track.image_links = {"cover_front": path_file_img}
-    image_original = track._extract_images()[0]
+    image_original = track._read_images()[0]
     image_new = open_image(path_file_img)
 
     # dry run, no updates should happen
-    track.update_file_tags(tags=TagEnums.IMAGES, replace=False, dry_run=True)
+    track.write_tags(tags=TagNames.IMAGES, replace=False, dry_run=True)
     track_update_dry = deepcopy(track)
-    image_update_dry = track_update_dry._extract_images()[0]
+    image_update_dry = track_update_dry._read_images()[0]
 
     assert track_update_dry.has_image == track_original.has_image
     assert image_update_dry.size == image_original.size
 
     # clear current image and update
     shutil.copyfile(path_file_base, path_file_copy)
-    track.clear_tags(TagEnums.IMAGES, dry_run=False)
+    track.delete_tags(TagNames.IMAGES, dry_run=False)
     assert not track.has_image
 
-    track.update_file_tags(tags=TagEnums.IMAGES, replace=False, dry_run=False)
+    track.write_tags(tags=TagNames.IMAGES, replace=False, dry_run=False)
     track_update = deepcopy(track)
-    image_update = track_update._extract_images()[0]
+    image_update = track_update._read_images()[0]
 
     assert track_update.has_image
     assert image_update.size == image_new.size
 
     # update and replace
     shutil.copyfile(path_file_base, path_file_copy)
-    track.update_file_tags(tags=TagEnums.IMAGES, replace=False, dry_run=False)
+    track.write_tags(tags=TagNames.IMAGES, replace=False, dry_run=False)
     track_update_replace = deepcopy(track)
-    image_update_replace = track_update_replace._extract_images()[0]
+    image_update_replace = track_update_replace._read_images()[0]
 
     assert track_update_replace.has_image
     assert image_update_replace.size == image_new.size
