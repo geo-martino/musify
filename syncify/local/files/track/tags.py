@@ -73,6 +73,10 @@ class Properties:
 
 class Name(IntEnum):
 
+    @property
+    def ALL(self):
+        return 0
+
     @classmethod
     def all(cls) -> Set[Self]:
         all_enums = set(cls)

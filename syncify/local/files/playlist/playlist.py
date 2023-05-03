@@ -1,11 +1,12 @@
-from abc import ABC, abstractmethod
-from os.path import exists, basename, splitext
-from typing import Optional, List, Set
+from abc import ABCMeta, abstractmethod
+from os.path import basename, splitext
+from typing import List, MutableMapping, Optional, Set
 
+from local.files.track.collection.collection import TrackCollection
 from syncify.local.files.track.track import Track
 
 
-class Playlist(ABC):
+class Playlist(TrackCollection, metaclass=ABCMeta):
     """
     Generic class for CRUD operations on playlists.
 
@@ -30,6 +31,8 @@ class Playlist(ABC):
             library_folder: Optional[str] = None,
             other_folders: Optional[Set[str]] = None,
     ):
+        TrackCollection.__init__(self)
+
         self.name, self.ext = splitext(basename(path))
         self.path: str = path
         self.tracks: Optional[List[Track]] = None
@@ -42,45 +45,6 @@ class Playlist(ABC):
             self._other_folders = set(folder.rstrip("\\/") for folder in other_folders)
 
         self.load(tracks=tracks)
-
-    def _check_for_other_folder_stem(self, paths: List[str]) -> None:
-        """
-        Checks for the presence of some other folder as the stem of the paths in this playlist.
-        Useful when managing similar libraries across multiple operating systems
-
-        :param paths: Paths to search through for a match.
-        """
-        self._original_folder = None
-
-        for path in paths:
-            results = [folder for folder in self._other_folders if path.startswith(folder)]
-            if len(results) != 0:
-                self._original_folder = results[0]
-                break
-
-    def _sanitise_file_path(self, path: str) -> Optional[str]:
-        """
-        Sanitise a file path by:
-            - replacing path stems found in other_folders
-            - sanitising path separators to match current os separator
-            - checking the track exists and replacing path with case-sensitive path if found
-
-        :param path: Path to sanitise.
-        :return: Sanitised path if path exists, None if not.
-        """
-        if not path:
-            return
-
-        if self._library_folder is not None:
-            # check if replacement of filepath stem is necessary
-            if self._original_folder is not None:
-                path = path.replace(self._original_folder, self._library_folder)
-
-            # sanitise path separators
-            path = path.replace("\\", "/") if "/" in self._library_folder else path.replace("/", "\\")
-
-        if exists(path):
-            return path
 
     @abstractmethod
     def load(self, tracks: Optional[List[Track]] = None) -> Optional[List[Track]]:
@@ -104,3 +68,19 @@ class Playlist(ABC):
         :param tracks: Available Tracks to search through for matches.
         :return: Number of paths written to the file
         """
+
+    def as_dict(self) -> MutableMapping[str, object]:
+        return {
+            "name": self.name,
+            "description": self.description,
+            "path": self.path,
+            "tracks": [track.as_json() for track in self.tracks]
+        }
+
+    def as_json(self) -> MutableMapping[str, object]:
+        return {
+            "name": self.name,
+            "description": self.description,
+            "path": self.path,
+            "tracks": [track.as_dict() for track in self.tracks]
+        }

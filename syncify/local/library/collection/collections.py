@@ -1,7 +1,7 @@
-from typing import List, Optional, MutableMapping
+from typing import List, MutableMapping
 
 from syncify.local.files.track.track import Track
-from syncify.local.library.collection.track import TrackCollection
+from syncify.local.files.track.collection.collection import TrackCollection
 
 
 class Album(TrackCollection):
@@ -47,34 +47,6 @@ class Folder(TrackCollection):
         return {
             "name": self.name,
             "tracks": [track.as_json() for track in self.tracks]
-        }
-
-
-class Playlist(TrackCollection):
-
-    @property
-    def tracks(self) -> List[Track]:
-        return self._tracks
-
-    def __init__(self, name: str, tracks: List[Track], filepath: Optional[str] = None):
-        self.name: str = name
-        self.filepath: Optional[str] = filepath
-        self._tracks: List[Track] = []
-
-        self._tracks: List[Track] = tracks
-
-    def as_dict(self) -> MutableMapping[str, object]:
-        return {
-            "name": self.name,
-            "filepath": self.filepath,
-            "tracks": [track.as_json() for track in self.tracks]
-        }
-
-    def as_json(self) -> MutableMapping[str, object]:
-        return {
-            "name": self.name,
-            "filepath": self.filepath,
-            "tracks": [track.as_dict() for track in self.tracks]
         }
 
 

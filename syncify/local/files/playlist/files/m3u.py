@@ -1,7 +1,7 @@
 from typing import Optional, List, Set
 
-from local.files.file import load_track
-from local.files.track.track import Track
+from syncify.local.files.file import load_track
+from syncify.local.files.track.track import Track
 from syncify.local.files.playlist.playlist import Playlist
 
 
@@ -27,23 +27,20 @@ class M3U(Playlist):
             other_folders: Optional[Set[str]] = None
     ):
         Playlist.__init__(self, path=path, tracks=tracks, library_folder=library_folder, other_folders=other_folders)
+        with open(self.path, "r", encoding='utf-8') as f:
+            self.include_paths = [line.strip() for line in f]
+        self.sanitise_file_paths(library_folder=library_folder, other_folders=other_folders)
 
     def load(self, tracks: Optional[List[Track]] = None) -> Optional[List[Track]]:
-        with open(self.path, "r", encoding='utf-8') as f:
-            paths = [line.strip() for line in f]
-
-        if len(paths) == 0:
+        if len(self.include_paths) == 0:
             return
 
-        self._check_for_other_folder_stem(paths)
-        paths = [self._sanitise_file_path(path) for path in paths if path]
-
         if tracks is None:
-            self.tracks = [load_track(path=path) for path in paths if path is not None]
+            self.tracks = [load_track(path=path) for path in self.include_paths if path is not None]
         else:
             track_paths_map = {track.path.lower(): track for track in tracks}
-            tracks = [track_paths_map.get(path.lower()) for path in paths]
-            self.tracks = [track for track in tracks if track is not None]
+            tracks = [track_paths_map.get(path.lower()) for path in self.include_paths]
+            self.tracks = self.match(tracks)
 
         return self.tracks
 

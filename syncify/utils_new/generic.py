@@ -31,7 +31,3 @@ def flatten_nested(nested: Mapping, previous: list = None) -> List:
         previous.extend(nested)
 
     return previous
-
-
-def xml_ts_to_dt(timestamp_str: str) -> datetime:
-    return datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%SZ")
