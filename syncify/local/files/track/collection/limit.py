@@ -5,7 +5,6 @@ from typing import Any, Callable, List, Mapping, Optional, Self, MutableMapping
 from syncify.local.files.track.base import PropertyName, Track
 from syncify.local.files.track.collection.processor import TrackProcessor, Mode
 from syncify.local.files.track.collection.sort import TrackSort
-from syncify.local.files.utils.exception import EnumNotFoundError
 
 
 class LimitType(Mode):
@@ -48,16 +47,20 @@ class TrackLimit(TrackProcessor):
         if value is None:
             return
 
-        sort_sanitised = self._sort_method_prefix + re.sub('([A-Z])', lambda m: f"_{m.group(0).lower()}", value)
+        sort_sanitised = re.sub('([A-Z])', lambda m: f"_{m.group(0).lower()}", value.strip()).replace(" ", "_")
+        if not sort_sanitised.startswith("_"):
+            sort_sanitised = "_" + sort_sanitised
+        if not sort_sanitised.startswith(self._sort_method_prefix):
+            sort_sanitised = self._sort_method_prefix + sort_sanitised
 
-        if sort_sanitised not in self._valid_conditions:
-            valid_methods_str = ", ".join([c.replace(self._sort_method_prefix, "") for c in self._valid_conditions])
+        if sort_sanitised not in self._valid_methods:
+            valid_methods_str = ", ".join([c.replace(self._sort_method_prefix, "") for c in self._valid_methods])
             raise ValueError(
                 f"Unrecognised sort method: {value} | " 
                 f"Valid sort methods: {valid_methods_str}"
             )
 
-        self._limit_sort = sort_sanitised.replace("_", " ").replace(self._sort_method_prefix, "").strip()
+        self._limit_sort = sort_sanitised.replace(self._sort_method_prefix, "").replace("_", " ").strip()
         self._sort_method = getattr(self, sort_sanitised)
 
     def __init__(
@@ -74,7 +77,7 @@ class TrackLimit(TrackProcessor):
         self.allowance = allowance
 
         self._sort_method_prefix = "_sort"
-        self._valid_conditions = [name for name in dir(self) if name.startswith(self._sort_method_prefix)]
+        self._valid_methods = [name for name in dir(self) if name.startswith(self._sort_method_prefix)]
         self.limit_sort = sorted_by
 
     @classmethod

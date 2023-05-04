@@ -6,7 +6,7 @@ from typing import Any, Callable, List, Mapping, Optional, Self, MutableMapping
 
 from dateutil.relativedelta import relativedelta
 
-from syncify.local.files.track.base import Name, Track, TagName, PropertyName
+from syncify.local.files.track.base import Name, Track, TagName
 from syncify.local.files.track.collection import TrackProcessor
 from syncify.local.files.utils.musicbee import field_name_map
 from syncify.utils.helpers import make_list
@@ -39,16 +39,23 @@ class TrackCompare(TrackProcessor):
 
     @condition.setter
     def condition(self, value: str):
-        condition_sanitised = self._cond_method_prefix + re.sub('([A-Z])', lambda m: f"_{m.group(0).lower()}", value)
+        if value is None:
+            return
 
-        if condition_sanitised not in self._valid_conditions:
-            valid_conditions_str = ", ".join([c.replace(self._cond_method_prefix, "") for c in self._valid_conditions])
+        condition_sanitised = re.sub('([A-Z])', lambda m: f"_{m.group(0).lower()}", value.strip()).replace(" ", "_")
+        if not condition_sanitised.startswith("_"):
+            condition_sanitised = "_" + condition_sanitised
+        if not condition_sanitised.startswith(self._cond_method_prefix):
+            condition_sanitised = self._cond_method_prefix + condition_sanitised
+
+        if condition_sanitised not in self._valid_methods:
+            valid_methods_str = ", ".join([c.replace(self._cond_method_prefix, "") for c in self._valid_methods])
             raise ValueError(
                 f"Unrecognised condition: {value} | " 
-                f"Valid conditions: {valid_conditions_str}"
+                f"Valid conditions: {valid_methods_str}"
             )
 
-        self._condition = condition_sanitised.replace("_", " ").replace(self._cond_method_prefix, "").strip()
+        self._condition = condition_sanitised.replace(self._cond_method_prefix, "").replace("_", " ").strip()
         self._method = getattr(self, condition_sanitised)
 
     @property
@@ -73,7 +80,7 @@ class TrackCompare(TrackProcessor):
         self.expected: Optional[List[Any]] = expected
 
         self._cond_method_prefix = "_cond"
-        self._valid_conditions = [name for name in dir(self) if name.startswith(self._cond_method_prefix)]
+        self._valid_methods = [name for name in dir(self) if name.startswith(self._cond_method_prefix)]
         self.condition = condition
 
     @classmethod
@@ -119,7 +126,10 @@ class TrackCompare(TrackProcessor):
         else:
             expected = make_list(getattr(track_2, self.field.name.lower(), None))
 
-        return self._method(actual, expected)
+        try:
+            return self._method(actual, expected)
+        except TypeError:
+            return False
 
     def _convert_expected(self, value: Any) -> None:
         """Driver for converting expected values to the same type as given value"""
@@ -182,82 +192,82 @@ class TrackCompare(TrackProcessor):
         self._expected = converted
 
     @staticmethod
-    def _cond_is(value: Any, expected: Optional[List[Any]]) -> bool:
+    def _cond_is(value: Optional[Any], expected: Optional[List[Any]]) -> bool:
         return value == expected[0]
 
-    def _cond_is_not(self, value: Any, expected: Optional[List[Any]]) -> bool:
+    def _cond_is_not(self, value: Optional[Any], expected: Optional[List[Any]]) -> bool:
         return not self._cond_is(value=value, expected=expected)
 
     @staticmethod
-    def _cond_is_after(value: Any, expected: Optional[List[Any]]) -> bool:
+    def _cond_is_after(value: Optional[Any], expected: Optional[List[Any]]) -> bool:
         return value > expected[0]
 
     @staticmethod
-    def _cond_is_before(value: Any, expected: Optional[List[Any]]) -> bool:
+    def _cond_is_before(value: Optional[Any], expected: Optional[List[Any]]) -> bool:
         return value < expected[0]
 
-    def _cond_is_in_the_last(self, value: Any, expected: Optional[List[Any]]) -> bool:
+    def _cond_is_in_the_last(self, value: Optional[Any], expected: Optional[List[Any]]) -> bool:
         return self._cond_is_after(value=value, expected=expected)
 
-    def _cond_is_not_in_the_last(self, value: Any, expected: Optional[List[Any]]) -> bool:
+    def _cond_is_not_in_the_last(self, value: Optional[Any], expected: Optional[List[Any]]) -> bool:
         return self._cond_is_before(value=value, expected=expected)
 
     @staticmethod
-    def _cond_is_in(value: Any, expected: Optional[List[Any]]) -> bool:
+    def _cond_is_in(value: Optional[Any], expected: Optional[List[Any]]) -> bool:
         return value in expected
 
-    def _cond_is_not_in(self, value: Any, expected: Optional[List[Any]]) -> bool:
+    def _cond_is_not_in(self, value: Optional[Any], expected: Optional[List[Any]]) -> bool:
         return not self._cond_is_in(value=value, expected=expected)
 
     @staticmethod
-    def _cond_greater_than(value: Any, expected: Optional[List[Any]]) -> bool:
+    def _cond_greater_than(value: Optional[Any], expected: Optional[List[Any]]) -> bool:
         return value > expected[0]
 
     @staticmethod
-    def _cond_less_than(value: Any, expected: Optional[List[Any]]) -> bool:
+    def _cond_less_than(value: Optional[Any], expected: Optional[List[Any]]) -> bool:
         return value < expected[0]
 
     @staticmethod
-    def _cond_in_range(value: Any, expected: Optional[List[Any]]) -> bool:
+    def _cond_in_range(value: Optional[Any], expected: Optional[List[Any]]) -> bool:
         return expected[0] < value < expected[1]
 
-    def _cond_not_in_range(self, value: Any, expected: Optional[List[Any]]) -> bool:
+    def _cond_not_in_range(self, value: Optional[Any], expected: Optional[List[Any]]) -> bool:
         return not self._cond_in_range(value=value, expected=expected)
 
     @staticmethod
-    def _cond_is_not_null(value: Any, _: Optional[List[Any]] = None) -> bool:
+    def _cond_is_not_null(value: Optional[Any], _: Optional[List[Any]] = None) -> bool:
         return value is not None or value is True
 
     @staticmethod
-    def _cond_is_null(value: Any, _: Optional[List[Any]] = None) -> bool:
+    def _cond_is_null(value: Optional[Any], _: Optional[List[Any]] = None) -> bool:
         return value is None or value is False
 
     @staticmethod
-    def _cond_starts_with(value: Any, expected: Optional[List[Any]]) -> bool:
+    def _cond_starts_with(value: Optional[Any], expected: Optional[List[Any]]) -> bool:
         return value.startswith(expected[0])
 
     @staticmethod
-    def _cond_ends_with(value: Any, expected: Optional[List[Any]]) -> bool:
+    def _cond_ends_with(value: Optional[Any], expected: Optional[List[Any]]) -> bool:
         return value.endswith(expected[0])
 
     @staticmethod
-    def _cond_contains(value: Any, expected: Optional[List[Any]]) -> bool:
+    def _cond_contains(value: Optional[Any], expected: Optional[List[Any]]) -> bool:
         return expected[0] in value
 
-    def _cond_does_not_contain(self, value: Any, expected: Optional[List[Any]]) -> bool:
+    def _cond_does_not_contain(self, value: Optional[Any], expected: Optional[List[Any]]) -> bool:
         return not self._cond_contains(value=value, expected=expected)
 
     @staticmethod
-    def _cond_in_tag_hierarchy(value: Any, expected: Optional[List[Any]]) -> bool:
+    def _cond_in_tag_hierarchy(value: Optional[Any], expected: Optional[List[Any]]) -> bool:
         # TODO: what does this even mean
         raise NotImplementedError
 
     @staticmethod
-    def _cond_matches_reg_ex(value: Any, expected: Optional[List[Any]]) -> bool:
+    def _cond_matches_reg_ex(value: Optional[Any], expected: Optional[List[Any]]) -> bool:
         return bool(re.search(expected[0], value))
 
     @staticmethod
-    def _cond_matches_reg_ex_ignore_case(value: Any, expected: Optional[List[Any]]) -> bool:
+    def _cond_matches_reg_ex_ignore_case(value: Optional[Any], expected: Optional[List[Any]]) -> bool:
         return bool(re.search(expected[0], value, flags=re.IGNORECASE))
 
     def as_dict(self) -> MutableMapping[str, object]:

@@ -131,8 +131,6 @@ class TrackSort(TrackProcessor):
         tracks_grouped = self.group_by_field(tracks, field=next(iter(self.sort_fields), None))
         tracks_nested = self._sort_by_fields(tracks_grouped, fields=self.sort_fields)
 
-        print(tracks_nested)
-
         tracks.clear()
         tracks.extend(flatten_nested(tracks_nested, sort_keys=True, sort_ignore=True))
 

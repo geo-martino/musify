@@ -1,7 +1,6 @@
 from typing import List, MutableMapping
 
-from local.files.track.files.track import Track
-from local.files.track.collection import TrackCollection
+from syncify.local.files import Track, TrackCollection
 
 
 class Album(TrackCollection):
@@ -54,7 +53,7 @@ if __name__ == "__main__":
     from glob import glob
     from os.path import join
 
-    from local.files.track.file import load_track
+    from local.files.track import load_track
 
     music_folder = "/mnt/d/Music"
     folder = "Audioslave"

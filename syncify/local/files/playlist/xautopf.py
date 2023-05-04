@@ -109,9 +109,8 @@ if __name__ == "__main__":
     tracks.extend(load_track(path=path) for path in M4A.available_track_paths)
     tracks.extend(load_track(path=path) for path in WMA.available_track_paths)
 
-    name = "70s.xautopf"
-    path = join(library_folder, playlist_folder, name)
-
-    pl = XAutoPF(path=path, tracks=tracks, library_folder=library_folder, other_folders={other_folder})
-
-    [print(str(i).zfill(3), track.album, track.title, sep=" = ") for i, track in enumerate(pl.tracks, 1)]
+    from glob import glob
+    for path in glob(join(library_folder, playlist_folder, "**", f"*xautopf"), recursive=True):
+        pl = XAutoPF(path=path, tracks=tracks, library_folder=library_folder, other_folders={other_folder})
+        print(pl.name)
+        [print(str(i).zfill(3), track.album, track.title, sep=" = ") for i, track in enumerate(pl.tracks, 1)]
