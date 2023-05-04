@@ -1,5 +1,6 @@
 from copy import deepcopy
 from dataclasses import dataclass
+from os.path import exists
 from typing import Any, List, Mapping, Optional, Set
 
 import xmltodict
@@ -42,7 +43,7 @@ class XAutoPF(Playlist):
         Useful when managing similar libraries on multiple platforms.
     """
 
-    playlist_ext = [".xautopf"]
+    valid_extensions = [".xautopf"]
 
     def __init__(
             self,
@@ -51,13 +52,16 @@ class XAutoPF(Playlist):
             library_folder: Optional[str] = None,
             other_folders: Optional[Set[str]] = None
     ):
+        self._validate_type(path)
+        if not exists(path):
+            raise ValueError(f"No playlist at given path: {path}")
+
         with open(path, "r", encoding='utf-8') as f:
             self.xml: Mapping[str, Any] = xmltodict.parse(f.read())
 
         Playlist.__init__(
             self,
             path=path,
-            tracks=tracks,
             library_folder=library_folder,
             other_folders=other_folders,
             matcher=TrackMatch.from_xml(xml=self.xml),
@@ -98,18 +102,21 @@ class XAutoPF(Playlist):
 
         self._save_xml()
 
+        count_start = self._count_last_save
+        self._count_last_save = len(self.tracks)
+
         start_source: Mapping[str, Any] = start_xml["SmartPlaylist"]["Source"]
         final_source: Mapping[str, Any] = self.xml["SmartPlaylist"]["Source"]
 
         return UpdateResultXAutoPF(
-            start=self._count_last_save,
+            start=count_start,
             start_description=start_source["Description"],
             start_include=len([p for p in start_source.get("ExceptionsInclude", "").split("|") if p]),
             start_exclude=len([p for p in start_source.get("Exceptions", "").split("|") if p]),
             start_comparators=len(start_source.get("Conditions", [])),
             start_limiter=len(start_source.get("Limit", [])) > 0,
             start_sorter=len(start_source.get("SortBy", start_source.get("DefinedSort", []))) > 0,
-            final=len(self.tracks),
+            final=self._count_last_save,
             final_description=final_source["Description"],
             final_include=len([p for p in final_source.get("ExceptionsInclude", "").split("|") if p]),
             final_exclude=len([p for p in final_source.get("Exceptions", "").split("|") if p]),

@@ -3,18 +3,18 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from glob import glob
 from os.path import join, splitext, exists
-from typing import Optional, List, Union, Mapping, Set
+from typing import Optional, List, Union, Mapping, Set, Self
 
 import mutagen
 
+from syncify.local.files.file import File
 from syncify.local.files.track.base.reader import TagReader
 from syncify.local.files.track.base.tags import Tags, Properties
 from syncify.local.files.track.base.writer import TagWriter
-from syncify.local.files.utils.exception import IllegalFileTypeError
 from syncify.utils_new.generic import PrettyPrinter
 
 
-class Track(PrettyPrinter, TagReader, TagWriter, metaclass=ABCMeta):
+class Track(PrettyPrinter, File, TagReader, TagWriter, metaclass=ABCMeta):
     """
     Generic track object for extracting, modifying, and saving tags for a given file.
 
@@ -28,7 +28,7 @@ class Track(PrettyPrinter, TagReader, TagWriter, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def track_ext(self) -> List[str]:
+    def valid_extensions(self) -> List[str]:
         """Allowed extensions in lowercase"""
         raise NotImplementedError
 
@@ -50,7 +50,7 @@ class Track(PrettyPrinter, TagReader, TagWriter, metaclass=ABCMeta):
         if cls.available_track_paths is None:
             cls.available_track_paths = set()
 
-        for ext in cls.track_ext:
+        for ext in cls.valid_extensions:
             # first glob doesn't get filenames that start with a period
             cls.available_track_paths.update(glob(join(library_folder, "**", f"*{ext}"), recursive=True))
             # second glob only picks up filenames that start with a period
@@ -85,13 +85,7 @@ class Track(PrettyPrinter, TagReader, TagWriter, metaclass=ABCMeta):
 
     def load_file(self) -> Optional[mutagen.File]:
         # extract file extension and confirm file type is listed in accepted file types list
-        ext = splitext(self.path)[1].lower()
-        if ext not in self.track_ext:
-            raise IllegalFileTypeError(
-                ext,
-                f"Not an accepted {self.__class__.__qualname__} file extension. "
-                f"Use only: {', '.join(self.track_ext)}"
-            )
+        self._validate_type(self.path)
 
         if self.available_track_paths is not None and self._path not in self.available_track_paths:
             # attempt to correct case-insensitive path to case-sensitive
@@ -103,7 +97,7 @@ class Track(PrettyPrinter, TagReader, TagWriter, metaclass=ABCMeta):
             raise FileNotFoundError(f"File not found | {self._path}")
 
         self._file = mutagen.File(self._path)
-        self.ext = ext
+        self.ext = splitext(self._path)[1].lower()
 
     def load_metadata(self) -> Track:
         """General method for extracting metadata from loaded file"""

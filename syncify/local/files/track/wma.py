@@ -16,7 +16,7 @@ class WMA(Track):
     :param file: The path or Mutagen object of the file to load.
     """
 
-    track_ext = [".wma"]
+    valid_extensions = [".wma"]
 
     tag_map = TagMap(
         title=["Title"],

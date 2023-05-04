@@ -18,7 +18,7 @@ class FLAC(Track):
     :param file: The path or Mutagen object of the file to load.
     """
 
-    track_ext = [".flac"]
+    valid_extensions = [".flac"]
 
     tag_map = TagMap(
         title=["title"],

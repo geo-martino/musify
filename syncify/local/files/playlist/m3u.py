@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Optional, List, Set
+from os.path import exists
+from typing import Optional, List, Set, Any
 
 from syncify.local.files import TrackMatch
 from syncify.local.files.playlist import Playlist, UpdateResult
@@ -22,36 +23,37 @@ class M3U(Playlist):
 
     :param path: Full path of the playlist.
     :param tracks: Available Tracks to search through for matches. Optional.
+        If the path given does not exist, the object will use all tracks given here as the tracks in the playlist.
     :param library_folder: Full path of folder containing tracks.
     :param other_folders: Full paths of other possible library paths.
         Use to replace path stems from other libraries for the paths in loaded playlists.
         Useful when managing similar libraries on multiple platforms.
     """
 
-    playlist_ext = [".m3u"]
+    valid_extensions = [".m3u"]
 
     def __init__(
             self,
-            path: Optional[str],
+            path: str,
             tracks: List[Track],
             library_folder: Optional[str] = None,
             other_folders: Optional[Set[str]] = None
     ):
-        with open(path, "r", encoding='utf-8') as f:
-            matcher = TrackMatch(
-                include_paths=[line.strip() for line in f], library_folder=library_folder, other_folders=other_folders
-            )
+        self._validate_type(path)
+
+        if exists(path):
+            with open(path, "r", encoding='utf-8') as f:
+                paths = [line.strip() for line in f]
+        else:
+            paths = [track.path for track in tracks]
 
         Playlist.__init__(
             self,
             path=path,
-            tracks=tracks,
             library_folder=library_folder,
             other_folders=other_folders,
-            matcher=matcher
+            matcher=TrackMatch(include_paths=paths, library_folder=library_folder, other_folders=other_folders)
         )
-
-        self.matcher.sanitise_file_paths(library_folder=library_folder, other_folders=other_folders)
 
         self.load(tracks=tracks)
 
@@ -67,9 +69,11 @@ class M3U(Playlist):
         return self.tracks
 
     def write(self) -> UpdateResultM3U:
-        with open(self.path, "r", encoding='utf-8') as f:
-            start_paths = {line.rstrip().lower() for line in f}
-            start_paths = {path for path in start_paths if path}
+        start_paths: Set[str] = set()
+        if exists(self.path):
+            with open(self.path, "r", encoding='utf-8') as f:
+                start_paths = {line.rstrip().lower() for line in f}
+                start_paths = {path for path in start_paths if path}
 
         with open(self.path, "w", encoding='utf-8') as f:
             paths = self._prepare_paths_for_output([track.path for track in self.tracks])

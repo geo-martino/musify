@@ -17,7 +17,7 @@ class M4A(Track):
     :param file: The path or Mutagen object of the file to load.
     """
 
-    track_ext = [".m4a"]
+    valid_extensions = [".m4a"]
 
     tag_map = TagMap(
         title=["©nam"],

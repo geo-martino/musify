@@ -50,13 +50,13 @@ class PrettyPrinter(metaclass=ABCMeta):
         """Return a dictionary representation of the key attributes of this object that is safe to output to json"""
         attributes = {}
 
-        for attr_name, attr_value in self.as_dict().items():
-            if isinstance(attr_value, PrettyPrinter):
-                attributes[attr_name] = attr_value.as_json()
-            elif isinstance(attr_value, datetime):
-                attributes[attr_name] = attr_value.strftime("%Y-%m-%d %H:%M:%S")
+        for attr_key, attr_val in self.as_dict().items():
+            if isinstance(attr_val, self.__class__):
+                attributes[attr_key] = attr_val.as_json()
+            elif isinstance(attr_val, datetime):
+                attributes[attr_key] = attr_val.strftime("%Y-%m-%d %H:%M:%S")
             else:
-                attributes[attr_name] = attr_value
+                attributes[attr_key] = attr_val
 
         return attributes
 
@@ -75,7 +75,7 @@ class PrettyPrinter(metaclass=ABCMeta):
                 attr_val = list(attr_val)
 
             if isinstance(attr_val, list):
-                if len(attr_val) > 0 and hasattr(attr_val[0], "as_json") or len(str(attr_val)) > max_val_width:
+                if len(attr_val) > 0 and isinstance(attr_val, self.__class__) or len(str(attr_val)) > max_val_width:
                     pp_repr = f"[\n{{}}\n" + " " * indent + "]"
                     pp = [" " * indent * 2 + str(v).replace("\n", "\n" + " " * indent * 2) for v in attr_val]
                     attr_val = pp_repr.format(",\n".join(pp))

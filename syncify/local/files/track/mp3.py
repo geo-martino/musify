@@ -19,7 +19,7 @@ class MP3(Track):
     :param file: The path or Mutagen object of the file to load.
     """
 
-    track_ext = [".mp3"]
+    valid_extensions = [".mp3"]
 
     tag_map = TagMap(
         title=["TIT2"],

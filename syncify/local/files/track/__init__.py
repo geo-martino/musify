@@ -9,9 +9,9 @@ from .m4a import M4A
 from .wma import WMA
 
 __TRACK_CLASSES__ = [FLAC, MP3, M4A, WMA]
-__ACCEPTED_FILETYPES__ = [filetype for c in __TRACK_CLASSES__ for filetype in c.track_ext]
+__ACCEPTED_FILETYPES__ = [filetype for c in __TRACK_CLASSES__ for filetype in c.valid_extensions]
 
-from syncify.local.files.utils.exception import IllegalFileTypeError
+from syncify.local.files.file import IllegalFileTypeError
 
 
 def load_track(path: str) -> Track:
@@ -24,16 +24,16 @@ def load_track(path: str) -> Track:
     """
     ext = splitext(path)[1].lower()
 
-    if ext in FLAC.track_ext:
+    if ext in FLAC.valid_extensions:
         return FLAC(file=path)
-    elif ext in MP3.track_ext:
+    elif ext in MP3.valid_extensions:
         return MP3(file=path)
-    elif ext in M4A.track_ext:
+    elif ext in M4A.valid_extensions:
         return M4A(file=path)
-    elif ext in WMA.track_ext:
+    elif ext in WMA.valid_extensions:
         return WMA(file=path)
     else:
-        all_ext = [ext for c in __TRACK_CLASSES__ for ext in c.track_ext]
+        all_ext = [ext for c in __TRACK_CLASSES__ for ext in c.valid_extensions]
         raise IllegalFileTypeError(ext, f"Not an accepted extension. Use only: {', '.join(all_ext)}")
 
 

@@ -3,6 +3,7 @@ from abc import ABCMeta, abstractmethod, ABC
 from os.path import basename, splitext
 from typing import List, MutableMapping, Optional, Set, Collection
 
+from syncify.local.files.file import File
 from syncify.local.files import Track
 from syncify.local.files.track.collection import TrackMatch, TrackLimit, TrackSort
 from syncify.utils_new.generic import PrettyPrinter
@@ -10,31 +11,23 @@ from syncify.utils_new.generic import PrettyPrinter
 
 @dataclass
 class UpdateResult(ABC):
-    raise NotImplementedError
+    pass
 
 
-class Playlist(PrettyPrinter, metaclass=ABCMeta):
+class Playlist(PrettyPrinter, File, metaclass=ABCMeta):
     """
     Generic class for CRUD operations on playlists.
 
     :param path: Full path of the playlist.
-    :param tracks: Available Tracks to search through for matches.
     :param library_folder: Full path of folder containing tracks.
     :param other_folders: Full paths of other possible library paths.
         Use to replace path stems from other libraries for the paths in loaded playlists.
         Useful when managing similar libraries on multiple platforms.
     """
 
-    @property
-    @abstractmethod
-    def playlist_ext(self) -> List[str]:
-        """Allowed extensions in lowercase"""
-        raise NotImplementedError
-
     def __init__(
             self,
             path: str,
-            tracks: Optional[List[Track]] = None,
             library_folder: Optional[str] = None,
             other_folders: Optional[Set[str]] = None,
             matcher: Optional[TrackMatch] = None,
