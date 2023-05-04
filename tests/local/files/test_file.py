@@ -1,9 +1,5 @@
+from syncify.local.files.track import load_track, FLAC, M4A, MP3, WMA
 from syncify.local.files.utils.exception import IllegalFileTypeError
-from syncify.local.files.file import load_track
-from syncify.local.files.track.files.flac import FLAC
-from syncify.local.files.track.files.m4a import M4A
-from syncify.local.files.track.files.mp3 import MP3
-from syncify.local.files.track.files.wma import WMA
 from tests.common import path_file_flac, path_file_mp3, path_file_m4a, path_file_wma, path_file_txt
 
 import pytest

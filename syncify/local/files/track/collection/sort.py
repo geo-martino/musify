@@ -1,18 +1,11 @@
 from datetime import datetime
-from enum import IntEnum
 from random import shuffle
 from typing import Any, Callable, List, Mapping, MutableMapping, Optional, Self, Tuple, Union
 
+from syncify.local.files.track.base import Name, PropertyName, TagName, Track
 from syncify.local.files.track.collection.processor import TrackProcessor
-from syncify.local.files.track.tags import Name, PropertyNames, TagNames
-from syncify.local.files.track.track import Track
 from syncify.local.files.utils.musicbee import get_field_from_code
 from syncify.utils_new.generic import flatten_nested, strip_ignore_words
-
-
-class ShuffleMode(IntEnum):
-    NONE = 0
-    RANDOM = 1
 
 
 class TrackSort(TrackProcessor):
@@ -22,16 +15,14 @@ class TrackSort(TrackProcessor):
     :param fields:
         * List of tags/properties to sort by.
         * Map of {``tag/property``: ``reversed``}. If reversed is true, sort the ``tag/property`` in reverse.
-    :param shuffle_mode: Shuffle mode to use when shuffling tracks.
-        Currently, only NONE and RANDOM are supported.
     """
 
     _custom_sort: Mapping[int, Mapping[Name, bool]] = {
         6: {
-            TagNames.ALBUM: False,
-            TagNames.DISC: False,
-            TagNames.TRACK: False,
-            PropertyNames.FILENAME: False
+            TagName.ALBUM: False,
+            TagName.DISC: False,
+            TagName.TRACK: False,
+            PropertyName.FILENAME: False
         }
     }
 
@@ -91,13 +82,8 @@ class TrackSort(TrackProcessor):
 
         return grouped
 
-    def __init__(
-            self,
-            fields: Optional[Union[List[Name], Mapping[Name, bool]]] = None,
-            shuffle_mode: Optional[ShuffleMode] = None
-    ):
+    def __init__(self, fields: Optional[Union[List[Name], Mapping[Name, bool]]] = None):
         self.sort_fields: Union[List[Name], Mapping[Name, bool]] = fields
-        self.shuffle_mode: Optional[ShuffleMode] = shuffle_mode
 
     @classmethod
     def from_xml(cls, xml: Optional[Mapping[str, Any]] = None) -> Self:
@@ -112,7 +98,6 @@ class TrackSort(TrackProcessor):
             return cls()
 
         source = xml["SmartPlaylist"]["Source"]
-        shuffle_mode = xml["SmartPlaylist"]["@ShuffleMode"]
 
         if "SortBy" in source:
             field_code = int(source["SortBy"].get("@Field", 0))
@@ -128,7 +113,7 @@ class TrackSort(TrackProcessor):
             field = get_field_from_code(field_code)
 
         if field is None:
-            return cls(shuffle_mode=shuffle_mode)
+            return cls()
         elif "SortBy" in source:
             fields = {field: source["SortBy"]["@Order"] == "Descending"}
         elif "DefinedSort" in source:
@@ -136,19 +121,20 @@ class TrackSort(TrackProcessor):
         else:
             raise ValueError("Sort type in XML not recognised")
 
-        return cls(fields=fields, shuffle_mode=shuffle_mode)
+        return cls(fields=fields)
 
     def sort(self, tracks: List[Track]) -> None:
         """Sorts a list of tracks inplace."""
-        if self.shuffle_mode == ShuffleMode.NONE:
-            tracks_grouped = self.group_by_field(tracks, field=next(iter(self.sort_fields), None))
-            tracks_nested = self._sort_by_fields(tracks_grouped, fields=self.sort_fields)
+        if self.sort_fields is None:
+            return
 
-            tracks.clear()
-            tracks.extend(flatten_nested(tracks_nested))
-        else:  # only random sort supported
-            # TODO: implement other shuffle modes
-            shuffle(tracks)
+        tracks_grouped = self.group_by_field(tracks, field=next(iter(self.sort_fields), None))
+        tracks_nested = self._sort_by_fields(tracks_grouped, fields=self.sort_fields)
+
+        print(tracks_nested)
+
+        tracks.clear()
+        tracks.extend(flatten_nested(tracks_nested, sort_keys=True, sort_ignore=True))
 
     @classmethod
     def _sort_by_fields(
@@ -182,3 +168,8 @@ class TrackSort(TrackProcessor):
                 tracks_grouped[key] = cls.group_by_field(tracks, field=field)
 
         return tracks_grouped
+
+    def as_dict(self) -> MutableMapping[str, object]:
+        return {
+            "sort_fields": {field.name: "desc" if r else "asc" for field, r in self.sort_fields.items()}
+        }

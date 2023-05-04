@@ -5,13 +5,13 @@ from typing import Optional
 
 import mutagen
 
-from syncify.local.files.track.tags import Tags, Properties, TagNames, TagMap
+from syncify.local.files.track.base.tags import Tags, Properties, TagName, TagMap
 
 
 class TagProcessor(Tags, Properties, metaclass=ABCMeta):
     """Generic base class for tag processing"""
 
-    uri_tag = TagNames.COMMENTS
+    uri_tag = TagName.COMMENTS
 
     @property
     @abstractmethod

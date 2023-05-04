@@ -2,8 +2,8 @@ from abc import ABCMeta, abstractmethod
 from os.path import basename, splitext
 from typing import List, MutableMapping, Optional, Set
 
-from local.files.track.collection.collection import TrackCollection
-from syncify.local.files.track.track import Track
+from syncify.local.files.track.collection import TrackMatch, TrackLimit, TrackSort
+from syncify.local.files import Track, TrackCollection
 
 
 class Playlist(TrackCollection, metaclass=ABCMeta):
@@ -30,8 +30,11 @@ class Playlist(TrackCollection, metaclass=ABCMeta):
             tracks: Optional[List[Track]] = None,
             library_folder: Optional[str] = None,
             other_folders: Optional[Set[str]] = None,
+            matcher: Optional[TrackMatch] = None,
+            limiter: Optional[TrackLimit] = None,
+            sorter: Optional[TrackSort] = None,
     ):
-        TrackCollection.__init__(self)
+        TrackCollection.__init__(self, matcher=matcher, limiter=limiter, sorter=sorter)
 
         self.name, self.ext = splitext(basename(path))
         self.path: str = path
@@ -42,14 +45,18 @@ class Playlist(TrackCollection, metaclass=ABCMeta):
         self._original_folder: Optional[str] = None
         self._other_folders: Optional[Set[str]] = None
         if other_folders is not None:
-            self._other_folders = set(folder.rstrip("\\/") for folder in other_folders)
+            self._other_folders = {folder.rstrip("\\/") for folder in other_folders}
+
+        print(matcher)
+        print(limiter)
+        print(sorter)
 
         self.load(tracks=tracks)
 
     @abstractmethod
     def load(self, tracks: Optional[List[Track]] = None) -> Optional[List[Track]]:
         """
-        Read the playlist file
+        Read the playlist file and update the tracks in this playlist instance.
 
         :param tracks: Available Tracks to search through for matches.
         :return: Ordered list of tracks in this playlist
@@ -74,13 +81,5 @@ class Playlist(TrackCollection, metaclass=ABCMeta):
             "name": self.name,
             "description": self.description,
             "path": self.path,
-            "tracks": [track.as_json() for track in self.tracks]
-        }
-
-    def as_json(self) -> MutableMapping[str, object]:
-        return {
-            "name": self.name,
-            "description": self.description,
-            "path": self.path,
-            "tracks": [track.as_dict() for track in self.tracks]
+            "tracks": self.tracks
         }

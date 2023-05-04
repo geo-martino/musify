@@ -1,8 +1,7 @@
 from typing import Optional, List, Set
 
-from syncify.local.files.file import load_track
-from syncify.local.files.track.track import Track
-from syncify.local.files.playlist.playlist import Playlist
+from syncify.local.files.playlist import Playlist
+from syncify.local.files.track import Track, load_track
 
 
 class M3U(Playlist):
@@ -21,7 +20,7 @@ class M3U(Playlist):
 
     def __init__(
             self,
-            path: str,
+            path: Optional[str],
             tracks: List[Track],
             library_folder: Optional[str] = None,
             other_folders: Optional[Set[str]] = None

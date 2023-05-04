@@ -1,9 +1,9 @@
 from os.path import exists
-from typing import Any, List, Mapping, Optional, Self, Set
+from typing import Any, List, Mapping, Optional, Self, Set, MutableMapping
 
 from syncify.local.files.track.collection.processor import TrackProcessor
 from syncify.local.files.track.collection.compare import TrackCompare
-from syncify.local.files.track.track import Track
+from syncify.local.files.track.base import Track
 
 
 class TrackMatch(TrackProcessor):
@@ -27,16 +27,16 @@ class TrackMatch(TrackProcessor):
             self,
             comparators: Optional[List[TrackCompare]] = None,
             match_all: bool = True,
-            include_paths: Optional[List[str]] = None,
-            exclude_paths: Optional[List[str]] = None,
+            include_paths: Optional[Set[str]] = None,
+            exclude_paths: Optional[Set[str]] = None,
             library_folder: Optional[str] = None,
             other_folders: Optional[Set[str]] = None,
     ):
         self.comparators = comparators
         self.match_all = match_all
 
-        self.include_paths: Optional[List[str]] = include_paths
-        self.exclude_paths: Optional[List[str]] = exclude_paths
+        self.include_paths: Optional[Set[str]] = include_paths
+        self.exclude_paths: Optional[Set[str]] = exclude_paths
 
         self.library_folder = None
         self.original_folder: Optional[str] = None
@@ -59,12 +59,12 @@ class TrackMatch(TrackProcessor):
         self._check_for_other_folder_stem(other_folders, self.include_paths, self.exclude_paths)
 
         if self.include_paths is not None:
-            self.include_paths = [self._sanitise_file_path(path) for path in self.include_paths]
-            self.include_paths = [path for path in self.include_paths if path is not None]
+            self.include_paths = {self._sanitise_file_path(path) for path in self.include_paths}
+            self.include_paths = {path for path in self.include_paths if path is not None}
 
         if self.exclude_paths is not None:
-            self.exclude_paths = [self._sanitise_file_path(path) for path in self.exclude_paths]
-            self.exclude_paths = [path for path in self.exclude_paths if path is not None]
+            self.exclude_paths = {self._sanitise_file_path(path) for path in self.exclude_paths}
+            self.exclude_paths = {path for path in self.exclude_paths if path is not None}
 
     def _check_for_other_folder_stem(self, stems: Optional[List[str]], *paths: Optional[List[str]]) -> None:
         """
@@ -139,7 +139,7 @@ class TrackMatch(TrackProcessor):
         :param reference: Optional reference track to use when comparator has no expected value.
         :return: List of tracks that match the conditions.
         """
-        if len(self.comparators) == 0:
+        if self.comparators is None or len(self.comparators) == 0:
             return []
 
         matches = []
@@ -163,3 +163,13 @@ class TrackMatch(TrackProcessor):
                 matches.append(track)
 
         return matches
+
+    def as_dict(self) -> MutableMapping[str, object]:
+        return {
+            "library_folder": self.library_folder,
+            "original_folder": self.original_folder,
+            "include": self.include_paths,
+            "exclude": self.exclude_paths,
+            "match_all": self.match_all,
+            "comparators": self.comparators
+        }

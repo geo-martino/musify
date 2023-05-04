@@ -1,16 +1,14 @@
 import re
-from enum import IntEnum
 from random import shuffle
-from typing import Any, Callable, List, Mapping, Optional, Self
+from typing import Any, Callable, List, Mapping, Optional, Self, MutableMapping
 
-from syncify.local.files.track.collection.processor import TrackProcessor
-from syncify.local.files.utils.exception import EnumNotFoundError
+from syncify.local.files.track.base import PropertyName, Track
+from syncify.local.files.track.collection.processor import TrackProcessor, Mode
 from syncify.local.files.track.collection.sort import TrackSort
-from syncify.local.files.track.tags import PropertyNames
-from syncify.local.files.track.track import Track
+from syncify.local.files.utils.exception import EnumNotFoundError
 
 
-class LimitType(IntEnum):
+class LimitType(Mode):
     ITEMS = 0
     ALBUMS = 1
 
@@ -26,39 +24,30 @@ class LimitType(IntEnum):
     GIGABYTES = 24
     TERABYTES = 25
 
-    @classmethod
-    def from_name(cls, name: str) -> Self:
-        """
-        Returns the first enum that matches the given name
-
-        :exception EnumNotFoundError: If a corresponding enum cannot be found.
-        """
-        for enum in cls:
-            if enum.name.startswith(name.split("_")[0].upper()):
-                return enum
-        raise EnumNotFoundError(name)
-
 
 class TrackLimit(TrackProcessor):
     """
     Sort tracks inplace based on given conditions.
 
-    :param limit: The number of tracks to limit to.
+    :param limit: The number of tracks to limit to. A value of 0 applies no limiting.
     :param on: The type to limit on e.g. items, albums, minutes.
     :param sorted_by: When limiting, sort the collection of tracks by this function first.
     :param allowance: When limit on bytes or length, add this extra allowance to the max size limit.
     """
 
     @property
-    def limit_sort(self) -> str:
+    def limit_sort(self) -> Optional[str]:
         return self._limit_sort
 
     @limit_sort.getter
-    def limit_sort(self) -> str:
+    def limit_sort(self) -> Optional[str]:
         return self._limit_sort
 
     @limit_sort.setter
-    def limit_sort(self, value: str):
+    def limit_sort(self, value: Optional[str]):
+        if value is None:
+            return
+
         sort_sanitised = self._sort_method_prefix + re.sub('([A-Z])', lambda m: f"_{m.group(0).lower()}", value)
 
         if sort_sanitised not in self._valid_conditions:
@@ -68,7 +57,7 @@ class TrackLimit(TrackProcessor):
                 f"Valid sort methods: {valid_methods_str}"
             )
 
-        self._limit_sort = sort_sanitised.replace("_", " ").strip()
+        self._limit_sort = sort_sanitised.replace("_", " ").replace(self._sort_method_prefix, "").strip()
         self._sort_method = getattr(self, sort_sanitised)
 
     def __init__(
@@ -80,12 +69,12 @@ class TrackLimit(TrackProcessor):
     ):
         self._sort_method: Callable[[List[Track]], None] = lambda _: None
 
-        self.limit = limit
+        self.limit_max = limit
         self.kind = on
         self.allowance = allowance
 
-        self._sort_method_prefix = "_sort_"
-        self._valid_conditions = [cond for cond in self.__annotations__ if cond.startswith(self._sort_method_prefix)]
+        self._sort_method_prefix = "_sort"
+        self._valid_conditions = [name for name in dir(self) if name.startswith(self._sort_method_prefix)]
         self.limit_sort = sorted_by
 
     @classmethod
@@ -94,7 +83,7 @@ class TrackLimit(TrackProcessor):
             return cls()
 
         conditions: Mapping[str, str] = xml["SmartPlaylist"]["Source"]["Limit"]
-        if conditions["Enabled"] != "True":
+        if conditions["@Enabled"] != "True":
             return
         # filter_duplicates = conditions["@FilterDuplicates"] == "True"
 
@@ -108,13 +97,16 @@ class TrackLimit(TrackProcessor):
 
     def limit(self, tracks: List[Track]) -> None:
         """Limit tracks inplace based on set conditions"""
+        if len(tracks) == 0 or self.kind is None or self.limit_max == 0:
+            return
+
         self._sort_method(tracks)
 
         tracks_limit = tracks.copy()
         tracks.clear()
 
         if self.kind == LimitType.ITEMS:
-            tracks.extend(tracks_limit[:self.limit])
+            tracks.extend(tracks_limit[:self.limit_max])
         elif self.kind == LimitType.ALBUMS:
             seen_albums = []
             for track in tracks_limit:
@@ -122,18 +114,18 @@ class TrackLimit(TrackProcessor):
                 if track.album not in seen_albums:
                     seen_albums.append(track.album)
 
-                if len(seen_albums) >= self.limit:
+                if len(seen_albums) >= self.limit_max:
                     break
         else:
             count = 0
             for track in tracks_limit:
                 value = self._convert(track)
 
-                if count + value <= self.limit * self.allowance:
+                if count + value <= self.limit_max * self.allowance:
                     tracks.append(track)
                     count += value
 
-                if count > self.limit:
+                if count > self.limit_max:
                     break
 
     @staticmethod
@@ -142,35 +134,35 @@ class TrackLimit(TrackProcessor):
 
     @staticmethod
     def _sort_highest_rating(tracks: List[Track]) -> None:
-        TrackSort.sort_by_field(tracks, PropertyNames.RATING, reverse=True)
+        TrackSort.sort_by_field(tracks, PropertyName.RATING, reverse=True)
 
     @staticmethod
     def _sort_lowest_rating(tracks: List[Track]) -> None:
-        TrackSort.sort_by_field(tracks, PropertyNames.RATING, reverse=False)
+        TrackSort.sort_by_field(tracks, PropertyName.RATING, reverse=False)
 
     @staticmethod
     def _sort_most_recently_played(tracks: List[Track]) -> None:
-        TrackSort.sort_by_field(tracks, PropertyNames.LAST_PLAYED, reverse=True)
+        TrackSort.sort_by_field(tracks, PropertyName.LAST_PLAYED, reverse=True)
 
     @staticmethod
     def _sort_least_recently_played(tracks: List[Track]) -> None:
-        TrackSort.sort_by_field(tracks, PropertyNames.LAST_PLAYED, reverse=False)
+        TrackSort.sort_by_field(tracks, PropertyName.LAST_PLAYED, reverse=False)
 
     @staticmethod
     def _sort_most_often_played(tracks: List[Track]) -> None:
-        TrackSort.sort_by_field(tracks, PropertyNames.PLAY_COUNT, reverse=True)
+        TrackSort.sort_by_field(tracks, PropertyName.PLAY_COUNT, reverse=True)
 
     @staticmethod
     def _sort_least_often_played(tracks: List[Track]) -> None:
-        TrackSort.sort_by_field(tracks, PropertyNames.PLAY_COUNT, reverse=False)
+        TrackSort.sort_by_field(tracks, PropertyName.PLAY_COUNT, reverse=False)
 
     @staticmethod
     def _sort_most_recently_added(tracks: List[Track]) -> None:
-        TrackSort.sort_by_field(tracks, PropertyNames.DATE_ADDED, reverse=True)
+        TrackSort.sort_by_field(tracks, PropertyName.DATE_ADDED, reverse=True)
 
     @staticmethod
     def _sort_least_recently_added(tracks: List[Track]) -> None:
-        TrackSort.sort_by_field(tracks, PropertyNames.DATE_ADDED, reverse=False)
+        TrackSort.sort_by_field(tracks, PropertyName.DATE_ADDED, reverse=False)
 
     def _convert(self, track: Track) -> float:
         """Convert units for track length or size"""
@@ -187,3 +179,11 @@ class TrackLimit(TrackProcessor):
         else:
             bytes_scale = 1000
             return track.size / (self.kind.value % 10 * bytes_scale)
+
+    def as_dict(self) -> MutableMapping[str, object]:
+        return {
+            "on": self.kind,
+            "limit": self.limit_max,
+            "sorted_by": self.limit_sort,
+            "allowance": self.allowance
+        }

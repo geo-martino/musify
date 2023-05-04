@@ -7,7 +7,7 @@ from typing import Optional, List, Tuple
 
 from PIL import Image
 
-from syncify.local.files.track.processor import TagProcessor
+from syncify.local.files.track.base.processor import TagProcessor
 from syncify.spotify.helpers import check_spotify_type, SpotifyType, __UNAVAILABLE_URI_VALUE__
 
 
@@ -148,7 +148,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
     def _read_comments(self) -> Optional[List[str]]:
         """Extract metadata from file for comment"""
         values = self._read_tag(self.tag_map.comments)
-        return list(set(str(value) for value in values)) if values is not None else None
+        return list({str(value) for value in values}) if values is not None else None
 
     def _read_uri(self) -> Tuple[Optional[str], bool]:
         """

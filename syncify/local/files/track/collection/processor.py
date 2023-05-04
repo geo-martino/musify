@@ -1,8 +1,27 @@
 from abc import ABCMeta, abstractmethod
-from typing import Any, Mapping, Optional, Self
+from enum import IntEnum
+from typing import Any, Mapping, Optional, Self, Type
+
+from syncify.local.files.utils.exception import EnumNotFoundError
+from syncify.utils_new.generic import PP
 
 
-class TrackProcessor(metaclass=ABCMeta):
+class Mode(IntEnum):
+
+    @classmethod
+    def from_name(cls, name: str) -> Self:
+        """
+        Returns the first enum that matches the given name
+
+        :exception EnumNotFoundError: If a corresponding enum cannot be found.
+        """
+        for enum in cls:
+            if name.upper() == enum.name:
+                return enum
+        raise EnumNotFoundError(name)
+
+
+class TrackProcessor(PP, metaclass=ABCMeta):
 
     @classmethod
     @abstractmethod
@@ -14,6 +33,6 @@ class TrackProcessor(metaclass=ABCMeta):
         """
         raise NotImplementedError
 
-    def inherit(self, obj: Self) -> None:
+    def inherit(self, obj: Type[Self]) -> None:
         """Inherit all variables from an instantiated instance of this class"""
         self.__dict__.update(obj.__dict__)

@@ -4,8 +4,7 @@ from copy import copy, deepcopy
 from os.path import join, basename, dirname, exists
 from typing import Tuple
 
-from syncify.local.files.track.track import Track
-from syncify.local.files.track.tags import TagNames
+from syncify.local.files import Track, TagName
 from syncify.local.files.utils.image import open_image
 from syncify.spotify.helpers import __UNAVAILABLE_URI_VALUE__
 from tests.common import path_cache, path_file_img
@@ -30,7 +29,7 @@ def clear_tags_test(track: Track) -> None:
     track_original = copy(track)
 
     # dry run, no updates should happen
-    track.delete_tags(tags=TagNames.ALL, dry_run=True)
+    track.delete_tags(tags=TagName.ALL, dry_run=True)
     track_update_dry = deepcopy(track)
 
     assert track_update_dry.title == track_original.title
@@ -53,7 +52,7 @@ def clear_tags_test(track: Track) -> None:
     assert track_update_dry.has_image == track_original.has_image
 
     # clear
-    track.delete_tags(tags=TagNames.ALL, dry_run=False)
+    track.delete_tags(tags=TagName.ALL, dry_run=False)
     track_update = deepcopy(track)
 
     assert track_update.title is None
@@ -99,7 +98,7 @@ def update_tags_test(track: Track) -> None:
     track.image_links = None
 
     # dry run, no updates should happen
-    track.write_tags(tags=TagNames.ALL, replace=False, dry_run=True)
+    track.write_tags(tags=TagName.ALL, replace=False, dry_run=True)
     track_update_dry = deepcopy(track)
 
     assert track_update_dry.title == track_original.title
@@ -123,7 +122,7 @@ def update_tags_test(track: Track) -> None:
 
     # update and don't replace current tags (except uri if uri is False)
     shutil.copyfile(path_file_base, path_file_copy)
-    track.write_tags(tags=TagNames.ALL, replace=False, dry_run=False)
+    track.write_tags(tags=TagName.ALL, replace=False, dry_run=False)
     track_update = deepcopy(track)
 
     assert track_update.title == track_original.title
@@ -147,7 +146,7 @@ def update_tags_test(track: Track) -> None:
 
     # update and replace
     shutil.copyfile(path_file_base, path_file_copy)
-    track.write_tags(tags=TagNames.ALL, replace=True, dry_run=False)
+    track.write_tags(tags=TagName.ALL, replace=True, dry_run=False)
     track_update_replace = deepcopy(track)
 
     assert track_update_replace.title == track.title
@@ -181,7 +180,7 @@ def update_images_test(track: Track) -> None:
     image_new = open_image(path_file_img)
 
     # dry run, no updates should happen
-    track.write_tags(tags=TagNames.IMAGES, replace=False, dry_run=True)
+    track.write_tags(tags=TagName.IMAGES, replace=False, dry_run=True)
     track_update_dry = deepcopy(track)
     image_update_dry = track_update_dry._read_images()[0]
 
@@ -190,10 +189,10 @@ def update_images_test(track: Track) -> None:
 
     # clear current image and update
     shutil.copyfile(path_file_base, path_file_copy)
-    track.delete_tags(TagNames.IMAGES, dry_run=False)
+    track.delete_tags(TagName.IMAGES, dry_run=False)
     assert not track.has_image
 
-    track.write_tags(tags=TagNames.IMAGES, replace=False, dry_run=False)
+    track.write_tags(tags=TagName.IMAGES, replace=False, dry_run=False)
     track_update = deepcopy(track)
     image_update = track_update._read_images()[0]
 
@@ -202,7 +201,7 @@ def update_images_test(track: Track) -> None:
 
     # update and replace
     shutil.copyfile(path_file_base, path_file_copy)
-    track.write_tags(tags=TagNames.IMAGES, replace=False, dry_run=False)
+    track.write_tags(tags=TagName.IMAGES, replace=False, dry_run=False)
     track_update_replace = deepcopy(track)
     image_update_replace = track_update_replace._read_images()[0]
 

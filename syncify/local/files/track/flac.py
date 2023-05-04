@@ -7,8 +7,7 @@ import mutagen.flac
 from PIL import Image
 from mutagen.id3 import PictureType
 
-from syncify.local.files.track.track import Track
-from syncify.local.files.track.tags import TagMap, TagNames
+from syncify.local.files.track.base import Track, TagName, TagMap
 from syncify.local.files.utils.image import open_image, get_image_bytes
 
 
@@ -83,7 +82,7 @@ class FLAC(Track):
         return updated
 
     def _delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:
-        if tag_name == TagNames.IMAGES.name.lower():
+        if tag_name == TagName.IMAGES.name.lower():
             self._file.clear_pictures()
             return True
 

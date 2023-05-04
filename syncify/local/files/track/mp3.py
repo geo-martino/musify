@@ -7,8 +7,7 @@ import mutagen.mp3
 from PIL import Image
 from mutagen.id3 import Encoding
 
-from syncify.local.files.track.track import Track
-from syncify.local.files.track.tags import TagMap, TagNames
+from syncify.local.files.track.base import Track, TagName, TagMap
 from syncify.local.files.utils.image import open_image, get_image_bytes
 from syncify.spotify.helpers import __UNAVAILABLE_URI_VALUE__
 
@@ -115,7 +114,7 @@ class MP3(Track):
 
     def _write_comments(self, dry_run: bool = True) -> bool:
         tag_id_prefix = next(iter(self.tag_map.comments), None)
-        self.delete_tags(tags=TagNames.COMMENTS, dry_run=dry_run)
+        self.delete_tags(tags=TagName.COMMENTS, dry_run=dry_run)
 
         for i, comment in enumerate(self.comments, 1):
             comm = mutagen.id3.COMM(encoding=Encoding.UTF8, desc=f'ID3v1 Comment {i}', lang='eng', text=[comment])
@@ -129,7 +128,7 @@ class MP3(Track):
         tag_value = __UNAVAILABLE_URI_VALUE__ if not self.has_uri else self.uri
 
         # if applying uri as comment, clear comments and add manually with custom description
-        if self.uri_tag == TagNames.COMMENTS:
+        if self.uri_tag == TagName.COMMENTS:
             tag_id_prefix = next(iter(self.tag_map.comments), None)
             self.delete_tags(tags=self.uri_tag, dry_run=dry_run)
 

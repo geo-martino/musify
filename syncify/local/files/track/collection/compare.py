@@ -2,13 +2,12 @@ import re
 from datetime import datetime, timedelta
 from functools import reduce
 from operator import mul
-from typing import Any, Callable, List, Mapping, Optional, Self
+from typing import Any, Callable, List, Mapping, Optional, Self, MutableMapping
 
 from dateutil.relativedelta import relativedelta
 
-from local.files.track.collection.processor import TrackProcessor
-from syncify.local.files.track.tags import Name
-from syncify.local.files.track.track import Track
+from syncify.local.files.track.base import Name, Track, TagName, PropertyName
+from syncify.local.files.track.collection import TrackProcessor
 from syncify.local.files.utils.musicbee import field_name_map
 from syncify.utils.helpers import make_list
 
@@ -49,7 +48,7 @@ class TrackCompare(TrackProcessor):
                 f"Valid conditions: {valid_conditions_str}"
             )
 
-        self._condition = condition_sanitised.replace("_", " ").strip()
+        self._condition = condition_sanitised.replace("_", " ").replace(self._cond_method_prefix, "").strip()
         self._method = getattr(self, condition_sanitised)
 
     @property
@@ -73,8 +72,8 @@ class TrackCompare(TrackProcessor):
         self.field: Any = field
         self.expected: Optional[List[Any]] = expected
 
-        self._cond_method_prefix = "_cond_"
-        self._valid_conditions = [cond for cond in self.__annotations__ if cond.startswith(self._cond_method_prefix)]
+        self._cond_method_prefix = "_cond"
+        self._valid_conditions = [name for name in dir(self) if name.startswith(self._cond_method_prefix)]
         self.condition = condition
 
     @classmethod
@@ -110,7 +109,9 @@ class TrackCompare(TrackProcessor):
         if track_2 is None and self.expected is None:
             raise ValueError("No comparative track given and no expected values set")
 
-        actual = getattr(track_1, self.field.name.lower(), None)
+        field_name = TagName.to_tag(self.field)[0] if isinstance(self.field, TagName) else self.field.name.lower()
+
+        actual = getattr(track_1, field_name, None)
         if track_2 is None:
             if not self._converted:
                 self._convert_expected(actual)
@@ -148,7 +149,7 @@ class TrackCompare(TrackProcessor):
         """Convert expected values to integers"""
         converted: List[int] = []
         for exp in self.expected:
-            if not isinstance(exp, int) or not isinstance(exp, float) and ":" in exp:
+            if isinstance(exp, str) and ":" in exp:
                 exp = self._get_seconds(exp)
             converted.append(int(exp))
         self._expected = converted
@@ -157,7 +158,7 @@ class TrackCompare(TrackProcessor):
         """Convert expected values to floats"""
         converted: List[float] = []
         for exp in self.expected:
-            if not isinstance(exp, int) or not isinstance(exp, float) and ":" in exp:
+            if isinstance(exp, str) and ":" in exp:
                 exp = self._get_seconds(exp)
             converted.append(float(exp))
         self._expected = converted
@@ -258,3 +259,10 @@ class TrackCompare(TrackProcessor):
     @staticmethod
     def _cond_matches_reg_ex_ignore_case(value: Any, expected: Optional[List[Any]]) -> bool:
         return bool(re.search(expected[0], value, flags=re.IGNORECASE))
+
+    def as_dict(self) -> MutableMapping[str, object]:
+        return {
+            "field": self.field.name,
+            "condition": self.condition,
+            "expected": self.expected
+        }

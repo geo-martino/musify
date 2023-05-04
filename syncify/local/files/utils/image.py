@@ -6,7 +6,7 @@ from urllib.error import URLError
 from urllib.request import urlopen
 
 from PIL import Image, UnidentifiedImageError
-from syncify.local.files.utils.exception import ImageLoadError
+from .exception import ImageLoadError
 
 
 def open_image(image_link: str) -> Image.Image:

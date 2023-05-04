@@ -2,7 +2,7 @@ from glob import glob
 from os.path import basename, splitext, join
 from typing import Optional, List, Set, MutableMapping, Mapping
 
-from syncify.local.files.file import __ACCEPTED_FILETYPES__, __TRACK_CLASSES__
+from local.files.track.file import __ACCEPTED_FILETYPES__, __TRACK_CLASSES__
 from syncify.local.files.utils.exception import IllegalFileTypeError
 
 
@@ -20,7 +20,7 @@ class PlaylistManager:
 
         self.other_folders: Optional[Set[str]] = None
         if other_folders is not None:
-            self.other_folders = set(folder.rstrip("\\/") for folder in other_folders)
+            self.other_folders = {folder.rstrip("\\/") for folder in other_folders}
 
         # all playlist lowercase names mapped to their filepaths with accepted filetypes in playlist folder
         self.playlist_paths: Optional[MutableMapping[str, str]] = None
@@ -43,11 +43,11 @@ class PlaylistManager:
                 self.playlist_paths.update({splitext(basename(path))[0]: path for path in paths})
 
         if load_from_track_obj:
-            self.track_paths = set(
+            self.track_paths = {
                 path
                 for track_obj in __TRACK_CLASSES__
                 for path in track_obj.available_track_paths if track_obj.available_track_paths is not None
-            )
+            }
         else:
             self.track_paths = set()
             for ext in __ACCEPTED_FILETYPES__:

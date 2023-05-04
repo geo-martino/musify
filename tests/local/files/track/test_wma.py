@@ -4,7 +4,7 @@ from os.path import basename, dirname
 
 import pytest
 
-from syncify.local.files.track.files.wma import WMA
+from syncify.local.files import WMA
 from syncify.local.files.utils.exception import IllegalFileTypeError
 from syncify.spotify.helpers import __UNAVAILABLE_URI_VALUE__
 from tests.common import path_file_wma, path_resources, path_file_txt

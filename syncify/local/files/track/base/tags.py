@@ -73,15 +73,9 @@ class Properties:
 
 class Name(IntEnum):
 
-    @property
-    def ALL(self):
-        return 0
-
     @classmethod
     def all(cls) -> Set[Self]:
-        all_enums = set(cls)
-        all_enums.remove(cls.ALL)
-        return all_enums
+        return {e for e in cls if e.name != "ALL"}
 
     @classmethod
     def from_name(cls, name: str) -> Self:
@@ -108,7 +102,7 @@ class Name(IntEnum):
         raise EnumNotFoundError(value)
 
 
-class TagNames(Name):
+class TagName(Name):
     """
     Human-friendly enum tag names using condensed names
     e.g. ``track_number`` and ``track_total`` are condensed to just ``track`` here
@@ -131,15 +125,15 @@ class TagNames(Name):
     IMAGES = 903  # unknown MusicBee mapping
 
     @classmethod
-    def to_tag(cls, enum: Self) -> Set[str]:
+    def to_tag(cls, enum: Self) -> List[str]:
         """
         Returns all human-friendly tag names for a given enum
         e.g. ``track`` returns both ``track_number`` and ``track_total`` tag names
         """
-        return set(tag for tag in TagMap.__annotations__ if tag.startswith(enum.name.lower()))
+        return [tag for tag in TagMap.__annotations__ if tag.startswith(enum.name.lower())]
 
 
-class PropertyNames(Name):
+class PropertyName(Name):
     """Enums for properties that can be extracted from a file"""
 
     ALL = 0

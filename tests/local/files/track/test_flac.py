@@ -4,7 +4,7 @@ from os.path import basename, dirname
 
 import pytest
 
-from syncify.local.files.track.files.flac import FLAC
+from syncify.local.files import FLAC
 from syncify.local.files.utils.exception import IllegalFileTypeError
 from tests.common import path_file_flac, path_resources, path_file_txt
 from tests.local.files.track.test_track import update_tags_test, clear_tags_test, update_images_test

@@ -4,7 +4,7 @@ from os.path import basename, dirname
 
 import pytest
 
-from local.files.track.files.m4a import M4A
+from syncify.local.files import M4A
 from syncify.local.files.utils.exception import IllegalFileTypeError
 from tests.common import path_file_m4a, path_resources, path_file_txt
 from tests.local.files.track.test_track import update_tags_test, clear_tags_test, update_images_test

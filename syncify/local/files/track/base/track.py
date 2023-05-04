@@ -1,20 +1,20 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-from datetime import datetime
+from abc import ABCMeta, abstractmethod
 from glob import glob
 from os.path import join, splitext, exists
 from typing import Optional, List, Union, Mapping, Set
 
 import mutagen
 
-from syncify.local.files.track.reader import TagReader
-from syncify.local.files.track.writer import TagWriter
-from syncify.local.files.track.tags import Tags, Properties
+from syncify.local.files.track.base.reader import TagReader
+from syncify.local.files.track.base.tags import Tags, Properties
+from syncify.local.files.track.base.writer import TagWriter
 from syncify.local.files.utils.exception import IllegalFileTypeError
+from syncify.utils_new.generic import PP
 
 
-class Track(ABC, TagReader, TagWriter):
+class Track(PP, TagReader, TagWriter, metaclass=ABCMeta):
     """
     Generic track object for extracting, modifying, and saving tags for a given file.
 
@@ -133,37 +133,6 @@ class Track(ABC, TagReader, TagWriter):
             tag_name: getattr(self, tag_name, None)
             for tag_name in list(Tags.__annotations__) + list(Properties.__annotations__)
         }
-
-    def as_json(self) -> Mapping[str, object]:
-        """
-        Return a dictionary representation of the tags for this track that is safe to output to json.
-
-        :return: JSON-formatted dictionary of tags.
-        """
-        tags = {}
-
-        for tag_name, tag_value in self.as_dict().items():
-            if isinstance(tag_value, datetime):
-                tags[tag_name] = tag_value.strftime("%Y-%m-%d %H:%M:%S")
-            else:
-                tags[tag_name] = tag_value
-
-        return tags
-
-    def __str__(self) -> str:
-        result = f"{self.__class__.__name__}(\n{{}}\n)"
-        tags = self.as_dict()
-        indent = 2
-
-        max_width = max(len(tag_name) for tag_name in tags)
-        tags_repr = []
-        for tag_name, tag_value in tags.items():
-            tags_repr.append(f"{tag_name : <{max_width}} = {repr(tag_value)}")
-
-        return result.format("\n".join([" " * indent + tag for tag in tags_repr]))
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.as_dict()})"
 
     def __copy__(self):
         """Copy Track object by reloading from the file object in memory"""
