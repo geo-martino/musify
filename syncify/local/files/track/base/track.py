@@ -11,10 +11,10 @@ from syncify.local.files.track.base.reader import TagReader
 from syncify.local.files.track.base.tags import Tags, Properties
 from syncify.local.files.track.base.writer import TagWriter
 from syncify.local.files.utils.exception import IllegalFileTypeError
-from syncify.utils_new.generic import PP
+from syncify.utils_new.generic import PrettyPrinter
 
 
-class Track(PP, TagReader, TagWriter, metaclass=ABCMeta):
+class Track(PrettyPrinter, TagReader, TagWriter, metaclass=ABCMeta):
     """
     Generic track object for extracting, modifying, and saving tags for a given file.
 

@@ -40,7 +40,7 @@ def flatten_nested(nested: Mapping, sort_keys: bool = False, sort_ignore: bool =
     return previous
 
 
-class PP(metaclass=ABCMeta):
+class PrettyPrinter(metaclass=ABCMeta):
     @abstractmethod
     def as_dict(self) -> MutableMapping[str, object]:
         """Return a dictionary representation of the key attributes of this object"""
@@ -51,9 +51,9 @@ class PP(metaclass=ABCMeta):
         attributes = {}
 
         for attr_name, attr_value in self.as_dict().items():
-            if isinstance(attr_value, PP):
+            if isinstance(attr_value, PrettyPrinter):
                 attributes[attr_name] = attr_value.as_json()
-            if isinstance(attr_value, datetime):
+            elif isinstance(attr_value, datetime):
                 attributes[attr_name] = attr_value.strftime("%Y-%m-%d %H:%M:%S")
             else:
                 attributes[attr_name] = attr_value

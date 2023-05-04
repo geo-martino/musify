@@ -4,7 +4,7 @@ from enum import IntEnum
 from typing import Any, Mapping, Optional, Self, List
 
 from syncify.local.files.utils.exception import EnumNotFoundError
-from syncify.utils_new.generic import PP
+from syncify.utils_new.generic import PrettyPrinter
 
 
 class Mode(IntEnum):
@@ -22,7 +22,7 @@ class Mode(IntEnum):
         raise EnumNotFoundError(name)
 
 
-class TrackProcessor(PP, metaclass=ABCMeta):
+class TrackProcessor(PrettyPrinter, metaclass=ABCMeta):
 
     @classmethod
     @abstractmethod

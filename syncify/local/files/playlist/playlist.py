@@ -5,7 +5,7 @@ from typing import List, MutableMapping, Optional, Set, Collection
 
 from syncify.local.files import Track
 from syncify.local.files.track.collection import TrackMatch, TrackLimit, TrackSort
-from syncify.utils_new.generic import PP
+from syncify.utils_new.generic import PrettyPrinter
 
 
 @dataclass
@@ -13,7 +13,7 @@ class UpdateResult(ABC):
     raise NotImplementedError
 
 
-class Playlist(PP, metaclass=ABCMeta):
+class Playlist(PrettyPrinter, metaclass=ABCMeta):
     """
     Generic class for CRUD operations on playlists.
 
