@@ -1,6 +1,5 @@
-import re
 from random import shuffle
-from typing import Any, Callable, List, Mapping, Optional, Self, MutableMapping
+from typing import Any, Callable, List, Mapping, Optional, Self, MutableMapping, Set
 
 from syncify.local.files.track.base import PropertyName, Track
 from syncify.local.files.track.collection.processor import TrackProcessor, Mode
@@ -47,38 +46,9 @@ class TrackLimit(TrackProcessor):
         if value is None:
             return
 
-        sort_sanitised = re.sub('([A-Z])', lambda m: f"_{m.group(0).lower()}", value.strip()).replace(" ", "_")
-        if not sort_sanitised.startswith("_"):
-            sort_sanitised = "_" + sort_sanitised
-        if not sort_sanitised.startswith(self._sort_method_prefix):
-            sort_sanitised = self._sort_method_prefix + sort_sanitised
-
-        if sort_sanitised not in self._valid_methods:
-            valid_methods_str = ", ".join([c.replace(self._sort_method_prefix, "") for c in self._valid_methods])
-            raise ValueError(
-                f"Unrecognised sort method: {value} | " 
-                f"Valid sort methods: {valid_methods_str}"
-            )
-
-        self._limit_sort = sort_sanitised.replace(self._sort_method_prefix, "").replace("_", " ").strip()
-        self._sort_method = getattr(self, sort_sanitised)
-
-    def __init__(
-            self,
-            limit: int = 0,
-            on: Optional[LimitType] = LimitType.ITEMS,
-            sorted_by: Optional[str] = None,
-            allowance: float = 1.25
-    ):
-        self._sort_method: Callable[[List[Track]], None] = lambda _: None
-
-        self.limit_max = limit
-        self.kind = on
-        self.allowance = allowance
-
-        self._sort_method_prefix = "_sort"
-        self._valid_methods = [name for name in dir(self) if name.startswith(self._sort_method_prefix)]
-        self.limit_sort = sorted_by
+        name = self._get_method_name(value, valid=self._valid_methods, prefix=self._sort_method_prefix)
+        self._limit_sort = self._snake_to_camel(name, prefix=self._sort_method_prefix)
+        self._sort_method = getattr(self, name)
 
     @classmethod
     def from_xml(cls, xml: Optional[Mapping[str, Any]] = None) -> Optional[Self]:
@@ -98,15 +68,41 @@ class TrackLimit(TrackProcessor):
             allowance=1.25
         )
 
-    def limit(self, tracks: List[Track]) -> None:
-        """Limit tracks inplace based on set conditions"""
+    def __init__(
+            self,
+            limit: int = 0,
+            on: Optional[LimitType] = LimitType.ITEMS,
+            sorted_by: Optional[str] = None,
+            allowance: float = 1.25,
+    ):
+        self._sort_method: Callable[[List[Track]], None] = lambda _: None
+
+        self.limit_max = limit
+        self.kind = on
+        self.allowance = allowance
+
+        self._sort_method_prefix = "_sort"
+        self._valid_methods = [name for name in dir(self) if name.startswith(self._sort_method_prefix)]
+        self.limit_sort = sorted_by
+
+    def limit(self, tracks: List[Track], ignore: Optional[Set[str]] = None) -> None:
+        """
+        Limit tracks inplace based on set conditions.
+        Optionally set a list of paths of tracks to ignore when limiting i.e. keep them in the list regardless.
+        """
         if len(tracks) == 0 or self.kind is None or self.limit_max == 0:
             return
 
         self._sort_method(tracks)
 
-        tracks_limit = tracks.copy()
-        tracks.clear()
+        if ignore is not None:
+            tracks_limit = [track for track in tracks if track.path not in ignore]
+            tracks_ignore = [track for track in tracks if track.path in ignore]
+            tracks.clear()
+            tracks.extend(tracks_ignore)
+        else:
+            tracks_limit = tracks.copy()
+            tracks.clear()
 
         if self.kind == LimitType.ITEMS:
             tracks.extend(tracks_limit[:self.limit_max])

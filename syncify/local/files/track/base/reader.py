@@ -3,7 +3,7 @@ import re
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
 from os.path import basename, dirname, getmtime, splitext, getsize, join, exists
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Set
 
 from PIL import Image
 
@@ -145,7 +145,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
         values = self._read_tag(self.tag_map.compilation)
         return bool(int(values[0])) if values is not None else None
 
-    def _read_comments(self) -> Optional[List[str]]:
+    def _read_comments(self) -> Optional[Set[str]]:
         """Extract metadata from file for comment"""
         values = self._read_tag(self.tag_map.comments)
         return list({str(value) for value in values}) if values is not None else None

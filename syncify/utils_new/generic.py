@@ -69,7 +69,7 @@ class PP(metaclass=ABCMeta):
         max_val_width = 120 - max_key_width
         attributes_repr = []
         for attr_key, attr_val in attributes.items():
-            attr_val_repr = f"{attr_key.title() : <{max_key_width}} = {repr(attr_val)}"
+            attr_val_repr = f"{attr_key.title().replace('_', ' ') : <{max_key_width}} = {repr(attr_val)}"
 
             if isinstance(attr_val, set):
                 attr_val = list(attr_val)

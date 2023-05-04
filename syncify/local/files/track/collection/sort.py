@@ -3,9 +3,23 @@ from random import shuffle
 from typing import Any, Callable, List, Mapping, MutableMapping, Optional, Self, Tuple, Union
 
 from syncify.local.files.track.base import Name, PropertyName, TagName, Track
-from syncify.local.files.track.collection.processor import TrackProcessor
+from syncify.local.files.track.collection.processor import TrackProcessor, Mode
 from syncify.local.files.utils.musicbee import get_field_from_code
 from syncify.utils_new.generic import flatten_nested, strip_ignore_words
+
+
+class ShuffleMode(Mode):
+    NONE = 0
+    RANDOM = 1
+    HIGHER_RATING = 2
+    RECENT_ADDED = 3
+    DIFFERENT_ARTIST = 3
+
+
+class ShuffleBy(Mode):
+    TRACK = 0
+    ALBUM = 1
+    ARTIST = 2
 
 
 class TrackSort(TrackProcessor):
@@ -82,9 +96,6 @@ class TrackSort(TrackProcessor):
 
         return grouped
 
-    def __init__(self, fields: Optional[Union[List[Name], Mapping[Name, bool]]] = None):
-        self.sort_fields: Union[List[Name], Mapping[Name, bool]] = fields
-
     @classmethod
     def from_xml(cls, xml: Optional[Mapping[str, Any]] = None) -> Self:
         """
@@ -121,18 +132,39 @@ class TrackSort(TrackProcessor):
         else:
             raise ValueError("Sort type in XML not recognised")
 
-        return cls(fields=fields)
+        shuffle_mode = ShuffleMode.from_name(cls._camel_to_snake(xml["SmartPlaylist"]["@ShuffleMode"]))
+        shuffle_by = ShuffleBy.from_name(cls._camel_to_snake(xml["SmartPlaylist"]["@GroupBy"]))
+        shuffle_weight = float(xml["SmartPlaylist"].get("@ShuffleSameArtistWeight", 1))
+
+        return cls(fields=fields, shuffle_mode=shuffle_mode, shuffle_by=shuffle_by, shuffle_weight=shuffle_weight)
+
+    def __init__(
+            self,
+            fields: Optional[Union[List[Name], Mapping[Name, bool]]] = None,
+            shuffle_mode: Optional[ShuffleMode] = None,
+            shuffle_by: Optional[ShuffleBy] = None,
+            shuffle_weight: float = 1.0
+    ):
+        self.sort_fields: Union[List[Name], Mapping[Name, bool]] = fields
+        self.shuffle_mode: Optional[ShuffleMode] = shuffle_mode
+        self.shuffle_by: Optional[ShuffleBy] = shuffle_by
+        self.shuffle_weight = shuffle_weight
 
     def sort(self, tracks: List[Track]) -> None:
         """Sorts a list of tracks inplace."""
         if self.sort_fields is None:
             return
 
-        tracks_grouped = self.group_by_field(tracks, field=next(iter(self.sort_fields), None))
-        tracks_nested = self._sort_by_fields(tracks_grouped, fields=self.sort_fields)
+        if self.shuffle_mode == ShuffleMode.NONE:
+            tracks_grouped = self.group_by_field(tracks, field=next(iter(self.sort_fields), None))
+            tracks_nested = self._sort_by_fields(tracks_grouped, fields=self.sort_fields)
 
-        tracks.clear()
-        tracks.extend(flatten_nested(tracks_nested, sort_keys=True, sort_ignore=True))
+            tracks.clear()
+            tracks.extend(flatten_nested(tracks_nested, sort_keys=True, sort_ignore=True))
+        elif self.shuffle_mode == ShuffleMode.RANDOM:
+            shuffle(tracks)
+        else:
+            NotImplementedError(f"Shuffle mode not yet implemented: {self.shuffle_mode}")
 
     @classmethod
     def _sort_by_fields(
@@ -169,5 +201,7 @@ class TrackSort(TrackProcessor):
 
     def as_dict(self) -> MutableMapping[str, object]:
         return {
-            "sort_fields": {field.name: "desc" if r else "asc" for field, r in self.sort_fields.items()}
+            "sort_fields": {field.name: "desc" if r else "asc" for field, r in self.sort_fields.items()},
+            "shuffle_mode": self.shuffle_mode,
+            "shuffle_by": self.shuffle_by
         }

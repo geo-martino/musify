@@ -42,21 +42,9 @@ class TrackCompare(TrackProcessor):
         if value is None:
             return
 
-        condition_sanitised = re.sub('([A-Z])', lambda m: f"_{m.group(0).lower()}", value.strip()).replace(" ", "_")
-        if not condition_sanitised.startswith("_"):
-            condition_sanitised = "_" + condition_sanitised
-        if not condition_sanitised.startswith(self._cond_method_prefix):
-            condition_sanitised = self._cond_method_prefix + condition_sanitised
-
-        if condition_sanitised not in self._valid_methods:
-            valid_methods_str = ", ".join([c.replace(self._cond_method_prefix, "") for c in self._valid_methods])
-            raise ValueError(
-                f"Unrecognised condition: {value} | " 
-                f"Valid conditions: {valid_methods_str}"
-            )
-
-        self._condition = condition_sanitised.replace(self._cond_method_prefix, "").replace("_", " ").strip()
-        self._method = getattr(self, condition_sanitised)
+        name = self._get_method_name(value=value, valid=self._valid_methods, prefix=self._cond_method_prefix)
+        self._condition = self._snake_to_camel(name, prefix=self._cond_method_prefix)
+        self._method = getattr(self, name)
 
     @property
     def expected(self) -> Optional[List[Any]]:
@@ -70,18 +58,6 @@ class TrackCompare(TrackProcessor):
     def expected(self, value: Optional[List[Any]] = None):
         self._converted = False
         self._expected = value
-
-    def __init__(self, field: Name, condition: str, expected: Optional[List[Any]] = None) -> None:
-        self._method: Callable[[Any, Optional[List[Any]]], bool] = lambda _, __: False
-        self._converted = False
-        self._expected: Optional[List[Any]] = None
-
-        self.field: Any = field
-        self.expected: Optional[List[Any]] = expected
-
-        self._cond_method_prefix = "_cond"
-        self._valid_methods = [name for name in dir(self) if name.startswith(self._cond_method_prefix)]
-        self.condition = condition
 
     @classmethod
     def from_xml(cls, xml: Optional[Mapping[str, Any]] = None) -> Optional[List[Self]]:
@@ -107,6 +83,18 @@ class TrackCompare(TrackProcessor):
             objs.append(cls(field=field, condition=compare_str, expected=expected))
 
         return objs
+
+    def __init__(self, field: Name, condition: str, expected: Optional[List[Any]] = None) -> None:
+        self._method: Callable[[Any, Optional[List[Any]]], bool] = lambda _, __: False
+        self._converted = False
+        self._expected: Optional[List[Any]] = None
+
+        self.field: Name = field
+        self.expected: Optional[List[Any]] = expected
+
+        self._cond_method_prefix = "_cond"
+        self._valid_methods = [name for name in dir(self) if name.startswith(self._cond_method_prefix)]
+        self.condition = condition
 
     def compare(self, track_1: Track, track_2: Optional[List[Track]] = None) -> bool:
         """

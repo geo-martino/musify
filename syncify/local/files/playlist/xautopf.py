@@ -1,10 +1,31 @@
+from copy import deepcopy
+from dataclasses import dataclass
 from typing import Any, List, Mapping, Optional, Set
 
 import xmltodict
 
 from syncify.local.files import TrackMatch, TrackLimit, TrackSort
+from syncify.local.files.playlist import Playlist, UpdateResult
 from syncify.local.files.track import PropertyName, Track
-from syncify.local.files.playlist import Playlist
+
+
+@dataclass
+class UpdateResultXAutoPF(UpdateResult):
+    start: int
+    start_description: str
+    start_include: int
+    start_exclude: int
+    start_comparators: int
+    start_limiter: bool
+    start_sorter: bool
+
+    final: int
+    final_description: str
+    final_include: int
+    final_exclude: int
+    final_comparators: int
+    final_limiter: bool
+    final_sorter: bool
 
 
 class XAutoPF(Playlist):
@@ -45,6 +66,9 @@ class XAutoPF(Playlist):
         )
         self.description = self.xml["SmartPlaylist"]["Source"]["Description"]
 
+        self.load(tracks=tracks)
+        self._count_last_save = len(self.tracks)
+
     def load(self, tracks: Optional[List[Track]] = None) -> Optional[List[Track]]:
         """
         Read the playlist file.
@@ -57,60 +81,85 @@ class XAutoPF(Playlist):
         if tracks is None:
             raise ValueError("This playlist type requires that you provide a list of loaded tracks")
 
-        if self.include_paths is not None:
-            include_paths_original = self.include_paths.copy()
-            include_paths_lower = {path.lower() for path in self.include_paths}
-            self.include_paths = {track.path for track in tracks if track.path.lower() in include_paths_lower}
-
-        if self.exclude_paths is not None:
-            exclude_paths_original = self.include_paths.copy()
-            exclude_paths_lower = {path.lower() for path in self.exclude_paths}
-            self.exclude_paths = {track.path for track in tracks if track.path.lower() in exclude_paths_lower}
-
-        self.sort_by_field(tracks, field=PropertyName.LAST_PLAYED, reverse=True)
-        self.tracks = self.match(tracks, reference=tracks[0])
-        self.limit(self.tracks)
-        self.sort(self.tracks)
-
-        if self.include_paths is not None:
-            self.include_paths = include_paths_original
-        if self.exclude_paths is not None:
-            self.exclude_paths = exclude_paths_original
+        self.sorter.sort_by_field(tracks, field=PropertyName.LAST_PLAYED, reverse=True)
+        self._match(tracks, reference=tracks[0])
+        self._limit(ignore=self.matcher.include_paths)
+        self._sort()
 
         return tracks
 
-    def write(self, tracks: List[Track]) -> int:
+    def write(self) -> UpdateResultXAutoPF:
+        start_xml = deepcopy(self.xml)
+
+        self._update_xml_paths()
+        # self._update_comparators()
+        # self._update_limiter()
+        # self._update_sorter()
+
+        self._save_xml()
+
+        start_source: Mapping[str, Any] = start_xml["SmartPlaylist"]["Source"]
+        final_source: Mapping[str, Any] = self.xml["SmartPlaylist"]["Source"]
+
+        return UpdateResultXAutoPF(
+            start=self._count_last_save,
+            start_description=start_source["Description"],
+            start_include=len([p for p in start_source.get("ExceptionsInclude", "").split("|") if p]),
+            start_exclude=len([p for p in start_source.get("Exceptions", "").split("|") if p]),
+            start_comparators=len(start_source.get("Conditions", [])),
+            start_limiter=len(start_source.get("Limit", [])) > 0,
+            start_sorter=len(start_source.get("SortBy", start_source.get("DefinedSort", []))) > 0,
+            final=len(self.tracks),
+            final_description=final_source["Description"],
+            final_include=len([p for p in final_source.get("ExceptionsInclude", "").split("|") if p]),
+            final_exclude=len([p for p in final_source.get("Exceptions", "").split("|") if p]),
+            final_comparators=len(final_source.get("Conditions", [])),
+            final_limiter=len(final_source.get("Limit", [])) > 0,
+            final_sorter=len(final_source.get("SortBy", final_source.get("DefinedSort", []))) > 0,
+        )
+
+    # noinspection PyTypeChecker
+    def _update_xml_paths(self) -> None:
+        tracks = self.tracks.copy()
+        path_track_map: Mapping[str: Track] = {track.path.lower(): track for track in tracks}
+
+        # match again on current conditions to check differences
+        self.sorter.sort_by_field(tracks, field=PropertyName.LAST_PLAYED, reverse=True)
+        matches: List[Track] = self.matcher.match(tracks, reference=tracks[0], combine=False)[2]
+        compared: Mapping[str: Track] = {track.path.lower(): track for track in matches}
+
+        self.matcher.include_paths = list(path_track_map - compared.keys())
+        self.matcher.exclude_paths = list(compared.keys() - path_track_map)
+
+        include_tracks: List[Optional[Track]] = [path_track_map.get(path) for path in self.matcher.include_paths]
+        exclude_tracks: List[Optional[Track]] = [compared.get(path) for path in self.matcher.exclude_paths]
+
+        include_paths: List[str] = [track.path for track in include_tracks if track is not None]
+        exclude_paths: List[str] = [track.path for track in exclude_tracks if track is not None]
+
+        source = self.xml["SmartPlaylist"]["Source"]
+
+        if len(include_paths) > 0:
+            source["ExceptionsInclude"] = "|".join(self._prepare_paths_for_output(include_paths))
+        else:
+            source.pop("ExceptionsInclude", None)
+
+        if len(exclude_paths) > 0:
+            source["Exceptions"] = "|".join(self._prepare_paths_for_output(exclude_paths))
+        else:
+            source.pop("Exceptions", None)
+
+    def _update_comparators(self) -> None:
         raise NotImplementedError
 
+    def _update_limiter(self) -> None:
+        raise NotImplementedError
 
-if __name__ == "__main__":
-    from syncify.local.files.track import FLAC
-    from syncify.local.files.track import MP3
-    from syncify.local.files.track import M4A
-    from syncify.local.files.track import WMA
-    from syncify.local.files import load_track
+    def _update_sorter(self) -> None:
+        raise NotImplementedError
 
-    from os.path import join
-
-    playlist_folder = join("MusicBee", "Playlists")
-    library_folder = "D:\\Music\\"
-    other_folder = "/mnt/d/Music/"
-
-    print("Setting file paths")
-    FLAC.set_file_paths(library_folder=library_folder)
-    MP3.set_file_paths(library_folder=library_folder)
-    M4A.set_file_paths(library_folder=library_folder)
-    WMA.set_file_paths(library_folder=library_folder)
-
-    print("Loading tracks")
-    tracks = []
-    tracks.extend(load_track(path=path) for path in FLAC.available_track_paths)
-    tracks.extend(load_track(path=path) for path in MP3.available_track_paths)
-    tracks.extend(load_track(path=path) for path in M4A.available_track_paths)
-    tracks.extend(load_track(path=path) for path in WMA.available_track_paths)
-
-    from glob import glob
-    for path in glob(join(library_folder, playlist_folder, "**", f"*xautopf"), recursive=True):
-        pl = XAutoPF(path=path, tracks=tracks, library_folder=library_folder, other_folders={other_folder})
-        print(pl.name)
-        [print(str(i).zfill(3), track.album, track.title, sep=" = ") for i, track in enumerate(pl.tracks, 1)]
+    def _save_xml(self) -> None:
+        """Save XML representation of the playlist"""
+        with open(self.path, 'w', encoding='utf-8') as f:
+            xml_str = xmltodict.unparse(self.xml, pretty=True, short_empty_elements=True)
+            f.write(xml_str.replace('/>', ' />').replace('\t', '  '))
