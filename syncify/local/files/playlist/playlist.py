@@ -3,6 +3,7 @@ from abc import ABCMeta, abstractmethod, ABC
 from os.path import basename, splitext
 from typing import List, MutableMapping, Optional, Set, Collection, Any
 
+from local.files.track.collection import TrackCollection
 from syncify.local.files.file import File
 from syncify.local.files.track import Track
 from syncify.local.files.track.collection import TrackMatch, TrackLimit, TrackSort
@@ -14,7 +15,7 @@ class UpdateResult(ABC):
     pass
 
 
-class Playlist(PrettyPrinter, File, metaclass=ABCMeta):
+class Playlist(PrettyPrinter, TrackCollection, File, metaclass=ABCMeta):
     """
     Generic class for CRUD operations on playlists.
 
@@ -24,6 +25,18 @@ class Playlist(PrettyPrinter, File, metaclass=ABCMeta):
         Use to replace path stems from other libraries for the paths in loaded playlists.
         Useful when managing similar libraries on multiple platforms.
     """
+
+    @property
+    def tracks(self) -> Optional[List[Track]]:
+        return self._tracks
+
+    @tracks.getter
+    def tracks(self) -> List[Track]:
+        return self._tracks
+
+    @tracks.setter
+    def tracks(self, value: List[Track]):
+        self._tracks = value
 
     def __init__(
             self,
@@ -138,12 +151,11 @@ if __name__ == "__main__":
 
     for path in glob(join(library_folder, playlist_folder, "**", f"*.xautopf"), recursive=True):
         pl = XAutoPF(path=path, tracks=tracks, library_folder=library_folder, other_folders={other_folder})
-        print(pl)
+        print(pl.name, len(pl))
         # # [print(str(i).zfill(3), track.album, track.title, sep=" = ") for i, track in enumerate(pl.tracks, 1)]
         # print(json.dumps(pl.xml, indent=2))
 
     for path in glob(join(library_folder, playlist_folder, "**", f"*.m3u"), recursive=True):
         pl = M3U(path=path, tracks=tracks, library_folder=library_folder, other_folders={other_folder})
-        print(pl)
-        print(len(pl.tracks))
-        [print(str(i).zfill(3), track.album, track.title, sep=" = ") for i, track in enumerate(pl.tracks, 1)]
+        print(pl.name, len(pl))
+        # [print(str(i).zfill(3), track.album, track.title, sep=" = ") for i, track in enumerate(pl.tracks, 1)]
