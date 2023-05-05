@@ -6,16 +6,14 @@ from syncify.local.files.track.base.processor import TagProcessor
 from syncify.local.files.track.base.tags import TagName
 from syncify.spotify.helpers import __UNAVAILABLE_URI_VALUE__
 from syncify.utils.helpers import make_list
+from utils_new.generic import UnionList
 
 
 class TagWriter(TagProcessor, metaclass=ABCMeta):
     """Contains methods for updating and removing tags from a loaded file"""
 
     def write_tags(
-            self, 
-            tags: Optional[Union[TagName, List[TagName]]] = None,
-            replace: bool = False, 
-            dry_run: bool = True
+            self, tags: Optional[UnionList[TagName]] = None, replace: bool = False, dry_run: bool = True
     ) -> Set[TagName]:
         """
         Update file's tags from given dictionary of tags.
@@ -281,9 +279,7 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
         :returns: True if the file was updated or would have been if dry_run is True, False otherwise.
         """
 
-    def delete_tags(
-            self, tags: Optional[Union[TagName, List[TagName]]] = None, dry_run: bool = True
-    ) -> Set[TagName]:
+    def delete_tags(self, tags: Optional[UnionList[TagName]] = None, dry_run: bool = True) -> Set[TagName]:
         """
         Remove tags from file.
 

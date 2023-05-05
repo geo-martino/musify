@@ -5,12 +5,11 @@ from os.path import basename, dirname
 import pytest
 
 from syncify.local.files import M4A, IllegalFileTypeError
-from tests.common import path_file_m4a, path_resources, path_file_txt
-from tests.local.files.track.track import update_tags_test, clear_tags_test, update_images_test
+from tests.local.files.track.track import path_track_m4a, path_track_resources, path_track_txt, update_tags_test, clear_tags_test, update_images_test
 
 
 def test_load():
-    track = M4A(file=path_file_m4a)
+    track = M4A(file=path_track_m4a)
 
     track_file = track.file
 
@@ -25,7 +24,7 @@ def test_load():
 
     # raises error on unrecognised file type
     with pytest.raises(IllegalFileTypeError):
-        M4A(path_file_txt)
+        M4A(path_track_txt)
 
     # raises error on files that do not exist
     with pytest.raises(FileNotFoundError):
@@ -33,7 +32,7 @@ def test_load():
 
 
 def test_copy():
-    track = M4A(file=path_file_m4a)
+    track = M4A(file=path_track_m4a)
 
     track_from_file = M4A(file=track.file)
     assert id(track.file) == id(track_from_file.file)
@@ -50,19 +49,19 @@ def test_copy():
 
 
 def test_set_and_find_file_paths():
-    track = M4A(file=path_file_m4a.upper())
-    assert track.path == path_file_m4a.upper()
+    track = M4A(file=path_track_m4a.upper())
+    assert track.path == path_track_m4a.upper()
 
-    M4A.set_file_paths(path_resources)
-    assert M4A.available_track_paths == {path_file_m4a}
-    assert M4A._available_track_paths_lower_map == {path_file_m4a.lower(): path_file_m4a}
+    M4A.set_file_paths(path_track_resources)
+    assert M4A.available_track_paths == {path_track_m4a}
+    assert M4A._available_track_paths_lower_map == {path_track_m4a.lower(): path_track_m4a}
 
-    track = M4A(file=path_file_m4a.upper())
-    assert track.path != path_file_m4a.upper()
+    track = M4A(file=path_track_m4a.upper())
+    assert track.path != path_track_m4a.upper()
 
 
 def test_loaded_attributes():
-    track = M4A(file=path_file_m4a)
+    track = M4A(file=path_track_m4a)
 
     # metadata
     assert track.title == 'title 3'
@@ -87,9 +86,9 @@ def test_loaded_attributes():
     assert track.has_image
 
     # file properties
-    assert track.path == path_file_m4a
-    assert track.folder == basename(dirname(path_file_m4a))
-    assert track.filename == basename(path_file_m4a)
+    assert track.path == path_track_m4a
+    assert track.folder == basename(dirname(path_track_m4a))
+    assert track.filename == basename(path_track_m4a)
     assert track.ext == '.m4a'
     assert track.size == 302199
     assert int(track.length) == 20
@@ -103,15 +102,15 @@ def test_loaded_attributes():
 
 
 def test_cleared_tags():
-    track = M4A(file=path_file_m4a)
+    track = M4A(file=path_track_m4a)
     clear_tags_test(track)
 
 
 def test_updated_tags():
-    track = M4A(file=path_file_m4a)
+    track = M4A(file=path_track_m4a)
     update_tags_test(track)
 
 
 def test_updated_images():
-    track = M4A(file=path_file_m4a)
+    track = M4A(file=path_track_m4a)
     update_images_test(track)

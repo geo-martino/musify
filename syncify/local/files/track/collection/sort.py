@@ -5,7 +5,8 @@ from typing import Any, Callable, List, Mapping, MutableMapping, Optional, Self,
 from syncify.local.files.track.base import Name, PropertyName, TagName, Track
 from syncify.local.files.track.collection.processor import TrackProcessor, Mode
 from syncify.local.files.utils.musicbee import get_field_from_code
-from syncify.utils_new.generic import flatten_nested, strip_ignore_words
+from syncify.utils_new.generic import flatten_nested, strip_ignore_words, UnionList
+from utils.helpers import make_list
 
 
 class ShuffleMode(Mode):
@@ -27,8 +28,13 @@ class TrackSort(TrackProcessor):
     Sort tracks inplace based on given conditions.
 
     :param fields:
+        * When None, shuffle the tracks.
         * List of tags/properties to sort by.
         * Map of {``tag/property``: ``reversed``}. If reversed is true, sort the ``tag/property`` in reverse.
+    :param shuffle_mode: The mode to use for shuffling.
+    :param shuffle_by: The field to shuffle by when shuffling.
+    :param shuffle_weight: The weights (between 0 and 1) to apply to shuffling modes that can use it.
+        This value will automatically be limited to within the accepted range 0 and 1.
     """
 
     _custom_sort: Mapping[int, Mapping[Name, bool]] = {
@@ -41,7 +47,7 @@ class TrackSort(TrackProcessor):
     }
 
     @staticmethod
-    def sort_by_field(tracks: List[Track], field: Optional[Name], reverse: bool = False) -> None:
+    def sort_by_field(tracks: List[Track], field: Optional[Name] = None, reverse: bool = False) -> None:
         """
         Sort tracks by the values of a given field.
 
@@ -53,7 +59,7 @@ class TrackSort(TrackProcessor):
             shuffle(tracks)
             return
 
-        tag_name = field.name.lower()
+        tag_name = field.to_tag(field)[0] if isinstance(field, TagName) else field.name.lower()
         example_value = None
         for track in tracks:
             example_value = getattr(track, tag_name)
@@ -65,16 +71,16 @@ class TrackSort(TrackProcessor):
 
         if isinstance(example_value, datetime):
             default = datetime.fromtimestamp(0)
-            sort_value: Callable[[Track], float] = lambda t: getattr(t, tag_name, default).timestamp()
+            sort_key: Callable[[Track], float] = lambda t: getattr(t, tag_name, default).timestamp()
         elif isinstance(example_value, str):
-            sort_value: Callable[[Track], Tuple[bool, str]] = lambda t: strip_ignore_words(getattr(t, tag_name, ""))
+            sort_key: Callable[[Track], Tuple[bool, str]] = lambda t: strip_ignore_words(getattr(t, tag_name, ""))
         else:
-            sort_value: Callable[[Track], object] = lambda t: getattr(t, tag_name, 0)
+            sort_key: Callable[[Track], object] = lambda t: getattr(t, tag_name, 0)
 
-        sorted(tracks, key=sort_value, reverse=reverse)
+        tracks.sort(key=sort_key, reverse=reverse)
 
     @classmethod
-    def group_by_field(cls, tracks: List[Track], field: Optional[Name]) -> MutableMapping[Any, List[Track]]:
+    def group_by_field(cls, tracks: List[Track], field: Optional[Name] = None) -> MutableMapping[Any, List[Track]]:
         """
         Group tracks by the values of a given field.
 
@@ -88,7 +94,8 @@ class TrackSort(TrackProcessor):
         grouped: MutableMapping[Optional[Any], List[Track]] = {}
 
         for track in tracks:
-            value = getattr(track, field.name.lower(), None)
+            tag_name = field.to_tag(field)[0] if isinstance(field, TagName) else field.name.lower()
+            value = getattr(track, tag_name, None)
             if grouped.get(value) is None:
                 grouped[value] = []
 
@@ -140,27 +147,27 @@ class TrackSort(TrackProcessor):
 
     def __init__(
             self,
-            fields: Optional[Union[List[Name], Mapping[Name, bool]]] = None,
-            shuffle_mode: Optional[ShuffleMode] = None,
-            shuffle_by: Optional[ShuffleBy] = None,
+            fields: Optional[Union[UnionList[Optional[Name]], Mapping[Optional[Name], bool]]] = None,
+            shuffle_mode: ShuffleMode = ShuffleMode.NONE,
+            shuffle_by: ShuffleBy = ShuffleBy.TRACK,
             shuffle_weight: float = 1.0
     ):
+        fields = make_list(fields) if isinstance(fields, Name) else fields
         self.sort_fields: Union[List[Name], Mapping[Name, bool]] = fields
         self.shuffle_mode: Optional[ShuffleMode] = shuffle_mode
         self.shuffle_by: Optional[ShuffleBy] = shuffle_by
-        self.shuffle_weight = shuffle_weight
+        self.shuffle_weight = max(min(shuffle_weight, 1.0), 0.0)
 
     def sort(self, tracks: List[Track]) -> None:
         """Sorts a list of tracks inplace."""
         if self.sort_fields is None:
+            shuffle(tracks)
             return
 
         if self.shuffle_mode == ShuffleMode.NONE:
-            tracks_grouped = self.group_by_field(tracks, field=next(iter(self.sort_fields), None))
-            tracks_nested = self._sort_by_fields(tracks_grouped, fields=self.sort_fields)
-
+            tracks_nested = self._sort_by_fields({None: tracks}, fields=self.sort_fields)
             tracks.clear()
-            tracks.extend(flatten_nested(tracks_nested, sort_keys=True, sort_ignore=True))
+            tracks.extend(flatten_nested(tracks_nested))
         elif self.shuffle_mode == ShuffleMode.RANDOM:
             shuffle(tracks)
         else:
@@ -168,38 +175,36 @@ class TrackSort(TrackProcessor):
 
     @classmethod
     def _sort_by_fields(
-            cls, tracks_grouped: MutableMapping, fields: Optional[Union[List[Name], Mapping[Name, bool]]]
+            cls, tracks_grouped: MutableMapping, fields: Optional[Union[List[Name], Mapping[Name, bool]]], call = 0
     ) -> MutableMapping:
         """
         Sort tracks by the given fields recursively in the order given.
 
         :param tracks_grouped: Map of tracks grouped by the last sort value.
         :param fields:
+            * When None, return ``tracks_grouped`` as is.
             * List of tags or properties to sort by.
             * Map of {``tag/property``: ``reversed``}. If reversed is true, sort the ``tag/property`` in reverse.
-            * None just shuffles the tracks.
         :return: Map of grouped and sorted tracks.
         """
         if isinstance(fields, list):
             fields = {field: False for field in fields}
 
-        field = next(iter(fields), None)
-
+        field, reverse = next(iter(fields.items()), (None, None))
         if field is None:
             return tracks_grouped
-        elif len(fields) == 1:
-            for tracks in tracks_grouped.values():
-                cls.sort_by_field(tracks, field=field, reverse=fields[field])
-        else:
-            fields = fields.copy()
-            fields.pop(field)
-            field = next(iter(fields))
-            for key, tracks in tracks_grouped.items():
-                tracks_grouped[key] = cls.group_by_field(tracks, field=field)
+
+        fields = fields.copy()
+        fields.pop(field)
+        tag_name = field.to_tag(field)[0] if isinstance(field, TagName) else field.name.lower()
+
+        for i, (key, tracks) in enumerate(tracks_grouped.items(), 1):
+            tracks.sort(key=lambda x: getattr(x, tag_name), reverse=reverse)
+            tracks_grouped[key] = cls._sort_by_fields(cls.group_by_field(tracks, field=field), fields=fields, call=call)
 
         return tracks_grouped
 
-    def as_dict(self) -> MutableMapping[str, object]:
+    def as_dict(self) -> MutableMapping[str, Any]:
         return {
             "sort_fields": {field.name: "desc" if r else "asc" for field, r in self.sort_fields.items()},
             "shuffle_mode": self.shuffle_mode,

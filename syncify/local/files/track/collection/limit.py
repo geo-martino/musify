@@ -1,5 +1,5 @@
 from random import shuffle
-from typing import Any, Callable, List, Mapping, Optional, Self, MutableMapping, Set
+from typing import Any, Callable, List, Mapping, Optional, Self, MutableMapping, Set, Dict
 
 from syncify.local.files.track.base import PropertyName, Track
 from syncify.local.files.track.collection.processor import TrackProcessor, Mode
@@ -33,6 +33,8 @@ class TrackLimit(TrackProcessor):
     :param allowance: When limit on bytes or length, add this extra allowance to the max size limit.
     """
 
+    _valid_methods: MutableMapping[str, str] = {}
+
     @property
     def limit_sort(self) -> Optional[str]:
         return self._limit_sort
@@ -48,7 +50,7 @@ class TrackLimit(TrackProcessor):
 
         name = self._get_method_name(value, valid=self._valid_methods, prefix=self._sort_method_prefix)
         self._limit_sort = self._snake_to_camel(name, prefix=self._sort_method_prefix)
-        self._sort_method = getattr(self, name)
+        self._sort_method = getattr(self, self._valid_methods[name])
 
     @classmethod
     def from_xml(cls, xml: Optional[Mapping[str, Any]] = None) -> Optional[Self]:
@@ -81,8 +83,12 @@ class TrackLimit(TrackProcessor):
         self.kind = on
         self.allowance = allowance
 
+        prefix = "_sort"
         self._sort_method_prefix = "_sort"
-        self._valid_methods = [name for name in dir(self) if name.startswith(self._sort_method_prefix)]
+        self._valid_methods = {
+            k if k.startswith(prefix) else prefix + k: v if v.startswith(prefix) else prefix + v
+            for k, v in self._valid_methods.items()
+        } | {name: name for name in dir(self) if name.startswith(self._sort_method_prefix)}
         self.limit_sort = sorted_by
 
     def limit(self, tracks: List[Track], ignore: Optional[Set[str]] = None) -> None:
@@ -179,7 +185,7 @@ class TrackLimit(TrackProcessor):
             bytes_scale = 1000
             return track.size / (self.kind.value % 10 * bytes_scale)
 
-    def as_dict(self) -> MutableMapping[str, object]:
+    def as_dict(self) -> MutableMapping[str, Any]:
         return {
             "on": self.kind,
             "limit": self.limit_max,

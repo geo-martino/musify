@@ -5,12 +5,11 @@ from os.path import basename, dirname
 import pytest
 
 from syncify.local.files import MP3, IllegalFileTypeError
-from tests.common import path_file_mp3, path_resources, path_file_txt
-from tests.local.files.track.track import update_tags_test, clear_tags_test, update_images_test
+from tests.local.files.track.track import path_track_mp3, path_track_resources, path_track_txt, update_tags_test, clear_tags_test, update_images_test
 
 
 def test_load():
-    track = MP3(file=path_file_mp3)
+    track = MP3(file=path_track_mp3)
 
     track_file = track.file
 
@@ -25,7 +24,7 @@ def test_load():
 
     # raises error on unrecognised file type
     with pytest.raises(IllegalFileTypeError):
-        MP3(path_file_txt)
+        MP3(path_track_txt)
 
     # raises error on files that do not exist
     with pytest.raises(FileNotFoundError):
@@ -33,7 +32,7 @@ def test_load():
 
 
 def test_copy():
-    track = MP3(file=path_file_mp3)
+    track = MP3(file=path_track_mp3)
 
     track_from_file = MP3(file=track.file)
     assert id(track.file) == id(track_from_file.file)
@@ -50,19 +49,19 @@ def test_copy():
 
 
 def test_set_and_find_file_paths():
-    track = MP3(file=path_file_mp3.upper())
-    assert track.path == path_file_mp3.upper()
+    track = MP3(file=path_track_mp3.upper())
+    assert track.path == path_track_mp3.upper()
 
-    MP3.set_file_paths(path_resources)
-    assert MP3.available_track_paths == {path_file_mp3}
-    assert MP3._available_track_paths_lower_map == {path_file_mp3.lower(): path_file_mp3}
+    MP3.set_file_paths(path_track_resources)
+    assert MP3.available_track_paths == {path_track_mp3}
+    assert MP3._available_track_paths_lower_map == {path_track_mp3.lower(): path_track_mp3}
 
-    track = MP3(file=path_file_mp3.upper())
-    assert track.path != path_file_mp3.upper()
+    track = MP3(file=path_track_mp3.upper())
+    assert track.path != path_track_mp3.upper()
 
 
 def test_loaded_attributes():
-    track = MP3(file=path_file_mp3)
+    track = MP3(file=path_track_mp3)
 
     # metadata
     assert track.title == 'title 2'
@@ -87,9 +86,9 @@ def test_loaded_attributes():
     assert track.has_image
 
     # file properties
-    assert track.path == path_file_mp3
-    assert track.folder == basename(dirname(path_file_mp3))
-    assert track.filename == basename(path_file_mp3)
+    assert track.path == path_track_mp3
+    assert track.folder == basename(dirname(path_track_mp3))
+    assert track.filename == basename(path_track_mp3)
     assert track.ext == '.mp3'
     assert track.size == 411038
     assert int(track.length) == 30
@@ -103,15 +102,15 @@ def test_loaded_attributes():
 
 
 def test_cleared_tags():
-    track = MP3(file=path_file_mp3)
+    track = MP3(file=path_track_mp3)
     clear_tags_test(track)
 
 
 def test_updated_tags():
-    track = MP3(file=path_file_mp3)
+    track = MP3(file=path_track_mp3)
     update_tags_test(track)
 
 
 def test_updated_images():
-    track = MP3(file=path_file_mp3)
+    track = MP3(file=path_track_mp3)
     update_images_test(track)

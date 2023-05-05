@@ -6,12 +6,11 @@ import pytest
 
 from syncify.local.files import WMA, IllegalFileTypeError
 from syncify.spotify.helpers import __UNAVAILABLE_URI_VALUE__
-from tests.common import path_file_wma, path_resources, path_file_txt
-from tests.local.files.track.track import update_tags_test, clear_tags_test
+from tests.local.files.track.track import path_track_wma, path_track_resources, path_track_txt, update_tags_test, clear_tags_test
 
 
 def test_load():
-    track = WMA(file=path_file_wma)
+    track = WMA(file=path_track_wma)
 
     track_file = track.file
 
@@ -26,7 +25,7 @@ def test_load():
 
     # raises error on unrecognised file type
     with pytest.raises(IllegalFileTypeError):
-        WMA(path_file_txt)
+        WMA(path_track_txt)
 
     # raises error on files that do not exist
     with pytest.raises(FileNotFoundError):
@@ -34,7 +33,7 @@ def test_load():
 
 
 def test_copy():
-    track = WMA(file=path_file_wma)
+    track = WMA(file=path_track_wma)
 
     track_from_file = WMA(file=track.file)
     assert id(track.file) == id(track_from_file.file)
@@ -51,19 +50,19 @@ def test_copy():
 
 
 def test_set_and_find_file_paths():
-    track = WMA(file=path_file_wma.upper())
-    assert track.path == path_file_wma.upper()
+    track = WMA(file=path_track_wma.upper())
+    assert track.path == path_track_wma.upper()
 
-    WMA.set_file_paths(path_resources)
-    assert WMA.available_track_paths == {path_file_wma}
-    assert WMA._available_track_paths_lower_map == {path_file_wma.lower(): path_file_wma}
+    WMA.set_file_paths(path_track_resources)
+    assert WMA.available_track_paths == {path_track_wma}
+    assert WMA._available_track_paths_lower_map == {path_track_wma.lower(): path_track_wma}
 
-    track = WMA(file=path_file_wma.upper())
-    assert track.path != path_file_wma.upper()
+    track = WMA(file=path_track_wma.upper())
+    assert track.path != path_track_wma.upper()
 
 
 def test_loaded_attributes():
-    track = WMA(file=path_file_wma)
+    track = WMA(file=path_track_wma)
 
     # metadata
     assert track.title == 'title 4'
@@ -88,9 +87,9 @@ def test_loaded_attributes():
     assert track.has_image
 
     # file properties
-    assert track.path == path_file_wma
-    assert track.folder == basename(dirname(path_file_wma))
-    assert track.filename == basename(path_file_wma)
+    assert track.path == path_track_wma
+    assert track.folder == basename(dirname(path_track_wma))
+    assert track.filename == basename(path_track_wma)
     assert track.ext == '.wma'
     assert track.size == 1193637
     assert int(track.length) == 32
@@ -104,10 +103,10 @@ def test_loaded_attributes():
 
 
 def test_cleared_tags():
-    track = WMA(file=path_file_wma)
+    track = WMA(file=path_track_wma)
     clear_tags_test(track)
 
 
 def test_updated_tags():
-    track = WMA(file=path_file_wma)
+    track = WMA(file=path_track_wma)
     update_tags_test(track)

@@ -1,10 +1,9 @@
 from dataclasses import dataclass
 from os.path import exists
-from typing import Optional, List, Set, Any
+from typing import Optional, List, Set
 
-from syncify.local.files import TrackMatch
+from syncify.local.files.track import Track, load_track, TrackMatch
 from syncify.local.files.playlist import Playlist, UpdateResult
-from syncify.local.files.track import Track, load_track
 
 
 @dataclass
@@ -20,10 +19,17 @@ class UpdateResultM3U(UpdateResult):
 class M3U(Playlist):
     """
     For reading and writing data from M3U playlist format.
+    You must provide either a valid playlist path of a file that exists,
+    or a list of tracks to use as this playlist's tracks.
+    You may also provide both to use and store the loaded tracks to this instance.
 
     :param path: Full path of the playlist.
-    :param tracks: Available Tracks to search through for matches. Optional.
-        If the path given does not exist, the object will use all tracks given here as the tracks in the playlist.
+        If the playlist ``path`` given does not exist, the playlist instance will use all the tracks
+        given in ``tracks`` as the tracks in the playlist.
+    :param tracks: Optional. Available Tracks to search through for matches.
+        If no tracks are given, the playlist instance load all the tracks from paths
+        listed in file at the playlist ``path``.
+
     :param library_folder: Full path of folder containing tracks.
     :param other_folders: Full paths of other possible library paths.
         Use to replace path stems from other libraries for the paths in loaded playlists.
@@ -35,7 +41,7 @@ class M3U(Playlist):
     def __init__(
             self,
             path: str,
-            tracks: List[Track],
+            tracks: Optional[List[Track]] = None,
             library_folder: Optional[str] = None,
             other_folders: Optional[Set[str]] = None
     ):

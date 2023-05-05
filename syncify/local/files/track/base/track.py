@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from glob import glob
 from os.path import join, splitext, exists
-from typing import Optional, List, Union, Mapping, Set, Self
+from typing import Optional, List, Union, Mapping, Set
 
 import mutagen
 

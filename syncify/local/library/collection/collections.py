@@ -1,4 +1,4 @@
-from typing import List, MutableMapping
+from typing import List, MutableMapping, Any
 
 from syncify.local.files import Track, TrackCollection
 
@@ -13,7 +13,7 @@ class Album(TrackCollection):
         self.name: str = name
         self._tracks: List[Track] = [track for track in tracks if track.album.lower() == name.lower()]
 
-    def as_dict(self) -> MutableMapping[str, object]:
+    def as_dict(self) -> MutableMapping[str, Any]:
         return {
             "name": self.name,
             "tracks": [track.as_dict() for track in self.tracks]
@@ -36,7 +36,7 @@ class Folder(TrackCollection):
         self.name: str = name
         self._tracks: List[Track] = [track for track in tracks if track.folder.lower() == name.lower()]
 
-    def as_dict(self) -> MutableMapping[str, object]:
+    def as_dict(self) -> MutableMapping[str, Any]:
         return {
             "name": self.name,
             "tracks": [track.as_dict() for track in self.tracks]

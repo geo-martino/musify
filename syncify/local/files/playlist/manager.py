@@ -58,7 +58,6 @@ class PlaylistManager:
 
         self._track_paths_lower_map = {path.lower(): path for path in self.filepaths}
 
-
     def _get_playlist_path(
             self, name: Optional[str] = None, path: Optional[str] = None, ext: Optional[str] = None
     ) -> str:
@@ -124,6 +123,7 @@ class PlaylistManager:
             return self.get_track_paths_xautopf(path=path)
         else:
             raise IllegalFileTypeError(ext)
+
 
 if __name__ == "__main__":
     playlist_folder = "MusicBee/Playlists"

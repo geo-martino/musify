@@ -1,7 +1,7 @@
 import re
 from abc import ABCMeta, abstractmethod
 from enum import IntEnum
-from typing import Any, Mapping, Optional, Self, List
+from typing import Any, Mapping, Optional, Self, List, Union
 
 from syncify.local.files.utils.exception import EnumNotFoundError
 from syncify.utils_new.generic import PrettyPrinter
@@ -34,12 +34,13 @@ class TrackProcessor(PrettyPrinter, metaclass=ABCMeta):
         """
         raise NotImplementedError
 
-    def _get_method_name(self, value: str, valid: List[str], prefix: Optional[str] = None) -> str:
+    def _get_method_name(self, value: str, valid: Union[List[str], Mapping[str, str]], prefix: Optional[str] = None) -> str:
         """
         Find a method that matches the given string from a list of valid methods.
 
         :param value: The name of the method to search for. This will be automatically sanitised to snake_case.
-        :param valid: A list of string representing the methods to search through.
+        :param valid: A list of strings representing the methods to search through.
+            May also provide a map of strings to match on a method names to return.
         :param prefix: An optional prefix to append to the sanitised value.
             Also used to remove prefixes from the valid methods when logging an error
         :return: The sanitised value representing the name of the method.
@@ -59,7 +60,7 @@ class TrackProcessor(PrettyPrinter, metaclass=ABCMeta):
     @staticmethod
     def _camel_to_snake(value: str, prefix: Optional[str] = None) -> str:
         """Convert snake_case to CamelCase. Optionally, add a given prefix"""
-        value = re.sub('([A-Z])', lambda m: f"_{m.group(1).lower()}", value.strip()).replace(" ", "_").lstrip("_")
+        value = re.sub('([A-Z])', lambda m: f"_{m.group(1).lower()}", value.strip()).replace(" ", "_").strip("_")
         if prefix is not None:
             value = f"{prefix}_{value}"
         return value.lower()

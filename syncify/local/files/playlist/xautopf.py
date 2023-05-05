@@ -5,9 +5,8 @@ from typing import Any, List, Mapping, Optional, Set
 
 import xmltodict
 
-from syncify.local.files import TrackMatch, TrackLimit, TrackSort
 from syncify.local.files.playlist import Playlist, UpdateResult
-from syncify.local.files.track import PropertyName, Track
+from syncify.local.files.track import PropertyName, Track, TrackMatch, TrackLimit, TrackSort
 
 
 @dataclass
@@ -36,7 +35,7 @@ class XAutoPF(Playlist):
     **Note**: You must provide a list of tracks to search on initialisation for this playlist type.
 
     :param path: Full path of the playlist.
-    :param tracks: Available Tracks to search through for matches. Required.
+    :param tracks: **Required**. Available Tracks to search through for matches.
     :param library_folder: Full path of folder containing tracks.
     :param other_folders: Full paths of other possible library paths.
         Use to replace path stems from other libraries for the paths in loaded playlists.
@@ -47,14 +46,18 @@ class XAutoPF(Playlist):
 
     def __init__(
             self,
-            path: Optional[str],
+            path: str,
             tracks: List[Track],
             library_folder: Optional[str] = None,
             other_folders: Optional[Set[str]] = None
     ):
         self._validate_type(path)
+
         if not exists(path):
-            raise ValueError(f"No playlist at given path: {path}")
+            raise NotImplementedError(
+                f"No playlist at given path: {path}. "
+                "This program is not yet able to create this playlist type from scratch."
+            )
 
         with open(path, "r", encoding='utf-8') as f:
             self.xml: Mapping[str, Any] = xmltodict.parse(f.read())
@@ -79,7 +82,7 @@ class XAutoPF(Playlist):
 
         **Note**: You must provide a list of tracks for this playlist type.
 
-        :param tracks: Available Tracks to search through for matches.
+        :param tracks: **Required**. Available Tracks to search through for matches.
         :return: Ordered list of tracks in this playlist
         """
         if tracks is None:

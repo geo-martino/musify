@@ -1,9 +1,13 @@
 import re
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
-from typing import Tuple, Mapping, List, MutableMapping
+from typing import Tuple, Mapping, List, MutableMapping, Any, TypeVar, Union
 
 sort_ignore_words = ["The", "A"]
+
+
+T = TypeVar('T')
+UnionList = Union[T, List[T]]
 
 
 def strip_ignore_words(value: str) -> Tuple[bool, str]:
@@ -21,19 +25,13 @@ def strip_ignore_words(value: str) -> Tuple[bool, str]:
     return not_special, new_value
 
 
-def flatten_nested(nested: Mapping, sort_keys: bool = False, sort_ignore: bool = False, previous: list = None) -> List:
+def flatten_nested(nested: Mapping, previous: List = None) -> List:
     if previous is None:
         previous = []
 
     if isinstance(nested, dict):
-        if sort_keys:
-            key_func = (lambda x: strip_ignore_words(x[0])) if sort_ignore else (lambda x: x[0])
-            values = [v for _, v in sorted(nested.items(), key=key_func)]
-        else:
-            values = list(nested.values())
-
-        for value in values:
-            flatten_nested(value, sort_keys=sort_keys, previous=previous)
+        for key, value in nested.items():
+            flatten_nested(value, previous=previous)
     elif isinstance(nested, list):
         previous.extend(nested)
 
@@ -42,7 +40,7 @@ def flatten_nested(nested: Mapping, sort_keys: bool = False, sort_ignore: bool =
 
 class PrettyPrinter(metaclass=ABCMeta):
     @abstractmethod
-    def as_dict(self) -> MutableMapping[str, object]:
+    def as_dict(self) -> MutableMapping[str, Any]:
         """Return a dictionary representation of the key attributes of this object"""
         raise NotImplementedError
 

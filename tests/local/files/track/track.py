@@ -5,23 +5,28 @@ import string
 from copy import copy, deepcopy
 from datetime import datetime
 from os.path import join, basename, dirname, exists
-from typing import Tuple, Type, Optional, Callable
+from typing import Tuple, Type, Optional, List
 
 from dateutil.relativedelta import relativedelta
 
-from syncify.local.files import Track, TagName, __TRACK_CLASSES__
+from syncify.local.files.track import Track, TagName, __TRACK_CLASSES__
 from syncify.local.files.utils.image import open_image
 from syncify.spotify.helpers import __UNAVAILABLE_URI_VALUE__, SpotifyType
-from tests.common import path_cache, path_file_img
+from tests.common import path_resources, path_cache, random_str
+
+path_track_resources = join(path_resources, "track")
+path_track_flac = join(path_track_resources, "noise_flac.flac")
+path_track_mp3 = join(path_track_resources, "noise_mp3.mp3")
+path_track_m4a = join(path_track_resources, "noise_m4a.m4a")
+path_track_wma = join(path_track_resources, "noise_wma.wma")
+path_track_txt = join(path_track_resources, "noise.txt")
+path_track_img = join(path_track_resources, "track_image.jpg")
 
 
 def random_track(cls: Optional[Type[Track]] = None) -> Track:
     if cls is None:
         cls = choice(__TRACK_CLASSES__)
     track = cls.__new__(cls)
-
-    random_str: Callable[[int, int], str] = \
-        lambda x, y: ''.join(choice(string.ascii_letters) for _ in range(randrange(x, y)))
 
     track.title = random_str(5, 20)
     track.artist = random_str(5, 20)
@@ -31,7 +36,7 @@ def random_track(cls: Optional[Type[Track]] = None) -> Track:
     track.track_total = randint(track.track_number, 20)
     track.genres = [random_str(5, 20) for _ in range(randrange(7))]
     track.year = randrange(1950, datetime.now().year + 1)
-    track.bpm = randint(6000, 15000) / 1000
+    track.bpm = randint(6000, 15000) / 100
     track.key = choice(string.ascii_uppercase[:7])
     track.disc_number = randrange(1, 8)
     track.disc_total = randint(track.disc_number, 20)
@@ -61,6 +66,10 @@ def random_track(cls: Optional[Type[Track]] = None) -> Track:
     track.rating = randrange(6)
 
     return track
+
+
+def random_tracks(number: int, cls: Optional[Type[Track]] = None) -> List[Track]:
+    return [random_track(cls=cls) for _ in range(number)]
 
 
 def copy_track(track: Track) -> Tuple[str, str]:
@@ -228,9 +237,9 @@ def update_images_test(track: Track) -> None:
     path_file_base, path_file_copy = copy_track(track)
     track_original = copy(track)
 
-    track.image_links = {"cover_front": path_file_img}
+    track.image_links = {"cover_front": path_track_img}
     image_original = track._read_images()[0]
-    image_new = open_image(path_file_img)
+    image_new = open_image(path_track_img)
 
     # dry run, no updates should happen
     track.write_tags(tags=TagName.IMAGES, replace=False, dry_run=True)

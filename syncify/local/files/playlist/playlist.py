@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from abc import ABCMeta, abstractmethod, ABC
 from os.path import basename, splitext
-from typing import List, MutableMapping, Optional, Set, Collection
+from typing import List, MutableMapping, Optional, Set, Collection, Any
 
 from syncify.local.files.file import File
-from syncify.local.files import Track
+from syncify.local.files.track import Track
 from syncify.local.files.track.collection import TrackMatch, TrackLimit, TrackSort
 from syncify.utils_new.generic import PrettyPrinter
 
@@ -92,7 +92,7 @@ class Playlist(PrettyPrinter, File, metaclass=ABCMeta):
         :return: UpdateResult object with stats on the changes to the playlist.
         """
 
-    def as_dict(self) -> MutableMapping[str, object]:
+    def as_dict(self) -> MutableMapping[str, Any]:
         return {
             "name": self.name,
             "description": self.description,

@@ -5,12 +5,11 @@ from os.path import basename, dirname
 import pytest
 
 from syncify.local.files import FLAC, IllegalFileTypeError
-from tests.common import path_file_flac, path_resources, path_file_txt
-from tests.local.files.track.track import update_tags_test, clear_tags_test, update_images_test
+from tests.local.files.track.track import path_track_flac, path_track_resources, path_track_txt, update_tags_test, clear_tags_test, update_images_test
 
 
 def test_load():
-    track = FLAC(file=path_file_flac)
+    track = FLAC(file=path_track_flac)
 
     track_file = track.file
 
@@ -25,7 +24,7 @@ def test_load():
 
     # raises error on unrecognised file type
     with pytest.raises(IllegalFileTypeError):
-        FLAC(path_file_txt)
+        FLAC(path_track_txt)
 
     # raises error on files that do not exist
     with pytest.raises(FileNotFoundError):
@@ -33,7 +32,7 @@ def test_load():
 
 
 def test_copy():
-    track = FLAC(file=path_file_flac)
+    track = FLAC(file=path_track_flac)
 
     track_from_file = FLAC(file=track.file)
     assert id(track.file) == id(track_from_file.file)
@@ -50,19 +49,19 @@ def test_copy():
 
 
 def test_set_and_find_file_paths():
-    track = FLAC(file=path_file_flac.upper())
-    assert track.path == path_file_flac.upper()
+    track = FLAC(file=path_track_flac.upper())
+    assert track.path == path_track_flac.upper()
 
-    FLAC.set_file_paths(path_resources)
-    assert FLAC.available_track_paths == {path_file_flac}
-    assert FLAC._available_track_paths_lower_map == {path_file_flac.lower(): path_file_flac}
+    FLAC.set_file_paths(path_track_resources)
+    assert FLAC.available_track_paths == {path_track_flac}
+    assert FLAC._available_track_paths_lower_map == {path_track_flac.lower(): path_track_flac}
 
-    track = FLAC(file=path_file_flac.upper())
-    assert track.path != path_file_flac.upper()
+    track = FLAC(file=path_track_flac.upper())
+    assert track.path != path_track_flac.upper()
 
 
 def test_loaded_attributes():
-    track = FLAC(file=path_file_flac)
+    track = FLAC(file=path_track_flac)
 
     # metadata
     assert track.title == 'title 1'
@@ -87,9 +86,9 @@ def test_loaded_attributes():
     assert track.has_image
 
     # file properties
-    assert track.path == path_file_flac
-    assert track.folder == basename(dirname(path_file_flac))
-    assert track.filename == basename(path_file_flac)
+    assert track.path == path_track_flac
+    assert track.folder == basename(dirname(path_track_flac))
+    assert track.filename == basename(path_track_flac)
     assert track.ext == '.flac'
     assert track.size == 1818191
     assert int(track.length) == 20
@@ -103,15 +102,15 @@ def test_loaded_attributes():
 
 
 def test_cleared_tags():
-    track = FLAC(file=path_file_flac)
+    track = FLAC(file=path_track_flac)
     clear_tags_test(track)
 
 
 def test_updated_tags():
-    track = FLAC(file=path_file_flac)
+    track = FLAC(file=path_track_flac)
     update_tags_test(track)
 
 
 def test_updated_images():
-    track = FLAC(file=path_file_flac)
+    track = FLAC(file=path_track_flac)
     update_images_test(track)
