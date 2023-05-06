@@ -35,8 +35,8 @@ def test_init():
     ]
 
     # removes paths from the include list that are present in both include and exclude lists
-    exclude_paths = set(f"{other_folders[0]}/folder/{random_str()}.MP3" for _ in range(20))
-    include_paths = set(f"{other_folders[0]}/folder/{random_str()}.MP3" for _ in range(20)) - exclude_paths
+    exclude_paths = set(f"{other_folders[0]}/folder/{random_str(20, 50)}.MP3" for _ in range(20))
+    include_paths = set(f"{other_folders[0]}/folder/{random_str(20, 50)}.MP3" for _ in range(20)) - exclude_paths
 
     matcher = TrackMatch(
         comparators=comparators,

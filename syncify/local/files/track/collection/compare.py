@@ -82,7 +82,7 @@ class TrackCompare(TrackProcessor):
                 raise ValueError(f"Unrecognised field name: {field_str}")
 
             expected: Optional[List[str]] = [val for k, val in condition.items() if k.startswith("@Value")]
-            if expected[0] == '[playing track]':
+            if len(expected) == 0 or expected[0] == '[playing track]':
                 expected = None
 
             objs.append(cls(field=field, condition=condition["@Comparison"], expected=expected))
@@ -124,10 +124,11 @@ class TrackCompare(TrackProcessor):
         else:
             expected = make_list(getattr(reference, self.field.name.lower(), None))
 
-        if isinstance(actual, datetime) and not isinstance(expected[0], datetime):
-            actual = actual.date()
-        elif not isinstance(actual, datetime) and isinstance(expected[0], datetime):
-            expected = [exp.date() for exp in expected]
+        if expected is not None:
+            if isinstance(actual, datetime) and not isinstance(expected[0], datetime):
+                actual = actual.date()
+            elif not isinstance(actual, datetime) and isinstance(expected[0], datetime):
+                expected = [exp.date() for exp in expected]
 
         try:
             return self._method(actual, expected)

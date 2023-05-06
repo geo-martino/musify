@@ -34,6 +34,8 @@ class M3U(Playlist):
     :param other_folders: Full paths of other possible library paths.
         Use to replace path stems from other libraries for the paths in loaded playlists.
         Useful when managing similar libraries on multiple platforms.
+    :param check_existence: If True, when processing paths,
+        check for the existence of the file paths on the file system and reject any that don't.
     """
 
     valid_extensions = [".m3u"]
@@ -43,7 +45,8 @@ class M3U(Playlist):
             path: str,
             tracks: Optional[List[LocalTrack]] = None,
             library_folder: Optional[str] = None,
-            other_folders: Optional[Union[str, Collection[str]]] = None
+            other_folders: Optional[Union[str, Collection[str]]] = None,
+            check_existence: bool = True
     ):
         self._validate_type(path)
 
@@ -54,7 +57,12 @@ class M3U(Playlist):
         elif tracks is not None:
             paths = [track.path for track in tracks]
 
-        matcher = TrackMatch(include_paths=paths, library_folder=library_folder, other_folders=other_folders)
+        matcher = TrackMatch(
+            include_paths=paths,
+            library_folder=library_folder,
+            other_folders=other_folders,
+            check_existence=check_existence
+        )
         Playlist.__init__(self, path=path, matcher=matcher)
 
         self.load(tracks=tracks)
@@ -70,14 +78,15 @@ class M3U(Playlist):
         self._limit(ignore=self.matcher.include_paths)
         self._sort()
 
+        if exists(self._path):
+            self._tracks_original = self.tracks.copy()
+        else:
+            self._tracks_original = []
+
         return self.tracks
 
     def save(self) -> UpdateResultM3U:
-        start_paths: Set[str] = set()
-        if exists(self.path):
-            with open(self.path, "r", encoding='utf-8') as f:
-                start_paths = {line.rstrip().lower() for line in f if line.rstrip()}
-                start_paths = {self.matcher.correct_path_separater(path) for path in start_paths if path}
+        start_paths = set(self._prepare_paths_for_output({track.path.lower() for track in self._tracks_original}))
 
         with open(self.path, "w", encoding='utf-8') as f:
             paths = self._prepare_paths_for_output([track.path for track in self.tracks])
@@ -86,10 +95,7 @@ class M3U(Playlist):
         with open(self.path, "r", encoding='utf-8') as f:
             final_paths = {line.rstrip().lower() for line in f if line.rstrip()}
 
-        print("PATHS")
-        print(start_paths)
-        print(final_paths)
-
+        self._tracks_original = self.tracks.copy()
         return UpdateResultM3U(
             start=len(start_paths),
             added=len(final_paths - start_paths),

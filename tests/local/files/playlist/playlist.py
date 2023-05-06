@@ -4,7 +4,6 @@ from os.path import join, basename, dirname, exists
 from typing import Tuple
 
 from tests.common import path_resources, path_cache
-from tests.local.files.track.track import random_tracks
 
 
 path_playlist_cache = join(path_cache, basename(dirname(__file__)))
@@ -24,8 +23,3 @@ def copy_playlist_file(path: str) -> Tuple[str, str]:
     shutil.copyfile(path_file_base, path_file_copy)
 
     return path_file_base, path_file_copy
-
-
-if __name__ == "__main__":
-    [print(track) for track in random_tracks(20)]
-

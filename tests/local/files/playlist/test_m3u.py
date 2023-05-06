@@ -116,7 +116,7 @@ def test_save():
 
     os.remove(path_new)
 
-    # loading from an existing M3U file
+    # loading from an existing M3U file and giving it a new name
     _, path_file_copy = copy_playlist_file(path_playlist_m3u)
     pl = M3U(path=path_file_copy, library_folder=path_resources, other_folders="../")
     assert pl.path == path_file_copy
@@ -124,6 +124,7 @@ def test_save():
 
     tracks_random = random_tracks(10)
     pl.tracks = pl.tracks[:2] + tracks_random
+    pl.name = "New Playlist"
     result = pl.save()
 
     assert result.start == 3
@@ -133,9 +134,10 @@ def test_save():
     assert result.difference == 9
     assert result.final == 12
 
-    with open(path_file_copy, 'r') as f:
+    with open(pl.path, 'r') as f:
         paths = [line.strip() for line in f]
     assert paths == pl._prepare_paths_for_output([track.path for track in pl.tracks])
 
     os.remove(path_file_copy)
+    os.remove(pl.path)
 

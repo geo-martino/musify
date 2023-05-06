@@ -24,7 +24,7 @@ class TrackMatch(TrackProcessor):
         Use to replace path stems from other libraries for the paths in loaded playlists.
         Useful when managing similar libraries on multiple platforms.
     :param check_existence: Check for the existence of the file paths on the file system
-        when sanitising the given paths.
+        when sanitising the given paths and reject any that don't.
     """
 
     @classmethod
@@ -48,7 +48,13 @@ class TrackMatch(TrackProcessor):
             if "contains" in c.condition.lower() and len(c.expected) == 1 and not c.expected[0]:
                 comparators = None
 
-        return cls(comparators=comparators, match_all=match_all, include_paths=include, exclude_paths=exclude)
+        return cls(
+            comparators=comparators,
+            match_all=match_all,
+            include_paths=include,
+            exclude_paths=exclude,
+            check_existence=False
+        )
 
     def __init__(
             self,
@@ -175,7 +181,7 @@ class TrackMatch(TrackProcessor):
             - List 3: Tracks that only match on comparators
         """
         if len(tracks) == 0:
-            return [], [], []
+            return [] if combine else ([], [], [])
 
         path_tracks: Mapping[str, LocalTrack] = {track.path.lower(): track for track in tracks}
 
@@ -188,9 +194,7 @@ class TrackMatch(TrackProcessor):
             exclude.extend([path_tracks[path] for path in self.exclude_paths if path in path_tracks])
 
         if self.comparators is None or len(self.comparators) == 0:
-            if combine:
-                return [track for track in include if track not in exclude]
-            return include, exclude, []
+            return [track for track in include if track not in exclude] if combine else (include, exclude, [])
 
         compared: List[LocalTrack] = []
         for track in tracks:

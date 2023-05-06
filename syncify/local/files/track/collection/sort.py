@@ -1,4 +1,5 @@
-from datetime import datetime
+from copy import copy
+from datetime import datetime, UTC
 from random import shuffle
 from typing import Any, Callable, List, Mapping, MutableMapping, Optional, Self, Tuple, Union
 
@@ -71,8 +72,14 @@ class TrackSort(TrackProcessor):
             return
 
         if isinstance(example_value, datetime):
-            default = datetime.fromtimestamp(0)
-            sort_key: Callable[[LocalTrack], float] = lambda t: getattr(t, tag_name, default).timestamp()
+            default = datetime.fromtimestamp(1, tz=UTC)
+            def get_dt(t: LocalTrack) -> datetime:
+                value = getattr(t, tag_name, default)
+                if value is None:
+                    value = default
+                return value
+
+            sort_key: Callable[[LocalTrack], float] = lambda t: get_dt(t).timestamp()
         elif isinstance(example_value, str):
             sort_key: Callable[[LocalTrack], Tuple[bool, str]] = lambda t: strip_ignore_words(getattr(t, tag_name, ""))
         else:
@@ -148,14 +155,19 @@ class TrackSort(TrackProcessor):
 
     def __init__(
             self,
-            fields: Optional[Union[UnionList[Optional[Name]], Mapping[Optional[Name], bool]]] = None,
+            fields: Optional[Union[UnionList[Optional[Name]], MutableMapping[Optional[Name], bool]]] = None,
             shuffle_mode: ShuffleMode = ShuffleMode.NONE,
             shuffle_by: ShuffleBy = ShuffleBy.TRACK,
             shuffle_weight: float = 1.0
     ):
         fields = make_list(fields) if isinstance(fields, Name) else fields
-        self.sort_fields: Union[List[Name], Mapping[Name, bool]] = fields
-        self.shuffle_mode: Optional[ShuffleMode] = shuffle_mode
+        if isinstance(fields, list):
+            self.sort_fields: MutableMapping[Name, bool] = {field: False for field in fields}
+        else:
+            self.sort_fields: MutableMapping[Name, bool] = fields
+
+        self.shuffle_mode: Optional[ShuffleMode] = \
+            shuffle_mode if shuffle_mode in [ShuffleMode.NONE, ShuffleMode.RANDOM] else ShuffleMode.NONE
         self.shuffle_by: Optional[ShuffleBy] = shuffle_by
         self.shuffle_weight = max(min(shuffle_weight, 1.0), 0.0)
 
@@ -173,30 +185,23 @@ class TrackSort(TrackProcessor):
         elif self.sort_fields is None:
             return
         else:
-            NotImplementedError(f"Shuffle mode not yet implemented: {self.shuffle_mode}")
+            raise NotImplementedError(f"Shuffle mode not yet implemented: {self.shuffle_mode}")
 
     @classmethod
-    def _sort_by_fields(
-            cls, tracks_grouped: MutableMapping, fields: Union[List[Name], Mapping[Name, bool]]
-    ) -> MutableMapping:
+    def _sort_by_fields(cls, tracks_grouped: MutableMapping, fields: MutableMapping[Name, bool]) -> MutableMapping:
         """
         Sort tracks by the given fields recursively in the order given.
 
         :param tracks_grouped: Map of tracks grouped by the last sort value.
-        :param fields:
-            * When None, return ``tracks_grouped`` as is.
-            * List of tags or properties to sort by.
-            * Map of {``tag/property``: ``reversed``}. If reversed is true, sort the ``tag/property`` in reverse.
+        :param fields: Map of {``tag/property``: ``reversed``}.
+            If reversed is True, sort the ``tag/property`` in reverse.
         :return: Map of grouped and sorted tracks.
         """
-        if isinstance(fields, list):
-            fields = {field: False for field in fields}
-
         field, reverse = next(iter(fields.items()), (None, None))
         if field is None:
             return tracks_grouped
 
-        fields = fields.copy()
+        fields = copy(fields)
         fields.pop(field)
         tag_name = field.to_tag(field)[0] if isinstance(field, TagName) else field.name.lower()
 

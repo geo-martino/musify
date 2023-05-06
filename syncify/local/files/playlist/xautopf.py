@@ -6,7 +6,7 @@ from typing import Any, List, Mapping, Optional, Union, Collection
 import xmltodict
 
 from syncify.local.files.playlist.playlist import Playlist
-from syncify.local.files.track import PropertyName, LocalTrack, TrackMatch, TrackLimit, TrackSort
+from syncify.local.files.track import PropertyName, LocalTrack, TrackMatch, TrackLimit, TrackSort, load_track
 from syncify.utils_new.generic import UpdateResult
 
 
@@ -36,11 +36,14 @@ class XAutoPF(Playlist):
     **Note**: You must provide a list of tracks to search on initialisation for this playlist type.
 
     :param path: Full path of the playlist.
-    :param tracks: **Required**. Available Tracks to search through for matches.
+    :param tracks: Available Tracks to search through for matches.
+        If none are provided, will load only the paths listed in the ``ExceptionsInclude`` key of the playlist file.
     :param library_folder: Full path of folder containing tracks.
     :param other_folders: Full paths of other possible library paths.
         Use to replace path stems from other libraries for the paths in loaded playlists.
         Useful when managing similar libraries on multiple platforms.
+    :param check_existence: If True, when processing paths,
+        check for the existence of the file paths on the file system and reject any that don't.
     """
 
     valid_extensions = [".xautopf"]
@@ -48,12 +51,12 @@ class XAutoPF(Playlist):
     def __init__(
             self,
             path: str,
-            tracks: List[LocalTrack],
+            tracks: Optional[List[LocalTrack]] = None,
             library_folder: Optional[str] = None,
-            other_folders: Optional[Union[str, Collection[str]]] = None
+            other_folders: Optional[Union[str, Collection[str]]] = None,
+            check_existence: bool = True
     ):
         self._validate_type(path)
-
         if not exists(path):
             raise NotImplementedError(
                 f"No playlist at given path: {path}. "
@@ -65,7 +68,7 @@ class XAutoPF(Playlist):
 
         matcher = TrackMatch.from_xml(xml=self.xml)
         matcher.library_folder = library_folder
-        matcher.sanitise_file_paths(other_folders)
+        matcher.sanitise_file_paths(other_folders, check_existence=check_existence)
 
         limiter = TrackLimit.from_xml(xml=self.xml)
         sorter = TrackSort.from_xml(xml=self.xml)
@@ -74,31 +77,26 @@ class XAutoPF(Playlist):
 
         self.description = self.xml["SmartPlaylist"]["Source"]["Description"]
 
+        self._tracks_original: List[LocalTrack]
+
         self.load(tracks=tracks)
-        self._count_last_save = len(self.tracks)
 
     def load(self, tracks: Optional[List[LocalTrack]] = None) -> Optional[List[LocalTrack]]:
-        """
-        Read the playlist file.
-
-        **Note**: You must provide a list of tracks for this playlist type.
-
-        :param tracks: **Required**. Available Tracks to search through for matches.
-        :return: Ordered list of tracks in this playlist
-        """
         if tracks is None:
-            raise ValueError("This playlist type requires that you provide a list of loaded tracks")
+            tracks = [load_track(path=path) for path in self.matcher.include_paths if path is not None]
 
         self.sorter.sort_by_field(tracks, field=PropertyName.LAST_PLAYED, reverse=True)
-        self._match(tracks=tracks, reference=tracks[0])
+        self._match(tracks=tracks, reference=tracks[0] if len(tracks) > 0 else None)
         self._limit(ignore=self.matcher.include_paths)
         self._sort()
 
+        self._tracks_original = self.tracks.copy()
         return tracks
 
     def save(self) -> UpdateResultXAutoPF:
         start_xml = deepcopy(self.xml)
 
+        self.xml["SmartPlaylist"]["Source"]["Description"] = self.description
         self._update_xml_paths()
         # self._update_comparators()
         # self._update_limiter()
@@ -106,8 +104,8 @@ class XAutoPF(Playlist):
 
         self._save_xml()
 
-        count_start = self._count_last_save
-        self._count_last_save = len(self.tracks)
+        count_start = len(self._tracks_original)
+        self._tracks_original = self.tracks.copy()
 
         start_source: Mapping[str, Any] = start_xml["SmartPlaylist"]["Source"]
         final_source: Mapping[str, Any] = self.xml["SmartPlaylist"]["Source"]
@@ -117,22 +115,23 @@ class XAutoPF(Playlist):
             start_description=start_source["Description"],
             start_include=len([p for p in start_source.get("ExceptionsInclude", "").split("|") if p]),
             start_exclude=len([p for p in start_source.get("Exceptions", "").split("|") if p]),
-            start_comparators=len(start_source.get("Conditions", [])),
-            start_limiter=len(start_source.get("Limit", [])) > 0,
+            start_comparators=len(start_source["Conditions"].get("Condition", [])),
+            start_limiter=start_source["Limit"].get("@Enabled", "False") == "True",
             start_sorter=len(start_source.get("SortBy", start_source.get("DefinedSort", []))) > 0,
-            final=self._count_last_save,
+            final=len(self._tracks_original),
             final_description=final_source["Description"],
             final_include=len([p for p in final_source.get("ExceptionsInclude", "").split("|") if p]),
             final_exclude=len([p for p in final_source.get("Exceptions", "").split("|") if p]),
-            final_comparators=len(final_source.get("Conditions", [])),
-            final_limiter=len(final_source.get("Limit", [])) > 0,
+            final_comparators=len(final_source["Conditions"].get("Condition", [])),
+            final_limiter=final_source["Limit"].get("@Enabled", "False") == "True",
             final_sorter=len(final_source.get("SortBy", final_source.get("DefinedSort", []))) > 0,
         )
 
     # noinspection PyTypeChecker
     def _update_xml_paths(self) -> None:
-        tracks = self.tracks.copy()
-        path_track_map: Mapping[str: LocalTrack] = {track.path.lower(): track for track in tracks}
+        tracks = self._tracks_original
+
+        path_track_map: Mapping[str: LocalTrack] = {track.path.lower(): track for track in self.tracks}
 
         # match again on current conditions to check differences
         self.sorter.sort_by_field(tracks, field=PropertyName.LAST_PLAYED, reverse=True)

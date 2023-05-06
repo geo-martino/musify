@@ -1,6 +1,6 @@
 import re
 from abc import ABCMeta, abstractmethod
-from os.path import basename, splitext
+from os.path import basename, splitext, dirname, join
 from typing import List, MutableMapping, Optional, Collection, Any, Union
 
 from syncify.local.files.file import File
@@ -32,6 +32,27 @@ class Playlist(PrettyPrinter, TrackCollection, File, metaclass=ABCMeta):
     def tracks(self, value: List[LocalTrack]):
         self._tracks = value
 
+    @property
+    def path(self) -> str:
+        return self._path
+
+    @path.getter
+    def path(self) -> str:
+        return self._path
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.getter
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str):
+        self._path = join(dirname(self._path), value + self.ext)
+        self._name = value
+
     def __init__(
             self,
             path: str,
@@ -39,8 +60,8 @@ class Playlist(PrettyPrinter, TrackCollection, File, metaclass=ABCMeta):
             limiter: Optional[TrackLimit] = None,
             sorter: Optional[TrackSort] = None,
     ):
-        self.name, self.ext = splitext(basename(path))
-        self.path: str = path
+        self._name, self.ext = splitext(basename(path))
+        self._path: str = path
         self.tracks: Optional[List[LocalTrack]] = None
         self.description: Optional[str] = None
 
@@ -48,10 +69,16 @@ class Playlist(PrettyPrinter, TrackCollection, File, metaclass=ABCMeta):
         self.limiter = limiter
         self.sorter = sorter
 
+        self._tracks_original: Optional[List[LocalTrack]] = None
+
     def _match(self, tracks: Optional[List[LocalTrack]] = None, reference: Optional[LocalTrack] = None) -> None:
         """Wrapper for matcher"""
-        if self.matcher is not None and tracks is not None:
-            self.tracks: List[LocalTrack] = self.matcher.match(tracks=tracks, reference=reference, combine=True)
+        m = self.matcher
+        if m is not None and tracks is not None:
+            if m.include_paths is None and m.exclude_paths is None and m.comparators is None:
+                self.tracks: List[LocalTrack] = tracks.copy()
+            else:
+                self.tracks: List[LocalTrack] = m.match(tracks=tracks, reference=reference, combine=True)
 
     def _limit(self, ignore: Optional[Union[Collection[str], Collection[LocalTrack]]] = None) -> None:
         """Wrapper for limiter"""
