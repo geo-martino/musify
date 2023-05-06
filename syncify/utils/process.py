@@ -187,7 +187,7 @@ class Process():
                 try:  # try to save tags, skip if error and display path
                     if not dry_run and modified:
                         self._logger.debug(f"{track['path']} | Saving file with new tags: {updating_tags}")
-                        file_raw.save()
+                        file_raw.save_file()
                         count += 1
                     elif modified and self._verbose:
                         name = name if len(name) < 30 else name[:27] + '...'

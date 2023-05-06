@@ -1,9 +1,9 @@
 from os.path import exists
 from typing import Any, List, Mapping, Optional, Self, MutableMapping, Collection, Union, Tuple
 
-from syncify.local.files.track.base import Track
-from syncify.local.files.track.collection.processor import TrackProcessor
+from syncify.local.files.track.base import LocalTrack
 from syncify.local.files.track.collection.compare import TrackCompare
+from syncify.local.files.track.collection.processor import TrackProcessor
 from utils.helpers import make_list
 from utils_new.generic import UnionList
 
@@ -66,36 +66,31 @@ class TrackMatch(TrackProcessor):
         self.include_paths: Optional[List[str]] = include_paths
         self.exclude_paths: Optional[List[str]] = exclude_paths
 
-        self.library_folder = None
+        self.library_folder = library_folder.rstrip("\\/") if library_folder is not None else library_folder
         self.original_folder: Optional[str] = None
-        self.sanitise_file_paths(
-            library_folder=library_folder, other_folders=other_folders, check_existence=check_existence
-        )
+        self.sanitise_file_paths(other_folders=other_folders, check_existence=check_existence)
 
     def sanitise_file_paths(
             self,
-            library_folder: Optional[str] = None,
-            other_folders: Optional[Collection[str]] = None,
+            other_folders: Optional[Union[str, Collection[str]]] = None,
             check_existence: bool = True,
     ) -> None:
         """
-        Assign library folder and attempt to sanitise given include/exclude file paths
-        based on other possible folder stems.
+        Attempt to sanitise given include/exclude file paths
+        based on current library folder and other possible folder stems.
 
-        :param library_folder: Full path of parent folder containing all tracks.
         :param other_folders: Full paths of other possible library paths.
             Use to replace path stems from other libraries for the paths in loaded playlists.
             Useful when managing similar libraries on multiple platforms.
         :param check_existence: Check for the existence of the file paths on the file system.
         """
-        self.library_folder = library_folder
-        self.original_folder: Optional[str] = None
-        self._check_for_other_folder_stem(other_folders, self.include_paths, self.exclude_paths)
+        if self.library_folder is not None and other_folders is not None and self.original_folder is None:
+            self._check_for_other_folder_stem(other_folders, self.include_paths, self.exclude_paths)
 
         if self.exclude_paths is not None:
             exclude = []
             for path in self.exclude_paths:
-                path = self._sanitise_file_path(path, check_existence=check_existence)
+                path = self.sanitise_file_path(path, check_existence=check_existence)
                 if path is not None:
                     exclude.append(path.lower())
 
@@ -104,13 +99,15 @@ class TrackMatch(TrackProcessor):
         if self.include_paths is not None:
             include = []
             for path in self.include_paths:
-                path = self._sanitise_file_path(path, check_existence=check_existence)
+                path = self.sanitise_file_path(path, check_existence=check_existence)
                 if path is not None and (self.exclude_paths is None or path.lower() not in self.exclude_paths):
                     include.append(path.lower())
 
             self.include_paths = include
 
-    def _check_for_other_folder_stem(self, stems: Optional[List[str]], *paths: Optional[List[str]]) -> None:
+    def _check_for_other_folder_stem(
+            self, stems: Union[str, Collection[str]], *paths: Optional[List[str]]
+    ) -> None:
         """
         Checks for the presence of some other folder as the stem of one of the given paths.
         Useful when managing similar libraries across multiple operating systems.
@@ -118,9 +115,7 @@ class TrackMatch(TrackProcessor):
         :param stems: Full paths of possible stems.
         :param paths: Paths to search through for a match.
         """
-        if stems is None:
-            return
-
+        stems = {folder.rstrip("\\/") for folder in make_list(stems)}
         self.original_folder = None
 
         for paths_list in paths:
@@ -133,7 +128,7 @@ class TrackMatch(TrackProcessor):
                     self.original_folder = results[0]
                     break
 
-    def _sanitise_file_path(self, path: Optional[str], check_existence: bool = True) -> Optional[str]:
+    def sanitise_file_path(self, path: Optional[str], check_existence: bool = True) -> Optional[str]:
         """
         Sanitise a file path by:
             - replacing path stems found in other_folders
@@ -150,17 +145,24 @@ class TrackMatch(TrackProcessor):
         if self.library_folder is not None:
             # check if replacement of filepath stem is necessary
             if self.original_folder is not None:
-                path = path.replace(self.original_folder, self.library_folder)
+                path = path.replace(self.original_folder, self.library_folder).replace("//", "/").replace("\\\\", "\\")
 
             # sanitise path separators
-            path = path.replace("\\", "/") if "/" in self.library_folder else path.replace("/", "\\")
+            path = self.correct_path_separater(path)
 
         if not check_existence or exists(path):
             return path
 
+    def correct_path_separater(self, path: str) -> str:
+        """Align a paths separators with the separators in the path for the library folder"""
+        if self.library_folder is not None:
+            return path.replace("\\", "/") if "/" in self.library_folder else path.replace("/", "\\")
+        else:
+            return path
+
     def match(
-            self, tracks: List[Track], reference: Optional[Track] = None, combine: bool = True
-    ) -> Union[List[Track], Tuple[List[Track], List[Track], List[Track]]]:
+            self, tracks: List[LocalTrack], reference: Optional[LocalTrack] = None, combine: bool = True
+    ) -> Union[List[LocalTrack], Tuple[List[LocalTrack], List[LocalTrack], List[LocalTrack]]]:
         """
         Return a new list of tracks from input tracks that match the given conditions.
 
@@ -172,13 +174,16 @@ class TrackMatch(TrackProcessor):
             - List 2: Tracks that only match on exclude_paths
             - List 3: Tracks that only match on comparators
         """
-        path_tracks: Mapping[str, Track] = {track.path.lower(): track for track in tracks}
+        if len(tracks) == 0:
+            return [], [], []
 
-        include: List[Track] = []
+        path_tracks: Mapping[str, LocalTrack] = {track.path.lower(): track for track in tracks}
+
+        include: List[LocalTrack] = []
         if self.include_paths:
             include.extend([path_tracks[path] for path in self.include_paths if path in path_tracks])
 
-        exclude: List[Track] = []
+        exclude: List[LocalTrack] = []
         if self.exclude_paths:
             exclude.extend([path_tracks[path] for path in self.exclude_paths if path in path_tracks])
 
@@ -187,7 +192,7 @@ class TrackMatch(TrackProcessor):
                 return [track for track in include if track not in exclude]
             return include, exclude, []
 
-        compared: List[Track] = []
+        compared: List[LocalTrack] = []
         for track in tracks:
             match_results = []
             for comparator in self.comparators:

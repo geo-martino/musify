@@ -9,39 +9,40 @@ from typing import Tuple, Type, Optional, List
 
 from dateutil.relativedelta import relativedelta
 
-from syncify.local.files.track import Track, TagName, __TRACK_CLASSES__
+from syncify.local.files.track import LocalTrack, TagName, __TRACK_CLASSES__
 from syncify.local.files.utils.image import open_image
 from syncify.spotify.helpers import __UNAVAILABLE_URI_VALUE__, SpotifyType
 from tests.common import path_resources, path_cache, random_str
 
-path_track_resources = join(path_resources, "track")
+path_track_cache = join(path_cache, basename(dirname(__file__)))
+
+path_track_resources = join(path_resources, basename(dirname(__file__)))
 path_track_flac = join(path_track_resources, "noise_flac.flac")
 path_track_mp3 = join(path_track_resources, "noise_mp3.mp3")
 path_track_m4a = join(path_track_resources, "noise_m4a.m4a")
 path_track_wma = join(path_track_resources, "noise_wma.wma")
-path_track_txt = join(path_track_resources, "noise.txt")
 path_track_img = join(path_track_resources, "track_image.jpg")
 
 
-def random_track(cls: Optional[Type[Track]] = None) -> Track:
+def random_track(cls: Optional[Type[LocalTrack]] = None) -> LocalTrack:
     if cls is None:
         cls = choice(__TRACK_CLASSES__)
     track = cls.__new__(cls)
 
-    track.title = random_str(5, 20)
-    track.artist = random_str(5, 20)
-    track.album = random_str(5, 20)
-    track.album_artist = random_str(5, 20)
+    track.title = random_str(20, 50)
+    track.artist = random_str(20, 50)
+    track.album = random_str(20, 50)
+    track.album_artist = random_str(20, 50)
     track.track_number = randrange(1, 20)
     track.track_total = randint(track.track_number, 20)
-    track.genres = [random_str(5, 20) for _ in range(randrange(7))]
+    track.genres = [random_str(20, 50) for _ in range(randrange(7))]
     track.year = randrange(1950, datetime.now().year + 1)
     track.bpm = randint(6000, 15000) / 100
     track.key = choice(string.ascii_uppercase[:7])
     track.disc_number = randrange(1, 8)
     track.disc_total = randint(track.disc_number, 20)
     track.compilation = choice([True, False])
-    track.comments = [random_str(5, 20) for _ in range(randrange(3))]
+    track.comments = [random_str(20, 50) for _ in range(randrange(3))]
 
     track.has_uri = choice([True, False])
     if track.has_uri:
@@ -52,10 +53,10 @@ def random_track(cls: Optional[Type[Track]] = None) -> Track:
     track.image_links = None
     track.has_image = False
 
-    track.folder = basename(path_cache)
+    track.folder = basename(path_track_cache)
     track.filename = f"{str(track.track_number).zfill(2)} - {track.title}"
     track.ext = track.valid_extensions[0]
-    track._path = join(path_cache, track.filename + track.ext)
+    track._path = join(path_track_cache, track.filename + track.ext)
     track.size = randrange(6000, 10000000)
     track.length = randint(30, 600)
     track.date_modified = datetime.now() - relativedelta(days=randrange(1, 20), hours=randrange(1, 24))
@@ -68,13 +69,13 @@ def random_track(cls: Optional[Type[Track]] = None) -> Track:
     return track
 
 
-def random_tracks(number: int, cls: Optional[Type[Track]] = None) -> List[Track]:
+def random_tracks(number: int, cls: Optional[Type[LocalTrack]] = None) -> List[LocalTrack]:
     return [random_track(cls=cls) for _ in range(number)]
 
 
-def copy_track(track: Track) -> Tuple[str, str]:
+def copy_track(track: LocalTrack) -> Tuple[str, str]:
     path_file_base = track.path
-    path_file_copy = join(path_cache, basename(dirname(__file__)), basename(path_file_base))
+    path_file_copy = join(path_track_cache, basename(path_file_base))
     if not exists(dirname(path_file_copy)):
         os.makedirs(dirname(path_file_copy))
 
@@ -86,12 +87,14 @@ def copy_track(track: Track) -> Tuple[str, str]:
     return path_file_base, path_file_copy
 
 
-def clear_tags_test(track: Track) -> None:
+def clear_tags_test(track: LocalTrack) -> None:
     path_file_base, path_file_copy = copy_track(track)
     track_original = copy(track)
 
     # dry run, no updates should happen
-    track.delete_tags(tags=TagName.ALL, dry_run=True)
+    result = track.delete_tags(tags=TagName.ALL, dry_run=True)
+    assert not result.saved
+
     track_update_dry = deepcopy(track)
 
     assert track_update_dry.title == track_original.title
@@ -114,7 +117,9 @@ def clear_tags_test(track: Track) -> None:
     assert track_update_dry.has_image == track_original.has_image
 
     # clear
-    track.delete_tags(tags=TagName.ALL, dry_run=False)
+    result = track.delete_tags(tags=TagName.ALL, dry_run=False)
+    assert result.saved
+
     track_update = deepcopy(track)
 
     assert track_update.title is None
@@ -139,7 +144,7 @@ def clear_tags_test(track: Track) -> None:
     os.remove(path_file_copy)
 
 
-def update_tags_test(track: Track) -> None:
+def update_tags_test(track: LocalTrack) -> None:
     path_file_base, path_file_copy = copy_track(track)
     track_original = copy(track)
 
@@ -160,7 +165,9 @@ def update_tags_test(track: Track) -> None:
     track.image_links = None
 
     # dry run, no updates should happen
-    track.write_tags(tags=TagName.ALL, replace=False, dry_run=True)
+    result = track.save(tags=TagName.ALL, replace=False, dry_run=True)
+    assert not result.saved
+
     track_update_dry = deepcopy(track)
 
     assert track_update_dry.title == track_original.title
@@ -184,7 +191,9 @@ def update_tags_test(track: Track) -> None:
 
     # update and don't replace current tags (except uri if uri is False)
     shutil.copyfile(path_file_base, path_file_copy)
-    track.write_tags(tags=TagName.ALL, replace=False, dry_run=False)
+    result = track.save(tags=TagName.ALL, replace=False, dry_run=False)
+    assert result.saved
+
     track_update = deepcopy(track)
 
     assert track_update.title == track_original.title
@@ -208,7 +217,8 @@ def update_tags_test(track: Track) -> None:
 
     # update and replace
     shutil.copyfile(path_file_base, path_file_copy)
-    track.write_tags(tags=TagName.ALL, replace=True, dry_run=False)
+    track.save(tags=TagName.ALL, replace=True, dry_run=False)
+    assert result.saved
     track_update_replace = deepcopy(track)
 
     assert track_update_replace.title == track.title
@@ -233,7 +243,7 @@ def update_tags_test(track: Track) -> None:
     os.remove(path_file_copy)
 
 
-def update_images_test(track: Track) -> None:
+def update_images_test(track: LocalTrack) -> None:
     path_file_base, path_file_copy = copy_track(track)
     track_original = copy(track)
 
@@ -242,10 +252,11 @@ def update_images_test(track: Track) -> None:
     image_new = open_image(path_track_img)
 
     # dry run, no updates should happen
-    track.write_tags(tags=TagName.IMAGES, replace=False, dry_run=True)
+    result = track.save(tags=TagName.IMAGES, replace=False, dry_run=True)
+    assert not result.saved
+
     track_update_dry = deepcopy(track)
     image_update_dry = track_update_dry._read_images()[0]
-
     assert track_update_dry.has_image == track_original.has_image
     assert image_update_dry.size == image_original.size
 
@@ -254,24 +265,22 @@ def update_images_test(track: Track) -> None:
     track.delete_tags(TagName.IMAGES, dry_run=False)
     assert not track.has_image
 
-    track.write_tags(tags=TagName.IMAGES, replace=False, dry_run=False)
+    result = track.save(tags=TagName.IMAGES, replace=False, dry_run=False)
+    assert result.saved
+
     track_update = deepcopy(track)
     image_update = track_update._read_images()[0]
-
     assert track_update.has_image
     assert image_update.size == image_new.size
 
     # update and replace
     shutil.copyfile(path_file_base, path_file_copy)
-    track.write_tags(tags=TagName.IMAGES, replace=False, dry_run=False)
+    result = track.save(tags=TagName.IMAGES, replace=True, dry_run=False)
+    assert result.saved
+
     track_update_replace = deepcopy(track)
     image_update_replace = track_update_replace._read_images()[0]
-
     assert track_update_replace.has_image
     assert image_update_replace.size == image_new.size
 
     os.remove(path_file_copy)
-
-
-if __name__ == "__main__":
-    print(random_track())

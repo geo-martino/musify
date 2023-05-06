@@ -1,6 +1,7 @@
 from random import sample
+from typing import Callable, Any
 
-from syncify.local.files.track import TrackCompare, TrackMatch, TagName
+from syncify.local.files.track import LocalTrack, TrackCompare, TrackMatch, TagName
 from tests.common import random_str
 from tests.local.files.track.track import random_tracks
 
@@ -25,7 +26,7 @@ def test_init():
     )
 
     assert matcher.comparators == matcher.comparators
-    assert matcher.original_folder == other_folders[1]
+    assert matcher.original_folder == other_folders[1].rstrip("/\\")
     assert matcher.include_paths == [
         path.replace(other_folders[1], library_folder).replace("\\", "/").lower() for path in include_paths
     ]
@@ -47,7 +48,7 @@ def test_init():
     )
 
     assert matcher.comparators == matcher.comparators
-    assert matcher.original_folder == other_folders[0]
+    assert matcher.original_folder == other_folders[0].rstrip("/\\")
     assert matcher.include_paths == [
         path.replace(other_folders[0], library_folder).lower() for path in sorted(include_paths)
     ]
@@ -87,7 +88,7 @@ def test_match():
         track._path = exclude_paths[i]
     tracks_include_reduced = [track for track in tracks_include if track not in tracks_exclude]
 
-    sort_key = lambda x: x.path
+    sort_key: Callable[[LocalTrack], Any] = lambda x: x.path
 
     # match on paths only
     matcher = TrackMatch(
@@ -113,7 +114,6 @@ def test_match():
         exclude_paths=[track.path for track in tracks_exclude],
         check_existence=False
     )
-
 
     tracks_album_reduced = [track for track in tracks_album if track not in tracks_exclude]
     matches = sorted(matcher.match(tracks=tracks), key=sort_key)
@@ -141,4 +141,3 @@ def test_match():
     assert include == tracks_include_reduced
     assert exclude == tracks_exclude
     assert sorted(compare, key=sort_key) == sorted(tracks_artist, key=sort_key)
-

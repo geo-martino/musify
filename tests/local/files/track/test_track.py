@@ -2,7 +2,8 @@ import pytest
 
 from syncify.local.files import FLAC, M4A, MP3, WMA, load_track
 from syncify.local.files import IllegalFileTypeError
-from tests.local.files.track.track import path_track_flac, path_track_mp3, path_track_m4a, path_track_wma, path_track_txt
+from tests.common import path_txt
+from tests.local.files.track.track import path_track_flac, path_track_mp3, path_track_m4a, path_track_wma
 
 
 def test_load_track():
@@ -24,4 +25,4 @@ def test_load_track():
 
     # raises error on unrecognised file type
     with pytest.raises(IllegalFileTypeError):
-        load_track(path_track_txt)
+        load_track(path_txt)

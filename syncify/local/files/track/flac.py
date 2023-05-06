@@ -7,11 +7,11 @@ import mutagen.flac
 from PIL import Image
 from mutagen.id3 import PictureType
 
-from syncify.local.files.track.base import Track, TagName, TagMap
+from syncify.local.files.track.base import LocalTrack, TagName, TagMap
 from syncify.local.files.utils.image import open_image, get_image_bytes
 
 
-class FLAC(Track):
+class FLAC(LocalTrack):
     """
     Track object for extracting, modifying, and saving tags from FLAC files.
 
@@ -39,7 +39,7 @@ class FLAC(Track):
     )
 
     def __init__(self, file: Union[str, mutagen.File]):
-        Track.__init__(self, file=file)
+        LocalTrack.__init__(self, file=file)
         self._file: mutagen.flac.FLAC = self._file
 
     def _read_images(self) -> Optional[List[Image.Image]]:

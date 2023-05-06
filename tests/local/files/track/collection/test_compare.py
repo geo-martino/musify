@@ -40,6 +40,9 @@ def test_compare_with_reference():
     assert comparator._expected is None
     assert not comparator._converted
 
+    with pytest.raises(ValueError):
+        comparator.compare(track=track_1)
+
     track_1.album = "album 124 is a great album"
     track_2.album = "album"
     assert comparator.compare(track=track_1, reference=track_2)

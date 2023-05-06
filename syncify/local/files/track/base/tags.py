@@ -29,7 +29,7 @@ class TagMap:
 
 @dataclass
 class Tags:
-    """Tags that can be extracted from a file and their related inferred properties"""
+    """Tags that can be extracted for a given track and their related inferred attributes"""
     title: Optional[str]
     artist: Optional[str]
     album: Optional[str]

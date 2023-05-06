@@ -1,5 +1,6 @@
 import re
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta, abstractmethod, ABC
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Tuple, Mapping, List, MutableMapping, Any, TypeVar, Union
 
@@ -85,3 +86,8 @@ class PrettyPrinter(metaclass=ABCMeta):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.as_dict()})"
+
+
+@dataclass
+class UpdateResult(ABC):
+    pass

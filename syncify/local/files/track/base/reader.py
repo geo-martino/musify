@@ -107,7 +107,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
             return
 
         try:
-            year = int(re.sub("\D+", "", str(values[0]))[:4])
+            year = int(re.sub(r"\D+", "", str(values[0]))[:4])
             return year if year > 1000 else None
         except (ValueError, TypeError):
             return

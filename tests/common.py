@@ -11,6 +11,8 @@ if not exists(path_cache):
 
 path_resources = join(dirname(__file__), "__resources")
 
+path_txt = join(path_resources, "test.txt")
+
 
 def random_str(start: int = 1, stop: int = 20) -> str:
     return ''.join(choice(string.ascii_letters) for _ in range(randrange(start, stop)))

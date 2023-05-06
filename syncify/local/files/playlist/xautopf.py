@@ -1,12 +1,13 @@
 from copy import deepcopy
 from dataclasses import dataclass
 from os.path import exists
-from typing import Any, List, Mapping, Optional, Set
+from typing import Any, List, Mapping, Optional, Union, Collection
 
 import xmltodict
 
-from syncify.local.files.playlist import Playlist, UpdateResult
-from syncify.local.files.track import PropertyName, Track, TrackMatch, TrackLimit, TrackSort
+from syncify.local.files.playlist.playlist import Playlist
+from syncify.local.files.track import PropertyName, LocalTrack, TrackMatch, TrackLimit, TrackSort
+from syncify.utils_new.generic import UpdateResult
 
 
 @dataclass
@@ -47,9 +48,9 @@ class XAutoPF(Playlist):
     def __init__(
             self,
             path: str,
-            tracks: List[Track],
+            tracks: List[LocalTrack],
             library_folder: Optional[str] = None,
-            other_folders: Optional[Set[str]] = None
+            other_folders: Optional[Union[str, Collection[str]]] = None
     ):
         self._validate_type(path)
 
@@ -62,21 +63,21 @@ class XAutoPF(Playlist):
         with open(path, "r", encoding='utf-8') as f:
             self.xml: Mapping[str, Any] = xmltodict.parse(f.read())
 
-        Playlist.__init__(
-            self,
-            path=path,
-            library_folder=library_folder,
-            other_folders=other_folders,
-            matcher=TrackMatch.from_xml(xml=self.xml),
-            limiter=TrackLimit.from_xml(xml=self.xml),
-            sorter=TrackSort.from_xml(xml=self.xml)
-        )
+        matcher = TrackMatch.from_xml(xml=self.xml)
+        matcher.library_folder = library_folder
+        matcher.sanitise_file_paths(other_folders)
+
+        limiter = TrackLimit.from_xml(xml=self.xml)
+        sorter = TrackSort.from_xml(xml=self.xml)
+
+        Playlist.__init__(self, path=path, matcher=matcher, limiter=limiter, sorter=sorter)
+
         self.description = self.xml["SmartPlaylist"]["Source"]["Description"]
 
         self.load(tracks=tracks)
         self._count_last_save = len(self.tracks)
 
-    def load(self, tracks: Optional[List[Track]] = None) -> Optional[List[Track]]:
+    def load(self, tracks: Optional[List[LocalTrack]] = None) -> Optional[List[LocalTrack]]:
         """
         Read the playlist file.
 
@@ -89,13 +90,13 @@ class XAutoPF(Playlist):
             raise ValueError("This playlist type requires that you provide a list of loaded tracks")
 
         self.sorter.sort_by_field(tracks, field=PropertyName.LAST_PLAYED, reverse=True)
-        self._match(tracks, reference=tracks[0])
+        self._match(tracks=tracks, reference=tracks[0])
         self._limit(ignore=self.matcher.include_paths)
         self._sort()
 
         return tracks
 
-    def write(self) -> UpdateResultXAutoPF:
+    def save(self) -> UpdateResultXAutoPF:
         start_xml = deepcopy(self.xml)
 
         self._update_xml_paths()
@@ -131,18 +132,18 @@ class XAutoPF(Playlist):
     # noinspection PyTypeChecker
     def _update_xml_paths(self) -> None:
         tracks = self.tracks.copy()
-        path_track_map: Mapping[str: Track] = {track.path.lower(): track for track in tracks}
+        path_track_map: Mapping[str: LocalTrack] = {track.path.lower(): track for track in tracks}
 
         # match again on current conditions to check differences
         self.sorter.sort_by_field(tracks, field=PropertyName.LAST_PLAYED, reverse=True)
-        matches: List[Track] = self.matcher.match(tracks, reference=tracks[0], combine=False)[2]
-        compared: Mapping[str: Track] = {track.path.lower(): track for track in matches}
+        matches: List[LocalTrack] = self.matcher.match(tracks, reference=tracks[0], combine=False)[2]
+        compared: Mapping[str: LocalTrack] = {track.path.lower(): track for track in matches}
 
         self.matcher.include_paths = list(path_track_map - compared.keys())
         self.matcher.exclude_paths = list(compared.keys() - path_track_map)
 
-        include_tracks: List[Optional[Track]] = [path_track_map.get(path) for path in self.matcher.include_paths]
-        exclude_tracks: List[Optional[Track]] = [compared.get(path) for path in self.matcher.exclude_paths]
+        include_tracks: List[Optional[LocalTrack]] = [path_track_map.get(path) for path in self.matcher.include_paths]
+        exclude_tracks: List[Optional[LocalTrack]] = [compared.get(path) for path in self.matcher.exclude_paths]
 
         include_paths: List[str] = [track.path for track in include_tracks if track is not None]
         exclude_paths: List[str] = [track.path for track in exclude_tracks if track is not None]

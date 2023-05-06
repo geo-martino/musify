@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 from os.path import exists
-from typing import Optional, List, Set
+from typing import Optional, List, Set, Collection, Union
 
-from syncify.local.files.track import Track, load_track, TrackMatch
-from syncify.local.files.playlist import Playlist, UpdateResult
+from syncify.local.files.track import LocalTrack, load_track, TrackMatch
+from syncify.local.files.playlist.playlist import Playlist
+from syncify.utils_new.generic import UpdateResult
 
 
 @dataclass
@@ -29,7 +30,6 @@ class M3U(Playlist):
     :param tracks: Optional. Available Tracks to search through for matches.
         If no tracks are given, the playlist instance load all the tracks from paths
         listed in file at the playlist ``path``.
-
     :param library_folder: Full path of folder containing tracks.
     :param other_folders: Full paths of other possible library paths.
         Use to replace path stems from other libraries for the paths in loaded playlists.
@@ -41,53 +41,54 @@ class M3U(Playlist):
     def __init__(
             self,
             path: str,
-            tracks: Optional[List[Track]] = None,
+            tracks: Optional[List[LocalTrack]] = None,
             library_folder: Optional[str] = None,
-            other_folders: Optional[Set[str]] = None
+            other_folders: Optional[Union[str, Collection[str]]] = None
     ):
         self._validate_type(path)
 
+        paths = []
         if exists(path):
             with open(path, "r", encoding='utf-8') as f:
                 paths = [line.strip() for line in f]
-        else:
+        elif tracks is not None:
             paths = [track.path for track in tracks]
 
-        Playlist.__init__(
-            self,
-            path=path,
-            library_folder=library_folder,
-            other_folders=other_folders,
-            matcher=TrackMatch(include_paths=paths, library_folder=library_folder, other_folders=other_folders)
-        )
+        matcher = TrackMatch(include_paths=paths, library_folder=library_folder, other_folders=other_folders)
+        Playlist.__init__(self, path=path, matcher=matcher)
 
         self.load(tracks=tracks)
 
-    def load(self, tracks: Optional[List[Track]] = None) -> Optional[List[Track]]:
+    def load(self, tracks: Optional[List[LocalTrack]] = None) -> List[LocalTrack]:
         if self.matcher.include_paths is None or len(self.matcher.include_paths) == 0:
-            return
-
-        if tracks is None:
-            self.tracks = [load_track(path=path) for path in self.matcher.include_paths if path is not None]
-        else:
+            self.tracks = tracks if tracks else []
+        elif tracks is not None:
             self._match(tracks)
+        else:
+            self.tracks = [load_track(path=path) for path in self.matcher.include_paths if path is not None]
+
+        self._limit(ignore=self.matcher.include_paths)
+        self._sort()
 
         return self.tracks
 
-    def write(self) -> UpdateResultM3U:
+    def save(self) -> UpdateResultM3U:
         start_paths: Set[str] = set()
         if exists(self.path):
             with open(self.path, "r", encoding='utf-8') as f:
-                start_paths = {line.rstrip().lower() for line in f}
-                start_paths = {path for path in start_paths if path}
+                start_paths = {line.rstrip().lower() for line in f if line.rstrip()}
+                start_paths = {self.matcher.correct_path_separater(path) for path in start_paths if path}
 
         with open(self.path, "w", encoding='utf-8') as f:
             paths = self._prepare_paths_for_output([track.path for track in self.tracks])
             f.writelines([path.strip() + '\n' for path in paths])
 
         with open(self.path, "r", encoding='utf-8') as f:
-            final_paths = {line.rstrip().lower() for line in f}
-            final_paths = {path for path in final_paths if path}
+            final_paths = {line.rstrip().lower() for line in f if line.rstrip()}
+
+        print("PATHS")
+        print(start_paths)
+        print(final_paths)
 
         return UpdateResultM3U(
             start=len(start_paths),

@@ -5,12 +5,12 @@ import mutagen
 import mutagen.mp4
 from PIL import Image
 
-from syncify.local.files.track.base import Track, TagMap
+from syncify.local.files.track.base import LocalTrack, TagMap
 from syncify.local.files.utils.image import open_image, get_image_bytes
 from syncify.utils.helpers import make_list
 
 
-class M4A(Track):
+class M4A(LocalTrack):
     """
     Track object for extracting, modifying, and saving tags from M4A files.
 
@@ -38,7 +38,7 @@ class M4A(Track):
     )
     
     def __init__(self, file: Union[str, mutagen.File]):
-        Track.__init__(self, file=file)
+        LocalTrack.__init__(self, file=file)
         self._file: mutagen.mp4.MP4 = self._file
 
     def _read_tag(self, tag_ids: List[str]) -> Optional[list]:

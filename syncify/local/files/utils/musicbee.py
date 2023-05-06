@@ -7,7 +7,7 @@ from typing import Any, List, Mapping, Optional
 import xmltodict
 from tqdm import tqdm
 
-from syncify.local.files.track.base import Track, Name, PropertyName, TagName
+from syncify.local.files.track.base import LocalTrack, Name, PropertyName, TagName
 
 library_path_relative = join("MusicBee", "iTunes Music Library.xml")
 
@@ -52,7 +52,7 @@ def xml_ts_to_dt(timestamp_str: str) -> datetime:
     return datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%SZ")
 
 
-def enrich_metadata(tracks: List[Track], library_folder: str) -> None:
+def enrich_metadata(tracks: List[LocalTrack], library_folder: str) -> None:
     library_path = join(library_folder, library_path_relative)
     with open(library_path, "r", encoding='utf-8') as f:
         xml: Mapping[str, Any] = xmltodict.parse(f.read())

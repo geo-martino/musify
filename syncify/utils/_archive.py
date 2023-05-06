@@ -279,5 +279,5 @@ class Misc:
 
                     if not skip:  # save tags
                         print('\33[92;1m SAVED \33[0m')
-                        file_data.save()
+                        file_data.save_file()
                     print()

@@ -2,11 +2,11 @@ import re
 from datetime import datetime, timedelta, date
 from functools import reduce
 from operator import mul
-from typing import Any, Callable, List, Mapping, Optional, Self, MutableMapping, Dict, Union
+from typing import Any, Callable, List, Mapping, Optional, Self, MutableMapping
 
 from dateutil.relativedelta import relativedelta
 
-from syncify.local.files.track.base import Name, Track, TagName
+from syncify.local.files.track.base import Name, LocalTrack, TagName
 from syncify.local.files.track.collection import TrackProcessor
 from syncify.local.files.utils.musicbee import field_name_map
 from syncify.utils.helpers import make_list
@@ -90,7 +90,7 @@ class TrackCompare(TrackProcessor):
         return objs
 
     def __init__(self, field: Name, condition: str, expected: Optional[UnionList[Any]] = None) -> None:
-        self._method: Callable[[Any, Optional[List[Any]]], bool] = lambda _, __: False
+        self._method: Callable[[Optional[Any], Optional[List[Any]]], bool] = lambda _, __: False
         self._converted = False
         self._expected: Optional[List[Any]] = None
 
@@ -105,7 +105,7 @@ class TrackCompare(TrackProcessor):
         } | {name: name for name in dir(self) if name.startswith(self._cond_method_prefix)}
         self.condition = condition
 
-    def compare(self, track: Track, reference: Optional[UnionList[Track]] = None) -> bool:
+    def compare(self, track: LocalTrack, reference: Optional[UnionList[LocalTrack]] = None) -> bool:
         """
         Compare a track to another a track
         or, if no other track is given, to the instance's list of expected values

@@ -6,7 +6,8 @@ import pytest
 
 from syncify.local.files import WMA, IllegalFileTypeError
 from syncify.spotify.helpers import __UNAVAILABLE_URI_VALUE__
-from tests.local.files.track.track import path_track_wma, path_track_resources, path_track_txt, update_tags_test, clear_tags_test
+from tests.common import path_txt
+from tests.local.files.track.track import path_track_wma, path_track_resources, update_tags_test, clear_tags_test
 
 
 def test_load():
@@ -25,7 +26,7 @@ def test_load():
 
     # raises error on unrecognised file type
     with pytest.raises(IllegalFileTypeError):
-        WMA(path_track_txt)
+        WMA(path_txt)
 
     # raises error on files that do not exist
     with pytest.raises(FileNotFoundError):

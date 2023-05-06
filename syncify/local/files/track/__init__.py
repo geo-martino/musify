@@ -14,7 +14,7 @@ __ACCEPTED_FILETYPES__ = [filetype for c in __TRACK_CLASSES__ for filetype in c.
 from syncify.local.files.file import IllegalFileTypeError
 
 
-def load_track(path: str) -> Track:
+def load_track(path: str) -> LocalTrack:
     """
     Attempt to load a file from a given path, returning the appropriate ``Track`` object
 

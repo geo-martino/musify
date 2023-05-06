@@ -5,7 +5,8 @@ from os.path import basename, dirname
 import pytest
 
 from syncify.local.files import FLAC, IllegalFileTypeError
-from tests.local.files.track.track import path_track_flac, path_track_resources, path_track_txt, update_tags_test, clear_tags_test, update_images_test
+from tests.common import path_txt
+from tests.local.files.track.track import path_track_flac, path_track_resources, update_tags_test, clear_tags_test, update_images_test
 
 
 def test_load():
@@ -24,7 +25,7 @@ def test_load():
 
     # raises error on unrecognised file type
     with pytest.raises(IllegalFileTypeError):
-        FLAC(path_track_txt)
+        FLAC(path_txt)
 
     # raises error on files that do not exist
     with pytest.raises(FileNotFoundError):

@@ -1,18 +1,13 @@
-from dataclasses import dataclass
-from abc import ABCMeta, abstractmethod, ABC
+import re
+from abc import ABCMeta, abstractmethod
 from os.path import basename, splitext
-from typing import List, MutableMapping, Optional, Set, Collection, Any
+from typing import List, MutableMapping, Optional, Collection, Any, Union
 
-from local.files.track.collection import TrackCollection
 from syncify.local.files.file import File
-from syncify.local.files.track import Track
+from syncify.local.files.track import LocalTrack
+from syncify.local.files.track.collection import TrackCollection
 from syncify.local.files.track.collection import TrackMatch, TrackLimit, TrackSort
-from syncify.utils_new.generic import PrettyPrinter
-
-
-@dataclass
-class UpdateResult(ABC):
-    pass
+from syncify.utils_new.generic import PrettyPrinter, UpdateResult
 
 
 class Playlist(PrettyPrinter, TrackCollection, File, metaclass=ABCMeta):
@@ -20,54 +15,45 @@ class Playlist(PrettyPrinter, TrackCollection, File, metaclass=ABCMeta):
     Generic class for CRUD operations on playlists.
 
     :param path: Full path of the playlist.
-    :param library_folder: Full path of folder containing tracks.
-    :param other_folders: Full paths of other possible library paths.
-        Use to replace path stems from other libraries for the paths in loaded playlists.
-        Useful when managing similar libraries on multiple platforms.
+    :param matcher: :class:`TrackMatch` object to use for matching tracks.
+    :param limiter: :class:`TrackLimit` object to use for limiting the number of tracks matched.
+    :param sorter: :class:`TrackSort` object to use for sorting the final track list.
     """
 
     @property
-    def tracks(self) -> Optional[List[Track]]:
+    def tracks(self) -> List[LocalTrack]:
         return self._tracks
 
     @tracks.getter
-    def tracks(self) -> List[Track]:
+    def tracks(self) -> List[LocalTrack]:
         return self._tracks
 
     @tracks.setter
-    def tracks(self, value: List[Track]):
+    def tracks(self, value: List[LocalTrack]):
         self._tracks = value
 
     def __init__(
             self,
             path: str,
-            library_folder: Optional[str] = None,
-            other_folders: Optional[Set[str]] = None,
             matcher: Optional[TrackMatch] = None,
             limiter: Optional[TrackLimit] = None,
             sorter: Optional[TrackSort] = None,
     ):
         self.name, self.ext = splitext(basename(path))
         self.path: str = path
-        self.tracks: Optional[List[Track]] = None
+        self.tracks: Optional[List[LocalTrack]] = None
         self.description: Optional[str] = None
-
-        self._library_folder: str = library_folder.rstrip("\\/") if library_folder is not None else None
-        self._original_folder: Optional[str] = None
-        self._other_folders: Optional[Set[str]] = None
-        if other_folders is not None:
-            self._other_folders = {folder.rstrip("\\/") for folder in other_folders}
 
         self.matcher = matcher
         self.limiter = limiter
         self.sorter = sorter
 
-    def _match(self, tracks: Optional[List[Track]] = None, reference: Optional[Track] = None) -> None:
+    def _match(self, tracks: Optional[List[LocalTrack]] = None, reference: Optional[LocalTrack] = None) -> None:
         """Wrapper for matcher"""
         if self.matcher is not None and tracks is not None:
-            self.tracks: List[Track] = self.matcher.match(tracks=tracks, reference=reference, combine=True)
+            self.tracks: List[LocalTrack] = self.matcher.match(tracks=tracks, reference=reference, combine=True)
 
-    def _limit(self, ignore: Optional[Set[str]] = None) -> None:
+    def _limit(self, ignore: Optional[Union[Collection[str], Collection[LocalTrack]]] = None) -> None:
         """Wrapper for limiter"""
         if self.limiter is not None and self.tracks is not None:
             self.limiter.limit(tracks=self.tracks, ignore=ignore)
@@ -83,12 +69,13 @@ class Playlist(PrettyPrinter, TrackCollection, File, metaclass=ABCMeta):
         original_folder = self.matcher.original_folder
 
         if len(paths) > 0 and library_folder is not None and original_folder is not None:
-            paths = [p.lower().replace(library_folder.lower(), original_folder.lower()) for p in paths]
+            pattern = re.compile(library_folder.replace("\\", "\\\\"), re.IGNORECASE)
+            paths = [pattern.sub(original_folder, p) for p in paths]
 
         return paths
 
     @abstractmethod
-    def load(self, tracks: Optional[List[Track]] = None) -> Optional[List[Track]]:
+    def load(self, tracks: Optional[List[LocalTrack]] = None) -> Optional[List[LocalTrack]]:
         """
         Read the playlist file and update the tracks in this playlist instance.
 
@@ -98,9 +85,9 @@ class Playlist(PrettyPrinter, TrackCollection, File, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def write(self) -> UpdateResult:
+    def save(self) -> UpdateResult:
         """
-        Write the tracks in this Playlist to file.
+        Write the tracks in this Playlist and its settings (if applicable) to file.
 
         :return: UpdateResult object with stats on the changes to the playlist.
         """
@@ -119,7 +106,6 @@ class Playlist(PrettyPrinter, TrackCollection, File, metaclass=ABCMeta):
 if __name__ == "__main__":
     from os.path import join
     from glob import glob
-    import json
 
     from syncify.local.files.track import FLAC
     from syncify.local.files.track import MP3
@@ -128,9 +114,6 @@ if __name__ == "__main__":
     from syncify.local.files import load_track
     from syncify.local.files.playlist.xautopf import XAutoPF
     from syncify.local.files.playlist.m3u import M3U
-
-    from timeit import timeit
-    from time import time
 
     playlist_folder = join("MusicBee", "Playlists")
     library_folder = "D:\\Music\\"

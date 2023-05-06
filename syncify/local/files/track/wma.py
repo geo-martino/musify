@@ -5,11 +5,11 @@ import mutagen
 import mutagen.asf
 from PIL import Image
 
-from syncify.local.files.track.base import Track, TagMap
+from syncify.local.files.track.base import LocalTrack, TagMap
 from syncify.local.files.utils.image import open_image, get_image_bytes
 
 
-class WMA(Track):
+class WMA(LocalTrack):
     """
     Track object for extracting, modifying, and saving tags from WMA files.
 
@@ -37,7 +37,7 @@ class WMA(Track):
     )
 
     def __init__(self, file: Union[str, mutagen.File]):
-        Track.__init__(self, file=file)
+        LocalTrack.__init__(self, file=file)
         self._file: mutagen.asf.ASF = self._file
 
     def _read_tag(self, tag_ids: List[str]) -> Optional[list]:

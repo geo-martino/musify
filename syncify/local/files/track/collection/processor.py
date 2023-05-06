@@ -60,7 +60,8 @@ class TrackProcessor(PrettyPrinter, metaclass=ABCMeta):
     @staticmethod
     def _camel_to_snake(value: str, prefix: Optional[str] = None) -> str:
         """Convert snake_case to CamelCase. Optionally, add a given prefix"""
-        value = re.sub('([A-Z])', lambda m: f"_{m.group(1).lower()}", value.strip()).replace(" ", "_").strip("_")
+        value = re.sub('([A-Z])', lambda m: f"_{m.group(1).lower()}", value.strip("_ "))
+        value = re.sub(r"[_ ]+", "_", value).strip("_ ")
         if prefix is not None:
             value = f"{prefix}_{value}"
         return value.lower()

@@ -14,7 +14,7 @@ from syncify.local.files.track.base.writer import TagWriter
 from syncify.utils_new.generic import PrettyPrinter
 
 
-class Track(PrettyPrinter, File, TagReader, TagWriter, metaclass=ABCMeta):
+class LocalTrack(PrettyPrinter, File, TagReader, TagWriter, metaclass=ABCMeta):
     """
     Generic track object for extracting, modifying, and saving tags for a given file.
 
@@ -76,7 +76,7 @@ class Track(PrettyPrinter, File, TagReader, TagWriter, metaclass=ABCMeta):
         self.play_count = None
         self.rating = None
 
-    def load(self) -> Track:
+    def load(self) -> LocalTrack:
         """General method for loading file and its metadata"""
         self.load_file()
         if self._file is not None:
@@ -99,7 +99,7 @@ class Track(PrettyPrinter, File, TagReader, TagWriter, metaclass=ABCMeta):
         self._file = mutagen.File(self._path)
         self.ext = splitext(self._path)[1].lower()
 
-    def load_metadata(self) -> Track:
+    def load_metadata(self) -> LocalTrack:
         """General method for extracting metadata from loaded file"""
         if self._file is not None:
             self._read_metadata()

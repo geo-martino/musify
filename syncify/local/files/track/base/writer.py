@@ -1,20 +1,27 @@
 from abc import ABCMeta, abstractmethod
 from copy import copy
-from typing import List, Optional, Union, Set
+from dataclasses import dataclass
+from typing import Optional, Set, MutableMapping
 
 from syncify.local.files.track.base.processor import TagProcessor
 from syncify.local.files.track.base.tags import TagName
 from syncify.spotify.helpers import __UNAVAILABLE_URI_VALUE__
 from syncify.utils.helpers import make_list
-from utils_new.generic import UnionList
+from syncify.utils_new.generic import UnionList, UpdateResult
+
+
+@dataclass
+class UpdateResultTrack(UpdateResult):
+    saved: bool  # if changes to the file on the disk were made
+    updated: MutableMapping[TagName, int]  # The tag updated and the condition index it satisfied to be updated
 
 
 class TagWriter(TagProcessor, metaclass=ABCMeta):
     """Contains methods for updating and removing tags from a loaded file"""
 
-    def write_tags(
+    def save(
             self, tags: Optional[UnionList[TagName]] = None, replace: bool = False, dry_run: bool = True
-    ) -> Set[TagName]:
+    ) -> UpdateResultTrack:
         """
         Update file's tags from given dictionary of tags.
 
@@ -25,7 +32,7 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
         """
         self.load_file()
         file = copy(self)
-        updated: Set[TagName] = set()
+        updated: MutableMapping[TagName, int] = {}
 
         tags: Set[TagName] = set(make_list(tags))
         if TagName.ALL in tags:
@@ -34,22 +41,22 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
         if TagName.TITLE in tags:
             conditionals = [file.title is None, replace and self.title != file.title]
             if any(conditionals) and self._write_title(dry_run):
-                updated.add(TagName.TITLE)
+                updated.update({TagName.TITLE: [i for i, c in enumerate(conditionals) if c][0]})
                     
         if TagName.ARTIST in tags:
             conditionals = [file.artist is None, replace and self.artist != file.artist]
             if any(conditionals) and self._write_artist(dry_run):
-                updated.add(TagName.ARTIST)
+                updated.update({TagName.ARTIST: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.ALBUM in tags:
             conditionals = [file.album is None, replace and self.album != file.album]
             if any(conditionals) and self._write_album(dry_run):
-                updated.add(TagName.ALBUM)
+                updated.update({TagName.ALBUM: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.ALBUM_ARTIST in tags:
             conditionals = [file.album_artist is None, replace and self.album_artist != file.album_artist]
             if any(conditionals) and self._write_album_artist(dry_run):
-                updated.add(TagName.ALBUM_ARTIST)
+                updated.update({TagName.ALBUM_ARTIST: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.TRACK in tags:
             conditionals = [
@@ -57,17 +64,17 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
                 replace and (self.track_number != file.track_number or self.track_total != file.track_total)
             ]
             if any(conditionals) and self._write_track(dry_run):
-                updated.add(TagName.TRACK)
+                updated.update({TagName.TRACK: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.GENRES in tags:
             conditionals = [file.genres is None, replace and self.genres != file.genres]
             if any(conditionals) and self._write_genres(dry_run):
-                updated.add(TagName.GENRES)
+                updated.update({TagName.GENRES: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.YEAR in tags:
             conditionals = [file.year is None, replace and self.year != file.year]
             if any(conditionals) and self._write_year(dry_run):
-                updated.add(TagName.YEAR)
+                updated.update({TagName.YEAR: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.BPM in tags:
             conditionals = [
@@ -76,12 +83,12 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
                 replace and int(getattr(self, "bpm", 0)) != int(getattr(file, "bpm", 0))
             ]
             if any(conditionals) and self._write_bpm(dry_run):
-                updated.add(TagName.BPM)
+                updated.update({TagName.BPM: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.KEY in tags:
             conditionals = [file.key is None, replace and self.key != file.key]
             if any(conditionals) and self._write_key(dry_run):
-                updated.add(TagName.KEY)
+                updated.update({TagName.KEY: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.DISC in tags:
             conditionals = [
@@ -89,32 +96,33 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
                 replace and (self.disc_number != file.disc_number or self.disc_total != file.disc_total)
             ]
             if any(conditionals) and self._write_disc(dry_run):
-                updated.add(TagName.DISC)
+                updated.update({TagName.DISC: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.COMPILATION in tags:
             conditionals = [file.compilation is None, replace and self.compilation != file.compilation]
             if any(conditionals) and self._write_compilation(dry_run):
-                updated.add(TagName.COMPILATION)
+                updated.update({TagName.COMPILATION: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.COMMENTS in tags:
             conditionals = [file.comments is None, replace and self.comments != file.comments]
             if any(conditionals) and self._write_comments(dry_run):
-                updated.add(TagName.COMMENTS)
+                updated.update({TagName.COMMENTS: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.URI in tags:  # needs deeper comparison
             conditionals = [file.uri is None, self.has_uri is False, replace and self.uri != file.uri]
             if any(conditionals) and self._write_uri(dry_run):
-                updated.add(TagName.URI)
+                updated.update({TagName.URI: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.IMAGES in tags:  # needs deeper comparison
-            conditionals = [file.has_image is False, replace and self.has_image != file.has_image]
+            conditionals = [file.has_image is False, replace and self.image_links is not None]
             if any(conditionals) and self._write_images(dry_run):
-                updated.add(TagName.IMAGES)
-
-        if not dry_run and len(updated) > 0:
+                updated.update({TagName.IMAGES: [i for i, c in enumerate(conditionals) if c][0]})
+        
+        save = not dry_run and len(updated) > 0
+        if save:
             self.file.save()
 
-        return updated
+        return UpdateResultTrack(saved=save, updated=updated)
                     
     @abstractmethod
     def _write_tag(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
@@ -279,7 +287,7 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
         :returns: True if the file was updated or would have been if dry_run is True, False otherwise.
         """
 
-    def delete_tags(self, tags: Optional[UnionList[TagName]] = None, dry_run: bool = True) -> Set[TagName]:
+    def delete_tags(self, tags: Optional[UnionList[TagName]] = None, dry_run: bool = True) -> UpdateResultTrack:
         """
         Remove tags from file.
 
@@ -297,10 +305,11 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
         if TagName.IMAGES in removed:
             self.has_image = False
 
-        if not dry_run and len(removed) > 0:
+        save = not dry_run and len(removed) > 0
+        if save:
             self.file.save()
 
-        return removed
+        return UpdateResultTrack(saved=save, updated={u: 0 for u in removed})
 
     def _delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:
         """
