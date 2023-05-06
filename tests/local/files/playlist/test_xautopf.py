@@ -5,13 +5,14 @@ from typing import List
 
 import pytest
 
-from local.files.track import TrackCompare, TagName, PropertyName
+from local.files.track import TagName, PropertyName
 from local.files.track.collection.limit import LimitType
 from local.files.track.collection.sort import ShuffleMode, ShuffleBy
 from syncify.local.files import XAutoPF, IllegalFileTypeError
 from syncify.local.files.track import LocalTrack, FLAC, M4A, WMA, MP3
 from tests.common import path_txt
-from tests.local.files.playlist.playlist import copy_playlist_file, path_playlist_xautopf_ra, path_playlist_xautopf_bp, path_resources
+from tests.local.files.playlist.playlist import copy_playlist_file, path_resources
+from tests.local.files.playlist.playlist import path_playlist_xautopf_ra, path_playlist_xautopf_bp
 from tests.local.files.track.track import random_tracks, path_track_flac, path_track_m4a, path_track_wma, path_track_mp3
 
 
@@ -21,10 +22,10 @@ def test_init_fails():
     # raises error on non-existent file, remove this once supported
     with pytest.raises(NotImplementedError):
         path_fake = join(dirname(path_playlist_xautopf_bp), "does_not_exist.xautopf")
-        pl = XAutoPF(path=path_fake, tracks=tracks)
+        XAutoPF(path=path_fake, tracks=tracks)
 
     with pytest.raises(IllegalFileTypeError):
-        pl = XAutoPF(path=path_txt, tracks=tracks)
+        XAutoPF(path=path_txt, tracks=tracks)
 
 
 def test_load_playlist_1():

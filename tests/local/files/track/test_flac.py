@@ -6,7 +6,8 @@ import pytest
 
 from syncify.local.files import FLAC, IllegalFileTypeError
 from tests.common import path_txt
-from tests.local.files.track.track import path_track_flac, path_track_resources, update_tags_test, clear_tags_test, update_images_test
+from tests.local.files.track.track import path_track_flac, path_track_resources
+from tests.local.files.track.track import update_tags_test, clear_tags_test, update_images_test
 
 
 def test_load():

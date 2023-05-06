@@ -34,7 +34,9 @@ class TrackProcessor(PrettyPrinter, metaclass=ABCMeta):
         """
         raise NotImplementedError
 
-    def _get_method_name(self, value: str, valid: Union[List[str], Mapping[str, str]], prefix: Optional[str] = None) -> str:
+    def _get_method_name(
+            self, value: str, valid: Union[List[str], Mapping[str, str]], prefix: Optional[str] = None
+    ) -> str:
         """
         Find a method that matches the given string from a list of valid methods.
 

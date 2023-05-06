@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from os.path import exists
-from typing import Optional, List, Set, Collection, Union
+from typing import Optional, List, Collection, Union
 
-from syncify.local.files.track import LocalTrack, load_track, TrackMatch
 from syncify.local.files.playlist.playlist import Playlist
+from syncify.local.files.track import LocalTrack, load_track, TrackMatch
 from syncify.utils_new.generic import UpdateResult
 
 

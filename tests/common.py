@@ -1,10 +1,7 @@
 import os
-import shutil
 import string
 from os.path import join, dirname, exists
 from random import choice, randrange
-
-import pytest
 
 path_root = dirname(dirname(__file__))
 

@@ -1,9 +1,10 @@
 from glob import glob
-from os.path import basename, splitext, join
+from os.path import basename, splitext, join, exists
 from typing import Optional, List, Set, MutableMapping, Mapping
 
-from local.files.track.file import __ACCEPTED_FILETYPES__, __TRACK_CLASSES__
-from syncify.local.files.utils.exception import IllegalFileTypeError
+from syncify.local.files import IllegalFileTypeError
+from syncify.local.files.track import __TRACK_FILETYPES__, __TRACK_CLASSES__
+from syncify.local.files.playlist import __PLAYLIST_FILETYPES__
 
 
 class PlaylistManager:
@@ -38,7 +39,7 @@ class PlaylistManager:
         """
         if self.playlist_folder is not None:
             self.playlist_paths = {}
-            for filetype in self.filetypes:
+            for filetype in __PLAYLIST_FILETYPES__:
                 paths = glob(join(self.playlist_folder, "**", f"*.{filetype}"), recursive=True)
                 self.playlist_paths.update({splitext(basename(path))[0]: path for path in paths})
 
@@ -50,7 +51,7 @@ class PlaylistManager:
             }
         else:
             self.track_paths = set()
-            for ext in __ACCEPTED_FILETYPES__:
+            for ext in __TRACK_FILETYPES__:
                 # first glob doesn't get filenames that start with a period
                 self.track_paths.update(glob(join(self.library_folder, "**", f"*{ext}"), recursive=True))
                 # second glob only picks up filenames that start with a period
@@ -123,16 +124,3 @@ class PlaylistManager:
             return self.get_track_paths_xautopf(path=path)
         else:
             raise IllegalFileTypeError(ext)
-
-
-if __name__ == "__main__":
-    playlist_folder = "MusicBee/Playlists"
-    library_folder = "/mnt/d/Music/"
-    other_folder = "D:\\Music\\"
-
-    loader = PlaylistLoader(
-        library_folder=library_folder, playlist_folder=playlist_folder, other_folders={other_folder}
-    )
-
-    name = "2sing.m3u"
-    print(loader.get_track_paths_m3u(path=join(library_folder, playlist_folder, "B A S S")))

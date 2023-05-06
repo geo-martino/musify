@@ -9,7 +9,7 @@ from .m4a import M4A
 from .wma import WMA
 
 __TRACK_CLASSES__ = [FLAC, MP3, M4A, WMA]
-__ACCEPTED_FILETYPES__ = [filetype for c in __TRACK_CLASSES__ for filetype in c.valid_extensions]
+__TRACK_FILETYPES__ = [filetype for c in __TRACK_CLASSES__ for filetype in c.valid_extensions]
 
 from syncify.local.files.file import IllegalFileTypeError
 

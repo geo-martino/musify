@@ -1,17 +1,17 @@
 from typing import List, MutableMapping, Any
 
-from syncify.local.files import Track, TrackCollection
+from syncify.local.files.track import LocalTrack, TrackCollection
 
 
 class Album(TrackCollection):
 
     @property
-    def tracks(self) -> List[Track]:
+    def tracks(self) -> List[LocalTrack]:
         return self._tracks
 
-    def __init__(self, name: str, tracks: List[Track]):
+    def __init__(self, name: str, tracks: List[LocalTrack]):
         self.name: str = name
-        self._tracks: List[Track] = [track for track in tracks if track.album.lower() == name.lower()]
+        self._tracks: List[LocalTrack] = [track for track in tracks if track.album.lower() == name.lower()]
 
     def as_dict(self) -> MutableMapping[str, Any]:
         return {
@@ -29,12 +29,12 @@ class Album(TrackCollection):
 class Folder(TrackCollection):
 
     @property
-    def tracks(self) -> List[Track]:
+    def tracks(self) -> List[LocalTrack]:
         return self._tracks
 
-    def __init__(self, name: str, tracks: List[Track]):
+    def __init__(self, name: str, tracks: List[LocalTrack]):
         self.name: str = name
-        self._tracks: List[Track] = [track for track in tracks if track.folder.lower() == name.lower()]
+        self._tracks: List[LocalTrack] = [track for track in tracks if track.folder.lower() == name.lower()]
 
     def as_dict(self) -> MutableMapping[str, Any]:
         return {

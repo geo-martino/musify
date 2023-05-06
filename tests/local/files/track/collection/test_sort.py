@@ -1,6 +1,8 @@
 from itertools import groupby
 from random import choice, randrange
+from typing import Callable
 
+from local.files.track import LocalTrack
 from syncify.local.files.track import PropertyName
 from syncify.local.files.track import TrackSort, TagName
 from syncify.local.files.track.collection.sort import ShuffleMode
@@ -85,11 +87,11 @@ def test_sort():
 
     # complex multi-sort, includes reverse options
     tracks_sorted = []
-    sort_key_1 = lambda x: x.album
+    sort_key_1: Callable[[LocalTrack], str] = lambda x: x.album
     for _, group_1 in groupby(sorted(tracks, key=sort_key_1, reverse=True), key=sort_key_1):
-        sort_key_2 = lambda x: x.disc_number
+        sort_key_2: Callable[[LocalTrack], int] = lambda x: x.disc_number
         for __, group_2 in groupby(sorted(group_1, key=sort_key_2), key=sort_key_2):
-            sort_key_3 = lambda x: x.track_number
+            sort_key_3: Callable[[LocalTrack], int] = lambda x: x.track_number
             for ___, group_3 in groupby(sorted(group_2, key=sort_key_3, reverse=True), key=sort_key_3):
                 tracks_sorted.extend(list(group_3))
 

@@ -73,6 +73,7 @@ class TrackSort(TrackProcessor):
 
         if isinstance(example_value, datetime):
             default = datetime.fromtimestamp(1, tz=UTC)
+
             def get_dt(t: LocalTrack) -> datetime:
                 value = getattr(t, tag_name, default)
                 if value is None:
@@ -88,7 +89,9 @@ class TrackSort(TrackProcessor):
         tracks.sort(key=sort_key, reverse=reverse)
 
     @classmethod
-    def group_by_field(cls, tracks: List[LocalTrack], field: Optional[Name] = None) -> MutableMapping[Any, List[LocalTrack]]:
+    def group_by_field(
+            cls, tracks: List[LocalTrack], field: Optional[Name] = None
+    ) -> MutableMapping[Any, List[LocalTrack]]:
         """
         Group tracks by the values of a given field.
 
