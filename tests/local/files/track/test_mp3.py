@@ -54,11 +54,10 @@ def test_set_and_find_file_paths():
     track = MP3(file=path_track_mp3.upper())
     assert track.path == path_track_mp3.upper()
 
-    MP3.set_file_paths(path_track_resources)
-    assert MP3.available_track_paths == {path_track_mp3}
-    assert MP3._available_track_paths_lower_map == {path_track_mp3.lower(): path_track_mp3}
+    paths = MP3.get_filepaths(path_track_resources)
+    assert paths == {path_track_mp3}
 
-    track = MP3(file=path_track_mp3.upper())
+    track = MP3(file=path_track_mp3.upper(), available=paths)
     assert track.path != path_track_mp3.upper()
 
 

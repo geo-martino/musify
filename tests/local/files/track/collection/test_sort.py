@@ -26,7 +26,7 @@ def test_sort_by_field():
         track.track_number = i
         track.track_total = len(tracks)
 
-    tracks_sorted = sorted(tracks, key=lambda x: x.track_number)
+    tracks_sorted = sorted(tracks, key=lambda t: t.track_number)
     TrackSort.sort_by_field(tracks, field=TagName.TRACK)
     assert tracks == tracks_sorted
     TrackSort.sort_by_field(tracks, field=TagName.TRACK, reverse=True)
@@ -36,14 +36,14 @@ def test_sort_by_field():
     for i, track in enumerate(tracks, 1):
         track.date_modified = track.date_modified.replace(second=i)
 
-    tracks_sorted = sorted(tracks, key=lambda x: x.date_modified)
+    tracks_sorted = sorted(tracks, key=lambda t: t.date_modified)
     TrackSort.sort_by_field(tracks, field=PropertyName.DATE_MODIFIED)
     assert tracks == tracks_sorted
     TrackSort.sort_by_field(tracks, field=PropertyName.DATE_MODIFIED, reverse=True)
     assert tracks == list(reversed(tracks_sorted))
 
     # sort on str, ignoring defined words like 'The' and 'A'
-    tracks_sorted = sorted(tracks, key=lambda x: strip_ignore_words(x.title))
+    tracks_sorted = sorted(tracks, key=lambda t: strip_ignore_words(t.title))
     TrackSort.sort_by_field(tracks, field=TagName.TITLE)
     assert tracks == tracks_sorted
     TrackSort.sort_by_field(tracks, field=TagName.TITLE, reverse=True)
@@ -81,17 +81,17 @@ def test_sort():
         track.disc_number = randrange(1, 3)
 
     # simple multi-sort
-    tracks_sorted = sorted(tracks, key=lambda x: (x.album, x.disc_number, x.track_number))
+    tracks_sorted = sorted(tracks, key=lambda t: (t.album, t.disc_number, t.track_number))
     TrackSort(fields=[TagName.ALBUM, TagName.DISC, TagName.TRACK], shuffle_mode=ShuffleMode.NONE).sort(tracks)
     assert tracks == tracks_sorted
 
     # complex multi-sort, includes reverse options
     tracks_sorted = []
-    sort_key_1: Callable[[LocalTrack], str] = lambda x: x.album
+    sort_key_1: Callable[[LocalTrack], str] = lambda t: t.album
     for _, group_1 in groupby(sorted(tracks, key=sort_key_1, reverse=True), key=sort_key_1):
-        sort_key_2: Callable[[LocalTrack], int] = lambda x: x.disc_number
+        sort_key_2: Callable[[LocalTrack], int] = lambda t: t.disc_number
         for __, group_2 in groupby(sorted(group_1, key=sort_key_2), key=sort_key_2):
-            sort_key_3: Callable[[LocalTrack], int] = lambda x: x.track_number
+            sort_key_3: Callable[[LocalTrack], int] = lambda t: t.track_number
             for ___, group_3 in groupby(sorted(group_2, key=sort_key_3, reverse=True), key=sort_key_3):
                 tracks_sorted.extend(list(group_3))
 

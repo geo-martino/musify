@@ -54,11 +54,10 @@ def test_set_and_find_file_paths():
     track = M4A(file=path_track_m4a.upper())
     assert track.path == path_track_m4a.upper()
 
-    M4A.set_file_paths(path_track_resources)
-    assert M4A.available_track_paths == {path_track_m4a}
-    assert M4A._available_track_paths_lower_map == {path_track_m4a.lower(): path_track_m4a}
+    paths = M4A.get_filepaths(path_track_resources)
+    assert paths == {path_track_m4a}
 
-    track = M4A(file=path_track_m4a.upper())
+    track = M4A(file=path_track_m4a.upper(), available=paths)
     assert track.path != path_track_m4a.upper()
 
 

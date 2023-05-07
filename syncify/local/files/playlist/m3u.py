@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from os.path import exists
+from datetime import datetime
+from os.path import exists, getmtime
 from typing import Optional, List, Collection, Union
 
 from syncify.local.files.playlist.playlist import Playlist
@@ -85,15 +86,19 @@ class M3U(Playlist):
 
         return self.tracks
 
-    def save(self) -> UpdateResultM3U:
+    def save(self, dry_run: bool = True) -> UpdateResultM3U:
         start_paths = set(self._prepare_paths_for_output({track.path.lower() for track in self._tracks_original}))
 
-        with open(self.path, "w", encoding='utf-8') as f:
-            paths = self._prepare_paths_for_output([track.path for track in self.tracks])
-            f.writelines([path.strip() + '\n' for path in paths])
+        if not dry_run:
+            with open(self.path, "w", encoding='utf-8') as f:
+                paths = self._prepare_paths_for_output([track.path for track in self.tracks])
+                f.writelines([path.strip() + '\n' for path in paths])
+            self.date_modified = datetime.fromtimestamp(getmtime(self._path))
 
-        with open(self.path, "r", encoding='utf-8') as f:
-            final_paths = {line.rstrip().lower() for line in f if line.rstrip()}
+            with open(self.path, "r", encoding='utf-8') as f:
+                final_paths = {line.rstrip().lower() for line in f if line.rstrip()}
+        else:
+            final_paths = {track.path.lower() for track in self._tracks}
 
         self._tracks_original = self.tracks.copy()
         return UpdateResultM3U(

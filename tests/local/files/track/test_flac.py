@@ -54,11 +54,10 @@ def test_set_and_find_file_paths():
     track = FLAC(file=path_track_flac.upper())
     assert track.path == path_track_flac.upper()
 
-    FLAC.set_file_paths(path_track_resources)
-    assert FLAC.available_track_paths == {path_track_flac}
-    assert FLAC._available_track_paths_lower_map == {path_track_flac.lower(): path_track_flac}
+    paths = FLAC.get_filepaths(path_track_resources)
+    assert paths == {path_track_flac}
 
-    track = FLAC(file=path_track_flac.upper())
+    track = FLAC(file=path_track_flac.upper(), available=paths)
     assert track.path != path_track_flac.upper()
 
 

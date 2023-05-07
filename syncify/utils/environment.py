@@ -329,7 +329,6 @@ class Environment:
         self.runtime_settings = self._configure(func_name, self.runtime_settings[func_name])
         return self.runtime_settings
 
-
     def get_parser(self):
         parser = argparse.ArgumentParser(
         description="Sync your local library to Spotify.", prog="syncify",

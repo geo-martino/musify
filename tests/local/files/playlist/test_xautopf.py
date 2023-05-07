@@ -193,13 +193,16 @@ def test_save_playlist():
     assert pl.path == path_file_copy
     assert len(pl.tracks) == 11
 
-    # perform some operations on the playlist and save
+    # perform some operations on the playlist
     pl.description = "new description"
     tracks_added = random_tracks(3)
     pl.tracks += tracks_added
     pl.tracks.pop(5)
     pl.tracks.pop(6)
     pl.tracks.remove(tracks_actual[0])
+
+    # first test results on a dry run
+    original_dt = pl.date_modified
     result = pl.save()
 
     assert result.start == 11
@@ -216,6 +219,12 @@ def test_save_playlist():
     assert result.final_comparators == 3
     assert not result.start_limiter
     assert result.start_sorter
+
+    assert pl.date_modified == original_dt
+
+    # save the file and check it has been updated
+    pl.save(dry_run=False)
+    assert pl.date_modified > original_dt
 
     os.remove(path_file_copy)
 

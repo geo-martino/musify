@@ -88,7 +88,7 @@ def test_match():
         track._path = exclude_paths[i]
     tracks_include_reduced = [track for track in tracks_include if track not in tracks_exclude]
 
-    sort_key: Callable[[LocalTrack], Any] = lambda x: x.path
+    sort_key: Callable[[LocalTrack], Any] = lambda t: t.path
 
     # match on paths only
     matcher = TrackMatch(

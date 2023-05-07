@@ -3,7 +3,7 @@ from datetime import datetime
 from enum import IntEnum
 from typing import Optional, List, Mapping, Set, Self
 
-from syncify.local.files.utils.exception import EnumNotFoundError
+from syncify.utils_new.exception import EnumNotFoundError
 
 
 @dataclass
@@ -42,11 +42,11 @@ class Tags:
     key: Optional[str]
     disc_number: Optional[int]
     disc_total: Optional[int]
-    compilation: bool
+    compilation: Optional[bool]
     comments: Optional[List[str]]
 
     uri: Optional[str]
-    has_uri: bool
+    has_uri: Optional[bool]
 
     image_links: Optional[Mapping[str, str]]
     has_image: bool

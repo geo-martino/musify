@@ -54,11 +54,10 @@ def test_set_and_find_file_paths():
     track = WMA(file=path_track_wma.upper())
     assert track.path == path_track_wma.upper()
 
-    WMA.set_file_paths(path_track_resources)
-    assert WMA.available_track_paths == {path_track_wma}
-    assert WMA._available_track_paths_lower_map == {path_track_wma.lower(): path_track_wma}
+    paths = WMA.get_filepaths(path_track_resources)
+    assert paths == {path_track_wma}
 
-    track = WMA(file=path_track_wma.upper())
+    track = WMA(file=path_track_wma.upper(), available=paths)
     assert track.path != path_track_wma.upper()
 
 

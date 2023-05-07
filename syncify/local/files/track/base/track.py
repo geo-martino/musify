@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
+from datetime import datetime
 from glob import glob
-from os.path import join, splitext, exists
-from typing import Optional, List, Union, Mapping, Set
+from os.path import join, splitext, exists, getmtime, getsize
+from typing import Optional, List, Union, Mapping, Set, Collection
 
 import mutagen
 
@@ -19,12 +20,11 @@ class LocalTrack(PrettyPrinter, File, TagReader, TagWriter, metaclass=ABCMeta):
     Generic track object for extracting, modifying, and saving tags for a given file.
 
     :param file: The path or Mutagen object of the file to load.
+    :param available: A list of available track paths that are known to exist and are valid for this track type.
+        Useful for case-insensitive path loading and correcting paths to case-sensitive.
     """
 
     _num_sep = "/"
-
-    available_track_paths: Set[str] = None  # all available paths for this file type
-    _available_track_paths_lower_map: Mapping[str, str] = None  # all available paths mapped as lower case to actual
 
     @property
     @abstractmethod
@@ -41,25 +41,29 @@ class LocalTrack(PrettyPrinter, File, TagReader, TagWriter, metaclass=ABCMeta):
         return self._file
 
     @classmethod
-    def set_file_paths(cls, library_folder: str) -> None:
-        """
-        Set class property for all available track file paths. Necessary for loading with case-sensitive logic.
-
-        :param library_folder: Path of the music library to search.
-        """
-        if cls.available_track_paths is None:
-            cls.available_track_paths = set()
+    def get_filepaths(cls, library_folder: str) -> Set[str]:
+        """Get all files in a given library that match this Track object's valid filetypes."""
+        paths = set()
 
         for ext in cls.valid_extensions:
             # first glob doesn't get filenames that start with a period
-            cls.available_track_paths.update(glob(join(library_folder, "**", f"*{ext}"), recursive=True))
+            paths.update(glob(join(library_folder, "**", f"*{ext}"), recursive=True))
             # second glob only picks up filenames that start with a period
-            cls.available_track_paths.update(glob(join(library_folder, "*", "**", f".*{ext}"), recursive=True))
+            paths.update(glob(join(library_folder, "*", "**", f".*{ext}"), recursive=True))
 
-        cls._available_track_paths_lower_map = {path.lower(): path for path in cls.available_track_paths}
+        return paths
 
-    def __init__(self, file: Union[str, mutagen.File]):
+    def __init__(self, file: Union[str, mutagen.File], available: Optional[Collection[str]] = None):
         self._file: Optional[mutagen.File] = None
+
+        # all available paths for this file type
+        self._available_paths: Optional[Collection[str]] = None
+        # all available paths mapped as lower case to actual
+        self._available_paths_lower: Optional[Mapping[str, str]] = None
+
+        if available is not None:
+            self._available_paths = set(available)
+            self._available_paths_lower = {path.lower(): path for path in self._available_paths}
 
         if isinstance(file, str):
             self._path = file
@@ -87,9 +91,9 @@ class LocalTrack(PrettyPrinter, File, TagReader, TagWriter, metaclass=ABCMeta):
         # extract file extension and confirm file type is listed in accepted file types list
         self._validate_type(self.path)
 
-        if self.available_track_paths is not None and self._path not in self.available_track_paths:
+        if self._available_paths is not None and self._path not in self._available_paths:
             # attempt to correct case-insensitive path to case-sensitive
-            path = self._available_track_paths_lower_map.get(self._path.lower())
+            path = self._available_paths_lower.get(self._path.lower())
             if path is not None and exists(path):
                 self._path = path
 
@@ -107,12 +111,14 @@ class LocalTrack(PrettyPrinter, File, TagReader, TagWriter, metaclass=ABCMeta):
 
     def save_file(self) -> bool:
         """
-        Save current tags to file
+        Save current tags to file and update object attributes relating to file properties.
 
         :return: True if successful, False otherwise.
         """
         try:
             self._file.save()
+            self.size = getsize(self.path)
+            self.date_modified = datetime.fromtimestamp(getmtime(self.path))
         except mutagen.MutagenError as ex:
             raise ex
         return True

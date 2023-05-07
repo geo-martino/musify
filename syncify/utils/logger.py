@@ -4,7 +4,11 @@ import re
 import sys
 from datetime import datetime
 from os.path import join, dirname, exists
-from typing import Literal, Optional, List
+from typing import Literal, Optional, List, Collection, Any, Type, Iterable
+
+from tqdm.asyncio import tqdm_asyncio
+from tqdm.auto import tqdm as tqdm_auto
+from tqdm.std import tqdm
 
 
 class LogStdOutFilter(logging.Filter):
@@ -130,3 +134,26 @@ class Logger:
         for handler in handlers:
             self._logger.removeHandler(handler)
             handler.close()
+
+    @staticmethod
+    def _get_max_width(items: Collection[Any], max_width: int = 50) -> int:
+        if len(items) == 0:
+            return 0
+        items = [str(item) for item in items]
+        return len(max(items, key=len)) + 1 if len(max(items, key=len)) + 1 < max_width else max_width
+
+    @staticmethod
+    def _truncate_align_str(value: Any, max_width: int = 0) -> str:
+        if max_width == 0:
+            return value
+        return f"{value if len(str(value)) < 50 else str(value)[:47] + '...':<{max_width}}"
+
+    @staticmethod
+    def _get_progress_bar(**kwargs) -> tqdm_asyncio:
+        """Wrapper for tqdm progress bar. For kwargs, see :class:`tqdm`"""
+        return tqdm_auto(
+            leave=True,  # self._verbose > 0,
+            disable=False,  # self._verbose > 2 and self._verbose < 2,
+            file=sys.stdout,
+            **kwargs
+        )

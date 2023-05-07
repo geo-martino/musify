@@ -1,5 +1,5 @@
 from io import BytesIO
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Collection
 
 import mutagen
 import mutagen.id3
@@ -8,7 +8,7 @@ from PIL import Image
 from mutagen.id3 import Encoding
 
 from syncify.local.files.track.base import LocalTrack, TagName, TagMap
-from syncify.local.files.utils.image import open_image, get_image_bytes
+from syncify.local.files.track.base.image import open_image, get_image_bytes
 from syncify.spotify.helpers import __UNAVAILABLE_URI_VALUE__
 
 
@@ -17,6 +17,8 @@ class MP3(LocalTrack):
     Track object for extracting, modifying, and saving tags from MP3 files.
 
     :param file: The path or Mutagen object of the file to load.
+    :param available: A list of available track paths that are known to exist and are valid for this track type.
+        Useful for case-insensitive path loading and correcting paths to case-sensitive.
     """
 
     valid_extensions = [".mp3"]
@@ -39,8 +41,8 @@ class MP3(LocalTrack):
         images=["APIC"],
     )
 
-    def __init__(self, file: Union[str, mutagen.File]):
-        LocalTrack.__init__(self, file=file)
+    def __init__(self, file: Union[str, mutagen.File], available: Optional[Collection[str]] = None):
+        LocalTrack.__init__(self, file=file, available=available)
         self._file: mutagen.mp3.MP3 = self._file
 
     def _read_tag(self, tag_ids: List[str]) -> Optional[list]:

@@ -1,16 +1,17 @@
 import re
 from abc import ABCMeta, abstractmethod
-from os.path import basename, splitext, dirname, join
-from typing import List, MutableMapping, Optional, Collection, Any, Union
+from datetime import datetime
+from os.path import basename, splitext, dirname, join, getmtime, exists
+from typing import List, MutableMapping, Optional, Collection, Any, Union, Callable, Tuple
 
 from syncify.local.files.file import File
 from syncify.local.files.track import LocalTrack
 from syncify.local.files.track.collection import TrackCollection
 from syncify.local.files.track.collection import TrackMatch, TrackLimit, TrackSort
-from syncify.utils_new.generic import PrettyPrinter, UpdateResult
+from syncify.utils_new.generic import UpdateResult
 
 
-class Playlist(PrettyPrinter, TrackCollection, File, metaclass=ABCMeta):
+class Playlist(TrackCollection, File, metaclass=ABCMeta):
     """
     Generic class for CRUD operations on playlists.
 
@@ -30,6 +31,10 @@ class Playlist(PrettyPrinter, TrackCollection, File, metaclass=ABCMeta):
 
     @tracks.setter
     def tracks(self, value: List[LocalTrack]):
+        if len(value) > 0:
+            key_type = Callable[[LocalTrack], Tuple[bool, datetime]]
+            key: key_type = lambda t: (t.last_played is None, t.last_played)
+            self.last_played = sorted(value, key=key, reverse=True)[0].last_played
         self._tracks = value
 
     @property
@@ -62,8 +67,13 @@ class Playlist(PrettyPrinter, TrackCollection, File, metaclass=ABCMeta):
     ):
         self._name, self.ext = splitext(basename(path))
         self._path: str = path
-        self.tracks: Optional[List[LocalTrack]] = None
+        self._tracks: Optional[List[LocalTrack]] = None
         self.description: Optional[str] = None
+        self.last_played: Optional[datetime] = None
+        self.date_modified: Optional[datetime] = None
+
+        if exists(self._path):
+            self.date_modified = datetime.fromtimestamp(getmtime(self._path))
 
         self.matcher = matcher
         self.limiter = limiter
@@ -112,10 +122,11 @@ class Playlist(PrettyPrinter, TrackCollection, File, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def save(self) -> UpdateResult:
+    def save(self, dry_run: bool = True) -> UpdateResult:
         """
         Write the tracks in this Playlist and its settings (if applicable) to file.
 
+        :param dry_run: Run function, but do not modify file at all.
         :return: UpdateResult object with stats on the changes to the playlist.
         """
 
@@ -125,47 +136,7 @@ class Playlist(PrettyPrinter, TrackCollection, File, metaclass=ABCMeta):
             "description": self.description,
             "path": self.path,
             "processors": [p for p in [self.matcher, self.limiter, self.sorter] if p is not None],
-            "track_count": len(self.tracks) if self.tracks is not None else 0
-            # "tracks": self.tracks
+            "track_count": len(self.tracks) if self.tracks is not None else 0,
+            "date_modified": self.date_modified,
+            "last_played": self.last_played,
         }
-
-
-if __name__ == "__main__":
-    from os.path import join
-    from glob import glob
-
-    from syncify.local.files.track import FLAC
-    from syncify.local.files.track import MP3
-    from syncify.local.files.track import M4A
-    from syncify.local.files.track import WMA
-    from syncify.local.files import load_track
-    from syncify.local.files.playlist.xautopf import XAutoPF
-    from syncify.local.files.playlist.m3u import M3U
-
-    playlist_folder = join("MusicBee", "Playlists")
-    library_folder = "D:\\Music\\"
-    other_folder = "/mnt/d/Music/"
-
-    print("Setting file paths")
-    FLAC.set_file_paths(library_folder=library_folder)
-    MP3.set_file_paths(library_folder=library_folder)
-    M4A.set_file_paths(library_folder=library_folder)
-    WMA.set_file_paths(library_folder=library_folder)
-
-    print("Loading tracks")
-    tracks = []
-    tracks.extend(load_track(path=path) for path in FLAC.available_track_paths)
-    tracks.extend(load_track(path=path) for path in MP3.available_track_paths)
-    tracks.extend(load_track(path=path) for path in M4A.available_track_paths)
-    tracks.extend(load_track(path=path) for path in WMA.available_track_paths)
-
-    for path in glob(join(library_folder, playlist_folder, "**", f"*.xautopf"), recursive=True):
-        pl = XAutoPF(path=path, tracks=tracks, library_folder=library_folder, other_folders={other_folder})
-        print(pl.name, len(pl))
-        # # [print(str(i).zfill(3), track.album, track.title, sep=" = ") for i, track in enumerate(pl.tracks, 1)]
-        # print(json.dumps(pl.xml, indent=2))
-
-    for path in glob(join(library_folder, playlist_folder, "**", f"*.m3u"), recursive=True):
-        pl = M3U(path=path, tracks=tracks, library_folder=library_folder, other_folders={other_folder})
-        print(pl.name, len(pl))
-        # [print(str(i).zfill(3), track.album, track.title, sep=" = ") for i, track in enumerate(pl.tracks, 1)]

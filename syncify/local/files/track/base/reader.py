@@ -140,7 +140,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
         value = str(values[0])
         return int(value.split(self._num_sep)[1]) if self._num_sep in value else int(value)
 
-    def _read_compilation(self) -> bool:
+    def _read_compilation(self) -> Optional[bool]:
         """Extract metadata from file for compilation"""
         values = self._read_tag(self.tag_map.compilation)
         return bool(int(values[0])) if values is not None else None
@@ -150,13 +150,13 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
         values = self._read_tag(self.tag_map.comments)
         return list({str(value) for value in values}) if values is not None else None
 
-    def _read_uri(self) -> Tuple[Optional[str], bool]:
+    def _read_uri(self) -> Tuple[Optional[str], Optional[bool]]:
         """
         Extract metadata relating to Spotify URI from current object metadata
 
         :return: URI, if the track is available on remote server i.e. has_uri on remote server.
         """
-        has_uri = False
+        has_uri = None
         uri = None
         possible_values: Optional[List[str]] = getattr(self, self.uri_tag.name.lower())
         if possible_values is None or len(possible_values) == 0:

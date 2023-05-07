@@ -1,13 +1,26 @@
 from copy import copy
-from datetime import datetime, UTC
+from datetime import datetime
 from random import shuffle
 from typing import Any, Callable, List, Mapping, MutableMapping, Optional, Self, Tuple, Union
 
 from syncify.local.files.track.base import Name, PropertyName, TagName, LocalTrack
 from syncify.local.files.track.collection.processor import TrackProcessor, Mode
-from syncify.local.files.utils.musicbee import get_field_from_code
 from syncify.utils_new.generic import flatten_nested, strip_ignore_words, UnionList
-from utils.helpers import make_list
+from syncify.utils_new.helpers import make_list
+
+
+def get_field_from_code(field_code: int) -> Optional[Name]:
+    """Get the Tag or Property for a given MusicBee field code"""
+    if field_code == 0:
+        return
+    elif field_code in [e.value for e in TagName.all()]:
+        return TagName.from_value(field_code)
+    elif field_code in [e.value for e in PropertyName.all()]:
+        return PropertyName.from_value(field_code)
+    elif field_code == 78:  # album including articles like 'the' and 'a' etc.
+        return TagName.ALBUM  # album ignoring articles like 'the' and 'a' etc.
+    else:
+        raise ValueError(f"Field code not recognised: {field_code}")
 
 
 class ShuffleMode(Mode):
@@ -72,15 +85,9 @@ class TrackSort(TrackProcessor):
             return
 
         if isinstance(example_value, datetime):
-            default = datetime.fromtimestamp(1, tz=UTC)
-
-            def get_dt(t: LocalTrack) -> datetime:
-                value = getattr(t, tag_name, default)
-                if value is None:
-                    value = default
-                return value
-
-            sort_key: Callable[[LocalTrack], float] = lambda t: get_dt(t).timestamp()
+            def sort_key(t: LocalTrack) -> float:
+                value = getattr(t, tag_name)
+                return value.timestamp() if value is not None else 0.0
         elif isinstance(example_value, str):
             sort_key: Callable[[LocalTrack], Tuple[bool, str]] = lambda t: strip_ignore_words(getattr(t, tag_name, ""))
         else:
@@ -148,7 +155,7 @@ class TrackSort(TrackProcessor):
         elif "DefinedSort" in source:
             fields = [field]
         else:
-            raise ValueError("Sort type in XML not recognised")
+            raise NotImplementedError("Sort type in XML not recognised")
 
         shuffle_mode = ShuffleMode.from_name(cls._camel_to_snake(xml["SmartPlaylist"]["@ShuffleMode"]))
         shuffle_by = ShuffleBy.from_name(cls._camel_to_snake(xml["SmartPlaylist"]["@GroupBy"]))
@@ -209,7 +216,7 @@ class TrackSort(TrackProcessor):
         tag_name = field.to_tag(field)[0] if isinstance(field, TagName) else field.name.lower()
 
         for i, (key, tracks) in enumerate(tracks_grouped.items(), 1):
-            tracks.sort(key=lambda x: getattr(x, tag_name), reverse=reverse)
+            tracks.sort(key=lambda t: (getattr(t, tag_name) is None, getattr(t, tag_name)), reverse=reverse)
             tracks_grouped[key] = cls._sort_by_fields(cls.group_by_field(tracks, field=field), fields=fields)
 
         return tracks_grouped

@@ -1,6 +1,7 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from os.path import exists
+from datetime import datetime
+from os.path import exists, getmtime
 from typing import Any, List, Mapping, Optional, Union, Collection
 
 import xmltodict
@@ -93,7 +94,7 @@ class XAutoPF(Playlist):
         self._tracks_original = self.tracks.copy()
         return tracks
 
-    def save(self) -> UpdateResultXAutoPF:
+    def save(self, dry_run: bool = True) -> UpdateResultXAutoPF:
         start_xml = deepcopy(self.xml)
 
         self.xml["SmartPlaylist"]["Source"]["Description"] = self.description
@@ -102,7 +103,9 @@ class XAutoPF(Playlist):
         # self._update_limiter()
         # self._update_sorter()
 
-        self._save_xml()
+        if not dry_run:
+            self._save_xml()
+        self.date_modified = datetime.fromtimestamp(getmtime(self._path))
 
         count_start = len(self._tracks_original)
         self._tracks_original = self.tracks.copy()

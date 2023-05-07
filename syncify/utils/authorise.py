@@ -178,7 +178,7 @@ class ApiAuthoriser:
 
         :param requests_args: dict. Authorisation data to post via requests.
         """
-        if user_args:  # TODO: Flask server for picking up redirects for token code instead?
+        if user_args:
             self._logger.info("Authorising user privilege access...")
 
             # opens in user's browser to authenticate

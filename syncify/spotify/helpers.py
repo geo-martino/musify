@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import List, Optional, Union, Set
 
-from syncify.utils.helpers import make_list
+from utils_new.helpers import make_list
 
 
 __UNAVAILABLE_URI_VALUE__ = "spotify:track:unavailable"

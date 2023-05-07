@@ -1,5 +1,5 @@
 import os
-from os.path import dirname, join, splitext, basename
+from os.path import dirname, join, splitext, basename, exists
 from typing import List
 
 import pytest
@@ -7,7 +7,8 @@ import pytest
 from syncify.local.files import M3U, IllegalFileTypeError
 from syncify.local.files.track import LocalTrack, FLAC, M4A, WMA
 from tests.common import path_txt
-from tests.local.files.playlist.playlist import copy_playlist_file, path_playlist_m3u, path_resources
+from tests.local.files.playlist.playlist import copy_playlist_file, path_playlist_m3u, path_resources, \
+    path_playlist_cache
 from tests.local.files.track.track import random_tracks, path_track_flac, path_track_m4a, path_track_wma
 
 
@@ -70,7 +71,7 @@ def test_load():
 
 
 def test_save():
-    path_new = join(dirname(path_playlist_m3u), "new_playlist.m3u")
+    path_new = join(path_playlist_cache, "new_playlist.m3u")
     try:
         os.remove(path_new)
     except FileNotFoundError:
@@ -86,14 +87,28 @@ def test_save():
     pl.load(tracks_random)
     assert pl.tracks == tracks_random
 
-    # ...save these loaded tracks
-    result = pl.save()
+    # ...save these loaded tracks first as a dry run - no output
+    result = pl.save(dry_run=True)
     assert result.start == 0
     assert result.added == len(tracks_random)
     assert result.removed == 0
     assert result.unchanged == 0
     assert result.difference == len(tracks_random)
     assert result.final == len(tracks_random)
+    assert not exists(path_new)
+    assert pl.date_modified is None
+
+    # ...save these loaded tracks for real
+    pl = M3U(path=path_new)
+    pl.load(tracks_random)
+    result = pl.save(dry_run=False)
+    assert result.start == 0
+    assert result.added == len(tracks_random)
+    assert result.removed == 0
+    assert result.unchanged == 0
+    assert result.difference == len(tracks_random)
+    assert result.final == len(tracks_random)
+    assert pl.date_modified is not None
 
     with open(path_new, 'r') as f:
         paths = [line.strip() for line in f]
@@ -102,13 +117,16 @@ def test_save():
     # ...remove some tracks and add some new ones
     tracks_random_new = random_tracks(15)
     pl.tracks = pl.tracks[:20] + tracks_random_new
-    result = pl.save()
+    original_dt = pl.date_modified
+    result = pl.save(dry_run=False)
+
     assert result.start == len(tracks_random)
     assert result.added == len(tracks_random_new)
     assert result.removed == 10
     assert result.unchanged == 20
     assert result.difference == 5
     assert result.final == 35
+    assert pl.date_modified > original_dt
 
     with open(path_new, 'r') as f:
         paths = [line.strip() for line in f]
@@ -125,7 +143,7 @@ def test_save():
     tracks_random = random_tracks(10)
     pl.tracks = pl.tracks[:2] + tracks_random
     pl.name = "New Playlist"
-    result = pl.save()
+    result = pl.save(dry_run=False)
 
     assert result.start == 3
     assert result.added == len(tracks_random)

@@ -6,11 +6,33 @@ from typing import Any, Callable, List, Mapping, Optional, Self, MutableMapping
 
 from dateutil.relativedelta import relativedelta
 
-from syncify.local.files.track.base import Name, LocalTrack, TagName
+from syncify.local.files.track.base import Name, LocalTrack, TagName, PropertyName
 from syncify.local.files.track.collection import TrackProcessor
-from syncify.local.files.utils.musicbee import field_name_map
-from syncify.utils.helpers import make_list
-from utils_new.generic import UnionList
+from syncify.utils_new.helpers import make_list
+from syncify.utils_new.generic import UnionList
+
+
+# Map of MusicBee field name to Tag or Property
+field_name_map = {
+    "None": None,
+    "Title": TagName.TITLE,
+    "ArtistPeople": TagName.ARTIST,
+    "Album": TagName.ALBUM,  # album ignoring articles like 'the' and 'a' etc.
+    "TrackNo": TagName.TRACK,
+    "GenreSplits": TagName.GENRES,
+    "Year": TagName.YEAR,
+    "Tempo": TagName.BPM,
+    "DiscNo": TagName.DISC,
+    "AlbumArtist": TagName.ALBUM_ARTIST,
+    "Comment": TagName.COMMENTS,
+    "FileDuration": PropertyName.LENGTH,
+    "FolderName": PropertyName.FOLDER,
+    "FilePath": PropertyName.PATH,
+    "FileName": PropertyName.FILENAME,
+    "FileExtension": PropertyName.EXT,
+    "FileDateAdded": PropertyName.DATE_ADDED,
+    "FilePlayCount": PropertyName.PLAY_COUNT,
+}
 
 
 class TrackCompare(TrackProcessor):
@@ -111,7 +133,7 @@ class TrackCompare(TrackProcessor):
         or, if no other track is given, to the instance's list of expected values
         """
         if reference is None and self.expected is None:
-            raise ValueError("No comparative track given and no expected values set")
+            raise TypeError("No comparative track given and no expected values set")
 
         field_name = TagName.to_tag(self.field)[0] if isinstance(self.field, TagName) else self.field.name.lower()
 

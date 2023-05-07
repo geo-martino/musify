@@ -1,9 +1,8 @@
-import re
 from abc import ABCMeta, abstractmethod
 from enum import IntEnum
 from typing import Any, Mapping, Optional, Self, List, Union
 
-from syncify.local.files.utils.exception import EnumNotFoundError
+from syncify.utils_new.exception import EnumNotFoundError
 from syncify.utils_new.generic import PrettyPrinter
 
 
@@ -58,19 +57,3 @@ class TrackProcessor(PrettyPrinter, metaclass=ABCMeta):
             )
 
         return sanitised
-
-    @staticmethod
-    def _camel_to_snake(value: str, prefix: Optional[str] = None) -> str:
-        """Convert snake_case to CamelCase. Optionally, add a given prefix"""
-        value = re.sub('([A-Z])', lambda m: f"_{m.group(1).lower()}", value.strip("_ "))
-        value = re.sub(r"[_ ]+", "_", value).strip("_ ")
-        if prefix is not None:
-            value = f"{prefix}_{value}"
-        return value.lower()
-
-    @staticmethod
-    def _snake_to_camel(value: str, prefix: Optional[str] = None) -> str:
-        """Convert snake_case to CamelCase. Optionally, remove a given prefix"""
-        if prefix is not None:
-            value = re.sub(f'^{prefix}', "", value)
-        return re.sub('_(.)', lambda m: m.group(1).upper(), value.strip())
