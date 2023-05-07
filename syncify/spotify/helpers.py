@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from enum import Enum
+from enum import Enum, IntEnum
 from typing import List, Optional, Union, Set
 
 from utils_new.helpers import make_list
@@ -9,12 +9,30 @@ from utils_new.helpers import make_list
 __UNAVAILABLE_URI_VALUE__ = "spotify:track:unavailable"
 
 
+class URIType(IntEnum):
+    ALL = 0
+    PLAYLIST = 1
+    TRACK = 2
+    ALBUM = 3
+    ARTIST = 4
+    USER = 5
+    SHOW = 6
+    EPISODE = 7
+
+    @classmethod
+    def all(cls) -> Set[SpotifyType]:
+        all_enums = set(cls)
+        all_enums.remove(cls.ALL)
+        return all_enums
+
+
 class SpotifyType(Enum):
     OPEN_URL: str = "https://open.spotify.com"
     API_URL: str = "https://api.spotify.com/v1"
-    ALL: int = 0
     URI: int = 3
     ID: int = 22
+
+    ALL: int = 0
 
     @classmethod
     def all(cls) -> Set[SpotifyType]:

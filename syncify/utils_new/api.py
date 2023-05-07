@@ -12,7 +12,7 @@ import requests
 from syncify.utils.logger import Logger
 
 
-class APIAuthorizer(Logger):
+class APIAuthoriser(Logger):
     """
     Authorises and validates an API token for given input parameters.
     Functions for returning formatted headers for future, authorised requests.
@@ -61,6 +61,22 @@ class APIAuthorizer(Logger):
     def token_safe(self) -> Mapping[str, Any]:
         return {k: f"{v[:5]}..." if str(k).endswith("_token") else v for k, v in self.token.items()}
 
+    @property
+    def headers(self) -> Mapping[str, str]:
+        """Format headers to usage appropriate format"""
+        if self.token is None:
+            raise TypeError("Token not loaded.")
+
+        token_value = self.token
+        for key in self.token_key_path:
+            token_value = token_value.get(key, {})
+
+        if not isinstance(token_value, str):
+            raise TypeError(f"Did not find valid token at key path: {self.token_key_path} -> {token_value} | " +
+                            str(self.token_safe))
+
+        return {self.header_key: f"{self.header_prefix}{token_value}"} | self.header_extra
+
     def __init__(
         self,
         auth_args: Mapping[str, Any],
@@ -68,7 +84,7 @@ class APIAuthorizer(Logger):
         refresh_args: Optional[Mapping[str, Any]] = None,
         test_args: Optional[Mapping[str, Any]] = None,
         test_condition: Optional[Callable[[Union[str, Mapping[str, Any]]], bool]] = None,
-        test_expiry: Optional[int] = None,
+        test_expiry: int = 0,
         token: Optional[Mapping[str, Any]] = None,
         token_file_path: Optional[str] = None,
         token_key_path: Optional[List[str]] = None,
@@ -86,7 +102,7 @@ class APIAuthorizer(Logger):
         # test params and conditions
         self.test_args: Optional[Mapping[str, Any]] = test_args
         self.test_condition: Optional[Callable[[Union[str, Mapping[str, Any]]], bool]] = test_condition
-        self.test_expiry: Optional[int] = test_expiry
+        self.test_expiry: int = test_expiry
 
         # store token
         self.token: Optional[Mapping[str, Any]] = token
@@ -95,8 +111,8 @@ class APIAuthorizer(Logger):
 
         # information for the final headers
         self.header_key: str = header_key
-        self.header_prefix: Optional[str] = header_prefix if header_prefix else ""
-        self.header_extra: Optional[Mapping[str, str]] = header_extra
+        self.header_prefix: str = header_prefix if header_prefix else ""
+        self.header_extra: Mapping[str, str] = header_extra if header_extra else {}
 
     def auth(self, force_load: bool = False, force_new=False) -> Mapping[str, str]:
         """
@@ -141,44 +157,56 @@ class APIAuthorizer(Logger):
             self.request_token(user=True, **self.auth_args)
             valid = self.test()
             if not valid:
-                raise ConnectionRefusedError(f"Token is still not valid: {self.token_safe}")
+                raise ConnectionError(f"Token is still not valid: {self.token_safe}")
 
         self._logger.debug("Access token is valid. Saving...")
         self.save_token()
 
-        return self.get_headers()
+        return self.headers
+
+    def _auth_user(self, **requests_args) -> None:
+        """
+        Add user authentication code to request args by authorising through user's browser
+
+        :param requests_args: requests.post() parameters to enrich.
+        """
+        if not self.user_args:
+            return
+
+        self._logger.info("Authorising user privilege access...")
+
+        # set up socket to listen for the redirect from Spotify
+        address = ('localhost', 80)
+        code_listener = socket(AF_INET, SOCK_STREAM)
+        code_listener.bind(address)
+        code_listener.settimeout(120)
+        code_listener.listen(1)
+
+        print("\33[1mOpening Spotify in your browser. Log in to Spotify, authorise, and return here after\33[0m")
+        print(f"\33[1mWaiting for code, timeout in {code_listener.timeout} seconds...\33[0m")
+
+        # TODO: this should f"http://{address[0]}:{address[1]}/", switch when callback is verified
+        self.user_args["params"]["redirect_uri"] = f"http://{address[0]}/"
+        webopen(requests.post(**self.user_args).url)
+        request, _ = code_listener.accept()
+
+        request.send("Code received! You may now close this window and return to Syncify...".encode("utf-8"))
+        print("\33[92;1mCode received!\33[0m")
+        code_listener.close()
+
+        # format out the access code from the returned response
+        path_raw = [line for line in request.recv(8196).decode('utf-8').split("\n") if line.startswith("GET")][0]
+        requests_args["data"]["code"] = parse_qs(urlparse(path_raw).query)['code'][0]
 
     def request_token(self, user: bool = True, **requests_args) -> None:
         """
         Authenticates/refreshes basic API access and returns token.
+
         :param user: Authenticate as the user first to user to generate a user access authenticated token.
         :param requests_args: requests.post() parameters to send as a request for authorisation.
         """
-        if user and self.user_args:
-            self._logger.info("Authorising user privilege access...")
-
-            # set up socket to listen for the redirect from Spotify
-            address = ('localhost', 80)
-            code_listener = socket(AF_INET, SOCK_STREAM)
-            code_listener.bind(address)
-            code_listener.settimeout(120)
-            code_listener.listen(1)
-
-            print("\33[1mOpening Spotify in your browser. Log in to Spotify, authorise, and return here after\33[0m")
-            print(f"\33[1mWaiting for code, timeout in {code_listener.timeout} seconds...\33[0m")
-
-            # TODO: this should f"http://{address[0]}:{address[1]}/", switch when callback is verified
-            self.user_args["params"]["redirect_uri"] = f"http://{address[0]}/"
-            webopen(requests.post(**self.user_args).url)
-            request, _ = code_listener.accept()
-
-            request.send("Code received! You may now close this window and return to Syncify...".encode("utf-8"))
-            print("\33[92;1mCode received!\33[0m")
-            code_listener.close()
-
-            # format out the access code from the returned response
-            path_raw = [line for line in request.recv(8196).decode('utf-8').split("\n") if line.startswith("GET")][0]
-            requests_args["data"]["code"] = parse_qs(urlparse(path_raw).query)['code'][0]
+        if user and self.user_args and not requests_args["data"].get("code"):
+            self._auth_user(**requests_args)
 
         # post auth request
         auth_response = requests.post(**requests_args).json()
@@ -209,11 +237,9 @@ class APIAuthorizer(Logger):
         if not token_has_no_error:
             return False
 
-        headers = self.get_headers()
-
         # test for expected response
         if self.test_args is not None and self.test_condition is not None:
-            response = requests.get(headers=headers, **self.test_args)
+            response = requests.get(headers=self.headers, **self.test_args)
             try:
                 response = response.json()
             except json.JSONDecodeError:
@@ -223,35 +249,15 @@ class APIAuthorizer(Logger):
             self._logger.debug(f"Valid response test: {valid_response}")
 
         # test for has not expired
-        if "expires_at" in self.token and self.test_expiry is not None:
+        if "expires_at" in self.token and self.test_expiry > 0:
             not_expired = datetime.now().timestamp() + self.test_expiry < self.token["expires_at"]
             self._logger.debug(f"Expiry time test: {not_expired}")
 
         return all([token_has_no_error, valid_response, not_expired])
 
-    def get_headers(self) -> Mapping[str, str]:
-        """Format headers to usage appropriate format"""
-        if self.token is None:
-            raise TypeError("Token not loaded.")
-
-        token_value = self.token
-        for key in self.token_key_path:
-            token_value = token_value.get(key, {})
-
-        if not isinstance(token_value, str):
-            raise TypeError(f"Did not find valid token at key path: {self.token_key_path} -> {token_value} | " +
-                            str(self.token_safe))
-
-        headers = {self.header_key: f"{self.header_prefix}{token_value}"}
-
-        if isinstance(self.header_extra, dict):
-            headers.update(self.header_extra)
-
-        return headers
-
     def load_token(self) -> Mapping[str, Any]:
         """Load stored token from given path"""
-        if os.path.exists(self.token_file_path):
+        if self.token_file_path and os.path.exists(self.token_file_path):
             self._logger.debug("Saved access token found. Loading stored token...")
             with open(self.token_file_path, "r") as file:  # load token
                 self.token = json.load(file)
@@ -266,7 +272,7 @@ class APIAuthorizer(Logger):
 
 
 if __name__ == "__main__":
-    auth = APIAuthorizer(
+    auth = APIAuthoriser(
         auth_args={
             "url": "https://accounts.spotify.com/api/token",
             "data": {
@@ -314,6 +320,6 @@ if __name__ == "__main__":
     url = f"https://api.spotify.com/v1/me"
     params = {}
 
-    resp = requests.get(url, params=params, headers=auth.get_headers())
+    resp = requests.get(url, params=params, headers=auth.headers)
     print(resp.text)
     print(json.dumps(resp.json(), indent=2))

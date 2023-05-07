@@ -114,6 +114,7 @@ class ReadXmlLibrary:
                 pass
                 # print('Unknown tag {}'.format(elem.tag))
 
+    # noinspection PyUnusedLocal
     def _parse_dict(self, key=None):
         elem = next(self._parse())
         elem, _dict = self._parse_key_value(elem.text)
