@@ -3,7 +3,7 @@ from datetime import datetime as dt
 from datetime import timedelta
 from os.path import dirname, join
 from time import sleep
-from typing import Optional, MutableMapping, Any, Union
+from typing import MutableMapping, Any
 
 import requests_cache
 from requests.structures import CaseInsensitiveDict

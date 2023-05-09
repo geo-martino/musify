@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 from syncify.api.request import RequestHandler
 from syncify.spotify import IDType, ItemType, __URL_API__, __URL_OPEN__
 from syncify.utils.logger import Logger
-from utils_new.exception import EnumNotFoundError
+from syncify.utils_new.exception import EnumNotFoundError
 
 InputItemTypeVar = Union[str, MutableMapping[str, Any], List[str], List[MutableMapping[str, Any]]]
 

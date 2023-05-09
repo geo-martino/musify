@@ -1,6 +1,6 @@
 from typing import Optional
 
-from api.request import RequestHandler
+from syncify.api import RequestHandler
 from syncify.spotify.endpoints.basic import Basic
 from syncify.spotify.endpoints.collection import Collections
 from syncify.spotify.endpoints.item import Items
