@@ -8,9 +8,9 @@ from titlecase import titlecase
 
 
 class Misc:
-    #############################################################
+    ###########################################################################
     ## Misc. functions
-    #############################################################
+    ###########################################################################
 
     # THESE FUNCTIONS ARE AUTHOR SPECIFIC AND HAVE NOT BEEN BUILT FOR GENERAL USE.
     # All ARE UNTESTED AND EDGE CASES HAVE NOT BEEN CONSIDERED. USE WITH

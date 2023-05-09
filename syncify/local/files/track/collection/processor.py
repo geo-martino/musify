@@ -1,24 +1,7 @@
 from abc import ABCMeta, abstractmethod
-from enum import IntEnum
 from typing import Any, Mapping, Optional, Self, List, Union
 
-from syncify.utils_new.exception import EnumNotFoundError
 from syncify.utils_new.generic import PrettyPrinter
-
-
-class Mode(IntEnum):
-
-    @classmethod
-    def from_name(cls, name: str) -> Self:
-        """
-        Returns the first enum that matches the given name
-
-        :exception EnumNotFoundError: If a corresponding enum cannot be found.
-        """
-        for enum in cls:
-            if name.upper() == enum.name:
-                return enum
-        raise EnumNotFoundError(name)
 
 
 class TrackProcessor(PrettyPrinter, metaclass=ABCMeta):

@@ -3,7 +3,7 @@ import os
 from collections.abc import Callable
 from datetime import datetime
 from socket import socket, AF_INET, SOCK_STREAM
-from typing import Optional, Any, Mapping, Union, List
+from typing import Optional, Any, Mapping, Union, List, MutableMapping
 from urllib.parse import urlparse, parse_qs
 from webbrowser import open as webopen
 
@@ -62,7 +62,7 @@ class APIAuthoriser(Logger):
         return {k: f"{v[:5]}..." if str(k).endswith("_token") else v for k, v in self.token.items()}
 
     @property
-    def headers(self) -> Mapping[str, str]:
+    def headers(self) -> MutableMapping[str, str]:
         """Format headers to usage appropriate format"""
         if self.token is None:
             raise TypeError("Token not loaded.")
@@ -114,7 +114,7 @@ class APIAuthoriser(Logger):
         self.header_prefix: str = header_prefix if header_prefix else ""
         self.header_extra: Mapping[str, str] = header_extra if header_extra else {}
 
-    def auth(self, force_load: bool = False, force_new=False) -> Mapping[str, str]:
+    def auth(self, force_load: bool = False, force_new=False) -> MutableMapping[str, str]:
         """
         Main method for authentication, tests/refreshes/reauthorises as needed
 
@@ -130,10 +130,10 @@ class APIAuthoriser(Logger):
         # generate new token if not or force is enabled
         if self.token is None:
             self._logger.debug("Saved access token not found. Generating new token...")
-            self.request_token(user=True, **self.auth_args)
+            self._request_token(user=True, **self.auth_args)
         elif force_new:
             self._logger.debug("New token generation forced. Generating new token...")
-            self.request_token(user=True, **self.auth_args)
+            self._request_token(user=True, **self.auth_args)
 
         # test current token
         valid = self.test()
@@ -144,7 +144,7 @@ class APIAuthoriser(Logger):
             self._logger.debug("Access token is not valid and refresh data found. Refreshing token and testing...")
 
             self.refresh_args["data"]["refresh_token"] = self.token["refresh_token"]
-            self.request_token(user=False, **self.refresh_args)
+            self._request_token(user=False, **self.refresh_args)
             valid = self.test()
             refreshed = True
 
@@ -154,7 +154,7 @@ class APIAuthoriser(Logger):
             else:
                 self._logger.debug("Access token is not valid and and no refresh data found. Generating new token...")
 
-            self.request_token(user=True, **self.auth_args)
+            self._request_token(user=True, **self.auth_args)
             valid = self.test()
             if not valid:
                 raise ConnectionError(f"Token is still not valid: {self.token_safe}")
@@ -176,7 +176,7 @@ class APIAuthoriser(Logger):
         self._logger.info("Authorising user privilege access...")
 
         # set up socket to listen for the redirect from Spotify
-        address = ('localhost', 80)
+        address = ('localhost', 8080)
         code_listener = socket(AF_INET, SOCK_STREAM)
         code_listener.bind(address)
         code_listener.settimeout(120)
@@ -185,8 +185,7 @@ class APIAuthoriser(Logger):
         print("\33[1mOpening Spotify in your browser. Log in to Spotify, authorise, and return here after\33[0m")
         print(f"\33[1mWaiting for code, timeout in {code_listener.timeout} seconds...\33[0m")
 
-        # TODO: this should f"http://{address[0]}:{address[1]}/", switch when callback is verified
-        self.user_args["params"]["redirect_uri"] = f"http://{address[0]}/"
+        self.user_args["params"]["redirect_uri"] = f"http://{address[0]}:{address[1]}/"
         webopen(requests.post(**self.user_args).url)
         request, _ = code_listener.accept()
 
@@ -198,7 +197,7 @@ class APIAuthoriser(Logger):
         path_raw = [line for line in request.recv(8196).decode('utf-8').split("\n") if line.startswith("GET")][0]
         requests_args["data"]["code"] = parse_qs(urlparse(path_raw).query)['code'][0]
 
-    def request_token(self, user: bool = True, **requests_args) -> None:
+    def _request_token(self, user: bool = True, **requests_args) -> None:
         """
         Authenticates/refreshes basic API access and returns token.
 
@@ -269,57 +268,3 @@ class APIAuthoriser(Logger):
         self._logger.debug(f"Saving token: {self.token_safe}")
         with open(self.token_file_path, "w") as file:
             json.dump(self.token, file, indent=2)
-
-
-if __name__ == "__main__":
-    auth = APIAuthoriser(
-        auth_args={
-            "url": "https://accounts.spotify.com/api/token",
-            "data": {
-                "grant_type": "authorization_code",
-                "code": None,
-                "client_id": os.getenv("CLIENT_ID"),
-                "client_secret": os.getenv("CLIENT_SECRET"),
-                "redirect_uri": "http://localhost/",
-            },
-        },
-        user_args={
-            "url": "https://accounts.spotify.com/authorize",
-            "params": {
-                "response_type": "code",
-                "client_id": os.getenv("CLIENT_ID"),
-                "scope": " ".join(
-                    [
-                        "playlist-modify-public",
-                        "playlist-modify-private",
-                        "playlist-read-collaborative",
-                    ]
-                ),
-                "state": "syncify",
-            },
-        },
-        refresh_args={
-            "url": "https://accounts.spotify.com/api/token",
-            "data": {
-                "grant_type": "refresh_token",
-                "refresh_token": None,
-                "client_id": os.getenv("CLIENT_ID"),
-                "client_secret": os.getenv("CLIENT_SECRET"),
-            },
-        },
-        test_args={"url": "https://api.spotify.com/v1/me"},
-        test_condition=lambda r: "href" in r and "display_name" in r,
-        test_expiry=600,
-        token_file_path=f"D:\\Coding\\syncify\\_data\\token_NEW.json",
-        token_key_path=["access_token"],
-        # header_extra={"Accept": "application/json", "Content-Type": "application/json"},
-    )
-
-    auth.auth()
-
-    url = f"https://api.spotify.com/v1/me"
-    params = {}
-
-    resp = requests.get(url, params=params, headers=auth.headers)
-    print(resp.text)
-    print(json.dumps(resp.json(), indent=2))

@@ -8,7 +8,7 @@ from typing import Optional, List, Tuple, Set
 from PIL import Image
 
 from syncify.local.files.track.base.processor import TagProcessor
-from syncify.spotify.helpers import check_spotify_type, SpotifyType, __UNAVAILABLE_URI_VALUE__
+from syncify.spotify import check_spotify_type, IDType, __UNAVAILABLE_URI_VALUE__
 
 
 class TagReader(TagProcessor, metaclass=ABCMeta):
@@ -167,7 +167,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
                 has_uri = False
                 uri = None
                 break
-            elif check_spotify_type(uri, types=SpotifyType.URI):
+            elif check_spotify_type(uri, types=IDType.URI):
                 has_uri = True
                 break
 

@@ -4,11 +4,12 @@ from random import shuffle
 from typing import Any, Callable, List, Mapping, Optional, Self, MutableMapping, Union, Collection
 
 from syncify.local.files.track.base import PropertyName, LocalTrack
-from syncify.local.files.track.collection.processor import TrackProcessor, Mode
+from syncify.local.files.track.collection.processor import TrackProcessor
 from syncify.local.files.track.collection.sort import TrackSort
+from syncify.utils_new.helpers import SyncifyEnum
 
 
-class LimitType(Mode):
+class LimitType(SyncifyEnum):
     ITEMS = 0
     ALBUMS = 1
 

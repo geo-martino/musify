@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from http.client import HTTPResponse
 from io import BytesIO
 from urllib.error import URLError

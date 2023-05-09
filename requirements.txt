@@ -1,5 +1,6 @@
 mutagen~=1.46.0
 requests~=2.30
+requests-cache~=1.0.1
 python-dotenv~=1.0.0
 tqdm~=4.65.0
 Pillow~=9.5.0

@@ -11,7 +11,7 @@ from dateutil.relativedelta import relativedelta
 
 from syncify.local.files.track import LocalTrack, TagName, __TRACK_CLASSES__
 from local.files.track.base.image import open_image
-from syncify.spotify.helpers import __UNAVAILABLE_URI_VALUE__, SpotifyType
+from syncify.spotify import __UNAVAILABLE_URI_VALUE__, IDType
 from tests.common import path_resources, path_cache, random_str
 
 path_track_cache = join(path_cache, basename(dirname(__file__)))
@@ -46,7 +46,7 @@ def random_track(cls: Optional[Type[LocalTrack]] = None) -> LocalTrack:
 
     track.has_uri = choice([True, False])
     if track.has_uri:
-        track.uri = "spotify:track:" + random_str(SpotifyType.ID.value, SpotifyType.ID.value + 1)
+        track.uri = "spotify:track:" + random_str(IDType.ID.value, IDType.ID.value + 1)
     else:
         track.uri = __UNAVAILABLE_URI_VALUE__
 

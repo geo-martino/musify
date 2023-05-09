@@ -33,9 +33,9 @@ class Spotify(Endpoints, Search, CheckMatches):
         Search.__init__(self)
         CheckMatches.__init__(self)
 
-    #############################################################
+    ###########################################################################
     ## Tracks
-    #############################################################
+    ###########################################################################
     def extract_spotify_track_metadata(
             self, track: dict,
             position: int = None,
@@ -175,9 +175,9 @@ class Spotify(Endpoints, Search, CheckMatches):
         self._logger.debug('Extracting Spotify metadata: Done')
         return tracks_metadata
 
-    #############################################################
+    ###########################################################################
     ## Playlists
-    #############################################################
+    ###########################################################################
     def get_playlist_metadata(self, playlist: str, name: str = None, add_genre: bool = False,
                               add_extra: dict = None, **kwargs) -> list:
         """

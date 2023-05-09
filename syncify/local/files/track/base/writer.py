@@ -5,7 +5,7 @@ from typing import Optional, Set, MutableMapping
 
 from syncify.local.files.track.base.processor import TagProcessor
 from syncify.local.files.track.base.tags import TagName
-from syncify.spotify.helpers import __UNAVAILABLE_URI_VALUE__
+from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 from syncify.utils_new.helpers import make_list
 from syncify.utils_new.generic import UnionList, UpdateResult
 

@@ -9,7 +9,7 @@ from mutagen.id3 import Encoding
 
 from syncify.local.files.track.base import LocalTrack, TagName, TagMap
 from syncify.local.files.track.base.image import open_image, get_image_bytes
-from syncify.spotify.helpers import __UNAVAILABLE_URI_VALUE__
+from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 
 
 class MP3(LocalTrack):

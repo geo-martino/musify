@@ -1,10 +1,8 @@
-from __future__ import annotations
-
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
 from glob import glob
 from os.path import join, splitext, exists, getmtime, getsize
-from typing import Optional, List, Union, Mapping, Set, Collection
+from typing import Optional, List, Union, Mapping, Set, Collection, Self
 
 import mutagen
 
@@ -80,7 +78,7 @@ class LocalTrack(PrettyPrinter, File, TagReader, TagWriter, metaclass=ABCMeta):
         self.play_count = None
         self.rating = None
 
-    def load(self) -> LocalTrack:
+    def load(self) -> Self:
         """General method for loading file and its metadata"""
         self.load_file()
         if self._file is not None:
@@ -103,7 +101,7 @@ class LocalTrack(PrettyPrinter, File, TagReader, TagWriter, metaclass=ABCMeta):
         self._file = mutagen.File(self._path)
         self.ext = splitext(self._path)[1].lower()
 
-    def load_metadata(self) -> LocalTrack:
+    def load_metadata(self) -> Self:
         """General method for extracting metadata from loaded file"""
         if self._file is not None:
             self._read_metadata()

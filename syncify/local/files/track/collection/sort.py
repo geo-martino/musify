@@ -4,9 +4,9 @@ from random import shuffle
 from typing import Any, Callable, List, Mapping, MutableMapping, Optional, Self, Tuple, Union
 
 from syncify.local.files.track.base import Name, PropertyName, TagName, LocalTrack
-from syncify.local.files.track.collection.processor import TrackProcessor, Mode
+from syncify.local.files.track.collection.processor import TrackProcessor
 from syncify.utils_new.generic import flatten_nested, strip_ignore_words, UnionList
-from syncify.utils_new.helpers import make_list
+from syncify.utils_new.helpers import make_list, SyncifyEnum
 
 
 def get_field_from_code(field_code: int) -> Optional[Name]:
@@ -23,7 +23,7 @@ def get_field_from_code(field_code: int) -> Optional[Name]:
         raise ValueError(f"Field code not recognised: {field_code}")
 
 
-class ShuffleMode(Mode):
+class ShuffleMode(SyncifyEnum):
     NONE = 0
     RANDOM = 1
     HIGHER_RATING = 2
@@ -31,7 +31,7 @@ class ShuffleMode(Mode):
     DIFFERENT_ARTIST = 3
 
 
-class ShuffleBy(Mode):
+class ShuffleBy(SyncifyEnum):
     TRACK = 0
     ALBUM = 1
     ARTIST = 2

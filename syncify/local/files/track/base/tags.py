@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from datetime import datetime
-from enum import IntEnum
-from typing import Optional, List, Mapping, Set, Self
+from typing import Optional, List, Mapping, Self
 
 from syncify.utils_new.exception import EnumNotFoundError
+from utils_new.helpers import SyncifyEnum
 
 
 @dataclass
@@ -71,11 +71,7 @@ class Properties:
     rating: Optional[int]
 
 
-class Name(IntEnum):
-
-    @classmethod
-    def all(cls) -> Set[Self]:
-        return {e for e in cls if e.name != "ALL"}
+class Name(SyncifyEnum):
 
     @classmethod
     def from_name(cls, name: str) -> Self:

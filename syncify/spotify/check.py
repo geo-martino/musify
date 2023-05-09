@@ -6,9 +6,9 @@ from tqdm.auto import tqdm
 
 class CheckMatches:
 
-    #############################################################
+    ###########################################################################
     ## Create playlists from tracks
-    #############################################################
+    ###########################################################################
     def check_tracks(self, playlists: dict, pause: int = 10, **kwargs) -> dict:
         """
         Creates temporary playlists from locally stored URIs to check tracks have an accurate URI attached.
@@ -160,9 +160,9 @@ class CheckMatches:
 
         return inp
 
-    #############################################################
+    ###########################################################################
     ## Match to tracks user has added or removed
-    #############################################################
+    ###########################################################################
     def match_tracks_from_playlists(self, local: dict, urls: dict,
                                     report_file: str = None, **kwargs) -> dict:
         """

@@ -169,9 +169,9 @@ class Syncify(Logger, ApiAuthoriser, IO, Report, Spotify, Playlists):
         else:
             self._logger.warning(f"{name} is not a valid track, album, artist, or playlist")
 
-    #############################################################
+    ###########################################################################
     ## Backup/Restore
-    #############################################################
+    ###########################################################################
     def backup(self, **kwargs) -> None:
         """Backup all URI lists for local files/playlists and Spotify playlists"""
         if self._headers is None:
@@ -222,9 +222,9 @@ class Syncify(Logger, ApiAuthoriser, IO, Report, Spotify, Playlists):
                 self._headers = self.auth()
             self.restore_spotify_playlists(f"{quickload}/backup__spotify_playlists", **kwargs)
     
-    #############################################################
+    ###########################################################################
     ## Utilities/Misc.
-    #############################################################
+    ###########################################################################
     def missing_tags(self, **kwargs) -> None:
         """Produces report on local tracks with defined set of missing tags"""
 
@@ -308,9 +308,9 @@ class Syncify(Logger, ApiAuthoriser, IO, Report, Spotify, Playlists):
 
 
 
-    #############################################################
+    ###########################################################################
     ## Main runtime functions
-    #############################################################
+    ###########################################################################
     def search(self, quickload, **kwargs) -> None:
         """Run all main steps up to search and check
 
@@ -320,9 +320,9 @@ class Syncify(Logger, ApiAuthoriser, IO, Report, Spotify, Playlists):
         if self._headers is None:
             self._headers = self.auth()
         
-        #############################################################
+        ###########################################################################
         ## Step 1: LOAD LOCAL METADATA FOR LIBRARY
-        #############################################################
+        ###########################################################################
         if quickload:  # load results from last search
             self._library_local = self.load_json(
                 f"{quickload}/03_library__searched", parent=True, **kwargs)
@@ -337,9 +337,9 @@ class Syncify(Logger, ApiAuthoriser, IO, Report, Spotify, Playlists):
         path_uri = self.convert_metadata(self._library_local, key="path", fields="uri", sort_keys=True, **kwargs)
         self.save_json(path_uri, "URIs_initial", **kwargs)
 
-        #############################################################
+        ###########################################################################
         ## Step 2-6: SEARCH/CHECK LIBRARY
-        #############################################################
+        ###########################################################################
         if len([t for f in self._library_local.values() for t in f if t is not None]) == 0:
             self._logger.info("All songs found or unavailable. Skipping search.")
             return
@@ -385,9 +385,9 @@ class Syncify(Logger, ApiAuthoriser, IO, Report, Spotify, Playlists):
         self.enrich_metadata(library_path_metadata)
         self.save_json(self._library_local, "01_library__initial", **kwargs)
 
-        #############################################################
+        ###########################################################################
         ## Step 7: LOAD SPOTIFY METADATA FOR ALL TRACKS/PLAYLISTS
-        #############################################################
+        ###########################################################################
         # extract URI list and get Spotify metadata for all tracks with URIs in local library
         add_extra = self.convert_metadata(self._library_local, key=None, fields=self.extra_spotify_fields, **kwargs)
         add_extra = [track for track in add_extra if isinstance(track['uri'], str)]
@@ -411,9 +411,9 @@ class Syncify(Logger, ApiAuthoriser, IO, Report, Spotify, Playlists):
         if not self._library_local or not self._library_spotify:  # load if needed
             self._extract_all_from_spotify(False, **kwargs)
 
-        #############################################################
+        ###########################################################################
         ## Step 8-9: TRANSFORM LOCAL TRACK METADATA, RELOAD LIBRARY
-        #############################################################
+        ###########################################################################
         # replace local tags with spotify
         for name, tracks in self._library_local.items():
             for track in tracks:
@@ -550,8 +550,5 @@ if __name__ == "__main__":
 #  Then somehow update local library playlists after...
 #  Maybe add a final step that syncs Spotify back to library if
 #  uris for extra songs in Spotify playlists found in library
-# TODO: cache responses from API calls to improve speed and reduce API load
-#  pip install requests-cache
-#  replace 'requests' with 'requests_cache.CachedSession()' object
 # TODO: function to open search website tabs for all songs in 2get playlist
 #  on common music stores/torrent sites

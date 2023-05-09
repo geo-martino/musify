@@ -41,9 +41,9 @@ class Process():
             new_value = 0
         return not_special, new_value
 
-    #############################################################
+    ###########################################################################
     ## Update tags
-    #############################################################
+    ###########################################################################
     def update_file_tags(self, playlists: dict, tags: list = None,
                          replace: bool = False, dry_run: bool = True, **kwargs) -> None:
         """
@@ -258,9 +258,9 @@ class Process():
         img.close()
         return file_raw, True
 
-    #############################################################
+    ###########################################################################
     ## Transform
-    #############################################################       
+    ###########################################################################       
     def convert_metadata(self, playlists: dict, key: str = "uri", fields: list = None, out: str = "dict", sort_keys: bool = False, reverse: bool = False, **kwargs):
         """
         Convert dict from <name>: <list of dicts of track's metadata> to simpler, sorted key-value pairs.
@@ -423,9 +423,9 @@ class Process():
             )
         return filtered
 
-    #############################################################
+    ###########################################################################
     ## Extract Images
-    #############################################################
+    ###########################################################################
     def extract_images(self, playlists: dict, dim: bool = True, **kwargs) -> str:
         """
         Extract and save all embedded images from local files or Spotify tracks.

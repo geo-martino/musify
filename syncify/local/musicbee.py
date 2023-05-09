@@ -506,9 +506,9 @@ class MusicBee(LocalIO):
             tracks[path]["play_count"] = play_count
             tracks[path]["rating"] = rating
     
-    #############################################################
+    ###########################################################################
     ## Load metadata from m3u path lists
-    #############################################################
+    ###########################################################################
     def load_m3u_metadata(self, in_playlists: list = None,
                          ex_playlists: list = None, **kwargs) -> dict:
         """

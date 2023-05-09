@@ -108,9 +108,9 @@ class LocalIO(Process):
         else:
             raise FileNotFoundError(f"Path not found in library: {path}")
 
-    #############################################################
+    ###########################################################################
     ## Inidividual track functions
-    #############################################################
+    ###########################################################################
     def load_file(self, track, **kwargs) -> tuple:
         """
         Load local file using mutagen and extract file extension as string.
@@ -295,9 +295,9 @@ class LocalIO(Process):
 
         return metadata
 
-    #############################################################
+    ###########################################################################
     ## Multiple files functions
-    #############################################################
+    ###########################################################################
     def load_local_metadata(self, prefix_start: str = None, prefix_stop: str = None,
                            prefix_limit: list = None, compilation: bool = None, **kwargs) -> dict:
         """

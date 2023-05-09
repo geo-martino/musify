@@ -14,7 +14,7 @@
 **.yml*
 
 # caches
-**.test_cache
+**cache
 
 # large data & log folders
 _data/

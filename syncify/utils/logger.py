@@ -140,7 +140,7 @@ class Logger:
         if len(items) == 0:
             return 0
         items = [str(item) for item in items]
-        return len(max(items, key=len)) + 1 if len(max(items, key=len)) + 1 < max_width else max_width
+        return min(len(max(items, key=len)) + 1, max_width)
 
     @staticmethod
     def _truncate_align_str(value: Any, max_width: int = 0) -> str:

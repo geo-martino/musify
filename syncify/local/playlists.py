@@ -128,9 +128,9 @@ class Playlists(MusicBee):
                 paths_filtered = self._filter_paths(paths, f"{name_log}   ")
                 self.save_m3u(paths_filtered, name, **kwargs)
 
-    #############################################################
+    ###########################################################################
     ## Compare for synchronisation
-    #############################################################
+    ###########################################################################
     def _get_stem_path_map(self):
         return {self._clean_path(path, self._music_path): path for path in self._all_files}
 
