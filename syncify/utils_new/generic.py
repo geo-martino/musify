@@ -103,6 +103,8 @@ class PrettyPrinter(metaclass=ABCMeta):
         return result.format("\n".join([" " * indent + attribute for attribute in attributes_repr]))
 
     def _to_str(self, attributes: Mapping[str, Any], indent: int = 2, increment: int = 2) -> List[str]:
+        if len(attributes) == 0:
+            return []
         max_key_width = max(len(tag_name) for tag_name in attributes)
         max_val_width = 120 - max_key_width
         attributes_repr = []
@@ -128,8 +130,14 @@ class PrettyPrinter(metaclass=ABCMeta):
             elif isinstance(attr_val, dict):
                 pp_repr = " " * indent + "{}"
                 pp = self._to_str(attr_val, indent=indent, increment=increment)
-                pp_repr = pp_repr.format("\n".join(pp)).replace("\n", "\n" + " " * indent)
-                attr_val = "{\n" + pp_repr + "\n" + " " * indent_prev + "}"
+
+                if len(pp) == 0:
+                    attr_val = "{}"
+                elif len(str(pp)) < max_val_width:
+                    attr_val = "{ " + ", ".join(pp) + " }"
+                else:
+                    pp_repr = pp_repr.format("\n".join(pp)).replace("\n", "\n" + " " * indent)
+                    attr_val = "{\n" + pp_repr + "\n" + " " * indent_prev + "}"
                 attr_val_repr = f"{attr_key : <{max_key_width}} = {attr_val}"
 
             attributes_repr.append(attr_val_repr)

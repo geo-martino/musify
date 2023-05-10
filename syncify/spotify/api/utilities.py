@@ -3,20 +3,19 @@ from typing import Optional, List, Union, MutableMapping, Any
 from urllib.parse import urlparse
 
 from syncify.api.request import RequestHandler
-from syncify.spotify import IDType, ItemType, __URL_API__, __URL_OPEN__
+from syncify.spotify import IDType, ItemType, __URL_API__, __URL_EXT__
 from syncify.utils.logger import Logger
 from syncify.utils_new.exception import EnumNotFoundError
+from syncify.utils_new.generic import UnionList
 
 InputItemTypeVar = Union[str, MutableMapping[str, Any], List[str], List[MutableMapping[str, Any]]]
 
 
 class Utilities(Logger, metaclass=ABCMeta):
-    url_log_width = 46  # for aligning the URLs when logging
-    batch_size_max = 50  # max batch size for batchable endpoints
 
     @property
     @abstractmethod
-    def requests(self) -> RequestHandler:
+    def handler(self) -> RequestHandler:
         """Requests handler"""
         raise NotImplementedError
 
@@ -27,7 +26,7 @@ class Utilities(Logger, metaclass=ABCMeta):
         raise NotImplementedError
 
     @staticmethod
-    def limit_value(value: int, floor: int = 1, ceil: int = batch_size_max) -> int:
+    def limit_value(value: int, floor: int = 1, ceil: int = 50) -> int:
         """Limits a given ``value`` to always be between some ``floor`` and ``ceil``"""
         return max(min(value, ceil), floor)
 
@@ -41,10 +40,10 @@ class Utilities(Logger, metaclass=ABCMeta):
         """Check that a given ``value`` is a type of Spotify ID given by ``kind ``"""
         value = value.strip().lower()
 
-        if kind == IDType.URL_API:
+        if kind == IDType.URL:
             return value.startswith(__URL_API__)
-        elif kind == IDType.URL_OPEN:
-            return value.startswith(__URL_OPEN__)
+        elif kind == IDType.URL_EXT:
+            return value.startswith(__URL_EXT__)
         elif kind == IDType.URI:
             uri_split = value.split(':')
             return len(uri_split) == IDType.URI.value and uri_split[0] == "spotify"
@@ -62,14 +61,14 @@ class Utilities(Logger, metaclass=ABCMeta):
         :exception ValueError: Raised when the function cannot determine the ID type of the input ``items``.
         """
         value = value.strip().lower()
-        url_check = [i for i in urlparse(value.replace('/v1/', '/')).netloc.split(".") if i]
+        url_check = [i for i in urlparse(value).netloc.split(".") if i]
         uri_check = value.split(':')
 
         if len(url_check) > 0:
             if url_check[0] == 'api':  # open/api url
-                return IDType.URL_API
+                return IDType.URL
             elif url_check[0] == 'open':
-                return IDType.URL_OPEN
+                return IDType.URL_EXT
         elif len(uri_check) == IDType.URI.value:
             return IDType.URI
         elif len(value) == IDType.ID.value:  # use manually defined kind for a given id
@@ -77,7 +76,7 @@ class Utilities(Logger, metaclass=ABCMeta):
         raise ValueError(f"Could not determine ID type of given value: {value}")
 
     @staticmethod
-    def get_item_type(value: Union[str, MutableMapping[str, Any]]) -> Optional[ItemType]:
+    def _get_item_type(value: Union[str, MutableMapping[str, Any]]) -> Optional[ItemType]:
         """
         Determine the Spotify item type of the given ``value`` and return its type.
 
@@ -107,7 +106,7 @@ class Utilities(Logger, metaclass=ABCMeta):
             return None
         raise ValueError(f"Could not determine item type of given value: {value}")
 
-    def get_item_type_from_list(self, values: List[str]) -> ItemType:
+    def get_item_type(self, values: UnionList[str]) -> ItemType:
         """
         Determine the Spotify item type from a list of ``values``
 
@@ -115,13 +114,16 @@ class Utilities(Logger, metaclass=ABCMeta):
         :exception ValueError: Raised when the function cannot determine the item type of the input ``items``.
             Or when the list contains strings representing many differing Spotify item types or only IDs.
         """
-        kinds = {self.get_item_type(value) for value in values}
-        kinds = [kind for kind in kinds if kind is not None]
-        if len(kinds) == 0:
-            raise ValueError("Given items are invalid or are IDs with no kind given")
-        if len(kinds) != 1:
-            raise ValueError(f"Ensure all the given items are of the same type! Found: {kinds}")
-        return kinds[0]
+        if isinstance(values, list):
+            kinds = {self._get_item_type(value) for value in values}
+            kinds = [kind for kind in kinds if kind is not None]
+            if len(kinds) == 0:
+                raise ValueError("Given items are invalid or are IDs with no kind given")
+            if len(kinds) != 1:
+                raise ValueError(f"Ensure all the given items are of the same type! Found: {kinds}")
+            return kinds[0]
+
+        return self._get_item_type(values)
 
     def convert(
             self,
@@ -131,7 +133,7 @@ class Utilities(Logger, metaclass=ABCMeta):
             type_out: Optional[IDType] = None
     ) -> str:
         """
-        Converts ID to required format - API URL, OPEN URL, URI, or ID.
+        Converts ID to required format - API URL, EXT URL, URI, or ID.
 
         :param value: URL/URI/ID to convert.
         :param kind: Optionally, give the item type of the input ``value`` to reduce skip some checks.
@@ -145,7 +147,7 @@ class Utilities(Logger, metaclass=ABCMeta):
         if type_in is None or type_in == IDType.ALL or not self.validate_id_type(value, kind=type_in):
             type_in = self.get_id_type(value)
 
-        if type_in == IDType.URL_OPEN or type_in == IDType.URL_API:  # open/api url
+        if type_in == IDType.URL_EXT or type_in == IDType.URL:  # open/api url
             url_path = urlparse(value.strip()).path.split("/")
             for chunk in url_path:
                 try:
@@ -170,10 +172,10 @@ class Utilities(Logger, metaclass=ABCMeta):
 
         # reformat
         item = kind.name.lower().rstrip('s')
-        if type_out == IDType.URL_API:
+        if type_out == IDType.URL:
             return f'{__URL_API__}/{item}s/{id_}'
-        elif type_out == IDType.URL_OPEN:
-            return f'{__URL_OPEN__}/{item}/{id_}'
+        elif type_out == IDType.URL_EXT:
+            return f'{__URL_EXT__}/{item}/{id_}'
         elif type_out == IDType.URI:
             return f'spotify:{item}:{id_}'
         else:
@@ -182,9 +184,9 @@ class Utilities(Logger, metaclass=ABCMeta):
     def extract_ids(self, items: InputItemTypeVar, kind: Optional[ItemType] = None) -> List[str]:
         """
         Extract a list of IDs from input ``items``. Items may be:
-            * A single string value.
-            * A dictionary response from Spotify API represent some item.
-            * A list of string values.
+            * A single string value representing a URL/URI/ID.
+            * A dictionary response from Spotify API representing some item.
+            * A list of string values representing a URLs/URIs/IDs of the same type.
             * A list of dictionary responses from Spotify API represent some items.
 
         :param items: List of items to get. See description.

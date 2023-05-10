@@ -1,7 +1,7 @@
 from enum import IntEnum
 from typing import Any, List, Optional, Set, Self
 
-from utils_new.exception import EnumNotFoundError
+from syncify.utils_new.exception import EnumNotFoundError
 
 
 def make_list(data: Any) -> Optional[List]:

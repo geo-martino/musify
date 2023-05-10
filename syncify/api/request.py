@@ -3,7 +3,7 @@ from datetime import datetime as dt
 from datetime import timedelta
 from os.path import dirname, join
 from time import sleep
-from typing import MutableMapping, Any
+from typing import List, MutableMapping, Any, Optional
 
 import requests_cache
 from requests.structures import CaseInsensitiveDict
@@ -41,7 +41,7 @@ class RequestHandler(APIAuthoriser, Logger):
 
         self.auth()
 
-    def request(self, method: str, url: str, use_cache: bool = True, *args, **kwargs) -> MutableMapping[str, Any]:
+    def handle(self, method: str, url: str, *args, **kwargs) -> MutableMapping[str, Any]:
         """
         Generic method for handling API requests with back-off on failed requests.
         See :py:func:`request` for more arguments.
@@ -51,22 +51,15 @@ class RequestHandler(APIAuthoriser, Logger):
         :param url: URL for the new :class:`Request` object.
         :returns: The JSON formatted response or, if JSON formatting not possible, the text response.
         """
-        try:
-            headers = self.headers
-        except TypeError:
-            headers = self.auth()
-
         kwargs.pop("headers", None)
-        response = self.session.request(
-            method=method.upper(), url=url, headers=headers, force_refresh=not use_cache, *args, **kwargs
-        )
+        response = self.request(method=method, url=url, *args, **kwargs)
         backoff = self.backoff_start
 
         while response.status_code >= 400:
             response_headers = response.headers
             if isinstance(response.headers, CaseInsensitiveDict):
                 response_headers = json.dumps(dict(response.headers), indent=2)
-            self._logger.warning(f"\33[91mEndpoint: {url} | Code: {response.status_code} | "
+            self._logger.warning(f"\33[91m{method.upper():<7}: {url} | Code: {response.status_code} | "
                                  f"Response text and headers follow:"
                                  f"\nResponse text:\n{response.text}"
                                  f"\nHeaders:\n{response_headers}\33[0m")
@@ -94,10 +87,38 @@ class RequestHandler(APIAuthoriser, Logger):
             else:
                 raise ConnectionError("Max retries exceeded")
 
-            response = self.session.request(method=method.upper(), url=url, headers=self.auth(), *args, **kwargs)
+            response = self.request(method=method, url=url, *args, **kwargs)
 
         return self._response_as_json(response)
 
+    def request(
+            self,
+            method: str,
+            url: str,
+            use_cache: bool = True,
+            log_pad: int = 46,
+            log_extra: Optional[List[str]] = None,
+            *args, **kwargs
+    ) -> BaseResponse:
+        try:
+            headers = self.headers
+        except TypeError:
+            headers = self.auth()
+
+        log = [f"{method.upper():<7}: {url:<{log_pad}}"]
+        if log_extra:
+            log.extend(log_extra)
+        if len(args) > 0:
+            log.append(f"Args: ({', '.join(args)})")
+        if len(kwargs) > 0:
+            log.extend(f"{k.title()}: {v}" for k, v in kwargs.items())
+        if use_cache:
+            log.append("Cached")
+
+        self._logger.debug(" | ".join(log))
+        return self.session.request(
+            method=method.upper(), url=url, headers=headers, force_refresh=not use_cache, *args, **kwargs
+        )
     @staticmethod
     def _response_as_json(response: BaseResponse) -> MutableMapping[str, Any]:
         try:
@@ -107,29 +128,29 @@ class RequestHandler(APIAuthoriser, Logger):
 
     def get(self, url: str, **kwargs):
         """Sends a GET request."""
-        return self.request("get", url=url, **kwargs)
+        return self.handle("get", url=url, **kwargs)
 
     def post(self, url: str, **kwargs):
         """Sends a POST request."""
-        return self.request("post", url=url, **kwargs)
+        return self.handle("post", url=url, **kwargs)
 
     def put(self, url: str, **kwargs):
         """Sends a PUT request."""
-        return self.request("put", url=url, **kwargs)
+        return self.handle("put", url=url, **kwargs)
 
     def delete(self, url: str, **kwargs):
         """Sends a DELETE request."""
-        return self.request("delete", url, **kwargs)
+        return self.handle("delete", url, **kwargs)
 
     def options(self, url: str, **kwargs):
         """Sends an OPTIONS request."""
-        return self.request("options", url=url, **kwargs)
+        return self.handle("options", url=url, **kwargs)
 
     def head(self, url: str, **kwargs):
         """Sends a HEAD request."""
         kwargs.setdefault("allow_redirects", False)
-        return self.request("head", url=url, **kwargs)
+        return self.handle("head", url=url, **kwargs)
 
     def patch(self, url: str, **kwargs):
         """Sends a PATCH request."""
-        return self.request("patch", url=url, **kwargs)
+        return self.handle("patch", url=url, **kwargs)

@@ -1,0 +1,75 @@
+from typing import Optional
+
+from syncify.api import RequestHandler
+from syncify.spotify.api.basic import Basic
+from syncify.spotify.api.collection import Collections
+from syncify.spotify.api.item import Items
+from syncify.spotify import IDType, ItemType
+from syncify.utils.logger import Logger
+
+
+class API(Basic, Items, Collections):
+    """
+    Collection of endpoints for the Spotify API.
+
+    :param handler: An initialised request handler for handling API calls.
+    """
+    @property
+    def handler(self) -> RequestHandler:
+        return self._requests
+
+    @property
+    def user_id(self) -> Optional[str]:
+        return self._user_id
+
+    def __init__(self, handler: RequestHandler):
+        Logger.__init__(self)
+        self._requests = handler
+
+        try:
+            self._user_id: Optional[str] = self.get_self()["id"]
+        except Exception:
+            self._user_id = None
+
+    ###########################################################################
+    ## Misc endpoints
+    ###########################################################################
+    def pretty_print_uris(self, value: Optional[str] = None) -> None:
+        """
+        Diagnostic function. Print tracks from a given link in ``<track> - <title> | <URI> - <URL>`` format
+        for a given URL/URI/ID.
+
+        :param value: URL/URI/ID to print information for.
+        """
+        if not value:  # get user to paste in URL/URI
+            value = input("\33[1mEnter URL/URI/ID: \33[0m")
+
+        kind = self._get_item_type(value)
+        while kind is None:
+            kind = ItemType.from_name(input("\33[1mEnter ID type: \33[0m"))
+
+        url = self.convert(value, kind=kind, type_out=IDType.URL)
+        name = self.handler.get(url, log_pad=46)['name']
+
+        r = {'next': f"{url}/tracks"}
+        i = 0
+        while r['next']:
+            url = r['next']
+            r = self.handler.get(url, params={'limit': 20})
+
+            if r["offset"] == 0:
+                url_open = self.convert(url, type_in=IDType.URL_EXT, type_out=IDType.URL_EXT)
+                print(f"\n\t\33[96mShowing tracks for {kind.name.lower()}: {name} - {url_open}\33[0m\n")
+                pass
+
+            if 'error' in r:
+                self._logger.warning(f"{'ERROR':<7}: {url:<46}")
+                return
+
+            tracks = [item['track'] if kind == ItemType.PLAYLIST else item for item in r["items"]]
+            for i, track in enumerate(tracks, i + 1):
+                print(f"\t\33[92m{str(i).zfill(len(str(r['total'])))}\33[0m - "
+                      f"\33[97m{self._truncate_align_str(track['name'], 50)}\33[0m | "
+                      f"\33[93m{track['uri']}\33[0m - "
+                      f"{self.convert(track['uri'], type_in=IDType.URI, type_out=IDType.URL_EXT)}")
+            print()

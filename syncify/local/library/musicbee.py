@@ -41,7 +41,7 @@ class MusicBee(Library):
     @staticmethod
     def _xml_ts_to_dt(timestamp_str: Optional[str]) -> Optional[datetime]:
         if timestamp_str:
-            return datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%SZ")
+            return datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S%z")
 
     @staticmethod
     def _clean_xml_filepath(path: str) -> str:

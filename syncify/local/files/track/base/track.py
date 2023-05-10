@@ -122,11 +122,7 @@ class LocalTrack(PrettyPrinter, File, TagReader, TagWriter, metaclass=ABCMeta):
         return True
 
     def as_dict(self) -> Mapping[str, object]:
-        """
-        Return a dictionary representation of the tags for this track.
-
-        :return: Dictionary of tags.
-        """
+        """Return a dictionary representation of the tags for this track."""
         return {
             tag_name: getattr(self, tag_name, None)
             for tag_name in list(Tags.__annotations__) + list(Properties.__annotations__)
