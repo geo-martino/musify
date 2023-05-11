@@ -63,7 +63,7 @@ class RequestHandler(APIAuthoriser, Logger):
             self._logger.warning(f"\33[91m{method.upper():<7}: {url} | Code: {response.status_code} | "
                                  f"Response text and headers follow:"
                                  f"\nResponse text:\n{response.text}"
-                                 f"\nHeaders:\n{response_headers}\33[0m")
+                                 f"\nHeaders:\n{response_headers} \33[0m")
 
             message = self._response_as_json(response).get('error', {}).get('message')
             if response.status_code == 403:
@@ -104,7 +104,9 @@ class RequestHandler(APIAuthoriser, Logger):
         try:
             headers = self.headers
         except TypeError:
+            print()
             headers = self.auth()
+            print()
 
         log = [f"{method.upper():<7}: {url:<{log_pad}}"]
         if log_extra:

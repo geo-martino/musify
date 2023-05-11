@@ -57,7 +57,7 @@ class API(Basic, Items, Collections):
 
             if r["offset"] == 0:
                 url_open = self.convert(url, type_in=IDType.URL_EXT, type_out=IDType.URL_EXT)
-                print(f"\n\t\33[96mShowing tracks for {kind.name.lower()}: {name} - {url_open}\33[0m\n")
+                print(f"\n\t\33[96mShowing tracks for {kind.name.lower()}: {name} - {url_open} \33[0m\n")
                 pass
 
             if 'error' in r:
@@ -66,8 +66,8 @@ class API(Basic, Items, Collections):
 
             tracks = [item['track'] if kind == ItemType.PLAYLIST else item for item in r["items"]]
             for i, track in enumerate(tracks, i + 1):
-                print(f"\t\33[92m{str(i).zfill(len(str(r['total'])))}\33[0m - "
-                      f"\33[97m{self._truncate_align_str(track['name'], 50)}\33[0m | "
-                      f"\33[93m{track['uri']}\33[0m - "
+                print(f"\t\33[92m{str(i).zfill(len(str(r['total'])))} \33[0m- "
+                      f"\33[97m{self._truncate_align_str(track['name'], 50)} \33[0m| "
+                      f"\33[93m{track['uri']} \33[0m- "
                       f"{self.convert(track['uri'], type_in=IDType.URI, type_out=IDType.URL_EXT)}")
             print()

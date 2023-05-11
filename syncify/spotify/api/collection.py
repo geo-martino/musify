@@ -1,4 +1,5 @@
 from abc import ABCMeta
+from time import sleep
 from typing import Any, List, Mapping, MutableMapping, Optional, Union
 
 from syncify.spotify import __URL_API__, IDType, ItemType
@@ -65,6 +66,7 @@ class Collections(Utilities, metaclass=ABCMeta):
         unit = self.collection_types[kind.name] if kind else 'entries'
 
         bar = None
+        pages = 0
         if "limit" in response and "total" in response:  # check if progress bar needed
             pages = (response["total"] - len(response.get("items", []))) // response["limit"]
             if pages > 5:  # show progress bar for batches which may take a long time
@@ -83,10 +85,11 @@ class Collections(Utilities, metaclass=ABCMeta):
             results.extend(response[self.items_key])
             count += len(response[self.items_key])
 
-            if bar:
+            if bar and i <= pages:
+                sleep(0.1)
                 bar.update(1)
 
-        if bar:
+        if bar is not None:
             bar.close()
 
         if isinstance(url, dict) and isinstance(url.get(self.items_key), list):

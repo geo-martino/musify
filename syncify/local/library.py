@@ -197,7 +197,6 @@ class LocalIO(Process):
                             else:
                                 metadata[tag_name].append(raw_data[tag][0])
 
-                            
                     for i, value in enumerate(metadata[tag_name]):  # find valid URI
                         if self.check_spotify_valid(value, kind="uri") or value == self._unavailable_uri_value:
                             metadata[tag_name] = value

@@ -64,7 +64,14 @@ class LocalLibrary(LocalTrackCollection, Logger):
                 paths = glob(join(self._playlist_folder, "**", f"*{filetype}"), recursive=True)
                 entry = {path.replace(self._playlist_folder, "").strip().lower(): path for path in paths}
                 playlists.update(entry)
-            self._playlist_paths = dict(sorted(playlists.items(), key=lambda x: x[0]))
+
+            playlists_total = len(playlists)
+            self._playlist_paths = {name: path for name, path in sorted(playlists.items(), key=lambda x: x[0])
+                                    if (not self.include or name in self.include)
+                                    and (not self.exclude or name not in self.exclude)}
+
+            self._logger.debug(f"Filtered out {playlists_total - len(self._playlist_paths)} playlists "
+                               f"from {playlists_total} Spotify playlists")
 
     @property
     def tracks(self) -> List[LocalTrack]:
@@ -87,9 +94,14 @@ class LocalLibrary(LocalTrackCollection, Logger):
             library_folder: Optional[str] = None,
             playlist_folder: Optional[str] = None,
             other_folders: Optional[Set[str]] = None,
+            include: Optional[List[str]] = None,
+            exclude: Optional[List[str]] = None,
             load: bool = True,
     ):
         Logger.__init__(self)
+
+        self.include = [name.strip().lower() for name in include] if include else None
+        self.exclude = [name.strip().lower() for name in exclude] if exclude else None
 
         self._library_folder: Optional[str] = None
         # name of track object to set of paths valid for that track object
@@ -100,6 +112,11 @@ class LocalLibrary(LocalTrackCollection, Logger):
         # playlist lowercase name mapped to its filepath for all accepted filetypes in playlist folder
         self._playlist_paths: Optional[MutableMapping[str, str]] = None
         self.playlist_folder = playlist_folder
+
+        self._logger.info(f"\33[1;95m ->\33[1;97m Loading local library of "
+                          f"{sum(len(tracks) for tracks in self._track_paths.values())} tracks "
+                          f"and {len(self._playlist_paths)} playlists \33[0m")
+        self._line()
 
         self.other_folders = other_folders
 
@@ -114,7 +131,10 @@ class LocalLibrary(LocalTrackCollection, Logger):
 
     def load(self) -> None:
         """Loads all tracks and playlists in this library from scratch and log results."""
+        self._logger.debug("Load local library: START")
+
         self._tracks = self.load_tracks()
+        self._line()
         if len(self._tracks) > 0:
             key_type = Callable[[LocalTrack], Tuple[bool, datetime]]
             key: key_type = lambda t: (t.last_played is None, t.last_played)
@@ -124,9 +144,14 @@ class LocalLibrary(LocalTrackCollection, Logger):
             key: key_type = lambda t: (t.date_modified is None, t.date_modified)
             self.last_modified = sorted(self._tracks, key=key, reverse=True)[0].date_modified
         self.log_tracks()
+        print()
 
         self._playlists = self.load_playlists()
+        self._line()
         self.log_playlists()
+        print()
+
+        self._logger.debug("Load local library: DONE\n")
 
     def load_tracks(self) -> List[LocalTrack]:
         """Returns a list of loaded tracks from all the valid paths in this library"""
@@ -134,9 +159,11 @@ class LocalLibrary(LocalTrackCollection, Logger):
 
     def _load_tracks(self) -> List[LocalTrack]:
         """Returns a list of loaded tracks from all the valid paths in this library"""
+        self._logger.debug("Load local tracks: START")
         paths = [path for paths in self._track_paths.values() for path in paths]
 
-        self._logger.info(f"\33[1;95m -> \33[1;97mExtracting metadata and properties for {len(paths)} tracks \33[0m")
+        self._logger.info(f"\33[1;95m  >\33[1;97m " 
+                          f"Extracting metadata and properties for {len(paths)} tracks \33[0m")
 
         tracks: List[LocalTrack] = []
         errors: List[str] = []
@@ -148,7 +175,7 @@ class LocalLibrary(LocalTrackCollection, Logger):
                 continue
 
         self._log_errors(errors)
-        self._logger.debug("Loading track metadata: Done")
+        self._logger.debug("Load local tracks: DONE\n")
         return tracks
 
     def save_tracks(self, **kwargs) -> Mapping[str, SyncResultTrack]:
@@ -157,10 +184,8 @@ class LocalLibrary(LocalTrackCollection, Logger):
 
     def log_tracks(self) -> None:
         """Log stats on currently loaded tracks"""
-        if self._verbose > 0:
-            print()
-        self._logger.debug(
-            f"\33[1;96mLIBRARY TOTALS       \33[1;0m|"
+        self._logger.info(
+            f"\33[1;96m{'LIBRARY TOTALS':<22}\33[1;0m|"
             f"\33[92m{sum([track.has_uri for track in self._tracks]):>6} available \33[0m|"
             f"\33[91m{sum([track.has_uri is None for track in self._tracks]):>6} missing \33[0m|"
             f"\33[93m{sum([track.has_uri is False for track in self._tracks]):>6} unavailable \33[0m|"
@@ -176,10 +201,11 @@ class LocalLibrary(LocalTrackCollection, Logger):
         :return: The loaded playlists.
         :exception KeyError: If a given playlist name cannot be found.
         """
+        self._logger.debug("Load local playlist data: START")
         if names is None:
             names = self._playlist_paths.keys()
 
-        self._logger.info(f"\33[1;95m -> \33[1;97mLoading playlist data for {len(names)} playlists \33[0m")
+        self._logger.info(f"\33[1;95m  >\33[1;97m Loading playlist data for {len(names)} playlists \33[0m")
 
         playlists: List[LocalPlaylist] = []
         errors: List[str] = []
@@ -203,11 +229,11 @@ class LocalLibrary(LocalTrackCollection, Logger):
             playlists.append(pl)
 
         self._log_errors(errors)
-        self._logger.debug("Loading playlist data: Done")
+        self._logger.debug("Load local playlist data: DONE\n")
         return playlists
 
     def save_playlists(self, **kwargs) -> Mapping[str, SyncResult]:
-        """Saves the tags of all tracks in this library. Use arguments from :py:func:`LocalTrack.save()`"""
+        """Saves the tags of all tracks in this library. Use arguments from :py:func:`LocalPlaylist.save()`"""
         return {pl.name: pl.save(**kwargs) for pl in self.playlists}
 
     def log_playlists(self) -> None:
@@ -215,11 +241,9 @@ class LocalLibrary(LocalTrackCollection, Logger):
         playlists: Mapping[str, LocalPlaylist] = dict(sorted([(pl.name, pl) for pl in self._playlists], key=lambda x: x[0]))
         max_width = self._get_max_width(playlists)
 
-        if self._verbose > 0:
-            print()
-        self._logger.debug("\33[1;96mFound the following Local playlists: \33[0m")
-        for name, playlist in sorted(playlists.items(), key=lambda x: x[0].lower()):
-            self._logger.debug(
+        self._logger.info("\33[1;96mFound the following Local playlists: \33[0m")
+        for name, playlist in playlists.items():
+            self._logger.info(
                 f"{self._truncate_align_str(name, max_width=max_width)} |"
                 f"\33[92m{len([t for t in playlist if t.has_uri]):>4} available \33[0m|"
                 f"\33[91m{len([t for t in playlist if t.has_uri is None]):>4} missing \33[0m|"

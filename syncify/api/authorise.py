@@ -182,15 +182,15 @@ class APIAuthoriser(Logger):
         code_listener.settimeout(120)
         code_listener.listen(1)
 
-        print("\33[1mOpening Spotify in your browser. Log in to Spotify, authorise, and return here after\33[0m")
-        print(f"\33[1mWaiting for code, timeout in {code_listener.timeout} seconds...\33[0m")
+        print("\33[1mOpening Spotify in your browser. Log in to Spotify, authorise, and return here after \33[0m")
+        print(f"\33[1mWaiting for code, timeout in {code_listener.timeout} seconds... \33[0m")
 
         self.user_args["params"]["redirect_uri"] = f"http://{address[0]}:{address[1]}/"
         webopen(requests.post(**self.user_args).url)
         request, _ = code_listener.accept()
 
         request.send("Code received! You may now close this window and return to Syncify...".encode("utf-8"))
-        print("\33[92;1mCode received!\33[0m")
+        print("\33[92;1mCode received! \33[0m")
         code_listener.close()
 
         # format out the access code from the returned response

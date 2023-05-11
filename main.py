@@ -552,3 +552,4 @@ if __name__ == "__main__":
 #  uris for extra songs in Spotify playlists found in library
 # TODO: function to open search website tabs for all songs in 2get playlist
 #  on common music stores/torrent sites
+# TODO: get_items returns 100 items and it's messing up the items extension parts of input responses?

@@ -21,13 +21,13 @@ class LogStdOutFilter(logging.Filter):
         self.levels = levels
 
     def filter(self, record: logging.LogRecord) -> logging.LogRecord:
-        if record.levelno in self.levels:
+        if self.levels is None or record.levelno in self.levels:
             return record
 
 
 class LogFileFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> logging.LogRecord:
-        record.msg = re.sub("\n$", "", record.msg)
+        # record.msg = re.sub("\n$", "", record.msg)
         record.msg = re.sub("\33.*?m", "", record.msg)
         record.funcName = f"{record.module}.{record.funcName}"
 
@@ -75,9 +75,8 @@ class Logger:
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
             return
 
-        self._logger.critical(
-            "CRITICAL ERROR: Uncaught Exception", exc_info=(
-                exc_type, exc_value, exc_traceback))
+        self._logger.critical("CRITICAL ERROR: Uncaught Exception",
+                              exc_info=(exc_type, exc_value, exc_traceback))
 
     def _set_logger(self) -> None:
         """Set logger object formatted for stdout and file handlers."""
@@ -85,7 +84,7 @@ class Logger:
         if not self._is_dev and not exists(self._log_folder):  # if log folder doesn't exist
             os.makedirs(self._log_folder)  # create log folder
 
-        levels: List[Literal] = [logging.INFO, logging.WARNING]
+        levels: List[Literal] = [logging.INFO, logging.WARNING, logging.CRITICAL]
         if self._verbose < 2:
             log_filter = LogStdOutFilter(levels=levels)
         elif self._verbose == 2:
@@ -148,12 +147,20 @@ class Logger:
             return value
         return f"{value if len(str(value)) < 50 else str(value)[:47] + '...':<{max_width}}"
 
-    @staticmethod
-    def _get_progress_bar(**kwargs) -> tqdm_asyncio:
+    def _get_progress_bar(self, **kwargs) -> tqdm_asyncio:
         """Wrapper for tqdm progress bar. For kwargs, see :class:`tqdm`"""
+        preset_keys = ["leave", "disable", "colour", "position"]
         return tqdm_auto(
-            leave=True,  # self._verbose > 0,
-            disable=False,  # self._verbose > 2 and self._verbose < 2,
+            leave=kwargs.get("leave", self._verbose > 0) and kwargs.get("position", 0) == 0,
+            disable=kwargs.get("disable", self._logger.handlers[0].level == logging.DEBUG),
             file=sys.stdout,
-            **kwargs
+            ncols=120,
+            colour=kwargs.get("colour", "green"),
+            smoothing=0,
+            position=kwargs.get("position", 0),
+            **{k: v for k, v in kwargs.items() if k not in preset_keys}
         )
+
+    def _line(self):
+        if self._logger.handlers[0].level != logging.DEBUG:
+            print()

@@ -27,6 +27,14 @@ class SpotifyPlaylist(SpotifyCollection):
     :param response: The Spotify API JSON response
     """
 
+    @property
+    def items(self) -> List[SpotifyTrack]:
+        return self._items
+
+    @property
+    def tracks(self) -> List[SpotifyTrack]:
+        return self.items
+
     def __init__(self, response: MutableMapping[str, Any]):
         SpotifyResponse.__init__(self, response)
 
@@ -49,7 +57,7 @@ class SpotifyPlaylist(SpotifyCollection):
         self.date_created: Optional[datetime] = None
         self.date_modified: Optional[datetime] = None
 
-        self.tracks = [SpotifyTrack(track["track"], track["added_at"]) for track in response["tracks"]["items"]]
+        self._items = [SpotifyTrack(track["track"], track["added_at"]) for track in response["tracks"]["items"]]
 
         if len(self.tracks) > 0:
             self.length: float = sum(track.length for track in self.tracks)

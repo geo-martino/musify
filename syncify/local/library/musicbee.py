@@ -30,6 +30,8 @@ class MusicBee(LocalLibrary):
             library_folder: Optional[str] = None,
             musicbee_folder: str = "MusicBee",
             other_folders: Optional[Set[str]] = None,
+            include: Optional[List[str]] = None,
+            exclude: Optional[List[str]] = None,
             load: bool = True
     ):
         if not exists(musicbee_folder):
@@ -49,6 +51,8 @@ class MusicBee(LocalLibrary):
             library_folder=library_folder,
             playlist_folder=join(musicbee_folder, "Playlists"),
             other_folders=other_folders,
+            include=include,
+            exclude=exclude,
             load=load
         )
 
@@ -145,8 +149,3 @@ class ReadXmlLibrary:
             else:
                 pass
                 # print('Unknown tag {}'.format(elem.tag))
-
-
-if __name__ == "__main__":
-    mb = MusicBee(library_folder="D:\\Music")
-    print(mb)
