@@ -6,18 +6,11 @@ from syncify.api.request import RequestHandler
 from syncify.spotify import IDType, ItemType, __URL_API__, __URL_EXT__
 from syncify.utils.logger import Logger
 from syncify.utils_new.exception import EnumNotFoundError
-from syncify.utils_new.generic import UnionList
 
 InputItemTypeVar = Union[str, MutableMapping[str, Any], List[str], List[MutableMapping[str, Any]]]
 
 
-class Utilities(Logger, metaclass=ABCMeta):
-
-    @property
-    @abstractmethod
-    def handler(self) -> RequestHandler:
-        """Requests handler"""
-        raise NotImplementedError
+class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
 
     @property
     @abstractmethod
@@ -34,22 +27,6 @@ class Utilities(Logger, metaclass=ABCMeta):
     def chunk_items(values: List[Any], size: int) -> List[List[Any]]:
         """Chunks a list of ``values`` into a list of lists of equal ``size``"""
         return [values[i: i + size] for i in range(0, len(values), size) if len(values[i: i + size]) > 0]
-
-    @staticmethod
-    def validate_id_type(value: str, kind: IDType) -> bool:
-        """Check that a given ``value`` is a type of Spotify ID given by ``kind ``"""
-        value = value.strip().lower()
-
-        if kind == IDType.URL:
-            return value.startswith(__URL_API__)
-        elif kind == IDType.URL_EXT:
-            return value.startswith(__URL_EXT__)
-        elif kind == IDType.URI:
-            uri_split = value.split(':')
-            return len(uri_split) == IDType.URI.value and uri_split[0] == "spotify"
-        elif kind == IDType.ID:
-            return len(value) == IDType.ID.value
-        return False
 
     @staticmethod
     def get_id_type(value: str) -> IDType:
@@ -76,9 +53,50 @@ class Utilities(Logger, metaclass=ABCMeta):
         raise ValueError(f"Could not determine ID type of given value: {value}")
 
     @staticmethod
+    def validate_id_type(value: str, kind: IDType) -> bool:
+        """Check that the given ``value`` is a type of Spotify ID given by ``kind ``"""
+        value = value.strip().lower()
+
+        if kind == IDType.URL:
+            return value.startswith(__URL_API__)
+        elif kind == IDType.URL_EXT:
+            return value.startswith(__URL_EXT__)
+        elif kind == IDType.URI:
+            uri_split = value.split(':')
+            return len(uri_split) == IDType.URI.value and uri_split[0] == "spotify"
+        elif kind == IDType.ID:
+            return len(value) == IDType.ID.value
+        return False
+
+    def get_item_type(self, values: InputItemTypeVar) -> ItemType:
+        """
+        Determine the Spotify item type of ``values``. Values may be:
+            * A single string value representing a URL/URI/ID.
+            * A list of string values representing a URLs/URIs/IDs of the same type.
+            * A Spotify API JSON response for a collection including some items under an ``items`` key.
+            * A list of Spotify API JSON responses for a collection including some items under an ``items`` key.
+
+        :param values: A list of strings to determine.
+        :exception ValueError: Raised when the function cannot determine the item type of the input ``items``.
+            Or when the list contains strings representing many differing Spotify item types or only IDs.
+        """
+        if isinstance(values, list):
+            kinds = {self._get_item_type(value) for value in values}
+            kinds = [kind for kind in kinds if kind is not None]
+            if len(kinds) == 0:
+                raise ValueError("Given items are invalid or are IDs with no kind given")
+            if len(kinds) != 1:
+                raise ValueError(f"Ensure all the given items are of the same type! Found: {kinds}")
+            return kinds[0]
+
+        return self._get_item_type(values)
+
+    @staticmethod
     def _get_item_type(value: Union[str, MutableMapping[str, Any]]) -> Optional[ItemType]:
         """
-        Determine the Spotify item type of the given ``value`` and return its type.
+        Determine the Spotify item type of the given ``value`` and return its type. Value may be:
+            * A single string value representing a URL/URI/ID.
+            * A Spotify API JSON response for a collection including some items under an ``items`` key.
 
         :param value: A string to determine or some dictionary response from the Spotify API.
         :returns: The Spotify item type. If the given value is determined to be an ID, returns None.
@@ -106,24 +124,23 @@ class Utilities(Logger, metaclass=ABCMeta):
             return None
         raise ValueError(f"Could not determine item type of given value: {value}")
 
-    def get_item_type(self, values: UnionList[str]) -> ItemType:
+    def validate_item_type(self, values: InputItemTypeVar, kind: ItemType) -> None:
         """
-        Determine the Spotify item type from a list of ``values``
+        Check that the given ``values`` is a type of item given by ``kind `` or a simple ID. Values may be:
+            * A single string value representing a URL/URI/ID.
+            * A list of string values representing a URLs/URIs/IDs of the same type.
+            * A Spotify API JSON response for a collection including some items under an ``items`` key.
+            * A list of Spotify API JSON responses for a collection including some items under an ``items`` key.
 
-        :param values: A list of strings to determine.
-        :exception ValueError: Raised when the function cannot determine the item type of the input ``items``.
-            Or when the list contains strings representing many differing Spotify item types or only IDs.
+        :param values: Values to determine.
+        :param kind: The Spotify item type to check for.
+        :exception ValueError: Raised when the function cannot validate the item type of the input ``values``
+            is of type ``kind`` or a simple ID.
         """
-        if isinstance(values, list):
-            kinds = {self._get_item_type(value) for value in values}
-            kinds = [kind for kind in kinds if kind is not None]
-            if len(kinds) == 0:
-                raise ValueError("Given items are invalid or are IDs with no kind given")
-            if len(kinds) != 1:
-                raise ValueError(f"Ensure all the given items are of the same type! Found: {kinds}")
-            return kinds[0]
-
-        return self._get_item_type(values)
+        item_type = self.get_item_type(values)
+        if item_type is not None and not item_type == kind:
+            item_str = "unknown" if item_type is None else item_type.name.lower() + "s"
+            raise ValueError(f"Given items must all be {kind.name.lower()} URLs/URIs/IDs, not {item_str}")
 
     def convert(
             self,
@@ -185,9 +202,9 @@ class Utilities(Logger, metaclass=ABCMeta):
         """
         Extract a list of IDs from input ``items``. Items may be:
             * A single string value representing a URL/URI/ID.
-            * A dictionary response from Spotify API representing some item.
             * A list of string values representing a URLs/URIs/IDs of the same type.
-            * A list of dictionary responses from Spotify API represent some items.
+            * A Spotify API JSON response for a collection including some items under an ``items`` key.
+            * A list of Spotify API JSON responses for a collection including some items under an ``items`` key.
 
         :param items: List of items to get. See description.
         :param kind: Optionally, give the item type of the input ``value`` to reduce skip some checks.

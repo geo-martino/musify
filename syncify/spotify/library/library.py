@@ -1,13 +1,15 @@
-from api import RequestHandler
+from local.library import Library, MusicBee
 from spotify.api import API
 from spotify.library.collection import SpotifyAlbum, SpotifyPlaylist
 import json
 import os
+
+from spotify.library.item import SpotifyResponse, SpotifyArtist, SpotifyTrack
 from syncify.spotify import __URL_AUTH__, __URL_API__, ItemType
 
 if __name__ == "__main__":
 
-    handler = RequestHandler(
+    api = API(
         auth_args={
             "url": f"{__URL_AUTH__}/api/token",
             "data": {
@@ -50,7 +52,6 @@ if __name__ == "__main__":
         header_extra={"Accept": "application/json", "Content-Type": "application/json"},
     )
 
-    api = API(handler=handler)
     tracks = [
         "https://open.spotify.com/track/3pSL8LoyWexY7vgq84baOA?si=73b831d0154746ba",
         "https://open.spotify.com/track/6g1VQsGGteeFbJm4IEn3N4?si=0dc21d8615204196",
@@ -76,14 +77,27 @@ if __name__ == "__main__":
         "https://open.spotify.com/user/1122812955?si=9370cab5095048a0"
     ]
 
-    print(api.get_playlist_url("70s"))
-    playlists = [SpotifyPlaylist(pl) for pl in api.get_collections("70s", kind=ItemType.PLAYLIST)]
-    print(playlists[0])
-    playlists[0].refresh_full(api)
-    print(playlists[0])
+    SpotifyResponse.api = api
+
+    mb = MusicBee(library_folder="D:\\Music")
+    print(mb)
+    uris = sorted(track.uri for track in mb.tracks if track.has_uri)
+    tracks = api.get_items(uris, kind=ItemType.TRACK, use_cache=True)
+    api.get_tracks_extra(tracks, features=True, use_cache=True)
+    spotify_tracks = [SpotifyTrack(track) for track in tracks]
+
+    anastasic = [track for track in spotify_tracks if track.uri == 'spotify:track:77vCn7iUHH8KAOqdOe1XjY'][0]
+    anastasic.response["audio_features"]["tempo"] = 60
+
+
+    # playlists = [SpotifyPlaylist(pl) for pl in api.get_collections("berge cruising", kind=ItemType.PLAYLIST, limit=100)]
+    pl = SpotifyPlaylist.load("berge cruising", tracks=[track for track in spotify_tracks if track.uri != anastasic.uri])
+    anastasic_pl = [track for track in pl.tracks if track.uri == 'spotify:track:77vCn7iUHH8KAOqdOe1XjY'][0]
+    print(anastasic)
+    print(anastasic_pl)
+    # print(SpotifyTrack.load("https://open.spotify.com/track/7LygtNjQ65PSdzVjUnHXQb?si=d951aefaf8134a49"))
     # print(json.dumps(playlists[0].response, indent=2))
 
-    #
     # results = [pl for pl in endpoints.get_user_collections(kind=ItemType.PLAYLIST) if pl["name"] in ["berge cruising", "70s"]]
     # results = endpoints.get_collection_items(results)
     # for pl in results:

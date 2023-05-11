@@ -11,24 +11,22 @@ from syncify.utils.logger import Logger
 class API(Basic, Items, Collections):
     """
     Collection of endpoints for the Spotify API.
+    See :py:class:`RequestHandler` and :py:class:`APIAuthoriser`
+    for more info on which params to pass to authorise and execute requests.
 
-    :param handler: An initialised request handler for handling API calls.
+    :param handler_kwargs: The authorisation kwargs to be passed to :py:class:`RequestHandler`.
     """
-    @property
-    def handler(self) -> RequestHandler:
-        return self._requests
-
     @property
     def user_id(self) -> Optional[str]:
         return self._user_id
 
-    def __init__(self, handler: RequestHandler):
+    def __init__(self, **handler_kwargs):
         Logger.__init__(self)
-        self._requests = handler
+        RequestHandler.__init__(self, **handler_kwargs)
 
         try:
             self._user_id: Optional[str] = self.get_self()["id"]
-        except Exception:
+        except (ConnectionError, KeyError):
             self._user_id = None
 
     ###########################################################################
@@ -49,13 +47,13 @@ class API(Basic, Items, Collections):
             kind = ItemType.from_name(input("\33[1mEnter ID type: \33[0m"))
 
         url = self.convert(value, kind=kind, type_out=IDType.URL)
-        name = self.handler.get(url, log_pad=46)['name']
+        name = self.get(url, log_pad=46)['name']
 
         r = {'next': f"{url}/tracks"}
         i = 0
         while r['next']:
             url = r['next']
-            r = self.handler.get(url, params={'limit': 20})
+            r = self.get(url, params={'limit': 20})
 
             if r["offset"] == 0:
                 url_open = self.convert(url, type_in=IDType.URL_EXT, type_out=IDType.URL_EXT)

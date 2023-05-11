@@ -119,6 +119,7 @@ class RequestHandler(APIAuthoriser, Logger):
         return self.session.request(
             method=method.upper(), url=url, headers=headers, force_refresh=not use_cache, *args, **kwargs
         )
+
     @staticmethod
     def _response_as_json(response: BaseResponse) -> MutableMapping[str, Any]:
         try:

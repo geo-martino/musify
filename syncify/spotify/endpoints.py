@@ -128,7 +128,7 @@ class Endpoints:
         else:  # use given user
             url = f'{self._base_api}/users/{user}'
 
-        self._logger.debug(f"Endpoint {url:<87}")
+        self._logger.debug(f"Endpoint {url:<93}")
         r = self.handle_request("get", url)
         if user == 'self':  # update stored user
             self._user_id = r['id']
@@ -344,7 +344,7 @@ class Endpoints:
 
         # get results and add to list
         while r['next']:
-            self._logger.debug(f"Endpoint: {r['next']:<87} |{i*limit:>4}/{r['total']:<4} tracks")
+            self._logger.debug(f"Endpoint: {r['next']:<93} |{i*limit:>4}/{r['total']:<4} tracks")
             r = self.handle_request("get", r['next'], params={"limit": limit})
             raw_data = [r['track'] for r in r["items"]]
             raw_data = self.get_track_features(raw_data, **kwargs) if add_features else raw_data
@@ -497,7 +497,7 @@ class Endpoints:
         for i in range(len(tracks) // limit + 1):
             body.append(tracks[limit * i: limit * (i + 1)])
 
-        self._logger.debug(f"Endpoint: {url:<87} | Clearing {len(tracks):>3} tracks")
+        self._logger.debug(f"Endpoint: {url:<93} | Clearing {len(tracks):>3} tracks")
 
         count = 0
         if not dry_run:
@@ -505,7 +505,7 @@ class Endpoints:
                 self.handle_request("delete", url, json={'tracks': tracks})
                 count += len(tracks)
 
-        self._logger.debug(f"Endpoint: {url:<87} | Cleared {count:>3} tracks")
+        self._logger.debug(f"Endpoint: {url:<93} | Cleared {count:>3} tracks")
 
         return url
 
@@ -522,7 +522,7 @@ class Endpoints:
             string = input('\33[1mEnter URL/URI: \33[0m')
 
         url = self.convert(string, get='api', **kwargs)
-        self._logger.debug(f"Endpoint: {url:<87}")
+        self._logger.debug(f"Endpoint: {url:<93}")
         main_info = self.handle_request("get", url)
         r = {'next': f"{url}/tracks"}
 

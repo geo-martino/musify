@@ -60,7 +60,7 @@ class Library(TrackCollection, Logger):
         return self._playlists
 
     @playlists.getter
-    def tracks(self) -> List[Playlist]:
+    def playlists(self) -> List[Playlist]:
         return self._playlists
 
     def __init__(
