@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from typing import Any, MutableMapping, Self
+from typing import Any, MutableMapping, Self, Optional
 
 from spotify.api.utilities import APIMethodInputType
 from syncify.spotify.api import API
@@ -14,7 +14,7 @@ class SpotifyResponse(PrettyPrinter, metaclass=ABCMeta):
     """
 
     _list_sep = "; "
-    _url_pad = 69
+    _url_pad = 71
 
     api: API
 
@@ -22,12 +22,12 @@ class SpotifyResponse(PrettyPrinter, metaclass=ABCMeta):
         self.response = response
         self._check_type()
 
-        self.id: str = response["id"]
+        self.id: Optional[str] = response["id"]
         self.uri: str = response["uri"]
-        self.has_uri: bool = True
+        self.has_uri: bool = not response.get("is_local", False)
 
-        self.url: str = response["href"]
-        self.url_ext: str = response["external_urls"]["spotify"]
+        self.url: Optional[str] = response["href"]
+        self.url_ext: Optional[str] = response["external_urls"].get("spotify")
 
     def _check_type(self) -> None:
         """Checks the given response is compatible with this object type, raises an exception if not"""

@@ -51,7 +51,7 @@ class SpotifyTrack(SpotifyItem, Tags):
         self.track_number = response["track_number"]
         self.track_total = album.get("total_tracks")
         self.genres = genres if genres else None
-        self.year = int(album["release_date"][:4]) if album else None
+        self.year = int(album["release_date"][:4]) if album.get("release_date") else None
         self.bpm = None
         self.key = None
         self.disc_number = response["disc_number"]

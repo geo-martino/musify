@@ -11,7 +11,7 @@ class Basic(Utilities, metaclass=ABCMeta):
     ###########################################################################
     def get_self(self) -> dict:
         """``GET: /me`` - Get API response for information on current user"""
-        return self.get(url=f'{__URL_API__}/me', use_cache=True, log_pad=69)
+        return self.get(url=f'{__URL_API__}/me', use_cache=True, log_pad=71)
 
     def query(self, query: str, kind: ItemType, limit: int = 10, use_cache: bool = True) -> list:
         """
@@ -28,7 +28,7 @@ class Basic(Utilities, metaclass=ABCMeta):
         r = self.get(url, params=params, use_cache=use_cache)
 
         if 'error' in r:
-            self._logger.error(f"{'ERROR':<7}: {url:<46} | Query: {query} | {r['error']}")
+            self._logger.error(f"{'ERROR':<7}: {url:<43} | Query: {query} | {r['error']}")
             return []
 
         return r[f'{kind.name.lower()}s']['items']

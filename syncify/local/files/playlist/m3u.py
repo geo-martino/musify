@@ -5,11 +5,11 @@ from typing import Optional, List, Collection, Union
 
 from syncify.local.files.playlist.playlist import LocalPlaylist
 from syncify.local.files.track import LocalTrack, load_track, TrackMatch
-from syncify.utils_new.generic import UpdateResult
+from syncify.utils_new.generic import SyncResult
 
 
 @dataclass
-class UpdateResultM3U(UpdateResult):
+class SyncResultM3U(SyncResult):
     start: int
     added: int
     removed: int
@@ -86,7 +86,7 @@ class M3U(LocalPlaylist):
 
         return self.tracks
 
-    def save(self, dry_run: bool = True) -> UpdateResultM3U:
+    def save(self, dry_run: bool = True) -> SyncResultM3U:
         start_paths = set(self._prepare_paths_for_output({track.path.lower() for track in self._tracks_original}))
 
         if not dry_run:
@@ -101,7 +101,7 @@ class M3U(LocalPlaylist):
             final_paths = {track.path.lower() for track in self._tracks}
 
         self._tracks_original = self.tracks.copy()
-        return UpdateResultM3U(
+        return SyncResultM3U(
             start=len(start_paths),
             added=len(final_paths - start_paths),
             removed=len(start_paths - final_paths),

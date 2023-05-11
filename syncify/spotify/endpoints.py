@@ -163,7 +163,7 @@ class Endpoints:
         # batch ids into given limit size
         item_bar = range(round(len(id_list) / limit + 0.5))
 
-        self._logger.debug(f"Endpoint: {url:<46} |{len(item_bar):>4} pages |{len(id_list):>5} {kind}")
+        self._logger.debug(f"Endpoint: {url:<43} |{len(item_bar):>4} pages |{len(id_list):>5} {kind}")
 
         # add progress bar for large lists of over 50 iterations
         if len(id_list) > 10 * limit:
@@ -202,16 +202,16 @@ class Endpoints:
 
         if isinstance(data, str):  # get features and return raw result to user
             data = self.convert(data, get="id", **kwargs)
-            self._logger.debug(f"Endpoint: {url:<46} | ID: {data}")
+            self._logger.debug(f"Endpoint: {url:<43} | ID: {data}")
             return self.handle_request("get", f"{url}/{data}")
         elif isinstance(data, dict) and 'id' in data:  # get features and update input
-            self._logger.debug(f"Endpoint: {url:<46} | ID: {data['id']}")
+            self._logger.debug(f"Endpoint: {url:<43} | ID: {data['id']}")
             features = self.handle_request("get", f"{url}/{data['id']}")
             data['audio_features'] = features
             return data
         elif isinstance(data, list):
             if len(data) == 0:
-                self._logger.debug(f"Endpoint: {url:<46} | No data given")
+                self._logger.debug(f"Endpoint: {url:<43} | No data given")
                 return data
 
             # get correctly formatted id string for endpoint
@@ -220,16 +220,16 @@ class Endpoints:
             elif isinstance(data[0], dict) and 'id' in data[0]:
                 params = {'ids': ','.join(track['id'] for track in data)}
             else:
-                self._logger.warning(f"Endpoint: {url:<46} | Input data not recognised")
+                self._logger.warning(f"Endpoint: {url:<43} | Input data not recognised")
 
-            self._logger.debug(f"Endpoint: {url:<46} | Params: {params}")
+            self._logger.debug(f"Endpoint: {url:<43} | Params: {params}")
 
             # get features and update input metadata
             features = self.handle_request("get", url, params=params)['audio_features']
             for m, f in zip(data, features):
                 m['audio_features'] = f
         else:
-            self._logger.warning(f"Endpoint: {url:<46} | Input data not recognised")
+            self._logger.warning(f"Endpoint: {url:<43} | Input data not recognised")
 
         return data
 
@@ -245,15 +245,15 @@ class Endpoints:
 
         if isinstance(data, str):  # get analysis and return raw result to user
             data = self.convert(data, get="id", **kwargs)
-            self._logger.debug(f"Endpoint: {url:<46} | ID: {data}")
+            self._logger.debug(f"Endpoint: {url:<43} | ID: {data}")
             return endpoint_func(data)
         elif isinstance(data, dict) and 'id' in data:  # get analysis and update input
-            self._logger.debug(f"Endpoint: {url:<46} | ID: {data['id']}")
+            self._logger.debug(f"Endpoint: {url:<43} | ID: {data['id']}")
             data.update(endpoint_func(data['id']))
             return data
         elif isinstance(data, list):
             if len(data) == 0:
-                self._logger.debug(f"Endpoint: {url:<46} | No data given")
+                self._logger.debug(f"Endpoint: {url:<43} | No data given")
                 return data
 
             # get id_list and analysis per track
@@ -263,14 +263,14 @@ class Endpoints:
             elif isinstance(data[0], dict) and 'id' in data[0]:
                 id_list = [d['id'] for d in data]
 
-            self._logger.debug(f"Endpoint: {url:<46} | IDs: {id_list}")
+            self._logger.debug(f"Endpoint: {url:<43} | IDs: {id_list}")
             analysis = [endpoint_func(id_) for id_ in id_list]
 
             # update input metadata
             for m, a in zip(data, analysis):
                 m["audio_analysis"] = a
         else:
-            self._logger.warning(f"Endpoint: {url:<46} | Input data not recognised")
+            self._logger.warning(f"Endpoint: {url:<43} | Input data not recognised")
 
         return data
 
@@ -388,7 +388,7 @@ class Endpoints:
             "public": public,
             "collaborative": collaborative,
         }
-        self._logger.debug(f"Endpoint: {url:<69} | Body: {body}")
+        self._logger.debug(f"Endpoint: {url:<71} | Body: {body}")
         playlist = self.handle_request("post", url, json=body)['href']
 
         # reformat response to required format
@@ -412,7 +412,7 @@ class Endpoints:
         url = f"{self.convert(playlist, get='api', kind='playlist', **kwargs)}/tracks"
 
         if len(tracks) == 0:
-            self._logger.debug(f"Endpoint: {url:<69} | No data given")
+            self._logger.debug(f"Endpoint: {url:<71} | No data given")
             return
 
         if len(str(tracks[0]).split(':')) != 3:  # reformat tracks to URIs
@@ -432,7 +432,7 @@ class Endpoints:
         # add tracks in batches
         for i in range(len(tracks) // limit + 1):
             params = {'uris': ','.join(tracks[limit * i: limit * (i + 1)])}
-            self._logger.debug(f"Endpoint: {url:<69} | Adding {len(tracks):>3} tracks | Params: {params}")
+            self._logger.debug(f"Endpoint: {url:<71} | Adding {len(tracks):>3} tracks | Params: {params}")
             self.handle_request("post", url, params=params)
 
         return url
@@ -457,7 +457,7 @@ class Endpoints:
         else:
             url = f"{self.convert(playlist, get='api', kind='playlist', **kwargs)}/followers"
 
-        self._logger.debug(f"Endpoint: {url:<69}")
+        self._logger.debug(f"Endpoint: {url:<71}")
         self.handle_request("delete", url)
         return url
 

@@ -8,7 +8,7 @@ from syncify.local.files.file import File
 from syncify.local.files.track import LocalTrack
 from syncify.local.files.track.collection import LocalTrackCollection
 from syncify.local.files.track.collection import TrackMatch, TrackLimit, TrackSort
-from syncify.utils_new.generic import UpdateResult
+from syncify.utils_new.generic import SyncResult
 
 
 class LocalPlaylist(LocalTrackCollection, File, metaclass=ABCMeta):
@@ -122,7 +122,7 @@ class LocalPlaylist(LocalTrackCollection, File, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def save(self, dry_run: bool = True) -> UpdateResult:
+    def save(self, dry_run: bool = True) -> SyncResult:
         """
         Write the tracks in this Playlist and its settings (if applicable) to file.
 

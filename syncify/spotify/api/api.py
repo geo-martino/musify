@@ -47,7 +47,7 @@ class API(Basic, Items, Collections):
             kind = ItemType.from_name(input("\33[1mEnter ID type: \33[0m"))
 
         url = self.convert(value, kind=kind, type_out=IDType.URL)
-        name = self.get(url, log_pad=46)['name']
+        name = self.get(url, log_pad=43)['name']
 
         r = {'next': f"{url}/tracks"}
         i = 0
@@ -61,7 +61,7 @@ class API(Basic, Items, Collections):
                 pass
 
             if 'error' in r:
-                self._logger.warning(f"{'ERROR':<7}: {url:<46}")
+                self._logger.warning(f"{'ERROR':<7}: {url:<43}")
                 return
 
             tracks = [item['track'] if kind == ItemType.PLAYLIST else item for item in r["items"]]

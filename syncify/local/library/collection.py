@@ -100,7 +100,6 @@ class Folder(LocalCollection):
     :raises ValueError: If the given tracks contain more than one unique value for ``folder`` when name is None.
     """
 
-
     @property
     def artists(self) -> Set[str]:
         return self._artists

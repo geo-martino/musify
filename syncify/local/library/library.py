@@ -5,8 +5,8 @@ from typing import Optional, List, Set, MutableMapping, Mapping, Collection, Any
 
 from syncify.local.files import IllegalFileTypeError
 from syncify.local.files.playlist import __PLAYLIST_FILETYPES__, LocalPlaylist, M3U, XAutoPF
-from syncify.local.files.track import LocalTrackCollection, __TRACK_CLASSES__, LocalTrack, load_track, UpdateResultTrack
-from syncify.utils_new.generic import UpdateResult
+from syncify.local.files.track import LocalTrackCollection, __TRACK_CLASSES__, LocalTrack, load_track, SyncResultTrack
+from syncify.utils_new.generic import SyncResult
 from utils.logger import Logger
 
 
@@ -151,7 +151,7 @@ class LocalLibrary(LocalTrackCollection, Logger):
         self._logger.debug("Loading track metadata: Done")
         return tracks
 
-    def save_tracks(self, **kwargs) -> Mapping[str, UpdateResultTrack]:
+    def save_tracks(self, **kwargs) -> Mapping[str, SyncResultTrack]:
         """Saves the tags of all tracks in this library. Use arguments from :py:func:`LocalTrack.save()`"""
         return {track.path: track.save(**kwargs) for track in self.tracks}
 
@@ -206,7 +206,7 @@ class LocalLibrary(LocalTrackCollection, Logger):
         self._logger.debug("Loading playlist data: Done")
         return playlists
 
-    def save_playlists(self, **kwargs) -> Mapping[str, UpdateResult]:
+    def save_playlists(self, **kwargs) -> Mapping[str, SyncResult]:
         """Saves the tags of all tracks in this library. Use arguments from :py:func:`LocalTrack.save()`"""
         return {pl.name: pl.save(**kwargs) for pl in self.playlists}
 

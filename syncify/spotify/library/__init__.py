@@ -1,2 +1,4 @@
-from .item import SpotifyTrack, SpotifyArtist
-from .collection import SpotifyPlaylist, SpotifyAlbum
+from .item import SpotifyItem, SpotifyTrack, SpotifyArtist
+from .collection import SpotifyCollection, SpotifyAlbum
+from .playlist import SpotifyPlaylist, SyncResultSpotifyPlaylist
+from .library import SpotifyLibrary

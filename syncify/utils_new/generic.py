@@ -95,6 +95,9 @@ class PrettyPrinter(metaclass=ABCMeta):
         return result
 
     def __str__(self) -> str:
+        if not self.as_dict():
+            return f"{self.__class__.__name__}()"
+
         result = f"{self.__class__.__name__}(\n{{}}\n)"
 
         indent = 2
@@ -149,5 +152,5 @@ class PrettyPrinter(metaclass=ABCMeta):
 
 
 @dataclass
-class UpdateResult(ABC):
+class SyncResult(ABC):
     pass

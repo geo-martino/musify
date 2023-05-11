@@ -64,6 +64,12 @@ class Collections(Utilities, metaclass=ABCMeta):
         response: Mapping[str, Any] = {"href": url, "next": url} if isinstance(url, str) else url
         unit = self.collection_types[kind.name] if kind else 'entries'
 
+        bar = None
+        if "limit" in response and "total" in response:  # check if progress bar needed
+            pages = (response["total"] - len(response.get("items", []))) // response["limit"]
+            if pages > 5:  # show progress bar for batches which may take a long time
+                bar = self._get_progress_bar(total=pages, desc=f'Getting {unit}', unit="pages")
+
         i = 0
         results = []
         count = 0 if isinstance(url, str) else len(url[self.items_key])
@@ -71,10 +77,17 @@ class Collections(Utilities, metaclass=ABCMeta):
             i += 1
             log = None
             if "limit" in response and "total" in response:
-                log = [f"{min(count + response['limit'], response['total']):>4}/{response['total']:<4} {unit}"]
-            response = self.get(response["next"], use_cache=use_cache, log_pad=93, log_extra=log)
+                log = [f"{min(count + response['limit'], response['total']):>6}/{response['total']:<6} {unit}"]
+
+            response = self.get(response["next"], use_cache=use_cache, log_pad=95, log_extra=log)
             results.extend(response[self.items_key])
             count += len(response[self.items_key])
+
+            if bar:
+                bar.update(1)
+
+        if bar:
+            bar.close()
 
         if isinstance(url, dict) and isinstance(url.get(self.items_key), list):
             url[self.items_key].extend(results)
@@ -93,6 +106,7 @@ class Collections(Utilities, metaclass=ABCMeta):
     def get_collections_user(
             self,
             user: Optional[str] = None,
+            expand: bool = True,
             kind: ItemType = ItemType.PLAYLIST,
             limit: int = 50,
             use_cache: bool = True,
@@ -121,16 +135,16 @@ class Collections(Utilities, metaclass=ABCMeta):
             url = f"{self.convert(user, kind=ItemType.USER, type_out=IDType.URL)}/{kind.name.lower()}s"
 
         params = {"limit": self.limit_value(limit, ceil=50)}
-        r = self.get(url, params=params, use_cache=use_cache, log_pad=69)
+        r = self.get(url, params=params, use_cache=use_cache, log_pad=71)
         self._get_collection_items(r, kind=kind, use_cache=use_cache)
         collections = r[self.items_key]
 
         self._enrich_collections_response(collections, kind=kind)
-        self._logger.debug(f"{'DONE':<7}: {url:<69} | Retrieved {len(collections):>3} {kind.name.lower()}s")
+        self._logger.debug(f"{'DONE':<7}: {url:<71} | Retrieved {len(collections):>6} {kind.name.lower()}s")
         return collections
 
     def get_collections(
-            self, items: APIMethodInputType, kind: Optional[ItemType] = None, limit: int = 100, use_cache: bool = True,
+            self, items: APIMethodInputType, kind: Optional[ItemType] = None, limit: int = 50, use_cache: bool = True,
     ) -> List[MutableMapping[str, Any]]:
         """
         ``GET: /{kind}s/...`` - Get all items from a given list of ``items``. Items may be:
@@ -159,24 +173,28 @@ class Collections(Utilities, metaclass=ABCMeta):
             raise ValueError(f"{kind.name.title()}s are not a valid collection type")
 
         if kind == ItemType.PLAYLIST and isinstance(items, str):
-            items = self.get_playlist_url(items, use_cache=use_cache).split("/")[-1]
+            items = self.get_playlist_url(items, use_cache=use_cache)
 
-        id_list = self.extract_ids(items, kind=kind)
         url = f"{__URL_API__}/{kind.name.lower()}s"
-        params = {"limit": self.limit_value(limit, ceil=100)}
+        params = {"limit": self.limit_value(limit, ceil=50)}
+        id_list = self.extract_ids(items, kind=kind)
+
+        unit = kind.name.lower() + "s"
+        if len(id_list) > 5:  # show progress bar for collection batches which may take a long time
+            id_list = self._get_progress_bar(iterable=id_list, desc=f'Getting {unit}', unit=unit)
 
         collections = []
         for id_ in id_list:
-            r = self.get(f"{url}/{id_}", params=params, use_cache=use_cache, log_pad=69)
+            r = self.get(f"{url}/{id_}", params=params, use_cache=use_cache, log_pad=71)
             self._get_collection_items(r[self.collection_types[kind.name]], kind=kind, use_cache=use_cache)
             collections.append(r)
 
         self._enrich_collections_response(collections, kind=kind)
 
         item_count = sum(len(coll[self.collection_types[kind.name]][self.items_key]) for coll in collections)
-        self._logger.debug(f"{'DONE':<7}: {url:<69} | "
-                           f"Retrieved {item_count:>4} {self.collection_types[kind.name]} "
-                           f"across {len(collections)} {kind.name.lower()}s")
+        self._logger.debug(f"{'DONE':<7}: {url:<71} | "
+                           f"Retrieved {item_count:>6} {self.collection_types[kind.name]} "
+                           f"across {len(collections):>5} {kind.name.lower()}s")
 
         if isinstance(items, dict) and len(collections) == 1:
             items.clear()
@@ -192,7 +210,7 @@ class Collections(Utilities, metaclass=ABCMeta):
     ###########################################################################
     def create_playlist(self, name: str, public: bool = True, collaborative: bool = False) -> str:
         """
-        ``POST: /users/{user_id}/playlists`` - Create an empty playlist for the current user.
+        ``POST: /users/{user_id}/playlists`` - Create an empty playlist for the current user with the given name.
 
         :param name: Name of playlist to create.
         :param public: Set playlist availability as `public` if True and `private` if False.
@@ -207,9 +225,9 @@ class Collections(Utilities, metaclass=ABCMeta):
             "public": public,
             "collaborative": collaborative,
         }
-        playlist = self.post(url, json=body, use_cache=False, log_pad=69)['href']
+        playlist = self.post(url, json=body, log_pad=71)['href']
 
-        self._logger.debug(f"{'DONE':<7}: {url:<69} | Created playlist: '{name}' -> {playlist}")
+        self._logger.debug(f"{'DONE':<7}: {url:<71} | Created playlist: '{name}' -> {playlist}")
         return playlist
 
     def add_to_playlist(self, playlist: str, items: List[str], limit: int = 50, skip_dupes: bool = True) -> int:
@@ -227,7 +245,7 @@ class Collections(Utilities, metaclass=ABCMeta):
         limit = self.limit_value(limit, ceil=50)
 
         if len(items) == 0:
-            self._logger.debug(f"{'SKIP':<7}: {url:<46} | No data given")
+            self._logger.debug(f"{'SKIP':<7}: {url:<43} | No data given")
             return 0
 
         self.validate_item_type(items, kind=ItemType.TRACK)
@@ -235,15 +253,16 @@ class Collections(Utilities, metaclass=ABCMeta):
         uri_list = [self.convert(item, kind=ItemType.TRACK, type_out=IDType.URI) for item in items]
         if skip_dupes:  # skip tracks currently in playlist
             pl_current = self.get_collections(url, kind=ItemType.PLAYLIST, limit=limit, use_cache=False)[0]
-            uris_current = [item['track']['uri'] for item in pl_current[self.items_key]]
+            tracks = pl_current[self.collection_types[ItemType.PLAYLIST.name]][self.items_key]
+            uris_current = [track['track']['uri'] for track in tracks]
             uri_list = [uri for uri in uri_list if uri not in uris_current]
 
         for uris in self.chunk_items(uri_list, size=limit):
             params = {'uris': ','.join(uris)}
-            log = [f"Adding {len(uris):>3} items"]
-            self.post(url, params=params, use_cache=False, log_pad=46, log_extra=log)
+            log = [f"Adding {len(uris):>5} items"]
+            self.post(url, params=params, log_pad=71, log_extra=log)
 
-        self._logger.debug(f"{'DONE':<7}: {url:<46} |  Added {len(uri_list)} items to playlist: {url}")
+        self._logger.debug(f"{'DONE':<7}: {url:<71} | Added  {len(uri_list):>5} items to playlist: {url}")
         return len(uri_list)
 
     ###########################################################################
@@ -258,7 +277,7 @@ class Collections(Utilities, metaclass=ABCMeta):
         :return: API URL for playlist.
         """
         url = f"{self.get_playlist_url(playlist, use_cache=False)}/followers"
-        self.delete(url, use_cache=False, log_pad=46)
+        self.delete(url, log_pad=43)
         return url
 
     def clear_from_playlist(self, playlist: str, items: Optional[List[str]] = None, limit: int = 100) -> int:
@@ -274,19 +293,20 @@ class Collections(Utilities, metaclass=ABCMeta):
         :exception ValueError: Raised when the item types of the input ``items`` are not all tracks or IDs.
         """
         url = f"{self.get_playlist_url(playlist, use_cache=False)}/tracks"
-        limit = self.limit_value(limit, ceil=50)
+        limit = self.limit_value(limit, ceil=100)
 
         if items is not None:
             self.validate_item_type(items, kind=ItemType.TRACK)
             uri_list = [self.convert(item, kind=ItemType.TRACK, type_out=IDType.URI) for item in items]
         else:
-            pl_current = self.get_collections(url, kind=ItemType.PLAYLIST, use_cache=False)[0]
-            uri_list = [item['track']['uri'] for item in pl_current[self.items_key]]
+            pl_current = self.get_collections(url, kind=ItemType.PLAYLIST)[0]
+            tracks = pl_current[self.collection_types[ItemType.PLAYLIST.name]][self.items_key]
+            uri_list = [track['track']['uri'] for track in tracks]
 
         for uris in self.chunk_items(uri_list, size=limit):
-            body = {'tracks': [{'uri': uri for uri in uris}]}
+            body = {'tracks': [{'uri': uri} for uri in uris]}
             log = [f"Clearing {len(uri_list):>3} tracks"]
-            self.delete(url, json=body, use_cache=False, log_pad=69, log_extra=log)
+            self.delete(url, json=body, log_pad=71, log_extra=log)
 
-        self._logger.debug(f"{'DONE':<7}: {url:<69} | Cleared  {len(uri_list):>3} tracks")
+        self._logger.debug(f"{'DONE':<7}: {url:<71} | Cleared  {len(uri_list):>3} tracks")
         return len(uri_list)

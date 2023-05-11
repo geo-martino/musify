@@ -65,9 +65,8 @@ class MusicBee(LocalLibrary):
 
     def load_tracks(self) -> List[LocalTrack]:
         tracks_paths = {track.path.lower(): track for track in self._load_tracks()}
-        tracks_xml = self.xml['Tracks'].values()
 
-        for track_xml in self._get_progress_bar(iterable=tracks_xml, desc="Enriching metadata", unit="tracks"):
+        for track_xml in self.xml['Tracks'].values():
             if not track_xml['Location'].startswith('file://localhost/'):
                 continue
 

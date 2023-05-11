@@ -8,11 +8,11 @@ import xmltodict
 
 from syncify.local.files.playlist.playlist import LocalPlaylist
 from syncify.local.files.track import PropertyName, LocalTrack, TrackMatch, TrackLimit, TrackSort, load_track
-from syncify.utils_new.generic import UpdateResult
+from syncify.utils_new.generic import SyncResult
 
 
 @dataclass
-class UpdateResultXAutoPF(UpdateResult):
+class SyncResultXAutoPF(SyncResult):
     start: int
     start_description: str
     start_include: int
@@ -94,7 +94,7 @@ class XAutoPF(LocalPlaylist):
         self._tracks_original = self.tracks.copy()
         return tracks
 
-    def save(self, dry_run: bool = True) -> UpdateResultXAutoPF:
+    def save(self, dry_run: bool = True) -> SyncResultXAutoPF:
         start_xml = deepcopy(self.xml)
 
         self.xml["SmartPlaylist"]["Source"]["Description"] = self.description
@@ -113,7 +113,7 @@ class XAutoPF(LocalPlaylist):
         start_source: Mapping[str, Any] = start_xml["SmartPlaylist"]["Source"]
         final_source: Mapping[str, Any] = self.xml["SmartPlaylist"]["Source"]
 
-        return UpdateResultXAutoPF(
+        return SyncResultXAutoPF(
             start=count_start,
             start_description=start_source["Description"],
             start_include=len([p for p in start_source.get("ExceptionsInclude", "").split("|") if p]),

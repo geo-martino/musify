@@ -42,7 +42,7 @@ class Items(Utilities, metaclass=ABCMeta):
             id_list = self._get_progress_bar(iterable=id_list, desc=f'Getting {unit}', unit=unit)
 
         log = [f"{unit.title()}:{len(id_list):>5}"]
-        results: List[Any] = [self.get(f"{url}/{id_}", params=params, use_cache=use_cache, log_pad=46, log_extra=log)
+        results: List[Any] = [self.get(f"{url}/{id_}", params=params, use_cache=use_cache, log_pad=43, log_extra=log)
                               for id_ in id_list]
         return [r[key] if key else r for r in results]
 
@@ -79,18 +79,18 @@ class Items(Utilities, metaclass=ABCMeta):
 
         id_chunks = self.chunk_items(id_list, size=self.limit_value(limit, ceil=50))
 
-        item_bar = range(len(id_chunks))
+        bar = range(len(id_chunks))
         if len(id_chunks) > 10:  # show progress bar for batches which may take a long time
-            item_bar = self._get_progress_bar(iterable=item_bar, desc=f'Getting {unit}', unit=unit)
+            bar = self._get_progress_bar(iterable=bar, desc=f'Getting {unit}', unit="pages")
 
         results = []
         params = params if params is not None else {}
-        for i, idx in enumerate(item_bar, 1):
+        for i, idx in enumerate(bar, 1):
             id_chunk = id_chunks[idx]
             params_chunk = params | {'ids': ','.join(id_chunk)}
 
-            log = [f"{unit.title()}:{len(results) + len(id_chunk):>6}/{len(id_list):<6}"]
-            response = self.get(url, params=params_chunk, use_cache=use_cache, log_pad=46, log_extra=log)
+            log = [f"{unit.title() + ':':<11} {len(results) + len(id_chunk):>6}/{len(id_list):<6}"]
+            response = self.get(url, params=params_chunk, use_cache=use_cache, log_pad=43, log_extra=log)
             results.extend(response[key]) if key else results.append(response)
         
         return results
@@ -121,6 +121,8 @@ class Items(Utilities, metaclass=ABCMeta):
         """
         if kind is None:
             kind = self.get_item_type(items)
+        else:
+            self.validate_item_type(items, kind=ItemType.TRACK)
 
         kind_str = f"{kind.name.lower()}s"
         url = f"{__URL_API__}/{kind_str}"
@@ -132,7 +134,7 @@ class Items(Utilities, metaclass=ABCMeta):
             results = self._get_item_results_batch(url=url, id_list=id_list, key=kind_str,
                                                    use_cache=use_cache, limit=limit)
 
-        self._logger.debug(f"{'DONE':<7}: {url:<46} | Retrieved {len(results):>3} {kind_str}")
+        self._logger.debug(f"{'DONE':<7}: {url:<43} | Retrieved {len(results):>6} {kind_str}")
         
         if isinstance(items, dict) and len(results) == 0:
             items.clear()
@@ -146,9 +148,9 @@ class Items(Utilities, metaclass=ABCMeta):
     def get_tracks_extra(
             self,
             items: APIMethodInputType,
-            limit: int = 50,
             features: bool = False,
             analysis: bool = False,
+            limit: int = 50,
             use_cache: bool = True,
     ) -> MutableMapping[str, List[Mapping[str, Any]]]:
         """
@@ -163,9 +165,9 @@ class Items(Utilities, metaclass=ABCMeta):
         under the ``audio_features`` and ``audio_analysis`` keys as appropriate.
 
         :param items: The values representing some Spotify tracks. See description for allowed value types.
-        :param limit: Size of batches to request when getting audio features.
         :param features: When True, get audio features.
         :param analysis: When True, get audio analysis.
+        :param limit: Size of batches to request when getting audio features.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: Raw API responses for each item.
         :exception ValueError: Raised when the item types of the input ``items`` are not all tracks or IDs.
@@ -177,7 +179,7 @@ class Items(Utilities, metaclass=ABCMeta):
 
         id_list = self.extract_ids(items, kind=ItemType.TRACK)
         if len(id_list) == 0:
-            self._logger.debug(f"{'SKIP':<7}: {__URL_API__:<46} | No data given")
+            self._logger.debug(f"{'SKIP':<7}: {__URL_API__:<43} | No data given")
             return {}
 
         features_key = "audio_features"
@@ -188,17 +190,17 @@ class Items(Utilities, metaclass=ABCMeta):
         results: MutableMapping[str, List[Mapping[str, Any]]] = {}
         if len(id_list) == 1:
             if features:
-                results[features_key] = [self.get(f"{features_url}/{id_list[0]}", use_cache=use_cache, log_pad=46)]
+                results[features_key] = [self.get(f"{features_url}/{id_list[0]}", use_cache=use_cache, log_pad=43)]
             if analysis:
-                results[analysis_key] = [self.get(f"{analysis_url}/{id_list[0]}", use_cache=use_cache, log_pad=46)]
+                results[analysis_key] = [self.get(f"{analysis_url}/{id_list[0]}", use_cache=use_cache, log_pad=43)]
         else:
             if features:
                 results[features_key] = self._get_item_results_batch(features_url, id_list=id_list, key=features_key,
-                                                                     unit=ItemType.TRACK.name, use_cache=use_cache,
+                                                                     unit="features", use_cache=use_cache,
                                                                      limit=limit)
             if analysis:
                 results[analysis_key] = self._get_item_results(url=analysis_url, id_list=id_list,
-                                                               unit=ItemType.TRACK.name, use_cache=use_cache)
+                                                               unit="analysis", use_cache=use_cache)
 
         if isinstance(items, dict):
             for key, result in results.items():

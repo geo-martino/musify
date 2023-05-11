@@ -5,9 +5,9 @@ from os.path import splitext
 
 from tqdm.auto import tqdm
 
-from syncify.spotify.spotify import CheckMatches
-from syncify.spotify.spotify import Endpoints
-from syncify.spotify.spotify import Search
+from syncify.spotify.check import CheckMatches
+from syncify.spotify.endpoints import Endpoints
+from syncify.spotify.search import Search
 
 
 class Spotify(Endpoints, Search, CheckMatches):

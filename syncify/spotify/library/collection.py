@@ -1,6 +1,5 @@
 from abc import ABCMeta, abstractmethod
 from copy import copy
-from datetime import datetime
 from typing import Any, List, MutableMapping, Optional, Self, Mapping
 
 from syncify.spotify import ItemType, IDType
@@ -32,6 +31,19 @@ class SpotifyCollection(SpotifyResponse, metaclass=ABCMeta):
             in the given list before calling the API for any items not found there.
             This helps reduce the number of API calls made on initialisation.
         """
+
+    @classmethod
+    def _load_response(cls, value: APIMethodInputType, use_cache: bool = True) -> MutableMapping[str, Any]:
+        kind = cls.__name__.lower().replace("spotify", "")
+        item_type = ItemType.from_name(kind).name
+        key = cls.api.collection_types[item_type]
+        try:
+            cls.api.validate_item_type(value, kind=ItemType.PLAYLIST)
+            value: MutableMapping[str, Any]
+            assert len(value[key][cls.api.items_key]) == value[key]["total"]
+            return value
+        except (ValueError, AssertionError):
+            return cls.api.get_collections(value, kind=ItemType.PLAYLIST, use_cache=use_cache)[0]
 
 
 class SpotifyAlbum(SpotifyCollection):
@@ -74,15 +86,15 @@ class SpotifyAlbum(SpotifyCollection):
             track.disc_total = self.disc_total
 
     @classmethod
-    def load(cls, value: APIMethodInputType, use_cache: bool = True, items: Optional[List[SpotifyTrack]] = None) -> Self:
+    def load(cls, value: APIMethodInputType, use_cache: bool = True,
+             items: Optional[List[SpotifyTrack]] = None) -> Self:
         cls._check_for_api()
         obj = cls.__new__(cls)
-        kind = ItemType.ALBUM
-        response: MutableMapping[str, Any] = cls.api.get_collections(value, kind=kind, use_cache=use_cache)[0]
+        response = cls._load_response(value, use_cache=use_cache)
 
         if not items:
             id_ = cls.api.extract_ids(value)[0]
-            obj.url = cls.api.convert(id_, kind=kind, type_in=IDType.ID, type_out=IDType.URL)
+            obj.url = cls.api.convert(id_, kind=ItemType.ALBUM, type_in=IDType.ID, type_out=IDType.URL)
             obj.reload(use_cache=use_cache)
         else:
             uri_tracks: Mapping[str, SpotifyTrack] = {track.uri: track for track in items}
@@ -93,18 +105,19 @@ class SpotifyAlbum(SpotifyCollection):
                 if track:
                     track_raw.clear()
                     track_raw.update(track.response)
-                else:
+                elif not track_raw["is_local"]:
                     uri_get.append(track_raw["uri"])
 
-            tracks_new = cls.api.get_items(uri_get, kind=ItemType.TRACK, use_cache=use_cache)
-            cls.api.get_tracks_extra(tracks_new, features=True, use_cache=use_cache)
-            uri_tracks: Mapping[str, Mapping[str, Any]] = {r["uri"]: r for r in tracks_new}
+            if len(uri_get) > 0:
+                tracks_new = cls.api.get_items(uri_get, kind=ItemType.TRACK, use_cache=use_cache)
+                cls.api.get_tracks_extra(tracks_new, features=True, use_cache=use_cache)
+                uri_tracks: Mapping[str, Mapping[str, Any]] = {r["uri"]: r for r in tracks_new}
 
-            for i, track_raw in enumerate(response["tracks"]["items"]):
-                track: Mapping[str, Any] = uri_tracks.get(track_raw["track"]["uri"])
-                if track:
-                    track_raw.clear()
-                    track_raw.update(track)
+                for i, track_raw in enumerate(response["tracks"]["items"]):
+                    track: Mapping[str, Any] = uri_tracks.get(track_raw["track"]["uri"])
+                    if track:
+                        track_raw.clear()
+                        track_raw.update(track)
 
             obj.__init__(response)
 
@@ -117,86 +130,4 @@ class SpotifyAlbum(SpotifyCollection):
         self.api.get_items(response["tracks"]["items"], kind=ItemType.TRACK, use_cache=use_cache)
         self.api.get_tracks_extra(response["tracks"]["items"], features=True, use_cache=use_cache)
 
-        self.__init__(response)
-
-
-class SpotifyPlaylist(SpotifyCollection):
-    """
-    Extracts key ``playlist`` data from a Spotify API JSON response.
-
-    :param response: The Spotify API JSON response
-    """
-
-    def __init__(self, response: MutableMapping[str, Any]):
-        SpotifyResponse.__init__(self, response)
-
-        self.name: str = response["name"]
-        self.description: str = response["description"]
-        self.collaborative: bool = response["collaborative"]
-        self.public: bool = response["public"]
-        self.followers: int = response["followers"]["total"]
-        self.track_total: int = response["tracks"]["total"]
-
-        self.owner_name: str = response["owner"]["display_name"]
-        self.owner_id: str = response["owner"]["id"]
-
-        images = {image["height"]: image["url"] for image in response["images"]}
-        self.image_links: MutableMapping[str, str] = {"cover_front": url
-                                                      for height, url in images.items() if height == max(images)}
-        self.has_image: bool = len(self.image_links) > 0
-
-        self.length: float = 0.0
-        self.date_created: Optional[datetime] = None
-        self.date_modified: Optional[datetime] = None
-
-        self.tracks = [SpotifyTrack(track["track"], track["added_at"]) for track in response["tracks"]["items"]]
-
-        if len(self.tracks) > 0:
-            self.length: float = sum(track.length for track in self.tracks)
-            self.date_created: datetime = min(track.date_added for track in self.tracks)
-            self.date_modified: datetime = max(track.date_added for track in self.tracks)
-
-    @classmethod
-    def load(cls, value: APIMethodInputType, use_cache: bool = True, items: Optional[List[SpotifyTrack]] = None) -> Self:
-        cls._check_for_api()
-        obj = cls.__new__(cls)
-        response = cls.api.get_collections(value, kind=ItemType.PLAYLIST, use_cache=use_cache)[0]
-
-        if not items:
-            obj.url = cls.api.get_playlist_url(value)
-            obj.reload(use_cache=use_cache)
-        else:
-            uri_tracks: Mapping[str, SpotifyTrack] = {track.uri: track for track in items}
-            uri_get: List[str] = []
-
-            for i, track_raw in enumerate(response["tracks"]["items"]):
-                track: SpotifyTrack = uri_tracks.get(track_raw["track"]["uri"])
-                if track:
-                    response["tracks"]["items"][i]["track"] = track.response
-                else:
-                    uri_get.append(track_raw["track"]["uri"])
-
-            tracks_new = cls.api.get_items(uri_get, kind=ItemType.TRACK, use_cache=use_cache)
-            cls.api.get_tracks_extra(tracks_new, features=True, use_cache=use_cache)
-            uri_tracks: Mapping[str, Mapping[str, Any]] = {r["uri"]: r for r in tracks_new}
-
-            for i, track_raw in enumerate(response["tracks"]["items"]):
-                track: Mapping[str, Any] = uri_tracks.get(track_raw["track"]["uri"])
-                if track:
-                    response["tracks"]["items"][i]["track"] = track
-
-            obj.__init__(response)
-
-        return obj
-
-    def reload(self, use_cache: bool = True) -> None:
-        self._check_for_api()
-
-        response = self.api.get_collections(self.url, kind=ItemType.PLAYLIST, use_cache=use_cache)[0]
-        tracks = [track["track"] for track in response["tracks"]["items"]]
-        self.api.get_items(tracks, kind=ItemType.TRACK, use_cache=use_cache)
-        self.api.get_tracks_extra(tracks, features=True, use_cache=use_cache)
-
-        for old, new in zip(response["tracks"]["items"], tracks):
-            old["track"] = new
         self.__init__(response)

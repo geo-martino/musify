@@ -66,7 +66,7 @@ class Logger:
     @classmethod
     def set_dev(cls) -> None:
         cls.set_log_folder("___log_dev", "dev")
-        cls.set_verbosity(5)
+        cls.set_verbosity(0)
         cls._is_dev = True
 
     def _handle_exception(self, exc_type, exc_value, exc_traceback) -> None:

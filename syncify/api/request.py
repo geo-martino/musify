@@ -16,7 +16,7 @@ from syncify.utils.logger import Logger
 class RequestHandler(APIAuthoriser, Logger):
     """
     Generic API request handler using cached responses for GET requests only.
-    Caches GET responses for a maximum of 4 weeks.
+    Caches GET responses for a maximum of 4 weeks by default.
     Handles error responses and backoff on failed requests.
     See :py:class:`APIAuthoriser` for more info on which params to pass to authorise requests.
 
@@ -28,6 +28,7 @@ class RequestHandler(APIAuthoriser, Logger):
     backoff_count = 10
 
     default_cache = join(dirname(dirname(dirname(__file__))), ".api_cache", "cache")
+    cache_expiry = timedelta(weeks=4)
 
     def __init__(self, cache_path: str = default_cache, **auth_kwargs):
         APIAuthoriser.__init__(self, **auth_kwargs)
@@ -36,7 +37,7 @@ class RequestHandler(APIAuthoriser, Logger):
         self.timeout = sum(self.backoff_start * self.backoff_factor ** i for i in range(self.backoff_count + 1))
 
         self.session = requests_cache.CachedSession(
-            cache_path, expire_after=timedelta(weeks=4), allowable_methods=['GET']
+            cache_path, expire_after=self.cache_expiry, allowable_methods=['GET']
         )
 
         self.auth()
@@ -96,7 +97,7 @@ class RequestHandler(APIAuthoriser, Logger):
             method: str,
             url: str,
             use_cache: bool = True,
-            log_pad: int = 46,
+            log_pad: int = 43,
             log_extra: Optional[List[str]] = None,
             *args, **kwargs
     ) -> BaseResponse:
@@ -112,7 +113,7 @@ class RequestHandler(APIAuthoriser, Logger):
             log.append(f"Args: ({', '.join(args)})")
         if len(kwargs) > 0:
             log.extend(f"{k.title()}: {v}" for k, v in kwargs.items())
-        if use_cache:
+        if use_cache and method.upper() in self.session.settings.allowable_methods:
             log.append("Cached")
 
         self._logger.debug(" | ".join(log))

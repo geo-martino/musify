@@ -26,7 +26,8 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
     @staticmethod
     def chunk_items(values: List[Any], size: int) -> List[List[Any]]:
         """Chunks a list of ``values`` into a list of lists of equal ``size``"""
-        return [values[i: i + size] for i in range(0, len(values), size) if len(values[i: i + size]) > 0]
+        chunked = [values[i: i + size] for i in range(0, len(values), size)]
+        return [chunk for chunk in chunked if chunk]
 
     @staticmethod
     def get_id_type(value: str) -> IDType:
@@ -82,6 +83,9 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
             Or when the list contains strings representing many differing Spotify item types or only IDs.
         """
         if isinstance(values, list):
+            if len(values) == 0:
+                raise ValueError("No values given: list is empty")
+
             kinds = {self._get_item_type(value) for value in values}
             kinds = [kind for kind in kinds if kind is not None]
             if len(kinds) == 0:
@@ -104,9 +108,11 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
         :exception ValueError: Raised when the function cannot determine the item type of the input ``items``.
         """
         if isinstance(value, dict):
-            if "type" in value:
-                return ItemType.from_name(value["type"].rstrip('s'))
-            raise ValueError(f"Given map does not contain a 'type' key: {value}")
+            if value.get("is_local", False):
+                raise ValueError("Cannot process local items")
+            if "type" not in value:
+                raise ValueError(f"Given map does not contain a 'type' key: {value}")
+            return ItemType.from_name(value["type"].rstrip('s'))
 
         value = value.strip()
         url_check = urlparse(value.replace('/v1/', '/')).netloc.split(".")
@@ -162,12 +168,15 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
         :return: Formatted string.
         :exception ValueError: Raised when the function cannot determine the item type of the input ``items``.
         """
-        value = value.strip()
+        if type_out is not None and self.validate_id_type(value, kind=type_out):
+            return value
         if type_in is None or type_in == IDType.ALL or not self.validate_id_type(value, kind=type_in):
             type_in = self.get_id_type(value)
 
+        value = value.strip()
+
         if type_in == IDType.URL_EXT or type_in == IDType.URL:  # open/api url
-            url_path = urlparse(value.strip()).path.split("/")
+            url_path = urlparse(value).path.split("/")
             for chunk in url_path:
                 try:
                     kind = ItemType.from_name(chunk.rstrip('s'))

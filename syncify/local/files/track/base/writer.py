@@ -7,11 +7,11 @@ from syncify.local.files.track.base.processor import TagProcessor
 from syncify.local.files.track.base.tags import TagName
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 from syncify.utils_new.helpers import make_list
-from syncify.utils_new.generic import UnionList, UpdateResult
+from syncify.utils_new.generic import UnionList, SyncResult
 
 
 @dataclass
-class UpdateResultTrack(UpdateResult):
+class SyncResultTrack(SyncResult):
     saved: bool  # if changes to the file on the disk were made
     updated: MutableMapping[TagName, int]  # The tag updated and the condition index it satisfied to be updated
 
@@ -21,7 +21,7 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
 
     def save(
             self, tags: Optional[UnionList[TagName]] = None, replace: bool = False, dry_run: bool = True
-    ) -> UpdateResultTrack:
+    ) -> SyncResultTrack:
         """
         Update file's tags from given dictionary of tags.
 
@@ -122,7 +122,7 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
         if save:
             self.file.save()
 
-        return UpdateResultTrack(saved=save, updated=updated)
+        return SyncResultTrack(saved=save, updated=updated)
                     
     @abstractmethod
     def _write_tag(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
@@ -287,7 +287,7 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
         :returns: True if the file was updated or would have been if dry_run is True, False otherwise.
         """
 
-    def delete_tags(self, tags: Optional[UnionList[TagName]] = None, dry_run: bool = True) -> UpdateResultTrack:
+    def delete_tags(self, tags: Optional[UnionList[TagName]] = None, dry_run: bool = True) -> SyncResultTrack:
         """
         Remove tags from file.
 
@@ -309,7 +309,7 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
         if save:
             self.file.save()
 
-        return UpdateResultTrack(saved=save, updated={u: 0 for u in removed})
+        return SyncResultTrack(saved=save, updated={u: 0 for u in removed})
 
     def _delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:
         """
