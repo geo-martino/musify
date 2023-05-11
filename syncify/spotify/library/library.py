@@ -167,7 +167,6 @@ if __name__ == "__main__":
     exit()
 
 
-
     import traceback
     import sys
 
@@ -190,7 +189,6 @@ if __name__ == "__main__":
 
     anastasic = [track for track in spotify_tracks if track.uri == 'spotify:track:77vCn7iUHH8KAOqdOe1XjY'][0]
     anastasic.response["audio_features"]["tempo"] = 60
-
 
     # playlists = [SpotifyPlaylist(pl) for pl in api.get_collections("berge cruising", kind=ItemType.PLAYLIST, limit=100)]
     pl = SpotifyPlaylist.load("berge cruising")

@@ -106,7 +106,6 @@ class Collections(Utilities, metaclass=ABCMeta):
     def get_collections_user(
             self,
             user: Optional[str] = None,
-            expand: bool = True,
             kind: ItemType = ItemType.PLAYLIST,
             limit: int = 50,
             use_cache: bool = True,
