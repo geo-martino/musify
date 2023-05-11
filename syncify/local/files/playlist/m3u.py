@@ -3,7 +3,7 @@ from datetime import datetime
 from os.path import exists, getmtime
 from typing import Optional, List, Collection, Union
 
-from syncify.local.files.playlist.playlist import Playlist
+from syncify.local.files.playlist.playlist import LocalPlaylist
 from syncify.local.files.track import LocalTrack, load_track, TrackMatch
 from syncify.utils_new.generic import UpdateResult
 
@@ -18,21 +18,21 @@ class UpdateResultM3U(UpdateResult):
     final: int
 
 
-class M3U(Playlist):
+class M3U(LocalPlaylist):
     """
     For reading and writing data from M3U playlist format.
     You must provide either a valid playlist path of a file that exists,
     or a list of tracks to use as this playlist's tracks.
     You may also provide both to use and store the loaded tracks to this instance.
 
-    :param path: Full path of the playlist.
+    :param path: Absolute path of the playlist.
         If the playlist ``path`` given does not exist, the playlist instance will use all the tracks
         given in ``tracks`` as the tracks in the playlist.
     :param tracks: Optional. Available Tracks to search through for matches.
         If no tracks are given, the playlist instance load all the tracks from paths
         listed in file at the playlist ``path``.
-    :param library_folder: Full path of folder containing tracks.
-    :param other_folders: Full paths of other possible library paths.
+    :param library_folder: Absolute path of folder containing tracks.
+    :param other_folders: Absolute paths of other possible library paths.
         Use to replace path stems from other libraries for the paths in loaded playlists.
         Useful when managing similar libraries on multiple platforms.
     :param check_existence: If True, when processing paths,
@@ -64,7 +64,7 @@ class M3U(Playlist):
             other_folders=other_folders,
             check_existence=check_existence
         )
-        Playlist.__init__(self, path=path, matcher=matcher)
+        LocalPlaylist.__init__(self, path=path, matcher=matcher)
 
         self.load(tracks=tracks)
 

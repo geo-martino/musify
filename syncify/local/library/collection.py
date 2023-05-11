@@ -1,10 +1,21 @@
 from datetime import datetime
 from typing import List, MutableMapping, Any, Optional, Callable, Tuple, Set
 
-from syncify.local.files.track import LocalTrack, TrackCollection
+from syncify.local.files.track import LocalTrack, LocalTrackCollection
 
 
-class LocalCollection(TrackCollection):
+class LocalCollection(LocalTrackCollection):
+    """
+    Generic class for storing a collection of local tracks
+    with methods for enriching the attributes of this object from the attributes of the collection of tracks
+
+    :param tracks: A list of loaded tracks.
+    :param name: The name of this collection.
+        If given, the object only stores tracks that match the name given on the attribute of this object.
+        If None, the list of tracks given are taken to be all the tracks contained in this collection.
+    :raises ValueError: If the given tracks contain more than one unique value
+        for the attribute of this collection when name is None.
+    """
 
     @property
     def tracks(self) -> List[LocalTrack]:
@@ -59,6 +70,7 @@ class LocalCollection(TrackCollection):
         self._last_modified: Optional[datetime] = None
 
     def _get_times(self) -> None:
+        """Extract key time data for this track collection from the loaded tracks"""
         key_type = Callable[[LocalTrack], Tuple[bool, datetime]]
         key: key_type = lambda t: (t.last_played is None, t.last_played)
         self._last_played = sorted(self._tracks, key=key, reverse=True)[0].last_played
@@ -78,6 +90,16 @@ class LocalCollection(TrackCollection):
 
 
 class Folder(LocalCollection):
+    """
+    Object representing a collection of tracks in a folder on the local drive
+
+    :param tracks: A list of loaded tracks.
+    :param name: The name of this folder.
+        If given, the object only stores tracks that match the folder ``name`` given.
+        If None, the list of tracks given are taken to be all the tracks contained in this folder.
+    :raises ValueError: If the given tracks contain more than one unique value for ``folder`` when name is None.
+    """
+
 
     @property
     def artists(self) -> Set[str]:
@@ -114,6 +136,15 @@ class Folder(LocalCollection):
 
 
 class Album(LocalCollection):
+    """
+    Object representing a collection of tracks of an album.
+
+    :param tracks: A list of loaded tracks.
+    :param name: The name of this album.
+        If given, the object only stores tracks that match the album ``name`` given.
+        If None, the list of tracks given are taken to be all the tracks for this album.
+    :raises ValueError: If the given tracks contain more than one unique value for ``album`` when name is None.
+    """
 
     @property
     def artists(self) -> Set[str]:
@@ -150,6 +181,15 @@ class Album(LocalCollection):
 
 
 class Artist(LocalCollection):
+    """
+    Object representing a collection of tracks by a single artist.
+
+    :param tracks: A list of loaded tracks.
+    :param name: The name of this artist.
+        If given, the object only stores tracks that match the artist ``name`` given.
+        If None, the list of tracks given are taken to be all the tracks by this artist.
+    :raises ValueError: If the given tracks contain more than one unique value for ``artist`` when name is None.
+    """
 
     @property
     def albums(self) -> Set[str]:
@@ -179,6 +219,15 @@ class Artist(LocalCollection):
 
 
 class Genres(LocalCollection):
+    """
+    Object representing a collection of tracks within a genre.
+
+    :param tracks: A list of loaded tracks.
+    :param name: The name of this genre.
+        If given, the object only stores tracks that match the genre ``name`` given.
+        If None, the list of tracks given are taken to be all the tracks within this genre.
+    :raises ValueError: If the given tracks contain more than one unique value for ``genre`` when name is None.
+    """
 
     @property
     def artists(self) -> Set[str]:

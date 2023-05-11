@@ -1,4 +1,4 @@
-from local.library import Library, MusicBee
+from local.library import LocalLibrary, MusicBee
 from spotify.api import API
 from spotify.library.collection import SpotifyAlbum, SpotifyPlaylist
 import json
@@ -91,7 +91,7 @@ if __name__ == "__main__":
 
 
     # playlists = [SpotifyPlaylist(pl) for pl in api.get_collections("berge cruising", kind=ItemType.PLAYLIST, limit=100)]
-    pl = SpotifyPlaylist.load("berge cruising", tracks=[track for track in spotify_tracks if track.uri != anastasic.uri])
+    pl = SpotifyPlaylist.load("berge cruising")
     anastasic_pl = [track for track in pl.tracks if track.uri == 'spotify:track:77vCn7iUHH8KAOqdOe1XjY'][0]
     print(anastasic)
     print(anastasic_pl)

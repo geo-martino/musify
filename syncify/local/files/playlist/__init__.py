@@ -1,4 +1,4 @@
-from .playlist import Playlist
+from .playlist import LocalPlaylist
 from .m3u import M3U
 from .xautopf import XAutoPF
 

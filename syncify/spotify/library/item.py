@@ -1,13 +1,25 @@
+from abc import ABCMeta
 from datetime import datetime
 from typing import Any, List, MutableMapping, Optional, Union, Self
 
-from syncify.spotify.api.utilities import InputItemTypeVar
+from syncify.spotify.api.utilities import APIMethodInputType
 from syncify.spotify import ItemType, IDType
 from syncify.spotify.library.response import SpotifyResponse
 from syncify.local.files.track.base.tags import Tags
 
 
-class SpotifyTrack(SpotifyResponse, Tags):
+class SpotifyItem(SpotifyResponse, metaclass=ABCMeta):
+    pass
+
+
+class SpotifyTrack(SpotifyItem, Tags):
+    """
+    Extracts key ``track`` data from a Spotify API JSON response.
+
+    :param response: The Spotify API JSON response.
+    :param date_added: Optionally, add a ``date_added`` attribute to this object that represents
+        when this track was added to a parent collection.
+    """
 
     _song_keys = {
         0: 'C',
@@ -75,7 +87,7 @@ class SpotifyTrack(SpotifyResponse, Tags):
                 self.key = f"{key}{'m'*is_minor}"
 
     @classmethod
-    def load(cls, value: InputItemTypeVar, use_cache: bool = True) -> Self:
+    def load(cls, value: APIMethodInputType, use_cache: bool = True) -> Self:
         cls._check_for_api()
         obj = cls.__new__(cls)
 
@@ -86,6 +98,7 @@ class SpotifyTrack(SpotifyResponse, Tags):
         return obj
 
     def refresh(self, use_cache: bool = True) -> None:
+        """Quickly refresh this item, calling the stored ``url`` and extracting metadata from the response"""
         self.__init__(self.api.get(url=self.url, use_cache=use_cache, log_pad=self._url_pad))
 
     def reload(self, use_cache: bool = True) -> None:
@@ -99,7 +112,12 @@ class SpotifyTrack(SpotifyResponse, Tags):
         self.__init__(response, date_added=getattr(self, "date_added", None))
 
 
-class SpotifyArtist(SpotifyResponse):
+class SpotifyArtist(SpotifyItem):
+    """
+    Extracts key ``artist`` data from a Spotify API JSON response.
+
+    :param response: The Spotify API JSON response.
+    """
 
     def __init__(self, response: MutableMapping[str, Any]):
         SpotifyResponse.__init__(self, response)
@@ -115,7 +133,7 @@ class SpotifyArtist(SpotifyResponse):
         self.rating: Optional[int] = response.get('popularity')
 
     @classmethod
-    def load(cls, value: InputItemTypeVar, use_cache: bool = True) -> Self:
+    def load(cls, value: APIMethodInputType, use_cache: bool = True) -> Self:
         cls._check_for_api()
         obj = cls.__new__(cls)
 

@@ -3,7 +3,7 @@ from abc import ABCMeta
 from typing import Optional, List, MutableMapping, Mapping, Any
 
 from syncify.spotify import ItemType, __URL_API__
-from syncify.spotify.api.utilities import Utilities, InputItemTypeVar
+from syncify.spotify.api.utilities import Utilities, APIMethodInputType
 
 
 class Items(Utilities, metaclass=ABCMeta):
@@ -99,16 +99,19 @@ class Items(Utilities, metaclass=ABCMeta):
     ## GET endpoints
     ###########################################################################
     def get_items(
-            self, items: InputItemTypeVar, kind: Optional[ItemType] = None, limit: int = 50, use_cache: bool = True,
+            self, items: APIMethodInputType, kind: Optional[ItemType] = None, limit: int = 50, use_cache: bool = True,
     ) -> List[MutableMapping[str, Any]]:
         """
         ``GET: /{kind}s`` - Get information for given list of ``items``. Items may be:
             * A single string value representing a URL/URI/ID.
             * A list of string values representing a URLs/URIs/IDs of the same type.
-            * A Spotify API JSON response for a collection including some items under an ``items`` key.
-            * A list of Spotify API JSON responses for a collection including some items under an ``items`` key.
+            * A Spotify API JSON response for a collection including some items under an ``items`` key, a valid ID value under an ``id`` key, and a valid item type value under a ``type`` key if ``kind`` is None.
+            * A list of Spotify API JSON responses for a collection including some items under an ``items`` key, a valid ID value under an ``id`` key, and a valid item type value under a ``type`` key if ``kind`` is None.
 
-        :param items: List of items to get. See description.
+        If a JSON response is given, this replaces the ``items`` with the new results.
+
+        :param items: The values representing some Spotify items. See description for allowed value types.
+            These items must all be of the same type of item i.e. all tracks OR all artists etc.
         :param kind: Item type if given string is ID.
         :param limit: Size of batches to request.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
@@ -142,7 +145,7 @@ class Items(Utilities, metaclass=ABCMeta):
 
     def get_tracks_extra(
             self,
-            items: InputItemTypeVar,
+            items: APIMethodInputType,
             limit: int = 50,
             features: bool = False,
             analysis: bool = False,
@@ -153,10 +156,13 @@ class Items(Utilities, metaclass=ABCMeta):
         Items may be:
             * A single string value representing a URL/URI/ID.
             * A list of string values representing a URLs/URIs/IDs of the same type.
-            * A Spotify API JSON response for a collection including some items under an ``items`` key.
-            * A list of Spotify API JSON responses for a collection including some items under an ``items`` key.
+            * A Spotify API JSON response for a collection including some items under an ``items`` key and a valid ID value under an ``id`` key.
+            * A list of Spotify API JSON responses for a collection including some items under an ``items`` key and a valid ID value under an ``id`` key.
 
-        :param items: List of items to get. See description.
+        If a JSON response is given, this updates ``items`` by adding the results
+        under the ``audio_features`` and ``audio_analysis`` keys as appropriate.
+
+        :param items: The values representing some Spotify tracks. See description for allowed value types.
         :param limit: Size of batches to request when getting audio features.
         :param features: When True, get audio features.
         :param analysis: When True, get audio analysis.

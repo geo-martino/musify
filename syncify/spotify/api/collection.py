@@ -2,11 +2,7 @@ from abc import ABCMeta
 from typing import Any, List, Mapping, MutableMapping, Optional, Union
 
 from syncify.spotify import __URL_API__, IDType, ItemType
-from syncify.spotify.api.utilities import InputItemTypeVar, Utilities
-
-
-class ItemTYpe:
-    pass
+from syncify.spotify.api.utilities import APIMethodInputType, Utilities
 
 
 class Collections(Utilities, metaclass=ABCMeta):
@@ -51,13 +47,16 @@ class Collections(Utilities, metaclass=ABCMeta):
         The function requests each page of the collection returning a list of all items
         found across all pages for this URL.
 
-        The input ``url`` may either be a URL string, or a Spotify API JSON response for an items type endpoint
-        which includes a required ``next`` key plus optional keys ``total``, ``limit``, ``items`` etc.
+        The input ``url`` may either be:
+            * A URL string
+            * A Spotify API JSON response for an items type endpoint which includes a required 
+            ``next`` key plus optional keys ``total``, ``limit``, ``items`` etc.
 
-        If a JSON response is given, this updates the value of the ``items`` key by extending the ``items``
-        with new results.
+        If a JSON response is given, this updates the value of the ``items`` key in-place 
+        by extending the ``items`` with new results.
 
         :param url: The URL for the required requests, or a Spotify API JSON response for an items type endpoint.
+            See description for allowed value types.
         :param kind: Item type of the given collection for logging purposes. If None, defaults to 'entries'.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: Raw API responses for each item
@@ -131,19 +130,19 @@ class Collections(Utilities, metaclass=ABCMeta):
         return collections
 
     def get_collections(
-            self, items: InputItemTypeVar, kind: Optional[ItemType] = None, limit: int = 100, use_cache: bool = True,
+            self, items: APIMethodInputType, kind: Optional[ItemType] = None, limit: int = 100, use_cache: bool = True,
     ) -> List[MutableMapping[str, Any]]:
         """
         ``GET: /{kind}s/...`` - Get all items from a given list of ``items``. Items may be:
             * A single string value representing a URL/URI/ID.
             * A list of string values representing a URLs/URIs/IDs of the same type.
-            * A Spotify API JSON response for a collection including some items under an ``items`` key.
-            * A list of Spotify API JSON responses for a collection including some items under an ``items`` key.
+            * A Spotify API JSON response for a collection including some items under an ``items`` key, a valid ID value under an ``id`` key and a valid item type value under a ``type`` key if ``kind`` is None.
+            * A list of Spotify API JSON responses for a collection including some items under an ``items`` key, a valid ID value under an ``id`` key and a valid item type value under a ``type`` key if ``kind`` is None.
 
         If JSON response/s are given, this updates the value of the ``items`` in-place
         by clearing and replacing its values.
 
-        :param items: List of items representing a list os collections of some kind. See description.
+        :param items: The values representing some Spotify collection. See description for allowed value types.
             These items must all be of the same type of collection i.e. all playlists OR all shows etc.
         :param kind: Item type of the given collection.
             If None, function will attempt to determine the type of the given values
@@ -228,7 +227,7 @@ class Collections(Utilities, metaclass=ABCMeta):
         limit = self.limit_value(limit, ceil=50)
 
         if len(items) == 0:
-            self._logger.debug(f"SKIP: {url:<46} | No data given")
+            self._logger.debug(f"{'SKIP':<7}: {url:<46} | No data given")
             return 0
 
         self.validate_item_type(items, kind=ItemType.TRACK)

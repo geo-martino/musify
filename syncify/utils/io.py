@@ -194,7 +194,7 @@ class IO:
         """
         Load xml like object from path.
 
-        :param path: str. Full path to file with extension.
+        :param path: str. Absolute path to file with extension.
         :return: dict.
         """ 
         raw = {}

@@ -6,7 +6,7 @@ from typing import Any, List, Mapping, Optional, Union, Collection
 
 import xmltodict
 
-from syncify.local.files.playlist.playlist import Playlist
+from syncify.local.files.playlist.playlist import LocalPlaylist
 from syncify.local.files.track import PropertyName, LocalTrack, TrackMatch, TrackLimit, TrackSort, load_track
 from syncify.utils_new.generic import UpdateResult
 
@@ -30,17 +30,17 @@ class UpdateResultXAutoPF(UpdateResult):
     final_sorter: bool
 
 
-class XAutoPF(Playlist):
+class XAutoPF(LocalPlaylist):
     """
     For reading and writing data from MusicBee's auto-playlist format.
 
     **Note**: You must provide a list of tracks to search on initialisation for this playlist type.
 
-    :param path: Full path of the playlist.
+    :param path: Absolute path of the playlist.
     :param tracks: Available Tracks to search through for matches.
         If none are provided, will load only the paths listed in the ``ExceptionsInclude`` key of the playlist file.
-    :param library_folder: Full path of folder containing tracks.
-    :param other_folders: Full paths of other possible library paths.
+    :param library_folder: Absolute path of folder containing tracks.
+    :param other_folders: Absolute paths of other possible library paths.
         Use to replace path stems from other libraries for the paths in loaded playlists.
         Useful when managing similar libraries on multiple platforms.
     :param check_existence: If True, when processing paths,
@@ -74,7 +74,7 @@ class XAutoPF(Playlist):
         limiter = TrackLimit.from_xml(xml=self.xml)
         sorter = TrackSort.from_xml(xml=self.xml)
 
-        Playlist.__init__(self, path=path, matcher=matcher, limiter=limiter, sorter=sorter)
+        LocalPlaylist.__init__(self, path=path, matcher=matcher, limiter=limiter, sorter=sorter)
 
         self.description = self.xml["SmartPlaylist"]["Source"]["Description"]
 

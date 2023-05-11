@@ -6,16 +6,16 @@ from typing import List, MutableMapping, Optional, Collection, Any, Union, Calla
 
 from syncify.local.files.file import File
 from syncify.local.files.track import LocalTrack
-from syncify.local.files.track.collection import TrackCollection
+from syncify.local.files.track.collection import LocalTrackCollection
 from syncify.local.files.track.collection import TrackMatch, TrackLimit, TrackSort
 from syncify.utils_new.generic import UpdateResult
 
 
-class Playlist(TrackCollection, File, metaclass=ABCMeta):
+class LocalPlaylist(LocalTrackCollection, File, metaclass=ABCMeta):
     """
-    Generic class for CRUD operations on playlists.
+    Generic class for manipulating local playlists.
 
-    :param path: Full path of the playlist.
+    :param path: Absolute path of the playlist.
     :param matcher: :class:`TrackMatch` object to use for matching tracks.
     :param limiter: :class:`TrackLimit` object to use for limiting the number of tracks matched.
     :param sorter: :class:`TrackSort` object to use for sorting the final track list.

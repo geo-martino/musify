@@ -1,14 +1,45 @@
+from abc import ABCMeta, abstractmethod
 from copy import copy
 from datetime import datetime
 from typing import Any, List, MutableMapping, Optional, Self, Mapping
 
 from syncify.spotify import ItemType, IDType
-from syncify.spotify.api.utilities import InputItemTypeVar
-from syncify.spotify.library.item import SpotifyTrack, SpotifyArtist
+from syncify.spotify.api.utilities import APIMethodInputType
+from syncify.spotify.library.item import SpotifyTrack, SpotifyArtist, SpotifyItem
 from syncify.spotify.library.response import SpotifyResponse
 
 
-class SpotifyAlbum(SpotifyResponse):
+class SpotifyCollection(SpotifyResponse, metaclass=ABCMeta):
+
+    @classmethod
+    @abstractmethod
+    def load(cls, value: APIMethodInputType, use_cache: bool = True, items: Optional[List[SpotifyItem]] = None) -> Self:
+        """
+        Generate a new object, calling all required endpoints to get a complete set of data for this item type.
+
+        The given ``value`` may be:
+            * A single string value representing a URL/URI/ID.
+            * A list of string values representing a URLs/URIs/IDs of the same type.
+            * A Spotify API JSON response for a collection with a valid ID value under an ``id`` key.
+            * A list of Spotify API JSON responses for a collection with a valid ID value under an ``id`` key.
+
+        When a list is given, only the first item is processed.
+
+        :param value: The value representing some Spotify artist. See description for allowed value types.
+        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param items: Optionally, give a list of available items to build a response for this collection.
+            In doing so, the method will first try to find the API responses for the items of this collection
+            in the given list before calling the API for any items not found there.
+            This helps reduce the number of API calls made on initialisation.
+        """
+
+
+class SpotifyAlbum(SpotifyCollection):
+    """
+    Extracts key ``album`` data from a Spotify API JSON response.
+
+    :param response: The Spotify API JSON response
+    """
 
     def __init__(self, response: MutableMapping[str, Any]):
         SpotifyResponse.__init__(self, response)
@@ -43,18 +74,18 @@ class SpotifyAlbum(SpotifyResponse):
             track.disc_total = self.disc_total
 
     @classmethod
-    def load(cls, value: InputItemTypeVar, use_cache: bool = True, tracks: Optional[List[SpotifyTrack]] = None) -> Self:
+    def load(cls, value: APIMethodInputType, use_cache: bool = True, items: Optional[List[SpotifyTrack]] = None) -> Self:
         cls._check_for_api()
         obj = cls.__new__(cls)
         kind = ItemType.ALBUM
         response: MutableMapping[str, Any] = cls.api.get_collections(value, kind=kind, use_cache=use_cache)[0]
 
-        if not tracks:
+        if not items:
             id_ = cls.api.extract_ids(value)[0]
             obj.url = cls.api.convert(id_, kind=kind, type_in=IDType.ID, type_out=IDType.URL)
             obj.reload(use_cache=use_cache)
         else:
-            uri_tracks: Mapping[str, SpotifyTrack] = {track.uri: track for track in tracks}
+            uri_tracks: Mapping[str, SpotifyTrack] = {track.uri: track for track in items}
             uri_get: List[str] = []
 
             for i, track_raw in enumerate(response["tracks"]["items"]):
@@ -89,7 +120,12 @@ class SpotifyAlbum(SpotifyResponse):
         self.__init__(response)
 
 
-class SpotifyPlaylist(SpotifyResponse):
+class SpotifyPlaylist(SpotifyCollection):
+    """
+    Extracts key ``playlist`` data from a Spotify API JSON response.
+
+    :param response: The Spotify API JSON response
+    """
 
     def __init__(self, response: MutableMapping[str, Any]):
         SpotifyResponse.__init__(self, response)
@@ -121,16 +157,16 @@ class SpotifyPlaylist(SpotifyResponse):
             self.date_modified: datetime = max(track.date_added for track in self.tracks)
 
     @classmethod
-    def load(cls, value: InputItemTypeVar, use_cache: bool = True, tracks: Optional[List[SpotifyTrack]] = None) -> Self:
+    def load(cls, value: APIMethodInputType, use_cache: bool = True, items: Optional[List[SpotifyTrack]] = None) -> Self:
         cls._check_for_api()
         obj = cls.__new__(cls)
         response = cls.api.get_collections(value, kind=ItemType.PLAYLIST, use_cache=use_cache)[0]
 
-        if not tracks:
+        if not items:
             obj.url = cls.api.get_playlist_url(value)
             obj.reload(use_cache=use_cache)
         else:
-            uri_tracks: Mapping[str, SpotifyTrack] = {track.uri: track for track in tracks}
+            uri_tracks: Mapping[str, SpotifyTrack] = {track.uri: track for track in items}
             uri_get: List[str] = []
 
             for i, track_raw in enumerate(response["tracks"]["items"]):

@@ -1,16 +1,30 @@
 from datetime import datetime
 from glob import glob
-from os.path import splitext, join
+from os.path import splitext, join, exists
 from typing import Optional, List, Set, MutableMapping, Mapping, Collection, Any, Callable, Tuple
 
 from syncify.local.files import IllegalFileTypeError
-from syncify.local.files.playlist import __PLAYLIST_FILETYPES__, Playlist, M3U, XAutoPF
-from syncify.local.files.track import TrackCollection, __TRACK_CLASSES__, LocalTrack, load_track, UpdateResultTrack
+from syncify.local.files.playlist import __PLAYLIST_FILETYPES__, LocalPlaylist, M3U, XAutoPF
+from syncify.local.files.track import LocalTrackCollection, __TRACK_CLASSES__, LocalTrack, load_track, UpdateResultTrack
 from syncify.utils_new.generic import UpdateResult
 from utils.logger import Logger
 
 
-class Library(TrackCollection, Logger):
+class LocalLibrary(LocalTrackCollection, Logger):
+    """
+    Represents a local library, providing various methods for manipulating
+    tracks and playlists across an entire local library collection.
+
+    :param library_folder: The absolute path of the library folder containing all tracks.
+        The intialiser will check for the existence of this path and only store it if it exists.
+    :param playlist_folder: The absolute path of the playlist folder containing all playlists
+        or the relative path within the given ``library_folder``.
+        The intialiser will check for the existence of this path and only store the absolute path if it exists.
+    :param other_folders: Absolute paths of other possible library paths.
+        Use to replace path stems from other libraries for the paths in loaded playlists.
+        Useful when managing similar libraries on multiple platforms.
+    :param load: When True, load the library on intialisation.
+    """
 
     @property
     def library_folder(self) -> str:
@@ -22,7 +36,7 @@ class Library(TrackCollection, Logger):
 
     @library_folder.setter
     def library_folder(self, value: Optional[str]):
-        self._library_folder: str = value.rstrip("\\/") if value is not None else None
+        self._library_folder: str = value.rstrip("\\/") if value is not None and exists(value) else None
         self._track_paths = None
         if value is not None:
             self._track_paths = {c.__name__: c.get_filepaths(self._library_folder) for c in __TRACK_CLASSES__}
@@ -37,6 +51,11 @@ class Library(TrackCollection, Logger):
 
     @playlist_folder.setter
     def playlist_folder(self, value: Optional[str]):
+        if not exists(value) and self.library_folder is not None:
+            value = join(self.library_folder.rstrip("\\/"), value.lstrip("\\/"))
+        if not exists(value):
+            return
+
         self._playlist_folder: str = value.rstrip("\\/") if value is not None else None
         self._playlist_paths = None
         if value is not None:
@@ -56,11 +75,11 @@ class Library(TrackCollection, Logger):
         return self._tracks
 
     @property
-    def playlists(self) -> List[Playlist]:
+    def playlists(self) -> List[LocalPlaylist]:
         return self._playlists
 
     @playlists.getter
-    def playlists(self) -> List[Playlist]:
+    def playlists(self) -> List[LocalPlaylist]:
         return self._playlists
 
     def __init__(
@@ -85,7 +104,7 @@ class Library(TrackCollection, Logger):
         self.other_folders = other_folders
 
         self._tracks: List[LocalTrack] = []
-        self._playlists: List[Playlist] = []
+        self._playlists: List[LocalPlaylist] = []
         self.last_played: Optional[datetime] = None
         self.last_added: Optional[datetime] = None
         self.last_modified: Optional[datetime] = None
@@ -148,7 +167,7 @@ class Library(TrackCollection, Logger):
             f"\33[1m{len(self._tracks):>6} total \33[0m"
         )
 
-    def load_playlists(self, names: Optional[Collection[str]] = None) -> List[Playlist]:
+    def load_playlists(self, names: Optional[Collection[str]] = None) -> List[LocalPlaylist]:
         """
         Load a playlist from a given list of names or, if None, load all playlists in this library.
         The name must be relative to the playlist folder of this object and exist in its loaded paths.
@@ -162,7 +181,7 @@ class Library(TrackCollection, Logger):
 
         self._logger.info(f"\33[1;95m -> \33[1;97mLoading playlist data for {len(names)} playlists \33[0m")
 
-        playlists: List[Playlist] = []
+        playlists: List[LocalPlaylist] = []
         errors: List[str] = []
         for name in self._get_progress_bar(iterable=names, desc="Loading playlists", unit="playlists"):
             path = self._playlist_paths.get(name.strip().lower())
@@ -193,7 +212,7 @@ class Library(TrackCollection, Logger):
 
     def log_playlists(self) -> None:
         """Log stats on currently loaded playlists"""
-        playlists: Mapping[str, Playlist] = dict(sorted([(pl.name, pl) for pl in self._playlists], key=lambda x: x[0]))
+        playlists: Mapping[str, LocalPlaylist] = dict(sorted([(pl.name, pl) for pl in self._playlists], key=lambda x: x[0]))
         max_width = self._get_max_width(playlists)
 
         if self._verbose > 0:

@@ -19,8 +19,8 @@ class TrackMatch(TrackProcessor):
         Ignored when comparators equal None.
     :param include_paths: List of paths for tracks to include regardless of comparator matches.
     :param exclude_paths: List of paths for tracks to exclude regardless of comparator matches.
-    :param library_folder: Full path of parent folder containing all tracks.
-    :param other_folders: Full paths of other possible library paths.
+    :param library_folder: Absolute path of the folder containing all tracks.
+    :param other_folders: Absolute paths of other possible library paths.
         Use to replace path stems from other libraries for the paths in loaded playlists.
         Useful when managing similar libraries on multiple platforms.
     :param check_existence: Check for the existence of the file paths on the file system
@@ -85,7 +85,7 @@ class TrackMatch(TrackProcessor):
         Attempt to sanitise given include/exclude file paths
         based on current library folder and other possible folder stems.
 
-        :param other_folders: Full paths of other possible library paths.
+        :param other_folders: Absolute paths of other possible library paths.
             Use to replace path stems from other libraries for the paths in loaded playlists.
             Useful when managing similar libraries on multiple platforms.
         :param check_existence: Check for the existence of the file paths on the file system.
@@ -118,7 +118,7 @@ class TrackMatch(TrackProcessor):
         Checks for the presence of some other folder as the stem of one of the given paths.
         Useful when managing similar libraries across multiple operating systems.
 
-        :param stems: Full paths of possible stems.
+        :param stems: Absolute paths of possible stems.
         :param paths: Paths to search through for a match.
         """
         stems = {folder.rstrip("\\/") for folder in make_list(stems)}

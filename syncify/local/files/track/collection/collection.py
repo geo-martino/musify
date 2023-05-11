@@ -5,7 +5,8 @@ from syncify.local.files.track import LocalTrack
 from syncify.utils_new.generic import PrettyPrinter
 
 
-class TrackCollection(PrettyPrinter, metaclass=ABCMeta):
+class LocalTrackCollection(PrettyPrinter, metaclass=ABCMeta):
+    """Generic class for storing a collection of local tracks."""
 
     @property
     @abstractmethod

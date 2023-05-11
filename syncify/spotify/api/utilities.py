@@ -7,7 +7,7 @@ from syncify.spotify import IDType, ItemType, __URL_API__, __URL_EXT__
 from syncify.utils.logger import Logger
 from syncify.utils_new.exception import EnumNotFoundError
 
-InputItemTypeVar = Union[str, MutableMapping[str, Any], List[str], List[MutableMapping[str, Any]]]
+APIMethodInputType = Union[str, MutableMapping[str, Any], List[str], List[MutableMapping[str, Any]]]
 
 
 class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
@@ -68,15 +68,16 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
             return len(value) == IDType.ID.value
         return False
 
-    def get_item_type(self, values: InputItemTypeVar) -> ItemType:
+    def get_item_type(self, values: APIMethodInputType) -> ItemType:
         """
         Determine the Spotify item type of ``values``. Values may be:
             * A single string value representing a URL/URI/ID.
             * A list of string values representing a URLs/URIs/IDs of the same type.
-            * A Spotify API JSON response for a collection including some items under an ``items`` key.
-            * A list of Spotify API JSON responses for a collection including some items under an ``items`` key.
+            * A Spotify API JSON response for a collection with a valid item type value under a ``type`` key.
+            * A list of Spotify API JSON responses for a collection with a valid item type value under a ``type`` key.
 
-        :param values: A list of strings to determine.
+        :param values: The values representing some Spotify items. See description for allowed value types.
+            These items must all be of the same type of item to pass i.e. all tracks OR all artists etc.
         :exception ValueError: Raised when the function cannot determine the item type of the input ``items``.
             Or when the list contains strings representing many differing Spotify item types or only IDs.
         """
@@ -96,9 +97,9 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
         """
         Determine the Spotify item type of the given ``value`` and return its type. Value may be:
             * A single string value representing a URL/URI/ID.
-            * A Spotify API JSON response for a collection including some items under an ``items`` key.
+            * A Spotify API JSON response for a collection with a valid item type value under a ``type`` key.
 
-        :param value: A string to determine or some dictionary response from the Spotify API.
+        :param value: The value representing some Spotify item. See description for allowed value types.
         :returns: The Spotify item type. If the given value is determined to be an ID, returns None.
         :exception ValueError: Raised when the function cannot determine the item type of the input ``items``.
         """
@@ -124,15 +125,16 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
             return None
         raise ValueError(f"Could not determine item type of given value: {value}")
 
-    def validate_item_type(self, values: InputItemTypeVar, kind: ItemType) -> None:
+    def validate_item_type(self, values: APIMethodInputType, kind: ItemType) -> None:
         """
         Check that the given ``values`` is a type of item given by ``kind `` or a simple ID. Values may be:
             * A single string value representing a URL/URI/ID.
             * A list of string values representing a URLs/URIs/IDs of the same type.
-            * A Spotify API JSON response for a collection including some items under an ``items`` key.
-            * A list of Spotify API JSON responses for a collection including some items under an ``items`` key.
+            * A Spotify API JSON response for a collection with a valid item type value under a ``type`` key.
+            * A list of Spotify API JSON responses for a collection with a valid item type value under a ``type`` key.
 
-        :param values: Values to determine.
+        :param values: The values representing some Spotify items. See description for allowed value types.
+            These items must all be of the same type of item to pass i.e. all tracks OR all artists etc.
         :param kind: The Spotify item type to check for.
         :exception ValueError: Raised when the function cannot validate the item type of the input ``values``
             is of type ``kind`` or a simple ID.
@@ -198,15 +200,16 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
         else:
             return id_
 
-    def extract_ids(self, items: InputItemTypeVar, kind: Optional[ItemType] = None) -> List[str]:
+    def extract_ids(self, items: APIMethodInputType, kind: Optional[ItemType] = None) -> List[str]:
         """
         Extract a list of IDs from input ``items``. Items may be:
             * A single string value representing a URL/URI/ID.
             * A list of string values representing a URLs/URIs/IDs of the same type.
-            * A Spotify API JSON response for a collection including some items under an ``items`` key.
-            * A list of Spotify API JSON responses for a collection including some items under an ``items`` key.
+            * A Spotify API JSON response for a collection with a valid ID value under an ``id`` key.
+            * A list of Spotify API JSON responses for a collection with a valid ID value under an ``id`` key.
 
-        :param items: List of items to get. See description.
+        :param items: The values representing some Spotify items. See description for allowed value types.
+            These items may be of mixed item types e.g. some tracks AND some artists.
         :param kind: Optionally, give the item type of the input ``value`` to reduce skip some checks.
             This is required when the given ``value`` is an ID.
         :return: List of IDs.

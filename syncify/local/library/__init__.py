@@ -1,3 +1,3 @@
 from .collection import *
-from .library import Library
+from .library import LocalLibrary
 from .musicbee import MusicBee

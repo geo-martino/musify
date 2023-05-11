@@ -6,10 +6,24 @@ from typing import Optional, Set, Any, List, MutableMapping
 from lxml import etree
 
 from syncify.local.files.track.base import LocalTrack
-from syncify.local.library.library import Library
+from syncify.local.library.library import LocalLibrary
 
 
-class MusicBee(Library):
+class MusicBee(LocalLibrary):
+    """
+    Represents a local MusicBee library, providing various methods for manipulating
+    tracks and playlists across an entire local library collection.
+
+    :param library_folder: The absolute path of the library folder containing all tracks.
+        The intialiser will check for the existence of this path and only store it if it exists.
+    :param musicbee_folder: The absolute path of the playlist folder containing all playlists
+        or the relative path within the given ``library_folder``.
+        The intialiser will check for the existence of this path and only store the absolute path if it exists.
+    :param other_folders: Absolute paths of other possible library paths.
+        Use to replace path stems from other libraries for the paths in loaded playlists.
+        Useful when managing similar libraries on multiple platforms.
+    :param load: When True, load the library on intialisation.
+    """
 
     def __init__(
             self,
@@ -19,32 +33,34 @@ class MusicBee(Library):
             load: bool = True
     ):
         if not exists(musicbee_folder):
-            musicbee_in_library = join(library_folder, musicbee_folder)
-            if not exists(musicbee_in_library):
+            in_library = join(library_folder.rstrip("\\/"), musicbee_folder.lstrip("\\/"))
+            if not exists(in_library):
                 raise FileNotFoundError(f"Cannot find MusicBee library at given path: "
-                                        f"{musicbee_folder} OR {musicbee_in_library}")
-            musicbee_folder = musicbee_in_library
+                                        f"{musicbee_folder} OR {in_library}")
+            musicbee_folder = in_library
 
         self.xml: MutableMapping[str, Any] = {}
         for record in ReadXmlLibrary(join(musicbee_folder, "iTunes Music Library.xml")):
             for key, value in record.items():
                 self.xml[key] = value
 
-        Library.__init__(
+        LocalLibrary.__init__(
             self,
-            playlist_folder=join(musicbee_folder, "Playlists"),
             library_folder=library_folder,
+            playlist_folder=join(musicbee_folder, "Playlists"),
             other_folders=other_folders,
             load=load
         )
 
     @staticmethod
     def _xml_ts_to_dt(timestamp_str: Optional[str]) -> Optional[datetime]:
+        """Convert timestamp string as found in the MusicBee XML library file to a ``datetime`` object"""
         if timestamp_str:
             return datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S%z")
 
     @staticmethod
     def _clean_xml_filepath(path: str) -> str:
+        """Clean the file paths as found in the MusicBee XML library file to a standard system path"""
         return normpath(urllib.parse.unquote(path.replace("file://localhost/", "")))
 
     def load_tracks(self) -> List[LocalTrack]:
