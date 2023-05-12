@@ -4,10 +4,11 @@ from syncify.spotify import ItemType
 from syncify.spotify.api import API
 from syncify.spotify.library.item import SpotifyResponse, SpotifyTrack
 from syncify.spotify.library.playlist import SpotifyPlaylist
+from syncify.spotify.processor import ItemChecker, ItemSearcher
 from syncify.utils.logger import Logger
 
 
-class SpotifyLibrary(Logger):
+class SpotifyLibrary(ItemChecker, ItemSearcher):
     limit = 50
 
     def __init__(

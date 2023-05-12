@@ -48,10 +48,10 @@ def check_spotify_type(
     if IDType.ALL in types:
         types = IDType.all()
 
-    if IDType.URL_EXT in types and __URL_EXT__.lower() in value.lower():
-        return IDType.URL_EXT
-    elif IDType.URL in types and __URL_API__.lower() in value.lower():
+    if IDType.URL in types and value.lower().startswith(__URL_API__):
         return IDType.URL
+    elif IDType.URL_EXT in types and value.lower().startswith(__URL_EXT__):
+        return IDType.URL_EXT
     elif IDType.URI in types and len(value.split(":")) == IDType.URI.value:
         uri_list = value.split(":")
         if not uri_list[0] == "spotify":

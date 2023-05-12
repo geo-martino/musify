@@ -18,8 +18,8 @@ class SpotifyCollection(ItemCollection, SpotifyResponse, metaclass=ABCMeta):
         Generate a new object, calling all required endpoints to get a complete set of data for this item type.
 
         The given ``value`` may be:
-            * A single string value representing a URL/URI/ID.
-            * A list of string values representing a URLs/URIs/IDs of the same type.
+            * A string representing a URL/URI/ID.
+            * A list of strings representing URLs/URIs/IDs of the same type.
             * A Spotify API JSON response for a collection with a valid ID value under an ``id`` key.
             * A list of Spotify API JSON responses for a collection with a valid ID value under an ``id`` key.
 

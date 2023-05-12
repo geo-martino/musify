@@ -103,8 +103,8 @@ class Items(Utilities, metaclass=ABCMeta):
     ) -> List[MutableMapping[str, Any]]:
         """
         ``GET: /{kind}s`` - Get information for given list of ``items``. Items may be:
-            * A single string value representing a URL/URI/ID.
-            * A list of string values representing a URLs/URIs/IDs of the same type.
+            * A string representing a URL/URI/ID.
+            * A list of strings representing URLs/URIs/IDs of the same type.
             * A Spotify API JSON response for a collection including some items under an ``items`` key, a valid ID value under an ``id`` key, and a valid item type value under a ``type`` key if ``kind`` is None.
             * A list of Spotify API JSON responses for a collection including some items under an ``items`` key, a valid ID value under an ``id`` key, and a valid item type value under a ``type`` key if ``kind`` is None.
 
@@ -156,8 +156,8 @@ class Items(Utilities, metaclass=ABCMeta):
         """
         ``GET: /audio-features`` and/or ``GET: /audio-analysis`` - Get audio features/analysis for list of items.
         Items may be:
-            * A single string value representing a URL/URI/ID.
-            * A list of string values representing a URLs/URIs/IDs of the same type.
+            * A string representing a URL/URI/ID.
+            * A list of strings representing URLs/URIs/IDs of the same type.
             * A Spotify API JSON response for a collection including some items under an ``items`` key and a valid ID value under an ``id`` key.
             * A list of Spotify API JSON responses for a collection including some items under an ``items`` key and a valid ID value under an ``id`` key.
 

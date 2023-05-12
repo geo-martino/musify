@@ -34,7 +34,7 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
         """
         Determine the Spotify ID type of the given ``value`` and return its type.
 
-        :param value: A string to determine.
+        :param value: URL/URI/ID to check.
         :returns: The Spotify ID type.
         :exception ValueError: Raised when the function cannot determine the ID type of the input ``items``.
         """
@@ -72,8 +72,8 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
     def get_item_type(self, values: APIMethodInputType) -> ItemType:
         """
         Determine the Spotify item type of ``values``. Values may be:
-            * A single string value representing a URL/URI/ID.
-            * A list of string values representing a URLs/URIs/IDs of the same type.
+            * A string representing a URL/URI/ID.
+            * A list of strings representing URLs/URIs/IDs of the same type.
             * A Spotify API JSON response for a collection with a valid item type value under a ``type`` key.
             * A list of Spotify API JSON responses for a collection with a valid item type value under a ``type`` key.
 
@@ -100,7 +100,7 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
     def _get_item_type(value: Union[str, MutableMapping[str, Any]]) -> Optional[ItemType]:
         """
         Determine the Spotify item type of the given ``value`` and return its type. Value may be:
-            * A single string value representing a URL/URI/ID.
+            * A string representing a URL/URI/ID.
             * A Spotify API JSON response for a collection with a valid item type value under a ``type`` key.
 
         :param value: The value representing some Spotify item. See description for allowed value types.
@@ -134,8 +134,8 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
     def validate_item_type(self, values: APIMethodInputType, kind: ItemType) -> None:
         """
         Check that the given ``values`` is a type of item given by ``kind `` or a simple ID. Values may be:
-            * A single string value representing a URL/URI/ID.
-            * A list of string values representing a URLs/URIs/IDs of the same type.
+            * A string representing a URL/URI/ID.
+            * A list of strings representing URLs/URIs/IDs of the same type.
             * A Spotify API JSON response for a collection with a valid item type value under a ``type`` key.
             * A list of Spotify API JSON responses for a collection with a valid item type value under a ``type`` key.
 
@@ -212,8 +212,8 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
     def extract_ids(self, items: APIMethodInputType, kind: Optional[ItemType] = None) -> List[str]:
         """
         Extract a list of IDs from input ``items``. Items may be:
-            * A single string value representing a URL/URI/ID.
-            * A list of string values representing a URLs/URIs/IDs of the same type.
+            * A string representing a URL/URI/ID.
+            * A list of strings representing URLs/URIs/IDs of the same type.
             * A Spotify API JSON response for a collection with a valid ID value under an ``id`` key.
             * A list of Spotify API JSON responses for a collection with a valid ID value under an ``id`` key.
 
