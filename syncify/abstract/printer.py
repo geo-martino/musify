@@ -1,43 +1,9 @@
 import re
-from abc import ABCMeta, abstractmethod, ABC
-from dataclasses import dataclass
+from abc import ABCMeta, abstractmethod
 from datetime import datetime
-from typing import Tuple, Mapping, List, MutableMapping, Any, TypeVar, Union, Optional
+from typing import Mapping, List, MutableMapping, Any, Optional
 
 from utils_new.helpers import make_list
-
-sort_ignore_words = ["The", "A"]
-
-T = TypeVar('T')
-UnionList = Union[T, List[T]]
-
-
-def strip_ignore_words(value: str) -> Tuple[bool, str]:
-    if not value:
-        return False, value
-
-    new_value = value
-    not_special = not any(value.startswith(c) for c in list('!"£$%^&*()_+-=…'))
-
-    for word in sort_ignore_words:
-        new_value = re.sub(f"^{word} ", "", value)
-        if new_value != value:
-            break
-
-    return not_special, new_value
-
-
-def flatten_nested(nested: Mapping, previous: List = None) -> List:
-    if previous is None:
-        previous = []
-
-    if isinstance(nested, dict):
-        for key, value in nested.items():
-            flatten_nested(value, previous=previous)
-    elif isinstance(nested, list):
-        previous.extend(nested)
-
-    return previous
 
 
 class PrettyPrinter(metaclass=ABCMeta):
@@ -150,7 +116,3 @@ class PrettyPrinter(metaclass=ABCMeta):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.as_dict()})"
 
-
-@dataclass
-class SyncResult(ABC):
-    pass

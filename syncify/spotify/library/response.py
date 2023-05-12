@@ -3,7 +3,7 @@ from typing import Any, MutableMapping, Self, Optional
 
 from spotify.api.utilities import APIMethodInputType
 from syncify.spotify.api import API
-from syncify.utils_new.generic import PrettyPrinter
+from syncify.abstract import PrettyPrinter
 
 
 class SpotifyResponse(PrettyPrinter, metaclass=ABCMeta):

@@ -1,9 +1,11 @@
+from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional, List, Mapping, Self
 
-from syncify.utils_new.exception import EnumNotFoundError
-from utils_new.helpers import SyncifyEnum
+import mutagen
+
+from syncify.abstract import SyncifyEnum, EnumNotFoundError
 
 
 @dataclass
@@ -148,3 +150,43 @@ class PropertyName(Name):
     LAST_PLAYED = 13
     PLAY_COUNT = 14
     RATING = 75
+
+
+class TagProcessor(Tags, Properties, metaclass=ABCMeta):
+    """Generic base class for tag processing"""
+
+    uri_tag = TagName.COMMENTS
+
+    @property
+    @abstractmethod
+    def _num_sep(self) -> str:
+        """
+        Some number values come as a combined string i.e. track number/track total
+        Define the separator to use when representing both values as a combined string
+        """
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def tag_map(self) -> TagMap:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def path(self) -> Optional[str]:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def file(self) -> Optional[mutagen.File]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def load_file(self) -> Optional[mutagen.File]:
+        """
+        Load local file using mutagen and set object file path and extension properties.
+
+        :returns: Mutagen file object or None if load error.
+        :exception FileNotFoundError: If the file cannot be found.
+        :exception IllegalFileTypeError: If the file type is not supported.
+        """

@@ -10,7 +10,7 @@ from typing import Tuple, Type, Optional, List
 from dateutil.relativedelta import relativedelta
 
 from syncify.local.files.track import LocalTrack, TagName, __TRACK_CLASSES__
-from local.files.track.base.image import open_image
+from syncify.local.files.file import open_image
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__, IDType
 from tests.common import path_resources, path_cache, random_str
 

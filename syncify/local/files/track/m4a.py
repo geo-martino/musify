@@ -5,8 +5,8 @@ import mutagen
 import mutagen.mp4
 from PIL import Image
 
+from syncify.local.files.file import open_image, get_image_bytes
 from syncify.local.files.track.base import LocalTrack, TagMap
-from syncify.local.files.track.base.image import open_image, get_image_bytes
 from syncify.utils_new.helpers import make_list
 
 

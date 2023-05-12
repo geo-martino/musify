@@ -6,14 +6,14 @@ from typing import Optional, List, Union, Mapping, Set, Collection, Self
 
 import mutagen
 
+from syncify.abstract import Item
 from syncify.local.files.file import File
 from syncify.local.files.track.base.reader import TagReader
 from syncify.local.files.track.base.tags import Tags, Properties
 from syncify.local.files.track.base.writer import TagWriter
-from syncify.utils_new.generic import PrettyPrinter
 
 
-class LocalTrack(PrettyPrinter, File, TagReader, TagWriter, metaclass=ABCMeta):
+class LocalTrack(Item, File, TagReader, TagWriter, metaclass=ABCMeta):
     """
     Generic track object for extracting, modifying, and saving tags for a given file.
 

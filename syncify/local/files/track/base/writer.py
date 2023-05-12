@@ -3,11 +3,10 @@ from copy import copy
 from dataclasses import dataclass
 from typing import Optional, Set, MutableMapping
 
-from syncify.local.files.track.base.processor import TagProcessor
-from syncify.local.files.track.base.tags import TagName
+from syncify.abstract import SyncResult
+from syncify.local.files.track.base.tags import TagName, TagProcessor
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
-from syncify.utils_new.helpers import make_list
-from syncify.utils_new.generic import UnionList, SyncResult
+from syncify.utils_new.helpers import UnionList, make_list
 
 
 @dataclass

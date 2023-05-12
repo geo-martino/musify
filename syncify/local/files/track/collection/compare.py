@@ -8,8 +8,7 @@ from dateutil.relativedelta import relativedelta
 
 from syncify.local.files.track.base import Name, LocalTrack, TagName, PropertyName
 from syncify.local.files.track.collection import TrackProcessor
-from syncify.utils_new.helpers import make_list
-from syncify.utils_new.generic import UnionList
+from syncify.utils_new.helpers import UnionList, make_list
 
 
 # Map of MusicBee field name to Tag or Property

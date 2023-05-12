@@ -6,9 +6,9 @@ from typing import Any, List, Mapping, Optional, Union, Collection
 
 import xmltodict
 
+from syncify.abstract import SyncResult
 from syncify.local.files.playlist.playlist import LocalPlaylist
 from syncify.local.files.track import PropertyName, LocalTrack, TrackMatch, TrackLimit, TrackSort, load_track
-from syncify.utils_new.generic import SyncResult
 
 
 @dataclass

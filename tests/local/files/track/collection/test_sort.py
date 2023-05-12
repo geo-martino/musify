@@ -2,12 +2,12 @@ from itertools import groupby
 from random import choice, randrange
 from typing import Callable
 
-from local.files.track import LocalTrack
+from syncify.local.files.track import LocalTrack
 from syncify.local.files.track import PropertyName
 from syncify.local.files.track import TrackSort, TagName
 from syncify.local.files.track.collection.sort import ShuffleMode
+from syncify.utils_new.helpers import strip_ignore_words
 from tests.local.files.track.track import random_tracks
-from utils_new.generic import strip_ignore_words
 
 
 def test_sort_by_field():

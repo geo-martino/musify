@@ -3,10 +3,10 @@ from operator import mul
 from random import shuffle
 from typing import Any, Callable, List, Mapping, Optional, Self, MutableMapping, Union, Collection
 
+from syncify.abstract import SyncifyEnum
 from syncify.local.files.track.base import PropertyName, LocalTrack
 from syncify.local.files.track.collection.processor import TrackProcessor
 from syncify.local.files.track.collection.sort import TrackSort
-from syncify.utils_new.helpers import SyncifyEnum
 
 
 class LimitType(SyncifyEnum):

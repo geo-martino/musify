@@ -4,8 +4,7 @@ from typing import Any, List, Mapping, Optional, Self, MutableMapping, Collectio
 from syncify.local.files.track.base import LocalTrack
 from syncify.local.files.track.collection.compare import TrackCompare
 from syncify.local.files.track.collection.processor import TrackProcessor
-from syncify.utils_new.helpers import make_list
-from syncify.utils_new.generic import UnionList
+from syncify.utils_new.helpers import UnionList, make_list
 
 
 class TrackMatch(TrackProcessor):

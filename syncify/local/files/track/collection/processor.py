@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from typing import Any, Mapping, Optional, Self, List, Union
 
-from syncify.utils_new.generic import PrettyPrinter
+from syncify.abstract import PrettyPrinter
 
 
 class TrackProcessor(PrettyPrinter, metaclass=ABCMeta):

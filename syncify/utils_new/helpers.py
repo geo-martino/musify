@@ -1,7 +1,11 @@
-from enum import IntEnum
-from typing import Any, List, Optional, Set, Self
+import re
+from typing import Any, Optional
+from typing import Tuple, Mapping, List, TypeVar, Union
 
-from syncify.utils_new.exception import EnumNotFoundError
+sort_ignore_words = ["The", "A"]
+
+T = TypeVar('T')
+UnionList = Union[T, List[T]]
 
 
 def make_list(data: Any) -> Optional[List]:
@@ -13,20 +17,29 @@ def make_list(data: Any) -> Optional[List]:
     return [data] if data is not None else None
 
 
-class SyncifyEnum(IntEnum):
+def strip_ignore_words(value: str) -> Tuple[bool, str]:
+    if not value:
+        return False, value
 
-    @classmethod
-    def all(cls) -> Set[Self]:
-        return {e for e in cls if e.name != "ALL"}
+    new_value = value
+    not_special = not any(value.startswith(c) for c in list('!"£$%^&*()_+-=…'))
 
-    @classmethod
-    def from_name(cls, name: str) -> Self:
-        """
-        Returns the first enum that matches the given name
+    for word in sort_ignore_words:
+        new_value = re.sub(f"^{word} ", "", value)
+        if new_value != value:
+            break
 
-        :exception EnumNotFoundError: If a corresponding enum cannot be found.
-        """
-        for enum in cls:
-            if name.strip().upper() == enum.name.upper():
-                return enum
-        raise EnumNotFoundError(name)
+    return not_special, new_value
+
+
+def flatten_nested(nested: Mapping, previous: List = None) -> List:
+    if previous is None:
+        previous = []
+
+    if isinstance(nested, dict):
+        for key, value in nested.items():
+            flatten_nested(value, previous=previous)
+    elif isinstance(nested, list):
+        previous.extend(nested)
+
+    return previous

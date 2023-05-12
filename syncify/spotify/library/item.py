@@ -2,13 +2,14 @@ from abc import ABCMeta
 from datetime import datetime
 from typing import Any, List, MutableMapping, Optional, Union, Self
 
+from syncify.abstract import Item
 from syncify.spotify.api.utilities import APIMethodInputType
 from syncify.spotify import ItemType, IDType
 from syncify.spotify.library.response import SpotifyResponse
 from syncify.local.files.track.base.tags import Tags
 
 
-class SpotifyItem(SpotifyResponse, metaclass=ABCMeta):
+class SpotifyItem(Item, SpotifyResponse, metaclass=ABCMeta):
     pass
 
 

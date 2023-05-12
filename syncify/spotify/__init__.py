@@ -1,6 +1,7 @@
 from typing import List, Optional, Union, Set
 
-from utils_new.helpers import make_list, SyncifyEnum
+from syncify.abstract import SyncifyEnum
+from syncify.utils_new.helpers import make_list
 
 __UNAVAILABLE_URI_VALUE__ = "spotify:track:unavailable"
 __URL_AUTH__ = "https://accounts.spotify.com"

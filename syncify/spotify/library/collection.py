@@ -2,18 +2,14 @@ from abc import ABCMeta, abstractmethod
 from copy import copy
 from typing import Any, List, MutableMapping, Optional, Self, Mapping
 
+from syncify.abstract import ItemCollection
 from syncify.spotify import ItemType, IDType
 from syncify.spotify.api.utilities import APIMethodInputType
 from syncify.spotify.library.item import SpotifyTrack, SpotifyArtist, SpotifyItem
 from syncify.spotify.library.response import SpotifyResponse
 
 
-class SpotifyCollection(SpotifyResponse, metaclass=ABCMeta):
-
-    @property
-    @abstractmethod
-    def items(self) -> List[SpotifyItem]:
-        raise NotImplementedError
+class SpotifyCollection(ItemCollection, SpotifyResponse, metaclass=ABCMeta):
 
     @classmethod
     @abstractmethod
@@ -50,12 +46,6 @@ class SpotifyCollection(SpotifyResponse, metaclass=ABCMeta):
         except (ValueError, AssertionError):
             return cls.api.get_collections(value, kind=ItemType.PLAYLIST, use_cache=use_cache)[0]
 
-    def __len__(self):
-        return len(self.items)
-
-    def __iter__(self):
-        return (t for t in self.items)
-
 
 class SpotifyAlbum(SpotifyCollection):
     """
@@ -66,11 +56,11 @@ class SpotifyAlbum(SpotifyCollection):
 
     @property
     def items(self) -> List[SpotifyTrack]:
-        return self._items
+        return self._tracks
 
     @property
     def tracks(self) -> List[SpotifyTrack]:
-        return self.items
+        return self._tracks
 
     def __init__(self, response: MutableMapping[str, Any]):
         SpotifyResponse.__init__(self, response)
@@ -98,7 +88,7 @@ class SpotifyAlbum(SpotifyCollection):
             track["album"] = album_only
 
         self.artists = [SpotifyArtist(artist) for artist in response["artists"]]
-        self._items = [SpotifyTrack(track) for track in response["tracks"]["items"]]
+        self._tracks = [SpotifyTrack(track) for track in response["tracks"]["items"]]
         self.disc_total = max(track.disc_number for track in self.tracks)
 
         for track in self.tracks:

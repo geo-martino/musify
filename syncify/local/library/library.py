@@ -3,14 +3,14 @@ from glob import glob
 from os.path import splitext, join, exists
 from typing import Optional, List, Set, MutableMapping, Mapping, Collection, Any, Callable, Tuple
 
+from syncify.abstract import ItemCollection, SyncResult
 from syncify.local.files import IllegalFileTypeError
 from syncify.local.files.playlist import __PLAYLIST_FILETYPES__, LocalPlaylist, M3U, XAutoPF
-from syncify.local.files.track import LocalTrackCollection, __TRACK_CLASSES__, LocalTrack, load_track, SyncResultTrack
-from syncify.utils_new.generic import SyncResult
-from utils.logger import Logger
+from syncify.local.files.track import __TRACK_CLASSES__, LocalTrack, load_track, SyncResultTrack
+from syncify.utils.logger import Logger
 
 
-class LocalLibrary(LocalTrackCollection, Logger):
+class LocalLibrary(ItemCollection, Logger):
     """
     Represents a local library, providing various methods for manipulating
     tracks and playlists across an entire local library collection.
@@ -74,6 +74,10 @@ class LocalLibrary(LocalTrackCollection, Logger):
                                f"from {playlists_total} Spotify playlists")
 
     @property
+    def items(self) -> List[LocalTrack]:
+        return self._tracks
+
+    @property
     def tracks(self) -> List[LocalTrack]:
         return self._tracks
 
@@ -135,14 +139,14 @@ class LocalLibrary(LocalTrackCollection, Logger):
 
         self._tracks = self.load_tracks()
         self._line()
-        if len(self._tracks) > 0:
+        if len(self.tracks) > 0:
             key_type = Callable[[LocalTrack], Tuple[bool, datetime]]
             key: key_type = lambda t: (t.last_played is None, t.last_played)
-            self.last_played = sorted(self._tracks, key=key, reverse=True)[0].last_played
+            self.last_played = sorted(self.tracks, key=key, reverse=True)[0].last_played
             key: key_type = lambda t: (t.date_added is None, t.date_added)
-            self.last_added = sorted(self._tracks, key=key, reverse=True)[0].date_added
+            self.last_added = sorted(self.tracks, key=key, reverse=True)[0].date_added
             key: key_type = lambda t: (t.date_modified is None, t.date_modified)
-            self.last_modified = sorted(self._tracks, key=key, reverse=True)[0].date_modified
+            self.last_modified = sorted(self.tracks, key=key, reverse=True)[0].date_modified
         self.log_tracks()
         print()
 
@@ -186,10 +190,10 @@ class LocalLibrary(LocalTrackCollection, Logger):
         """Log stats on currently loaded tracks"""
         self._logger.info(
             f"\33[1;96m{'LIBRARY TOTALS':<22}\33[1;0m|"
-            f"\33[92m{sum([track.has_uri for track in self._tracks]):>6} available \33[0m|"
-            f"\33[91m{sum([track.has_uri is None for track in self._tracks]):>6} missing \33[0m|"
-            f"\33[93m{sum([track.has_uri is False for track in self._tracks]):>6} unavailable \33[0m|"
-            f"\33[1m{len(self._tracks):>6} total \33[0m"
+            f"\33[92m{sum([track.has_uri for track in self.tracks]):>6} available \33[0m|"
+            f"\33[91m{sum([track.has_uri is None for track in self.tracks]):>6} missing \33[0m|"
+            f"\33[93m{sum([track.has_uri is False for track in self.tracks]):>6} unavailable \33[0m|"
+            f"\33[1m{len(self.tracks):>6} total \33[0m"
         )
 
     def load_playlists(self, names: Optional[Collection[str]] = None) -> List[LocalPlaylist]:
@@ -217,11 +221,11 @@ class LocalLibrary(LocalTrackCollection, Logger):
             ext = splitext(path)[1].lower()
             if ext in M3U.valid_extensions:
                 pl = M3U(
-                    path=path, tracks=self._tracks, library_folder=self.library_folder, other_folders=self.other_folders
+                    path=path, tracks=self.tracks, library_folder=self.library_folder, other_folders=self.other_folders
                 )
             elif ext in XAutoPF.valid_extensions:
                 pl = XAutoPF(
-                    path=path, tracks=self._tracks, library_folder=self.library_folder, other_folders=self.other_folders
+                    path=path, tracks=self.tracks, library_folder=self.library_folder, other_folders=self.other_folders
                 )
             else:
                 raise IllegalFileTypeError(ext)
@@ -281,6 +285,6 @@ class LocalLibrary(LocalTrackCollection, Logger):
             "library_folder": self.library_folder,
             "playlists_folder": self.playlist_folder,
             "other_folders": self.other_folders,
-            "track_count": len(self._tracks),
+            "track_count": len(self.tracks),
             "playlist_counts": {pl.name: len(pl) for pl in self._playlists},
         }

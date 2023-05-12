@@ -7,8 +7,8 @@ import mutagen.mp3
 from PIL import Image
 from mutagen.id3 import Encoding
 
+from syncify.local.files.file import open_image, get_image_bytes
 from syncify.local.files.track.base import LocalTrack, TagName, TagMap
-from syncify.local.files.track.base.image import open_image, get_image_bytes
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 
 

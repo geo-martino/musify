@@ -2,12 +2,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, List, MutableMapping, Optional, Self, Mapping, Literal, Collection
 
+from syncify.abstract import SyncResult
 from syncify.spotify import ItemType
 from syncify.spotify.api.utilities import APIMethodInputType
 from syncify.spotify.library.collection import SpotifyCollection
 from syncify.spotify.library.item import SpotifyTrack
 from syncify.spotify.library.response import SpotifyResponse
-from syncify.utils_new.generic import SyncResult
 
 
 @dataclass
@@ -29,11 +29,11 @@ class SpotifyPlaylist(SpotifyCollection):
 
     @property
     def items(self) -> List[SpotifyTrack]:
-        return self._items
+        return self._tracks
 
     @property
     def tracks(self) -> List[SpotifyTrack]:
-        return self.items
+        return self._tracks
 
     def __init__(self, response: MutableMapping[str, Any]):
         SpotifyResponse.__init__(self, response)
@@ -57,7 +57,7 @@ class SpotifyPlaylist(SpotifyCollection):
         self.date_created: Optional[datetime] = None
         self.date_modified: Optional[datetime] = None
 
-        self._items = [SpotifyTrack(track["track"], track["added_at"]) for track in response["tracks"]["items"]]
+        self._tracks = [SpotifyTrack(track["track"], track["added_at"]) for track in response["tracks"]["items"]]
 
         if len(self.tracks) > 0:
             self.length: float = sum(track.length for track in self.tracks)

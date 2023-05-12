@@ -1,10 +1,11 @@
 from datetime import datetime
 from typing import List, MutableMapping, Any, Optional, Callable, Tuple, Set
 
-from syncify.local.files.track import LocalTrack, LocalTrackCollection
+from syncify.abstract import ItemCollection
+from syncify.local.files.track import LocalTrack
 
 
-class LocalCollection(LocalTrackCollection):
+class LocalCollection(ItemCollection):
     """
     Generic class for storing a collection of local tracks
     with methods for enriching the attributes of this object from the attributes of the collection of tracks
@@ -18,24 +19,12 @@ class LocalCollection(LocalTrackCollection):
     """
 
     @property
-    def tracks(self) -> List[LocalTrack]:
+    def items(self) -> List[LocalTrack]:
         return self._tracks
 
     @property
-    def name(self) -> str:
-        return self._name
-
-    @property
-    def last_added(self) -> Optional[datetime]:
-        return self._last_added
-
-    @property
-    def last_modified(self) -> Optional[datetime]:
-        return self._last_modified
-
-    @property
-    def last_played(self) -> Optional[datetime]:
-        return self._last_played
+    def tracks(self) -> List[LocalTrack]:
+        return self._tracks
 
     def __init__(self, tracks: List[LocalTrack], name: Optional[str] = None):
         if len(tracks) == 0:
@@ -62,30 +51,30 @@ class LocalCollection(LocalTrackCollection):
 
             name = names_flat[0]
 
-        self._name: str = name
+        self.name: str = name
         self._tracks: List[LocalTrack] = [track for track in tracks if getattr(track, self._tag_key, None) == name]
 
-        self._last_played: Optional[datetime] = None
-        self._last_added: Optional[datetime] = None
-        self._last_modified: Optional[datetime] = None
+        self.last_played: Optional[datetime] = None
+        self.last_added: Optional[datetime] = None
+        self.last_modified: Optional[datetime] = None
 
     def _get_times(self) -> None:
         """Extract key time data for this track collection from the loaded tracks"""
         key_type = Callable[[LocalTrack], Tuple[bool, datetime]]
         key: key_type = lambda t: (t.last_played is None, t.last_played)
-        self._last_played = sorted(self._tracks, key=key, reverse=True)[0].last_played
+        self.last_played = sorted(self.tracks, key=key, reverse=True)[0].last_played
         key: key_type = lambda t: (t.date_added is None, t.date_added)
-        self._last_added = sorted(self._tracks, key=key, reverse=True)[0].date_added
+        self.last_added = sorted(self.tracks, key=key, reverse=True)[0].date_added
         key: key_type = lambda t: (t.date_modified is None, t.date_modified)
-        self._last_modified = sorted(self._tracks, key=key, reverse=True)[0].date_modified
+        self.last_modified = sorted(self.tracks, key=key, reverse=True)[0].date_modified
 
     def as_dict(self) -> MutableMapping[str, Any]:
         return {
-            "name": self._name,
-            "tracks": self._tracks,
-            "last_added": self._last_added,
-            "last_modified": self._last_modified,
-            "last_played": self._last_played,
+            "name": self.name,
+            "tracks": self.tracks,
+            "last_played": self.last_played,
+            "last_added": self.last_added,
+            "last_modified": self.last_modified,
         }
 
 
@@ -100,37 +89,25 @@ class Folder(LocalCollection):
     :raises ValueError: If the given tracks contain more than one unique value for ``folder`` when name is None.
     """
 
-    @property
-    def artists(self) -> Set[str]:
-        return self._artists
-
-    @property
-    def genres(self) -> Set[str]:
-        return self._genres
-
-    @property
-    def compilation(self) -> bool:
-        return self._compilation
-
     def __init__(self, tracks: List[LocalTrack], name: Optional[str] = None):
         LocalCollection.__init__(self, tracks=tracks, name=name)
         self._get_times()
 
-        self._artists = set(track.artist for track in self.tracks)
-        self._genres = set(genre for track in self.tracks for genre in (track.genres if track.genres else []))
+        self.artists = set(track.artist for track in self.tracks)
+        self.genres = set(genre for track in self.tracks for genre in (track.genres if track.genres else []))
         # collection is a compilation if over 50% of tracks are marked as compilation
-        self._compilation = (sum(track.compilation for track in self.tracks) / len(self.tracks)) > 0.5
+        self.compilation = (sum(track.compilation for track in self.tracks) / len(self.tracks)) > 0.5
 
     def as_dict(self) -> MutableMapping[str, Any]:
         return {
-            "name": self._name,
-            "artists": self._artists,
-            "genres": self._genres,
-            "compilation": self._compilation,
-            "tracks": self._tracks,
-            "last_added": self._last_added,
-            "last_modified": self._last_modified,
-            "last_played": self._last_played,
+            "name": self.name,
+            "artists": self.artists,
+            "genres": self.genres,
+            "compilation": self.compilation,
+            "tracks": self.tracks,
+            "last_played": self.last_played,
+            "last_added": self.last_added,
+            "last_modified": self.last_modified,
         }
 
 
@@ -145,37 +122,25 @@ class Album(LocalCollection):
     :raises ValueError: If the given tracks contain more than one unique value for ``album`` when name is None.
     """
 
-    @property
-    def artists(self) -> Set[str]:
-        return self._artists
-
-    @property
-    def genres(self) -> Set[str]:
-        return self._genres
-
-    @property
-    def compilation(self) -> bool:
-        return self._compilation
-
     def __init__(self, tracks: List[LocalTrack], name: Optional[str] = None):
         LocalCollection.__init__(self, tracks=tracks, name=name)
         self._get_times()
 
-        self._artists = set(track.artist for track in self.tracks if track.artist)
-        self._genres = set(genre for track in self.tracks for genre in (track.genres if track.genres else []))
+        self.artists = set(track.artist for track in self.tracks if track.artist)
+        self.genres = set(genre for track in self.tracks for genre in (track.genres if track.genres else []))
         # collection is a compilation if over 50% of tracks are marked as compilation
-        self._compilation = (sum(track.compilation for track in self.tracks) / len(self.tracks)) > 0.5
+        self.compilation = (sum(track.compilation for track in self.tracks) / len(self.tracks)) > 0.5
 
     def as_dict(self) -> MutableMapping[str, Any]:
         return {
-            "name": self._name,
-            "artists": self._artists,
-            "genres": self._genres,
-            "compilation": self._compilation,
-            "tracks": self._tracks,
-            "last_added": self._last_added,
-            "last_modified": self._last_modified,
-            "last_played": self._last_played,
+            "name": self.name,
+            "artists": self.artists,
+            "genres": self.genres,
+            "compilation": self.compilation,
+            "tracks": self.tracks,
+            "last_played": self.last_played,
+            "last_added": self.last_added,
+            "last_modified": self.last_modified,
         }
 
 
@@ -190,30 +155,22 @@ class Artist(LocalCollection):
     :raises ValueError: If the given tracks contain more than one unique value for ``artist`` when name is None.
     """
 
-    @property
-    def albums(self) -> Set[str]:
-        return self._albums
-
-    @property
-    def genres(self) -> Set[str]:
-        return self._genres
-
     def __init__(self, tracks: List[LocalTrack], name: Optional[str] = None):
         LocalCollection.__init__(self, tracks=tracks, name=name)
         self._get_times()
 
-        self._albums = set(track.album for track in self.tracks if track.album)
-        self._genres = set(genre for track in self.tracks for genre in (track.genres if track.genres else []))
+        self.albums = set(track.album for track in self.tracks if track.album)
+        self.genres = set(genre for track in self.tracks for genre in (track.genres if track.genres else []))
 
     def as_dict(self) -> MutableMapping[str, Any]:
         return {
-            "name": self._name,
-            "albums": self._albums,
-            "genres": self._genres,
-            "tracks": self._tracks,
-            "last_added": self._last_added,
-            "last_modified": self._last_modified,
-            "last_played": self._last_played,
+            "name": self.name,
+            "albums": self.albums,
+            "genres": self.genres,
+            "tracks": self.tracks,
+            "last_played": self.last_played,
+            "last_added": self.last_added,
+            "last_modified": self.last_modified,
         }
 
 
@@ -228,34 +185,22 @@ class Genres(LocalCollection):
     :raises ValueError: If the given tracks contain more than one unique value for ``genre`` when name is None.
     """
 
-    @property
-    def artists(self) -> Set[str]:
-        return self._artists
-
-    @property
-    def albums(self) -> Set[str]:
-        return self._albums
-
-    @property
-    def genres(self) -> Set[str]:
-        return self._genres
-
     def __init__(self, tracks: List[LocalTrack], name: Optional[str] = None):
         LocalCollection.__init__(self, tracks=tracks, name=name)
         self._tracks: List[LocalTrack] = [track for track in tracks if name in getattr(track, self._tag_key, [])]
         self._get_times()
 
-        self._artists = set(track.artist for track in self.tracks if track.artist)
-        self._albums = set(track.album for track in self.tracks if track.album)
-        self._genres = set(genre for track in self.tracks for genre in (track.genres if track.genres else []))
+        self.artists = set(track.artist for track in self.tracks if track.artist)
+        self.albums = set(track.album for track in self.tracks if track.album)
+        self.genres = set(genre for track in self.tracks for genre in (track.genres if track.genres else []))
 
     def as_dict(self) -> MutableMapping[str, Any]:
         return {
-            "name": self._name,
-            "artists": self._artists,
-            "albums": self._albums,
-            "tracks": self._tracks,
-            "last_added": self._last_added,
-            "last_modified": self._last_modified,
-            "last_played": self._last_played,
+            "name": self.name,
+            "artists": self.artists,
+            "albums": self.albums,
+            "tracks": self.tracks,
+            "last_played": self.last_played,
+            "last_added": self.last_added,
+            "last_modified": self.last_modified,
         }

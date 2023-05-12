@@ -2,10 +2,10 @@ from abc import ABCMeta, abstractmethod
 from typing import Optional, List, Union, MutableMapping, Any
 from urllib.parse import urlparse
 
+from syncify.abstract import EnumNotFoundError
 from syncify.api.request import RequestHandler
 from syncify.spotify import IDType, ItemType, __URL_API__, __URL_EXT__
 from syncify.utils.logger import Logger
-from syncify.utils_new.exception import EnumNotFoundError
 
 APIMethodInputType = Union[str, MutableMapping[str, Any], List[str], List[MutableMapping[str, Any]]]
 

@@ -81,7 +81,7 @@ if __name__ == "__main__":
         "https://open.spotify.com/user/1122812955?si=9370cab5095048a0"
     ]
 
-    lib = SpotifyLibrary(api, exclude=["easy lover"], use_cache=False)
+    lib = SpotifyLibrary(api, exclude=["easy lover"], use_cache=True)
     pl = lib.playlists["70s"]
     print(pl.tracks[0])
     exit()

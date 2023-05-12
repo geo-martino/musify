@@ -2,16 +2,15 @@ import re
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
 from os.path import basename, splitext, dirname, join, getmtime, exists
-from typing import List, MutableMapping, Optional, Collection, Any, Union, Callable, Tuple
+from typing import List, MutableMapping, Optional, Any, Union, Callable, Tuple, Collection
 
+from syncify.abstract import ItemCollection, SyncResult
 from syncify.local.files.file import File
 from syncify.local.files.track import LocalTrack
-from syncify.local.files.track.collection import LocalTrackCollection
 from syncify.local.files.track.collection import TrackMatch, TrackLimit, TrackSort
-from syncify.utils_new.generic import SyncResult
 
 
-class LocalPlaylist(LocalTrackCollection, File, metaclass=ABCMeta):
+class LocalPlaylist(ItemCollection, File, metaclass=ABCMeta):
     """
     Generic class for manipulating local playlists.
 
@@ -20,6 +19,10 @@ class LocalPlaylist(LocalTrackCollection, File, metaclass=ABCMeta):
     :param limiter: :class:`TrackLimit` object to use for limiting the number of tracks matched.
     :param sorter: :class:`TrackSort` object to use for sorting the final track list.
     """
+
+    @property
+    def items(self) -> List[LocalTrack]:
+        return self._tracks
 
     @property
     def tracks(self) -> List[LocalTrack]:
