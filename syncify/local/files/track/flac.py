@@ -5,10 +5,12 @@ import mutagen
 import mutagen.flac
 import mutagen.flac
 from PIL import Image
+# noinspection PyProtectedMember
 from mutagen.id3 import PictureType
 
 from syncify.local.files.file import open_image, get_image_bytes
-from syncify.local.files.track.base import LocalTrack, TagName, TagMap
+from syncify.local.files.track.base import TagName, TagMap
+from syncify.local.files.track.base.track import LocalTrack
 
 
 class FLAC(LocalTrack):
@@ -22,6 +24,7 @@ class FLAC(LocalTrack):
 
     valid_extensions = [".flac"]
 
+    # noinspection SpellCheckingInspection
     tag_map = TagMap(
         title=["title"],
         artist=["artist"],
@@ -65,6 +68,7 @@ class FLAC(LocalTrack):
             image = open_image(image_link)
 
             picture = mutagen.flac.Picture()
+            # noinspection PyUnresolvedReferences
             picture.type = getattr(mutagen.id3.PictureType, image_type.upper(), mutagen.id3.PictureType.COVER_FRONT)
             picture.mime = Image.MIME[image.format]
             picture.data = get_image_bytes(image)

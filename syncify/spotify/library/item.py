@@ -2,9 +2,9 @@ from abc import ABCMeta
 from datetime import datetime
 from typing import Any, List, MutableMapping, Optional, Union, Self
 
-from syncify.abstract import Item, Tags
-from syncify.spotify.api.utilities import APIMethodInputType
+from syncify.abstract import Item, Track
 from syncify.spotify import ItemType, IDType
+from syncify.spotify.api.utilities import APIMethodInputType
 from syncify.spotify.library.response import SpotifyResponse
 
 
@@ -12,7 +12,7 @@ class SpotifyItem(Item, SpotifyResponse, metaclass=ABCMeta):
     pass
 
 
-class SpotifyTrack(SpotifyItem, Tags):
+class SpotifyTrack(Track, SpotifyItem):
     """
     Extracts key ``track`` data from a Spotify API JSON response.
 
@@ -36,8 +36,13 @@ class SpotifyTrack(SpotifyItem, Tags):
         11: 'B'
     }
 
+    @property
+    def name(self):
+        return self.title
+
     def __init__(self, response: MutableMapping[str, Any], date_added: Optional[Union[str, datetime]] = None):
         SpotifyResponse.__init__(self, response=response)
+        Item.__init__(self, self.uri, self.has_uri)
 
         album = response.get("album", {})
         artists = response.get("artists", {})
@@ -45,9 +50,9 @@ class SpotifyTrack(SpotifyItem, Tags):
         genres = album.get("genres") if album.get("genres") else artist_genres
 
         self.title = response["name"]
-        self.artist = self._list_sep.join(artist["name"] for artist in artists)
+        self.artist = self.list_sep.join(artist["name"] for artist in artists)
         self.album = album.get("name")
-        self.album_artist = self._list_sep.join(artist["name"] for artist in album.get("artists", []))
+        self.album_artist = self.list_sep.join(artist["name"] for artist in album.get("artists", []))
         self.track_number = response["track_number"]
         self.track_total = album.get("total_tracks")
         self.genres = genres if genres else None
@@ -119,8 +124,13 @@ class SpotifyArtist(SpotifyItem):
     :param response: The Spotify API JSON response.
     """
 
+    @property
+    def name(self):
+        return self.artist
+
     def __init__(self, response: MutableMapping[str, Any]):
         SpotifyResponse.__init__(self, response)
+        Item.__init__(self, self.uri, self.has_uri)
 
         self.artist: str = response["name"]
         self.genres: Optional[List[str]] = response.get("genres")

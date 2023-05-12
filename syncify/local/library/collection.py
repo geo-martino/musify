@@ -1,11 +1,13 @@
+from abc import ABCMeta
+from collections import Counter
 from datetime import datetime
-from typing import List, MutableMapping, Any, Optional, Callable, Tuple, Set
+from typing import List, MutableMapping, Any, Optional, Callable, Tuple
 
-from syncify.abstract import ItemCollection
+from syncify.abstract.collection import ItemCollection, Folder, Album, Artist, Genre
 from syncify.local.files.track import LocalTrack
 
 
-class LocalCollection(ItemCollection):
+class LocalCollection(ItemCollection, metaclass=ABCMeta):
     """
     Generic class for storing a collection of local tracks
     with methods for enriching the attributes of this object from the attributes of the collection of tracks
@@ -19,18 +21,18 @@ class LocalCollection(ItemCollection):
     """
 
     @property
-    def items(self) -> List[LocalTrack]:
-        return self._tracks
+    def name(self) -> str:
+        return self._name
 
     @property
-    def tracks(self) -> List[LocalTrack]:
-        return self._tracks
+    def items(self) -> List[LocalTrack]:
+        return self.tracks
 
     def __init__(self, tracks: List[LocalTrack], name: Optional[str] = None):
         if len(tracks) == 0:
             raise ValueError("No tracks were given")
 
-        self._tag_key = self._camel_to_snake(self.__class__.__name__)
+        self._tag_key = self._camel_to_snake(self.__class__.__name__.replace("Local", ""))
 
         if name is None:
             names = set(getattr(track, self._tag_key, None) for track in tracks)
@@ -51,8 +53,9 @@ class LocalCollection(ItemCollection):
 
             name = names_flat[0]
 
-        self.name: str = name
-        self._tracks: List[LocalTrack] = [track for track in tracks if getattr(track, self._tag_key, None) == name]
+        self._name: str = name
+        self.tracks: List[LocalTrack] = [track for track in tracks if getattr(track, self._tag_key, None) == name]
+        self.length: float = sum(track.length for track in self.tracks)
 
         self.last_played: Optional[datetime] = None
         self.last_added: Optional[datetime] = None
@@ -78,7 +81,7 @@ class LocalCollection(ItemCollection):
         }
 
 
-class Folder(LocalCollection):
+class LocalFolder(Folder, LocalCollection):
     """
     Object representing a collection of tracks in a folder on the local drive
 
@@ -89,20 +92,29 @@ class Folder(LocalCollection):
     :raises ValueError: If the given tracks contain more than one unique value for ``folder`` when name is None.
     """
 
+    @property
+    def folder(self) -> str:
+        return self._name
+
     def __init__(self, tracks: List[LocalTrack], name: Optional[str] = None):
         LocalCollection.__init__(self, tracks=tracks, name=name)
         self._get_times()
 
-        self.artists = set(track.artist for track in self.tracks)
+        self.artists = set(track.artist for track in self.tracks if track.artist)
+        self.albums = set(track.album for track in self.tracks if track.album)
         self.genres = set(genre for track in self.tracks for genre in (track.genres if track.genres else []))
+
+        self.track_total = len(self.tracks)
         # collection is a compilation if over 50% of tracks are marked as compilation
         self.compilation = (sum(track.compilation for track in self.tracks) / len(self.tracks)) > 0.5
 
     def as_dict(self) -> MutableMapping[str, Any]:
         return {
-            "name": self.name,
+            "name": self.folder,
             "artists": self.artists,
+            "albums": self.albums,
             "genres": self.genres,
+            "track_total": self.track_total,
             "compilation": self.compilation,
             "tracks": self.tracks,
             "last_played": self.last_played,
@@ -111,7 +123,7 @@ class Folder(LocalCollection):
         }
 
 
-class Album(LocalCollection):
+class LocalAlbum(Album, LocalCollection):
     """
     Object representing a collection of tracks of an album.
 
@@ -122,18 +134,34 @@ class Album(LocalCollection):
     :raises ValueError: If the given tracks contain more than one unique value for ``album`` when name is None.
     """
 
+    @property
+    def album(self) -> str:
+        return self._name
+
     def __init__(self, tracks: List[LocalTrack], name: Optional[str] = None):
         LocalCollection.__init__(self, tracks=tracks, name=name)
         self._get_times()
 
-        self.artists = set(track.artist for track in self.tracks if track.artist)
+        self.artist = self.list_sep.join(track.artist for track in self.tracks if track.artist)
+        self.album_artist = Counter(track.artist for track in self.tracks if track.artist).most_common(1)[0][0]
+        self.track_total = len(self.tracks)
         self.genres = set(genre for track in self.tracks for genre in (track.genres if track.genres else []))
+        self.year = Counter(track.year for track in self.tracks if track.year).most_common(1)[0][0]
+        self.disc_total = max(track.disc_number for track in self.tracks if track.disc_number)
         # collection is a compilation if over 50% of tracks are marked as compilation
         self.compilation = (sum(track.compilation for track in self.tracks) / len(self.tracks)) > 0.5
 
+        self.image_links = {}
+        self.has_image = any(track.has_image for track in tracks)
+
+        self.length = sum(track.length for track in self.tracks if track.length)
+        self.rating = sum(track.rating for track in self.tracks if track.rating) / len(tracks)
+
+        self.artists = set(track.artist for track in self.tracks if track.artist)
+
     def as_dict(self) -> MutableMapping[str, Any]:
         return {
-            "name": self.name,
+            "name": self.album,
             "artists": self.artists,
             "genres": self.genres,
             "compilation": self.compilation,
@@ -144,7 +172,7 @@ class Album(LocalCollection):
         }
 
 
-class Artist(LocalCollection):
+class LocalArtist(Artist, LocalCollection):
     """
     Object representing a collection of tracks by a single artist.
 
@@ -155,6 +183,10 @@ class Artist(LocalCollection):
     :raises ValueError: If the given tracks contain more than one unique value for ``artist`` when name is None.
     """
 
+    @property
+    def artist(self) -> str:
+        return self._name
+
     def __init__(self, tracks: List[LocalTrack], name: Optional[str] = None):
         LocalCollection.__init__(self, tracks=tracks, name=name)
         self._get_times()
@@ -164,7 +196,7 @@ class Artist(LocalCollection):
 
     def as_dict(self) -> MutableMapping[str, Any]:
         return {
-            "name": self.name,
+            "name": self.artist,
             "albums": self.albums,
             "genres": self.genres,
             "tracks": self.tracks,
@@ -174,7 +206,7 @@ class Artist(LocalCollection):
         }
 
 
-class Genres(LocalCollection):
+class LocalGenres(Genre, LocalCollection):
     """
     Object representing a collection of tracks within a genre.
 
@@ -185,9 +217,13 @@ class Genres(LocalCollection):
     :raises ValueError: If the given tracks contain more than one unique value for ``genre`` when name is None.
     """
 
+    @property
+    def genre(self) -> str:
+        return self._name
+
     def __init__(self, tracks: List[LocalTrack], name: Optional[str] = None):
         LocalCollection.__init__(self, tracks=tracks, name=name)
-        self._tracks: List[LocalTrack] = [track for track in tracks if name in getattr(track, self._tag_key, [])]
+        self.tracks: List[LocalTrack] = [track for track in tracks if name in getattr(track, self._tag_key, [])]
         self._get_times()
 
         self.artists = set(track.artist for track in self.tracks if track.artist)
@@ -196,9 +232,10 @@ class Genres(LocalCollection):
 
     def as_dict(self) -> MutableMapping[str, Any]:
         return {
-            "name": self.name,
+            "name": self.genre,
             "artists": self.artists,
             "albums": self.albums,
+            "genres": self.genres,
             "tracks": self.tracks,
             "last_played": self.last_played,
             "last_added": self.last_added,

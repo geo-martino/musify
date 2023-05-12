@@ -1,6 +1,6 @@
 from datetime import datetime
 from glob import glob
-from os.path import splitext, join, exists
+from os.path import splitext, join, exists, basename
 from typing import Optional, List, Set, MutableMapping, Mapping, Collection, Any, Callable, Tuple
 
 from syncify.abstract import ItemCollection, SyncResult
@@ -30,10 +30,6 @@ class LocalLibrary(ItemCollection, Logger):
     def library_folder(self) -> str:
         return self._library_folder
 
-    @library_folder.getter
-    def library_folder(self) -> str:
-        return self._library_folder
-
     @library_folder.setter
     def library_folder(self, value: Optional[str]):
         self._library_folder: str = value.rstrip("\\/") if value is not None and exists(value) else None
@@ -42,10 +38,6 @@ class LocalLibrary(ItemCollection, Logger):
             self._track_paths = {c.__name__: c.get_filepaths(self._library_folder) for c in __TRACK_CLASSES__}
 
     @property
-    def playlist_folder(self) -> str:
-        return self._playlist_folder
-
-    @playlist_folder.getter
     def playlist_folder(self) -> str:
         return self._playlist_folder
 
@@ -74,6 +66,10 @@ class LocalLibrary(ItemCollection, Logger):
                                f"from {playlists_total} Spotify playlists")
 
     @property
+    def name(self) -> Optional[str]:
+        return basename(self.library_folder) if self.library_folder else None
+
+    @property
     def items(self) -> List[LocalTrack]:
         return self._tracks
 
@@ -81,15 +77,7 @@ class LocalLibrary(ItemCollection, Logger):
     def tracks(self) -> List[LocalTrack]:
         return self._tracks
 
-    @tracks.getter
-    def tracks(self) -> List[LocalTrack]:
-        return self._tracks
-
     @property
-    def playlists(self) -> List[LocalPlaylist]:
-        return self._playlists
-
-    @playlists.getter
     def playlists(self) -> List[LocalPlaylist]:
         return self._playlists
 
@@ -242,7 +230,8 @@ class LocalLibrary(ItemCollection, Logger):
 
     def log_playlists(self) -> None:
         """Log stats on currently loaded playlists"""
-        playlists: Mapping[str, LocalPlaylist] = dict(sorted([(pl.name, pl) for pl in self._playlists], key=lambda x: x[0]))
+        items = [(pl.name, pl) for pl in self._playlists]
+        playlists: Mapping[str, LocalPlaylist] = dict(sorted(items, key=lambda x: x[0]))
         max_width = self._get_max_width(playlists)
 
         self._logger.info("\33[1;96mFound the following Local playlists: \33[0m")

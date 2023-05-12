@@ -2,7 +2,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, List, MutableMapping, Optional, Self, Mapping, Literal, Collection
 
-from syncify.abstract import SyncResult
+from syncify.abstract.collection import Playlist
+from syncify.abstract.misc import SyncResult
 from syncify.spotify import ItemType
 from syncify.spotify.api.utilities import APIMethodInputType
 from syncify.spotify.library.collection import SpotifyCollection
@@ -20,7 +21,7 @@ class SyncResultSpotifyPlaylist(SyncResult):
     final: int
 
 
-class SpotifyPlaylist(SpotifyCollection):
+class SpotifyPlaylist(Playlist, SpotifyCollection):
     """
     Extracts key ``playlist`` data from a Spotify API JSON response.
 
@@ -28,17 +29,17 @@ class SpotifyPlaylist(SpotifyCollection):
     """
 
     @property
-    def items(self) -> List[SpotifyTrack]:
-        return self._tracks
+    def name(self) -> str:
+        return self._name
 
     @property
-    def tracks(self) -> List[SpotifyTrack]:
-        return self._tracks
+    def items(self) -> List[SpotifyTrack]:
+        return self.tracks
 
     def __init__(self, response: MutableMapping[str, Any]):
         SpotifyResponse.__init__(self, response)
 
-        self.name: str = response["name"]
+        self._name: str = response["name"]
         self.description: str = response["description"]
         self.collaborative: bool = response["collaborative"]
         self.public: bool = response["public"]
@@ -57,7 +58,7 @@ class SpotifyPlaylist(SpotifyCollection):
         self.date_created: Optional[datetime] = None
         self.date_modified: Optional[datetime] = None
 
-        self._tracks = [SpotifyTrack(track["track"], track["added_at"]) for track in response["tracks"]["items"]]
+        self.tracks = [SpotifyTrack(track["track"], track["added_at"]) for track in response["tracks"]["items"]]
 
         if len(self.tracks) > 0:
             self.length: float = sum(track.length for track in self.tracks)
@@ -147,9 +148,11 @@ class SpotifyPlaylist(SpotifyCollection):
         """
         Synchronise this playlist object with the remote Spotify playlist it is associated with. Clear options:
 
-        * None: Do not clear any items from the remote playlist and only add any tracks from this playlist object not currently in the remote playlist.
+        * None: Do not clear any items from the remote playlist and only add any tracks
+            from this playlist object not currently in the remote playlist.
         * 'all': Clear all items from the remote playlist first, then add all items from this playlist object.
-        * 'extra': Clear all items not currently in this object's items list, then add all tracks from this playlist object not currently in the remote playlist.
+        * 'extra': Clear all items not currently in this object's items list, then add all tracks
+            from this playlist object not currently in the remote playlist.
 
         :param clear: Clear option for the remote playlist. See description.
         :param reload: When True, once synchronisation is complete, reload this SpotifyPlaylist object

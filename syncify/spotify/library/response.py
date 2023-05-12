@@ -1,9 +1,9 @@
 from abc import ABCMeta, abstractmethod
 from typing import Any, MutableMapping, Self, Optional
 
+from syncify.abstract.misc import PrettyPrinter
 from spotify.api.utilities import APIMethodInputType
 from syncify.spotify.api import API
-from syncify.abstract import PrettyPrinter
 
 
 class SpotifyResponse(PrettyPrinter, metaclass=ABCMeta):
@@ -13,7 +13,6 @@ class SpotifyResponse(PrettyPrinter, metaclass=ABCMeta):
     :param response: The Spotify API JSON response
     """
 
-    _list_sep = "; "
     _url_pad = 71
 
     api: API

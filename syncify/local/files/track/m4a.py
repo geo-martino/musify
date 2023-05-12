@@ -21,6 +21,7 @@ class M4A(LocalTrack):
 
     valid_extensions = [".m4a"]
 
+    # noinspection SpellCheckingInspection
     tag_map = TagMap(
         title=["©nam"],
         artist=["©ART"],

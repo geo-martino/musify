@@ -1,6 +1,6 @@
 import pytest
 
-from syncify.local.library import Folder, Album, Artist, Genres
+from syncify.local.library import LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from tests.local.files.track.track import random_tracks
 
 
@@ -23,9 +23,9 @@ def test_folder():
 
     # test generic collection functionality
     with pytest.raises(TypeError):
-        Folder(tracks=tracks)
+        LocalFolder(tracks=tracks)
 
-    collection = Folder(tracks=tracks[:7])
+    collection = LocalFolder(tracks=tracks[:7])
     assert collection.name == tracks[0].folder
     assert collection.tracks == tracks[:7]
     assert collection.last_played == last_played
@@ -53,7 +53,7 @@ def test_album():
             track.artist = None
             track.genres = None
 
-    collection = Album(tracks=tracks, name=tracks[0].album)
+    collection = LocalAlbum(tracks=tracks, name=tracks[0].album)
     assert collection.name == tracks[0].album
     assert collection.artists == {tracks[0].artist}
     assert collection.genres == set(tracks[0].genres)
@@ -71,7 +71,7 @@ def test_artist():
             track.album = "another album"
             track.genres = None
 
-    collection = Artist(tracks=tracks, name=tracks[0].artist)
+    collection = LocalArtist(tracks=tracks, name=tracks[0].artist)
     assert collection.name == tracks[0].artist
     assert collection.albums == {tracks[0].album, tracks[1].album}
     assert collection.genres == set(tracks[0].genres)
@@ -93,8 +93,8 @@ def test_genre():
             track.artist = "artist name 3"
             track.album = "album name"
 
-    collection = Genres(tracks=tracks, name="rock")
-    assert collection.name == tracks[0].genres[0]
+    collection = LocalGenres(tracks=tracks, name="rock")
+    assert collection.name == list(tracks[0].genres)[0]
     assert collection.artists == {tracks[0].artist, tracks[-1].artist}
     assert collection.albums == {tracks[0].album, tracks[-1].album}
     assert collection.genres == set(tracks[0].genres) | set(tracks[-1].genres)

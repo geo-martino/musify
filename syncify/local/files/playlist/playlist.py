@@ -1,16 +1,17 @@
 import re
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
-from os.path import basename, splitext, dirname, join, getmtime, exists
+from os.path import basename, splitext, dirname, join, getmtime, exists, getctime
 from typing import List, MutableMapping, Optional, Any, Union, Callable, Tuple, Collection
 
-from syncify.abstract import ItemCollection, SyncResult
+from syncify.abstract.collection import Playlist
+from syncify.abstract.misc import SyncResult
 from syncify.local.files.file import File
 from syncify.local.files.track import LocalTrack
 from syncify.local.files.track.collection import TrackMatch, TrackLimit, TrackSort
 
 
-class LocalPlaylist(ItemCollection, File, metaclass=ABCMeta):
+class LocalPlaylist(Playlist, File, metaclass=ABCMeta):
     """
     Generic class for manipulating local playlists.
 
@@ -28,10 +29,6 @@ class LocalPlaylist(ItemCollection, File, metaclass=ABCMeta):
     def tracks(self) -> List[LocalTrack]:
         return self._tracks
 
-    @tracks.getter
-    def tracks(self) -> List[LocalTrack]:
-        return self._tracks
-
     @tracks.setter
     def tracks(self, value: List[LocalTrack]):
         if len(value) > 0:
@@ -40,19 +37,14 @@ class LocalPlaylist(ItemCollection, File, metaclass=ABCMeta):
             self.last_played = sorted(value, key=key, reverse=True)[0].last_played
         self._tracks = value
 
+        self.track_total = len(self._tracks)
+        self.length = sum(track.length for track in self._tracks)
+
     @property
     def path(self) -> str:
         return self._path
 
-    @path.getter
-    def path(self) -> str:
-        return self._path
-
     @property
-    def name(self) -> str:
-        return self._name
-
-    @name.getter
     def name(self) -> str:
         return self._name
 
@@ -72,10 +64,18 @@ class LocalPlaylist(ItemCollection, File, metaclass=ABCMeta):
         self._path: str = path
         self._tracks: Optional[List[LocalTrack]] = None
         self.description: Optional[str] = None
+        self.track_total: int = 0
+
+        self.image_links = {}
+        self.has_image = False
+
+        self.length: float = 0
         self.last_played: Optional[datetime] = None
+        self.date_created: Optional[datetime] = None
         self.date_modified: Optional[datetime] = None
 
         if exists(self._path):
+            self.date_created = datetime.fromtimestamp(getctime(self._path))
             self.date_modified = datetime.fromtimestamp(getmtime(self._path))
 
         self.matcher = matcher
@@ -139,7 +139,9 @@ class LocalPlaylist(ItemCollection, File, metaclass=ABCMeta):
             "description": self.description,
             "path": self.path,
             "processors": [p for p in [self.matcher, self.limiter, self.sorter] if p is not None],
-            "track_count": len(self.tracks) if self.tracks is not None else 0,
+            "track_total": self.track_total,
+            "length": self.length,
+            "date_created": self.date_created,
             "date_modified": self.date_modified,
             "last_played": self.last_played,
         }

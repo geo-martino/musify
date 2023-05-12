@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 from copy import copy
 from typing import Any, List, MutableMapping, Optional, Self, Mapping
 
-from syncify.abstract import ItemCollection
+from syncify.abstract.collection import ItemCollection, Album
 from syncify.spotify import ItemType, IDType
 from syncify.spotify.api.utilities import APIMethodInputType
 from syncify.spotify.library.item import SpotifyTrack, SpotifyArtist, SpotifyItem
@@ -47,7 +47,7 @@ class SpotifyCollection(ItemCollection, SpotifyResponse, metaclass=ABCMeta):
             return cls.api.get_collections(value, kind=ItemType.PLAYLIST, use_cache=use_cache)[0]
 
 
-class SpotifyAlbum(SpotifyCollection):
+class SpotifyAlbum(Album, SpotifyCollection):
     """
     Extracts key ``album`` data from a Spotify API JSON response.
 
@@ -55,17 +55,17 @@ class SpotifyAlbum(SpotifyCollection):
     """
 
     @property
-    def items(self) -> List[SpotifyTrack]:
-        return self._tracks
+    def name(self) -> str:
+        return self.album
 
     @property
-    def tracks(self) -> List[SpotifyTrack]:
-        return self._tracks
+    def items(self) -> List[SpotifyTrack]:
+        return self.tracks
 
     def __init__(self, response: MutableMapping[str, Any]):
         SpotifyResponse.__init__(self, response)
 
-        self.artist: str = self._list_sep.join(artist["name"] for artist in response["artists"])
+        self.artist: str = self.list_sep.join(artist["name"] for artist in response["artists"])
         self.album: str = response["name"]
         self.album_artist: str = self.artist
         self.track_total: int = response["total_tracks"]
@@ -73,13 +73,13 @@ class SpotifyAlbum(SpotifyCollection):
         self.year: int = int(response["release_date"][:4])
         self.disc_total: int = 0
         self.compilation: bool = response['album_type'] == "compilation"
-        self.comments: Optional[List[str]] = None
 
         images = {image["height"]: image["url"] for image in response["images"]}
         self.image_links: MutableMapping[str, str] = {"cover_front": url
                                                       for height, url in images.items() if height == max(images)}
         self.has_image: bool = len(self.image_links) > 0
 
+        self.length: float = 0.0
         self.rating: int = response['popularity']
 
         album_only = copy(response)
@@ -88,7 +88,8 @@ class SpotifyAlbum(SpotifyCollection):
             track["album"] = album_only
 
         self.artists = [SpotifyArtist(artist) for artist in response["artists"]]
-        self._tracks = [SpotifyTrack(track) for track in response["tracks"]["items"]]
+        self.tracks = [SpotifyTrack(track) for track in response["tracks"]["items"]]
+        self.length = sum(track.length for track in self.tracks)
         self.disc_total = max(track.disc_number for track in self.tracks)
 
         for track in self.tracks:

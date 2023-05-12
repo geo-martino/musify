@@ -55,6 +55,7 @@ class WMA(LocalTrack):
 
         return values if len(values) > 0 else None
 
+    # noinspection PyUnreachableCode
     def _read_images(self) -> Optional[List[Image.Image]]:
         raise NotImplementedError("Image extraction not supported for WMA files")
 
@@ -69,6 +70,7 @@ class WMA(LocalTrack):
                 self._file[tag_id] = mutagen.asf.ASFUnicodeAttribute(str(tag_value))
         return tag_id is not None
 
+    # noinspection PyUnreachableCode
     def _write_images(self, dry_run: bool = True) -> bool:
         raise NotImplementedError("Image embedding not supported for WMA files")
 

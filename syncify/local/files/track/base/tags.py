@@ -4,7 +4,7 @@ from typing import Optional, List, Self
 
 import mutagen
 
-from syncify.abstract import Tags, Properties, SyncifyEnum, EnumNotFoundError
+from syncify.abstract import Track, Properties, SyncifyEnum, EnumNotFoundError
 
 
 @dataclass
@@ -107,7 +107,7 @@ class PropertyName(Name):
     RATING = 75
 
 
-class TagProcessor(Tags, Properties, metaclass=ABCMeta):
+class TagProcessor(Track, Properties, metaclass=ABCMeta):
     """Generic base class for tag processing"""
 
     uri_tag = TagName.COMMENTS

@@ -3,7 +3,7 @@ from copy import copy
 from dataclasses import dataclass
 from typing import Optional, Set, MutableMapping
 
-from syncify.abstract import SyncResult
+from syncify.abstract.misc import SyncResult
 from syncify.local.files.track.base.tags import TagName, TagProcessor
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 from syncify.utils_new.helpers import UnionList, make_list
@@ -113,7 +113,7 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
                 updated.update({TagName.URI: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.IMAGES in tags:  # needs deeper comparison
-            conditionals = [file.has_image is False, replace and self.image_links is not None]
+            conditionals = [file.has_image is False, replace and self.image_links]
             if any(conditionals) and self._write_images(dry_run):
                 updated.update({TagName.IMAGES: [i for i, c in enumerate(conditionals) if c][0]})
         

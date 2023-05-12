@@ -6,14 +6,13 @@ from typing import Optional, List, Union, Mapping, Set, Collection, Self
 
 import mutagen
 
-from syncify.abstract import Item
+from syncify.abstract.item import Tags, Properties, Item
 from syncify.local.files.file import File
 from syncify.local.files.track.base.reader import TagReader
-from syncify.local.files.track.base.tags import Tags, Properties
 from syncify.local.files.track.base.writer import TagWriter
 
 
-class LocalTrack(Item, File, TagReader, TagWriter, metaclass=ABCMeta):
+class LocalTrack(File, TagReader, TagWriter, metaclass=ABCMeta):
     """
     Generic track object for extracting, modifying, and saving tags for a given file.
 
@@ -35,6 +34,10 @@ class LocalTrack(Item, File, TagReader, TagWriter, metaclass=ABCMeta):
         return self._path
 
     @property
+    def name(self):
+        return self.title
+
+    @property
     def file(self):
         return self._file
 
@@ -43,6 +46,7 @@ class LocalTrack(Item, File, TagReader, TagWriter, metaclass=ABCMeta):
         """Get all files in a given library that match this Track object's valid filetypes."""
         paths = set()
 
+        # noinspection PyTypeChecker
         for ext in cls.valid_extensions:
             # first glob doesn't get filenames that start with a period
             paths.update(glob(join(library_folder, "**", f"*{ext}"), recursive=True))
@@ -52,7 +56,7 @@ class LocalTrack(Item, File, TagReader, TagWriter, metaclass=ABCMeta):
         return paths
 
     def __init__(self, file: Union[str, mutagen.File], available: Optional[Collection[str]] = None):
-        self._file: Optional[mutagen.File] = None
+        Item.__init__(self)
 
         # all available paths for this file type
         self._available_paths: Optional[Collection[str]] = None
@@ -73,6 +77,7 @@ class LocalTrack(Item, File, TagReader, TagWriter, metaclass=ABCMeta):
         if self._file is not None:
             self.load_metadata()
 
+        self.image_links = {}
         self.date_added = None
         self.last_played = None
         self.play_count = None
@@ -132,6 +137,6 @@ class LocalTrack(Item, File, TagReader, TagWriter, metaclass=ABCMeta):
         """Copy Track object by reloading from the file object in memory"""
         return self.__class__(file=self.file)
 
-    def __deepcopy__(self, memodict: dict = None):
+    def __deepcopy__(self, m: dict = None):
         """Deepcopy Track object by reloading from the disk"""
         return self.__class__(file=self.path)

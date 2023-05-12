@@ -6,7 +6,8 @@ from typing import Any, Callable, List, Mapping, Optional, Self, MutableMapping
 
 from dateutil.relativedelta import relativedelta
 
-from syncify.local.files.track.base import Name, LocalTrack, TagName, PropertyName
+from syncify.local.files.track.base.tags import Name, TagName, PropertyName
+from syncify.local.files.track.base.track import LocalTrack
 from syncify.local.files.track.collection import TrackProcessor
 from syncify.utils_new.helpers import UnionList, make_list
 
@@ -62,10 +63,6 @@ class TrackCompare(TrackProcessor):
     def condition(self) -> str:
         return self._condition
 
-    @condition.getter
-    def condition(self) -> str:
-        return self._condition
-
     @condition.setter
     def condition(self, value: str):
         if value is None:
@@ -76,10 +73,6 @@ class TrackCompare(TrackProcessor):
         self._method = getattr(self, self._valid_methods[name])
 
     @property
-    def expected(self) -> Optional[List[Any]]:
-        return self._expected
-
-    @expected.getter
     def expected(self) -> Optional[List[Any]]:
         return self._expected
 

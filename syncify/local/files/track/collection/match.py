@@ -153,12 +153,12 @@ class TrackMatch(TrackProcessor):
                 path = path.replace(self.original_folder, self.library_folder).replace("//", "/").replace("\\\\", "\\")
 
             # sanitise path separators
-            path = self.correct_path_separater(path)
+            path = self.correct_path_separator(path)
 
         if not check_existence or exists(path):
             return path
 
-    def correct_path_separater(self, path: str) -> str:
+    def correct_path_separator(self, path: str) -> str:
         """Align a paths separators with the separators in the path for the library folder"""
         if self.library_folder is not None:
             return path.replace("\\", "/") if "/" in self.library_folder else path.replace("/", "\\")

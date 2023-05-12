@@ -1,9 +1,15 @@
 import re
 from abc import ABCMeta, abstractmethod
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Mapping, List, MutableMapping, Any, Optional
 
 from utils_new.helpers import make_list
+
+
+@dataclass
+class SyncResult(metaclass=ABCMeta):
+    pass
 
 
 class PrettyPrinter(metaclass=ABCMeta):

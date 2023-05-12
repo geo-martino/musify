@@ -49,10 +49,6 @@ class TrackLimit(TrackProcessor):
     def limit_sort(self) -> Optional[str]:
         return self._limit_sort
 
-    @limit_sort.getter
-    def limit_sort(self) -> Optional[str]:
-        return self._limit_sort
-
     @limit_sort.setter
     def limit_sort(self, value: Optional[str]):
         if value is None:

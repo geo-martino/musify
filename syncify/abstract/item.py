@@ -1,28 +1,9 @@
-from abc import ABCMeta, abstractmethod, ABC
+from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Optional, MutableMapping
+from typing import List, Optional, MutableMapping, Collection
 
-from syncify.abstract import PrettyPrinter
-
-
-class Item(PrettyPrinter, metaclass=ABCMeta):
-    """Generic class for storing an item."""
-
-
-class ItemCollection(PrettyPrinter, metaclass=ABCMeta):
-    """Generic class for storing a collection of items."""
-
-    @property
-    @abstractmethod
-    def items(self) -> List[Item]:
-        raise NotImplementedError
-
-    def __len__(self):
-        return len(self.items)
-
-    def __iter__(self):
-        return (t for t in self.items)
+from syncify.abstract.misc import PrettyPrinter
 
 
 @dataclass
@@ -34,7 +15,7 @@ class Tags:
     album_artist: Optional[str]
     track_number: Optional[int]
     track_total: Optional[int]
-    genres: Optional[List[str]]
+    genres: Optional[Collection[str]]
     year: Optional[int]
     bpm: Optional[float]
     key: Optional[str]
@@ -42,11 +23,7 @@ class Tags:
     disc_total: Optional[int]
     compilation: Optional[bool]
     comments: Optional[List[str]]
-
-    uri: Optional[str]
-    has_uri: Optional[bool]
-
-    image_links: Optional[MutableMapping[str, str]]
+    image_links: MutableMapping[str, str]
     has_image: bool
 
 
@@ -66,9 +43,34 @@ class Properties:
     date_added: Optional[datetime]
     last_played: Optional[datetime]
     play_count: Optional[int]
-    rating: Optional[int]
+    rating: Optional[float]
 
 
-@dataclass
-class SyncResult(ABC):
+class Base:
+    list_sep = "; "
+
+
+class Item(Base, PrettyPrinter, metaclass=ABCMeta):
+    """Generic class for storing an item."""
+
+    def __init__(self, uri: Optional[str] = None, has_url: bool = False):
+        self.uri = uri
+        self.has_uri = has_url
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        raise NotImplementedError
+
+    def __hash__(self):
+        return hash(self.uri)
+
+    def __eq__(self, item):
+        return self.uri == item.uri
+
+    def __ne__(self, item):
+        return not self.__eq__(item)
+
+
+class Track(Item, Tags, metaclass=ABCMeta):
     pass

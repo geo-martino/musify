@@ -24,7 +24,7 @@ class Basic(Utilities, metaclass=ABCMeta):
         :return: The response from the endpoint.
         """
         url = f'{__URL_API__}/search'
-        params = {'q': query, 'type': kind.name.lower(), 'limit': self.limit_value(limit)}
+        params = {'q': query, 'type': kind.name.lower(), 'limit': self._limit_value(limit)}
         r = self.get(url, params=params, use_cache=use_cache)
 
         if 'error' in r:

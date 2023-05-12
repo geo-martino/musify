@@ -78,12 +78,13 @@ def test_loaded_attributes():
     assert track.disc_number == 1
     assert track.disc_total == 3
     assert track.compilation
+    # noinspection SpellCheckingInspection
     assert track.comments == ['spotify:track:6fWoFduMpBem73DMLCOh1Z']
 
     assert track.uri == track.comments[0]
     assert track.has_uri
 
-    assert track.image_links is None
+    assert track.image_links == {}
     assert track.has_image
 
     # file properties

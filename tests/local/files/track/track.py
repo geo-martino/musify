@@ -44,13 +44,13 @@ def random_track(cls: Optional[Type[LocalTrack]] = None) -> LocalTrack:
     track.compilation = choice([True, False])
     track.comments = [random_str(20, 50) for _ in range(randrange(3))]
 
-    track.has_uri = choice([True, False])
+    track._has_uri = choice([True, False])
     if track.has_uri:
-        track.uri = "spotify:track:" + random_str(IDType.ID.value, IDType.ID.value + 1)
+        track._uri = "spotify:track:" + random_str(IDType.ID.value, IDType.ID.value + 1)
     else:
-        track.uri = __UNAVAILABLE_URI_VALUE__
+        track._uri = __UNAVAILABLE_URI_VALUE__
 
-    track.image_links = None
+    track.image_links = {}
     track.has_image = False
 
     track.folder = basename(path_track_cache)
@@ -161,8 +161,8 @@ def update_tags_test(track: LocalTrack) -> None:
     track.disc_number = 2
     track.disc_total = 3
     track.compilation = False
-    track.has_uri = False
-    track.image_links = None
+    track._has_uri = False
+    track.image_links = {}
 
     # dry run, no updates should happen
     result = track.save(tags=TagName.ALL, replace=False, dry_run=True)
@@ -243,6 +243,7 @@ def update_tags_test(track: LocalTrack) -> None:
     os.remove(path_file_copy)
 
 
+# noinspection PyProtectedMember
 def update_images_test(track: LocalTrack) -> None:
     path_file_base, path_file_copy = copy_track(track)
     track_original = copy(track)

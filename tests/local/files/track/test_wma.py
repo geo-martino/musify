@@ -83,7 +83,7 @@ def test_loaded_attributes():
     assert track.uri is None
     assert not track.has_uri
 
-    assert track.image_links is None
+    assert track.image_links == {}
     assert track.has_image
 
     # file properties

@@ -4,12 +4,17 @@ from syncify.spotify import ItemType
 from syncify.spotify.api import API
 from syncify.spotify.library.item import SpotifyResponse, SpotifyTrack
 from syncify.spotify.library.playlist import SpotifyPlaylist
-from syncify.spotify.processor import ItemChecker, ItemSearcher
+from syncify.spotify.processor.check import ItemChecker
+from syncify.spotify.processor.search import ItemSearcher
 from syncify.utils.logger import Logger
 
 
 class SpotifyLibrary(ItemChecker, ItemSearcher):
     limit = 50
+
+    @property
+    def api(self) -> API:
+        return self._api
 
     def __init__(
             self,
@@ -21,7 +26,7 @@ class SpotifyLibrary(ItemChecker, ItemSearcher):
         Logger.__init__(self)
         self._logger.debug("Load Spotify library: START")
 
-        self.api = api
+        self._api = api
         self.include = include
         self.exclude = exclude
         self.use_cache = use_cache
@@ -95,7 +100,7 @@ class SpotifyLibrary(ItemChecker, ItemSearcher):
             exclude = [name.lower() for name in self.exclude]
             playlists_data = [pl for pl in playlists_data if pl["name"].lower() not in exclude]
 
-        self._logger.debug(f"Filtered out {playlists_total- len(playlists_data)} playlists "
+        self._logger.debug(f"Filtered out {playlists_total - len(playlists_data)} playlists "
                            f"from {playlists_total} Spotify playlists")
 
         total_tracks = sum(pl["tracks"]["total"] for pl in playlists_data)

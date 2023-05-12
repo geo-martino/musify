@@ -116,7 +116,7 @@ class CheckMatches:
         :return: str. The user's input.
         """
         options = {
-            "Return": "Once all playlist's tracks are checked, continue to checking for any switches by the user",
+            "Return": "Once all playlist's tracks are checked, continue on and check for any switches by the user",
             "Name of playlist": "Print list of URIs and positions of tracks as originally added to temp playlist",
             "Spotify link/URI": "Print position, track title, and URI from given link (useful to check current status of playlist)",
             "s": "Delete current temporary playlists and skip remaining checks",

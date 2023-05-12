@@ -136,7 +136,7 @@ class Collections(Utilities, metaclass=ABCMeta):
         else:
             url = f"{self.convert(user, kind=ItemType.USER, type_out=IDType.URL)}/{kind.name.lower()}s"
 
-        params = {"limit": self.limit_value(limit, ceil=50)}
+        params = {"limit": self._limit_value(limit, ceil=50)}
         r = self.get(url, params=params, use_cache=use_cache, log_pad=71)
         self._get_collection_items(r, kind=kind, use_cache=use_cache)
         collections = r[self.items_key]
@@ -152,8 +152,12 @@ class Collections(Utilities, metaclass=ABCMeta):
         ``GET: /{kind}s/...`` - Get all items from a given list of ``items``. Items may be:
             * A string representing a URL/URI/ID.
             * A list of strings representing URLs/URIs/IDs of the same type.
-            * A Spotify API JSON response for a collection including some items under an ``items`` key, a valid ID value under an ``id`` key and a valid item type value under a ``type`` key if ``kind`` is None.
-            * A list of Spotify API JSON responses for a collection including some items under an ``items`` key, a valid ID value under an ``id`` key and a valid item type value under a ``type`` key if ``kind`` is None.
+            * A Spotify API JSON response for a collection including some items under an ``items`` key,
+                a valid ID value under an ``id`` key,
+                and a valid item type value under a ``type`` key if ``kind`` is None.
+            * A list of Spotify API JSON responses for a collection including some items under an ``items`` key,
+                a valid ID value under an ``id`` key,
+                and a valid item type value under a ``type`` key if ``kind`` is None.
 
         If JSON response/s are given, this updates the value of the ``items`` in-place
         by clearing and replacing its values.
@@ -178,7 +182,7 @@ class Collections(Utilities, metaclass=ABCMeta):
             items = self.get_playlist_url(items, use_cache=use_cache)
 
         url = f"{__URL_API__}/{kind.name.lower()}s"
-        params = {"limit": self.limit_value(limit, ceil=50)}
+        params = {"limit": self._limit_value(limit, ceil=50)}
         id_list = self.extract_ids(items, kind=kind)
 
         unit = kind.name.lower() + "s"
@@ -244,7 +248,7 @@ class Collections(Utilities, metaclass=ABCMeta):
         :exception ValueError: Raised when the item types of the input ``items`` are not all tracks or IDs.
         """
         url = f"{self.get_playlist_url(playlist, use_cache=False)}/tracks"
-        limit = self.limit_value(limit, ceil=50)
+        limit = self._limit_value(limit, ceil=50)
 
         if len(items) == 0:
             self._logger.debug(f"{'SKIP':<7}: {url:<43} | No data given")
@@ -295,7 +299,7 @@ class Collections(Utilities, metaclass=ABCMeta):
         :exception ValueError: Raised when the item types of the input ``items`` are not all tracks or IDs.
         """
         url = f"{self.get_playlist_url(playlist, use_cache=False)}/tracks"
-        limit = self.limit_value(limit, ceil=100)
+        limit = self._limit_value(limit, ceil=100)
 
         if items is not None:
             self.validate_item_type(items, kind=ItemType.TRACK)

@@ -5,6 +5,7 @@ import mutagen
 import mutagen.id3
 import mutagen.mp3
 from PIL import Image
+# noinspection PyProtectedMember
 from mutagen.id3 import Encoding
 
 from syncify.local.files.file import open_image, get_image_bytes
@@ -23,6 +24,7 @@ class MP3(LocalTrack):
 
     valid_extensions = [".mp3"]
 
+    # noinspection SpellCheckingInspection
     tag_map = TagMap(
         title=["TIT2"],
         artist=["TPE1"],
@@ -87,6 +89,7 @@ class MP3(LocalTrack):
         values = ";".join(self.genres)
         return self._write_tag(next(iter(self.tag_map.genres), None), values, dry_run)
 
+    # noinspection PyUnresolvedReferences
     def _write_images(self, dry_run: bool = True) -> bool:
         tag_id_prefix = next(iter(self.tag_map.images), None)
 
@@ -114,6 +117,7 @@ class MP3(LocalTrack):
             updated = tag_id_prefix is not None
         return updated
 
+    # noinspection PyUnresolvedReferences
     def _write_comments(self, dry_run: bool = True) -> bool:
         tag_id_prefix = next(iter(self.tag_map.comments), None)
         self.delete_tags(tags=TagName.COMMENTS, dry_run=dry_run)
@@ -126,6 +130,7 @@ class MP3(LocalTrack):
 
         return tag_id_prefix is not None
 
+    # noinspection PyUnresolvedReferences
     def _write_uri(self, dry_run: bool = True) -> bool:
         tag_value = __UNAVAILABLE_URI_VALUE__ if not self.has_uri else self.uri
 

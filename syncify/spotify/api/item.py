@@ -77,7 +77,7 @@ class Items(Utilities, metaclass=ABCMeta):
         unit = unit.lower().rstrip("s") + "s"
         url = url.rstrip("/")
 
-        id_chunks = self.chunk_items(id_list, size=self.limit_value(limit, ceil=50))
+        id_chunks = self.chunk_items(id_list, size=self._limit_value(limit, ceil=50))
 
         bar = range(len(id_chunks))
         if len(id_chunks) > 10:  # show progress bar for batches which may take a long time
@@ -103,10 +103,14 @@ class Items(Utilities, metaclass=ABCMeta):
     ) -> List[MutableMapping[str, Any]]:
         """
         ``GET: /{kind}s`` - Get information for given list of ``items``. Items may be:
-            * A string representing a URL/URI/ID.
-            * A list of strings representing URLs/URIs/IDs of the same type.
-            * A Spotify API JSON response for a collection including some items under an ``items`` key, a valid ID value under an ``id`` key, and a valid item type value under a ``type`` key if ``kind`` is None.
-            * A list of Spotify API JSON responses for a collection including some items under an ``items`` key, a valid ID value under an ``id`` key, and a valid item type value under a ``type`` key if ``kind`` is None.
+            - A string representing a URL/URI/ID.
+            - A list of strings representing URLs/URIs/IDs of the same type.
+            - A Spotify API JSON response for a collection including some items under an ``items`` key,
+                a valid ID value under an ``id`` key,
+                and a valid item type value under a ``type`` key if ``kind`` is None.
+            - A list of Spotify API JSON responses for a collection including some items under an ``items`` key,
+                a valid ID value under an ``id`` key,
+                and a valid item type value under a ``type`` key if ``kind`` is None.
 
         If a JSON response is given, this replaces the ``items`` with the new results.
 
@@ -158,8 +162,10 @@ class Items(Utilities, metaclass=ABCMeta):
         Items may be:
             * A string representing a URL/URI/ID.
             * A list of strings representing URLs/URIs/IDs of the same type.
-            * A Spotify API JSON response for a collection including some items under an ``items`` key and a valid ID value under an ``id`` key.
-            * A list of Spotify API JSON responses for a collection including some items under an ``items`` key and a valid ID value under an ``id`` key.
+            * A Spotify API JSON response for a collection including some items under an ``items`` key
+                and a valid ID value under an ``id`` key.
+            * A list of Spotify API JSON responses for a collection including some items under an ``items`` key
+                and a valid ID value under an ``id`` key.
 
         If a JSON response is given, this updates ``items`` by adding the results
         under the ``audio_features`` and ``audio_analysis`` keys as appropriate.

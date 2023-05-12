@@ -19,11 +19,6 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
         raise NotImplementedError
 
     @staticmethod
-    def limit_value(value: int, floor: int = 1, ceil: int = 50) -> int:
-        """Limits a given ``value`` to always be between some ``floor`` and ``ceil``"""
-        return max(min(value, ceil), floor)
-
-    @staticmethod
     def chunk_items(values: List[Any], size: int) -> List[List[Any]]:
         """Chunks a list of ``values`` into a list of lists of equal ``size``"""
         chunked = [values[i: i + size] for i in range(0, len(values), size)]

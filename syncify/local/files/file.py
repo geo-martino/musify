@@ -27,6 +27,11 @@ class File(metaclass=ABCMeta):
 
     @property
     @abstractmethod
+    def path(self) -> str:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
     def valid_extensions(self) -> List[str]:
         """Allowed extensions in lowercase"""
         raise NotImplementedError

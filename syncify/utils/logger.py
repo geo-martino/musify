@@ -4,7 +4,7 @@ import re
 import sys
 from datetime import datetime
 from os.path import join, dirname, exists
-from typing import Literal, Optional, List, Collection, Any, Type, Iterable
+from typing import Literal, Optional, List, Collection, Any, Type, Iterable, Union
 
 from tqdm.asyncio import tqdm_asyncio
 from tqdm.auto import tqdm as tqdm_auto
@@ -133,6 +133,13 @@ class Logger:
         for handler in handlers:
             self._logger.removeHandler(handler)
             handler.close()
+
+    @staticmethod
+    def _limit_value(
+            value: Union[int, float], floor: Union[int, float] = 1, ceil: Union[int, float] = 50
+    ) -> Union[int, float]:
+        """Limits a given ``value`` to always be between some ``floor`` and ``ceil``"""
+        return max(min(value, ceil), floor)
 
     @staticmethod
     def _get_max_width(items: Collection[Any], max_width: int = 50) -> int:
