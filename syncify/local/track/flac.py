@@ -88,7 +88,7 @@ class FLAC(LocalTrack):
         return updated
 
     def _delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:
-        if tag_name == TagName.IMAGES.name.lower():
+        if tag_name == TagName.IMAGES.name.casefold():
             self._file.clear_pictures()
             return True
 

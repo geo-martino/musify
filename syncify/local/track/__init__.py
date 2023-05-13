@@ -24,7 +24,7 @@ def load_track(path: str, available: Optional[Collection[str]] = None) -> LocalT
     :return: Loaded Track object
     :exception IllegalFileTypeError: If the file type is not supported.
     """
-    ext = splitext(path)[1].lower()
+    ext = splitext(path)[1].casefold()
 
     if ext in FLAC.valid_extensions:
         return FLAC(file=path, available=available)

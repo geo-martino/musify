@@ -154,7 +154,7 @@ class TagReader(File, TagProcessor, metaclass=ABCMeta):
         """
         has_uri = None
         uri = None
-        possible_values: Optional[List[str]] = getattr(self, self.uri_tag.name.lower())
+        possible_values: Optional[List[str]] = getattr(self, self.uri_tag.name.casefold())
         if possible_values is None or len(possible_values) == 0:
             return uri, has_uri
 
@@ -189,7 +189,7 @@ class TagReader(File, TagProcessor, metaclass=ABCMeta):
         count = 0
 
         for i, image in enumerate(images):
-            output_path = join(output_folder, self.filename + f"_{str(i).zfill(2)}" + image.format.lower())
+            output_path = join(output_folder, self.filename + f"_{str(i).zfill(2)}" + image.format.casefold())
             if not exists(dirname(output_path)):
                 os.makedirs(dirname(output_path))
 

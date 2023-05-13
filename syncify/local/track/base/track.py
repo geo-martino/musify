@@ -66,7 +66,7 @@ class LocalTrack(TagReader, TagWriter, metaclass=ABCMeta):
 
         if available is not None:
             self._available_paths = set(available)
-            self._available_paths_lower = {path.lower(): path for path in self._available_paths}
+            self._available_paths_lower = {path.casefold(): path for path in self._available_paths}
 
         if isinstance(file, str):
             self._path = file
@@ -91,7 +91,7 @@ class LocalTrack(TagReader, TagWriter, metaclass=ABCMeta):
 
         if self._available_paths is not None and self._path not in self._available_paths:
             # attempt to correct case-insensitive path to case-sensitive
-            path = self._available_paths_lower.get(self._path.lower())
+            path = self._available_paths_lower.get(self._path.casefold())
             if path is not None and exists(path):
                 self._path = path
 

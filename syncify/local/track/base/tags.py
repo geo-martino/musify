@@ -83,7 +83,7 @@ class TagName(Name):
         Returns all human-friendly tag names for a given enum
         e.g. ``track`` returns both ``track_number`` and ``track_total`` tag names
         """
-        return [tag for tag in TagMap.__annotations__ if tag.startswith(self.name.lower())]
+        return [tag for tag in TagMap.__annotations__ if tag.startswith(self.name.casefold())]
 
 
 class PropertyName(Name):

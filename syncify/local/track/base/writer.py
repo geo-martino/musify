@@ -274,7 +274,7 @@ class TagWriter(File, TagProcessor, metaclass=ABCMeta):
         :param dry_run: Run function, but do not modify file at all.
         :returns: True if the file was updated or would have been if dry_run is True, False otherwise.
         """
-        tag_id = next(iter(getattr(self.tag_map, self.uri_tag.name.lower(), [])), None)
+        tag_id = next(iter(getattr(self.tag_map, self.uri_tag.name.casefold(), [])), None)
         tag_value = __UNAVAILABLE_URI_VALUE__ if not self.has_uri else self.uri
         return self._write_tag(tag_id, tag_value, dry_run)
 
