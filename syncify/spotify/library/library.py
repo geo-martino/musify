@@ -1,16 +1,14 @@
 from typing import Optional, List, MutableMapping, Any
 
-from syncify.abstract import ItemCollection
+from syncify.abstract.collection import ItemCollection
 from syncify.spotify import ItemType
 from syncify.spotify.api import API
 from syncify.spotify.library.item import SpotifyResponse, SpotifyTrack
 from syncify.spotify.library.playlist import SpotifyPlaylist
-from syncify.spotify.processor.check import ItemChecker
-from syncify.spotify.processor.search import ItemSearcher
 from syncify.utils.logger import Logger
 
 
-class SpotifyLibrary(ItemCollection, ItemChecker, ItemSearcher):
+class SpotifyLibrary(Logger, ItemCollection):
     limit = 50
 
     @property
@@ -53,11 +51,12 @@ class SpotifyLibrary(ItemCollection, ItemChecker, ItemSearcher):
                           f"{len(tracks_data)} tracks and {len(playlists_data)} playlists \33[0m")
 
         self.tracks = [SpotifyTrack(track) for track in tracks_data]
-        self.playlists = [SpotifyPlaylist.load(pl, items=self.tracks, use_cache=use_cache) for pl in playlists_data]
-        print()
+        playlists = [SpotifyPlaylist.load(pl, items=self.tracks, use_cache=use_cache) for pl in playlists_data]
+        self.playlists = {pl.name: pl for pl in sorted(playlists, key=lambda pl: pl.name.casefold())}
+        self._line()
         self.log_tracks()
         self.log_playlists()
-        print()
+        self._line()
 
         self._logger.debug("Load Spotify library: DONE\n")
 
@@ -82,7 +81,7 @@ class SpotifyLibrary(ItemCollection, ItemChecker, ItemSearcher):
 
     def log_tracks(self) -> None:
         """Log stats on currently loaded tracks"""
-        playlist_tracks = [track.uri for tracks in self.playlists for track in tracks]
+        playlist_tracks = [track.uri for tracks in self.playlists.values() for track in tracks]
         in_playlists = len([track for track in self.tracks if track.uri in playlist_tracks])
 
         self._logger.info(f"\33[1;96m{'SPOTIFY TRACKS':<22}\33[1;0m|"
@@ -118,10 +117,10 @@ class SpotifyLibrary(ItemCollection, ItemChecker, ItemSearcher):
 
     def log_playlists(self) -> None:
         """Log stats on currently loaded playlists"""
-        max_width = self._get_max_width([pl.name for pl in self.playlists])
+        max_width = self._get_max_width(self.playlists)
 
         self._logger.info("\33[1;96mLoaded the following Spotify playlists: \33[0m")
-        for playlist in sorted(self.playlists, key=lambda x: x.name.lower()):
+        for name, playlist in self.playlists.items():
             name = self._truncate_align_str(playlist.name, max_width=max_width)
             self._logger.info(f"{name} | \33[92m{len(playlist):>6} total tracks \33[0m")
 
@@ -130,5 +129,5 @@ class SpotifyLibrary(ItemCollection, ItemChecker, ItemSearcher):
             "user_name": self.api.user_name,
             "user_id": self.api.user_id,
             "track_count": len(self.tracks),
-            "playlist_counts": {pl.name: len(pl) for pl in self.playlists},
+            "playlist_counts": {name: len(pl) for name, pl in self.playlists},
         }

@@ -1,13 +1,14 @@
-from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from typing import List, Optional, MutableMapping, Any, Tuple, Mapping, Literal
 
-from spotify import ItemType
-from spotify.library import SpotifyTrack, SpotifyAlbum
 from syncify.abstract.collection import ItemCollection, Album
 from syncify.abstract.item import Item, Track, Base
+from syncify.spotify import ItemType
+from syncify.spotify.library.item import SpotifyTrack
+from syncify.spotify.library.collection import SpotifyAlbum
 from syncify.spotify.api import API
 from syncify.spotify.processor.match import ItemMatcher
+from syncify.utils.logger import Logger
 
 
 @dataclass
@@ -56,26 +57,27 @@ class AlgorithmSettings:
                                 result_count=10)
 
 
-class ItemSearcher(ItemMatcher, metaclass=ABCMeta):
+class ItemSearcher(ItemMatcher):
 
-    @property
-    @abstractmethod
-    def api(self) -> API:
-        raise NotImplementedError
+    def __init__(self, api: API, algorithm: Algorithm):
+        Logger.__init__(self)
 
-    def _get_results(self, item: Base, kind: ItemType, algo: Algorithm) -> Optional[List[MutableMapping[str, Any]]]:
+        self.api = api
+        self.algorithm = algorithm
+
+    def _get_results(self, item: Base, kind: ItemType) -> Optional[List[MutableMapping[str, Any]]]:
         item_clean = self.clean_tags(item)
 
         def execute_query(keys: List[str]) -> Tuple[List[MutableMapping[str, Any]], str]:
             attributes = set(getattr(item_clean, key, None) for key in keys)
             q = " ".join(attr for attr in attributes if attr)
-            return self.api.query(q, kind=kind, limit=algo.result_count), q
+            return self.api.query(q, kind=kind, limit=self.algorithm.result_count), q
 
-        results, query = execute_query(algo.search_fields_1)
-        if not results and algo.search_fields_2:
-            results, query = execute_query(algo.search_fields_2)
-        if not results and algo.search_fields_3:
-            results, query = execute_query(algo.search_fields_3)
+        results, query = execute_query(self.algorithm.search_fields_1)
+        if not results and self.algorithm.search_fields_2:
+            results, query = execute_query(self.algorithm.search_fields_2)
+        if not results and self.algorithm.search_fields_3:
+            results, query = execute_query(self.algorithm.search_fields_3)
 
         if not results:
             self._log_padded([item_clean.name, f"Query: {query}", "Match failed: No results."], pad="<")
@@ -127,9 +129,7 @@ class ItemSearcher(ItemMatcher, metaclass=ABCMeta):
         )
         self._line()
 
-    def search(
-            self, collections: List[ItemCollection], algo: Algorithm = AlgorithmSettings.full
-    ) -> MutableMapping[str, SearchResult]:
+    def search(self, collections: List[ItemCollection]) -> MutableMapping[str, SearchResult]:
         self._logger.debug('Searching items: START')
         if not [self.clean_tags(item) for c in collections for item in c.items if item.has_uri is None]:
             self._log_padded(["\33[93mNo items to search. \33[0m"], pad="<")
@@ -146,48 +146,48 @@ class ItemSearcher(ItemMatcher, metaclass=ABCMeta):
 
             if getattr(collection, "compilation", None):
                 self._log_padded([collection.name, "Searching with item algorithm"], pad='>')
-                result = self._search_items(collection=collection, algo=algo)
+                result = self._search_items(collection=collection)
             else:
                 self._log_padded([collection.name, "Searching with album algorithm"], pad='>')
-                result = self._search_album(collection=collection, algo=algo)
+                result = self._search_album(collection=collection)
                 missing = [item for item in result.items if item.has_uri is None]
                 if missing:
                     self._log_padded([collection.name,
                                       f"Searching for {len(missing)} unmatched items in this collection"])
                     search = SearchCollection(name=collection.name, items=missing)
-                    result = self._search_items(collection=search, algo=algo)
+                    result = self._search_items(collection=search)
 
             search_results[collection.name] = SearchResult(
-                matched=[track for track in result if track.has_uri],
-                unmatched=[track for track in result if track.has_uri is None],
-                skipped=[track for track in result if not track.has_uri]
+                matched=[item for item in result if item.has_uri],
+                unmatched=[item for item in result if item.has_uri is None],
+                skipped=[item for item in result if not item.has_uri]
             )
 
         self._log_results(search_results)
         self._logger.debug('Searching items: DONE\n')
         return search_results
 
-    def _search_items(self, collection: ItemCollection, algo: Algorithm) -> ItemCollection:
+    def _search_items(self, collection: ItemCollection) -> ItemCollection:
         matches = []
         for item in collection.items:
             if not isinstance(item, Track):
                 raise NotImplementedError(f"Currently only able to search for Track items, "
                                           f"not {item.__class__.__name__}")
 
-            results = [SpotifyTrack(r) for r in self._get_results(item, kind=ItemType.TRACK, algo=algo)]
+            results = [SpotifyTrack(r) for r in self._get_results(item, kind=ItemType.TRACK)]
             results = [result for result in results if self.not_karaoke(item, result=result)]
-            result = self.score_match(item, results=results, match_on=algo.match_fields,
-                                      min_score=algo.min_score, max_score=algo.max_score)
+            result = self.score_match(item, results=results, match_on=self.algorithm.match_fields,
+                                      min_score=self.algorithm.min_score, max_score=self.algorithm.max_score)
             matches.append(result) if result else matches.append(self.clean_tags(item))
 
         return SearchCollection(collection.name, items=matches)
 
-    def _search_album(self, collection: Album, algo: Algorithm) -> ItemCollection:
-        results = [SpotifyAlbum(r) for r in self._get_results(collection, kind=ItemType.ALBUM, algo=algo)]
+    def _search_album(self, collection: Album) -> ItemCollection:
+        results = [SpotifyAlbum(r) for r in self._get_results(collection, kind=ItemType.ALBUM)]
         results = [result for result in results if self.not_karaoke(collection, result=result)]
 
         # order and prioritise results that are closer to the item count of the input collection
         results = sorted(results, key=lambda x: abs(x.total_tracks - len(collection)))
-        result = self.score_match(collection, results=results, match_on=algo.match_fields,
-                                  min_score=algo.min_score, max_score=algo.max_score)
+        result = self.score_match(collection, results=results, match_on=self.algorithm.match_fields,
+                                  min_score=self.algorithm.min_score, max_score=self.algorithm.max_score)
         return result if result else collection

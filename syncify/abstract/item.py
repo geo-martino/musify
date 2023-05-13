@@ -63,10 +63,13 @@ class Item(Base, PrettyPrinter, metaclass=ABCMeta):
         self.has_uri = has_url
 
     def __hash__(self):
-        return hash(self.uri)
+        return hash(self.uri) if self.has_uri else hash(self.name)
 
     def __eq__(self, item):
-        return self.uri == item.uri
+        if self.has_uri or item.has_uri:
+            return self.has_uri == item.has_uri and self.uri == item.uri
+        else:
+            return self.name == item.name
 
     def __ne__(self, item):
         return not self.__eq__(item)

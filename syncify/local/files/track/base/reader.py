@@ -32,7 +32,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
         self.compilation = self._read_compilation()
         self.comments = self._read_comments()
 
-        self._uri, self._has_uri = self._read_uri()
+        self.uri, self.has_uri = self._read_uri()
         self.has_image = self._check_for_images()
 
         self.folder = basename(dirname(self.path))

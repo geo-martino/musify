@@ -78,7 +78,7 @@ class LocalLibrary(ItemCollection, Logger):
         return self._tracks
 
     @property
-    def playlists(self) -> List[LocalPlaylist]:
+    def playlists(self) -> MutableMapping[str, LocalPlaylist]:
         return self._playlists
 
     def __init__(
@@ -113,7 +113,7 @@ class LocalLibrary(ItemCollection, Logger):
         self.other_folders = other_folders
 
         self._tracks: List[LocalTrack] = []
-        self._playlists: List[LocalPlaylist] = []
+        self._playlists: MutableMapping[str, LocalPlaylist] = {}
         self.last_played: Optional[datetime] = None
         self.last_added: Optional[datetime] = None
         self.last_modified: Optional[datetime] = None
@@ -138,7 +138,7 @@ class LocalLibrary(ItemCollection, Logger):
         self.log_tracks()
         print()
 
-        self._playlists = self.load_playlists()
+        self._playlists = {pl.name: pl for pl in sorted(self.load_playlists(), key=lambda pl: pl.name.casefold())}
         self._line()
         self.log_playlists()
         print()
@@ -226,16 +226,14 @@ class LocalLibrary(ItemCollection, Logger):
 
     def save_playlists(self, **kwargs) -> Mapping[str, SyncResult]:
         """Saves the tags of all tracks in this library. Use arguments from :py:func:`LocalPlaylist.save()`"""
-        return {pl.name: pl.save(**kwargs) for pl in self.playlists}
+        return {name: pl.save(**kwargs) for name, pl in self.playlists.items()}
 
     def log_playlists(self) -> None:
         """Log stats on currently loaded playlists"""
-        items = [(pl.name, pl) for pl in self._playlists]
-        playlists: Mapping[str, LocalPlaylist] = dict(sorted(items, key=lambda x: x[0]))
-        max_width = self._get_max_width(playlists)
+        max_width = self._get_max_width(self.playlists)
 
         self._logger.info("\33[1;96mFound the following Local playlists: \33[0m")
-        for name, playlist in playlists.items():
+        for name, playlist in self.playlists.items():
             self._logger.info(
                 f"{self._truncate_align_str(name, max_width=max_width)} |"
                 f"\33[92m{len([t for t in playlist if t.has_uri]):>4} available \33[0m|"
@@ -275,5 +273,5 @@ class LocalLibrary(ItemCollection, Logger):
             "playlists_folder": self.playlist_folder,
             "other_folders": self.other_folders,
             "track_count": len(self.tracks),
-            "playlist_counts": {pl.name: len(pl) for pl in self._playlists},
+            "playlist_counts": {name: len(pl) for name, pl in self._playlists.items()},
         }

@@ -44,11 +44,11 @@ def random_track(cls: Optional[Type[LocalTrack]] = None) -> LocalTrack:
     track.compilation = choice([True, False])
     track.comments = [random_str(20, 50) for _ in range(randrange(3))]
 
-    track._has_uri = choice([True, False])
+    track.has_uri = choice([True, False])
     if track.has_uri:
-        track._uri = "spotify:track:" + random_str(IDType.ID.value, IDType.ID.value + 1)
+        track.uri = "spotify:track:" + random_str(IDType.ID.value, IDType.ID.value + 1)
     else:
-        track._uri = __UNAVAILABLE_URI_VALUE__
+        track.uri = __UNAVAILABLE_URI_VALUE__
 
     track.image_links = {}
     track.has_image = False
@@ -161,7 +161,7 @@ def update_tags_test(track: LocalTrack) -> None:
     track.disc_number = 2
     track.disc_total = 3
     track.compilation = False
-    track._has_uri = False
+    track.has_uri = False
     track.image_links = {}
 
     # dry run, no updates should happen
