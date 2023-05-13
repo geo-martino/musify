@@ -8,9 +8,8 @@ from syncify.local.playlist import M3U
 from syncify.local.file import IllegalFileTypeError
 from syncify.local.track import LocalTrack, FLAC, M4A, WMA
 from tests.common import path_txt
-from tests.local.files.playlist.playlist import copy_playlist_file, path_playlist_m3u, path_resources, \
-    path_playlist_cache
-from tests.local.files.track.track import random_tracks, path_track_flac, path_track_m4a, path_track_wma
+from tests.local.playlist.playlist import copy_playlist_file, path_playlist_m3u, path_resources, path_playlist_cache
+from tests.local.track.track import random_tracks, path_track_flac, path_track_m4a, path_track_wma
 
 
 def test_load():

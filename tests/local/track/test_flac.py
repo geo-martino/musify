@@ -4,15 +4,15 @@ from os.path import basename, dirname, splitext
 
 import pytest
 
-from syncify.local.track import M4A
+from syncify.local.track import FLAC
 from syncify.local.file import IllegalFileTypeError
 from tests.common import path_txt
-from tests.local.files.track.track import path_track_m4a, path_track_resources
-from tests.local.files.track.track import update_tags_test, clear_tags_test, update_images_test
+from tests.local.track.track import path_track_flac, path_track_resources
+from tests.local.track.track import update_tags_test, clear_tags_test, update_images_test
 
 
 def test_load():
-    track = M4A(file=path_track_m4a)
+    track = FLAC(file=path_track_flac)
 
     track_file = track.file
 
@@ -27,17 +27,17 @@ def test_load():
 
     # raises error on unrecognised file type
     with pytest.raises(IllegalFileTypeError):
-        M4A(path_txt)
+        FLAC(path_txt)
 
     # raises error on files that do not exist
     with pytest.raises(FileNotFoundError):
-        M4A("does_not_exist.m4a")
+        FLAC("does_not_exist.flac")
 
 
 def test_copy():
-    track = M4A(file=path_track_m4a)
+    track = FLAC(file=path_track_flac)
 
-    track_from_file = M4A(file=track.file)
+    track_from_file = FLAC(file=track.file)
     assert id(track.file) == id(track_from_file.file)
 
     track_copy = copy(track)
@@ -52,34 +52,35 @@ def test_copy():
 
 
 def test_set_and_find_file_paths():
-    track = M4A(file=path_track_m4a.upper())
-    assert track.path == path_track_m4a.upper()
+    track = FLAC(file=path_track_flac.upper())
+    assert track.path == path_track_flac.upper()
 
-    paths = M4A.get_filepaths(path_track_resources)
-    assert paths == {path_track_m4a}
+    paths = FLAC.get_filepaths(path_track_resources)
+    assert paths == {path_track_flac}
 
-    track = M4A(file=path_track_m4a.upper(), available=paths)
-    assert track.path != path_track_m4a.upper()
+    track = FLAC(file=path_track_flac.upper(), available=paths)
+    assert track.path != path_track_flac.upper()
 
 
 def test_loaded_attributes():
-    track = M4A(file=path_track_m4a)
+    track = FLAC(file=path_track_flac)
 
     # metadata
-    assert track.title == 'title 3'
-    assert track.artist == 'artist 3'
-    assert track.album == 'album artist 3'
+    assert track.title == 'title 1'
+    assert track.artist == 'artist 1'
+    assert track.album == 'album artist 1'
     assert track.album_artist == 'various'
-    assert track.track_number == 2
+    assert track.track_number == 1
     assert track.track_total == 4
-    assert track.genres == ['Dance', 'Techno']
-    assert track.year == 2021
-    assert track.bpm == 120.0
-    assert track.key == 'B'
+    assert track.genres == ['Pop', 'Rock', 'Jazz']
+    assert track.year == 2020
+    assert track.bpm == 120.12
+    assert track.key == 'A'
     assert track.disc_number == 1
-    assert track.disc_total == 2
+    assert track.disc_total == 3
     assert track.compilation
-    assert track.comments == ['spotify:track:4npv0xZO9fVLBmDS2XP9Bw']
+    # noinspection SpellCheckingInspection
+    assert track.comments == ['spotify:track:6fWoFduMpBem73DMLCOh1Z']
 
     assert track.uri == track.comments[0]
     assert track.has_uri
@@ -88,13 +89,13 @@ def test_loaded_attributes():
     assert track.has_image
 
     # file properties
-    assert track.path == path_track_m4a
-    assert track.folder == basename(dirname(path_track_m4a))
-    assert track.filename == splitext(basename(path_track_m4a))[0]
-    assert track.ext == '.m4a'
-    assert track.size == 302199
+    assert track.path == path_track_flac
+    assert track.folder == basename(dirname(path_track_flac))
+    assert track.filename == splitext(basename(path_track_flac))[0]
+    assert track.ext == '.flac'
+    assert track.size == 1818191
     assert int(track.length) == 20
-    assert track.date_modified == datetime(2023, 5, 1, 10, 23, 3, 839000)
+    assert track.date_modified == datetime(2023, 5, 1, 10, 24, 14, 903000)
 
     # library properties
     assert track.date_added is None
@@ -104,15 +105,15 @@ def test_loaded_attributes():
 
 
 def test_cleared_tags():
-    track = M4A(file=path_track_m4a)
+    track = FLAC(file=path_track_flac)
     clear_tags_test(track)
 
 
 def test_updated_tags():
-    track = M4A(file=path_track_m4a)
+    track = FLAC(file=path_track_flac)
     update_tags_test(track)
 
 
 def test_updated_images():
-    track = M4A(file=path_track_m4a)
+    track = FLAC(file=path_track_flac)
     update_images_test(track)

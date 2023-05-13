@@ -4,7 +4,7 @@ from typing import Callable, Any
 from syncify.local.playlist.processor import TrackCompare, TrackMatch
 from syncify.local.track import LocalTrack, TagName
 from tests.common import random_str
-from tests.local.files.track.track import random_tracks
+from tests.local.track.track import random_tracks
 
 
 def test_init():

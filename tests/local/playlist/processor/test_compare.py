@@ -4,7 +4,7 @@ import pytest
 
 from syncify.local.track import TagName, PropertyName, MP3, M4A, FLAC
 from syncify.local.playlist.processor import TrackCompare
-from tests.local.files.track.track import random_track
+from tests.local.track.track import random_track
 
 
 def test_init():

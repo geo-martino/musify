@@ -11,9 +11,9 @@ from syncify.local.playlist.processor import LimitType, ShuffleMode, ShuffleBy
 from syncify.local.file import IllegalFileTypeError
 from syncify.local.track import LocalTrack, FLAC, M4A, WMA, MP3
 from tests.common import path_txt
-from tests.local.files.playlist.playlist import copy_playlist_file, path_resources
-from tests.local.files.playlist.playlist import path_playlist_xautopf_ra, path_playlist_xautopf_bp
-from tests.local.files.track.track import random_tracks, path_track_flac, path_track_m4a, path_track_wma, path_track_mp3
+from tests.local.playlist.playlist import copy_playlist_file, path_resources
+from tests.local.playlist.playlist import path_playlist_xautopf_ra, path_playlist_xautopf_bp
+from tests.local.track.track import random_tracks, path_track_flac, path_track_m4a, path_track_wma, path_track_mp3
 
 
 def test_init_fails():

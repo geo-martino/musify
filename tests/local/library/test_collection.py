@@ -1,7 +1,7 @@
 import pytest
 
 from syncify.local.library import LocalFolder, LocalAlbum, LocalArtist, LocalGenres
-from tests.local.files.track.track import random_tracks
+from tests.local.track.track import random_tracks
 
 
 def test_folder():
