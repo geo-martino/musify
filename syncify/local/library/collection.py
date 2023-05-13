@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List, MutableMapping, Any, Optional, Callable, Tuple
 
 from syncify.abstract.collection import ItemCollection, Folder, Album, Artist, Genre
-from syncify.local.files.track import LocalTrack
+from syncify.local.track import LocalTrack
 
 
 class LocalCollection(ItemCollection, metaclass=ABCMeta):

@@ -5,11 +5,12 @@ from typing import Optional, Set, Any, List, MutableMapping
 
 from lxml import etree
 
-from syncify.local.files.track.base import LocalTrack
+from syncify.local.file import File
+from syncify.local.track.base import LocalTrack
 from syncify.local.library.library import LocalLibrary
 
 
-class MusicBee(LocalLibrary):
+class MusicBee(File, LocalLibrary):
     """
     Represents a local MusicBee library, providing various methods for manipulating
     tracks and playlists across an entire local library collection.
@@ -24,6 +25,12 @@ class MusicBee(LocalLibrary):
         Useful when managing similar libraries on multiple platforms.
     :param load: When True, load the library on intialisation.
     """
+
+    @property
+    def path(self) -> str:
+        return self._path
+
+    valid_extensions = [".xml"]
 
     def __init__(
             self,
@@ -41,8 +48,9 @@ class MusicBee(LocalLibrary):
                                         f"{musicbee_folder} OR {in_library}")
             musicbee_folder = in_library
 
+        self._path: str = join(musicbee_folder, "iTunes Music Library.xml")
         self.xml: MutableMapping[str, Any] = {}
-        for record in ReadXmlLibrary(join(musicbee_folder, "iTunes Music Library.xml")):
+        for record in ReadXmlLibrary(self._path):
             for key, value in record.items():
                 self.xml[key] = value
 

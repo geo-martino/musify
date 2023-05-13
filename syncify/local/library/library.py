@@ -3,14 +3,15 @@ from glob import glob
 from os.path import splitext, join, exists, basename
 from typing import Optional, List, Set, MutableMapping, Mapping, Collection, Any, Callable, Tuple
 
-from syncify.abstract import ItemCollection, SyncResult
-from syncify.local.files import IllegalFileTypeError
-from syncify.local.files.playlist import __PLAYLIST_FILETYPES__, LocalPlaylist, M3U, XAutoPF
-from syncify.local.files.track import __TRACK_CLASSES__, LocalTrack, load_track, SyncResultTrack
+from syncify.abstract.collection import Library
+from syncify.abstract.misc import SyncResult
+from syncify.local.file import IllegalFileTypeError
+from syncify.local.playlist import __PLAYLIST_FILETYPES__, LocalPlaylist, M3U, XAutoPF
+from syncify.local.track import __TRACK_CLASSES__, LocalTrack, load_track, SyncResultTrack
 from syncify.utils.logger import Logger
 
 
-class LocalLibrary(ItemCollection, Logger):
+class LocalLibrary(Logger, Library):
     """
     Represents a local library, providing various methods for manipulating
     tracks and playlists across an entire local library collection.
@@ -71,11 +72,7 @@ class LocalLibrary(ItemCollection, Logger):
 
     @property
     def items(self) -> List[LocalTrack]:
-        return self._tracks
-
-    @property
-    def tracks(self) -> List[LocalTrack]:
-        return self._tracks
+        return self.tracks
 
     @property
     def playlists(self) -> MutableMapping[str, LocalPlaylist]:
@@ -112,7 +109,7 @@ class LocalLibrary(ItemCollection, Logger):
 
         self.other_folders = other_folders
 
-        self._tracks: List[LocalTrack] = []
+        self.tracks: List[LocalTrack] = []
         self._playlists: MutableMapping[str, LocalPlaylist] = {}
         self.last_played: Optional[datetime] = None
         self.last_added: Optional[datetime] = None
@@ -125,7 +122,7 @@ class LocalLibrary(ItemCollection, Logger):
         """Loads all tracks and playlists in this library from scratch and log results."""
         self._logger.debug("Load local library: START")
 
-        self._tracks = self.load_tracks()
+        self.tracks = self.load_tracks()
         self._line()
         if len(self.tracks) > 0:
             key_type = Callable[[LocalTrack], Tuple[bool, datetime]]

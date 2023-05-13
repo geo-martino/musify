@@ -361,9 +361,9 @@ class Search:
         match_artist = self._settings[algorithm_album]["artist_match"]
         search_artist = self._settings[algorithm_album]["artist_search"]
 
-        # get shortest artist name from local metadata
+        # get shortest artist name from syncify.local metadata
         artist_clean = min(set(track['artist'] for track in tracks), key=len)
-        # clean artist and album from local metadata
+        # clean artist and album from syncify.local metadata
         album_clean = self.clean_tags(
             {'artist': artist_clean, 'album': tracks[0]['album']}, **kwargs)
         artist_clean = album_clean['artist']

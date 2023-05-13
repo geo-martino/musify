@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from os.path import splitext
+from os.path import splitext, basename, dirname
 from typing import List
 
 from http.client import HTTPResponse
@@ -29,6 +29,18 @@ class File(metaclass=ABCMeta):
     @abstractmethod
     def path(self) -> str:
         raise NotImplementedError
+
+    @property
+    def folder(self) -> str:
+        return basename(dirname(self.path))
+
+    @property
+    def filename(self) -> str:
+        return splitext(basename(self.path))[0]
+
+    @property
+    def ext(self) -> str:
+        return splitext(self.path)[1].lower()
 
     @property
     @abstractmethod

@@ -1,14 +1,14 @@
 import re
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
-from os.path import basename, splitext, dirname, join, getmtime, exists, getctime
+from os.path import dirname, join, getmtime, exists, getctime
 from typing import List, MutableMapping, Optional, Any, Union, Callable, Tuple, Collection
 
 from syncify.abstract.collection import Playlist
 from syncify.abstract.misc import SyncResult
-from syncify.local.files.file import File
-from syncify.local.files.track import LocalTrack
-from syncify.local.files.track.collection import TrackMatch, TrackLimit, TrackSort
+from syncify.local.file import File
+from syncify.local.track import LocalTrack
+from syncify.local.playlist.processor import TrackMatch, TrackLimit, TrackSort
 
 
 class LocalPlaylist(Playlist, File, metaclass=ABCMeta):
@@ -46,12 +46,11 @@ class LocalPlaylist(Playlist, File, metaclass=ABCMeta):
 
     @property
     def name(self) -> str:
-        return self._name
+        return self.filename
 
     @name.setter
     def name(self, value: str):
         self._path = join(dirname(self._path), value + self.ext)
-        self._name = value
 
     def __init__(
             self,
@@ -60,19 +59,9 @@ class LocalPlaylist(Playlist, File, metaclass=ABCMeta):
             limiter: Optional[TrackLimit] = None,
             sorter: Optional[TrackSort] = None,
     ):
-        self._name, self.ext = splitext(basename(path))
         self._path: str = path
         self._tracks: Optional[List[LocalTrack]] = None
-        self.description: Optional[str] = None
-        self.track_total: int = 0
-
-        self.image_links = {}
-        self.has_image = False
-
-        self.length: float = 0
         self.last_played: Optional[datetime] = None
-        self.date_created: Optional[datetime] = None
-        self.date_modified: Optional[datetime] = None
 
         if exists(self._path):
             self.date_created = datetime.fromtimestamp(getctime(self._path))

@@ -2,10 +2,8 @@ from itertools import groupby
 from random import choice, randrange
 from typing import Callable
 
-from syncify.local.files.track import LocalTrack
-from syncify.local.files.track import PropertyName
-from syncify.local.files.track import TrackSort, TagName
-from syncify.local.files.track.collection.sort import ShuffleMode
+from syncify.local.track import LocalTrack, PropertyName, TagName
+from syncify.local.playlist.processor import TrackSort, ShuffleMode
 from syncify.utils_new.helpers import strip_ignore_words
 from tests.local.files.track.track import random_tracks
 

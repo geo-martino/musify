@@ -1,6 +1,6 @@
 from typing import Optional, List, MutableMapping, Any
 
-from syncify.abstract.collection import ItemCollection
+from syncify.abstract.collection import Library
 from syncify.spotify import ItemType
 from syncify.spotify.api import API
 from syncify.spotify.library.item import SpotifyResponse, SpotifyTrack
@@ -8,7 +8,7 @@ from syncify.spotify.library.playlist import SpotifyPlaylist
 from syncify.utils.logger import Logger
 
 
-class SpotifyLibrary(Logger, ItemCollection):
+class SpotifyLibrary(Logger, Library):
     limit = 50
 
     @property
@@ -22,6 +22,10 @@ class SpotifyLibrary(Logger, ItemCollection):
     @property
     def items(self) -> List[SpotifyTrack]:
         return self.tracks
+
+    @property
+    def playlists(self) -> MutableMapping[str, SpotifyPlaylist]:
+        return self._playlists
 
     def __init__(
             self,
@@ -52,7 +56,7 @@ class SpotifyLibrary(Logger, ItemCollection):
 
         self.tracks = [SpotifyTrack(track) for track in tracks_data]
         playlists = [SpotifyPlaylist.load(pl, items=self.tracks, use_cache=use_cache) for pl in playlists_data]
-        self.playlists = {pl.name: pl for pl in sorted(playlists, key=lambda pl: pl.name.casefold())}
+        self._playlists = {pl.name: pl for pl in sorted(playlists, key=lambda pl: pl.name.casefold())}
         self._line()
         self.log_tracks()
         self.log_playlists()

@@ -8,8 +8,8 @@ from PIL import Image
 # noinspection PyProtectedMember
 from mutagen.id3 import Encoding
 
-from syncify.local.files.file import open_image, get_image_bytes
-from syncify.local.files.track.base import LocalTrack, TagName, TagMap
+from syncify.local.file import open_image, get_image_bytes
+from syncify.local.track.base import LocalTrack, TagName, TagMap
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 
 

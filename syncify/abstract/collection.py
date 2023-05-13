@@ -41,6 +41,14 @@ class Playlist(ItemCollection, metaclass=ABCMeta):
 
 
 @dataclass
+class Library(ItemCollection, metaclass=ABCMeta):
+
+    @property
+    def playlists(self) -> MutableMapping[str, Playlist]:
+        raise NotImplementedError
+
+
+@dataclass
 class Folder(ItemCollection, metaclass=ABCMeta):
     track_total: int = 0
     compilation: bool = False

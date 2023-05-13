@@ -4,8 +4,8 @@ from random import shuffle
 from typing import Any, Callable, List, Mapping, MutableMapping, Optional, Self, Tuple, Union
 
 from syncify.abstract import SyncifyEnum
-from syncify.local.files.track.base import Name, PropertyName, TagName, LocalTrack
-from syncify.local.files.track.collection.processor import TrackProcessor
+from syncify.local.track.base import Name, PropertyName, TagName, LocalTrack
+from syncify.local.playlist.processor.base import TrackProcessor
 from syncify.utils_new.helpers import UnionList, flatten_nested, strip_ignore_words, make_list
 
 
@@ -74,7 +74,7 @@ class TrackSort(TrackProcessor):
                 tracks.reverse()
             return
 
-        tag_name = field.to_tag(field)[0] if isinstance(field, TagName) else field.name.lower()
+        tag_name = field.to_tag()[0] if isinstance(field, TagName) else field.name.lower()
         example_value = None
         for track in tracks:
             example_value = getattr(track, tag_name)
@@ -112,7 +112,7 @@ class TrackSort(TrackProcessor):
         grouped: MutableMapping[Optional[Any], List[LocalTrack]] = {}
 
         for track in tracks:
-            tag_name = field.to_tag(field)[0] if isinstance(field, TagName) else field.name.lower()
+            tag_name = field.to_tag()[0] if isinstance(field, TagName) else field.name.lower()
             value = getattr(track, tag_name, None)
             if grouped.get(value) is None:
                 grouped[value] = []
@@ -213,7 +213,7 @@ class TrackSort(TrackProcessor):
 
         fields = copy(fields)
         fields.pop(field)
-        tag_name = field.to_tag(field)[0] if isinstance(field, TagName) else field.name.lower()
+        tag_name = field.to_tag()[0] if isinstance(field, TagName) else field.name.lower()
 
         for i, (key, tracks) in enumerate(tracks_grouped.items(), 1):
             tracks.sort(key=lambda t: (getattr(t, tag_name) is None, getattr(t, tag_name)), reverse=reverse)

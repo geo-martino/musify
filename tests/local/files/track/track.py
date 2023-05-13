@@ -9,8 +9,8 @@ from typing import Tuple, Type, Optional, List
 
 from dateutil.relativedelta import relativedelta
 
-from syncify.local.files.track import LocalTrack, TagName, __TRACK_CLASSES__
-from syncify.local.files.file import open_image
+from syncify.local.track import LocalTrack, TagName, __TRACK_CLASSES__
+from syncify.local.file import open_image
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__, IDType
 from tests.common import path_resources, path_cache, random_str
 
@@ -53,10 +53,7 @@ def random_track(cls: Optional[Type[LocalTrack]] = None) -> LocalTrack:
     track.image_links = {}
     track.has_image = False
 
-    track.folder = basename(path_track_cache)
-    track.filename = f"{str(track.track_number).zfill(2)} - {track.title}"
-    track.ext = track.valid_extensions[0]
-    track._path = join(path_track_cache, track.filename + track.ext)
+    track.path = join(path_track_cache, f"{str(track.track_number).zfill(2)} - {track.title}" + track.valid_extensions[0])
     track.size = randrange(6000, 10000000)
     track.length = randint(30, 600)
     track.date_modified = datetime.now() - relativedelta(days=randrange(1, 20), hours=randrange(1, 24))
@@ -162,7 +159,7 @@ def update_tags_test(track: LocalTrack) -> None:
     track.disc_total = 3
     track.compilation = False
     track.has_uri = False
-    track.image_links = {}
+    track.image_links = None
 
     # dry run, no updates should happen
     result = track.save(tags=TagName.ALL, replace=False, dry_run=True)

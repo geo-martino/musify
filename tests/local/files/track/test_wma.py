@@ -1,10 +1,11 @@
 from copy import copy, deepcopy
 from datetime import datetime
-from os.path import basename, dirname
+from os.path import basename, dirname, splitext
 
 import pytest
 
-from syncify.local.files import WMA, IllegalFileTypeError
+from syncify.local.track import WMA
+from syncify.local.file import IllegalFileTypeError
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 from tests.common import path_txt
 from tests.local.files.track.track import path_track_wma, path_track_resources, update_tags_test, clear_tags_test
@@ -83,13 +84,13 @@ def test_loaded_attributes():
     assert track.uri is None
     assert not track.has_uri
 
-    assert track.image_links == {}
+    assert track.image_links is None
     assert track.has_image
 
     # file properties
     assert track.path == path_track_wma
     assert track.folder == basename(dirname(path_track_wma))
-    assert track.filename == basename(path_track_wma)
+    assert track.filename == splitext(basename(path_track_wma))[0]
     assert track.ext == '.wma'
     assert track.size == 1193637
     assert int(track.length) == 32

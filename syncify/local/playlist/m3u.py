@@ -4,8 +4,9 @@ from os.path import exists, getmtime
 from typing import Optional, List, Collection, Union
 
 from syncify.abstract import SyncResult
-from syncify.local.files.playlist.playlist import LocalPlaylist
-from syncify.local.files.track import LocalTrack, load_track, TrackMatch
+from syncify.local.playlist.playlist import LocalPlaylist
+from syncify.local.playlist.processor import TrackMatch
+from syncify.local.track import LocalTrack, load_track
 
 
 @dataclass

@@ -12,7 +12,7 @@ class CheckMatches:
     ###########################################################################
     def check_tracks(self, playlists: dict, pause: int = 10, **kwargs) -> dict:
         """
-        Creates temporary playlists from locally stored URIs to check tracks have an accurate URI attached.
+        Creates temporary playlists from syncify.locally stored URIs to check tracks have an accurate URI attached.
         User can then manually modify incorrectly associated URIs by replacing tracks in the playlists.
 
         :param playlists: dict. Local playlists in form <name>: <list of dicts of track's metadata>

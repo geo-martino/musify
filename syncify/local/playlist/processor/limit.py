@@ -4,9 +4,9 @@ from random import shuffle
 from typing import Any, Callable, List, Mapping, Optional, Self, MutableMapping, Union, Collection
 
 from syncify.abstract import SyncifyEnum
-from syncify.local.files.track.base import PropertyName, LocalTrack
-from syncify.local.files.track.collection.processor import TrackProcessor
-from syncify.local.files.track.collection.sort import TrackSort
+from syncify.local.track.base import PropertyName, LocalTrack
+from syncify.local.playlist.processor.base import TrackProcessor
+from syncify.local.playlist.processor.sort import TrackSort
 
 
 class LimitType(SyncifyEnum):

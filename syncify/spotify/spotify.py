@@ -328,7 +328,7 @@ class Spotify(Endpoints, Search, CheckMatches):
                 spotify_playlist = self.get_playlist_tracks(spotify[name], name)
                 uris_current = [track['uri'] for track in spotify_playlist]
 
-                # get list of URIs from local playlists that are not already in Spotify playlist
+                # get list of URIs from syncify.local playlists that are not already in Spotify playlist
                 uris_add = [uri for uri in uris_all if uri not in uris_current]
 
                 # clear playlist
@@ -361,7 +361,7 @@ class Spotify(Endpoints, Search, CheckMatches):
                     f"{len(uris_add):>4} tracks to add"
                 )
 
-                # get newly created playlist URL, and list of URIs from local playlists
+                # get newly created playlist URL, and list of URIs from syncify.local playlists
                 if not dry_run:
                     url = self.create_playlist(name, **kwargs)
 

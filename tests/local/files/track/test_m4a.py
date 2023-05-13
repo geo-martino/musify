@@ -1,10 +1,11 @@
 from copy import copy, deepcopy
 from datetime import datetime
-from os.path import basename, dirname
+from os.path import basename, dirname, splitext
 
 import pytest
 
-from syncify.local.files import M4A, IllegalFileTypeError
+from syncify.local.track import M4A
+from syncify.local.file import IllegalFileTypeError
 from tests.common import path_txt
 from tests.local.files.track.track import path_track_m4a, path_track_resources
 from tests.local.files.track.track import update_tags_test, clear_tags_test, update_images_test
@@ -83,13 +84,13 @@ def test_loaded_attributes():
     assert track.uri == track.comments[0]
     assert track.has_uri
 
-    assert track.image_links == {}
+    assert track.image_links is None
     assert track.has_image
 
     # file properties
     assert track.path == path_track_m4a
     assert track.folder == basename(dirname(path_track_m4a))
-    assert track.filename == basename(path_track_m4a)
+    assert track.filename == splitext(basename(path_track_m4a))[0]
     assert track.ext == '.m4a'
     assert track.size == 302199
     assert int(track.length) == 20

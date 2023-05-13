@@ -428,7 +428,7 @@ class Process():
     ###########################################################################
     def extract_images(self, playlists: dict, dim: bool = True, **kwargs) -> str:
         """
-        Extract and save all embedded images from local files or Spotify tracks.
+        Extract and save all embedded images from syncify.local files or Spotify tracks.
 
         :param playlists: dict. <parent folder name>: <list of dicts of track's metadata>
         :param dim: bool, default=True. Add dimensions to image filenames on export as suffix in parentheses.

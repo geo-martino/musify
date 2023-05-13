@@ -2,12 +2,12 @@ import os
 import re
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
-from os.path import basename, dirname, getmtime, splitext, getsize, join, exists
+from os.path import dirname, getmtime, getsize, join, exists
 from typing import Optional, List, Tuple, Set
 
 from PIL import Image
 
-from syncify.local.files.track.base.tags import TagProcessor
+from syncify.local.track.base.tags import TagProcessor
 from syncify.spotify import check_spotify_type, IDType, __UNAVAILABLE_URI_VALUE__
 
 
@@ -35,9 +35,6 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
         self.uri, self.has_uri = self._read_uri()
         self.has_image = self._check_for_images()
 
-        self.folder = basename(dirname(self.path))
-        self.filename = basename(self.path)
-        self.ext = splitext(self.path)[1].lower()
         self.size = getsize(self.path)
         self.length = self.file.info.length
         self.date_modified = datetime.fromtimestamp(getmtime(self.path))

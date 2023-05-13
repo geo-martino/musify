@@ -4,8 +4,9 @@ from typing import List
 
 import pytest
 
-from syncify.local.files import M3U, IllegalFileTypeError
-from syncify.local.files.track import LocalTrack, FLAC, M4A, WMA
+from syncify.local.playlist import M3U
+from syncify.local.file import IllegalFileTypeError
+from syncify.local.track import LocalTrack, FLAC, M4A, WMA
 from tests.common import path_txt
 from tests.local.files.playlist.playlist import copy_playlist_file, path_playlist_m3u, path_resources, \
     path_playlist_cache

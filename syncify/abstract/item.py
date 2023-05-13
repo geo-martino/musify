@@ -6,46 +6,6 @@ from typing import List, Optional, MutableMapping, Collection
 from syncify.abstract.misc import PrettyPrinter
 
 
-@dataclass
-class Tags:
-    """Tags that can be extracted for a given track and their related inferred attributes"""
-    title: Optional[str]
-    artist: Optional[str]
-    album: Optional[str]
-    album_artist: Optional[str]
-    track_number: Optional[int]
-    track_total: Optional[int]
-    genres: Optional[Collection[str]]
-    year: Optional[int]
-    bpm: Optional[float]
-    key: Optional[str]
-    disc_number: Optional[int]
-    disc_total: Optional[int]
-    compilation: Optional[bool]
-    comments: Optional[List[str]]
-    image_links: MutableMapping[str, str]
-    has_image: bool
-
-
-@dataclass
-class Properties:
-    """Properties that can be extracted from a file"""
-    # file properties
-    path: Optional[str]
-    folder: Optional[str]
-    filename: Optional[str]
-    ext: Optional[str]
-    size: Optional[int]
-    length: Optional[float]
-    date_modified: Optional[datetime]
-
-    # library properties
-    date_added: Optional[datetime]
-    last_played: Optional[datetime]
-    play_count: Optional[int]
-    rating: Optional[float]
-
-
 class Base:
     list_sep = "; "
 
@@ -55,12 +15,12 @@ class Base:
         raise NotImplementedError
 
 
+@dataclass(repr=False, eq=False, unsafe_hash=False, frozen=False)
 class Item(Base, PrettyPrinter, metaclass=ABCMeta):
     """Generic class for storing an item."""
 
-    def __init__(self, uri: Optional[str] = None, has_url: Optional[bool] = None):
-        self.uri = uri
-        self.has_uri = has_url
+    uri: Optional[str] = None
+    has_uri: Optional[bool] = None
 
     def __hash__(self):
         return hash(self.uri) if self.has_uri else hash(self.name)
@@ -75,5 +35,34 @@ class Item(Base, PrettyPrinter, metaclass=ABCMeta):
         return not self.__eq__(item)
 
 
-class Track(Item, Tags, metaclass=ABCMeta):
-    pass
+class Track(Item, metaclass=ABCMeta):
+    # metadata/tags
+    title: Optional[str] = None
+    artist: Optional[str] = None
+    album: Optional[str] = None
+    album_artist: Optional[str] = None
+    track_number: Optional[int] = None
+    track_total: Optional[int] = None
+    genres: Optional[Collection[str]] = None
+    year: Optional[int] = None
+    bpm: Optional[float] = None
+    key: Optional[str] = None
+    disc_number: Optional[int] = None
+    disc_total: Optional[int] = None
+    compilation: Optional[bool] = None
+    comments: Optional[List[str]] = None
+
+    # images
+    image_links: Optional[MutableMapping[str, str]] = None
+    has_image: bool = False
+
+    # file properties
+    size: Optional[int] = None
+    length: Optional[float] = None
+    date_modified: Optional[datetime] = None
+
+    # library properties
+    date_added: Optional[datetime] = None
+    last_played: Optional[datetime] = None
+    play_count: Optional[int] = None
+    rating: Optional[float] = None

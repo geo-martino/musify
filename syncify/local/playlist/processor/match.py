@@ -1,9 +1,9 @@
 from os.path import exists
 from typing import Any, List, Mapping, Optional, Self, MutableMapping, Collection, Union, Tuple
 
-from syncify.local.files.track.base import LocalTrack
-from syncify.local.files.track.collection.compare import TrackCompare
-from syncify.local.files.track.collection.processor import TrackProcessor
+from syncify.local.track.base import LocalTrack
+from syncify.local.playlist.processor.compare import TrackCompare
+from syncify.local.playlist.processor.base import TrackProcessor
 from syncify.utils_new.helpers import UnionList, make_list
 
 

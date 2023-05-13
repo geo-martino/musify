@@ -2,7 +2,6 @@ from os.path import splitext
 from typing import Optional, Collection
 
 from .base import *
-from .collection import *
 
 from .flac import FLAC
 from .mp3 import MP3
@@ -12,7 +11,7 @@ from .wma import WMA
 __TRACK_CLASSES__ = [FLAC, MP3, M4A, WMA]
 __TRACK_FILETYPES__ = [filetype for c in __TRACK_CLASSES__ for filetype in c.valid_extensions]
 
-from syncify.local.files.file import IllegalFileTypeError
+from syncify.local.file import IllegalFileTypeError
 
 
 def load_track(path: str, available: Optional[Collection[str]] = None) -> LocalTrack:

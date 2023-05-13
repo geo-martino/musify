@@ -4,10 +4,10 @@ from typing import Optional, List, Self
 
 import mutagen
 
-from syncify.abstract import Track, Properties, SyncifyEnum, EnumNotFoundError
+from syncify.abstract import Track, SyncifyEnum, EnumNotFoundError
 
 
-@dataclass
+@dataclass(frozen=True)
 class TagMap:
     """Map of human-friendly tag name to ID3 tag ids for a given file type"""
 
@@ -62,6 +62,7 @@ class TagName(Name):
     """
 
     ALL = 0
+
     TITLE = 65
     ARTIST = 32
     ALBUM = 30  # MusicBee album ignoring articles like 'the' and 'a' etc.
@@ -77,13 +78,12 @@ class TagName(Name):
     URI = 902  # no MusicBee mapping
     IMAGES = 903  # unknown MusicBee mapping
 
-    @classmethod
-    def to_tag(cls, enum: Self) -> List[str]:
+    def to_tag(self) -> List[str]:
         """
         Returns all human-friendly tag names for a given enum
         e.g. ``track`` returns both ``track_number`` and ``track_total`` tag names
         """
-        return [tag for tag in TagMap.__annotations__ if tag.startswith(enum.name.lower())]
+        return [tag for tag in TagMap.__annotations__ if tag.startswith(self.name.lower())]
 
 
 class PropertyName(Name):
@@ -107,7 +107,7 @@ class PropertyName(Name):
     RATING = 75
 
 
-class TagProcessor(Track, Properties, metaclass=ABCMeta):
+class TagProcessor(Track, metaclass=ABCMeta):
     """Generic base class for tag processing"""
 
     uri_tag = TagName.COMMENTS

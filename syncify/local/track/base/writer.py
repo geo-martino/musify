@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Optional, Set, MutableMapping
 
 from syncify.abstract.misc import SyncResult
-from syncify.local.files.track.base.tags import TagName, TagProcessor
+from syncify.local.track.base.tags import TagName, TagProcessor
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 from syncify.utils_new.helpers import UnionList, make_list
 
@@ -298,7 +298,7 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
         if TagName.ALL in tags:
             tags = TagName.all()
 
-        tag_names = {tag_name for tag in tags for tag_name in TagName.to_tag(tag)}
+        tag_names = {tag_name for tag in tags for tag_name in tag.to_tag()}
         removed = {TagName.from_name(tag_name) for tag_name in tag_names if self._delete_tag(tag_name, dry_run)}
 
         if TagName.IMAGES in removed:

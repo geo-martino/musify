@@ -6,9 +6,9 @@ from typing import Any, Callable, List, Mapping, Optional, Self, MutableMapping
 
 from dateutil.relativedelta import relativedelta
 
-from syncify.local.files.track.base.tags import Name, TagName, PropertyName
-from syncify.local.files.track.base.track import LocalTrack
-from syncify.local.files.track.collection import TrackProcessor
+from syncify.local.track.base.tags import Name, TagName, PropertyName
+from syncify.local.track.base import LocalTrack
+from syncify.local.playlist.processor.base import TrackProcessor
 from syncify.utils_new.helpers import UnionList, make_list
 
 
@@ -127,7 +127,7 @@ class TrackCompare(TrackProcessor):
         if reference is None and self.expected is None:
             raise TypeError("No comparative track given and no expected values set")
 
-        field_name = TagName.to_tag(self.field)[0] if isinstance(self.field, TagName) else self.field.name.lower()
+        field_name = self.field.to_tag()[0] if isinstance(self.field, TagName) else self.field.name.lower()
 
         actual = getattr(track, field_name, None)
 

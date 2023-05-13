@@ -200,7 +200,7 @@ class Syncify(Logger, ApiAuthoriser, IO, Report, Spotify, Playlists):
         """Restore  URI lists for local files/playlists and Spotify playlists
         
         :param kind: str. Restore 'local' or 'spotify'.
-        :param mod: str, default=None. If kind='local', restore 'playlists' from local or restore playlists from 'spotify'
+        :param mod: str, default=None. If kind='local', restore 'playlists' from syncify.local or restore playlists from 'spotify'
         """
         if not quickload:
             self._logger.warning("\n\33[91mSet a date to restore from using the quickload arg\33[0m")
@@ -238,7 +238,7 @@ class Syncify(Logger, ApiAuthoriser, IO, Report, Spotify, Playlists):
         self.save_json(missing_tags, "14_library__missing_tags", **kwargs)
 
     def extract(self, kind: str, playlists: bool = False, **kwargs):
-        """Extract and save images from local files or Spotify"""
+        """Extract and save images from syncify.local files or Spotify"""
 
         self._library_local = self.load_local_metadata(**kwargs)
         library_path_metadata = self.convert_metadata(self._library_local, key="path", **kwargs)
@@ -248,7 +248,7 @@ class Syncify(Logger, ApiAuthoriser, IO, Report, Spotify, Playlists):
         if kind == 'local':
             if not playlists:  # extract from entire local library
                 self.save_json(self._library_local, "01_library__initial", **kwargs)
-            else:  # extract from local playlists
+            else:  # extract from syncify.local playlists
                 self._playlists_local = self.get_local_playlists_metadata(tracks=library_path_metadata, **kwargs)
                 self.save_json(extract, "10_playlists__local", **kwargs)
         elif kind == 'spotify':

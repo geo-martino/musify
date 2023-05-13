@@ -1,15 +1,14 @@
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
 from glob import glob
-from os.path import join, splitext, exists, getmtime, getsize
+from os.path import join, exists, getmtime, getsize
 from typing import Optional, List, Union, Mapping, Set, Collection, Self
 
 import mutagen
 
-from syncify.abstract.item import Tags, Properties, Item
-from syncify.local.files.file import File
-from syncify.local.files.track.base.reader import TagReader
-from syncify.local.files.track.base.writer import TagWriter
+from syncify.local.file import File
+from syncify.local.track.base.reader import TagReader
+from syncify.local.track.base.writer import TagWriter
 
 
 class LocalTrack(File, TagReader, TagWriter, metaclass=ABCMeta):
@@ -30,11 +29,15 @@ class LocalTrack(File, TagReader, TagWriter, metaclass=ABCMeta):
         raise NotImplementedError
 
     @property
-    def path(self):
+    def path(self) -> str:
         return self._path
 
+    @path.setter
+    def path(self, value: str):
+        self._path = value
+
     @property
-    def name(self):
+    def name(self) -> Optional[str]:
         return self.title
 
     @property
@@ -56,8 +59,6 @@ class LocalTrack(File, TagReader, TagWriter, metaclass=ABCMeta):
         return paths
 
     def __init__(self, file: Union[str, mutagen.File], available: Optional[Collection[str]] = None):
-        Item.__init__(self)
-
         # all available paths for this file type
         self._available_paths: Optional[Collection[str]] = None
         # all available paths mapped as lower case to actual
@@ -76,12 +77,6 @@ class LocalTrack(File, TagReader, TagWriter, metaclass=ABCMeta):
 
         if self._file is not None:
             self.load_metadata()
-
-        self.image_links = {}
-        self.date_added = None
-        self.last_played = None
-        self.play_count = None
-        self.rating = None
 
     def load(self) -> Self:
         """General method for loading file and its metadata"""
@@ -104,7 +99,6 @@ class LocalTrack(File, TagReader, TagWriter, metaclass=ABCMeta):
             raise FileNotFoundError(f"File not found | {self._path}")
 
         self._file = mutagen.File(self._path)
-        self.ext = splitext(self._path)[1].lower()
 
     def load_metadata(self) -> Self:
         """General method for extracting metadata from loaded file"""
@@ -128,10 +122,9 @@ class LocalTrack(File, TagReader, TagWriter, metaclass=ABCMeta):
 
     def as_dict(self) -> Mapping[str, object]:
         """Return a dictionary representation of the tags for this track."""
-        return {
-            tag_name: getattr(self, tag_name, None)
-            for tag_name in list(Tags.__annotations__) + list(Properties.__annotations__)
-        }
+        file_attrs = {k: getattr(self, k, None) for k in File.__dict__ if not k.startswith("_")}
+        del file_attrs["valid_extensions"]
+        return {k: v for k, v in self.__dict__.items() if not k.startswith("_")} | file_attrs
 
     def __copy__(self):
         """Copy Track object by reloading from the file object in memory"""

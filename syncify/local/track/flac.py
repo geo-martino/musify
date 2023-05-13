@@ -8,9 +8,9 @@ from PIL import Image
 # noinspection PyProtectedMember
 from mutagen.id3 import PictureType
 
-from syncify.local.files.file import open_image, get_image_bytes
-from syncify.local.files.track.base import TagName, TagMap
-from syncify.local.files.track.base.track import LocalTrack
+from syncify.local.file import open_image, get_image_bytes
+from syncify.local.track.base import TagName, TagMap
+from syncify.local.track.base import LocalTrack
 
 
 class FLAC(LocalTrack):
@@ -105,3 +105,19 @@ class FLAC(LocalTrack):
                 removed = True
 
         return removed
+
+
+if __name__ == "__main__":
+    track1 = FLAC("/__resources/track/noise_flac.flac")
+    print(track1)
+    track1.uri = "asd"
+    track1.has_uri = True
+    print(track1.uri)
+
+    track2 = FLAC("/__resources/track/noise_flac.flac")
+    print(track2.uri)
+    print(track1 == track2)
+    track2.uri = "asd"
+    track2.has_uri = True
+    print(track2.uri)
+    print(track1 == track2)
