@@ -53,7 +53,8 @@ def random_track(cls: Optional[Type[LocalTrack]] = None) -> LocalTrack:
     track.image_links = {}
     track.has_image = False
 
-    track.path = join(path_track_cache, f"{str(track.track_number).zfill(2)} - {track.title}" + track.valid_extensions[0])
+    track.path = join(path_track_cache,
+                      f"{str(track.track_number).zfill(2)} - {track.title}" + track.valid_extensions[0])
     track.size = randrange(6000, 10000000)
     track.length = randint(30, 600)
     track.date_modified = datetime.now() - relativedelta(days=randrange(1, 20), hours=randrange(1, 24))

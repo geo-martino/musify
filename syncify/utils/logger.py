@@ -4,11 +4,10 @@ import re
 import sys
 from datetime import datetime
 from os.path import join, dirname, exists
-from typing import Literal, Optional, List, Collection, Any, Type, Iterable, Union
+from typing import Literal, Optional, List, Collection, Any, Union
 
 from tqdm.asyncio import tqdm_asyncio
 from tqdm.auto import tqdm as tqdm_auto
-from tqdm.std import tqdm
 
 
 class LogStdOutFilter(logging.Filter):
@@ -35,7 +34,6 @@ class LogFileFilter(logging.Filter):
 
 
 class Logger:
-
     _log_folder: str = None
     _verbose: int = 0
     _is_dev: bool = False
@@ -103,7 +101,7 @@ class Logger:
         )
         if self._verbose > 3:
             stdout_format = file_format
-        
+
         # get logger and clear default handlers
         self._logger = logging.getLogger(self._log_filename)
         self._logger.setLevel(logging.DEBUG)

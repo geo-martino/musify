@@ -11,7 +11,7 @@ from syncify.local.track.base.reader import TagReader
 from syncify.local.track.base.writer import TagWriter
 
 
-class LocalTrack(File, TagReader, TagWriter, metaclass=ABCMeta):
+class LocalTrack(TagReader, TagWriter, metaclass=ABCMeta):
     """
     Generic track object for extracting, modifying, and saving tags for a given file.
 

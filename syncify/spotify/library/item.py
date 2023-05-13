@@ -42,7 +42,6 @@ class SpotifyTrack(Track, SpotifyItem):
 
     def __init__(self, response: MutableMapping[str, Any], date_added: Optional[Union[str, datetime]] = None):
         SpotifyResponse.__init__(self, response=response)
-        Item.__init__(self, self.uri, self.has_uri)
 
         album = response.get("album", {})
         artists = response.get("artists", {})
@@ -130,7 +129,6 @@ class SpotifyArtist(SpotifyItem):
 
     def __init__(self, response: MutableMapping[str, Any]):
         SpotifyResponse.__init__(self, response)
-        Item.__init__(self, self.uri, self.has_uri)
 
         self.artist: str = response["name"]
         self.genres: Optional[List[str]] = response.get("genres")

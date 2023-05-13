@@ -7,11 +7,12 @@ from typing import Optional, List, Tuple, Set
 
 from PIL import Image
 
+from syncify.local.file import File
 from syncify.local.track.base.tags import TagProcessor
 from syncify.spotify import check_spotify_type, IDType, __UNAVAILABLE_URI_VALUE__
 
 
-class TagReader(TagProcessor, metaclass=ABCMeta):
+class TagReader(File, TagProcessor, metaclass=ABCMeta):
     """Contains methods for extracting tags from a loaded file"""
 
     def _read_metadata(self) -> None:

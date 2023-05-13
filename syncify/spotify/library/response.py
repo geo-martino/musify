@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 from typing import Any, MutableMapping, Self, Optional
 
 from syncify.abstract.misc import PrettyPrinter
-from spotify.api.utilities import APIMethodInputType
+from syncify.spotify.api.utilities import APIMethodInputType
 from syncify.spotify.api import API
 
 
