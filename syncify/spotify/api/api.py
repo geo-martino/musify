@@ -27,9 +27,10 @@ class API(Basic, Items, Collections):
         try:
             user_data = self.get_self()
             self._user_id: Optional[str] = user_data["id"]
-            self.user_name: Optional[str] = user_data["name"]
+            self.user_name: Optional[str] = user_data["display_name"]
         except (ConnectionError, KeyError):
             self._user_id = None
+            self.user_name = None
 
     ###########################################################################
     ## Misc endpoints
@@ -78,7 +79,7 @@ class API(Basic, Items, Collections):
 
             if r["offset"] == 0:
                 url_open = self.convert(url, type_in=IDType.URL_EXT, type_out=IDType.URL_EXT)
-                print(f"\n\t\33[96mShowing tracks for {kind.name.lower()}: {name} - {url_open} \33[0m\n")
+                print(f"\n\t\33[96mShowing tracks for {kind.name.casefold()}: {name} - {url_open} \33[0m\n")
                 pass
 
             if 'error' in r:

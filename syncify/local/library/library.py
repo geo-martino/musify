@@ -252,6 +252,7 @@ class LocalLibrary(Logger, Library):
         :param remove: If True, when a lookup to the back for a URI returns None, remove the URI from the track.
             If False, keep the current value in the track.
         """
+        # TODO: complete and test me
         self._logger.info(f"\33[1;95m -> \33[1;97mRestoring URIs from backup file: {backup} \33[0m")
 
         backup: Mapping[str, str] = {path.lower(): uri for path, uri in self.load_json(backup).items()}

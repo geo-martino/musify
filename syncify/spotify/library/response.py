@@ -30,7 +30,7 @@ class SpotifyResponse(PrettyPrinter, metaclass=ABCMeta):
 
     def _check_type(self) -> None:
         """Checks the given response is compatible with this object type, raises an exception if not"""
-        kind = self.__class__.__name__.lower().replace("spotify", "")
+        kind = self.__class__.__name__.casefold().replace("spotify", "")
         if self.response.get("type") != kind:
             raise ValueError(f"Response is not of type '{kind}': {self.response.get('type')}")
 

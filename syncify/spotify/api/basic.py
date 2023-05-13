@@ -27,11 +27,11 @@ class Basic(Utilities, metaclass=ABCMeta):
         :return: The response from the endpoint.
         """
         url = f'{__URL_API__}/search'
-        params = {'q': query, 'type': kind.name.lower(), 'limit': self._limit_value(limit)}
+        params = {'q': query, 'type': kind.name.casefold(), 'limit': self._limit_value(limit)}
         r = self.get(url, params=params, use_cache=use_cache)
 
         if 'error' in r:
             self._logger.error(f"{'ERROR':<7}: {url:<43} | Query: {query} | {r['error']}")
             return []
 
-        return r[f'{kind.name.lower()}s']['items']
+        return r[f'{kind.name.casefold()}s']['items']

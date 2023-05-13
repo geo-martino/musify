@@ -35,7 +35,7 @@ class Items(Utilities, metaclass=ABCMeta):
         """
         if unit is None:
             unit = re.sub(r"[-_]+", " ", key) if key is not None else "items"
-        unit = unit.lower().rstrip("s") + "s"
+        unit = unit.casefold().rstrip("s") + "s"
         url = url.rstrip("/")
 
         if len(id_list) > 50:  # show progress bar for batches which may take a long time
@@ -74,7 +74,7 @@ class Items(Utilities, metaclass=ABCMeta):
         """
         if unit is None:
             unit = re.sub(r"[-_]+", " ", key) if key is not None else "items"
-        unit = unit.lower().rstrip("s") + "s"
+        unit = unit.casefold().rstrip("s") + "s"
         url = url.rstrip("/")
 
         id_chunks = self.chunk_items(id_list, size=self._limit_value(limit, ceil=50))
@@ -128,7 +128,7 @@ class Items(Utilities, metaclass=ABCMeta):
         else:
             self.validate_item_type(items, kind=ItemType.TRACK)
 
-        kind_str = f"{kind.name.lower()}s"
+        kind_str = f"{kind.name.casefold()}s"
         url = f"{__URL_API__}/{kind_str}"
         id_list = self.extract_ids(items, kind=kind)
 

@@ -127,7 +127,7 @@ class TrackCompare(TrackProcessor):
         if reference is None and self.expected is None:
             raise TypeError("No comparative track given and no expected values set")
 
-        field_name = self.field.to_tag()[0] if isinstance(self.field, TagName) else self.field.name.lower()
+        field_name = self.field.to_tag()[0] if isinstance(self.field, TagName) else self.field.name.casefold()
 
         actual = getattr(track, field_name, None)
 
@@ -136,7 +136,7 @@ class TrackCompare(TrackProcessor):
                 self._convert_expected(actual)
             expected = self.expected
         else:
-            expected = make_list(getattr(reference, self.field.name.lower(), None))
+            expected = make_list(getattr(reference, self.field.name.casefold(), None))
 
         if expected is not None:
             if isinstance(actual, datetime) and not isinstance(expected[0], datetime):

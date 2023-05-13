@@ -33,7 +33,7 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
         :returns: The Spotify ID type.
         :exception ValueError: Raised when the function cannot determine the ID type of the input ``items``.
         """
-        value = value.strip().lower()
+        value = value.strip().casefold()
         url_check = [i for i in urlparse(value).netloc.split(".") if i]
         uri_check = value.split(':')
 
@@ -51,7 +51,7 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
     @staticmethod
     def validate_id_type(value: str, kind: IDType) -> bool:
         """Check that the given ``value`` is a type of Spotify ID given by ``kind ``"""
-        value = value.strip().lower()
+        value = value.strip().casefold()
 
         if kind == IDType.URL:
             return value.startswith(__URL_API__)
@@ -142,8 +142,8 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
         """
         item_type = self.get_item_type(values)
         if item_type is not None and not item_type == kind:
-            item_str = "unknown" if item_type is None else item_type.name.lower() + "s"
-            raise ValueError(f"Given items must all be {kind.name.lower()} URLs/URIs/IDs, not {item_str}")
+            item_str = "unknown" if item_type is None else item_type.name.casefold() + "s"
+            raise ValueError(f"Given items must all be {kind.name.casefold()} URLs/URIs/IDs, not {item_str}")
 
     def convert(
             self,
@@ -179,7 +179,7 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
                 except EnumNotFoundError:
                     continue
             if kind == ItemType.USER:
-                id_ = url_path[url_path.index(kind.name.lower()) + 1]
+                id_ = url_path[url_path.index(kind.name.casefold()) + 1]
             else:
                 id_ = [p for p in url_path if len(p) == IDType.ID.value][0]
         elif type_in == IDType.URI:
@@ -194,7 +194,7 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
             raise ValueError(f"Could not determine item type: {value}")
 
         # reformat
-        item = kind.name.lower().rstrip('s')
+        item = kind.name.casefold().rstrip('s')
         if type_out == IDType.URL:
             return f'{__URL_API__}/{item}s/{id_}'
         elif type_out == IDType.URL_EXT:

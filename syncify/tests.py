@@ -1,5 +1,8 @@
 import os
 
+from spotify.library import SpotifyPlaylist
+from spotify.processor import ItemSearcher, ItemChecker
+from spotify.processor.search import SearchCollection
 from syncify.local.library import MusicBee
 from syncify.spotify import __URL_AUTH__, __URL_API__
 from syncify.spotify.api import API
@@ -10,8 +13,6 @@ from syncify.spotify.library.item import SpotifyResponse
 
 
 if __name__ == "__main__":
-    mb = MusicBee(library_folder="D:\\Music", exclude=["B A S S"])
-    print(mb)
 
     api = API(
         auth_args={
@@ -81,10 +82,22 @@ if __name__ == "__main__":
         "https://open.spotify.com/user/1122812955?si=9370cab5095048a0"
     ]
 
+    mb = MusicBee(library_folder="D:\\Music", exclude=["B A S S"])
+    print(mb)
+
     lib = SpotifyLibrary(api, exclude=["easy lover"], use_cache=True)
     pl = lib.playlists["70s"]
-    print(pl.tracks[0])
-    exit()
+
+    SpotifyResponse.api = api
+    pl = SpotifyPlaylist.load("I AM THE CAPTAIN, MY NAME IS DAVE")
+    for track in pl:
+        track.uri = None
+        track.has_uri = None
+
+    searcher = ItemSearcher(api=api)
+    results = searcher.search([pl])
+    checker = ItemChecker(api=api)
+    checker.check_items([SearchCollection("test", list(results.values())[0].matched)])
 
 
     import traceback

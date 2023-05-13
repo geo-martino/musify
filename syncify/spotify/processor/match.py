@@ -1,5 +1,6 @@
 import inspect
 import re
+from abc import ABCMeta
 from copy import copy
 from typing import List, Optional, Union, Any, Literal, Iterable, TypeVar, Tuple
 
@@ -24,24 +25,29 @@ class ItemMatcher(Base, Logger):
         self._logger.debug(" | ".join(log))
 
     def _log_algorithm(self, source: Base, extra: Optional[List[str]] = None):
-        algorithm = inspect.stack()[1][0].f_code.co_name.upper().replace("_", " ")
+        algorithm = inspect.stack()[1][0].f_code.co_name.upper().lstrip("_").replace("_", " ")
         log = [source.name, algorithm]
         if extra:
             log += extra
         self._log_padded(log, pad='>')
 
     def _log_test(self, source: Base, result: MatchTypes, test: Any, extra: Optional[List[str]] = None) -> None:
-        algorithm = inspect.stack()[1][0].f_code.co_name.replace("match").upper().replace("_", " ")
-        log = [source.name, f">>> Testing URI: {result.uri}", f"{algorithm:<10}={test:<5}"]
+        algorithm = inspect.stack()[1][0].f_code.co_name.replace("match", "").upper().lstrip("_").replace("_", " ")
+        log_result = f"> Testing URI: {result.uri}" if hasattr(result, "uri") else "> Test failed"
+        log = [source.name, log_result, f"{algorithm:<10}={test:<5}"]
         if extra:
             log += extra
         self._log_padded(log, pad=' ')
 
     def _log_match(self, source: Base, result: MatchTypes, extra: Optional[List[str]] = None) -> None:
-        log = [source.name, f"<<< Matched URI: {result.uri}"]
+        log = [source.name, f"< Matched URI: {result.uri}"]
         if extra:
             log += extra
         self._log_padded(log, pad='<')
+
+    def __init__(self, allow_karaoke: bool = False):
+        Logger.__init__(self)
+        self.allow_karaoke = allow_karaoke
 
     @staticmethod
     def clean_tags(source: T) -> T:
@@ -56,7 +62,7 @@ class ItemMatcher(Base, Logger):
         item_copy = copy(source)
 
         def process(value: str, redundant: Optional[List[str]] = None, split: Optional[List[str]] = None) -> str:
-            value = re.sub(r"[(\[].*?[)\]]", "", value).lower()
+            value = re.sub(r"[(\[].*?[)\]]", "", value).casefold()
             for word in redundant_all:
                 value = value.replace(word + " ", "")
 
@@ -92,7 +98,7 @@ class ItemMatcher(Base, Logger):
 
         def is_karaoke(values: Union[str, List[str]]):
             karaoke = any(word in values for word in karaoke_tags)
-            self._log_test(source=source, result=result, test=not karaoke, extra=[f"{karaoke_tags} -> {values}"])
+            self._log_test(source=source, result=result, test=karaoke, extra=[f"{karaoke_tags} -> {values}"])
             return karaoke
 
         if is_karaoke(result.name):  # title/album name
@@ -107,7 +113,7 @@ class ItemMatcher(Base, Logger):
         """Match on names(/titles) and return a score. Score=0 when either value is None."""
         score = 0
         if source.name and result.name:
-            score = sum(word in source.name for word in result.name) / len(source.name.split())
+            score = sum(word in source.name for word in result.name.split()) / len(source.name.split())
 
         self._log_test(source=source, result=result, test=score, extra=[f"{source.name} -> {result.name}"])
         return score
@@ -115,7 +121,7 @@ class ItemMatcher(Base, Logger):
     def match_artist(self, source: MatchTypes, result: MatchTypes) -> float:
         """Match on artists and return a score. Score=0 when either value is None."""
         score = 0
-        if source.artist and result.artist:
+        if not source.artist or not result.artist:
             self._log_test(source=source, result=result, test=score, extra=[f"{source.artist} -> {result.artist}"])
             return score
 
@@ -125,13 +131,14 @@ class ItemMatcher(Base, Logger):
         for i, artist in enumerate(artists_result, 1):
             score += (sum(word in artists_source for word in artist.split()) /
                       len(artists_source.split())) * (1 / i)
+        self._log_test(source=source, result=result, test=score, extra=[f"{source.artist} -> {result.artist}"])
         return score
 
     def match_album(self, source: MatchTypes, result: MatchTypes) -> float:
         """Match on album and return a score. Score=0 when either value is None."""
         score = 0
         if source.album and result.album:
-            score = sum(word in source.album for word in result.album) / len(source.album.split())
+            score = sum(word in source.album for word in result.album.split()) / len(source.album.split())
 
         self._log_test(source=source, result=result, test=score, extra=[f"{source.album} -> {result.album}"])
         return score
@@ -161,8 +168,8 @@ class ItemMatcher(Base, Logger):
             self,
             source: MatchTypes,
             results: Iterable[MatchTypes],
-            min_score: float = 1,
-            max_score: float = 2,
+            min_score: float = 0.1,
+            max_score: float = 0.8,
             match_on: Optional[List[Literal["name", "artist", "album", "length", "year"]]] = None
     ) -> Optional[MatchTypes]:
         """
@@ -171,33 +178,35 @@ class ItemMatcher(Base, Logger):
         :param source: Source item to compare against and find a match for.
         :param results: Results for comparisons.
         :param min_score: Only return the result as a match if the score is above this value.
-            Value will be limited to between 0.1 and 4.0.
+            Value will be limited to between 0.1 and 1.0.
         :param max_score: Stop matching once this score has been reached.
-            Value will be limited to between 0.1 and 4.0.
+            Value will be limited to between 0.1 and 1.0.
         :param match_on: List of tags to match on.
         :return: dict. Metadata for locally stored track with added matched URI if found.
         """
         source_clean = self.clean_tags(source)
-        score, result = self._get_score_from_results(source_clean=source_clean, results=results,
-                                                     max_score=max_score, match_on=match_on)
+        score, result = self._score(source_clean=source_clean, results=results,
+                                    max_score=max_score, match_on=match_on)
 
         if score > min_score:
-            self._log_match(source=source_clean, result=result)
+            extra = f"best score: {'%.2f' % round(score, 2)} > {'%.2f' % round(min_score, 2)}" if score < max_score \
+                else f"max score reached: {'%.2f' % round(score, 2)} > {'%.2f' % round(max_score, 2)}"
+            self._log_match(source=source_clean, result=result, extra=[extra])
             return result
         else:
             self._log_test(source=source_clean, result=result, test=score, extra=[f"NO MATCH: {score}<{min_score}"])
 
-    def _get_score_from_results(
+    def _score(
             self,
             source_clean: MatchTypes,
             results: Iterable[MatchTypes],
-            max_score: float = 2,
+            max_score: float = 0.8,
             match_on: Optional[List[Literal["name", "artist", "album", "length", "year"]]] = None
-    ) -> Optional[Tuple[float, MatchTypes]]:
+    ) -> Tuple[float, Optional[MatchTypes]]:
         if not results:
             self._log_algorithm(source=source_clean, extra=[f"NO RESULTS GIVEN, SKIPPING"])
-            return
-        max_score = self._limit_value(max_score, floor=0.1, ceil=4)
+            return 0, None
+        max_score = self._limit_value(max_score, floor=0.1, ceil=1.0)
         self._log_algorithm(source=source_clean, extra=[f"max_score={max_score}"])
 
         if not match_on:
@@ -212,16 +221,15 @@ class ItemMatcher(Base, Logger):
             scores_current = self._get_scores(source_clean=source_clean, result_clean=result_clean,
                                               max_score=max_score, match_on=match_on)
 
-            sum_current = sum(scores_current.values())
-            log_current = ', '.join(f'{k}={round(v, 2)}' for k, v in scores_current.items()) + f": {sum_current}"
-            sum_highest = sum(scores_highest.values())
-            log_highest = ', '.join(f'{k}={round(v, 2)}' for k, v in scores_highest.items()) + f": {sum_highest}"
-            self._log_test(source=source_clean, result=result_clean, test=log_current, extra=[f"highest={log_highest}"])
+            sum_current = sum(scores_current.values()) / len(match_on)
+            self._log_test(source=source_clean, result=result_clean,
+                           test=round(sum_current, 2), extra=[f"HIGHEST={round(sum_highest, 2)}"])
 
             if sum_current > sum_highest:
                 scores_highest = scores_current.copy()
-                if sum_highest >= max_score:  # max threshold reached, match found
-                    break
+                sum_highest = sum(scores_highest.values()) / len(match_on)
+            if sum_highest >= max_score:  # max threshold reached, match found
+                break
 
         return sum_highest, result
 
@@ -232,6 +240,9 @@ class ItemMatcher(Base, Logger):
             max_score: float = 2,
             match_on: Optional[List[Literal["name", "artist", "album", "length", "year"]]] = None
     ) -> dict[str, float]:
+        if not self.allow_karaoke and self.not_karaoke(source_clean, result_clean) < 1:
+            return {}
+
         scores_current: dict[str, float] = {}
 
         if "name" in match_on:
@@ -255,8 +266,8 @@ class ItemMatcher(Base, Logger):
             result_items: List[Track] = result_clean.items
             for i in source_clean.items:
                 item_clean = self.clean_tags(i)
-                score, _ = self._get_score_from_results(source_clean=item_clean, results=result_items,
-                                                        match_on=match_on, max_score=max_score)
+                score, _ = self._score(source_clean=item_clean, results=result_items,
+                                       match_on=match_on, max_score=max_score)
                 scores_current["items"] += score / len(source_clean.items)
 
         return scores_current

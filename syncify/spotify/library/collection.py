@@ -35,7 +35,7 @@ class SpotifyCollection(ItemCollection, SpotifyResponse, metaclass=ABCMeta):
 
     @classmethod
     def _load_response(cls, value: APIMethodInputType, use_cache: bool = True) -> MutableMapping[str, Any]:
-        kind = cls.__name__.lower().replace("spotify", "")
+        kind = cls.__name__.casefold().replace("spotify", "")
         item_type = ItemType.from_name(kind).name
         key = cls.api.collection_types[item_type]
         try:
@@ -69,7 +69,7 @@ class SpotifyAlbum(Album, SpotifyCollection):
         self.album: str = response["name"]
         self.album_artist: str = self.artist
         self.track_total: int = response["total_tracks"]
-        self.genres: List[str] = response["genres"]
+        self.genres: Optional[List[str]] = response.get("genres")
         self.year: int = int(response["release_date"][:4])
         self.disc_total: int = 0
         self.compilation: bool = response['album_type'] == "compilation"

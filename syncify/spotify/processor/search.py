@@ -35,14 +35,15 @@ class SearchCollection(ItemCollection):
         return {"name": self.name, "items": self.items}
 
 
-@dataclass
+@dataclass(frozen=True)
 class Algorithm:
     search_fields_1: List[str]
     match_fields: Optional[List[Literal["name", "artist", "album", "length", "year"]]]
     result_count: int
+    allow_karaoke: bool = False
 
-    min_score: int = 1
-    max_score: int = 2
+    min_score: float = 0.1
+    max_score: float = 0.8
 
     search_fields_2: Optional[List[str]] = None
     search_fields_3: Optional[List[str]] = None
@@ -50,17 +51,18 @@ class Algorithm:
 
 @dataclass
 class AlgorithmSettings:
-    full: Algorithm = Algorithm(search_fields_1=["name", "artist"],
+    FULL: Algorithm = Algorithm(search_fields_1=["name", "artist"],
                                 search_fields_2=["name", "album"],
                                 search_fields_3=["name"],
                                 match_fields=["name", "artist", "album", "length"],
-                                result_count=10)
+                                result_count=10,
+                                allow_karaoke=False)
 
 
 class ItemSearcher(ItemMatcher):
 
-    def __init__(self, api: API, algorithm: Algorithm):
-        Logger.__init__(self)
+    def __init__(self, api: API, algorithm: Algorithm = AlgorithmSettings.FULL):
+        ItemMatcher.__init__(self, not algorithm.allow_karaoke)
 
         self.api = api
         self.algorithm = algorithm
@@ -112,27 +114,27 @@ class ItemSearcher(ItemMatcher):
             colour3 = '\33[92m' if skipped == 0 else '\33[93m'
 
             self._logger.info(
-                f"{self._truncate_align_str(name, max_width=max_width)} |"
-                f'{colour1}{matched:>4} matched \33[0m|'
-                f'{colour2}{unmatched:>4} unmatched \33[0m|'
-                f'{colour3}{skipped:>4} skipped \33[0m|'
-                f'\33[1m {total:>4} total \33[0m'
+                f"\33[1m{self._truncate_align_str(name, max_width=max_width)} \33[0m|"
+                f'{colour1}{matched:>5} matched \33[0m| '
+                f'{colour2}{unmatched:>5} unmatched \33[0m| '
+                f'{colour3}{skipped:>5} skipped \33[0m| '
+                f'\33[97m{total:>6} total \33[0m'
             )
 
         self._line()
         self._logger.info(
             f"\33[1;96m{self._truncate_align_str('TOTALS', max_width=max_width)} \33[0m|"
-            f'\33[92m{total_matched:>5} matched \33[0m|'
-            f'\33[91m{total_unmatched:>5} unmatched \33[0m|'
-            f'\33[93m{total_skipped:>5} skipped \33[0m|'
-            f"\33[1m{total_all:>6} total \33[0m\n"
+            f'\33[92m{total_matched:>5} matched \33[0m| '
+            f'\33[91m{total_unmatched:>5} unmatched \33[0m| '
+            f'\33[93m{total_skipped:>5} skipped \33[0m| '
+            f"\33[97m{total_all:>6} total \33[0m\n "
         )
         self._line()
 
     def search(self, collections: List[ItemCollection]) -> MutableMapping[str, SearchResult]:
         self._logger.debug('Searching items: START')
         if not [self.clean_tags(item) for c in collections for item in c.items if item.has_uri is None]:
-            self._log_padded(["\33[93mNo items to search. \33[0m"], pad="<")
+            self._logger.debug("\33[93mNo items to search. \33[0m")
             return {}
 
         self._logger.info(f"\33[1;95m ->\33[1;97m "
@@ -144,7 +146,7 @@ class ItemSearcher(ItemMatcher):
             if not [item for item in collection.items if item.has_uri is None]:
                 self._log_padded([collection.name, "Skipping search, no tracks to search"], pad='<')
 
-            if getattr(collection, "compilation", None):
+            if getattr(collection, "compilation", True) is not False:
                 self._log_padded([collection.name, "Searching with item algorithm"], pad='>')
                 result = self._search_items(collection=collection)
             else:
@@ -175,16 +177,14 @@ class ItemSearcher(ItemMatcher):
                                           f"not {item.__class__.__name__}")
 
             results = [SpotifyTrack(r) for r in self._get_results(item, kind=ItemType.TRACK)]
-            results = [result for result in results if self.not_karaoke(item, result=result)]
             result = self.score_match(item, results=results, match_on=self.algorithm.match_fields,
                                       min_score=self.algorithm.min_score, max_score=self.algorithm.max_score)
-            matches.append(result) if result else matches.append(self.clean_tags(item))
+            matches.append(result) if result else matches.append(item)
 
         return SearchCollection(collection.name, items=matches)
 
     def _search_album(self, collection: Album) -> ItemCollection:
         results = [SpotifyAlbum(r) for r in self._get_results(collection, kind=ItemType.ALBUM)]
-        results = [result for result in results if self.not_karaoke(collection, result=result)]
 
         # order and prioritise results that are closer to the item count of the input collection
         results = sorted(results, key=lambda x: abs(x.total_tracks - len(collection)))

@@ -31,8 +31,8 @@ class ItemChecker(ItemMatcher):
         self.done = value if value else self.done
         self._exit = value
 
-    def __init__(self, api: API):
-        Logger.__init__(self)
+    def __init__(self, api: API, allow_karaoke: bool = False):
+        ItemMatcher.__init__(self, allow_karaoke=allow_karaoke)
 
         self.api = api
         self.playlist_name_urls = {}
@@ -55,7 +55,7 @@ class ItemChecker(ItemMatcher):
     def _make_temp_playlist(self, name: str, collection: ItemCollection) -> None:
         """Create a temporary playlist, store its URL for later unfollowing, and add all given URIs."""
         try:
-            url = f'{self.api.create_playlist(name, public=False)}/tracks'
+            url = self.api.create_playlist(name, public=False)
             uris = [item.uri for item in collection if item.has_uri]
             self.playlist_name_urls[name] = url
             self.playlist_name_collection[name] = collection
@@ -89,13 +89,12 @@ class ItemChecker(ItemMatcher):
         self._logger.info(f"\33[1;95m ->\33[1;97m Checking items by creating temporary Spotify playlists "
                           f"for the current user: {self.api.user_name} \33[0m")
 
-        bar = self._get_progress_bar(total=len(collections), desc="Creating temp playlists", unit="playlists")
+        bar = self._get_progress_bar(iterable=collections, desc="Creating temp playlists", unit="playlists")
         interval_total = (len(collections) // interval) + (len(collections) % interval > 0)
         self.done = False
         self.exit = False
-
-        for i in bar:
-            collection: ItemCollection = collections[i]
+        print(len(collections))
+        for i, collection in enumerate(bar):
             self._make_temp_playlist(name=collection.name, collection=collection)
 
             # skip loop if pause amount has not been reached and not finished making all playlists i.e. not last loop
@@ -115,9 +114,10 @@ class ItemChecker(ItemMatcher):
 
             self._logger.info(f'\33[93mDeleting {len(self.playlist_name_urls)} temporary playlists... \33[0m')
             for url in self.playlist_name_urls.values():  # delete playlists
-                self.api.delete_playlist(url.replace("tracks", "followers"))
-                self.playlist_name_urls.clear()
-                self.playlist_name_collection.clear()
+                self.api.delete_playlist(url.removesuffix("tracks"))
+
+            self.playlist_name_urls.clear()
+            self.playlist_name_collection.clear()
 
             if self.exit:  # quit syncify
                 exit("User terminated program or critical failure occurred.")
@@ -161,8 +161,9 @@ class ItemChecker(ItemMatcher):
         print(help_text)
         while current_input != '':  # while user has not hit return only
             current_input = self._get_user_input(f"Enter ({progress_text})")
+            print(current_input)
             pl_names = [name for name in self.playlist_name_collection
-                        if name.lower().startswith(current_input.lower())]
+                        if name.casefold().startswith(current_input.casefold())]
 
             if current_input == "":  # user entered no option, break loop and return
                 break
@@ -173,11 +174,12 @@ class ItemChecker(ItemMatcher):
                 print(f"\n\t\33[96mShowing tracks originally added to {name}:\33[0m\n")
                 for i, item in enumerate(items, 1):
                     print(self.api.format_item_data(i=i, name=item.name, uri=item.uri, total=len(items)))
-            elif current_input.lower() == 's' or current_input.lower() == 'q':  # quit/skip
-                self.exit = current_input.lower() == 'q'
+                print()
+            elif current_input.casefold() == 's' or current_input.casefold() == 'q':  # quit/skip
+                self.exit = current_input.casefold() == 'q'
                 self.done = True
                 break
-            elif current_input.lower() == "h":  # print help text
+            elif current_input.casefold() == "h":  # print help text
                 print(help_text)
             elif check_spotify_type(current_input) is not None:  # print URL/URI/ID result
                 if not self.api.test():
@@ -185,7 +187,7 @@ class ItemChecker(ItemMatcher):
                 self.api.pretty_print_uris(current_input)
 
             else:
-                print("Input not recognised.")
+                self._logger.warning("Input not recognised.")
 
     ###########################################################################
     ## Match tracks user has added or removed
@@ -221,14 +223,14 @@ class ItemChecker(ItemMatcher):
                           f'Attempting to find URIs for items in Spotify playlist: \33[94m{name}\33[0m...')
 
         source = self.playlist_name_collection[name]
-        remote = SpotifyPlaylist(self.api.get_collections(self.playlist_name_urls[name])[0]).tracks
+        remote = SpotifyPlaylist(self.api.get_collections(self.playlist_name_urls[name], use_cache=False)[0]).tracks
 
         added = [track for track in remote if track not in source and track.has_uri]
         removed = [track for track in source if track not in remote and track.has_uri]
         missing = [track for track in source if not track.has_uri]
 
         if len(added) + len(removed) + len(missing) == 0:
-            self._log_padded([name, f"Playlist unchanged and no missing URIs, skipping match"], pad='< >')
+            self._log_padded([name, f"Playlist unchanged and no missing URIs, skipping match"], pad=' ')
             return
 
         self._log_padded([name, f"{len(added):>6} items added"], pad=' ')
@@ -238,15 +240,19 @@ class ItemChecker(ItemMatcher):
         remaining = removed + missing
         count_start = len(remaining)
         for track in remaining:
-            result = self.score_match(track, results=added, max_score=1.5)
+            if not added:
+                break
+
+            result = self.score_match(track, results=added, match_on=["name"], max_score=0.8)
             if not result:
                 continue
 
-            removed.remove(result) if result in removed else missing.remove(result)
+            removed.remove(track) if track in removed else missing.remove(track)
+            added.remove(result)
             self.switched.append(result)
 
         self.remaining = removed + missing
-        count_final = len(remaining)
+        count_final = len(self.remaining)
         self._log_padded([name, f"{count_start - count_final:>4} tracks switched"])
         self._log_padded([name, f"{count_final:>4} tracks still not found"])
 
@@ -258,7 +264,7 @@ class ItemChecker(ItemMatcher):
         options = {
             "u": "Mark track as 'Unavailable on Spotify'",
             "n": "Leave track with no URI. (Syncify will still attempt to find this track at the next run)",
-            "a": "Add in addition to 'u' or 's' options to apply this setting to all tracks in this playlist",
+            "a": "Add in addition to 'u' or 'n' options to apply this setting to all tracks in this playlist",
             "r": "Recheck playlist for all tracks in the album",
             "s": "Skip checking process for all playlists",
             "q": "Skip checking process, delete current temporary playlists, and quit Syncify",
@@ -275,40 +281,41 @@ class ItemChecker(ItemMatcher):
         print(help_text)
         for item in self.remaining.copy():
             while item in self.remaining:  # while item not matched or skipped
+                self._log_padded([name, f"{len(self.remaining)} remaining items"])
                 if 'a' not in current_input:
                     current_input = self._get_user_input(self._truncate_align_str(item.name, max_width=max_width))
 
-                if current_input.lower().replace('a', '') == 'u':  # mark track as unavailable
-                    self._logger.debug([name, "Marking as unavailable"])
+                if current_input.casefold().replace('a', '') == 'u':  # mark track as unavailable
+                    self._log_padded([name, "Marking as unavailable"], pad="<")
                     item.uri = None
                     item.has_uri = False
                     self.remaining.remove(item)
-                elif current_input.lower().replace('a', '') == 'n':  # leave track without URI and unprocessed
-                    self._logger.debug([name, "Skipping"])
+                elif current_input.casefold().replace('a', '') == 'n':  # leave track without URI and unprocessed
+                    self._log_padded([name, "Skipping"], pad="<")
                     item.uri = None
                     item.has_uri = None
                     self.remaining.remove(item)
-                elif current_input.lower() == 'r':  # return to former 'while' loop
-                    self._logger.debug([name, "Refreshing playlist metadata and restarting loop"])
-                    self.remaining.clear()
+                elif current_input.casefold() == 'r':  # return to former 'while' loop
+                    self._log_padded([name, "Refreshing playlist metadata and restarting loop"])
                     return
-                elif current_input.lower() == 's' or current_input.lower() == 'q':  # quit/skip
-                    self._log_padded([name, "Skipping all loops"])
-                    self.exit = current_input.lower() == 'q'
+                elif current_input.casefold() == 's' or current_input.casefold() == 'q':  # quit/skip
+                    self._log_padded([name, "Skipping all loops"], pad="<")
+                    self.exit = current_input.casefold() == 'q'
                     self.done = True
                     self.remaining.clear()
                     return
-                elif current_input.lower() == 'h':  # print help
+                elif current_input.casefold() == 'h':  # print help
                     print(help_text)
                 elif check_spotify_type(current_input) is not None:  # update URI and add track to switched list
                     uri = self.api.convert(current_input, kind=ItemType.TRACK, type_out=IDType.URI)
 
-                    self._logger.debug([name, f"Updating URI: {item.uri} -> {uri}"])
+                    self._log_padded([name, f"Updating URI: {item.uri} -> {uri}"], pad="<")
                     item.uri = uri
                     item.has_uri = uri
 
                     self.switched.append(item)
                     self.remaining.remove(item)
+                    current_input = ""
                 else:  # invalid input
                     current_input = ""
 

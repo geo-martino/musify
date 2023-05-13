@@ -74,7 +74,7 @@ class TrackSort(TrackProcessor):
                 tracks.reverse()
             return
 
-        tag_name = field.to_tag()[0] if isinstance(field, TagName) else field.name.lower()
+        tag_name = field.to_tag()[0] if isinstance(field, TagName) else field.name.casefold()
         example_value = None
         for track in tracks:
             example_value = getattr(track, tag_name)
@@ -112,7 +112,7 @@ class TrackSort(TrackProcessor):
         grouped: MutableMapping[Optional[Any], List[LocalTrack]] = {}
 
         for track in tracks:
-            tag_name = field.to_tag()[0] if isinstance(field, TagName) else field.name.lower()
+            tag_name = field.to_tag()[0] if isinstance(field, TagName) else field.name.casefold()
             value = getattr(track, tag_name, None)
             if grouped.get(value) is None:
                 grouped[value] = []
@@ -213,7 +213,7 @@ class TrackSort(TrackProcessor):
 
         fields = copy(fields)
         fields.pop(field)
-        tag_name = field.to_tag()[0] if isinstance(field, TagName) else field.name.lower()
+        tag_name = field.to_tag()[0] if isinstance(field, TagName) else field.name.casefold()
 
         for i, (key, tracks) in enumerate(tracks_grouped.items(), 1):
             tracks.sort(key=lambda t: (getattr(t, tag_name) is None, getattr(t, tag_name)), reverse=reverse)

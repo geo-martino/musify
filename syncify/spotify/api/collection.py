@@ -11,10 +11,10 @@ class Collections(Utilities, metaclass=ABCMeta):
 
     items_key = "items"
     collection_types = {
-        ItemType.PLAYLIST.name: ItemType.TRACK.name.lower().rstrip("s") + "s",
-        ItemType.ALBUM.name: ItemType.TRACK.name.lower().rstrip("s") + "s",
-        ItemType.AUDIOBOOK.name: ItemType.CHAPTER.name.lower().rstrip("s") + "s",
-        ItemType.SHOW.name: ItemType.EPISODE.name.lower().rstrip("s") + "s",
+        ItemType.PLAYLIST.name: ItemType.TRACK.name.casefold().rstrip("s") + "s",
+        ItemType.ALBUM.name: ItemType.TRACK.name.casefold().rstrip("s") + "s",
+        ItemType.AUDIOBOOK.name: ItemType.CHAPTER.name.casefold().rstrip("s") + "s",
+        ItemType.SHOW.name: ItemType.EPISODE.name.casefold().rstrip("s") + "s",
     }
     
     def get_playlist_url(self, playlist: str, use_cache: bool = True) -> str:
@@ -101,7 +101,7 @@ class Collections(Utilities, metaclass=ABCMeta):
     def _enrich_collections_response(collections: List[MutableMapping[str, Any]], kind: ItemType) -> None:
         for collection in collections:
             if collection.get("type") is None:
-                collection["type"] = kind.name.lower()
+                collection["type"] = kind.name.casefold()
 
     ###########################################################################
     ## GET endpoints
@@ -129,12 +129,12 @@ class Collections(Utilities, metaclass=ABCMeta):
         if kind == ItemType.ARTIST or kind.name not in self.collection_types:
             raise ValueError(f"{kind.name.title()}s are not a valid user collection type")
         if kind != ItemType.PLAYLIST and user is not None:
-            raise ValueError(f"Only able to retrieve {kind.name.lower()}s from the currently authenticated user")
+            raise ValueError(f"Only able to retrieve {kind.name.casefold()}s from the currently authenticated user")
 
         if user is None:
-            url = f"{__URL_API__}/me/{kind.name.lower()}s"
+            url = f"{__URL_API__}/me/{kind.name.casefold()}s"
         else:
-            url = f"{self.convert(user, kind=ItemType.USER, type_out=IDType.URL)}/{kind.name.lower()}s"
+            url = f"{self.convert(user, kind=ItemType.USER, type_out=IDType.URL)}/{kind.name.casefold()}s"
 
         params = {"limit": self._limit_value(limit, ceil=50)}
         r = self.get(url, params=params, use_cache=use_cache, log_pad=71)
@@ -142,7 +142,7 @@ class Collections(Utilities, metaclass=ABCMeta):
         collections = r[self.items_key]
 
         self._enrich_collections_response(collections, kind=kind)
-        self._logger.debug(f"{'DONE':<7}: {url:<71} | Retrieved {len(collections):>6} {kind.name.lower()}s")
+        self._logger.debug(f"{'DONE':<7}: {url:<71} | Retrieved {len(collections):>6} {kind.name.casefold()}s")
         return collections
 
     def get_collections(
@@ -181,11 +181,11 @@ class Collections(Utilities, metaclass=ABCMeta):
         if kind == ItemType.PLAYLIST and isinstance(items, str):
             items = self.get_playlist_url(items, use_cache=use_cache)
 
-        url = f"{__URL_API__}/{kind.name.lower()}s"
+        url = f"{__URL_API__}/{kind.name.casefold()}s"
         params = {"limit": self._limit_value(limit, ceil=50)}
         id_list = self.extract_ids(items, kind=kind)
 
-        unit = kind.name.lower() + "s"
+        unit = kind.name.casefold() + "s"
         if len(id_list) > 5:  # show progress bar for collection batches which may take a long time
             id_list = self._get_progress_bar(iterable=id_list, desc=f'Getting {unit}', unit=unit)
 
@@ -200,7 +200,7 @@ class Collections(Utilities, metaclass=ABCMeta):
         item_count = sum(len(coll[self.collection_types[kind.name]][self.items_key]) for coll in collections)
         self._logger.debug(f"{'DONE':<7}: {url:<71} | "
                            f"Retrieved {item_count:>6} {self.collection_types[kind.name]} "
-                           f"across {len(collections):>5} {kind.name.lower()}s")
+                           f"across {len(collections):>5} {kind.name.casefold()}s")
 
         if isinstance(items, dict) and len(collections) == 1:
             items.clear()

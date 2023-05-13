@@ -44,7 +44,7 @@ class TrackMatch(TrackProcessor):
 
         if len(comparators) == 1:
             c = comparators[0]
-            if "contains" in c.condition.lower() and len(c.expected) == 1 and not c.expected[0]:
+            if "contains" in c.condition.casefold() and len(c.expected) == 1 and not c.expected[0]:
                 comparators = None
 
         return cls(
@@ -128,7 +128,7 @@ class TrackMatch(TrackProcessor):
                 continue
 
             for path in paths_list:
-                results = [stem for stem in stems if path.lower().startswith(stem.lower())]
+                results = [stem for stem in stems if path.casefold().startswith(stem.casefold())]
                 if len(results) != 0:
                     self.original_folder = results[0]
                     break
