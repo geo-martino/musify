@@ -1,5 +1,6 @@
 from typing import Optional, List, MutableMapping, Any
 
+from syncify.abstract import ItemCollection
 from syncify.spotify import ItemType
 from syncify.spotify.api import API
 from syncify.spotify.library.item import SpotifyResponse, SpotifyTrack
@@ -9,12 +10,20 @@ from syncify.spotify.processor.search import ItemSearcher
 from syncify.utils.logger import Logger
 
 
-class SpotifyLibrary(ItemChecker, ItemSearcher):
+class SpotifyLibrary(ItemCollection, ItemChecker, ItemSearcher):
     limit = 50
 
     @property
     def api(self) -> API:
         return self._api
+
+    @property
+    def name(self) -> Optional[str]:
+        return self.api.user_name
+
+    @property
+    def items(self) -> List[SpotifyTrack]:
+        return self.tracks
 
     def __init__(
             self,
@@ -43,8 +52,8 @@ class SpotifyLibrary(ItemChecker, ItemSearcher):
         self._logger.info(f"\33[1;95m  >\33[1;97m Processing Spotify library of "
                           f"{len(tracks_data)} tracks and {len(playlists_data)} playlists \33[0m")
 
-        self.tracks = self._get_tracks(tracks_data=tracks_data)
-        self.playlists = self._get_playlists(playlists_data=playlists_data)
+        self.tracks = [SpotifyTrack(track) for track in tracks_data]
+        self.playlists = [SpotifyPlaylist.load(pl, items=self.tracks, use_cache=use_cache) for pl in playlists_data]
         print()
         self.log_tracks()
         self.log_playlists()
@@ -71,16 +80,10 @@ class SpotifyLibrary(ItemChecker, ItemSearcher):
         self._logger.debug("Load Spotify tracks data: DONE\n")
         return tracks_data
 
-    @staticmethod
-    def _get_tracks(tracks_data: List[MutableMapping[str, Any]]) -> MutableMapping[str, SpotifyTrack]:
-        """Extract track data from API responses to Spotify objects and return map of URI to track"""
-        tracks = [SpotifyTrack(track) for track in tracks_data]
-        return {track.uri: track for track in tracks}
-
     def log_tracks(self) -> None:
         """Log stats on currently loaded tracks"""
-        playlist_tracks = [track.uri for tracks in self.playlists.values() for track in tracks]
-        in_playlists = len([track for track in self.tracks.values() if track.uri in playlist_tracks])
+        playlist_tracks = [track.uri for tracks in self.playlists for track in tracks]
+        in_playlists = len([track for track in self.tracks if track.uri in playlist_tracks])
 
         self._logger.info(f"\33[1;96m{'SPOTIFY TRACKS':<22}\33[1;0m|"
                           f"\33[92m{in_playlists:>6} in playlists \33[0m|"
@@ -113,17 +116,19 @@ class SpotifyLibrary(ItemChecker, ItemSearcher):
         self._logger.debug("Get Spotify playlists data: DONE\n")
         return playlists_data
 
-    def _get_playlists(self, playlists_data: List[MutableMapping[str, Any]]) -> MutableMapping[str, SpotifyPlaylist]:
-        """Extract playlist data from API responses to Spotify objects and return map of URI to playlist"""
-        tracks = self.tracks.values()
-        playlists = [SpotifyPlaylist.load(pl, items=tracks, use_cache=self.use_cache) for pl in playlists_data]
-        return {playlist.name: playlist for playlist in playlists}
-
     def log_playlists(self) -> None:
         """Log stats on currently loaded playlists"""
-        max_width = self._get_max_width([pl.name for pl in self.playlists.values()])
+        max_width = self._get_max_width([pl.name for pl in self.playlists])
 
         self._logger.info("\33[1;96mLoaded the following Spotify playlists: \33[0m")
-        for playlist in sorted(self.playlists.values(), key=lambda x: x.name.lower()):
+        for playlist in sorted(self.playlists, key=lambda x: x.name.lower()):
             name = self._truncate_align_str(playlist.name, max_width=max_width)
             self._logger.info(f"{name} | \33[92m{len(playlist):>6} total tracks \33[0m")
+
+    def as_dict(self) -> MutableMapping[str, Any]:
+        return {
+            "user_name": self.api.user_name,
+            "user_id": self.api.user_id,
+            "track_count": len(self.tracks),
+            "playlist_counts": {pl.name: len(pl) for pl in self.playlists},
+        }

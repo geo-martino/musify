@@ -13,11 +13,6 @@ class ItemCollection(Base, PrettyPrinter, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def name(self) -> str:
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
     def items(self) -> List[Item]:
         raise NotImplementedError
 

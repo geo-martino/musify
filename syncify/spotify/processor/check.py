@@ -83,6 +83,8 @@ class ItemChecker(ItemMatcher):
 
     def check_items(self, collections: List[ItemCollection], interval: int = 10) -> CheckResult:
         self._logger.debug('Checking items: START')
+        if len(collections) == 0 or all(not collection.items for collection in collections):
+            self._log_padded([f"\33[93mNo items to check. \33[0m"], pad="<")
 
         self._logger.info(f"\33[1;95m ->\33[1;97m Checking items by creating temporary Spotify playlists "
                           f"for the current user: {self.api.user_name} \33[0m")

@@ -49,18 +49,18 @@ class Properties:
 class Base:
     list_sep = "; "
 
-
-class Item(Base, PrettyPrinter, metaclass=ABCMeta):
-    """Generic class for storing an item."""
-
-    def __init__(self, uri: Optional[str] = None, has_url: bool = False):
-        self.uri = uri
-        self.has_uri = has_url
-
     @property
     @abstractmethod
     def name(self) -> str:
         raise NotImplementedError
+
+
+class Item(Base, PrettyPrinter, metaclass=ABCMeta):
+    """Generic class for storing an item."""
+
+    def __init__(self, uri: Optional[str] = None, has_url: Optional[bool] = None):
+        self.uri = uri
+        self.has_uri = has_url
 
     def __hash__(self):
         return hash(self.uri)
