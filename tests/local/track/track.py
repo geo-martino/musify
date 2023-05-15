@@ -1,17 +1,16 @@
 import os
-from random import choice, randrange, randint
 import shutil
 import string
 from copy import copy, deepcopy
 from datetime import datetime
 from os.path import join, basename, dirname, exists
+from random import choice, randrange, randint
 from typing import Tuple, Type, Optional, List
 
-import mutagen
 from dateutil.relativedelta import relativedelta
 
-from syncify.local.track import LocalTrack, TagName, __TRACK_CLASSES__
 from syncify.local.file import open_image
+from syncify.local.track import LocalTrack, TagName, __TRACK_CLASSES__
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__, IDType
 from tests.common import path_resources, path_cache, random_str
 

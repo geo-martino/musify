@@ -1,14 +1,14 @@
 from dataclasses import dataclass
-from typing import List, Optional, MutableMapping, Any, Tuple, Mapping, Literal
+from typing import List, Optional, MutableMapping, Any, Tuple, Mapping, Collection, Union
 
+from local.track import TagName, PropertyName
 from syncify.abstract.collection import ItemCollection, Album
 from syncify.abstract.item import Item, Track, Base
 from syncify.spotify import ItemType
-from syncify.spotify.library.item import SpotifyTrack
-from syncify.spotify.library.collection import SpotifyAlbum
 from syncify.spotify.api import API
+from syncify.spotify.library.collection import SpotifyAlbum
+from syncify.spotify.library.item import SpotifyTrack
 from syncify.spotify.processor.match import ItemMatcher
-from syncify.utils.logger import Logger
 
 
 @dataclass
@@ -38,7 +38,7 @@ class SearchCollection(ItemCollection):
 @dataclass(frozen=True)
 class Algorithm:
     search_fields_1: List[str]
-    match_fields: Optional[List[Literal["name", "artist", "album", "length", "year"]]]
+    match_fields: Collection[Union[TagName, PropertyName]]
     result_count: int
     allow_karaoke: bool = False
 
@@ -54,7 +54,7 @@ class AlgorithmSettings:
     FULL: Algorithm = Algorithm(search_fields_1=["name", "artist"],
                                 search_fields_2=["name", "album"],
                                 search_fields_3=["name"],
-                                match_fields=["name", "artist", "album", "length"],
+                                match_fields=[TagName.TITLE, TagName.ARTIST, TagName.ALBUM, PropertyName.LENGTH],
                                 result_count=10,
                                 allow_karaoke=False)
 

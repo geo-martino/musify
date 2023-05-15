@@ -2,13 +2,13 @@ import traceback
 from dataclasses import dataclass
 from typing import List, Mapping, Optional
 
-from syncify.abstract.item import Item
+from local.track import TagName
 from syncify.abstract.collection import ItemCollection
+from syncify.abstract.item import Item
 from syncify.spotify import check_spotify_type, ItemType, IDType
 from syncify.spotify.api import API
 from syncify.spotify.library.library import SpotifyPlaylist
 from syncify.spotify.processor.match import ItemMatcher
-from syncify.utils.logger import Logger
 
 
 @dataclass
@@ -243,7 +243,7 @@ class ItemChecker(ItemMatcher):
             if not added:
                 break
 
-            result = self.score_match(track, results=added, match_on=["name"], max_score=0.8)
+            result = self.score_match(track, results=added, match_on=[TagName.TITLE], max_score=0.8)
             if not result:
                 continue
 
