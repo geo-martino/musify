@@ -14,12 +14,7 @@ def test_init():
     assert library_blank._track_paths is None
     library_blank.library_folder = path_track_resources
     assert library_blank.library_folder == path_track_resources
-    assert library_blank._track_paths == {
-        "FLAC": {path_track_flac},
-        "MP3": {path_track_mp3},
-        "M4A": {path_track_m4a},
-        "WMA": {path_track_wma},
-    }
+    assert library_blank._track_paths == {path_track_flac, path_track_mp3, path_track_m4a, path_track_wma}
 
     assert library_blank.playlist_folder is None
     assert library_blank._playlist_paths is None
@@ -40,12 +35,7 @@ def test_init():
         load=False
     )
     assert library_include.library_folder == path_track_resources
-    assert library_include._track_paths == {
-        "FLAC": {path_track_flac},
-        "MP3": {path_track_mp3},
-        "M4A": {path_track_m4a},
-        "WMA": {path_track_wma},
-    }
+    assert library_include._track_paths == {path_track_flac, path_track_mp3, path_track_m4a, path_track_wma}
     assert library_include.playlist_folder == path_playlist_resources
     assert library_include._playlist_paths == {
         splitext(basename(path_playlist_m3u).lower())[0]: path_playlist_m3u,
@@ -68,10 +58,10 @@ def test_init():
 
 def test_load():
     library = LocalLibrary(library_folder=path_track_resources, playlist_folder=path_playlist_resources)
-    tracks = [track.path for track in library.tracks]
+    tracks = {track.path for track in library.tracks}
     playlists = {name: pl.path for name, pl in library.playlists.items()}
 
-    assert tracks == [path_track_flac, path_track_mp3, path_track_m4a, path_track_wma]
+    assert tracks == {path_track_flac, path_track_mp3, path_track_m4a, path_track_wma}
     assert playlists == {
         splitext(basename(path_playlist_m3u))[0]: path_playlist_m3u,
         splitext(basename(path_playlist_xautopf_bp))[0]: path_playlist_xautopf_bp,

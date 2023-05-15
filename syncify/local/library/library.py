@@ -38,7 +38,7 @@ class LocalLibrary(Logger, Library):
         self._library_folder: str = value.rstrip("\\/")
         self._track_paths = None
         if value is not None:
-            self._track_paths = {c.__name__: c.get_filepaths(self._library_folder) for c in __TRACK_CLASSES__}
+            self._track_paths = {path for c in __TRACK_CLASSES__ for path in c.get_filepaths(self._library_folder)}
 
     @property
     def playlist_folder(self) -> str:
@@ -98,7 +98,7 @@ class LocalLibrary(Logger, Library):
 
         self._library_folder: Optional[str] = None
         # name of track object to set of paths valid for that track object
-        self._track_paths: Optional[Mapping[str, Set[str]]] = None
+        self._track_paths: Optional[Set[str]] = None
         self.library_folder = library_folder
 
         self._playlist_folder: Optional[str] = None
@@ -116,8 +116,7 @@ class LocalLibrary(Logger, Library):
 
         if load:
             self._logger.info(f"\33[1;95m ->\33[1;97m Loading local library of "
-                              f"{sum(len(tracks) for tracks in self._track_paths.values())} tracks "
-                              f"and {len(self._playlist_paths)} playlists \33[0m")
+                              f"{len(self._track_paths)} tracks and {len(self._playlist_paths)} playlists \33[0m")
             self._line()
             self.load()
 
@@ -152,14 +151,12 @@ class LocalLibrary(Logger, Library):
     def _load_tracks(self) -> List[LocalTrack]:
         """Returns a list of loaded tracks from all the valid paths in this library"""
         self._logger.debug("Load local tracks: START")
-        paths = [path for paths in self._track_paths.values() for path in paths]
-
         self._logger.info(f"\33[1;95m  >\33[1;97m " 
-                          f"Extracting metadata and properties for {len(paths)} tracks \33[0m")
+                          f"Extracting metadata and properties for {len(self._track_paths)} tracks \33[0m")
 
         tracks: List[LocalTrack] = []
         errors: List[str] = []
-        for path in self._get_progress_bar(iterable=paths, desc="Loading tracks", unit="tracks"):
+        for path in self._get_progress_bar(iterable=self._track_paths, desc="Loading tracks", unit="tracks"):
             try:
                 tracks.append(load_track(path=path))
             except Exception:
