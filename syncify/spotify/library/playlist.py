@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, List, MutableMapping, Optional, Self, Mapping, Literal, Collection
 
+from abstract import Item
 from syncify.abstract.collection import Playlist
 from syncify.abstract.misc import SyncResult
 from syncify.spotify import ItemType
@@ -144,7 +145,12 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
         for key in list(self.__dict__.keys()):
             delattr(self, key)
 
-    def sync(self, clear: Optional[Literal['all', 'extra']] = None, reload: bool = True) -> SyncResultSpotifyPlaylist:
+    def sync(
+            self,
+            items: Optional[List[Item]] = None,
+            clear: Optional[Literal['all', 'extra']] = None,
+            reload: bool = True
+    ) -> SyncResultSpotifyPlaylist:
         """
         Synchronise this playlist object with the remote Spotify playlist it is associated with. Clear options:
 
@@ -154,6 +160,8 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
         * 'extra': Clear all items not currently in this object's items list, then add all tracks
             from this playlist object not currently in the remote playlist.
 
+        :param items: Provide a list of items to synchronise to the remote playlist.
+            Use the currently loaded ``tracks`` in this object if not given.
         :param clear: Clear option for the remote playlist. See description.
         :param reload: When True, once synchronisation is complete, reload this SpotifyPlaylist object
             to reflect the changes on the remote playlist if enabled. Skip if False.
@@ -161,7 +169,7 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
         """
         self._check_for_api()
 
-        uris_obj = [track.uri for track in self.tracks]
+        uris_obj = [track.uri for track in (items if items else self.tracks)]
         uris_remote = [track["track"]["uri"] for track in self.response["tracks"]["items"]]
 
         uris_add = [uri for uri in uris_obj if uri not in uris_remote]
