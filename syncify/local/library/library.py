@@ -33,7 +33,9 @@ class LocalLibrary(Logger, Library):
 
     @library_folder.setter
     def library_folder(self, value: Optional[str]):
-        self._library_folder: str = value.rstrip("\\/") if value is not None and exists(value) else None
+        if value is None:
+            return
+        self._library_folder: str = value.rstrip("\\/")
         self._track_paths = None
         if value is not None:
             self._track_paths = {c.__name__: c.get_filepaths(self._library_folder) for c in __TRACK_CLASSES__}
@@ -44,18 +46,20 @@ class LocalLibrary(Logger, Library):
 
     @playlist_folder.setter
     def playlist_folder(self, value: Optional[str]):
+        if value is None:
+            return
         if not exists(value) and self.library_folder is not None:
             value = join(self.library_folder.rstrip("\\/"), value.lstrip("\\/"))
         if not exists(value):
             return
 
-        self._playlist_folder: str = value.rstrip("\\/") if value is not None else None
+        self._playlist_folder: str = value.rstrip("\\/")
         self._playlist_paths = None
         if value is not None:
             playlists = {}
             for filetype in __PLAYLIST_FILETYPES__:
                 paths = glob(join(self._playlist_folder, "**", f"*{filetype}"), recursive=True)
-                entry = {path.replace(self._playlist_folder, "").strip().lower(): path for path in paths}
+                entry = {splitext(basename(path.replace(self._playlist_folder, "").lower()))[0]: path for path in paths}
                 playlists.update(entry)
 
             playlists_total = len(playlists)
@@ -102,11 +106,6 @@ class LocalLibrary(Logger, Library):
         self._playlist_paths: Optional[MutableMapping[str, str]] = None
         self.playlist_folder = playlist_folder
 
-        self._logger.info(f"\33[1;95m ->\33[1;97m Loading local library of "
-                          f"{sum(len(tracks) for tracks in self._track_paths.values())} tracks "
-                          f"and {len(self._playlist_paths)} playlists \33[0m")
-        self._line()
-
         self.other_folders = other_folders
 
         self.tracks: List[LocalTrack] = []
@@ -116,6 +115,10 @@ class LocalLibrary(Logger, Library):
         self.last_modified: Optional[datetime] = None
 
         if load:
+            self._logger.info(f"\33[1;95m ->\33[1;97m Loading local library of "
+                              f"{sum(len(tracks) for tracks in self._track_paths.values())} tracks "
+                              f"and {len(self._playlist_paths)} playlists \33[0m")
+            self._line()
             self.load()
 
     def load(self) -> None:

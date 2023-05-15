@@ -11,6 +11,7 @@ def test_chunk():
     assert Utilities.chunk(flat, 3) == [[1, 2, 3], [4, 5, 6], [7, 8]]
 
 
+# noinspection SpellCheckingInspection
 def test_get_id_type():
     assert Utilities.get_id_type("1234567890ASDFGHJKLZXC") == IDType.ID
     assert Utilities.get_id_type("spotify:show:1234567890ASDFGHJKLZXC") == IDType.URI
@@ -21,6 +22,7 @@ def test_get_id_type():
         Utilities.get_id_type("Not an ID")
 
 
+# noinspection SpellCheckingInspection
 def test_validate_id_type():
     assert Utilities.validate_id_type("1234567890ASDFGHJKLZXC", kind=IDType.ID)
     assert Utilities.validate_id_type("spotify:show:1234567890ASDFGHJKLZXC", kind=IDType.URI)
@@ -31,6 +33,7 @@ def test_validate_id_type():
     assert not Utilities.validate_id_type("spotify:show:1234567890ASDFGHJKLZXC", kind=IDType.URL_EXT)
 
 
+# noinspection SpellCheckingInspection
 def test_get_item_type():
     assert Utilities.get_item_type("spotify:playlist:1234567890ASDFGHJKLZXC") == ItemType.PLAYLIST
     assert Utilities.get_item_type("spotify:TRACK:1234567890ASDFGHJKLZXC") == ItemType.TRACK
@@ -99,6 +102,7 @@ def test_get_item_type():
         Utilities.get_item_type("spotify:bad_type:1234567890ASDFGHJKLZXC")
 
 
+# noinspection SpellCheckingInspection
 def test_validate_item_type():
     assert Utilities.validate_item_type(f"{__URL_API__}/playlist/1234567890ASDFGHJKLZXC/followers",
                                         kind=ItemType.PLAYLIST) is None
@@ -131,6 +135,7 @@ def test_validate_item_type():
         Utilities.validate_item_type(values, kind=ItemType.TRACK)
 
 
+# noinspection SpellCheckingInspection
 def test_convert():
     id_ = "1234567890ASDFGHJKLZXC"
     assert Utilities.convert(id_, kind=ItemType.EPISODE, type_out=IDType.URL) == f"{__URL_API__}/episodes/{id_}"
@@ -165,6 +170,7 @@ def test_convert():
         Utilities.convert("bad value", type_out=IDType.URI)
 
 
+# noinspection SpellCheckingInspection
 def test_extract_ids():
     value = f"{__URL_API__}/playlists/8188181818181818129321/followers"
     assert Utilities.extract_ids(value) == ["8188181818181818129321"]

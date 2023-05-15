@@ -2,6 +2,7 @@ from tests.local.track.track import random_track
 from syncify.spotify.processor.match import ItemMatcher
 
 
+# noinspection SpellCheckingInspection
 def test_clean_tags():
     track = random_track()
     track.has_uri = True
