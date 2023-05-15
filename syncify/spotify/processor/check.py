@@ -2,9 +2,9 @@ import traceback
 from dataclasses import dataclass
 from typing import List, Mapping, Optional
 
-from local.track import TagName
 from syncify.abstract.collection import ItemCollection
 from syncify.abstract.item import Item
+from syncify.local.track import TagName
 from syncify.spotify import check_spotify_type, ItemType, IDType
 from syncify.spotify.api import API
 from syncify.spotify.library.library import SpotifyPlaylist

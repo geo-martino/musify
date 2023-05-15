@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Optional, MutableMapping, Any, Tuple, Mapping, Collection, Union
 
-from local.track import TagName, PropertyName
+from syncify.local.track import TagName, PropertyName
 from syncify.abstract.collection import ItemCollection, Album
 from syncify.abstract.item import Item, Track, Base
 from syncify.spotify import ItemType

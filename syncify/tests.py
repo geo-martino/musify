@@ -1,8 +1,8 @@
 import os
 
-from spotify.library import SpotifyPlaylist
-from spotify.processor import ItemSearcher, ItemChecker
-from spotify.processor.search import SearchCollection
+from syncify.spotify.library import SpotifyPlaylist
+from syncify.spotify.processor import ItemSearcher, ItemChecker
+from syncify.spotify.processor.search import SearchCollection
 from syncify.local.library import MusicBee
 from syncify.spotify import __URL_AUTH__, __URL_API__
 from syncify.spotify.api import API
