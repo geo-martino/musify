@@ -7,6 +7,7 @@ from datetime import datetime
 from os.path import join, basename, dirname, exists
 from typing import Tuple, Type, Optional, List
 
+import mutagen
 from dateutil.relativedelta import relativedelta
 
 from syncify.local.track import LocalTrack, TagName, __TRACK_CLASSES__
@@ -219,6 +220,7 @@ def update_tags_test(track: LocalTrack) -> None:
     assert result.saved
     track_update_replace = deepcopy(track)
 
+    print(track_update_replace.title, track.title)
     assert track_update_replace.title == track.title
     assert track_update_replace.artist == track.artist
     assert track_update_replace.album == track.album

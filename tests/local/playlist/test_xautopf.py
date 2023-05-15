@@ -21,8 +21,7 @@ def test_init_fails():
 
     # raises error on non-existent file, remove this once supported
     with pytest.raises(NotImplementedError):
-        path_fake = join(dirname(path_playlist_xautopf_bp), "does_not_exist.xautopf")
-        XAutoPF(path=path_fake, tracks=tracks)
+        XAutoPF(path=join(dirname(path_playlist_xautopf_bp), "does_not_exist.xautopf"), tracks=tracks)
 
     with pytest.raises(IllegalFileTypeError):
         XAutoPF(path=path_txt, tracks=tracks)

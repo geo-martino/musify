@@ -1,6 +1,6 @@
 from typing import Optional
 
-from syncify.api import RequestHandler
+from syncify.spotify.api.request import RequestHandler
 from syncify.spotify.api.basic import Basic
 from syncify.spotify.api.collection import Collections
 from syncify.spotify.api.item import Items
@@ -28,7 +28,7 @@ class API(Basic, Items, Collections):
             user_data = self.get_self()
             self._user_id: Optional[str] = user_data["id"]
             self.user_name: Optional[str] = user_data["display_name"]
-        except (ConnectionError, KeyError):
+        except (ConnectionError, KeyError, TypeError):
             self._user_id = None
             self.user_name = None
 

@@ -77,7 +77,7 @@ class Items(Utilities, metaclass=ABCMeta):
         unit = unit.casefold().rstrip("s") + "s"
         url = url.rstrip("/")
 
-        id_chunks = self.chunk_items(id_list, size=self._limit_value(limit, ceil=50))
+        id_chunks = self.chunk(id_list, size=self._limit_value(limit, ceil=50))
 
         bar = range(len(id_chunks))
         if len(id_chunks) > 10:  # show progress bar for batches which may take a long time

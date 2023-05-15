@@ -127,8 +127,18 @@ class LocalTrack(TagReader, TagWriter, metaclass=ABCMeta):
         return {k: v for k, v in self.__dict__.items() if not k.startswith("_")} | file_attrs
 
     def __copy__(self):
-        """Copy Track object by reloading from the file object in memory"""
-        return self.__class__(file=self.file)
+        """
+        Copy Track object by reloading from the file object in memory
+        If current object has no file object present, generated new class and shallow copy attributes
+        (as used for testing purposes).
+        """
+        if hasattr(self, "_file"):
+            return self.__class__(file=self.file)
+        else:
+            obj = self.__class__.__new__(self.__class__)
+            for k, v in self.__dict__.items():
+                setattr(obj, k, v)
+            return obj
 
     def __deepcopy__(self, m: dict = None):
         """Deepcopy Track object by reloading from the disk"""

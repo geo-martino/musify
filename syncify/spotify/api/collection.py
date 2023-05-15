@@ -1,4 +1,4 @@
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 from time import sleep
 from typing import Any, List, Mapping, MutableMapping, Optional, Union
 
@@ -16,6 +16,12 @@ class Collections(Utilities, metaclass=ABCMeta):
         ItemType.AUDIOBOOK.name: ItemType.CHAPTER.name.casefold().rstrip("s") + "s",
         ItemType.SHOW.name: ItemType.EPISODE.name.casefold().rstrip("s") + "s",
     }
+
+    @property
+    @abstractmethod
+    def user_id(self) -> Optional[str]:
+        """ID of the currently authenticated used"""
+        raise NotImplementedError
     
     def get_playlist_url(self, playlist: str, use_cache: bool = True) -> str:
         """
@@ -263,7 +269,7 @@ class Collections(Utilities, metaclass=ABCMeta):
             uris_current = [track['track']['uri'] for track in tracks]
             uri_list = [uri for uri in uri_list if uri not in uris_current]
 
-        for uris in self.chunk_items(uri_list, size=limit):
+        for uris in self.chunk(uri_list, size=limit):
             params = {'uris': ','.join(uris)}
             log = [f"Adding {len(uris):>5} items"]
             self.post(url, params=params, log_pad=71, log_extra=log)
@@ -309,7 +315,7 @@ class Collections(Utilities, metaclass=ABCMeta):
             tracks = pl_current[self.collection_types[ItemType.PLAYLIST.name]][self.items_key]
             uri_list = [track['track']['uri'] for track in tracks]
 
-        for uris in self.chunk_items(uri_list, size=limit):
+        for uris in self.chunk(uri_list, size=limit):
             body = {'tracks': [{'uri': uri} for uri in uris]}
             log = [f"Clearing {len(uri_list):>3} tracks"]
             self.delete(url, json=body, log_pad=71, log_extra=log)

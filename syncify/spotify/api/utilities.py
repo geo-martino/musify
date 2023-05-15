@@ -1,25 +1,18 @@
-from abc import ABCMeta, abstractmethod
 from typing import Optional, List, Union, MutableMapping, Any
 from urllib.parse import urlparse
 
 from syncify.abstract import EnumNotFoundError
-from syncify.api.request import RequestHandler
+from syncify.spotify.api.request import RequestHandler
 from syncify.spotify import IDType, ItemType, __URL_API__, __URL_EXT__
 from syncify.utils.logger import Logger
 
 APIMethodInputType = Union[str, MutableMapping[str, Any], List[str], List[MutableMapping[str, Any]]]
 
 
-class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
-
-    @property
-    @abstractmethod
-    def user_id(self) -> Optional[str]:
-        """ID of the currently authenticated used"""
-        raise NotImplementedError
+class Utilities(RequestHandler, Logger):
 
     @staticmethod
-    def chunk_items(values: List[Any], size: int) -> List[List[Any]]:
+    def chunk(values: List[Any], size: int) -> List[List[Any]]:
         """Chunks a list of ``values`` into a list of lists of equal ``size``"""
         chunked = [values[i: i + size] for i in range(0, len(values), size)]
         return [chunk for chunk in chunked if chunk]
@@ -64,10 +57,11 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
             return len(value) == IDType.ID.value
         return False
 
-    def get_item_type(self, values: APIMethodInputType) -> ItemType:
+    @classmethod
+    def get_item_type(cls, values: APIMethodInputType) -> ItemType:
         """
         Determine the Spotify item type of ``values``. Values may be:
-            * A string representing a URL/URI/ID.
+            * A string representing a URL/URI.
             * A list of strings representing URLs/URIs/IDs of the same type.
             * A Spotify API JSON response for a collection with a valid item type value under a ``type`` key.
             * A list of Spotify API JSON responses for a collection with a valid item type value under a ``type`` key.
@@ -81,7 +75,7 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
             if len(values) == 0:
                 raise ValueError("No values given: list is empty")
 
-            kinds = {self._get_item_type(value) for value in values}
+            kinds = {cls._get_item_type(value) for value in values}
             kinds = [kind for kind in kinds if kind is not None]
             if len(kinds) == 0:
                 raise ValueError("Given items are invalid or are IDs with no kind given")
@@ -89,7 +83,7 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
                 raise ValueError(f"Ensure all the given items are of the same type! Found: {kinds}")
             return kinds[0]
 
-        return self._get_item_type(values)
+        return cls._get_item_type(values)
 
     @staticmethod
     def _get_item_type(value: Union[str, MutableMapping[str, Any]]) -> Optional[ItemType]:
@@ -101,13 +95,14 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
         :param value: The value representing some Spotify item. See description for allowed value types.
         :returns: The Spotify item type. If the given value is determined to be an ID, returns None.
         :exception ValueError: Raised when the function cannot determine the item type of the input ``items``.
+        :exception EnumNotFoundError: Raised when the item type of teh given ``value`` is not a valid Spotify item type.
         """
         if isinstance(value, dict):
             if value.get("is_local", False):
                 raise ValueError("Cannot process local items")
             if "type" not in value:
                 raise ValueError(f"Given map does not contain a 'type' key: {value}")
-            return ItemType.from_name(value["type"].rstrip('s'))
+            return ItemType.from_name(value["type"].casefold().rstrip('s'))
 
         value = value.strip()
         url_check = urlparse(value.replace('/v1/', '/')).netloc.split(".")
@@ -117,16 +112,17 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
             url_path = urlparse(value.replace('/v1/', '/')).path.split("/")
             for chunk in url_path:
                 try:
-                    return ItemType.from_name(chunk.rstrip('s'))
+                    return ItemType.from_name(chunk.casefold().rstrip('s'))
                 except EnumNotFoundError:
                     continue
-        elif len(uri_check) == IDType.URI.value:
+        elif len(uri_check) == IDType.URI.value and uri_check[0].casefold() == "spotify":
             return ItemType.from_name(uri_check[1])
-        elif len(value) == IDType.ID.value:  # use manually defined kind for a given id
+        elif len(value) == IDType.ID.value:
             return None
         raise ValueError(f"Could not determine item type of given value: {value}")
 
-    def validate_item_type(self, values: APIMethodInputType, kind: ItemType) -> None:
+    @classmethod
+    def validate_item_type(cls, values: APIMethodInputType, kind: ItemType) -> None:
         """
         Check that the given ``values`` is a type of item given by ``kind `` or a simple ID. Values may be:
             * A string representing a URL/URI/ID.
@@ -140,33 +136,34 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
         :exception ValueError: Raised when the function cannot validate the item type of the input ``values``
             is of type ``kind`` or a simple ID.
         """
-        item_type = self.get_item_type(values)
+        item_type = cls.get_item_type(values)
         if item_type is not None and not item_type == kind:
             item_str = "unknown" if item_type is None else item_type.name.casefold() + "s"
             raise ValueError(f"Given items must all be {kind.name.casefold()} URLs/URIs/IDs, not {item_str}")
 
+    @classmethod
     def convert(
-            self,
+            cls,
             value: str,
             kind: Optional[ItemType] = None,
-            type_in: Optional[IDType] = None,
-            type_out: Optional[IDType] = None
+            type_in: IDType = IDType.ALL,
+            type_out: IDType = IDType.ID
     ) -> str:
         """
         Converts ID to required format - API URL, EXT URL, URI, or ID.
 
         :param value: URL/URI/ID to convert.
-        :param kind: Optionally, give the item type of the input ``value`` to reduce skip some checks.
+        :param kind: Optionally, give the item type of the input ``value`` to skip some checks.
             This is required when the given ``value`` is an ID.
-        :param type_in: Optionally, give the ID type of the input ``value`` to reduce skip some checks.
-        :param type_out: Optionally, give the ID type of the output ``value``. Returns the ID when None.
+        :param type_in: Optionally, give the ID type of the input ``value`` to skip some checks.
+        :param type_out: The ID type of the output ``value``.
         :return: Formatted string.
         :exception ValueError: Raised when the function cannot determine the item type of the input ``items``.
         """
-        if type_out is not None and self.validate_id_type(value, kind=type_out):
+        if cls.validate_id_type(value, kind=type_out):
             return value
-        if type_in is None or type_in == IDType.ALL or not self.validate_id_type(value, kind=type_in):
-            type_in = self.get_id_type(value)
+        if type_in == IDType.ALL or not cls.validate_id_type(value, kind=type_in):
+            type_in = cls.get_id_type(value)
 
         value = value.strip()
 
@@ -204,7 +201,8 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
         else:
             return id_
 
-    def extract_ids(self, items: APIMethodInputType, kind: Optional[ItemType] = None) -> List[str]:
+    @classmethod
+    def extract_ids(cls, items: APIMethodInputType, kind: Optional[ItemType] = None) -> List[str]:
         """
         Extract a list of IDs from input ``items``. Items may be:
             * A string representing a URL/URI/ID.
@@ -214,21 +212,21 @@ class Utilities(RequestHandler, Logger, metaclass=ABCMeta):
 
         :param items: The values representing some Spotify items. See description for allowed value types.
             These items may be of mixed item types e.g. some tracks AND some artists.
-        :param kind: Optionally, give the item type of the input ``value`` to reduce skip some checks.
+        :param kind: Optionally, give the item type of the input ``value`` to skip some checks.
             This is required when the given ``value`` is an ID.
         :return: List of IDs.
         :exception ValueError: Raised when the function cannot determine the item type of the input ``items``.
             Or when it does not recognise the type of the input ``items`` parameter.
         """
         if isinstance(items, str):
-            return [self.convert(items, kind=kind, type_out=IDType.ID)]
+            return [cls.convert(items, kind=kind, type_out=IDType.ID)]
         elif isinstance(items, dict) and 'id' in items:  # is a raw API response from Spotify
             return [items['id']]
         elif isinstance(items, list):
             if len(items) == 0:
                 return []
             elif all(isinstance(d, str) for d in items):
-                return [self.convert(d, kind=kind, type_out=IDType.ID) for d in items]
+                return [cls.convert(d, kind=kind, type_out=IDType.ID) for d in items]
             elif all(isinstance(d, dict) and 'id' in d for d in items):
                 return [track['id'] for track in items]
 

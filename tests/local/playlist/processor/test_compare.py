@@ -30,7 +30,7 @@ def test_init():
     assert comparator._method == comparator._cond_is
 
     with pytest.raises(ValueError):
-        assert TrackCompare(field=PropertyName.EXT, condition="this cond does not exist")
+        TrackCompare(field=PropertyName.EXT, condition="this cond does not exist")
 
 
 def test_compare_with_reference():
@@ -51,7 +51,7 @@ def test_compare_with_reference():
     assert not comparator._converted
 
     with pytest.raises(TypeError):
-        assert comparator.compare(track=track_1)
+        comparator.compare(track=track_1)
 
 
 def test_compare_str():

@@ -9,7 +9,7 @@ import requests_cache
 from requests.structures import CaseInsensitiveDict
 from requests_cache.models.response import BaseResponse
 
-from syncify.api.authorise import APIAuthoriser
+from syncify.spotify.api.authorise import APIAuthoriser
 from syncify.utils.logger import Logger
 
 
@@ -21,23 +21,26 @@ class RequestHandler(APIAuthoriser, Logger):
     See :py:class:`APIAuthoriser` for more info on which params to pass to authorise requests.
 
     :param cache_path: The path to store the requests session's sqlite cache.
+    :param cache_expiry: The expiry time to apply to cached responses after which responses are invalidated.
     :param auth_kwargs: The authorisation kwargs to be passed to :py:class:`APIAuthoriser`.
     """
     backoff_start = 0.5
     backoff_factor = 2
     backoff_count = 10
 
-    default_cache = join(dirname(dirname(dirname(__file__))), ".api_cache", "cache")
-    cache_expiry = timedelta(weeks=4)
-
-    def __init__(self, cache_path: str = default_cache, **auth_kwargs):
+    def __init__(
+            self,
+            cache_path: str = join(dirname(dirname(dirname(__file__))), ".api_cache", "cache"),
+            cache_expiry=timedelta(weeks=4),
+            **auth_kwargs
+    ):
         APIAuthoriser.__init__(self, **auth_kwargs)
 
         self.backoff_final = self.backoff_start * self.backoff_factor ** self.backoff_count
         self.timeout = sum(self.backoff_start * self.backoff_factor ** i for i in range(self.backoff_count + 1))
 
         self.session = requests_cache.CachedSession(
-            cache_path, expire_after=self.cache_expiry, allowable_methods=['GET']
+            cache_path, expire_after=cache_expiry, allowable_methods=['GET']
         )
 
         self.auth()

@@ -89,7 +89,7 @@ class TagName(Name):
 class PropertyName(Name):
     """Enums for properties that can be extracted from a file"""
 
-    ALL = 0
+    ALL = 200
 
     # file properties
     PATH = 106
