@@ -1,18 +1,20 @@
 from dataclasses import dataclass
 from typing import List, Optional, MutableMapping, Any, Tuple, Mapping, Collection, Union
 
-from syncify.local.track import TagName, PropertyName
 from syncify.abstract.collection import ItemCollection, Album
 from syncify.abstract.item import Item, Track, Base
+from syncify.abstract.misc import Result
+from syncify.local.track import TagName, PropertyName
 from syncify.spotify import ItemType
 from syncify.spotify.api import API
 from syncify.spotify.library.collection import SpotifyAlbum
 from syncify.spotify.library.item import SpotifyTrack
-from syncify.spotify.processor.match import ItemMatcher
+from syncify.spotify.processor.match import Matcher
 
 
 @dataclass
-class SearchResult:
+class SearchResult(Result):
+    """Stores the results of the searching process"""
     matched: List[Item]
     unmatched: List[Item]
     skipped: List[Item]
@@ -37,6 +39,7 @@ class SearchCollection(ItemCollection):
 
 @dataclass(frozen=True)
 class Algorithm:
+    """Key settings related to a search algorithm"""
     search_fields_1: List[str]
     match_fields: Collection[Union[TagName, PropertyName]]
     result_count: int
@@ -51,23 +54,33 @@ class Algorithm:
 
 @dataclass
 class AlgorithmSettings:
+    """Stores a collection of algorithms for the search operation"""
     FULL: Algorithm = Algorithm(search_fields_1=["name", "artist"],
                                 search_fields_2=["name", "album"],
                                 search_fields_3=["name"],
                                 match_fields=[TagName.TITLE, TagName.ARTIST, TagName.ALBUM, PropertyName.LENGTH],
                                 result_count=10,
-                                allow_karaoke=False)
+                                allow_karaoke=False,
+                                min_score=0.1,
+                                max_score=0.8)
 
 
-class ItemSearcher(ItemMatcher):
+class Searcher(Matcher):
+    """
+    Searches for Spotify matches for a list of item collections.
+
+    :param api: An API object for calling the Spotify query endpoint.
+    :param algorithm: The settings to apply to the searcher. See :py:class:`Algorithm`
+    """
 
     def __init__(self, api: API, algorithm: Algorithm = AlgorithmSettings.FULL):
-        ItemMatcher.__init__(self, not algorithm.allow_karaoke)
+        Matcher.__init__(self, allow_karaoke=algorithm.allow_karaoke)
 
         self.api = api
         self.algorithm = algorithm
 
     def _get_results(self, item: Base, kind: ItemType) -> Optional[List[MutableMapping[str, Any]]]:
+        """Calls the ``/search`` endpoint to get results for the current item based on algorithm settings"""
         item_clean = self.clean_tags(item)
 
         def execute_query(keys: List[str]) -> Tuple[List[MutableMapping[str, Any]], str]:
@@ -87,7 +100,8 @@ class ItemSearcher(ItemMatcher):
             self._log_padded([item_clean.name, f"Query: {query}", f"{len(results)} results"], pad=" ")
             return results
 
-    def _log_results(self, results: Mapping[str, SearchResult]) -> None:
+    def _log_results(self, results: Mapping[ItemCollection, SearchResult]) -> None:
+        """Logs the final results of the Searcher"""
         if not results:
             return
 
@@ -98,7 +112,7 @@ class ItemSearcher(ItemMatcher):
         total_skipped = 0
         total_all = 0
 
-        for name, result in results.items():
+        for collection, result in results.items():
             matched = len(result.matched)
             unmatched = len(result.unmatched)
             skipped = len(result.skipped)
@@ -114,7 +128,7 @@ class ItemSearcher(ItemMatcher):
             colour3 = '\33[92m' if skipped == 0 else '\33[93m'
 
             self._logger.info(
-                f"\33[1m{self._truncate_align_str(name, max_width=max_width)} \33[0m|"
+                f"\33[1m{self._truncate_align_str(collection.name, max_width=max_width)} \33[0m|"
                 f'{colour1}{matched:>5} matched \33[0m| '
                 f'{colour2}{unmatched:>5} unmatched \33[0m| '
                 f'{colour3}{skipped:>5} skipped \33[0m| '
@@ -131,7 +145,12 @@ class ItemSearcher(ItemMatcher):
         )
         self._line()
 
-    def search(self, collections: List[ItemCollection]) -> MutableMapping[str, SearchResult]:
+    def search(self, collections: List[ItemCollection]) -> MutableMapping[ItemCollection, SearchResult]:
+        """
+        Searches for Spotify matches for the given list of item collections.
+
+        :returns: Mapping of the collection to its results.
+        """
         self._logger.debug('Searching items: START')
         if not [self.clean_tags(item) for c in collections for item in c.items if item.has_uri is None]:
             self._logger.debug("\33[93mNo items to search. \33[0m")
@@ -141,7 +160,7 @@ class ItemSearcher(ItemMatcher):
                           f"Searching for matches on Spotify for {len(collections)} collections\33[0m")
         bar = self._get_progress_bar(iterable=collections, desc="Searching", unit="collections")
 
-        search_results: MutableMapping[str, SearchResult] = {}
+        search_results: MutableMapping[ItemCollection, SearchResult] = {}
         for collection in bar:
             if not [item for item in collection.items if item.has_uri is None]:
                 self._log_padded([collection.name, "Skipping search, no tracks to search"], pad='<')
@@ -159,7 +178,7 @@ class ItemSearcher(ItemMatcher):
                     search = SearchCollection(name=collection.name, items=missing)
                     result = self._search_items(collection=search)
 
-            search_results[collection.name] = SearchResult(
+            search_results[collection] = SearchResult(
                 matched=[item for item in result if item.has_uri],
                 unmatched=[item for item in result if item.has_uri is None],
                 skipped=[item for item in result if not item.has_uri]
@@ -170,6 +189,7 @@ class ItemSearcher(ItemMatcher):
         return search_results
 
     def _search_items(self, collection: ItemCollection) -> ItemCollection:
+        """Search for matches on individual items in an item collection"""
         matches = []
         for item in collection.items:
             if not isinstance(item, Track):
@@ -184,6 +204,7 @@ class ItemSearcher(ItemMatcher):
         return SearchCollection(collection.name, items=matches)
 
     def _search_album(self, collection: Album) -> ItemCollection:
+        """Search for matches on an entire item collection"""
         results = [SpotifyAlbum(r) for r in self._get_results(collection, kind=ItemType.ALBUM)]
 
         # order and prioritise results that are closer to the item count of the input collection

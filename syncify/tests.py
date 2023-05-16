@@ -1,7 +1,7 @@
 import os
 
 from syncify.spotify.library import SpotifyPlaylist
-from syncify.spotify.processor import ItemSearcher, ItemChecker
+from syncify.spotify.processor import Searcher, Checker
 from syncify.spotify.processor.search import SearchCollection
 from syncify.local.library import MusicBee
 from syncify.spotify import __URL_AUTH__, __URL_API__
@@ -94,10 +94,10 @@ if __name__ == "__main__":
         track.uri = None
         track.has_uri = None
 
-    searcher = ItemSearcher(api=api)
+    searcher = Searcher(api=api)
     results = searcher.search([pl])
-    checker = ItemChecker(api=api)
-    checker.check_items([SearchCollection("test", list(results.values())[0].matched)])
+    checker = Checker(api=api)
+    checker.check([SearchCollection("test", list(results.values())[0].matched)])
 
 
     import traceback

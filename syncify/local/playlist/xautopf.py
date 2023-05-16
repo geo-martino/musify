@@ -6,14 +6,15 @@ from typing import Any, List, Mapping, Optional, Union, Collection
 
 import xmltodict
 
-from syncify.abstract import SyncResult
+from syncify.abstract import Result
 from syncify.local.playlist.playlist import LocalPlaylist
 from syncify.local.playlist.processor import TrackMatch, TrackLimit, TrackSort
 from syncify.local.track import PropertyName, LocalTrack, load_track
 
 
 @dataclass
-class SyncResultXAutoPF(SyncResult):
+class SyncResultXAutoPF(Result):
+    """Stores the results of a sync with local a XAutoPF playlist"""
     start: int
     start_description: str
     start_include: int

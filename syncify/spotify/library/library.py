@@ -9,6 +9,15 @@ from syncify.utils.logger import Logger
 
 
 class SpotifyLibrary(Logger, Library):
+    """
+    Represents a Spotify library, providing various methods for manipulating
+    tracks and playlists across an entire Spotify library collection.
+
+    :param api: An authorised API object for the authenticated user you wish to load the library from.
+    :param include: An optional list of playlist names to include when loading playlists.
+    :param exclude: An optional list of playlist names to exclude when loading playlists.
+    :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+    """
     limit = 50
 
     @property

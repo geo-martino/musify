@@ -8,7 +8,8 @@ from syncify.utils_new.helpers import make_list
 
 
 @dataclass
-class SyncResult(metaclass=ABCMeta):
+class Result(metaclass=ABCMeta):
+    """Stores the results of an operation within Syncify"""
     pass
 
 

@@ -3,14 +3,15 @@ from datetime import datetime
 from os.path import exists, getmtime
 from typing import Optional, List, Collection, Union
 
-from syncify.abstract import SyncResult
+from syncify.abstract import Result
 from syncify.local.playlist.playlist import LocalPlaylist
 from syncify.local.playlist.processor import TrackMatch
 from syncify.local.track import LocalTrack, load_track
 
 
 @dataclass
-class SyncResultM3U(SyncResult):
+class SyncResultM3U(Result):
+    """Stores the results of a sync with a local M3U playlist"""
     start: int
     added: int
     removed: int

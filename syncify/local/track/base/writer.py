@@ -3,7 +3,7 @@ from copy import copy
 from dataclasses import dataclass
 from typing import Optional, Set, MutableMapping
 
-from syncify.abstract.misc import SyncResult
+from syncify.abstract.misc import Result
 from syncify.local.file import File
 from syncify.local.track.base.tags import TagName, TagProcessor
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
@@ -11,7 +11,8 @@ from syncify.utils_new.helpers import UnionList, make_list
 
 
 @dataclass
-class SyncResultTrack(SyncResult):
+class SyncResultTrack(Result):
+    """Stores the results of a sync with local track"""
     saved: bool  # if changes to the file on the disk were made
     updated: MutableMapping[TagName, int]  # The tag updated and the condition index it satisfied to be updated
 

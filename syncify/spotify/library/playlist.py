@@ -4,7 +4,7 @@ from typing import Any, List, MutableMapping, Optional, Self, Mapping, Literal, 
 
 from abstract import Item
 from syncify.abstract.collection import Playlist
-from syncify.abstract.misc import SyncResult
+from syncify.abstract.misc import Result
 from syncify.spotify import ItemType
 from syncify.spotify.api.utilities import APIMethodInputType
 from syncify.spotify.library.collection import SpotifyCollection
@@ -13,7 +13,8 @@ from syncify.spotify.library.response import SpotifyResponse
 
 
 @dataclass
-class SyncResultSpotifyPlaylist(SyncResult):
+class SyncResultSpotifyPlaylist(Result):
+    """Stores the results of a sync with a remote Spotify playlist"""
     start: int
     added: int
     removed: int

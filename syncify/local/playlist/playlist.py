@@ -5,7 +5,7 @@ from os.path import dirname, join, getmtime, exists, getctime
 from typing import List, MutableMapping, Optional, Any, Union, Callable, Tuple, Collection
 
 from syncify.abstract.collection import Playlist
-from syncify.abstract.misc import SyncResult
+from syncify.abstract.misc import Result
 from syncify.local.file import File
 from syncify.local.track import LocalTrack
 from syncify.local.playlist.processor import TrackMatch, TrackLimit, TrackSort
@@ -114,7 +114,7 @@ class LocalPlaylist(Playlist, File, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def save(self, dry_run: bool = True) -> SyncResult:
+    def save(self, dry_run: bool = True) -> Result:
         """
         Write the tracks in this Playlist and its settings (if applicable) to file.
 

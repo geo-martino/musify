@@ -30,6 +30,7 @@ class ItemCollection(Base, PrettyPrinter, metaclass=ABCMeta):
 
 @dataclass
 class Playlist(ItemCollection, metaclass=ABCMeta):
+    """A playlist of items and some of their derived properties/objects"""
     description: Optional[str] = None
     track_total: int = 0
     image_links: MutableMapping[str, str] = None
@@ -42,6 +43,7 @@ class Playlist(ItemCollection, metaclass=ABCMeta):
 
 @dataclass
 class Library(ItemCollection, metaclass=ABCMeta):
+    """A library of items and playlists"""
 
     @property
     def playlists(self) -> MutableMapping[str, Playlist]:
@@ -50,6 +52,7 @@ class Library(ItemCollection, metaclass=ABCMeta):
 
 @dataclass
 class Folder(ItemCollection, metaclass=ABCMeta):
+    """A folder of items and some of their derived properties/objects"""
     track_total: int = 0
     compilation: bool = False
 
@@ -60,6 +63,7 @@ class Folder(ItemCollection, metaclass=ABCMeta):
 
 @dataclass
 class Album(ItemCollection, metaclass=ABCMeta):
+    """An album of items and some of their derived properties/objects"""
     artist: Optional[str] = None
     album: str = None
     album_artist: Optional[str] = None
@@ -80,12 +84,14 @@ class Album(ItemCollection, metaclass=ABCMeta):
 
 @dataclass
 class Artist(ItemCollection, metaclass=ABCMeta):
+    """An artist of items and some of their derived properties/objects"""
     albums: Collection = None
     genres: Collection[str] = None
 
 
 @dataclass
 class Genre(ItemCollection, metaclass=ABCMeta):
+    """A genre of items and some of their derived properties/objects"""
     artists: Collection = None
     albums: Collection = None
     genres: Collection[str] = None

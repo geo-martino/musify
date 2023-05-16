@@ -1,3 +1,3 @@
-from .match import ItemMatcher
-from .check import ItemChecker
-from .search import ItemSearcher
+from .match import Matcher
+from .check import Checker
+from .search import Searcher
