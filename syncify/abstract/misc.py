@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Mapping, List, MutableMapping, Any, Optional
 
-from syncify.utils_new.helpers import make_list
+from syncify.utils.helpers import make_list
 
 
 @dataclass

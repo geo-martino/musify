@@ -1,11 +1,9 @@
-import json
 import os
 import re
 import sys
 from datetime import datetime as dt
-from io import BytesIO
-from os.path import basename, dirname, exists, join, split, splitext
-from time import sleep
+from syncify.utils._archive.io import BytesIO
+from os.path import basename, exists, join, split, splitext
 from urllib.error import URLError
 from urllib.request import urlopen
 

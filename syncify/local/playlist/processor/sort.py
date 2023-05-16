@@ -6,7 +6,7 @@ from typing import Any, Callable, List, Mapping, MutableMapping, Optional, Self,
 from syncify.abstract import SyncifyEnum
 from syncify.local.track.base import Name, PropertyName, TagName, LocalTrack
 from syncify.local.playlist.processor.base import TrackProcessor
-from syncify.utils_new.helpers import UnionList, flatten_nested, strip_ignore_words, make_list
+from syncify.utils.helpers import UnionList, flatten_nested, strip_ignore_words, make_list
 
 
 def get_field_from_code(field_code: int) -> Optional[Name]:

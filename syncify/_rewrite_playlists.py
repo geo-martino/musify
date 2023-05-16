@@ -4,7 +4,7 @@ from glob import glob
 from os.path import (basename, dirname, exists, join, normpath, sep,
                      splitext)
 
-from syncify.local.musicbee import MusicBee
+from local._archive.musicbee import MusicBee
 
 
 class Playlists(MusicBee):

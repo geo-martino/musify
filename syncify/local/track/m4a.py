@@ -7,7 +7,7 @@ from PIL import Image
 
 from syncify.local.file import open_image, get_image_bytes
 from syncify.local.track.base import LocalTrack, TagMap
-from syncify.utils_new.helpers import make_list
+from syncify.utils.helpers import make_list
 
 
 class M4A(LocalTrack):

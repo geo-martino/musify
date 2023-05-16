@@ -7,7 +7,7 @@ from os.path import basename, dirname, isdir, join, splitext, getmtime, getsize
 
 import mutagen
 from tqdm.auto import tqdm
-from syncify.utils.process import Process
+from syncify.utils._archive.process import Process
 
 
 class LocalIO(Process):

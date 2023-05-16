@@ -137,6 +137,46 @@ class SpotifyLibrary(Logger, Library):
             name = self._truncate_align_str(playlist.name, max_width=max_width)
             self._logger.info(f"{name} | \33[92m{len(playlist):>6} total tracks \33[0m")
 
+    def restore_playlists(self, backup: str, in_playlists: list=None, ex_playlists: list=None, **kwargs) -> dict:
+        """
+        Restore Spotify playlists from backup.
+
+        :param backup: str. Filename of backup json in form <name>: <list of dicts of track's metadata>
+        :param in_playlists: list, default=None. Only restore playlists in this list.
+        :param ex_playlists: list, default=None. Don't restore playlists in this list.
+        """
+        print()
+        self._logger.info(f"\33[1;95m -> \33[1;97mRestoring Spotify playlists from backup file: {backup} \33[0m")
+
+        backup = self.load_json(backup, parent=True, **kwargs)
+        if not backup:
+            self._logger.info(f"\33[91mBackup file not found.\33[0m")
+            return
+
+        if isinstance(in_playlists, str):  # handle string
+            in_playlists = [in_playlists]
+
+        if in_playlists is not None:
+            for name, tracks in backup.copy().items():
+                if name.lower() not in [p.lower() for p in in_playlists]:
+                    del backup[name]
+        else:
+            in_playlists = list(backup.keys())
+
+        if ex_playlists is not None:
+            for name in backup.copy().keys():
+                if name.lower() in [p.lower() for p in ex_playlists]:
+                    del backup[name]
+
+        # set clear kwarg to all
+        kwargs_mod = kwargs.copy()
+        kwargs_mod['clear'] = 'all'
+
+        self.update_playlists(backup, **kwargs_mod)
+
+        self._logger.info(f"\33[92mRestored {len(backup)} Spotify playlists \33[0m")
+
+
     def as_dict(self) -> MutableMapping[str, Any]:
         return {
             "user_name": self.api.user_name,

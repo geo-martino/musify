@@ -30,7 +30,7 @@ class RequestHandler(APIAuthoriser, Logger):
 
     def __init__(
             self,
-            cache_path: str = join(dirname(dirname(dirname(__file__))), ".api_cache", "cache"),
+            cache_path: str = join(dirname(dirname(dirname(dirname(__file__)))), ".api_cache", "cache"),
             cache_expiry=timedelta(weeks=4),
             **auth_kwargs
     ):
