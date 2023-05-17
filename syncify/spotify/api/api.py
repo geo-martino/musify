@@ -29,7 +29,7 @@ AUTH_ARGS_BASIC = {
     "test_expiry": 600,
     "token_file_path": "{token_file_path}",
     "token_key_path": ["access_token"],
-    "extra_headers": {"Accept": "application/json", "Content-Type": "application/json"},
+    "header_extra": {"Accept": "application/json", "Content-Type": "application/json"},
 }
 
 AUTH_ARGS_USER = {
@@ -73,7 +73,7 @@ AUTH_ARGS_USER = {
     "test_expiry": 600,
     "token_file_path": "{token_file_path}",
     "token_key_path": ["access_token"],
-    "extra_headers": {"Accept": "application/json", "Content-Type": "application/json"},
+    "header_extra": {"Accept": "application/json", "Content-Type": "application/json"},
 }
 
 
@@ -115,7 +115,7 @@ class API(Basic, Items, Collections):
         :param max_width: The maximum width to print names as. Any name lengths longer than this will be truncated.
         """
         return f"\t\33[92m{str(i).zfill(len(str(total)))} \33[0m- "\
-               f"\33[97m{self._truncate_align_str(name, max_width=max_width)} \33[0m| "\
+               f"\33[97m{self.truncate_align_str(name, max_width=max_width)} \33[0m| "\
                f"\33[93m{uri} \33[0m- "\
                f"{self.convert(uri, type_in=IDType.URI, type_out=IDType.URL_EXT)}"
 
@@ -152,7 +152,7 @@ class API(Basic, Items, Collections):
                 pass
 
             if 'error' in r:
-                self._logger.warning(f"{'ERROR':<7}: {url:<43}")
+                self.logger.warning(f"{'ERROR':<7}: {url:<43}")
                 return
 
             tracks = [item['track'] if kind == ItemType.PLAYLIST else item for item in r["items"]]

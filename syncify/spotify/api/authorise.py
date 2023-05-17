@@ -129,10 +129,10 @@ class APIAuthoriser(Logger):
 
         # generate new token if not or force is enabled
         if self.token is None:
-            self._logger.debug("Saved access token not found. Generating new token...")
+            self.logger.debug("Saved access token not found. Generating new token...")
             self._request_token(user=True, **self.auth_args)
         elif force_new:
-            self._logger.debug("New token generation forced. Generating new token...")
+            self.logger.debug("New token generation forced. Generating new token...")
             self._request_token(user=True, **self.auth_args)
 
         # test current token
@@ -141,7 +141,7 @@ class APIAuthoriser(Logger):
 
         # if invalid, first attempt to re-authorise via refresh_token
         if not valid and "refresh_token" in self.token and self.refresh_args is not None:
-            self._logger.debug("Access token is not valid and refresh data found. Refreshing token and testing...")
+            self.logger.debug("Access token is not valid and refresh data found. Refreshing token and testing...")
 
             self.refresh_args["data"]["refresh_token"] = self.token["refresh_token"]
             self._request_token(user=False, **self.refresh_args)
@@ -150,16 +150,16 @@ class APIAuthoriser(Logger):
 
         if not valid:  # generate new token
             if refreshed:
-                self._logger.debug("Refreshed access token is still not valid. Generating new token...")
+                self.logger.debug("Refreshed access token is still not valid. Generating new token...")
             else:
-                self._logger.debug("Access token is not valid and and no refresh data found. Generating new token...")
+                self.logger.debug("Access token is not valid and and no refresh data found. Generating new token...")
 
             self._request_token(user=True, **self.auth_args)
             valid = self.test()
             if not valid:
                 raise ConnectionError(f"Token is still not valid: {self.token_safe}")
 
-        self._logger.debug("Access token is valid. Saving...")
+        self.logger.debug("Access token is valid. Saving...")
         self.save_token()
 
         return self.headers
@@ -173,7 +173,7 @@ class APIAuthoriser(Logger):
         if not self.user_args:
             return
 
-        self._logger.info("Authorising user privilege access...")
+        self.logger.info("Authorising user privilege access...")
 
         # set up socket to listen for the redirect from Spotify
         address = ('localhost', 8080)
@@ -221,18 +221,18 @@ class APIAuthoriser(Logger):
             if self.token is not None and "refresh_token" in self.token:
                 auth_response["refresh_token"] = self.token["refresh_token"]
 
-        self._logger.debug("New token successfully generated.")
+        self.logger.debug("New token successfully generated.")
         self.token = auth_response
 
     def test(self) -> bool:
         """Test validity of token and given headers. Returns True if all tests pass, False otherwise"""
-        self._logger.debug("Begin testing token...")
+        self.logger.debug("Begin testing token...")
 
         not_expired = True
         valid_response = True
 
         token_has_no_error = "error" not in self.token
-        self._logger.debug(f"Token contains no error test: {token_has_no_error}")
+        self.logger.debug(f"Token contains no error test: {token_has_no_error}")
         if not token_has_no_error:
             return False
 
@@ -245,19 +245,19 @@ class APIAuthoriser(Logger):
                 response = response.text
 
             valid_response = self.test_condition(response)
-            self._logger.debug(f"Valid response test: {valid_response}")
+            self.logger.debug(f"Valid response test: {valid_response}")
 
         # test for has not expired
         if "expires_at" in self.token and self.test_expiry > 0:
             not_expired = datetime.now().timestamp() + self.test_expiry < self.token["expires_at"]
-            self._logger.debug(f"Expiry time test: {not_expired}")
+            self.logger.debug(f"Expiry time test: {not_expired}")
 
         return all([token_has_no_error, valid_response, not_expired])
 
     def load_token(self) -> Mapping[str, Any]:
         """Load stored token from given path"""
         if self.token_file_path and os.path.exists(self.token_file_path):
-            self._logger.debug("Saved access token found. Loading stored token...")
+            self.logger.debug("Saved access token found. Loading stored token...")
             with open(self.token_file_path, "r") as file:  # load token
                 self.token = json.load(file)
 
@@ -265,6 +265,6 @@ class APIAuthoriser(Logger):
 
     def save_token(self) -> None:
         """Save new/updated token to given path"""
-        self._logger.debug(f"Saving token: {self.token_safe}")
+        self.logger.debug(f"Saving token: {self.token_safe}")
         with open(self.token_file_path, "w") as file:
             json.dump(self.token, file, indent=2)

@@ -22,7 +22,7 @@ class Collections(Utilities, metaclass=ABCMeta):
     def user_id(self) -> Optional[str]:
         """ID of the currently authenticated used"""
         raise NotImplementedError
-    
+
     def get_playlist_url(self, playlist: str, use_cache: bool = True) -> str:
         """
         Determine the type of the given ``playlist`` and return its API URL.
@@ -76,7 +76,7 @@ class Collections(Utilities, metaclass=ABCMeta):
         if "limit" in response and "total" in response:  # check if progress bar needed
             pages = (response["total"] - len(response.get("items", []))) // response["limit"]
             if pages > 5:  # show progress bar for batches which may take a long time
-                bar = self._get_progress_bar(total=pages, desc=f'Getting {unit}', unit="pages")
+                bar = self.get_progress_bar(total=pages, desc=f'Getting {unit}', unit="pages")
 
         i = 0
         results = []
@@ -142,13 +142,13 @@ class Collections(Utilities, metaclass=ABCMeta):
         else:
             url = f"{self.convert(user, kind=ItemType.USER, type_out=IDType.URL)}/{kind.name.casefold()}s"
 
-        params = {"limit": self._limit_value(limit, ceil=50)}
+        params = {"limit": self.limit_value(limit, ceil=50)}
         r = self.get(url, params=params, use_cache=use_cache, log_pad=71)
         self._get_collection_items(r, kind=kind, use_cache=use_cache)
         collections = r[self.items_key]
 
         self._enrich_collections_response(collections, kind=kind)
-        self._logger.debug(f"{'DONE':<7}: {url:<71} | Retrieved {len(collections):>6} {kind.name.casefold()}s")
+        self.logger.debug(f"{'DONE':<7}: {url:<71} | Retrieved {len(collections):>6} {kind.name.casefold()}s")
         return collections
 
     def get_collections(
@@ -188,12 +188,12 @@ class Collections(Utilities, metaclass=ABCMeta):
             items = self.get_playlist_url(items, use_cache=use_cache)
 
         url = f"{__URL_API__}/{kind.name.casefold()}s"
-        params = {"limit": self._limit_value(limit, ceil=50)}
+        params = {"limit": self.limit_value(limit, ceil=50)}
         id_list = self.extract_ids(items, kind=kind)
 
         unit = kind.name.casefold() + "s"
         if len(id_list) > 5:  # show progress bar for collection batches which may take a long time
-            id_list = self._get_progress_bar(iterable=id_list, desc=f'Getting {unit}', unit=unit)
+            id_list = self.get_progress_bar(iterable=id_list, desc=f'Getting {unit}', unit=unit)
 
         collections = []
         for id_ in id_list:
@@ -204,9 +204,9 @@ class Collections(Utilities, metaclass=ABCMeta):
         self._enrich_collections_response(collections, kind=kind)
 
         item_count = sum(len(coll[self.collection_types[kind.name]][self.items_key]) for coll in collections)
-        self._logger.debug(f"{'DONE':<7}: {url:<71} | "
-                           f"Retrieved {item_count:>6} {self.collection_types[kind.name]} "
-                           f"across {len(collections):>5} {kind.name.casefold()}s")
+        self.logger.debug(f"{'DONE':<7}: {url:<71} | "
+                          f"Retrieved {item_count:>6} {self.collection_types[kind.name]} "
+                          f"across {len(collections):>5} {kind.name.casefold()}s")
 
         if isinstance(items, dict) and len(collections) == 1:
             items.clear()
@@ -239,7 +239,7 @@ class Collections(Utilities, metaclass=ABCMeta):
         }
         playlist = self.post(url, json=body, log_pad=71)['href']
 
-        self._logger.debug(f"{'DONE':<7}: {url:<71} | Created playlist: '{name}' -> {playlist}")
+        self.logger.debug(f"{'DONE':<7}: {url:<71} | Created playlist: '{name}' -> {playlist}")
         return playlist
 
     def add_to_playlist(self, playlist: str, items: List[str], limit: int = 50, skip_dupes: bool = True) -> int:
@@ -254,10 +254,10 @@ class Collections(Utilities, metaclass=ABCMeta):
         :exception ValueError: Raised when the item types of the input ``items`` are not all tracks or IDs.
         """
         url = f"{self.get_playlist_url(playlist, use_cache=False)}/tracks"
-        limit = self._limit_value(limit, ceil=50)
+        limit = self.limit_value(limit, ceil=50)
 
         if len(items) == 0:
-            self._logger.debug(f"{'SKIP':<7}: {url:<43} | No data given")
+            self.logger.debug(f"{'SKIP':<7}: {url:<43} | No data given")
             return 0
 
         self.validate_item_type(items, kind=ItemType.TRACK)
@@ -274,7 +274,7 @@ class Collections(Utilities, metaclass=ABCMeta):
             log = [f"Adding {len(uris):>5} items"]
             self.post(url, params=params, log_pad=71, log_extra=log)
 
-        self._logger.debug(f"{'DONE':<7}: {url:<71} | Added  {len(uri_list):>5} items to playlist: {url}")
+        self.logger.debug(f"{'DONE':<7}: {url:<71} | Added  {len(uri_list):>5} items to playlist: {url}")
         return len(uri_list)
 
     ###########################################################################
@@ -305,7 +305,7 @@ class Collections(Utilities, metaclass=ABCMeta):
         :exception ValueError: Raised when the item types of the input ``items`` are not all tracks or IDs.
         """
         url = f"{self.get_playlist_url(playlist, use_cache=False)}/tracks"
-        limit = self._limit_value(limit, ceil=100)
+        limit = self.limit_value(limit, ceil=100)
 
         if items is not None:
             self.validate_item_type(items, kind=ItemType.TRACK)
@@ -320,5 +320,5 @@ class Collections(Utilities, metaclass=ABCMeta):
             log = [f"Clearing {len(uri_list):>3} tracks"]
             self.delete(url, json=body, log_pad=71, log_extra=log)
 
-        self._logger.debug(f"{'DONE':<7}: {url:<71} | Cleared  {len(uri_list):>3} tracks")
+        self.logger.debug(f"{'DONE':<7}: {url:<71} | Cleared  {len(uri_list):>3} tracks")
         return len(uri_list)

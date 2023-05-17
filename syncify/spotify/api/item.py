@@ -39,7 +39,7 @@ class Items(Utilities, metaclass=ABCMeta):
         url = url.rstrip("/")
 
         if len(id_list) > 50:  # show progress bar for batches which may take a long time
-            id_list = self._get_progress_bar(iterable=id_list, desc=f'Getting {unit}', unit=unit)
+            id_list = self.get_progress_bar(iterable=id_list, desc=f'Getting {unit}', unit=unit)
 
         log = [f"{unit.title()}:{len(id_list):>5}"]
         results: List[Any] = [self.get(f"{url}/{id_}", params=params, use_cache=use_cache, log_pad=43, log_extra=log)
@@ -77,11 +77,11 @@ class Items(Utilities, metaclass=ABCMeta):
         unit = unit.casefold().rstrip("s") + "s"
         url = url.rstrip("/")
 
-        id_chunks = self.chunk(id_list, size=self._limit_value(limit, ceil=50))
+        id_chunks = self.chunk(id_list, size=self.limit_value(limit, ceil=50))
 
         bar = range(len(id_chunks))
         if len(id_chunks) > 10:  # show progress bar for batches which may take a long time
-            bar = self._get_progress_bar(iterable=bar, desc=f'Getting {unit}', unit="pages")
+            bar = self.get_progress_bar(iterable=bar, desc=f'Getting {unit}', unit="pages")
 
         results = []
         params = params if params is not None else {}
@@ -138,7 +138,7 @@ class Items(Utilities, metaclass=ABCMeta):
             results = self._get_item_results_batch(url=url, id_list=id_list, key=kind_str,
                                                    use_cache=use_cache, limit=limit)
 
-        self._logger.debug(f"{'DONE':<7}: {url:<43} | Retrieved {len(results):>6} {kind_str}")
+        self.logger.debug(f"{'DONE':<7}: {url:<43} | Retrieved {len(results):>6} {kind_str}")
         
         if isinstance(items, dict) and len(results) == 0:
             items.clear()
@@ -185,7 +185,7 @@ class Items(Utilities, metaclass=ABCMeta):
 
         id_list = self.extract_ids(items, kind=ItemType.TRACK)
         if len(id_list) == 0:
-            self._logger.debug(f"{'SKIP':<7}: {__URL_API__:<43} | No data given")
+            self.logger.debug(f"{'SKIP':<7}: {__URL_API__:<43} | No data given")
             return {}
 
         features_key = "audio_features"

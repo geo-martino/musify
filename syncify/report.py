@@ -16,13 +16,14 @@ class Report(Logger):
             to the source library's playlists.
         :return: Report on extra, missing, and unavailable tracks for the compare library.
         """
+        self.logger.debug("Report library differences: START")
         extra = {}
         missing = {}
         unavailable = {}
 
-        max_width = self._get_max_width(source.playlists.keys(), max_width=50)
+        max_width = self.get_max_width(source.playlists.keys(), max_width=50)
 
-        self._logger.info('\33[1;95m ->\33[1;97m Reporting on differences between libraries... \33[0m')
+        self.logger.info('\33[1;95m ->\33[1;97m Reporting on differences between libraries... \33[0m')
         for source_playlist in source.playlists.values():
             name = source_playlist.name
             compare_playlist = compare.playlists.get(name)
@@ -39,22 +40,23 @@ class Report(Logger):
             missing[name] = source_extra
             unavailable[name] = source_no_uri + compare_no_uri
 
-            self._logger.info(f"{self._truncate_align_str(name, max_width=max_width)} |"
-                              f"\33[92m{len(compare_extra):>4} extra \33[0m|"
-                              f"\33[91m{len(source_extra):>4} missing \33[0m|"
-                              f"\33[93m{len(source_no_uri) + len(compare_no_uri):>4} unavailable \33[0m")
+            self.logger.info(f"{self.truncate_align_str(name, max_width=max_width)} |"
+                             f"\33[92m{len(compare_extra):>4} extra \33[0m|"
+                             f"\33[91m{len(source_extra):>4} missing \33[0m|"
+                             f"\33[93m{len(source_no_uri) + len(compare_no_uri):>4} unavailable \33[0m")
 
         report = {"Source ✗ | Compare ✓": extra,
                   "Source ✓ | Compare ✗": missing,
                   "Items unavailable (no URI)": unavailable}
 
-        self._logger.info(
-            f"\33[1;96m{self._truncate_align_str('TOTALS', max_width=max_width)} \33[0m|"
+        self.logger.info(
+            f"\33[1;96m{self.truncate_align_str('TOTALS', max_width=max_width)} \33[0m|"
             f"\33[1;92m{sum(len(items) for items in extra.values()):>4} extra \33[0m|"
             f"\33[1;91m{sum(len(items) for items in missing.values()):>4} missing \33[0m|"
             f"\33[1;93m{sum(len(items) for items in unavailable.values()):>4} unavailable \33[0m\n"
         )
 
+        self.logger.debug("Report library differences: DONE\n")
         return report
 
     def report_missing_tags(self,
@@ -70,6 +72,7 @@ class Report(Logger):
             When False, item counts as missing tags when missing only one of the given tags.
         :return: Report on collections by name which have items with missing tags.
         """
+        self.logger.debug("Report missing tags: START")
         if tags == TagName.ALL or TagName.ALL in tags:
             tags = TagName.all()
         tag_names = [t for tag in tags for t in tag.to_tag()]
@@ -80,8 +83,8 @@ class Report(Logger):
             tag_names.append("has_image")
 
         items_total = sum(len(collection) for collection in collections)
-        self._logger.info(f"Checking {items_total} items for {'all' if match_all else 'any'} missing tags: "
-                          f"{', '.join(tag_names)}")
+        self.logger.info(f"Checking {items_total} items for {'all' if match_all else 'any'} missing tags: "
+                         f"{', '.join(tag_names)}")
 
         missing_tags = {}
         for collection in collections:
@@ -102,7 +105,8 @@ class Report(Logger):
                 missing_tags[name] = missing
 
         items_count = len([item for items in missing_tags.values() for item in items])
-        self._logger.info(f"\33[93mFound {items_count} items with {'all' if match_all else 'any'} missing tags\33[0m: "
-                          f"{', '.join(tag_names)}")
+        self.logger.info(f"\33[93mFound {items_count} items with {'all' if match_all else 'any'} missing tags\33[0m: "
+                         f"{', '.join(tag_names)}")
 
+        self.logger.debug("Report missing tags: DONE\n")
         return missing_tags

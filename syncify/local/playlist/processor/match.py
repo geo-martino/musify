@@ -120,7 +120,7 @@ class TrackMatch(TrackProcessor):
         :param stems: Absolute paths of possible stems.
         :param paths: Paths to search through for a match.
         """
-        stems = {folder.rstrip("\\/") for folder in make_list(stems)}
+        stems = {folder.rstrip("\\/") for folder in make_list(stems) if folder is not None}
         self.original_folder = None
 
         for paths_list in paths:

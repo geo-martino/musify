@@ -1,16 +1,13 @@
 import os
 
+from syncify.abstract.collection import BasicCollection
 from syncify.spotify.library import SpotifyPlaylist
 from syncify.spotify.processor import Searcher, Checker
-from syncify.spotify.processor.search import SearchCollection
 from syncify.local.library import MusicBee
 from syncify.spotify import __URL_AUTH__, __URL_API__
 from syncify.spotify.api import API
 from syncify.spotify.library import SpotifyLibrary
 from syncify.spotify.library.item import SpotifyResponse
-
-
-
 
 if __name__ == "__main__":
 
@@ -97,8 +94,7 @@ if __name__ == "__main__":
     searcher = Searcher(api=api)
     results = searcher.search([pl])
     checker = Checker(api=api)
-    checker.check([SearchCollection("test", list(results.values())[0].matched)])
-
+    checker.check([BasicCollection("test", list(results.values())[0].matched)])
 
     import traceback
 

@@ -21,7 +21,7 @@ class Matcher(Logger):
     def _log_padded(self, log: List[str], pad: str = ' '):
         """Wrapper for logging lists in a correctly aligned format"""
         log[0] = pad * 3 + ' ' + (log[0] if log[0] else "unknown")
-        self._logger.debug(" | ".join(log))
+        self.logger.debug(" | ".join(log))
 
     def _log_algorithm(self, source: Base, extra: Optional[List[str]] = None):
         """Wrapper for initially logging an algorithm in a correctly aligned format"""
@@ -115,7 +115,8 @@ class Matcher(Logger):
         if source.name and result.name:
             score = sum(word in result.name for word in source.name.split()) / len(source.name.split())
 
-        self._log_test(source=source, result=result, test=score, extra=[f"{source.name} -> {result.name}"])
+        self._log_test(source=source, result=result, test=round(score, 2),
+                       extra=[f"{source.name} -> {result.name}"])
         return score
 
     def match_artist(self, source: MatchTypes, result: MatchTypes) -> float:
@@ -127,7 +128,8 @@ class Matcher(Logger):
         """
         score = 0
         if not source.artist or not result.artist:
-            self._log_test(source=source, result=result, test=score, extra=[f"{source.artist} -> {result.artist}"])
+            self._log_test(source=source, result=result, test=score,
+                           extra=[f"{source.artist} -> {result.artist}"])
             return score
 
         artists_source = source.artist.replace(Base.list_sep, " ")
@@ -136,7 +138,8 @@ class Matcher(Logger):
         for i, artist in enumerate(artists_result, 1):
             score += (sum(word in artists_source for word in artist.split()) /
                       len(artists_source.split())) * (1 / i)
-        self._log_test(source=source, result=result, test=score, extra=[f"{source.artist} -> {result.artist}"])
+        self._log_test(source=source, result=result, test=round(score, 2),
+                       extra=[f"{source.artist} -> {result.artist}"])
         return score
 
     def match_album(self, source: MatchTypes, result: MatchTypes) -> float:
@@ -145,7 +148,8 @@ class Matcher(Logger):
         if source.album and result.album:
             score = sum(word in result.album for word in source.album.split()) / len(source.album.split())
 
-        self._log_test(source=source, result=result, test=score, extra=[f"{source.album} -> {result.album}"])
+        self._log_test(source=source, result=result, test=round(score, 2),
+                       extra=[f"{source.album} -> {result.album}"])
         return score
 
     def match_length(self, source: MatchTypes, result: MatchTypes) -> float:
@@ -154,7 +158,9 @@ class Matcher(Logger):
         if source.length and result.length:
             score = max((source.length - abs(source.length - result.length)), 0) / source.length
 
-        self._log_test(source=source, result=result, test=score, extra=[f"{source.length} -> {result.length}"])
+        self._log_test(source=source, result=result, test=round(score, 2),
+                       extra=[f"{round(source.length, 2) if source.length else None} -> "
+                              f"{round(result.length, 2) if result.length else None}"])
         return score
 
     def match_year(self, source: MatchTypes, result: MatchTypes) -> float:
@@ -167,7 +173,8 @@ class Matcher(Logger):
         if source.year and result.year:
             score = max((self.year_range - abs(source.year - result.year)), 0) / self.year_range
 
-        self._log_test(source=source, result=result, test=score, extra=[f"{source.year} -> {result.year}"])
+        self._log_test(source=source, result=result, test=round(score, 2),
+                       extra=[f"{source.year} -> {result.year}"])
         return score
 
     ###########################################################################
@@ -227,7 +234,7 @@ class Matcher(Logger):
         if not results:
             self._log_algorithm(source=source_clean, extra=[f"NO RESULTS GIVEN, SKIPPING"])
             return 0, None
-        max_score = self._limit_value(max_score, floor=0.1, ceil=1.0)
+        max_score = self.limit_value(max_score, floor=0.1, ceil=1.0)
         self._log_algorithm(source=source_clean, extra=[f"max_score={max_score}"])
 
         # process and limit match options
@@ -239,24 +246,25 @@ class Matcher(Logger):
             match_on.remove(PropertyName.ALL)
             match_on |= PropertyName.all()
 
-        sum_highest = 0
-        result = None
+        best_sum = 0
+        best_result = None
 
-        for result in results:
-            result_clean = self.clean_tags(result)
+        for current_result in results:
+            result_clean = self.clean_tags(current_result)
             scores_current = self._get_scores(source_clean=source_clean, result_clean=result_clean,
                                               max_score=max_score, match_on=match_on)
 
-            sum_current = sum(scores_current.values()) / len(scores_current)
+            current_sum = sum(scores_current.values()) / len(scores_current)
             self._log_test(source=source_clean, result=result_clean,
-                           test=round(sum_current, 2), extra=[f"HIGHEST={round(sum_highest, 2)}"])
+                           test=round(current_sum, 2), extra=[f"HIGHEST={round(best_sum, 2)}"])
 
-            if sum_current > sum_highest:
-                sum_highest = sum(scores_current.values()) / len(scores_current)
-            if sum_highest >= max_score:  # max threshold reached, match found
+            if current_sum > best_sum:
+                best_result = current_result
+                best_sum = sum(scores_current.values()) / len(scores_current)
+            if best_sum >= max_score:  # max threshold reached, match found
                 break
 
-        return sum_highest, result
+        return best_sum, best_result
 
     def _get_scores(
             self,

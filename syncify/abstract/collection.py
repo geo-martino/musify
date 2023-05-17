@@ -30,6 +30,15 @@ class ItemCollection(Base, PrettyPrinter, metaclass=ABCMeta):
     def clear(self):
         self.items.clear()
 
+    def __hash__(self):
+        return hash((self.name, (item for item in self.items)))
+
+    def __eq__(self, collection):
+        return all(x == y for x, y in zip(self, collection))
+
+    def __ne__(self, item):
+        return not self.__eq__(item)
+
     def __len__(self):
         return len(self.items)
 
@@ -40,6 +49,23 @@ class ItemCollection(Base, PrettyPrinter, metaclass=ABCMeta):
         if i.has_uri and i.uri in [item.uri for item in self.items if item.has_uri]:
             return True
         return False
+
+
+class BasicCollection(ItemCollection):
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def items(self) -> List[Item]:
+        return self._items
+
+    def __init__(self, name: str, items: List[Item]):
+        self._name = name
+        self._items = items
+
+    def as_dict(self) -> MutableMapping[str, Any]:
+        return {"name": self.name, "items": self.items}
 
 
 @dataclass
@@ -71,9 +97,9 @@ class Library(ItemCollection, Logger, metaclass=ABCMeta):
 
         :return: Filtered playlists.
         """
-        self._logger.debug(f"Filtering tracks in {len(self.playlists)} playlists | "
-                           f"Filter out tags: {filter_tags}")
-        max_width = self._get_max_width(self.playlists, max_width=50)
+        self.logger.debug(f"Filtering tracks in {len(self.playlists)} playlists | "
+                          f"Filter out tags: {filter_tags}")
+        max_width = self.get_max_width(self.playlists, max_width=50)
 
         filtered = {}
         for name, playlist in self.playlists.items():
@@ -85,8 +111,8 @@ class Library(ItemCollection, Logger, metaclass=ABCMeta):
                         filtered[name].remove(item)
                         break
 
-            self._logger.debug(f"{self._truncate_align_str(name, max_width=max_width)} | "
-                               f"Filtered out {len(filtered[name]) - len(playlist):>3} items")
+            self.logger.debug(f"{self.truncate_align_str(name, max_width=max_width)} | "
+                              f"Filtered out {len(filtered[name]) - len(playlist):>3} items")
         return filtered
 
 

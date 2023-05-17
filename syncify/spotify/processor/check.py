@@ -76,27 +76,27 @@ class Checker(Matcher):
 
             self.api.add_to_playlist(url, items=uris, skip_dupes=False)
         except (KeyboardInterrupt, BaseException):
-            self._logger.error(traceback.format_exc())
+            self.logger.error(traceback.format_exc())
             self.exit = True
 
     def _get_user_input(self, text: Optional[str] = None) -> str:
         """Print dialog with optional text and get the user's input."""
         inp = input(f"\33[93m{text}\33[0m | ")
-        self._logger.debug(f"User input: {inp}")
+        self.logger.debug(f"User input: {inp}")
         return inp.strip()
 
     def _format_help_text(self, options: Mapping[str, str], header: Optional[List[str]] = None) -> str:
         """Format help text with a given mapping of options. Add an option header to include before options."""
-        max_width = self._get_max_width(options, 50)
+        max_width = self.get_max_width(options, 50)
 
         help_text = header if header else []
         help_text.append("\n\t\33[96mEnter one of the following: \33[0m\n\t")
-        help_text.extend(f"{self._truncate_align_str(k, max_width=max_width)}{': ' + v if v else ''}"
+        help_text.extend(f"{self.truncate_align_str(k, max_width=max_width)}{': ' + v if v else ''}"
                          for k, v in options.items())
 
         return '\n\t'.join(help_text) + '\n'
 
-    def check(self, collections: List[ItemCollection], interval: int = 10) -> CheckResult:
+    def check(self, collections: List[ItemCollection], interval: int = 10) -> Optional[CheckResult]:
         """
         Run the following operations to check a list of ItemCollections on Spotify.
 
@@ -113,18 +113,19 @@ class Checker(Matcher):
         :param interval: Stop creating playlists after this many playlists have been created and pause for user input.
         :return: A result object containing the remapped items created during the check.
         """
-        self._logger.debug('Checking items: START')
         if len(collections) == 0 or all(not collection.items for collection in collections):
-            self._log_padded([f"\33[93mNo items to check. \33[0m"], pad="<")
+            self.logger.debug("\33[93mNo items to check. \33[0m")
+            return
 
-        self._logger.info(f"\33[1;95m ->\33[1;97m Checking items by creating temporary Spotify playlists "
-                          f"for the current user: {self.api.user_name} \33[0m")
+        self.logger.debug('Checking items: START')
+        self.logger.info(f"\33[1;95m ->\33[1;97m Checking items by creating temporary Spotify playlists "
+                         f"for the current user: {self.api.user_name} \33[0m")
 
-        bar = self._get_progress_bar(iterable=collections, desc="Creating temp playlists", unit="playlists")
+        bar = self.get_progress_bar(iterable=collections, desc="Creating temp playlists", unit="playlists")
         interval_total = (len(collections) // interval) + (len(collections) % interval > 0)
         self.done = False
         self.exit = False
-        print(len(collections))
+
         for i, collection in enumerate(bar):
             self._make_temp_playlist(name=collection.name, collection=collection)
 
@@ -140,10 +141,10 @@ class Checker(Matcher):
                 self.exit = True
 
             if not self.api.test():  # check if token has expired
-                self._logger.info('\33[93mAPI token has expired, re-authorising... \33[0m')
+                self.logger.info('\33[93mAPI token has expired, re-authorising... \33[0m')
                 self.api.auth()
 
-            self._logger.info(f'\33[93mDeleting {len(self.playlist_name_urls)} temporary playlists... \33[0m')
+            self.logger.info(f'\33[93mDeleting {len(self.playlist_name_urls)} temporary playlists... \33[0m')
             for url in self.playlist_name_urls.values():  # delete playlists
                 self.api.delete_playlist(url.removesuffix("tracks"))
 
@@ -159,6 +160,10 @@ class Checker(Matcher):
         result = CheckResult(
             switched=self.final_switched, unavailable=self.final_unavailable, unchanged=self.final_unchanged
         )
+        self.logger.info(f"\33[92mDone \33[0m| "
+                         f"\33[94m{len(self.final_switched):>5} switched  \33[0m| "
+                         f"\33[91m{len(self.final_unavailable):>5} unavailable \33[0m| "
+                         f"\33[93m{len(self.final_unchanged):>5} unchanged \33[0m")
 
         self.done = True
         self.remaining.clear()
@@ -167,7 +172,7 @@ class Checker(Matcher):
         self.final_unavailable = []
         self.final_unchanged = []
 
-        self._logger.debug('Checking items: DONE\n')
+        self.logger.debug('Checking items: DONE\n')
         return result
 
     ###########################################################################
@@ -199,7 +204,6 @@ class Checker(Matcher):
         print(help_text)
         while current_input != '':  # while user has not hit return only
             current_input = self._get_user_input(f"Enter ({progress_text})")
-            print(current_input)
             pl_names = [name for name in self.playlist_name_collection
                         if name.casefold().startswith(current_input.casefold())]
 
@@ -225,7 +229,7 @@ class Checker(Matcher):
                 self.api.pretty_print_uris(current_input)
 
             else:
-                self._logger.warning("Input not recognised.")
+                self.logger.warning("Input not recognised.")
 
     ###########################################################################
     ## Match items user has added or removed
@@ -262,8 +266,8 @@ class Checker(Matcher):
         Check the current temporary playlist given by ``name`` and attempt to match the source list of items
         to any modifications the user has made.
         """
-        self._logger.info(f'\33[1;95m ->\33[1;97m '
-                          f'Attempting to find URIs for items in Spotify playlist: \33[94m{name}\33[0m...')
+        self.logger.info(f'\33[1;95m ->\33[1;97m '
+                         f'Attempting to find URIs for items in Spotify playlist: \33[94m{name}\33[0m...')
 
         source = self.playlist_name_collection[name]
         remote = SpotifyPlaylist(self.api.get_collections(self.playlist_name_urls[name], use_cache=False)[0]).tracks
@@ -323,14 +327,14 @@ class Checker(Matcher):
         help_text += "OR enter a custom URI/URL/ID for this item\n"
 
         self._log_padded([name, f"Getting user input for {len(self.remaining)} items"])
-        max_width = self._get_max_width([item.name for item in self.remaining], max_width=50)
+        max_width = self.get_max_width([item.name for item in self.remaining], max_width=50)
 
         print(help_text)
         for item in self.remaining.copy():
             while item in self.remaining:  # while item not matched or skipped
                 self._log_padded([name, f"{len(self.remaining)} remaining items"])
                 if 'a' not in current_input:
-                    current_input = self._get_user_input(self._truncate_align_str(item.name, max_width=max_width))
+                    current_input = self._get_user_input(self.truncate_align_str(item.name, max_width=max_width))
 
                 if current_input.casefold().replace('a', '') == 'u':  # mark item as unavailable
                     self._log_padded([name, "Marking as unavailable"], pad="<")

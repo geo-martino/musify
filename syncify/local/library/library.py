@@ -72,8 +72,8 @@ class LocalLibrary(Library):
                                     if (not self.include or name in self.include)
                                     and (not self.exclude or name not in self.exclude)}
 
-            self._logger.debug(f"Filtered out {playlists_total - len(self._playlist_paths)} playlists "
-                               f"from {playlists_total} Spotify playlists")
+            self.logger.debug(f"Filtered out {playlists_total - len(self._playlist_paths)} playlists "
+                              f"from {playlists_total} Spotify playlists")
 
     @property
     def name(self) -> Optional[str]:
@@ -122,17 +122,20 @@ class LocalLibrary(Library):
         self.last_modified: Optional[datetime] = None
 
         if load:
-            self._logger.info(f"\33[1;95m ->\33[1;97m Loading local library of "
-                              f"{len(self._track_paths)} tracks and {len(self._playlist_paths)} playlists \33[0m")
-            self._line()
+            self.logger.info(f"\33[1;95m ->\33[1;97m Loading local library of "
+                             f"{len(self._track_paths)} tracks and {len(self._playlist_paths)} playlists \33[0m")
+            self.print_line()
             self.load()
 
     def load(self) -> None:
         """Loads all tracks and playlists in this library from scratch and log results."""
-        self._logger.debug("Load local library: START")
+        self.logger.debug("Load local library: START")
 
         self.tracks = self.load_tracks()
-        self._line()
+        folder_groups = TrackSort.group_by_field(tracks=self.tracks, field=PropertyName.FOLDER)
+        self.folders = [LocalFolder(group, name=name) for name, group in folder_groups.items()]
+        self.print_line()
+
         if len(self.tracks) > 0:
             key_type = Callable[[LocalTrack], Tuple[bool, datetime]]
             key: key_type = lambda t: (t.last_played is None, t.last_played)
@@ -145,28 +148,25 @@ class LocalLibrary(Library):
         print()
 
         self._playlists = {pl.name: pl for pl in sorted(self.load_playlists(), key=lambda pl: pl.name.casefold())}
-        self._line()
+        self.print_line()
         self.log_playlists()
         print()
 
-        self._logger.debug("Load local library: DONE\n")
+        self.logger.debug("Load local library: DONE\n")
 
     def load_tracks(self) -> List[LocalTrack]:
         """Returns a list of loaded tracks from all the valid paths in this library"""
-        tracks = self._load_tracks()
-        folder_groups = TrackSort.group_by_field(tracks=tracks, field=PropertyName.FOLDER)
-        self.folders = [LocalFolder(group, name=name) for name, group in folder_groups.items()]
-        return tracks
+        return self._load_tracks()
 
     def _load_tracks(self) -> List[LocalTrack]:
         """Returns a list of loaded tracks from all the valid paths in this library"""
-        self._logger.debug("Load local tracks: START")
-        self._logger.info(f"\33[1;95m  >\33[1;97m " 
-                          f"Extracting metadata and properties for {len(self._track_paths)} tracks \33[0m")
+        self.logger.debug("Load local tracks: START")
+        self.logger.info(f"\33[1;95m  >\33[1;97m "
+                         f"Extracting metadata and properties for {len(self._track_paths)} tracks \33[0m")
 
         tracks: List[LocalTrack] = []
         errors: List[str] = []
-        for path in self._get_progress_bar(iterable=self._track_paths, desc="Loading tracks", unit="tracks"):
+        for path in self.get_progress_bar(iterable=self._track_paths, desc="Loading tracks", unit="tracks"):
             try:
                 tracks.append(load_track(path=path))
             except Exception:
@@ -174,7 +174,7 @@ class LocalLibrary(Library):
                 continue
 
         self._log_errors(errors)
-        self._logger.debug("Load local tracks: DONE\n")
+        self.logger.debug("Load local tracks: DONE\n")
         return tracks
 
     def save_tracks(self, **kwargs) -> Mapping[str, SyncResultTrack]:
@@ -183,9 +183,9 @@ class LocalLibrary(Library):
 
     def log_tracks(self) -> None:
         """Log stats on currently loaded tracks"""
-        self._logger.info(
+        self.logger.info(
             f"\33[1;96m{'LIBRARY TOTALS':<22}\33[1;0m|"
-            f"\33[92m{sum([track.has_uri for track in self.tracks]):>6} available \33[0m|"
+            f"\33[92m{sum([track.has_uri is not None for track in self.tracks]):>6} available \33[0m|"
             f"\33[91m{sum([track.has_uri is None for track in self.tracks]):>6} missing \33[0m|"
             f"\33[93m{sum([track.has_uri is False for track in self.tracks]):>6} unavailable \33[0m|"
             f"\33[1m{len(self.tracks):>6} total \33[0m"
@@ -200,15 +200,15 @@ class LocalLibrary(Library):
         :return: The loaded playlists.
         :exception KeyError: If a given playlist name cannot be found.
         """
-        self._logger.debug("Load local playlist data: START")
+        self.logger.debug("Load local playlist data: START")
         if names is None:
             names = self._playlist_paths.keys()
 
-        self._logger.info(f"\33[1;95m  >\33[1;97m Loading playlist data for {len(names)} playlists \33[0m")
+        self.logger.info(f"\33[1;95m  >\33[1;97m Loading playlist data for {len(names)} playlists \33[0m")
 
         playlists: List[LocalPlaylist] = []
         errors: List[str] = []
-        for name in self._get_progress_bar(iterable=names, desc="Loading playlists", unit="playlists"):
+        for name in self.get_progress_bar(iterable=names, desc="Loading playlists", unit="playlists"):
             path = self._playlist_paths.get(name.strip().lower())
             if path is None:
                 raise KeyError(f"Playlist name not found in the stored paths of this manager: {name}")
@@ -228,7 +228,7 @@ class LocalLibrary(Library):
             playlists.append(pl)
 
         self._log_errors(errors)
-        self._logger.debug("Load local playlist data: DONE\n")
+        self.logger.debug("Load local playlist data: DONE\n")
         return playlists
 
     def save_playlists(self, dry_run: bool = True) -> Mapping[str, Result]:
@@ -237,12 +237,12 @@ class LocalLibrary(Library):
 
     def log_playlists(self) -> None:
         """Log stats on currently loaded playlists"""
-        max_width = self._get_max_width(self.playlists)
+        max_width = self.get_max_width(self.playlists)
 
-        self._logger.info("\33[1;96mFound the following Local playlists: \33[0m")
+        self.logger.info("\33[1;96mFound the following Local playlists: \33[0m")
         for name, playlist in self.playlists.items():
-            self._logger.info(
-                f"{self._truncate_align_str(name, max_width=max_width)} |"
+            self.logger.info(
+                f"{self.truncate_align_str(name, max_width=max_width)} |"
                 f"\33[92m{len([t for t in playlist if t.has_uri]):>4} available \33[0m|"
                 f"\33[91m{len([t for t in playlist if t.has_uri is None]):>4} missing \33[0m|"
                 f"\33[93m{len([t for t in playlist if t.has_uri is False]):>4} unavailable \33[0m|"
@@ -252,7 +252,7 @@ class LocalLibrary(Library):
     def _log_errors(self, errors: List[str]) -> None:
         """Log paths which had some error while loading"""
         if len(errors) > 0:
-            self._logger.debug("Could not load: \33[91m\n\t- {errors} \33[0m".format(errors="\n\t- ".join(errors)))
+            self.logger.debug("Could not load: \33[91m\n\t- {errors} \33[0m".format(errors="\n\t- ".join(errors)))
 
     def set_compilation_tags(self) -> None:
         """
@@ -269,8 +269,8 @@ class LocalLibrary(Library):
         * Set track_number in ascending order by filename
         * Set disc_number to 1
         """
-        self._logger.info(f"\33[1;95m ->\33[1;97m "
-                          f"Setting compilation style tags for {len(self.folders)} folders \33[0m")
+        self.logger.info(f"\33[1;95m ->\33[1;97m "
+                         f"Setting compilation style tags for {len(self.folders)} folders \33[0m")
 
         count = 0
         for folder in self.folders:
@@ -289,7 +289,7 @@ class LocalLibrary(Library):
                     track.compilation = False
                     count += 1
 
-        self._logger.info(f"\33[92mDone | Set metadata for {count} tracks \33[0m")
+        self.logger.info(f"\33[92mDone | Set metadata for {count} tracks \33[0m")
 
     def restore_uris(self, backup: str, remove: bool = True) -> None:
         """
@@ -300,7 +300,7 @@ class LocalLibrary(Library):
             If False, keep the current value in the track.
         """
         # TODO: complete and test me
-        self._logger.info(f"\33[1;95m -> \33[1;97mRestoring URIs from backup file: {backup} \33[0m")
+        self.logger.info(f"\33[1;95m -> \33[1;97mRestoring URIs from backup file: {backup} \33[0m")
 
         backup: Mapping[str, str] = {path.lower(): uri for path, uri in self.load_json(backup).items()}
         count = 0
@@ -310,7 +310,7 @@ class LocalLibrary(Library):
                 track.uri = uri
                 count += 1
 
-        self._logger.info(f"\33[92mRestored URIs for {count} tracks \33[0m")
+        self.logger.info(f"\33[92mRestored URIs for {count} tracks \33[0m")
 
     def as_dict(self) -> MutableMapping[str, Any]:
         return {

@@ -1,5 +1,6 @@
-from typing import Optional, List, MutableMapping, Any
+from typing import Optional, List, MutableMapping, Any, Collection
 
+from syncify.abstract import Track
 from syncify.abstract.collection import Library
 from syncify.spotify import ItemType
 from syncify.spotify.api import API
@@ -44,7 +45,7 @@ class SpotifyLibrary(Library):
             use_cache: bool = True
     ):
         Logger.__init__(self)
-        self._logger.debug("Load Spotify library: START")
+        self.logger.debug("Load Spotify library: START")
 
         self._api = api
         self.include = include
@@ -52,30 +53,30 @@ class SpotifyLibrary(Library):
         self.use_cache = use_cache
         SpotifyResponse.api = api
 
-        self._logger.info(f"\33[1;95m ->\33[1;97m Loading Spotify library \33[0m")
-        self._line()
+        self.logger.info(f"\33[1;95m ->\33[1;97m Loading Spotify library \33[0m")
+        self.print_line()
 
         playlists_data = self._get_playlists_data()
-        self._line()
+        self.print_line()
         tracks_data = self._get_tracks_data(playlists_data=playlists_data)
-        self._line()
+        self.print_line()
 
-        self._logger.info(f"\33[1;95m  >\33[1;97m Processing Spotify library of "
-                          f"{len(tracks_data)} tracks and {len(playlists_data)} playlists \33[0m")
+        self.logger.info(f"\33[1;95m  >\33[1;97m Processing Spotify library of "
+                         f"{len(tracks_data)} tracks and {len(playlists_data)} playlists \33[0m")
 
         self.tracks = [SpotifyTrack(track) for track in tracks_data]
         playlists = [SpotifyPlaylist.load(pl, items=self.tracks, use_cache=use_cache) for pl in playlists_data]
         self._playlists = {pl.name: pl for pl in sorted(playlists, key=lambda pl: pl.name.casefold())}
-        self._line()
+        self.print_line()
         self.log_tracks()
         self.log_playlists()
-        self._line()
+        self.print_line()
 
-        self._logger.debug("Load Spotify library: DONE\n")
+        self.logger.debug("Load Spotify library: DONE\n")
 
     def _get_tracks_data(self, playlists_data: List[MutableMapping[str, Any]]) -> List[MutableMapping[str, Any]]:
         """Get a list of unique tracks with enhanced data (i.e. features, genres etc.) across all playlists"""
-        self._logger.debug("Load Spotify tracks data: START")
+        self.logger.debug("Load Spotify tracks data: START")
         playlists_tracks_data = [pl["tracks"]["items"] for pl in playlists_data]
 
         tracks_data = []
@@ -85,11 +86,11 @@ class SpotifyLibrary(Library):
                 tracks_seen.add(track["uri"])
                 tracks_data.append(track)
 
-        self._logger.info(f"\33[1;95m  >\33[1;97m Getting Spotify data for {len(tracks_data)} unique tracks \33[0m")
+        self.logger.info(f"\33[1;95m  >\33[1;97m Getting Spotify data for {len(tracks_data)} unique tracks \33[0m")
         self.api.get_items(tracks_data, kind=ItemType.TRACK, limit=50, use_cache=self.use_cache)
         self.api.get_tracks_extra(tracks_data, features=True, limit=50, use_cache=self.use_cache)
 
-        self._logger.debug("Load Spotify tracks data: DONE\n")
+        self.logger.debug("Load Spotify tracks data: DONE\n")
         return tracks_data
 
     def log_tracks(self) -> None:
@@ -97,13 +98,13 @@ class SpotifyLibrary(Library):
         playlist_tracks = [track.uri for tracks in self.playlists.values() for track in tracks]
         in_playlists = len([track for track in self.tracks if track.uri in playlist_tracks])
 
-        self._logger.info(f"\33[1;96m{'SPOTIFY TRACKS':<22}\33[1;0m|"
-                          f"\33[92m{in_playlists:>6} in playlists \33[0m|"
-                          f"\33[1m{len(self.tracks):>6} total \33[0m")
+        self.logger.info(f"\33[1;96m{'SPOTIFY TRACKS':<22}\33[1;0m|"
+                         f"\33[92m{in_playlists:>6} in playlists \33[0m|"
+                         f"\33[1m{len(self.tracks):>6} total \33[0m")
 
     def _get_playlists_data(self) -> List[MutableMapping[str, Any]]:
         """Get playlists and all their tracks"""
-        self._logger.debug("Get Spotify playlists data: START")
+        self.logger.debug("Get Spotify playlists data: START")
         playlists_data = self.api.get_collections_user(kind=ItemType.PLAYLIST, limit=self.limit,
                                                        use_cache=self.use_cache)
         playlists_total = len(playlists_data)
@@ -115,27 +116,36 @@ class SpotifyLibrary(Library):
             exclude = [name.lower() for name in self.exclude]
             playlists_data = [pl for pl in playlists_data if pl["name"].lower() not in exclude]
 
-        self._logger.debug(f"Filtered out {playlists_total - len(playlists_data)} playlists "
-                           f"from {playlists_total} Spotify playlists")
+        self.logger.debug(f"Filtered out {playlists_total - len(playlists_data)} playlists "
+                          f"from {playlists_total} Spotify playlists")
 
         total_tracks = sum(pl["tracks"]["total"] for pl in playlists_data)
         total_pl = len(playlists_data)
-        self._logger.info(f"\33[1;95m  >\33[1;97m "
-                          f"Getting {total_tracks} Spotify tracks from {total_pl} playlists \33[0m")
+        self.logger.info(f"\33[1;95m  >\33[1;97m "
+                         f"Getting {total_tracks} Spotify tracks from {total_pl} playlists \33[0m")
 
         self.api.get_collections(playlists_data, kind=ItemType.PLAYLIST, limit=self.limit, use_cache=self.use_cache)
 
-        self._logger.debug("Get Spotify playlists data: DONE\n")
+        self.logger.debug("Get Spotify playlists data: DONE\n")
         return playlists_data
 
     def log_playlists(self) -> None:
         """Log stats on currently loaded playlists"""
-        max_width = self._get_max_width(self.playlists)
+        max_width = self.get_max_width(self.playlists)
 
-        self._logger.info("\33[1;96mLoaded the following Spotify playlists: \33[0m")
+        self.logger.info("\33[1;96mLoaded the following Spotify playlists: \33[0m")
         for name, playlist in self.playlists.items():
-            name = self._truncate_align_str(playlist.name, max_width=max_width)
-            self._logger.info(f"{name} | \33[92m{len(playlist):>6} total tracks \33[0m")
+            name = self.truncate_align_str(playlist.name, max_width=max_width)
+            self.logger.info(f"{name} | \33[92m{len(playlist):>6} total tracks \33[0m")
+
+    def add_tracks(self, tracks: Collection[Track]) -> None:
+        for track in tracks:
+            if track in self.tracks:
+                continue
+            elif isinstance(track, SpotifyTrack):
+                self.tracks.append(track)
+            elif track.has_uri:
+                self.tracks.append(SpotifyTrack.load(track.uri))
 
     def restore_playlists(self, backup: str, in_playlists: list = None, ex_playlists: list = None, **kwargs) -> dict:
         """
@@ -146,11 +156,11 @@ class SpotifyLibrary(Library):
         :param ex_playlists: list, default=None. Don't restore playlists in this list.
         """
         print()
-        self._logger.info(f"\33[1;95m -> \33[1;97mRestoring Spotify playlists from backup file: {backup} \33[0m")
+        self.logger.info(f"\33[1;95m -> \33[1;97mRestoring Spotify playlists from backup file: {backup} \33[0m")
 
         backup = self.load_json(backup, parent=True, **kwargs)
         if not backup:
-            self._logger.info(f"\33[91mBackup file not found.\33[0m")
+            self.logger.info(f"\33[91mBackup file not found.\33[0m")
             return
 
         if isinstance(in_playlists, str):  # handle string
@@ -174,7 +184,7 @@ class SpotifyLibrary(Library):
 
         self.update_playlists(backup, **kwargs_mod)
 
-        self._logger.info(f"\33[92mRestored {len(backup)} Spotify playlists \33[0m")
+        self.logger.info(f"\33[92mRestored {len(backup)} Spotify playlists \33[0m")
 
     def as_dict(self) -> MutableMapping[str, Any]:
         return {

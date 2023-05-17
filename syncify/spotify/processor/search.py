@@ -20,23 +20,6 @@ class SearchResult(Result):
     skipped: List[Item]
 
 
-class SearchCollection(ItemCollection):
-    @property
-    def name(self) -> str:
-        return self._name
-
-    @property
-    def items(self) -> List[Item]:
-        return self._items
-
-    def __init__(self, name: str, items: List[Item]):
-        self._name = name
-        self._items = items
-
-    def as_dict(self) -> MutableMapping[str, Any]:
-        return {"name": self.name, "items": self.items}
-
-
 @dataclass(frozen=True)
 class Algorithm:
     """Key settings related to a search algorithm"""
@@ -105,7 +88,7 @@ class Searcher(Matcher):
         if not results:
             return
 
-        max_width = self._get_max_width(results, max_width=50)
+        max_width = self.get_max_width(results, max_width=50)
 
         total_matched = 0
         total_unmatched = 0
@@ -127,23 +110,23 @@ class Searcher(Matcher):
             colour2 = '\33[92m' if unmatched == 0 else '\33[91m'
             colour3 = '\33[92m' if skipped == 0 else '\33[93m'
 
-            self._logger.info(
-                f"\33[1m{self._truncate_align_str(collection.name, max_width=max_width)} \33[0m|"
+            self.logger.info(
+                f"\33[1m{self.truncate_align_str(collection.name, max_width=max_width)} \33[0m|"
                 f'{colour1}{matched:>5} matched \33[0m| '
                 f'{colour2}{unmatched:>5} unmatched \33[0m| '
                 f'{colour3}{skipped:>5} skipped \33[0m| '
                 f'\33[97m{total:>6} total \33[0m'
             )
 
-        self._line()
-        self._logger.info(
-            f"\33[1;96m{self._truncate_align_str('TOTALS', max_width=max_width)} \33[0m|"
+        self.print_line()
+        self.logger.info(
+            f"\33[1;96m{self.truncate_align_str('TOTALS', max_width=max_width)} \33[0m|"
             f'\33[92m{total_matched:>5} matched \33[0m| '
             f'\33[91m{total_unmatched:>5} unmatched \33[0m| '
             f'\33[93m{total_skipped:>5} skipped \33[0m| '
             f"\33[97m{total_all:>6} total \33[0m\n "
         )
-        self._line()
+        self.print_line()
 
     def search(self, collections: List[ItemCollection]) -> MutableMapping[ItemCollection, SearchResult]:
         """
@@ -151,47 +134,44 @@ class Searcher(Matcher):
 
         :returns: Mapping of the collection to its results.
         """
-        self._logger.debug('Searching items: START')
-        if not [self.clean_tags(item) for c in collections for item in c.items if item.has_uri is None]:
-            self._logger.debug("\33[93mNo items to search. \33[0m")
+        self.logger.debug('Searching items: START')
+        if not [item for c in collections for item in c.items if item.has_uri is None]:
+            self.logger.debug("\33[93mNo items to search. \33[0m")
             return {}
 
-        self._logger.info(f"\33[1;95m ->\33[1;97m "
-                          f"Searching for matches on Spotify for {len(collections)} collections\33[0m")
-        bar = self._get_progress_bar(iterable=collections, desc="Searching", unit="collections")
+        self.logger.info(f"\33[1;95m ->\33[1;97m "
+                         f"Searching for matches on Spotify for {len(collections)} collections\33[0m")
+        bar = self.get_progress_bar(iterable=collections, desc="Searching", unit="collections")
 
         search_results: MutableMapping[ItemCollection, SearchResult] = {}
         for collection in bar:
             if not [item for item in collection.items if item.has_uri is None]:
                 self._log_padded([collection.name, "Skipping search, no tracks to search"], pad='<')
+            skipped = [item for item in collection if item.has_uri is not None]
 
             if getattr(collection, "compilation", True) is not False:
                 self._log_padded([collection.name, "Searching with item algorithm"], pad='>')
-                result = self._search_items(collection=collection)
+                self._search_items(collection=collection)
             else:
                 self._log_padded([collection.name, "Searching with album algorithm"], pad='>')
-                result = self._search_album(collection=collection)
-                missing = [item for item in result.items if item.has_uri is None]
+                self._search_album(collection=collection)
+                missing = [item for item in collection.items if item.has_uri is None]
                 if missing:
                     self._log_padded([collection.name,
                                       f"Searching for {len(missing)} unmatched items in this collection"])
-                    search = SearchCollection(name=collection.name, items=missing)
-                    result = self._search_items(collection=search)
+                    self._search_items(collection=collection)
 
-            search_results[collection] = SearchResult(
-                matched=[item for item in result if item.has_uri],
-                unmatched=[item for item in result if item.has_uri is None],
-                skipped=[item for item in result if not item.has_uri]
-            )
+            search_results[collection] = SearchResult(matched=[item for item in collection if item.has_uri],
+                                                      unmatched=[item for item in collection if item.has_uri is None],
+                                                      skipped=skipped)
 
         self._log_results(search_results)
-        self._logger.debug('Searching items: DONE\n')
+        self.logger.debug('Searching items: DONE\n')
         return search_results
 
-    def _search_items(self, collection: ItemCollection) -> ItemCollection:
-        """Search for matches on individual items in an item collection"""
-        matches = []
-        for item in collection.items:
+    def _search_items(self, collection: ItemCollection) -> None:
+        """Search for matches on individual items in an item collection that have ``None`` on ``has_uri`` attribute"""
+        for item in [item for item in collection.items if item.has_uri is None]:
             if not isinstance(item, Track):
                 raise NotImplementedError(f"Currently only able to search for Track items, "
                                           f"not {item.__class__.__name__}")
@@ -199,9 +179,10 @@ class Searcher(Matcher):
             results = [SpotifyTrack(r) for r in self._get_results(item, kind=ItemType.TRACK)]
             result = self.score_match(item, results=results, match_on=self.algorithm.match_fields,
                                       min_score=self.algorithm.min_score, max_score=self.algorithm.max_score)
-            matches.append(result) if result else matches.append(item)
 
-        return SearchCollection(collection.name, items=matches)
+            if result and result.has_uri:
+                item.uri = result.uri
+                item.has_uri = True
 
     def _search_album(self, collection: Album) -> ItemCollection:
         """Search for matches on an entire item collection"""

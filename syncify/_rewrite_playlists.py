@@ -23,11 +23,11 @@ class Playlists(MusicBee):
         """
 
         print()
-        self._logger.info(f"\33[1;95m -> \33[1;97mRestoring local playlists from backup file: {backup} \33[0m")
+        self.logger.info(f"\33[1;95m -> \33[1;97mRestoring local playlists from backup file: {backup} \33[0m")
 
         backup = self.load_json(backup, parent=True, **kwargs)
         if not backup:
-            self._logger.info(f"\33[91mBackup file not found.\33[0m")
+            self.logger.info(f"\33[91mBackup file not found.\33[0m")
             return
 
         if isinstance(in_playlists, str):  # handle string
@@ -50,7 +50,7 @@ class Playlists(MusicBee):
                 name = re.sub(r'[\\/*?:"<>|]', '', name)
                 self.save_m3u([t['path'] for t in tracks], name, **kwargs)
 
-            self._logger.info(f"\33[92mRestored {len(backup)} local playlists \33[0m")
+            self.logger.info(f"\33[92mRestored {len(backup)} local playlists \33[0m")
 
     def _filter_paths(self, paths: list, name: str):
         start_count = len(paths)
@@ -75,12 +75,12 @@ class Playlists(MusicBee):
         
         paths = [path for path in paths if path is not None]
         if start_count - len(paths) > 0 or changed_count > 0:
-            self._logger.debug(
+            self.logger.debug(
                 f"{name} | "
                 f"{start_count - len(paths)} paths removed | "
                 f"{changed_count} path cases changed")
         else:
-            self._logger.debug(f"{name} | No paths changed")
+            self.logger.debug(f"{name} | No paths changed")
         return paths
 
     def clean_playlists(self, **kwargs):
@@ -92,7 +92,7 @@ class Playlists(MusicBee):
         playlists += glob(join(self._playlists_path, '**', '*.m3u'), recursive=True)
 
         print()
-        self._logger.info(
+        self.logger.info(
             f'\33[1;95m -> \33[1;97mCleaning paths in {len(playlists)} Local playlists\33[0m')
         
         names = [splitext(basename(path))[0] for path in playlists]
@@ -196,7 +196,7 @@ class Playlists(MusicBee):
     def _update_autoplaylist(self, path: str, current: list, added: list, removed: list, max_width: int = 0, **kwargs):
         name = splitext(basename(path))[0]
         name_log = f"{name if len(name) < 50 else name[:47] + '...':<{max_width}}"
-        logger = self._logger.info if self._verbose > 0 else self._logger.debug
+        logger = self.logger.info if self._verbose > 0 else self.logger.debug
 
         xml = self.load_autoplaylist(path, **kwargs)
         source = xml["SmartPlaylist"]["Source"]
@@ -248,7 +248,7 @@ class Playlists(MusicBee):
 
     def compare_playlists(self, playlists: dict, ext_playlists_path: str, export_alias: str, ext_path_prefix: str = "..", dry_run: bool=False, **kwargs):        
         print()
-        self._logger.info(
+        self.logger.info(
             f'\33[1;95m -> \33[1;97mSynchronising Local and {export_alias} playlists\33[0m')
 
         stem_path_map = self._get_stem_path_map()
@@ -270,7 +270,7 @@ class Playlists(MusicBee):
         
 
         synced_playlists = {}
-        logger = self._logger.info if self._verbose > 0 else self._logger.debug
+        logger = self.logger.info if self._verbose > 0 else self.logger.debug
         names = (set(ext_changes) | set(local_changes) | set(playlists)) - set(drop_playlists)
         max_width = len(max(names, key=len)) + 1 if len(max(names, key=len)) + 1 < 50 else 50
 

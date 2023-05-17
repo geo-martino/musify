@@ -63,10 +63,10 @@ class RequestHandler(APIAuthoriser, Logger):
             response_headers = response.headers
             if isinstance(response.headers, CaseInsensitiveDict):
                 response_headers = json.dumps(dict(response.headers), indent=2)
-            self._logger.warning(f"\33[91m{method.upper():<7}: {url} | Code: {response.status_code} | "
-                                 f"Response text and headers follow:"
-                                 f"\nResponse text:\n{response.text}"
-                                 f"\nHeaders:\n{response_headers} \33[0m")
+            self.logger.warning(f"\33[91m{method.upper():<7}: {url} | Code: {response.status_code} | "
+                                f"Response text and headers follow:"
+                                f"\nResponse text:\n{response.text}"
+                                f"\nHeaders:\n{response_headers} \33[0m")
 
             message = self._response_as_json(response).get('error', {}).get('message')
             if response.status_code == 403:
@@ -79,13 +79,13 @@ class RequestHandler(APIAuthoriser, Logger):
             if 'retry-after' in response.headers:  # wait if time is short
                 wait_time = int(response.headers['retry-after'])
                 wait_str = (dt.now() + timedelta(seconds=wait_time)).strftime('%Y-%m-%d %H:%M:%S')
-                self._logger.info(f"Rate limit exceeded. Retry again at {wait_str}")
+                self.logger.info(f"Rate limit exceeded. Retry again at {wait_str}")
 
-                if wait_time > self.timeout:   # exception if too long
+                if wait_time > self.timeout:  # exception if too long
                     raise ConnectionError(f"Retry time is greater than timeout of {self.timeout} seconds")
 
             if backoff < self.backoff_final:
-                self._logger.info(f"Retrying in {backoff} seconds...")
+                self.logger.info(f"Retrying in {backoff} seconds...")
                 sleep(backoff)
                 backoff *= self.backoff_factor
             else:
@@ -121,7 +121,7 @@ class RequestHandler(APIAuthoriser, Logger):
         if use_cache and method.upper() in self.session.settings.allowable_methods:
             log.append("Cached")
 
-        self._logger.debug(" | ".join(log))
+        self.logger.debug(" | ".join(log))
         return self.session.request(
             method=method.upper(), url=url, headers=headers, force_refresh=not use_cache, *args, **kwargs
         )

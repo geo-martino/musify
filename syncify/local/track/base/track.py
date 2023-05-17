@@ -126,6 +126,12 @@ class LocalTrack(TagReader, TagWriter, metaclass=ABCMeta):
         del file_attrs["valid_extensions"]
         return {k: v for k, v in self.__dict__.items() if not k.startswith("_")} | file_attrs
 
+    def __hash__(self):
+        return hash(self.path)
+
+    def __eq__(self, item):
+        return self.path == item.path
+
     def __copy__(self):
         """
         Copy Track object by reloading from the file object in memory

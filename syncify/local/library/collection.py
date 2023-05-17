@@ -122,6 +122,9 @@ class LocalFolder(Folder, LocalCollection):
             "last_modified": self.last_modified,
         }
 
+    def __hash__(self):
+        return hash((self.name, (item for item in self.items)))
+
 
 class LocalAlbum(Album, LocalCollection):
     """

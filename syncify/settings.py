@@ -2,10 +2,12 @@ import argparse
 import json
 import os
 import sys
+from abc import ABCMeta, abstractmethod
 from ast import literal_eval
 from copy import deepcopy
+from datetime import datetime
 from os.path import dirname, exists, join, splitext, isabs
-from typing import Any, MutableMapping
+from typing import Any, MutableMapping, List
 
 import yaml
 
@@ -35,7 +37,7 @@ def _format_map(data, format_map: dict):
     return data
 
 
-class Settings:
+class Settings(metaclass=ABCMeta):
     _platform_map = {"win32": "win", "linux": "lin", "darwin": "mac"}
     _functions = {
         "main": {"main": []},
@@ -61,8 +63,13 @@ class Settings:
         "clear": {"clear_from_playlist": ['playlist']},
     }
 
-    def __init__(self, config_path: str = "config.yml"):
+    @property
+    @abstractmethod
+    def allowed_functions(self) -> List[str]:
+        raise NotImplementedError
 
+    def __init__(self, config_path: str = "config.yml"):
+        self.run_dt = datetime.now()
         self.module_folder = dirname(dirname(__file__))
         config_path = self._append_module_folder(config_path)
 
@@ -74,8 +81,9 @@ class Settings:
         self.cfg_output = self.cfg_general.pop("output", {})
 
         self.dry_run = self.cfg_general.get("dry_run", True)
-        self.log_folder = None
         self.output_folder = None
+
+        self.functions: List[str] = [self.allowed_functions[0]]
 
         self.set_env()
 
@@ -98,15 +106,16 @@ class Settings:
     ###########################################################################
     ## Wrangle general settings
     ###########################################################################
-    def set_logger(self, func_name: str = "unknown"):
-        self.log_folder = self._append_module_folder(self.cfg_logging.get("path", "_logs"))
-        Logger.set_log_folder(self.log_folder, run_name=func_name)
+    def set_logger(self):
+        log_folder = self._append_module_folder(self.cfg_logging.get("path", "_logs"))
+        Logger.set_log_folder(log_folder, run_dt=self.run_dt)
 
         verbosity = self.cfg_logging.get("verbosity", 0)
         Logger.set_verbosity(verbosity)
 
     def set_output(self):
-        self.output_folder = self._append_module_folder(self.cfg_output.get("path", "_data"))
+        parent_folder = self._append_module_folder(self.cfg_output.get("path", "_data"))
+        self.output_folder = join(parent_folder, self.run_dt.strftime(Logger.dt_format))
         if not exists(self.output_folder):
             os.makedirs(self.output_folder)
 
@@ -153,7 +162,7 @@ class Settings:
             template = AUTH_ARGS_USER if settings.get("user_auth", False) else AUTH_ARGS_BASIC
             token_file_path = settings.pop("token_file_path", "token.json")
             if not isabs(token_file_path):
-                token_file_path = join(self.output_folder, token_file_path)
+                token_file_path = join(dirname(self.output_folder), token_file_path)
 
             format_map = {
                 "client_id": settings.pop("client_id"),
@@ -205,31 +214,31 @@ class Settings:
         parsed = parser.parse_known_args()
         kwargs = vars(parsed[0])
         args = parsed[1]
-        func_name = kwargs.pop('function')
+        self.functions = kwargs.pop('functions')
 
-        if kwargs.pop('use_config'):
-            if func_name in self.runtime_settings or func_name in self._functions:
-                self.runtime_settings = {func_name: self.runtime_settings.get(func_name, self.cfg_general)}
-                if len(args) > 0:
-                    self.runtime_settings[func_name]["args"] = args
-                    self.runtime_settings[func_name] = self._parse_args(func_name, self.runtime_settings[func_name])
-
-            return self.runtime_settings
-        if kwargs['filter_tags']:
-            del kwargs['filter_tags']
-
-        cfg_processed = {"kwargs": kwargs, "args": args}
-        cfg_processed = _update_map(deepcopy(self.cfg_general), cfg_processed)
-
-        _update_map(self.runtime_settings[func_name], cfg_processed)
-        self.runtime_settings = self._configure(func_name, self.runtime_settings[func_name])
-        return self.runtime_settings
+        # if kwargs.pop('use_config'):
+        #     if func_name in self.runtime_settings or func_name in self._functions:
+        #         self.runtime_settings = {func_name: self.runtime_settings.get(func_name, self.cfg_general)}
+        #         if len(args) > 0:
+        #             self.runtime_settings[func_name]["args"] = args
+        #             self.runtime_settings[func_name] = self._parse_args(func_name, self.runtime_settings[func_name])
+        #
+        #     return self.runtime_settings
+        # if kwargs['filter_tags']:
+        #     del kwargs['filter_tags']
+        #
+        # cfg_processed = {"kwargs": kwargs, "args": args}
+        # cfg_processed = _update_map(deepcopy(self.cfg_general), cfg_processed)
+        #
+        # _update_map(self.runtime_settings[func_name], cfg_processed)
+        # self.runtime_settings = self._configure(func_name, self.runtime_settings[func_name])
+        # return self.runtime_settings
 
     # noinspection PyProtectedMember
     def get_parser(self):
         parser = argparse.ArgumentParser(description="Sync your local library to Spotify.",
                                          prog="syncify",
-                                         usage='%(prog)s [function] [options]')
+                                         usage='%(prog)s [options] [function]')
         parser._positionals.title = 'Functions'
         parser._optionals.title = 'Optional arguments'
 
@@ -237,8 +246,8 @@ class Settings:
         parser.add_argument('-cfg', '--use-config',
                             action='store_true',
                             help=f"Use saved config in config.yml instead of cli settings.")
-        parser.add_argument('function',
-                            nargs='?', choices=list(self._functions.keys()),
+        parser.add_argument('functions',
+                            nargs='*', choices=self.allowed_functions,
                             help=f"Syncify function to run.")
 
         local = parser.add_argument_group("Local library filters and options")
