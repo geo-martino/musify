@@ -281,8 +281,6 @@ class Syncify(Settings, Report):
         checker = Checker(self.api, allow_karaoke=algorithm.allow_karaoke)
         checker.check(collections, interval=cfg.get("check", {}).get("interval", 10))
 
-    def _extract_all_from_spotify(self, quickload, **kwargs):
-        """INTERNAL USE ONLY"""
         self.spotify_library
 
     def update_tags(self, quickload, **kwargs) -> None:
