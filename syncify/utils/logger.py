@@ -35,7 +35,7 @@ class LogFileFilter(logging.Filter):
 
 class Logger:
     _log_folder: str = None
-    _verbose: int = 0
+    _verbosity: int = 0
     _is_dev: bool = False
 
     def __init__(self):
@@ -58,13 +58,13 @@ class Logger:
         cls._log_folder = join(folder, run_name, run_dt.strftime("%Y-%m-%d_%H.%M.%S"))
 
     @classmethod
-    def set_verbosity(cls, verbose: int) -> None:
-        cls._verbose = verbose
+    def set_verbosity(cls, verbosity: int = 0) -> None:
+        cls._verbosity = verbosity
 
     @classmethod
     def set_dev(cls) -> None:
         cls.set_log_folder("___log_dev", "dev")
-        cls.set_verbosity(0)
+        cls.set_verbosity(5)
         cls._is_dev = True
 
     def _handle_exception(self, exc_type, exc_value, exc_traceback) -> None:
@@ -82,11 +82,13 @@ class Logger:
         if not self._is_dev and not exists(self._log_folder):  # if log folder doesn't exist
             os.makedirs(self._log_folder)  # create log folder
 
-        levels: List[Literal] = [logging.INFO, logging.WARNING, logging.CRITICAL]
-        if self._verbose < 2:
+        levels: List[Literal] = [logging.INFO, logging.ERROR, logging.CRITICAL]
+        if self._verbosity == 0:
             log_filter = LogStdOutFilter(levels=levels)
-        elif self._verbose == 2:
-            log_filter = LogStdOutFilter(levels=levels + [logging.DEBUG])
+        elif self._verbosity == 1:
+            log_filter = LogStdOutFilter(levels=levels + [logging.WARNING])
+        elif self._verbosity == 2:
+            log_filter = LogStdOutFilter(levels=levels + [logging.WARNING, logging.DEBUG])
         else:
             log_filter = LogFileFilter()
 
@@ -99,7 +101,7 @@ class Logger:
             fmt="[%(asctime)s] [%(levelname)8s] [%(funcName)-40s:%(lineno)4d] --- %(message)s",
             datefmt="%y-%b-%d %H:%M:%S"
         )
-        if self._verbose > 3:
+        if self._verbosity > 3:
             stdout_format = file_format
 
         # get logger and clear default handlers
@@ -110,7 +112,7 @@ class Logger:
 
         # handler for stdout
         stdout_h = logging.StreamHandler(stream=sys.stdout)
-        stdout_h.setLevel(logging.INFO if self._verbose < 2 else logging.DEBUG)
+        stdout_h.setLevel(logging.INFO if self._verbosity < 2 else logging.DEBUG)
         stdout_h.setFormatter(stdout_format)
         stdout_h.addFilter(log_filter)
         self._logger.addHandler(stdout_h)
@@ -156,7 +158,7 @@ class Logger:
         """Wrapper for tqdm progress bar. For kwargs, see :class:`tqdm`"""
         preset_keys = ["leave", "disable", "colour", "position"]
         return tqdm_auto(
-            leave=kwargs.get("leave", self._verbose > 0) and kwargs.get("position", 0) == 0,
+            leave=kwargs.get("leave", self._verbosity > 0) and kwargs.get("position", 0) == 0,
             disable=kwargs.get("disable", self._logger.handlers[0].level == logging.DEBUG),
             file=sys.stdout,
             ncols=120,

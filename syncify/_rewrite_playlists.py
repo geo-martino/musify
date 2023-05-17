@@ -4,7 +4,7 @@ from glob import glob
 from os.path import (basename, dirname, exists, join, normpath, sep,
                      splitext)
 
-from local._archive.musicbee import MusicBee
+from syncify.local._archive.musicbee import MusicBee
 
 
 class Playlists(MusicBee):
@@ -112,7 +112,7 @@ class Playlists(MusicBee):
                 if len(include_filtered) > 0:
                     source['ExceptionsInclude'] = '|'.join(include_filtered)
                 elif source.get('ExceptionsInclude'):
-                    source['ExceptionsInclude']
+                    del source['ExceptionsInclude']
 
                 exclude = source.get('Exceptions')
                 exclude = exclude.split('|') if isinstance(exclude, str) else []

@@ -6,12 +6,15 @@ from typing import Optional, List, Set, MutableMapping, Mapping, Collection, Any
 from syncify.abstract.collection import Library
 from syncify.abstract.misc import Result
 from syncify.local.file import IllegalFileTypeError
+from syncify.local.library.collection import LocalFolder
 from syncify.local.playlist import __PLAYLIST_FILETYPES__, LocalPlaylist, M3U, XAutoPF
+from syncify.local.playlist.processor import TrackSort
 from syncify.local.track import __TRACK_CLASSES__, LocalTrack, load_track, SyncResultTrack
+from syncify.local.track.base.tags import PropertyName
 from syncify.utils.logger import Logger
 
 
-class LocalLibrary(Logger, Library):
+class LocalLibrary(Library):
     """
     Represents a local library, providing various methods for manipulating
     tracks and playlists across an entire local library collection.
@@ -112,6 +115,8 @@ class LocalLibrary(Logger, Library):
 
         self.tracks: List[LocalTrack] = []
         self._playlists: MutableMapping[str, LocalPlaylist] = {}
+        self.folders: List[LocalFolder] = []
+
         self.last_played: Optional[datetime] = None
         self.last_added: Optional[datetime] = None
         self.last_modified: Optional[datetime] = None
@@ -148,7 +153,10 @@ class LocalLibrary(Logger, Library):
 
     def load_tracks(self) -> List[LocalTrack]:
         """Returns a list of loaded tracks from all the valid paths in this library"""
-        return self._load_tracks()
+        tracks = self._load_tracks()
+        folder_groups = TrackSort.group_by_field(tracks=tracks, field=PropertyName.FOLDER)
+        self.folders = [LocalFolder(group, name=name) for name, group in folder_groups.items()]
+        return tracks
 
     def _load_tracks(self) -> List[LocalTrack]:
         """Returns a list of loaded tracks from all the valid paths in this library"""
@@ -223,9 +231,9 @@ class LocalLibrary(Logger, Library):
         self._logger.debug("Load local playlist data: DONE\n")
         return playlists
 
-    def save_playlists(self, **kwargs) -> Mapping[str, Result]:
+    def save_playlists(self, dry_run: bool = True) -> Mapping[str, Result]:
         """Saves the tags of all tracks in this library. Use arguments from :py:func:`LocalPlaylist.save()`"""
-        return {name: pl.save(**kwargs) for name, pl in self.playlists.items()}
+        return {name: pl.save(dry_run=dry_run) for name, pl in self.playlists.items()}
 
     def log_playlists(self) -> None:
         """Log stats on currently loaded playlists"""
@@ -245,6 +253,43 @@ class LocalLibrary(Logger, Library):
         """Log paths which had some error while loading"""
         if len(errors) > 0:
             self._logger.debug("Could not load: \33[91m\n\t- {errors} \33[0m".format(errors="\n\t- ".join(errors)))
+
+    def set_compilation_tags(self) -> None:
+        """
+        Modify tags for tracks in the folders of this library.
+
+        The following steps are applied to all folders:
+
+        * Set compilation to True if folder is a compilation, False otherwise
+
+        The following steps are also applied to all compilation folders:
+
+        * Set album name to folder name
+        * Set album artist to 'Various'
+        * Set track_number in ascending order by filename
+        * Set disc_number to 1
+        """
+        self._logger.info(f"\33[1;95m ->\33[1;97m "
+                          f"Setting compilation style tags for {len(self.folders)} folders \33[0m")
+
+        count = 0
+        for folder in self.folders:
+            if folder.compilation:
+                tracks = sorted(folder.tracks, key=lambda x: x.path)
+
+                for i, track in enumerate(tracks, 1):  # set tags
+                    track.album = track.folder
+                    track.album_artist = "Various"
+                    track.track_number = i
+                    track.disc_number = 1
+                    track.compilation = True
+                    count += 1
+            else:
+                for track in folder.tracks:  # set tags
+                    track.compilation = False
+                    count += 1
+
+        self._logger.info(f"\33[92mDone | Set metadata for {count} tracks \33[0m")
 
     def restore_uris(self, backup: str, remove: bool = True) -> None:
         """

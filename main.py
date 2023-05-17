@@ -11,10 +11,10 @@ from time import perf_counter
 from dateutil.relativedelta import relativedelta
 
 from syncify.local.playlists import Playlists
-from spotify._archive.spotify import Spotify
-from utils._archive.authorise import ApiAuthoriser
+from syncifyspotify._archive.spotify import Spotify
+from syncify.utils._archive.authorise import ApiAuthoriser
 from environment import Environment
-from utils._archive.io import IO
+from syncify.utils._archive.io import IO
 from syncify.utils.logger import Logger
 from report import Report
 
@@ -520,7 +520,7 @@ class Syncify(Logger, ApiAuthoriser, IO, Report, Spotify, Playlists):
 if __name__ == "__main__":
     env = Environment()
     env.get_kwargs()
-    env.parse_from_bash()
+    env.parse_from_prompt()
     
     for func, settings in env.runtime_settings.items():
         print()

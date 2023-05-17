@@ -8,7 +8,7 @@ from syncify.spotify.library.playlist import SpotifyPlaylist
 from syncify.utils.logger import Logger
 
 
-class SpotifyLibrary(Logger, Library):
+class SpotifyLibrary(Library):
     """
     Represents a Spotify library, providing various methods for manipulating
     tracks and playlists across an entire Spotify library collection.
@@ -137,7 +137,7 @@ class SpotifyLibrary(Logger, Library):
             name = self._truncate_align_str(playlist.name, max_width=max_width)
             self._logger.info(f"{name} | \33[92m{len(playlist):>6} total tracks \33[0m")
 
-    def restore_playlists(self, backup: str, in_playlists: list=None, ex_playlists: list=None, **kwargs) -> dict:
+    def restore_playlists(self, backup: str, in_playlists: list = None, ex_playlists: list = None, **kwargs) -> dict:
         """
         Restore Spotify playlists from backup.
 
@@ -175,7 +175,6 @@ class SpotifyLibrary(Logger, Library):
         self.update_playlists(backup, **kwargs_mod)
 
         self._logger.info(f"\33[92mRestored {len(backup)} Spotify playlists \33[0m")
-
 
     def as_dict(self) -> MutableMapping[str, Any]:
         return {

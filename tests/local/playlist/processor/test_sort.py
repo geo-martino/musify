@@ -4,7 +4,7 @@ from typing import Callable
 
 from syncify.local.track import LocalTrack, PropertyName, TagName
 from syncify.local.playlist.processor import TrackSort, ShuffleMode
-from utils.helpers import strip_ignore_words
+from syncify.utils.helpers import strip_ignore_words
 from tests.local.track.track import random_tracks
 
 

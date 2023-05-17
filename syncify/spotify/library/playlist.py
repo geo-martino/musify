@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, List, MutableMapping, Optional, Self, Mapping, Literal, Collection
 
-from abstract import Item
+from syncify.abstract import Item
 from syncify.abstract.collection import Playlist
 from syncify.abstract.misc import Result
 from syncify.spotify import ItemType
