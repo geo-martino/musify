@@ -281,8 +281,6 @@ class Syncify(Settings, Report):
         checker = Checker(self.api, allow_karaoke=algorithm.allow_karaoke)
         checker.check(collections, interval=cfg.get("check", {}).get("interval", 10))
 
-        self.spotify_library
-
     def update_tags(self, quickload, **kwargs) -> None:
         """Run all main functions for updating local files"""
 

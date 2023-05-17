@@ -191,5 +191,5 @@ class SpotifyLibrary(Library):
             "user_name": self.api.user_name,
             "user_id": self.api.user_id,
             "track_count": len(self.tracks),
-            "playlist_counts": {name: len(pl) for name, pl in self.playlists},
+            "playlist_counts": {name: len(pl) for name, pl in self.playlists.items()},
         }
