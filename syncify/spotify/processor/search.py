@@ -1,6 +1,5 @@
-from copy import copy, deepcopy
 from dataclasses import dataclass
-from typing import List, Optional, MutableMapping, Any, Tuple, Mapping, Collection, Union, Set
+from typing import List, Optional, MutableMapping, Any, Tuple, Mapping, Union, Set
 
 from syncify.abstract.collection import ItemCollection, Album
 from syncify.abstract.item import Item, Track, Base

@@ -23,7 +23,7 @@ class Report(Logger):
 
         max_width = self.get_max_width(source.playlists.keys(), max_width=50)
 
-        self.logger.info('\33[1;95m ->\33[1;97m Reporting on differences between libraries... \33[0m')
+        self.logger.info('\33[1;95m ->\33[1;97m Reporting on differences between libraries \33[0m')
         for source_playlist in source.playlists.values():
             name = source_playlist.name
             compare_playlist = compare.playlists.get(name)
@@ -40,10 +40,11 @@ class Report(Logger):
             missing[name] = source_extra
             unavailable[name] = source_no_uri + compare_no_uri
 
-            self.logger.info(f"{self.truncate_align_str(name, max_width=max_width)} |"
-                             f"\33[92m{len(compare_extra):>4} extra \33[0m|"
-                             f"\33[91m{len(source_extra):>4} missing \33[0m|"
-                             f"\33[93m{len(source_no_uri) + len(compare_no_uri):>4} unavailable \33[0m")
+            self.logger.info(f"\33[97m{self.truncate_align_str(name, max_width=max_width)} \33[0m|"
+                             f"\33[92m{len(compare_extra):>5} extra \33[0m|"
+                             f"\33[91m{len(source_extra):>5} missing \33[0m|"
+                             f"\33[93m{len(source_no_uri) + len(compare_no_uri):>5} unavailable \33[0m|"
+                             f"\33[94m{len(source_playlist):>5} in source \33[0m")
 
         report = {"Source ✗ | Compare ✓": extra,
                   "Source ✓ | Compare ✗": missing,
@@ -51,9 +52,10 @@ class Report(Logger):
 
         self.logger.info(
             f"\33[1;96m{self.truncate_align_str('TOTALS', max_width=max_width)} \33[0m|"
-            f"\33[1;92m{sum(len(items) for items in extra.values()):>4} extra \33[0m|"
-            f"\33[1;91m{sum(len(items) for items in missing.values()):>4} missing \33[0m|"
-            f"\33[1;93m{sum(len(items) for items in unavailable.values()):>4} unavailable \33[0m\n"
+            f"\33[1;92m{sum(len(items) for items in extra.values()):>5} extra \33[0m|"
+            f"\33[1;91m{sum(len(items) for items in missing.values()):>5} missing \33[0m|"
+            f"\33[1;93m{sum(len(items) for items in unavailable.values()):>5} unavailable \33[0m|"
+            f"\33[1;94m{len(source.playlists):>5} playlists \33[0m\n"
         )
 
         self.logger.debug("Report library differences: DONE\n")
@@ -83,8 +85,8 @@ class Report(Logger):
             tag_names.append("has_image")
 
         items_total = sum(len(collection) for collection in collections)
-        self.logger.info(f"Checking {items_total} items for {'all' if match_all else 'any'} missing tags: "
-                         f"{', '.join(tag_names)}")
+        self.logger.info(f"\33[1;95m ->\33[1;97m Checking {items_total} items for {'all' if match_all else 'any'} "
+                         f"missing tags: {', '.join(tag_names)}")
 
         missing_tags = {}
         for collection in collections:
@@ -105,8 +107,8 @@ class Report(Logger):
                 missing_tags[name] = missing
 
         items_count = len([item for items in missing_tags.values() for item in items])
-        self.logger.info(f"\33[93mFound {items_count} items with {'all' if match_all else 'any'} missing tags\33[0m: "
-                         f"{', '.join(tag_names)}")
+        self.logger.info(f"\33[1;95m  >\33[1;97m Found {items_count} items with {'all' if match_all else 'any'} "
+                         f"missing tags\33[0m: {', '.join(tag_names)}")
 
         self.logger.debug("Report missing tags: DONE\n")
         return missing_tags

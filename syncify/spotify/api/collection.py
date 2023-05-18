@@ -304,6 +304,9 @@ class Collections(Utilities, metaclass=ABCMeta):
         :return: The number of tracks cleared from the playlist.
         :exception ValueError: Raised when the item types of the input ``items`` are not all tracks or IDs.
         """
+        if not items:
+            return 0
+
         url = f"{self.get_playlist_url(playlist, use_cache=False)}/tracks"
         limit = self.limit_value(limit, ceil=100)
 

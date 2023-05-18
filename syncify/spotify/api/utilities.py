@@ -75,7 +75,7 @@ class Utilities(RequestHandler, Logger):
             if len(values) == 0:
                 raise ValueError("No values given: list is empty")
 
-            kinds = {cls._get_item_type(value) for value in values}
+            kinds = {cls._get_item_type(value) for value in values if value is not None}
             kinds = [kind for kind in kinds if kind is not None]
             if len(kinds) == 0:
                 raise ValueError("Given items are invalid or are IDs with no kind given")

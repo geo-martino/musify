@@ -156,7 +156,7 @@ class Settings(metaclass=ABCMeta):
     def set_api_settings(self) -> None:
         for cfg in [self.cfg_general] + list(self.cfg_functions.values()):
             settings = cfg.get("spotify", {}).get("api", {})
-            if not settings:
+            if not settings or "client_id" not in settings or "client_secret" not in settings:
                 continue
 
             template = AUTH_ARGS_USER if settings.get("user_auth", False) else AUTH_ARGS_BASIC

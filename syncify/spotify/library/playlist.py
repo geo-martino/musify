@@ -170,7 +170,7 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
         """
         self._check_for_api()
 
-        uris_obj = [track.uri for track in (items if items else self.tracks)]
+        uris_obj = [track.uri for track in (items if items else self.tracks) if track.uri]
         uris_remote = [track["track"]["uri"] for track in self.response["tracks"]["items"]]
 
         uris_add = [uri for uri in uris_obj if uri not in uris_remote]

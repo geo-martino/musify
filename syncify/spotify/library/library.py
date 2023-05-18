@@ -1,4 +1,4 @@
-from typing import Optional, List, MutableMapping, Any, Collection, Union, Mapping
+from typing import Optional, List, MutableMapping, Any, Collection, Union, Mapping, Literal
 
 from syncify.abstract import Item
 from syncify.abstract.collection import Library, ItemCollection, Playlist
@@ -42,10 +42,10 @@ class SpotifyLibrary(Library):
             api: API,
             include: Optional[List[str]] = None,
             exclude: Optional[List[str]] = None,
-            use_cache: bool = True
+            use_cache: bool = True,
+            load: bool = True,
     ):
         Logger.__init__(self)
-        self.logger.debug("Load Spotify library: START")
 
         self._api = api
         self.include = include
@@ -53,6 +53,14 @@ class SpotifyLibrary(Library):
         self.use_cache = use_cache
         SpotifyResponse.api = api
 
+        self.tracks: List[SpotifyTrack] = []
+        self._playlists: MutableMapping[str, SpotifyPlaylist] = {}
+
+        if load:
+            self.load()
+
+    def load(self, log: bool = True):
+        self.logger.debug("Load Spotify library: START")
         self.logger.info(f"\33[1;95m ->\33[1;97m Loading Spotify library \33[0m")
         self.print_line()
 
@@ -65,13 +73,15 @@ class SpotifyLibrary(Library):
                          f"{len(tracks_data)} tracks and {len(playlists_data)} playlists \33[0m")
 
         self.tracks = [SpotifyTrack(track) for track in tracks_data]
-        playlists = [SpotifyPlaylist.load(pl, items=self.tracks, use_cache=use_cache) for pl in playlists_data]
+        playlists = [SpotifyPlaylist.load(pl, items=self.tracks, use_cache=self.use_cache) for pl in playlists_data]
         self._playlists = {pl.name: pl for pl in sorted(playlists, key=lambda pl: pl.name.casefold())}
         self.print_line()
-        self.log_playlists()
-        self.print_line()
-        self.log_tracks()
-        self.print_line()
+
+        if log:
+            self.log_playlists()
+            self.print_line()
+            self.log_tracks()
+            self.print_line()
 
         self.logger.debug("Load Spotify library: DONE\n")
 
@@ -102,7 +112,7 @@ class SpotifyLibrary(Library):
 
         self.logger.info(f"\33[1;96m{'SPOTIFY TOTALS':<22}\33[1;0m|"
                          f"\33[92m{in_playlists:>6} in playlists \33[0m|"
-                         f"\33[1m{len(self.tracks):>6} total \33[0m")
+                         f"\33[97m{len(self.tracks):>6} total \33[0m")
 
     def _get_playlists_data(self) -> List[MutableMapping[str, Any]]:
         """Get playlists and all their tracks"""
@@ -138,23 +148,35 @@ class SpotifyLibrary(Library):
         self.logger.info("\33[1;96mLoaded the following Spotify playlists: \33[0m")
         for name, playlist in self.playlists.items():
             name = self.truncate_align_str(playlist.name, max_width=max_width)
-            self.logger.info(f"{name} | \33[92m{len(playlist):>6} total tracks \33[0m")
+            self.logger.info(f"\33[97m{name} \33[0m| \33[92m{len(playlist):>6} total tracks \33[0m")
 
-    def sync(self, playlists: Optional[Union[Library, Mapping[str, Playlist], List[Playlist]]] = None, **kwargs):
+    def sync(self,
+             playlists: Optional[Union[Library, Mapping[str, Playlist], List[Playlist]]] = None,
+             clear: Optional[Literal['all', 'extra']] = None,
+             reload: bool = True):
+        self.logger.debug("Update Spotify: START")
+        count = len(playlists if playlists else self.playlists)
+        clearing = f", clearing {clear} tracks" if clear else ""
+        reloading = " and reloading Syncify" if reload else ""
+        self.logger.info(f"\33[1;95m ->\33[1;97m Synchronising {count} Spotify playlists{clearing}{reloading} \33[0m")
+
         if not playlists:
-            [pl.sync(**kwargs) for pl in self.playlists.values()]
-            return
-
-        if isinstance(playlists, list):
+            playlists = self.playlists
+        elif isinstance(playlists, list):
             playlists = {pl.name: pl for pl in playlists}
         elif isinstance(playlists, Library):
             playlists = playlists.playlists
         playlists: Mapping[str, Playlist]
 
-        for name, playlist in playlists.items():
+        bar = self.get_progress_bar(iterable=playlists.items(), desc="Synchronising Spotify", unit="playlists")
+        for name, playlist in bar:
             spotify = self.playlists.get(name)
-            if spotify:
-                spotify.sync(items=playlist, **kwargs)
+            if not spotify:
+                spotify = SpotifyPlaylist.create(name=name)
+            spotify.sync(items=playlist, clear=clear, reload=reload)
+
+        self.logger.debug("Update Spotify: DONE\n")
+        self.print_line()
 
     def restore_playlists(self, backup: str, in_playlists: list = None, ex_playlists: list = None, **kwargs) -> dict:
         """
@@ -164,7 +186,6 @@ class SpotifyLibrary(Library):
         :param in_playlists: list, default=None. Only restore playlists in this list.
         :param ex_playlists: list, default=None. Don't restore playlists in this list.
         """
-        print()
         self.logger.info(f"\33[1;95m -> \33[1;97mRestoring Spotify playlists from backup file: {backup} \33[0m")
 
         backup = self.load_json(backup, parent=True, **kwargs)

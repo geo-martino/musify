@@ -141,7 +141,6 @@ class ReadXmlLibrary:
                     return elem, _dict
             else:
                 pass
-                # print('Unknown tag {}'.format(elem.tag))
 
     # noinspection PyUnusedLocal
     def _parse_dict(self, key=None):
@@ -158,4 +157,3 @@ class ReadXmlLibrary:
                     return
             else:
                 pass
-                # print('Unknown tag {}'.format(elem.tag))

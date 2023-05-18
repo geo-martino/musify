@@ -39,10 +39,6 @@ class TagWriter(File, TagProcessor, metaclass=ABCMeta):
         if TagName.ALL in tags:
             tags = TagName.all()
 
-        print(tags)
-        print(TagName.TITLE in tags)
-        print(replace, self.title, file.title)
-
         if TagName.TITLE in tags:
             conditionals = [file.title is None and self.title is not None,
                             replace and self.title != file.title]

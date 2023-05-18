@@ -1,10 +1,7 @@
-from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, List, Self
+from dataclasses import dataclass
+from typing import List, Self
 
-import mutagen
-
-from syncify.abstract.item import Track
 from syncify.abstract.enum import SyncifyEnum, EnumNotFoundError
 
 

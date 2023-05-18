@@ -1,5 +1,4 @@
 from glob import glob
-from glob import glob
 from os.path import splitext, join, exists, basename
 from typing import Optional, List, Set, MutableMapping, Mapping, Collection, Any, Union
 
@@ -138,24 +137,28 @@ class LocalLibrary(Library, LocalCollection):
         self._playlists: MutableMapping[str, LocalPlaylist] = {}
 
         if load:
-            self.logger.info(f"\33[1;95m ->\33[1;97m Loading local library of "
-                             f"{len(self._track_paths)} tracks and {len(self._playlist_paths)} playlists \33[0m")
-            self.print_line()
             self.load()
 
-    def load(self) -> None:
+    def load(self, tracks: bool = True, playlists: bool = True, log: bool = True) -> None:
         """Loads all tracks and playlists in this library from scratch and log results."""
         self.logger.debug("Load local library: START")
-
-        self.tracks = self.load_tracks()
+        self.logger.info(f"\33[1;95m ->\33[1;97m Loading local library of "
+                         f"{len(self._track_paths)} tracks and {len(self._playlist_paths)} playlists \33[0m")
         self.print_line()
-        self.log_tracks()
-        print()
 
-        self._playlists = {pl.name: pl for pl in sorted(self.load_playlists(), key=lambda pl: pl.name.casefold())}
-        self.print_line()
-        self.log_playlists()
-        print()
+        if tracks:
+            self.tracks = self.load_tracks()
+            self.print_line()
+            if log:
+                self.log_tracks()
+                self.print_line()
+
+        if playlists:
+            self._playlists = {pl.name: pl for pl in sorted(self.load_playlists(), key=lambda pl: pl.name.casefold())}
+            self.print_line()
+            if log:
+                self.log_playlists()
+                self.print_line()
 
         self.logger.debug("Load local library: DONE\n")
 
@@ -189,7 +192,7 @@ class LocalLibrary(Library, LocalCollection):
             f"\33[92m{sum([track.has_uri is not None for track in self.tracks]):>6} available \33[0m|"
             f"\33[91m{sum([track.has_uri is None for track in self.tracks]):>6} missing \33[0m|"
             f"\33[93m{sum([track.has_uri is False for track in self.tracks]):>6} unavailable \33[0m|"
-            f"\33[1m{len(self.tracks):>6} total \33[0m"
+            f"\33[97m{len(self.tracks):>6} total \33[0m"
         )
 
     def load_playlists(self, names: Optional[Collection[str]] = None) -> List[LocalPlaylist]:
@@ -243,11 +246,11 @@ class LocalLibrary(Library, LocalCollection):
         self.logger.info("\33[1;96mFound the following Local playlists: \33[0m")
         for name, playlist in self.playlists.items():
             self.logger.info(
-                f"{self.truncate_align_str(name, max_width=max_width)} |"
-                f"\33[92m{len([t for t in playlist if t.has_uri]):>4} available \33[0m|"
-                f"\33[91m{len([t for t in playlist if t.has_uri is None]):>4} missing \33[0m|"
-                f"\33[93m{len([t for t in playlist if t.has_uri is False]):>4} unavailable \33[0m|"
-                f"\33[1m {len(playlist):>4} total \33[0m"
+                f"\33[97m{self.truncate_align_str(name, max_width=max_width)} \33[0m|"
+                f"\33[92m{len([t for t in playlist if t.has_uri]):>5} available \33[0m|"
+                f"\33[91m{len([t for t in playlist if t.has_uri is None]):>5} missing \33[0m|"
+                f"\33[93m{len([t for t in playlist if t.has_uri is False]):>5} unavailable \33[0m|"
+                f"\33[1;94m {len(playlist):>4} total \33[0m"
             )
 
     def _log_errors(self, errors: List[str]) -> None:

@@ -47,6 +47,7 @@ class ItemCollection(Base, PrettyPrinter, metaclass=ABCMeta):
             self.logger.info(f"\33[1;95m  >\33[1;97m "
                              f"Merging library of {len(self)} tracks with {len(items)} tracks on tags: "
                              f"{', '.join(tag_names)} \33[0m")
+            items = self.get_progress_bar(iterable=items, desc="Merging library", unit="tracks")
 
         for item in items:
             item_in_library = next((i for i in self.items if i == item), None)
@@ -129,8 +130,8 @@ class Library(ItemCollection, Logger, metaclass=ABCMeta):
 
         :return: Filtered playlists.
         """
-        self.logger.debug(f"Filtering tracks in {len(self.playlists)} playlists | "
-                          f"Filter out tags: {filter_tags}")
+        self.logger.info(f"\33[1;95m ->\33[1;97m Filtering tracks in {len(self.playlists)} playlists\n"
+                         f"\33[0;97m    Filter out tags: {filter_tags} \33[0m")
         max_width = self.get_max_width(self.playlists, max_width=50)
 
         filtered = {}
@@ -145,6 +146,8 @@ class Library(ItemCollection, Logger, metaclass=ABCMeta):
 
             self.logger.debug(f"{self.truncate_align_str(name, max_width=max_width)} | "
                               f"Filtered out {len(filtered[name]) - len(playlist):>3} items")
+
+        self.print_line()
         return filtered
 
 

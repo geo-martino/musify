@@ -107,9 +107,9 @@ class RequestHandler(APIAuthoriser, Logger):
         try:
             headers = self.headers
         except TypeError:
-            print()
+            self.print_line()
             headers = self.auth()
-            print()
+            self.print_line()
 
         log = [f"{method.upper():<7}: {url:<{log_pad}}"]
         if log_extra:
