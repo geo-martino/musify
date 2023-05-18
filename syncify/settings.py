@@ -188,7 +188,7 @@ class Settings(metaclass=ABCMeta):
         self.set_output()
         self.set_logger()
         self.set_platform_paths()
-        self.set_search_algorithm()
+        # self.set_search_algorithm()
         self.set_api_settings()
         self.merge_general_to_functions()
 

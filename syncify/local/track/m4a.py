@@ -87,6 +87,9 @@ class M4A(LocalTrack):
         return [Image.open(BytesIO(bytes(value))) for value in values] if values is not None else None
 
     def _write_tag(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
+        if tag_value is None:
+            return self._delete_tag(tag_id, dry_run=dry_run)
+
         if not dry_run and tag_id is not None:
             if tag_id.startswith("----:com.apple.iTunes"):
                 self._file[tag_id] = [mutagen.mp4.MP4FreeForm(str(v).encode("utf-8"), 1) for v in make_list(tag_value)]

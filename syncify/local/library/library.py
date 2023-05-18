@@ -1,20 +1,21 @@
-from datetime import datetime
+from glob import glob
 from glob import glob
 from os.path import splitext, join, exists, basename
-from typing import Optional, List, Set, MutableMapping, Mapping, Collection, Any, Callable, Tuple
+from typing import Optional, List, Set, MutableMapping, Mapping, Collection, Any, Union
 
-from syncify.abstract.collection import Library
+from syncify.abstract import Item
+from syncify.abstract.collection import Library, ItemCollection
 from syncify.abstract.misc import Result
 from syncify.local.file import IllegalFileTypeError
-from syncify.local.library.collection import LocalFolder
+from syncify.local.library.collection import LocalCollection, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from syncify.local.playlist import __PLAYLIST_FILETYPES__, LocalPlaylist, M3U, XAutoPF
 from syncify.local.playlist.processor import TrackSort
-from syncify.local.track import __TRACK_CLASSES__, LocalTrack, load_track, SyncResultTrack
-from syncify.local.track.base.tags import PropertyName
+from syncify.local.track import __TRACK_CLASSES__, LocalTrack, load_track
+from syncify.local.track.base.tags import PropertyName, TagName
 from syncify.utils.logger import Logger
 
 
-class LocalLibrary(Library):
+class LocalLibrary(Library, LocalCollection):
     """
     Represents a local library, providing various methods for manipulating
     tracks and playlists across an entire local library collection.
@@ -80,12 +81,32 @@ class LocalLibrary(Library):
         return basename(self.library_folder) if self.library_folder else None
 
     @property
-    def items(self) -> List[LocalTrack]:
-        return self.tracks
-
-    @property
     def playlists(self) -> MutableMapping[str, LocalPlaylist]:
         return self._playlists
+
+    @property
+    def folders(self) -> List[LocalFolder]:
+        grouped = TrackSort.group_by_field(tracks=self.tracks, field=PropertyName.FOLDER)
+        collections = [LocalFolder(group, name=name) for name, group in grouped.items()]
+        return sorted(collections, key=lambda x: x.name)
+
+    @property
+    def albums(self) -> List[LocalAlbum]:
+        grouped = TrackSort.group_by_field(tracks=self.tracks, field=TagName.ALBUM)
+        collections = [LocalAlbum(group, name=name) for name, group in grouped.items()]
+        return sorted(collections, key=lambda x: x.name)
+
+    @property
+    def artists(self) -> List[LocalArtist]:
+        grouped = TrackSort.group_by_field(tracks=self.tracks, field=TagName.ARTIST)
+        collections = [LocalArtist(group, name=name) for name, group in grouped.items()]
+        return sorted(collections, key=lambda x: x.name)
+
+    @property
+    def genres(self) -> List[LocalGenres]:
+        grouped = TrackSort.group_by_field(tracks=self.tracks, field=TagName.GENRES)
+        collections = [LocalGenres(group, name=name) for name, group in grouped.items()]
+        return sorted(collections, key=lambda x: x.name)
 
     def __init__(
             self,
@@ -115,11 +136,6 @@ class LocalLibrary(Library):
 
         self.tracks: List[LocalTrack] = []
         self._playlists: MutableMapping[str, LocalPlaylist] = {}
-        self.folders: List[LocalFolder] = []
-
-        self.last_played: Optional[datetime] = None
-        self.last_added: Optional[datetime] = None
-        self.last_modified: Optional[datetime] = None
 
         if load:
             self.logger.info(f"\33[1;95m ->\33[1;97m Loading local library of "
@@ -132,18 +148,7 @@ class LocalLibrary(Library):
         self.logger.debug("Load local library: START")
 
         self.tracks = self.load_tracks()
-        folder_groups = TrackSort.group_by_field(tracks=self.tracks, field=PropertyName.FOLDER)
-        self.folders = [LocalFolder(group, name=name) for name, group in folder_groups.items()]
         self.print_line()
-
-        if len(self.tracks) > 0:
-            key_type = Callable[[LocalTrack], Tuple[bool, datetime]]
-            key: key_type = lambda t: (t.last_played is None, t.last_played)
-            self.last_played = sorted(self.tracks, key=key, reverse=True)[0].last_played
-            key: key_type = lambda t: (t.date_added is None, t.date_added)
-            self.last_added = sorted(self.tracks, key=key, reverse=True)[0].date_added
-            key: key_type = lambda t: (t.date_modified is None, t.date_modified)
-            self.last_modified = sorted(self.tracks, key=key, reverse=True)[0].date_modified
         self.log_tracks()
         print()
 
@@ -176,10 +181,6 @@ class LocalLibrary(Library):
         self._log_errors(errors)
         self.logger.debug("Load local tracks: DONE\n")
         return tracks
-
-    def save_tracks(self, **kwargs) -> Mapping[str, SyncResultTrack]:
-        """Saves the tags of all tracks in this library. Use arguments from :py:func:`LocalTrack.save()`"""
-        return {track.path: track.save(**kwargs) for track in self.tracks}
 
     def log_tracks(self) -> None:
         """Log stats on currently loaded tracks"""
@@ -254,43 +255,6 @@ class LocalLibrary(Library):
         if len(errors) > 0:
             self.logger.debug("Could not load: \33[91m\n\t- {errors} \33[0m".format(errors="\n\t- ".join(errors)))
 
-    def set_compilation_tags(self) -> None:
-        """
-        Modify tags for tracks in the folders of this library.
-
-        The following steps are applied to all folders:
-
-        * Set compilation to True if folder is a compilation, False otherwise
-
-        The following steps are also applied to all compilation folders:
-
-        * Set album name to folder name
-        * Set album artist to 'Various'
-        * Set track_number in ascending order by filename
-        * Set disc_number to 1
-        """
-        self.logger.info(f"\33[1;95m ->\33[1;97m "
-                         f"Setting compilation style tags for {len(self.folders)} folders \33[0m")
-
-        count = 0
-        for folder in self.folders:
-            if folder.compilation:
-                tracks = sorted(folder.tracks, key=lambda x: x.path)
-
-                for i, track in enumerate(tracks, 1):  # set tags
-                    track.album = track.folder
-                    track.album_artist = "Various"
-                    track.track_number = i
-                    track.disc_number = 1
-                    track.compilation = True
-                    count += 1
-            else:
-                for track in folder.tracks:  # set tags
-                    track.compilation = False
-                    count += 1
-
-        self.logger.info(f"\33[92mDone | Set metadata for {count} tracks \33[0m")
-
     def restore_uris(self, backup: str, remove: bool = True) -> None:
         """
         Restore URIs from a backup to loaded track objects. This does not save the updated tags.
@@ -311,6 +275,9 @@ class LocalLibrary(Library):
                 count += 1
 
         self.logger.info(f"\33[92mRestored URIs for {count} tracks \33[0m")
+
+    def extend(self, items: Union[ItemCollection, Collection[Item]]) -> None:
+        self.tracks.extend(track for track in items if isinstance(track, LocalTrack) and track not in self.tracks)
 
     def as_dict(self) -> MutableMapping[str, Any]:
         return {

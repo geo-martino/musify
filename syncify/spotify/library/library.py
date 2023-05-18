@@ -1,7 +1,7 @@
-from typing import Optional, List, MutableMapping, Any, Collection
+from typing import Optional, List, MutableMapping, Any, Collection, Union, Mapping
 
-from syncify.abstract import Track
-from syncify.abstract.collection import Library
+from syncify.abstract import Item
+from syncify.abstract.collection import Library, ItemCollection, Playlist
 from syncify.spotify import ItemType
 from syncify.spotify.api import API
 from syncify.spotify.library.item import SpotifyResponse, SpotifyTrack
@@ -68,8 +68,9 @@ class SpotifyLibrary(Library):
         playlists = [SpotifyPlaylist.load(pl, items=self.tracks, use_cache=use_cache) for pl in playlists_data]
         self._playlists = {pl.name: pl for pl in sorted(playlists, key=lambda pl: pl.name.casefold())}
         self.print_line()
-        self.log_tracks()
         self.log_playlists()
+        self.print_line()
+        self.log_tracks()
         self.print_line()
 
         self.logger.debug("Load Spotify library: DONE\n")
@@ -86,7 +87,8 @@ class SpotifyLibrary(Library):
                 tracks_seen.add(track["uri"])
                 tracks_data.append(track)
 
-        self.logger.info(f"\33[1;95m  >\33[1;97m Getting Spotify data for {len(tracks_data)} unique tracks \33[0m")
+        self.logger.info(f"\33[1;95m  >\33[1;97m Getting Spotify data for {len(tracks_data)} unique tracks "
+                         f"across {len(playlists_data)} playlists \33[0m")
         self.api.get_items(tracks_data, kind=ItemType.TRACK, limit=50, use_cache=self.use_cache)
         self.api.get_tracks_extra(tracks_data, features=True, limit=50, use_cache=self.use_cache)
 
@@ -98,7 +100,7 @@ class SpotifyLibrary(Library):
         playlist_tracks = [track.uri for tracks in self.playlists.values() for track in tracks]
         in_playlists = len([track for track in self.tracks if track.uri in playlist_tracks])
 
-        self.logger.info(f"\33[1;96m{'SPOTIFY TRACKS':<22}\33[1;0m|"
+        self.logger.info(f"\33[1;96m{'SPOTIFY TOTALS':<22}\33[1;0m|"
                          f"\33[92m{in_playlists:>6} in playlists \33[0m|"
                          f"\33[1m{len(self.tracks):>6} total \33[0m")
 
@@ -138,14 +140,21 @@ class SpotifyLibrary(Library):
             name = self.truncate_align_str(playlist.name, max_width=max_width)
             self.logger.info(f"{name} | \33[92m{len(playlist):>6} total tracks \33[0m")
 
-    def add_tracks(self, tracks: Collection[Track]) -> None:
-        for track in tracks:
-            if track in self.tracks:
-                continue
-            elif isinstance(track, SpotifyTrack):
-                self.tracks.append(track)
-            elif track.has_uri:
-                self.tracks.append(SpotifyTrack.load(track.uri))
+    def sync(self, playlists: Optional[Union[Library, Mapping[str, Playlist], List[Playlist]]] = None, **kwargs):
+        if not playlists:
+            [pl.sync(**kwargs) for pl in self.playlists.values()]
+            return
+
+        if isinstance(playlists, list):
+            playlists = {pl.name: pl for pl in playlists}
+        elif isinstance(playlists, Library):
+            playlists = playlists.playlists
+        playlists: Mapping[str, Playlist]
+
+        for name, playlist in playlists.items():
+            spotify = self.playlists.get(name)
+            if spotify:
+                spotify.sync(items=playlist, **kwargs)
 
     def restore_playlists(self, backup: str, in_playlists: list = None, ex_playlists: list = None, **kwargs) -> dict:
         """
@@ -185,6 +194,31 @@ class SpotifyLibrary(Library):
         self.update_playlists(backup, **kwargs_mod)
 
         self.logger.info(f"\33[92mRestored {len(backup)} Spotify playlists \33[0m")
+
+    def extend(self, items: Union[ItemCollection, Collection[Item]]) -> None:
+        self.logger.debug("Extend Spotify tracks data: START")
+        load_uris = []
+        for track in items:
+            if track in self.tracks:
+                continue
+            elif isinstance(track, SpotifyTrack):
+                self.tracks.append(track)
+            elif track.has_uri:
+                load_uris.append(track.uri)
+
+        if not load_uris:
+            return
+
+        self.logger.info(f"\33[1;95m  >\33[1;97m "
+                         f"Extending Spotify library with {len(load_uris)} additional tracks \33[0m")
+        load_tracks = self.api.get_items(load_uris, kind=ItemType.TRACK, limit=50, use_cache=self.use_cache)
+        self.api.get_tracks_extra(load_tracks, features=True, limit=50, use_cache=self.use_cache)
+        self.tracks.extend(SpotifyTrack(response) for response in load_tracks)
+        self.print_line()
+        self.log_tracks()
+        self.print_line()
+
+        self.logger.debug("Extend Spotify tracks data: DONE\n")
 
     def as_dict(self) -> MutableMapping[str, Any]:
         return {

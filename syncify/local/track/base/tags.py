@@ -4,7 +4,8 @@ from typing import Optional, List, Self
 
 import mutagen
 
-from syncify.abstract import Track, SyncifyEnum, EnumNotFoundError
+from syncify.abstract.item import Track
+from syncify.abstract.enum import SyncifyEnum, EnumNotFoundError
 
 
 @dataclass(frozen=True)
@@ -37,8 +38,11 @@ class Name(SyncifyEnum):
 
         :exception EnumNotFoundError: If a corresponding enum cannot be found.
         """
+        name = name.strip().upper()
         for enum in cls:
-            if enum.name.startswith(name.split("_")[0].upper()):
+            if enum.name.startswith(name):
+                return enum
+            elif (name.startswith("TRACK") or name.startswith("DISC")) and enum.name.startswith(name.split("_")[0]):
                 return enum
         raise EnumNotFoundError(name)
 
@@ -105,43 +109,3 @@ class PropertyName(Name):
     LAST_PLAYED = 13
     PLAY_COUNT = 14
     RATING = 75
-
-
-class TagProcessor(Track, metaclass=ABCMeta):
-    """Generic base class for tag processing"""
-
-    uri_tag = TagName.COMMENTS
-
-    @property
-    @abstractmethod
-    def _num_sep(self) -> str:
-        """
-        Some number values come as a combined string i.e. track number/track total
-        Define the separator to use when representing both values as a combined string
-        """
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def tag_map(self) -> TagMap:
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def path(self) -> Optional[str]:
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def file(self) -> Optional[mutagen.File]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def load_file(self) -> Optional[mutagen.File]:
-        """
-        Load local file using mutagen and set object file path and extension properties.
-
-        :returns: Mutagen file object or None if load error.
-        :exception FileNotFoundError: If the file cannot be found.
-        :exception IllegalFileTypeError: If the file type is not supported.
-        """

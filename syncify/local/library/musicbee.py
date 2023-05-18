@@ -77,6 +77,7 @@ class MusicBee(File, LocalLibrary):
 
     def load_tracks(self) -> List[LocalTrack]:
         tracks_paths = {track.path.lower(): track for track in self._load_tracks()}
+        self.logger.debug("Enrich local tracks: START")
 
         for track_xml in self.xml['Tracks'].values():
             if not track_xml['Location'].startswith('file://localhost/'):
@@ -91,6 +92,7 @@ class MusicBee(File, LocalLibrary):
             track.play_count = int(track_xml.get('Play Count', 0))
             track.rating = int(track_xml.get('Rating')) if track_xml.get('Rating') is not None else None
 
+        self.logger.debug("Enrich local tracks: DONE\n")
         return list(tracks_paths.values())
 
 

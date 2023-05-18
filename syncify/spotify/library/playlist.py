@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, List, MutableMapping, Optional, Self, Mapping, Literal, Collection
+from typing import Any, List, MutableMapping, Optional, Self, Mapping, Literal, Collection, Union
 
 from syncify.abstract import Item
-from syncify.abstract.collection import Playlist
+from syncify.abstract.collection import Playlist, ItemCollection
 from syncify.abstract.misc import Result
 from syncify.spotify import ItemType
 from syncify.spotify.api.utilities import APIMethodInputType
@@ -148,7 +148,7 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
 
     def sync(
             self,
-            items: Optional[List[Item]] = None,
+            items: Optional[Union[ItemCollection, List[Item]]] = None,
             clear: Optional[Literal['all', 'extra']] = None,
             reload: bool = True
     ) -> SyncResultSpotifyPlaylist:
@@ -161,7 +161,7 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
         * 'extra': Clear all items not currently in this object's items list, then add all tracks
             from this playlist object not currently in the remote playlist.
 
-        :param items: Provide a list of items to synchronise to the remote playlist.
+        :param items: Provide an item collection or list of items to synchronise to the remote playlist.
             Use the currently loaded ``tracks`` in this object if not given.
         :param clear: Clear option for the remote playlist. See description.
         :param reload: When True, once synchronisation is complete, reload this SpotifyPlaylist object

@@ -36,15 +36,16 @@ class SpotifyCollection(ItemCollection, SpotifyResponse, metaclass=ABCMeta):
     @classmethod
     def _load_response(cls, value: APIMethodInputType, use_cache: bool = True) -> MutableMapping[str, Any]:
         kind = cls.__name__.casefold().replace("spotify", "")
-        item_type = ItemType.from_name(kind).name
-        key = cls.api.collection_types[item_type]
+        item_type = ItemType.from_name(kind)
+        key = cls.api.collection_types[item_type.name]
+
         try:
-            cls.api.validate_item_type(value, kind=ItemType.PLAYLIST)
+            cls.api.validate_item_type(value, kind=item_type)
             value: MutableMapping[str, Any]
             assert len(value[key][cls.api.items_key]) == value[key]["total"]
             return value
-        except (ValueError, AssertionError):
-            return cls.api.get_collections(value, kind=ItemType.PLAYLIST, use_cache=use_cache)[0]
+        except (ValueError, AssertionError, TypeError):
+            return cls.api.get_collections(value, kind=item_type, use_cache=use_cache)[0]
 
 
 class SpotifyAlbum(Album, SpotifyCollection):
@@ -80,10 +81,9 @@ class SpotifyAlbum(Album, SpotifyCollection):
         self.has_image: bool = len(self.image_links) > 0
 
         self.length: float = 0.0
-        self.rating: int = response['popularity']
+        self.rating: Optional[int] = response.get('popularity')
 
         album_only = copy(response)
-        album_only.pop("tracks")
         for track in response["tracks"]["items"]:
             track["album"] = album_only
 

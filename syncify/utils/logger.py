@@ -61,7 +61,7 @@ class Logger:
 
     @classmethod
     def set_dev(cls) -> None:
-        cls.set_log_folder("___log_dev")
+        cls.set_log_folder("_logs/_dev")
         cls.set_verbosity(5)
         cls.is_dev = True
 
@@ -110,6 +110,7 @@ class Logger:
 
         # handler for stdout
         stdout_h = logging.StreamHandler(stream=sys.stdout)
+        stdout_h.set_name("stdout")
         stdout_h.setLevel(logging.INFO if self.verbosity < 2 else logging.DEBUG)
         stdout_h.setFormatter(stdout_format)
         stdout_h.addFilter(log_filter)
@@ -118,6 +119,7 @@ class Logger:
         # handler for file output
         if not self.is_dev:
             file_h = logging.FileHandler(self.log_path, 'w', encoding='utf-8')
+            file_h.set_name("file")
             file_h.setLevel(logging.DEBUG)
             file_h.setFormatter(file_format)
             file_h.addFilter(LogFileFilter())
@@ -155,13 +157,14 @@ class Logger:
     def get_progress_bar(self, **kwargs) -> tqdm_asyncio:
         """Wrapper for tqdm progress bar. For kwargs, see :class:`tqdm`"""
         preset_keys = ["leave", "disable", "colour", "position"]
+        stdout_h = [handler for handler in self.logger.handlers if handler.name == "stdout"][0]
         return tqdm_auto(
             leave=kwargs.get("leave", self.verbosity > 0) and kwargs.get("position", 0) == 0,
-            disable=kwargs.get("disable", self.verbosity == 0 and self.logger.handlers[0].level == logging.DEBUG),
+            disable=kwargs.get("disable", self.verbosity == 0 and stdout_h.level == logging.DEBUG),
             file=sys.stdout,
             ncols=120,
             colour=kwargs.get("colour", "green"),
-            smoothing=0,
+            smoothing=0.5,
             position=kwargs.get("position", 0),
             **{k: v for k, v in kwargs.items() if k not in preset_keys}
         )

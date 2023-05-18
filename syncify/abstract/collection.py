@@ -1,12 +1,16 @@
+from __future__ import annotations
+
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Optional, MutableMapping, Collection, Any
+from typing import List, Optional, MutableMapping, Collection, Any, Union
 
 from syncify.abstract.item import Item, Base
 from syncify.abstract.misc import PrettyPrinter
+from syncify.local.track.base.tags import TagName
 from syncify.utils.logger import Logger
+from syncify.utils.helpers import UnionList, make_list
 
 
 @dataclass
@@ -30,11 +34,37 @@ class ItemCollection(Base, PrettyPrinter, metaclass=ABCMeta):
     def clear(self):
         self.items.clear()
 
+    def merge(
+            self, items: Union[ItemCollection, Collection[Item]], tags: UnionList[TagName] = TagName.ALL
+    ) -> None:
+        tags: List[TagName] = make_list(tags)
+        if TagName.ALL in tags:
+            tag_names = TagName.all()
+        else:
+            tag_names = [t for tag in tags for t in tag.to_tag()]
+
+        if isinstance(self, Library):
+            self.logger.info(f"\33[1;95m  >\33[1;97m "
+                             f"Merging library of {len(self)} tracks with {len(items)} tracks on tags: "
+                             f"{', '.join(tag_names)} \33[0m")
+
+        for item in items:
+            item_in_library = next((i for i in self.items if i == item), None)
+            if not item_in_library:
+                continue
+
+            for tag in tag_names:
+                if hasattr(item, tag):
+                    setattr(item_in_library, tag, getattr(item, tag))
+
+        if isinstance(self, Library):
+            self.print_line()
+
     def __hash__(self):
         return hash((self.name, (item for item in self.items)))
 
     def __eq__(self, collection):
-        return all(x == y for x, y in zip(self, collection))
+        return self.name == collection.name and all(x == y for x, y in zip(self, collection))
 
     def __ne__(self, item):
         return not self.__eq__(item)
@@ -45,10 +75,8 @@ class ItemCollection(Base, PrettyPrinter, metaclass=ABCMeta):
     def __iter__(self):
         return (t for t in self.items)
 
-    def __contains__(self, i: Item):
-        if i.has_uri and i.uri in [item.uri for item in self.items if item.has_uri]:
-            return True
-        return False
+    def __contains__(self, item: Item):
+        return any(item == i for i in self.items)
 
 
 class BasicCollection(ItemCollection):
@@ -87,6 +115,10 @@ class Library(ItemCollection, Logger, metaclass=ABCMeta):
 
     @property
     def playlists(self) -> MutableMapping[str, Playlist]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def extend(self, items: Union[ItemCollection, Collection[Item]]) -> None:
         raise NotImplementedError
 
     def get_filtered_playlists(self, **filter_tags: List[Any]) -> MutableMapping[str, Playlist]:

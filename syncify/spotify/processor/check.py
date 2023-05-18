@@ -130,7 +130,7 @@ class Checker(Matcher):
             self._make_temp_playlist(name=collection.name, collection=collection)
 
             # skip loop if pause amount has not been reached and not finished making all playlists i.e. not last loop
-            if len(self.playlist_name_urls) % interval != 0 and i != len(collections) - 1:
+            if len(self.playlist_name_urls) % interval != 0 and i + 1 != len(collections):
                 continue
 
             try:
@@ -160,7 +160,8 @@ class Checker(Matcher):
         result = CheckResult(
             switched=self.final_switched, unavailable=self.final_unavailable, unchanged=self.final_unchanged
         )
-        self.logger.info(f"\33[92mDone \33[0m| "
+        self.print_line()
+        self.logger.info(f"\33[1;96mCHECK TOTALS \33[0m| "
                          f"\33[94m{len(self.final_switched):>5} switched  \33[0m| "
                          f"\33[91m{len(self.final_unavailable):>5} unavailable \33[0m| "
                          f"\33[93m{len(self.final_unchanged):>5} unchanged \33[0m")
@@ -201,7 +202,7 @@ class Checker(Matcher):
         help_text = self._format_help_text(options=options)
         progress_text = f"{page // page_size}/{page_total}"
 
-        print(help_text)
+        print("\n" + help_text)
         while current_input != '':  # while user has not hit return only
             current_input = self._get_user_input(f"Enter ({progress_text})")
             pl_names = [name for name in self.playlist_name_collection
@@ -311,7 +312,7 @@ class Checker(Matcher):
         if not self.remaining:
             return
 
-        header = ["\n\t\33[1;94m{name}:\33[91m The following items were removed and/or matches were not found. \33[0m"]
+        header = ["\t\33[1;94m{name}:\33[91m The following items were removed and/or matches were not found. \33[0m"]
         options = {
             "u": "Mark item as 'Unavailable on Spotify'",
             "n": "Leave item with no URI. (Syncify will still attempt to find this item at the next run)",
@@ -329,7 +330,7 @@ class Checker(Matcher):
         self._log_padded([name, f"Getting user input for {len(self.remaining)} items"])
         max_width = self.get_max_width([item.name for item in self.remaining], max_width=50)
 
-        print(help_text)
+        print("\n" + help_text)
         for item in self.remaining.copy():
             while item in self.remaining:  # while item not matched or skipped
                 self._log_padded([name, f"{len(self.remaining)} remaining items"])
@@ -356,7 +357,7 @@ class Checker(Matcher):
                     self.remaining.clear()
                     return
                 elif current_input.casefold() == 'h':  # print help
-                    print(help_text)
+                    print("\n" + help_text)
                 elif check_spotify_type(current_input) is not None:  # update URI and add item to switched list
                     uri = self.api.convert(current_input, kind=ItemType.TRACK, type_out=IDType.URI)
 

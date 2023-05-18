@@ -63,6 +63,9 @@ class WMA(LocalTrack):
         return [Image.open(BytesIO(value)) for value in values] if values is not None else None
 
     def _write_tag(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
+        if tag_value is None:
+            return self._delete_tag(tag_id, dry_run=dry_run)
+
         if not dry_run and tag_id is not None:
             if isinstance(tag_value, list):
                 self._file[tag_id] = [mutagen.asf.ASFUnicodeAttribute(str(v)) for v in tag_value]

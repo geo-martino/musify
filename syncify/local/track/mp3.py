@@ -81,12 +81,15 @@ class MP3(LocalTrack):
         return [Image.open(BytesIO(value.data)) for value in values] if values is not None else None
 
     def _write_tag(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
+        if tag_value is None:
+            return self._delete_tag(tag_id, dry_run=dry_run)
+
         if not dry_run and tag_id is not None:
             self._file[tag_id] = getattr(mutagen.id3, tag_id)(3, text=str(tag_value))
         return tag_id is not None
 
     def _write_genres(self, dry_run: bool = True) -> bool:
-        values = ";".join(self.genres)
+        values = ";".join(self.genres if self.genres is not None else [])
         return self._write_tag(next(iter(self.tag_map.genres), None), values, dry_run)
 
     # noinspection PyUnresolvedReferences
@@ -158,7 +161,7 @@ class MP3(LocalTrack):
 
         for tag_id_prefix in tag_ids:
             for mp3_id in list(self.file.keys()).copy():
-                if mp3_id.split(":")[0] == tag_id_prefix:
+                if mp3_id.split(":")[0] == tag_id_prefix and self._file[mp3_id]:
                     if not dry_run:
                         del self._file[mp3_id]
                     removed = True

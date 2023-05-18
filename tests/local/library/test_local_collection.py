@@ -32,8 +32,8 @@ def test_folder():
     assert collection.last_added == last_added
     assert collection.last_modified == last_modified
 
-    assert collection.artists == {tracks[0].artist, tracks[1].artist}
-    assert collection.genres == set(tracks[0].genres) | set(tracks[1].genres)
+    assert collection.artists == [tracks[0].artist, tracks[1].artist]
+    assert sorted(collection.genres) == sorted(set(tracks[0].genres) | set(tracks[1].genres))
     assert collection.compilation
 
 
@@ -55,8 +55,8 @@ def test_album():
 
     collection = LocalAlbum(tracks=tracks, name=tracks[0].album)
     assert collection.name == tracks[0].album
-    assert collection.artists == {tracks[0].artist}
-    assert collection.genres == set(tracks[0].genres)
+    assert collection.artists == [tracks[0].artist]
+    assert collection.genres == tracks[0].genres
     assert not collection.compilation
 
 
@@ -73,8 +73,8 @@ def test_artist():
 
     collection = LocalArtist(tracks=tracks, name=tracks[0].artist)
     assert collection.name == tracks[0].artist
-    assert collection.albums == {tracks[0].album, tracks[1].album}
-    assert collection.genres == set(tracks[0].genres)
+    assert collection.albums == [tracks[0].album, tracks[1].album]
+    assert collection.genres == tracks[0].genres
 
 
 def test_genre():
@@ -95,7 +95,7 @@ def test_genre():
 
     collection = LocalGenres(tracks=tracks, name="rock")
     assert collection.name == list(tracks[0].genres)[0]
-    assert collection.artists == {tracks[0].artist, tracks[-1].artist}
-    assert collection.albums == {tracks[0].album, tracks[-1].album}
-    assert collection.genres == set(tracks[0].genres) | set(tracks[-1].genres)
+    assert collection.artists == [tracks[0].artist, tracks[-1].artist]
+    assert collection.albums == [tracks[0].album]
+    assert sorted(collection.genres) == sorted(set(tracks[0].genres) | set(tracks[-1].genres))
 

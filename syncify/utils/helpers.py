@@ -1,5 +1,6 @@
 import re
-from typing import Any, Optional
+from collections import Counter
+from typing import Any, Optional, Iterable
 from typing import Tuple, Mapping, List, TypeVar, Union
 
 sort_ignore_words = ["The", "A"]
@@ -43,3 +44,8 @@ def flatten_nested(nested: Mapping, previous: List = None) -> List:
         previous.extend(nested)
 
     return previous
+
+
+def get_most_common_values(values: Iterable[Any]) -> List[Any]:
+    """Get an ordered list of the most common values for a given collection of ``values``"""
+    return [x[0] for x in Counter(values).most_common()]

@@ -1,5 +1,6 @@
+from copy import copy, deepcopy
 from dataclasses import dataclass
-from typing import List, Optional, MutableMapping, Any, Tuple, Mapping, Collection, Union
+from typing import List, Optional, MutableMapping, Any, Tuple, Mapping, Collection, Union, Set
 
 from syncify.abstract.collection import ItemCollection, Album
 from syncify.abstract.item import Item, Track, Base
@@ -24,7 +25,7 @@ class SearchResult(Result):
 class Algorithm:
     """Key settings related to a search algorithm"""
     search_fields_1: List[str]
-    match_fields: Collection[Union[TagName, PropertyName]]
+    match_fields: Set[Union[TagName, PropertyName]]
     result_count: int
     allow_karaoke: bool = False
 
@@ -38,14 +39,21 @@ class Algorithm:
 @dataclass
 class AlgorithmSettings:
     """Stores a collection of algorithms for the search operation"""
-    FULL: Algorithm = Algorithm(search_fields_1=["name", "artist"],
-                                search_fields_2=["name", "album"],
-                                search_fields_3=["name"],
-                                match_fields=[TagName.TITLE, TagName.ARTIST, TagName.ALBUM, PropertyName.LENGTH],
-                                result_count=10,
-                                allow_karaoke=False,
-                                min_score=0.1,
-                                max_score=0.8)
+    ITEMS: Algorithm = Algorithm(search_fields_1=["name", "artist"],
+                                 search_fields_2=["name", "album"],
+                                 search_fields_3=["name"],
+                                 match_fields={TagName.TITLE, TagName.ARTIST, TagName.ALBUM, PropertyName.LENGTH},
+                                 result_count=10,
+                                 allow_karaoke=False,
+                                 min_score=0.1,
+                                 max_score=0.8)
+    ALBUM: Algorithm = Algorithm(search_fields_1=["name", "artist"],
+                                 search_fields_2=["name"],
+                                 match_fields={TagName.ARTIST, TagName.ALBUM, PropertyName.LENGTH},
+                                 result_count=5,
+                                 allow_karaoke=False,
+                                 min_score=0.1,
+                                 max_score=0.7)
 
 
 class Searcher(Matcher):
@@ -53,29 +61,29 @@ class Searcher(Matcher):
     Searches for Spotify matches for a list of item collections.
 
     :param api: An API object for calling the Spotify query endpoint.
-    :param algorithm: The settings to apply to the searcher. See :py:class:`Algorithm`
+    :param allow_karaoke: Allow karaoke results to be matched, skip karaoke results otherwise.
     """
 
-    def __init__(self, api: API, algorithm: Algorithm = AlgorithmSettings.FULL):
-        Matcher.__init__(self, allow_karaoke=algorithm.allow_karaoke)
-
+    def __init__(self, api: API, allow_karaoke: bool = False):
+        Matcher.__init__(self, allow_karaoke=allow_karaoke)
         self.api = api
-        self.algorithm = algorithm
 
-    def _get_results(self, item: Base, kind: ItemType) -> Optional[List[MutableMapping[str, Any]]]:
+    def _get_results(
+            self, item: Base, kind: ItemType, algorithm: Algorithm
+    ) -> Optional[List[MutableMapping[str, Any]]]:
         """Calls the ``/search`` endpoint to get results for the current item based on algorithm settings"""
         item_clean = self.clean_tags(item)
 
         def execute_query(keys: List[str]) -> Tuple[List[MutableMapping[str, Any]], str]:
             attributes = set(getattr(item_clean, key, None) for key in keys)
             q = " ".join(attr for attr in attributes if attr)
-            return self.api.query(q, kind=kind, limit=self.algorithm.result_count), q
+            return self.api.query(q, kind=kind, limit=algorithm.result_count), q
 
-        results, query = execute_query(self.algorithm.search_fields_1)
-        if not results and self.algorithm.search_fields_2:
-            results, query = execute_query(self.algorithm.search_fields_2)
-        if not results and self.algorithm.search_fields_3:
-            results, query = execute_query(self.algorithm.search_fields_3)
+        results, query = execute_query(algorithm.search_fields_1)
+        if not results and algorithm.search_fields_2:
+            results, query = execute_query(algorithm.search_fields_2)
+        if not results and algorithm.search_fields_3:
+            results, query = execute_query(algorithm.search_fields_3)
 
         if not results:
             self._log_padded([item_clean.name, f"Query: {query}", "Match failed: No results."], pad="<")
@@ -118,13 +126,12 @@ class Searcher(Matcher):
                 f'\33[97m{total:>6} total \33[0m'
             )
 
-        self.print_line()
         self.logger.info(
             f"\33[1;96m{self.truncate_align_str('TOTALS', max_width=max_width)} \33[0m|"
             f'\33[92m{total_matched:>5} matched \33[0m| '
             f'\33[91m{total_unmatched:>5} unmatched \33[0m| '
             f'\33[93m{total_skipped:>5} skipped \33[0m| '
-            f"\33[97m{total_all:>6} total \33[0m\n "
+            f"\33[97m{total_all:>6} total \33[0m"
         )
         self.print_line()
 
@@ -171,25 +178,36 @@ class Searcher(Matcher):
 
     def _search_items(self, collection: ItemCollection) -> None:
         """Search for matches on individual items in an item collection that have ``None`` on ``has_uri`` attribute"""
+        algorithm = AlgorithmSettings.ITEMS
         for item in [item for item in collection.items if item.has_uri is None]:
             if not isinstance(item, Track):
                 raise NotImplementedError(f"Currently only able to search for Track items, "
                                           f"not {item.__class__.__name__}")
 
-            results = [SpotifyTrack(r) for r in self._get_results(item, kind=ItemType.TRACK)]
-            result = self.score_match(item, results=results, match_on=self.algorithm.match_fields,
-                                      min_score=self.algorithm.min_score, max_score=self.algorithm.max_score)
+            results = [SpotifyTrack(r) for r in self._get_results(item, kind=ItemType.TRACK, algorithm=algorithm)]
+            result = self.score_match(item, results=results, match_on=algorithm.match_fields,
+                                      min_score=algorithm.min_score, max_score=algorithm.max_score)
 
             if result and result.has_uri:
                 item.uri = result.uri
                 item.has_uri = True
 
-    def _search_album(self, collection: Album) -> ItemCollection:
+    def _search_album(self, collection: Album) -> None:
         """Search for matches on an entire item collection"""
-        results = [SpotifyAlbum(r) for r in self._get_results(collection, kind=ItemType.ALBUM)]
+        algorithm = AlgorithmSettings.ALBUM
+        results = [SpotifyAlbum.load(r["uri"])
+                   for r in self._get_results(collection, kind=ItemType.ALBUM, algorithm=algorithm)]
 
         # order and prioritise results that are closer to the item count of the input collection
-        results = sorted(results, key=lambda x: abs(x.total_tracks - len(collection)))
-        result = self.score_match(collection, results=results, match_on=self.algorithm.match_fields,
-                                  min_score=self.algorithm.min_score, max_score=self.algorithm.max_score)
-        return result if result else collection
+        results = sorted(results, key=lambda x: abs(x.track_total - len(collection)))
+        result = self.score_match(collection, results=results, match_on=algorithm.match_fields,
+                                  min_score=algorithm.min_score, max_score=algorithm.max_score)
+        if not result:
+            return
+
+        for item in collection:
+            item_result = self.score_match(item, results=result.items, match_on=[TagName.TITLE],
+                                           min_score=algorithm.min_score, max_score=0.8)
+            if item_result:
+                item.uri = item_result.uri
+                item.has_uri = item_result.has_uri

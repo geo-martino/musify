@@ -38,7 +38,7 @@ class Items(Utilities, metaclass=ABCMeta):
         unit = unit.casefold().rstrip("s") + "s"
         url = url.rstrip("/")
 
-        if len(id_list) > 50:  # show progress bar for batches which may take a long time
+        if len(id_list) >= 50:  # show progress bar for batches which may take a long time
             id_list = self.get_progress_bar(iterable=id_list, desc=f'Getting {unit}', unit=unit)
 
         log = [f"{unit.title()}:{len(id_list):>5}"]
@@ -80,7 +80,7 @@ class Items(Utilities, metaclass=ABCMeta):
         id_chunks = self.chunk(id_list, size=self.limit_value(limit, ceil=50))
 
         bar = range(len(id_chunks))
-        if len(id_chunks) > 10:  # show progress bar for batches which may take a long time
+        if len(id_chunks) >= 10:  # show progress bar for batches which may take a long time
             bar = self.get_progress_bar(iterable=bar, desc=f'Getting {unit}', unit="pages")
 
         results = []

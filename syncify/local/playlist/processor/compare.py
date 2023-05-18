@@ -238,11 +238,11 @@ class TrackCompare(TrackProcessor):
 
     @staticmethod
     def _cond_is_after(value: Optional[Any], expected: Optional[List[Any]]) -> bool:
-        return value > expected[0]
+        return value > expected[0] if value is not None and expected[0] is not None else False
 
     @staticmethod
     def _cond_is_before(value: Optional[Any], expected: Optional[List[Any]]) -> bool:
-        return value < expected[0]
+        return value < expected[0] if value is not None and expected[0] is not None else False
 
     @staticmethod
     def _cond_is_in(value: Optional[Any], expected: Optional[List[Any]]) -> bool:
@@ -254,7 +254,7 @@ class TrackCompare(TrackProcessor):
 
     @staticmethod
     def _cond_in_range(value: Optional[Any], expected: Optional[List[Any]]) -> bool:
-        return expected[0] < value < expected[1]
+        return expected[0] < value < expected[1] if value is not None and expected[0] is not None else False
 
     @classmethod
     def _cond_not_in_range(cls, value: Optional[Any], expected: Optional[List[Any]]) -> bool:
@@ -270,15 +270,15 @@ class TrackCompare(TrackProcessor):
 
     @staticmethod
     def _cond_starts_with(value: Optional[Any], expected: Optional[List[Any]]) -> bool:
-        return value.startswith(expected[0])
+        return value.startswith(expected[0]) if value is not None and expected[0] is not None else False
 
     @staticmethod
     def _cond_ends_with(value: Optional[Any], expected: Optional[List[Any]]) -> bool:
-        return value.endswith(expected[0])
+        return value.endswith(expected[0]) if value is not None and expected[0] is not None else False
 
     @staticmethod
     def _cond_contains(value: Optional[Any], expected: Optional[List[Any]]) -> bool:
-        return expected[0] in value
+        return expected[0] in value if value is not None and expected[0] is not None else False
 
     @classmethod
     def _cond_does_not_contain(cls, value: Optional[Any], expected: Optional[List[Any]]) -> bool:
@@ -291,10 +291,12 @@ class TrackCompare(TrackProcessor):
 
     @staticmethod
     def _cond_matches_reg_ex(value: Optional[Any], expected: Optional[List[Any]]) -> bool:
-        return bool(re.search(expected[0], value))
+        return bool(re.search(expected[0], value)) if value is not None and expected[0] is not None else False
 
     @staticmethod
     def _cond_matches_reg_ex_ignore_case(value: Optional[Any], expected: Optional[List[Any]]) -> bool:
+        if value is not None and expected[0] is not None:
+            return False
         return bool(re.search(expected[0], value, flags=re.IGNORECASE))
 
     def as_dict(self) -> MutableMapping[str, Any]:

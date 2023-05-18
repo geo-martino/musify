@@ -26,6 +26,8 @@ class Basic(Utilities, metaclass=ABCMeta):
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: The response from the endpoint.
         """
+        if len(query) > 150:  # query is too long
+            return []
         url = f'{__URL_API__}/search'
         params = {'q': query, 'type': kind.name.casefold(), 'limit': self.limit_value(limit)}
         r = self.get(url, params=params, use_cache=use_cache)

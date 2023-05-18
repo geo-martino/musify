@@ -1,5 +1,5 @@
 import io
-from typing import Optional, List, Union, Collection
+from typing import Optional, List, Union, Collection, Any
 
 import mutagen
 import mutagen.flac
@@ -54,7 +54,10 @@ class FLAC(LocalTrack):
     def _check_for_images(self) -> bool:
         return len(self._file.pictures) > 0
 
-    def _write_tag(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
+    def _write_tag(self, tag_id: Optional[str], tag_value: Any, dry_run: bool = True) -> bool:
+        if tag_value is None:
+            return self._delete_tag(tag_id, dry_run=dry_run)
+
         if not dry_run and tag_id is not None:
             if isinstance(tag_value, list):
                 self._file[tag_id] = [str(v) for v in tag_value]
@@ -99,7 +102,7 @@ class FLAC(LocalTrack):
             return removed
 
         for tag_id in tag_ids:
-            if tag_id in self._file:
+            if tag_id in self._file and self._file[tag_id]:
                 if not dry_run:
                     del self._file[tag_id]
                 removed = True

@@ -13,7 +13,11 @@ T = TypeVar("T")
 
 
 class Matcher(Logger):
-    """Matches source items/collections to given result(s)."""
+    """
+    Matches source items/collections to given result(s).
+
+    :param allow_karaoke: Allow karaoke results to be matched, skip karaoke results otherwise.
+    """
 
     karaoke_tags = ['karaoke', 'backing', 'instrumental']
     year_range = 10
@@ -101,11 +105,11 @@ class Matcher(Logger):
             self._log_test(source=source, result=result, test=karaoke, extra=[f"{self.karaoke_tags} -> {values}"])
             return karaoke
 
-        if is_karaoke(result.name):  # title/album name
+        if is_karaoke(result.name.lower()):  # title/album name
             return 0
-        if is_karaoke(result.artist if isinstance(result, Track) else result.artists):  # artists
+        if is_karaoke(result.artist.lower()):  # artists
             return 0
-        if isinstance(result, Track) and is_karaoke(result.album):  # album when the result is a track
+        if isinstance(result, Track) and is_karaoke(result.album.lower()):  # album when the result is a track
             return 0
         return 1
 
@@ -114,6 +118,12 @@ class Matcher(Logger):
         score = 0
         if source.name and result.name:
             score = sum(word in result.name for word in source.name.split()) / len(source.name.split())
+
+            # reduce a score if certain keywords are present in result and not source
+            reduce_factor = 0.5
+            reduce_on = ["live", "demo"] + self.karaoke_tags
+            if any(word in result.name and word not in source.name for word in reduce_on):
+                score = max(score - reduce_factor, 0)
 
         self._log_test(source=source, result=result, test=round(score, 2),
                        extra=[f"{source.name} -> {result.name}"])
@@ -202,7 +212,7 @@ class Matcher(Logger):
         :return: dict. Metadata for locally stored track with added matched URI if found.
         """
         source_clean = self.clean_tags(source)
-        score, result = self._score(source_clean=source_clean, results=results,
+        score, result = self._score(source=source, source_clean=source_clean, results=results,
                                     max_score=max_score, match_on=match_on)
 
         if score > min_score:
@@ -215,6 +225,7 @@ class Matcher(Logger):
 
     def _score(
             self,
+            source: MatchTypes,
             source_clean: MatchTypes,
             results: Iterable[MatchTypes],
             max_score: float = 0.8,
@@ -223,7 +234,8 @@ class Matcher(Logger):
         """
         Gets the score and result from a cleaned source and a given list of results.
 
-        :param source_clean: Source item to compare against and find a match for.
+        :param source: Source item to compare against and find a match for.
+        :param source_clean: Cleaned source item to compare against and find a match for.
         :param results: Results for comparisons.
         :param max_score: Stop matching once this score has been reached.
             Value will be limited to between 0.1 and 1.0.
@@ -246,46 +258,49 @@ class Matcher(Logger):
             match_on.remove(PropertyName.ALL)
             match_on |= PropertyName.all()
 
-        best_sum = 0
+        best_score = 0
         best_result = None
 
         for current_result in results:
             result_clean = self.clean_tags(current_result)
-            scores_current = self._get_scores(source_clean=source_clean, result_clean=result_clean,
-                                              max_score=max_score, match_on=match_on)
+            scores = self._get_scores(source=source, source_clean=source_clean,
+                                      result=current_result, result_clean=result_clean, match_on=match_on)
+            if not scores:
+                continue
 
-            current_sum = sum(scores_current.values()) / len(scores_current)
+            current_score = sum(scores.values()) / len(scores)
             self._log_test(source=source_clean, result=result_clean,
-                           test=round(current_sum, 2), extra=[f"HIGHEST={round(best_sum, 2)}"])
+                           test=round(current_score, 2), extra=[f"BEST={round(best_score, 2)}"])
 
-            if current_sum > best_sum:
+            if current_score > best_score:
                 best_result = current_result
-                best_sum = sum(scores_current.values()) / len(scores_current)
-            if best_sum >= max_score:  # max threshold reached, match found
+                best_score = sum(scores.values()) / len(scores)
+            if best_score >= max_score:  # max threshold reached, match found
                 break
 
-        return best_sum, best_result
+        return best_score, best_result
 
     def _get_scores(
             self,
+            source: MatchTypes,
             source_clean: MatchTypes,
+            result: MatchTypes,
             result_clean: MatchTypes,
-            max_score: float = 0.8,
             match_on: Collection[Union[TagName, PropertyName]] = frozenset([TagName.ALL, PropertyName.ALL])
     ) -> dict[str, float]:
         """
         Gets the scores from a cleaned source and result to match on.
         When an ItemCollection is given to match on, scores are also given for the items in the collection.
 
-        :param source_clean: Source item to compare against and find a match for.
-        :param result_clean: Result to compare against.
-        :param max_score: Stop matching once this score has been reached.
-            Value will be limited to between 0.1 and 1.0.
+        :param source: Source item to compare against and find a match for.
+        :param source_clean: Cleaned source item to compare against and find a match for.
+        :param result: Result to compare against.
+        :param result_clean: Cleaned result to compare against.
         :param match_on: List of tags to match on. Currently only the following tags/properties are supported:
             track, artist, album, year, length.
         :return: dict. Metadata for locally stored track with added matched URI if found.
         """
-        if not self.allow_karaoke and self.match_not_karaoke(source_clean, result_clean) < 1:
+        if not self.allow_karaoke and self.match_not_karaoke(source_clean, result) < 1:
             return {}
 
         scores_current: dict[str, float] = {}
@@ -308,11 +323,11 @@ class Matcher(Logger):
                 return scores_current
 
             # also score all the items individually in the collection
-            result_items: List[Track] = result_clean.items
+            result_items = result_clean.items
+            scores_current["items"] = 0
             for i in source_clean.items:
                 item_clean = self.clean_tags(i)
-                score, _ = self._score(source_clean=item_clean, results=result_items,
-                                       match_on=match_on, max_score=max_score)
+                score, _ = self._score(source=source, source_clean=item_clean, results=result_items, match_on=match_on)
                 scores_current["items"] += score / len(source_clean.items)
 
         return scores_current

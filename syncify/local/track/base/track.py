@@ -130,7 +130,10 @@ class LocalTrack(TagReader, TagWriter, metaclass=ABCMeta):
         return hash(self.path)
 
     def __eq__(self, item):
-        return self.path == item.path
+        if self.has_uri or item.has_uri:
+            return self.has_uri == item.has_uri and self.uri == item.uri
+        else:
+            return self.path == item.path
 
     def __copy__(self):
         """
@@ -138,7 +141,7 @@ class LocalTrack(TagReader, TagWriter, metaclass=ABCMeta):
         If current object has no file object present, generated new class and shallow copy attributes
         (as used for testing purposes).
         """
-        if hasattr(self, "_file"):
+        if hasattr(self, "file"):
             return self.__class__(file=self.file)
         else:
             obj = self.__class__.__new__(self.__class__)

@@ -190,7 +190,7 @@ def update_tags_test(track: LocalTrack) -> None:
     # update and don't replace current tags (except uri if uri is False)
     shutil.copyfile(path_file_base, path_file_copy)
     result = track.save(tags=TagName.ALL, replace=False, dry_run=False)
-    assert result.saved
+    assert result.saved if track_original.has_uri else not result.saved
 
     track_update = deepcopy(track)
 
@@ -215,11 +215,10 @@ def update_tags_test(track: LocalTrack) -> None:
 
     # update and replace
     shutil.copyfile(path_file_base, path_file_copy)
-    track.save(tags=TagName.ALL, replace=True, dry_run=False)
+    result = track.save(tags=TagName.ALL, replace=True, dry_run=False)
     assert result.saved
     track_update_replace = deepcopy(track)
 
-    print(track_update_replace.title, track.title)
     assert track_update_replace.title == track.title
     assert track_update_replace.artist == track.artist
     assert track_update_replace.album == track.album

@@ -8,7 +8,7 @@ from typing import Optional, List, Tuple, Set
 from PIL import Image
 
 from syncify.local.file import File
-from syncify.local.track.base.tags import TagProcessor
+from syncify.local.track.base.processor import TagProcessor
 from syncify.spotify import check_spotify_type, IDType, __UNAVAILABLE_URI_VALUE__
 
 
