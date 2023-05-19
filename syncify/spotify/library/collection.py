@@ -4,9 +4,9 @@ from typing import Any, List, MutableMapping, Optional, Self, Mapping
 
 from syncify.abstract.collection import ItemCollection, Album
 from syncify.spotify import ItemType, IDType
-from syncify.spotify.api.utilities import APIMethodInputType
-from syncify.spotify.library.item import SpotifyTrack, SpotifyArtist, SpotifyItem
+from syncify.spotify.api import APIMethodInputType
 from syncify.spotify.library.response import SpotifyResponse
+from syncify.spotify.library.item import SpotifyTrack, SpotifyArtist, SpotifyItem
 
 
 class SpotifyCollection(ItemCollection, SpotifyResponse, metaclass=ABCMeta):

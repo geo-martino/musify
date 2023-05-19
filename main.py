@@ -14,17 +14,15 @@ from typing import List, Optional, Mapping, Any, Callable, MutableMapping
 
 from dateutil.relativedelta import relativedelta
 
+from syncify.enums.tags import TagName
 from syncify.local.library import LocalLibrary, MusicBee
-from syncify.local.track.base.tags import TagName
-from syncify.report import Report
-from syncify.settings import Settings
 from syncify.spotify.api import API
-from syncify.spotify.library import SpotifyLibrary
-from syncify.spotify.library.response import SpotifyResponse
+from syncify.spotify.library import SpotifyResponse, SpotifyLibrary
 from syncify.spotify.processor import Searcher, Checker
 from syncify.spotify.processor.search import AlgorithmSettings
-from syncify.utils.logger import Logger
-from syncify.utils.helpers import get_user_input
+from syncify.utils import Logger, get_user_input
+from syncify.report import Report
+from syncify.settings import Settings
 
 
 class Syncify(Settings, Report):
@@ -189,7 +187,7 @@ class Syncify(Settings, Report):
             self.logger.debug(f"Removing {p}")
             shutil.rmtree(p)
 
-        self.logger.info(f"\33[1;95m ->\33[1;92m Removed {len(remove)} folders")
+        self.logger.info(f"\33[1;95m ->\33[1;92m Removed {len(remove)} folders\33[0m")
         self.logger.debug("Clean Syncify files: DONE\n")
 
     ###########################################################################
@@ -268,6 +266,7 @@ class Syncify(Settings, Report):
 
     def extract(self):
         """Extract and save images from local or Spotify items"""
+        # TODO: add library-wide image extraction method
         raise NotImplementedError
 
     ###########################################################################
@@ -372,7 +371,7 @@ class Syncify(Settings, Report):
 
         replace = self.cfg_run.get("local", {}).get("update", {}).get("replace", False)
         tag_names = self.cfg_run.get("local", {}).get("update", {}).get("tags")
-        tags = TagName.ALL if not tag_names else[TagName.from_name(tag_name) for tag_name in tag_names]
+        tags = [TagName.ALL] if not tag_names else [TagName.from_name(tag_name) for tag_name in tag_names]
         item_count = sum(len(folder) for folder in folders)
 
         self.logger.info(f"\33[1;95m ->\33[1;97m Setting and saving compilation style tags "
@@ -465,12 +464,12 @@ if __name__ == "__main__":
             main.logger.debug(f"START function: {func}")
             print_line(func)
             main.run()
-            # main._close_handlers()
             main.logger.debug(f"DONE  function: {func}")
         except BaseException:
             main.logger.critical(traceback.format_exc())
             break
 
+    main.close_handlers()
     print_logo()
     print_time(main.time_taken)
 
@@ -481,6 +480,16 @@ if __name__ == "__main__":
 #  uris for extra songs in Spotify playlists found in library
 # TODO: function to open search website tabs for all songs in 2get playlist
 #  on common music stores/torrent sites
+# TODO: implement merge playlists functions and,
+#  by extension, implement android library sync
+# TODO: implement XAutoPF full update functionality
+# TODO: WMA images io
+# TODO: full search/match functionality including all item types
+# TODO: reimplement terminal parser for all kwargs
+# TODO: write tests, write tests, write tests
+
+## SELECTED FOR DEVELOPMENT
 # TODO: genres are still not being populated from Spotify
-# TODO: increment position number on successive tqdm bars when getting
-#  reset when position=0 finishes
+# TODO: add properly defined exception classes and switch all the ValueError raises
+# TODO: test on linux/mac platforms
+# TODO: parallelize long loads

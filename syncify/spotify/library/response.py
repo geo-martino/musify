@@ -2,8 +2,7 @@ from abc import ABCMeta, abstractmethod
 from typing import Any, MutableMapping, Self, Optional
 
 from syncify.abstract.misc import PrettyPrinter
-from syncify.spotify.api.utilities import APIMethodInputType
-from syncify.spotify.api import API
+from syncify.spotify.api import API, APIMethodInputType
 
 
 class SpotifyResponse(PrettyPrinter, metaclass=ABCMeta):

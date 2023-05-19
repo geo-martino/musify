@@ -4,7 +4,7 @@ from typing import Optional
 import mutagen
 
 from syncify.abstract.item import Track
-from syncify.local.track.base.tags import TagName, TagMap
+from syncify.enums.tags import TagName, TagMap
 
 
 class TagProcessor(Track, metaclass=ABCMeta):

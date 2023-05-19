@@ -1,7 +1,7 @@
 from abc import ABCMeta
 from typing import MutableMapping, List, Any
 
-from syncify.spotify import ItemType, __URL_API__
+from syncify.spotify import __URL_API__, ItemType
 from syncify.spotify.api.utilities import Utilities
 
 

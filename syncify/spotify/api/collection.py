@@ -3,7 +3,7 @@ from time import sleep
 from typing import Any, List, Mapping, MutableMapping, Optional, Union
 
 from syncify.spotify import __URL_API__, IDType, ItemType
-from syncify.spotify.api.utilities import APIMethodInputType, Utilities
+from syncify.spotify.api.utilities import Utilities, APIMethodInputType
 
 
 class Collections(Utilities, metaclass=ABCMeta):
@@ -271,10 +271,10 @@ class Collections(Utilities, metaclass=ABCMeta):
 
         for uris in self.chunk(uri_list, size=limit):
             params = {'uris': ','.join(uris)}
-            log = [f"Adding {len(uris):>5} items"]
+            log = [f"Adding {len(uris):>6} items"]
             self.post(url, params=params, log_pad=71, log_extra=log)
 
-        self.logger.debug(f"{'DONE':<7}: {url:<71} | Added  {len(uri_list):>5} items to playlist: {url}")
+        self.logger.debug(f"{'DONE':<7}: {url:<71} | Added  {len(uri_list):>6} items to playlist: {url}")
         return len(uri_list)
 
     ###########################################################################

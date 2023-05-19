@@ -5,8 +5,9 @@ import mutagen
 import mutagen.asf
 from PIL import Image
 
+from syncify.enums.tags import TagMap
 from syncify.local.file import open_image, get_image_bytes
-from syncify.local.track.base import LocalTrack, TagMap
+from syncify.local.track.base import LocalTrack
 
 
 class WMA(LocalTrack):
@@ -57,6 +58,7 @@ class WMA(LocalTrack):
 
     # noinspection PyUnreachableCode
     def _read_images(self) -> Optional[List[Image.Image]]:
+        # TODO: figure out how to read images from WMA
         raise NotImplementedError("Image extraction not supported for WMA files")
 
         values = self._read_tag(self.tag_map.images)
@@ -75,6 +77,7 @@ class WMA(LocalTrack):
 
     # noinspection PyUnreachableCode
     def _write_images(self, dry_run: bool = True) -> bool:
+        # TODO: figure out how to write images to WMA
         raise NotImplementedError("Image embedding not supported for WMA files")
 
         tag_id = next(iter(self.tag_map.key), None)

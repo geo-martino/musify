@@ -9,7 +9,7 @@ from webbrowser import open as webopen
 
 import requests
 
-from syncify.utils.logger import Logger
+from syncify.utils import Logger
 
 
 class APIAuthoriser(Logger):

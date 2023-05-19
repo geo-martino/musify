@@ -5,7 +5,6 @@ from typing import Tuple
 
 from tests.common import path_resources, path_cache
 
-
 path_playlist_cache = join(path_cache, basename(dirname(__file__)))
 
 path_playlist_resources = join(path_resources, basename(dirname(__file__)))

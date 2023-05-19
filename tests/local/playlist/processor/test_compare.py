@@ -2,8 +2,9 @@ from datetime import datetime, date, timedelta
 
 import pytest
 
-from syncify.local.track import TagName, PropertyName, MP3, M4A, FLAC
+from syncify.enums.tags import TagName, PropertyName
 from syncify.local.playlist.processor import TrackCompare
+from syncify.local.track import MP3, M4A, FLAC
 from tests.local.track.track import random_track
 
 

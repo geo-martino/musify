@@ -5,12 +5,12 @@ from typing import List, Mapping, Optional
 from syncify.abstract.collection import ItemCollection
 from syncify.abstract.item import Item
 from syncify.abstract.misc import Result
-from syncify.local.track import TagName
+from syncify.enums.tags import TagName
 from syncify.spotify import check_spotify_type, ItemType, IDType
 from syncify.spotify.api import API
 from syncify.spotify.library.library import SpotifyPlaylist
 from syncify.spotify.processor.match import Matcher
-from syncify.utils.helpers import get_user_input
+from syncify.utils import get_user_input
 
 
 @dataclass
@@ -88,7 +88,7 @@ class Checker(Matcher):
 
     def _format_help_text(self, options: Mapping[str, str], header: Optional[List[str]] = None) -> str:
         """Format help text with a given mapping of options. Add an option header to include before options."""
-        max_width = self.get_max_width(options, 50)
+        max_width = self.get_max_width(options)
 
         help_text = header if header else []
         help_text.append("\n\t\33[96mEnter one of the following: \33[0m\n\t")
@@ -329,7 +329,7 @@ class Checker(Matcher):
         help_text += "OR enter a custom URI/URL/ID for this item\n"
 
         self._log_padded([name, f"Getting user input for {len(self.remaining)} items"])
-        max_width = self.get_max_width([item.name for item in self.remaining], max_width=50)
+        max_width = self.get_max_width([item.name for item in self.remaining])
 
         print("\n" + help_text)
         for item in self.remaining.copy():

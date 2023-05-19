@@ -3,10 +3,11 @@ from datetime import datetime
 from random import shuffle
 from typing import Any, Callable, List, Mapping, MutableMapping, Optional, Self, Tuple, Union
 
-from syncify.abstract import SyncifyEnum
-from syncify.local.track.base import Name, PropertyName, TagName, LocalTrack
+from syncify.enums import SyncifyEnum
+from syncify.enums.tags import Name, PropertyName, TagName
+from syncify.local.track import LocalTrack
 from syncify.local.playlist.processor.base import TrackProcessor
-from syncify.utils.helpers import UnionList, flatten_nested, strip_ignore_words, make_list
+from syncify.utils import UnionList, flatten_nested, strip_ignore_words, make_list
 
 
 def get_field_from_code(field_code: int) -> Optional[Name]:
@@ -195,6 +196,7 @@ class TrackSort(TrackProcessor):
         elif self.sort_fields is None:
             return
         else:
+            # TODO: implement all shuffle modes
             raise NotImplementedError(f"Shuffle mode not yet implemented: {self.shuffle_mode}")
 
     @classmethod

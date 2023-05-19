@@ -4,8 +4,8 @@ from os.path import basename, dirname, splitext
 
 import pytest
 
+from syncify.local.exception import IllegalFileTypeError
 from syncify.local.track import WMA
-from syncify.local.file import IllegalFileTypeError
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 from tests.common import path_txt
 from tests.local.track.track import path_track_wma, path_track_resources, update_tags_test, clear_tags_test

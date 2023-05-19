@@ -1,13 +1,16 @@
+import inspect
 import logging
 import os
 import re
 import sys
 from datetime import datetime
-from os.path import join, dirname, exists
-from typing import Literal, List, Collection, Any, Union
+from os.path import join, dirname, exists, splitext, split
+from typing import Literal, List, Collection, Any, Union, Optional
 
 from tqdm.asyncio import tqdm_asyncio
 from tqdm.auto import tqdm as tqdm_auto
+
+module_width = 40
 
 
 class LogStdOutFilter(logging.Filter):
@@ -28,7 +31,38 @@ class LogFileFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> logging.LogRecord:
         # record.msg = re.sub("\n$", "", record.msg)
         record.msg = re.sub("\33.*?m", "", record.msg)
-        record.funcName = f"{record.module}.{record.funcName}"
+
+        # get fully qualified path name to function including class name
+        path = record.funcName.split(".")[-1]
+        stack = inspect.stack()
+        f_locals = stack[7][0].f_locals
+        class_ = f_locals["self"] if "self" in f_locals else None
+
+        if class_ is not None:
+            path = splitext(inspect.getfile(class_.__class__))[0]
+
+            # get relative path to 'syncify' sources root
+            folder = ""
+            path_split = []
+            while folder != "syncify":
+                path, folder = split(path)
+                path_split.append(folder)
+
+            # produce fully qualified path
+            path_split = list(reversed(path_split[:-1]))
+            path_split.extend([class_.__class__.__name__, record.funcName.split(".")[-1]])
+            path = ".".join(path_split)
+
+        # truncate long paths by taking first letters of each part until short enough
+        path_split = path.split(".")
+        for i, part in enumerate(path_split):
+            if len(path) <= module_width:
+                break
+
+            path_split[i] = part[0]
+            path = ".".join(path_split)
+
+        record.funcName = path
 
         return record
 
@@ -46,7 +80,8 @@ class Logger:
         self.log_filename = ".".join((self.__class__.__module__, self.__class__.__qualname__))
         self.log_path = join(self.log_folder, f"{self.log_filename}.log")
 
-        self.logger = None
+        self.logger: Optional[logging.Logger] = None
+        self._main_bar: Optional[tqdm_asyncio] = None
         self._set_logger()
 
     @classmethod
@@ -74,6 +109,7 @@ class Logger:
         self.logger.critical("CRITICAL ERROR: Uncaught Exception",
                              exc_info=(exc_type, exc_value, exc_traceback))
 
+    # noinspection SpellCheckingInspection
     def _set_logger(self) -> None:
         """Set logger object formatted for stdout and file handlers."""
         # set log file path
@@ -90,17 +126,24 @@ class Logger:
         else:
             log_filter = LogFileFilter()
 
+        stdout_pretty = ("\33[91m{asctime}.{msecs:0.0f}\33[0m | "
+                         "[\33[92m{levelname:>8}\33[0m] "
+                         "\33[1;96m{{funcName:<{module_width}.{module_width}}}\33[0m "
+                         "[\33[95m{lineno:>4}\33[0m] | "
+                         "{message}")
         # logging formats
         stdout_format = logging.Formatter(
-            fmt="%(message)s",
-            datefmt="%y-%b-%d %H:%M:%S"
+            fmt="{message}" if self.verbosity < 3 else stdout_pretty,
+            datefmt="%Y-%m-%d %H:%M:%S", style="{", validate=True
         )
         file_format = logging.Formatter(
-            fmt="[%(asctime)s] [%(levelname)8s] [%(funcName)-40s:%(lineno)4d] --- %(message)s",
-            datefmt="%y-%b-%d %H:%M:%S"
+            fmt="{asctime}.{msecs:0<3.0f} | "
+                "[{levelname:>8}] "
+                f"{{funcName:<{module_width}.{module_width}}} "
+                "[{lineno:>4}] | "
+                "{message}",
+            datefmt="%Y-%m-%d %H:%M:%S", style="{", validate=True
         )
-        if self.verbosity > 3:
-            stdout_format = file_format
 
         # get logger and clear default handlers
         self.logger = logging.getLogger(self.log_filename)
@@ -128,7 +171,7 @@ class Logger:
         # return exceptions to logger
         sys.excepthook = self._handle_exception
 
-    def _close_handlers(self):
+    def close_handlers(self):
         handlers = self.logger.handlers[:]
         for handler in handlers:
             self.logger.removeHandler(handler)
@@ -142,11 +185,11 @@ class Logger:
         return max(min(value, ceil), floor)
 
     @staticmethod
-    def get_max_width(items: Collection[Any], max_width: int = 50) -> int:
+    def get_max_width(items: Collection[Any], min_width: int = 15, max_width: int = 50) -> int:
         if len(items) == 0:
             return 0
         items = [str(item) for item in items]
-        return min(len(max(items, key=len)) + 1, max_width)
+        return max(min(len(max(items, key=len)) + 1, max_width), min_width)
 
     @staticmethod
     def truncate_align_str(value: Any, max_width: int = 0) -> str:
@@ -158,14 +201,20 @@ class Logger:
         """Wrapper for tqdm progress bar. For kwargs, see :class:`tqdm`"""
         preset_keys = ["leave", "disable", "colour", "position"]
         stdout_h = [handler for handler in self.logger.handlers if handler.name == "stdout"][0]
+
+        try:
+            cols = os.get_terminal_size().columns
+        except OSError:
+            cols = 120
+
         return tqdm_auto(
             leave=kwargs.get("leave", self.verbosity > 0) and kwargs.get("position", 0) == 0,
             disable=kwargs.get("disable", self.verbosity == 0 and stdout_h.level == logging.DEBUG),
             file=sys.stdout,
-            ncols=os.get_terminal_size().columns,
+            ncols=cols,
             colour=kwargs.get("colour", "green"),
             smoothing=0.5,
-            position=kwargs.get("position", 0),
+            position=None,
             **{k: v for k, v in kwargs.items() if k not in preset_keys}
         )
 

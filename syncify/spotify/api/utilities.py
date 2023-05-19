@@ -1,10 +1,10 @@
 from typing import Optional, List, Union, MutableMapping, Any
 from urllib.parse import urlparse
 
-from syncify.abstract import EnumNotFoundError
+from syncify.enums import EnumNotFoundError
+from syncify.spotify import __URL_API__, __URL_EXT__, IDType, ItemType
 from syncify.spotify.api.request import RequestHandler
-from syncify.spotify import IDType, ItemType, __URL_API__, __URL_EXT__
-from syncify.utils.logger import Logger
+from syncify.utils import Logger
 
 APIMethodInputType = Union[str, MutableMapping[str, Any], List[str], List[MutableMapping[str, Any]]]
 

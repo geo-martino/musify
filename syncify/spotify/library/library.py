@@ -1,12 +1,13 @@
 from typing import Optional, List, MutableMapping, Any, Collection, Union, Mapping, Literal
 
-from syncify.abstract import Item
+from syncify.abstract.item import Item
 from syncify.abstract.collection import Library, ItemCollection, Playlist
 from syncify.spotify import ItemType
 from syncify.spotify.api import API
-from syncify.spotify.library.item import SpotifyResponse, SpotifyTrack
+from syncify.spotify.library.response import SpotifyResponse
+from syncify.spotify.library.item import SpotifyTrack
 from syncify.spotify.library.playlist import SpotifyPlaylist, SyncResultSpotifyPlaylist
-from syncify.utils.logger import Logger
+from syncify.utils import Logger
 
 
 class SpotifyLibrary(Library):
@@ -110,9 +111,10 @@ class SpotifyLibrary(Library):
         playlist_tracks = [track.uri for tracks in self.playlists.values() for track in tracks]
         in_playlists = len([track for track in self.tracks if track.uri in playlist_tracks])
 
-        self.logger.info(f"\33[1;96m{'SPOTIFY TOTALS':<22}\33[1;0m|"
-                         f"\33[92m{in_playlists:>6} in playlists \33[0m|"
-                         f"\33[97m{len(self.tracks):>6} total \33[0m")
+        width = self.get_max_width(self.playlists)
+        self.logger.info(f"\33[1;96m{'SPOTIFY ITEMS':<{width}}\33[1;0m |"
+                         f"\33[92m{in_playlists:>7} in playlists \33[0m|"
+                         f"\33[1;94m{len(self.tracks):>6} total \33[0m")
 
     def _get_playlists_data(self) -> List[MutableMapping[str, Any]]:
         """Get playlists and all their tracks"""
@@ -207,6 +209,8 @@ class SpotifyLibrary(Library):
         self.logger.debug("Extend Spotify tracks data: DONE\n")
 
     def merge_playlists(self, playlists: Optional[Union[Library, Mapping[str, Playlist], List[Playlist]]] = None):
+        # TODO: merge playlists adding/removing tracks as needed.
+        #  Most likely will need to implement some method on playlist class too
         raise NotImplementedError
 
     def restore_playlists(self, backup: Mapping[str, List[str]]) -> None:

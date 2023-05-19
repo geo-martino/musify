@@ -3,8 +3,9 @@ from operator import mul
 from random import shuffle
 from typing import Any, Callable, List, Mapping, Optional, Self, MutableMapping, Union, Collection
 
-from syncify.abstract import SyncifyEnum
-from syncify.local.track.base import PropertyName, LocalTrack
+from syncify.enums import SyncifyEnum
+from syncify.enums.tags import PropertyName
+from syncify.local.track import LocalTrack
 from syncify.local.playlist.processor.base import TrackProcessor
 from syncify.local.playlist.processor.sort import TrackSort
 

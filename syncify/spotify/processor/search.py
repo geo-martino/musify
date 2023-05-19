@@ -4,11 +4,11 @@ from typing import List, Optional, MutableMapping, Any, Tuple, Mapping, Union, S
 from syncify.abstract.collection import ItemCollection, Album
 from syncify.abstract.item import Item, Track, Base
 from syncify.abstract.misc import Result
-from syncify.local.track import TagName, PropertyName
+from syncify.enums.tags import TagName, PropertyName
 from syncify.spotify import ItemType
 from syncify.spotify.api import API
-from syncify.spotify.library.collection import SpotifyAlbum
 from syncify.spotify.library.item import SpotifyTrack
+from syncify.spotify.library.collection import SpotifyAlbum
 from syncify.spotify.processor.match import Matcher
 
 
@@ -95,7 +95,7 @@ class Searcher(Matcher):
         if not results:
             return
 
-        max_width = self.get_max_width(results, max_width=50)
+        max_width = self.get_max_width(results)
 
         total_matched = 0
         total_unmatched = 0
@@ -119,17 +119,17 @@ class Searcher(Matcher):
 
             self.logger.info(
                 f"\33[1m{self.truncate_align_str(collection.name, max_width=max_width)} \33[0m|"
-                f'{colour1}{matched:>5} matched \33[0m| '
-                f'{colour2}{unmatched:>5} unmatched \33[0m| '
-                f'{colour3}{skipped:>5} skipped \33[0m| '
+                f'{colour1}{matched:>6} matched \33[0m| '
+                f'{colour2}{unmatched:>6} unmatched \33[0m| '
+                f'{colour3}{skipped:>6} skipped \33[0m| '
                 f'\33[97m{total:>6} total \33[0m'
             )
 
         self.logger.info(
-            f"\33[1;96m{self.truncate_align_str('TOTALS', max_width=max_width)} \33[0m|"
-            f'\33[92m{total_matched:>5} matched \33[0m| '
-            f'\33[91m{total_unmatched:>5} unmatched \33[0m| '
-            f'\33[93m{total_skipped:>5} skipped \33[0m| '
+            f"\33[1;96m{'TOTALS':<{max_width}} \33[0m|"
+            f'\33[92m{total_matched:>6} matched \33[0m| '
+            f'\33[91m{total_unmatched:>6} unmatched \33[0m| '
+            f'\33[93m{total_skipped:>6} skipped \33[0m| '
             f"\33[97m{total_all:>6} total \33[0m"
         )
         self.print_line()
@@ -180,6 +180,7 @@ class Searcher(Matcher):
         algorithm = AlgorithmSettings.ITEMS
         for item in [item for item in collection.items if item.has_uri is None]:
             if not isinstance(item, Track):
+                # TODO: expand search logic to include all item types (low priority)
                 raise NotImplementedError(f"Currently only able to search for Track items, "
                                           f"not {item.__class__.__name__}")
 

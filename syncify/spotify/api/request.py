@@ -10,7 +10,7 @@ from requests.structures import CaseInsensitiveDict
 from requests_cache.models.response import BaseResponse
 
 from syncify.spotify.api.authorise import APIAuthoriser
-from syncify.utils.logger import Logger
+from syncify.utils import Logger
 
 
 class RequestHandler(APIAuthoriser, Logger):

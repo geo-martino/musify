@@ -6,10 +6,11 @@ from typing import Any, List, Mapping, Optional, Union, Collection
 
 import xmltodict
 
-from syncify.abstract import Result
+from syncify.abstract.misc import Result
+from syncify.enums.tags import PropertyName
+from syncify.local.track import LocalTrack, load_track
 from syncify.local.playlist.playlist import LocalPlaylist
 from syncify.local.playlist.processor import TrackMatch, TrackLimit, TrackSort
-from syncify.local.track import PropertyName, LocalTrack, load_track
 
 
 @dataclass
@@ -61,6 +62,7 @@ class XAutoPF(LocalPlaylist):
     ):
         self._validate_type(path)
         if not exists(path):
+            # TODO: implement creation of auto-playlist from scratch (very low priority)
             raise NotImplementedError(
                 f"No playlist at given path: {path}. "
                 "This program is not yet able to create this playlist type from scratch."
@@ -165,12 +167,15 @@ class XAutoPF(LocalPlaylist):
             source.pop("Exceptions", None)
 
     def _update_comparators(self) -> None:
+        # TODO: implement comparison XML part updater (low priority)
         raise NotImplementedError
 
     def _update_limiter(self) -> None:
+        # TODO: implement limit XML part updater (low priority)
         raise NotImplementedError
 
     def _update_sorter(self) -> None:
+        # TODO: implement sort XML part updater (low priority)
         raise NotImplementedError
 
     def _save_xml(self) -> None:

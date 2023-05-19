@@ -2,7 +2,7 @@ import re
 from abc import ABCMeta
 from typing import Optional, List, MutableMapping, Mapping, Any
 
-from syncify.spotify import ItemType, __URL_API__
+from syncify.spotify import __URL_API__, ItemType
 from syncify.spotify.api.utilities import Utilities, APIMethodInputType
 
 

@@ -1,5 +1,5 @@
-from tests.local.track.track import random_track
 from syncify.spotify.processor.match import Matcher
+from tests.local.track.track import random_track
 
 
 # noinspection SpellCheckingInspection

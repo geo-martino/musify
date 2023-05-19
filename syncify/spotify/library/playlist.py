@@ -2,14 +2,14 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, List, MutableMapping, Optional, Self, Mapping, Literal, Collection, Union
 
-from syncify.abstract import Item
+from syncify.abstract.item import Item
 from syncify.abstract.collection import Playlist, ItemCollection
 from syncify.abstract.misc import Result
 from syncify.spotify import ItemType
-from syncify.spotify.api.utilities import APIMethodInputType
-from syncify.spotify.library.collection import SpotifyCollection
-from syncify.spotify.library.item import SpotifyTrack
+from syncify.spotify.api import APIMethodInputType
 from syncify.spotify.library.response import SpotifyResponse
+from syncify.spotify.library.item import SpotifyTrack
+from syncify.spotify.library.collection import SpotifyCollection
 
 
 @dataclass

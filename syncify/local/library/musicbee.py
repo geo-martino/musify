@@ -6,7 +6,7 @@ from typing import Optional, Set, Any, List, MutableMapping
 from lxml import etree
 
 from syncify.local.file import File
-from syncify.local.track.base import LocalTrack
+from syncify.local.track import LocalTrack
 from syncify.local.library.library import LocalLibrary
 
 

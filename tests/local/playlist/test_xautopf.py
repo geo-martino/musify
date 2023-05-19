@@ -5,10 +5,10 @@ from typing import List
 
 import pytest
 
-from syncify.local.track import TagName, PropertyName
+from syncify.enums.tags import TagName, PropertyName
+from syncify.local.exception import IllegalFileTypeError
 from syncify.local.playlist import XAutoPF
 from syncify.local.playlist.processor import LimitType, ShuffleMode, ShuffleBy
-from syncify.local.file import IllegalFileTypeError
 from syncify.local.track import LocalTrack, FLAC, M4A, WMA, MP3
 from tests.common import path_txt
 from tests.local.playlist.playlist import copy_playlist_file, path_resources

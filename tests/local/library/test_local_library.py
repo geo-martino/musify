@@ -1,10 +1,10 @@
 from os.path import basename, splitext
 
-from tests.local.track.track import path_track_resources, path_track_flac, path_track_mp3
-from tests.local.track.track import path_track_m4a, path_track_wma
+from syncify.local.library import LocalLibrary
 from tests.local.playlist.playlist import path_playlist_resources, path_playlist_m3u
 from tests.local.playlist.playlist import path_playlist_xautopf_bp, path_playlist_xautopf_ra
-from syncify.local.library import LocalLibrary
+from tests.local.track.track import path_track_m4a, path_track_wma
+from tests.local.track.track import path_track_resources, path_track_flac, path_track_mp3
 
 
 def test_init():
@@ -71,8 +71,3 @@ def test_load():
     assert library.last_played is None
     assert library.last_added is None
     assert library.last_modified == max(track.date_modified for track in library.tracks)
-
-
-def test_restore_uris():
-    # TODO: add test
-    pass

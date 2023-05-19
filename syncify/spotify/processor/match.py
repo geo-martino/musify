@@ -3,10 +3,10 @@ import re
 from copy import copy
 from typing import List, Optional, Union, Any, Iterable, TypeVar, Tuple, Collection
 
-from syncify.abstract.collection import Album, ItemCollection
 from syncify.abstract.item import Track, Base
-from syncify.local.track import TagName, PropertyName
-from syncify.utils.logger import Logger
+from syncify.abstract.collection import Album, ItemCollection
+from syncify.enums.tags import TagName, PropertyName
+from syncify.utils import Logger
 
 MatchTypes = Union[Track, Album]
 T = TypeVar("T")

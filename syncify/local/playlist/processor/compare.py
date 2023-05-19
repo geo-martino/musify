@@ -6,11 +6,10 @@ from typing import Any, Callable, List, Mapping, Optional, Self, MutableMapping
 
 from dateutil.relativedelta import relativedelta
 
-from syncify.local.track.base.tags import Name, TagName, PropertyName
-from syncify.local.track.base import LocalTrack
+from syncify.enums.tags import Name, TagName, PropertyName
+from syncify.local.track import LocalTrack
 from syncify.local.playlist.processor.base import TrackProcessor
-from syncify.utils.helpers import UnionList, make_list
-
+from syncify.utils import UnionList, make_list
 
 # Map of MusicBee field name to Tag or Property
 field_name_map = {

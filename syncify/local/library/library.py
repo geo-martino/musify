@@ -2,18 +2,16 @@ from glob import glob
 from os.path import splitext, join, exists, basename
 from typing import Optional, List, Set, MutableMapping, Mapping, Collection, Any, Union
 
-from syncify.abstract import Playlist
-from syncify.abstract import Item
-from syncify.abstract.collection import Library, ItemCollection
+from syncify.abstract.item import Item
+from syncify.abstract.collection import ItemCollection, Playlist, Library
 from syncify.abstract.misc import Result
-from syncify.local.file import IllegalFileTypeError
-from syncify.local.library.collection import LocalCollection, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
+from syncify.enums.tags import PropertyName, TagName
+from syncify.local.track import __TRACK_CLASSES__, LocalTrack, load_track
 from syncify.local.playlist import __PLAYLIST_FILETYPES__, LocalPlaylist, M3U, XAutoPF
 from syncify.local.playlist.processor import TrackSort
-from syncify.local.track import __TRACK_CLASSES__, LocalTrack, load_track
-from syncify.local.track.base.tags import PropertyName, TagName
-from syncify.utils.logger import Logger
-from syncify.utils.helpers import UnionList
+from syncify.local.library.collection import LocalCollection, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
+from syncify.local.exception import IllegalFileTypeError
+from syncify.utils import Logger, UnionList
 
 
 class LocalLibrary(Library, LocalCollection):
@@ -47,6 +45,8 @@ class LocalLibrary(Library, LocalCollection):
         if value is not None:
             self._track_paths = {path for c in __TRACK_CLASSES__ for path in c.get_filepaths(self._library_folder)}
 
+        self.logger.debug(f"Set library folder: {self.library_folder} | {len(self._track_paths)} track paths found")
+
     @property
     def playlist_folder(self) -> str:
         return self._playlist_folder
@@ -76,6 +76,8 @@ class LocalLibrary(Library, LocalCollection):
 
             self.logger.debug(f"Filtered out {playlists_total - len(self._playlist_paths)} playlists "
                               f"from {playlists_total} Spotify playlists")
+
+        self.logger.debug(f"Set playlist folder: {self.library_folder} | {len(self._track_paths)} playlists found")
 
     @property
     def name(self) -> Optional[str]:
@@ -189,12 +191,13 @@ class LocalLibrary(Library, LocalCollection):
 
     def log_tracks(self) -> None:
         """Log stats on currently loaded tracks"""
+        width = self.get_max_width(self._playlist_paths)
         self.logger.info(
-            f"\33[1;96m{'LIBRARY TOTALS':<22}\33[1;0m|"
+            f"\33[1;96m{'LIBRARY URIS':<{width}}\33[1;0m |"
             f"\33[92m{sum([track.has_uri is not None for track in self.tracks]):>6} available \33[0m|"
             f"\33[91m{sum([track.has_uri is None for track in self.tracks]):>6} missing \33[0m|"
             f"\33[93m{sum([track.has_uri is False for track in self.tracks]):>6} unavailable \33[0m|"
-            f"\33[97m{len(self.tracks):>6} total \33[0m"
+            f"\33[1;94m{len(self.tracks):>6} total \33[0m"
         )
 
     def load_playlists(self, names: Optional[Collection[str]] = None) -> List[LocalPlaylist]:
@@ -249,10 +252,10 @@ class LocalLibrary(Library, LocalCollection):
         for name, playlist in self.playlists.items():
             self.logger.info(
                 f"\33[97m{self.truncate_align_str(name, max_width=max_width)} \33[0m|"
-                f"\33[92m{len([t for t in playlist if t.has_uri]):>5} available \33[0m|"
-                f"\33[91m{len([t for t in playlist if t.has_uri is None]):>5} missing \33[0m|"
-                f"\33[93m{len([t for t in playlist if t.has_uri is False]):>5} unavailable \33[0m|"
-                f"\33[1;94m {len(playlist):>4} total \33[0m"
+                f"\33[92m{len([t for t in playlist if t.has_uri]):>6} available \33[0m|"
+                f"\33[91m{len([t for t in playlist if t.has_uri is None]):>6} missing \33[0m|"
+                f"\33[93m{len([t for t in playlist if t.has_uri is False]):>6} unavailable \33[0m|"
+                f"\33[1;94m{len(playlist):>6} total \33[0m"
             )
 
     def _log_errors(self, errors: List[str]) -> None:
@@ -264,6 +267,8 @@ class LocalLibrary(Library, LocalCollection):
         self.tracks.extend(track for track in items if isinstance(track, LocalTrack) and track not in self.tracks)
 
     def merge_playlists(self, playlists: Optional[Union[Library, Mapping[str, Playlist], List[Playlist]]] = None):
+        # TODO: merge playlists adding/removing tracks as needed.
+        #  Most likely will need to implement some method on playlist class too
         raise NotImplementedError
         pass
 

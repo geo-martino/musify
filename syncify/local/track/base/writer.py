@@ -7,7 +7,7 @@ from syncify.abstract.misc import Result
 from syncify.local.file import File
 from syncify.local.track.base.processor import TagName, TagProcessor
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
-from syncify.utils.helpers import UnionList, make_list
+from syncify.utils import UnionList, make_list
 
 
 @dataclass

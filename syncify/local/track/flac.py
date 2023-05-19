@@ -8,8 +8,8 @@ from PIL import Image
 # noinspection PyProtectedMember
 from mutagen.id3 import PictureType
 
+from syncify.enums.tags import TagName, TagMap
 from syncify.local.file import open_image, get_image_bytes
-from syncify.local.track.base import TagName, TagMap
 from syncify.local.track.base import LocalTrack
 
 

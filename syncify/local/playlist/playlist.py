@@ -4,8 +4,8 @@ from datetime import datetime
 from os.path import dirname, join, getmtime, exists, getctime
 from typing import List, MutableMapping, Optional, Any, Union, Callable, Tuple, Collection
 
-from syncify.abstract.collection import Playlist
 from syncify.abstract.misc import Result
+from syncify.abstract.collection import Playlist
 from syncify.local.file import File
 from syncify.local.track import LocalTrack
 from syncify.local.playlist.processor import TrackMatch, TrackLimit, TrackSort

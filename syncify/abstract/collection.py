@@ -8,9 +8,8 @@ from typing import List, Optional, MutableMapping, Collection, Any, Union, Mappi
 
 from syncify.abstract.item import Item, Base
 from syncify.abstract.misc import PrettyPrinter
-from syncify.local.track.base.tags import TagName
-from syncify.utils.logger import Logger
-from syncify.utils.helpers import UnionList, make_list
+from syncify.enums.tags import TagName
+from syncify.utils import Logger, UnionList, make_list
 
 
 @dataclass
@@ -137,7 +136,7 @@ class Library(ItemCollection, Logger, metaclass=ABCMeta):
         """
         self.logger.info(f"\33[1;95m ->\33[1;97m Filtering playlists and tracks from {len(self.playlists)} playlists\n"
                          f"\33[0;90m    Filter out tags: {filter_tags} \33[0m")
-        max_width = self.get_max_width(self.playlists, max_width=50)
+        max_width = self.get_max_width(self.playlists)
 
         filtered = {}
         for name, playlist in self.playlists.items():
@@ -158,7 +157,9 @@ class Library(ItemCollection, Logger, metaclass=ABCMeta):
         self.print_line()
         return filtered
 
+    @abstractmethod
     def merge_playlists(self, playlists: Optional[Union[Library, Mapping[str, Playlist], List[Playlist]]] = None):
+        """Merge playlists from given list/map/library to this library"""
         raise NotImplementedError
 
 

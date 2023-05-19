@@ -9,8 +9,9 @@ from typing import Tuple, Type, Optional, List
 
 from dateutil.relativedelta import relativedelta
 
+from syncify.enums.tags import TagName
 from syncify.local.file import open_image
-from syncify.local.track import LocalTrack, TagName, __TRACK_CLASSES__
+from syncify.local.track import __TRACK_CLASSES__, LocalTrack
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__, IDType
 from tests.common import path_resources, path_cache, random_str
 

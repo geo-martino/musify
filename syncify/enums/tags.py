@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Self
 
-from syncify.abstract.enum import SyncifyEnum, EnumNotFoundError
+from syncify.enums import SyncifyEnum, EnumNotFoundError
 
 
 @dataclass(frozen=True)

@@ -5,9 +5,10 @@ import mutagen
 import mutagen.mp4
 from PIL import Image
 
+from syncify.enums.tags import TagMap
 from syncify.local.file import open_image, get_image_bytes
-from syncify.local.track.base import LocalTrack, TagMap
-from syncify.utils.helpers import make_list
+from syncify.local.track.base import LocalTrack
+from syncify.utils import make_list
 
 
 class M4A(LocalTrack):

@@ -2,9 +2,9 @@ from abc import ABCMeta
 from datetime import datetime
 from typing import Any, List, MutableMapping, Optional, Union, Self
 
-from syncify.abstract import Item, Track
+from syncify.abstract.item import Item, Track
 from syncify.spotify import ItemType, IDType
-from syncify.spotify.api.utilities import APIMethodInputType
+from syncify.spotify.api import APIMethodInputType
 from syncify.spotify.library.response import SpotifyResponse
 
 

@@ -1,26 +1,14 @@
 from abc import ABCMeta, abstractmethod
-from os.path import splitext, basename, dirname
-from typing import List
-
 from http.client import HTTPResponse
 from io import BytesIO
+from os.path import splitext, basename, dirname
+from typing import List
 from urllib.error import URLError
 from urllib.request import urlopen
 
 from PIL import Image, UnidentifiedImageError
 
-
-class IllegalFileTypeError(Exception):
-    """Exception raised for unrecognised file types.
-
-    :param filetype: The file type that caused the error.
-    :param message: Explanation of the error.
-    """
-
-    def __init__(self, filetype: str, message: str = "File type not recognised"):
-        self.filetype = filetype
-        self.message = message
-        super().__init__(f"{filetype} | {self.message}")
+from syncify.local.exception import IllegalFileTypeError
 
 
 class File(metaclass=ABCMeta):

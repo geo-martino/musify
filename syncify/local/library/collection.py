@@ -2,11 +2,9 @@ from abc import ABCMeta
 from datetime import datetime
 from typing import List, MutableMapping, Any, Optional, Callable, Mapping
 
-from syncify.local.track import SyncResultTrack
 from syncify.abstract.collection import ItemCollection, Folder, Album, Artist, Genre
-from syncify.local.track import LocalTrack
-from syncify.utils.helpers import get_most_common_values
-from syncify.utils.logger import Logger
+from syncify.local.track import LocalTrack, SyncResultTrack
+from syncify.utils import Logger, get_most_common_values
 
 
 class LocalCollection(ItemCollection, Logger, metaclass=ABCMeta):
