@@ -5,7 +5,7 @@ from syncify.abstract.collection import Library, ItemCollection, Playlist
 from syncify.spotify import ItemType
 from syncify.spotify.api import API
 from syncify.spotify.library.item import SpotifyResponse, SpotifyTrack
-from syncify.spotify.library.playlist import SpotifyPlaylist
+from syncify.spotify.library.playlist import SpotifyPlaylist, SyncResultSpotifyPlaylist
 from syncify.utils.logger import Logger
 
 
@@ -27,7 +27,7 @@ class SpotifyLibrary(Library):
 
     @property
     def name(self) -> Optional[str]:
-        return self.api.user_name
+        return self.api.user_id
 
     @property
     def items(self) -> List[SpotifyTrack]:
@@ -153,8 +153,9 @@ class SpotifyLibrary(Library):
     def sync(self,
              playlists: Optional[Union[Library, Mapping[str, Playlist], List[Playlist]]] = None,
              clear: Optional[Literal['all', 'extra']] = None,
-             reload: bool = True):
+             reload: bool = True) -> MutableMapping[str, SyncResultSpotifyPlaylist]:
         self.logger.debug("Update Spotify: START")
+
         count = len(playlists if playlists else self.playlists)
         clearing = f", clearing {clear} tracks" if clear else ""
         reloading = " and reloading Syncify" if reload else ""
@@ -169,52 +170,16 @@ class SpotifyLibrary(Library):
         playlists: Mapping[str, Playlist]
 
         bar = self.get_progress_bar(iterable=playlists.items(), desc="Synchronising Spotify", unit="playlists")
+        results = {}
         for name, playlist in bar:
             spotify = self.playlists.get(name)
             if not spotify:
                 spotify = SpotifyPlaylist.create(name=name)
-            spotify.sync(items=playlist, clear=clear, reload=reload)
+            results[name] = spotify.sync(items=playlist, clear=clear, reload=reload)
 
-        self.logger.debug("Update Spotify: DONE\n")
         self.print_line()
-
-    def restore_playlists(self, backup: str, in_playlists: list = None, ex_playlists: list = None, **kwargs) -> dict:
-        """
-        Restore Spotify playlists from backup.
-
-        :param backup: str. Filename of backup json in form <name>: <list of dicts of track's metadata>
-        :param in_playlists: list, default=None. Only restore playlists in this list.
-        :param ex_playlists: list, default=None. Don't restore playlists in this list.
-        """
-        self.logger.info(f"\33[1;95m -> \33[1;97mRestoring Spotify playlists from backup file: {backup} \33[0m")
-
-        backup = self.load_json(backup, parent=True, **kwargs)
-        if not backup:
-            self.logger.info(f"\33[91mBackup file not found.\33[0m")
-            return
-
-        if isinstance(in_playlists, str):  # handle string
-            in_playlists = [in_playlists]
-
-        if in_playlists is not None:
-            for name, tracks in backup.copy().items():
-                if name.lower() not in [p.lower() for p in in_playlists]:
-                    del backup[name]
-        else:
-            in_playlists = list(backup.keys())
-
-        if ex_playlists is not None:
-            for name in backup.copy().keys():
-                if name.lower() in [p.lower() for p in ex_playlists]:
-                    del backup[name]
-
-        # set clear kwarg to all
-        kwargs_mod = kwargs.copy()
-        kwargs_mod['clear'] = 'all'
-
-        self.update_playlists(backup, **kwargs_mod)
-
-        self.logger.info(f"\33[92mRestored {len(backup)} Spotify playlists \33[0m")
+        self.logger.debug("Update Spotify: DONE\n")
+        return results
 
     def extend(self, items: Union[ItemCollection, Collection[Item]]) -> None:
         self.logger.debug("Extend Spotify tracks data: START")
@@ -241,10 +206,42 @@ class SpotifyLibrary(Library):
 
         self.logger.debug("Extend Spotify tracks data: DONE\n")
 
+    def merge_playlists(self, playlists: Optional[Union[Library, Mapping[str, Playlist], List[Playlist]]] = None):
+        raise NotImplementedError
+
+    def restore_playlists(self, backup: Mapping[str, List[str]]) -> None:
+        """
+        Restore playlists from a backup to loaded playlist objects.
+        This does not sync the updated playlists with Spotify.
+        """
+        uri_tracks = {track.uri: track for track in self.tracks}
+
+        uris = [uri for uri_list in backup.values() for uri in uri_list if uri not in uri_tracks]
+        if uris:
+            tracks_data = self.api.get_items(uris, use_cache=self.use_cache)
+            self.api.get_tracks_extra(tracks_data, features=True, limit=50, use_cache=self.use_cache)
+
+            tracks = [SpotifyTrack(track) for track in tracks_data]
+            uri_tracks.update({track.uri: track for track in tracks})
+
+        for name, uris in backup.items():
+            tracks = [uri_tracks.get(uri) for uri in uris]
+            playlist = SpotifyPlaylist.create(name) if name not in self.playlists else self.playlists[name]
+            playlist.items = tracks
+            self.playlists[name] = playlist
+
     def as_dict(self) -> MutableMapping[str, Any]:
         return {
             "user_name": self.api.user_name,
             "user_id": self.api.user_id,
             "track_count": len(self.tracks),
             "playlist_counts": {name: len(pl) for name, pl in self.playlists.items()},
+        }
+
+    def as_json(self):
+        return {
+            "user_name": self.api.user_name,
+            "user_id": self.api.user_id,
+            "tracks": dict(sorted(((track.uri, track.as_json()) for track in self.tracks), key=lambda x: x[0])),
+            "playlists": {name: [tr.uri for tr in pl] for name, pl in self.playlists.items()},
         }

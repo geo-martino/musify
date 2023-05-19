@@ -304,19 +304,21 @@ class Collections(Utilities, metaclass=ABCMeta):
         :return: The number of tracks cleared from the playlist.
         :exception ValueError: Raised when the item types of the input ``items`` are not all tracks or IDs.
         """
-        if not items:
-            return 0
-
         url = f"{self.get_playlist_url(playlist, use_cache=False)}/tracks"
         limit = self.limit_value(limit, ceil=100)
 
-        if items is not None:
+        if items is not None and len(items) == 0:
+            return 0
+        elif items is not None:
             self.validate_item_type(items, kind=ItemType.TRACK)
             uri_list = [self.convert(item, kind=ItemType.TRACK, type_out=IDType.URI) for item in items]
         else:
-            pl_current = self.get_collections(url, kind=ItemType.PLAYLIST)[0]
+            pl_current = self.get_collections(url, kind=ItemType.PLAYLIST, use_cache=False)[0]
             tracks = pl_current[self.collection_types[ItemType.PLAYLIST.name]][self.items_key]
             uri_list = [track['track']['uri'] for track in tracks]
+
+        if not uri_list:
+            return 0
 
         for uris in self.chunk(uri_list, size=limit):
             body = {'tracks': [{'uri': uri} for uri in uris]}

@@ -10,6 +10,7 @@ from syncify.spotify import check_spotify_type, ItemType, IDType
 from syncify.spotify.api import API
 from syncify.spotify.library.library import SpotifyPlaylist
 from syncify.spotify.processor.match import Matcher
+from syncify.utils.helpers import get_user_input
 
 
 @dataclass
@@ -81,7 +82,7 @@ class Checker(Matcher):
 
     def _get_user_input(self, text: Optional[str] = None) -> str:
         """Print dialog with optional text and get the user's input."""
-        inp = input(f"\33[93m{text}\33[0m | ")
+        inp = get_user_input(text)
         self.logger.debug(f"User input: {inp}")
         return inp.strip()
 

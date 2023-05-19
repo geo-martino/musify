@@ -38,6 +38,20 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
     def items(self) -> List[SpotifyTrack]:
         return self.tracks
 
+    @items.setter
+    def items(self, value: List[SpotifyTrack]):
+        self.tracks = value
+        self.length = 0.0
+        self.date_created = None
+        self.date_modified = None
+
+        if len(self.tracks) > 0:
+            self.length: float = sum(track.length for track in self.tracks if track.length)
+            date_added = [track.date_added for track in self.tracks if track.date_added]
+            if date_added:
+                self.date_created: datetime = min(date_added)
+                self.date_modified: datetime = max(date_added)
+
     def __init__(self, response: MutableMapping[str, Any]):
         SpotifyResponse.__init__(self, response)
 
@@ -60,12 +74,7 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
         self.date_created: Optional[datetime] = None
         self.date_modified: Optional[datetime] = None
 
-        self.tracks = [SpotifyTrack(track["track"], track["added_at"]) for track in response["tracks"]["items"]]
-
-        if len(self.tracks) > 0:
-            self.length: float = sum(track.length for track in self.tracks)
-            self.date_created: datetime = min(track.date_added for track in self.tracks)
-            self.date_modified: datetime = max(track.date_added for track in self.tracks)
+        self.items = [SpotifyTrack(track["track"], track["added_at"]) for track in response["tracks"]["items"]]
 
     @classmethod
     def load(cls, value: APIMethodInputType, use_cache: bool = True,
@@ -186,7 +195,7 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
             removed = self.api.clear_from_playlist(self.url, items=uris_clear)
             uris_unchanged = [uri for uri in uris_remote if uri in uris_obj]
 
-        added = self.api.add_to_playlist(self.url, items=uris_add, skip_dupes=True)
+        added = self.api.add_to_playlist(self.url, items=uris_add, skip_dupes=clear != "all")
         if reload:
             self.reload(use_cache=False)
 

@@ -86,7 +86,7 @@ class Report(Logger):
 
         items_total = sum(len(collection) for collection in collections)
         self.logger.info(f"\33[1;95m ->\33[1;97m Checking {items_total} items for {'all' if match_all else 'any'} "
-                         f"missing tags: {', '.join(tag_names)}")
+                         f"missing tags: \n\33[90m{', '.join(tag_names)}\33[0m")
 
         missing_tags = {}
         for collection in collections:
@@ -108,7 +108,7 @@ class Report(Logger):
 
         items_count = len([item for items in missing_tags.values() for item in items])
         self.logger.info(f"\33[1;95m  >\33[1;97m Found {items_count} items with {'all' if match_all else 'any'} "
-                         f"missing tags\33[0m: {', '.join(tag_names)}")
+                         f"missing tags\33[0m: \n\33[90m{', '.join(tag_names)}\33[0m")
 
         self.logger.debug("Report missing tags: DONE\n")
         return missing_tags

@@ -162,7 +162,7 @@ class Logger:
             leave=kwargs.get("leave", self.verbosity > 0) and kwargs.get("position", 0) == 0,
             disable=kwargs.get("disable", self.verbosity == 0 and stdout_h.level == logging.DEBUG),
             file=sys.stdout,
-            ncols=120,
+            ncols=os.get_terminal_size().columns,
             colour=kwargs.get("colour", "green"),
             smoothing=0.5,
             position=kwargs.get("position", 0),

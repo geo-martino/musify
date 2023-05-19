@@ -40,7 +40,7 @@ class PrettyPrinter(metaclass=ABCMeta):
         """Return a dictionary representation of the key attributes of this object that is safe to output to json"""
         return self._as_json(self.as_dict())
 
-    def _as_json(self, attributes: Mapping[str, object]) -> Mapping[str, object]:
+    def _as_json(self, attributes: Mapping[str, Any]) -> Mapping[str, Any]:
         result = {}
 
         for attr_key, attr_val in attributes.items():
@@ -50,15 +50,15 @@ class PrettyPrinter(metaclass=ABCMeta):
             if isinstance(attr_val, list):
                 result[attr_key] = []
                 for item in attr_val:
-                    if isinstance(item, self.__class__):
+                    if isinstance(item, PrettyPrinter):
                         result[attr_key].append(item.as_json())
                     elif isinstance(item, datetime):
                         result[attr_key].append(item.strftime("%Y-%m-%d %H:%M:%S"))
                     else:
-                        result[item].append(item)
+                        result[attr_key].append(item)
             elif isinstance(attr_val, dict):
                 result[attr_key] = self._as_json(attr_val)
-            elif isinstance(attr_val, self.__class__):
+            elif isinstance(attr_val, PrettyPrinter):
                 result[attr_key] = attr_val.as_json()
             elif isinstance(attr_val, datetime):
                 result[attr_key] = attr_val.strftime("%Y-%m-%d %H:%M:%S")

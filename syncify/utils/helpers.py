@@ -49,3 +49,8 @@ def flatten_nested(nested: Mapping, previous: List = None) -> List:
 def get_most_common_values(values: Iterable[Any]) -> List[Any]:
     """Get an ordered list of the most common values for a given collection of ``values``"""
     return [x[0] for x in Counter(values).most_common()]
+
+
+def get_user_input(text: Optional[str] = None) -> str:
+    """Print dialog with optional text and get the user's input."""
+    return input(f"\33[93m{text}\33[0m | ").strip()

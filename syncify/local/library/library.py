@@ -2,6 +2,7 @@ from glob import glob
 from os.path import splitext, join, exists, basename
 from typing import Optional, List, Set, MutableMapping, Mapping, Collection, Any, Union
 
+from syncify.abstract import Playlist
 from syncify.abstract import Item
 from syncify.abstract.collection import Library, ItemCollection
 from syncify.abstract.misc import Result
@@ -12,6 +13,7 @@ from syncify.local.playlist.processor import TrackSort
 from syncify.local.track import __TRACK_CLASSES__, LocalTrack, load_track
 from syncify.local.track.base.tags import PropertyName, TagName
 from syncify.utils.logger import Logger
+from syncify.utils.helpers import UnionList
 
 
 class LocalLibrary(Library, LocalCollection):
@@ -258,29 +260,28 @@ class LocalLibrary(Library, LocalCollection):
         if len(errors) > 0:
             self.logger.debug("Could not load: \33[91m\n\t- {errors} \33[0m".format(errors="\n\t- ".join(errors)))
 
-    def restore_uris(self, backup: str, remove: bool = True) -> None:
-        """
-        Restore URIs from a backup to loaded track objects. This does not save the updated tags.
-
-        :param backup: Filename of backup json in form <path>: <uri>.
-        :param remove: If True, when a lookup to the back for a URI returns None, remove the URI from the track.
-            If False, keep the current value in the track.
-        """
-        # TODO: complete and test me
-        self.logger.info(f"\33[1;95m -> \33[1;97mRestoring URIs from backup file: {backup} \33[0m")
-
-        backup: Mapping[str, str] = {path.lower(): uri for path, uri in self.load_json(backup).items()}
-        count = 0
-        for track in self.tracks:
-            uri = backup.get(track.path.lower())
-            if remove or uri is not None:
-                track.uri = uri
-                count += 1
-
-        self.logger.info(f"\33[92mRestored URIs for {count} tracks \33[0m")
-
     def extend(self, items: Union[ItemCollection, Collection[Item]]) -> None:
         self.tracks.extend(track for track in items if isinstance(track, LocalTrack) and track not in self.tracks)
+
+    def merge_playlists(self, playlists: Optional[Union[Library, Mapping[str, Playlist], List[Playlist]]] = None):
+        raise NotImplementedError
+        pass
+
+    def restore_tracks(self, backup: Mapping[str, Mapping[str, Any]], tags: UnionList[TagName] = TagName.ALL) -> int:
+        """Restore track tags from a backup to loaded track objects. This does not save the updated tags."""
+        tag_names = [t for tag in tags for t in tag.to_tag()]
+        backup = {path.lower(): track_map for path, track_map in backup.items()}
+
+        count = 0
+        for track in self.tracks:
+            track_map = backup.get(track.path.lower())
+            if not track_map:
+                continue
+
+            [setattr(track, tag, track_map.get(tag)) for tag in tag_names]
+            count += 1
+
+        return count
 
     def as_dict(self) -> MutableMapping[str, Any]:
         return {
@@ -289,4 +290,13 @@ class LocalLibrary(Library, LocalCollection):
             "other_folders": self.other_folders,
             "track_count": len(self.tracks),
             "playlist_counts": {name: len(pl) for name, pl in self._playlists.items()},
+        }
+
+    def as_json(self):
+        return {
+            "library_folder": self.library_folder,
+            "playlists_folder": self.playlist_folder,
+            "other_folders": self.other_folders,
+            "tracks": dict(sorted(((track.path, track.as_json()) for track in self.tracks), key=lambda x: x[0])),
+            "playlists": {name: [tr.path for tr in pl] for name, pl in self.playlists.items()},
         }

@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from dataclasses import dataclass
 from typing import List, Self
 
 from syncify.abstract.enum import SyncifyEnum, EnumNotFoundError
@@ -84,7 +83,8 @@ class TagName(Name):
         Returns all human-friendly tag names for a given enum
         e.g. ``track`` returns both ``track_number`` and ``track_total`` tag names
         """
-        return [tag for tag in TagMap.__annotations__ if tag.startswith(self.name.casefold())]
+        tags = list(TagMap.__annotations__) + ["uri"]
+        return [tag for tag in tags if tag.startswith(self.name.casefold())]
 
 
 class PropertyName(Name):

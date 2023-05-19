@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Optional, MutableMapping, Collection, Any, Union
+from typing import List, Optional, MutableMapping, Collection, Any, Union, Mapping
 
 from syncify.abstract.item import Item, Base
 from syncify.abstract.misc import PrettyPrinter
@@ -34,7 +34,7 @@ class ItemCollection(Base, PrettyPrinter, metaclass=ABCMeta):
     def clear(self):
         self.items.clear()
 
-    def merge(
+    def merge_items(
             self, items: Union[ItemCollection, Collection[Item]], tags: UnionList[TagName] = TagName.ALL
     ) -> None:
         tags: List[TagName] = make_list(tags)
@@ -122,7 +122,12 @@ class Library(ItemCollection, Logger, metaclass=ABCMeta):
     def extend(self, items: Union[ItemCollection, Collection[Item]]) -> None:
         raise NotImplementedError
 
-    def get_filtered_playlists(self, **filter_tags: List[Any]) -> MutableMapping[str, Playlist]:
+    def get_filtered_playlists(
+            self,
+            include: Optional[Collection[str]] = None,
+            exclude: Optional[Collection[str]] = None,
+            **filter_tags: List[Any]
+    ) -> MutableMapping[str, Playlist]:
         """
         Returns the playlists of this library featuring only the items that don't have tags matching those given.
         Parse a tag name as a parameter with its value being a list of tags to filter out of the items
@@ -130,12 +135,15 @@ class Library(ItemCollection, Logger, metaclass=ABCMeta):
 
         :return: Filtered playlists.
         """
-        self.logger.info(f"\33[1;95m ->\33[1;97m Filtering tracks in {len(self.playlists)} playlists\n"
-                         f"\33[0;97m    Filter out tags: {filter_tags} \33[0m")
+        self.logger.info(f"\33[1;95m ->\33[1;97m Filtering playlists and tracks from {len(self.playlists)} playlists\n"
+                         f"\33[0;90m    Filter out tags: {filter_tags} \33[0m")
         max_width = self.get_max_width(self.playlists, max_width=50)
 
         filtered = {}
         for name, playlist in self.playlists.items():
+            if (include and name not in include) or (exclude and name in exclude):
+                continue
+
             filtered[name] = deepcopy(playlist)
             for item in playlist.items:
                 for tag, values in filter_tags.items():
@@ -149,6 +157,9 @@ class Library(ItemCollection, Logger, metaclass=ABCMeta):
 
         self.print_line()
         return filtered
+
+    def merge_playlists(self, playlists: Optional[Union[Library, Mapping[str, Playlist], List[Playlist]]] = None):
+        raise NotImplementedError
 
 
 @dataclass

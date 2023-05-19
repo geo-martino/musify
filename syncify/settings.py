@@ -15,6 +15,7 @@ from syncify.local.track import TagMap
 from syncify.spotify.api.api import AUTH_ARGS_BASIC, AUTH_ARGS_USER
 from syncify.spotify.processor.search import AlgorithmSettings
 from syncify.utils.logger import Logger
+from syncify.utils.helpers import make_list
 
 
 def _update_map(source: MutableMapping, new: MutableMapping, extend: bool = True, overwrite: bool = False):
@@ -132,9 +133,9 @@ class Settings(metaclass=ABCMeta):
             if not paths["library"]:
                 raise KeyError(f"No library path given for this platform: {sys.platform}")
 
-            paths["other"] = []
-            for key in paths.copy():
-                if key.startswith("library_"):
+            paths["other"] = [path for path in make_list(paths.get("other", [])) if path]
+            for key, value in paths.copy().items():
+                if key.startswith("library_") and value:
                     paths["other"].append(paths.pop(key))
 
     def set_search_algorithm(self) -> None:
