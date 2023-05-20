@@ -126,7 +126,7 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
                     uri_get.append(track_raw["track"]["uri"])
 
             if len(uri_get) > 0:  # get remaining items
-                tracks_new = cls.api.get_tracks(uri_get, features=True, kind=ItemType.TRACK, use_cache=use_cache)
+                tracks_new = cls.api.get_tracks(uri_get, features=True, use_cache=use_cache)
                 uri_tracks: Mapping[str, Mapping[str, Any]] = {r["uri"]: r for r in tracks_new}
 
                 for i, track_raw in enumerate(response["tracks"]["items"]):

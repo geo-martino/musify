@@ -89,11 +89,11 @@ class TagWriter(File, TagProcessor, metaclass=ABCMeta):
                 updated.update({TagName.YEAR: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.BPM in tags:
-            conditionals = [
-                file.bpm is None and self.bpm is not None and self.bpm > 30,
-                (file["bpm"] if file["bpm"] else 0) < 30 < (self["bpm"] if self["bpm"] else 0),
-                replace and int(self["bpm"] if self["bpm"] is not None else 0) != int(file["bpm"] if file["bpm"] is not None else 0)
-            ]
+            self_bpm = int(self["bpm"] if self["bpm"] is not None else 0)
+            file_bpm = int(file["bpm"] if file["bpm"] is not None else 0)
+            conditionals = [file.bpm is None and self.bpm is not None and self.bpm > 30,
+                            file_bpm < 30 < self_bpm,
+                            replace and self_bpm != file_bpm]
             if any(conditionals) and self._write_bpm(dry_run):
                 updated.update({TagName.BPM: [i for i, c in enumerate(conditionals) if c][0]})
 
