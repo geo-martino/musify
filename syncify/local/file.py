@@ -1,14 +1,15 @@
 from abc import ABCMeta, abstractmethod
+from datetime import datetime
 from http.client import HTTPResponse
 from io import BytesIO
-from os.path import splitext, basename, dirname
+from os.path import splitext, basename, dirname, getsize, getmtime, getctime
 from typing import List
 from urllib.error import URLError
 from urllib.request import urlopen
 
 from PIL import Image, UnidentifiedImageError
 
-from syncify.local.exception import IllegalFileTypeError
+from syncify.local.exception import IllegalFileTypeError, ImageLoadError
 
 
 class File(metaclass=ABCMeta):
@@ -31,31 +32,34 @@ class File(metaclass=ABCMeta):
         return splitext(self.path)[1].lower()
 
     @property
+    def size(self) -> int:
+        """The size of the file in bytes"""
+        return getsize(self.path)
+
+    @property
+    def date_created(self) -> datetime:
+        """datetime object representing when the file was created"""
+        return datetime.fromtimestamp(getctime(self.path))
+
+    @property
+    def date_modified(self) -> datetime:
+        """datetime object representing when the file was last modified"""
+        return datetime.fromtimestamp(getmtime(self.path))
+
+    @property
     @abstractmethod
     def valid_extensions(self) -> List[str]:
         """Allowed extensions in lowercase"""
         raise NotImplementedError
 
-    def _validate_type(self, path: str) -> None:
+    def _validate_type(self, path: str):
         """Raises exception if the path's extension is not accepted"""
         ext = splitext(path)[1].lower()
         if ext not in self.valid_extensions:
             raise IllegalFileTypeError(
                 ext,
                 f"Not an accepted {self.__class__.__qualname__} file extension. "
-                f"Use only: {', '.join(self.valid_extensions)}"
-            )
-
-
-class ImageLoadError(Exception):
-    """Exception raised for errors in loading an image.
-
-    :param message: Explanation of the error.
-    """
-
-    def __init__(self, message: str = "Image failed to load"):
-        self.message = message
-        super().__init__(self.message)
+                f"Use only: {', '.join(self.valid_extensions)}")
 
 
 def open_image(image_link: str) -> Image.Image:

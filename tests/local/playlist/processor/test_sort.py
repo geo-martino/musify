@@ -11,7 +11,6 @@ from tests.local.track.track import random_tracks
 
 def test_sort_by_field():
     tracks = random_tracks(30)
-    # print([track.track_number for track in tracks])
 
     # random shuffle
     tracks_copy = tracks.copy()
@@ -33,12 +32,12 @@ def test_sort_by_field():
 
     # sort on datetime
     for i, track in enumerate(tracks, 1):
-        track.date_modified = track.date_modified.replace(second=i)
+        track.date_added = track.date_added.replace(second=i)
 
-    tracks_sorted = sorted(tracks, key=lambda t: t.date_modified)
-    TrackSort.sort_by_field(tracks, field=PropertyName.DATE_MODIFIED)
+    tracks_sorted = sorted(tracks, key=lambda t: t.date_added)
+    TrackSort.sort_by_field(tracks, field=PropertyName.DATE_ADDED)
     assert tracks == tracks_sorted
-    TrackSort.sort_by_field(tracks, field=PropertyName.DATE_MODIFIED, reverse=True)
+    TrackSort.sort_by_field(tracks, field=PropertyName.DATE_ADDED, reverse=True)
     assert tracks == list(reversed(tracks_sorted))
 
     # sort on str, ignoring defined words like 'The' and 'A'

@@ -38,9 +38,9 @@ class PrettyPrinter(metaclass=ABCMeta):
 
     def as_json(self) -> Mapping[str, object]:
         """Return a dictionary representation of the key attributes of this object that is safe to output to json"""
-        return self._as_json(self.as_dict())
+        return self.__as_json(self.as_dict())
 
-    def _as_json(self, attributes: Mapping[str, Any]) -> Mapping[str, Any]:
+    def __as_json(self, attributes: Mapping[str, Any]) -> Mapping[str, Any]:
         result = {}
 
         for attr_key, attr_val in attributes.items():
@@ -57,7 +57,7 @@ class PrettyPrinter(metaclass=ABCMeta):
                     else:
                         result[attr_key].append(item)
             elif isinstance(attr_val, dict):
-                result[attr_key] = self._as_json(attr_val)
+                result[attr_key] = self.__as_json(attr_val)
             elif isinstance(attr_val, PrettyPrinter):
                 result[attr_key] = attr_val.as_json()
             elif isinstance(attr_val, datetime):
@@ -74,11 +74,11 @@ class PrettyPrinter(metaclass=ABCMeta):
         result = f"{self.__class__.__name__}(\n{{}}\n)"
 
         indent = 2
-        attributes_repr = self._to_str(self.as_dict(), indent=indent, increment=indent)
+        attributes_repr = self.__to_str(self.as_dict(), indent=indent, increment=indent)
 
         return result.format("\n".join([" " * indent + attribute for attribute in attributes_repr]))
 
-    def _to_str(self, attributes: Mapping[str, Any], indent: int = 2, increment: int = 2) -> List[str]:
+    def __to_str(self, attributes: Mapping[str, Any], indent: int = 2, increment: int = 2) -> List[str]:
         if len(attributes) == 0:
             return []
         max_key_width = max(len(tag_name) for tag_name in attributes)
@@ -105,7 +105,7 @@ class PrettyPrinter(metaclass=ABCMeta):
                     attr_val_repr = f"{attr_key : <{max_key_width}} = {attr_val}"
             elif isinstance(attr_val, dict):
                 pp_repr = " " * indent + "{}"
-                pp = self._to_str(attr_val, indent=indent, increment=increment)
+                pp = self.__to_str(attr_val, indent=indent, increment=increment)
 
                 if len(pp) == 0:
                     attr_val = "{}"

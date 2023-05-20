@@ -1,6 +1,6 @@
 from typing import Optional
 
-from syncify.spotify import IDType, ItemType
+from syncify.spotify import IDType, ItemType, get_item_type, convert
 from syncify.spotify.api.basic import Basic
 from syncify.spotify.api.collection import Collections
 from syncify.spotify.api.item import Items
@@ -46,9 +46,9 @@ class API(Basic, Items, Collections):
         :param max_width: The maximum width to print names as. Any name lengths longer than this will be truncated.
         """
         return f"\t\33[92m{str(i).zfill(len(str(total)))} \33[0m- "\
-               f"\33[97m{self.truncate_align_str(name, max_width=max_width)} \33[0m| "\
+               f"\33[97m{self.align_and_truncate(name, max_width=max_width)} \33[0m| "\
                f"\33[93m{uri} \33[0m- "\
-               f"{self.convert(uri, type_in=IDType.URI, type_out=IDType.URL_EXT)}"
+               f"{convert(uri, type_in=IDType.URI, type_out=IDType.URL_EXT)}"
 
     def pretty_print_uris(self, value: Optional[str] = None, kind: Optional[IDType] = None, use_cache: bool = True):
         """
@@ -63,30 +63,30 @@ class API(Basic, Items, Collections):
         if not value:  # get user to paste in URL/URI
             value = input("\33[1mEnter URL/URI/ID: \33[0m")
         if not kind:
-            kind = self._get_item_type(value)
+            kind = get_item_type(value)
 
-        while kind is None:
+        while kind is None:  # get user to input ID type
             kind = ItemType.from_name(input("\33[1mEnter ID type: \33[0m"))
 
-        url = self.convert(value, kind=kind, type_out=IDType.URL)
+        url = convert(value, kind=kind, type_out=IDType.URL)
         name = self.get(url, log_pad=43)['name']
 
         r = {'next': f"{url}/tracks"}
         i = 0
-        while r['next']:
+        while r['next']:  # loop through each page, printing data in blocks of 20
             url = r['next']
             r = self.get(url, params={'limit': 20}, use_cache=use_cache)
 
-            if r["offset"] == 0:
-                url_open = self.convert(url, type_in=IDType.URL_EXT, type_out=IDType.URL_EXT)
+            if r["offset"] == 0:  # first page, show header
+                url_open = convert(url, type_in=IDType.URL_EXT, type_out=IDType.URL_EXT)
                 print(f"\n\t\33[96mShowing tracks for {kind.name.casefold()}: {name} - {url_open} \33[0m\n")
                 pass
 
-            if 'error' in r:
+            if 'error' in r:  # fail
                 self.logger.warning(f"{'ERROR':<7}: {url:<43}")
                 return
 
             tracks = [item['track'] if kind == ItemType.PLAYLIST else item for item in r["items"]]
-            for i, track in enumerate(tracks, i + 1):
+            for i, track in enumerate(tracks, i + 1):  # print each item in this page
                 print(self.format_item_data(i=i, name=track['name'], uri=track['uri'], total=r['total'], max_width=50))
             print()

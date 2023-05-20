@@ -1,6 +1,6 @@
 from cx_Freeze import setup, Executable
 
-# Dependencies are automatically detected, but it might need fine tuning.
+# Dependencies are automatically detected, but it might need fine-tuning.
 options = {"build_exe": {"packages": [],
                          "include_files": ['README.md', 'LICENSE'],
                          "optimize": 1},
@@ -17,7 +17,7 @@ target = Executable(
 setup(
     name="Syncify",
     version="2.0",
-    description="Syncronise your music library to Spotify",
+    description="Synchronise your music library to Spotify",
     author="George M. Marino",
     options=options,
     executables=[target]

@@ -59,9 +59,9 @@ class RequestHandler(APIAuthoriser, Logger):
         response = self.request(method=method, url=url, *args, **kwargs)
         backoff = self.backoff_start
 
-        while response.status_code >= 400:
+        while response.status_code >= 400:  # error response code received
             response_headers = response.headers
-            if isinstance(response.headers, CaseInsensitiveDict):
+            if isinstance(response.headers, CaseInsensitiveDict):  # format headers if JSON
                 response_headers = json.dumps(dict(response.headers), indent=2)
             self.logger.warning(f"\33[91m{method.upper():<7}: {url} | Code: {response.status_code} | "
                                 f"Response text and headers follow:"
@@ -84,11 +84,11 @@ class RequestHandler(APIAuthoriser, Logger):
                 if wait_time > self.timeout:  # exception if too long
                     raise ConnectionError(f"Retry time is greater than timeout of {self.timeout} seconds")
 
-            if backoff < self.backoff_final:
+            if backoff < self.backoff_final:  # exponential backoff
                 self.logger.info(f"Retrying in {backoff} seconds...")
                 sleep(backoff)
                 backoff *= self.backoff_factor
-            else:
+            else:  # max backoff exceeded
                 raise ConnectionError("Max retries exceeded")
 
             response = self.request(method=method, url=url, *args, **kwargs)
@@ -104,13 +104,14 @@ class RequestHandler(APIAuthoriser, Logger):
             log_extra: Optional[List[str]] = None,
             *args, **kwargs
     ) -> BaseResponse:
-        try:
+        try:  # reauthorise if needed
             headers = self.headers
         except TypeError:
             self.print_line()
             headers = self.auth()
             self.print_line()
 
+        # format logs
         log = [f"{method.upper():<7}: {url:<{log_pad}}"]
         if log_extra:
             log.extend(log_extra)

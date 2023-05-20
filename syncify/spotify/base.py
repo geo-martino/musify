@@ -2,12 +2,13 @@ from abc import ABCMeta, abstractmethod
 from typing import Any, MutableMapping, Self, Optional
 
 from syncify.abstract.misc import PrettyPrinter
-from syncify.spotify.api import API, APIMethodInputType
+from syncify.spotify import APIMethodInputType
+from syncify.spotify.api import API
 
 
-class SpotifyResponse(PrettyPrinter, metaclass=ABCMeta):
+class Spotify(PrettyPrinter, metaclass=ABCMeta):
     """
-    Extracts key data from a Spotify API JSON response.
+    Generic base class for Spotify-stored objects. Extracts key data from a Spotify API JSON response.
 
     :param response: The Spotify API JSON response
     """
@@ -16,18 +17,31 @@ class SpotifyResponse(PrettyPrinter, metaclass=ABCMeta):
 
     api: API
 
+    @property
+    def id(self) -> str:
+        return self.response["id"]
+
+    @property
+    def uri(self) -> str:
+        return self.response["uri"]
+
+    @property
+    def has_uri(self) -> bool:
+        return not self.response.get("is_local", False)
+
+    @property
+    def url(self) -> str:
+        return self.response["href"]
+
+    @property
+    def url_ext(self) -> Optional[str]:
+        return self.response["external_urls"].get("spotify")
+
     def __init__(self, response: MutableMapping[str, Any]):
         self.response = response
         self._check_type()
 
-        self.id: Optional[str] = response["id"]
-        self.uri: str = response["uri"]
-        self.has_uri: bool = not response.get("is_local", False)
-
-        self.url: Optional[str] = response["href"]
-        self.url_ext: Optional[str] = response["external_urls"].get("spotify")
-
-    def _check_type(self) -> None:
+    def _check_type(self):
         """Checks the given response is compatible with this object type, raises an exception if not"""
         kind = self.__class__.__name__.casefold().replace("spotify", "")
         if self.response.get("type") != kind:
@@ -47,7 +61,7 @@ class SpotifyResponse(PrettyPrinter, metaclass=ABCMeta):
 
         The given ``value`` may be:
             * A string representing a URL/URI/ID.
-            * A list of strings representing URLs/URIs/IDs of the same type.
+            * A collection of strings representing URLs/URIs/IDs of the same type.
             * A Spotify API JSON response for a collection with a valid ID value under an ``id`` key.
             * A list of Spotify API JSON responses for a collection with a valid ID value under an ``id`` key.
 
@@ -59,7 +73,7 @@ class SpotifyResponse(PrettyPrinter, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def reload(self, use_cache: bool = True) -> None:
+    def reload(self, use_cache: bool = True):
         """
         Reload this object from the API, calling all required endpoints
         to get a complete set of data for this item type
@@ -68,12 +82,13 @@ class SpotifyResponse(PrettyPrinter, metaclass=ABCMeta):
         """
         raise NotImplementedError
 
-    def replace(self, response: MutableMapping[str, Any]) -> None:
+    def replace(self, response: MutableMapping[str, Any]):
         """
         Replace the extracted metadata on this object by extracting data from the given response
         No API calls are made for this function.
         """
         self.__init__(response)
 
-    def as_dict(self) -> MutableMapping[str, Any]:
-        return {k: v for k, v in self.__dict__.items() if k != "response"}
+    def as_dict(self):
+        return {k: getattr(self, k) for k in self.__dir__() if not k.startswith("_") and k not in ["response", "name"]
+                and not callable(getattr(self, k)) and k not in Spotify.__annotations__}

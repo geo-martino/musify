@@ -5,9 +5,8 @@ from typing import Any, List, MutableMapping, Optional, Self, Mapping, Literal, 
 from syncify.abstract.item import Item
 from syncify.abstract.collection import Playlist, ItemCollection
 from syncify.abstract.misc import Result
-from syncify.spotify import ItemType
-from syncify.spotify.api import APIMethodInputType
-from syncify.spotify.library.response import SpotifyResponse
+from syncify.spotify import ItemType, APIMethodInputType
+from syncify.spotify.base import Spotify
 from syncify.spotify.library.item import SpotifyTrack
 from syncify.spotify.library.collection import SpotifyCollection
 
@@ -32,49 +31,76 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
 
     @property
     def name(self) -> str:
+        """The name of this playlist"""
         return self._name
 
     @property
     def items(self) -> List[SpotifyTrack]:
         return self.tracks
 
-    @items.setter
-    def items(self, value: List[SpotifyTrack]):
-        self.tracks = value
-        self.length = 0.0
-        self.date_created = None
-        self.date_modified = None
+    @property
+    def tracks(self) -> List[SpotifyTrack]:
+        return self._tracks
 
-        if len(self.tracks) > 0:
-            self.length: float = sum(track.length for track in self.tracks if track.length)
-            date_added = [track.date_added for track in self.tracks if track.date_added]
-            if date_added:
-                self.date_created: datetime = min(date_added)
-                self.date_modified: datetime = max(date_added)
+    @property
+    def track_total(self) -> int:
+        return self.response["tracks"]["total"]
+
+    @property
+    def date_created(self) -> Optional[datetime]:
+        """datetime object representing when the first track was added to this playlist"""
+        return min(self.date_added.values()) if self.date_added else None
+
+    @property
+    def date_modified(self) -> Optional[datetime]:
+        """datetime object representing when a track was most recently added/removed"""
+        return max(self.date_added.values()) if self.date_added else None
+
+    @property
+    def date_added(self) -> Mapping[str, datetime]:
+        """A map of ``{URI: date}`` for each item for when that item was added to the playlist"""
+        return self._date_added
+
+    @property
+    def followers(self) -> int:
+        """The number of followers this playlist has"""
+        return self.response["followers"]["total"]
+
+    @property
+    def owner_name(self) -> str:
+        """The name of the owner of this playlist"""
+        return self.response["owner"]["display_name"]
+
+    @property
+    def owner_id(self) -> str:
+        """The ID of the owner of this playlist"""
+        return self.response["owner"]["id"]
+
+    @property
+    def has_image(self) -> bool:
+        """Does this playlist have an image"""
+        images = self.response.get("album", {}).get("images", [])
+        return images is not None and len(images) > 0
 
     def __init__(self, response: MutableMapping[str, Any]):
-        SpotifyResponse.__init__(self, response)
+        Spotify.__init__(self, response)
 
         self._name: str = response["name"]
         self.description: str = response["description"]
         self.collaborative: bool = response["collaborative"]
         self.public: bool = response["public"]
-        self.followers: int = response["followers"]["total"]
-        self.track_total: int = response["tracks"]["total"]
-
-        self.owner_name: str = response["owner"]["display_name"]
-        self.owner_id: str = response["owner"]["id"]
 
         images = {image["height"]: image["url"] for image in response["images"]}
         self.image_links: MutableMapping[str, str] = {"cover_front": url
                                                       for height, url in images.items() if height == max(images)}
-        self.has_image: bool = len(self.image_links) > 0
 
-        self.length: float = 0.0
-        self.date_created: Optional[datetime] = None
-        self.date_modified: Optional[datetime] = None
+        # uri: date item was added
+        self._date_added: Mapping[str, datetime] = {
+            track["track"]["uri"]: datetime.strptime(track["added_at"], "%Y-%m-%dT%H:%M:%S%z")
+            for track in response["tracks"]["items"]
+        }
 
-        self.items = [SpotifyTrack(track["track"], track["added_at"]) for track in response["tracks"]["items"]]
+        self._tracks = [SpotifyTrack(track["track"]) for track in response["tracks"]["items"]]
 
     @classmethod
     def load(cls, value: APIMethodInputType, use_cache: bool = True,
@@ -83,41 +109,42 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
         obj = cls.__new__(cls)
         response = cls._load_response(value, use_cache=use_cache)
 
-        if not items:
-            obj.url = cls.api.get_playlist_url(value)
+        if not items:  # no items given, regenerate API response from the URL
+            obj.response = {"href": cls.api.get_playlist_url(value)}
             obj.reload(use_cache=use_cache)
-        else:
+        else:  # attempt to find items for this playlist in the given items
             uri_tracks: Mapping[str, SpotifyTrack] = {track.uri: track for track in items}
             uri_get: List[str] = []
 
             for i, track_raw in enumerate(response["tracks"]["items"]):
+                # loop through the skeleton response for this playlist
+                # find items that match from the given items
                 track: SpotifyTrack = uri_tracks.get(track_raw["track"]["uri"])
-                if track:
+                if track:  # replace the skeleton response with the response from the track
                     response["tracks"]["items"][i]["track"] = track.response
-                elif not track_raw["is_local"]:
+                elif not track_raw["is_local"]:  # add to get list
                     uri_get.append(track_raw["track"]["uri"])
 
-            if len(uri_get) > 0:
-                tracks_new = cls.api.get_items(uri_get, kind=ItemType.TRACK, use_cache=use_cache)
-                cls.api.get_tracks_extra(tracks_new, features=True, use_cache=use_cache)
+            if len(uri_get) > 0:  # get remaining items
+                tracks_new = cls.api.get_tracks(uri_get, features=True, kind=ItemType.TRACK, use_cache=use_cache)
                 uri_tracks: Mapping[str, Mapping[str, Any]] = {r["uri"]: r for r in tracks_new}
 
                 for i, track_raw in enumerate(response["tracks"]["items"]):
                     track: Mapping[str, Any] = uri_tracks.get(track_raw["track"]["uri"])
-                    if track:
+                    if track:  # replace the skeleton response with the new response
                         response["tracks"]["items"][i]["track"] = track
 
             obj.__init__(response)
 
         return obj
 
-    def reload(self, use_cache: bool = True) -> None:
+    def reload(self, use_cache: bool = True):
         self._check_for_api()
 
+        # reload with enriched data
         response = self.api.get_collections(self.url, kind=ItemType.PLAYLIST, use_cache=use_cache)[0]
         tracks = [track["track"] for track in response["tracks"]["items"]]
-        self.api.get_items(tracks, kind=ItemType.TRACK, use_cache=use_cache)
-        self.api.get_tracks_extra(tracks, features=True, use_cache=use_cache)
+        self.api.get_tracks(tracks, features=True, use_cache=use_cache)
 
         for old, new in zip(response["tracks"]["items"], tracks):
             old["track"] = new
@@ -137,15 +164,12 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
         cls._check_for_api()
 
         url = cls.api.create_playlist(name=name, public=public, collaborative=collaborative)
-        date_created = datetime.now()
 
         obj = cls.__new__(cls)
         obj.__init__(cls.api.get(url))
-        obj.date_created = date_created
-        obj.date_modified = date_created
         return obj
 
-    def delete(self) -> None:
+    def delete(self):
         """
         Unfollow the current playlist and clear all attributes from this object.
         WARNING: This function will destructively modify your Spotify playlists.
@@ -186,17 +210,17 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
         uris_unchanged = uris_remote
         removed = 0
 
-        if clear == "all":
+        if clear == "all":  # remove all items from the remote playlist on Spotify
             removed = self.api.clear_from_playlist(self.url)
             uris_add = uris_obj
             uris_unchanged = []
-        elif clear == "extra":
+        elif clear == "extra":  # remove items not present in the current list from the remote playlist on Spotify
             uris_clear = [uri for uri in uris_remote if uri not in uris_obj]
             removed = self.api.clear_from_playlist(self.url, items=uris_clear)
             uris_unchanged = [uri for uri in uris_remote if uri in uris_obj]
 
         added = self.api.add_to_playlist(self.url, items=uris_add, skip_dupes=clear != "all")
-        if reload:
+        if reload:  # reload the current playlist object from remote
             self.reload(use_cache=False)
 
         return SyncResultSpotifyPlaylist(

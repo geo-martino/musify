@@ -43,7 +43,10 @@ class FLAC(LocalTrack):
         images=[],
     )
 
-    def __init__(self, file: Union[str, mutagen.File], available: Optional[Collection[str]] = None):
+    # noinspection PyTypeChecker
+    def __init__(
+            self, file: Union[str, mutagen.FileType, mutagen.flac.FLAC], available: Optional[Collection[str]] = None
+    ):
         LocalTrack.__init__(self, file=file, available=available)
         self._file: mutagen.flac.FLAC = self._file
 
@@ -56,7 +59,7 @@ class FLAC(LocalTrack):
 
     def _write_tag(self, tag_id: Optional[str], tag_value: Any, dry_run: bool = True) -> bool:
         if tag_value is None:
-            return self._delete_tag(tag_id, dry_run=dry_run)
+            return self.delete_tag(tag_id, dry_run=dry_run)
 
         if not dry_run and tag_id is not None:
             if isinstance(tag_value, list):
@@ -90,14 +93,14 @@ class FLAC(LocalTrack):
 
         return updated
 
-    def _delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:
+    def delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:
         if tag_name == TagName.IMAGES.name.casefold():
             self._file.clear_pictures()
             return True
 
         removed = False
 
-        tag_ids = getattr(self.tag_map, tag_name, None)
+        tag_ids = self.tag_map[tag_name]
         if tag_ids is None or len(tag_ids) is None:
             return removed
 

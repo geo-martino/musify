@@ -1,13 +1,15 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Optional, MutableMapping, Collection
+from typing import List, Optional, MutableMapping, Collection, Self, Any
 
 from syncify.abstract.misc import PrettyPrinter
+from syncify.enums.tags import TagName
+from syncify.utils import UnionList
 
 
 class Base:
-    list_sep = "; "
+    _list_sep = "; "
 
     @property
     @abstractmethod
@@ -19,13 +21,30 @@ class Base:
 class Item(Base, PrettyPrinter, metaclass=ABCMeta):
     """Generic class for storing an item."""
 
-    uri: Optional[str] = None
-    has_uri: Optional[bool] = None
+    @property
+    @abstractmethod
+    def uri(self) -> Optional[str]:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def has_uri(self) -> Optional[bool]:
+        raise NotImplementedError
+
+    def merge(self, item: Self, tags: UnionList[TagName] = TagName.ALL):
+        """Set the tags of this item equal to the given ``item``. Give a list of ``tags`` to limit which are set"""
+        tag_names = set(TagName.to_tags(tags))
+
+        for tag in tag_names:  # merge on each tag
+            if hasattr(item, tag):
+                setattr(self, tag, item[tag])
 
     def __hash__(self):
-        return hash(self.uri) if self.has_uri else hash(self.name)
+        """Uniqueness of an item is its URI + name"""
+        return hash((self.uri, self.name))
 
     def __eq__(self, item):
+        """URI attributes equal if at least one item has a URI, names equal otherwise"""
         if self.has_uri or item.has_uri:
             return self.has_uri == item.has_uri and self.uri == item.uri
         else:
@@ -33,6 +52,14 @@ class Item(Base, PrettyPrinter, metaclass=ABCMeta):
 
     def __ne__(self, item):
         return not self.__eq__(item)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any):
+        if not hasattr(self, key):
+            raise KeyError(f"Given key is not a valid attribute of this item: {key}")
+        return setattr(self, key, value)
 
 
 class Track(Item, metaclass=ABCMeta):
@@ -56,13 +83,12 @@ class Track(Item, metaclass=ABCMeta):
     image_links: Optional[MutableMapping[str, str]] = None
     has_image: bool = False
 
-    # file properties
-    size: Optional[int] = None
+    # properties
     length: Optional[float] = None
-    date_modified: Optional[datetime] = None
+    rating: Optional[float] = None
 
-    # library properties
+
+class TrackProperties:
     date_added: Optional[datetime] = None
     last_played: Optional[datetime] = None
     play_count: Optional[int] = None
-    rating: Optional[float] = None

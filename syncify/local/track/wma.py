@@ -39,7 +39,10 @@ class WMA(LocalTrack):
         images=["WM/Picture"],
     )
 
-    def __init__(self, file: Union[str, mutagen.File], available: Optional[Collection[str]] = None):
+    # noinspection PyTypeChecker
+    def __init__(
+            self, file: Union[str, mutagen.FileType, mutagen.asf.ASF], available: Optional[Collection[str]] = None
+    ):
         LocalTrack.__init__(self, file=file, available=available)
         self._file: mutagen.asf.ASF = self._file
 
@@ -66,7 +69,7 @@ class WMA(LocalTrack):
 
     def _write_tag(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
         if tag_value is None:
-            return self._delete_tag(tag_id, dry_run=dry_run)
+            return self.delete_tag(tag_id, dry_run=dry_run)
 
         if not dry_run and tag_id is not None:
             if isinstance(tag_value, list):

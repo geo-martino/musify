@@ -1,7 +1,8 @@
 from dataclasses import dataclass
-from typing import List, Self
+from typing import List, Self, Collection, Union
 
 from syncify.enums import SyncifyEnum, EnumNotFoundError
+from syncify.utils import make_list
 
 
 @dataclass(frozen=True)
@@ -24,6 +25,9 @@ class TagMap:
     comments: List[str]
     images: List[str]
 
+    def __getitem__(self, key: str) -> List[str]:
+        return getattr(self, key, [])
+
 
 class Name(SyncifyEnum):
 
@@ -35,10 +39,13 @@ class Name(SyncifyEnum):
         :exception EnumNotFoundError: If a corresponding enum cannot be found.
         """
         name = name.strip().upper()
+        if name == "ALBUM_ARTIST":
+            return TagName.ALBUM_ARTIST
+
         for enum in cls:
             if enum.name.startswith(name):
                 return enum
-            elif (name.startswith("TRACK") or name.startswith("DISC")) and enum.name.startswith(name.split("_")[0]):
+            elif enum.name.startswith(name.split("_")[0]):
                 return enum
         raise EnumNotFoundError(name)
 
@@ -83,8 +90,16 @@ class TagName(Name):
         Returns all human-friendly tag names for a given enum
         e.g. ``track`` returns both ``track_number`` and ``track_total`` tag names
         """
-        tags = list(TagMap.__annotations__) + ["uri"]
+        tags: List[str] = list(TagMap.__annotations__.keys()) + ["uri"]
+        if self == self.ALL:
+            return tags
         return [tag for tag in tags if tag.startswith(self.name.casefold())]
+
+    @classmethod
+    def to_tags(cls, tags: Union[Self, Collection[Self]]) -> List[str]:
+        if isinstance(tags, cls):
+            return tags.to_tag()
+        return [t for tag in make_list(tags) for t in tag.to_tag()]
 
 
 class PropertyName(Name):

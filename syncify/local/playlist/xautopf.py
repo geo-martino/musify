@@ -1,16 +1,15 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from datetime import datetime
-from os.path import exists, getmtime
+from os.path import exists
 from typing import Any, List, Mapping, Optional, Union, Collection
 
 import xmltodict
 
 from syncify.abstract.misc import Result
 from syncify.enums.tags import PropertyName
-from syncify.local.track import LocalTrack, load_track
 from syncify.local.playlist.playlist import LocalPlaylist
 from syncify.local.playlist.processor import TrackMatch, TrackLimit, TrackSort
+from syncify.local.track import LocalTrack, load_track
 
 
 @dataclass
@@ -71,10 +70,10 @@ class XAutoPF(LocalPlaylist):
         with open(path, "r", encoding='utf-8') as f:
             self.xml: Mapping[str, Any] = xmltodict.parse(f.read())
 
+        # generate track processors from the XML settings
         matcher = TrackMatch.from_xml(xml=self.xml)
         matcher.library_folder = library_folder
         matcher.sanitise_file_paths(other_folders, check_existence=check_existence)
-
         limiter = TrackLimit.from_xml(xml=self.xml)
         sorter = TrackSort.from_xml(xml=self.xml)
 
@@ -83,7 +82,6 @@ class XAutoPF(LocalPlaylist):
         self.description = self.xml["SmartPlaylist"]["Source"]["Description"]
 
         self._tracks_original: List[LocalTrack]
-
         self.load(tracks=tracks)
 
     def load(self, tracks: Optional[List[LocalTrack]] = None) -> Optional[List[LocalTrack]]:
@@ -101,19 +99,19 @@ class XAutoPF(LocalPlaylist):
     def save(self, dry_run: bool = True) -> SyncResultXAutoPF:
         start_xml = deepcopy(self.xml)
 
+        # update the stored XML object
         self.xml["SmartPlaylist"]["Source"]["Description"] = self.description
         self._update_xml_paths()
         # self._update_comparators()
         # self._update_limiter()
         # self._update_sorter()
 
-        if not dry_run:
+        if not dry_run:  # save the modified XML object to file
             self._save_xml()
-        self.date_modified = datetime.fromtimestamp(getmtime(self._path))
 
+        # generate stats for logging
         count_start = len(self._tracks_original)
         self._tracks_original = self.tracks.copy()
-
         start_source: Mapping[str, Any] = start_xml["SmartPlaylist"]["Source"]
         final_source: Mapping[str, Any] = self.xml["SmartPlaylist"]["Source"]
 
@@ -135,50 +133,51 @@ class XAutoPF(LocalPlaylist):
         )
 
     # noinspection PyTypeChecker
-    def _update_xml_paths(self) -> None:
+    def _update_xml_paths(self):
         tracks = self._tracks_original
 
         path_track_map: Mapping[str: LocalTrack] = {track.path.lower(): track for track in self.tracks}
 
         # match again on current conditions to check differences
         self.sorter.sort_by_field(tracks, field=PropertyName.LAST_PLAYED, reverse=True)
-        matches: List[LocalTrack] = self.matcher.match(tracks, reference=tracks[0], combine=False)[2]
+        matches: List[LocalTrack] = self.matcher.match(tracks, reference=tracks[0], combine=False).compared
         compared: Mapping[str: LocalTrack] = {track.path.lower(): track for track in matches}
 
+        # get new include/exclude paths based on the leftovers after matching on comparators
         self.matcher.include_paths = list(path_track_map - compared.keys())
         self.matcher.exclude_paths = list(compared.keys() - path_track_map)
 
+        # get the track objects related to these paths and their actual paths as stored in their objects
         include_tracks: List[Optional[LocalTrack]] = [path_track_map.get(path) for path in self.matcher.include_paths]
         exclude_tracks: List[Optional[LocalTrack]] = [compared.get(path) for path in self.matcher.exclude_paths]
-
         include_paths: List[str] = [track.path for track in include_tracks if track is not None]
         exclude_paths: List[str] = [track.path for track in exclude_tracks if track is not None]
 
         source = self.xml["SmartPlaylist"]["Source"]
 
-        if len(include_paths) > 0:
+        if len(include_paths) > 0:  # assign include paths to XML object
             source["ExceptionsInclude"] = "|".join(self._prepare_paths_for_output(include_paths))
         else:
             source.pop("ExceptionsInclude", None)
 
-        if len(exclude_paths) > 0:
+        if len(exclude_paths) > 0:  # assign exclude paths to XML object
             source["Exceptions"] = "|".join(self._prepare_paths_for_output(exclude_paths))
         else:
             source.pop("Exceptions", None)
 
-    def _update_comparators(self) -> None:
+    def _update_comparators(self):
         # TODO: implement comparison XML part updater (low priority)
         raise NotImplementedError
 
-    def _update_limiter(self) -> None:
+    def _update_limiter(self):
         # TODO: implement limit XML part updater (low priority)
         raise NotImplementedError
 
-    def _update_sorter(self) -> None:
+    def _update_sorter(self):
         # TODO: implement sort XML part updater (low priority)
         raise NotImplementedError
 
-    def _save_xml(self) -> None:
+    def _save_xml(self):
         """Save XML representation of the playlist"""
         with open(self.path, 'w', encoding='utf-8') as f:
             xml_str = xmltodict.unparse(self.xml, pretty=True, short_empty_elements=True)

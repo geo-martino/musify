@@ -44,7 +44,10 @@ class MP3(LocalTrack):
         images=["APIC"],
     )
 
-    def __init__(self, file: Union[str, mutagen.File], available: Optional[Collection[str]] = None):
+    # noinspection PyTypeChecker
+    def __init__(
+            self, file: Union[str, mutagen.FileType, mutagen.mp3.MP3], available: Optional[Collection[str]] = None
+    ):
         LocalTrack.__init__(self, file=file, available=available)
         self._file: mutagen.mp3.MP3 = self._file
 
@@ -83,7 +86,7 @@ class MP3(LocalTrack):
 
     def _write_tag(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
         if tag_value is None:
-            return self._delete_tag(tag_id, dry_run=dry_run)
+            return self.delete_tag(tag_id, dry_run=dry_run)
 
         if not dry_run and tag_id is not None:
             self._file[tag_id] = getattr(mutagen.id3, tag_id)(3, text=str(tag_value))
@@ -150,13 +153,13 @@ class MP3(LocalTrack):
 
             return tag_id is not None
         else:
-            tag_id = next(iter(getattr(self.tag_map, self.uri_tag.name.casefold(), [])), None)
+            tag_id = next(iter(self.tag_map[self.uri_tag.name.casefold()]), None)
             return self._write_tag(tag_id, tag_value, dry_run)
 
-    def _delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:
+    def delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:
         removed = False
 
-        tag_ids = getattr(self.tag_map, tag_name, None)
+        tag_ids = self.tag_map[tag_name]
         if tag_ids is None or len(tag_ids) is None:
             return removed
 

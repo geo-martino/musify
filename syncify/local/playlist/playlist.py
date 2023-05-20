@@ -1,17 +1,19 @@
 import re
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
-from os.path import dirname, join, getmtime, exists, getctime
-from typing import List, MutableMapping, Optional, Any, Union, Callable, Tuple, Collection
+from os.path import dirname, join, getmtime, getctime
+from typing import List, Optional, Union, Collection
 
-from syncify.abstract.misc import Result
 from syncify.abstract.collection import Playlist
+from syncify.abstract.misc import Result
 from syncify.local.file import File
-from syncify.local.track import LocalTrack
+from syncify.local.library.collection import LocalCollection
 from syncify.local.playlist.processor import TrackMatch, TrackLimit, TrackSort
+from syncify.local.track import LocalTrack
+from syncify.utils import Logger
 
 
-class LocalPlaylist(Playlist, File, metaclass=ABCMeta):
+class LocalPlaylist(Playlist, LocalCollection, File, metaclass=ABCMeta):
     """
     Generic class for manipulating local playlists.
 
@@ -20,6 +22,14 @@ class LocalPlaylist(Playlist, File, metaclass=ABCMeta):
     :param limiter: :class:`TrackLimit` object to use for limiting the number of tracks matched.
     :param sorter: :class:`TrackSort` object to use for sorting the final track list.
     """
+
+    @property
+    def name(self) -> str:
+        return self.filename
+
+    @name.setter
+    def name(self, value: str):
+        self._path = join(dirname(self._path), value + self.ext)
 
     @property
     def items(self) -> List[LocalTrack]:
@@ -31,26 +41,21 @@ class LocalPlaylist(Playlist, File, metaclass=ABCMeta):
 
     @tracks.setter
     def tracks(self, value: List[LocalTrack]):
-        if len(value) > 0:
-            key_type = Callable[[LocalTrack], Tuple[bool, datetime]]
-            key: key_type = lambda t: (t.last_played is None, t.last_played)
-            self.last_played = sorted(value, key=key, reverse=True)[0].last_played
         self._tracks = value
-
-        self.track_total = len(self._tracks)
-        self.length = sum(track.length for track in self._tracks)
 
     @property
     def path(self) -> str:
         return self._path
 
     @property
-    def name(self) -> str:
-        return self.filename
+    def date_modified(self) -> Optional[datetime]:
+        if self.path:
+            return datetime.fromtimestamp(getmtime(self.path))
 
-    @name.setter
-    def name(self, value: str):
-        self._path = join(dirname(self._path), value + self.ext)
+    @property
+    def date_created(self) -> Optional[datetime]:
+        if self.path:
+            return datetime.fromtimestamp(getctime(self.path))
 
     def __init__(
             self,
@@ -59,35 +64,31 @@ class LocalPlaylist(Playlist, File, metaclass=ABCMeta):
             limiter: Optional[TrackLimit] = None,
             sorter: Optional[TrackSort] = None,
     ):
+        Logger.__init__(self)
         self._path: str = path
         self._tracks: Optional[List[LocalTrack]] = None
-        self.last_played: Optional[datetime] = None
-
-        if exists(self._path):
-            self.date_created = datetime.fromtimestamp(getctime(self._path))
-            self.date_modified = datetime.fromtimestamp(getmtime(self._path))
+        self._tracks_original: Optional[List[LocalTrack]] = None
 
         self.matcher = matcher
         self.limiter = limiter
         self.sorter = sorter
 
-        self._tracks_original: Optional[List[LocalTrack]] = None
-
-    def _match(self, tracks: Optional[List[LocalTrack]] = None, reference: Optional[LocalTrack] = None) -> None:
+    def _match(self, tracks: Optional[List[LocalTrack]] = None, reference: Optional[LocalTrack] = None):
         """Wrapper for matcher"""
         m = self.matcher
         if m is not None and tracks is not None:
             if m.include_paths is None and m.exclude_paths is None and m.comparators is None:
+                # just return the tracks given if matcher has no settings applied
                 self.tracks: List[LocalTrack] = tracks.copy()
-            else:
+            else:  # run matcher
                 self.tracks: List[LocalTrack] = m.match(tracks=tracks, reference=reference, combine=True)
 
-    def _limit(self, ignore: Optional[Union[Collection[str], Collection[LocalTrack]]] = None) -> None:
+    def _limit(self, ignore: Optional[Union[Collection[str], Collection[LocalTrack]]] = None):
         """Wrapper for limiter"""
         if self.limiter is not None and self.tracks is not None:
             self.limiter.limit(tracks=self.tracks, ignore=ignore)
 
-    def _sort(self) -> None:
+    def _sort(self):
         """Wrapper for sorter"""
         if self.sorter is not None and self.tracks is not None:
             self.sorter.sort(tracks=self.tracks)
@@ -122,7 +123,7 @@ class LocalPlaylist(Playlist, File, metaclass=ABCMeta):
         :return: UpdateResult object with stats on the changes to the playlist.
         """
 
-    def as_dict(self) -> MutableMapping[str, Any]:
+    def as_dict(self):
         return {
             "name": self.name,
             "description": self.description,

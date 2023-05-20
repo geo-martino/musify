@@ -1,6 +1,8 @@
+import os
 from copy import copy
 from datetime import datetime
 
+from tests.common import random_file
 from syncify.local.playlist.processor import TrackLimit, LimitType
 from tests.local.track.track import random_tracks
 
@@ -29,11 +31,15 @@ def test_limit():
 
     # prepare tracks for tests
     tracks = random_tracks(50)
+    random_files = []
     for i in range(1, 6):
+        random_file_path = random_file(i * 1000)
+        random_files.append(random_file_path)
         for track in tracks[(i-1)*10:i*10]:
+
             track.album = f"album {i}"
-            track.length = i * 60
-            track.size = i * 1000000
+            track.file.info.length = i * 60
+            track.path = random_file_path
             track.rating = i
 
             if i != 1 and i != 5:
@@ -96,12 +102,15 @@ def test_limit():
     assert len(tracks_copy) == 21
 
     # on bytes
-    limiter = TrackLimit(limit=30, on=LimitType.MEGABYTES)
+    limiter = TrackLimit(limit=30, on=LimitType.KILOBYTES)
     tracks_copy = copy(tracks)
     limiter.limit(tracks_copy)
     assert len(tracks_copy) == 20
 
-    limiter = TrackLimit(limit=30, on=LimitType.MEGABYTES, allowance=2)
+    limiter = TrackLimit(limit=30, on=LimitType.KILOBYTES, allowance=2)
     tracks_copy = copy(tracks)
     limiter.limit(tracks_copy)
     assert len(tracks_copy) == 21
+
+    for path in random_files:
+        os.remove(path)

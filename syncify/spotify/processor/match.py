@@ -3,10 +3,12 @@ import re
 from copy import copy
 from typing import List, Optional, Union, Any, Iterable, TypeVar, Tuple, Collection
 
+from syncify.abstract import item
+from syncify.local.library import LocalAlbum
 from syncify.abstract.item import Track, Base
 from syncify.abstract.collection import Album, ItemCollection
 from syncify.enums.tags import TagName, PropertyName
-from syncify.utils import Logger
+from syncify.utils import Logger, limit_value
 
 MatchTypes = Union[Track, Album]
 T = TypeVar("T")
@@ -35,7 +37,7 @@ class Matcher(Logger):
             log += extra
         self._log_padded(log, pad='>')
 
-    def _log_test(self, source: Base, result: MatchTypes, test: Any, extra: Optional[List[str]] = None) -> None:
+    def _log_test(self, source: Base, result: MatchTypes, test: Any, extra: Optional[List[str]] = None):
         """Wrapper for initially logging a test result in a correctly aligned format"""
         algorithm = inspect.stack()[1][0].f_code.co_name.replace("match", "").upper().lstrip("_").replace("_", " ")
         log_result = f"> Testing URI: {result.uri}" if hasattr(result, "uri") else "> Test failed"
@@ -44,7 +46,7 @@ class Matcher(Logger):
             log += extra
         self._log_padded(log, pad=' ')
 
-    def _log_match(self, source: Base, result: MatchTypes, extra: Optional[List[str]] = None) -> None:
+    def _log_match(self, source: Base, result: MatchTypes, extra: Optional[List[str]] = None):
         """Wrapper for initially logging a match in a correctly aligned format"""
         log = [source.name, f"< Matched URI: {result.uri}"]
         if extra:
@@ -91,7 +93,11 @@ class Matcher(Logger):
 
         album = getattr(item_copy, "album", None)
         if album:
-            item_copy.album = process(album.split('-')[0], redundant=["ep"])
+            cleaned = process(album.split('-')[0], redundant=["ep"])
+            if isinstance(item, LocalAlbum):
+                item_copy._name = cleaned
+            else:
+                item_copy.album = cleaned
 
         return item_copy
 
@@ -129,6 +135,7 @@ class Matcher(Logger):
                        extra=[f"{source.name} -> {result.name}"])
         return score
 
+    # noinspection PyProtectedMember
     def match_artist(self, source: MatchTypes, result: MatchTypes) -> float:
         """
         Match on artists and return a score. Score=0 when either value is None.
@@ -142,8 +149,8 @@ class Matcher(Logger):
                            extra=[f"{source.artist} -> {result.artist}"])
             return score
 
-        artists_source = source.artist.replace(Base.list_sep, " ")
-        artists_result = result.artist.split(Base.list_sep)
+        artists_source = source.artist.replace(Base._list_sep, " ")
+        artists_result = result.artist.split(Base._list_sep)
 
         for i, artist in enumerate(artists_result, 1):
             score += (sum(word in artists_source for word in artist.split()) /
@@ -246,7 +253,7 @@ class Matcher(Logger):
         if not results:
             self._log_algorithm(source=source_clean, extra=[f"NO RESULTS GIVEN, SKIPPING"])
             return 0, None
-        max_score = self.limit_value(max_score, floor=0.1, ceil=1.0)
+        max_score = limit_value(max_score, floor=0.1, ceil=1.0)
         self._log_algorithm(source=source_clean, extra=[f"max_score={max_score}"])
 
         # process and limit match options

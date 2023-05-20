@@ -1,6 +1,6 @@
 from copy import copy, deepcopy
 from datetime import datetime
-from os.path import basename, dirname, splitext
+from os.path import basename, dirname, splitext, getmtime
 
 import pytest
 
@@ -16,7 +16,7 @@ def test_load():
 
     track_file = track.file
 
-    track.load_file()
+    track._file = track.get_file()
     track_reload_1 = track.file
 
     track.load()
@@ -43,12 +43,12 @@ def test_copy():
     track_copy = copy(track)
     assert id(track.file) == id(track_copy.file)
     for key, value in vars(track).items():
-        assert value == getattr(track_copy, key)
+        assert value == track_copy[key]
 
     track_deepcopy = deepcopy(track)
     assert id(track.file) != id(track_deepcopy.file)
     for key, value in vars(track).items():
-        assert value == getattr(track_deepcopy, key)
+        assert value == track_deepcopy[key]
 
 
 def test_set_and_find_file_paths():
@@ -94,7 +94,7 @@ def test_loaded_attributes():
     assert track.ext == '.wma'
     assert track.size == 1193637
     assert int(track.length) == 32
-    assert track.date_modified == datetime(2023, 5, 1, 19, 27, 19, 440000)
+    assert track.date_modified == datetime.fromtimestamp(getmtime(path_track_wma))
 
     # library properties
     assert track.date_added is None

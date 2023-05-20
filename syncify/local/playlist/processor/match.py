@@ -1,10 +1,18 @@
+from dataclasses import dataclass
 from os.path import exists
-from typing import Any, List, Mapping, Optional, Self, MutableMapping, Collection, Union, Tuple
+from typing import Any, List, Mapping, Optional, Self, Collection, Union
 
-from syncify.local.track import LocalTrack
 from syncify.local.playlist.processor.base import TrackProcessor
 from syncify.local.playlist.processor.compare import TrackCompare
+from syncify.local.track import LocalTrack
 from syncify.utils import UnionList, make_list
+
+
+@dataclass
+class MatchResult:
+    include: List[LocalTrack]
+    exclude: List[LocalTrack]
+    compared: List[LocalTrack]
 
 
 class TrackMatch(TrackProcessor):
@@ -76,10 +84,8 @@ class TrackMatch(TrackProcessor):
         self.sanitise_file_paths(other_folders=other_folders, check_existence=check_existence)
 
     def sanitise_file_paths(
-            self,
-            other_folders: Optional[Union[str, Collection[str]]] = None,
-            check_existence: bool = True,
-    ) -> None:
+            self, other_folders: Optional[Union[str, Collection[str]]] = None, check_existence: bool = True,
+    ):
         """
         Attempt to sanitise given include/exclude file paths
         based on current library folder and other possible folder stems.
@@ -90,9 +96,10 @@ class TrackMatch(TrackProcessor):
         :param check_existence: Check for the existence of the file paths on the file system.
         """
         if self.library_folder is not None and other_folders is not None and self.original_folder is None:
+            # determine original_folder from other_folders using include/exclude paths
             self._check_for_other_folder_stem(other_folders, self.include_paths, self.exclude_paths)
 
-        if self.exclude_paths is not None:
+        if self.exclude_paths is not None:  # filter out exclude paths
             exclude = []
             for path in self.exclude_paths:
                 path = self.sanitise_file_path(path, check_existence=check_existence)
@@ -101,7 +108,7 @@ class TrackMatch(TrackProcessor):
 
             self.exclude_paths = exclude
 
-        if self.include_paths is not None:
+        if self.include_paths is not None:  # include filtering
             include = []
             for path in self.include_paths:
                 path = self.sanitise_file_path(path, check_existence=check_existence)
@@ -110,9 +117,7 @@ class TrackMatch(TrackProcessor):
 
             self.include_paths = include
 
-    def _check_for_other_folder_stem(
-            self, stems: Union[str, Collection[str]], *paths: Optional[List[str]]
-    ) -> None:
+    def _check_for_other_folder_stem(self, stems: Union[str, Collection[str]], *paths: Optional[List[str]]):
         """
         Checks for the presence of some other folder as the stem of one of the given paths.
         Useful when managing similar libraries across multiple operating systems.
@@ -148,8 +153,7 @@ class TrackMatch(TrackProcessor):
             return
 
         if self.library_folder is not None:
-            # check if replacement of filepath stem is necessary
-            if self.original_folder is not None:
+            if self.original_folder is not None:  # check if replacement of filepath stem is necessary
                 path = path.replace(self.original_folder, self.library_folder).replace("//", "/").replace("\\\\", "\\")
 
             # sanitise path separators
@@ -167,7 +171,7 @@ class TrackMatch(TrackProcessor):
 
     def match(
             self, tracks: List[LocalTrack], reference: Optional[LocalTrack] = None, combine: bool = True
-    ) -> Union[List[LocalTrack], Tuple[List[LocalTrack], List[LocalTrack], List[LocalTrack]]]:
+    ) -> Union[List[LocalTrack], MatchResult]:
         """
         Return a new list of tracks from input tracks that match the given conditions.
 
@@ -179,29 +183,30 @@ class TrackMatch(TrackProcessor):
             - List 2: Tracks that only match on exclude_paths
             - List 3: Tracks that only match on comparators
         """
-        if len(tracks) == 0:
-            return [] if combine else ([], [], [])
+        if len(tracks) == 0:  # skip match
+            return [] if combine else MatchResult(include=[], exclude=[], compared=[])
 
         path_tracks: Mapping[str, LocalTrack] = {track.path.lower(): track for track in tracks}
 
         include: List[LocalTrack] = []
-        if self.include_paths:
+        if self.include_paths:  # include filter
             include.extend([path_tracks[path] for path in self.include_paths if path in path_tracks])
 
         exclude: List[LocalTrack] = []
-        if self.exclude_paths:
+        if self.exclude_paths:  # filter out exclude paths
             exclude.extend([path_tracks[path] for path in self.exclude_paths if path in path_tracks])
 
-        if self.comparators is None or len(self.comparators) == 0:
-            return [track for track in include if track not in exclude] if combine else (include, exclude, [])
+        if self.comparators is None or len(self.comparators) == 0:  # skip comparator checks
+            return [track for track in include if track not in exclude] if combine \
+                else MatchResult(include=include, exclude=exclude, compared=[])
 
         compared: List[LocalTrack] = []
-        for track in tracks:
+        for track in tracks:  # run comparator checks
             match_results = []
             for comparator in self.comparators:
-                if comparator.expected is None:
+                if comparator.expected is None:  # compare with a reference
                     match_results.append(comparator.compare(track=track, reference=reference))
-                else:
+                else:  # compare with the comparators expected values
                     match_results.append(comparator.compare(track=track))
 
             if self.match_all and all(match_results):
@@ -212,9 +217,9 @@ class TrackMatch(TrackProcessor):
         if combine:
             compared_reduced = [track for track in compared if track not in include]
             return [track for results in [compared_reduced, include] for track in results if track not in exclude]
-        return include, exclude, compared
+        return MatchResult(include=include, exclude=exclude, compared=compared)
 
-    def as_dict(self) -> MutableMapping[str, Any]:
+    def as_dict(self):
         return {
             "include": self.include_paths,
             "exclude": self.exclude_paths,

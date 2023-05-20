@@ -7,7 +7,7 @@ from syncify.enums import SyncifyEnum
 from syncify.enums.tags import Name, PropertyName, TagName
 from syncify.local.track import LocalTrack
 from syncify.local.playlist.processor.base import TrackProcessor
-from syncify.utils import UnionList, flatten_nested, strip_ignore_words, make_list
+from syncify.utils import UnionList, flatten_nested, strip_ignore_words, make_list, limit_value
 
 
 def get_field_from_code(field_code: int) -> Optional[Name]:
@@ -18,8 +18,11 @@ def get_field_from_code(field_code: int) -> Optional[Name]:
         return TagName.from_value(field_code)
     elif field_code in [e.value for e in PropertyName.all()]:
         return PropertyName.from_value(field_code)
-    elif field_code == 78:  # album including articles like 'the' and 'a' etc.
-        return TagName.ALBUM  # album ignoring articles like 'the' and 'a' etc.
+    elif field_code == 78:
+        # 78 == album including articles like 'the' and 'a' etc.
+        # 30 == album ignoring articles like 'the' and 'a' etc.
+        # program doesn't have functionality to discern between each so just default to 30
+        return TagName.ALBUM
     else:
         raise ValueError(f"Field code not recognised: {field_code}")
 
@@ -52,6 +55,7 @@ class TrackSort(TrackProcessor):
         This value will automatically be limited to within the accepted range 0 and 1.
     """
 
+    # define custom sort codes
     _custom_sort: Mapping[int, Mapping[Name, bool]] = {
         6: {
             TagName.ALBUM: False,
@@ -61,8 +65,8 @@ class TrackSort(TrackProcessor):
         }
     }
 
-    @staticmethod
-    def sort_by_field(tracks: List[LocalTrack], field: Optional[Name] = None, reverse: bool = False) -> None:
+    @classmethod
+    def sort_by_field(cls, tracks: List[LocalTrack], field: Optional[Name] = None, reverse: bool = False):
         """
         Sort tracks by the values of a given field.
 
@@ -75,24 +79,27 @@ class TrackSort(TrackProcessor):
                 tracks.reverse()
             return
 
-        tag_name = field.to_tag()[0] if isinstance(field, TagName) else field.name.casefold()
+        tag_name = cls._get_tag(field)
+
+        # attempt to find an example value to determine the value type for this sort
         example_value = None
         for track in tracks:
-            example_value = getattr(track, tag_name)
+            example_value = track[tag_name]
             if example_value is not None:
                 break
-
         if example_value is None:
+            # if no example value found, all values are None and no sort can happen safely. Skip
             return
 
-        if isinstance(example_value, datetime):
+        # get sort key based on value type
+        if isinstance(example_value, datetime):  # key converts datetime to floats
             def sort_key(t: LocalTrack) -> float:
-                value = getattr(t, tag_name)
+                value = t[tag_name]
                 return value.timestamp() if value is not None else 0.0
-        elif isinstance(example_value, str):
-            sort_key: Callable[[LocalTrack], Tuple[bool, str]] = lambda t: strip_ignore_words(getattr(t, tag_name, ""))
+        elif isinstance(example_value, str):  # key strips ignore words from string
+            sort_key: Callable[[LocalTrack], Tuple[bool, str]] = lambda t: strip_ignore_words(t[tag_name])
         else:
-            sort_key: Callable[[LocalTrack], object] = lambda t: getattr(t, tag_name, 0)
+            sort_key: Callable[[LocalTrack], object] = lambda t: t[tag_name]
 
         tracks.sort(key=sort_key, reverse=reverse)
 
@@ -107,17 +114,16 @@ class TrackSort(TrackProcessor):
         :param field: Tag or property to group by. None returns map of {``None``: ``tracks``}.
         :return: Map of grouped tracks.
         """
-        if field is None:
+        if field is None:  # group by None
             return {None: tracks}
 
-        grouped: MutableMapping[Optional[Any], List[LocalTrack]] = {}
+        tag_name = cls._get_tag(field)
 
-        for track in tracks:
-            tag_name = field.to_tag()[0] if isinstance(field, TagName) else field.name.casefold()
-            value = getattr(track, tag_name, None)
+        grouped: MutableMapping[Optional[Any], List[LocalTrack]] = {}
+        for track in tracks:  # produce map of grouped values
+            value = track[tag_name]
             if grouped.get(value) is None:
                 grouped[value] = []
-
             grouped[value].append(track)
 
         return grouped
@@ -172,28 +178,26 @@ class TrackSort(TrackProcessor):
             shuffle_weight: float = 1.0
     ):
         fields = make_list(fields) if isinstance(fields, Name) else fields
-        if isinstance(fields, list):
-            self.sort_fields: MutableMapping[Name, bool] = {field: False for field in fields}
-        else:
-            self.sort_fields: MutableMapping[Name, bool] = fields
+        self.sort_fields: MutableMapping[Name, bool]
+        self.sort_fields = {field: False for field in fields} if isinstance(fields, list) else fields
 
-        self.shuffle_mode: Optional[ShuffleMode] = \
-            shuffle_mode if shuffle_mode in [ShuffleMode.NONE, ShuffleMode.RANDOM] else ShuffleMode.NONE
+        self.shuffle_mode: Optional[ShuffleMode]
+        self.shuffle_mode = shuffle_mode if shuffle_mode in [ShuffleMode.NONE, ShuffleMode.RANDOM] else ShuffleMode.NONE
         self.shuffle_by: Optional[ShuffleBy] = shuffle_by
-        self.shuffle_weight = max(min(shuffle_weight, 1.0), 0.0)
+        self.shuffle_weight = limit_value(shuffle_weight, floor=0, ceil=1)
 
-    def sort(self, tracks: List[LocalTrack]) -> None:
+    def sort(self, tracks: List[LocalTrack]):
         """Sorts a list of tracks inplace."""
         if len(tracks) == 0:
             return
 
-        if self.shuffle_mode == ShuffleMode.RANDOM:
+        if self.shuffle_mode == ShuffleMode.RANDOM:  # random
             shuffle(tracks)
-        elif self.shuffle_mode == ShuffleMode.NONE and self.sort_fields is not None:
+        elif self.shuffle_mode == ShuffleMode.NONE and self.sort_fields is not None:  # sort by fields
             tracks_nested = self._sort_by_fields({None: tracks}, fields=self.sort_fields)
             tracks.clear()
             tracks.extend(flatten_nested(tracks_nested))
-        elif self.sort_fields is None:
+        elif self.sort_fields is None:  # no sort
             return
         else:
             # TODO: implement all shuffle modes
@@ -205,25 +209,25 @@ class TrackSort(TrackProcessor):
         Sort tracks by the given fields recursively in the order given.
 
         :param tracks_grouped: Map of tracks grouped by the last sort value.
-        :param fields: Map of {``tag/property``: ``reversed``}.
-            If reversed is True, sort the ``tag/property`` in reverse.
+        :param fields: Map of ``{tag/property: reversed}``. If reversed is True, sort the ``tag/property`` in reverse.
         :return: Map of grouped and sorted tracks.
         """
         field, reverse = next(iter(fields.items()), (None, None))
-        if field is None:
+        if field is None:  # sorting complete
             return tracks_grouped
 
         fields = copy(fields)
         fields.pop(field)
-        tag_name = field.to_tag()[0] if isinstance(field, TagName) else field.name.casefold()
+        tag_name = cls._get_tag(field)
 
+        # sort each group and recurse through each field for each group
         for i, (key, tracks) in enumerate(tracks_grouped.items(), 1):
-            tracks.sort(key=lambda t: (getattr(t, tag_name) is None, getattr(t, tag_name)), reverse=reverse)
+            tracks.sort(key=lambda t: (t[tag_name] is None, t[tag_name]), reverse=reverse)
             tracks_grouped[key] = cls._sort_by_fields(cls.group_by_field(tracks, field=field), fields=fields)
 
         return tracks_grouped
 
-    def as_dict(self) -> MutableMapping[str, Any]:
+    def as_dict(self):
         return {
             "sort_fields": {field.name: "desc" if r else "asc" for field, r in self.sort_fields.items()},
             "shuffle_mode": self.shuffle_mode,

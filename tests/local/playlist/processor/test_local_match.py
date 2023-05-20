@@ -103,10 +103,10 @@ def test_match():
     assert matcher.exclude_paths == [track.path.lower() for track in tracks_exclude]
     assert matcher.match(tracks=tracks) == tracks_include_reduced
 
-    include, exclude, compare = matcher.match(tracks=tracks, combine=False)
-    assert include == tracks_include_reduced
-    assert exclude == tracks_exclude
-    assert len(compare) == 0
+    match_result = matcher.match(tracks=tracks, combine=False)
+    assert match_result.include == tracks_include_reduced
+    assert match_result.exclude == tracks_exclude
+    assert len(match_result.compared) == 0
 
     # match on paths and any comparators
     matcher = TrackMatch(
@@ -121,10 +121,10 @@ def test_match():
     matches = sorted(matcher.match(tracks=tracks), key=sort_key)
     assert matches == sorted(tracks_album_reduced + tracks_include_reduced, key=sort_key)
 
-    include, exclude, compare = matcher.match(tracks=tracks, combine=False)
-    assert include == tracks_include_reduced
-    assert exclude == tracks_exclude
-    assert sorted(compare, key=sort_key) == sorted(tracks_album, key=sort_key)
+    match_result = matcher.match(tracks=tracks, combine=False)
+    assert match_result.include == tracks_include_reduced
+    assert match_result.exclude == tracks_exclude
+    assert sorted(match_result.compared, key=sort_key) == sorted(tracks_album, key=sort_key)
 
     # match on paths and all comparators
     matcher = TrackMatch(
@@ -139,7 +139,7 @@ def test_match():
     matches = sorted(matcher.match(tracks=tracks), key=sort_key)
     assert matches == sorted(tracks_artist_reduced + tracks_include_reduced, key=sort_key)
 
-    include, exclude, compare = matcher.match(tracks=tracks, combine=False)
-    assert include == tracks_include_reduced
-    assert exclude == tracks_exclude
-    assert sorted(compare, key=sort_key) == sorted(tracks_artist, key=sort_key)
+    match_result = matcher.match(tracks=tracks, combine=False)
+    assert match_result.include == tracks_include_reduced
+    assert match_result.exclude == tracks_exclude
+    assert sorted(match_result.compared, key=sort_key) == sorted(tracks_artist, key=sort_key)

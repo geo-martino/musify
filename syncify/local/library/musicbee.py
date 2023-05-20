@@ -23,6 +23,8 @@ class MusicBee(File, LocalLibrary):
     :param other_folders: Absolute paths of other possible library paths.
         Use to replace path stems from other libraries for the paths in loaded playlists.
         Useful when managing similar libraries on multiple platforms.
+    :param include: An optional list of playlist names to include when loading playlists.
+    :param exclude: An optional list of playlist names to exclude when loading playlists.
     :param load: When True, load the library on intialisation.
     """
 

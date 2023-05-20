@@ -96,7 +96,8 @@ def test_save():
     assert result.difference == len(tracks_random)
     assert result.final == len(tracks_random)
     assert not exists(path_new)
-    assert pl.date_modified is None
+    with pytest.raises(FileNotFoundError):
+        assert pl.date_modified is None
 
     # ...save these loaded tracks for real
     pl = M3U(path=path_new)

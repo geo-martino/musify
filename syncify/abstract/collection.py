@@ -4,12 +4,13 @@ from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Optional, MutableMapping, Collection, Any, Union, Mapping
+from typing import List, Optional, MutableMapping, Collection, Any, Union, Mapping, Self
 
-from syncify.abstract.item import Item, Base
+from syncify.abstract.item import Item, Base, Track
 from syncify.abstract.misc import PrettyPrinter
 from syncify.enums.tags import TagName
-from syncify.utils import Logger, UnionList, make_list
+from syncify.spotify import validate_id_type, IDType
+from syncify.utils import Logger, UnionList
 
 
 @dataclass
@@ -19,51 +20,64 @@ class ItemCollection(Base, PrettyPrinter, metaclass=ABCMeta):
     @property
     @abstractmethod
     def items(self) -> List[Item]:
+        """The items in this collection"""
         raise NotImplementedError
 
-    def add(self, item: Item):
+    @property
+    def track_total(self) -> int:
+        """Number of tracks in this collection"""
+        return len(self)
+
+    def append(self, item: Item):
+        """Append one item to the items in this collection"""
         self.items.append(item)
 
-    def add_all(self, items: List[Item]):
+    def extend(self, items: Union[Self, Collection[Item]]):
+        """Append many items to the items in this collection"""
         self.items.extend(items)
 
     def remove(self, item: Item):
+        """Remove one item from the items in this collection"""
         self.items.remove(item)
 
     def clear(self):
+        """Remove all items from this collection"""
         self.items.clear()
 
-    def merge_items(
-            self, items: Union[ItemCollection, Collection[Item]], tags: UnionList[TagName] = TagName.ALL
-    ) -> None:
-        tags: List[TagName] = make_list(tags)
-        if TagName.ALL in tags:
-            tag_names = TagName.all()
-        else:
-            tag_names = [t for tag in tags for t in tag.to_tag()]
+    def merge_items(self, items: Union[ItemCollection, Collection[Item]], tags: UnionList[TagName] = TagName.ALL):
+        """
+        Merge this collection with another collection or list of items
+        by performing an inner join on a given set of tags
+        
+        :param items: List of items or ItemCollection to merge with
+        :param tags: List of tags to merge on. 
+        """
+        tag_names = set(TagName.to_tags(tags))
 
-        if isinstance(self, Library):
+        if isinstance(self, Library):  # log status message and use progress bar for libraries
             self.logger.info(f"\33[1;95m  >\33[1;97m "
-                             f"Merging library of {len(self)} tracks with {len(items)} tracks on tags: "
+                             f"Merging library of {len(self)} items with {len(items)} items on tags: "
                              f"{', '.join(tag_names)} \33[0m")
             items = self.get_progress_bar(iterable=items, desc="Merging library", unit="tracks")
 
-        for item in items:
+        for item in items:  # perform the merge
             item_in_library = next((i for i in self.items if i == item), None)
-            if not item_in_library:
+            if not item_in_library:  # skip if the item does not exist in this collection
                 continue
 
-            for tag in tag_names:
+            for tag in tag_names:  # merge on each tag
                 if hasattr(item, tag):
-                    setattr(item_in_library, tag, getattr(item, tag))
+                    setattr(item_in_library, tag, item[tag])
 
         if isinstance(self, Library):
             self.print_line()
 
     def __hash__(self):
+        """Uniqueness of collection is a combination of its name and the items it holds"""
         return hash((self.name, (item for item in self.items)))
 
     def __eq__(self, collection):
+        """Names equal and all items equal in order"""
         return self.name == collection.name and all(x == y for x, y in zip(self, collection))
 
     def __ne__(self, item):
@@ -75,8 +89,47 @@ class ItemCollection(Base, PrettyPrinter, metaclass=ABCMeta):
     def __iter__(self):
         return (t for t in self.items)
 
+    def __reversed__(self):
+        return reversed(self.items)
+
     def __contains__(self, item: Item):
         return any(item == i for i in self.items)
+
+    def __getitem__(self, key: Union[str, int, Item]) -> Item:
+        if isinstance(key, int):  # simply index the list or items
+            return self.items[key]
+        elif isinstance(key, Item):  # take the URI
+            if not key.has_uri or key.uri is None:
+                raise KeyError(f"Given item does not have a URI associated: {key.name}")
+            key = key.uri
+        elif not validate_id_type(key, kind=IDType.URI):  # assume the string is a name
+            try:
+                return next(item for item in self.items if item.name == key)
+            except StopIteration:
+                raise KeyError(f"No matching name found: '{key}'")
+
+        try:  # string is a URI
+            return next(item for item in self.items if item.uri == key)
+        except StopIteration:
+            raise KeyError(f"No matching URI found: '{key}'")
+
+    def __setitem__(self, key: Union[str, int, Item], value: Item):
+        try:
+            value_self = self[key]
+        except KeyError:
+            if isinstance(key, int):  # don't append if key is index
+                raise KeyError(f"Given index is out of range: {key}")
+            self.append(value)
+            return
+
+        if type(value) is not type(value_self):  # only merge attributes if matching types
+            raise ValueError("Trying to set value on mismatched item types")
+
+        for key, value in value.__dict__.items():  # merge attributes
+            setattr(value_self, key, deepcopy(value))
+
+    def __delitem__(self, key: Union[str, int, Item]):
+        del self[key]
 
 
 class BasicCollection(ItemCollection):
@@ -92,7 +145,7 @@ class BasicCollection(ItemCollection):
         self._name = name
         self._items = items
 
-    def as_dict(self) -> MutableMapping[str, Any]:
+    def as_dict(self):
         return {"name": self.name, "items": self.items}
 
 
@@ -100,25 +153,50 @@ class BasicCollection(ItemCollection):
 class Playlist(ItemCollection, metaclass=ABCMeta):
     """A playlist of items and some of their derived properties/objects"""
     description: Optional[str] = None
-    track_total: int = 0
     image_links: MutableMapping[str, str] = None
-    has_image: bool = False
 
-    length: float = 0
-    date_created: Optional[datetime] = None
-    date_modified: Optional[datetime] = None
+    @property
+    @abstractmethod
+    def tracks(self) -> List[Track]:
+        """The tracks in this collection"""
+        raise NotImplementedError
+
+    @property
+    def has_image(self) -> bool:
+        """Does this playlist have an image"""
+        return len(self.image_links) > 0
+
+    @property
+    def length(self) -> Optional[float]:
+        """Total duration of all tracks in this collection in seconds"""
+        lengths = [track.length for track in self.tracks]
+        return sum(lengths) if lengths else None
+
+    @property
+    @abstractmethod
+    def date_created(self) -> datetime:
+        """datetime object representing when the playlist was created"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def date_modified(self) -> datetime:
+        """datetime object representing when the playlist was last modified"""
+        raise NotImplementedError
 
 
-@dataclass
 class Library(ItemCollection, Logger, metaclass=ABCMeta):
     """A library of items and playlists"""
 
     @property
-    def playlists(self) -> MutableMapping[str, Playlist]:
+    @abstractmethod
+    def tracks(self) -> List[Track]:
+        """The tracks in this library"""
         raise NotImplementedError
 
-    @abstractmethod
-    def extend(self, items: Union[ItemCollection, Collection[Item]]) -> None:
+    @property
+    def playlists(self) -> MutableMapping[str, Playlist]:
+        """The playlists in this library"""
         raise NotImplementedError
 
     def get_filtered_playlists(
@@ -128,83 +206,241 @@ class Library(ItemCollection, Logger, metaclass=ABCMeta):
             **filter_tags: List[Any]
     ) -> MutableMapping[str, Playlist]:
         """
-        Returns the playlists of this library featuring only the items that don't have tags matching those given.
-        Parse a tag name as a parameter with its value being a list of tags to filter out of the items
-        in the returned playlists
+        Returns a filtered set of playlists in this library.
+        The playlists returned are deep copies of the playlists in the library.
 
+        :param include: An optional list of playlist names to include.
+        :param exclude: An optional list of playlist names to exclude.
+        :param filter_tags: Provide optional kwargs of the tags and values of items to filter out of every playlist.
+            Parse a tag name as a parameter, any item matching the values given for this tag will be filtered out.
         :return: Filtered playlists.
         """
         self.logger.info(f"\33[1;95m ->\33[1;97m Filtering playlists and tracks from {len(self.playlists)} playlists\n"
                          f"\33[0;90m    Filter out tags: {filter_tags} \33[0m")
         max_width = self.get_max_width(self.playlists)
+        bar = self.get_progress_bar(iterable=self.playlists.items(), desc="Filtering playlists", unit="playlists")
 
         filtered = {}
-        for name, playlist in self.playlists.items():
+        for name, playlist in bar:
             if (include and name not in include) or (exclude and name in exclude):
                 continue
 
             filtered[name] = deepcopy(playlist)
             for item in playlist.items:
                 for tag, values in filter_tags.items():
-                    value = getattr(item, tag, None)
+                    value = item[tag]
                     if isinstance(value, str) and value.strip().lower() in values:
                         filtered[name].remove(item)
                         break
 
-            self.logger.debug(f"{self.truncate_align_str(name, max_width=max_width)} | "
+            self.logger.debug(f"{self.align_and_truncate(name, max_width=max_width)} | "
                               f"Filtered out {len(filtered[name]) - len(playlist):>3} items")
 
         self.print_line()
         return filtered
 
     @abstractmethod
-    def merge_playlists(self, playlists: Optional[Union[Library, Mapping[str, Playlist], List[Playlist]]] = None):
+    def merge_playlists(self, playlists: Optional[Union[Self, Mapping[str, Playlist], List[Playlist]]] = None):
         """Merge playlists from given list/map/library to this library"""
         raise NotImplementedError
 
 
-@dataclass
 class Folder(ItemCollection, metaclass=ABCMeta):
     """A folder of items and some of their derived properties/objects"""
-    track_total: int = 0
-    compilation: bool = False
 
-    artists: Collection = None
-    albums: Collection = None
-    genres: Collection[str] = None
+    @property
+    def folder(self) -> str:
+        """The folder name"""
+        return self.name
+
+    @property
+    @abstractmethod
+    def tracks(self) -> List[Track]:
+        """The tracks in this collection"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def artists(self) -> List[str]:
+        """List of artists ordered by frequency of appearance on the tracks in this collection"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def albums(self) -> List[str]:
+        """List of albums ordered by frequency of appearance on the tracks in this collection"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def genres(self) -> List[str]:
+        """List of genres ordered by frequency of appearance on the tracks in this collection"""
+        raise NotImplementedError
+
+    @property
+    def length(self) -> Optional[float]:
+        """Total duration of all tracks in this collection"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def compilation(self) -> bool:
+        """Is this collection a compilation"""
+        raise NotImplementedError
 
 
-@dataclass
 class Album(ItemCollection, metaclass=ABCMeta):
     """An album of items and some of their derived properties/objects"""
-    artist: Optional[str] = None
-    album: str = None
-    album_artist: Optional[str] = None
-    track_total: int = 0
-    genres: Collection[str] = None
-    year: Optional[int] = None
-    disc_total: Optional[int] = None
-    compilation: bool = False
 
-    image_links: MutableMapping[str, str] = None
-    has_image: bool = False
+    @property
+    def album(self) -> str:
+        """The album name"""
+        return self.name
 
-    length: float = 0
-    rating: Optional[float] = None
+    @property
+    @abstractmethod
+    def tracks(self) -> List[Track]:
+        """The tracks in this collection"""
+        raise NotImplementedError
 
-    artists: Collection = None
+    @property
+    @abstractmethod
+    def artists(self) -> List[str]:
+        """List of artists ordered by frequency of appearance on the tracks in this collection"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def genres(self) -> List[str]:
+        """List of genres ordered by frequency of appearance on the tracks in this collection"""
+        raise NotImplementedError
+
+    @property
+    def artist(self) -> str:
+        """Joined string representation of all artists in this collection ordered by frequency of appearance"""
+        return self._list_sep.join(self.artists)
+
+    @property
+    @abstractmethod
+    def album_artist(self) -> Optional[str]:
+        """The album artist for this collection"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def year(self) -> Optional[int]:
+        """The year this collection was released"""
+        raise NotImplementedError
+
+    @property
+    def disc_total(self) -> Optional[int]:
+        """The highest value of disc number in this collection"""
+        disc_numbers = [track.disc_number for track in self.tracks if track.disc_number]
+        return max(disc_numbers) if disc_numbers else None
+
+    @property
+    @abstractmethod
+    def compilation(self) -> bool:
+        """Is this collection a compilation"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def image_links(self) -> MutableMapping[str, str]:
+        """The images associated with this collection in the form ``{image name: image link}``"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def has_image(self) -> bool:
+        """Does this collection have an image"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def length(self) -> Optional[float]:
+        """Total duration of all tracks in this collection in seconds"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def rating(self) -> Optional[float]:
+        """Rating of this collection"""
+        raise NotImplementedError
 
 
-@dataclass
 class Artist(ItemCollection, metaclass=ABCMeta):
     """An artist of items and some of their derived properties/objects"""
-    albums: Collection = None
-    genres: Collection[str] = None
+
+    @property
+    def artist(self) -> str:
+        """The artist name"""
+        return self.name
+
+    @property
+    @abstractmethod
+    def tracks(self) -> List[Track]:
+        """The tracks in this collection"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def artists(self) -> List[str]:
+        """List of artists ordered by frequency of appearance on the tracks in this collection"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def albums(self) -> List[str]:
+        """List of albums ordered by frequency of appearance on the tracks in this collection"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def genres(self) -> List[str]:
+        """List of genres ordered by frequency of appearance on the tracks in this collection"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def length(self) -> Optional[float]:
+        """Total duration of all tracks in this collection"""
+        raise NotImplementedError
+
+    @property
+    def rating(self) -> Optional[float]:
+        """Rating of this collection"""
+        raise NotImplementedError
 
 
-@dataclass
 class Genre(ItemCollection, metaclass=ABCMeta):
     """A genre of items and some of their derived properties/objects"""
-    artists: Collection = None
-    albums: Collection = None
-    genres: Collection[str] = None
+
+    @property
+    def genre(self) -> str:
+        """The genre name"""
+        return self.name
+
+    @property
+    @abstractmethod
+    def tracks(self) -> List[Track]:
+        """The tracks in this collection"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def artists(self) -> List[str]:
+        """List of artists ordered by frequency of appearance on the tracks in this collection"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def albums(self) -> List[str]:
+        """List of albums ordered by frequency of appearance on the tracks in this collection"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def genres(self) -> List[str]:
+        """List of genres ordered by frequency of appearance on the tracks in this collection"""
+        raise NotImplementedError

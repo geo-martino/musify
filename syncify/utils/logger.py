@@ -3,12 +3,13 @@ import logging
 import os
 import re
 import sys
+from time import sleep
 from datetime import datetime
 from os.path import join, dirname, exists, splitext, split
-from typing import Literal, List, Collection, Any, Union, Optional
+from typing import Literal, List, Collection, Any, Optional
 
-from tqdm.asyncio import tqdm_asyncio
 from tqdm.auto import tqdm as tqdm_auto
+from tqdm.std import tqdm as tqdm_std
 
 module_width = 40
 
@@ -36,10 +37,9 @@ class LogFileFilter(logging.Filter):
         path = record.funcName.split(".")[-1]
         stack = inspect.stack()
         f_locals = stack[7][0].f_locals
-        class_ = f_locals["self"] if "self" in f_locals else None
 
-        if class_ is not None:
-            path = splitext(inspect.getfile(class_.__class__))[0]
+        if "self" in f_locals:  # is a valid and initialised object
+            path = splitext(inspect.getfile(f_locals["self"].__class__))[0]
 
             # get relative path to 'syncify' sources root
             folder = ""
@@ -50,7 +50,7 @@ class LogFileFilter(logging.Filter):
 
             # produce fully qualified path
             path_split = list(reversed(path_split[:-1]))
-            path_split.extend([class_.__class__.__name__, record.funcName.split(".")[-1]])
+            path_split.extend([f_locals["self"].__class__.__name__, record.funcName.split(".")[-1]])
             path = ".".join(path_split)
 
         # truncate long paths by taking first letters of each part until short enough
@@ -63,7 +63,6 @@ class LogFileFilter(logging.Filter):
             path = ".".join(path_split)
 
         record.funcName = path
-
         return record
 
 
@@ -81,26 +80,27 @@ class Logger:
         self.log_path = join(self.log_folder, f"{self.log_filename}.log")
 
         self.logger: Optional[logging.Logger] = None
-        self._main_bar: Optional[tqdm_asyncio] = None
         self._set_logger()
 
     @classmethod
     def set_log_folder(cls,
                        folder: str = join(dirname(dirname(__file__)), "_logs"),
-                       run_dt: datetime = datetime.now()) -> None:
+                       run_dt: datetime = datetime.now()):
+        """Set the path of the log folder. Defaults to a folder in the source code's root"""
         cls.log_folder = join(folder, run_dt.strftime(cls.dt_format))
 
     @classmethod
-    def set_verbosity(cls, verbosity: int = 0) -> None:
+    def set_verbosity(cls, verbosity: int = 0):
         cls.verbosity = verbosity
 
     @classmethod
-    def set_dev(cls) -> None:
+    def set_dev(cls):
+        """Set defaults for running in dev mode"""
         cls.set_log_folder("_logs/_dev")
         cls.set_verbosity(5)
         cls.is_dev = True
 
-    def _handle_exception(self, exc_type, exc_value, exc_traceback) -> None:
+    def _handle_exception(self, exc_type, exc_value, exc_traceback):
         """Custom exception handler. Handles exceptions through logger."""
         if issubclass(exc_type, KeyboardInterrupt):
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
@@ -110,7 +110,7 @@ class Logger:
                              exc_info=(exc_type, exc_value, exc_traceback))
 
     # noinspection SpellCheckingInspection
-    def _set_logger(self) -> None:
+    def _set_logger(self):
         """Set logger object formatted for stdout and file handlers."""
         # set log file path
         if not self.is_dev and not exists(self.log_folder):  # if log folder doesn't exist
@@ -172,32 +172,28 @@ class Logger:
         sys.excepthook = self._handle_exception
 
     def close_handlers(self):
+        """Close all handlers and end logging"""
         handlers = self.logger.handlers[:]
         for handler in handlers:
             self.logger.removeHandler(handler)
             handler.close()
 
     @staticmethod
-    def limit_value(
-            value: Union[int, float], floor: Union[int, float] = 1, ceil: Union[int, float] = 50
-    ) -> Union[int, float]:
-        """Limits a given ``value`` to always be between some ``floor`` and ``ceil``"""
-        return max(min(value, ceil), floor)
-
-    @staticmethod
     def get_max_width(items: Collection[Any], min_width: int = 15, max_width: int = 50) -> int:
+        """Get max width of given list of items for column-aligned logging"""
         if len(items) == 0:
             return 0
         items = [str(item) for item in items]
         return max(min(len(max(items, key=len)) + 1, max_width), min_width)
 
     @staticmethod
-    def truncate_align_str(value: Any, max_width: int = 0) -> str:
+    def align_and_truncate(value: Any, max_width: int = 0) -> str:
+        """Align string with space padding. Truncate any string longer than max width with ..."""
         if max_width == 0:
             return value
         return f"{value if len(str(value)) < 50 else str(value)[:47] + '...':<{max_width}}"
 
-    def get_progress_bar(self, **kwargs) -> tqdm_asyncio:
+    def get_progress_bar(self, **kwargs) -> tqdm_std:
         """Wrapper for tqdm progress bar. For kwargs, see :class:`tqdm`"""
         preset_keys = ["leave", "disable", "colour", "position"]
         stdout_h = [handler for handler in self.logger.handlers if handler.name == "stdout"][0]
@@ -207,6 +203,7 @@ class Logger:
         except OSError:
             cols = 120
 
+        sleep(0.1)  # calling the bar in quick succession can cause odd bugs, small pause to avoid this
         return tqdm_auto(
             leave=kwargs.get("leave", self.verbosity > 0) and kwargs.get("position", 0) == 0,
             disable=kwargs.get("disable", self.verbosity == 0 and stdout_h.level == logging.DEBUG),
@@ -219,5 +216,6 @@ class Logger:
         )
 
     def print_line(self):
+        """Print a new line only when logging level is not DEBUG"""
         if self.logger.handlers[0].level != logging.DEBUG:
             print()

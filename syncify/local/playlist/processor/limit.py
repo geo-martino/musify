@@ -48,11 +48,15 @@ class TrackLimit(TrackProcessor):
 
     @property
     def limit_sort(self) -> Optional[str]:
+        """String representation of the sorting method to use before limiting"""
         return self._limit_sort
 
     @limit_sort.setter
     def limit_sort(self, value: Optional[str]):
+        """Sets the sorting method name and stored function"""
         if value is None:
+            self._limit_sort: Optional[str] = None
+            self._sort_method: Callable[[List[LocalTrack]], None] = lambda _: None
             return
 
         name = self._get_method_name(value, valid=self._valid_methods, prefix=self._sort_method_prefix)
@@ -84,8 +88,6 @@ class TrackLimit(TrackProcessor):
             sorted_by: Optional[str] = None,
             allowance: float = 1.0,
     ):
-        self._sort_method: Callable[[List[LocalTrack]], None] = lambda _: None
-
         self.limit_max = limit
         self.kind = on
         self.allowance = allowance
@@ -98,85 +100,84 @@ class TrackLimit(TrackProcessor):
         } | {name: name for name in dir(self) if name.startswith(self._sort_method_prefix)}
         self.limit_sort = sorted_by
 
-    def limit(
-            self, tracks: List[LocalTrack], ignore: Optional[Collection[Union[str, LocalTrack]]] = None
-    ) -> None:
+    def limit(self, tracks: List[LocalTrack], ignore: Optional[Collection[Union[str, LocalTrack]]] = None):
         """
-        Limit tracks inplace based on set conditions.
-        Optionally set a list of tracks or paths of tracks to ignore when limiting
-        i.e. keep them in the list regardless.
+        Limit ``tracks`` inplace based on set conditions.
+
+        :param tracks: The list of tracks to limit.
+        :param ignore: Optional, list of tracks or paths of tracks to ignore when limiting.
+            i.e. keep them in the list regardless.
         """
         if len(tracks) == 0 or self.limit_max == 0:
             return
 
-        self._sort_method(tracks)
+        self._sort_method(tracks)  # sort the input tracks in-place if sort method given
 
-        if ignore is not None and len(ignore) > 0:
+        if ignore is not None and len(ignore) > 0:  # filter out the ignore tracks if given
             ignore = [track.path if isinstance(track, LocalTrack) else track for track in ignore]
 
             tracks_limit = [track for track in tracks if track.path not in ignore]
             tracks_ignore = [track for track in tracks if track.path in ignore]
             tracks.clear()
             tracks.extend(tracks_ignore)
-        else:
+        else:  # make a copy of the given tracks and clear the original list
             tracks_limit = tracks.copy()
             tracks.clear()
 
-        if self.kind == LimitType.ITEMS:
+        if self.kind == LimitType.ITEMS:  # limit on items
             tracks.extend(tracks_limit[:self.limit_max])
-        elif self.kind == LimitType.ALBUMS:
+        elif self.kind == LimitType.ALBUMS:  # limit on albums
             seen_albums = []
             for track in tracks_limit:
                 if len(seen_albums) < self.limit_max and track.album not in seen_albums:
+                    # album limit not yet reached
                     seen_albums.append(track.album)
                 if track.album in seen_albums:
                     tracks.append(track)
-        else:
+        else:  # limit on duration or size
             count = 0
             for track in tracks_limit:
                 value = self._convert(track)
-
-                if count + value <= self.limit_max * self.allowance:
+                if count + value <= self.limit_max * self.allowance:  # limit not yet reached
                     tracks.append(track)
                     count += value
-
-                if count > self.limit_max:
+                if count > self.limit_max:  # limit reached
                     break
 
     @staticmethod
-    def _sort_random(tracks: List[LocalTrack]) -> None:
+    def _sort_random(tracks: List[LocalTrack]):
         shuffle(tracks)
 
     @staticmethod
-    def _sort_highest_rating(tracks: List[LocalTrack]) -> None:
+    def _sort_highest_rating(tracks: List[LocalTrack]):
         TrackSort.sort_by_field(tracks, PropertyName.RATING, reverse=True)
 
     @staticmethod
-    def _sort_lowest_rating(tracks: List[LocalTrack]) -> None:
+    def _sort_lowest_rating(tracks: List[LocalTrack]):
         TrackSort.sort_by_field(tracks, PropertyName.RATING, reverse=False)
 
     @staticmethod
-    def _sort_most_recently_played(tracks: List[LocalTrack]) -> None:
+    def _sort_most_recently_played(tracks: List[LocalTrack]):
         TrackSort.sort_by_field(tracks, PropertyName.LAST_PLAYED, reverse=True)
 
     @staticmethod
-    def _sort_least_recently_played(tracks: List[LocalTrack]) -> None:
+    def _sort_least_recently_played(tracks: List[LocalTrack]):
         TrackSort.sort_by_field(tracks, PropertyName.LAST_PLAYED, reverse=False)
 
     @staticmethod
-    def _sort_most_often_played(tracks: List[LocalTrack]) -> None:
+    def _sort_most_often_played(tracks: List[LocalTrack]):
         TrackSort.sort_by_field(tracks, PropertyName.PLAY_COUNT, reverse=True)
 
     @staticmethod
-    def _sort_least_often_played(tracks: List[LocalTrack]) -> None:
+    def _sort_least_often_played(tracks: List[LocalTrack]):
         TrackSort.sort_by_field(tracks, PropertyName.PLAY_COUNT, reverse=False)
 
     @staticmethod
-    def _sort_most_recently_added(tracks: List[LocalTrack]) -> None:
+    def _sort_most_recently_added(tracks: List[LocalTrack]):
         TrackSort.sort_by_field(tracks, PropertyName.DATE_ADDED, reverse=True)
 
     @staticmethod
-    def _sort_least_recently_added(tracks: List[LocalTrack]) -> None:
+    def _sort_least_recently_added(tracks: List[LocalTrack]):
         TrackSort.sort_by_field(tracks, PropertyName.DATE_ADDED, reverse=False)
 
     def _convert(self, track: LocalTrack) -> float:
@@ -190,7 +191,7 @@ class TrackLimit(TrackProcessor):
         else:
             raise ValueError(f"Unrecognised LimitType: {self.kind}")
 
-    def as_dict(self) -> MutableMapping[str, Any]:
+    def as_dict(self):
         return {
             "on": self.kind,
             "limit": self.limit_max,

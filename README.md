@@ -2,7 +2,7 @@
 
 ### A complete local library and Spotify management tool. Main features include:
 - Search for and associate local songs to Spotify URIs
-- Syncronise local m3u playlists with Spotify playlists
+- Synchronise local m3u playlists with Spotify playlists
 - Update local library metadata and embedded images with Spotify metadata
 - Backup and restore playlists and URI associations
 - Extract and save embedded images from local library or their associated Spotify tracks
@@ -27,7 +27,7 @@
 5. Authorise the program to access your Spotify user's data: `python main.py auth`
    - Log in to spotify in the browser window and authorise access
    - Paste the link from the address bar into the terminal
->  This package is cross platform. If you intend to use this package across multiple platforms, it is advised to use the default data folder path in the packages root directory by not defining **DATA_PATH**
+>  This package is cross-platform. If you intend to use this package across multiple platforms, it is advised to use the default data folder path in the packages root directory by not defining **DATA_PATH**
 
 > **Note**: Currently, this program only supports .mp3, .flac, .wma, and .m4a files. Image embedding for .wma files is not supported.
 
@@ -43,7 +43,7 @@ The main functionality of Syncify follows the following 13 steps:
 
 1. Load local library and extract formatted metadata. _**01_library__initial.json**_
 2. Search for all tracks that do not have a URI in the expected tag field (default: comment) tag. _**02_report__search.json**_ & _**03_library__searched.json**_
-3. Create temporary playlists for any folder that contained missing tracks and add search results. Get usert to check the tracks in these playlists and replace any incorrect matches or add to the playlist for songs that were not matched.
+3. Create temporary playlists for any folder that contained missing tracks and add search results. Get user to check the tracks in these playlists and replace any incorrect matches or add to the playlist for songs that were not matched.
 4. Find any songs that have changed or been added to these playlists by the user and match the replaced/missing track to these tracks. 
 5. Ask for user input for any tracks still not matched. _**04_report__updated_uris.json**_ & _**05_report__check_matches.json**_
 6. Update internal library metadata with new URI tags. _**06_library__checked.json**_
@@ -51,11 +51,11 @@ The main functionality of Syncify follows the following 13 steps:
 8. Update the stored tags in local tracks based on extracted Spotify metadata. _**08_library__updated.json**_
 9. Load local library again, extract formatted metadata and create a backup of the path: URIs. _**09_library__final.json**_ & _**URIs.json**_
 10. Extract metadata for all local playlists and create a backup.  _**10_playlists__local.json**_ & _**URIs__local_playlists.json**_
-11. Extract Spotify metadata for all Spotify playlists. _**11_playlists__spotify_intial.json**_
+11. Extract Spotify metadata for all Spotify playlists. _**11_playlists__spotify_initial.json**_
 12. Update Spotify playlists based on tracks in local playlists. _**12_playlists__spotify_final.json**_
 13. Produce a report on the differences between local and Spotify playlists. _**13_report__differences.json**_
 
-> The user may also set options to modify the behvaiour at various steps. See [options](#options) below or by running: `python main.py -h`
+> The user may also set options to modify the behaviour at various steps. See [options](#options) below or by running: `python main.py -h`
 
 ---
 
@@ -86,7 +86,7 @@ python main.py update_tags [options]
 python main.py update_spotify [options]
 ```
 
-### **Report**: Produce a report on the differences between local and Spotfify playlists.
+### **Report**: Produce a report on the differences between local and Spotify playlists.
 > *Runs step 13 of main function*
 ```sh
 python main.py report [options]

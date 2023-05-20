@@ -89,16 +89,16 @@ def test_compare_int():
     assert comparator._converted
 
     # int: conversion when given a time str
-    comparator = TrackCompare(field=PropertyName.LENGTH, condition="greater than", expected="1:30,618")
+    comparator = TrackCompare(field=PropertyName.RATING, condition="greater than", expected="1:30,618")
     assert comparator._expected == ["1:30,618"]
     assert not comparator._converted
     assert comparator._method == comparator._cond_is_after
 
-    track.length = 120
+    track.rating = 120
     assert comparator.compare(track)
     assert comparator._expected == [90]
     assert comparator._converted
-    track.length = 60
+    track.rating = 60
     assert not comparator.compare(track)
     assert comparator._expected == [90]
     assert comparator._converted
@@ -129,18 +129,18 @@ def test_compare_date():
     track = random_track()
 
     # all datetime comparisons only consider date part
-    comparator = TrackCompare(field=PropertyName.DATE_MODIFIED, condition="is", expected=datetime(2023, 4, 21, 19, 20))
+    comparator = TrackCompare(field=PropertyName.DATE_ADDED, condition="is", expected=datetime(2023, 4, 21, 19, 20))
     assert comparator._expected == [datetime(2023, 4, 21, 19, 20)]
     assert not comparator._converted
     assert comparator._method == comparator._cond_is
 
-    track.date_modified = datetime(2023, 4, 21, 11, 30, 49, 203)
+    track.date_added = datetime(2023, 4, 21, 11, 30, 49, 203)
     assert comparator.compare(track)
     assert comparator._expected == [date(2023, 4, 21)]
     assert comparator._converted
 
     # converts supported strings
-    comparator = TrackCompare(field=PropertyName.DATE_MODIFIED, condition="is_not", expected="20/01/01")
+    comparator = TrackCompare(field=PropertyName.DATE_ADDED, condition="is_not", expected="20/01/01")
     assert comparator._expected == ["20/01/01"]
     assert not comparator._converted
     assert comparator._method == comparator._cond_is_not
@@ -149,7 +149,7 @@ def test_compare_date():
     assert comparator._expected == [date(2001, 1, 20)]
     assert comparator._converted
 
-    comparator = TrackCompare(field=PropertyName.DATE_MODIFIED, condition="is_not", expected="13/8/2004")
+    comparator = TrackCompare(field=PropertyName.DATE_ADDED, condition="is_not", expected="13/8/2004")
     assert comparator._expected == ["13/8/2004"]
     assert not comparator._converted
     assert comparator._method == comparator._cond_is_not
@@ -159,12 +159,12 @@ def test_compare_date():
     assert comparator._converted
 
     # converts date ranges
-    comparator = TrackCompare(field=PropertyName.DATE_MODIFIED, condition="is_in_the_last", expected="8h")
+    comparator = TrackCompare(field=PropertyName.DATE_ADDED, condition="is_in_the_last", expected="8h")
     assert comparator._expected == ["8h"]
     assert not comparator._converted
     assert comparator._method == comparator._cond_is_after
 
-    track.date_modified = datetime.now() - timedelta(hours=4)
+    track.date_added = datetime.now() - timedelta(hours=4)
     assert comparator.compare(track)
     # truncate to avoid time lag between assignment and test making the test fail
     exp_truncated = comparator._expected[0].replace(second=0, microsecond=0)

@@ -6,6 +6,7 @@ from tests.local.track.track import random_tracks
 
 def test_folder():
     tracks = random_tracks(10)
+
     for i, track in enumerate(tracks[:7]):
         track.path = "/test/folder name/file.ext"
         if i < 4:
@@ -19,7 +20,6 @@ def test_folder():
 
     last_played = sorted(tracks[:7], key=lambda t: t.last_played, reverse=True)[0].last_played
     last_added = sorted(tracks[:7], key=lambda t: t.date_added, reverse=True)[0].date_added
-    last_modified = sorted(tracks[:7], key=lambda t: t.date_modified, reverse=True)[0].date_modified
 
     # test generic collection functionality
     with pytest.raises(TypeError):
@@ -30,7 +30,6 @@ def test_folder():
     assert collection.tracks == tracks[:7]
     assert collection.last_played == last_played
     assert collection.last_added == last_added
-    assert collection.last_modified == last_modified
 
     assert collection.artists == [tracks[0].artist, tracks[1].artist]
     assert sorted(collection.genres) == sorted(set(tracks[0].genres) | set(tracks[1].genres))

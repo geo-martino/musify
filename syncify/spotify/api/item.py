@@ -2,11 +2,12 @@ import re
 from abc import ABCMeta
 from typing import Optional, List, MutableMapping, Mapping, Any
 
-from syncify.spotify import __URL_API__, ItemType
-from syncify.spotify.api.utilities import Utilities, APIMethodInputType
+from syncify.spotify import __URL_API__, ItemType, APIMethodInputType, get_item_type, validate_item_type, extract_ids
+from syncify.spotify.api.basic import APIBase
+from syncify.utils import chunk, limit_value
 
 
-class Items(Utilities, metaclass=ABCMeta):
+class Items(APIBase, metaclass=ABCMeta):
     """Spotify API endpoints for processing all Spotify item types"""
 
     ###########################################################################
@@ -44,7 +45,7 @@ class Items(Utilities, metaclass=ABCMeta):
         log = [f"{unit.title()}:{len(id_list):>5}"]
         results: List[Any] = [self.get(f"{url}/{id_}", params=params, use_cache=use_cache, log_pad=43, log_extra=log)
                               for id_ in id_list]
-        return [r[key] if key else r for r in results]
+        return [r[key] if key else r for r in results]  # extract items on given key
 
     def _get_item_results_batch(
             self,
@@ -72,12 +73,12 @@ class Items(Utilities, metaclass=ABCMeta):
             the object's current ``batch_size_max``. Maximum=50.
         :return: Raw API responses for each item at the given ``key``.
         """
-        if unit is None:
+        if unit is None:  # determine the unit type to use in the progress bar
             unit = re.sub(r"[-_]+", " ", key) if key is not None else "items"
         unit = unit.casefold().rstrip("s") + "s"
         url = url.rstrip("/")
 
-        id_chunks = self.chunk(id_list, size=self.limit_value(limit, ceil=50))
+        id_chunks = chunk(id_list, size=limit_value(limit, ceil=50))
 
         bar = range(len(id_chunks))
         if len(id_chunks) >= 10:  # show progress bar for batches which may take a long time
@@ -85,7 +86,7 @@ class Items(Utilities, metaclass=ABCMeta):
 
         results = []
         params = params if params is not None else {}
-        for i, idx in enumerate(bar, 1):
+        for i, idx in enumerate(bar, 1):  # get responses in batches
             id_chunk = id_chunks[idx]
             params_chunk = params | {'ids': ','.join(id_chunk)}
 
@@ -99,12 +100,12 @@ class Items(Utilities, metaclass=ABCMeta):
     ## GET endpoints
     ###########################################################################
     def get_items(
-            self, items: APIMethodInputType, kind: Optional[ItemType] = None, limit: int = 50, use_cache: bool = True,
+            self, values: APIMethodInputType, kind: Optional[ItemType] = None, limit: int = 50, use_cache: bool = True,
     ) -> List[MutableMapping[str, Any]]:
         """
-        ``GET: /{kind}s`` - Get information for given list of ``items``. Items may be:
+        ``GET: /{kind}s`` - Get information for given list of ``values``. Items may be:
             - A string representing a URL/URI/ID.
-            - A list of strings representing URLs/URIs/IDs of the same type.
+            - A collection of strings representing URLs/URIs/IDs of the same type.
             - A Spotify API JSON response for a collection including some items under an ``items`` key,
                 a valid ID value under an ``id`` key,
                 and a valid item type value under a ``type`` key if ``kind`` is None.
@@ -114,23 +115,23 @@ class Items(Utilities, metaclass=ABCMeta):
 
         If a JSON response is given, this replaces the ``items`` with the new results.
 
-        :param items: The values representing some Spotify items. See description for allowed value types.
+        :param values: The values representing some Spotify items. See description for allowed value types.
             These items must all be of the same type of item i.e. all tracks OR all artists etc.
         :param kind: Item type if given string is ID.
         :param limit: Size of batches to request.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: Raw API responses for each item.
-        :exception ValueError: Raised when the function cannot determine the item type of the input ``items``.
-            Or when it does not recognise the type of the input ``items`` parameter.
+        :exception ValueError: Raised when the function cannot determine the item type of the input ``values``.
+            Or when it does not recognise the type of the input ``values`` parameter.
         """
-        if kind is None:
-            kind = self.get_item_type(items)
+        if kind is None:  # determine the item type
+            kind = get_item_type(values)
         else:
-            self.validate_item_type(items, kind=ItemType.TRACK)
+            validate_item_type(values, kind=kind)
 
         kind_str = f"{kind.name.casefold()}s"
         url = f"{__URL_API__}/{kind_str}"
-        id_list = self.extract_ids(items, kind=kind)
+        id_list = extract_ids(values, kind=kind)
 
         if kind == ItemType.USER or kind == ItemType.PLAYLIST:
             results = self._get_item_results(url=url, id_list=id_list, unit=kind_str, use_cache=use_cache)
@@ -139,19 +140,20 @@ class Items(Utilities, metaclass=ABCMeta):
                                                    use_cache=use_cache, limit=limit)
 
         self.logger.debug(f"{'DONE':<7}: {url:<43} | Retrieved {len(results):>6} {kind_str}")
-        
-        if isinstance(items, dict) and len(results) == 0:
-            items.clear()
-            items.update(results[0])
-        elif isinstance(items, list) and all(isinstance(item, dict) for item in items):
-            items.clear()
-            items.extend(results)
+
+        # if API response was given on input, update it with new responses
+        if isinstance(values, dict) and len(results) == 0:
+            values.clear()
+            values.update(results[0])
+        elif isinstance(values, (list, set)) and all(isinstance(item, dict) for item in values):
+            values.clear()
+            values.extend(results)
 
         return results
 
     def get_tracks_extra(
             self,
-            items: APIMethodInputType,
+            values: APIMethodInputType,
             features: bool = False,
             analysis: bool = False,
             limit: int = 50,
@@ -161,7 +163,7 @@ class Items(Utilities, metaclass=ABCMeta):
         ``GET: /audio-features`` and/or ``GET: /audio-analysis`` - Get audio features/analysis for list of items.
         Items may be:
             * A string representing a URL/URI/ID.
-            * A list of strings representing URLs/URIs/IDs of the same type.
+            * A collection of strings representing URLs/URIs/IDs of the same type.
             * A Spotify API JSON response for a collection including some items under an ``items`` key
                 and a valid ID value under an ``id`` key.
             * A list of Spotify API JSON responses for a collection including some items under an ``items`` key
@@ -170,21 +172,21 @@ class Items(Utilities, metaclass=ABCMeta):
         If a JSON response is given, this updates ``items`` by adding the results
         under the ``audio_features`` and ``audio_analysis`` keys as appropriate.
 
-        :param items: The values representing some Spotify tracks. See description for allowed value types.
+        :param values: The values representing some Spotify tracks. See description for allowed value types.
         :param features: When True, get audio features.
         :param analysis: When True, get audio analysis.
         :param limit: Size of batches to request when getting audio features.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: Raw API responses for each item.
-        :exception ValueError: Raised when the item types of the input ``items`` are not all tracks or IDs.
+        :exception ValueError: Raised when the item types of the input ``values`` are not all tracks or IDs.
         """
-        if not features and not analysis:
+        if not features and not analysis:  # skip on all False
             return {}
 
-        self.validate_item_type(items, kind=ItemType.TRACK)
+        validate_item_type(values, kind=ItemType.TRACK)
 
-        id_list = self.extract_ids(items, kind=ItemType.TRACK)
-        if len(id_list) == 0:
+        id_list = extract_ids(values, kind=ItemType.TRACK)
+        if len(id_list) == 0:  # skip on empty
             self.logger.debug(f"{'SKIP':<7}: {__URL_API__:<43} | No data given")
             return {}
 
@@ -208,13 +210,50 @@ class Items(Utilities, metaclass=ABCMeta):
                 results[analysis_key] = self._get_item_results(url=analysis_url, id_list=id_list,
                                                                unit="analysis", use_cache=use_cache)
 
-        if isinstance(items, dict):
+        # if API response was given on input, update it with new responses
+        if isinstance(values, dict):
             for key, result in results.items():
-                items[key] = result[0]
-        elif isinstance(items, list) and all(isinstance(item, dict) and "id" in item for item in items):
+                values[key] = result[0]
+        elif isinstance(values, (list, set)) and all(isinstance(item, dict) and "id" in item for item in values):
             for key, result in results.items():
                 result_mapped = {r["id"]: r for r in result}
-                for item in items:
+                for item in values:
                     item[key] = result_mapped[item["id"]]
 
         return results
+
+    def get_tracks(
+            self,
+            values: APIMethodInputType,
+            features: bool = False,
+            analysis: bool = False,
+            limit: int = 50,
+            use_cache: bool = True
+    ) -> List[MutableMapping[str, Any]]:
+        """
+        ``GET: /{kind}s`` + GET: /audio-features`` and/or ``GET: /audio-analysis``
+
+        Get audio features/analysis for list of tracks.
+        Mostly just a wrapper for ``get_items`` and ``get_tracks`` functions.
+        Items may be:
+            * A string representing a URL/URI/ID.
+            * A collection of strings representing URLs/URIs/IDs of the same type.
+            * A Spotify API JSON response for a collection including some items under an ``items`` key
+                and a valid ID value under an ``id`` key.
+            * A list of Spotify API JSON responses for a collection including some items under an ``items`` key
+                and a valid ID value under an ``id`` key.
+
+        If a JSON response is given, this updates ``items`` by adding the results
+        under the ``audio_features`` and ``audio_analysis`` keys as appropriate.
+
+        :param values: The values representing some Spotify tracks. See description for allowed value types.
+        :param features: When True, get audio features.
+        :param analysis: When True, get audio analysis.
+        :param limit: Size of batches to request when getting audio features.
+        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :return: Raw API responses for each item.
+        :exception ValueError: Raised when the item types of the input ``tracks`` are not all tracks or IDs.
+        """
+        tracks = self.get_items(values=values, kind=ItemType.TRACK, limit=limit, use_cache=use_cache)
+        self.get_tracks_extra(values=tracks, features=features, analysis=analysis, limit=limit, use_cache=use_cache)
+        return tracks

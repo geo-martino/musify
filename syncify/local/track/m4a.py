@@ -40,8 +40,11 @@ class M4A(LocalTrack):
         comments=["©cmt"],
         images=["covr"],
     )
-    
-    def __init__(self, file: Union[str, mutagen.File], available: Optional[Collection[str]] = None):
+
+    # noinspection PyTypeChecker
+    def __init__(
+            self, file: Union[str, mutagen.FileType, mutagen.mp4.MP4], available: Optional[Collection[str]] = None
+    ):
         LocalTrack.__init__(self, file=file, available=available)
         self._file: mutagen.mp4.MP4 = self._file
 
@@ -89,7 +92,7 @@ class M4A(LocalTrack):
 
     def _write_tag(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
         if tag_value is None:
-            return self._delete_tag(tag_id, dry_run=dry_run)
+            return self.delete_tag(tag_id, dry_run=dry_run)
 
         if not dry_run and tag_id is not None:
             if tag_id.startswith("----:com.apple.iTunes"):

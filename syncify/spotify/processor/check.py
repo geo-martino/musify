@@ -6,7 +6,8 @@ from syncify.abstract.collection import ItemCollection
 from syncify.abstract.item import Item
 from syncify.abstract.misc import Result
 from syncify.enums.tags import TagName
-from syncify.spotify import check_spotify_type, ItemType, IDType
+from syncify.local.track import LocalTrack
+from syncify.spotify import check_spotify_type, ItemType, IDType, convert
 from syncify.spotify.api import API
 from syncify.spotify.library.library import SpotifyPlaylist
 from syncify.spotify.processor.match import Matcher
@@ -60,14 +61,14 @@ class Checker(Matcher):
         self.done = False  # when true, exit ItemChecker
         self.exit = False  # when true, exit Syncify
 
-        self.remaining: List[Item] = []
-        self.switched: List[Item] = []
+        self.remaining: List[LocalTrack] = []
+        self.switched: List[LocalTrack] = []
 
-        self.final_switched: List[Item] = []
-        self.final_unavailable: List[Item] = []
-        self.final_unchanged: List[Item] = []
+        self.final_switched: List[LocalTrack] = []
+        self.final_unavailable: List[LocalTrack] = []
+        self.final_unchanged: List[LocalTrack] = []
 
-    def _make_temp_playlist(self, name: str, collection: ItemCollection) -> None:
+    def _make_temp_playlist(self, name: str, collection: ItemCollection):
         """Create a temporary playlist, store its URL for later unfollowing, and add all given URIs."""
         try:
             url = self.api.create_playlist(name, public=False)
@@ -92,7 +93,7 @@ class Checker(Matcher):
 
         help_text = header if header else []
         help_text.append("\n\t\33[96mEnter one of the following: \33[0m\n\t")
-        help_text.extend(f"{self.truncate_align_str(k, max_width=max_width)}{': ' + v if v else ''}"
+        help_text.extend(f"{self.align_and_truncate(k, max_width=max_width)}{': ' + v if v else ''}"
                          for k, v in options.items())
 
         return '\n\t'.join(help_text) + '\n'
@@ -180,7 +181,7 @@ class Checker(Matcher):
     ###########################################################################
     ## Pause to check items in current temp playlists
     ###########################################################################
-    def _check_pause(self, page: int, page_size: int, page_total: int) -> None:
+    def _check_pause(self, page: int, page_size: int, page_total: int):
         """
         Initial pause after the ``interval`` limit of playlists have been created.
 
@@ -236,7 +237,7 @@ class Checker(Matcher):
     ###########################################################################
     ## Match items user has added or removed
     ###########################################################################
-    def _check_uri(self) -> None:
+    def _check_uri(self):
         """Run operations to check that URIs are assigned to all the items in the current list of collections."""
         for name, collection in self.playlist_name_collection.items():
             name: str = self._default_name if isinstance(collection, list) else collection.name
@@ -263,7 +264,7 @@ class Checker(Matcher):
             self.final_unchanged += unchanged
             self.switched.clear()
 
-    def _match_to_remote(self, name: str) -> None:
+    def _match_to_remote(self, name: str):
         """
         Check the current temporary playlist given by ``name`` and attempt to match the source list of items
         to any modifications the user has made.
@@ -297,7 +298,6 @@ class Checker(Matcher):
                 continue
 
             item.uri = result.uri
-            item.has_uri = result.has_uri
 
             added.remove(result)
             removed.remove(item) if item in removed else missing.remove(item)
@@ -336,17 +336,15 @@ class Checker(Matcher):
             while item in self.remaining:  # while item not matched or skipped
                 self._log_padded([name, f"{len(self.remaining)} remaining items"])
                 if 'a' not in current_input:
-                    current_input = self._get_user_input(self.truncate_align_str(item.name, max_width=max_width))
+                    current_input = self._get_user_input(self.align_and_truncate(item.name, max_width=max_width))
 
                 if current_input.casefold().replace('a', '') == 'u':  # mark item as unavailable
                     self._log_padded([name, "Marking as unavailable"], pad="<")
                     item.uri = None
-                    item.has_uri = False
                     self.remaining.remove(item)
                 elif current_input.casefold().replace('a', '') == 'n':  # leave item without URI and unprocessed
                     self._log_padded([name, "Skipping"], pad="<")
                     item.uri = None
-                    item.has_uri = None
                     self.remaining.remove(item)
                 elif current_input.casefold() == 'r':  # return to former 'while' loop
                     self._log_padded([name, "Refreshing playlist metadata and restarting loop"])
@@ -360,11 +358,10 @@ class Checker(Matcher):
                 elif current_input.casefold() == 'h':  # print help
                     print("\n" + help_text)
                 elif check_spotify_type(current_input) is not None:  # update URI and add item to switched list
-                    uri = self.api.convert(current_input, kind=ItemType.TRACK, type_out=IDType.URI)
+                    uri = convert(current_input, kind=ItemType.TRACK, type_out=IDType.URI)
 
                     self._log_padded([name, f"Updating URI: {item.uri} -> {uri}"], pad="<")
                     item.uri = uri
-                    item.has_uri = uri
 
                     self.switched.append(item)
                     self.remaining.remove(item)

@@ -2,10 +2,15 @@ from abc import ABCMeta
 from typing import MutableMapping, List, Any
 
 from syncify.spotify import __URL_API__, ItemType
-from syncify.spotify.api.utilities import Utilities
+from syncify.spotify.api.request import RequestHandler
+from syncify.utils import Logger, limit_value
 
 
-class Basic(Utilities, metaclass=ABCMeta):
+class APIBase(RequestHandler, Logger):
+    pass
+
+
+class Basic(APIBase, metaclass=ABCMeta):
 
     ###########################################################################
     ## GET endpoints
@@ -26,10 +31,11 @@ class Basic(Utilities, metaclass=ABCMeta):
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: The response from the endpoint.
         """
-        if len(query) > 150:  # query is too long
+        if len(query) > 150:  # query is too long, skip
             return []
+
         url = f'{__URL_API__}/search'
-        params = {'q': query, 'type': kind.name.casefold(), 'limit': self.limit_value(limit)}
+        params = {'q': query, 'type': kind.name.casefold(), 'limit': limit_value(limit)}
         r = self.get(url, params=params, use_cache=use_cache)
 
         if 'error' in r:

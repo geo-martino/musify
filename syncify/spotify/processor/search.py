@@ -90,7 +90,7 @@ class Searcher(Matcher):
             self._log_padded([item_clean.name, f"Query: {query}", f"{len(results)} results"], pad=" ")
             return results
 
-    def _log_results(self, results: Mapping[ItemCollection, SearchResult]) -> None:
+    def _log_results(self, results: Mapping[ItemCollection, SearchResult]):
         """Logs the final results of the Searcher"""
         if not results:
             return
@@ -118,7 +118,7 @@ class Searcher(Matcher):
             colour3 = '\33[92m' if skipped == 0 else '\33[93m'
 
             self.logger.info(
-                f"\33[1m{self.truncate_align_str(collection.name, max_width=max_width)} \33[0m|"
+                f"\33[1m{self.align_and_truncate(collection.name, max_width=max_width)} \33[0m|"
                 f'{colour1}{matched:>6} matched \33[0m| '
                 f'{colour2}{unmatched:>6} unmatched \33[0m| '
                 f'{colour3}{skipped:>6} skipped \33[0m| '
@@ -147,10 +147,9 @@ class Searcher(Matcher):
 
         self.logger.info(f"\33[1;95m ->\33[1;97m "
                          f"Searching for matches on Spotify for {len(collections)} collections\33[0m")
-        bar = self.get_progress_bar(iterable=collections, desc="Searching", unit="collections")
 
         search_results: MutableMapping[ItemCollection, SearchResult] = {}
-        for collection in bar:
+        for collection in self.get_progress_bar(iterable=collections, desc="Searching", unit="collections"):
             if not [item for item in collection.items if item.has_uri is None]:
                 self._log_padded([collection.name, "Skipping search, no tracks to search"], pad='<')
             skipped = [item for item in collection if item.has_uri is not None]
@@ -175,7 +174,7 @@ class Searcher(Matcher):
         self.logger.debug('Searching items: DONE\n')
         return search_results
 
-    def _search_items(self, collection: ItemCollection) -> None:
+    def _search_items(self, collection: ItemCollection):
         """Search for matches on individual items in an item collection that have ``None`` on ``has_uri`` attribute"""
         algorithm = AlgorithmSettings.ITEMS
         for item in [item for item in collection.items if item.has_uri is None]:
@@ -190,9 +189,8 @@ class Searcher(Matcher):
 
             if result and result.has_uri:
                 item.uri = result.uri
-                item.has_uri = True
 
-    def _search_album(self, collection: Album) -> None:
+    def _search_album(self, collection: Album):
         """Search for matches on an entire item collection"""
         algorithm = AlgorithmSettings.ALBUM
         results = [SpotifyAlbum.load(r["uri"])
@@ -210,4 +208,3 @@ class Searcher(Matcher):
                                            min_score=algorithm.min_score, max_score=0.8)
             if item_result:
                 item.uri = item_result.uri
-                item.has_uri = item_result.has_uri

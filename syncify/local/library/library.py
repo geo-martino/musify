@@ -9,12 +9,12 @@ from syncify.enums.tags import PropertyName, TagName
 from syncify.local.track import __TRACK_CLASSES__, LocalTrack, load_track
 from syncify.local.playlist import __PLAYLIST_FILETYPES__, LocalPlaylist, M3U, XAutoPF
 from syncify.local.playlist.processor import TrackSort
-from syncify.local.library.collection import LocalCollection, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
+from syncify.local.library.collection import LocalCollectionFiltered, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from syncify.local.exception import IllegalFileTypeError
 from syncify.utils import Logger, UnionList
 
 
-class LocalLibrary(Library, LocalCollection):
+class LocalLibrary(Library, LocalCollectionFiltered):
     """
     Represents a local library, providing various methods for manipulating
     tracks and playlists across an entire local library collection.
@@ -33,11 +33,21 @@ class LocalLibrary(Library, LocalCollection):
     """
 
     @property
+    def tracks(self) -> List[LocalTrack]:
+        """The tracks in this collection"""
+        return self._tracks
+
+    @property
     def library_folder(self) -> str:
+        """Path to the library folder"""
         return self._library_folder
 
     @library_folder.setter
     def library_folder(self, value: Optional[str]):
+        """
+        Sets the library folder path and generates a set of available and valid track paths in the folder.
+        Skips settings if the given value is None.
+        """
         if value is None:
             return
         self._library_folder: str = value.rstrip("\\/")
@@ -49,10 +59,15 @@ class LocalLibrary(Library, LocalCollection):
 
     @property
     def playlist_folder(self) -> str:
+        """Path to the playlist folder"""
         return self._playlist_folder
 
     @playlist_folder.setter
     def playlist_folder(self, value: Optional[str]):
+        """
+        Sets the playlist folder path and generates a set of available and valid playlists in the folder.
+        Appends the library folder path if the given path is not valid. Skips settings if the given value is None.
+        """
         if value is None:
             return
         if not exists(value) and self.library_folder is not None:
@@ -81,32 +96,38 @@ class LocalLibrary(Library, LocalCollection):
 
     @property
     def name(self) -> Optional[str]:
+        """The basename of the library folder"""
         return basename(self.library_folder) if self.library_folder else None
 
     @property
     def playlists(self) -> MutableMapping[str, LocalPlaylist]:
+        """The playlists in this library mapped as ``{name: playlist}``"""
         return self._playlists
 
     @property
     def folders(self) -> List[LocalFolder]:
+        """Dynamically generate a set of folder collections from the tracks in this library"""
         grouped = TrackSort.group_by_field(tracks=self.tracks, field=PropertyName.FOLDER)
         collections = [LocalFolder(group, name=name) for name, group in grouped.items()]
         return sorted(collections, key=lambda x: x.name)
 
     @property
     def albums(self) -> List[LocalAlbum]:
+        """Dynamically generate a set of album collections from the tracks in this library"""
         grouped = TrackSort.group_by_field(tracks=self.tracks, field=TagName.ALBUM)
         collections = [LocalAlbum(group, name=name) for name, group in grouped.items()]
         return sorted(collections, key=lambda x: x.name)
 
     @property
     def artists(self) -> List[LocalArtist]:
+        """Dynamically generate a set of artist collections from the tracks in this library"""
         grouped = TrackSort.group_by_field(tracks=self.tracks, field=TagName.ARTIST)
         collections = [LocalArtist(group, name=name) for name, group in grouped.items()]
         return sorted(collections, key=lambda x: x.name)
 
     @property
     def genres(self) -> List[LocalGenres]:
+        """Dynamically generate a set of genre collections from the tracks in this library"""
         grouped = TrackSort.group_by_field(tracks=self.tracks, field=TagName.GENRES)
         collections = [LocalGenres(group, name=name) for name, group in grouped.items()]
         return sorted(collections, key=lambda x: x.name)
@@ -137,13 +158,13 @@ class LocalLibrary(Library, LocalCollection):
 
         self.other_folders = other_folders
 
-        self.tracks: List[LocalTrack] = []
+        self._tracks: List[LocalTrack] = []
         self._playlists: MutableMapping[str, LocalPlaylist] = {}
 
         if load:
             self.load()
 
-    def load(self, tracks: bool = True, playlists: bool = True, log: bool = True) -> None:
+    def load(self, tracks: bool = True, playlists: bool = True, log: bool = True):
         """Loads all tracks and playlists in this library from scratch and log results."""
         self.logger.debug("Load local library: START")
         self.logger.info(f"\33[1;95m ->\33[1;97m Loading local library of "
@@ -151,7 +172,7 @@ class LocalLibrary(Library, LocalCollection):
         self.print_line()
 
         if tracks:
-            self.tracks = self.load_tracks()
+            self._tracks = self.load_tracks()
             self.print_line()
             if log:
                 self.log_tracks()
@@ -179,6 +200,7 @@ class LocalLibrary(Library, LocalCollection):
         tracks: List[LocalTrack] = []
         errors: List[str] = []
         for path in self.get_progress_bar(iterable=self._track_paths, desc="Loading tracks", unit="tracks"):
+            # noinspection PyBroadException
             try:
                 tracks.append(load_track(path=path))
             except Exception:
@@ -189,7 +211,7 @@ class LocalLibrary(Library, LocalCollection):
         self.logger.debug("Load local tracks: DONE\n")
         return tracks
 
-    def log_tracks(self) -> None:
+    def log_tracks(self):
         """Log stats on currently loaded tracks"""
         width = self.get_max_width(self._playlist_paths)
         self.logger.info(
@@ -202,8 +224,8 @@ class LocalLibrary(Library, LocalCollection):
 
     def load_playlists(self, names: Optional[Collection[str]] = None) -> List[LocalPlaylist]:
         """
-        Load a playlist from a given list of names or, if None, load all playlists in this library.
-        The name must be relative to the playlist folder of this object and exist in its loaded paths.
+        Load a playlist from a given list of names or, if None, load all playlists found in this library's loaded paths.
+        The name must be relative to the playlist folder of this library and exist in its loaded paths.
 
         :param names: Playlist paths to load relative to the playlist folder.
         :return: The loaded playlists.
@@ -244,26 +266,27 @@ class LocalLibrary(Library, LocalCollection):
         """Saves the tags of all tracks in this library. Use arguments from :py:func:`LocalPlaylist.save()`"""
         return {name: pl.save(dry_run=dry_run) for name, pl in self.playlists.items()}
 
-    def log_playlists(self) -> None:
+    def log_playlists(self):
         """Log stats on currently loaded playlists"""
         max_width = self.get_max_width(self.playlists)
 
         self.logger.info("\33[1;96mFound the following Local playlists: \33[0m")
         for name, playlist in self.playlists.items():
             self.logger.info(
-                f"\33[97m{self.truncate_align_str(name, max_width=max_width)} \33[0m|"
+                f"\33[97m{self.align_and_truncate(name, max_width=max_width)} \33[0m|"
                 f"\33[92m{len([t for t in playlist if t.has_uri]):>6} available \33[0m|"
                 f"\33[91m{len([t for t in playlist if t.has_uri is None]):>6} missing \33[0m|"
                 f"\33[93m{len([t for t in playlist if t.has_uri is False]):>6} unavailable \33[0m|"
                 f"\33[1;94m{len(playlist):>6} total \33[0m"
             )
 
-    def _log_errors(self, errors: List[str]) -> None:
+    def _log_errors(self, errors: List[str]):
         """Log paths which had some error while loading"""
+        errors = [f"\33[91m{e}\33[0m" for e in errors]
         if len(errors) > 0:
-            self.logger.debug("Could not load: \33[91m\n\t- {errors} \33[0m".format(errors="\n\t- ".join(errors)))
+            self.logger.debug("\33[97mCould not load: \33[0m\n\t- {errors} ".format(errors="\n\t- ".join(errors)))
 
-    def extend(self, items: Union[ItemCollection, Collection[Item]]) -> None:
+    def extend(self, items: Union[ItemCollection, Collection[Item]]):
         self.tracks.extend(track for track in items if isinstance(track, LocalTrack) and track not in self.tracks)
 
     def merge_playlists(self, playlists: Optional[Union[Library, Mapping[str, Playlist], List[Playlist]]] = None):
@@ -273,8 +296,14 @@ class LocalLibrary(Library, LocalCollection):
         pass
 
     def restore_tracks(self, backup: Mapping[str, Mapping[str, Any]], tags: UnionList[TagName] = TagName.ALL) -> int:
-        """Restore track tags from a backup to loaded track objects. This does not save the updated tags."""
-        tag_names = [t for tag in tags for t in tag.to_tag()]
+        """
+        Restore track tags from a backup to loaded track objects. This does not save the updated tags.
+
+        :param backup: Backup data in the form ``{path: {JSON formatted track data}}``
+        :param tags: Set of tags to restore.
+        :returns: The number of tracks restored
+        """
+        tag_names = set(TagName.to_tags(tags))
         backup = {path.lower(): track_map for path, track_map in backup.items()}
 
         count = 0
@@ -283,12 +312,13 @@ class LocalLibrary(Library, LocalCollection):
             if not track_map:
                 continue
 
-            [setattr(track, tag, track_map.get(tag)) for tag in tag_names]
+            for tag in tag_names:
+                track[tag] = track_map.get(tag)
             count += 1
 
         return count
 
-    def as_dict(self) -> MutableMapping[str, Any]:
+    def as_dict(self):
         return {
             "library_folder": self.library_folder,
             "playlists_folder": self.playlist_folder,

@@ -1,7 +1,7 @@
 from syncify.spotify import __URL_AUTH__, __URL_API__
 from .api import API
-from .utilities import APIMethodInputType
 
+# non-user authenticated access
 AUTH_ARGS_BASIC = {
     "auth_args": {
         "url": f"{__URL_AUTH__}/api/token",
@@ -27,6 +27,7 @@ AUTH_ARGS_BASIC = {
     "header_extra": {"Accept": "application/json", "Content-Type": "application/json"},
 }
 
+# user authenticated access with scopes
 AUTH_ARGS_USER = {
     "auth_args": {
         "url": f"{__URL_AUTH__}/api/token",

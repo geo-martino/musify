@@ -2,11 +2,13 @@ from abc import ABCMeta, abstractmethod
 from time import sleep
 from typing import Any, List, Mapping, MutableMapping, Optional, Union
 
-from syncify.spotify import __URL_API__, IDType, ItemType
-from syncify.spotify.api.utilities import Utilities, APIMethodInputType
+from syncify.spotify import __URL_API__, IDType, ItemType, APIMethodInputType, validate_item_type, convert, \
+    get_item_type, extract_ids
+from syncify.spotify.api.basic import APIBase
+from syncify.utils import chunk, limit_value
 
 
-class Collections(Utilities, metaclass=ABCMeta):
+class Collections(APIBase, metaclass=ABCMeta):
     """Spotify API endpoints for processing collections i.e. playlists, albums, shows, and audiobooks"""
 
     items_key = "items"
@@ -31,11 +33,11 @@ class Collections(Utilities, metaclass=ABCMeta):
 
         :param playlist: In URL/URI/ID form, or the name of one of the currently authenticated user's playlists.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
-        :exception ValueError: Raised when the function cannot determine the item type of the input ``items``.
-            Or when it does not recognise the type of the input ``items`` parameter.
+        :exception ValueError: Raised when the function cannot determine the item type of the input ``playlist``.
+            Or when it does not recognise the type of the input ``playlist`` parameter.
         """
         try:
-            return self.convert(playlist, kind=ItemType.PLAYLIST, type_out=IDType.URL)
+            return convert(playlist, kind=ItemType.PLAYLIST, type_out=IDType.URL)
         except ValueError:
             playlists = {pl["name"]: pl["href"] for pl in self.get_collections_user(use_cache=use_cache)}
             if playlist not in playlists:
@@ -81,30 +83,32 @@ class Collections(Utilities, metaclass=ABCMeta):
         i = 0
         results = []
         count = 0 if isinstance(url, str) else len(url[self.items_key])
-        while response.get("next"):
+        while response.get("next"):  # loop through each page
             i += 1
             log = None
-            if "limit" in response and "total" in response:
+            if "limit" in response and "total" in response:  # log the current page count
                 log = [f"{min(count + response['limit'], response['total']):>6}/{response['total']:<6} {unit}"]
 
             response = self.get(response["next"], use_cache=use_cache, log_pad=95, log_extra=log)
             results.extend(response[self.items_key])
             count += len(response[self.items_key])
 
-            if bar and i <= pages:
+            if bar and i <= pages:  # update progress bar
                 sleep(0.1)
                 bar.update(1)
 
         if bar is not None:
             bar.close()
 
-        if isinstance(url, dict) and isinstance(url.get(self.items_key), list):
+        # if API response was given on input, update it with new responses
+        if isinstance(url, dict) and isinstance(url.get(self.items_key), (list, set)):
             url[self.items_key].extend(results)
 
         return results
 
     @staticmethod
-    def _enrich_collections_response(collections: List[MutableMapping[str, Any]], kind: ItemType) -> None:
+    def _enrich_collections_response(collections: List[MutableMapping[str, Any]], kind: ItemType):
+        """Add type to API collection response"""
         for collection in collections:
             if collection.get("type") is None:
                 collection["type"] = kind.name.casefold()
@@ -137,27 +141,29 @@ class Collections(Utilities, metaclass=ABCMeta):
         if kind != ItemType.PLAYLIST and user is not None:
             raise ValueError(f"Only able to retrieve {kind.name.casefold()}s from the currently authenticated user")
 
-        if user is None:
-            url = f"{__URL_API__}/me/{kind.name.casefold()}s"
+        if user is not None:
+            url = f"{convert(user, kind=ItemType.USER, type_out=IDType.URL)}/{kind.name.casefold()}s"
         else:
-            url = f"{self.convert(user, kind=ItemType.USER, type_out=IDType.URL)}/{kind.name.casefold()}s"
+            url = f"{__URL_API__}/me/{kind.name.casefold()}s"
 
-        params = {"limit": self.limit_value(limit, ceil=50)}
+        # get response
+        params = {"limit": limit_value(limit, ceil=50)}
         r = self.get(url, params=params, use_cache=use_cache, log_pad=71)
         self._get_collection_items(r, kind=kind, use_cache=use_cache)
         collections = r[self.items_key]
 
+        # enrich response
         self._enrich_collections_response(collections, kind=kind)
         self.logger.debug(f"{'DONE':<7}: {url:<71} | Retrieved {len(collections):>6} {kind.name.casefold()}s")
         return collections
 
     def get_collections(
-            self, items: APIMethodInputType, kind: Optional[ItemType] = None, limit: int = 50, use_cache: bool = True,
+            self, values: APIMethodInputType, kind: Optional[ItemType] = None, limit: int = 50, use_cache: bool = True,
     ) -> List[MutableMapping[str, Any]]:
         """
-        ``GET: /{kind}s/...`` - Get all items from a given list of ``items``. Items may be:
+        ``GET: /{kind}s/...`` - Get all items from a given list of ``values``. Items may be:
             * A string representing a URL/URI/ID.
-            * A list of strings representing URLs/URIs/IDs of the same type.
+            * A collection of strings representing URLs/URIs/IDs of the same type.
             * A Spotify API JSON response for a collection including some items under an ``items`` key,
                 a valid ID value under an ``id`` key,
                 and a valid item type value under a ``type`` key if ``kind`` is None.
@@ -168,7 +174,7 @@ class Collections(Utilities, metaclass=ABCMeta):
         If JSON response/s are given, this updates the value of the ``items`` in-place
         by clearing and replacing its values.
 
-        :param items: The values representing some Spotify collection. See description for allowed value types.
+        :param values: The values representing some Spotify collection. See description for allowed value types.
             These items must all be of the same type of collection i.e. all playlists OR all shows etc.
         :param kind: Item type of the given collection.
             If None, function will attempt to determine the type of the given values
@@ -176,27 +182,27 @@ class Collections(Utilities, metaclass=ABCMeta):
             This value will be limited to be between ``1`` and the object's current ``batch_size_max``. Maximum=50.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: Raw API responses for each collection containing the collections items under the ``items`` key.
-        :exception ValueError: Raised when the function cannot determine the item type of the input ``items``.
+        :exception ValueError: Raised when the function cannot determine the item type of the input ``values``.
             Or when the given ``kind`` is not a valid collection.
         """
-        if kind is None:
-            kind = self.get_item_type(items)
+        if kind is None:  # determine kind if not given
+            kind = get_item_type(values)
         if kind.name not in self.collection_types:
             raise ValueError(f"{kind.name.title()}s are not a valid collection type")
 
-        if kind == ItemType.PLAYLIST and isinstance(items, str):
-            items = self.get_playlist_url(items, use_cache=use_cache)
+        if kind == ItemType.PLAYLIST and isinstance(values, str):
+            values = self.get_playlist_url(values, use_cache=use_cache)
 
         url = f"{__URL_API__}/{kind.name.casefold()}s"
-        params = {"limit": self.limit_value(limit, ceil=50)}
-        id_list = self.extract_ids(items, kind=kind)
+        params = {"limit": limit_value(limit, ceil=50)}
+        id_list = extract_ids(values, kind=kind)
 
         unit = kind.name.casefold() + "s"
         if len(id_list) > 5:  # show progress bar for collection batches which may take a long time
             id_list = self.get_progress_bar(iterable=id_list, desc=f'Getting {unit}', unit=unit)
 
         collections = []
-        for id_ in id_list:
+        for id_ in id_list:  # get responses for each collection in batches
             r = self.get(f"{url}/{id_}", params=params, use_cache=use_cache, log_pad=71)
             self._get_collection_items(r[self.collection_types[kind.name]], kind=kind, use_cache=use_cache)
             collections.append(r)
@@ -208,12 +214,13 @@ class Collections(Utilities, metaclass=ABCMeta):
                           f"Retrieved {item_count:>6} {self.collection_types[kind.name]} "
                           f"across {len(collections):>5} {kind.name.casefold()}s")
 
-        if isinstance(items, dict) and len(collections) == 1:
-            items.clear()
-            items.update(collections[0])
-        elif isinstance(items, list) and all(isinstance(item, dict) for item in items):
-            items.clear()
-            items.extend(collections)
+        # if API response was given on input, update it with new responses
+        if isinstance(values, dict) and len(collections) == 1:
+            values.clear()
+            values.update(collections[0])
+        elif isinstance(values, (list, set)) and all(isinstance(item, dict) for item in values):
+            values.clear()
+            values.extend(collections)
 
         return collections
 
@@ -254,22 +261,22 @@ class Collections(Utilities, metaclass=ABCMeta):
         :exception ValueError: Raised when the item types of the input ``items`` are not all tracks or IDs.
         """
         url = f"{self.get_playlist_url(playlist, use_cache=False)}/tracks"
-        limit = self.limit_value(limit, ceil=50)
+        limit = limit_value(limit, ceil=50)
 
         if len(items) == 0:
             self.logger.debug(f"{'SKIP':<7}: {url:<43} | No data given")
             return 0
 
-        self.validate_item_type(items, kind=ItemType.TRACK)
+        validate_item_type(items, kind=ItemType.TRACK)
 
-        uri_list = [self.convert(item, kind=ItemType.TRACK, type_out=IDType.URI) for item in items]
+        uri_list = [convert(item, kind=ItemType.TRACK, type_out=IDType.URI) for item in items]
         if skip_dupes:  # skip tracks currently in playlist
             pl_current = self.get_collections(url, kind=ItemType.PLAYLIST, limit=limit, use_cache=False)[0]
             tracks = pl_current[self.collection_types[ItemType.PLAYLIST.name]][self.items_key]
             uris_current = [track['track']['uri'] for track in tracks]
             uri_list = [uri for uri in uri_list if uri not in uris_current]
 
-        for uris in self.chunk(uri_list, size=limit):
+        for uris in chunk(uri_list, size=limit):  # add tracks in batches
             params = {'uris': ','.join(uris)}
             log = [f"Adding {len(uris):>6} items"]
             self.post(url, params=params, log_pad=71, log_extra=log)
@@ -305,22 +312,22 @@ class Collections(Utilities, metaclass=ABCMeta):
         :exception ValueError: Raised when the item types of the input ``items`` are not all tracks or IDs.
         """
         url = f"{self.get_playlist_url(playlist, use_cache=False)}/tracks"
-        limit = self.limit_value(limit, ceil=100)
+        limit = limit_value(limit, ceil=100)
 
         if items is not None and len(items) == 0:
             return 0
-        elif items is not None:
-            self.validate_item_type(items, kind=ItemType.TRACK)
-            uri_list = [self.convert(item, kind=ItemType.TRACK, type_out=IDType.URI) for item in items]
-        else:
+        elif items is not None:  # clear only the items given
+            validate_item_type(items, kind=ItemType.TRACK)
+            uri_list = [convert(item, kind=ItemType.TRACK, type_out=IDType.URI) for item in items]
+        else:  # clear everything
             pl_current = self.get_collections(url, kind=ItemType.PLAYLIST, use_cache=False)[0]
             tracks = pl_current[self.collection_types[ItemType.PLAYLIST.name]][self.items_key]
             uri_list = [track['track']['uri'] for track in tracks]
 
-        if not uri_list:
+        if not uri_list:  # skip when nothing to clear
             return 0
 
-        for uris in self.chunk(uri_list, size=limit):
+        for uris in chunk(uri_list, size=limit):  # clear in batches
             body = {'tracks': [{'uri': uri} for uri in uris]}
             log = [f"Clearing {len(uri_list):>3} tracks"]
             self.delete(url, json=body, log_pad=71, log_extra=log)

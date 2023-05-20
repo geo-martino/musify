@@ -5,7 +5,6 @@ from tests.local.track.track import random_track
 # noinspection SpellCheckingInspection
 def test_clean_tags():
     track = random_track()
-    track.has_uri = True
     track.uri = "spotify:track:ASDFGHJKLQWERTYUIOPZX"
 
     track.title = "A Song Part 2"
@@ -70,7 +69,7 @@ def test_match_artist():
 
     track1 = random_track()
     track2 = random_track()
-    sep = track1.list_sep
+    sep = track1._list_sep
 
     # no artists in at least one item always returns 0
     track1.artist = "artist"
@@ -118,12 +117,12 @@ def test_match_length():
     track2 = random_track()
 
     # no lengths for at least one item always returns 0
-    track1.length = 110.20
-    track2.length = None
+    track1.file.info.length = 110.20
+    track2.file.info.length = None
     assert matcher.match_length(track1, track2) == 0
 
-    track1.length = 100
-    track2.length = 90
+    track1.file.info.length = 100
+    track2.file.info.length = 90
     assert matcher.match_length(track1, track2) == 0.9
 
 
@@ -158,7 +157,7 @@ def test_match_score():
 
     track1 = random_track()
     track2 = random_track()
-    sep = track1.list_sep
+    sep = track1._list_sep
 
     track1.title = "a longer title"
     track2.title = "this is a different title"
@@ -166,8 +165,8 @@ def test_match_score():
     track2.artist = f"nope"
     track1.album = "album"
     track2.album = "name"
-    track1.length = 100
-    track2.length = 10
+    track1.file.info.length = 100
+    track2.file.info.length = 10
     track1.year = 2020
     track2.year = 2010
 
@@ -186,6 +185,6 @@ def test_match_score():
     track4.title = "a longer title"
     track4.artist = f"band{sep}a singer{sep}artist"
     track4.album = "album"
-    track4.length = 100
+    track4.file.info.length = 100
     track4.year = 2015
     assert matcher.score_match(track1, [track2, track4, track3], min_score=0.2, max_score=0.8) == track4

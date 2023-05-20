@@ -1,12 +1,11 @@
 from dataclasses import dataclass
-from datetime import datetime
-from os.path import exists, getmtime
+from os.path import exists
 from typing import Optional, List, Collection, Union
 
 from syncify.abstract.misc import Result
-from syncify.local.track import LocalTrack, load_track
 from syncify.local.playlist.playlist import LocalPlaylist
 from syncify.local.playlist.processor import TrackMatch
+from syncify.local.track import LocalTrack, load_track
 
 
 @dataclass
@@ -54,10 +53,10 @@ class M3U(LocalPlaylist):
         self._validate_type(path)
 
         paths = []
-        if exists(path):
+        if exists(path):  # load from file
             with open(path, "r", encoding='utf-8') as f:
                 paths = [line.strip() for line in f]
-        elif tracks is not None:
+        elif tracks is not None:  # generating a new M3U
             paths = [track.path for track in tracks]
 
         matcher = TrackMatch(
@@ -72,20 +71,17 @@ class M3U(LocalPlaylist):
 
     def load(self, tracks: Optional[List[LocalTrack]] = None) -> List[LocalTrack]:
         if self.matcher.include_paths is None or len(self.matcher.include_paths) == 0:
+            # use the given tracks if no valid matcher present
             self.tracks = tracks if tracks else []
-        elif tracks is not None:
+        elif tracks is not None:  # match paths from given tracks using the matcher
             self._match(tracks)
-        else:
+        else:  # use the paths in the matcher to load tracks from scratch
             self.tracks = [load_track(path=path) for path in self.matcher.include_paths if path is not None]
 
         self._limit(ignore=self.matcher.include_paths)
         self._sort()
 
-        if exists(self._path):
-            self._tracks_original = self.tracks.copy()
-        else:
-            self._tracks_original = []
-
+        self._tracks_original = self.tracks.copy() if exists(self._path) else []
         return self.tracks
 
     def save(self, dry_run: bool = True) -> SyncResultM3U:
@@ -93,13 +89,13 @@ class M3U(LocalPlaylist):
 
         if not dry_run:
             with open(self.path, "w", encoding='utf-8') as f:
+                # reassign any original folder found by the matcher and output
                 paths = self._prepare_paths_for_output([track.path for track in self.tracks])
                 f.writelines([path.strip() + '\n' for path in paths])
-            self.date_modified = datetime.fromtimestamp(getmtime(self._path))
 
-            with open(self.path, "r", encoding='utf-8') as f:
+            with open(self.path, "r", encoding='utf-8') as f:  # get list of paths that were saved for logging
                 final_paths = {line.rstrip().lower() for line in f if line.rstrip()}
-        else:
+        else:  # use current list of tracks as a proxy of paths that were saved for logging
             final_paths = {track.path.lower() for track in self._tracks}
 
         self._tracks_original = self.tracks.copy()

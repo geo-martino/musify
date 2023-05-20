@@ -9,6 +9,8 @@ from typing import Tuple, Type, Optional, List
 
 from dateutil.relativedelta import relativedelta
 
+# noinspection PyProtectedMember
+from syncify.local.track.base.track import _MutagenMock
 from syncify.enums.tags import TagName
 from syncify.local.file import open_image
 from syncify.local.track import __TRACK_CLASSES__, LocalTrack
@@ -30,6 +32,9 @@ def random_track(cls: Optional[Type[LocalTrack]] = None) -> LocalTrack:
         cls = choice(__TRACK_CLASSES__)
     track = cls.__new__(cls)
 
+    track._file = _MutagenMock()
+    track.file.info.length = randint(30, 600)
+
     track.title = random_str(20, 50)
     track.artist = random_str(20, 50)
     track.album = random_str(20, 50)
@@ -45,8 +50,8 @@ def random_track(cls: Optional[Type[LocalTrack]] = None) -> LocalTrack:
     track.compilation = choice([True, False])
     track.comments = [random_str(20, 50) for _ in range(randrange(3))]
 
-    track.has_uri = choice([True, False])
-    if track.has_uri:
+    has_uri = choice([True, False])
+    if has_uri:
         track.uri = "spotify:track:" + random_str(IDType.ID.value, IDType.ID.value + 1)
     else:
         track.uri = __UNAVAILABLE_URI_VALUE__
@@ -56,12 +61,9 @@ def random_track(cls: Optional[Type[LocalTrack]] = None) -> LocalTrack:
 
     track.path = join(path_track_cache,
                       f"{str(track.track_number).zfill(2)} - {track.title}" + track.valid_extensions[0])
-    track.size = randrange(6000, 10000000)
-    track.length = randint(30, 600)
-    track.date_modified = datetime.now() - relativedelta(days=randrange(1, 20), hours=randrange(1, 24))
 
-    track.date_added = track.date_modified - relativedelta(days=randrange(1, 20), hours=randrange(1, 24))
-    track.last_played = datetime.now() - relativedelta(days=randrange(1, 20), hours=randrange(1, 24))
+    track.date_added = datetime.now() - relativedelta(days=randrange(8, 20), hours=randrange(1, 24))
+    track.last_played = datetime.now() - relativedelta(days=randrange(1, 6), hours=randrange(1, 24))
     track.play_count = randrange(100)
     track.rating = randrange(6)
 
@@ -86,7 +88,7 @@ def copy_track(track: LocalTrack) -> Tuple[str, str]:
     return path_file_base, path_file_copy
 
 
-def clear_tags_test(track: LocalTrack) -> None:
+def clear_tags_test(track: LocalTrack):
     path_file_base, path_file_copy = copy_track(track)
     track_original = copy(track)
 
@@ -143,7 +145,7 @@ def clear_tags_test(track: LocalTrack) -> None:
     os.remove(path_file_copy)
 
 
-def update_tags_test(track: LocalTrack) -> None:
+def update_tags_test(track: LocalTrack):
     path_file_base, path_file_copy = copy_track(track)
     track_original = copy(track)
 
@@ -160,7 +162,7 @@ def update_tags_test(track: LocalTrack) -> None:
     track.disc_number = 2
     track.disc_total = 3
     track.compilation = False
-    track.has_uri = False
+    track.uri = __UNAVAILABLE_URI_VALUE__
     track.image_links = None
 
     # dry run, no updates should happen
@@ -191,7 +193,7 @@ def update_tags_test(track: LocalTrack) -> None:
     # update and don't replace current tags (except uri if uri is False)
     shutil.copyfile(path_file_base, path_file_copy)
     result = track.save(tags=TagName.ALL, replace=False, dry_run=False)
-    assert result.saved if track_original.has_uri else not result.saved
+    assert result.saved
 
     track_update = deepcopy(track)
 
@@ -243,7 +245,7 @@ def update_tags_test(track: LocalTrack) -> None:
 
 
 # noinspection PyProtectedMember
-def update_images_test(track: LocalTrack) -> None:
+def update_images_test(track: LocalTrack):
     path_file_base, path_file_copy = copy_track(track)
     track_original = copy(track)
 

@@ -3,11 +3,12 @@ from typing import Optional
 
 import mutagen
 
-from syncify.abstract.item import Track
+from syncify.abstract.item import Track, TrackProperties
 from syncify.enums.tags import TagName, TagMap
+from syncify.local.base import Local
 
 
-class TagProcessor(Track, metaclass=ABCMeta):
+class TagProcessor(Track, TrackProperties, Local, metaclass=ABCMeta):
     """Generic base class for tag processing"""
 
     uri_tag = TagName.COMMENTS
@@ -33,11 +34,11 @@ class TagProcessor(Track, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def file(self) -> Optional[mutagen.File]:
+    def file(self) -> mutagen.FileType:
         raise NotImplementedError
 
     @abstractmethod
-    def load_file(self) -> Optional[mutagen.File]:
+    def get_file(self) -> mutagen.FileType:
         """
         Load local file using mutagen and set object file path and extension properties.
 

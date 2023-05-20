@@ -2,9 +2,11 @@ from abc import ABCMeta, abstractmethod
 from typing import Any, Mapping, Optional, Self, List, Union
 
 from syncify.abstract.misc import PrettyPrinter
+from syncify.enums.tags import TagName, Name
 
 
 class TrackProcessor(PrettyPrinter, metaclass=ABCMeta):
+    """Base object for processing tracks in a playlist"""
 
     @classmethod
     @abstractmethod
@@ -40,3 +42,7 @@ class TrackProcessor(PrettyPrinter, metaclass=ABCMeta):
             )
 
         return sanitised
+
+    @classmethod
+    def _get_tag(cls, tag: Optional[Name] = None) -> str:
+        return tag.to_tag()[0] if isinstance(tag, TagName) else tag.name.casefold()

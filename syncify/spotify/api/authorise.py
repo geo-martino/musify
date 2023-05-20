@@ -68,7 +68,7 @@ class APIAuthoriser(Logger):
             raise TypeError("Token not loaded.")
 
         token_value = self.token
-        for key in self.token_key_path:
+        for key in self.token_key_path:  # get token key value at given path
             token_value = token_value.get(key, {})
 
         if not isinstance(token_value, str):
@@ -94,7 +94,7 @@ class APIAuthoriser(Logger):
     ):
         Logger.__init__(self)
 
-        # dictionaries of requests parameters to be parsed to requests
+        # maps of requests parameters to be passed to `requests` functions
         self.auth_args: Mapping[str, Any] = auth_args
         self.user_args: Optional[Mapping[str, Any]] = user_args
         self.refresh_args: Optional[Mapping[str, Any]] = refresh_args
@@ -164,7 +164,7 @@ class APIAuthoriser(Logger):
 
         return self.headers
 
-    def _auth_user(self, **requests_args) -> None:
+    def _auth_user(self, **requests_args):
         """
         Add user authentication code to request args by authorising through user's browser
 
@@ -185,6 +185,7 @@ class APIAuthoriser(Logger):
         print("\33[1mOpening Spotify in your browser. Log in to Spotify, authorise, and return here after \33[0m")
         print(f"\33[1mWaiting for code, timeout in {code_listener.timeout} seconds... \33[0m")
 
+        # open authorise webpage and wait for the redirect
         self.user_args["params"]["redirect_uri"] = f"http://{address[0]}:{address[1]}/"
         webopen(requests.post(**self.user_args).url)
         request, _ = code_listener.accept()
@@ -197,7 +198,7 @@ class APIAuthoriser(Logger):
         path_raw = [line for line in request.recv(8196).decode('utf-8').split("\n") if line.startswith("GET")][0]
         requests_args["data"]["code"] = parse_qs(urlparse(path_raw).query)['code'][0]
 
-    def _request_token(self, user: bool = True, **requests_args) -> None:
+    def _request_token(self, user: bool = True, **requests_args):
         """
         Authenticates/refreshes basic API access and returns token.
 
@@ -263,7 +264,7 @@ class APIAuthoriser(Logger):
 
         return self.token
 
-    def save_token(self) -> None:
+    def save_token(self):
         """Save new/updated token to given path"""
         self.logger.debug(f"Saving token: {self.token_safe}")
         with open(self.token_file_path, "w") as file:
