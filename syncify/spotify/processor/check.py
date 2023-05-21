@@ -217,7 +217,7 @@ class Checker(Matcher):
                 name = pl_names[0]
                 items = self.playlist_name_collection[name]
 
-                print(f"\n\t\33[96mShowing items originally added to {name}:\33[0m\n")
+                print(f"\n\t\33[96mShowing items originally added to \33[94m{name}\33[0m:\n")
                 for i, item in enumerate(items, 1):
                     print(self.api.format_item_data(i=i, name=item.name, uri=item.uri, total=len(items)))
                 print()
@@ -271,7 +271,7 @@ class Checker(Matcher):
         to any modifications the user has made.
         """
         self.logger.info(f'\33[1;95m ->\33[1;97m '
-                         f'Attempting to find URIs for items in Spotify playlist: \33[94m{name}\33[0m...')
+                         f'Checking for changes to items in Spotify playlist: \33[94m{name}\33[0m...')
 
         source = self.playlist_name_collection[name]
         remote = SpotifyPlaylist(self.api.get_collections(self.playlist_name_urls[name], use_cache=False)[0]).tracks

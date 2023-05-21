@@ -152,8 +152,6 @@ class SpotifyLibrary(Library):
             for track in self.tracks:
                 track.response["artists"] = [artists[artist["uri"]] for artist in track.response["artists"]]
 
-        self.print_line()
-
     def _get_playlists_data(self) -> List[MutableMapping[str, Any]]:
         """Get playlists and all their tracks"""
         self.logger.debug("Get Spotify playlists data: START")

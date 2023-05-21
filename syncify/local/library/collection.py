@@ -208,16 +208,19 @@ class LocalFolder(LocalCollectionFiltered, Folder):
         """
         Modify tags for tracks in the folders of this library.
 
-        The following steps are applied to all folders:
+        The following steps are applied to all non-compilation folders:
 
-        * Set compilation to True if folder is a compilation, False otherwise
+        * Set compilation to False
 
-        The following steps are also applied to all compilation folders:
+        The following steps are applied to all compilation folders:
 
         * Set album name to folder name
         * Set album artist to 'Various'
         * Set track_number in ascending order by filename
+        * Set track_total to the number of tracks in the folder
         * Set disc_number to 1
+        * Set disc_total to 1
+        * Set compilation to True
         """
 
         count = 0
@@ -228,7 +231,9 @@ class LocalFolder(LocalCollectionFiltered, Folder):
                 track.album = track.folder
                 track.album_artist = "Various"
                 track.track_number = i
+                track.track_total = len(tracks)
                 track.disc_number = 1
+                track.disc_total = 1
                 track.compilation = True
                 count += 1
         else:

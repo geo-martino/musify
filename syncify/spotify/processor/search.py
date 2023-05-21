@@ -71,10 +71,10 @@ class Searcher(Matcher):
             self, item: Base, kind: ItemType, algorithm: Algorithm
     ) -> Optional[List[MutableMapping[str, Any]]]:
         """Calls the ``/search`` endpoint to get results for the current item based on algorithm settings"""
-        item_clean = self.clean_tags(item)
+        self.clean_tags(item)
 
         def execute_query(keys: List[str]) -> Tuple[List[MutableMapping[str, Any]], str]:
-            attributes = set(getattr(item_clean, key, None) for key in keys)
+            attributes = set(item.clean_tags.get(key) for key in keys)
             q = " ".join(attr for attr in attributes if attr)
             return self.api.query(q, kind=kind, limit=algorithm.result_count), q
 
@@ -85,9 +85,9 @@ class Searcher(Matcher):
             results, query = execute_query(algorithm.search_fields_3)
 
         if not results:
-            self._log_padded([item_clean.name, f"Query: {query}", "Match failed: No results."], pad="<")
+            self._log_padded([item.name, f"Query: {query}", "Match failed: No results."], pad="<")
         else:
-            self._log_padded([item_clean.name, f"Query: {query}", f"{len(results)} results"], pad=" ")
+            self._log_padded([item.name, f"Query: {query}", f"{len(results)} results"], pad=" ")
             return results
 
     def _log_results(self, results: Mapping[ItemCollection, SearchResult]):

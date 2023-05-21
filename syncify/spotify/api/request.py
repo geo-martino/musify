@@ -87,7 +87,7 @@ class RequestHandler(APIAuthoriser, Logger):
                     raise APIError(f"Retry time is greater than timeout of {self.timeout} seconds")
 
             if backoff < self.backoff_final:  # exponential backoff
-                self.logger.info(f"Retrying in {backoff} seconds...")
+                self.logger.info(f"Request failed: retrying in {backoff} seconds...")
                 sleep(backoff)
                 backoff *= self.backoff_factor
             else:  # max backoff exceeded

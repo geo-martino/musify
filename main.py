@@ -91,7 +91,6 @@ class Syncify(Settings, Report):
             exclude = self.cfg_run["spotify"].get("playlists", {}).get("exclude")
 
             self._spotify_library = SpotifyLibrary(api=self.api, include=include, exclude=exclude, use_cache=use_cache)
-            self._spotify_library.enrich_tracks(artists=True)
         return self._spotify_library
 
     @property
@@ -158,6 +157,7 @@ class Syncify(Settings, Report):
         if self._spotify_library is not None:
             self.spotify_library.use_cache = self.use_cache
             self.spotify_library.load(log=False)
+            self.spotify_library.extend(self.local_library)
             self.spotify_library.enrich_tracks(artists=True)
 
         self.logger.debug("Reload libraries: DONE\n")
@@ -215,11 +215,17 @@ class Syncify(Settings, Report):
     ###########################################################################
     ## Backup/Restore
     ###########################################################################
-    def backup(self):
+    def backup(self, is_final: bool = False):
         """Backup data for all tracks and playlists in all libraries"""
         self.logger.debug("Backup libraries: START")
-        self.save_json(self.local_library_backup_name, self.local_library.as_json())
-        self.save_json(self.spotify_library_backup_name, self.spotify_library.as_json())
+
+        local_backup_name = self.local_library_backup_name
+        local_backup_name = f"[FINAL] - {local_backup_name}" if is_final else local_backup_name
+        self.save_json(local_backup_name, self.local_library.as_json())
+
+        spotify_backup_name = self.spotify_library_backup_name
+        spotify_backup_name = f"[FINAL] - {spotify_backup_name}" if is_final else spotify_backup_name
+        self.save_json(spotify_backup_name, self.spotify_library.as_json())
         self.logger.debug("Backup libraries: DONE\n")
 
     def restore(self):
@@ -365,6 +371,7 @@ class Syncify(Settings, Report):
 
         # add extra local tracks to Spotify library and merge Spotify items to local library
         self.spotify_library.extend(self.local_library)
+        self._spotify_library.enrich_tracks(artists=True)
         self.local_library.merge_items(self.spotify_library, tags=tags)
 
         # save tags to files
@@ -462,15 +469,16 @@ def print_logo():
     print()
 
 
-def print_line(text: str = ""):
+def print_line(text: str = "", line_char: str = "-"):
     """Print an aligned line with the given text in the centre of the terminal"""
     text = text.replace("_", " ").title()
     cols = os.get_terminal_size().columns
 
-    amount_left = (cols - (len(text) + 2)) // 2
-    output_len = amount_left * 2 + len(text) + 2
+    text = f" {text} " if text else ""
+    amount_left = (cols - len(text)) // 2
+    output_len = amount_left * 2 + len(text)
     amount_right = amount_left + (1 if output_len < cols else 0)
-    print(f"\n\33[1;96m{'-' * amount_left} \33[95m{text}\33[1;96m {'-' * amount_right}\33[0m\n")
+    print(f"\n\33[1;96m{line_char * amount_left}\33[95m{text}\33[1;96m{line_char * amount_right}\33[0m\n")
 
 
 def print_time(seconds: float):
@@ -486,25 +494,35 @@ def print_time(seconds: float):
 
 
 if __name__ == "__main__":
+    print_logo()
     main = Syncify()
     main.parse_from_prompt()
-    print_logo()
     main.logger.info(f"\33[90mLogs: {main.log_path} \33[0m")
     main.logger.info(f"\33[90mOutput: {main.output_folder} \33[0m")
 
-    for func in main.functions:
+    if main.dry_run:
+        print_line("DRY RUN ENABLED", " ")
+
+    failed = False
+    for i, func in enumerate(main.functions, 1):
         # noinspection PyBroadException
         try:  # run the functions requested by the user
-            main.set_func(func)
             main.logger.debug(f"START function: {func}")
-            print_line(func)
-            main.run()
+            main.set_func(func)
+
+            if main.run == main.backup and i == len(main.functions):
+                print_line(f"final_{func}")
+                main.backup(True)
+            else:
+                print_line(func)
+                main.run()
+
             main.logger.debug(f"DONE  function: {func}")
         except BaseException:
             main.logger.critical(traceback.format_exc())
+            failed = True
             break
 
-    main.print_line()
     main.close_handlers()
     print_logo()
     print_time(main.time_taken)
@@ -526,6 +544,9 @@ if __name__ == "__main__":
 # TODO: generally improve performance
 
 ## SELECTED FOR DEVELOPMENT
+# TODO: cascade dry_run down to Spotify sync method
+#  and produce report on changes like in local sync
+# TODO: improve verbosity options, only show report logs when verbosity is > n
 # TODO: test on linux/mac platforms
 # TODO: parallelize long loads
 # TODO: update the readme

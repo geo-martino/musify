@@ -80,7 +80,8 @@ class API(Basic, Items, Collections):
 
             if r["offset"] == 0:  # first page, show header
                 url_open = convert(url, type_in=IDType.URL_EXT, type_out=IDType.URL_EXT)
-                print(f"\n\t\33[96mShowing tracks for {kind.name.casefold()}: {name} - {url_open} \33[0m\n")
+                print(f"\n\t\33[96mShowing tracks for {kind.name.casefold()}\33[0m: "
+                      f"\33[94m{name} \33[97m- {url_open} \33[0m\n")
                 pass
 
             if 'error' in r:  # fail

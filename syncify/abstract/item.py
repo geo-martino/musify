@@ -8,8 +8,10 @@ from syncify.enums.tags import TagName
 from syncify.utils import UnionList
 
 
+@dataclass
 class Base:
-    _list_sep = "; "
+    clean_tags: MutableMapping[str, Any]
+    _list_sep: str = "; "
 
     @property
     @abstractmethod

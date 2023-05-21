@@ -58,17 +58,13 @@ class Matcher(Logger):
         self.allow_karaoke = allow_karaoke
 
     @staticmethod
-    def clean_tags(source: T) -> T:
+    def clean_tags(source: Base):
         """
-        Clean tags on a copy of the input item and return the copy. Used for better matching/searching.
+        Clean tags on the input item and assign to its ``clean_tags`` attribute. Used for better matching/searching.
         Clean by removing redundant words, and only taking phrases before a certain word e.g. 'featuring', 'part'.
 
-        :param source: The item with tags to clean.
-        :return: A copy of the original item with cleaned tags.
+        :param source: The base object with tags to clean.
         """
-        redundant_all = ["the", "a", "&", "and"]
-        item_copy = copy(source)
-
         def process(value: str, redundant: Optional[List[str]] = None, split: Optional[List[str]] = None) -> str:
             value = re.sub(r"[(\[].*?[)\]]", "", value).casefold()
             for word in redundant_all:
@@ -83,23 +79,33 @@ class Matcher(Logger):
 
             return re.sub(r"[^\w']+", ' ', value).strip()
 
-        title = getattr(item_copy, "title", None)
+        redundant_all = ["the", "a", "&", "and"]
+        source.clean_tags = {"name": ""}
+        name = source.name
+
+        title = getattr(source, "title", None)
+        source.clean_tags["title"] = ""
         if title:
-            item_copy.title = process(title, redundant=["part"], split=["featuring", "feat.", "ft.", "/"])
+            source.clean_tags["title"] = process(title, redundant=["part"], split=["featuring", "feat.", "ft.", "/"])
+            if name == title:
+                source.clean_tags["name"] = source.clean_tags["title"]
 
-        artist = getattr(item_copy, "artist", None)
+        artist = getattr(source, "artist", None)
+        source.clean_tags["artist"] = ""
         if artist:
-            item_copy.artist = process(artist, split=["featuring", "feat.", "ft.", "vs"])
+            source.clean_tags["artist"] = process(artist, split=["featuring", "feat.", "ft.", "vs"])
+            if name == artist:
+                source.clean_tags["name"] = source.clean_tags["artist"]
 
-        album = getattr(item_copy, "album", None)
+        album = getattr(source, "album", None)
+        source.clean_tags["album"] = ""
         if album:
-            cleaned = process(album.split('-')[0], redundant=["ep"])
-            if isinstance(item, LocalAlbum):
-                item_copy._name = cleaned
-            else:
-                item_copy.album = cleaned
+            source.clean_tags["album"] = process(album.split('-')[0], redundant=["ep"])
+            if name == album:
+                source.clean_tags["name"] = source.clean_tags["album"]
 
-        return item_copy
+        source.clean_tags["length"] = getattr(source, "length", None)
+        source.clean_tags["year"] = getattr(source, "year", None)
 
     ###########################################################################
     ## Conditions
@@ -111,28 +117,30 @@ class Matcher(Logger):
             self._log_test(source=source, result=result, test=karaoke, extra=[f"{self.karaoke_tags} -> {values}"])
             return karaoke
 
-        if is_karaoke(result.name.lower()):  # title/album name
+        if is_karaoke(result.clean_tags["name"].lower()):  # title/album name
             return 0
-        if is_karaoke(result.artist.lower()):  # artists
+        if is_karaoke(result.clean_tags["artist"].lower()):  # artists
             return 0
-        if isinstance(result, Track) and is_karaoke(result.album.lower()):  # album when the result is a track
+        if is_karaoke(result.clean_tags["album"].lower()):  # album
             return 0
         return 1
 
     def match_name(self, source: Base, result: MatchTypes) -> float:
         """Match on names and return a score. Score=0 when either value is None."""
         score = 0
-        if source.name and result.name:
-            score = sum(word in result.name for word in source.name.split()) / len(source.name.split())
+        source_val = source.clean_tags["name"]
+        result_val = result.clean_tags["name"]
+
+        if source_val and result_val:
+            score = sum(word in result_val for word in source_val.split()) / len(source_val.split())
 
             # reduce a score if certain keywords are present in result and not source
             reduce_factor = 0.5
-            reduce_on = ["live", "demo"] + self.karaoke_tags
-            if any(word in result.name and word not in source.name for word in reduce_on):
+            reduce_on = ["live", "demo", "acoustic"] + self.karaoke_tags
+            if any(word in result_val and word not in source_val for word in reduce_on):
                 score = max(score - reduce_factor, 0)
 
-        self._log_test(source=source, result=result, test=round(score, 2),
-                       extra=[f"{source.name} -> {result.name}"])
+        self._log_test(source=source, result=result, test=round(score, 2), extra=[f"{source_val} -> {result_val}"])
         return score
 
     # noinspection PyProtectedMember
@@ -144,40 +152,45 @@ class Matcher(Logger):
         match on artist 3 is scaled by 1/3 etc.
         """
         score = 0
-        if not source.artist or not result.artist:
-            self._log_test(source=source, result=result, test=score,
-                           extra=[f"{source.artist} -> {result.artist}"])
+        source_val = source.clean_tags["artist"]
+        result_val = result.clean_tags["artist"]
+
+        if not source_val or not result_val:
+            self._log_test(source=source, result=result, test=score, extra=[f"{source_val} -> {result_val}"])
             return score
 
-        artists_source = source.artist.replace(Base._list_sep, " ")
-        artists_result = result.artist.split(Base._list_sep)
+        artists_source = source_val.replace(Base._list_sep, " ")
+        artists_result = result_val.split(Base._list_sep)
 
         for i, artist in enumerate(artists_result, 1):
-            score += (sum(word in artists_source for word in artist.split()) /
-                      len(artists_source.split())) * (1 / i)
-        self._log_test(source=source, result=result, test=round(score, 2),
-                       extra=[f"{source.artist} -> {result.artist}"])
+            score += (sum(word in artists_source for word in artist.split()) / len(artists_source.split())) * (1 / i)
+        self._log_test(source=source, result=result, test=round(score, 2), extra=[f"{source_val} -> {result_val}"])
         return score
 
     def match_album(self, source: MatchTypes, result: MatchTypes) -> float:
         """Match on album and return a score. Score=0 when either value is None."""
         score = 0
-        if source.album and result.album:
-            score = sum(word in result.album for word in source.album.split()) / len(source.album.split())
+        source_val = source.clean_tags["album"]
+        result_val = result.clean_tags["album"]
 
-        self._log_test(source=source, result=result, test=round(score, 2),
-                       extra=[f"{source.album} -> {result.album}"])
+        if source_val and result_val:
+            score = sum(word in result_val for word in source_val.split()) / len(source_val.split())
+
+        self._log_test(source=source, result=result, test=round(score, 2), extra=[f"{source_val} -> {result_val}"])
         return score
 
     def match_length(self, source: MatchTypes, result: MatchTypes) -> float:
         """Match on length and return a score. Score=0 when either value is None."""
         score = 0
-        if source.length and result.length:
-            score = max((source.length - abs(source.length - result.length)), 0) / source.length
+        source_val = source.clean_tags["length"]
+        result_val = result.clean_tags["length"]
+
+        if source_val and result_val:
+            score = max((source_val - abs(source_val - result_val)), 0) / source_val
 
         self._log_test(source=source, result=result, test=round(score, 2),
-                       extra=[f"{round(source.length, 2) if source.length else None} -> "
-                              f"{round(result.length, 2) if result.length else None}"])
+                       extra=[f"{round(source_val, 2) if source_val else None} -> "
+                              f"{round(result_val, 2) if result_val else None}"])
         return score
 
     def match_year(self, source: MatchTypes, result: MatchTypes) -> float:
@@ -187,11 +200,13 @@ class Matcher(Logger):
         User may modify this max range via the ``year_range`` class attribute.
         """
         score = 0
-        if source.year and result.year:
-            score = max((self.year_range - abs(source.year - result.year)), 0) / self.year_range
+        source_val = source.clean_tags["year"]
+        result_val = result.clean_tags["year"]
 
-        self._log_test(source=source, result=result, test=round(score, 2),
-                       extra=[f"{source.year} -> {result.year}"])
+        if source_val and result_val:
+            score = max((self.year_range - abs(source_val - result_val)), 0) / self.year_range
+
+        self._log_test(source=source, result=result, test=round(score, 2), extra=[f"{source_val} -> {result_val}"])
         return score
 
     ###########################################################################
@@ -218,22 +233,21 @@ class Matcher(Logger):
             track, artist, album, year, length.
         :return: dict. Metadata for locally stored track with added matched URI if found.
         """
-        source_clean = self.clean_tags(source)
-        score, result = self._score(source=source, source_clean=source_clean, results=results,
-                                    max_score=max_score, match_on=match_on)
+        if not source.clean_tags:
+            self.clean_tags(source)
+        score, result = self._score(source=source, results=results, max_score=max_score, match_on=match_on)
 
         if score > min_score:
             extra = f"best score: {'%.2f' % round(score, 2)} > {'%.2f' % round(min_score, 2)}" if score < max_score \
                 else f"max score reached: {'%.2f' % round(score, 2)} > {'%.2f' % round(max_score, 2)}"
-            self._log_match(source=source_clean, result=result, extra=[extra])
+            self._log_match(source=source, result=result, extra=[extra])
             return result
         else:
-            self._log_test(source=source_clean, result=result, test=score, extra=[f"NO MATCH: {score}<{min_score}"])
+            self._log_test(source=source, result=result, test=score, extra=[f"NO MATCH: {score}<{min_score}"])
 
     def _score(
             self,
             source: MatchTypes,
-            source_clean: MatchTypes,
             results: Iterable[MatchTypes],
             max_score: float = 0.8,
             match_on:  Collection[Union[TagName, PropertyName]] = frozenset([TagName.ALL, PropertyName.ALL])
@@ -241,9 +255,8 @@ class Matcher(Logger):
         """
         Gets the score and result from a cleaned source and a given list of results.
 
-        :param source: Source item to compare against and find a match for.
-        :param source_clean: Cleaned source item to compare against and find a match for.
-        :param results: Results for comparisons.
+        :param source: Source item to compare against and find a match for with assigned ``clean_tags``.
+        :param results: Result items for comparisons.
         :param max_score: Stop matching once this score has been reached.
             Value will be limited to between 0.1 and 1.0.
         :param match_on: List of tags to match on. Currently only the following tags/properties are supported:
@@ -251,10 +264,10 @@ class Matcher(Logger):
         :return: dict. Metadata for locally stored track with added matched URI if found.
         """
         if not results:
-            self._log_algorithm(source=source_clean, extra=[f"NO RESULTS GIVEN, SKIPPING"])
+            self._log_algorithm(source=source, extra=[f"NO RESULTS GIVEN, SKIPPING"])
             return 0, None
         max_score = limit_value(max_score, floor=0.1, ceil=1.0)
-        self._log_algorithm(source=source_clean, extra=[f"max_score={max_score}"])
+        self._log_algorithm(source=source, extra=[f"max_score={max_score}"])
 
         # process and limit match options
         match_on = set(match_on)
@@ -269,14 +282,13 @@ class Matcher(Logger):
         best_result = None
 
         for current_result in results:
-            result_clean = self.clean_tags(current_result)
-            scores = self._get_scores(source=source, source_clean=source_clean,
-                                      result=current_result, result_clean=result_clean, match_on=match_on)
+            self.clean_tags(current_result)
+            scores = self._get_scores(source=source, result=current_result, match_on=match_on)
             if not scores:
                 continue
 
             current_score = sum(scores.values()) / len(scores)
-            self._log_test(source=source_clean, result=result_clean,
+            self._log_test(source=source, result=current_result,
                            test=round(current_score, 2), extra=[f"BEST={round(best_score, 2)}"])
 
             if current_score > best_score:
@@ -290,51 +302,46 @@ class Matcher(Logger):
     def _get_scores(
             self,
             source: MatchTypes,
-            source_clean: MatchTypes,
             result: MatchTypes,
-            result_clean: MatchTypes,
             match_on: Collection[Union[TagName, PropertyName]] = frozenset([TagName.ALL, PropertyName.ALL])
     ) -> dict[str, float]:
         """
         Gets the scores from a cleaned source and result to match on.
         When an ItemCollection is given to match on, scores are also given for the items in the collection.
 
-        :param source: Source item to compare against and find a match for.
-        :param source_clean: Cleaned source item to compare against and find a match for.
-        :param result: Result to compare against.
-        :param result_clean: Cleaned result to compare against.
+        :param source: Source item to compare against and find a match for with assigned ``clean_tags``.
+        :param result: Result item to compare against with assigned ``clean_tags``.
         :param match_on: List of tags to match on. Currently only the following tags/properties are supported:
             track, artist, album, year, length.
         :return: dict. Metadata for locally stored track with added matched URI if found.
         """
-        if not self.allow_karaoke and self.match_not_karaoke(source_clean, result) < 1:
+        if not self.allow_karaoke and self.match_not_karaoke(source, result) < 1:
             return {}
 
         scores_current: dict[str, float] = {}
 
         if TagName.TITLE in match_on:
-            scores_current["title"] = self.match_name(source=source_clean, result=result_clean)
+            scores_current["title"] = self.match_name(source=source, result=result)
         if TagName.ARTIST in match_on:
-            scores_current["artist"] = self.match_artist(source=source_clean, result=result_clean)
+            scores_current["artist"] = self.match_artist(source=source, result=result)
         if TagName.ALBUM in match_on:
-            scores_current["album"] = self.match_album(source=source_clean, result=result_clean)
+            scores_current["album"] = self.match_album(source=source, result=result)
         if PropertyName.LENGTH in match_on:
-            scores_current["length"] = self.match_length(source=source_clean, result=result_clean)
+            scores_current["length"] = self.match_length(source=source, result=result)
         if TagName.YEAR in match_on:
-            scores_current["year"] = self.match_year(source=source_clean, result=result_clean)
-        if isinstance(source_clean, ItemCollection) and isinstance(result_clean, ItemCollection):
+            scores_current["year"] = self.match_year(source=source, result=result)
+        if isinstance(source, ItemCollection) and isinstance(result, ItemCollection):
             # skip this if not a collection of tracks
-            if not all(isinstance(i, Track) for i in source_clean.items):
+            if not all(isinstance(i, Track) for i in source.items):
                 return scores_current
-            if not all(isinstance(i, Track) for i in result_clean.items):
+            if not all(isinstance(i, Track) for i in result.items):
                 return scores_current
 
             # also score all the items individually in the collection
-            result_items = result_clean.items
             scores_current["items"] = 0
-            for i in source_clean.items:
-                item_clean = self.clean_tags(i)
-                score, _ = self._score(source=source, source_clean=item_clean, results=result_items, match_on=match_on)
-                scores_current["items"] += score / len(source_clean.items)
+            for item in source.items:
+                self.clean_tags(item)
+                score, _ = self._score(source=item, results=result.items, match_on=match_on)
+                scores_current["items"] += score / len(source.items)
 
         return scores_current
