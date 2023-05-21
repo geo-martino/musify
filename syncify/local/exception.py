@@ -40,6 +40,20 @@ class LocalCollectionError(LocalError):
         super().__init__(formatted)
 
 
+class LocalProcessorError(LocalError):
+    """
+    Exception raised for errors related to track processors.
+
+    :param message: Explanation of the error.
+    """
+
+    def __init__(self, message: Optional[str] = None):
+        super().__init__(message=message)
+
+
+###########################################################################
+## File errors
+###########################################################################
 class FileError(LocalError):
     """
     Exception raised for file errors.
@@ -80,6 +94,9 @@ class ImageLoadError(FileError):
         super().__init__(filetype=filetype, message=message)
 
 
+###########################################################################
+## MusicBee errors
+###########################################################################
 class MusicBeeError(LocalError):
     """
     Exception raised for errors related to MusicBee logic.
@@ -101,23 +118,12 @@ class FieldError(MusicBeeError):
         self.field = field
         self.message = message
         formatted = f"{message}: {field}" if field else message
-        super().__init__(message=message)
+        super().__init__(message=formatted)
 
 
 class LimitError(MusicBeeError):
     """
     Exception raised for errors related to MusicBee limit settings.
-
-    :param message: Explanation of the error.
-    """
-
-    def __init__(self, message: Optional[str] = None):
-        super().__init__(message=message)
-
-
-class LocalProcessorError(LocalError):
-    """
-    Exception raised for errors related to track processors.
 
     :param message: Explanation of the error.
     """

@@ -5,7 +5,7 @@ from typing import Any, List, MutableMapping, Optional, Self, Mapping, Union
 from syncify.abstract.collection import ItemCollection, Album
 from syncify.abstract.item import Item
 from syncify.spotify import IDType, ItemType, APIMethodInputType
-from syncify.spotify.utils import validate_item_type, convert, extract_ids
+from syncify.spotify.utils import validate_item_type, convert, extract_ids, get_id_type
 from syncify.spotify.exception import SpotifyIDTypeError
 from syncify.spotify.base import Spotify
 from syncify.spotify.library.item import SpotifyTrack, SpotifyArtist, SpotifyItem

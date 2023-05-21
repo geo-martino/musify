@@ -43,6 +43,20 @@ class SpotifyCollectionError(SpotifyError):
         super().__init__(formatted)
 
 
+class APIError(SpotifyError):
+    """
+    Exception raised for Spotify API errors.
+
+    :param message: Explanation of the error.
+    """
+
+    def __init__(self, message: Optional[str] = None):
+        super().__init__(message)
+
+
+###########################################################################
+## Type errors
+###########################################################################
 class SpotifyIDTypeError(SpotifyError):
     """
     Exception raised for Spotify ID type errors.
@@ -72,16 +86,3 @@ class SpotifyItemTypeError(SpotifyError):
         formatted = f"{kind} | {message}" if kind else message
         formatted += f": {value}" if value else ""
         super().__init__(formatted)
-
-
-class APIError(SpotifyError):
-    """
-    Exception raised for Spotify API errors.
-
-    :param message: Explanation of the error.
-    """
-
-    def __init__(self, message: Optional[str] = None):
-        super().__init__(message)
-
-

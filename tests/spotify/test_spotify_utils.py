@@ -5,6 +5,7 @@ from syncify.spotify import __URL_API__, __URL_EXT__, IDType, ItemType
 from syncify.spotify.exception import SpotifyError, SpotifyIDTypeError, SpotifyItemTypeError
 from syncify.spotify.utils import get_id_type, validate_id_type, get_item_type, validate_item_type, convert, extract_ids
 
+
 # noinspection SpellCheckingInspection
 def test_get_id_type():
     assert get_id_type("1234567890ASDFGHJKLZXC") == IDType.ID
