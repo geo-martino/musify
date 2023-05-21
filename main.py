@@ -166,7 +166,7 @@ class Syncify(Settings, Report):
         """Pretty print data from user's input"""
         self.api.pretty_print_uris(use_cache=self.use_cache)
 
-    def clean_syncify_files(self):
+    def clean_env(self):
         """Clears files older than a number of days and only keeps max # of runs"""
         self.logger.debug("Clean Syncify files: START")
 
