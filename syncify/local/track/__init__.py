@@ -21,7 +21,7 @@ def load_track(path: str, available: Optional[Collection[str]] = None) -> LocalT
     :param available: A list of available track paths that are known to exist and are valid for this track type.
         Useful for case-insensitive path loading and correcting paths to case-sensitive.
     :return: Loaded Track object
-    :exception IllegalFileTypeError: If the file type is not supported.
+    :raises IllegalFileTypeError: If the file type is not supported.
     """
     ext = splitext(path)[1].casefold()
 

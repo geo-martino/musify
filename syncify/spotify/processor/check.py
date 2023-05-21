@@ -7,7 +7,8 @@ from syncify.abstract.item import Item
 from syncify.abstract.misc import Result
 from syncify.enums.tags import TagName
 from syncify.local.track import LocalTrack
-from syncify.spotify import check_spotify_type, ItemType, IDType, convert
+from syncify.spotify import IDType, ItemType
+from syncify.spotify.utils import check_spotify_type, convert
 from syncify.spotify.api import API
 from syncify.spotify.library.library import SpotifyPlaylist
 from syncify.spotify.processor.match import Matcher

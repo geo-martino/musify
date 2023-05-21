@@ -36,7 +36,7 @@ class Name(SyncifyEnum):
         """
         Returns the first enum that matches the given name
 
-        :exception EnumNotFoundError: If a corresponding enum cannot be found.
+        :raises EnumNotFoundError: If a corresponding enum cannot be found.
         """
         name = name.strip().upper()
         if name == "ALBUM_ARTIST":
@@ -54,7 +54,7 @@ class Name(SyncifyEnum):
         """
         Returns the first enum that matches the given enum value
 
-        :exception EnumNotFoundError: If a corresponding enum cannot be found.
+        :raises EnumNotFoundError: If a corresponding enum cannot be found.
         """
         for enum in cls:
             if enum.value == value:

@@ -5,13 +5,18 @@ from typing import Any, Callable, List, Mapping, MutableMapping, Optional, Self,
 
 from syncify.enums import SyncifyEnum
 from syncify.enums.tags import Name, PropertyName, TagName
+from syncify.local.exception import FieldError
 from syncify.local.track import LocalTrack
 from syncify.local.playlist.processor.base import TrackProcessor
 from syncify.utils import UnionList, flatten_nested, strip_ignore_words, make_list, limit_value
 
 
 def get_field_from_code(field_code: int) -> Optional[Name]:
-    """Get the Tag or Property for a given MusicBee field code"""
+    """
+    Get the Tag or Property for a given MusicBee field code.
+
+    :raises FieldError: When the given ``field_code`` cannot be found.
+    """
     if field_code == 0:
         return
     elif field_code in [e.value for e in TagName.all()]:
@@ -24,7 +29,7 @@ def get_field_from_code(field_code: int) -> Optional[Name]:
         # program doesn't have functionality to discern between each so just default to 30
         return TagName.ALBUM
     else:
-        raise ValueError(f"Field code not recognised: {field_code}")
+        raise FieldError(f"Field code not recognised", field=field_code)
 
 
 class ShuffleMode(SyncifyEnum):

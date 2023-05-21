@@ -5,6 +5,7 @@ from typing import Any, Callable, List, Mapping, Optional, Self, MutableMapping,
 
 from syncify.enums import SyncifyEnum
 from syncify.enums.tags import PropertyName
+from syncify.local.exception import LimitError
 from syncify.local.track import LocalTrack
 from syncify.local.playlist.processor.base import TrackProcessor
 from syncify.local.playlist.processor.sort import TrackSort
@@ -181,7 +182,11 @@ class TrackLimit(TrackProcessor):
         TrackSort.sort_by_field(tracks, PropertyName.DATE_ADDED, reverse=False)
 
     def _convert(self, track: LocalTrack) -> float:
-        """Convert units for track length or size"""
+        """
+        Convert units for track length or size
+
+        :raises LimitError: When the given limit type cannot be found
+        """
         if 10 < self.kind.value < 20:
             factors = [1, 60, 60, 24, 7][:self.kind.value % 10]
             return track.length / reduce(mul, factors, 1)
@@ -189,7 +194,7 @@ class TrackLimit(TrackProcessor):
             bytes_scale = 1000
             return track.size / (bytes_scale ** (self.kind.value % 10))
         else:
-            raise ValueError(f"Unrecognised LimitType: {self.kind}")
+            raise LimitError(f"Unrecognised LimitType: {self.kind}")
 
     def as_dict(self):
         return {

@@ -1,6 +1,7 @@
 from typing import Optional
 
-from syncify.spotify import IDType, ItemType, get_item_type, convert
+from syncify.spotify import IDType, ItemType
+from syncify.spotify.utils import get_item_type, convert
 from syncify.spotify.api.basic import Basic
 from syncify.spotify.api.collection import Collections
 from syncify.spotify.api.item import Items

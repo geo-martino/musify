@@ -2,7 +2,8 @@ from abc import ABCMeta, abstractmethod
 from typing import Any, MutableMapping, Self, Optional
 
 from syncify.abstract.misc import PrettyPrinter
-from syncify.spotify import APIMethodInputType
+from syncify.spotify import APIMethodInputType, ItemType
+from syncify.spotify.exception import APIError, SpotifyItemTypeError
 from syncify.spotify.api import API
 
 
@@ -42,16 +43,25 @@ class Spotify(PrettyPrinter, metaclass=ABCMeta):
         self._check_type()
 
     def _check_type(self):
-        """Checks the given response is compatible with this object type, raises an exception if not"""
+        """
+        Checks the given response is compatible with this object type, raises an exception if not.
+
+        :raises SpotifyItemTypeError: When the response type is not compatible with this object.
+        """
         kind = self.__class__.__name__.casefold().replace("spotify", "")
         if self.response.get("type") != kind:
-            raise ValueError(f"Response is not of type '{kind}': {self.response.get('type')}")
+            kind = ItemType.from_name(kind)
+            raise SpotifyItemTypeError(f"Response type invalid", kind=kind, value=self.response.get('type'))
 
     @classmethod
     def _check_for_api(cls):
-        """Checks the API has been set on the class, raises an exception if not"""
+        """
+        Checks the API has been set on the class, raises an exception if not.
+
+        :raises APIError: When the API has not been set for this class.
+        """
         if cls.api is None:
-            raise ValueError("API is not set. Assign an API to the SpotifyResponse class first.")
+            raise APIError("API is not set. Assign an API to the SpotifyResponse class first.")
 
     @classmethod
     @abstractmethod

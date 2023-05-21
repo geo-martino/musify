@@ -30,13 +30,13 @@ class TrackProcessor(PrettyPrinter, metaclass=ABCMeta):
         :param prefix: An optional prefix to append to the sanitised value.
             Also used to remove prefixes from the valid methods when logging an error
         :return: The sanitised value representing the name of the method.
-        :exception ValueError: When the method cannot be found in the valid list.
+        :raises LookupError: When the method cannot be found in the valid list.
         """
         sanitised = self._camel_to_snake(value, prefix=prefix)
 
         if sanitised not in valid:
             valid_methods_str = ", ".join([c.replace(prefix, "") if prefix is not None else c for c in valid])
-            raise ValueError(
+            raise LookupError(
                 f"Unrecognised method: '{value}' (sanitised to '{sanitised}') | " 
                 f"Valid methods: {valid_methods_str}"
             )

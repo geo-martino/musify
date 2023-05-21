@@ -7,6 +7,7 @@ from typing import Any, Callable, List, Mapping, Optional, Self
 from dateutil.relativedelta import relativedelta
 
 from syncify.enums.tags import Name, TagName, PropertyName
+from syncify.local.exception import FieldError, LocalProcessorError
 from syncify.local.playlist.processor.base import TrackProcessor
 from syncify.local.track import LocalTrack
 from syncify.utils import UnionList, make_list
@@ -100,7 +101,7 @@ class TrackCompare(TrackProcessor):
             field_str = condition.get("@Field", "None")
             field: Name = field_name_map.get(field_str)
             if field is None:
-                raise ValueError(f"Unrecognised field name: {field_str}")
+                raise FieldError(f"Unrecognised field name", field=field_str)
 
             expected: Optional[List[str]] = [val for k, val in condition.items() if k.startswith("@Value")]
             if len(expected) == 0 or expected[0] == '[playing track]':
@@ -129,9 +130,11 @@ class TrackCompare(TrackProcessor):
         """
         Compare a ``track`` to a ``reference`` or,
         if no ``reference`` is given, to this object's list of ``expected`` values
+
+        :raises LocalProcessorError: If no reference given and no expected values set for this comparator.
         """
         if reference is None and self.expected is None:
-            raise TypeError("No comparative track given and no expected values set")
+            raise LocalProcessorError("No comparative track given and no expected values set")
 
         tag_name = self._get_tag(self.field)
         actual = track[tag_name]

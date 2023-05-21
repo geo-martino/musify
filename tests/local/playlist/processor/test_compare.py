@@ -3,6 +3,7 @@ from datetime import datetime, date, timedelta
 import pytest
 
 from syncify.enums.tags import TagName, PropertyName
+from syncify.local.exception import LocalProcessorError
 from syncify.local.playlist.processor import TrackCompare
 from syncify.local.track import MP3, M4A, FLAC
 from tests.local.track.track import random_track
@@ -30,7 +31,7 @@ def test_init():
     assert comparator._condition == "Is"
     assert comparator._method == comparator._cond_is
 
-    with pytest.raises(ValueError):
+    with pytest.raises(LookupError):
         TrackCompare(field=PropertyName.EXT, condition="this cond does not exist")
 
 
@@ -42,7 +43,7 @@ def test_compare_with_reference():
     assert comparator._expected is None
     assert not comparator._converted
 
-    with pytest.raises(TypeError):
+    with pytest.raises(LocalProcessorError):
         comparator.compare(track=track_1)
 
     track_1.album = "album 124 is a great album"
@@ -51,7 +52,7 @@ def test_compare_with_reference():
     assert comparator._expected is None
     assert not comparator._converted
 
-    with pytest.raises(TypeError):
+    with pytest.raises(LocalProcessorError):
         comparator.compare(track=track_1)
 
 

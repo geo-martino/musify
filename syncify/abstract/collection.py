@@ -9,7 +9,8 @@ from typing import List, Optional, MutableMapping, Collection, Any, Union, Mappi
 from syncify.abstract.item import Item, Base, Track
 from syncify.abstract.misc import PrettyPrinter
 from syncify.enums.tags import TagName
-from syncify.spotify import validate_id_type, IDType
+from syncify.spotify import IDType
+from syncify.spotify.utils import validate_id_type
 from syncify.utils import Logger, UnionList
 
 

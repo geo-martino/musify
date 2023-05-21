@@ -1,9 +1,9 @@
 import pytest
 
 from syncify.enums import EnumNotFoundError
-from syncify.spotify import IDType, ItemType, __URL_API__, __URL_EXT__, get_id_type, validate_id_type, get_item_type, \
-    validate_item_type, convert, extract_ids
-
+from syncify.spotify import __URL_API__, __URL_EXT__, IDType, ItemType
+from syncify.spotify.exception import SpotifyError, SpotifyIDTypeError, SpotifyItemTypeError
+from syncify.spotify.utils import get_id_type, validate_id_type, get_item_type, validate_item_type, convert, extract_ids
 
 # noinspection SpellCheckingInspection
 def test_get_id_type():
@@ -12,7 +12,7 @@ def test_get_id_type():
     assert get_id_type(f"{__URL_API__}/1234567890ASDFGHJKLZXC") == IDType.URL
     assert get_id_type(f"{__URL_EXT__}/1234567890ASDFGHJKLZXC") == IDType.URL_EXT
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SpotifyIDTypeError):
         get_id_type("Not an ID")
 
 
@@ -67,29 +67,29 @@ def test_get_item_type():
     ]
     assert get_item_type(values) == ItemType.PLAYLIST
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SpotifyItemTypeError):
         get_item_type([])
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SpotifyItemTypeError):
         get_item_type(["1234567890ASDFGHJKLZXC", "qwertyuiopASDFGHJKLZ12"])
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SpotifyItemTypeError):
         values = ["spotify:show:1234567890ASDFGHJKLZXC", {"type": 'track'}]
         get_item_type(values)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SpotifyItemTypeError):
         values = ["spotify:show:1234567890ASDFGHJKLZXC", f"{__URL_API__}/playlists/qwertyuiopASDFGHJKLZ12"]
         get_item_type(values)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SpotifyItemTypeError):
         response = {"type": 'track', "is_local": True}
         get_item_type(response)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SpotifyItemTypeError):
         response = {"not_a_type": 'track', "is_local": False}
         get_item_type(response)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SpotifyItemTypeError):
         get_item_type("bad_uri:chapter:1234567890ASDFGHJKLZXC")
 
     with pytest.raises(EnumNotFoundError):
@@ -125,7 +125,7 @@ def test_validate_item_type():
     ]
     assert validate_item_type(values, kind=ItemType.PLAYLIST) is None
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SpotifyItemTypeError):
         validate_item_type(values, kind=ItemType.TRACK)
 
 
@@ -157,10 +157,10 @@ def test_convert():
                    type_out=IDType.URL) == f"{__URL_API__}/episodes/{id_}"
 
     # no ID type given when input value is ID raises error
-    with pytest.raises(ValueError):
+    with pytest.raises(SpotifyIDTypeError):
         convert(id_, type_out=IDType.URI)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SpotifyIDTypeError):
         convert("bad value", type_out=IDType.URI)
 
 
@@ -191,8 +191,8 @@ def test_extract_ids():
     expected = ["8188181818181818129321", "bnmhjkyuidfgertsdfertw", "1234567890ASDFGHJKLZXC"]
     assert extract_ids(values) == expected
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SpotifyError):
         extract_ids([{"id": "8188181818181818129321"}, {"type": "track"}])
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SpotifyError):
         extract_ids([{"id": "8188181818181818129321"}, ["spotify:playlist:1234567890ASDFGHJKLZXC"]])

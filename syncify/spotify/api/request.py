@@ -9,6 +9,7 @@ import requests_cache
 from requests.structures import CaseInsensitiveDict
 from requests_cache.models.response import BaseResponse
 
+from syncify.spotify.exception import APIError
 from syncify.spotify.api.authorise import APIAuthoriser
 from syncify.utils import Logger
 
@@ -54,6 +55,7 @@ class RequestHandler(APIAuthoriser, Logger):
             ``GET``, ``OPTIONS``, ``HEAD``, ``POST``, ``PUT``, ``PATCH``, or ``DELETE``.
         :param url: URL for the new :class:`Request` object.
         :returns: The JSON formatted response or, if JSON formatting not possible, the text response.
+        :raises APIError: On any logic breaking error/response.
         """
         kwargs.pop("headers", None)
         response = self.request(method=method, url=url, *args, **kwargs)
@@ -71,10 +73,10 @@ class RequestHandler(APIAuthoriser, Logger):
             message = self._response_as_json(response).get('error', {}).get('message')
             if response.status_code == 403:
                 message = message if message else "You are not authorised for this action."
-                raise ConnectionError(message)
+                raise APIError(message)
             elif response.status_code == 404:
                 message = message if message else "Resource not found."
-                raise ConnectionError(message)
+                raise APIError(message)
 
             if 'retry-after' in response.headers:  # wait if time is short
                 wait_time = int(response.headers['retry-after'])
@@ -82,14 +84,14 @@ class RequestHandler(APIAuthoriser, Logger):
                 self.logger.info(f"Rate limit exceeded. Retry again at {wait_str}")
 
                 if wait_time > self.timeout:  # exception if too long
-                    raise ConnectionError(f"Retry time is greater than timeout of {self.timeout} seconds")
+                    raise APIError(f"Retry time is greater than timeout of {self.timeout} seconds")
 
             if backoff < self.backoff_final:  # exponential backoff
                 self.logger.info(f"Retrying in {backoff} seconds...")
                 sleep(backoff)
                 backoff *= self.backoff_factor
             else:  # max backoff exceeded
-                raise ConnectionError("Max retries exceeded")
+                raise APIError("Max retries exceeded")
 
             response = self.request(method=method, url=url, *args, **kwargs)
 
@@ -106,7 +108,7 @@ class RequestHandler(APIAuthoriser, Logger):
     ) -> BaseResponse:
         try:  # reauthorise if needed
             headers = self.headers
-        except TypeError:
+        except APIError:
             self.print_line()
             headers = self.auth()
             self.print_line()

@@ -10,6 +10,7 @@ from typing import Any, MutableMapping, List, Mapping
 
 import yaml
 
+from syncify.local.exception import IllegalFileTypeError
 from syncify.spotify.api import AUTH_ARGS_BASIC, AUTH_ARGS_USER
 from syncify.spotify.processor.search import AlgorithmSettings
 from syncify.utils import Logger, make_list
@@ -86,9 +87,13 @@ class Settings(metaclass=ABCMeta):
 
     @staticmethod
     def _load_config(config_path: str) -> MutableMapping[Any, Any]:
-        """Load the config file"""
+        """
+        Load the config file
+
+        :raises IllegalFileTypeError: When the given config file is not of the correct type.
+        """
         if splitext(config_path)[1].lower() not in ['.yml', '.yaml']:
-            raise ValueError(f"Unrecognised file type: {config_path}")
+            raise IllegalFileTypeError(f"Unrecognised file type: {config_path}")
         elif not exists(config_path):
             raise FileNotFoundError(f"Config file not found: {config_path}")
 
@@ -134,7 +139,11 @@ class Settings(metaclass=ABCMeta):
                     paths["other"].append(paths.pop(key))
 
     def set_search_algorithm(self):
-        """Set the search algorithm config according to the loaded settings"""
+        """
+        Set the search algorithm config according to the loaded settings.
+
+        :raises LookupError: When the given algorithm name cannot be found in the AlgorithmSettings object.
+        """
         settings = list(AlgorithmSettings.__annotations__.keys())
 
         for cfg in [self.cfg_general] + list(self.cfg_functions.values()):
@@ -143,8 +152,8 @@ class Settings(metaclass=ABCMeta):
             if algorithm is None:
                 continue
             if algorithm.upper().strip() not in settings:
-                raise ValueError(f"'{algorithm}' search algorithm is invalid, use one of the following algorithms: " +
-                                 ', '.join(settings))
+                raise LookupError(f"'{algorithm}' search algorithm is invalid, use one of the following algorithms: " +
+                                  ', '.join(settings))
             search["algorithm"] = getattr(AlgorithmSettings, algorithm.strip().upper())
 
     ###########################################################################

@@ -4,7 +4,9 @@ from typing import Any, List, MutableMapping, Optional, Self, Mapping, Union
 
 from syncify.abstract.collection import ItemCollection, Album
 from syncify.abstract.item import Item
-from syncify.spotify import ItemType, IDType, APIMethodInputType, extract_ids, convert, validate_item_type, get_id_type
+from syncify.spotify import IDType, ItemType, APIMethodInputType
+from syncify.spotify.utils import validate_item_type, convert, extract_ids
+from syncify.spotify.exception import SpotifyIDTypeError
 from syncify.spotify.base import Spotify
 from syncify.spotify.library.item import SpotifyTrack, SpotifyArtist, SpotifyItem
 
@@ -64,7 +66,7 @@ class SpotifyCollection(ItemCollection, Spotify, metaclass=ABCMeta):
         else:  # determine the ID type
             try:
                 key_type = get_id_type(key)
-            except ValueError:
+            except SpotifyIDTypeError:
                 try:
                     return next(item for item in self.items if item.name == key)
                 except StopIteration:

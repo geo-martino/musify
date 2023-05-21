@@ -10,7 +10,7 @@ from syncify.local.track import __TRACK_CLASSES__, LocalTrack, load_track
 from syncify.local.playlist import __PLAYLIST_FILETYPES__, LocalPlaylist, M3U, XAutoPF
 from syncify.local.playlist.processor import TrackSort
 from syncify.local.library.collection import LocalCollectionFiltered, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
-from syncify.local.exception import IllegalFileTypeError
+from syncify.local.exception import IllegalFileTypeError, LocalCollectionError
 from syncify.utils import Logger, UnionList
 
 
@@ -229,7 +229,7 @@ class LocalLibrary(Library, LocalCollectionFiltered):
 
         :param names: Playlist paths to load relative to the playlist folder.
         :return: The loaded playlists.
-        :exception KeyError: If a given playlist name cannot be found.
+        :raises LocalCollectionError: If a given playlist name cannot be found.
         """
         self.logger.debug("Load local playlist data: START")
         if names is None:
@@ -242,7 +242,8 @@ class LocalLibrary(Library, LocalCollectionFiltered):
         for name in self.get_progress_bar(iterable=names, desc="Loading playlists", unit="playlists"):
             path = self._playlist_paths.get(name.strip().lower())
             if path is None:
-                raise KeyError(f"Playlist name not found in the stored paths of this manager: {name}")
+                raise LocalCollectionError(f"Playlist name not found in the stored paths of this manager: {name}",
+                                           kind="playlist")
 
             ext = splitext(path)[1].lower()
             if ext in M3U.valid_extensions:

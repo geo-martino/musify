@@ -526,7 +526,6 @@ if __name__ == "__main__":
 # TODO: generally improve performance
 
 ## SELECTED FOR DEVELOPMENT
-# TODO: add properly defined exception classes and switch all the ValueError raises
 # TODO: test on linux/mac platforms
 # TODO: parallelize long loads
 # TODO: update the readme

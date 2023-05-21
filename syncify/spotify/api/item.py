@@ -1,8 +1,8 @@
 import re
 from abc import ABCMeta
 from typing import Optional, List, MutableMapping, Mapping, Any
-
-from syncify.spotify import __URL_API__, ItemType, APIMethodInputType, get_item_type, validate_item_type, extract_ids
+from syncify.spotify import __URL_API__, ItemType, APIMethodInputType
+from syncify.spotify.utils import validate_item_type, get_item_type, extract_ids
 from syncify.spotify.api.basic import APIBase
 from syncify.utils import chunk, limit_value
 
@@ -121,7 +121,7 @@ class Items(APIBase, metaclass=ABCMeta):
         :param limit: Size of batches to request.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: Raw API responses for each item.
-        :exception ValueError: Raised when the function cannot determine the item type of the input ``values``.
+        :raises SpotifyItemTypeError: Raised when the function cannot determine the item type of the input ``values``.
             Or when it does not recognise the type of the input ``values`` parameter.
         """
         if kind is None:  # determine the item type
@@ -178,7 +178,7 @@ class Items(APIBase, metaclass=ABCMeta):
         :param limit: Size of batches to request when getting audio features.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: Raw API responses for each item.
-        :exception ValueError: Raised when the item types of the input ``values`` are not all tracks or IDs.
+        :raises SpotifyItemTypeError: Raised when the item types of the input ``values`` are not all tracks or IDs.
         """
         if not features and not analysis:  # skip on all False
             return {}
@@ -252,7 +252,7 @@ class Items(APIBase, metaclass=ABCMeta):
         :param limit: Size of batches to request when getting audio features.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: Raw API responses for each item.
-        :exception ValueError: Raised when the item types of the input ``tracks`` are not all tracks or IDs.
+        :raises SpotifyItemTypeError: Raised when the item types of the input ``tracks`` are not all tracks or IDs.
         """
         tracks = self.get_items(values=values, kind=ItemType.TRACK, limit=limit, use_cache=use_cache)
         self.get_tracks_extra(values=tracks, features=features, analysis=analysis, limit=limit, use_cache=use_cache)

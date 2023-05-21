@@ -6,7 +6,8 @@ from PIL import Image
 
 from syncify.local.file import File
 from syncify.local.track.base.processor import TagProcessor
-from syncify.spotify import check_spotify_type, IDType, __UNAVAILABLE_URI_VALUE__
+from syncify.spotify import __UNAVAILABLE_URI_VALUE__, IDType
+from syncify.spotify.utils import check_spotify_type
 
 
 class TagReader(File, TagProcessor, metaclass=ABCMeta):

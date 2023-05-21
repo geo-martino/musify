@@ -9,6 +9,7 @@ from webbrowser import open as webopen
 
 import requests
 
+from syncify.spotify.exception import APIError
 from syncify.utils import Logger
 
 
@@ -63,17 +64,22 @@ class APIAuthoriser(Logger):
 
     @property
     def headers(self) -> MutableMapping[str, str]:
-        """Format headers to usage appropriate format"""
+        """
+        Format headers to usage appropriate format
+
+        :raises APIError: If no token has been loaded,
+            or a valid value was not found at the ``token_key_path`` within the token
+        """
         if self.token is None:
-            raise TypeError("Token not loaded.")
+            raise APIError("Token not loaded.")
 
         token_value = self.token
         for key in self.token_key_path:  # get token key value at given path
             token_value = token_value.get(key, {})
 
         if not isinstance(token_value, str):
-            raise TypeError(f"Did not find valid token at key path: {self.token_key_path} -> {token_value} | " +
-                            str(self.token_safe))
+            raise APIError(f"Did not find valid token at key path: {self.token_key_path} -> {token_value} | " +
+                           str(self.token_safe))
 
         return {self.header_key: f"{self.header_prefix}{token_value}"} | self.header_extra
 
@@ -122,6 +128,7 @@ class APIAuthoriser(Logger):
             Ignored when force_new is True.
         :param force_new: Ignore saved/loaded token and generate new token.
         :return: Headers for request authorisation.
+        :raises APIError: If the token cannot be validated.
         """
         # attempt to load stored token if found
         if (self.token is None or force_load) and not force_new:
@@ -157,7 +164,7 @@ class APIAuthoriser(Logger):
             self._request_token(user=True, **self.auth_args)
             valid = self.test()
             if not valid:
-                raise ConnectionError(f"Token is still not valid: {self.token_safe}")
+                raise APIError(f"Token is still not valid: {self.token_safe}")
 
         self.logger.debug("Access token is valid. Saving...")
         self.save_token()

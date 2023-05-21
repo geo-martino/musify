@@ -5,9 +5,11 @@ from typing import List, MutableMapping, Optional, Mapping, Union, Set
 
 from syncify.abstract.collection import ItemCollection, Folder, Album, Artist, Genre
 from syncify.abstract.item import Item
+from syncify.local.exception import LocalCollectionError
 from syncify.local.base import Local
 from syncify.local.track import LocalTrack, SyncResultTrack
-from syncify.spotify import IDType, validate_id_type
+from syncify.spotify import IDType
+from syncify.spotify.utils import validate_id_type
 from syncify.utils import Logger, get_most_common_values
 
 # noinspection SpellCheckingInspection
@@ -122,7 +124,7 @@ class LocalCollectionFiltered(LocalCollection):
     :param name: The name of this collection.
         If given, the object only stores tracks that match the name given on the attribute of this object.
         If None, the list of tracks given are taken to be all the tracks contained in this collection.
-    :raises ValueError: If the given tracks contain more than one unique value
+    :raises LocalCollectionError: If the given tracks contain more than one unique value
         for the attribute of this collection when name is None.
     """
 
@@ -138,7 +140,7 @@ class LocalCollectionFiltered(LocalCollection):
     def __init__(self, tracks: List[LocalTrack], name: Optional[str] = None):
         Logger.__init__(self)
         if len(tracks) == 0:
-            raise ValueError("No tracks were given")
+            raise LocalCollectionError("No tracks were given")
 
         # get the tag key dynamically from the name of this class
         self._tag_key = self._camel_to_snake(self.__class__.__name__.replace("Local", ""))
@@ -151,9 +153,9 @@ class LocalCollectionFiltered(LocalCollection):
                     names_flat.extend(name) if isinstance(name, (list, set)) else names_flat.append(name)
 
             if len(names_flat) == 0:  # no valid name found
-                raise TypeError(f"No {self._tag_key.rstrip('s')}s found in the given tracks")
+                raise LocalCollectionError(f"No {self._tag_key.rstrip('s')}s found in the given tracks")
             if len(names_flat) != 1:  # too many names found
-                raise TypeError(
+                raise LocalCollectionError(
                     f"Too many {self._tag_key.rstrip('s')}s found in the given tracks."
                     f" Only provide tracks from the same {self._tag_key.rstrip('s')}.")
 
@@ -184,7 +186,8 @@ class LocalFolder(LocalCollectionFiltered, Folder):
     :param name: The name of this folder.
         If given, the object only stores tracks that match the folder ``name`` given.
         If None, the list of tracks given are taken to be all the tracks contained in this folder.
-    :raises ValueError: If the given tracks contain more than one unique value for ``folder`` when name is None.
+    :raises LocalCollectionError: If the given tracks contain more than one unique value for
+        ``folder`` when name is None.
     """
 
     @property
@@ -257,7 +260,8 @@ class LocalAlbum(LocalCollectionFiltered, Album):
     :param name: The name of this album.
         If given, the object only stores tracks that match the album ``name`` given.
         If None, the list of tracks given are taken to be all the tracks for this album.
-    :raises ValueError: If the given tracks contain more than one unique value for ``album`` when name is None.
+    :raises LocalCollectionError: If the given tracks contain more than one unique value for
+        ``album`` when name is None.
     """
     @property
     def album_artist(self) -> Optional[int]:
@@ -323,7 +327,8 @@ class LocalArtist(LocalCollectionFiltered, Artist):
     :param name: The name of this artist.
         If given, the object only stores tracks that match the artist ``name`` given.
         If None, the list of tracks given are taken to be all the tracks by this artist.
-    :raises ValueError: If the given tracks contain more than one unique value for ``artist`` when name is None.
+    :raises LocalCollectionError: If the given tracks contain more than one unique value for
+        ``artist`` when name is None.
     """
 
     @property
@@ -360,7 +365,8 @@ class LocalGenres(LocalCollectionFiltered, Genre):
     :param name: The name of this genre.
         If given, the object only stores tracks that match the genre ``name`` given.
         If None, the list of tracks given are taken to be all the tracks within this genre.
-    :raises ValueError: If the given tracks contain more than one unique value for ``genre`` when name is None.
+    :raises LocalCollectionError: If the given tracks contain more than one unique value for
+        ``genre`` when name is None.
     """
 
     @property

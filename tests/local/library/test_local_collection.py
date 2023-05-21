@@ -1,5 +1,6 @@
 import pytest
 
+from syncify.local.exception import LocalCollectionError
 from syncify.local.library import LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from tests.local.track.track import random_tracks
 
@@ -22,7 +23,7 @@ def test_folder():
     last_added = sorted(tracks[:7], key=lambda t: t.date_added, reverse=True)[0].date_added
 
     # test generic collection functionality
-    with pytest.raises(TypeError):
+    with pytest.raises(LocalCollectionError):
         LocalFolder(tracks=tracks)
 
     collection = LocalFolder(tracks=tracks[:7])

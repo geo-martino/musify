@@ -224,7 +224,8 @@ class SpotifyLibrary(Library):
 
     def extend(self, items: Union[ItemCollection, Collection[Item]]):
         self.logger.debug("Extend Spotify tracks data: START")
-        self.logger.info(f"\33[1;95m ->\33[1;97m Checking if the given items are already in this library \33[0m")
+        self.logger.info(f"\33[1;95m ->\33[1;97m "
+                         f"Extending library: checking if the given items are already in this library \33[0m")
 
         load_uris = []
         for track in items:

@@ -2,8 +2,9 @@ from abc import ABCMeta, abstractmethod
 from time import sleep
 from typing import Any, List, Mapping, MutableMapping, Optional, Union
 
-from syncify.spotify import __URL_API__, IDType, ItemType, APIMethodInputType, validate_item_type, convert, \
-    get_item_type, extract_ids
+from syncify.spotify import __URL_API__, IDType, ItemType, APIMethodInputType
+from syncify.spotify.utils import validate_item_type, convert, get_item_type, extract_ids
+from syncify.spotify.exception import SpotifyIDTypeError, SpotifyItemTypeError
 from syncify.spotify.api.basic import APIBase
 from syncify.utils import chunk, limit_value
 
@@ -33,16 +34,16 @@ class Collections(APIBase, metaclass=ABCMeta):
 
         :param playlist: In URL/URI/ID form, or the name of one of the currently authenticated user's playlists.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
-        :exception ValueError: Raised when the function cannot determine the item type of the input ``playlist``.
+        :raises SpotifyIDTypeError: Raised when the function cannot determine the item type of the input ``playlist``.
             Or when it does not recognise the type of the input ``playlist`` parameter.
         """
         try:
             return convert(playlist, kind=ItemType.PLAYLIST, type_out=IDType.URL)
-        except ValueError:
+        except SpotifyIDTypeError:
             playlists = {pl["name"]: pl["href"] for pl in self.get_collections_user(use_cache=use_cache)}
             if playlist not in playlists:
-                raise ValueError(f"Given playlist is not a valid URL/URI/ID "
-                                 f"and name not found in user's playlists: {playlist}")
+                raise SpotifyIDTypeError(f"Given playlist is not a valid URL/URI/ID "
+                                         f"and name not found in user's playlists", value=playlist)
             return playlists[playlist]
 
     ###########################################################################
@@ -133,13 +134,15 @@ class Collections(APIBase, metaclass=ABCMeta):
             This value will be limited to be between ``1`` and ``50``.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: Raw API responses for each collection.
-        :exception ValueError: Raised a user is given and the ``kind`` is not ``PLAYLIST``.
+        :raises SpotifyIDTypeError: Raised when the input ``user`` does not represent a user URL/URI/ID.
+        :raises SpotifyItemTypeError: Raised a user is given and the ``kind`` is not ``PLAYLIST``.
             Or when the given ``kind`` is not a valid collection.
         """
         if kind == ItemType.ARTIST or kind.name not in self.collection_types:
-            raise ValueError(f"{kind.name.title()}s are not a valid user collection type")
+            raise SpotifyItemTypeError(f"{kind.name.title()}s are not a valid user collection type", kind=kind)
         if kind != ItemType.PLAYLIST and user is not None:
-            raise ValueError(f"Only able to retrieve {kind.name.casefold()}s from the currently authenticated user")
+            raise SpotifyItemTypeError(f"Only able to retrieve {kind.name.casefold()}s "
+                                       f"from the currently authenticated user", kind=kind)
 
         if user is not None:
             url = f"{convert(user, kind=ItemType.USER, type_out=IDType.URL)}/{kind.name.casefold()}s"
@@ -182,13 +185,13 @@ class Collections(APIBase, metaclass=ABCMeta):
             This value will be limited to be between ``1`` and the object's current ``batch_size_max``. Maximum=50.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: Raw API responses for each collection containing the collections items under the ``items`` key.
-        :exception ValueError: Raised when the function cannot determine the item type of the input ``values``.
+        :raises SpotifyItemTypeError: Raised when the function cannot determine the item type of the input ``values``.
             Or when the given ``kind`` is not a valid collection.
         """
         if kind is None:  # determine kind if not given
             kind = get_item_type(values)
         if kind.name not in self.collection_types:
-            raise ValueError(f"{kind.name.title()}s are not a valid collection type")
+            raise SpotifyItemTypeError(f"{kind.name.title()}s are not a valid collection type", kind=kind)
 
         if kind == ItemType.PLAYLIST and isinstance(values, str):
             values = self.get_playlist_url(values, use_cache=use_cache)
@@ -258,7 +261,8 @@ class Collections(APIBase, metaclass=ABCMeta):
         :param limit: Size of each batch of IDs to add. This value will be limited to be between ``1`` and ``50``.
         :param skip_dupes: Skip duplicates.
         :return: The number of tracks added to the playlist.
-        :exception ValueError: Raised when the item types of the input ``items`` are not all tracks or IDs.
+        :raises SpotifyIDTypeError: Raised when the input ``playlist`` does not represent a playlist URL/URI/ID.
+        :raises SpotifyItemTypeError: Raised when the item types of the input ``items`` are not all tracks or IDs.
         """
         url = f"{self.get_playlist_url(playlist, use_cache=False)}/tracks"
         limit = limit_value(limit, ceil=50)
@@ -309,7 +313,8 @@ class Collections(APIBase, metaclass=ABCMeta):
         :param limit: Size of each batch of IDs to clear in a single request.
             This value will be limited to be between ``1`` and ``100``.
         :return: The number of tracks cleared from the playlist.
-        :exception ValueError: Raised when the item types of the input ``items`` are not all tracks or IDs.
+        :raises SpotifyIDTypeError: Raised when the input ``playlist`` does not represent a playlist URL/URI/ID.
+        :raises SpotifyItemTypeError: Raised when the item types of the input ``items`` are not all tracks or IDs.
         """
         url = f"{self.get_playlist_url(playlist, use_cache=False)}/tracks"
         limit = limit_value(limit, ceil=100)

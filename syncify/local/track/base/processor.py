@@ -43,6 +43,6 @@ class TagProcessor(Track, TrackProperties, Local, metaclass=ABCMeta):
         Load local file using mutagen and set object file path and extension properties.
 
         :returns: Mutagen file object or None if load error.
-        :exception FileNotFoundError: If the file cannot be found.
-        :exception IllegalFileTypeError: If the file type is not supported.
+        :raises FileNotFoundError: If the file cannot be found.
+        :raises IllegalFileTypeError: If the file type is not supported.
         """

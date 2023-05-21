@@ -66,7 +66,7 @@ def open_image(image_link: str) -> Image.Image:
     """
     Open Image object from a given URL or file path
 
-    :exception ImageLoadError: If the image cannot be loaded.
+    :raises ImageLoadError: If the image cannot be loaded.
     """
 
     try:  # open image from link
