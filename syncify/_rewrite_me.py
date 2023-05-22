@@ -1,16 +1,10 @@
 import os
 import re
 from glob import glob
-from os.path import (basename, dirname, exists, join, normpath, sep,
-                     splitext)
-
-from syncify.local._archive.musicbee import MusicBee
+from os.path import basename, dirname, exists, join, normpath, sep, splitext
 
 
-class Playlists(MusicBee):
-
-    def __init__(self):
-        MusicBee.__init__(self)
+class Playlists:
 
     def restore_local_playlists(self, backup: str, in_playlists: list=None, ex_playlists: list=None, dry_run: bool = True, **kwargs):
         """

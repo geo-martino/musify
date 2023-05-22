@@ -10,7 +10,8 @@ from syncify.utils import UnionList
 
 @dataclass
 class Base:
-    clean_tags: MutableMapping[str, Any]
+    """Generic Base class for all local/Spotify item/collections."""
+    clean_tags: MutableMapping[str, Any] = None
     _list_sep: str = "; "
 
     @property
@@ -19,18 +20,20 @@ class Base:
         raise NotImplementedError
 
 
-@dataclass(repr=False, eq=False, unsafe_hash=False, frozen=False)
+@dataclass(repr=False, eq=False)
 class Item(Base, PrettyPrinter, metaclass=ABCMeta):
     """Generic class for storing an item."""
 
     @property
     @abstractmethod
     def uri(self) -> Optional[str]:
+        """The URI associated with this item."""
         raise NotImplementedError
 
     @property
     @abstractmethod
     def has_uri(self) -> Optional[bool]:
+        """Does this item have a valid URI."""
         raise NotImplementedError
 
     def merge(self, item: Self, tags: UnionList[TagName] = TagName.ALL):
@@ -65,6 +68,8 @@ class Item(Base, PrettyPrinter, metaclass=ABCMeta):
 
 
 class Track(Item, metaclass=ABCMeta):
+    """Metadata/tags associated with a track."""
+
     # metadata/tags
     title: Optional[str] = None
     artist: Optional[str] = None
@@ -91,6 +96,8 @@ class Track(Item, metaclass=ABCMeta):
 
 
 class TrackProperties:
+    """Properties associated with a track."""
+
     date_added: Optional[datetime] = None
     last_played: Optional[datetime] = None
     play_count: Optional[int] = None

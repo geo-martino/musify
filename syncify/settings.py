@@ -13,7 +13,8 @@ import yaml
 from syncify.local.exception import IllegalFileTypeError
 from syncify.spotify.api import AUTH_ARGS_BASIC, AUTH_ARGS_USER
 from syncify.spotify.processor.search import AlgorithmSettings
-from syncify.utils import Logger, make_list
+from syncify.utils import make_list
+from syncify.utils.logger import Logger
 
 
 def _update_map(source: MutableMapping, new: MutableMapping, extend: bool = True, overwrite: bool = False):
@@ -109,8 +110,9 @@ class Settings(metaclass=ABCMeta):
         log_folder = self._append_module_folder(self.cfg_logging.get("path", "_logs"))
         Logger.set_log_folder(log_folder, run_dt=self.run_dt)
 
-        verbosity = self.cfg_logging.get("verbosity", 0)
-        Logger.set_verbosity(verbosity)
+        Logger.verbosity = self.cfg_logging.get("verbosity", 0)
+        Logger.compact = self.cfg_logging.get("compact", False)
+        Logger.detailed = self.cfg_logging.get("detailed", False)
 
     def set_output(self):
         """Set the output according to the loaded settings"""
@@ -190,7 +192,7 @@ class Settings(metaclass=ABCMeta):
             return
 
         for cfg in self.cfg_functions.values():
-            _update_map(cfg, self.cfg_general, extend=True, overwrite=False)
+            _update_map(cfg, self.cfg_general, extend=True)
 
     def set(self):
         """Run all setting functions"""

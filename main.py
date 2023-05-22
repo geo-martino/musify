@@ -1,8 +1,5 @@
 import json
 import os
-import random
-
-import pyfiglet
 import re
 import shutil
 import traceback
@@ -16,14 +13,15 @@ from dateutil.relativedelta import relativedelta
 
 from syncify.enums.tags import TagName
 from syncify.local.library import LocalLibrary, MusicBee
+from syncify.report import Report
+from syncify.settings import Settings
 from syncify.spotify.api import API
 from syncify.spotify.base import Spotify
 from syncify.spotify.library import SpotifyLibrary
 from syncify.spotify.processor import Searcher, Checker
 from syncify.spotify.processor.search import AlgorithmSettings
-from syncify.utils import Logger, get_user_input
-from syncify.report import Report
-from syncify.settings import Settings
+from syncify.utils import get_user_input, print_logo, print_line, print_time
+from syncify.utils.logger import Logger, STAT
 
 
 class Syncify(Settings, Report):
@@ -48,8 +46,10 @@ class Syncify(Settings, Report):
     def api(self) -> API:
         """Set the API if not already set and return"""
         if self._api is None:
+            self.logger.info(f"\33[1;95m ->\33[1;97m Authorising API access \33[0m")
             self._api = API(**self.cfg_run["spotify"]["api"]["settings"])
             Spotify.api = self._api
+            self.print_line()
         return self._api
 
     @property
@@ -118,7 +118,7 @@ class Syncify(Settings, Report):
         self.run = getattr(self, name)
         self.cfg_run = self.cfg_functions.get(name, self.cfg_general)
 
-    def save_json(self, filename: str, data: Mapping[str, Any], folder: Optional[str] = None):
+    def _save_json(self, filename: str, data: Mapping[str, Any], folder: Optional[str] = None):
         """Save a JSON file to a given folder, or this run's folder if not given"""
         if not filename.lower().endswith(".json"):
             filename += ".json"
@@ -128,7 +128,7 @@ class Syncify(Settings, Report):
         with open(path, "w") as f:
             json.dump(data, f, indent=2)
 
-    def load_json(self, filename: str, folder: Optional[str] = None) -> MutableMapping[str, Any]:
+    def _load_json(self, filename: str, folder: Optional[str] = None) -> MutableMapping[str, Any]:
         """Load a stored JSON file from a given folder, or this run's folder if not given"""
         if not filename.lower().endswith(".json"):
             filename += ".json"
@@ -147,13 +147,14 @@ class Syncify(Settings, Report):
         """Pause the program with a message and wait for user input to continue"""
         message = self.cfg_run.get("message", "Pausing, hit return to continue...").strip()
         input(f"\33[93m{message}\33[0m ")
+        self.print_line()
 
     def reload(self):
         """Reload libraries if they are initialised"""
         self.logger.debug("Reload libraries: START")
 
         if self._local_library is not None:
-            self.local_library.load(tracks=True, playlists=True, log=False)
+            self.local_library.load(log=False)
         if self._spotify_library is not None:
             self.spotify_library.use_cache = self.use_cache
             self.spotify_library.load(log=False)
@@ -202,14 +203,15 @@ class Syncify(Settings, Report):
                     dates.append(folder_dt)
                     remaining -= 1
 
-        get_paths_to_remove(current_output)
         get_paths_to_remove(current_logs)
+        get_paths_to_remove(current_output)
 
         for p in remove:  # delete folders
             self.logger.debug(f"Removing {p}")
             shutil.rmtree(p)
 
         self.logger.info(f"\33[1;95m ->\33[1;92m Removed {len(remove)} folders\33[0m")
+        self.print_line()
         self.logger.debug("Clean Syncify files: DONE\n")
 
     ###########################################################################
@@ -221,19 +223,20 @@ class Syncify(Settings, Report):
 
         local_backup_name = self.local_library_backup_name
         local_backup_name = f"[FINAL] - {local_backup_name}" if is_final else local_backup_name
-        self.save_json(local_backup_name, self.local_library.as_json())
+        self._save_json(local_backup_name, self.local_library.as_json())
 
         spotify_backup_name = self.spotify_library_backup_name
         spotify_backup_name = f"[FINAL] - {spotify_backup_name}" if is_final else spotify_backup_name
-        self.save_json(spotify_backup_name, self.spotify_library.as_json())
+        self._save_json(spotify_backup_name, self.spotify_library.as_json())
         self.logger.debug("Backup libraries: DONE\n")
 
     def restore(self):
         """Restore library data from a backup, getting user input for the settings"""
         output_parent = dirname(self.output_folder)
-        available_backup_names = [relpath(i[0], output_parent) for i in os.walk(output_parent)
-                                  if i[0] != output_parent
-                                  and len([file for file in i[2] if file.lower().endswith(".json")]) > 0]
+        backup_names = [self.local_library_backup_name, self.spotify_library_backup_name]
+        available_backup_names = [relpath(path[0], output_parent) for path in os.walk(output_parent)
+                                  if path[0] != output_parent
+                                  and any(any(name in file for name in backup_names) for file in path[2])]
         if len(available_backup_names) == 0:
             self.logger.info("\33[93mNo backups found, skipping.\33[0m")
 
@@ -273,12 +276,13 @@ class Syncify(Settings, Report):
         self.logger.info(f"\33[1;95m ->\33[1;97m Restoring local track tags from backup: "
                          f"{basename(folder)} | Tags: {', '.join(restore_tags)}\33[0m")
         self.print_line()
-        backup = self.load_json(self.local_library_backup_name, folder)
+        backup = self._load_json(self.local_library_backup_name, folder)
 
         # restore and save
         self.local_library.restore_tracks(backup["tracks"], tags=[TagName.from_name(tag) for tag in restore_tags])
-        self.local_library.save_tracks(tags=tags, replace=True, dry_run=self.dry_run)
+        results = self.local_library.save_tracks(tags=tags, replace=True, dry_run=self.dry_run)
 
+        self.local_library.log_save_tracks(results)
         self.logger.debug("Restore local: DONE\n")
 
     def _restore_spotify(self, folder: str):
@@ -287,11 +291,12 @@ class Syncify(Settings, Report):
 
         self.logger.info(f"\33[1;95m ->\33[1;97m Restoring Spotify playlists from backup: {basename(folder)} \33[0m")
         self.print_line()
-        backup = self.load_json(self.spotify_library_backup_name, folder)
+        backup = self._load_json(self.spotify_library_backup_name, folder)
 
         # restore and sync
         self.spotify_library.restore_playlists(backup["playlists"])
-        self.spotify_library.sync(clear='all', reload=False)
+        results = self.spotify_library.sync(clear='all', reload=False, dry_run=False)
+        self.spotify_library.log_sync(results)
 
         self.logger.debug("Restore Spotify: DONE\n")
 
@@ -316,7 +321,6 @@ class Syncify(Settings, Report):
 
         albums = self.local_library.albums
         cfg = self.cfg_run["spotify"]
-        Spotify.api = self.api
 
         allow_karaoke = AlgorithmSettings.ITEMS.allow_karaoke
         checker = Checker(api=self.api, allow_karaoke=allow_karaoke)
@@ -325,10 +329,11 @@ class Syncify(Settings, Report):
         self.logger.info(f"\33[1;95m ->\33[1;97m Updating tags for {len(self.local_library)} tracks: uri \33[0m")
         results = self.local_library.save_tracks(tags=TagName.URI, replace=True, dry_run=self.dry_run)
 
-        saved = sum(r.saved for r in results.values())
-        updated = sum(len(r.updated) > 0 for r in results.values())
-        self.logger.info(f"\33[92m    Done | Set tags for {updated} tracks | Saved {saved} tracks \33[0m")
-
+        if results:
+            self.print_line(STAT)
+        self.local_library.log_save_tracks(results)
+        self.logger.info(f"\33[92m    Done | Set tags for {len(results)} tracks \33[0m")
+        self.print_line()
         self.logger.debug("Check and update URIs: DONE\n")
 
     def search(self):
@@ -344,10 +349,10 @@ class Syncify(Settings, Report):
 
         if len(albums) == 0:
             self.logger.info("\33[1;95m ->\33[0;90m All items matched or unavailable. Skipping search.\33[0m")
+            self.print_line()
             return
 
         cfg = self.cfg_run["spotify"]
-        Spotify.api = self.api
 
         allow_karaoke = AlgorithmSettings.ITEMS.allow_karaoke
         searcher = Searcher(api=self.api, allow_karaoke=allow_karaoke)
@@ -379,9 +384,11 @@ class Syncify(Settings, Report):
                          f"{', '.join(t.name.lower() for t in tags)} \33[0m")
         results = self.local_library.save_tracks(tags=tags, replace=replace, dry_run=self.dry_run)
 
-        saved = sum(r.saved for r in results.values())
-        updated = sum(len(r.updated) > 0 for r in results.values())
-        self.logger.info(f"\33[92m    Done | Set tags for {updated} tracks | Saved {saved} tracks \33[0m")
+        if results:
+            self.print_line(STAT)
+        self.local_library.log_save_tracks(results)
+        self.logger.info(f"\33[92m    Done | Set tags for {len(results)} tracks \33[0m")
+        self.print_line()
         self.logger.debug("Update tags: DONE\n")
 
     def process_compilations(self):
@@ -418,9 +425,11 @@ class Syncify(Settings, Report):
             folder.set_compilation_tags()
             results.update(folder.save_tracks(tags=tags, replace=replace, dry_run=self.dry_run))
 
-        saved = sum(r.saved for r in results.values())
-        updated = sum(len(r.updated) > 0 for r in results.values())
-        self.logger.info(f"\33[92m    Done | Set tags for {updated} tracks | Saved {saved} tracks \33[0m")
+        if results:
+            self.print_line(STAT)
+        self.local_library.log_save_tracks(results)
+        self.logger.info(f"\33[92m    Done | Set tags for {len(results)} tracks \33[0m")
+        self.print_line()
         self.logger.debug("Update compilations: Done\n")
 
     def sync_spotify(self):
@@ -428,7 +437,7 @@ class Syncify(Settings, Report):
         self.logger.debug("Update Spotify: START")
 
         if self._local_library is not None:  # reload local library
-            self.local_library.load(tracks=False, playlists=True, log=False)
+            self.local_library.load(tracks=False, log=False)
 
         cfg_playlists = self.cfg_run.get("spotify", {}).get("playlists", {})
 
@@ -440,57 +449,10 @@ class Syncify(Settings, Report):
         # sync to Spotify
         clear = cfg_playlists.get("sync", {}).get("clear")
         reload = cfg_playlists.get("sync", {}).get("reload")
-        if not self.dry_run:
-            self.spotify_library.sync(playlists, clear=clear, reload=reload)
-        else:
-            self.logger.info(f"\33[1;95m    Dry run enabled, skipping Spotify sync ")
+        results = self.spotify_library.sync(playlists, clear=clear, reload=reload, dry_run=self.dry_run)
+        self.spotify_library.log_sync(results)
 
         self.logger.debug("Update Spotify: DONE\n")
-
-
-# noinspection SpellCheckingInspection
-def print_logo():
-    """Pretty print the Syncify logo in the centre of the terminal"""
-    fonts = ["basic", "broadway", "chunky", "doom", "drpepper", "epic", "hollywood", "isometric1", "isometric2",
-             "isometric3", "isometric4", "larry3d", "shadow", "slant", "speed", "standard", "univers", "whimsy"]
-    colours = [91, 93, 92, 94, 96, 95]
-    if bool(random.getrandbits(1)):
-        colours.reverse()
-
-    cols = os.get_terminal_size().columns
-    figlet = pyfiglet.Figlet(font=random.choice(fonts), direction=0, justify="left", width=cols)
-
-    text = figlet.renderText("SYNCIFY").rstrip().split("\n")
-    text_width = max(len(line) for line in text)
-    indent = int((cols - text_width) / 2)
-
-    for i, line in enumerate(text, random.randint(0, len(colours))):
-        print(f"{' ' * indent}\33[1;{colours[i % len(colours)]}m{line}\33[0m")
-    print()
-
-
-def print_line(text: str = "", line_char: str = "-"):
-    """Print an aligned line with the given text in the centre of the terminal"""
-    text = text.replace("_", " ").title()
-    cols = os.get_terminal_size().columns
-
-    text = f" {text} " if text else ""
-    amount_left = (cols - len(text)) // 2
-    output_len = amount_left * 2 + len(text)
-    amount_right = amount_left + (1 if output_len < cols else 0)
-    print(f"\n\33[1;96m{line_char * amount_left}\33[95m{text}\33[1;96m{line_char * amount_right}\33[0m\n")
-
-
-def print_time(seconds: float):
-    """Print the time in minutes and seconds in the centre of the terminal"""
-    mins = int(seconds // 60)
-    secs = int(seconds % 60)
-    text = f"{mins} mins {secs} secs"
-
-    cols = os.get_terminal_size().columns
-    indent = int((cols - len(text)) / 2)
-
-    print(f"\33[1;95m{' ' * indent}{text}\33[0m")
 
 
 if __name__ == "__main__":
@@ -527,26 +489,30 @@ if __name__ == "__main__":
     print_logo()
     print_time(main.time_taken)
 
-# TODO: track audio recognition when searching using Shazam like service?
+## BIGGER ONES
+# TODO: implement merge_playlists functions and,
+#  by extension, implement android library sync
+# TODO: implement XAutoPF full update functionality
+# TODO: function to open search website tabs for all songs in 2get playlist
+#  on common music stores/torrent sites
 # TODO: Automatically add songs added to each Spotify playlist to '2get'?
 #  Then somehow update local library playlists after...
 #  Maybe add a final step that syncs Spotify back to library if
 #  uris for extra songs in Spotify playlists found in library
-# TODO: function to open search website tabs for all songs in 2get playlist
-#  on common music stores/torrent sites
-# TODO: implement merge playlists functions and,
-#  by extension, implement android library sync
-# TODO: implement XAutoPF full update functionality
-# TODO: WMA images io
+# TODO: track audio recognition when searching using Shazam like service?
 # TODO: full search/match functionality including all item types
-# TODO: reimplement terminal parser for all kwargs
-# TODO: write tests, write tests, write tests
+
+## SMALLER/GENERAL ONES
+# TODO: WMA images io
 # TODO: generally improve performance
+# TODO: write tests, write tests, write tests
+# TODO: look into the requests_cache, it grows way too big sometimes?
 
 ## SELECTED FOR DEVELOPMENT
-# TODO: cascade dry_run down to Spotify sync method
-#  and produce report on changes like in local sync
-# TODO: improve verbosity options, only show report logs when verbosity is > n
-# TODO: test on linux/mac platforms
-# TODO: parallelize long loads
 # TODO: update the readme
+# TODO: BUG - check the numbers on loaded local playlists, some are too low
+# TODO: reimplement terminal parser for all kwargs
+# TODO: test on linux/mac platforms
+#  largely concerned about local playlist saving
+#  linux does not pick up 'include' paths when loading xautopf playlists
+# TODO: parallelize all the things

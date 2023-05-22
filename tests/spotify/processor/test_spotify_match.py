@@ -11,12 +11,10 @@ def test_clean_tags():
     track.artist = "Artist 1 & Artist two Feat. Artist 3"
     track.album = "The Best EP - the new one"
 
-    track_clean = Matcher.clean_tags(track)
-    assert id(track_clean) != id(track)
-    assert track_clean == track
-    assert track_clean.title == "song 2"
-    assert track_clean.artist == "artist 1 artist two"
-    assert track_clean.album == "best"
+    Matcher.clean_tags(track)
+    assert track.clean_tags["title"] == "song 2"
+    assert track.clean_tags["artist"] == "artist 1 artist two"
+    assert track.clean_tags["album"] == "best"
 
 
 def test_match_not_karaoke():
@@ -42,25 +40,33 @@ def test_match_name():
 
     track1 = random_track()
     track2 = random_track()
+    matcher.clean_tags(track1)
+    matcher.clean_tags(track2)
 
     # no names in at least one item always returns 0
-    track1.title = None
-    track2.title = None
+    track1.clean_tags["name"] = None
+    track2.clean_tags["name"] = None
     assert matcher.match_name(track1, track2) == 0
 
     # 1/1 word match
     track1.title = "title"
+    track1.clean_tags["name"] = track1.title
     track2.title = "other title"
+    track2.clean_tags["name"] = track2.title
     assert matcher.match_name(track1, track2) == 1
 
     # 0/4 words match
     track1.title = "title of a track"
+    track1.clean_tags["name"] = track1.title
     track2.title = "song"
+    track2.clean_tags["name"] = track2.title
     assert matcher.match_name(track1, track2) == 0
 
     # 2/3 words match
     track1.title = "a longer title"
+    track1.clean_tags["name"] = track1.title
     track2.title = "this is a different title"
+    track2.clean_tags["name"] = track2.title
     assert round(matcher.match_name(track1, track2), 2) == 0.67
 
 
@@ -69,22 +75,24 @@ def test_match_artist():
 
     track1 = random_track()
     track2 = random_track()
+    track1.clean_tags = {}
+    track2.clean_tags = {}
     sep = track1._list_sep
 
     # no artists in at least one item always returns 0
-    track1.artist = "artist"
-    track2.artist = None
+    track1.clean_tags["artist"] = "artist"
+    track2.clean_tags["artist"] = None
     assert matcher.match_artist(track1, track2) == 0
 
     # 1/4 words match
-    track1.artist = f"band{sep}a singer{sep}artist"
-    track2.artist = f"artist{sep}nope{sep}other"
+    track1.clean_tags["artist"] = f"band{sep}a singer{sep}artist"
+    track2.clean_tags["artist"] = f"artist{sep}nope{sep}other"
     assert matcher.match_artist(track1, track2) == 0.25
 
     # 2/4 words match, but now weighted
     # match 'artist' = 0.25 + match 'singer' = 0.125
-    track1.artist = f"band{sep}a singer{sep}artist"
-    track2.artist = f"artist{sep}singer{sep}other"
+    track1.clean_tags["artist"] = f"band{sep}a singer{sep}artist"
+    track2.clean_tags["artist"] = f"artist{sep}singer{sep}other"
     assert matcher.match_artist(track1, track2) == 0.375
 
 
@@ -93,20 +101,22 @@ def test_match_album():
 
     track1 = random_track()
     track2 = random_track()
+    matcher.clean_tags(track1)
+    matcher.clean_tags(track2)
 
     # no albums in at least one item always returns 0
-    track1.album = None
-    track2.album = "album"
+    track1.clean_tags["album"] = None
+    track2.clean_tags["album"] = "album"
     assert matcher.match_album(track1, track2) == 0
 
     # 1/2 words match
-    track1.album = "album name"
-    track2.album = "name"
+    track1.clean_tags["album"] = "album name"
+    track2.clean_tags["album"] = "name"
     assert matcher.match_album(track1, track2) == 0.5
 
     # 3/3 words match
-    track1.album = "brand new album"
-    track2.album = "this is a brand new really cool album"
+    track1.clean_tags["album"] = "brand new album"
+    track2.clean_tags["album"] = "this is a brand new really cool album"
     assert matcher.match_album(track1, track2) == 1
 
 
@@ -115,14 +125,16 @@ def test_match_length():
 
     track1 = random_track()
     track2 = random_track()
+    matcher.clean_tags(track1)
+    matcher.clean_tags(track2)
 
     # no lengths for at least one item always returns 0
-    track1.file.info.length = 110.20
-    track2.file.info.length = None
+    track1.clean_tags["length"] = 110.20
+    track2.clean_tags["length"] = None
     assert matcher.match_length(track1, track2) == 0
 
-    track1.file.info.length = 100
-    track2.file.info.length = 90
+    track1.clean_tags["length"] = 100
+    track2.clean_tags["length"] = 90
     assert matcher.match_length(track1, track2) == 0.9
 
 
@@ -132,22 +144,24 @@ def test_match_year():
 
     track1 = random_track()
     track2 = random_track()
+    matcher.clean_tags(track1)
+    matcher.clean_tags(track2)
 
     # no year for at least one item always returns 0
-    track1.year = 2023
-    track2.year = None
+    track1.clean_tags["year"] = 2023
+    track2.clean_tags["year"] = None
     assert matcher.match_year(track1, track2) == 0
 
-    track1.year = 2020
-    track2.year = 2015
+    track1.clean_tags["year"] = 2020
+    track2.clean_tags["year"] = 2015
     assert matcher.match_year(track1, track2) == 0.5
 
-    track1.year = 2020
-    track2.year = 2010
+    track1.clean_tags["year"] = 2020
+    track2.clean_tags["year"] = 2010
     assert matcher.match_year(track1, track2) == 0
 
-    track1.year = 2020
-    track2.year = 2005
+    track1.clean_tags["year"] = 2020
+    track2.clean_tags["year"] = 2005
     assert matcher.match_year(track1, track2) == 0
 
 

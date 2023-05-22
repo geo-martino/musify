@@ -11,7 +11,8 @@ from syncify.local.playlist import __PLAYLIST_FILETYPES__, LocalPlaylist, M3U, X
 from syncify.local.playlist.processor import TrackSort
 from syncify.local.library.collection import LocalCollectionFiltered, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from syncify.local.exception import IllegalFileTypeError, LocalCollectionError
-from syncify.utils import Logger, UnionList
+from syncify.utils import UnionList
+from syncify.utils.logger import Logger, REPORT
 
 
 class LocalLibrary(Library, LocalCollectionFiltered):
@@ -173,17 +174,13 @@ class LocalLibrary(Library, LocalCollectionFiltered):
 
         if tracks:
             self._tracks = self.load_tracks()
-            self.print_line()
             if log:
                 self.log_tracks()
-                self.print_line()
 
         if playlists:
             self._playlists = {pl.name: pl for pl in sorted(self.load_playlists(), key=lambda pl: pl.name.casefold())}
-            self.print_line()
             if log:
                 self.log_playlists()
-                self.print_line()
 
         self.logger.debug("Load local library: DONE\n")
 
@@ -207,6 +204,7 @@ class LocalLibrary(Library, LocalCollectionFiltered):
                 errors.append(path)
                 continue
 
+        self.print_line()
         self._log_errors(errors)
         self.logger.debug("Load local tracks: DONE\n")
         return tracks
@@ -214,13 +212,14 @@ class LocalLibrary(Library, LocalCollectionFiltered):
     def log_tracks(self):
         """Log stats on currently loaded tracks"""
         width = self.get_max_width(self._playlist_paths)
-        self.logger.info(
+        self.logger.report(
             f"\33[1;96m{'LIBRARY URIS':<{width}}\33[1;0m |"
-            f"\33[92m{sum([track.has_uri is not None for track in self.tracks]):>6} available \33[0m|"
+            f"\33[92m{sum([track.has_uri for track in self.tracks]):>6} available \33[0m|"
             f"\33[91m{sum([track.has_uri is None for track in self.tracks]):>6} missing \33[0m|"
             f"\33[93m{sum([track.has_uri is False for track in self.tracks]):>6} unavailable \33[0m|"
             f"\33[1;94m{len(self.tracks):>6} total \33[0m"
         )
+        self.print_line(REPORT)
 
     def load_playlists(self, names: Optional[Collection[str]] = None) -> List[LocalPlaylist]:
         """
@@ -259,6 +258,7 @@ class LocalLibrary(Library, LocalCollectionFiltered):
 
             playlists.append(pl)
 
+        self.print_line()
         self._log_errors(errors)
         self.logger.debug("Load local playlist data: DONE\n")
         return playlists
@@ -271,21 +271,23 @@ class LocalLibrary(Library, LocalCollectionFiltered):
         """Log stats on currently loaded playlists"""
         max_width = self.get_max_width(self.playlists)
 
-        self.logger.info("\33[1;96mFound the following Local playlists: \33[0m")
+        self.logger.report("\33[1;96mFound the following Local playlists: \33[0m")
         for name, playlist in self.playlists.items():
-            self.logger.info(
+            self.logger.report(
                 f"\33[97m{self.align_and_truncate(name, max_width=max_width)} \33[0m|"
                 f"\33[92m{len([t for t in playlist if t.has_uri]):>6} available \33[0m|"
                 f"\33[91m{len([t for t in playlist if t.has_uri is None]):>6} missing \33[0m|"
                 f"\33[93m{len([t for t in playlist if t.has_uri is False]):>6} unavailable \33[0m|"
                 f"\33[1;94m{len(playlist):>6} total \33[0m"
             )
+        self.print_line(REPORT)
 
     def _log_errors(self, errors: List[str]):
         """Log paths which had some error while loading"""
         errors = [f"\33[91m{e}\33[0m" for e in errors]
         if len(errors) > 0:
-            self.logger.debug("\33[97mCould not load: \33[0m\n\t- {errors} ".format(errors="\n\t- ".join(errors)))
+            self.logger.warning("\33[97mCould not load: \33[0m\n\t- {errors} ".format(errors="\n\t- ".join(errors)))
+            self.print_line()
 
     def extend(self, items: Union[ItemCollection, Collection[Item]]):
         self.tracks.extend(track for track in items if isinstance(track, LocalTrack) and track not in self.tracks)

@@ -12,6 +12,7 @@ from syncify.local.playlist.processor.sort import TrackSort
 
 
 class LimitType(SyncifyEnum):
+    """Represents the possible limit types to apply when filtering a playlist."""
     ITEMS = 0
     ALBUMS = 1
 
@@ -155,7 +156,7 @@ class TrackLimit(TrackProcessor):
 
     @staticmethod
     def _sort_lowest_rating(tracks: List[LocalTrack]):
-        TrackSort.sort_by_field(tracks, PropertyName.RATING, reverse=False)
+        TrackSort.sort_by_field(tracks, PropertyName.RATING)
 
     @staticmethod
     def _sort_most_recently_played(tracks: List[LocalTrack]):
@@ -163,7 +164,7 @@ class TrackLimit(TrackProcessor):
 
     @staticmethod
     def _sort_least_recently_played(tracks: List[LocalTrack]):
-        TrackSort.sort_by_field(tracks, PropertyName.LAST_PLAYED, reverse=False)
+        TrackSort.sort_by_field(tracks, PropertyName.LAST_PLAYED)
 
     @staticmethod
     def _sort_most_often_played(tracks: List[LocalTrack]):
@@ -171,7 +172,7 @@ class TrackLimit(TrackProcessor):
 
     @staticmethod
     def _sort_least_often_played(tracks: List[LocalTrack]):
-        TrackSort.sort_by_field(tracks, PropertyName.PLAY_COUNT, reverse=False)
+        TrackSort.sort_by_field(tracks, PropertyName.PLAY_COUNT)
 
     @staticmethod
     def _sort_most_recently_added(tracks: List[LocalTrack]):
@@ -179,7 +180,7 @@ class TrackLimit(TrackProcessor):
 
     @staticmethod
     def _sort_least_recently_added(tracks: List[LocalTrack]):
-        TrackSort.sort_by_field(tracks, PropertyName.DATE_ADDED, reverse=False)
+        TrackSort.sort_by_field(tracks, PropertyName.DATE_ADDED)
 
     def _convert(self, track: LocalTrack) -> float:
         """

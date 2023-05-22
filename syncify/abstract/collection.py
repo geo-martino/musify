@@ -11,7 +11,8 @@ from syncify.abstract.misc import PrettyPrinter
 from syncify.enums.tags import TagName
 from syncify.spotify import IDType
 from syncify.spotify.utils import validate_id_type
-from syncify.utils import Logger, UnionList
+from syncify.utils import UnionList
+from syncify.utils.logger import Logger
 
 
 @dataclass
@@ -60,6 +61,9 @@ class ItemCollection(Base, PrettyPrinter, metaclass=ABCMeta):
                              f"Merging library of {len(self)} items with {len(items)} items on tags: "
                              f"{', '.join(tag_names)} \33[0m")
             items = self.get_progress_bar(iterable=items, desc="Merging library", unit="tracks")
+        if TagName.IMAGES in tags or TagName.ALL in tags:
+            tag_names.add("image_links")
+            tag_names.add("has_image")
 
         for item in items:  # perform the merge
             item_in_library = next((i for i in self.items if i == item), None)
@@ -68,7 +72,7 @@ class ItemCollection(Base, PrettyPrinter, metaclass=ABCMeta):
 
             for tag in tag_names:  # merge on each tag
                 if hasattr(item, tag):
-                    setattr(item_in_library, tag, item[tag])
+                    item_in_library[tag] = item[tag]
 
         if isinstance(self, Library):
             self.print_line()
@@ -136,6 +140,7 @@ class ItemCollection(Base, PrettyPrinter, metaclass=ABCMeta):
 class BasicCollection(ItemCollection):
     @property
     def name(self) -> str:
+        """The name of this collection"""
         return self._name
 
     @property

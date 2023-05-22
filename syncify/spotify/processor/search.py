@@ -10,6 +10,7 @@ from syncify.spotify.api import API
 from syncify.spotify.library.item import SpotifyTrack
 from syncify.spotify.library.collection import SpotifyAlbum
 from syncify.spotify.processor.match import Matcher
+from syncify.utils.logger import REPORT
 
 
 @dataclass
@@ -87,7 +88,7 @@ class Searcher(Matcher):
         if not results:
             self._log_padded([item.name, f"Query: {query}", "Match failed: No results."], pad="<")
         else:
-            self._log_padded([item.name, f"Query: {query}", f"{len(results)} results"], pad=" ")
+            self._log_padded([item.name, f"Query: {query}", f"{len(results)} results"])
             return results
 
     def _log_results(self, results: Mapping[ItemCollection, SearchResult]):
@@ -117,7 +118,7 @@ class Searcher(Matcher):
             colour2 = '\33[92m' if unmatched == 0 else '\33[91m'
             colour3 = '\33[92m' if skipped == 0 else '\33[93m'
 
-            self.logger.info(
+            self.logger.report(
                 f"\33[1m{self.align_and_truncate(collection.name, max_width=max_width)} \33[0m|"
                 f'{colour1}{matched:>6} matched \33[0m| '
                 f'{colour2}{unmatched:>6} unmatched \33[0m| '
@@ -125,14 +126,14 @@ class Searcher(Matcher):
                 f'\33[97m{total:>6} total \33[0m'
             )
 
-        self.logger.info(
+        self.logger.report(
             f"\33[1;96m{'TOTALS':<{max_width}} \33[0m|"
             f'\33[92m{total_matched:>6} matched \33[0m| '
             f'\33[91m{total_unmatched:>6} unmatched \33[0m| '
             f'\33[93m{total_skipped:>6} skipped \33[0m| '
             f"\33[97m{total_all:>6} total \33[0m"
         )
-        self.print_line()
+        self.print_line(REPORT)
 
     def search(self, collections: List[ItemCollection]) -> MutableMapping[ItemCollection, SearchResult]:
         """
@@ -170,6 +171,7 @@ class Searcher(Matcher):
                                                       unmatched=[item for item in collection if item.has_uri is None],
                                                       skipped=skipped)
 
+        self.print_line()
         self._log_results(search_results)
         self.logger.debug('Searching items: DONE\n')
         return search_results

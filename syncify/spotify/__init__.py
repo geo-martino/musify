@@ -11,6 +11,7 @@ APIMethodInputType = Union[str, MutableMapping[str, Any], Collection[str], List[
 
 
 class ItemType(SyncifyEnum):
+    """Represents Spotify item types."""
     ALL = 0
     PLAYLIST = 1
     TRACK = 2
@@ -24,6 +25,7 @@ class ItemType(SyncifyEnum):
 
 
 class IDType(SyncifyEnum):
+    """Represents Spotify ID types."""
     ALL: int = 0
 
     ID: int = 22

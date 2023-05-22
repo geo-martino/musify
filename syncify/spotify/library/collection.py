@@ -98,6 +98,7 @@ class SpotifyAlbum(Album, SpotifyCollection):
 
     @property
     def name(self) -> str:
+        """The album title"""
         return self.response["name"]
 
     @property

@@ -10,7 +10,7 @@ from webbrowser import open as webopen
 import requests
 
 from syncify.spotify.exception import APIError
-from syncify.utils import Logger
+from syncify.utils.logger import Logger
 
 
 class APIAuthoriser(Logger):
@@ -60,6 +60,7 @@ class APIAuthoriser(Logger):
 
     @property
     def token_safe(self) -> Mapping[str, Any]:
+        """Returns a reformatted token, making it safe to log by removing sensitive values at predefined keys."""
         return {k: f"{v[:5]}..." if str(k).endswith("_token") else v for k, v in self.token.items()}
 
     @property
@@ -180,7 +181,7 @@ class APIAuthoriser(Logger):
         if not self.user_args:
             return
 
-        self.logger.info("Authorising user privilege access...")
+        self.logger.info_extra("Authorising user privilege access...")
 
         # set up socket to listen for the redirect from Spotify
         address = ('localhost', 8080)

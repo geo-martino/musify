@@ -62,6 +62,7 @@ class LocalTrack(TagReader, TagWriter, metaclass=ABCMeta):
 
     @property
     def uri(self) -> Optional[str]:
+        """The Spotify URI associated with this track."""
         return self._uri
 
     @uri.setter
@@ -76,6 +77,7 @@ class LocalTrack(TagReader, TagWriter, metaclass=ABCMeta):
 
     @property
     def has_uri(self) -> Optional[bool]:
+        """Does this track have an associated URI on Spotify. When None, unknown if yes or no."""
         return self._has_uri
 
     @property

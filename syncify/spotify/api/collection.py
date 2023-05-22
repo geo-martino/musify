@@ -1,11 +1,12 @@
 from abc import ABCMeta, abstractmethod
 from time import sleep
 from typing import Any, List, Mapping, MutableMapping, Optional, Union
+from urllib.parse import urlparse, urlencode
 
 from syncify.spotify import __URL_API__, IDType, ItemType, APIMethodInputType
-from syncify.spotify.utils import validate_item_type, convert, get_item_type, extract_ids
-from syncify.spotify.exception import SpotifyIDTypeError, SpotifyItemTypeError
 from syncify.spotify.api.basic import APIBase
+from syncify.spotify.exception import SpotifyIDTypeError, SpotifyItemTypeError
+from syncify.spotify.utils import validate_item_type, convert, get_item_type, extract_ids
 from syncify.utils import chunk, limit_value
 
 
@@ -81,6 +82,15 @@ class Collections(APIBase, metaclass=ABCMeta):
             if pages > 5:  # show progress bar for batches which may take a long time
                 bar = self.get_progress_bar(total=pages, desc=f'Getting {unit}', unit="pages")
 
+        # ISSUE: initial API response always gives items 0-100 no matter which limit given for some unknown reason
+        # When limit is e.g. 50 (the max allowed value), the 'next' url is then ALWAYS {url}?offset=0&limit=50
+        # This means items 50-100 will be added twice if extending the items by the response from the 'next' url
+        # WORKAROUND: manually create a valid 'next' url when response given as input
+        if isinstance(url, dict) and isinstance(url.get(self.items_key), (list, set)) and url.get("next"):
+            url_parsed = urlparse(url['next'])
+            params = {"offset": len(url[self.items_key]), "limit": url["limit"]}
+            url['next'] = f"{url_parsed.scheme}://{url_parsed.netloc}{url_parsed.path}?{urlencode(params)}"
+
         i = 0
         results = []
         count = 0 if isinstance(url, str) else len(url[self.items_key])
@@ -96,7 +106,7 @@ class Collections(APIBase, metaclass=ABCMeta):
 
             if bar and i <= pages:  # update progress bar
                 sleep(0.1)
-                bar.update(1)
+                bar.update()
 
         if bar is not None:
             bar.close()

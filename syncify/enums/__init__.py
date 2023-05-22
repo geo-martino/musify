@@ -3,9 +3,11 @@ from typing import Set, Self, Any
 
 
 class SyncifyEnum(IntEnum):
+    """Generic class for storing IntEnums."""
 
     @classmethod
     def all(cls) -> Set[Self]:
+        """Get all enums for this enum."""
         return {e for e in cls if e.name != "ALL"}
 
     @classmethod

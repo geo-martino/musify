@@ -6,12 +6,13 @@ from time import sleep
 from typing import List, MutableMapping, Any, Optional
 
 import requests_cache
+from requests.exceptions import ConnectionError
 from requests.structures import CaseInsensitiveDict
 from requests_cache.models.response import BaseResponse
 
 from syncify.spotify.exception import APIError
 from syncify.spotify.api.authorise import APIAuthoriser
-from syncify.utils import Logger
+from syncify.utils.logger import Logger
 
 
 class RequestHandler(APIAuthoriser, Logger):
@@ -46,7 +47,7 @@ class RequestHandler(APIAuthoriser, Logger):
 
         self.auth()
 
-    def handle(self, method: str, url: str, *args, **kwargs) -> MutableMapping[str, Any]:
+    def request(self, method: str, url: str, *args, **kwargs) -> MutableMapping[str, Any]:
         """
         Generic method for handling API requests with back-off on failed requests.
         See :py:func:`request` for more arguments.
@@ -58,46 +59,28 @@ class RequestHandler(APIAuthoriser, Logger):
         :raises APIError: On any logic breaking error/response.
         """
         kwargs.pop("headers", None)
-        response = self.request(method=method, url=url, *args, **kwargs)
+        response = self._request(method=method, url=url, *args, **kwargs)
         backoff = self.backoff_start
 
-        while response.status_code >= 400:  # error response code received
-            response_headers = response.headers
-            if isinstance(response.headers, CaseInsensitiveDict):  # format headers if JSON
-                response_headers = json.dumps(dict(response.headers), indent=2)
-            self.logger.warning(f"\33[91m{method.upper():<7}: {url} | Code: {response.status_code} | "
-                                f"Response text and headers follow:"
-                                f"\nResponse text:\n{response.text}"
-                                f"\nHeaders:\n{response_headers} \33[0m")
+        while response is None or response.status_code >= 400:  # error response code received
+            waited = False
+            if response:
+                self._log_response(response=response, method=method, url=url)
+                self._raise_exception(response=response)
+                waited = self._check_for_wait_time(response=response)
 
-            message = self._response_as_json(response).get('error', {}).get('message')
-            if response.status_code == 403:
-                message = message if message else "You are not authorised for this action."
-                raise APIError(message)
-            elif response.status_code == 404:
-                message = message if message else "Resource not found."
-                raise APIError(message)
-
-            if 'retry-after' in response.headers:  # wait if time is short
-                wait_time = int(response.headers['retry-after'])
-                wait_str = (dt.now() + timedelta(seconds=wait_time)).strftime('%Y-%m-%d %H:%M:%S')
-                self.logger.info(f"Rate limit exceeded. Retry again at {wait_str}")
-
-                if wait_time > self.timeout:  # exception if too long
-                    raise APIError(f"Retry time is greater than timeout of {self.timeout} seconds")
-
-            if backoff < self.backoff_final:  # exponential backoff
-                self.logger.info(f"Request failed: retrying in {backoff} seconds...")
+            if not waited and backoff < self.backoff_final:  # exponential backoff
+                self.logger.warning(f"Request failed: retrying in {backoff} seconds...")
                 sleep(backoff)
                 backoff *= self.backoff_factor
-            else:  # max backoff exceeded
+            elif not waited:  # max backoff exceeded
                 raise APIError("Max retries exceeded")
 
-            response = self.request(method=method, url=url, *args, **kwargs)
+            response = self._request(method=method, url=url, *args, **kwargs)
 
         return self._response_as_json(response)
 
-    def request(
+    def _request(
             self,
             method: str,
             url: str,
@@ -105,13 +88,12 @@ class RequestHandler(APIAuthoriser, Logger):
             log_pad: int = 43,
             log_extra: Optional[List[str]] = None,
             *args, **kwargs
-    ) -> BaseResponse:
+    ) -> Optional[BaseResponse]:
+        """Handle logging a request, send the request, and return the response"""
         try:  # reauthorise if needed
             headers = self.headers
         except APIError:
-            self.print_line()
             headers = self.auth()
-            self.print_line()
 
         # format logs
         log = [f"{method.upper():<7}: {url:<{log_pad}}"]
@@ -125,9 +107,47 @@ class RequestHandler(APIAuthoriser, Logger):
             log.append("Cached")
 
         self.logger.debug(" | ".join(log))
-        return self.session.request(
-            method=method.upper(), url=url, headers=headers, force_refresh=not use_cache, *args, **kwargs
-        )
+        try:
+            return self.session.request(
+                method=method.upper(), url=url, headers=headers, force_refresh=not use_cache, *args, **kwargs
+            )
+        except ConnectionError:
+            return
+
+    def _log_response(self, response: BaseResponse, method: str, url: str):
+        """Log the method, url, response text, and response headers."""
+        response_headers = response.headers
+        if isinstance(response.headers, CaseInsensitiveDict):  # format headers if JSON
+            response_headers = json.dumps(dict(response.headers), indent=2)
+        self.logger.warning(f"\33[91m{method.upper():<7}: {url} | Code: {response.status_code} | "
+                            f"Response text and headers follow:"
+                            f"\nResponse text:\n{response.text}"
+                            f"\nHeaders:\n{response_headers} \33[0m")
+
+    def _raise_exception(self, response: BaseResponse):
+        """Check for response status codes that should raise an exception."""
+        message = self._response_as_json(response).get('error', {}).get('message')
+        if response.status_code == 403:
+            message = message if message else "You are not authorised for this action."
+            raise APIError(message)
+        elif response.status_code == 404:
+            message = message if message else "Resource not found."
+            raise APIError(message)
+
+    def _check_for_wait_time(self, response: BaseResponse) -> bool:
+        """Handle when a wait time is included in the response headers."""
+        if 'retry-after' in response.headers:  # wait if time is short
+            wait_time = int(response.headers['retry-after'])
+            wait_str = (dt.now() + timedelta(seconds=wait_time)).strftime('%Y-%m-%d %H:%M:%S')
+            self.logger.info(f"\33[91mRate limit exceeded. Retrying again at {wait_str}\33[0m")
+
+            if wait_time > self.timeout:  # exception if too long
+                raise APIError(f"Rate limit exceeded and wait time is greater than timeout of {self.timeout} seconds")
+            else:
+                sleep(wait_time)
+                return True
+
+        return False
 
     @staticmethod
     def _response_as_json(response: BaseResponse) -> MutableMapping[str, Any]:
@@ -138,29 +158,29 @@ class RequestHandler(APIAuthoriser, Logger):
 
     def get(self, url: str, **kwargs):
         """Sends a GET request."""
-        return self.handle("get", url=url, **kwargs)
+        return self.request("get", url=url, **kwargs)
 
     def post(self, url: str, **kwargs):
         """Sends a POST request."""
-        return self.handle("post", url=url, **kwargs)
+        return self.request("post", url=url, **kwargs)
 
     def put(self, url: str, **kwargs):
         """Sends a PUT request."""
-        return self.handle("put", url=url, **kwargs)
+        return self.request("put", url=url, **kwargs)
 
     def delete(self, url: str, **kwargs):
         """Sends a DELETE request."""
-        return self.handle("delete", url, **kwargs)
+        return self.request("delete", url, **kwargs)
 
     def options(self, url: str, **kwargs):
         """Sends an OPTIONS request."""
-        return self.handle("options", url=url, **kwargs)
+        return self.request("options", url=url, **kwargs)
 
     def head(self, url: str, **kwargs):
         """Sends a HEAD request."""
         kwargs.setdefault("allow_redirects", False)
-        return self.handle("head", url=url, **kwargs)
+        return self.request("head", url=url, **kwargs)
 
     def patch(self, url: str, **kwargs):
         """Sends a PATCH request."""
-        return self.handle("patch", url=url, **kwargs)
+        return self.request("patch", url=url, **kwargs)

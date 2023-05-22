@@ -1,12 +1,16 @@
-from typing import List, Mapping
+from typing import List, Mapping, Collection, Union, MutableMapping
 
 from syncify.abstract.item import Item
 from syncify.abstract.collection import Library, ItemCollection
 from syncify.enums.tags import TagName
-from syncify.utils import Logger, make_list
+from syncify.local.library import LocalLibrary
+from syncify.utils import make_list
+from syncify.utils.logger import Logger, REPORT
 
 
 class Report(Logger):
+    """Various methods for reporting on items/collections/libraries etc."""
+
     def report_library_differences(self, source: Library, compare: Library) -> Mapping[str, Mapping[str, List[Item]]]:
         """
         Generate a report on the differences between two library's playlists.
@@ -24,6 +28,7 @@ class Report(Logger):
         max_width = self.get_max_width(source.playlists.keys())
 
         self.logger.info('\33[1;95m ->\33[1;97m Reporting on differences between libraries \33[0m')
+        self.print_line()
         for source_playlist in source.playlists.values():
             name = source_playlist.name
             compare_playlist = compare.playlists.get(name)
@@ -40,36 +45,37 @@ class Report(Logger):
             missing[name] = source_extra
             unavailable[name] = source_no_uri + compare_no_uri
 
-            self.logger.info(f"\33[97m{self.align_and_truncate(name, max_width=max_width)} \33[0m|"
-                             f"\33[92m{len(compare_extra):>6} extra \33[0m|"
-                             f"\33[91m{len(source_extra):>6} missing \33[0m|"
-                             f"\33[93m{len(source_no_uri) + len(compare_no_uri):>6} unavailable \33[0m|"
-                             f"\33[94m{len(source_playlist):>6} in source \33[0m")
+            self.logger.report(f"\33[97m{self.align_and_truncate(name, max_width=max_width)} \33[0m|"
+                               f"\33[92m{len(compare_extra):>6} extra \33[0m|"
+                               f"\33[91m{len(source_extra):>6} missing \33[0m|"
+                               f"\33[93m{len(source_no_uri) + len(compare_no_uri):>6} unavailable \33[0m|"
+                               f"\33[94m{len(source_playlist):>6} in source \33[0m")
 
         report = {"Source ✗ | Compare ✓": extra,
                   "Source ✓ | Compare ✗": missing,
                   "Items unavailable (no URI)": unavailable}
 
-        self.logger.info(
+        self.logger.report(
             f"\33[1;96m{'TOTALS':<{max_width}} \33[0m|"
             f"\33[1;92m{sum(len(items) for items in extra.values()):>6} extra \33[0m|"
             f"\33[1;91m{sum(len(items) for items in missing.values()):>6} missing \33[0m|"
             f"\33[1;93m{sum(len(items) for items in unavailable.values()):>6} unavailable \33[0m|"
-            f"\33[1;94m{len(source.playlists):>6} playlists \33[0m\n"
+            f"\33[1;94m{len(source.playlists):>6} playlists \33[0m"
         )
-
+        self.print_line(REPORT)
         self.logger.debug("Report library differences: DONE\n")
         return report
 
     def report_missing_tags(self,
-                            collections: List[ItemCollection],
+                            collections: Union[LocalLibrary, Collection[ItemCollection]],
                             tags: List[TagName] = TagName.ALL,
-                            match_all: bool = False) -> Mapping[str, List[Item]]:
+                            match_all: bool = False) -> MutableMapping[ItemCollection, MutableMapping[Item, List[str]]]:
         """
         Generate a report on the items with a set of collections that have missing tags.
 
-        :param collections: dict. Metadata in form <name>: <list of dicts of track's metadata>
-        :param tags: list, default=None. List of tags to consider missing.
+        :param collections: A collection of item collections to report on.
+            If a local library is given, use the albums of the library as the collections to report on.
+        :param tags: List of tags to consider missing.
         :param match_all: When True, item counts as missing tags if item is missing ``all`` of the given tags.
             When False, item counts as missing tags when missing only one of the given tags.
         :return: Report on collections by name which have items with missing tags.
@@ -78,6 +84,14 @@ class Report(Logger):
 
         tags = make_list(tags)
         tag_names = set(TagName.to_tags(tags))
+
+        if isinstance(collections, LocalLibrary):
+            collections = collections.albums
+        items_total = sum(len(collection) for collection in collections)
+        self.logger.info(f"\33[1;95m ->\33[1;97m "
+                         f"Checking {items_total} items for {'all' if match_all else 'any'} missing tags: \n"
+                         f"    \33[90m{', '.join(tag_names)}\33[0m")
+
         if TagName.URI in tags or TagName.ALL in tags:
             tag_names.remove("uri")
             tag_names.add("has_uri")
@@ -85,33 +99,38 @@ class Report(Logger):
             tag_names.remove("images")
             tag_names.add("has_image")
 
-        items_total = sum(len(collection) for collection in collections)
-        self.logger.info(f"\33[1;95m ->\33[1;97m "
-                         f"Checking {items_total} items for {'all' if match_all else 'any'} missing tags: \n"
-                         f"    \33[90m{', '.join(tag_names)}\33[0m")
-
-        missing_tags = {}
+        missing: MutableMapping[ItemCollection, MutableMapping[Item, List[str]]] = {}
         for collection in collections:
-            name = collection.name
-            items = collection.items
+            missing_collection: MutableMapping[Item, List[str]] = {}
+            for item in collection.items:
+                missing_tags = [tag for tag in tag_names if item[tag] is None]
+                if all(missing_tags) if match_all else any(missing_tags):
+                    missing_collection[item] = missing_tags
 
-            missing = []
-            for item in items:
-                if match_all:  # check if track is missing all tags
-                    match = all(item[tag] is None for tag in tag_names)
-                else:  # check if track is missing only some tags
-                    match = any(item[tag] is None for tag in tag_names)
+            if missing_collection:
+                missing[collection] = missing_collection
 
-                if match:
-                    missing.append(item)
+        if not missing:
+            self.logger.debug("Report missing tags: DONE\n")
+            return missing
 
-            if len(missing) > 0:
-                missing_tags[name] = missing
+        all_keys = [item.name for items in missing.values() for item in items]
+        max_width = self.get_max_width(all_keys)
 
-        items_count = len([item for items in missing_tags.values() for item in items])
-        self.logger.info(f"\33[1;95m  >\33[1;97m "
-                         f"Found {items_count} items with {'all' if match_all else 'any'} missing tags\33[0m: \n"
+        # log the report
+        self.print_line(REPORT)
+        self.logger.report("\33[1;94mFound the following missing items by collection: \33[0m")
+        self.print_line(REPORT)
+        for collection, result in missing.items():
+            self.logger.report(f"\33[1;91m -> {collection.name} \33[0m")
+            for item, tags in result.items():
+                name = self.align_and_truncate(item.name, max_width=max_width)
+                self.logger.report(f"\33[96m{name} \33[0m| \33[93m{', '.join(tags)} \33[0m")
+            self.print_line(REPORT)
+
+        self.logger.info(f"    \33[94mFound {len(all_keys)} items with "
+                         f"{'all' if match_all else 'any'} missing tags\33[0m: \n"
                          f"    \33[90m{', '.join(tag_names)}\33[0m")
-
+        self.print_line()
         self.logger.debug("Report missing tags: DONE\n")
-        return missing_tags
+        return missing

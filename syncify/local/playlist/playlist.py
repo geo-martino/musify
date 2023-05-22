@@ -10,7 +10,7 @@ from syncify.local.file import File
 from syncify.local.library.collection import LocalCollection
 from syncify.local.playlist.processor import TrackMatch, TrackLimit, TrackSort
 from syncify.local.track import LocalTrack
-from syncify.utils import Logger
+from syncify.utils.logger import Logger
 
 
 class LocalPlaylist(Playlist, LocalCollection, File, metaclass=ABCMeta):
@@ -25,6 +25,7 @@ class LocalPlaylist(Playlist, LocalCollection, File, metaclass=ABCMeta):
 
     @property
     def name(self) -> str:
+        """The name of this playlist, taken to always be the filename."""
         return self.filename
 
     @name.setter
@@ -81,7 +82,7 @@ class LocalPlaylist(Playlist, LocalCollection, File, metaclass=ABCMeta):
                 # just return the tracks given if matcher has no settings applied
                 self.tracks: List[LocalTrack] = tracks.copy()
             else:  # run matcher
-                self.tracks: List[LocalTrack] = m.match(tracks=tracks, reference=reference, combine=True)
+                self.tracks: List[LocalTrack] = m.match(tracks=tracks, reference=reference)
 
     def _limit(self, ignore: Optional[Union[Collection[str], Collection[LocalTrack]]] = None):
         """Wrapper for limiter"""

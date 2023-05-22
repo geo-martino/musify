@@ -6,7 +6,7 @@ from syncify.spotify.api.basic import Basic
 from syncify.spotify.api.collection import Collections
 from syncify.spotify.api.item import Items
 from syncify.spotify.api.request import RequestHandler
-from syncify.utils import Logger
+from syncify.utils.logger import Logger
 
 
 class API(Basic, Items, Collections):
@@ -90,5 +90,5 @@ class API(Basic, Items, Collections):
 
             tracks = [item['track'] if kind == ItemType.PLAYLIST else item for item in r["items"]]
             for i, track in enumerate(tracks, i + 1):  # print each item in this page
-                print(self.format_item_data(i=i, name=track['name'], uri=track['uri'], total=r['total'], max_width=50))
+                print(self.format_item_data(i=i, name=track['name'], uri=track['uri'], total=r['total']))
             print()

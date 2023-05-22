@@ -1,14 +1,12 @@
 import inspect
 import re
-from copy import copy
 from typing import List, Optional, Union, Any, Iterable, TypeVar, Tuple, Collection
 
-from syncify.abstract import item
-from syncify.local.library import LocalAlbum
-from syncify.abstract.item import Track, Base
 from syncify.abstract.collection import Album, ItemCollection
+from syncify.abstract.item import Track, Base
 from syncify.enums.tags import TagName, PropertyName
-from syncify.utils import Logger, limit_value
+from syncify.utils import limit_value
+from syncify.utils.logger import Logger
 
 MatchTypes = Union[Track, Album]
 T = TypeVar("T")
@@ -44,7 +42,7 @@ class Matcher(Logger):
         log = [source.name, log_result, f"{algorithm:<10}={test:<5}"]
         if extra:
             log += extra
-        self._log_padded(log, pad=' ')
+        self._log_padded(log)
 
     def _log_match(self, source: Base, result: MatchTypes, extra: Optional[List[str]] = None):
         """Wrapper for initially logging a match in a correctly aligned format"""
@@ -117,11 +115,11 @@ class Matcher(Logger):
             self._log_test(source=source, result=result, test=karaoke, extra=[f"{self.karaoke_tags} -> {values}"])
             return karaoke
 
-        if is_karaoke(result.clean_tags["name"].lower()):  # title/album name
+        if is_karaoke(result.name.lower()):  # title/album name
             return 0
-        if is_karaoke(result.clean_tags["artist"].lower()):  # artists
+        if is_karaoke(result.artist.lower()):  # artists
             return 0
-        if is_karaoke(result.clean_tags["album"].lower()):  # album
+        if is_karaoke(result.album.lower()):  # album
             return 0
         return 1
 
@@ -137,7 +135,7 @@ class Matcher(Logger):
             # reduce a score if certain keywords are present in result and not source
             reduce_factor = 0.5
             reduce_on = ["live", "demo", "acoustic"] + self.karaoke_tags
-            if any(word in result_val and word not in source_val for word in reduce_on):
+            if any(word in result.name.lower() and word not in source.name.lower() for word in reduce_on):
                 score = max(score - reduce_factor, 0)
 
         self._log_test(source=source, result=result, test=round(score, 2), extra=[f"{source_val} -> {result_val}"])
@@ -319,6 +317,9 @@ class Matcher(Logger):
             return {}
 
         scores_current: dict[str, float] = {}
+
+        print(source.clean_tags)
+        print(result.clean_tags)
 
         if TagName.TITLE in match_on:
             scores_current["title"] = self.match_name(source=source, result=result)

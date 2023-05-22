@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import Optional, Set, MutableMapping
 
 from syncify.abstract.misc import Result
-from syncify.local.file import File
 from syncify.local.track.base.processor import TagName, TagProcessor
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 from syncify.utils import UnionList, make_list
@@ -17,7 +16,7 @@ class SyncResultTrack(Result):
     updated: MutableMapping[TagName, int]  # The tag updated and the condition index it satisfied to be updated
 
 
-class TagWriter(File, TagProcessor, metaclass=ABCMeta):
+class TagWriter(TagProcessor, metaclass=ABCMeta):
     """Contains methods for updating and removing tags from a loaded file"""
 
     def save(

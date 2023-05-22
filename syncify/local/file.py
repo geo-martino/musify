@@ -13,22 +13,27 @@ from syncify.local.exception import IllegalFileTypeError, ImageLoadError
 
 
 class File(metaclass=ABCMeta):
+    """Generic class for representing a file on a system."""
 
     @property
     @abstractmethod
     def path(self) -> str:
+        """The path to the file."""
         raise NotImplementedError
 
     @property
     def folder(self) -> str:
+        """The parent folder of the file."""
         return basename(dirname(self.path))
 
     @property
     def filename(self) -> str:
+        """The filename without extension."""
         return splitext(basename(self.path))[0]
 
     @property
     def ext(self) -> str:
+        """The file extension in lowercase."""
         return splitext(self.path)[1].lower()
 
     @property
@@ -72,7 +77,7 @@ def open_image(image_link: str) -> Image.Image:
     try:  # open image from link
         if image_link.startswith("http"):
             response: HTTPResponse = urlopen(image_link)
-            image = Image.open(response.read())
+            image = Image.open(response)
             response.close()
         else:
             image = Image.open(image_link)

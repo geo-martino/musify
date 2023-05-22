@@ -14,6 +14,7 @@ class Result(metaclass=ABCMeta):
 
 
 class PrettyPrinter(metaclass=ABCMeta):
+    """Generic base class for pretty printing. Classes can inherit this class to gain pretty print functionality."""
 
     @staticmethod
     def _camel_to_snake(value: str, prefix: Optional[str] = None) -> str:

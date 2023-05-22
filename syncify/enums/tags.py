@@ -30,6 +30,7 @@ class TagMap:
 
 
 class Name(SyncifyEnum):
+    """Base class for tag/property names of an item."""
 
     @classmethod
     def from_name(cls, name: str) -> Self:
@@ -97,6 +98,7 @@ class TagName(Name):
 
     @classmethod
     def to_tags(cls, tags: Union[Self, Collection[Self]]) -> List[str]:
+        """Convert the given tags to tag names as given by the attributes of an item/collection"""
         if isinstance(tags, cls):
             return tags.to_tag()
         return [t for tag in make_list(tags) for t in tag.to_tag()]

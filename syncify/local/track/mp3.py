@@ -113,7 +113,7 @@ class MP3(LocalTrack):
 
                 self._file[tag_id] = mutagen.id3.APIC(
                     encoding=Encoding.UTF8,
-                    desc=image_kind,
+                    # desc=image_kind,
                     mime=Image.MIME[image.format],
                     type=image_type,
                     data=get_image_bytes(image)

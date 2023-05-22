@@ -10,6 +10,7 @@ from syncify.utils import UnionList, make_list
 
 @dataclass
 class MatchResult:
+    """Results from matching a collection of tracks to a set of conditions."""
     include: List[LocalTrack]
     exclude: List[LocalTrack]
     compared: List[LocalTrack]

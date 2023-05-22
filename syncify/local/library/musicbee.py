@@ -8,6 +8,7 @@ from lxml import etree
 from syncify.local.file import File
 from syncify.local.track import LocalTrack
 from syncify.local.library.library import LocalLibrary
+from syncify.utils.logger import Logger
 
 
 class MusicBee(File, LocalLibrary):
@@ -43,6 +44,9 @@ class MusicBee(File, LocalLibrary):
             exclude: Optional[List[str]] = None,
             load: bool = True
     ):
+        Logger.__init__(self)
+        self.logger.info(f"\33[1;95m ->\33[1;97m Loading MusicBee library \33[0m")
+
         if not exists(musicbee_folder):
             in_library = join(library_folder.rstrip("\\/"), musicbee_folder.lstrip("\\/"))
             if not exists(in_library):
@@ -56,6 +60,7 @@ class MusicBee(File, LocalLibrary):
             for key, value in record.items():
                 self.xml[key] = value
 
+        self.print_line()
         LocalLibrary.__init__(
             self,
             library_folder=library_folder,

@@ -183,7 +183,8 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
             self,
             items: Optional[Union[ItemCollection, List[Item]]] = None,
             clear: Optional[Literal['all', 'extra']] = None,
-            reload: bool = True
+            reload: bool = True,
+            dry_run: bool = False,
     ) -> SyncResultSpotifyPlaylist:
         """
         Synchronise this playlist object with the remote Spotify playlist it is associated with. Clear options:
@@ -199,6 +200,7 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
         :param clear: Clear option for the remote playlist. See description.
         :param reload: When True, once synchronisation is complete, reload this SpotifyPlaylist object
             to reflect the changes on the remote playlist if enabled. Skip if False.
+        :param dry_run: Run function, but do not modify the remote playlists at all.
         :return: UpdateResult object with stats on the changes to the remote playlist.
         """
         self._check_for_api()
@@ -210,17 +212,22 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
         uris_unchanged = uris_remote
         removed = 0
 
+        # process the remote playlist. when dry_run, mock the results
         if clear == "all":  # remove all items from the remote playlist on Spotify
-            removed = self.api.clear_from_playlist(self.url)
+            removed = self.api.clear_from_playlist(self.url) if not dry_run else len(uris_remote)
             uris_add = uris_obj
             uris_unchanged = []
         elif clear == "extra":  # remove items not present in the current list from the remote playlist on Spotify
             uris_clear = [uri for uri in uris_remote if uri not in uris_obj]
-            removed = self.api.clear_from_playlist(self.url, items=uris_clear)
+            removed = self.api.clear_from_playlist(self.url, items=uris_clear) if not dry_run else len(uris_clear)
             uris_unchanged = [uri for uri in uris_remote if uri in uris_obj]
 
-        added = self.api.add_to_playlist(self.url, items=uris_add, skip_dupes=clear != "all")
-        if reload:  # reload the current playlist object from remote
+        if not dry_run:
+            added = self.api.add_to_playlist(self.url, items=uris_add, skip_dupes=clear != "all")
+        else:
+            added = len(uris_add) if clear != "all" else len([uri for uri in uris_add if uri not in uris_remote])
+
+        if not dry_run and reload:  # reload the current playlist object from remote
             self.reload(use_cache=False)
 
         return SyncResultSpotifyPlaylist(

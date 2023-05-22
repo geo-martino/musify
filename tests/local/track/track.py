@@ -28,6 +28,7 @@ path_track_img = join(path_track_resources, "track_image.jpg")
 
 
 def random_track(cls: Optional[Type[LocalTrack]] = None) -> LocalTrack:
+    """Generates a new, random track of the given class."""
     if cls is None:
         cls = choice(__TRACK_CLASSES__)
     track = cls.__new__(cls)
@@ -71,10 +72,12 @@ def random_track(cls: Optional[Type[LocalTrack]] = None) -> LocalTrack:
 
 
 def random_tracks(number: int, cls: Optional[Type[LocalTrack]] = None) -> List[LocalTrack]:
+    """Generates a ``number`` of random tracks of the given class."""
     return [random_track(cls=cls) for _ in range(number)]
 
 
 def copy_track(track: LocalTrack) -> Tuple[str, str]:
+    """Copy a track to the test cache, returning the original and copy paths."""
     path_file_base = track.path
     path_file_copy = join(path_track_cache, basename(path_file_base))
     if not exists(dirname(path_file_copy)):
@@ -89,6 +92,7 @@ def copy_track(track: LocalTrack) -> Tuple[str, str]:
 
 
 def clear_tags_test(track: LocalTrack):
+    """Test for clearing tags on a given track."""
     path_file_base, path_file_copy = copy_track(track)
     track_original = copy(track)
 
@@ -146,6 +150,7 @@ def clear_tags_test(track: LocalTrack):
 
 
 def update_tags_test(track: LocalTrack):
+    """Test for updating tags on a given track."""
     path_file_base, path_file_copy = copy_track(track)
     track_original = copy(track)
 
@@ -246,6 +251,7 @@ def update_tags_test(track: LocalTrack):
 
 # noinspection PyProtectedMember
 def update_images_test(track: LocalTrack):
+    """Test for updating images on a given track."""
     path_file_base, path_file_copy = copy_track(track)
     track_original = copy(track)
 

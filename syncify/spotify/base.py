@@ -20,22 +20,27 @@ class Spotify(PrettyPrinter, metaclass=ABCMeta):
 
     @property
     def id(self) -> str:
+        """The ID of this item/collection."""
         return self.response["id"]
 
     @property
     def uri(self) -> str:
+        """The URI of this item/collection."""
         return self.response["uri"]
 
     @property
     def has_uri(self) -> bool:
+        """Does this item/collection have a valid URI that is not a local URI."""
         return not self.response.get("is_local", False)
 
     @property
     def url(self) -> str:
+        """The API URL of this item/collection."""
         return self.response["href"]
 
     @property
     def url_ext(self) -> Optional[str]:
+        """The external URL of this item/collection."""
         return self.response["external_urls"].get("spotify")
 
     def __init__(self, response: MutableMapping[str, Any]):

@@ -5,12 +5,13 @@ from typing import List, MutableMapping, Optional, Mapping, Union, Set
 
 from syncify.abstract.collection import ItemCollection, Folder, Album, Artist, Genre
 from syncify.abstract.item import Item
-from syncify.local.exception import LocalCollectionError
 from syncify.local.base import Local
+from syncify.local.exception import LocalCollectionError
 from syncify.local.track import LocalTrack, SyncResultTrack
 from syncify.spotify import IDType
 from syncify.spotify.utils import validate_id_type
-from syncify.utils import Logger, get_most_common_values
+from syncify.utils import get_most_common_values
+from syncify.utils.logger import Logger, STAT
 
 # noinspection SpellCheckingInspection
 __max_str = "zzzzzzzzzzzzzzzzzzzzzzzz"
@@ -22,6 +23,7 @@ class LocalCollection(ItemCollection, Local, Logger, metaclass=ABCMeta):
     @property
     @abstractmethod
     def tracks(self) -> List[LocalTrack]:
+        """The local tracks in this collection"""
         raise NotImplementedError
 
     @property
@@ -47,6 +49,7 @@ class LocalCollection(ItemCollection, Local, Logger, metaclass=ABCMeta):
 
     @property
     def length(self) -> Optional[float]:
+        """Total duration of all tracks in this collection in seconds"""
         lengths = [track.length for track in self.tracks]
         return sum(lengths) if lengths else None
 
@@ -68,10 +71,30 @@ class LocalCollection(ItemCollection, Local, Logger, metaclass=ABCMeta):
         sort = sorted(filter(lambda t: t.last_played, self.tracks), key=lambda t: t.last_played, reverse=True)
         return sort[0].last_played if sort else None
 
-    def save_tracks(self, **kwargs) -> Mapping[str, SyncResultTrack]:
+    def save_tracks(self, **kwargs) -> Mapping[LocalTrack, SyncResultTrack]:
         """Saves the tags of all tracks in this collection. Use arguments from :py:func:`LocalTrack.save()`"""
         bar = self.get_progress_bar(iterable=self.tracks, desc="Updating tracks", unit="tracks")
-        return {track.path: track.save(**kwargs) for track in bar}
+        results: Mapping[LocalTrack, SyncResultTrack] = {track: track.save(**kwargs) for track in bar}
+        results_filtered = {track: result for track, result in results.items() if result.updated}
+
+        return results_filtered
+
+    def log_save_tracks(self, results: Mapping[LocalTrack, SyncResultTrack]):
+        """Log stats from the results of a ``save_tracks`` operation"""
+        if not results:
+            return
+
+        max_width = self.get_max_width([track.path for track in results], max_width=80)
+
+        self.logger.stat("\33[1;96mSaved tags to the following tracks: \33[0m")
+        for track, result in results.items():
+            name = self.align_and_truncate(track.path, max_width=max_width, right_align=True)
+            updated = [t for tag in result.updated.keys() for t in tag.to_tag()]
+
+            self.logger.stat(f"\33[97m{name} \33[0m| " +
+                             ("\33[92mSAVED \33[0m| " if result.saved else "\33[91mNOT SAVED \33[0m| ") +
+                             f"\33[94m{', '.join(updated)} \33[0m")
+        self.print_line(STAT)
 
     def as_dict(self):
         return {
@@ -135,6 +158,7 @@ class LocalCollectionFiltered(LocalCollection):
 
     @property
     def tracks(self) -> List[LocalTrack]:
+        """The local tracks in this collection"""
         return self._tracks
 
     def __init__(self, tracks: List[LocalTrack], name: Optional[str] = None):
@@ -268,6 +292,7 @@ class LocalAlbum(LocalCollectionFiltered, Album):
     :raises LocalCollectionError: If the given tracks contain more than one unique value for
         ``album`` when name is None.
     """
+
     @property
     def album_artist(self) -> Optional[int]:
         """The most common artist in this collection"""

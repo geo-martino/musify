@@ -45,6 +45,7 @@ class Checker(Matcher):
 
     @property
     def exit(self) -> bool:
+        """The condition for exiting check. Setter sets both ``exit`` and ``done`` values."""
         return self._exit
 
     @exit.setter
@@ -144,10 +145,10 @@ class Checker(Matcher):
                 self.exit = True
 
             if not self.api.test():  # check if token has expired
-                self.logger.info('\33[93mAPI token has expired, re-authorising... \33[0m')
+                self.logger.info_extra('\33[93mAPI token has expired, re-authorising... \33[0m')
                 self.api.auth()
 
-            self.logger.info(f'\33[93mDeleting {len(self.playlist_name_urls)} temporary playlists... \33[0m')
+            self.logger.info_extra(f'\33[93mDeleting {len(self.playlist_name_urls)} temporary playlists... \33[0m')
             for url in self.playlist_name_urls.values():  # delete playlists
                 self.api.delete_playlist(url.removesuffix("tracks"))
 
@@ -164,10 +165,10 @@ class Checker(Matcher):
             switched=self.final_switched, unavailable=self.final_unavailable, unchanged=self.final_unchanged
         )
         self.print_line()
-        self.logger.info(f"\33[1;96mCHECK TOTALS \33[0m| "
-                         f"\33[94m{len(self.final_switched):>5} switched  \33[0m| "
-                         f"\33[91m{len(self.final_unavailable):>5} unavailable \33[0m| "
-                         f"\33[93m{len(self.final_unchanged):>5} unchanged \33[0m")
+        self.logger.report(f"\33[1;96mCHECK TOTALS \33[0m| "
+                           f"\33[94m{len(self.final_switched):>5} switched  \33[0m| "
+                           f"\33[91m{len(self.final_unavailable):>5} unavailable \33[0m| "
+                           f"\33[93m{len(self.final_unchanged):>5} unchanged \33[0m")
 
         self.done = True
         self.remaining.clear()
@@ -281,12 +282,12 @@ class Checker(Matcher):
         missing = [item for item in source if not item.has_uri]
 
         if len(added) + len(removed) + len(missing) == 0:
-            self._log_padded([name, f"Playlist unchanged and no missing URIs, skipping match"], pad=' ')
+            self._log_padded([name, f"Playlist unchanged and no missing URIs, skipping match"])
             return
 
-        self._log_padded([name, f"{len(added):>6} items added"], pad=' ')
-        self._log_padded([name, f"{len(removed):>6} items removed"], pad=' ')
-        self._log_padded([name, f"{len(missing):>6} items in source missing URI"], pad=' ')
+        self._log_padded([name, f"{len(added):>6} items added"])
+        self._log_padded([name, f"{len(removed):>6} items removed"])
+        self._log_padded([name, f"{len(missing):>6} items in source missing URI"])
 
         remaining = removed + missing
         count_start = len(remaining)
@@ -294,7 +295,7 @@ class Checker(Matcher):
             if not added:
                 break
 
-            result = self.score_match(item, results=added, match_on=[TagName.TITLE], max_score=0.8)
+            result = self.score_match(item, results=added, match_on=[TagName.TITLE])
             if not result:
                 continue
 

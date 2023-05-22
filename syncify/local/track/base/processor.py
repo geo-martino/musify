@@ -1,14 +1,14 @@
 from abc import ABCMeta, abstractmethod
-from typing import Optional
 
 import mutagen
 
 from syncify.abstract.item import Track, TrackProperties
 from syncify.enums.tags import TagName, TagMap
 from syncify.local.base import Local
+from syncify.local.file import File
 
 
-class TagProcessor(Track, TrackProperties, Local, metaclass=ABCMeta):
+class TagProcessor(Track, TrackProperties, Local, File, metaclass=ABCMeta):
     """Generic base class for tag processing"""
 
     uri_tag = TagName.COMMENTS
@@ -25,16 +25,13 @@ class TagProcessor(Track, TrackProperties, Local, metaclass=ABCMeta):
     @property
     @abstractmethod
     def tag_map(self) -> TagMap:
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def path(self) -> Optional[str]:
+        """Map of human-friendly tag name to ID3 tag ids for a given file type"""
         raise NotImplementedError
 
     @property
     @abstractmethod
     def file(self) -> mutagen.FileType:
+        """The mutagen file object representing the loaded file."""
         raise NotImplementedError
 
     @abstractmethod

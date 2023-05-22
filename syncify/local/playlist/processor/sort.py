@@ -33,6 +33,7 @@ def get_field_from_code(field_code: int) -> Optional[Name]:
 
 
 class ShuffleMode(SyncifyEnum):
+    """Represents the possible shuffle modes to use when shuffling tracks in a playlist."""
     NONE = 0
     RANDOM = 1
     HIGHER_RATING = 2
@@ -41,6 +42,7 @@ class ShuffleMode(SyncifyEnum):
 
 
 class ShuffleBy(SyncifyEnum):
+    """Represents the possible items/properties to shuffle by when shuffling tracks in a playlist."""
     TRACK = 0
     ALBUM = 1
     ARTIST = 2

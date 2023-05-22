@@ -3,7 +3,8 @@ from typing import MutableMapping, List, Any
 
 from syncify.spotify import __URL_API__, ItemType
 from syncify.spotify.api.request import RequestHandler
-from syncify.utils import Logger, limit_value
+from syncify.utils import limit_value
+from syncify.utils.logger import Logger
 
 
 class APIBase(RequestHandler, Logger):

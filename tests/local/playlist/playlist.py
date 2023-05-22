@@ -14,6 +14,7 @@ path_playlist_xautopf_ra = join(path_playlist_resources, "Recently Added.xautopf
 
 
 def copy_playlist_file(path: str) -> Tuple[str, str]:
+    """Copy a playlist file to the test cache, returning the original and copy paths."""
     path_file_base = path
     path_file_copy = join(path_playlist_cache, basename(path_file_base))
     if not exists(dirname(path_file_copy)):
