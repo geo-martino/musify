@@ -12,7 +12,7 @@ from typing import List, Optional, Mapping, Any, Callable, MutableMapping
 from dateutil.relativedelta import relativedelta
 
 from syncify.enums.tags import TagName
-from syncify.local.library import LocalLibrary, MusicBee
+from syncify.local.library import LocalLibrary, MusicBee, LocalFolder
 from syncify.report import Report
 from syncify.settings import Settings
 from syncify.spotify.api import API
@@ -139,6 +139,25 @@ class Syncify(Settings, Report):
             data = json.load(f)
 
         return data
+
+    def _get_limited_folders(self) -> List[LocalFolder]:
+        """Returns a limited set of local folders based on config conditions"""
+        # get filter conditions
+        include_prefix = self.cfg_run.get("filter", {}).get("include", {}).get("prefix", "").strip().lower()
+        exclude_prefix = self.cfg_run.get("filter", {}).get("exclude", {}).get("prefix", "").strip().lower()
+        start = self.cfg_run.get("filter", {}).get("start", "").strip().lower()
+        stop = self.cfg_run.get("filter", {}).get("stop", "").strip().lower()
+
+        folders = []
+        for folder in self.local_library.folders:  # apply filter
+            name = folder.name.strip().lower()
+            conditionals = [not include_prefix or name.startswith(include_prefix),
+                            not exclude_prefix or not name.startswith(exclude_prefix),
+                            not start or name >= start, not stop or name <= stop]
+            if all(conditionals):
+                folders.append(folder)
+
+        return folders
 
     ###########################################################################
     ## Maintenance/Utilities
@@ -319,12 +338,16 @@ class Syncify(Settings, Report):
         """Run check on entire library by album and update URI tags on file"""
         self.logger.debug("Check and update URIs: START")
 
-        albums = self.local_library.albums
+        folders = self._get_limited_folders()
         cfg = self.cfg_run["spotify"]
 
         allow_karaoke = AlgorithmSettings.ITEMS.allow_karaoke
         checker = Checker(api=self.api, allow_karaoke=allow_karaoke)
-        checker.check(albums, interval=cfg.get("check", {}).get("interval", 10))
+
+        try:
+            checker.check(folders, interval=cfg.get("check", {}).get("interval", 10))
+        except SystemExit:
+            self.print_line()
 
         self.logger.info(f"\33[1;95m ->\33[1;97m Updating tags for {len(self.local_library)} tracks: uri \33[0m")
         results = self.local_library.save_tracks(tags=TagName.URI, replace=True, dry_run=self.dry_run)
@@ -337,10 +360,7 @@ class Syncify(Settings, Report):
         self.logger.debug("Check and update URIs: DONE\n")
 
     def search(self):
-        """
-        Run all methods for searching, checking, and storing URI associations for local files.
-        This does not save URI associations to the file.
-        """
+        """Run all methods for searching, checking, and saving URI associations for local files."""
         self.logger.debug("Search and match: START")
 
         albums = self.local_library.albums
@@ -358,9 +378,20 @@ class Syncify(Settings, Report):
         searcher = Searcher(api=self.api, allow_karaoke=allow_karaoke)
         searcher.search(albums)
 
-        checker = Checker(api=self.api, allow_karaoke=allow_karaoke)
-        checker.check(albums, interval=cfg.get("check", {}).get("interval", 10))
+        try:
+            checker = Checker(api=self.api, allow_karaoke=allow_karaoke)
+            checker.check(albums, interval=cfg.get("check", {}).get("interval", 10))
+        except SystemExit:
+            self.print_line()
 
+        self.logger.info(f"\33[1;95m ->\33[1;97m Updating tags for {len(self.local_library)} tracks: uri \33[0m")
+        results = self.local_library.save_tracks(tags=TagName.URI, replace=True, dry_run=self.dry_run)
+
+        if results:
+            self.print_line(STAT)
+        self.local_library.log_save_tracks(results)
+        self.logger.info(f"\33[92m    Done | Set tags for {len(results)} tracks \33[0m")
+        self.print_line()
         self.logger.debug("Search and match: DONE\n")
 
     ###########################################################################
@@ -394,21 +425,7 @@ class Syncify(Settings, Report):
     def process_compilations(self):
         """Run all methods for setting and updating local track tags for compilation albums"""
         self.logger.debug("Update compilations: START")
-
-        # get filter conditions
-        include_prefix = self.cfg_run.get("filter", {}).get("include", {}).get("prefix", "").strip().lower()
-        exclude_prefix = self.cfg_run.get("filter", {}).get("exclude", {}).get("prefix", "").strip().lower()
-        start = self.cfg_run.get("filter", {}).get("start", "").strip().lower()
-        stop = self.cfg_run.get("filter", {}).get("stop", "").strip().lower()
-
-        folders = []
-        for folder in self.local_library.folders:  # apply filter
-            name = folder.name.strip().lower()
-            conditionals = [not include_prefix or name.startswith(include_prefix),
-                            not exclude_prefix or not name.startswith(exclude_prefix),
-                            not start or name >= start, not stop or name <= stop]
-            if all(conditionals):
-                folders.append(folder)
+        folders = self._get_limited_folders()
 
         # get settings
         replace = self.cfg_run.get("local", {}).get("update", {}).get("replace", False)
@@ -510,7 +527,6 @@ if __name__ == "__main__":
 
 ## SELECTED FOR DEVELOPMENT
 # TODO: update the readme
-# TODO: BUG - check the numbers on loaded local playlists, some are too low
 # TODO: reimplement terminal parser for all kwargs
 # TODO: test on linux/mac platforms
 #  largely concerned about local playlist saving

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from os.path import exists
-from typing import Any, List, Mapping, Optional, Self, Collection, Union
+from typing import Any, List, Mapping, Optional, Self, Collection, Union, Set
 
 from syncify.local.playlist.processor.base import TrackProcessor
 from syncify.local.playlist.processor.compare import TrackCompare
@@ -43,11 +43,11 @@ class TrackMatch(TrackProcessor):
 
         # tracks to include even if they don't meet match conditions
         include_str: str = source.get("ExceptionsInclude")
-        include: Optional[List[str]] = include_str.split("|") if isinstance(include_str, str) else None
+        include: Optional[Set[str]] = set(include_str.split("|")) if isinstance(include_str, str) else None
 
         # tracks to exclude even if they do meet match conditions
         exclude_str: str = source.get("Exceptions")
-        exclude: Optional[List[str]] = exclude_str.split("|") if isinstance(exclude_str, str) else None
+        exclude: Optional[Set[str]] = set(exclude_str.split("|")) if isinstance(exclude_str, str) else None
 
         comparators: Optional[List[TrackCompare]] = TrackCompare.from_xml(xml=xml)
 

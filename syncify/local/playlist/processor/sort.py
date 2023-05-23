@@ -23,11 +23,6 @@ def get_field_from_code(field_code: int) -> Optional[Name]:
         return TagName.from_value(field_code)
     elif field_code in [e.value for e in PropertyName.all()]:
         return PropertyName.from_value(field_code)
-    elif field_code == 78:
-        # 78 == album including articles like 'the' and 'a' etc.
-        # 30 == album ignoring articles like 'the' and 'a' etc.
-        # program doesn't have functionality to discern between each so just default to 30
-        return TagName.ALBUM
     else:
         raise FieldError(f"Field code not recognised", field=field_code)
 
@@ -63,7 +58,7 @@ class TrackSort(TrackProcessor):
     """
 
     # define custom sort codes
-    _custom_sort: Mapping[int, Mapping[Name, bool]] = {
+    _custom_sort: MutableMapping[int, Mapping[Name, bool]] = {
         6: {
             TagName.ALBUM: False,
             TagName.DISC: False,
@@ -71,6 +66,9 @@ class TrackSort(TrackProcessor):
             PropertyName.FILENAME: False
         }
     }
+    # TODO: implement field_code 78 - manual order according to MusicBee library file.
+    #  This is a workaround
+    _custom_sort[78] = _custom_sort[6]
 
     @classmethod
     def sort_by_field(cls, tracks: List[LocalTrack], field: Optional[Name] = None, reverse: bool = False):
@@ -225,11 +223,10 @@ class TrackSort(TrackProcessor):
 
         fields = copy(fields)
         fields.pop(field)
-        tag_name = cls._get_tag(field)
 
         # sort each group and recurse through each field for each group
         for i, (key, tracks) in enumerate(tracks_grouped.items(), 1):
-            tracks.sort(key=lambda t: (t[tag_name] is None, t[tag_name]), reverse=reverse)
+            cls.sort_by_field(tracks=tracks, field=field, reverse=reverse)
             tracks_grouped[key] = cls._sort_by_fields(cls.group_by_field(tracks, field=field), fields=fields)
 
         return tracks_grouped

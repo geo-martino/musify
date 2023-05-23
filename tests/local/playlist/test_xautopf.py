@@ -64,12 +64,12 @@ def test_load_playlist_1():
     assert pl.matcher.match_all
     assert pl.matcher.library_folder == path_resources.rstrip("\\/")
     assert pl.matcher.original_folder == ".."
-    assert pl.matcher.include_paths == [path_track_flac.lower(), path_track_wma.lower()]
-    assert pl.matcher.exclude_paths == [
-        join(path_resources, "playlist", "exclude_me.flac").lower(),
+    assert set(pl.matcher.include_paths) == {path_track_wma.lower(), path_track_flac.lower()}
+    assert set(pl.matcher.exclude_paths) == {
         join(path_resources, "playlist", "exclude_me_2.mp3").lower(),
-        path_track_mp3.lower()
-    ]
+        path_track_mp3.lower(),
+        join(path_resources, "playlist", "exclude_me.flac").lower(),
+    }
 
     # limit
     assert pl.limiter is None

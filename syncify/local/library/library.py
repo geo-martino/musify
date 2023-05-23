@@ -214,7 +214,7 @@ class LocalLibrary(Library, LocalCollectionFiltered):
         width = self.get_max_width(self._playlist_paths)
         self.logger.report(
             f"\33[1;96m{'LIBRARY URIS':<{width}}\33[1;0m |"
-            f"\33[92m{sum([track.has_uri for track in self.tracks]):>6} available \33[0m|"
+            f"\33[92m{sum([track.has_uri is True for track in self.tracks]):>6} available \33[0m|"
             f"\33[91m{sum([track.has_uri is None for track in self.tracks]):>6} missing \33[0m|"
             f"\33[93m{sum([track.has_uri is False for track in self.tracks]):>6} unavailable \33[0m|"
             f"\33[1;94m{len(self.tracks):>6} total \33[0m"
@@ -271,7 +271,7 @@ class LocalLibrary(Library, LocalCollectionFiltered):
         """Log stats on currently loaded playlists"""
         max_width = self.get_max_width(self.playlists)
 
-        self.logger.report("\33[1;96mFound the following Local playlists: \33[0m")
+        self.logger.report("\33[1;96mFound the following local playlists: \33[0m")
         for name, playlist in self.playlists.items():
             self.logger.report(
                 f"\33[97m{self.align_and_truncate(name, max_width=max_width)} \33[0m|"

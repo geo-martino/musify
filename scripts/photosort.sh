@@ -5,7 +5,7 @@ setopt CAse_glob
 
 PHONE_INTERNAL=/storage/self/primary
 PHONE_SD=/storage/E42C-0EA8
-LAST_EXPORT='2023-05-13 18:57:08'
+LAST_EXPORT='2023-05-23 00:55:46'
 THIS_EXPORT=$(date '+%Y-%m-%d %H:%M:%S')
 
 ### CREATE DIRECTORIES ###

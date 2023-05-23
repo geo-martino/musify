@@ -318,9 +318,6 @@ class Matcher(Logger):
 
         scores_current: dict[str, float] = {}
 
-        print(source.clean_tags)
-        print(result.clean_tags)
-
         if TagName.TITLE in match_on:
             scores_current["title"] = self.match_name(source=source, result=result)
         if TagName.ARTIST in match_on:

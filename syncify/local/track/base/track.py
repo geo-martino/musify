@@ -186,10 +186,12 @@ class LocalTrack(TagReader, TagWriter, metaclass=ABCMeta):
 
     def __eq__(self, item):
         """URI attributes equal if at least one item has a URI, paths equal otherwise"""
-        if self.has_uri or item.has_uri:
+        if hasattr(item, "path"):
+            return self.path == item.path
+        elif self.has_uri or item.has_uri:
             return self.has_uri == item.has_uri and self.uri == item.uri
         else:
-            return self.path == item.path
+            return self.name == self.name
 
     def __copy__(self):
         """

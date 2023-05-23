@@ -233,14 +233,15 @@ class Library(ItemCollection, Logger, metaclass=ABCMeta):
 
             filtered[name] = deepcopy(playlist)
             for item in playlist.items:
-                for tag, values in filter_tags.items():
-                    value = item[tag]
-                    if isinstance(value, str) and value.strip().lower() in values:
-                        filtered[name].remove(item)
-                        break
+                for tag, filter_vals in filter_tags.items():
+                    item_val = item[tag]
+                    if isinstance(item_val, str):
+                        if any(v.strip().lower() in item_val.strip().lower() for v in filter_vals):
+                            filtered[name].remove(item)
+                            break
 
             self.logger.debug(f"{self.align_and_truncate(name, max_width=max_width)} | "
-                              f"Filtered out {len(filtered[name]) - len(playlist):>3} items")
+                              f"Filtered out {len(playlist) - len(filtered[name]):>3} items")
 
         self.print_line()
         return filtered
