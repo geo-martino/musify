@@ -126,6 +126,7 @@ class Checker(Matcher):
         :param collections: A list of collections to check.
         :param interval: Stop creating playlists after this many playlists have been created and pause for user input.
         :return: A result object containing the remapped items created during the check.
+            None when the user opted to quit (not skip) the checker before completion.
         """
         if len(collections) == 0 or all(not collection.items for collection in collections):
             self.logger.debug("\33[93mNo items to check. \33[0m")
@@ -153,22 +154,21 @@ class Checker(Matcher):
             try:
                 self._check_pause(page=i, page_size=interval, page_total=interval_total)
                 if not self.quit:
-                    if self.skip:
-                        self.quit = True
-                        self.skip = False
                     self._check_uri()
             except (KeyboardInterrupt, ConnectionError):
                 self.quit = True
 
             self._delete_temp_playlists()
-            if self.quit:  # quit check
+            if self.quit or self.skip:  # quit check
                 if i + 1 != len(collections):
                     bar.leave = False
                 break
 
-        result = CheckResult(
-            switched=self.final_switched, unavailable=self.final_unavailable, unchanged=self.final_unchanged
-        )
+        result = self._finalise() if not self.quit else None
+        self.logger.debug('Checking items: DONE\n')
+        return result
+
+    def _finalise(self) -> CheckResult:
         self.print_line()
         self.logger.report(f"\33[1;96mCHECK TOTALS \33[0m| "
                            f"\33[94m{len(self.final_switched):>5} switched  \33[0m| "
@@ -183,8 +183,9 @@ class Checker(Matcher):
         self.final_unavailable = []
         self.final_unchanged = []
 
-        self.logger.debug('Checking items: DONE\n')
-        return result
+        return CheckResult(
+            switched=self.final_switched, unavailable=self.final_unavailable, unchanged=self.final_unchanged
+        )
 
     ###########################################################################
     ## Pause to check items in current temp playlists
@@ -221,7 +222,7 @@ class Checker(Matcher):
                 break
             elif current_input.casefold() == 's' or current_input.casefold() == 'q':  # quit/skip
                 self.quit = current_input.casefold() == 'q' or self.quit
-                self.skip = True
+                self.skip = current_input.casefold() == 's' or self.skip
                 break
             elif current_input.casefold() == "h":  # print help text
                 print(help_text)
@@ -249,6 +250,8 @@ class Checker(Matcher):
     ###########################################################################
     def _check_uri(self):
         """Run operations to check that URIs are assigned to all the items in the current list of collections."""
+        skip_hold = self.quit or self.skip
+        self.skip = False
         for name, collection in self.playlist_name_collection.items():
             if not self.api.test():  # check if token has expired
                 self.logger.info_extra('\33[93mAPI token has expired, re-authorising... \33[0m')
@@ -276,10 +279,10 @@ class Checker(Matcher):
             self.final_unchanged += unchanged
             self.switched.clear()
 
-            if self.skip:
+            if self.quit or self.skip:
                 break
 
-        self.skip = False
+        self.skip = skip_hold
 
     def _match_to_remote(self, name: str):
         """
@@ -385,7 +388,7 @@ class Checker(Matcher):
                 elif current_input.casefold() == 's' or current_input.casefold() == 'q':  # quit/skip
                     self._log_padded([name, "Skipping all loops"], pad="<")
                     self.quit = current_input.casefold() == 'q' or self.quit
-                    self.skip = True
+                    self.skip = current_input.casefold() == 's' or self.skip
                     self.remaining.clear()
                     return
                 elif current_input.casefold() == 'h':  # print help

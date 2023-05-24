@@ -345,15 +345,17 @@ class Syncify(Settings, Report):
 
         allow_karaoke = AlgorithmSettings.ITEMS.allow_karaoke
         checker = Checker(api=self.api, allow_karaoke=allow_karaoke)
-        checker.check(folders, interval=self.cfg_run.get("interval", 10))
+        check_results = checker.check(folders, interval=self.cfg_run.get("interval", 10))
 
-        self.logger.info(f"\33[1;95m ->\33[1;97m Updating tags for {len(self.local_library)} tracks: uri \33[0m")
-        results = self.local_library.save_tracks(tags=TagName.URI, replace=True, dry_run=self.dry_run)
+        if check_results:
+            self.logger.info(f"\33[1;95m ->\33[1;97m Updating tags for {len(self.local_library)} tracks: uri \33[0m")
+            results = self.local_library.save_tracks(tags=TagName.URI, replace=True, dry_run=self.dry_run)
 
-        if results:
-            self.print_line(STAT)
-        self.local_library.log_save_tracks(results)
-        self.logger.info(f"\33[92m    Done | Set tags for {len(results)} tracks \33[0m")
+            if results:
+                self.print_line(STAT)
+            self.local_library.log_save_tracks(results)
+            self.logger.info(f"\33[92m    Done | Set tags for {len(results)} tracks \33[0m")
+
         self.print_line()
         self.logger.debug("Check and update URIs: DONE\n")
 
