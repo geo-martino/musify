@@ -52,6 +52,8 @@ class TrackMatch(TrackProcessor):
         comparators: Optional[List[TrackCompare]] = TrackCompare.from_xml(xml=xml)
 
         if len(comparators) == 1:
+            # when user has not set an explicit comparator, there will still be an 'allow all' comparator
+            # check for this 'allow all' comparator and remove if present to speed up comparisons
             c = comparators[0]
             if "contains" in c.condition.casefold() and len(c.expected) == 1 and not c.expected[0]:
                 comparators = None

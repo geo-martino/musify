@@ -36,18 +36,21 @@ class API(Basic, Items, Collections):
     ###########################################################################
     ## Misc endpoints
     ###########################################################################
-    def format_item_data(self, i: int, name: str, uri: str, total: int, max_width=50) -> str:
+    def format_item_data(self, i: int, name: str, uri: str, length: float = 0,
+                         total: int = 1, max_width: int = 50) -> str:
         """
         Pretty format item data for displaying to the user
 
         :param i: The position of this item in the collection.
         :param name: The name of the item.
         :param uri: The URI of the item.
+        :param length: The duration of the item in seconds.
         :param total: The total number of items in the collection
         :param max_width: The maximum width to print names as. Any name lengths longer than this will be truncated.
         """
         return f"\t\33[92m{str(i).zfill(len(str(total)))} \33[0m- "\
                f"\33[97m{self.align_and_truncate(name, max_width=max_width)} \33[0m| "\
+               f"\33[91m{str(int(length // 60)).zfill(2)}:{str(round(length % 60)).zfill(2)} \33[0m| "\
                f"\33[93m{uri} \33[0m- "\
                f"{convert(uri, type_in=IDType.URI, type_out=IDType.URL_EXT)}"
 
@@ -90,5 +93,7 @@ class API(Basic, Items, Collections):
 
             tracks = [item['track'] if kind == ItemType.PLAYLIST else item for item in r["items"]]
             for i, track in enumerate(tracks, i + 1):  # print each item in this page
-                print(self.format_item_data(i=i, name=track['name'], uri=track['uri'], total=r['total']))
+                length = track["duration_ms"] / 1000
+                print(self.format_item_data(i=i, name=track['name'], uri=track['uri'], length=length,
+                                            total=r['total']))
             print()

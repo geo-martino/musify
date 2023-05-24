@@ -175,10 +175,12 @@ class LocalTrack(TagReader, TagWriter, metaclass=ABCMeta):
 
     def as_dict(self):
         """Return a dictionary representation of the tags for this track."""
-        file_attrs = {k: getattr(self, k, None) for k in File.__dict__.keys()
-                      if not k.startswith("_") and k != "valid_extensions"}
-        track_attrs = {k: getattr(self, k, None) for k in TrackProperties.__dict__.keys() if not k.startswith("_")}
-        return {k: getattr(self, k) for k in Track.__dict__.keys() if not k.startswith("_")} | file_attrs | track_attrs
+        other_attrs = {k: getattr(self, k, None) for k in ["uri", "has_uri"]}
+        other_attrs = {k: getattr(self, k, None) for k in File.__dict__.keys()
+                       if not k.startswith("_") and k != "valid_extensions"} | other_attrs
+        other_attrs = {k: getattr(self, k, None) for k in TrackProperties.__dict__.keys()
+                       if not k.startswith("_")} | other_attrs
+        return {k: getattr(self, k) for k in Track.__dict__.keys() if not k.startswith("_")} | other_attrs
 
     def __hash__(self):
         """Uniqueness of an item is its URI + path"""

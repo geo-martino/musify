@@ -32,6 +32,8 @@ def check_spotify_type(
         uri_list = value.split(":")
         if not uri_list[0] == "spotify":
             return None
+        elif uri_list[1] == 'user':
+            return IDType.URI
         elif uri_list[1] != 'user' and len(uri_list[2]) == IDType.ID.value:
             return IDType.URI
     elif IDType.ID in types and len(value) == IDType.ID.value:

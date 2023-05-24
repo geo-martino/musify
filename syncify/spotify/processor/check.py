@@ -45,16 +45,6 @@ class Checker(Matcher):
 
     _default_name = "check"
 
-    @property
-    def exit(self) -> bool:
-        """The condition for exiting check. Setter sets both ``exit`` and ``done`` values."""
-        return self._exit
-
-    @exit.setter
-    def exit(self, value: bool):
-        self.done = value if value else self.done
-        self._exit = value
-
     def __init__(self, api: API, allow_karaoke: bool = False):
         Matcher.__init__(self, allow_karaoke=allow_karaoke)
 
@@ -62,8 +52,8 @@ class Checker(Matcher):
         self.playlist_name_urls = {}
         self.playlist_name_collection = {}
 
-        self.done = False  # when true, exit ItemChecker
-        self.exit = False  # when true, exit Syncify
+        self.skip = False  # when true, skip the current loop
+        self.quit = False  # when true, quit ItemChecker
 
         self.remaining: List[LocalTrack] = []
         self.switched: List[LocalTrack] = []
@@ -84,9 +74,11 @@ class Checker(Matcher):
             self.playlist_name_collection[name] = collection
 
             self.api.add_to_playlist(url, items=uris, skip_dupes=False)
-        except (KeyboardInterrupt, BaseException):
+        except KeyboardInterrupt:
+            self.quit = True
+        except BaseException:
             self.logger.error(traceback.format_exc())
-            self.exit = True
+            self.quit = True
 
     def _get_user_input(self, text: Optional[str] = None) -> str:
         """Print dialog with optional text and get the user's input."""
@@ -145,14 +137,14 @@ class Checker(Matcher):
 
         bar = self.get_progress_bar(iterable=collections, desc="Creating temp playlists", unit="playlists")
         interval_total = (len(collections) // interval) + (len(collections) % interval > 0)
-        self.done = False
-        self.exit = False
+        self.skip = False
+        self.quit = False
 
         for i, collection in enumerate(bar):
             self._make_temp_playlist(name=collection.name, collection=collection)
-            if self.exit:
+            if self.quit:  # quit check
                 self._delete_temp_playlists()
-                exit("User terminated program or critical failure occurred.")
+                break
 
             # skip loop if pause amount has not been reached and not finished making all playlists i.e. not last loop
             if len(self.playlist_name_urls) % interval != 0 and i + 1 != len(collections):
@@ -160,16 +152,18 @@ class Checker(Matcher):
 
             try:
                 self._check_pause(page=i, page_size=interval, page_total=interval_total)
-                if not self.done:
+                if not self.quit:
+                    if self.skip:
+                        self.quit = True
+                        self.skip = False
                     self._check_uri()
             except (KeyboardInterrupt, ConnectionError):
-                self.exit = True
+                self.quit = True
 
             self._delete_temp_playlists()
-            if self.exit:  # quit syncify
-                exit("User terminated program or critical failure occurred.")
-            elif self.done:
-                bar.leave = False
+            if self.quit:  # quit check
+                if i + 1 != len(collections):
+                    bar.leave = False
                 break
 
         result = CheckResult(
@@ -182,7 +176,7 @@ class Checker(Matcher):
                            f"\33[93m{len(self.final_unchanged):>5} unchanged \33[0m")
         self.print_line(REPORT)
 
-        self.done = True
+        self.skip = True
         self.remaining.clear()
         self.switched.clear()
         self.final_switched = []
@@ -209,14 +203,14 @@ class Checker(Matcher):
                                 "of items as originally added to temp playlist",
             "Spotify link/URI": "Print position, item name, URI, and URL from given link "
                                 "(useful to check current status of playlist)",
-            "s": "Delete current temporary playlists and skip remaining checks",
-            "q": "Delete current temporary playlists and quit Syncify",
+            "s": "Check for changes on current playlists, but skip any remaining checks",
+            "q": "Delete current temporary playlists and quit check",
             "h": "Show this dialogue again",
         }
 
         current_input = "START"
         help_text = self._format_help_text(options=options)
-        progress_text = f"{page // page_size}/{page_total}"
+        progress_text = f"{(page // page_size) + 1}/{page_total}"
 
         print("\n" + help_text)
         while current_input != '':  # while user has not hit return only
@@ -226,8 +220,8 @@ class Checker(Matcher):
             if current_input == "":  # user entered no option, break loop and return
                 break
             elif current_input.casefold() == 's' or current_input.casefold() == 'q':  # quit/skip
-                self.exit = current_input.casefold() == 'q'
-                self.done = True
+                self.quit = current_input.casefold() == 'q' or self.quit
+                self.skip = True
                 break
             elif current_input.casefold() == "h":  # print help text
                 print(help_text)
@@ -238,7 +232,8 @@ class Checker(Matcher):
 
                 print(f"\n\t\33[96mShowing items originally added to \33[94m{name}\33[0m:\n")
                 for i, item in enumerate(items, 1):
-                    print(self.api.format_item_data(i=i, name=item.name, uri=item.uri,
+                    length = getattr(item, "length", 0)
+                    print(self.api.format_item_data(i=i, name=item.name, uri=item.uri, length=length,
                                                     total=len(items), max_width=max_width))
                 print()
             elif check_spotify_type(current_input) is not None:  # print URL/URI/ID result
@@ -255,6 +250,10 @@ class Checker(Matcher):
     def _check_uri(self):
         """Run operations to check that URIs are assigned to all the items in the current list of collections."""
         for name, collection in self.playlist_name_collection.items():
+            if not self.api.test():  # check if token has expired
+                self.logger.info_extra('\33[93mAPI token has expired, re-authorising... \33[0m')
+                self.api.auth()
+
             name: str = self._default_name if isinstance(collection, list) else collection.name
             items: List[Item] = collection if isinstance(collection, list) else collection.items
             self._log_padded([name, f"{len(items):>6} total items"], pad='>')
@@ -277,8 +276,10 @@ class Checker(Matcher):
             self.final_unchanged += unchanged
             self.switched.clear()
 
-            if self.done or self.exit:
+            if self.skip:
                 break
+
+        self.skip = False
 
     def _match_to_remote(self, name: str):
         """
@@ -350,8 +351,9 @@ class Checker(Matcher):
             "n": "Leave item with no URI. (Syncify will still attempt to find this item at the next run)",
             "a": "Add in addition to 'u' or 'n' options to apply this setting to all items in this playlist",
             "r": "Recheck playlist for all items in the album",
-            "s": "Skip checking process for all playlists",
-            "q": "Skip checking process, delete current temporary playlists, and quit Syncify",
+            "p": "Print the local path of the current item if available",
+            "s": "Skip checking process for all current playlists",
+            "q": "Skip checking process for all current playlists and quit check",
             "h": "Show this dialogue again",
         }
 
@@ -382,8 +384,8 @@ class Checker(Matcher):
                     return
                 elif current_input.casefold() == 's' or current_input.casefold() == 'q':  # quit/skip
                     self._log_padded([name, "Skipping all loops"], pad="<")
-                    self.exit = current_input.casefold() == 'q'
-                    self.done = True
+                    self.quit = current_input.casefold() == 'q' or self.quit
+                    self.skip = True
                     self.remaining.clear()
                     return
                 elif current_input.casefold() == 'h':  # print help

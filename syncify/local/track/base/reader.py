@@ -148,22 +148,20 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
             * False if the track has no URI and is not available on remote server
             * None if the track has no URI, and it is not known whether it is available on remote server
         """
-        has_uri = None
-        uri = None
+        # WORKAROUND: for dodgy mp3 tag comments, split on null and take first value
         possible_values: Optional[List[str]] = self[self.uri_tag.name.casefold()]
         if possible_values is None or len(possible_values) == 0:
-            return uri, has_uri
+            return None, None
 
+        # WORKAROUND: for dodgy mp3 tag comments, split on null and take first value
+        possible_values: Optional[List[str]] = [val for values in possible_values for val in values.split('\x00')]
         for uri in possible_values:
             if uri == __UNAVAILABLE_URI_VALUE__:
-                has_uri = False
-                uri = None
-                break
-            elif check_spotify_type(uri, types=IDType.URI):
-                has_uri = True
-                break
+                return None, False
+            elif check_spotify_type(uri, types=IDType.URI) == IDType.URI:
+                return uri, True
 
-        return uri, has_uri
+        return None, None
 
     @abstractmethod
     def _read_images(self) -> Optional[List[Image.Image]]:

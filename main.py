@@ -330,8 +330,11 @@ class Syncify(Settings, Report):
     def report(self):
         """Produce various reports on loaded data"""
         self.logger.debug("Generate reports: START")
-        self.report_library_differences(self.local_library, self.spotify_library)
-        self.report_missing_tags(self.local_library.folders)
+        cfg = self.cfg_run.get("reports", {})
+        if cfg.get("library_differences").get("enabled", True):
+            self.report_library_differences(self.local_library, self.spotify_library)
+        if cfg.get("missing_tags").get("enabled", True):
+            self.report_missing_tags(self.local_library.folders)
         self.logger.debug("Generate reports: DONE\n")
 
     def check(self):
@@ -339,15 +342,10 @@ class Syncify(Settings, Report):
         self.logger.debug("Check and update URIs: START")
 
         folders = self._get_limited_folders()
-        cfg = self.cfg_run["spotify"]
 
         allow_karaoke = AlgorithmSettings.ITEMS.allow_karaoke
         checker = Checker(api=self.api, allow_karaoke=allow_karaoke)
-
-        try:
-            checker.check(folders, interval=cfg.get("check", {}).get("interval", 10))
-        except SystemExit:
-            self.print_line()
+        checker.check(folders, interval=self.cfg_run.get("interval", 10))
 
         self.logger.info(f"\33[1;95m ->\33[1;97m Updating tags for {len(self.local_library)} tracks: uri \33[0m")
         results = self.local_library.save_tracks(tags=TagName.URI, replace=True, dry_run=self.dry_run)
@@ -372,17 +370,12 @@ class Syncify(Settings, Report):
             self.print_line()
             return
 
-        cfg = self.cfg_run["spotify"]
-
         allow_karaoke = AlgorithmSettings.ITEMS.allow_karaoke
         searcher = Searcher(api=self.api, allow_karaoke=allow_karaoke)
         searcher.search(albums)
 
-        try:
-            checker = Checker(api=self.api, allow_karaoke=allow_karaoke)
-            checker.check(albums, interval=cfg.get("check", {}).get("interval", 10))
-        except SystemExit:
-            self.print_line()
+        checker = Checker(api=self.api, allow_karaoke=allow_karaoke)
+        checker.check(albums, interval=self.cfg_run.get("interval", 10))
 
         self.logger.info(f"\33[1;95m ->\33[1;97m Updating tags for {len(self.local_library)} tracks: uri \33[0m")
         results = self.local_library.save_tracks(tags=TagName.URI, replace=True, dry_run=self.dry_run)
@@ -507,9 +500,6 @@ if __name__ == "__main__":
     print_time(main.time_taken)
 
 ## BIGGER ONES
-# TODO: implement merge_playlists functions and,
-#  by extension, implement android library sync
-# TODO: implement XAutoPF full update functionality
 # TODO: function to open search website tabs for all songs in 2get playlist
 #  on common music stores/torrent sites
 # TODO: Automatically add songs added to each Spotify playlist to '2get'?
@@ -517,7 +507,9 @@ if __name__ == "__main__":
 #  Maybe add a final step that syncs Spotify back to library if
 #  uris for extra songs in Spotify playlists found in library
 # TODO: track audio recognition when searching using Shazam like service?
+#  Maybe https://audd.io/ ?
 # TODO: full search/match functionality including all item types
+
 
 ## SMALLER/GENERAL ONES
 # TODO: WMA images io
@@ -525,10 +517,19 @@ if __name__ == "__main__":
 # TODO: write tests, write tests, write tests
 # TODO: look into the requests_cache, it grows way too big sometimes?
 
+
 ## SELECTED FOR DEVELOPMENT
-# TODO: update the readme
-# TODO: reimplement terminal parser for all kwargs
-# TODO: test on linux/mac platforms
-#  largely concerned about local playlist saving
-#  linux does not pick up 'include' paths when loading xautopf playlists
+# TODO: implement terminal parser for function-specific kwargs?
+
+# TODO: implement merge_playlists functions and,
+#  by extension, implement android library sync
+# TODO: implement XAutoPF full update functionality
+# TODO: test on linux/mac
+#  - concerned about local playlist saving
+#  - linux does not pick up 'include' paths when loading xautopf playlists
+#    this is due to case-sensitive paths not being found in linux
+#    from using lowercase path cleaning logic in TrackMatch
+
 # TODO: parallelize all the things
+
+# TODO: update the readme
