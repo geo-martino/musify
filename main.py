@@ -511,6 +511,8 @@ if __name__ == "__main__":
 # TODO: track audio recognition when searching using Shazam like service?
 #  Maybe https://audd.io/ ?
 # TODO: full search/match functionality including all item types
+# TODO: new music playlist that adds songs from artists user follows that
+#  have been released within a given timeframe e.g. a day
 
 
 ## SMALLER/GENERAL ONES
@@ -521,6 +523,9 @@ if __name__ == "__main__":
 
 
 ## SELECTED FOR DEVELOPMENT
+# TODO: add collections inheritance on all classes with dunder funcs
+#  + extend near-collections to match abstractions
+
 # TODO: implement terminal parser for function-specific kwargs?
 
 # TODO: implement merge_playlists functions and,
