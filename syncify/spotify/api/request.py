@@ -1,6 +1,7 @@
 import json
 from datetime import datetime as dt
 from datetime import timedelta
+from http import HTTPStatus
 from os.path import dirname, join
 from time import sleep
 from typing import List, MutableMapping, Any, Optional
@@ -64,7 +65,7 @@ class RequestHandler(APIAuthoriser, Logger):
 
         while response is None or response.status_code >= 400:  # error response code received
             waited = False
-            if response:
+            if response is not None:
                 self._log_response(response=response, method=method, url=url)
                 self._raise_exception(response=response)
                 waited = self._check_for_wait_time(response=response)
@@ -111,7 +112,8 @@ class RequestHandler(APIAuthoriser, Logger):
             return self.session.request(
                 method=method.upper(), url=url, headers=headers, force_refresh=not use_cache, *args, **kwargs
             )
-        except ConnectionError:
+        except ConnectionError as ex:
+            self.logger.warning(ex)
             return
 
     def _log_response(self, response: BaseResponse, method: str, url: str):
@@ -127,11 +129,11 @@ class RequestHandler(APIAuthoriser, Logger):
     def _raise_exception(self, response: BaseResponse):
         """Check for response status codes that should raise an exception."""
         message = self._response_as_json(response).get('error', {}).get('message')
-        if response.status_code == 403:
-            message = message if message else "You are not authorised for this action."
-            raise APIError(message)
-        elif response.status_code == 404:
-            message = message if message else "Resource not found."
+        if not message:
+            status = HTTPStatus(response.status_code)
+            message = f"{status.phrase} | {status.description}"
+
+        if response.status_code in [400, 403, 404]:
             raise APIError(message)
 
     def _check_for_wait_time(self, response: BaseResponse) -> bool:

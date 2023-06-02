@@ -216,9 +216,10 @@ class Items(APIBase, metaclass=ABCMeta):
                 values[key] = result[0]
         elif isinstance(values, (list, set)) and all(isinstance(item, dict) and "id" in item for item in values):
             for key, result in results.items():
-                result_mapped = {r["id"]: r for r in result}
+                result_mapped = {r["id"]: r for r in result if r}
                 for item in values:
-                    item[key] = result_mapped[item["id"]]
+                    if item["id"] in result_mapped:
+                        item[key] = result_mapped[item["id"]]
 
         return results
 

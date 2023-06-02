@@ -32,7 +32,7 @@ class Basic(APIBase, metaclass=ABCMeta):
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: The response from the endpoint.
         """
-        if len(query) > 150:  # query is too long, skip
+        if not query or len(query) > 150:  # query is too short or too long, skip
             return []
 
         url = f'{__URL_API__}/search'
