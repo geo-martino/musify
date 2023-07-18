@@ -2,6 +2,7 @@ import json
 import os
 import re
 import shutil
+import sys
 import traceback
 from datetime import datetime as dt
 from glob import glob
@@ -479,6 +480,15 @@ if __name__ == "__main__":
 
     failed = False
     for i, func in enumerate(main.functions, 1):
+        title = f"Syncify: {func}"
+        if main.dry_run:
+            title += " (DRYRUN)"
+
+        if sys.platform == "win32":
+            os.system(f'title {title}')
+        elif sys.platform == "linux" or sys.platform == "darwin":
+            os.system(f"echo '\033]2;{title}\007'")
+
         # noinspection PyBroadException
         try:  # run the functions requested by the user
             main.logger.debug(f"START function: {func}")
