@@ -1,5 +1,7 @@
 # Syncify
 
+> Documentation is currently outdated after update to v0.3. Updates to reflect v0.3 changes by end of year.
+
 ### A complete local library and Spotify management tool. Main features include:
 - Search for and associate local songs to Spotify URIs
 - Synchronise local playlists with Spotify playlists
