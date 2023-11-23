@@ -28,10 +28,10 @@ mkdir -p \
 ### FIND PORT AND CONNECT ###
 # if ANDROID_SERIAL not set
 if [ -z "$ANDROID_SERIAL" ]; then
-  export PHONE_IP=192.168.178.102
+  export PHONE_IP=192.168.2.55
 
   if [ -z "$PHONE_PORT" ]; then
-    echo "\033[1;95m-> \033[1;97mScanning for debug port of Android device with IP address $PHONE_IP (sudo required)\033[0m"
+    echo "\n\033[1;95m-> \033[1;97mScanning for debug port of Android device with IP address $PHONE_IP (sudo required)\033[0m"
     unset PHONE_PORT
     export PHONE_PORT=$(sudo nmap -nsF ${PHONE_IP} -p 30000-49999 | awk -F/ '/tcp open/{print $1}')
   fi
@@ -51,12 +51,12 @@ fi
 
 # if ANDROID_SERIAL device not found in adb devices list
 if ! adb devices | grep -q "$ANDROID_SERIAL"; then
-  echo "\033[1;95m-> \033[1;97mConnecting to Android with address => $ANDROID_SERIAL\033[0m"
+  echo "\n\033[1;95m-> \033[1;97mConnecting to Android with address => $ANDROID_SERIAL\033[0m"
 	adb connect "$ANDROID_SERIAL"
 fi
 
 if adb devices | grep "$ANDROID_SERIAL" | grep -v -q "offline"; then
-	echo "\033[1;95m-> \033[1;97mExtracting files created since $LAST_EXPORT\033[0m"
+	echo "\n\033[1;95m-> \033[1;97mExtracting files created since $LAST_EXPORT\033[0m"
 	# ### COPY ###
 	adb shell "find '$PHONE_INTERNAL/DCIM/Camera' \
 		-mindepth 1 -maxdepth 1 -type f -newerct '$LAST_EXPORT' 2>/dev/null" | \
@@ -98,7 +98,7 @@ if adb devices | grep "$ANDROID_SERIAL" | grep -v -q "offline"; then
 		-mindepth 1 -maxdepth 1 -type f -iname '*.mp4' -o -iname '*.mpeg4' -newerct '$LAST_EXPORT'" | \
 		xargs -i sh -c 'adb pull "{}" $SORT_WHATSAPP && adb shell "rm \"{}\""'
 else
-	echo "\033[1;95m-> \033[93mSkipping file extraction: phone not found\033[0m"
+	echo "\n\033[1;95m-> \033[93mSkipping file extraction: phone not found\033[0m"
 fi
 
 ### PROCESS ###
@@ -119,7 +119,7 @@ rmdir --ignore-fail-on-non-empty \
 
 if [ -d "$SORT_CAMERA" ]
 then
-	echo "\033[1;95m-> \033[1;97mProcessing $(ls -1 "$SORT_CAMERA" | wc -l) files in Camera\033[0m"
+	echo "\n\033[1;95m-> \033[1;97mProcessing $(ls -1 "$SORT_CAMERA" | wc -l) files in Camera\033[0m"
 	# Rename from %Y%m%d_%H%M%S.(EXT) to %Y-%m-%d_%H.%M.%S.(EXT)
 	find "$SORT_CAMERA" -mindepth 1 -maxdepth 1 \
 		-type f -regextype posix-egrep -regex '.*/[0-9]{8}_[0-9]{6}.*' | \
@@ -133,7 +133,7 @@ fi
 
 if [ -d "$SORT_IPHONE" ]
 then
-	echo "\033[1;95m-> \033[1;97mProcessing $(ls -1 "$SORT_IPHONE" | wc -l) files in iPhone\033[0m"
+	echo "\n\033[1;95m-> \033[1;97mProcessing $(ls -1 "$SORT_IPHONE" | wc -l) files in iPhone\033[0m"
 	rm -f "$SORT_IPHONE"/*.AAE
 	mkdir -p "$SORT_IPHONE_LIVE" "$SORT_OTHER" "$SORT_OTHER_LIVE"
 
@@ -163,23 +163,35 @@ then
 
 	# rename image files based on metadata
 	echo "\033[1;95m · \033[1;97mAttempting to rename images based on metadata\033[0m"
-	exiftool -ext jpg '-FileName<${DateTimeOriginal}_${filename;$_=substr($_,4,4)}.%e' \
-		-d %Y-%m-%d_%H.%M.%S "$SORT_IPHONE" 2>/dev/null
-	exiftool -ext jpeg '-FileName<${DateTimeOriginal}_${filename;$_=substr($_,4,4)}.%e' \
-		-d %Y-%m-%d_%H.%M.%S "$SORT_IPHONE" 2>/dev/null
-	exiftool -ext png '-FileName<${DateTimeOriginal}_${filename;$_=substr($_,4,4)}.%e' \
-		-d %Y-%m-%d_%H.%M.%S "$SORT_IPHONE" 2>/dev/null
-	exiftool -ext heic '-FileName<${DateTimeOriginal}_${filename;$_=substr($_,4,4)}.%e' \
-		-d %Y-%m-%d_%H.%M.%S "$SORT_IPHONE" 2>/dev/null
-	exiftool -ext heic '-FileName<${DateTimeOriginal}_${filename;$_=substr($_,4,4)}.%e' \
-        -d %Y-%m-%d_%H.%M.%S "$SORT_IPHONE" 2>/dev/null
+	exiftool -ext jpg '-FileName<${DateTimeOriginal}_${filename;$_=substr($_,-8,4)}.%e' \
+		-d "%Y-%m-%d_%H.%M.%S" "$SORT_IPHONE" 2>/dev/null
+	exiftool -ext jpeg '-FileName<${DateTimeOriginal}_${filename;$_=substr($_,-9,4)}.%e' \
+		-d "%Y-%m-%d_%H.%M.%S" "$SORT_IPHONE" 2>/dev/null
+	exiftool -ext png '-FileName<${DateTimeOriginal}_${filename;$_=substr($_,-8,4)}.%e' \
+		-d "%Y-%m-%d_%H.%M.%S" "$SORT_IPHONE" 2>/dev/null
+	exiftool -ext heic '-FileName<${DateTimeOriginal}_${filename;$_=substr($_,-9,4)}.%e' \
+		-d "%Y-%m-%d_%H.%M.%S" "$SORT_IPHONE" 2>/dev/null
 
 	# convert heic files to jpg and remove original
 	echo "\033[1;95m · \033[1;97mConverting $(find "$SORT_IPHONE" -mindepth 1 -maxdepth 1 -type f -iname '*.HEIC' | wc -l) HEIC images to JPG\033[0m"
 	find "$SORT_IPHONE" -mindepth 1 -maxdepth 1 \
 		-type f -iname '*.HEIC' | \
 		sed -r "s|(.*)\.(\S+)|\1.\2 \1.jpg|g" | \
-		xargs -n2 bash -c 'heif-convert -q 100 $0 $1 && rm -f $0' 2>/dev/null
+		xargs -n2 bash -c 'heif-convert -q 100 $0 $1 && rm -f $0' 1>/dev/null
+
+	if [ -d "$SORT_IPHONE_LIVE" ]
+	then
+    # rename live video files based on metadata
+    echo "\033[1;95m · \033[1;97mAttempting to rename live videos based on metadata\033[0m"
+    find "$SORT_IPHONE_LIVE" -mindepth 1 -maxdepth 1 \
+      -type f -iname '*.MOV' | \
+      xargs -i sh -c 'echo {} $(mediainfo \
+      --Inform="General;%com.apple.quicktime.creationdate%" {} | \
+      sed -r "s|[+-][0-9]{2}.?[0-9]{2}$||g" | \
+      xargs -I {} date -d {} +%Y-%m-%d_%H.%M.%S) | \
+      sed -r "s|(\S+) (\S+)|\1 $SORT_IPHONE_LIVE/\2.MOV|g"' | \
+      xargs -n2 mv -n
+	fi
 
 	# rename video files based on metadata
 	echo "\033[1;95m · \033[1;97mAttempting to rename videos based on metadata\033[0m"
@@ -189,7 +201,7 @@ then
 		--Inform="General;%com.apple.quicktime.creationdate%" {} | \
 		sed -r "s|[+-][0-9]{2}.?[0-9]{2}$||g" | \
 		xargs -I {} date -d {} +%Y-%m-%d_%H.%M.%S) | \
-		sed -r "s|(\S+) (\S+)|\1 $SORT_IPHONE/\2.MOV|g"' | \
+		sed -n -r "s|(\S+) (\S+)|\1 $SORT_IPHONE/\2.MOV|p"' | \
 		xargs -n2 mv -n
 
 	echo "\033[1;95m · \033[1;97mAttempting to remove indexes from files if present\033[0m"
@@ -233,7 +245,7 @@ rmdir --ignore-fail-on-non-empty \
 
 if [ -d "$SORT_FOLDER" ]
 then
-	echo " · \033[92m$(find "$SORT_FOLDER" -maxdepth 1 -type f | wc -l) files processed with timestamps\033[0m"
+	echo "\n · \033[92m$(find "$SORT_FOLDER" -maxdepth 1 -type f | wc -l) files processed with timestamps\033[0m"
 	if [ -d "$SORT_LIVE" ]
 	then
 		# remove any live videos no longer present in main folder
@@ -256,6 +268,8 @@ else
 	echo " · \033[93mNo files processed\033[0m" 
 fi
 
-#echo "\033[1;95m-> \033[1;97mUpdating last export time to $THIS_EXPORT\033[0m"
+#echo "\n\033[1;95m-> \033[1;97mUpdating last export time to $THIS_EXPORT\033[0m"
 #sed -r -i "s|^LAST_EXPORT=.*|LAST_EXPORT='$THIS_EXPORT'|g" "${0:a}"
+
+echo
 

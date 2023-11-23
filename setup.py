@@ -4,7 +4,7 @@ from cx_Freeze import setup, Executable
 options = {"build_exe": {"packages": [],
                          "include_files": ['README.md', 'LICENSE'],
                          "optimize": 1},
-           "build": {"build_exe": "build/syncify_v2.0"},
+           "build": {"build_exe": "build/syncify_v0.3"},
            "install_exe": {"force": True},
            }
 
@@ -16,7 +16,7 @@ target = Executable(
 
 setup(
     name="Syncify",
-    version="2.0",
+    version="0.3",
     description="Synchronise your music library to Spotify",
     author="George M. Marino",
     options=options,

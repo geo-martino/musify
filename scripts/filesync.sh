@@ -49,7 +49,7 @@ unset IFS
 ### FIND PORT AND CONNECT ###
 # if ANDROID_SERIAL not set
 if [ -z "$ANDROID_SERIAL" ]; then
-  export PHONE_IP=192.168.178.102
+  export PHONE_IP=192.168.2.55
 
   if [ -z "$PHONE_PORT" ]; then
     echo "\033[1;95m-> \033[1;97mScanning for debug port of Android device with IP address $PHONE_IP (sudo required)\033[0m"

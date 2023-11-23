@@ -520,33 +520,33 @@ if __name__ == "__main__":
 #  uris for extra songs in Spotify playlists found in library
 # TODO: track audio recognition when searching using Shazam like service?
 #  Maybe https://audd.io/ ?
-# TODO: full search/match functionality including all item types
+# TODO: expand search/match functionality to include all item types
 # TODO: new music playlist that adds songs from artists user follows that
 #  have been released within a given timeframe e.g. a day
+# TODO: implement XAutoPF full update functionality
 
 
 ## SMALLER/GENERAL ONES
-# TODO: WMA images io
+# TODO: parallelize all the things
 # TODO: generally improve performance
-# TODO: write tests, write tests, write tests
 # TODO: look into the requests_cache, it grows way too big sometimes?
+# TODO: implement terminal parser for function-specific kwargs?
 
 
 ## SELECTED FOR DEVELOPMENT
-# TODO: add collections inheritance on all classes with dunder funcs
-#  + extend near-collections to match abstractions
-
-# TODO: implement terminal parser for function-specific kwargs?
-
-# TODO: implement merge_playlists functions and,
-#  by extension, implement android library sync
-# TODO: implement XAutoPF full update functionality
+# TODO: WMA images io
+# TODO: write tests, write tests, write tests
 # TODO: test on linux/mac
 #  - concerned about local playlist saving
 #  - linux does not pick up 'include' paths when loading xautopf playlists
 #    this is due to case-sensitive paths not being found in linux
 #    from using lowercase path cleaning logic in TrackMatch
 
-# TODO: parallelize all the things
+# TODO: add collections inheritance on all classes with dunder funcs
+#  + extend near-collections to match abstractions
+
+# TODO: implement merge_playlists functions and,
+#  by extension, implement android library sync
+
 
 # TODO: update the readme

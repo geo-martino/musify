@@ -1,11 +1,14 @@
-# system/other folders
+# system/other objects
 **.egg-info
 **.DS_Store
 **.ipynb_checkpoints
 **__pycache__
 **.vscode
 
-# bin files
+# virtualenvs
+.venv*
+
+# binary files
 **.coverage*
 **.env*
 **.secrets*
@@ -18,4 +21,4 @@
 
 # large data & log folders
 _data/
-_log/
+_logs/
