@@ -1,14 +1,14 @@
 import os
 from datetime import datetime
 from os.path import dirname, join, splitext, basename
-from typing import List
 
 import pytest
 
 from syncify.enums.tags import TagName, PropertyName
 from syncify.local.exception import IllegalFileTypeError
 from syncify.local.playlist import XAutoPF
-from syncify.local.playlist.processor import LimitType, ShuffleMode, ShuffleBy
+from syncify.local.playlist.processor.limit import LimitType
+from syncify.local.playlist.processor.sort import ShuffleMode, ShuffleBy
 from syncify.local.track import LocalTrack, FLAC, M4A, WMA, MP3
 from tests.common import path_txt
 from tests.local.playlist.playlist import copy_playlist_file, path_resources
@@ -88,7 +88,7 @@ def test_load_playlist_1():
         track.artist = None
     for i, track in enumerate(tracks, 1):
         track.track_number = i
-    tracks_actual: List[LocalTrack] = [
+    tracks_actual: list[LocalTrack] = [
         FLAC(path_track_flac), WMA(path_track_wma), MP3(path_track_mp3), M4A(path_track_m4a)
     ]
     tracks += tracks_actual
@@ -179,7 +179,7 @@ def test_save_playlist():
         track.artist = None
     for i, track in enumerate(tracks, 1):
         track.track_number = i
-    tracks_actual: List[LocalTrack] = [FLAC(path_track_flac), WMA(path_track_wma)]
+    tracks_actual: list[LocalTrack] = [FLAC(path_track_flac), WMA(path_track_wma)]
     tracks += tracks_actual
 
     pl = XAutoPF(

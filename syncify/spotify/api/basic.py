@@ -1,9 +1,11 @@
 from abc import ABCMeta
-from typing import MutableMapping, List, Any
+from collections.abc import Mapping
+from typing import Any
 
-from syncify.spotify import __URL_API__, ItemType
+from syncify.spotify.api import __URL_API__
 from syncify.spotify.api.request import RequestHandler
-from syncify.utils import limit_value
+from syncify.spotify.enums import ItemType
+from syncify.utils.helpers import limit_value
 from syncify.utils.logger import Logger
 
 
@@ -16,13 +18,13 @@ class Basic(APIBase, metaclass=ABCMeta):
     ###########################################################################
     ## GET endpoints
     ###########################################################################
-    def get_self(self) -> MutableMapping[str, Any]:
+    def get_self(self) -> Mapping[str, Any]:
         """``GET: /me`` - Get API response for information on current user"""
         return self.get(url=f'{__URL_API__}/me', use_cache=True, log_pad=71)
 
     def query(
             self, query: str, kind: ItemType, limit: int = 10, use_cache: bool = True
-    ) -> List[MutableMapping[str, Any]]:
+    ) -> list[Mapping[str, Any]]:
         """
         ``GET: /search`` - Query for items. Modify result types returned with kind parameter
 

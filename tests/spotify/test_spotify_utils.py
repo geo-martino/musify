@@ -1,7 +1,8 @@
 import pytest
 
 from syncify.enums import EnumNotFoundError
-from syncify.spotify import __URL_API__, __URL_EXT__, IDType, ItemType
+from syncify.spotify import __URL_API__, __URL_EXT__
+from syncify.spotify.enums import IDType, ItemType
 from syncify.spotify.exception import SpotifyError, SpotifyIDTypeError, SpotifyItemTypeError
 from syncify.spotify.utils import get_id_type, validate_id_type, get_item_type, validate_item_type, convert, extract_ids
 

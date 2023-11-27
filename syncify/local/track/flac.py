@@ -1,16 +1,15 @@
 import io
-from typing import Optional, List, Union, Collection, Any
+from typing import Any
+from collections.abc import Collection
 
 import mutagen
 import mutagen.flac
-import mutagen.flac
+import mutagen.id3
 from PIL import Image
-# noinspection PyProtectedMember
-from mutagen.id3 import PictureType
 
 from syncify.enums.tags import TagName, TagMap
 from syncify.local.file import open_image, get_image_bytes
-from syncify.local.track.base import LocalTrack
+from syncify.local.track.base.track import LocalTrack
 
 
 class FLAC(LocalTrack):
@@ -45,19 +44,19 @@ class FLAC(LocalTrack):
 
     # noinspection PyTypeChecker
     def __init__(
-            self, file: Union[str, mutagen.FileType, mutagen.flac.FLAC], available: Optional[Collection[str]] = None
+            self, file: str | mutagen.FileType | mutagen.flac.FLAC, available: Collection[str] | None = None
     ):
         LocalTrack.__init__(self, file=file, available=available)
         self._file: mutagen.flac.FLAC = self._file
 
-    def _read_images(self) -> Optional[List[Image.Image]]:
+    def _read_images(self) -> list[Image.Image] | None:
         values = self._file.pictures
         return [Image.open(io.BytesIO(value.data)) for value in values] if len(values) > 0 else None
 
     def _check_for_images(self) -> bool:
         return len(self._file.pictures) > 0
 
-    def _write_tag(self, tag_id: Optional[str], tag_value: Any, dry_run: bool = True) -> bool:
+    def _write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
         if tag_value is None:
             return self.delete_tag(tag_id, dry_run=dry_run)
 
@@ -75,7 +74,7 @@ class FLAC(LocalTrack):
 
             picture = mutagen.flac.Picture()
             # noinspection PyUnresolvedReferences
-            picture.type = getattr(mutagen.id3.PictureType, image_type.upper(), mutagen.id3.PictureType.COVER_FRONT)
+            picture.type = getattr(mutagen.id3.PictureType, image_type.upper())
             picture.mime = Image.MIME[image.format]
             picture.data = get_image_bytes(image)
 

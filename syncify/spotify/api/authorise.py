@@ -1,9 +1,9 @@
 import json
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, MutableMapping
 from datetime import datetime
 from socket import socket, AF_INET, SOCK_STREAM
-from typing import Optional, Any, Mapping, Union, List, MutableMapping
+from typing import Any
 from urllib.parse import urlparse, parse_qs
 from webbrowser import open as webopen
 
@@ -87,41 +87,41 @@ class APIAuthoriser(Logger):
     def __init__(
         self,
         auth_args: Mapping[str, Any],
-        user_args: Optional[Mapping[str, Any]] = None,
-        refresh_args: Optional[Mapping[str, Any]] = None,
-        test_args: Optional[Mapping[str, Any]] = None,
-        test_condition: Optional[Callable[[Union[str, Mapping[str, Any]]], bool]] = None,
+        user_args: Mapping[str, Any] | None = None,
+        refresh_args: Mapping[str, Any] | None = None,
+        test_args: Mapping[str, Any] | None = None,
+        test_condition: Callable[[str | Mapping[str, Any]], bool] | None = None,
         test_expiry: int = 0,
-        token: Optional[Mapping[str, Any]] = None,
-        token_file_path: Optional[str] = None,
-        token_key_path: Optional[List[str]] = None,
+        token: Mapping[str, Any] | None = None,
+        token_file_path: str | None = None,
+        token_key_path: list[str] | None = None,
         header_key: str = "Authorization",
-        header_prefix: Optional[str] = "Bearer ",
-        header_extra: Optional[Mapping[str, str]] = None,
+        header_prefix: str | None = "Bearer ",
+        header_extra: Mapping[str, str] | None = None,
     ):
         Logger.__init__(self)
 
         # maps of requests parameters to be passed to `requests` functions
         self.auth_args: Mapping[str, Any] = auth_args
-        self.user_args: Optional[Mapping[str, Any]] = user_args
-        self.refresh_args: Optional[Mapping[str, Any]] = refresh_args
+        self.user_args: Mapping[str, Any] | None = user_args
+        self.refresh_args: Mapping[str, Any] | None = refresh_args
 
         # test params and conditions
-        self.test_args: Optional[Mapping[str, Any]] = test_args
-        self.test_condition: Optional[Callable[[Union[str, Mapping[str, Any]]], bool]] = test_condition
+        self.test_args: Mapping[str, Any] | None = test_args
+        self.test_condition: Callable[[str | Mapping[str, Any]], bool] | None = test_condition
         self.test_expiry: int = test_expiry
 
         # store token
-        self.token: Optional[Mapping[str, Any]] = token
-        self.token_file_path: Optional[str] = token_file_path
-        self.token_key_path: Optional[List[str]] = token_key_path if token_key_path is not None else ["access_token"]
+        self.token: Mapping[str, Any] | None = token
+        self.token_file_path: str | None = token_file_path
+        self.token_key_path: list[str] | None = token_key_path if token_key_path is not None else ["access_token"]
 
         # information for the final headers
         self.header_key: str = header_key
         self.header_prefix: str = header_prefix if header_prefix else ""
         self.header_extra: Mapping[str, str] = header_extra if header_extra else {}
 
-    def auth(self, force_load: bool = False, force_new=False) -> MutableMapping[str, str]:
+    def auth(self, force_load: bool = False, force_new=False) -> Mapping[str, str]:
         """
         Main method for authentication, tests/refreshes/reauthorises as needed
 

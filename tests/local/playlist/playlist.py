@@ -1,7 +1,6 @@
 import os
 import shutil
 from os.path import join, basename, dirname, exists
-from typing import Tuple
 
 from tests.common import path_resources, path_cache
 
@@ -13,7 +12,7 @@ path_playlist_xautopf_bp = join(path_playlist_resources, "The Best Playlist Ever
 path_playlist_xautopf_ra = join(path_playlist_resources, "Recently Added.xautopf")
 
 
-def copy_playlist_file(path: str) -> Tuple[str, str]:
+def copy_playlist_file(path: str) -> (str, str):
     """Copy a playlist file to the test cache, returning the original and copy paths."""
     path_file_base = path
     path_file_copy = join(path_playlist_cache, basename(path_file_base))

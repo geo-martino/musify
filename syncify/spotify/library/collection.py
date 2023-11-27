@@ -1,13 +1,15 @@
 from abc import ABCMeta, abstractmethod
+from collections.abc import Mapping, MutableMapping
 from copy import copy
-from typing import Any, List, MutableMapping, Optional, Self, Mapping, Union
+from typing import Any, Self
 
 from syncify.abstract.collection import ItemCollection, Album
 from syncify.abstract.item import Item
-from syncify.spotify import IDType, ItemType, APIMethodInputType
-from syncify.spotify.utils import validate_item_type, convert, extract_ids, get_id_type
-from syncify.spotify.exception import SpotifyIDTypeError
+from syncify.spotify.api import APIMethodInputType
 from syncify.spotify.base import Spotify
+from syncify.spotify.enums import IDType, ItemType
+from syncify.spotify.exception import SpotifyIDTypeError
+from syncify.spotify.utils import validate_item_type, convert, extract_ids, get_id_type
 from syncify.spotify.library.item import SpotifyTrack, SpotifyArtist, SpotifyItem
 
 
@@ -16,12 +18,12 @@ class SpotifyCollection(ItemCollection, Spotify, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def items(self) -> List[SpotifyItem]:
+    def items(self) -> list[SpotifyItem]:
         raise NotImplementedError
 
     @classmethod
     @abstractmethod
-    def load(cls, value: APIMethodInputType, use_cache: bool = True, items: Optional[List[SpotifyItem]] = None) -> Self:
+    def load(cls, value: APIMethodInputType, use_cache: bool = True, items: list[SpotifyItem] | None = None) -> Self:
         """
         Generate a new object, calling all required endpoints to get a complete set of data for this item type.
 
@@ -55,7 +57,7 @@ class SpotifyCollection(ItemCollection, Spotify, metaclass=ABCMeta):
         except (ValueError, AssertionError, TypeError):  # reload response from the API
             return cls.api.get_collections(value, kind=item_type, use_cache=use_cache)[0]
 
-    def __getitem__(self, key: Union[str, int, Item]) -> SpotifyItem:
+    def __getitem__(self, key: str | int | Item) -> SpotifyItem:
         if isinstance(key, int):  # simply index the list or items
             return self.items[key]
         elif isinstance(key, Item):  # take the URI
@@ -102,15 +104,15 @@ class SpotifyAlbum(Album, SpotifyCollection):
         return self.response["name"]
 
     @property
-    def items(self) -> List[SpotifyTrack]:
+    def items(self) -> list[SpotifyTrack]:
         return self.tracks
 
     @property
-    def tracks(self) -> List[SpotifyTrack]:
+    def tracks(self) -> list[SpotifyTrack]:
         return self._tracks
 
     @property
-    def artists(self) -> List[SpotifyArtist]:
+    def artists(self) -> list[SpotifyArtist]:
         return self._artists
 
     @property
@@ -126,7 +128,7 @@ class SpotifyAlbum(Album, SpotifyCollection):
         return self.response["total_tracks"]
 
     @property
-    def genres(self) -> Optional[List[str]]:
+    def genres(self) -> list[str] | None:
         return self.response.get("genres")
 
     @property
@@ -138,7 +140,7 @@ class SpotifyAlbum(Album, SpotifyCollection):
         return self.response['album_type'] == "compilation"
 
     @property
-    def image_links(self) -> MutableMapping[str, str]:
+    def image_links(self) -> Mapping[str, str]:
         images = {image["height"]: image["url"] for image in self.response["images"]}
         return {"cover_front": url for height, url in images.items() if height == max(images)}
 
@@ -147,13 +149,13 @@ class SpotifyAlbum(Album, SpotifyCollection):
         return len(self.image_links) > 0
 
     @property
-    def length(self) -> Optional[float]:
+    def length(self) -> float | None:
         """Total duration of all tracks in this collection"""
         lengths = [track.length for track in self.tracks]
         return sum(lengths) if lengths else None
 
     @property
-    def rating(self) -> Optional[int]:
+    def rating(self) -> int | None:
         return self.response.get('popularity')
 
     def __init__(self, response: MutableMapping[str, Any]):
@@ -171,7 +173,7 @@ class SpotifyAlbum(Album, SpotifyCollection):
 
     @classmethod
     def load(cls, value: APIMethodInputType, use_cache: bool = True,
-             items: Optional[List[SpotifyTrack]] = None) -> Self:
+             items: list[SpotifyTrack] | None = None) -> Self:
         cls._check_for_api()
         obj = cls.__new__(cls)
         response = cls._load_response(value, use_cache=use_cache)
@@ -182,7 +184,7 @@ class SpotifyAlbum(Album, SpotifyCollection):
             obj.reload(use_cache=use_cache)
         else:  # attempt to find items for this album in the given items
             uri_tracks: Mapping[str, SpotifyTrack] = {track.uri: track for track in items}
-            uri_get: List[str] = []
+            uri_get: list[str] = []
 
             for i, track_raw in enumerate(response["tracks"]["items"]):
                 # loop through the skeleton response for this album

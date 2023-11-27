@@ -1,15 +1,18 @@
-from typing import Optional, List, Set, Union, MutableMapping, Any
+from collections.abc import Mapping
+from typing import Any
 from urllib.parse import urlparse
 
 from syncify.enums import EnumNotFoundError
-from syncify.spotify import __URL_API__, __URL_EXT__, IDType, ItemType, APIMethodInputType
+from syncify.spotify import __URL_API__, __URL_EXT__
+from syncify.spotify.api import APIMethodInputType
+from syncify.spotify.enums import IDType, ItemType
 from syncify.spotify.exception import SpotifyError, SpotifyIDTypeError, SpotifyItemTypeError
-from syncify.utils import make_list
+from syncify.utils.helpers import make_list
 
 
 def check_spotify_type(
-        value: str, types: Union[IDType, List[IDType]] = IDType.ALL
-) -> Optional[IDType]:
+        value: str, types: IDType | list[IDType] = IDType.ALL
+) -> IDType | None:
     """
     Check that the given value is of a valid Spotify type.
 
@@ -20,7 +23,7 @@ def check_spotify_type(
     if not isinstance(value, str):
         return
 
-    types: Set[IDType] = set(make_list(types))
+    types: set[IDType] = set(make_list(types))
     if IDType.ALL in types:
         types = IDType.all()
 
@@ -108,7 +111,7 @@ def get_item_type(values: APIMethodInputType) -> ItemType:
     return __get_item_type(values)
 
 
-def __get_item_type(value: Union[str, MutableMapping[str, Any]]) -> Optional[ItemType]:
+def __get_item_type(value: str | Mapping[str, Any]) -> ItemType | None:
     """
     Determine the Spotify item type of the given ``value`` and return its type. Value may be:
         * A string representing a URL/URI/ID.
@@ -165,7 +168,7 @@ def validate_item_type(values: APIMethodInputType, kind: ItemType):
 
 
 def convert(
-        value: str, kind: Optional[ItemType] = None, type_in: IDType = IDType.ALL, type_out: IDType = IDType.ID
+        value: str, kind: ItemType | None = None, type_in: IDType = IDType.ALL, type_out: IDType = IDType.ID
 ) -> str:
     """
     Converts ID to required format - API URL, EXT URL, URI, or ID.
@@ -220,7 +223,7 @@ def convert(
         return id_
 
 
-def extract_ids(values: APIMethodInputType, kind: Optional[ItemType] = None) -> List[str]:
+def extract_ids(values: APIMethodInputType, kind: ItemType | None = None) -> list[str]:
     """
     Extract a list of IDs from input ``values``. Items may be:
         * A string representing a URL/URI/ID.

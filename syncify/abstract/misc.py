@@ -2,9 +2,10 @@ import re
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Mapping, List, MutableMapping, Any, Optional
+from typing import Any
+from collections.abc import Mapping
 
-from syncify.utils import make_list
+from syncify.utils.helpers import make_list
 
 
 @dataclass
@@ -17,7 +18,7 @@ class PrettyPrinter(metaclass=ABCMeta):
     """Generic base class for pretty printing. Classes can inherit this class to gain pretty print functionality."""
 
     @staticmethod
-    def _camel_to_snake(value: str, prefix: Optional[str] = None) -> str:
+    def _camel_to_snake(value: str, prefix: str | None = None) -> str:
         """Convert snake_case to CamelCase. Optionally, add a given prefix"""
         value = re.sub('([A-Z])', lambda m: f"_{m.group(1).lower()}", value.strip("_ "))
         value = re.sub(r"[_ ]+", "_", value).strip("_ ")
@@ -26,14 +27,14 @@ class PrettyPrinter(metaclass=ABCMeta):
         return value.lower()
 
     @staticmethod
-    def _snake_to_camel(value: str, prefix: Optional[str] = None) -> str:
+    def _snake_to_camel(value: str, prefix: str | None = None) -> str:
         """Convert snake_case to CamelCase. Optionally, remove a given prefix"""
         if prefix is not None:
             value = re.sub(f'^{prefix}', "", value)
         return re.sub('_(.)', lambda m: m.group(1).upper(), value.strip())
 
     @abstractmethod
-    def as_dict(self) -> MutableMapping[str, Any]:
+    def as_dict(self) -> Mapping[str, Any]:
         """Return a dictionary representation of the key attributes of this object"""
         raise NotImplementedError
 
@@ -79,7 +80,7 @@ class PrettyPrinter(metaclass=ABCMeta):
 
         return result.format("\n".join([" " * indent + attribute for attribute in attributes_repr]))
 
-    def __to_str(self, attributes: Mapping[str, Any], indent: int = 2, increment: int = 2) -> List[str]:
+    def __to_str(self, attributes: Mapping[str, Any], indent: int = 2, increment: int = 2) -> list[str]:
         if len(attributes) == 0:
             return []
         max_key_width = max(len(tag_name) for tag_name in attributes)
@@ -91,19 +92,19 @@ class PrettyPrinter(metaclass=ABCMeta):
 
         for attr_key, attr_val in attributes.items():
             attr_key = attr_key.title().replace('_', ' ')
-            attr_val_repr = f"{attr_key : <{max_key_width}} = {repr(attr_val)}"
+            attr_val_repr = f"{attr_key: <{max_key_width}} = {repr(attr_val)}"
 
             if isinstance(attr_val, set):
                 attr_val = list(attr_val)
 
             if isinstance(attr_val, PrettyPrinter) or isinstance(attr_val, datetime):
-                attr_val_repr = f"{attr_key : <{max_key_width}} = {attr_val}"
+                attr_val_repr = f"{attr_key: <{max_key_width}} = {attr_val}"
             elif isinstance(attr_val, list) and len(attr_val) > 0:
                 if isinstance(attr_val[0], PrettyPrinter) or len(str(attr_val)) > max_val_width:
                     pp_repr = "[\n" + "{}\n" + " " * indent_prev + "]"
                     pp = [" " * indent + str(v).replace("\n", "\n" + " " * indent) for v in attr_val]
                     attr_val = pp_repr.format(",\n".join(pp))
-                    attr_val_repr = f"{attr_key : <{max_key_width}} = {attr_val}"
+                    attr_val_repr = f"{attr_key: <{max_key_width}} = {attr_val}"
             elif isinstance(attr_val, dict):
                 pp_repr = " " * indent + "{}"
                 pp = self.__to_str(attr_val, indent=indent, increment=increment)
@@ -115,7 +116,7 @@ class PrettyPrinter(metaclass=ABCMeta):
                 else:
                     pp_repr = pp_repr.format("\n".join(pp)).replace("\n", "\n" + " " * indent)
                     attr_val = "{\n" + pp_repr + "\n" + " " * indent_prev + "}"
-                attr_val_repr = f"{attr_key : <{max_key_width}} = {attr_val}"
+                attr_val_repr = f"{attr_key: <{max_key_width}} = {attr_val}"
 
             attributes_repr.append(attr_val_repr)
 

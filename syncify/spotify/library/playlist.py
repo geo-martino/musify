@@ -1,11 +1,13 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, List, MutableMapping, Optional, Self, Mapping, Literal, Collection, Union
+from typing import Any, Self, Literal
+from collections.abc import Collection, Mapping, MutableMapping
 
 from syncify.abstract.item import Item
 from syncify.abstract.collection import Playlist, ItemCollection
 from syncify.abstract.misc import Result
-from syncify.spotify import ItemType, APIMethodInputType
+from syncify.spotify.api import APIMethodInputType
+from syncify.spotify.enums import ItemType
 from syncify.spotify.base import Spotify
 from syncify.spotify.library.item import SpotifyTrack
 from syncify.spotify.library.collection import SpotifyCollection
@@ -35,11 +37,11 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
         return self._name
 
     @property
-    def items(self) -> List[SpotifyTrack]:
+    def items(self) -> list[SpotifyTrack]:
         return self.tracks
 
     @property
-    def tracks(self) -> List[SpotifyTrack]:
+    def tracks(self) -> list[SpotifyTrack]:
         return self._tracks
 
     @property
@@ -47,12 +49,12 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
         return self.response["tracks"]["total"]
 
     @property
-    def date_created(self) -> Optional[datetime]:
+    def date_created(self) -> datetime | None:
         """datetime object representing when the first track was added to this playlist"""
         return min(self.date_added.values()) if self.date_added else None
 
     @property
-    def date_modified(self) -> Optional[datetime]:
+    def date_modified(self) -> datetime | None:
         """datetime object representing when a track was most recently added/removed"""
         return max(self.date_added.values()) if self.date_added else None
 
@@ -91,8 +93,9 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
         self.public: bool = response["public"]
 
         images = {image["height"]: image["url"] for image in response["images"]}
-        self.image_links: MutableMapping[str, str] = {"cover_front": url
-                                                      for height, url in images.items() if height == max(images)}
+        self.image_links: MutableMapping[str, str] = {
+            "cover_front": url for height, url in images.items() if height == max(images)
+        }
 
         # uri: date item was added
         self._date_added: Mapping[str, datetime] = {
@@ -104,7 +107,7 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
 
     @classmethod
     def load(cls, value: APIMethodInputType, use_cache: bool = True,
-             items: Optional[Collection[SpotifyTrack]] = None) -> Self:
+             items: Collection[SpotifyTrack] | None = None) -> Self:
         cls._check_for_api()
         obj = cls.__new__(cls)
         response = cls._load_response(value, use_cache=use_cache)
@@ -114,7 +117,7 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
             obj.reload(use_cache=use_cache)
         else:  # attempt to find items for this playlist in the given items
             uri_tracks: Mapping[str, SpotifyTrack] = {track.uri: track for track in items}
-            uri_get: List[str] = []
+            uri_get: list[str] = []
 
             for i, track_raw in enumerate(response["tracks"]["items"]):
                 # loop through the skeleton response for this playlist
@@ -181,8 +184,8 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
 
     def sync(
             self,
-            items: Optional[Union[ItemCollection, List[Item]]] = None,
-            clear: Optional[Literal['all', 'extra']] = None,
+            items: ItemCollection | list[Item] | None = None,
+            clear: Literal['all', 'extra'] | None = None,
             reload: bool = True,
             dry_run: bool = False,
     ) -> SyncResultSpotifyPlaylist:

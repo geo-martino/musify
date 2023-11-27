@@ -1,6 +1,6 @@
-from typing import Optional, Any
+from typing import Any
 
-from syncify.spotify import IDType, ItemType
+from syncify.spotify.enums import IDType, ItemType
 
 
 class SpotifyError(Exception):
@@ -10,7 +10,7 @@ class SpotifyError(Exception):
     :param message: Explanation of the error.
     """
 
-    def __init__(self, message: Optional[str] = None):
+    def __init__(self, message: str | None = None):
         self.message = message
         super().__init__(message)
 
@@ -22,7 +22,7 @@ class SpotifyItemError(SpotifyError):
     :param message: Explanation of the error.
     :param kind: The item type related to the error.
     """
-    def __init__(self, message: Optional[str] = None, kind: Optional[str] = None):
+    def __init__(self, message: str | None = None, kind: str | None = None):
         self.message = message
         self.kind = kind
         formatted = f"{kind} | {message}" if kind else message
@@ -36,7 +36,7 @@ class SpotifyCollectionError(SpotifyError):
     :param message: Explanation of the error.
     :param kind: The collection type related to the error.
     """
-    def __init__(self, message: Optional[str] = None, kind: Optional[str] = None):
+    def __init__(self, message: str | None = None, kind: str | None = None):
         self.message = message
         self.kind = kind
         formatted = f"{kind} | {message}" if kind else message
@@ -58,7 +58,7 @@ class SpotifyIDTypeError(SpotifyError):
     :param kind: The ID type related to the error.
     """
 
-    def __init__(self, message: Optional[str] = None, kind: Optional[IDType] = None, value: Any = None):
+    def __init__(self, message: str | None = None, kind: IDType | None = None, value: Any = None):
         self.kind = kind
         self.message = message
         formatted = f"{kind} | {message}" if kind else message
@@ -74,7 +74,7 @@ class SpotifyItemTypeError(SpotifyError):
     :param kind: The item type related to the error.
     """
 
-    def __init__(self, message: Optional[str] = None, kind: Optional[ItemType] = None, value: Any = None):
+    def __init__(self, message: str | None = None, kind: ItemType | None = None, value: Any = None):
         self.kind = kind
         formatted = f"{kind} | {message}" if kind else message
         formatted += f": {value}" if value else ""

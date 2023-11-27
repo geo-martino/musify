@@ -1,16 +1,15 @@
 from io import BytesIO
-from typing import Optional, List, Union, Collection
+from collections.abc import Collection
+from typing import Any
 
 import mutagen
 import mutagen.id3
 import mutagen.mp3
 from PIL import Image
-# noinspection PyProtectedMember
-from mutagen.id3 import Encoding
 
 from syncify.enums.tags import TagName, TagMap
 from syncify.local.file import open_image, get_image_bytes
-from syncify.local.track.base import LocalTrack
+from syncify.local.track.base.track import LocalTrack
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 
 
@@ -46,12 +45,12 @@ class MP3(LocalTrack):
 
     # noinspection PyTypeChecker
     def __init__(
-            self, file: Union[str, mutagen.FileType, mutagen.mp3.MP3], available: Optional[Collection[str]] = None
+            self, file: str | mutagen.FileType | mutagen.mp3.MP3, available: Collection[str] | None = None
     ):
         LocalTrack.__init__(self, file=file, available=available)
         self._file: mutagen.mp3.MP3 = self._file
 
-    def _read_tag(self, tag_ids: List[str]) -> Optional[list]:
+    def _read_tag(self, tag_ids: list[str]) -> list | None:
         # mp3 tag ids come in parts separated by : i.e. 'COMM:ID3v1 Comment:eng'
         # need to search all actual mp3 tag ids to check if the first part equals any of the given base tag ids
         tag_ids = [mp3_id for mp3_id in self._file.keys() for tag_id in tag_ids if mp3_id.split(":")[0] == tag_id]
@@ -72,7 +71,7 @@ class MP3(LocalTrack):
 
         return values if len(values) > 0 else None
 
-    def _read_genres(self) -> Optional[List[str]]:
+    def _read_genres(self) -> list[str] | None:
         """Extract metadata from file for genre"""
         values = self._read_tag(self.tag_map.genres)
         if values is None:
@@ -80,11 +79,11 @@ class MP3(LocalTrack):
 
         return [genre for value in values for genre in value.split(";")]
 
-    def _read_images(self) -> Optional[List[Image.Image]]:
+    def _read_images(self) -> list[Image.Image] | None:
         values = self._read_tag(self.tag_map.images)
         return [Image.open(BytesIO(value.data)) for value in values] if values is not None else None
 
-    def _write_tag(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
+    def _write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
         if tag_value is None:
             return self.delete_tag(tag_id, dry_run=dry_run)
 
@@ -106,13 +105,11 @@ class MP3(LocalTrack):
 
             if not dry_run and tag_id_prefix is not None:
                 image_kind_attr = image_kind.upper().replace(" ", "_")
-                image_type: mutagen.id3.PictureType = getattr(
-                    mutagen.id3.PictureType, image_kind_attr, mutagen.id3.PictureType.COVER_FRONT
-                )
+                image_type: mutagen.id3.PictureType = getattr(mutagen.id3.PictureType, image_kind_attr)
                 tag_id = f"{tag_id_prefix}:{image_kind}"
 
                 self._file[tag_id] = mutagen.id3.APIC(
-                    encoding=Encoding.UTF8,
+                    encoding=mutagen.id3.Encoding.UTF8,
                     # desc=image_kind,
                     mime=Image.MIME[image.format],
                     type=image_type,
@@ -130,7 +127,9 @@ class MP3(LocalTrack):
         self.delete_tags(tags=TagName.COMMENTS, dry_run=dry_run)
 
         for i, comment in enumerate(self.comments, 1):
-            comm = mutagen.id3.COMM(encoding=Encoding.UTF8, desc=f'ID3v1 Comment {i}', lang='eng', text=[comment])
+            comm = mutagen.id3.COMM(
+                encoding=mutagen.id3.Encoding.UTF8, desc=f'ID3v1 Comment {i}', lang='eng', text=[comment]
+            )
             tag_id = f"{tag_id_prefix}:{comm.desc}:{comm.lang}"
             if not dry_run and tag_id is not None:
                 self._file[tag_id] = comm
@@ -146,7 +145,7 @@ class MP3(LocalTrack):
             tag_id_prefix = next(iter(self.tag_map.comments), None)
             self.delete_tags(tags=self.uri_tag, dry_run=dry_run)
 
-            comm = mutagen.id3.COMM(encoding=Encoding.UTF8, lang='eng', desc='URI', text=[tag_value])
+            comm = mutagen.id3.COMM(encoding=mutagen.id3.Encoding.UTF8, lang='eng', desc='URI', text=[tag_value])
             tag_id = f"{tag_id_prefix}:{comm.desc}:{comm.lang}"
             if not dry_run and tag_id is not None:
                 self._file[tag_id] = comm

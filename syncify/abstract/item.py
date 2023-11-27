@@ -1,11 +1,12 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Optional, MutableMapping, Collection, Self, Any
+from typing import Self, Any
+from collections.abc import Collection, Mapping, MutableMapping
 
 from syncify.abstract.misc import PrettyPrinter
 from syncify.enums.tags import TagName
-from syncify.utils import UnionList
+from syncify.utils import UnitList
 
 
 @dataclass
@@ -17,6 +18,7 @@ class Base:
     @property
     @abstractmethod
     def name(self) -> str:
+        """A name for this object"""
         raise NotImplementedError
 
 
@@ -26,17 +28,23 @@ class Item(Base, PrettyPrinter, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def uri(self) -> Optional[str]:
+    def uri(self) -> str | None:
         """The URI associated with this item."""
+        raise NotImplementedError
+
+    @uri.setter
+    @abstractmethod
+    def uri(self, value: str | None) -> None:
+        """Should set both the ``uri`` property and the ``has_uri`` property ."""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def has_uri(self) -> Optional[bool]:
+    def has_uri(self) -> bool | None:
         """Does this item have a valid URI."""
         raise NotImplementedError
 
-    def merge(self, item: Self, tags: UnionList[TagName] = TagName.ALL):
+    def merge(self, item: Self, tags: UnitList[TagName] = TagName.ALL):
         """Set the tags of this item equal to the given ``item``. Give a list of ``tags`` to limit which are set"""
         tag_names = set(TagName.to_tags(tags))
 
@@ -71,33 +79,33 @@ class Track(Item, metaclass=ABCMeta):
     """Metadata/tags associated with a track."""
 
     # metadata/tags
-    title: Optional[str] = None
-    artist: Optional[str] = None
-    album: Optional[str] = None
-    album_artist: Optional[str] = None
-    track_number: Optional[int] = None
-    track_total: Optional[int] = None
-    genres: Optional[Collection[str]] = None
-    year: Optional[int] = None
-    bpm: Optional[float] = None
-    key: Optional[str] = None
-    disc_number: Optional[int] = None
-    disc_total: Optional[int] = None
-    compilation: Optional[bool] = None
-    comments: Optional[List[str]] = None
+    title: str | None = None
+    artist: str | None = None
+    album: str | None = None
+    album_artist: str | None = None
+    track_number: int | None = None
+    track_total: int | None = None
+    genres: Collection[str] | None = None
+    year: int | None = None
+    bpm: float | None = None
+    key: str | None = None
+    disc_number: int | None = None
+    disc_total: int | None = None
+    compilation: bool | None = None
+    comments: list[str] | None = None
 
     # images
-    image_links: Optional[MutableMapping[str, str]] = None
+    image_links: Mapping[str, str] | None = None
     has_image: bool = False
 
     # properties
-    length: Optional[float] = None
-    rating: Optional[float] = None
+    length: float | None = None
+    rating: float | None = None
 
 
 class TrackProperties:
     """Properties associated with a track."""
 
-    date_added: Optional[datetime] = None
-    last_played: Optional[datetime] = None
-    play_count: Optional[int] = None
+    date_added: datetime | None = None
+    last_played: datetime | None = None
+    play_count: int | None = None

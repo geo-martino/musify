@@ -1,19 +1,21 @@
 from dataclasses import dataclass
 from os.path import exists
-from typing import Any, List, Mapping, Optional, Self, Collection, Union, Set
+from typing import Any, Self
+from collections.abc import Collection, Mapping
 
 from syncify.local.playlist.processor.base import TrackProcessor
 from syncify.local.playlist.processor.compare import TrackCompare
-from syncify.local.track import LocalTrack
-from syncify.utils import UnionList, make_list
+from syncify.local.track.base.track import LocalTrack
+from syncify.utils import UnitList
+from syncify.utils.helpers import make_list
 
 
 @dataclass
 class MatchResult:
     """Results from matching a collection of tracks to a set of conditions."""
-    include: List[LocalTrack]
-    exclude: List[LocalTrack]
-    compared: List[LocalTrack]
+    include: list[LocalTrack]
+    exclude: list[LocalTrack]
+    compared: list[LocalTrack]
 
 
 class TrackMatch(TrackProcessor):
@@ -36,20 +38,20 @@ class TrackMatch(TrackProcessor):
     """
 
     @classmethod
-    def from_xml(cls, xml: Optional[Mapping[str, Any]] = None) -> Self:
+    def from_xml(cls, xml: Mapping[str, Any] | None = None) -> Self:
         source = xml["SmartPlaylist"]["Source"]
 
         match_all: bool = source["Conditions"]["@CombineMethod"] == "All"
 
         # tracks to include even if they don't meet match conditions
         include_str: str = source.get("ExceptionsInclude")
-        include: Optional[Set[str]] = set(include_str.split("|")) if isinstance(include_str, str) else None
+        include: set[str] | None = set(include_str.split("|")) if isinstance(include_str, str) else None
 
         # tracks to exclude even if they do meet match conditions
         exclude_str: str = source.get("Exceptions")
-        exclude: Optional[Set[str]] = set(exclude_str.split("|")) if isinstance(exclude_str, str) else None
+        exclude: set[str] | None = set(exclude_str.split("|")) if isinstance(exclude_str, str) else None
 
-        comparators: Optional[List[TrackCompare]] = TrackCompare.from_xml(xml=xml)
+        comparators: list[TrackCompare] | None = TrackCompare.from_xml(xml=xml)
 
         if len(comparators) == 1:
             # when user has not set an explicit comparator, there will still be an 'allow all' comparator
@@ -68,26 +70,26 @@ class TrackMatch(TrackProcessor):
 
     def __init__(
             self,
-            comparators: Optional[UnionList[TrackCompare]] = None,
+            comparators: UnitList[TrackCompare] | None = None,
             match_all: bool = True,
-            include_paths: Optional[List[str]] = None,
-            exclude_paths: Optional[Collection[str]] = None,
-            library_folder: Optional[str] = None,
-            other_folders: Optional[Collection[str]] = None,
+            include_paths: list[str] | None = None,
+            exclude_paths: Collection[str] | None = None,
+            library_folder: str | None = None,
+            other_folders: Collection[str] | None = None,
             check_existence: bool = True,
     ):
         self.comparators = make_list(comparators)
         self.match_all = match_all
 
-        self.include_paths: Optional[List[str]] = include_paths
-        self.exclude_paths: Optional[List[str]] = exclude_paths
+        self.include_paths: list[str] | None = include_paths
+        self.exclude_paths: list[str] | None = exclude_paths
 
         self.library_folder = library_folder.rstrip("\\/") if library_folder is not None else library_folder
-        self.original_folder: Optional[str] = None
+        self.original_folder: str | None = None
         self.sanitise_file_paths(other_folders=other_folders, check_existence=check_existence)
 
     def sanitise_file_paths(
-            self, other_folders: Optional[Union[str, Collection[str]]] = None, check_existence: bool = True,
+            self, other_folders: str | Collection[str] | None = None, check_existence: bool = True,
     ):
         """
         Attempt to sanitise given include/exclude file paths
@@ -120,7 +122,7 @@ class TrackMatch(TrackProcessor):
 
             self.include_paths = include
 
-    def _check_for_other_folder_stem(self, stems: Union[str, Collection[str]], *paths: Optional[List[str]]):
+    def _check_for_other_folder_stem(self, stems: str | Collection[str], *paths: list[str] | None):
         """
         Checks for the presence of some other folder as the stem of one of the given paths.
         Useful when managing similar libraries across multiple operating systems.
@@ -141,7 +143,7 @@ class TrackMatch(TrackProcessor):
                     self.original_folder = results[0]
                     break
 
-    def sanitise_file_path(self, path: Optional[str], check_existence: bool = True) -> Optional[str]:
+    def sanitise_file_path(self, path: str | None, check_existence: bool = True) -> str | None:
         """
         Sanitise a file path by:
             - replacing path stems found in other_folders
@@ -173,8 +175,8 @@ class TrackMatch(TrackProcessor):
             return path
 
     def match(
-            self, tracks: List[LocalTrack], reference: Optional[LocalTrack] = None, combine: bool = True
-    ) -> Union[List[LocalTrack], MatchResult]:
+            self, tracks: list[LocalTrack], reference: LocalTrack | None = None, combine: bool = True
+    ) -> list[LocalTrack] | MatchResult:
         """
         Return a new list of tracks from input tracks that match the given conditions.
 
@@ -191,11 +193,11 @@ class TrackMatch(TrackProcessor):
 
         path_tracks: Mapping[str, LocalTrack] = {track.path.lower(): track for track in tracks}
 
-        include: List[LocalTrack] = []
+        include: list[LocalTrack] = []
         if self.include_paths:  # include filter
             include.extend([path_tracks[path] for path in self.include_paths if path in path_tracks])
 
-        exclude: List[LocalTrack] = []
+        exclude: list[LocalTrack] = []
         if self.exclude_paths:  # filter out exclude paths
             exclude.extend([path_tracks[path] for path in self.exclude_paths if path in path_tracks])
 
@@ -203,7 +205,7 @@ class TrackMatch(TrackProcessor):
             return [track for track in include if track not in exclude] if combine \
                 else MatchResult(include=include, exclude=exclude, compared=[])
 
-        compared: List[LocalTrack] = []
+        compared: list[LocalTrack] = []
         for track in tracks:  # run comparator checks
             match_results = []
             for comparator in self.comparators:

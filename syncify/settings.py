@@ -3,21 +3,22 @@ import os
 import sys
 from abc import ABCMeta, abstractmethod
 from ast import literal_eval
+from collections.abc import Mapping
 from copy import deepcopy
 from datetime import datetime
 from os.path import dirname, exists, join, splitext, isabs
-from typing import Any, MutableMapping, List, Mapping
+from typing import Any
 
 import yaml
 
 from syncify.local.exception import IllegalFileTypeError
 from syncify.spotify.api import AUTH_ARGS_BASIC, AUTH_ARGS_USER
 from syncify.spotify.processor.search import AlgorithmSettings
-from syncify.utils import make_list
+from syncify.utils.helpers import make_list
 from syncify.utils.logger import Logger
 
 
-def _update_map(source: MutableMapping, new: MutableMapping, extend: bool = True, overwrite: bool = False):
+def _update_map(source: dict, new: dict, extend: bool = True, overwrite: bool = False):
     """
     Recursively update a given ``source`` map in place with a ``new`` map.
 
@@ -57,7 +58,7 @@ class Settings(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def allowed_functions(self) -> List[str]:
+    def allowed_functions(self) -> list[str]:
         """A list of allowed functions to filter by on terminal input"""
         raise NotImplementedError
 
@@ -76,7 +77,7 @@ class Settings(metaclass=ABCMeta):
         self.dry_run = self.cfg_general.get("dry_run", True)
         self.output_folder = None
 
-        self.functions: List[str] = [self.allowed_functions[0]]
+        self.functions: list[str] = [self.allowed_functions[0]]
 
         self.set()
 
@@ -87,7 +88,7 @@ class Settings(metaclass=ABCMeta):
         return path
 
     @staticmethod
-    def _load_config(config_path: str) -> MutableMapping[Any, Any]:
+    def _load_config(config_path: str) -> Mapping[Any, Any]:
         """
         Load the config file
 

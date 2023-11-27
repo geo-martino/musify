@@ -1,12 +1,13 @@
 import urllib.parse
+from collections.abc import MutableMapping
 from datetime import datetime
 from os.path import join, exists, normpath
-from typing import Optional, Set, Any, List, MutableMapping
+from typing import Any
 
 from lxml import etree
 
 from syncify.local.file import File
-from syncify.local.track import LocalTrack
+from syncify.local.track.base.track import LocalTrack
 from syncify.local.library.library import LocalLibrary
 from syncify.utils.logger import Logger
 
@@ -37,11 +38,11 @@ class MusicBee(File, LocalLibrary):
 
     def __init__(
             self,
-            library_folder: Optional[str] = None,
+            library_folder: str | None = None,
             musicbee_folder: str = "MusicBee",
-            other_folders: Optional[Set[str]] = None,
-            include: Optional[List[str]] = None,
-            exclude: Optional[List[str]] = None,
+            other_folders: set[str] | None = None,
+            include: list[str] | None = None,
+            exclude: list[str] | None = None,
             load: bool = True
     ):
         Logger.__init__(self)
@@ -72,7 +73,7 @@ class MusicBee(File, LocalLibrary):
         )
 
     @staticmethod
-    def _xml_ts_to_dt(timestamp_str: Optional[str]) -> Optional[datetime]:
+    def _xml_ts_to_dt(timestamp_str: str | None) -> datetime | None:
         """Convert timestamp string as found in the MusicBee XML library file to a ``datetime`` object"""
         if timestamp_str:
             return datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S%z")
@@ -82,7 +83,7 @@ class MusicBee(File, LocalLibrary):
         """Clean the file paths as found in the MusicBee XML library file to a standard system path"""
         return normpath(urllib.parse.unquote(path.replace("file://localhost/", "")))
 
-    def load_tracks(self) -> List[LocalTrack]:
+    def load_tracks(self) -> list[LocalTrack]:
         tracks_paths = {track.path.lower(): track for track in self._load_tracks()}
         self.logger.debug("Enrich local tracks: START")
 

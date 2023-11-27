@@ -8,20 +8,23 @@ from datetime import datetime as dt
 from glob import glob
 from os.path import basename, dirname, isdir, join, relpath
 from time import perf_counter
-from typing import List, Optional, Mapping, Any, Callable, MutableMapping
+from typing import Any
+from collections.abc import Callable, Mapping
 
 from dateutil.relativedelta import relativedelta
 
 from syncify.enums.tags import TagName
-from syncify.local.library import LocalLibrary, MusicBee, LocalFolder
+from syncify.local.library import LocalLibrary, MusicBee
+from syncify.local.library.collection import LocalFolder
 from syncify.report import Report
 from syncify.settings import Settings
-from syncify.spotify.api import API
+from syncify.spotify.api.api import API
 from syncify.spotify.base import Spotify
-from syncify.spotify.library import SpotifyLibrary
-from syncify.spotify.processor import Searcher, Checker
-from syncify.spotify.processor.search import AlgorithmSettings
-from syncify.utils import get_user_input, print_logo, print_line, print_time
+from syncify.spotify.library.library import SpotifyLibrary
+from syncify.spotify.processor.check import Checker
+from syncify.spotify.processor.search import Searcher, AlgorithmSettings
+from syncify.utils.helpers import get_user_input
+from syncify.utils.printers import print_logo, print_line, print_time
 from syncify.utils.logger import Logger, STAT
 
 
@@ -33,7 +36,7 @@ class Syncify(Settings, Report):
     """
 
     @property
-    def allowed_functions(self) -> List[str]:
+    def allowed_functions(self) -> list[str]:
         return [method for method, value in Syncify.__dict__.items()
                 if not method.startswith('_') and callable(value)
                 and method not in ["set_func"]]
@@ -104,13 +107,13 @@ class Syncify(Settings, Report):
         Settings.__init__(self, config_path=config_path)
         Logger.__init__(self)
 
-        self.run: Optional[Callable] = None
+        self.run: Callable[[], Any] | None = None
         self.cfg_run: Mapping[Any, Any] = self.cfg_general
 
-        self._api: Optional[API] = None
-        self._local_library: Optional[LocalLibrary] = None
-        self._android_library: Optional[LocalLibrary] = None
-        self._spotify_library: Optional[SpotifyLibrary] = None
+        self._api: API | None = None
+        self._local_library: LocalLibrary | None = None
+        self._android_library: LocalLibrary | None = None
+        self._spotify_library: SpotifyLibrary | None = None
 
         self.logger.debug(f"Initialisation of Syncify object: DONE\n")
 
@@ -119,7 +122,7 @@ class Syncify(Settings, Report):
         self.run = getattr(self, name)
         self.cfg_run = self.cfg_functions.get(name, self.cfg_general)
 
-    def _save_json(self, filename: str, data: Mapping[str, Any], folder: Optional[str] = None):
+    def _save_json(self, filename: str, data: Mapping[str, Any], folder: str | None = None):
         """Save a JSON file to a given folder, or this run's folder if not given"""
         if not filename.lower().endswith(".json"):
             filename += ".json"
@@ -129,7 +132,7 @@ class Syncify(Settings, Report):
         with open(path, "w") as f:
             json.dump(data, f, indent=2)
 
-    def _load_json(self, filename: str, folder: Optional[str] = None) -> MutableMapping[str, Any]:
+    def _load_json(self, filename: str, folder: str | None = None) -> Mapping[str, Any]:
         """Load a stored JSON file from a given folder, or this run's folder if not given"""
         if not filename.lower().endswith(".json"):
             filename += ".json"
@@ -141,7 +144,7 @@ class Syncify(Settings, Report):
 
         return data
 
-    def _get_limited_folders(self) -> List[LocalFolder]:
+    def _get_limited_folders(self) -> list[LocalFolder]:
         """Returns a limited set of local folders based on config conditions"""
         # get filter conditions
         include_prefix = self.cfg_run.get("filter", {}).get("include", {}).get("prefix", "").strip().lower()
@@ -206,7 +209,7 @@ class Syncify(Settings, Report):
         remove = []
         dates = []
 
-        def get_paths_to_remove(paths: List[str]):
+        def get_paths_to_remove(paths: list[str]):
             """Determine which folders to remove based on settings"""
             remaining = len(paths) + 1
 
@@ -534,8 +537,6 @@ if __name__ == "__main__":
 
 
 ## SELECTED FOR DEVELOPMENT
-# TODO: WMA images io
-# TODO: write tests, write tests, write tests
 # TODO: test on linux/mac
 #  - concerned about local playlist saving
 #  - linux does not pick up 'include' paths when loading xautopf playlists
@@ -549,4 +550,8 @@ if __name__ == "__main__":
 #  by extension, implement android library sync
 
 
+## NEEDED FOR v0.3
+# TODO: how to read WMA images
+# TODO: write tests, write tests, write tests
+# TODO: Implement generic types where needed
 # TODO: update the readme

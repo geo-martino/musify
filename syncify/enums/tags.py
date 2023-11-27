@@ -1,31 +1,32 @@
 from dataclasses import dataclass
-from typing import List, Self, Collection, Union
+from typing import Self
+from collections.abc import Collection
 
-from syncify.enums import SyncifyEnum, EnumNotFoundError
-from syncify.utils import make_list
+from . import SyncifyEnum, EnumNotFoundError
+from syncify.utils.helpers import make_list
 
 
 @dataclass(frozen=True)
 class TagMap:
     """Map of human-friendly tag name to ID3 tag ids for a given file type"""
 
-    title: List[str]
-    artist: List[str]
-    album: List[str]
-    album_artist: List[str]
-    track_number: List[str]
-    track_total: List[str]
-    genres: List[str]
-    year: List[str]
-    bpm: List[str]
-    key: List[str]
-    disc_number: List[str]
-    disc_total: List[str]
-    compilation: List[str]
-    comments: List[str]
-    images: List[str]
+    title: list[str]
+    artist: list[str]
+    album: list[str]
+    album_artist: list[str]
+    track_number: list[str]
+    track_total: list[str]
+    genres: list[str]
+    year: list[str]
+    bpm: list[str]
+    key: list[str]
+    disc_number: list[str]
+    disc_total: list[str]
+    compilation: list[str]
+    comments: list[str]
+    images: list[str]
 
-    def __getitem__(self, key: str) -> List[str]:
+    def __getitem__(self, key: str) -> list[str]:
         return getattr(self, key, [])
 
 
@@ -86,18 +87,18 @@ class TagName(Name):
     URI = 902  # no MusicBee mapping
     IMAGES = 903  # unknown MusicBee mapping
 
-    def to_tag(self) -> List[str]:
+    def to_tag(self) -> list[str]:
         """
         Returns all human-friendly tag names for a given enum
         e.g. ``track`` returns both ``track_number`` and ``track_total`` tag names
         """
-        tags: List[str] = list(TagMap.__annotations__.keys()) + ["uri"]
+        tags: list[str] = list(TagMap.__annotations__.keys()) + ["uri"]
         if self == self.ALL:
             return tags
         return [tag for tag in tags if tag.startswith(self.name.casefold())]
 
     @classmethod
-    def to_tags(cls, tags: Union[Self, Collection[Self]]) -> List[str]:
+    def to_tags(cls, tags: Self | Collection[Self]) -> list[str]:
         """Convert the given tags to tag names as given by the attributes of an item/collection"""
         if isinstance(tags, cls):
             return tags.to_tag()

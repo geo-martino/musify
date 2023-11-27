@@ -1,6 +1,5 @@
 import os
 from os.path import dirname, join, splitext, basename, exists
-from typing import List
 
 import pytest
 
@@ -13,7 +12,7 @@ from tests.local.track.track import random_tracks, path_track_flac, path_track_m
 
 
 def test_load():
-    tracks: List[LocalTrack] = [FLAC(path_track_flac), WMA(path_track_wma), M4A(path_track_m4a)]
+    tracks: list[LocalTrack] = [FLAC(path_track_flac), WMA(path_track_wma), M4A(path_track_m4a)]
 
     # initialising on a non-existent file and no tracks
     path_fake = join(dirname(path_playlist_m3u), "does_not_exist.m3u")

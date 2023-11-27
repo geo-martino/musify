@@ -2,7 +2,8 @@ import os
 from abc import ABCMeta, abstractmethod
 from glob import glob
 from os.path import join, exists, dirname
-from typing import Optional, List, Union, Mapping, Set, Collection, Self
+from typing import Self
+from collections.abc import Collection, Mapping
 
 import mutagen
 
@@ -37,12 +38,12 @@ class LocalTrack(TagReader, TagWriter, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def valid_extensions(self) -> List[str]:
+    def valid_extensions(self) -> list[str]:
         """Allowed extensions in lowercase"""
         raise NotImplementedError
 
     @property
-    def name(self) -> Optional[str]:
+    def name(self) -> str | None:
         """Track title"""
         return self.title
 
@@ -61,12 +62,12 @@ class LocalTrack(TagReader, TagWriter, metaclass=ABCMeta):
         self._path = value
 
     @property
-    def uri(self) -> Optional[str]:
+    def uri(self) -> str | None:
         """The Spotify URI associated with this track."""
         return self._uri
 
     @uri.setter
-    def uri(self, value: Optional[str]):
+    def uri(self, value: str | None):
         self._uri = value
         if value is None:
             self._has_uri = None
@@ -76,7 +77,7 @@ class LocalTrack(TagReader, TagWriter, metaclass=ABCMeta):
             self._has_uri = True
 
     @property
-    def has_uri(self) -> Optional[bool]:
+    def has_uri(self) -> bool | None:
         """Does this track have an associated URI on Spotify. When None, unknown if yes or no."""
         return self._has_uri
 
@@ -86,7 +87,7 @@ class LocalTrack(TagReader, TagWriter, metaclass=ABCMeta):
         return self.file.info.length
 
     @classmethod
-    def get_filepaths(cls, library_folder: str) -> Set[str]:
+    def get_filepaths(cls, library_folder: str) -> set[str]:
         """Get all files in a given library that match this Track object's valid filetypes."""
         paths = set()
 
@@ -99,14 +100,14 @@ class LocalTrack(TagReader, TagWriter, metaclass=ABCMeta):
 
         return paths
 
-    def __init__(self, file: Union[str, mutagen.FileType], available: Optional[Collection[str]] = None):
-        self._uri: Optional[str] = None
-        self._has_uri: Optional[bool] = None
+    def __init__(self, file: str | mutagen.FileType, available: Collection[str] | None = None):
+        self._uri: str | None = None
+        self._has_uri: bool | None = None
 
         # all available paths for this file type
-        self._available_paths: Optional[Collection[str]] = None
+        self._available_paths: Collection[str] | None = None
         # all available paths mapped as lower case to actual
-        self._available_paths_lower: Optional[Mapping[str, str]] = None
+        self._available_paths_lower: Mapping[str, str] | None = None
 
         if available is not None:
             self._available_paths = set(available)

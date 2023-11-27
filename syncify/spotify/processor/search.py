@@ -1,12 +1,13 @@
+from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass
-from typing import List, Optional, MutableMapping, Any, Tuple, Mapping, Union, Set
+from typing import Any
 
 from syncify.abstract.collection import ItemCollection, Album
 from syncify.abstract.item import Item, Track, Base
 from syncify.abstract.misc import Result
 from syncify.enums.tags import TagName, PropertyName
-from syncify.spotify import ItemType
-from syncify.spotify.api import API
+from syncify.spotify.api.api import API
+from syncify.spotify.enums import ItemType
 from syncify.spotify.library.item import SpotifyTrack
 from syncify.spotify.library.collection import SpotifyAlbum
 from syncify.spotify.processor.match import Matcher
@@ -16,24 +17,24 @@ from syncify.utils.logger import REPORT
 @dataclass
 class SearchResult(Result):
     """Stores the results of the searching process"""
-    matched: List[Item]
-    unmatched: List[Item]
-    skipped: List[Item]
+    matched: list[Item]
+    unmatched: list[Item]
+    skipped: list[Item]
 
 
 @dataclass(frozen=True)
 class Algorithm:
     """Key settings related to a search algorithm"""
-    search_fields_1: List[str]
-    match_fields: Set[Union[TagName, PropertyName]]
+    search_fields_1: list[str]
+    match_fields: set[TagName | PropertyName]
     result_count: int
     allow_karaoke: bool = False
 
     min_score: float = 0.1
     max_score: float = 0.8
 
-    search_fields_2: Optional[List[str]] = None
-    search_fields_3: Optional[List[str]] = None
+    search_fields_2: list[str] | None = None
+    search_fields_3: list[str] | None = None
 
 
 @dataclass
@@ -70,11 +71,12 @@ class Searcher(Matcher):
 
     def _get_results(
             self, item: Base, kind: ItemType, algorithm: Algorithm
-    ) -> Optional[List[MutableMapping[str, Any]]]:
+    ) -> list[Mapping[str, Any]] | None:
         """Calls the ``/search`` endpoint to get results for the current item based on algorithm settings"""
         self.clean_tags(item)
 
-        def execute_query(keys: List[str]) -> Tuple[List[MutableMapping[str, Any]], str]:
+        def execute_query(keys: list[str]) -> (list[Mapping[str, Any]], str):
+            """Generate and execute the query against the API for the given item's cleaned ``keys``"""
             attributes = set(item.clean_tags.get(key) for key in keys)
             q = " ".join(attr for attr in attributes if attr)
             return self.api.query(q, kind=kind, limit=algorithm.result_count), q
@@ -135,7 +137,7 @@ class Searcher(Matcher):
         )
         self.print_line(REPORT)
 
-    def search(self, collections: List[ItemCollection]) -> MutableMapping[ItemCollection, SearchResult]:
+    def search(self, collections: list[ItemCollection]) -> Mapping[ItemCollection, SearchResult]:
         """
         Searches for Spotify matches for the given list of item collections.
 

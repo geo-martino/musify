@@ -1,11 +1,9 @@
-from typing import Optional
-
-from syncify.spotify import IDType, ItemType
-from syncify.spotify.utils import get_item_type, convert
 from syncify.spotify.api.basic import Basic
 from syncify.spotify.api.collection import Collections
 from syncify.spotify.api.item import Items
 from syncify.spotify.api.request import RequestHandler
+from syncify.spotify.enums import IDType, ItemType
+from syncify.spotify.utils import get_item_type, convert
 from syncify.utils.logger import Logger
 
 
@@ -18,7 +16,7 @@ class API(Basic, Items, Collections):
     :param handler_kwargs: The authorisation kwargs to be passed to :py:class:`RequestHandler`.
     """
     @property
-    def user_id(self) -> Optional[str]:
+    def user_id(self) -> str | None:
         return self._user_id
 
     def __init__(self, **handler_kwargs):
@@ -27,8 +25,8 @@ class API(Basic, Items, Collections):
 
         try:
             user_data = self.get_self()
-            self._user_id: Optional[str] = user_data["id"]
-            self.user_name: Optional[str] = user_data["display_name"]
+            self._user_id: str | None = user_data["id"]
+            self.user_name: str | None = user_data["display_name"]
         except (ConnectionError, KeyError, TypeError):
             self._user_id = None
             self.user_name = None
@@ -54,7 +52,7 @@ class API(Basic, Items, Collections):
                f"\33[93m{uri} \33[0m- "\
                f"{convert(uri, type_in=IDType.URI, type_out=IDType.URL_EXT)}"
 
-    def pretty_print_uris(self, value: Optional[str] = None, kind: Optional[IDType] = None, use_cache: bool = True):
+    def pretty_print_uris(self, value: str | None = None, kind: IDType | None = None, use_cache: bool = True):
         """
         Diagnostic function. Print tracks from a given link in ``<track> - <title> | <URI> - <URL>`` format
         for a given URL/URI/ID.

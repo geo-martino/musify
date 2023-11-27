@@ -1,11 +1,11 @@
 from itertools import groupby
 from random import choice, randrange
-from typing import Callable
+from collections.abc import Callable
 
 from syncify.enums.tags import TagName, PropertyName
 from syncify.local.track import LocalTrack
-from syncify.local.playlist.processor import TrackSort, ShuffleMode
-from syncify.utils import strip_ignore_words
+from syncify.local.playlist.processor.sort import TrackSort, ShuffleMode
+from syncify.utils.helpers import strip_ignore_words
 from tests.local.track.track import random_tracks
 
 

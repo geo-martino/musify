@@ -1,5 +1,9 @@
+from typing import Any
+from collections.abc import Collection, Mapping
+
 from syncify.spotify import __URL_AUTH__, __URL_API__
-from .api import API
+
+APIMethodInputType = str | Mapping[str, Any] | Collection[str] | list[Mapping[str, Any]]
 
 # non-user authenticated access
 AUTH_ARGS_BASIC = {

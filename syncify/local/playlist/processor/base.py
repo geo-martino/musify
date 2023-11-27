@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
-from typing import Any, Mapping, Optional, Self, List, Union
+from collections.abc import Mapping
+from typing import Any, Self
 
 from syncify.abstract.misc import PrettyPrinter
 from syncify.enums.tags import TagName, Name
@@ -10,7 +11,7 @@ class TrackProcessor(PrettyPrinter, metaclass=ABCMeta):
 
     @classmethod
     @abstractmethod
-    def from_xml(cls, xml: Optional[Mapping[str, Any]] = None) -> Self:
+    def from_xml(cls, xml: Mapping[str, Any] | None = None) -> Self:
         """
         Initialise object from XML playlist.
 
@@ -19,7 +20,7 @@ class TrackProcessor(PrettyPrinter, metaclass=ABCMeta):
         raise NotImplementedError
 
     def _get_method_name(
-            self, value: str, valid: Union[List[str], Mapping[str, str]], prefix: Optional[str] = None
+            self, value: str, valid: list[str] | Mapping[str | str], prefix: str | None = None
     ) -> str:
         """
         Find a method that matches the given string from a list of valid methods.
@@ -44,5 +45,5 @@ class TrackProcessor(PrettyPrinter, metaclass=ABCMeta):
         return sanitised
 
     @classmethod
-    def _get_tag(cls, tag: Optional[Name] = None) -> str:
+    def _get_tag(cls, tag: Name | None = None) -> str:
         return tag.to_tag()[0] if isinstance(tag, TagName) else tag.name.casefold()

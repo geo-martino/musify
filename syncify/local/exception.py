@@ -1,4 +1,4 @@
-from typing import Optional, Any
+from typing import Any
 
 
 class LocalError(Exception):
@@ -7,7 +7,7 @@ class LocalError(Exception):
 
     :param message: Explanation of the error.
     """
-    def __init__(self, message: Optional[str] = None):
+    def __init__(self, message: str | None = None):
         self.message = message
         super().__init__(message)
 
@@ -19,7 +19,7 @@ class LocalItemError(LocalError):
     :param message: Explanation of the error.
     :param kind: The item type related to the error.
     """
-    def __init__(self, message: Optional[str] = None, kind: Optional[str] = None):
+    def __init__(self, message: str | None = None, kind: str | None = None):
         self.message = message
         self.kind = kind
         formatted = f"{kind} | {message}" if kind else message
@@ -33,7 +33,7 @@ class LocalCollectionError(LocalError):
     :param message: Explanation of the error.
     :param kind: The collection type related to the error.
     """
-    def __init__(self, message: Optional[str] = None, kind: Optional[str] = None):
+    def __init__(self, message: str | None = None, kind: str | None = None):
         self.message = message
         self.kind = kind
         formatted = f"{kind} | {message}" if kind else message
@@ -55,7 +55,7 @@ class FileError(LocalError):
     :param message: Explanation of the error.
     """
 
-    def __init__(self, filetype: Optional[str] = None, message: Optional[str] = None):
+    def __init__(self, filetype: str | None = None, message: str | None = None):
         self.filetype = filetype
         self.message = message
         formatted = f"{filetype} | {message}" if filetype else message
@@ -93,7 +93,7 @@ class FieldError(MusicBeeError):
 
     :param message: Explanation of the error.
     """
-    def __init__(self, message: Optional[str] = None, field: Optional[Any] = None):
+    def __init__(self, message: str | None = None, field: Any | None = None):
         self.field = field
         self.message = message
         formatted = f"{message}: {field}" if field else message

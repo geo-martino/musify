@@ -1,10 +1,12 @@
 from abc import ABCMeta, abstractmethod
-from typing import Any, MutableMapping, Self, Optional
+from collections.abc import MutableMapping
+from typing import Any, Self
 
 from syncify.abstract.misc import PrettyPrinter
-from syncify.spotify import APIMethodInputType, ItemType
+from syncify.spotify.enums import ItemType
 from syncify.spotify.exception import APIError, SpotifyItemTypeError
-from syncify.spotify.api import API
+from syncify.spotify.api import APIMethodInputType
+from syncify.spotify.api.api import API
 
 
 class Spotify(PrettyPrinter, metaclass=ABCMeta):
@@ -39,7 +41,7 @@ class Spotify(PrettyPrinter, metaclass=ABCMeta):
         return self.response["href"]
 
     @property
-    def url_ext(self) -> Optional[str]:
+    def url_ext(self) -> str | None:
         """The external URL of this item/collection."""
         return self.response["external_urls"].get("spotify")
 

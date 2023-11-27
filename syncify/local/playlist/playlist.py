@@ -2,14 +2,16 @@ import re
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
 from os.path import dirname, join, getmtime, getctime
-from typing import List, Optional, Union, Collection
+from collections.abc import Collection
 
 from syncify.abstract.collection import Playlist
 from syncify.abstract.misc import Result
 from syncify.local.file import File
 from syncify.local.library.collection import LocalCollection
-from syncify.local.playlist.processor import TrackMatch, TrackLimit, TrackSort
-from syncify.local.track import LocalTrack
+from syncify.local.playlist.processor.match import TrackMatch
+from syncify.local.playlist.processor.limit import TrackLimit
+from syncify.local.playlist.processor.sort import TrackSort
+from syncify.local.track.base.track import LocalTrack
 from syncify.utils.logger import Logger
 
 
@@ -33,15 +35,15 @@ class LocalPlaylist(Playlist, LocalCollection, File, metaclass=ABCMeta):
         self._path = join(dirname(self._path), value + self.ext)
 
     @property
-    def items(self) -> List[LocalTrack]:
+    def items(self) -> list[LocalTrack]:
         return self._tracks
 
     @property
-    def tracks(self) -> List[LocalTrack]:
+    def tracks(self) -> list[LocalTrack]:
         return self._tracks
 
     @tracks.setter
-    def tracks(self, value: List[LocalTrack]):
+    def tracks(self, value: list[LocalTrack]):
         self._tracks = value
 
     @property
@@ -49,42 +51,42 @@ class LocalPlaylist(Playlist, LocalCollection, File, metaclass=ABCMeta):
         return self._path
 
     @property
-    def date_modified(self) -> Optional[datetime]:
+    def date_modified(self) -> datetime | None:
         if self.path:
             return datetime.fromtimestamp(getmtime(self.path))
 
     @property
-    def date_created(self) -> Optional[datetime]:
+    def date_created(self) -> datetime | None:
         if self.path:
             return datetime.fromtimestamp(getctime(self.path))
 
     def __init__(
             self,
             path: str,
-            matcher: Optional[TrackMatch] = None,
-            limiter: Optional[TrackLimit] = None,
-            sorter: Optional[TrackSort] = None,
+            matcher: TrackMatch | None = None,
+            limiter: TrackLimit | None = None,
+            sorter: TrackSort | None = None,
     ):
         Logger.__init__(self)
         self._path: str = path
-        self._tracks: Optional[List[LocalTrack]] = None
-        self._tracks_original: Optional[List[LocalTrack]] = None
+        self._tracks: list[LocalTrack] | None = None
+        self._tracks_original: list[LocalTrack] | None = None
 
         self.matcher = matcher
         self.limiter = limiter
         self.sorter = sorter
 
-    def _match(self, tracks: Optional[List[LocalTrack]] = None, reference: Optional[LocalTrack] = None):
+    def _match(self, tracks: list[LocalTrack] | None = None, reference: LocalTrack | None = None):
         """Wrapper for matcher"""
         m = self.matcher
         if m is not None and tracks is not None:
             if m.include_paths is None and m.exclude_paths is None and m.comparators is None:
                 # just return the tracks given if matcher has no settings applied
-                self.tracks: List[LocalTrack] = tracks.copy()
+                self.tracks: list[LocalTrack] = tracks.copy()
             else:  # run matcher
-                self.tracks: List[LocalTrack] = m.match(tracks=tracks, reference=reference)
+                self.tracks: list[LocalTrack] = m.match(tracks=tracks, reference=reference)
 
-    def _limit(self, ignore: Optional[Union[Collection[str], Collection[LocalTrack]]] = None):
+    def _limit(self, ignore: Collection[str] | Collection[LocalTrack] | None = None):
         """Wrapper for limiter"""
         if self.limiter is not None and self.tracks is not None:
             self.limiter.limit(tracks=self.tracks, ignore=ignore)
@@ -106,7 +108,7 @@ class LocalPlaylist(Playlist, LocalCollection, File, metaclass=ABCMeta):
         return paths
 
     @abstractmethod
-    def load(self, tracks: Optional[List[LocalTrack]] = None) -> Optional[List[LocalTrack]]:
+    def load(self, tracks: list[LocalTrack] | None = None) -> list[LocalTrack] | None:
         """
         Read the playlist file and update the tracks in this playlist instance.
 

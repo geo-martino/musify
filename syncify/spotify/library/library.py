@@ -1,10 +1,11 @@
-from typing import Optional, List, MutableMapping, Any, Collection, Union, Mapping, Literal, Set
+from typing import Any, Literal
+from collections.abc import Collection, Mapping, MutableMapping
 
 from syncify.abstract.item import Item
 from syncify.abstract.collection import Library, ItemCollection, Playlist
-from syncify.spotify import ItemType
-from syncify.spotify.api import API
+from syncify.spotify.api.api import API
 from syncify.spotify.base import Spotify
+from syncify.spotify.enums import ItemType
 from syncify.spotify.library.item import SpotifyTrack
 from syncify.spotify.library.playlist import SpotifyPlaylist, SyncResultSpotifyPlaylist
 from syncify.utils.logger import Logger, REPORT, STAT
@@ -23,16 +24,16 @@ class SpotifyLibrary(Library):
     limit = 50
 
     @property
-    def name(self) -> Optional[str]:
+    def name(self) -> str | None:
         """The user ID associated with this library"""
         return self.api.user_id
 
     @property
-    def items(self) -> List[SpotifyTrack]:
+    def items(self) -> list[SpotifyTrack]:
         return self.tracks
 
     @property
-    def tracks(self) -> List[SpotifyTrack]:
+    def tracks(self) -> list[SpotifyTrack]:
         return self._tracks
 
     @property
@@ -47,8 +48,8 @@ class SpotifyLibrary(Library):
     def __init__(
             self,
             api: API,
-            include: Optional[List[str]] = None,
-            exclude: Optional[List[str]] = None,
+            include: list[str] | None = None,
+            exclude: list[str] | None = None,
             use_cache: bool = True,
             load: bool = True,
     ):
@@ -60,7 +61,7 @@ class SpotifyLibrary(Library):
         self.use_cache = use_cache
         Spotify.api = api
 
-        self._tracks: List[SpotifyTrack] = []
+        self._tracks: list[SpotifyTrack] = []
         self._playlists: MutableMapping[str, SpotifyPlaylist] = {}
 
         if load:
@@ -94,7 +95,7 @@ class SpotifyLibrary(Library):
 
         self.logger.debug("Load Spotify library: DONE\n")
 
-    def _get_tracks_data(self, playlists_data: List[MutableMapping[str, Any]]) -> List[MutableMapping[str, Any]]:
+    def _get_tracks_data(self, playlists_data: list[Mapping[str, Any]]) -> list[Mapping[str, Any]]:
         """Get a list of unique tracks with enhanced data (i.e. features, genres etc.) across all playlists"""
         self.logger.debug("Load Spotify tracks data: START")
         playlists_tracks_data = [pl["tracks"]["items"] for pl in playlists_data]
@@ -134,7 +135,7 @@ class SpotifyLibrary(Library):
         self.logger.info(f"\33[1;95m  >\33[1;97m Enriching metadata for {len(self.tracks)} Spotify tracks \33[0m")
 
         if albums:  # enrich track albums
-            album_uris: Set[str] = {track.response["album"]["uri"] for track in self.tracks}
+            album_uris: set[str] = {track.response["album"]["uri"] for track in self.tracks}
             album_responses = self.api.get_items(album_uris, kind=ItemType.ALBUM,
                                                  limit=20, use_cache=self.use_cache)
 
@@ -143,7 +144,7 @@ class SpotifyLibrary(Library):
                 track.response["album"] = albums[track.response["album"]["uri"]]
 
         if artists:  # enrich track artists
-            artist_uris: Set[str] = {artist["uri"] for track in self.tracks for artist in track.response["artists"]}
+            artist_uris: set[str] = {artist["uri"] for track in self.tracks for artist in track.response["artists"]}
             artist_responses = self.api.get_items(artist_uris, kind=ItemType.ARTIST,
                                                   limit=20, use_cache=self.use_cache)
 
@@ -154,7 +155,7 @@ class SpotifyLibrary(Library):
         self.print_line()
         self.logger.debug("Enrich Spotify library: DONE\n")
 
-    def _get_playlists_data(self) -> List[MutableMapping[str, Any]]:
+    def _get_playlists_data(self) -> list[Mapping[str, Any]]:
         """Get playlists and all their tracks"""
         self.logger.debug("Get Spotify playlists data: START")
         playlists_data = self.api.get_collections_user(kind=ItemType.PLAYLIST, limit=self.limit,
@@ -194,10 +195,10 @@ class SpotifyLibrary(Library):
         self.print_line(REPORT)
 
     def sync(self,
-             playlists: Optional[Union[Library, Mapping[str, Playlist], Collection[Playlist]]] = None,
-             clear: Optional[Literal['all', 'extra']] = None,
+             playlists: Library | Mapping[str, Playlist] | Collection[Playlist] | None = None,
+             clear: Literal['all', 'extra'] | None = None,
              reload: bool = True,
-             dry_run: bool = True) -> MutableMapping[str, SyncResultSpotifyPlaylist]:
+             dry_run: bool = True) -> Mapping[str, SyncResultSpotifyPlaylist]:
         """
         Synchronise this playlist object with the remote Spotify playlist it is associated with. Clear options:
 
@@ -263,7 +264,7 @@ class SpotifyLibrary(Library):
             )
         self.print_line(STAT)
 
-    def extend(self, items: Union[ItemCollection, Collection[Item]]):
+    def extend(self, items: ItemCollection | Collection[Item]):
         self.logger.debug("Extend Spotify tracks data: START")
         self.logger.info(f"\33[1;95m ->\33[1;97m "
                          f"Extending library: checking if the given items are already in this library \33[0m")
@@ -291,12 +292,12 @@ class SpotifyLibrary(Library):
         self.log_tracks()
         self.logger.debug("Extend Spotify tracks data: DONE\n")
 
-    def merge_playlists(self, playlists: Optional[Union[Library, Mapping[str, Playlist], List[Playlist]]] = None):
+    def merge_playlists(self, playlists: Library | Mapping[str, Playlist] | list[Playlist] | None = None):
         # TODO: merge playlists adding/removing tracks as needed.
         #  Most likely will need to implement some method on playlist class too
         raise NotImplementedError
 
-    def restore_playlists(self, backup: Mapping[str, List[str]]):
+    def restore_playlists(self, backup: Mapping[str, list[str]]):
         """
         Restore playlists from a backup to loaded playlist objects.
         This does not sync the updated playlists with Spotify.

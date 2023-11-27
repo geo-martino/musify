@@ -3,7 +3,7 @@ from copy import copy
 from datetime import datetime
 
 from tests.common import random_file
-from syncify.local.playlist.processor import TrackLimit, LimitType
+from syncify.local.playlist.processor.limit import TrackLimit, LimitType
 from tests.local.track.track import random_tracks
 
 

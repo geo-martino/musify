@@ -1,17 +1,18 @@
-from typing import List, Mapping, Collection, Union, MutableMapping
+from collections.abc import Collection, Mapping
+from typing import MutableMapping
 
 from syncify.abstract.item import Item
 from syncify.abstract.collection import Library, ItemCollection
 from syncify.enums.tags import TagName
 from syncify.local.library import LocalLibrary
-from syncify.utils import make_list
+from syncify.utils.helpers import make_list
 from syncify.utils.logger import Logger, REPORT
 
 
 class Report(Logger):
     """Various methods for reporting on items/collections/libraries etc."""
 
-    def report_library_differences(self, source: Library, compare: Library) -> Mapping[str, Mapping[str, List[Item]]]:
+    def report_library_differences(self, source: Library, compare: Library) -> Mapping[str, Mapping[str, list[Item]]]:
         """
         Generate a report on the differences between two library's playlists.
 
@@ -67,9 +68,9 @@ class Report(Logger):
         return report
 
     def report_missing_tags(self,
-                            collections: Union[LocalLibrary, Collection[ItemCollection]],
-                            tags: List[TagName] = TagName.ALL,
-                            match_all: bool = False) -> MutableMapping[ItemCollection, MutableMapping[Item, List[str]]]:
+                            collections: LocalLibrary | Collection[ItemCollection],
+                            tags: list[TagName] = TagName.ALL,
+                            match_all: bool = False) -> Mapping[ItemCollection, Mapping[Item, list[str]]]:
         """
         Generate a report on the items with a set of collections that have missing tags.
 
@@ -99,9 +100,9 @@ class Report(Logger):
             tag_names.remove("images")
             tag_names.add("has_image")
 
-        missing: MutableMapping[ItemCollection, MutableMapping[Item, List[str]]] = {}
+        missing: MutableMapping[ItemCollection, Mapping[Item, list[str]]] = {}
         for collection in collections:
-            missing_collection: MutableMapping[Item, List[str]] = {}
+            missing_collection: MutableMapping[Item, list[str]] = {}
             for item in collection.items:
                 missing_tags = [tag for tag in tag_names if item[tag] is None]
                 if all(missing_tags) if match_all else any(missing_tags):

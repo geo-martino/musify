@@ -1,20 +1,20 @@
 import sys
 from abc import ABCMeta, abstractmethod
+from collections.abc import Mapping
 from datetime import datetime
-from typing import List, MutableMapping, Optional, Mapping, Union, Set
 
 from syncify.abstract.collection import ItemCollection, Folder, Album, Artist, Genre
 from syncify.abstract.item import Item
 from syncify.local.base import Local
 from syncify.local.exception import LocalCollectionError
-from syncify.local.track import LocalTrack, SyncResultTrack
-from syncify.spotify import IDType
+from syncify.local.track.base.track import LocalTrack
+from syncify.local.track.base.writer import SyncResultTrack
+from syncify.spotify.enums import IDType
 from syncify.spotify.utils import validate_id_type
-from syncify.utils import get_most_common_values
+from syncify.utils.helpers import get_most_common_values
 from syncify.utils.logger import Logger, STAT
 
-# noinspection SpellCheckingInspection
-__max_str = "zzzzzzzzzzzzzzzzzzzzzzzz"
+__max_str = "z" * 50
 
 
 class LocalCollection(ItemCollection, Local, Logger, metaclass=ABCMeta):
@@ -22,33 +22,33 @@ class LocalCollection(ItemCollection, Local, Logger, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def tracks(self) -> List[LocalTrack]:
+    def tracks(self) -> list[LocalTrack]:
         """The local tracks in this collection"""
         raise NotImplementedError
 
     @property
-    def items(self) -> List[LocalTrack]:
+    def items(self) -> list[LocalTrack]:
         """Alias for ``self.tracks``"""
         return self.tracks
 
     @property
-    def track_paths(self) -> Set[str]:
+    def track_paths(self) -> set[str]:
         """Set of all unique track paths in this collection"""
         return {track.path for track in self.tracks}
 
     @property
-    def artists(self) -> List[str]:
+    def artists(self) -> list[str]:
         """List of artists ordered by frequency of appearance on the tracks in this collection"""
         return get_most_common_values(track.artist for track in self.tracks if track.artist)
 
     @property
-    def genres(self) -> List[str]:
+    def genres(self) -> list[str]:
         """List of genres ordered by frequency of appearance on the tracks in this collection"""
         genres = (genre for track in self.tracks for genre in (track.genres if track.genres else []))
         return get_most_common_values(genres)
 
     @property
-    def length(self) -> Optional[float]:
+    def length(self) -> float | None:
         """Total duration of all tracks in this collection in seconds"""
         lengths = [track.length for track in self.tracks]
         return sum(lengths) if lengths else None
@@ -60,13 +60,13 @@ class LocalCollection(ItemCollection, Local, Logger, metaclass=ABCMeta):
         return sort[0].date_modified
 
     @property
-    def last_added(self) -> Optional[datetime]:
+    def last_added(self) -> datetime | None:
         """Timestamp of the track last added to the library in this collection"""
         sort = sorted(filter(lambda t: t.date_added, self.tracks), key=lambda t: t.date_added, reverse=True)
         return sort[0].date_added if sort else None
 
     @property
-    def last_played(self) -> Optional[datetime]:
+    def last_played(self) -> datetime | None:
         """Timestamp of the last played track in this collection"""
         sort = sorted(filter(lambda t: t.last_played, self.tracks), key=lambda t: t.last_played, reverse=True)
         return sort[0].last_played if sort else None
@@ -109,7 +109,7 @@ class LocalCollection(ItemCollection, Local, Logger, metaclass=ABCMeta):
             "last_played": self.last_played,
         }
 
-    def __getitem__(self, key: Union[str, int, Item]) -> Item:
+    def __getitem__(self, key: str | int | Item) -> Item:
         """
         Returns the item in this collection by matching on a given path/index/URI.
         If an item is given, the URI or path is extracted from this item.
@@ -157,11 +157,11 @@ class LocalCollectionFiltered(LocalCollection):
         return self._name
 
     @property
-    def tracks(self) -> List[LocalTrack]:
+    def tracks(self) -> list[LocalTrack]:
         """The local tracks in this collection"""
         return self._tracks
 
-    def __init__(self, tracks: List[LocalTrack], name: Optional[str] = None):
+    def __init__(self, tracks: list[LocalTrack], name: str | None = None):
         Logger.__init__(self)
         if len(tracks) == 0:
             raise LocalCollectionError("No tracks were given")
@@ -184,14 +184,14 @@ class LocalCollectionFiltered(LocalCollection):
                     f" Only provide tracks from the same {self._tag_key.rstrip('s')}.")
 
             self._name: str = names_flat[0]
-            self._tracks: List[LocalTrack] = tracks
+            self._tracks: list[LocalTrack] = tracks
         else:  # match tracks with a tag equal to the given name for this collection
             self._name: str = name
-            self._tracks: List[LocalTrack] = self._get_matching_tracks(tracks)
+            self._tracks: list[LocalTrack] = self._get_matching_tracks(tracks)
 
-    def _get_matching_tracks(self, tracks: List[LocalTrack]) -> List[LocalTrack]:
+    def _get_matching_tracks(self, tracks: list[LocalTrack]) -> list[LocalTrack]:
         """Get a list of tracks that match this collection's name"""
-        matched: List[LocalTrack] = []
+        matched: list[LocalTrack] = []
         for track in tracks:
             value = track[self._tag_key]
             if isinstance(value, str) and self.name == value:
@@ -215,7 +215,7 @@ class LocalFolder(LocalCollectionFiltered, Folder):
     """
 
     @property
-    def albums(self) -> List[str]:
+    def albums(self) -> list[str]:
         """List of albums ordered by frequency of appearance on the tracks in this collection"""
         return get_most_common_values(track.album for track in self.tracks if track.album)
 
@@ -224,7 +224,7 @@ class LocalFolder(LocalCollectionFiltered, Folder):
         """Collection is a compilation if over 50% of tracks are marked as compilation"""
         return (sum(track.compilation is True for track in self.tracks) / len(self.tracks)) > 0.5
 
-    def __init__(self, tracks: List[LocalTrack], name: Optional[str] = None):
+    def __init__(self, tracks: list[LocalTrack], name: str | None = None):
         LocalCollectionFiltered.__init__(self, tracks=tracks, name=name)
         self.tracks.sort(key=lambda x: x.filename or __max_str)
 
@@ -294,12 +294,12 @@ class LocalAlbum(LocalCollectionFiltered, Album):
     """
 
     @property
-    def album_artist(self) -> Optional[int]:
+    def album_artist(self) -> int | None:
         """The most common artist in this collection"""
         return self.artists[0] if self.artists else None
 
     @property
-    def year(self) -> Optional[int]:
+    def year(self) -> int | None:
         """The most common year in this collection"""
         years = get_most_common_values(track.year for track in self.tracks if track.year)
         return years[0] if years else None
@@ -310,7 +310,7 @@ class LocalAlbum(LocalCollectionFiltered, Album):
         return (sum(track.compilation is True for track in self.tracks) / len(self.tracks)) > 0.5
 
     @property
-    def image_links(self) -> MutableMapping[str, str]:
+    def image_links(self) -> Mapping[str, str]:
         return self._image_links
 
     @property
@@ -318,12 +318,12 @@ class LocalAlbum(LocalCollectionFiltered, Album):
         return any(track.has_image for track in self.tracks)
 
     @property
-    def rating(self) -> Optional[float]:
+    def rating(self) -> float | None:
         """Average rating of all tracks in this collection"""
         ratings = [track.rating for track in self.tracks if track.rating]
         return sum(ratings) / len(ratings) if ratings else None
 
-    def __init__(self, tracks: List[LocalTrack], name: Optional[str] = None):
+    def __init__(self, tracks: list[LocalTrack], name: str | None = None):
         LocalCollectionFiltered.__init__(self, tracks=tracks, name=name)
         self.tracks.sort(key=lambda x: (x.disc_number or sys.maxsize,
                                         x.track_number or sys.maxsize,
@@ -362,11 +362,11 @@ class LocalArtist(LocalCollectionFiltered, Artist):
     """
 
     @property
-    def albums(self) -> List[str]:
+    def albums(self) -> list[str]:
         """List of albums ordered by frequency of appearance on the tracks in this collection"""
         return get_most_common_values(track.album for track in self.tracks if track.album)
 
-    def __init__(self, tracks: List[LocalTrack], name: Optional[str] = None):
+    def __init__(self, tracks: list[LocalTrack], name: str | None = None):
         LocalCollectionFiltered.__init__(self, tracks=tracks, name=name)
         self.tracks.sort(key=lambda x: (x.album or __max_str,
                                         x.disc_number or sys.maxsize,
@@ -400,11 +400,11 @@ class LocalGenres(LocalCollectionFiltered, Genre):
     """
 
     @property
-    def albums(self) -> List[str]:
+    def albums(self) -> list[str]:
         """List of albums ordered by frequency of appearance on the tracks in this collection"""
         return get_most_common_values(track.album for track in self.tracks if track.album)
 
-    def __init__(self, tracks: List[LocalTrack], name: Optional[str] = None):
+    def __init__(self, tracks: list[LocalTrack], name: str | None = None):
         LocalCollectionFiltered.__init__(self, tracks=tracks, name=name)
         self.tracks.sort(key=lambda x: (x.artist or __max_str,
                                         x.album or __max_str,

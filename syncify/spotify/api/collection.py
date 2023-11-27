@@ -1,13 +1,16 @@
 from abc import ABCMeta, abstractmethod
+from collections.abc import Mapping, MutableMapping
+from itertools import batched
 from time import sleep
-from typing import Any, List, Mapping, MutableMapping, Optional, Union
+from typing import Any
 from urllib.parse import urlparse, urlencode
 
-from syncify.spotify import __URL_API__, IDType, ItemType, APIMethodInputType
+from syncify.spotify.api import __URL_API__, APIMethodInputType
 from syncify.spotify.api.basic import APIBase
+from syncify.spotify.enums import IDType, ItemType
 from syncify.spotify.exception import SpotifyIDTypeError, SpotifyItemTypeError
 from syncify.spotify.utils import validate_item_type, convert, get_item_type, extract_ids
-from syncify.utils import chunk, limit_value
+from syncify.utils.helpers import limit_value
 
 
 class Collections(APIBase, metaclass=ABCMeta):
@@ -23,7 +26,7 @@ class Collections(APIBase, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def user_id(self) -> Optional[str]:
+    def user_id(self) -> str | None:
         """ID of the currently authenticated used"""
         raise NotImplementedError
 
@@ -51,8 +54,8 @@ class Collections(APIBase, metaclass=ABCMeta):
     ## GET helpers: Generic methods for getting collections and their items
     ###########################################################################
     def _get_collection_items(
-            self, url: Union[str, Mapping[str, Any]], kind: Optional[ItemType] = None, use_cache: bool = True,
-    ) -> List[MutableMapping[str, Any]]:
+            self, url: str | Mapping[str, Any], kind: ItemType | None = None, use_cache: bool = True,
+    ) -> list[Mapping[str, Any]]:
         """
         Get responses from a given ``url``.
         The function requests each page of the collection returning a list of all items
@@ -118,7 +121,7 @@ class Collections(APIBase, metaclass=ABCMeta):
         return results
 
     @staticmethod
-    def _enrich_collections_response(collections: List[MutableMapping[str, Any]], kind: ItemType):
+    def _enrich_collections_response(collections: list[MutableMapping[str, Any]], kind: ItemType):
         """Add type to API collection response"""
         for collection in collections:
             if collection.get("type") is None:
@@ -129,11 +132,11 @@ class Collections(APIBase, metaclass=ABCMeta):
     ###########################################################################
     def get_collections_user(
             self,
-            user: Optional[str] = None,
+            user: str | None = None,
             kind: ItemType = ItemType.PLAYLIST,
             limit: int = 50,
             use_cache: bool = True,
-    ) -> List[MutableMapping[str, Any]]:
+    ) -> list[Mapping[str, Any]]:
         """
         ``GET: /{kind}s`` - Get collections for a given user.
 
@@ -171,8 +174,8 @@ class Collections(APIBase, metaclass=ABCMeta):
         return collections
 
     def get_collections(
-            self, values: APIMethodInputType, kind: Optional[ItemType] = None, limit: int = 50, use_cache: bool = True,
-    ) -> List[MutableMapping[str, Any]]:
+            self, values: APIMethodInputType, kind: ItemType | None = None, limit: int = 50, use_cache: bool = True,
+    ) -> list[MutableMapping[str, Any]]:
         """
         ``GET: /{kind}s/...`` - Get all items from a given list of ``values``. Items may be:
             * A string representing a URL/URI/ID.
@@ -262,7 +265,7 @@ class Collections(APIBase, metaclass=ABCMeta):
         self.logger.debug(f"{'DONE':<7}: {url:<71} | Created playlist: '{name}' -> {playlist}")
         return playlist
 
-    def add_to_playlist(self, playlist: str, items: List[str], limit: int = 50, skip_dupes: bool = True) -> int:
+    def add_to_playlist(self, playlist: str, items: list[str], limit: int = 50, skip_dupes: bool = True) -> int:
         """
         ``POST: /playlists/{playlist_id}/tracks`` - Add list of tracks to a given playlist.
 
@@ -290,7 +293,7 @@ class Collections(APIBase, metaclass=ABCMeta):
             uris_current = [track['track']['uri'] for track in tracks]
             uri_list = [uri for uri in uri_list if uri not in uris_current]
 
-        for uris in chunk(uri_list, size=limit):  # add tracks in batches
+        for uris in batched(uri_list, limit):  # add tracks in batches
             params = {'uris': ','.join(uris)}
             log = [f"Adding {len(uris):>6} items"]
             self.post(url, params=params, log_pad=71, log_extra=log)
@@ -313,7 +316,7 @@ class Collections(APIBase, metaclass=ABCMeta):
         self.delete(url, log_pad=43)
         return url
 
-    def clear_from_playlist(self, playlist: str, items: Optional[List[str]] = None, limit: int = 100) -> int:
+    def clear_from_playlist(self, playlist: str, items: list[str] | None = None, limit: int = 100) -> int:
         """
         ``DELETE: /playlists/{playlist_id}/tracks`` - Clear tracks from a given playlist.
         WARNING: This function can destructively modify your Spotify playlists.
@@ -342,7 +345,7 @@ class Collections(APIBase, metaclass=ABCMeta):
         if not uri_list:  # skip when nothing to clear
             return 0
 
-        for uris in chunk(uri_list, size=limit):  # clear in batches
+        for uris in batched(uri_list, limit):  # clear in batches
             body = {'tracks': [{'uri': uri} for uri in uris]}
             log = [f"Clearing {len(uri_list):>3} tracks"]
             self.delete(url, json=body, log_pad=71, log_extra=log)

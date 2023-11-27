@@ -1,28 +1,28 @@
 import traceback
 from collections import Counter
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import List, Mapping, Optional
 
 from syncify.abstract.collection import ItemCollection
-from syncify.abstract.item import Item
+from syncify.abstract.item import Item, Track
 from syncify.abstract.misc import Result
 from syncify.enums.tags import TagName
-from syncify.local.track import LocalTrack
-from syncify.spotify import IDType, ItemType, __UNAVAILABLE_URI_VALUE__
-from syncify.spotify.utils import check_spotify_type, convert
-from syncify.spotify.api import API
+from syncify.spotify import __UNAVAILABLE_URI_VALUE__
+from syncify.spotify.api.api import API
+from syncify.spotify.enums import IDType, ItemType
 from syncify.spotify.library.library import SpotifyPlaylist
 from syncify.spotify.processor.match import Matcher
-from syncify.utils import get_user_input
+from syncify.spotify.utils import check_spotify_type, convert
+from syncify.utils.helpers import get_user_input
 from syncify.utils.logger import REPORT
 
 
 @dataclass
 class CheckResult(Result):
     """Stores the results of the checking process"""
-    switched: List[Item]
-    unavailable: List[Item]
-    unchanged: List[Item]
+    switched: list[Item]
+    unavailable: list[Item]
+    unchanged: list[Item]
 
 
 class Checker(Matcher):
@@ -55,12 +55,12 @@ class Checker(Matcher):
         self.skip = False  # when true, skip the current loop
         self.quit = False  # when true, quit ItemChecker
 
-        self.remaining: List[LocalTrack] = []
-        self.switched: List[LocalTrack] = []
+        self.remaining: list[Track] = []
+        self.switched: list[Track] = []
 
-        self.final_switched: List[LocalTrack] = []
-        self.final_unavailable: List[LocalTrack] = []
-        self.final_unchanged: List[LocalTrack] = []
+        self.final_switched: list[Track] = []
+        self.final_unavailable: list[Track] = []
+        self.final_unchanged: list[Track] = []
 
     def _make_temp_playlist(self, name: str, collection: ItemCollection):
         """Create a temporary playlist, store its URL for later unfollowing, and add all given URIs."""
@@ -80,13 +80,13 @@ class Checker(Matcher):
             self.logger.error(traceback.format_exc())
             self.quit = True
 
-    def _get_user_input(self, text: Optional[str] = None) -> str:
+    def _get_user_input(self, text: str | None = None) -> str:
         """Print dialog with optional text and get the user's input."""
         inp = get_user_input(text)
         self.logger.debug(f"User input: {inp}")
         return inp.strip()
 
-    def _format_help_text(self, options: Mapping[str, str], header: Optional[List[str]] = None) -> str:
+    def _format_help_text(self, options: Mapping[str, str], header: list[str] | None = None) -> str:
         """Format help text with a given mapping of options. Add an option header to include before options."""
         max_width = self.get_max_width(options)
 
@@ -110,7 +110,7 @@ class Checker(Matcher):
         self.playlist_name_urls.clear()
         self.playlist_name_collection.clear()
 
-    def check(self, collections: List[ItemCollection], interval: int = 10) -> Optional[CheckResult]:
+    def check(self, collections: list[ItemCollection], interval: int = 10) -> CheckResult | None:
         """
         Run the following operations to check a list of ItemCollections on Spotify.
 
@@ -258,7 +258,7 @@ class Checker(Matcher):
                 self.api.auth()
 
             name: str = self._default_name if isinstance(collection, list) else collection.name
-            items: List[Item] = collection if isinstance(collection, list) else collection.items
+            items: list[Item] = collection if isinstance(collection, list) else collection.items
             self._log_padded([name, f"{len(items):>6} total items"], pad='>')
 
             while True:

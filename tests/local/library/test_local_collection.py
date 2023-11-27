@@ -1,7 +1,7 @@
 import pytest
 
 from syncify.local.exception import LocalCollectionError
-from syncify.local.library import LocalFolder, LocalAlbum, LocalArtist, LocalGenres
+from syncify.local.library.collection import LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from tests.local.track.track import random_tracks
 
 

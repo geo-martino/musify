@@ -1,8 +1,10 @@
 from abc import ABCMeta
-from typing import Any, List, MutableMapping, Optional, Self
+from collections.abc import Mapping, MutableMapping
+from typing import Any, Self
 
 from syncify.abstract.item import Item, Track
-from syncify.spotify import IDType, ItemType, APIMethodInputType
+from syncify.spotify.api import APIMethodInputType
+from syncify.spotify.enums import IDType, ItemType
 from syncify.spotify.utils import convert, extract_ids
 from syncify.spotify.base import Spotify
 
@@ -52,20 +54,20 @@ class SpotifyTrack(Track, SpotifyItem):
         return self.response["name"]
 
     @property
-    def artist(self) -> Optional[str]:
+    def artist(self) -> str | None:
         """Joined string representation of all artists in on this track"""
         artists = self.response.get("artists", {})
         artist = self._list_sep.join(artist["name"] for artist in artists)
         return artist if artist else None
 
     @property
-    def album(self) -> Optional[str]:
+    def album(self) -> str | None:
         """The album this track is featured on"""
         album = self.response.get("album", {})
         return album.get("name")
 
     @property
-    def album_artist(self) -> Optional[str]:
+    def album_artist(self) -> str | None:
         """The artist of the album this track is featured on"""
         album = self.response.get("album", {})
         album_artist = self._list_sep.join(artist["name"] for artist in album.get("artists", []))
@@ -77,13 +79,13 @@ class SpotifyTrack(Track, SpotifyItem):
         return self.response["track_number"]
 
     @property
-    def track_total(self) -> Optional[int]:
+    def track_total(self) -> int | None:
         """The track number of tracks on the album this track is featured on"""
         album = self.response.get("album", {})
         return album.get("total_tracks")
 
     @property
-    def genres(self) -> Optional[List[str]]:
+    def genres(self) -> list[str] | None:
         """
         List of genres for the album this track is featured on.
         If not found, genres from the main artist are given.
@@ -100,19 +102,19 @@ class SpotifyTrack(Track, SpotifyItem):
         return [g.title() for g in main_artist_genres] if main_artist_genres else None
 
     @property
-    def year(self) -> Optional[int]:
+    def year(self) -> int | None:
         """The year this track was released"""
         album = self.response.get("album", {})
         return int(album["release_date"][:4]) if album.get("release_date") else None
 
     @property
-    def bpm(self) -> Optional[float]:
+    def bpm(self) -> float | None:
         """The tempo of this track"""
         if "audio_features" in self.response:
             return self.response["audio_features"]["tempo"]
 
     @property
-    def key(self) -> Optional[str]:
+    def key(self) -> str | None:
         """The key of this track in Alphabetical musical notation format"""
         if "audio_features" in self.response:
             # correctly formatted song key string
@@ -130,12 +132,12 @@ class SpotifyTrack(Track, SpotifyItem):
         return self.response["disc_number"]
 
     @property
-    def disc_total(self) -> Optional[int]:
+    def disc_total(self) -> int | None:
         """The total number the discs from the album this track is featured on"""
         return self._disc_total
 
     @disc_total.setter
-    def disc_total(self, value: Optional[int]):
+    def disc_total(self, value: int | None):
         """The total number the discs from the album this track is featured on"""
         self._disc_total = value
 
@@ -146,16 +148,16 @@ class SpotifyTrack(Track, SpotifyItem):
         return album.get('album_group', "") == "compilation"
 
     @property
-    def comments(self) -> Optional[List[str]]:
+    def comments(self) -> list[str] | None:
         """Comments associated with this track set by the user"""
         return self._comments
 
     @comments.setter
-    def comments(self, value: Optional[List[str]]):
+    def comments(self, value: list[str] | None):
         self._comments = value
 
     @property
-    def image_links(self) -> MutableMapping[str, str]:
+    def image_links(self) -> Mapping[str, str]:
         """The images associated with the album this track is featured on in the form ``{image name: image link}``"""
         album = self.response.get("album", {})
         images = {image["height"]: image["url"] for image in album.get("images", [])}
@@ -173,7 +175,7 @@ class SpotifyTrack(Track, SpotifyItem):
         return self.response['duration_ms'] / 1000
 
     @property
-    def rating(self) -> Optional[int]:
+    def rating(self) -> int | None:
         """The popularity of this track on Spotify"""
         return self.response.get('popularity')
 
@@ -224,17 +226,17 @@ class SpotifyArtist(SpotifyItem):
         return self.artist
 
     @property
-    def artist(self) -> Optional[str]:
+    def artist(self) -> str | None:
         """The artist's name"""
         return self.response["name"]
 
     @property
-    def genres(self) -> Optional[List[str]]:
+    def genres(self) -> list[str] | None:
         """List of genres associated with this artist"""
         return self.response.get("genres")
 
     @property
-    def image_links(self) -> MutableMapping[str, str]:
+    def image_links(self) -> Mapping[str, str]:
         """The images associated with this artist in the form ``{image name: image link}``"""
         images = {image["height"]: image["url"] for image in self.response.get("images", [])}
         return {"cover_front": url for height, url in images.items() if height == max(images)}
@@ -246,7 +248,7 @@ class SpotifyArtist(SpotifyItem):
         return images is not None and len(images) > 0
 
     @property
-    def rating(self) -> Optional[int]:
+    def rating(self) -> int | None:
         """The popularity of this artist on Spotify"""
         return self.response.get('popularity')
 

@@ -1,12 +1,13 @@
 from functools import reduce
 from operator import mul
 from random import shuffle
-from typing import Any, Callable, List, Mapping, Optional, Self, MutableMapping, Union, Collection
+from typing import Any, Self
+from collections.abc import Callable, Collection, Mapping
 
 from syncify.enums import SyncifyEnum
 from syncify.enums.tags import PropertyName
 from syncify.local.exception import LimitError
-from syncify.local.track import LocalTrack
+from syncify.local.track.base.track import LocalTrack
 from syncify.local.playlist.processor.base import TrackProcessor
 from syncify.local.playlist.processor.sort import TrackSort
 
@@ -46,19 +47,19 @@ class TrackLimit(TrackProcessor):
         processing.
     """
 
-    _valid_methods: MutableMapping[str, str] = {}
+    _valid_methods: Mapping[str, str] = {}
 
     @property
-    def limit_sort(self) -> Optional[str]:
+    def limit_sort(self) -> str | None:
         """String representation of the sorting method to use before limiting"""
         return self._limit_sort
 
     @limit_sort.setter
-    def limit_sort(self, value: Optional[str]):
+    def limit_sort(self, value: str | None):
         """Sets the sorting method name and stored function"""
         if value is None:
-            self._limit_sort: Optional[str] = None
-            self._sort_method: Callable[[List[LocalTrack]], None] = lambda _: None
+            self._limit_sort: str | None = None
+            self._sort_method: Callable[[list[LocalTrack]], None] = lambda _: None
             return
 
         name = self._get_method_name(value, valid=self._valid_methods, prefix=self._sort_method_prefix)
@@ -66,7 +67,7 @@ class TrackLimit(TrackProcessor):
         self._sort_method = getattr(self, self._valid_methods[name])
 
     @classmethod
-    def from_xml(cls, xml: Optional[Mapping[str, Any]] = None) -> Optional[Self]:
+    def from_xml(cls, xml: Mapping[str, Any] | None = None) -> Self | None:
         if xml is None:
             return cls()
 
@@ -87,7 +88,7 @@ class TrackLimit(TrackProcessor):
             self,
             limit: int = 0,
             on: LimitType = LimitType.ITEMS,
-            sorted_by: Optional[str] = None,
+            sorted_by: str | None = None,
             allowance: float = 1.0,
     ):
         self.limit_max = limit
@@ -102,12 +103,12 @@ class TrackLimit(TrackProcessor):
         } | {name: name for name in dir(self) if name.startswith(self._sort_method_prefix)}
         self.limit_sort = sorted_by
 
-    def limit(self, tracks: List[LocalTrack], ignore: Optional[Collection[Union[str, LocalTrack]]] = None):
+    def limit(self, tracks: list[LocalTrack], ignore: Collection[str | LocalTrack] | None = None):
         """
         Limit ``tracks`` inplace based on set conditions.
 
         :param tracks: The list of tracks to limit.
-        :param ignore: Optional, list of tracks or paths of tracks to ignore when limiting.
+        :param ignore: list of tracks or paths of tracks to ignore when limiting.
             i.e. keep them in the list regardless.
         """
         if len(tracks) == 0 or self.limit_max == 0:
@@ -147,39 +148,39 @@ class TrackLimit(TrackProcessor):
                     break
 
     @staticmethod
-    def _sort_random(tracks: List[LocalTrack]):
+    def _sort_random(tracks: list[LocalTrack]):
         shuffle(tracks)
 
     @staticmethod
-    def _sort_highest_rating(tracks: List[LocalTrack]):
+    def _sort_highest_rating(tracks: list[LocalTrack]):
         TrackSort.sort_by_field(tracks, PropertyName.RATING, reverse=True)
 
     @staticmethod
-    def _sort_lowest_rating(tracks: List[LocalTrack]):
+    def _sort_lowest_rating(tracks: list[LocalTrack]):
         TrackSort.sort_by_field(tracks, PropertyName.RATING)
 
     @staticmethod
-    def _sort_most_recently_played(tracks: List[LocalTrack]):
+    def _sort_most_recently_played(tracks: list[LocalTrack]):
         TrackSort.sort_by_field(tracks, PropertyName.LAST_PLAYED, reverse=True)
 
     @staticmethod
-    def _sort_least_recently_played(tracks: List[LocalTrack]):
+    def _sort_least_recently_played(tracks: list[LocalTrack]):
         TrackSort.sort_by_field(tracks, PropertyName.LAST_PLAYED)
 
     @staticmethod
-    def _sort_most_often_played(tracks: List[LocalTrack]):
+    def _sort_most_often_played(tracks: list[LocalTrack]):
         TrackSort.sort_by_field(tracks, PropertyName.PLAY_COUNT, reverse=True)
 
     @staticmethod
-    def _sort_least_often_played(tracks: List[LocalTrack]):
+    def _sort_least_often_played(tracks: list[LocalTrack]):
         TrackSort.sort_by_field(tracks, PropertyName.PLAY_COUNT)
 
     @staticmethod
-    def _sort_most_recently_added(tracks: List[LocalTrack]):
+    def _sort_most_recently_added(tracks: list[LocalTrack]):
         TrackSort.sort_by_field(tracks, PropertyName.DATE_ADDED, reverse=True)
 
     @staticmethod
-    def _sort_least_recently_added(tracks: List[LocalTrack]):
+    def _sort_least_recently_added(tracks: list[LocalTrack]):
         TrackSort.sort_by_field(tracks, PropertyName.DATE_ADDED)
 
     def _convert(self, track: LocalTrack) -> float:

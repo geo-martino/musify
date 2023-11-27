@@ -1,15 +1,41 @@
 import inspect
 import re
-from typing import List, Optional, Union, Any, Iterable, TypeVar, Tuple, Collection
+from dataclasses import dataclass
+from typing import Any
+from collections.abc import Iterable, Collection, Mapping, MutableMapping, Callable
 
 from syncify.abstract.collection import Album, ItemCollection
 from syncify.abstract.item import Track, Base
 from syncify.enums.tags import TagName, PropertyName
-from syncify.utils import limit_value
+from syncify.utils.helpers import limit_value
 from syncify.utils.logger import Logger
 
-MatchTypes = Union[Track, Album]
-T = TypeVar("T")
+
+_CLEAN_TAGS_REMOVE_ALL = ["the", "a", "&", "and"]
+_CLEAN_TAGS_SPLIT_ALL = []
+
+
+@dataclass
+class CleanTagConfig:
+    """Config for processing string-type tag values before matching"""
+    name: str
+    _remove: list[str] | None = None
+    _split: list[str] | None = None
+    _preprocess: Callable[[str], str] = None
+
+    @property
+    def remove(self) -> list[str]:
+        """Get all redundant words to be removed for this tag"""
+        return _CLEAN_TAGS_REMOVE_ALL + (self._remove if self._remove else [])
+
+    @property
+    def split(self) -> list[str]:
+        """Get all split words for which the cleaner will only take words before this word"""
+        return _CLEAN_TAGS_SPLIT_ALL + (self._split if self._split else [])
+
+    def preprocess(self, value: str) -> str:
+        """Apply the preprocess function to value if given, return value unprocessed if not"""
+        return self._preprocess(value) if self._preprocess else value
 
 
 class Matcher(Logger):
@@ -22,12 +48,19 @@ class Matcher(Logger):
     karaoke_tags = ['karaoke', 'backing', 'instrumental']
     year_range = 10
 
-    def _log_padded(self, log: List[str], pad: str = ' '):
+    # config for cleaning string-type tags for matching
+    _clean_tags_config = [
+        CleanTagConfig(name="title", _remove=["part"], _split=["featuring", "feat.", "ft.", "/"]),
+        CleanTagConfig(name="artist", _split=["featuring", "feat.", "ft.", "vs"]),
+        CleanTagConfig(name="album", _remove=["ep"], _preprocess=lambda x: x.split('-')[0])
+    ]
+
+    def _log_padded(self, log: list[str], pad: str = ' '):
         """Wrapper for logging lists in a correctly aligned format"""
         log[0] = pad * 3 + ' ' + (log[0] if log[0] else "unknown")
         self.logger.debug(" | ".join(log))
 
-    def _log_algorithm(self, source: Base, extra: Optional[List[str]] = None):
+    def _log_algorithm(self, source: Base, extra: list[str] | None = None):
         """Wrapper for initially logging an algorithm in a correctly aligned format"""
         algorithm = inspect.stack()[1][0].f_code.co_name.upper().lstrip("_").replace("_", " ")
         log = [source.name, algorithm]
@@ -35,7 +68,7 @@ class Matcher(Logger):
             log += extra
         self._log_padded(log, pad='>')
 
-    def _log_test(self, source: Base, result: MatchTypes, test: Any, extra: Optional[List[str]] = None):
+    def _log_test[T: (Track, Album)](self, source: Base, result: T, test: Any, extra: list[str] | None = None):
         """Wrapper for initially logging a test result in a correctly aligned format"""
         algorithm = inspect.stack()[1][0].f_code.co_name.replace("match", "").upper().lstrip("_").replace("_", " ")
         log_result = f"> Testing URI: {result.uri}" if hasattr(result, "uri") else "> Test failed"
@@ -44,7 +77,7 @@ class Matcher(Logger):
             log += extra
         self._log_padded(log)
 
-    def _log_match(self, source: Base, result: MatchTypes, extra: Optional[List[str]] = None):
+    def _log_match[T: (Track, Album)](self, source: Base, result: T, extra: list[str] | None = None):
         """Wrapper for initially logging a match in a correctly aligned format"""
         log = [source.name, f"< Matched URI: {result.uri}"]
         if extra:
@@ -55,52 +88,41 @@ class Matcher(Logger):
         Logger.__init__(self)
         self.allow_karaoke = allow_karaoke
 
-    @staticmethod
-    def clean_tags(source: Base):
+    def clean_tags(self, source: Base):
         """
         Clean tags on the input item and assign to its ``clean_tags`` attribute. Used for better matching/searching.
-        Clean by removing redundant words, and only taking phrases before a certain word e.g. 'featuring', 'part'.
+        Clean by removing words, and only taking phrases before a certain word e.g. 'featuring', 'part'.
+        Cleaning config for string-type tags is set in ``_clean_tags_config``.
 
         :param source: The base object with tags to clean.
         """
-        def process(value: str, redundant: Optional[List[str]] = None, split: Optional[List[str]] = None) -> str:
-            value = re.sub(r"[(\[].*?[)\]]", "", value).casefold()
-            for word in redundant_all:
-                value = re.sub(rf"\s{word}\s|^{word}\s|\s{word}$", " ", value)
+        def process(val: str, conf: CleanTagConfig) -> str:
+            """Apply transformations to the given ``value`` to clean it"""
+            val = conf.preprocess(val)
+            val = re.sub(r"[(\[].*?[)\]]", "", val).casefold()
 
-            if redundant:
-                for word in redundant:
-                    value = re.sub(rf"\s{word}\s|^{word}\s|\s{word}$", " ", value)
-            if split:
-                for word in split:
-                    value = value.split(word)[0].rstrip()
+            for word in conf.remove:
+                val = re.sub(rf"\s{word}\s|^{word}\s|\s{word}$", " ", val)
 
-            return re.sub(r"[^\w']+", ' ', value).strip()
+            for word in conf.split:
+                val = val.split(word)[0].rstrip()
 
-        redundant_all = ["the", "a", "&", "and"]
+            return re.sub(r"[^\w']+", ' ', val).strip()
+
         source.clean_tags = {"name": ""}
         name = source.name
 
-        title = getattr(source, "title", None)
-        source.clean_tags["title"] = ""
-        if title:
-            source.clean_tags["title"] = process(title, redundant=["part"], split=["featuring", "feat.", "ft.", "/"])
-            if name == title:
-                source.clean_tags["name"] = source.clean_tags["title"]
+        # process string tags according to config
+        for config in self._clean_tags_config:
+            value = getattr(source, config.name, None)
+            if not value:
+                source.clean_tags[config.name] = ""
+                continue
 
-        artist = getattr(source, "artist", None)
-        source.clean_tags["artist"] = ""
-        if artist:
-            source.clean_tags["artist"] = process(artist, split=["featuring", "feat.", "ft.", "vs"])
-            if name == artist:
-                source.clean_tags["name"] = source.clean_tags["artist"]
-
-        album = getattr(source, "album", None)
-        source.clean_tags["album"] = ""
-        if album:
-            source.clean_tags["album"] = process(album.split('-')[0], redundant=["ep"])
-            if name == album:
-                source.clean_tags["name"] = source.clean_tags["album"]
+            value_cleaned = process(value, conf=config)
+            source.clean_tags[config.name] = value_cleaned
+            if name == value:
+                source.clean_tags["name"] = value_cleaned
 
         source.clean_tags["length"] = getattr(source, "length", None)
         source.clean_tags["year"] = getattr(source, "year", None)
@@ -108,9 +130,10 @@ class Matcher(Logger):
     ###########################################################################
     ## Conditions
     ###########################################################################
-    def match_not_karaoke(self, source: MatchTypes, result: MatchTypes) -> int:
+    def match_not_karaoke[T: (Track, Album)](self, source: T, result: T) -> int:
         """Checks if a result is not a karaoke item."""
-        def is_karaoke(values: Union[str, List[str]]):
+        def is_karaoke(values: str | list[str]) -> bool:
+            """Check if the words in the given ``values`` match any word in ``karaoke_tags``"""
             karaoke = any(word in values for word in self.karaoke_tags)
             self._log_test(source=source, result=result, test=karaoke, extra=[f"{self.karaoke_tags} -> {values}"])
             return karaoke
@@ -123,7 +146,7 @@ class Matcher(Logger):
             return 0
         return 1
 
-    def match_name(self, source: Base, result: MatchTypes) -> float:
+    def match_name[T: (Track, Album)](self, source: T, result: T) -> float:
         """Match on names and return a score. Score=0 when either value is None."""
         score = 0
         source_val = source.clean_tags["name"]
@@ -142,7 +165,7 @@ class Matcher(Logger):
         return score
 
     # noinspection PyProtectedMember
-    def match_artist(self, source: MatchTypes, result: MatchTypes) -> float:
+    def match_artist[T: (Track, Album)](self, source: T, result: T) -> float:
         """
         Match on artists and return a score. Score=0 when either value is None.
         When many artists are present, a scale factor is applied to the score of matches on subsequent artists.
@@ -165,7 +188,7 @@ class Matcher(Logger):
         self._log_test(source=source, result=result, test=round(score, 2), extra=[f"{source_val} -> {result_val}"])
         return score
 
-    def match_album(self, source: MatchTypes, result: MatchTypes) -> float:
+    def match_album[T: (Track, Album)](self, source: T, result: T) -> float:
         """Match on album and return a score. Score=0 when either value is None."""
         score = 0
         source_val = source.clean_tags["album"]
@@ -177,7 +200,7 @@ class Matcher(Logger):
         self._log_test(source=source, result=result, test=round(score, 2), extra=[f"{source_val} -> {result_val}"])
         return score
 
-    def match_length(self, source: MatchTypes, result: MatchTypes) -> float:
+    def match_length[T: (Track, Album)](self, source: T, result: T) -> float:
         """Match on length and return a score. Score=0 when either value is None."""
         score = 0
         source_val = source.clean_tags["length"]
@@ -191,7 +214,7 @@ class Matcher(Logger):
                               f"{round(result_val, 2) if result_val else None}"])
         return score
 
-    def match_year(self, source: MatchTypes, result: MatchTypes) -> float:
+    def match_year[T: (Track, Album)](self, source: T, result: T) -> float:
         """
         Match on year and return a score. Score=0 when either value is None.
         Matches within 10 years on a 0-1 scale where 1 is the exact same year and 0 is 10+ year difference.
@@ -210,14 +233,14 @@ class Matcher(Logger):
     ###########################################################################
     ## Algorithms
     ###########################################################################
-    def score_match(
+    def score_match[T: (Track, Album)](
             self,
-            source: MatchTypes,
-            results: Iterable[MatchTypes],
+            source: T,
+            results: Iterable[T],
             min_score: float = 0.1,
             max_score: float = 0.8,
-            match_on: Collection[Union[TagName, PropertyName]] = frozenset([TagName.ALL, PropertyName.ALL])
-    ) -> Optional[MatchTypes]:
+            match_on: Collection[TagName | PropertyName] = frozenset([TagName.ALL, PropertyName.ALL])
+    ) -> T | None:
         """
         Perform score match algorithm for a given item and its results.
 
@@ -229,7 +252,7 @@ class Matcher(Logger):
             Value will be limited to between 0.1 and 1.0.
         :param match_on: List of tags to match on. Currently only the following tags/properties are supported:
             track, artist, album, year, length.
-        :return: dict. Metadata for locally stored track with added matched URI if found.
+        :return: T. The item that matched best if found, None if no item matched conditions.
         """
         if not source.clean_tags:
             self.clean_tags(source)
@@ -243,13 +266,13 @@ class Matcher(Logger):
         else:
             self._log_test(source=source, result=result, test=score, extra=[f"NO MATCH: {score}<{min_score}"])
 
-    def _score(
+    def _score[T: (Track, Album)](
             self,
-            source: MatchTypes,
-            results: Iterable[MatchTypes],
+            source: T,
+            results: Iterable[T],
             max_score: float = 0.8,
-            match_on:  Collection[Union[TagName, PropertyName]] = frozenset([TagName.ALL, PropertyName.ALL])
-    ) -> Tuple[float, Optional[MatchTypes]]:
+            match_on:  Collection[TagName | PropertyName] = frozenset([TagName.ALL, PropertyName.ALL])
+    ) -> (float, T | None):
         """
         Gets the score and result from a cleaned source and a given list of results.
 
@@ -259,7 +282,7 @@ class Matcher(Logger):
             Value will be limited to between 0.1 and 1.0.
         :param match_on: List of tags to match on. Currently only the following tags/properties are supported:
             track, artist, album, year, length.
-        :return: dict. Metadata for locally stored track with added matched URI if found.
+        :return: The score, the item that had the best score
         """
         if not results:
             self._log_algorithm(source=source, extra=[f"NO RESULTS GIVEN, SKIPPING"])
@@ -297,12 +320,12 @@ class Matcher(Logger):
 
         return best_score, best_result
 
-    def _get_scores(
+    def _get_scores[T: (Track, Album)](
             self,
-            source: MatchTypes,
-            result: MatchTypes,
-            match_on: Collection[Union[TagName, PropertyName]] = frozenset([TagName.ALL, PropertyName.ALL])
-    ) -> dict[str, float]:
+            source: T,
+            result: T,
+            match_on: Collection[TagName | PropertyName] = frozenset([TagName.ALL, PropertyName.ALL])
+    ) -> Mapping[str, float]:
         """
         Gets the scores from a cleaned source and result to match on.
         When an ItemCollection is given to match on, scores are also given for the items in the collection.
@@ -311,12 +334,12 @@ class Matcher(Logger):
         :param result: Result item to compare against with assigned ``clean_tags``.
         :param match_on: List of tags to match on. Currently only the following tags/properties are supported:
             track, artist, album, year, length.
-        :return: dict. Metadata for locally stored track with added matched URI if found.
+        :return: Map of score type name to score.
         """
         if not self.allow_karaoke and self.match_not_karaoke(source, result) < 1:
             return {}
 
-        scores_current: dict[str, float] = {}
+        scores_current: MutableMapping[str, float] = {}
 
         if TagName.TITLE in match_on:
             scores_current["title"] = self.match_name(source=source, result=result)

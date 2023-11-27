@@ -1,5 +1,6 @@
 from io import BytesIO
-from typing import Optional, Union, List, Collection
+from collections.abc import Collection
+from typing import Any
 
 import mutagen
 import mutagen.mp4
@@ -7,8 +8,8 @@ from PIL import Image
 
 from syncify.enums.tags import TagMap
 from syncify.local.file import open_image, get_image_bytes
-from syncify.local.track.base import LocalTrack
-from syncify.utils import make_list
+from syncify.local.track.base.track import LocalTrack
+from syncify.utils.helpers import make_list
 
 
 class M4A(LocalTrack):
@@ -43,12 +44,12 @@ class M4A(LocalTrack):
 
     # noinspection PyTypeChecker
     def __init__(
-            self, file: Union[str, mutagen.FileType, mutagen.mp4.MP4], available: Optional[Collection[str]] = None
+            self, file: str | mutagen.FileType | mutagen.mp4.MP4, available: Collection[str] | None = None
     ):
         LocalTrack.__init__(self, file=file, available=available)
         self._file: mutagen.mp4.MP4 = self._file
 
-    def _read_tag(self, tag_ids: List[str]) -> Optional[list]:
+    def _read_tag(self, tag_ids: list[str]) -> list | None:
         """Extract all tag values for a given list of tag IDs"""
         values = []
         for tag_id in tag_ids:
@@ -66,31 +67,31 @@ class M4A(LocalTrack):
 
         return values if len(values) > 0 else None
 
-    def _read_track_number(self) -> Optional[int]:
+    def _read_track_number(self) -> int | None:
         values = self._read_tag(self.tag_map.track_number)
         return int(values[0][0]) if values is not None else None
 
-    def _read_track_total(self) -> Optional[int]:
+    def _read_track_total(self) -> int | None:
         values = self._read_tag(self.tag_map.track_total)
         return int(values[0][1]) if values is not None else None
 
-    def _read_key(self) -> Optional[str]:
+    def _read_key(self) -> str | None:
         values = self._read_tag(self.tag_map.key)
         return str(values[0][:]) if values is not None else None
 
-    def _read_disc_number(self) -> Optional[int]:
+    def _read_disc_number(self) -> int | None:
         values = self._read_tag(self.tag_map.disc_number)
         return int(values[0][0]) if values is not None else None
 
-    def _read_disc_total(self) -> Optional[int]:
+    def _read_disc_total(self) -> int | None:
         values = self._read_tag(self.tag_map.disc_total)
         return int(values[0][1]) if values is not None else None
 
-    def _read_images(self) -> Optional[List[Image.Image]]:
+    def _read_images(self) -> list[Image.Image] | None:
         values = self._read_tag(self.tag_map.images)
         return [Image.open(BytesIO(bytes(value))) for value in values] if values is not None else None
 
-    def _write_tag(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
+    def _write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
         if tag_value is None:
             return self.delete_tag(tag_id, dry_run=dry_run)
 

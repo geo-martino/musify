@@ -1,9 +1,11 @@
 from random import sample
-from typing import Callable, Any
+from typing import Any
+from collections.abc import Callable
 
 from syncify.enums.tags import TagName
 from syncify.local.track import LocalTrack
-from syncify.local.playlist.processor import TrackCompare, TrackMatch
+from syncify.local.playlist.processor.compare import TrackCompare
+from syncify.local.playlist.processor.match import TrackMatch
 from tests.common import random_str
 from tests.local.track.track import random_tracks
 

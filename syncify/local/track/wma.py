@@ -1,13 +1,15 @@
-from io import BytesIO
-from typing import Optional, List, Union, Collection
+import struct
+from collections.abc import Collection
+from typing import Any
 
 import mutagen
 import mutagen.asf
+import mutagen.id3
 from PIL import Image
 
 from syncify.enums.tags import TagMap
 from syncify.local.file import open_image, get_image_bytes
-from syncify.local.track.base import LocalTrack
+from syncify.local.track.base.track import LocalTrack
 
 
 class WMA(LocalTrack):
@@ -41,16 +43,16 @@ class WMA(LocalTrack):
 
     # noinspection PyTypeChecker
     def __init__(
-            self, file: Union[str, mutagen.FileType, mutagen.asf.ASF], available: Optional[Collection[str]] = None
+            self, file: str | mutagen.FileType | mutagen.asf.ASF, available: Collection[str] | None = None
     ):
         LocalTrack.__init__(self, file=file, available=available)
         self._file: mutagen.asf.ASF = self._file
 
-    def _read_tag(self, tag_ids: List[str]) -> Optional[list]:
-        # wma tag values are return as mutagen.asf._attrs.ASFUnicodeAttribute
+    def _read_tag(self, tag_ids: list[str]) -> list | None:
+        # wma tag values are returned as mutagen.asf._attrs.ASFUnicodeAttribute
         values = []
         for tag_id in tag_ids:
-            value: List[mutagen.asf.ASFBaseAttribute] = self._file.get(tag_id)
+            value: list[mutagen.asf.ASFBaseAttribute] = self._file.get(tag_id)
             if value is None:
                 # skip null or empty/blank strings
                 continue
@@ -60,37 +62,68 @@ class WMA(LocalTrack):
         return values if len(values) > 0 else None
 
     # noinspection PyUnreachableCode
-    def _read_images(self) -> Optional[List[Image.Image]]:
+    def _read_images(self) -> list[Image.Image] | None:
         # TODO: figure out how to read images from WMA
         raise NotImplementedError("Image extraction not supported for WMA files")
 
         values = self._read_tag(self.tag_map.images)
-        return [Image.open(BytesIO(value)) for value in values] if values is not None else None
+        if values is None:
+            return
 
-    def _write_tag(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
+        images: list[Image.Image] = []
+        for i, value in enumerate(values):
+            v_type, v_size = struct.unpack_from(b'<bi', value)
+
+            pos = 5
+            mime = b''
+            while value[pos:pos + 2] != b'\x00\x00':
+                mime += value[pos:pos + 2]
+                pos += 2
+
+            pos += 2
+            description = b''
+
+            while value[pos:pos + 2] != b'\x00\x00':
+                description += value[pos:pos + 2]
+                pos += 2
+            pos += 2
+
+            image_data: bytes = value[pos:pos + v_size]
+            images.append(Image.open(image_data))
+
+        return images
+
+    def _write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
         if tag_value is None:
             return self.delete_tag(tag_id, dry_run=dry_run)
 
         if not dry_run and tag_id is not None:
             if isinstance(tag_value, list):
-                self._file[tag_id] = [mutagen.asf.ASFUnicodeAttribute(str(v)) for v in tag_value]
+                if all(isinstance(v, mutagen.asf.ASFByteArrayAttribute) for v in tag_value):
+                    self._file[tag_id] = tag_value
+                else:
+                    self._file[tag_id] = [mutagen.asf.ASFUnicodeAttribute(str(v)) for v in tag_value]
             else:
                 self._file[tag_id] = mutagen.asf.ASFUnicodeAttribute(str(tag_value))
         return tag_id is not None
 
-    # noinspection PyUnreachableCode
     def _write_images(self, dry_run: bool = True) -> bool:
-        # TODO: figure out how to write images to WMA
-        raise NotImplementedError("Image embedding not supported for WMA files")
-
-        tag_id = next(iter(self.tag_map.key), None)
+        tag_id = next(iter(self.tag_map.images), None)
 
         updated = False
         tag_value = []
-        for image_link in self.image_links.values():
-            image = open_image(image_link)
+        for image_kind, image_link in self.image_links.items():
+            image_kind_attr = image_kind.upper().replace(" ", "_")
+            image_type: mutagen.id3.PictureType = getattr(mutagen.id3.PictureType, image_kind_attr)
 
-            tag_value.append(mutagen.asf.ASFByteArrayAttribute(data=get_image_bytes(image)))
+            image = open_image(image_link)
+            data = get_image_bytes(image)
+            tag_data = struct.pack('<bi', image_type, len(data))
+            tag_data += Image.MIME[image.format].encode("utf-16") + b'\x00\x00'  # mime
+            tag_data += "".encode("utf-16") + b'\x00\x00'  # description
+            tag_data += data
+
+            tag_value.append(mutagen.asf.ASFByteArrayAttribute(tag_data))
             image.close()
 
         if len(tag_value) > 0:

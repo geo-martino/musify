@@ -5,7 +5,8 @@ import re
 import sys
 from datetime import datetime
 from os.path import join, dirname, exists, splitext, split
-from typing import Literal, List, Collection, Any, Optional
+from typing import Literal, Any
+from collections.abc import Collection
 
 from tqdm.auto import tqdm as tqdm_auto
 from tqdm.std import tqdm as tqdm_std
@@ -57,7 +58,7 @@ def format_full_func_name(record: logging.LogRecord):
 class LogStdOutFilter(logging.Filter):
     """Filter for logging to stdout."""
 
-    def __init__(self, levels: List[int] = None):
+    def __init__(self, levels: list[int] = None):
         """
         :param levels: Accepted log levels to return i.e. 'info', 'debug'
             If None, set to current log level.
@@ -65,7 +66,8 @@ class LogStdOutFilter(logging.Filter):
         super().__init__()
         self.levels = levels
 
-    def filter(self, record: logging.LogRecord) -> Optional[logging.LogRecord]:
+    # noinspection PyMissingOrEmptyDocstring
+    def filter(self, record: logging.LogRecord) -> logging.LogRecord | None:
         if self.levels is not None and record.levelno not in self.levels:
             return
         format_full_func_name(record)
@@ -75,6 +77,7 @@ class LogStdOutFilter(logging.Filter):
 class LogFileFilter(logging.Filter):
     """Filter for logging to a file."""
 
+    # noinspection PyMissingOrEmptyDocstring
     def filter(self, record: logging.LogRecord) -> logging.LogRecord:
         # record.msg = re.sub("\n$", "", record.msg)
         record.msg = re.sub("\33.*?m", "", record.msg)
@@ -127,7 +130,7 @@ class Logger:
         self.log_filename = ".".join((self.__class__.__module__, self.__class__.__qualname__))
         self.log_path = join(self.log_folder, f"{self.log_filename}.log")
 
-        self.logger: Optional[SyncifyLogger] = None
+        self.logger: SyncifyLogger | None = None
         self._set_logger()
 
     @classmethod
@@ -187,7 +190,7 @@ class Logger:
             datefmt="%Y-%m-%d %H:%M:%S", style="{"
         )
 
-        levels: List[Literal] = [logging.INFO, logging.ERROR, logging.CRITICAL]
+        levels: list[Literal] = [logging.INFO, logging.ERROR, logging.CRITICAL]
         level_base = logging.DEBUG
         if self.verbosity == 0:
             log_filter = LogStdOutFilter(levels=levels)
@@ -231,7 +234,7 @@ class Logger:
         file_h.addFilter(LogFileFilter())
         self.logger.addHandler(file_h)
 
-    def _get_handler(self, name: str) -> Optional[logging.Handler]:
+    def _get_handler(self, name: str) -> logging.Handler | None:
         handlers = self.logger.handlers[:]
         for handler in handlers:
             if handler.name == name:

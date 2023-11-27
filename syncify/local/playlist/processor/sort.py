@@ -1,17 +1,19 @@
 from copy import copy
 from datetime import datetime
 from random import shuffle
-from typing import Any, Callable, List, Mapping, MutableMapping, Optional, Self, Tuple, Union
+from typing import Any, Self
+from collections.abc import Callable, Mapping, MutableMapping
 
 from syncify.enums import SyncifyEnum
 from syncify.enums.tags import Name, PropertyName, TagName
 from syncify.local.exception import FieldError
-from syncify.local.track import LocalTrack
+from syncify.local.track.base.track import LocalTrack
 from syncify.local.playlist.processor.base import TrackProcessor
-from syncify.utils import UnionList, flatten_nested, strip_ignore_words, make_list, limit_value
+from syncify.utils import UnitList
+from syncify.utils.helpers import flatten_nested, strip_ignore_words, make_list, limit_value
 
 
-def get_field_from_code(field_code: int) -> Optional[Name]:
+def get_field_from_code(field_code: int) -> Name | None:
     """
     Get the Tag or Property for a given MusicBee field code.
 
@@ -71,7 +73,7 @@ class TrackSort(TrackProcessor):
     _custom_sort[78] = _custom_sort[6]
 
     @classmethod
-    def sort_by_field(cls, tracks: List[LocalTrack], field: Optional[Name] = None, reverse: bool = False):
+    def sort_by_field(cls, tracks: list[LocalTrack], field: Name | None = None, reverse: bool = False):
         """
         Sort tracks by the values of a given field.
 
@@ -99,10 +101,11 @@ class TrackSort(TrackProcessor):
         # get sort key based on value type
         if isinstance(example_value, datetime):  # key converts datetime to floats
             def sort_key(t: LocalTrack) -> float:
+                """Get the sort key for timestamp tags from the given ``t``"""
                 value = t[tag_name]
                 return value.timestamp() if value is not None else 0.0
         elif isinstance(example_value, str):  # key strips ignore words from string
-            sort_key: Callable[[LocalTrack], Tuple[bool, str]] = lambda t: strip_ignore_words(t[tag_name])
+            sort_key: Callable[[LocalTrack], (bool, str)] = lambda t: strip_ignore_words(t[tag_name])
         else:
             sort_key: Callable[[LocalTrack], object] = lambda t: t[tag_name]
 
@@ -110,8 +113,8 @@ class TrackSort(TrackProcessor):
 
     @classmethod
     def group_by_field(
-            cls, tracks: List[LocalTrack], field: Optional[Name] = None
-    ) -> MutableMapping[Any, List[LocalTrack]]:
+            cls, tracks: list[LocalTrack], field: Name | None = None
+    ) -> MutableMapping[Any, list[LocalTrack]]:
         """
         Group tracks by the values of a given field.
 
@@ -124,7 +127,7 @@ class TrackSort(TrackProcessor):
 
         tag_name = cls._get_tag(field)
 
-        grouped: MutableMapping[Optional[Any], List[LocalTrack]] = {}
+        grouped: MutableMapping[Any | None, list[LocalTrack]] = {}
         for track in tracks:  # produce map of grouped values
             value = track[tag_name]
             if grouped.get(value) is None:
@@ -134,14 +137,14 @@ class TrackSort(TrackProcessor):
         return grouped
 
     @classmethod
-    def from_xml(cls, xml: Optional[Mapping[str, Any]] = None) -> Self:
+    def from_xml(cls, xml: Mapping[str, Any] | None = None) -> Self:
         """
         Initialise object from XML playlist.
 
         :param xml: The loaded XML object for this playlist.
             If None, sorter will shuffle randomly when calling ``sort``.
         """
-        fields: Union[List[Name], Mapping[Name, bool]]
+        fields: list[Name] | Mapping[Name | bool]
         if xml is None:
             return cls()
 
@@ -177,21 +180,21 @@ class TrackSort(TrackProcessor):
 
     def __init__(
             self,
-            fields: Optional[Union[UnionList[Optional[Name]], MutableMapping[Optional[Name], bool]]] = None,
+            fields: UnitList[Name | None] | Mapping[Name | None, bool] | None = None,
             shuffle_mode: ShuffleMode = ShuffleMode.NONE,
             shuffle_by: ShuffleBy = ShuffleBy.TRACK,
             shuffle_weight: float = 1.0
     ):
         fields = make_list(fields) if isinstance(fields, Name) else fields
-        self.sort_fields: MutableMapping[Name, bool]
+        self.sort_fields: Mapping[Name, bool]
         self.sort_fields = {field: False for field in fields} if isinstance(fields, list) else fields
 
-        self.shuffle_mode: Optional[ShuffleMode]
+        self.shuffle_mode: ShuffleMode | None
         self.shuffle_mode = shuffle_mode if shuffle_mode in [ShuffleMode.NONE, ShuffleMode.RANDOM] else ShuffleMode.NONE
-        self.shuffle_by: Optional[ShuffleBy] = shuffle_by
+        self.shuffle_by: ShuffleBy | None = shuffle_by
         self.shuffle_weight = limit_value(shuffle_weight, floor=0, ceil=1)
 
-    def sort(self, tracks: List[LocalTrack]):
+    def sort(self, tracks: list[LocalTrack]):
         """Sorts a list of tracks inplace."""
         if len(tracks) == 0:
             return

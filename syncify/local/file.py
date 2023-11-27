@@ -3,7 +3,6 @@ from datetime import datetime
 from http.client import HTTPResponse
 from io import BytesIO
 from os.path import splitext, basename, dirname, getsize, getmtime, getctime
-from typing import List
 from urllib.error import URLError
 from urllib.request import urlopen
 
@@ -53,7 +52,7 @@ class File(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def valid_extensions(self) -> List[str]:
+    def valid_extensions(self) -> list[str]:
         """Allowed extensions in lowercase"""
         raise NotImplementedError
 

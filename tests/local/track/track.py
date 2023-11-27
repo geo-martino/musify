@@ -5,7 +5,6 @@ from copy import copy, deepcopy
 from datetime import datetime
 from os.path import join, basename, dirname, exists
 from random import choice, randrange, randint
-from typing import Tuple, Type, Optional, List
 
 from dateutil.relativedelta import relativedelta
 
@@ -14,7 +13,8 @@ from syncify.local.track.base.track import _MutagenMock
 from syncify.enums.tags import TagName
 from syncify.local.file import open_image
 from syncify.local.track import __TRACK_CLASSES__, LocalTrack
-from syncify.spotify import __UNAVAILABLE_URI_VALUE__, IDType
+from syncify.spotify import __UNAVAILABLE_URI_VALUE__
+from syncify.spotify.enums import IDType
 from tests.common import path_resources, path_cache, random_str
 
 path_track_cache = join(path_cache, basename(dirname(__file__)))
@@ -27,7 +27,7 @@ path_track_wma = join(path_track_resources, "noise_wma.wma")
 path_track_img = join(path_track_resources, "track_image.jpg")
 
 
-def random_track(cls: Optional[Type[LocalTrack]] = None) -> LocalTrack:
+def random_track(cls: type[LocalTrack] | None = None) -> LocalTrack:
     """Generates a new, random track of the given class."""
     if cls is None:
         cls = choice(__TRACK_CLASSES__)
@@ -71,12 +71,12 @@ def random_track(cls: Optional[Type[LocalTrack]] = None) -> LocalTrack:
     return track
 
 
-def random_tracks(number: int, cls: Optional[Type[LocalTrack]] = None) -> List[LocalTrack]:
+def random_tracks(number: int, cls: type[LocalTrack] | None = None) -> list[LocalTrack]:
     """Generates a ``number`` of random tracks of the given class."""
     return [random_track(cls=cls) for _ in range(number)]
 
 
-def copy_track(track: LocalTrack) -> Tuple[str, str]:
+def copy_track(track: LocalTrack) -> (str, str):
     """Copy a track to the test cache, returning the original and copy paths."""
     path_file_base = track.path
     path_file_copy = join(path_track_cache, basename(path_file_base))

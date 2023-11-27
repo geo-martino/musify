@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from os.path import exists
-from typing import Optional, List, Collection, Union
+from collections.abc import Collection
 
 from syncify.abstract.misc import Result
 from syncify.local.playlist.playlist import LocalPlaylist
-from syncify.local.playlist.processor import TrackMatch
+from syncify.local.playlist.processor.match import TrackMatch
 from syncify.local.track import LocalTrack, load_track
 
 
@@ -45,9 +45,9 @@ class M3U(LocalPlaylist):
     def __init__(
             self,
             path: str,
-            tracks: Optional[List[LocalTrack]] = None,
-            library_folder: Optional[str] = None,
-            other_folders: Optional[Union[str, Collection[str]]] = None,
+            tracks: list[LocalTrack] | None = None,
+            library_folder: str | None = None,
+            other_folders: str | Collection[str] | None = None,
             check_existence: bool = True
     ):
         self._validate_type(path)
@@ -69,7 +69,7 @@ class M3U(LocalPlaylist):
 
         self.load(tracks=tracks)
 
-    def load(self, tracks: Optional[List[LocalTrack]] = None) -> List[LocalTrack]:
+    def load(self, tracks: list[LocalTrack] | None = None) -> list[LocalTrack]:
         if self.matcher.include_paths is None or len(self.matcher.include_paths) == 0:
             # use the given tracks if no valid matcher present
             self.tracks = tracks if tracks else []

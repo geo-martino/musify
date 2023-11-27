@@ -4,6 +4,8 @@ from tests.local.track.track import random_track
 
 # noinspection SpellCheckingInspection
 def test_clean_tags():
+    matcher = Matcher()
+
     track = random_track()
     track.uri = "spotify:track:ASDFGHJKLQWERTYUIOPZX"
 
@@ -11,7 +13,7 @@ def test_clean_tags():
     track.artist = "Artist 1 & Artist two Feat. Artist 3"
     track.album = "The Best EP - the new one"
 
-    Matcher.clean_tags(track)
+    matcher.clean_tags(track)
     assert track.clean_tags["title"] == "song 2"
     assert track.clean_tags["artist"] == "artist 1 artist two"
     assert track.clean_tags["album"] == "best"

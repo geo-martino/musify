@@ -1,6 +1,7 @@
 from glob import glob
 from os.path import splitext, join, exists, basename
-from typing import Optional, List, Set, MutableMapping, Mapping, Collection, Any, Union
+from typing import Any
+from collections.abc import Collection, Mapping
 
 from syncify.abstract.item import Item
 from syncify.abstract.collection import ItemCollection, Playlist, Library
@@ -8,10 +9,10 @@ from syncify.abstract.misc import Result
 from syncify.enums.tags import PropertyName, TagName
 from syncify.local.track import __TRACK_CLASSES__, LocalTrack, load_track
 from syncify.local.playlist import __PLAYLIST_FILETYPES__, LocalPlaylist, M3U, XAutoPF
-from syncify.local.playlist.processor import TrackSort
+from syncify.local.playlist.processor.sort import TrackSort
 from syncify.local.library.collection import LocalCollectionFiltered, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from syncify.local.exception import IllegalFileTypeError, LocalCollectionError
-from syncify.utils import UnionList
+from syncify.utils import UnitList
 from syncify.utils.logger import Logger, REPORT
 
 
@@ -34,7 +35,7 @@ class LocalLibrary(Library, LocalCollectionFiltered):
     """
 
     @property
-    def tracks(self) -> List[LocalTrack]:
+    def tracks(self) -> list[LocalTrack]:
         """The tracks in this collection"""
         return self._tracks
 
@@ -44,7 +45,7 @@ class LocalLibrary(Library, LocalCollectionFiltered):
         return self._library_folder
 
     @library_folder.setter
-    def library_folder(self, value: Optional[str]):
+    def library_folder(self, value: str | None):
         """
         Sets the library folder path and generates a set of available and valid track paths in the folder.
         Skips settings if the given value is None.
@@ -64,7 +65,7 @@ class LocalLibrary(Library, LocalCollectionFiltered):
         return self._playlist_folder
 
     @playlist_folder.setter
-    def playlist_folder(self, value: Optional[str]):
+    def playlist_folder(self, value: str | None):
         """
         Sets the playlist folder path and generates a set of available and valid playlists in the folder.
         Appends the library folder path if the given path is not valid. Skips settings if the given value is None.
@@ -96,38 +97,38 @@ class LocalLibrary(Library, LocalCollectionFiltered):
         self.logger.debug(f"Set playlist folder: {self.library_folder} | {len(self._track_paths)} playlists found")
 
     @property
-    def name(self) -> Optional[str]:
+    def name(self) -> str | None:
         """The basename of the library folder"""
         return basename(self.library_folder) if self.library_folder else None
 
     @property
-    def playlists(self) -> MutableMapping[str, LocalPlaylist]:
+    def playlists(self) -> Mapping[str, LocalPlaylist]:
         """The playlists in this library mapped as ``{name: playlist}``"""
         return self._playlists
 
     @property
-    def folders(self) -> List[LocalFolder]:
+    def folders(self) -> list[LocalFolder]:
         """Dynamically generate a set of folder collections from the tracks in this library"""
         grouped = TrackSort.group_by_field(tracks=self.tracks, field=PropertyName.FOLDER)
         collections = [LocalFolder(group, name=name) for name, group in grouped.items()]
         return sorted(collections, key=lambda x: x.name)
 
     @property
-    def albums(self) -> List[LocalAlbum]:
+    def albums(self) -> list[LocalAlbum]:
         """Dynamically generate a set of album collections from the tracks in this library"""
         grouped = TrackSort.group_by_field(tracks=self.tracks, field=TagName.ALBUM)
         collections = [LocalAlbum(group, name=name) for name, group in grouped.items()]
         return sorted(collections, key=lambda x: x.name)
 
     @property
-    def artists(self) -> List[LocalArtist]:
+    def artists(self) -> list[LocalArtist]:
         """Dynamically generate a set of artist collections from the tracks in this library"""
         grouped = TrackSort.group_by_field(tracks=self.tracks, field=TagName.ARTIST)
         collections = [LocalArtist(group, name=name) for name, group in grouped.items()]
         return sorted(collections, key=lambda x: x.name)
 
     @property
-    def genres(self) -> List[LocalGenres]:
+    def genres(self) -> list[LocalGenres]:
         """Dynamically generate a set of genre collections from the tracks in this library"""
         grouped = TrackSort.group_by_field(tracks=self.tracks, field=TagName.GENRES)
         collections = [LocalGenres(group, name=name) for name, group in grouped.items()]
@@ -135,11 +136,11 @@ class LocalLibrary(Library, LocalCollectionFiltered):
 
     def __init__(
             self,
-            library_folder: Optional[str] = None,
-            playlist_folder: Optional[str] = None,
-            other_folders: Optional[Set[str]] = None,
-            include: Optional[List[str]] = None,
-            exclude: Optional[List[str]] = None,
+            library_folder: str | None = None,
+            playlist_folder: str | None = None,
+            other_folders: set[str] | None = None,
+            include: list[str] | None = None,
+            exclude: list[str] | None = None,
             load: bool = True,
     ):
         Logger.__init__(self)
@@ -147,20 +148,20 @@ class LocalLibrary(Library, LocalCollectionFiltered):
         self.include = [name.strip().lower() for name in include] if include else None
         self.exclude = [name.strip().lower() for name in exclude] if exclude else None
 
-        self._library_folder: Optional[str] = None
+        self._library_folder: str | None = None
         # name of track object to set of paths valid for that track object
-        self._track_paths: Optional[Set[str]] = None
+        self._track_paths: set[str] | None = None
         self.library_folder = library_folder
 
-        self._playlist_folder: Optional[str] = None
+        self._playlist_folder: str | None = None
         # playlist lowercase name mapped to its filepath for all accepted filetypes in playlist folder
-        self._playlist_paths: Optional[MutableMapping[str, str]] = None
+        self._playlist_paths: Mapping[str, str] | None = None
         self.playlist_folder = playlist_folder
 
         self.other_folders = other_folders
 
-        self._tracks: List[LocalTrack] = []
-        self._playlists: MutableMapping[str, LocalPlaylist] = {}
+        self._tracks: list[LocalTrack] = []
+        self._playlists: Mapping[str, LocalPlaylist] = {}
 
         if load:
             self.load()
@@ -184,18 +185,18 @@ class LocalLibrary(Library, LocalCollectionFiltered):
 
         self.logger.debug("Load local library: DONE\n")
 
-    def load_tracks(self) -> List[LocalTrack]:
+    def load_tracks(self) -> list[LocalTrack]:
         """Returns a list of loaded tracks from all the valid paths in this library"""
         return self._load_tracks()
 
-    def _load_tracks(self) -> List[LocalTrack]:
+    def _load_tracks(self) -> list[LocalTrack]:
         """Returns a list of loaded tracks from all the valid paths in this library"""
         self.logger.debug("Load local tracks: START")
         self.logger.info(f"\33[1;95m  >\33[1;97m "
                          f"Extracting metadata and properties for {len(self._track_paths)} tracks \33[0m")
 
-        tracks: List[LocalTrack] = []
-        errors: List[str] = []
+        tracks: list[LocalTrack] = []
+        errors: list[str] = []
         for path in self.get_progress_bar(iterable=self._track_paths, desc="Loading tracks", unit="tracks"):
             # noinspection PyBroadException
             try:
@@ -221,7 +222,7 @@ class LocalLibrary(Library, LocalCollectionFiltered):
         )
         self.print_line(REPORT)
 
-    def load_playlists(self, names: Optional[Collection[str]] = None) -> List[LocalPlaylist]:
+    def load_playlists(self, names: Collection[str] | None = None) -> list[LocalPlaylist]:
         """
         Load a playlist from a given list of names or, if None, load all playlists found in this library's loaded paths.
         The name must be relative to the playlist folder of this library and exist in its loaded paths.
@@ -236,8 +237,8 @@ class LocalLibrary(Library, LocalCollectionFiltered):
 
         self.logger.info(f"\33[1;95m  >\33[1;97m Loading playlist data for {len(names)} playlists \33[0m")
 
-        playlists: List[LocalPlaylist] = []
-        errors: List[str] = []
+        playlists: list[LocalPlaylist] = []
+        errors: list[str] = []
         for name in self.get_progress_bar(iterable=names, desc="Loading playlists", unit="playlists"):
             path = self._playlist_paths.get(name.strip().lower())
             if path is None:
@@ -282,23 +283,23 @@ class LocalLibrary(Library, LocalCollectionFiltered):
             )
         self.print_line(REPORT)
 
-    def _log_errors(self, errors: List[str]):
+    def _log_errors(self, errors: list[str]):
         """Log paths which had some error while loading"""
         errors = [f"\33[91m{e}\33[0m" for e in errors]
         if len(errors) > 0:
             self.logger.warning("\33[97mCould not load: \33[0m\n\t- {errors} ".format(errors="\n\t- ".join(errors)))
             self.print_line()
 
-    def extend(self, items: Union[ItemCollection, Collection[Item]]):
+    def extend(self, items: ItemCollection | Collection[Item]):
         self.tracks.extend(track for track in items if isinstance(track, LocalTrack) and track not in self.tracks)
 
-    def merge_playlists(self, playlists: Optional[Union[Library, Mapping[str, Playlist], List[Playlist]]] = None):
+    def merge_playlists(self, playlists: Library | Mapping[str, Playlist] | list[Playlist] | None = None):
         # TODO: merge playlists adding/removing tracks as needed.
         #  Most likely will need to implement some method on playlist class too
         raise NotImplementedError
         pass
 
-    def restore_tracks(self, backup: Mapping[str, Mapping[str, Any]], tags: UnionList[TagName] = TagName.ALL) -> int:
+    def restore_tracks(self, backup: Mapping[str, Mapping[str, Any]], tags: UnitList[TagName] = TagName.ALL) -> int:
         """
         Restore track tags from a backup to loaded track objects. This does not save the updated tags.
 

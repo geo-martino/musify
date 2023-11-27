@@ -1,19 +1,19 @@
 from os.path import splitext
-from typing import Optional, Collection
+from collections.abc import Collection
 
-from .base import *
+from .base.track import LocalTrack
 from .flac import FLAC
 from .m4a import M4A
 from .mp3 import MP3
 from .wma import WMA
 
+from syncify.local.exception import IllegalFileTypeError
+
 __TRACK_CLASSES__ = [FLAC, MP3, M4A, WMA]
 __TRACK_FILETYPES__ = [filetype for c in __TRACK_CLASSES__ for filetype in c.valid_extensions]
 
-from syncify.local.exception import IllegalFileTypeError
 
-
-def load_track(path: str, available: Optional[Collection[str]] = None) -> LocalTrack:
+def load_track(path: str, available: Collection[str] | None = None) -> LocalTrack:
     """
     Attempt to load a file from a given path, returning the appropriate ``Track`` object
 

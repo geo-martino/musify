@@ -1,10 +1,14 @@
 import re
 from abc import ABCMeta
-from typing import Optional, List, MutableMapping, Mapping, Any
-from syncify.spotify import __URL_API__, ItemType, APIMethodInputType
-from syncify.spotify.utils import validate_item_type, get_item_type, extract_ids
+from collections.abc import Mapping, MutableMapping
+from itertools import batched
+from typing import Any
+
+from syncify.spotify.api import __URL_API__, APIMethodInputType
 from syncify.spotify.api.basic import APIBase
-from syncify.utils import chunk, limit_value
+from syncify.spotify.enums import ItemType
+from syncify.spotify.utils import validate_item_type, get_item_type, extract_ids
+from syncify.utils.helpers import limit_value
 
 
 class Items(APIBase, metaclass=ABCMeta):
@@ -16,12 +20,12 @@ class Items(APIBase, metaclass=ABCMeta):
     def _get_item_results(
             self,
             url: str,
-            id_list: List[str],
-            params: Optional[Mapping[str, Any]] = None,
-            key: Optional[str] = None,
-            unit: Optional[str] = None,
+            id_list: list[str],
+            params: Mapping[str, Any] | None = None,
+            key: str | None = None,
+            unit: str | None = None,
             use_cache: bool = True,
-    ) -> List[MutableMapping[str, Any]]:
+    ) -> list[MutableMapping[str, Any]]:
         """
         Get responses from a given ``url`` appending an ID to each request from a given ``id_list`` i.e. ``{URL}/{ID}``.
         This function executes each URL request individually for each ID.
@@ -43,20 +47,20 @@ class Items(APIBase, metaclass=ABCMeta):
             id_list = self.get_progress_bar(iterable=id_list, desc=f'Getting {unit}', unit=unit)
 
         log = [f"{unit.title()}:{len(id_list):>5}"]
-        results: List[Any] = [self.get(f"{url}/{id_}", params=params, use_cache=use_cache, log_pad=43, log_extra=log)
+        results: list[Any] = [self.get(f"{url}/{id_}", params=params, use_cache=use_cache, log_pad=43, log_extra=log)
                               for id_ in id_list]
         return [r[key] if key else r for r in results]  # extract items on given key
 
     def _get_item_results_batch(
             self,
             url: str,
-            id_list: List[str],
-            params: Optional[Mapping[str, Any]] = None,
-            key: Optional[str] = None,
-            unit: Optional[str] = None,
+            id_list: list[str],
+            params: Mapping[str, Any] | None = None,
+            key: str | None = None,
+            unit: str | None = None,
             use_cache: bool = True,
             limit: int = 50,
-    ) -> List[MutableMapping[str, Any]]:
+    ) -> list[Mapping[str, Any]]:
         """
         Get responses from a given ``url`` appending an ID to each request from a given ``id_list`` i.e. ``{URL}/{ID}``.
         This function executes each URL request in batches of IDs based on the given ``batch_size``.
@@ -78,7 +82,7 @@ class Items(APIBase, metaclass=ABCMeta):
         unit = unit.casefold().rstrip("s") + "s"
         url = url.rstrip("/")
 
-        id_chunks = chunk(id_list, size=limit_value(limit, ceil=50))
+        id_chunks = list(batched(id_list, limit_value(limit, ceil=50)))
 
         bar = range(len(id_chunks))
         if len(id_chunks) >= 10:  # show progress bar for batches which may take a long time
@@ -100,8 +104,8 @@ class Items(APIBase, metaclass=ABCMeta):
     ## GET endpoints
     ###########################################################################
     def get_items(
-            self, values: APIMethodInputType, kind: Optional[ItemType] = None, limit: int = 50, use_cache: bool = True,
-    ) -> List[MutableMapping[str, Any]]:
+            self, values: APIMethodInputType, kind: ItemType | None = None, limit: int = 50, use_cache: bool = True,
+    ) -> list[MutableMapping[str, Any]]:
         """
         ``GET: /{kind}s`` - Get information for given list of ``values``. Items may be:
             - A string representing a URL/URI/ID.
@@ -158,7 +162,7 @@ class Items(APIBase, metaclass=ABCMeta):
             analysis: bool = False,
             limit: int = 50,
             use_cache: bool = True,
-    ) -> MutableMapping[str, List[Mapping[str, Any]]]:
+    ) -> Mapping[str, list[Mapping[str, Any]]]:
         """
         ``GET: /audio-features`` and/or ``GET: /audio-analysis`` - Get audio features/analysis for list of items.
         Items may be:
@@ -195,7 +199,7 @@ class Items(APIBase, metaclass=ABCMeta):
         analysis_key = "audio_analysis"
         analysis_url = f"{__URL_API__}/audio-analysis"
 
-        results: MutableMapping[str, List[Mapping[str, Any]]] = {}
+        results: MutableMapping[str, list[Mapping[str, Any]]] = {}
         if len(id_list) == 1:
             if features:
                 results[features_key] = [self.get(f"{features_url}/{id_list[0]}", use_cache=use_cache, log_pad=43)]
@@ -230,7 +234,7 @@ class Items(APIBase, metaclass=ABCMeta):
             analysis: bool = False,
             limit: int = 50,
             use_cache: bool = True
-    ) -> List[MutableMapping[str, Any]]:
+    ) -> list[MutableMapping[str, Any]]:
         """
         ``GET: /{kind}s`` + GET: /audio-features`` and/or ``GET: /audio-analysis``
 

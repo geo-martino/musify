@@ -1,26 +1,28 @@
 from abc import ABCMeta, abstractmethod
+from collections.abc import Mapping, MutableMapping
 from copy import copy
 from dataclasses import dataclass
-from typing import Optional, Set, MutableMapping
+from typing import Any
 
 from syncify.abstract.misc import Result
 from syncify.local.track.base.processor import TagName, TagProcessor
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
-from syncify.utils import UnionList, make_list
+from syncify.utils import UnitList
+from syncify.utils.helpers import make_list
 
 
 @dataclass
 class SyncResultTrack(Result):
     """Stores the results of a sync with local track"""
     saved: bool  # if changes to the file on the disk were made
-    updated: MutableMapping[TagName, int]  # The tag updated and the condition index it satisfied to be updated
+    updated: Mapping[TagName, int]  # The tag updated and the condition index it satisfied to be updated
 
 
 class TagWriter(TagProcessor, metaclass=ABCMeta):
     """Contains methods for updating and removing tags from a loaded file"""
 
     def save(
-            self, tags: Optional[UnionList[TagName]] = None, replace: bool = False, dry_run: bool = True
+            self, tags: UnitList[TagName] = TagName.ALL, replace: bool = False, dry_run: bool = True
     ) -> SyncResultTrack:
         """
         Update file's tags from given dictionary of tags.
@@ -34,7 +36,7 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
         file = copy(self)
         updated: MutableMapping[TagName, int] = {}
 
-        tags: Set[TagName] = set(make_list(tags))
+        tags: set[TagName] = set(make_list(tags))
         if TagName.ALL in tags:
             tags = TagName.all()
 
@@ -136,7 +138,7 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
         return SyncResultTrack(saved=save, updated=updated)
                     
     @abstractmethod
-    def _write_tag(self, tag_id: Optional[str], tag_value: object, dry_run: bool = True) -> bool:
+    def _write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
         """
         Generic method for updating a tag value in the file.
         
@@ -299,7 +301,7 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
         :returns: True if the file was updated or would have been when dry_run is True, False otherwise.
         """
 
-    def delete_tags(self, tags: Optional[UnionList[TagName]] = None, dry_run: bool = True) -> SyncResultTrack:
+    def delete_tags(self, tags: UnitList[TagName] | None = None, dry_run: bool = True) -> SyncResultTrack:
         """
         Remove tags from file.
 
@@ -310,6 +312,7 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
         if tags is None or (isinstance(tags, list) and len(tags) == 0):
             return SyncResultTrack(saved=False, updated={})
 
+        # noinspection PyTypeChecker
         tag_names = set(TagName.to_tags(tags))
         removed = {TagName.from_name(tag_name) for tag_name in tag_names if self.delete_tag(tag_name, dry_run)}
 

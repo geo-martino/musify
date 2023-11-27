@@ -1,10 +1,11 @@
 import json
+from collections.abc import Mapping
 from datetime import datetime as dt
 from datetime import timedelta
 from http import HTTPStatus
 from os.path import dirname, join
 from time import sleep
-from typing import List, MutableMapping, Any, Optional
+from typing import Any
 
 import requests_cache
 from requests.exceptions import ConnectionError
@@ -48,7 +49,7 @@ class RequestHandler(APIAuthoriser, Logger):
 
         self.auth()
 
-    def request(self, method: str, url: str, *args, **kwargs) -> MutableMapping[str, Any]:
+    def request(self, method: str, url: str, *args, **kwargs) -> Mapping[str, Any]:
         """
         Generic method for handling API requests with back-off on failed requests.
         See :py:func:`request` for more arguments.
@@ -87,9 +88,9 @@ class RequestHandler(APIAuthoriser, Logger):
             url: str,
             use_cache: bool = True,
             log_pad: int = 43,
-            log_extra: Optional[List[str]] = None,
+            log_extra: list[str] | None = None,
             *args, **kwargs
-    ) -> Optional[BaseResponse]:
+    ) -> BaseResponse | None:
         """Handle logging a request, send the request, and return the response"""
         try:  # reauthorise if needed
             headers = self.headers
@@ -152,7 +153,7 @@ class RequestHandler(APIAuthoriser, Logger):
         return False
 
     @staticmethod
-    def _response_as_json(response: BaseResponse) -> MutableMapping[str, Any]:
+    def _response_as_json(response: BaseResponse) -> Mapping[str, Any]:
         try:
             return response.json()
         except json.decoder.JSONDecodeError:
