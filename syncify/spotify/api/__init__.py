@@ -3,7 +3,7 @@ from collections.abc import Collection, Mapping
 
 from syncify.spotify import __URL_AUTH__, __URL_API__
 
-APIMethodInputType = str | Mapping[str, Any] | Collection[str] | list[Mapping[str, Any]]
+APIMethodInputType = str | Collection[str] | Mapping[str, Any] | list[Mapping[str, Any]]
 
 # non-user authenticated access
 AUTH_ARGS_BASIC = {

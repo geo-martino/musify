@@ -6,9 +6,9 @@ class SyncifyEnum(IntEnum):
     """Generic class for storing IntEnums."""
 
     @classmethod
-    def all(cls) -> set[Self]:
+    def all(cls) -> tuple[Self]:
         """Get all enums for this enum."""
-        return {e for e in cls if e.name != "ALL"}
+        return tuple({e for e in cls if e.name != "ALL"})
 
     @classmethod
     def from_name(cls, name: str) -> Self:

@@ -21,7 +21,7 @@ class FLAC(LocalTrack):
         Useful for case-insensitive path loading and correcting paths to case-sensitive.
     """
 
-    valid_extensions = [".flac"]
+    valid_extensions = {".flac"}
 
     # noinspection SpellCheckingInspection
     tag_map = TagMap(
@@ -62,7 +62,7 @@ class FLAC(LocalTrack):
 
         if not dry_run and tag_id is not None:
             if isinstance(tag_value, list):
-                self._file[tag_id] = [str(v) for v in tag_value]
+                self._file[tag_id] = list(map(str, tag_value))
             else:
                 self._file[tag_id] = str(tag_value)
         return tag_id is not None

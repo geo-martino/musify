@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 from os.path import exists
 from typing import Any, Self
-from collections.abc import Collection, Mapping
+from collections.abc import Collection, Mapping, Sequence
 
 from syncify.local.playlist.processor.base import TrackProcessor
 from syncify.local.playlist.processor.compare import TrackCompare
 from syncify.local.track.base.track import LocalTrack
 from syncify.utils import UnitList
-from syncify.utils.helpers import make_list
+from syncify.utils.helpers import to_collection
 
 
 @dataclass
@@ -72,17 +72,17 @@ class TrackMatch(TrackProcessor):
             self,
             comparators: UnitList[TrackCompare] | None = None,
             match_all: bool = True,
-            include_paths: list[str] | None = None,
+            include_paths: Collection[str] | None = None,
             exclude_paths: Collection[str] | None = None,
             library_folder: str | None = None,
             other_folders: Collection[str] | None = None,
             check_existence: bool = True,
     ):
-        self.comparators = make_list(comparators)
+        self.comparators: tuple[TrackCompare] = to_collection(comparators)
         self.match_all = match_all
 
-        self.include_paths: list[str] | None = include_paths
-        self.exclude_paths: list[str] | None = exclude_paths
+        self.include_paths: Sequence[str] | None = include_paths
+        self.exclude_paths: Collection[str] | None = exclude_paths
 
         self.library_folder = library_folder.rstrip("\\/") if library_folder is not None else library_folder
         self.original_folder: str | None = None
@@ -130,7 +130,7 @@ class TrackMatch(TrackProcessor):
         :param stems: Absolute paths of possible stems.
         :param paths: Paths to search through for a match.
         """
-        stems = {folder.rstrip("\\/") for folder in make_list(stems) if folder is not None}
+        stems = tuple(folder.rstrip("\\/") for folder in to_collection(stems) if folder is not None)
         self.original_folder = None
 
         for paths_list in paths:
@@ -138,9 +138,9 @@ class TrackMatch(TrackProcessor):
                 continue
 
             for path in paths_list:
-                results = [stem for stem in stems if path.casefold().startswith(stem.casefold())]
-                if len(results) != 0:
-                    self.original_folder = results[0]
+                result = next((stem for stem in stems if path.casefold().startswith(stem.casefold())), None)
+                if result:
+                    self.original_folder = result
                     break
 
     def sanitise_file_path(self, path: str | None, check_existence: bool = True) -> str | None:
@@ -171,8 +171,7 @@ class TrackMatch(TrackProcessor):
         """Align a paths separators with the separators in the path for the library folder"""
         if self.library_folder is not None:
             return path.replace("\\", "/") if "/" in self.library_folder else path.replace("/", "\\")
-        else:
-            return path
+        return path
 
     def match(
             self, tracks: list[LocalTrack], reference: LocalTrack | None = None, combine: bool = True
@@ -202,8 +201,9 @@ class TrackMatch(TrackProcessor):
             exclude.extend([path_tracks[path] for path in self.exclude_paths if path in path_tracks])
 
         if self.comparators is None or len(self.comparators) == 0:  # skip comparator checks
-            return [track for track in include if track not in exclude] if combine \
-                else MatchResult(include=include, exclude=exclude, compared=[])
+            if combine:
+                return [track for track in include if track not in exclude]
+            return MatchResult(include=include, exclude=exclude, compared=[])
 
         compared: list[LocalTrack] = []
         for track in tracks:  # run comparator checks
@@ -220,7 +220,7 @@ class TrackMatch(TrackProcessor):
                 compared.append(track)
 
         if combine:
-            compared_reduced = [track for track in compared if track not in include]
+            compared_reduced = {track for track in compared if track not in include}
             return [track for results in [compared_reduced, include] for track in results if track not in exclude]
         return MatchResult(include=include, exclude=exclude, compared=compared)
 

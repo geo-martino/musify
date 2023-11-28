@@ -4,11 +4,11 @@ import mutagen
 
 from syncify.abstract.item import Track, TrackProperties
 from syncify.enums.tags import TagName, TagMap
-from syncify.local.base import Local
+from syncify.local.base import LocalObject
 from syncify.local.file import File
 
 
-class TagProcessor(Track, TrackProperties, Local, File, metaclass=ABCMeta):
+class TagProcessor(Track, TrackProperties, LocalObject, File, metaclass=ABCMeta):
     """Generic base class for tag processing"""
 
     uri_tag = TagName.COMMENTS

@@ -15,6 +15,7 @@ class API(Basic, Items, Collections):
 
     :param handler_kwargs: The authorisation kwargs to be passed to :py:class:`RequestHandler`.
     """
+
     @property
     def user_id(self) -> str | None:
         return self._user_id
@@ -34,8 +35,9 @@ class API(Basic, Items, Collections):
     ###########################################################################
     ## Misc endpoints
     ###########################################################################
-    def format_item_data(self, i: int, name: str, uri: str, length: float = 0,
-                         total: int = 1, max_width: int = 50) -> str:
+    def format_item_data(
+            self, i: int, name: str, uri: str, length: float = 0, total: int = 1, max_width: int = 50
+    ) -> str:
         """
         Pretty format item data for displaying to the user
 
@@ -46,11 +48,13 @@ class API(Basic, Items, Collections):
         :param total: The total number of items in the collection
         :param max_width: The maximum width to print names as. Any name lengths longer than this will be truncated.
         """
-        return f"\t\33[92m{str(i).zfill(len(str(total)))} \33[0m- "\
-               f"\33[97m{self.align_and_truncate(name, max_width=max_width)} \33[0m| "\
-               f"\33[91m{str(int(length // 60)).zfill(2)}:{str(round(length % 60)).zfill(2)} \33[0m| "\
-               f"\33[93m{uri} \33[0m- "\
-               f"{convert(uri, type_in=IDType.URI, type_out=IDType.URL_EXT)}"
+        return (
+            f"\t\33[92m{str(i).zfill(len(str(total)))} \33[0m- "
+            f"\33[97m{self.align_and_truncate(name, max_width=max_width)} \33[0m| "
+            f"\33[91m{str(int(length // 60)).zfill(2)}:{str(round(length % 60)).zfill(2)} \33[0m| "
+            f"\33[93m{uri} \33[0m- "
+            f"{convert(uri, type_in=IDType.URI, type_out=IDType.URL_EXT)}"
+        )
 
     def pretty_print_uris(self, value: str | None = None, kind: IDType | None = None, use_cache: bool = True):
         """
@@ -71,27 +75,30 @@ class API(Basic, Items, Collections):
             kind = ItemType.from_name(input("\33[1mEnter ID type: \33[0m"))
 
         url = convert(value, kind=kind, type_out=IDType.URL)
-        name = self.get(url, log_pad=43)['name']
+        name = self.get(url, log_pad=43)["name"]
 
-        r = {'next': f"{url}/tracks"}
+        r = {"next": f"{url}/tracks"}
         i = 0
-        while r['next']:  # loop through each page, printing data in blocks of 20
-            url = r['next']
-            r = self.get(url, params={'limit': 20}, use_cache=use_cache)
+        while r["next"]:  # loop through each page, printing data in blocks of 20
+            url = r["next"]
+            r = self.get(url, params={"limit": 20}, use_cache=use_cache)
 
             if r["offset"] == 0:  # first page, show header
                 url_open = convert(url, type_in=IDType.URL_EXT, type_out=IDType.URL_EXT)
-                print(f"\n\t\33[96mShowing tracks for {kind.name.casefold()}\33[0m: "
-                      f"\33[94m{name} \33[97m- {url_open} \33[0m\n")
+                print(
+                    f"\n\t\33[96mShowing tracks for {kind.name.casefold()}\33[0m: "
+                    f"\33[94m{name} \33[97m- {url_open} \33[0m\n"
+                )
                 pass
 
-            if 'error' in r:  # fail
-                self.logger.warning(f"{'ERROR':<7}: {url:<43}")
+            if "error" in r:  # fail
+                self.logger.warning(f"{"ERROR":<7}: {url:<43}")
                 return
 
-            tracks = [item['track'] if kind == ItemType.PLAYLIST else item for item in r["items"]]
+            tracks = [item["track"] if kind == ItemType.PLAYLIST else item for item in r["items"]]
             for i, track in enumerate(tracks, i + 1):  # print each item in this page
-                length = track["duration_ms"] / 1000
-                print(self.format_item_data(i=i, name=track['name'], uri=track['uri'], length=length,
-                                            total=r['total']))
+                formatted_item_data = self.format_item_data(
+                    i=i, name=track["name"], uri=track["uri"], length=track["duration_ms"] / 1000, total=r["total"]
+                )
+                print(formatted_item_data)
             print()

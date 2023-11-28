@@ -92,18 +92,19 @@ class Checker(Matcher):
 
         help_text = header if header else []
         help_text.append("\n\t\33[96mEnter one of the following: \33[0m\n\t")
-        help_text.extend(f"{self.align_and_truncate(k, max_width=max_width)}{': ' + v if v else ''}"
-                         for k, v in options.items())
+        help_text.extend(
+            f"{self.align_and_truncate(k, max_width=max_width)}{': ' + v if v else ''}" for k, v in options.items()
+        )
 
-        return '\n\t'.join(help_text) + '\n'
+        return "\n\t".join(help_text) + '\n'
 
     def _delete_temp_playlists(self):
         """Delete all temporary playlists stored and clear stored playlists and collections"""
         if not self.api.test():  # check if token has expired
-            self.logger.info_extra('\33[93mAPI token has expired, re-authorising... \33[0m')
+            self.logger.info_extra("\33[93mAPI token has expired, re-authorising... \33[0m")
             self.api.auth()
 
-        self.logger.info_extra(f'\33[93mDeleting {len(self.playlist_name_urls)} temporary playlists... \33[0m')
+        self.logger.info_extra(f"\33[93mDeleting {len(self.playlist_name_urls)} temporary playlists... \33[0m")
         for url in self.playlist_name_urls.values():  # delete playlists
             self.api.delete_playlist(url.removesuffix("tracks"))
 
@@ -132,9 +133,11 @@ class Checker(Matcher):
             self.logger.debug("\33[93mNo items to check. \33[0m")
             return
 
-        self.logger.debug('Checking items: START')
-        self.logger.info(f"\33[1;95m ->\33[1;97m Checking items by creating temporary Spotify playlists "
-                         f"for the current user: {self.api.user_name} \33[0m")
+        self.logger.debug("Checking items: START")
+        self.logger.info(
+            f"\33[1;95m ->\33[1;97m Checking items by creating temporary Spotify playlists "
+            f"for the current user: {self.api.user_name} \33[0m"
+        )
 
         bar = self.get_progress_bar(iterable=collections, desc="Creating temp playlists", unit="playlists")
         interval_total = (len(collections) // interval) + (len(collections) % interval > 0)
@@ -165,15 +168,17 @@ class Checker(Matcher):
                 break
 
         result = self._finalise() if not self.quit else None
-        self.logger.debug('Checking items: DONE\n')
+        self.logger.debug("Checking items: DONE\n")
         return result
 
     def _finalise(self) -> CheckResult:
         self.print_line()
-        self.logger.report(f"\33[1;96mCHECK TOTALS \33[0m| "
-                           f"\33[94m{len(self.final_switched):>5} switched  \33[0m| "
-                           f"\33[91m{len(self.final_unavailable):>5} unavailable \33[0m| "
-                           f"\33[93m{len(self.final_unchanged):>5} unchanged \33[0m")
+        self.logger.report(
+            f"\33[1;96mCHECK TOTALS \33[0m| "
+            f"\33[94m{len(self.final_switched):>5} switched  \33[0m| "
+            f"\33[91m{len(self.final_unavailable):>5} unavailable \33[0m| "
+            f"\33[93m{len(self.final_unchanged):>5} unchanged \33[0m"
+        )
         self.print_line(REPORT)
 
         self.skip = True
@@ -234,8 +239,10 @@ class Checker(Matcher):
                 print(f"\n\t\33[96mShowing items originally added to \33[94m{name}\33[0m:\n")
                 for i, item in enumerate(items, 1):
                     length = getattr(item, "length", 0)
-                    print(self.api.format_item_data(i=i, name=item.name, uri=item.uri, length=length,
-                                                    total=len(items), max_width=max_width))
+                    formatted_item_data = self.api.format_item_data(
+                        i=i, name=item.name, uri=item.uri, length=length, total=len(items), max_width=max_width
+                    )
+                    print(formatted_item_data)
                 print()
             elif check_spotify_type(current_input) is not None:  # print URL/URI/ID result
                 if not self.api.test():
@@ -254,7 +261,7 @@ class Checker(Matcher):
         self.skip = False
         for name, collection in self.playlist_name_collection.items():
             if not self.api.test():  # check if token has expired
-                self.logger.info_extra('\33[93mAPI token has expired, re-authorising... \33[0m')
+                self.logger.info_extra("\33[93mAPI token has expired, re-authorising... \33[0m")
                 self.api.auth()
 
             name: str = self._default_name if isinstance(collection, list) else collection.name
@@ -289,8 +296,9 @@ class Checker(Matcher):
         Check the current temporary playlist given by ``name`` and attempt to match the source list of items
         to any modifications the user has made.
         """
-        self.logger.info(f'\33[1;95m ->\33[1;97m '
-                         f'Checking for changes to items in Spotify playlist: \33[94m{name}\33[0m...')
+        self.logger.info(
+            f'\33[1;95m ->\33[1;97m Checking for changes to items in Spotify playlist: \33[94m{name}\33[0m...'
+        )
 
         source = self.playlist_name_collection[name]
         remote = SpotifyPlaylist(self.api.get_collections(self.playlist_name_urls[name], use_cache=False)[0]).tracks
@@ -311,11 +319,7 @@ class Checker(Matcher):
             remote_counts = Counter(item.uri for item in remote_valid)
             for uri, count in Counter(item.uri for item in source_valid).items():
                 if remote_counts.get(uri) != count:
-                    print(uri)
                     missing.extend([item for item in source_valid if item.uri == uri])
-
-        for item in missing:
-            print(item)
 
         self._log_padded([name, f"{len(added):>6} items added"])
         self._log_padded([name, f"{len(removed):>6} items removed"])
@@ -365,7 +369,7 @@ class Checker(Matcher):
         help_text += "OR enter a custom URI/URL/ID for this item\n"
 
         self._log_padded([name, f"Getting user input for {len(self.remaining)} items"])
-        max_width = self.get_max_width([item.name for item in self.remaining])
+        max_width = self.get_max_width({item.name for item in self.remaining})
 
         print("\n" + help_text)
         for item in self.remaining.copy():

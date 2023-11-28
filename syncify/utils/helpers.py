@@ -8,14 +8,19 @@ from . import Number
 sort_ignore_words = frozenset(["The", "A"])
 
 
-def make_list(data: Any) -> list | None:
-    """Safely turn any object into a list unless None"""
-    if isinstance(data, list):
+def to_collection[T: (list, set, tuple)](data: Any, cls: T = tuple) -> T | None:
+    """Safely turn any object into a collection unless None"""
+    if data is None or isinstance(data, cls):
         return data
-    elif isinstance(data, set):
-        return list(data)
-
-    return [data] if data is not None else None
+    elif isinstance(data, (list, set, tuple)):
+        return cls(data)
+    elif cls is list:
+        return [data]
+    elif cls is set:
+        return {data}
+    elif cls is tuple:
+        return (data,)
+    raise Exception(f"Unable to convert data to {cls} (data = {data})")
 
 
 def strip_ignore_words(value: str, words: Collection[str] = sort_ignore_words) -> (bool, str):
@@ -38,8 +43,8 @@ def strip_ignore_words(value: str, words: Collection[str] = sort_ignore_words) -
     return not_special, new_value
 
 
-def flatten_nested(nested: MutableMapping, previous: list = None) -> list:
-    """Flatten a nested set of maps to a single list"""
+def flatten_nested[T: Any](nested: MutableMapping, previous: list[T] | None = None) -> list[T]:
+    """Flatten the final layers of the values of a nested map to a single list"""
     if previous is None:
         previous = []
 

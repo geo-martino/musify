@@ -52,7 +52,7 @@ class File(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def valid_extensions(self) -> list[str]:
+    def valid_extensions(self) -> set[str]:
         """Allowed extensions in lowercase"""
         raise NotImplementedError
 
@@ -63,7 +63,8 @@ class File(metaclass=ABCMeta):
             raise IllegalFileTypeError(
                 ext,
                 f"Not an accepted {self.__class__.__qualname__} file extension. "
-                f"Use only: {', '.join(self.valid_extensions)}")
+                f"Use only: {', '.join(self.valid_extensions)}"
+            )
 
 
 def open_image(image_link: str) -> Image.Image:

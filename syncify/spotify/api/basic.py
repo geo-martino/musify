@@ -20,7 +20,7 @@ class Basic(APIBase, metaclass=ABCMeta):
     ###########################################################################
     def get_self(self) -> Mapping[str, Any]:
         """``GET: /me`` - Get API response for information on current user"""
-        return self.get(url=f'{__URL_API__}/me', use_cache=True, log_pad=71)
+        return self.get(url=f"{__URL_API__}/me", use_cache=True, log_pad=71)
 
     def query(
             self, query: str, kind: ItemType, limit: int = 10, use_cache: bool = True
@@ -37,12 +37,12 @@ class Basic(APIBase, metaclass=ABCMeta):
         if not query or len(query) > 150:  # query is too short or too long, skip
             return []
 
-        url = f'{__URL_API__}/search'
-        params = {'q': query, 'type': kind.name.casefold(), 'limit': limit_value(limit)}
+        url = f"{__URL_API__}/search"
+        params = {'q': query, "type": kind.name.casefold(), "limit": limit_value(limit)}
         r = self.get(url, params=params, use_cache=use_cache)
 
-        if 'error' in r:
+        if "error" in r:
             self.logger.error(f"{'ERROR':<7}: {url:<43} | Query: {query} | {r['error']}")
             return []
 
-        return r[f'{kind.name.casefold()}s']['items']
+        return r[f"{kind.name.casefold()}s"]["items"]

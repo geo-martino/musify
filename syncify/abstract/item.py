@@ -10,8 +10,8 @@ from syncify.utils import UnitList
 
 
 @dataclass
-class Base:
-    """Generic Base class for all local/Spotify item/collections."""
+class BaseObject:
+    """Generic base class for all local/Spotify item/collections."""
     clean_tags: MutableMapping[str, Any] = None
     _list_sep: str = "; "
 
@@ -23,7 +23,7 @@ class Base:
 
 
 @dataclass(repr=False, eq=False)
-class Item(Base, PrettyPrinter, metaclass=ABCMeta):
+class Item(BaseObject, PrettyPrinter, metaclass=ABCMeta):
     """Generic class for storing an item."""
 
     @property

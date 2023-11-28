@@ -44,7 +44,7 @@ class RequestHandler(APIAuthoriser, Logger):
         self.timeout = sum(self.backoff_start * self.backoff_factor ** i for i in range(self.backoff_count + 1))
 
         self.session = requests_cache.CachedSession(
-            cache_path, expire_after=cache_expiry, allowable_methods=['GET']
+            cache_path, expire_after=cache_expiry, allowable_methods=["GET"]
         )
 
         self.auth()
@@ -122,14 +122,16 @@ class RequestHandler(APIAuthoriser, Logger):
         response_headers = response.headers
         if isinstance(response.headers, CaseInsensitiveDict):  # format headers if JSON
             response_headers = json.dumps(dict(response.headers), indent=2)
-        self.logger.warning(f"\33[91m{method.upper():<7}: {url} | Code: {response.status_code} | "
-                            f"Response text and headers follow:"
-                            f"\nResponse text:\n{response.text}"
-                            f"\nHeaders:\n{response_headers} \33[0m")
+        self.logger.warning(
+            f"\33[91m{method.upper():<7}: {url} | Code: {response.status_code} | "
+            f"Response text and headers follow:"
+            f"\nResponse text:\n{response.text}"
+            f"\nHeaders:\n{response_headers} \33[0m"
+        )
 
     def _raise_exception(self, response: BaseResponse):
         """Check for response status codes that should raise an exception."""
-        message = self._response_as_json(response).get('error', {}).get('message')
+        message = self._response_as_json(response).get("error", {}).get("message")
         if not message:
             status = HTTPStatus(response.status_code)
             message = f"{status.phrase} | {status.description}"
@@ -139,9 +141,9 @@ class RequestHandler(APIAuthoriser, Logger):
 
     def _check_for_wait_time(self, response: BaseResponse) -> bool:
         """Handle when a wait time is included in the response headers."""
-        if 'retry-after' in response.headers:  # wait if time is short
-            wait_time = int(response.headers['retry-after'])
-            wait_str = (dt.now() + timedelta(seconds=wait_time)).strftime('%Y-%m-%d %H:%M:%S')
+        if "retry-after" in response.headers:  # wait if time is short
+            wait_time = int(response.headers["retry-after"])
+            wait_str = (dt.now() + timedelta(seconds=wait_time)).strftime("%Y-%m-%d %H:%M:%S")
             self.logger.info(f"\33[91mRate limit exceeded. Retrying again at {wait_str}\33[0m")
 
             if wait_time > self.timeout:  # exception if too long

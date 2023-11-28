@@ -1,11 +1,11 @@
 import sys
 from abc import ABCMeta, abstractmethod
-from collections.abc import Mapping
+from collections.abc import Mapping, Collection
 from datetime import datetime
 
 from syncify.abstract.collection import ItemCollection, Folder, Album, Artist, Genre
 from syncify.abstract.item import Item
-from syncify.local.base import Local
+from syncify.local.base import LocalObject
 from syncify.local.exception import LocalCollectionError
 from syncify.local.track.base.track import LocalTrack
 from syncify.local.track.base.writer import SyncResultTrack
@@ -17,7 +17,7 @@ from syncify.utils.logger import Logger, STAT
 __max_str = "z" * 50
 
 
-class LocalCollection(ItemCollection, Local, Logger, metaclass=ABCMeta):
+class LocalCollection(ItemCollection, LocalObject, Logger, metaclass=ABCMeta):
     """Generic class for storing a collection of local tracks."""
 
     @property
@@ -50,7 +50,7 @@ class LocalCollection(ItemCollection, Local, Logger, metaclass=ABCMeta):
     @property
     def length(self) -> float | None:
         """Total duration of all tracks in this collection in seconds"""
-        lengths = [track.length for track in self.tracks]
+        lengths = {track.length for track in self.tracks}
         return sum(lengths) if lengths else None
 
     @property
@@ -89,11 +89,13 @@ class LocalCollection(ItemCollection, Local, Logger, metaclass=ABCMeta):
         self.logger.stat("\33[1;96mSaved tags to the following tracks: \33[0m")
         for track, result in results.items():
             name = self.align_and_truncate(track.path, max_width=max_width, right_align=True)
-            updated = [t for tag in result.updated.keys() for t in tag.to_tag()]
+            updated = tuple(t for tag in result.updated.keys() for t in tag.to_tag())
 
-            self.logger.stat(f"\33[97m{name} \33[0m| " +
-                             ("\33[92mSAVED \33[0m| " if result.saved else "\33[91mNOT SAVED \33[0m| ") +
-                             f"\33[94m{', '.join(updated)} \33[0m")
+            self.logger.stat(
+                f"\33[97m{name} \33[0m| " +
+                ("\33[92mSAVED \33[0m| " if result.saved else "\33[91mNOT SAVED \33[0m| ") +
+                f"\33[94m{', '.join(updated)} \33[0m"
+            )
         self.print_line(STAT)
 
     def as_dict(self):
@@ -170,20 +172,18 @@ class LocalCollectionFiltered(LocalCollection):
         self._tag_key = self._camel_to_snake(self.__class__.__name__.replace("Local", ""))
 
         if name is None:  # attempt to determine the name of this collection from the given tracks
-            names = set(track[self._tag_key] for track in tracks)
-            names_flat = []
-            for name in names.copy():
-                if name:
-                    names_flat.extend(name) if isinstance(name, (list, set)) else names_flat.append(name)
+            names: list[Collection[str] | str] = [track[self._tag_key] for track in tracks if track[self._tag_key]]
+            names: set[str] = {(n for n in name) if isinstance(name, (list, set, tuple)) else name for name in names}
 
-            if len(names_flat) == 0:  # no valid name found
+            if len(names) == 0:  # no valid name found
                 raise LocalCollectionError(f"No {self._tag_key.rstrip('s')}s found in the given tracks")
-            if len(names_flat) != 1:  # too many names found
+            if len(names) != 1:  # too many names found
                 raise LocalCollectionError(
                     f"Too many {self._tag_key.rstrip('s')}s found in the given tracks."
-                    f" Only provide tracks from the same {self._tag_key.rstrip('s')}.")
+                    f" Only provide tracks from the same {self._tag_key.rstrip('s')}."
+                )
 
-            self._name: str = names_flat[0]
+            self._name: str = names.pop()
             self._tracks: list[LocalTrack] = tracks
         else:  # match tracks with a tag equal to the given name for this collection
             self._name: str = name
@@ -320,14 +320,14 @@ class LocalAlbum(LocalCollectionFiltered, Album):
     @property
     def rating(self) -> float | None:
         """Average rating of all tracks in this collection"""
-        ratings = [track.rating for track in self.tracks if track.rating]
+        ratings = {track.rating for track in self.tracks if track.rating}
         return sum(ratings) / len(ratings) if ratings else None
 
     def __init__(self, tracks: list[LocalTrack], name: str | None = None):
         LocalCollectionFiltered.__init__(self, tracks=tracks, name=name)
-        self.tracks.sort(key=lambda x: (x.disc_number or sys.maxsize,
-                                        x.track_number or sys.maxsize,
-                                        x.filename or __max_str))
+        self.tracks.sort(
+            key=lambda x: (x.disc_number or sys.maxsize, x.track_number or sys.maxsize, x.filename or __max_str)
+        )
         self._image_links = {}
 
     def as_dict(self):
@@ -368,10 +368,12 @@ class LocalArtist(LocalCollectionFiltered, Artist):
 
     def __init__(self, tracks: list[LocalTrack], name: str | None = None):
         LocalCollectionFiltered.__init__(self, tracks=tracks, name=name)
-        self.tracks.sort(key=lambda x: (x.album or __max_str,
-                                        x.disc_number or sys.maxsize,
-                                        x.track_number or sys.maxsize,
-                                        x.filename or __max_str))
+        self.tracks.sort(
+            key=lambda x: (x.album or __max_str,
+                           x.disc_number or sys.maxsize,
+                           x.track_number or sys.maxsize,
+                           x.filename or __max_str)
+        )
 
     def as_dict(self):
         return {
@@ -406,11 +408,13 @@ class LocalGenres(LocalCollectionFiltered, Genre):
 
     def __init__(self, tracks: list[LocalTrack], name: str | None = None):
         LocalCollectionFiltered.__init__(self, tracks=tracks, name=name)
-        self.tracks.sort(key=lambda x: (x.artist or __max_str,
-                                        x.album or __max_str,
-                                        x.disc_number or sys.maxsize,
-                                        x.track_number or sys.maxsize,
-                                        x.filename or __max_str))
+        self.tracks.sort(
+            key=lambda x: (x.artist or __max_str,
+                           x.album or __max_str,
+                           x.disc_number or sys.maxsize,
+                           x.track_number or sys.maxsize,
+                           x.filename or __max_str)
+        )
 
     def as_dict(self):
         return {

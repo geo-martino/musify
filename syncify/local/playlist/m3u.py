@@ -40,7 +40,7 @@ class M3U(LocalPlaylist):
         check for the existence of the file paths on the file system and reject any that don't.
     """
 
-    valid_extensions = [".m3u"]
+    valid_extensions = {".m3u"}
 
     def __init__(
             self,
@@ -54,7 +54,7 @@ class M3U(LocalPlaylist):
 
         paths = []
         if exists(path):  # load from file
-            with open(path, "r", encoding='utf-8') as f:
+            with open(path, "r", encoding="utf-8") as f:
                 paths = [line.strip() for line in f]
         elif tracks is not None:  # generating a new M3U
             paths = [track.path for track in tracks]
@@ -88,12 +88,12 @@ class M3U(LocalPlaylist):
         start_paths = set(self._prepare_paths_for_output({track.path.lower() for track in self._tracks_original}))
 
         if not dry_run:
-            with open(self.path, "w", encoding='utf-8') as f:
+            with open(self.path, "w", encoding="utf-8") as f:
                 # reassign any original folder found by the matcher and output
-                paths = self._prepare_paths_for_output([track.path for track in self.tracks])
-                f.writelines([path.strip() + '\n' for path in paths])
+                paths = self._prepare_paths_for_output(tuple(track.path for track in self.tracks))
+                f.writelines(path.strip() + '\n' for path in paths)
 
-            with open(self.path, "r", encoding='utf-8') as f:  # get list of paths that were saved for logging
+            with open(self.path, "r", encoding="utf-8") as f:  # get list of paths that were saved for logging
                 final_paths = {line.rstrip().lower() for line in f if line.rstrip()}
         else:  # use current list of tracks as a proxy of paths that were saved for logging
             final_paths = {track.path.lower() for track in self._tracks}

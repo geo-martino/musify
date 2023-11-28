@@ -1,4 +1,4 @@
-from collections.abc import Mapping
+from collections.abc import Mapping, Collection
 from typing import Any
 from urllib.parse import urlparse
 
@@ -7,12 +7,11 @@ from syncify.spotify import __URL_API__, __URL_EXT__
 from syncify.spotify.api import APIMethodInputType
 from syncify.spotify.enums import IDType, ItemType
 from syncify.spotify.exception import SpotifyError, SpotifyIDTypeError, SpotifyItemTypeError
-from syncify.utils.helpers import make_list
+from syncify.utils import UnitList
+from syncify.utils.helpers import to_collection
 
 
-def check_spotify_type(
-        value: str, types: IDType | list[IDType] = IDType.ALL
-) -> IDType | None:
+def check_spotify_type(value: str, types: UnitList[IDType] = IDType.ALL) -> IDType | None:
     """
     Check that the given value is of a valid Spotify type.
 
@@ -23,7 +22,7 @@ def check_spotify_type(
     if not isinstance(value, str):
         return
 
-    types: set[IDType] = set(make_list(types))
+    types: Collection[IDType] = to_collection(types, set)
     if IDType.ALL in types:
         types = IDType.all()
 
@@ -35,9 +34,9 @@ def check_spotify_type(
         uri_list = value.split(":")
         if not uri_list[0] == "spotify":
             return None
-        elif uri_list[1] == 'user':
+        elif uri_list[1] == "user":
             return IDType.URI
-        elif uri_list[1] != 'user' and len(uri_list[2]) == IDType.ID.value:
+        elif uri_list[1] != "user" and len(uri_list[2]) == IDType.ID.value:
             return IDType.URI
     elif IDType.ID in types and len(value) == IDType.ID.value:
         return IDType.ID
@@ -52,13 +51,13 @@ def get_id_type(value: str) -> IDType:
     :raises SpotifyIDTypeError: Raised when the function cannot determine the ID type of the input ``value``.
     """
     value = value.strip().casefold()
-    url_check = [i for i in urlparse(value).netloc.split(".") if i]
+    url_check = tuple(i for i in urlparse(value).netloc.split(".") if i)
     uri_check = value.split(':')
 
     if len(url_check) > 0:
-        if url_check[0] == 'api':  # open/api URL
+        if url_check[0] == "api":  # open/api URL
             return IDType.URL
-        elif url_check[0] == 'open':
+        elif url_check[0] == "open":
             return IDType.URL_EXT
     elif len(uri_check) == IDType.URI.value:
         return IDType.URI
@@ -96,19 +95,19 @@ def get_item_type(values: APIMethodInputType) -> ItemType:
     :raises SpotifyItemTypeError: Raised when the function cannot determine the item type of the input ``values``.
         Or when the list contains strings representing many differing Spotify item types or only IDs.
     """
-    if isinstance(values, (list, set)):
-        if len(values) == 0:
-            raise SpotifyItemTypeError("No values given: list is empty")
+    if isinstance(values, str) or isinstance(values, dict):
+        return __get_item_type(values)
 
-        kinds = {__get_item_type(value) for value in values if value is not None}
-        kinds = [kind for kind in kinds if kind is not None]
-        if len(kinds) == 0:
-            raise SpotifyItemTypeError("Given items are invalid or are IDs with no kind given")
-        if len(kinds) != 1:
-            raise SpotifyItemTypeError(f"Ensure all the given items are of the same type! Found", value=kinds)
-        return kinds[0]
+    if len(values) == 0:
+        raise SpotifyItemTypeError("No values given: collection is empty")
 
-    return __get_item_type(values)
+    kinds = {__get_item_type(value) for value in values if value is not None}
+    kinds.discard(None)
+    if len(kinds) == 0:
+        raise SpotifyItemTypeError("Given items are invalid or are IDs with no kind given")
+    if len(kinds) != 1:
+        raise SpotifyItemTypeError(f"Ensure all the given items are of the same type! Found", value=kinds)
+    return kinds.pop()
 
 
 def __get_item_type(value: str | Mapping[str, Any]) -> ItemType | None:
@@ -130,11 +129,11 @@ def __get_item_type(value: str | Mapping[str, Any]) -> ItemType | None:
         return ItemType.from_name(value["type"].casefold().rstrip('s'))
 
     value = value.strip()
-    url_check = urlparse(value.replace('/v1/', '/')).netloc.split(".")
+    url_check = urlparse(value.replace("/v1/", '/')).netloc.split(".")
     uri_check = value.split(':')
 
-    if len(url_check) > 0 and url_check[0] == 'open' or url_check[0] == 'api':  # open/api URL
-        url_path = urlparse(value.replace('/v1/', '/')).path.split("/")
+    if len(url_check) > 0 and url_check[0] == "open" or url_check[0] == "api":  # open/api URL
+        url_path = urlparse(value.replace("/v1/", '/')).path.split("/")
         for chunk in url_path:
             try:
                 return ItemType.from_name(chunk.casefold().rstrip('s'))
@@ -199,7 +198,7 @@ def convert(
         if kind == ItemType.USER:
             id_ = url_path[url_path.index(kind.name.casefold()) + 1]
         else:
-            id_ = [p for p in url_path if len(p) == IDType.ID.value][0]
+            id_ = next(p for p in url_path if len(p) == IDType.ID.value)
     elif type_in == IDType.URI:
         uri_split = value.split(':')
         kind = ItemType.from_name(uri_split[1])
@@ -218,7 +217,7 @@ def convert(
     elif type_out == IDType.URL_EXT:
         return f'{__URL_EXT__}/{item}/{id_}'
     elif type_out == IDType.URI:
-        return f'spotify:{item}:{id_}'
+        return f"spotify:{item}:{id_}"
     else:
         return id_
 
@@ -241,14 +240,14 @@ def extract_ids(values: APIMethodInputType, kind: ItemType | None = None) -> lis
     """
     if isinstance(values, str):
         return [convert(values, kind=kind, type_out=IDType.ID)]
-    elif isinstance(values, dict) and 'id' in values:  # is a raw API response from Spotify
-        return [values['id']]
-    elif isinstance(values, (list, set)):
+    elif isinstance(values, dict) and "id" in values:  # is a raw API response from Spotify
+        return [values["id"]]
+    elif isinstance(values, Collection):
         if len(values) == 0:
             return []
         elif all(isinstance(d, str) for d in values):
             return [convert(d, kind=kind, type_out=IDType.ID) for d in values]
-        elif all(isinstance(d, dict) and 'id' in d for d in values):
-            return [track['id'] for track in values]
+        elif all(isinstance(d, dict) and "id" in d for d in values):
+            return [track["id"] for track in values]
 
     raise SpotifyError(f"Could not extract IDs. Input data not recognised: {type(values)}")

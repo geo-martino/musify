@@ -5,33 +5,29 @@ from typing import Any
 from collections.abc import Iterable, Collection, Mapping, MutableMapping, Callable
 
 from syncify.abstract.collection import Album, ItemCollection
-from syncify.abstract.item import Track, Base
+from syncify.abstract.item import Track, BaseObject
 from syncify.enums.tags import TagName, PropertyName
 from syncify.utils.helpers import limit_value
 from syncify.utils.logger import Logger
-
-
-_CLEAN_TAGS_REMOVE_ALL = ["the", "a", "&", "and"]
-_CLEAN_TAGS_SPLIT_ALL = []
 
 
 @dataclass
 class CleanTagConfig:
     """Config for processing string-type tag values before matching"""
     name: str
-    _remove: list[str] | None = None
-    _split: list[str] | None = None
+    _remove: set[str] | None = None
+    _split: set[str] | None = None
     _preprocess: Callable[[str], str] = None
 
     @property
-    def remove(self) -> list[str]:
+    def remove(self) -> set[str]:
         """Get all redundant words to be removed for this tag"""
-        return _CLEAN_TAGS_REMOVE_ALL + (self._remove if self._remove else [])
+        return self._remove if self._remove else set()
 
     @property
-    def split(self) -> list[str]:
+    def split(self) -> set[str]:
         """Get all split words for which the cleaner will only take words before this word"""
-        return _CLEAN_TAGS_SPLIT_ALL + (self._split if self._split else [])
+        return self._split if self._split else set()
 
     def preprocess(self, value: str) -> str:
         """Apply the preprocess function to value if given, return value unprocessed if not"""
@@ -45,14 +41,16 @@ class Matcher(Logger):
     :param allow_karaoke: Allow karaoke results to be matched, skip karaoke results otherwise.
     """
 
-    karaoke_tags = ['karaoke', 'backing', 'instrumental']
+    karaoke_tags = {"karaoke", "backing", "instrumental"}
     year_range = 10
 
     # config for cleaning string-type tags for matching
+    _clean_tags_remove_all = {"the", "a", "&", "and"}
+    _clean_tags_split_all = set()
     _clean_tags_config = [
-        CleanTagConfig(name="title", _remove=["part"], _split=["featuring", "feat.", "ft.", "/"]),
-        CleanTagConfig(name="artist", _split=["featuring", "feat.", "ft.", "vs"]),
-        CleanTagConfig(name="album", _remove=["ep"], _preprocess=lambda x: x.split('-')[0])
+        CleanTagConfig(name="title", _remove={"part"}, _split={"featuring", "feat.", "ft.", "/"}),
+        CleanTagConfig(name="artist", _split={"featuring", "feat.", "ft.", "vs"}),
+        CleanTagConfig(name="album", _remove={"ep"}, _preprocess=lambda x: x.split('-')[0])
     ]
 
     def _log_padded(self, log: list[str], pad: str = ' '):
@@ -60,7 +58,7 @@ class Matcher(Logger):
         log[0] = pad * 3 + ' ' + (log[0] if log[0] else "unknown")
         self.logger.debug(" | ".join(log))
 
-    def _log_algorithm(self, source: Base, extra: list[str] | None = None):
+    def _log_algorithm(self, source: BaseObject, extra: list[str] | None = None):
         """Wrapper for initially logging an algorithm in a correctly aligned format"""
         algorithm = inspect.stack()[1][0].f_code.co_name.upper().lstrip("_").replace("_", " ")
         log = [source.name, algorithm]
@@ -68,7 +66,7 @@ class Matcher(Logger):
             log += extra
         self._log_padded(log, pad='>')
 
-    def _log_test[T: (Track, Album)](self, source: Base, result: T, test: Any, extra: list[str] | None = None):
+    def _log_test[T: (Track, Album)](self, source: BaseObject, result: T, test: Any, extra: list[str] | None = None):
         """Wrapper for initially logging a test result in a correctly aligned format"""
         algorithm = inspect.stack()[1][0].f_code.co_name.replace("match", "").upper().lstrip("_").replace("_", " ")
         log_result = f"> Testing URI: {result.uri}" if hasattr(result, "uri") else "> Test failed"
@@ -77,7 +75,7 @@ class Matcher(Logger):
             log += extra
         self._log_padded(log)
 
-    def _log_match[T: (Track, Album)](self, source: Base, result: T, extra: list[str] | None = None):
+    def _log_match[T: (Track, Album)](self, source: BaseObject, result: T, extra: list[str] | None = None):
         """Wrapper for initially logging a match in a correctly aligned format"""
         log = [source.name, f"< Matched URI: {result.uri}"]
         if extra:
@@ -88,7 +86,7 @@ class Matcher(Logger):
         Logger.__init__(self)
         self.allow_karaoke = allow_karaoke
 
-    def clean_tags(self, source: Base):
+    def clean_tags(self, source: BaseObject):
         """
         Clean tags on the input item and assign to its ``clean_tags`` attribute. Used for better matching/searching.
         Clean by removing words, and only taking phrases before a certain word e.g. 'featuring', 'part'.
@@ -101,10 +99,10 @@ class Matcher(Logger):
             val = conf.preprocess(val)
             val = re.sub(r"[(\[].*?[)\]]", "", val).casefold()
 
-            for word in conf.remove:
+            for word in conf.remove | self._clean_tags_remove_all:
                 val = re.sub(rf"\s{word}\s|^{word}\s|\s{word}$", " ", val)
 
-            for word in conf.split:
+            for word in conf.split | self._clean_tags_split_all:
                 val = val.split(word)[0].rstrip()
 
             return re.sub(r"[^\w']+", ' ', val).strip()
@@ -157,7 +155,7 @@ class Matcher(Logger):
 
             # reduce a score if certain keywords are present in result and not source
             reduce_factor = 0.5
-            reduce_on = ["live", "demo", "acoustic"] + self.karaoke_tags
+            reduce_on = {"live", "demo", "acoustic"} | self.karaoke_tags  # TODO: factor these strings out
             if any(word in result.name.lower() and word not in source.name.lower() for word in reduce_on):
                 score = max(score - reduce_factor, 0)
 
@@ -180,8 +178,8 @@ class Matcher(Logger):
             self._log_test(source=source, result=result, test=score, extra=[f"{source_val} -> {result_val}"])
             return score
 
-        artists_source = source_val.replace(Base._list_sep, " ")
-        artists_result = result_val.split(Base._list_sep)
+        artists_source = source_val.replace(BaseObject._list_sep, " ")
+        artists_result = result_val.split(BaseObject._list_sep)
 
         for i, artist in enumerate(artists_result, 1):
             score += (sum(word in artists_source for word in artist.split()) / len(artists_source.split())) * (1 / i)
@@ -209,9 +207,8 @@ class Matcher(Logger):
         if source_val and result_val:
             score = max((source_val - abs(source_val - result_val)), 0) / source_val
 
-        self._log_test(source=source, result=result, test=round(score, 2),
-                       extra=[f"{round(source_val, 2) if source_val else None} -> "
-                              f"{round(result_val, 2) if result_val else None}"])
+        extra = [f"{round(source_val, 2) if source_val else None} -> {round(result_val, 2) if result_val else None}"]
+        self._log_test(source=source, result=result, test=round(score, 2), extra=extra)
         return score
 
     def match_year[T: (Track, Album)](self, source: T, result: T) -> float:
@@ -259,9 +256,12 @@ class Matcher(Logger):
         score, result = self._score(source=source, results=results, max_score=max_score, match_on=match_on)
 
         if score > min_score:
-            extra = f"best score: {'%.2f' % round(score, 2)} > {'%.2f' % round(min_score, 2)}" if score < max_score \
-                else f"max score reached: {'%.2f' % round(score, 2)} > {'%.2f' % round(max_score, 2)}"
-            self._log_match(source=source, result=result, extra=[extra])
+            extra = [
+                f"best score: {'%.2f' % round(score, 2)} > {'%.2f' % round(min_score, 2)}"
+                if score < max_score else
+                f"max score reached: {'%.2f' % round(score, 2)} > {'%.2f' % round(max_score, 2)}"
+            ]
+            self._log_match(source=source, result=result, extra=extra)
             return result
         else:
             self._log_test(source=source, result=result, test=score, extra=[f"NO MATCH: {score}<{min_score}"])
@@ -294,10 +294,10 @@ class Matcher(Logger):
         match_on = set(match_on)
         if TagName.ALL in match_on:
             match_on.remove(TagName.ALL)
-            match_on |= TagName.all()
+            match_on |= set(TagName.all())
         if PropertyName.ALL in match_on:
             match_on.remove(PropertyName.ALL)
-            match_on |= PropertyName.all()
+            match_on |= set(PropertyName.all())
 
         best_score = 0
         best_result = None
@@ -309,8 +309,8 @@ class Matcher(Logger):
                 continue
 
             current_score = sum(scores.values()) / len(scores)
-            self._log_test(source=source, result=current_result,
-                           test=round(current_score, 2), extra=[f"BEST={round(best_score, 2)}"])
+            log_extra = [f"BEST={round(best_score, 2)}"]
+            self._log_test(source=source, result=current_result, test=round(current_score, 2), extra=log_extra)
 
             if current_score > best_score:
                 best_result = current_result

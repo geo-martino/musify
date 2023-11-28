@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, date
 from functools import reduce
 from operator import mul
 from typing import Any, Self
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 
 from dateutil.relativedelta import relativedelta
 
@@ -12,7 +12,7 @@ from syncify.local.exception import FieldError, LocalProcessorError
 from syncify.local.playlist.processor.base import TrackProcessor
 from syncify.local.track.base.track import LocalTrack
 from syncify.utils import UnitList
-from syncify.utils.helpers import make_list
+from syncify.utils.helpers import to_collection
 
 # Map of MusicBee field name to Tag or Property
 field_name_map = {
@@ -73,7 +73,7 @@ class TrackCompare(TrackProcessor):
         """Sets the condition name and stored method"""
         if value is None:
             self._condition: str | None = None
-            self._method: Callable[[Any | None, list[Any] | None], bool] = lambda _, __: False
+            self._method: Callable[[Any | None, Sequence[Any] | None], bool] = lambda _, __: False
             return
 
         name = self._get_method_name(value=value, valid=self._valid_methods, prefix=self._cond_method_prefix)
@@ -81,12 +81,12 @@ class TrackCompare(TrackProcessor):
         self._method = getattr(self, self._valid_methods[name])
 
     @property
-    def expected(self) -> list[Any] | None:
+    def expected(self) -> Sequence[Any] | None:
         """A list of expected values used for most conditions"""
         return self._expected
 
     @expected.setter
-    def expected(self, value: list[Any] | None = None):
+    def expected(self, value: Sequence[Any] | None = None):
         """Set the list of expected values and reset the ``_converted`` attribute to False"""
         self._converted = False
         self._expected = value
@@ -96,7 +96,7 @@ class TrackCompare(TrackProcessor):
         if xml is None:
             return
 
-        conditions: list[Mapping[str, str]] = make_list(xml["SmartPlaylist"]["Source"]["Conditions"]["Condition"])
+        conditions: list[Mapping[str, str]] = to_collection(xml["SmartPlaylist"]["Source"]["Conditions"]["Condition"])
 
         objs = []
         for condition in conditions:
@@ -106,7 +106,7 @@ class TrackCompare(TrackProcessor):
                 raise FieldError(f"Unrecognised field name", field=field_str)
 
             expected: list[str] | None = [val for k, val in condition.items() if k.startswith("@Value")]
-            if len(expected) == 0 or expected[0] == '[playing track]':
+            if len(expected) == 0 or expected[0] == "[playing track]":
                 expected = None
 
             objs.append(cls(field=field, condition=condition["@Comparison"], expected=expected))
@@ -118,14 +118,16 @@ class TrackCompare(TrackProcessor):
         self._expected: list[Any] | None = None
 
         self.field: Name = field
-        self.expected: list[Any] | None = make_list(expected)
+        self.expected: list[Any] | None = to_collection(expected, list)
 
         prefix = "_cond"
         self._cond_method_prefix = "_cond"
         self._valid_methods = {
             k if k.startswith(prefix) else prefix + k: v if v.startswith(prefix) else prefix + v
             for k, v in self._valid_methods.items()
-        } | {name: name for name in dir(self) if name.startswith(self._cond_method_prefix)}
+        } | {
+            name: name for name in dir(self) if name.startswith(self._cond_method_prefix)
+        }
         self.condition = condition
 
     def compare(self, track: LocalTrack, reference: UnitList[LocalTrack] | None = None) -> bool:
@@ -147,7 +149,7 @@ class TrackCompare(TrackProcessor):
                 self._convert_expected(actual)
             expected = self.expected
         else:  # use the values from the reference as the expected values
-            expected = make_list(reference[tag_name])
+            expected = to_collection(reference[tag_name], list)
 
         if expected is not None:  # special on-the-fly conversions for datetime values
             if isinstance(actual, datetime) and not isinstance(expected[0], datetime):
@@ -181,9 +183,9 @@ class TrackCompare(TrackProcessor):
     @staticmethod
     def _get_seconds(time_str: str) -> float:
         """Convert string representation of time to seconds e.g. 4:30 -> 270s"""
-        factors = [24, 60, 60, 1]
+        factors = (24, 60, 60, 1)
         digits_split = time_str.split(":")
-        digits = [int(n.split(",")[0]) for n in digits_split]
+        digits = tuple(int(n.split(",")[0]) for n in digits_split)
 
         seconds = 0
         if "," in digits_split[-1]:  # add milliseconds if present
@@ -223,7 +225,7 @@ class TrackCompare(TrackProcessor):
                 converted.append(exp.date())
             elif re.match(r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}", exp):
                 # value is a string representation of datetime
-                digits = [int(d) for d in reversed(exp.split("/"))]
+                digits: list[int] = list(map(int, reversed(exp.split("/"))))
 
                 if len(str(digits[-1])) < 4:  # year is not fully qualified, add millennium part
                     this_millennium = str(date.today().year)[:2]
@@ -243,72 +245,72 @@ class TrackCompare(TrackProcessor):
         self._expected = converted
 
     @staticmethod
-    def _cond_is(value: Any | None, expected: list[Any] | None) -> bool:
+    def _cond_is(value: Any | None, expected: Sequence[Any] | None) -> bool:
         return value == expected[0]
 
     @classmethod
-    def _cond_is_not(cls, value: Any | None, expected: list[Any] | None) -> bool:
+    def _cond_is_not(cls, value: Any | None, expected: Sequence[Any] | None) -> bool:
         return not cls._cond_is(value=value, expected=expected)
 
     @staticmethod
-    def _cond_is_after(value: Any | None, expected: list[Any] | None) -> bool:
+    def _cond_is_after(value: Any | None, expected: Sequence[Any] | None) -> bool:
         return value > expected[0] if value is not None and expected[0] is not None else False
 
     @staticmethod
-    def _cond_is_before(value: Any | None, expected: list[Any] | None) -> bool:
+    def _cond_is_before(value: Any | None, expected: Sequence[Any] | None) -> bool:
         return value < expected[0] if value is not None and expected[0] is not None else False
 
     @staticmethod
-    def _cond_is_in(value: Any | None, expected: list[Any] | None) -> bool:
+    def _cond_is_in(value: Any | None, expected: Sequence[Any] | None) -> bool:
         return value in expected
 
     @classmethod
-    def _cond_is_not_in(cls, value: Any | None, expected: list[Any] | None) -> bool:
+    def _cond_is_not_in(cls, value: Any | None, expected: Sequence[Any] | None) -> bool:
         return not cls._cond_is_in(value=value, expected=expected)
 
     @staticmethod
-    def _cond_in_range(value: Any | None, expected: list[Any] | None) -> bool:
+    def _cond_in_range(value: Any | None, expected: Sequence[Any] | None) -> bool:
         return expected[0] < value < expected[1] if value is not None and expected[0] is not None else False
 
     @classmethod
-    def _cond_not_in_range(cls, value: Any | None, expected: list[Any] | None) -> bool:
+    def _cond_not_in_range(cls, value: Any | None, expected: Sequence[Any] | None) -> bool:
         return not cls._cond_in_range(value=value, expected=expected)
 
     @staticmethod
-    def _cond_is_not_null(value: Any | None, _: list[Any] | None = None) -> bool:
+    def _cond_is_not_null(value: Any | None, _: Sequence[Any] | None = None) -> bool:
         return value is not None or value is True
 
     @staticmethod
-    def _cond_is_null(value: Any | None, _: list[Any] | None = None) -> bool:
+    def _cond_is_null(value: Any | None, _: Sequence[Any] | None = None) -> bool:
         return value is None or value is False
 
     @staticmethod
-    def _cond_starts_with(value: Any | None, expected: list[Any] | None) -> bool:
+    def _cond_starts_with(value: Any | None, expected: Sequence[Any] | None) -> bool:
         return value.startswith(expected[0]) if value is not None and expected[0] is not None else False
 
     @staticmethod
-    def _cond_ends_with(value: Any | None, expected: list[Any] | None) -> bool:
+    def _cond_ends_with(value: Any | None, expected: Sequence[Any] | None) -> bool:
         return value.endswith(expected[0]) if value is not None and expected[0] is not None else False
 
     @staticmethod
-    def _cond_contains(value: Any | None, expected: list[Any] | None) -> bool:
+    def _cond_contains(value: Any | None, expected: Sequence[Any] | None) -> bool:
         return expected[0] in value if value is not None and expected[0] is not None else False
 
     @classmethod
-    def _cond_does_not_contain(cls, value: Any | None, expected: list[Any] | None) -> bool:
+    def _cond_does_not_contain(cls, value: Any | None, expected: Sequence[Any] | None) -> bool:
         return not cls._cond_contains(value=value, expected=expected)
 
     @staticmethod
-    def _cond_in_tag_hierarchy(value: Any | None, expected: list[Any] | None) -> bool:
+    def _cond_in_tag_hierarchy(value: Any | None, expected: Sequence[Any] | None) -> bool:
         # TODO: what does this even mean
         raise NotImplementedError
 
     @staticmethod
-    def _cond_matches_reg_ex(value: Any | None, expected: list[Any] | None) -> bool:
+    def _cond_matches_reg_ex(value: Any | None, expected: Sequence[Any] | None) -> bool:
         return bool(re.search(expected[0], value)) if value is not None and expected[0] is not None else False
 
     @staticmethod
-    def _cond_matches_reg_ex_ignore_case(value: Any | None, expected: list[Any] | None) -> bool:
+    def _cond_matches_reg_ex_ignore_case(value: Any | None, expected: Sequence[Any] | None) -> bool:
         if value is not None and expected[0] is not None:
             return False
         return bool(re.search(expected[0], value, flags=re.IGNORECASE))

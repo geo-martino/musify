@@ -3,7 +3,7 @@ from typing import Self
 from collections.abc import Collection
 
 from . import SyncifyEnum, EnumNotFoundError
-from syncify.utils.helpers import make_list
+from syncify.utils.helpers import to_collection
 
 
 @dataclass(frozen=True)
@@ -102,7 +102,7 @@ class TagName(Name):
         """Convert the given tags to tag names as given by the attributes of an item/collection"""
         if isinstance(tags, cls):
             return tags.to_tag()
-        return [t for tag in make_list(tags) for t in tag.to_tag()]
+        return [t for tag in to_collection(tags) for t in tag.to_tag()]
 
 
 class PropertyName(Name):

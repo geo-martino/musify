@@ -79,8 +79,10 @@ class APIAuthoriser(Logger):
             token_value = token_value.get(key, {})
 
         if not isinstance(token_value, str):
-            raise APIError(f"Did not find valid token at key path: {self.token_key_path} -> {token_value} | " +
-                           str(self.token_safe))
+            raise APIError(
+                f"Did not find valid token at key path: {self.token_key_path} -> {token_value} | " +
+                str(self.token_safe)
+            )
 
         return {self.header_key: f"{self.header_prefix}{token_value}"} | self.header_extra
 
@@ -184,7 +186,7 @@ class APIAuthoriser(Logger):
         self.logger.info_extra("Authorising user privilege access...")
 
         # set up socket to listen for the redirect from Spotify
-        address = ('localhost', 8080)
+        address = ("localhost", 8080)
         code_listener = socket(AF_INET, SOCK_STREAM)
         code_listener.bind(address)
         code_listener.settimeout(120)
@@ -203,8 +205,8 @@ class APIAuthoriser(Logger):
         code_listener.close()
 
         # format out the access code from the returned response
-        path_raw = [line for line in request.recv(8196).decode('utf-8').split("\n") if line.startswith("GET")][0]
-        requests_args["data"]["code"] = parse_qs(urlparse(path_raw).query)['code'][0]
+        path_raw = next(line for line in request.recv(8196).decode("utf-8").split('\n') if line.startswith("GET"))
+        requests_args["data"]["code"] = parse_qs(urlparse(path_raw).query)["code"][0]
 
     def _request_token(self, user: bool = True, **requests_args):
         """

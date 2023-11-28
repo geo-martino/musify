@@ -96,7 +96,7 @@ class LocalPlaylist(Playlist, LocalCollection, File, metaclass=ABCMeta):
         if self.sorter is not None and self.tracks is not None:
             self.sorter.sort(tracks=self.tracks)
 
-    def _prepare_paths_for_output(self, paths: Collection[str]) -> Collection[str]:
+    def _prepare_paths_for_output(self, paths: Collection[str]) -> list[str]:
         """Add the original library folder back to a list of paths for output"""
         library_folder = self.matcher.library_folder
         original_folder = self.matcher.original_folder

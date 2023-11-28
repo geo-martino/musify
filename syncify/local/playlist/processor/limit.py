@@ -100,7 +100,9 @@ class TrackLimit(TrackProcessor):
         self._valid_methods = {
             k if k.startswith(prefix) else prefix + k: v if v.startswith(prefix) else prefix + v
             for k, v in self._valid_methods.items()
-        } | {name: name for name in dir(self) if name.startswith(self._sort_method_prefix)}
+        } | {
+            name: name for name in dir(self) if name.startswith(self._sort_method_prefix)
+        }
         self.limit_sort = sorted_by
 
     def limit(self, tracks: list[LocalTrack], ignore: Collection[str | LocalTrack] | None = None):
@@ -117,7 +119,7 @@ class TrackLimit(TrackProcessor):
         self._sort_method(tracks)  # sort the input tracks in-place if sort method given
 
         if ignore is not None and len(ignore) > 0:  # filter out the ignore tracks if given
-            ignore = [track.path if isinstance(track, LocalTrack) else track for track in ignore]
+            ignore = {track.path if isinstance(track, LocalTrack) else track for track in ignore}
 
             tracks_limit = [track for track in tracks if track.path not in ignore]
             tracks_ignore = [track for track in tracks if track.path in ignore]
@@ -190,7 +192,7 @@ class TrackLimit(TrackProcessor):
         :raises LimitError: When the given limit type cannot be found
         """
         if 10 < self.kind.value < 20:
-            factors = [1, 60, 60, 24, 7][:self.kind.value % 10]
+            factors = (1, 60, 60, 24, 7)[:self.kind.value % 10]
             return track.length / reduce(mul, factors, 1)
         elif 20 <= self.kind.value < 30:
             bytes_scale = 1000

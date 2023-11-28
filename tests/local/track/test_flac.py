@@ -66,13 +66,13 @@ def test_loaded_attributes():
     track = FLAC(file=path_track_flac)
 
     # metadata
-    assert track.title == 'title 1'
-    assert track.artist == 'artist 1'
-    assert track.album == 'album artist 1'
-    assert track.album_artist == 'various'
+    assert track.title == "title 1"
+    assert track.artist == "artist 1"
+    assert track.album == "album artist 1"
+    assert track.album_artist == "various"
     assert track.track_number == 1
     assert track.track_total == 4
-    assert track.genres == ['Pop', 'Rock', 'Jazz']
+    assert track.genres == ["Pop", "Rock", "Jazz"]
     assert track.year == 2020
     assert track.bpm == 120.12
     assert track.key == 'A'
@@ -80,7 +80,7 @@ def test_loaded_attributes():
     assert track.disc_total == 3
     assert track.compilation
     # noinspection SpellCheckingInspection
-    assert track.comments == ['spotify:track:6fWoFduMpBem73DMLCOh1Z']
+    assert track.comments == ["spotify:track:6fWoFduMpBem73DMLCOh1Z"]
 
     assert track.uri == track.comments[0]
     assert track.has_uri
@@ -92,7 +92,7 @@ def test_loaded_attributes():
     assert track.path == path_track_flac
     assert track.folder == basename(dirname(path_track_flac))
     assert track.filename == splitext(basename(path_track_flac))[0]
-    assert track.ext == '.flac'
+    assert track.ext == ".flac"
     assert track.size == 1818191
     assert int(track.length) == 20
     assert track.date_modified == datetime.fromtimestamp(getmtime(path_track_flac))

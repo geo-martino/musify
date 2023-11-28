@@ -51,18 +51,18 @@ def test_get_item_type():
     assert get_item_type(f"{__URL_API__}/audiobooks/1234567890ASDFGHJKLZXC/chapters") == ItemType.AUDIOBOOK
     assert get_item_type(f"{__URL_EXT__}/chapters/1234567890ASDFGHJKLZXC") == ItemType.CHAPTER
 
-    assert get_item_type({"type": 'playlist'}) == ItemType.PLAYLIST
-    assert get_item_type({"type": 'TRACK'}) == ItemType.TRACK
-    assert get_item_type({"type": 'album'}) == ItemType.ALBUM
-    assert get_item_type({"type": 'ARTIST'}) == ItemType.ARTIST
-    assert get_item_type({"type": 'user'}) == ItemType.USER
-    assert get_item_type({"type": 'show'}) == ItemType.SHOW
-    assert get_item_type({"type": 'episode'}) == ItemType.EPISODE
-    assert get_item_type({"type": 'audiobook'}) == ItemType.AUDIOBOOK
-    assert get_item_type({"type": 'chapter'}) == ItemType.CHAPTER
+    assert get_item_type({"type": "playlist"}) == ItemType.PLAYLIST
+    assert get_item_type({"type": "TRACK"}) == ItemType.TRACK
+    assert get_item_type({"type": "album"}) == ItemType.ALBUM
+    assert get_item_type({"type": "ARTIST"}) == ItemType.ARTIST
+    assert get_item_type({"type": "user"}) == ItemType.USER
+    assert get_item_type({"type": "show"}) == ItemType.SHOW
+    assert get_item_type({"type": "episode"}) == ItemType.EPISODE
+    assert get_item_type({"type": "audiobook"}) == ItemType.AUDIOBOOK
+    assert get_item_type({"type": "chapter"}) == ItemType.CHAPTER
 
     values = [
-        {"type": 'playlist'},
+        {"type": "playlist"},
         f"{__URL_EXT__}/playlists/bnmhjkyuidfgertsdfertw/followers",
         "spotify:playlist:1234567890ASDFGHJKLZXC",
         "qwertyuiopASDFGHJKLZ12"
@@ -76,7 +76,7 @@ def test_get_item_type():
         get_item_type(["1234567890ASDFGHJKLZXC", "qwertyuiopASDFGHJKLZ12"])
 
     with pytest.raises(SpotifyItemTypeError):
-        values = ["spotify:show:1234567890ASDFGHJKLZXC", {"type": 'track'}]
+        values = ["spotify:show:1234567890ASDFGHJKLZXC", {"type": "track"}]
         get_item_type(values)
 
     with pytest.raises(SpotifyItemTypeError):
@@ -84,11 +84,11 @@ def test_get_item_type():
         get_item_type(values)
 
     with pytest.raises(SpotifyItemTypeError):
-        response = {"type": 'track', "is_local": True}
+        response = {"type": "track", "is_local": True}
         get_item_type(response)
 
     with pytest.raises(SpotifyItemTypeError):
-        response = {"not_a_type": 'track', "is_local": False}
+        response = {"not_a_type": "track", "is_local": False}
         get_item_type(response)
 
     with pytest.raises(SpotifyItemTypeError):
@@ -100,27 +100,36 @@ def test_get_item_type():
 
 # noinspection SpellCheckingInspection
 def test_validate_item_type():
-    assert validate_item_type(f"{__URL_API__}/playlist/1234567890ASDFGHJKLZXC/followers",
-                              kind=ItemType.PLAYLIST) is None
-    assert validate_item_type("1234567890ASDFGHJKLZXC",
-                              kind=ItemType.TRACK) is None
-    assert validate_item_type({"type": 'album', "id": "1234567890ASDFGHJKLZXC"},
-                              kind=ItemType.ALBUM) is None
-    assert validate_item_type("spotify:artist:1234567890ASDFGHJKLZXC",
-                              kind=ItemType.ARTIST) is None
-    assert validate_item_type("spotify:user:ausername",
-                              kind=ItemType.USER) is None
-    assert validate_item_type(f"{__URL_API__}/show/1234567890ASDFGHJKLZXC/episodes",
-                              kind=ItemType.SHOW) is None
-    assert validate_item_type("spotify:episode:1234567890ASDFGHJKLZXC",
-                              kind=ItemType.EPISODE) is None
-    assert validate_item_type(f"{__URL_EXT__}/audiobook/1234567890ASDFGHJKLZXC/chapters",
-                              kind=ItemType.AUDIOBOOK) is None
-    assert validate_item_type("spotify:chapter:1234567890ASDFGHJKLZXC",
-                              kind=ItemType.CHAPTER) is None
+    assert validate_item_type(
+        f"{__URL_API__}/playlist/1234567890ASDFGHJKLZXC/followers", kind=ItemType.PLAYLIST
+    ) is None
+    assert validate_item_type(
+        "1234567890ASDFGHJKLZXC", kind=ItemType.TRACK
+    ) is None
+    assert validate_item_type(
+        {"type": "album", "id": "1234567890ASDFGHJKLZXC"}, kind=ItemType.ALBUM
+    ) is None
+    assert validate_item_type(
+        "spotify:artist:1234567890ASDFGHJKLZXC", kind=ItemType.ARTIST
+    ) is None
+    assert validate_item_type(
+        "spotify:user:ausername", kind=ItemType.USER
+    ) is None
+    assert validate_item_type(
+        f"{__URL_API__}/show/1234567890ASDFGHJKLZXC/episodes", kind=ItemType.SHOW
+    ) is None
+    assert validate_item_type(
+        "spotify:episode:1234567890ASDFGHJKLZXC", kind=ItemType.EPISODE
+    ) is None
+    assert validate_item_type(
+        f"{__URL_EXT__}/audiobook/1234567890ASDFGHJKLZXC/chapters", kind=ItemType.AUDIOBOOK
+    ) is None
+    assert validate_item_type(
+        "spotify:chapter:1234567890ASDFGHJKLZXC", kind=ItemType.CHAPTER
+    ) is None
 
     values = [
-        {"type": 'playlist'},
+        {"type": "playlist"},
         f"{__URL_EXT__}/playlist/bnmhjkyuidfgertsdfertw/followers",
         "spotify:playlist:1234567890ASDFGHJKLZXC",
         "qwertyuiopASDFGHJKLZ12"

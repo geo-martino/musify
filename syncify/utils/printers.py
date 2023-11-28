@@ -6,8 +6,8 @@ import random
 # noinspection SpellCheckingInspection
 def print_logo():
     """Pretty print the Syncify logo in the centre of the terminal"""
-    fonts = ["basic", "broadway", "chunky", "doom", "drpepper", "epic", "hollywood", "isometric1", "isometric2",
-             "isometric3", "isometric4", "larry3d", "shadow", "slant", "speed", "standard", "univers", "whimsy"]
+    fonts = ("basic", "broadway", "chunky", "doom", "drpepper", "epic", "hollywood", "isometric1", "isometric2",
+             "isometric3", "isometric4", "larry3d", "shadow", "slant", "speed", "standard", "univers", "whimsy")
     colours = [91, 93, 92, 94, 96, 95]
     if bool(random.getrandbits(1)):
         colours.reverse()

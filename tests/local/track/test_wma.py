@@ -67,13 +67,13 @@ def test_loaded_attributes():
     track = WMA(file=path_track_wma)
 
     # metadata
-    assert track.title == 'title 4'
-    assert track.artist == 'artist 4'
-    assert track.album == 'album artist 4'
-    assert track.album_artist == 'various'
+    assert track.title == "title 4"
+    assert track.artist == "artist 4"
+    assert track.album == "album artist 4"
+    assert track.album_artist == "various"
     assert track.track_number == 4
     assert track.track_total == 4
-    assert track.genres == ['Metal', 'Rock']
+    assert track.genres == ["Metal", "Rock"]
     assert track.year == 2023
     assert track.bpm == 200.56
     assert track.key == 'D'
@@ -92,7 +92,7 @@ def test_loaded_attributes():
     assert track.path == path_track_wma
     assert track.folder == basename(dirname(path_track_wma))
     assert track.filename == splitext(basename(path_track_wma))[0]
-    assert track.ext == '.wma'
+    assert track.ext == ".wma"
     assert track.size == 1193637
     assert int(track.length) == 32
     assert track.date_modified == datetime.fromtimestamp(getmtime(path_track_wma))

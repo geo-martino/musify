@@ -14,7 +14,7 @@ import yaml
 from syncify.local.exception import IllegalFileTypeError
 from syncify.spotify.api import AUTH_ARGS_BASIC, AUTH_ARGS_USER
 from syncify.spotify.processor.search import AlgorithmSettings
-from syncify.utils.helpers import make_list
+from syncify.utils.helpers import to_collection
 from syncify.utils.logger import Logger
 
 
@@ -77,7 +77,7 @@ class Settings(metaclass=ABCMeta):
         self.dry_run = self.cfg_general.get("dry_run", True)
         self.output_folder = None
 
-        self.functions: list[str] = [self.allowed_functions[0]]
+        self.functions: tuple[str] = (self.allowed_functions[0],)
 
         self.set()
 
@@ -94,7 +94,7 @@ class Settings(metaclass=ABCMeta):
 
         :raises IllegalFileTypeError: When the given config file is not of the correct type.
         """
-        if splitext(config_path)[1].lower() not in ['.yml', '.yaml']:
+        if splitext(config_path)[1].lower() not in [".yml", ".yaml"]:
             raise IllegalFileTypeError(f"Unrecognised file type: {config_path}")
         elif not exists(config_path):
             raise FileNotFoundError(f"Config file not found: {config_path}")
@@ -136,7 +136,7 @@ class Settings(metaclass=ABCMeta):
             if not paths["library"]:
                 raise KeyError(f"No library path given for this platform: {sys.platform}")
 
-            paths["other"] = [path for path in make_list(paths.get("other", [])) if path]
+            paths["other"] = tuple(path for path in to_collection(paths.get("other", [])) if path)
             for key, value in paths.copy().items():
                 if key.startswith("library_") and value:
                     paths["other"].append(paths.pop(key))
@@ -155,8 +155,10 @@ class Settings(metaclass=ABCMeta):
             if algorithm is None:
                 continue
             if algorithm.upper().strip() not in settings:
-                raise LookupError(f"'{algorithm}' search algorithm is invalid, use one of the following algorithms: " +
-                                  ', '.join(settings))
+                raise LookupError(
+                    f"'{algorithm}' search algorithm is invalid, use one of the following algorithms: "
+                    ', '.join(settings)
+                )
             search["algorithm"] = getattr(AlgorithmSettings, algorithm.strip().upper())
 
     ###########################################################################
@@ -217,7 +219,7 @@ class Settings(metaclass=ABCMeta):
                     cfg_processed["kwargs"][k] = literal_eval(v)
                 except (ValueError, SyntaxError):
                     cfg_processed["kwargs"][k] = v
-        elif func_name not in self.cfg_functions and func_name != 'general':
+        elif func_name not in self.cfg_functions and func_name != "general":
             raise NotImplementedError(f"Function name '{func_name}' not recognised")
         cfg_processed.pop("args")
         return cfg_processed
@@ -228,7 +230,7 @@ class Settings(metaclass=ABCMeta):
         parsed = parser.parse_known_args()
         kwargs = vars(parsed[0])
         # args = parsed[1]
-        self.functions = kwargs.pop('functions')
+        self.functions = tuple(kwargs.pop("functions"))
 
         # if kwargs.pop('use_config'):
         #     if func_name in self.runtime_settings or func_name in self._functions:
@@ -251,19 +253,21 @@ class Settings(metaclass=ABCMeta):
     # noinspection PyProtectedMember,SpellCheckingInspection
     def get_parser(self):
         """Get the terminal input parser"""
-        parser = argparse.ArgumentParser(description="Sync your local library to Spotify.",
-                                         prog="syncify",
-                                         usage='%(prog)s [options] [function]')
-        parser._positionals.title = 'Functions'
-        parser._optionals.title = 'Optional arguments'
+        parser = argparse.ArgumentParser(
+            description="Sync your local library to Spotify.",
+            prog="syncify",
+            usage="%(prog)s [options] [function]"
+        )
+        parser._positionals.title = "Functions"
+        parser._optionals.title = "Optional arguments"
 
         # cli function aliases and expected args in order user should give them
         # parser.add_argument('-cfg', '--use-config',
         #                     action='store_true',
         #                     help=f"Use saved config in config.yml instead of cli settings.")
-        parser.add_argument('functions',
-                            nargs='*', choices=self.allowed_functions,
-                            help=f"Syncify function to run.")
+        parser.add_argument(
+            "functions", nargs='*', choices=self.allowed_functions, help=f"Syncify function to run."
+        )
 
         # local = parser.add_argument_group("Local library filters and options")
         # local.add_argument('-q', '--quickload',

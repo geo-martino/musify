@@ -52,7 +52,7 @@ class XAutoPF(LocalPlaylist):
         check for the existence of the file paths on the file system and reject any that don't.
     """
 
-    valid_extensions = [".xautopf"]
+    valid_extensions = {".xautopf"}
 
     def __init__(
             self,
@@ -70,7 +70,7 @@ class XAutoPF(LocalPlaylist):
                 "This program is not yet able to create this playlist type from scratch."
             )
 
-        with open(path, "r", encoding='utf-8') as f:
+        with open(path, "r", encoding="utf-8") as f:
             self.xml: Mapping[str, Any] = xmltodict.parse(f.read())
 
         # generate track processors from the XML settings
@@ -151,10 +151,10 @@ class XAutoPF(LocalPlaylist):
         self.matcher.exclude_paths = list(compared.keys() - path_track_map)
 
         # get the track objects related to these paths and their actual paths as stored in their objects
-        include_tracks: list[LocalTrack | None] = [path_track_map.get(path) for path in self.matcher.include_paths]
-        exclude_tracks: list[LocalTrack | None] = [compared.get(path) for path in self.matcher.exclude_paths]
-        include_paths: list[str] = [track.path for track in include_tracks if track is not None]
-        exclude_paths: list[str] = [track.path for track in exclude_tracks if track is not None]
+        include_tracks: tuple[LocalTrack | None] = tuple(path_track_map.get(p) for p in self.matcher.include_paths)
+        exclude_tracks: tuple[LocalTrack | None] = tuple(compared.get(p) for p in self.matcher.exclude_paths)
+        include_paths: tuple[str] = tuple(track.path for track in include_tracks if track is not None)
+        exclude_paths: tuple[str] = tuple(track.path for track in exclude_tracks if track is not None)
 
         source = self.xml["SmartPlaylist"]["Source"]
 
@@ -182,6 +182,6 @@ class XAutoPF(LocalPlaylist):
 
     def _save_xml(self):
         """Save XML representation of the playlist"""
-        with open(self.path, 'w', encoding='utf-8') as f:
+        with open(self.path, 'w', encoding="utf-8") as f:
             xml_str = xmltodict.unparse(self.xml, pretty=True, short_empty_elements=True)
-            f.write(xml_str.replace('/>', ' />').replace('\t', '  '))
+            f.write(xml_str.replace("/>", " />").replace('\t', '  '))

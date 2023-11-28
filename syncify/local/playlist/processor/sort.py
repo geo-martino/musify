@@ -10,7 +10,7 @@ from syncify.local.exception import FieldError
 from syncify.local.track.base.track import LocalTrack
 from syncify.local.playlist.processor.base import TrackProcessor
 from syncify.utils import UnitList
-from syncify.utils.helpers import flatten_nested, strip_ignore_words, make_list, limit_value
+from syncify.utils.helpers import flatten_nested, strip_ignore_words, to_collection, limit_value
 
 
 def get_field_from_code(field_code: int) -> Name | None:
@@ -21,12 +21,11 @@ def get_field_from_code(field_code: int) -> Name | None:
     """
     if field_code == 0:
         return
-    elif field_code in [e.value for e in TagName.all()]:
+    elif field_code in list(map(lambda x: x.value, TagName.all())):
         return TagName.from_value(field_code)
-    elif field_code in [e.value for e in PropertyName.all()]:
+    elif field_code in list(map(lambda x: x.value, PropertyName.all())):
         return PropertyName.from_value(field_code)
-    else:
-        raise FieldError(f"Field code not recognised", field=field_code)
+    raise FieldError(f"Field code not recognised", field=field_code)
 
 
 class ShuffleMode(SyncifyEnum):
@@ -185,7 +184,7 @@ class TrackSort(TrackProcessor):
             shuffle_by: ShuffleBy = ShuffleBy.TRACK,
             shuffle_weight: float = 1.0
     ):
-        fields = make_list(fields) if isinstance(fields, Name) else fields
+        fields = to_collection(fields, list) if isinstance(fields, Name) else fields
         self.sort_fields: Mapping[Name, bool]
         self.sort_fields = {field: False for field in fields} if isinstance(fields, list) else fields
 

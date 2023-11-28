@@ -1,6 +1,6 @@
 import re
 from abc import ABCMeta
-from collections.abc import Mapping, MutableMapping
+from collections.abc import Mapping, MutableMapping, MutableSequence
 from itertools import batched
 from typing import Any
 
@@ -44,11 +44,13 @@ class Items(APIBase, metaclass=ABCMeta):
         url = url.rstrip("/")
 
         if len(id_list) >= 50:  # show progress bar for batches which may take a long time
-            id_list = self.get_progress_bar(iterable=id_list, desc=f'Getting {unit}', unit=unit)
+            id_list = self.get_progress_bar(iterable=id_list, desc=f"Getting {unit}", unit=unit)
 
         log = [f"{unit.title()}:{len(id_list):>5}"]
-        results: list[Any] = [self.get(f"{url}/{id_}", params=params, use_cache=use_cache, log_pad=43, log_extra=log)
-                              for id_ in id_list]
+        results: list[Any] = [
+            self.get(f"{url}/{id_}", params=params, use_cache=use_cache, log_pad=43, log_extra=log)
+            for id_ in id_list
+        ]
         return [r[key] if key else r for r in results]  # extract items on given key
 
     def _get_item_results_batch(
@@ -86,13 +88,13 @@ class Items(APIBase, metaclass=ABCMeta):
 
         bar = range(len(id_chunks))
         if len(id_chunks) >= 10:  # show progress bar for batches which may take a long time
-            bar = self.get_progress_bar(iterable=bar, desc=f'Getting {unit}', unit="pages")
+            bar = self.get_progress_bar(iterable=bar, desc=f"Getting {unit}", unit="pages")
 
         results = []
         params = params if params is not None else {}
         for i, idx in enumerate(bar, 1):  # get responses in batches
             id_chunk = id_chunks[idx]
-            params_chunk = params | {'ids': ','.join(id_chunk)}
+            params_chunk = params | {"ids": ','.join(id_chunk)}
 
             log = [f"{unit.title() + ':':<11} {len(results) + len(id_chunk):>6}/{len(id_list):<6}"]
             response = self.get(url, params=params_chunk, use_cache=use_cache, log_pad=43, log_extra=log)
@@ -138,10 +140,13 @@ class Items(APIBase, metaclass=ABCMeta):
         id_list = extract_ids(values, kind=kind)
 
         if kind == ItemType.USER or kind == ItemType.PLAYLIST:
-            results = self._get_item_results(url=url, id_list=id_list, unit=kind_str, use_cache=use_cache)
+            results = self._get_item_results(
+                url=url, id_list=id_list, unit=kind_str, use_cache=use_cache
+            )
         else:
-            results = self._get_item_results_batch(url=url, id_list=id_list, key=kind_str,
-                                                   use_cache=use_cache, limit=limit)
+            results = self._get_item_results_batch(
+                url=url, id_list=id_list, key=kind_str, use_cache=use_cache, limit=limit
+            )
 
         self.logger.debug(f"{'DONE':<7}: {url:<43} | Retrieved {len(results):>6} {kind_str}")
 
@@ -149,7 +154,7 @@ class Items(APIBase, metaclass=ABCMeta):
         if isinstance(values, dict) and len(results) == 0:
             values.clear()
             values.update(results[0])
-        elif isinstance(values, (list, set)) and all(isinstance(item, dict) for item in values):
+        elif isinstance(values, MutableSequence) and all(isinstance(item, dict) for item in values):
             values.clear()
             values.extend(results)
 
@@ -207,18 +212,19 @@ class Items(APIBase, metaclass=ABCMeta):
                 results[analysis_key] = [self.get(f"{analysis_url}/{id_list[0]}", use_cache=use_cache, log_pad=43)]
         else:
             if features:
-                results[features_key] = self._get_item_results_batch(features_url, id_list=id_list, key=features_key,
-                                                                     unit="features", use_cache=use_cache,
-                                                                     limit=limit)
+                results[features_key] = self._get_item_results_batch(
+                    features_url, id_list=id_list, key=features_key, unit="features", use_cache=use_cache, limit=limit
+                )
             if analysis:
-                results[analysis_key] = self._get_item_results(url=analysis_url, id_list=id_list,
-                                                               unit="analysis", use_cache=use_cache)
+                results[analysis_key] = self._get_item_results(
+                    url=analysis_url, id_list=id_list, unit="analysis", use_cache=use_cache
+                )
 
         # if API response was given on input, update it with new responses
         if isinstance(values, dict):
             for key, result in results.items():
                 values[key] = result[0]
-        elif isinstance(values, (list, set)) and all(isinstance(item, dict) and "id" in item for item in values):
+        elif isinstance(values, MutableSequence) and all(isinstance(item, dict) and "id" in item for item in values):
             for key, result in results.items():
                 result_mapped = {r["id"]: r for r in result if r}
                 for item in values:

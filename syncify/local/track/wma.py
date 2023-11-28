@@ -21,7 +21,7 @@ class WMA(LocalTrack):
         Useful for case-insensitive path loading and correcting paths to case-sensitive.
     """
 
-    valid_extensions = [".wma"]
+    valid_extensions = {".wma"}
 
     tag_map = TagMap(
         title=["Title"],
@@ -48,7 +48,7 @@ class WMA(LocalTrack):
         LocalTrack.__init__(self, file=file, available=available)
         self._file: mutagen.asf.ASF = self._file
 
-    def _read_tag(self, tag_ids: list[str]) -> list | None:
+    def _read_tag(self, tag_ids: list[str]) -> list[Any] | None:
         # wma tag values are returned as mutagen.asf._attrs.ASFUnicodeAttribute
         values = []
         for tag_id in tag_ids:
@@ -72,18 +72,18 @@ class WMA(LocalTrack):
 
         images: list[Image.Image] = []
         for i, value in enumerate(values):
-            v_type, v_size = struct.unpack_from(b'<bi', value)
+            v_type, v_size = struct.unpack_from(b"<bi", value)
 
             pos = 5
-            mime = b''
-            while value[pos:pos + 2] != b'\x00\x00':
+            mime = b""
+            while value[pos:pos + 2] != b"\x00\x00":
                 mime += value[pos:pos + 2]
                 pos += 2
 
             pos += 2
-            description = b''
+            description = b""
 
-            while value[pos:pos + 2] != b'\x00\x00':
+            while value[pos:pos + 2] != b"\x00\x00":
                 description += value[pos:pos + 2]
                 pos += 2
             pos += 2
@@ -118,9 +118,9 @@ class WMA(LocalTrack):
 
             image = open_image(image_link)
             data = get_image_bytes(image)
-            tag_data = struct.pack('<bi', image_type, len(data))
-            tag_data += Image.MIME[image.format].encode("utf-16") + b'\x00\x00'  # mime
-            tag_data += "".encode("utf-16") + b'\x00\x00'  # description
+            tag_data = struct.pack("<bi", image_type, len(data))
+            tag_data += Image.MIME[image.format].encode("utf-16") + b"\x00\x00"  # mime
+            tag_data += "".encode("utf-16") + b"\x00\x00"  # description
             tag_data += data
 
             tag_value.append(mutagen.asf.ASFByteArrayAttribute(tag_data))

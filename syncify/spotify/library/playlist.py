@@ -8,7 +8,7 @@ from syncify.abstract.collection import Playlist, ItemCollection
 from syncify.abstract.misc import Result
 from syncify.spotify.api import APIMethodInputType
 from syncify.spotify.enums import ItemType
-from syncify.spotify.base import Spotify
+from syncify.spotify.base import SpotifyObject
 from syncify.spotify.library.item import SpotifyTrack
 from syncify.spotify.library.collection import SpotifyCollection
 
@@ -85,7 +85,7 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
         return images is not None and len(images) > 0
 
     def __init__(self, response: MutableMapping[str, Any]):
-        Spotify.__init__(self, response)
+        SpotifyObject.__init__(self, response)
 
         self._name: str = response["name"]
         self.description: str = response["description"]
@@ -185,7 +185,7 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
     def sync(
             self,
             items: ItemCollection | list[Item] | None = None,
-            clear: Literal['all', 'extra'] | None = None,
+            clear: Literal["all", "extra"] | None = None,
             reload: bool = True,
             dry_run: bool = False,
     ) -> SyncResultSpotifyPlaylist:
@@ -208,8 +208,8 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
         """
         self._check_for_api()
 
-        uris_obj = [track.uri for track in (items if items else self.tracks) if track.uri]
-        uris_remote = [track["track"]["uri"] for track in self.response["tracks"]["items"]]
+        uris_obj = {track.uri for track in (items if items else self.tracks) if track.uri}
+        uris_remote = {track["track"]["uri"] for track in self.response["tracks"]["items"]}
 
         uris_add = [uri for uri in uris_obj if uri not in uris_remote]
         uris_unchanged = uris_remote
@@ -219,16 +219,16 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
         if clear == "all":  # remove all items from the remote playlist on Spotify
             removed = self.api.clear_from_playlist(self.url) if not dry_run else len(uris_remote)
             uris_add = uris_obj
-            uris_unchanged = []
+            uris_unchanged = set()
         elif clear == "extra":  # remove items not present in the current list from the remote playlist on Spotify
-            uris_clear = [uri for uri in uris_remote if uri not in uris_obj]
+            uris_clear = {uri for uri in uris_remote if uri not in uris_obj}
             removed = self.api.clear_from_playlist(self.url, items=uris_clear) if not dry_run else len(uris_clear)
-            uris_unchanged = [uri for uri in uris_remote if uri in uris_obj]
+            uris_unchanged = {uri for uri in uris_remote if uri in uris_obj}
 
         if not dry_run:
             added = self.api.add_to_playlist(self.url, items=uris_add, skip_dupes=clear != "all")
         else:
-            added = len(uris_add) if clear != "all" else len([uri for uri in uris_add if uri not in uris_remote])
+            added = len(uris_add) if clear != "all" else len(set(uris_add) - uris_remote)
 
         if not dry_run and reload:  # reload the current playlist object from remote
             self.reload(use_cache=False)
@@ -237,7 +237,7 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
             start=len(uris_remote),
             added=added,
             removed=removed,
-            unchanged=len(set(uris_remote).intersection(set(uris_unchanged))),
+            unchanged=len(set(uris_remote).intersection(uris_unchanged)),
             difference=len(self.tracks) - len(uris_remote),
             final=len(self.tracks)
         )

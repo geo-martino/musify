@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any
 from collections.abc import Mapping
 
-from syncify.utils.helpers import make_list
+from syncify.utils.helpers import to_collection
 
 
 @dataclass
@@ -20,7 +20,7 @@ class PrettyPrinter(metaclass=ABCMeta):
     @staticmethod
     def _camel_to_snake(value: str, prefix: str | None = None) -> str:
         """Convert snake_case to CamelCase. Optionally, add a given prefix"""
-        value = re.sub('([A-Z])', lambda m: f"_{m.group(1).lower()}", value.strip("_ "))
+        value = re.sub("([A-Z])", lambda m: f"_{m.group(1).lower()}", value.strip("_ "))
         value = re.sub(r"[_ ]+", "_", value).strip("_ ")
         if prefix is not None:
             value = f"{prefix}_{value}"
@@ -30,8 +30,8 @@ class PrettyPrinter(metaclass=ABCMeta):
     def _snake_to_camel(value: str, prefix: str | None = None) -> str:
         """Convert snake_case to CamelCase. Optionally, remove a given prefix"""
         if prefix is not None:
-            value = re.sub(f'^{prefix}', "", value)
-        return re.sub('_(.)', lambda m: m.group(1).upper(), value.strip())
+            value = re.sub(f"^{prefix}", "", value)
+        return re.sub("_(.)", lambda m: m.group(1).upper(), value.strip())
 
     @abstractmethod
     def as_dict(self) -> Mapping[str, Any]:
@@ -47,9 +47,9 @@ class PrettyPrinter(metaclass=ABCMeta):
 
         for attr_key, attr_val in attributes.items():
             if isinstance(attr_val, set):
-                attr_val = make_list(attr_val)
+                attr_val = to_collection(attr_val)
 
-            if isinstance(attr_val, list):
+            if isinstance(attr_val, (tuple, list)):
                 result[attr_key] = []
                 for item in attr_val:
                     if isinstance(item, PrettyPrinter):
@@ -70,13 +70,14 @@ class PrettyPrinter(metaclass=ABCMeta):
         return result
 
     def __str__(self) -> str:
-        if not self.as_dict():
+        as_dict = self.as_dict()
+        if not as_dict:
             return f"{self.__class__.__name__}()"
 
         result = f"{self.__class__.__name__}(\n{{}}\n)"
 
         indent = 2
-        attributes_repr = self.__to_str(self.as_dict(), indent=indent, increment=indent)
+        attributes_repr = self.__to_str(as_dict, indent=indent, increment=indent)
 
         return result.format("\n".join([" " * indent + attribute for attribute in attributes_repr]))
 

@@ -83,16 +83,22 @@ class LocalLibrary(Library, LocalCollectionFiltered):
             playlists = {}
             for filetype in __PLAYLIST_FILETYPES__:
                 paths = glob(join(self._playlist_folder, "**", f"*{filetype}"), recursive=True)
-                entry = {splitext(basename(path.replace(self._playlist_folder, "").lower()))[0]: path for path in paths}
+                entry = {
+                    splitext(basename(path.replace(self._playlist_folder, "").lower()))[0]: path
+                    for path in paths
+                }
                 playlists.update(entry)
 
             playlists_total = len(playlists)
-            self._playlist_paths = {name: path for name, path in sorted(playlists.items(), key=lambda x: x[0])
-                                    if (not self.include or name in self.include)
-                                    and (not self.exclude or name not in self.exclude)}
+            self._playlist_paths = {
+                name: path for name, path in sorted(playlists.items(), key=lambda x: x[0])
+                if (not self.include or name in self.include) and (not self.exclude or name not in self.exclude)
+            }
 
-            self.logger.debug(f"Filtered out {playlists_total - len(self._playlist_paths)} playlists "
-                              f"from {playlists_total} Spotify playlists")
+            self.logger.debug(
+                f"Filtered out {playlists_total - len(self._playlist_paths)} playlists "
+                f"from {playlists_total} Spotify playlists"
+            )
 
         self.logger.debug(f"Set playlist folder: {self.library_folder} | {len(self._track_paths)} playlists found")
 
@@ -169,8 +175,10 @@ class LocalLibrary(Library, LocalCollectionFiltered):
     def load(self, tracks: bool = True, playlists: bool = True, log: bool = True):
         """Loads all tracks and playlists in this library from scratch and log results."""
         self.logger.debug("Load local library: START")
-        self.logger.info(f"\33[1;95m ->\33[1;97m Loading local library of "
-                         f"{len(self._track_paths)} tracks and {len(self._playlist_paths)} playlists \33[0m")
+        self.logger.info(
+            f"\33[1;95m ->\33[1;97m Loading local library of "
+            f"{len(self._track_paths)} tracks and {len(self._playlist_paths)} playlists \33[0m"
+        )
         self.print_line()
 
         if tracks:
@@ -192,8 +200,10 @@ class LocalLibrary(Library, LocalCollectionFiltered):
     def _load_tracks(self) -> list[LocalTrack]:
         """Returns a list of loaded tracks from all the valid paths in this library"""
         self.logger.debug("Load local tracks: START")
-        self.logger.info(f"\33[1;95m  >\33[1;97m "
-                         f"Extracting metadata and properties for {len(self._track_paths)} tracks \33[0m")
+        self.logger.info(
+            f"\33[1;95m  >\33[1;97m "
+            f"Extracting metadata and properties for {len(self._track_paths)} tracks \33[0m"
+        )
 
         tracks: list[LocalTrack] = []
         errors: list[str] = []
@@ -242,8 +252,9 @@ class LocalLibrary(Library, LocalCollectionFiltered):
         for name in self.get_progress_bar(iterable=names, desc="Loading playlists", unit="playlists"):
             path = self._playlist_paths.get(name.strip().lower())
             if path is None:
-                raise LocalCollectionError(f"Playlist name not found in the stored paths of this manager: {name}",
-                                           kind="playlist")
+                raise LocalCollectionError(
+                    f"Playlist name not found in the stored paths of this manager: {name}", kind="playlist"
+                )
 
             ext = splitext(path)[1].lower()
             if ext in M3U.valid_extensions:
@@ -285,7 +296,7 @@ class LocalLibrary(Library, LocalCollectionFiltered):
 
     def _log_errors(self, errors: list[str]):
         """Log paths which had some error while loading"""
-        errors = [f"\33[91m{e}\33[0m" for e in errors]
+        errors = tuple(f"\33[91m{e}\33[0m" for e in errors)
         if len(errors) > 0:
             self.logger.warning("\33[97mCould not load: \33[0m\n\t- {errors} ".format(errors="\n\t- ".join(errors)))
             self.print_line()

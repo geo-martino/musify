@@ -66,20 +66,20 @@ def test_loaded_attributes():
     track = M4A(file=path_track_m4a)
 
     # metadata
-    assert track.title == 'title 3'
-    assert track.artist == 'artist 3'
-    assert track.album == 'album artist 3'
-    assert track.album_artist == 'various'
+    assert track.title == "title 3"
+    assert track.artist == "artist 3"
+    assert track.album == "album artist 3"
+    assert track.album_artist == "various"
     assert track.track_number == 2
     assert track.track_total == 4
-    assert track.genres == ['Dance', 'Techno']
+    assert track.genres == ["Dance", "Techno"]
     assert track.year == 2021
     assert track.bpm == 120.0
     assert track.key == 'B'
     assert track.disc_number == 1
     assert track.disc_total == 2
     assert track.compilation
-    assert track.comments == ['spotify:track:4npv0xZO9fVLBmDS2XP9Bw']
+    assert track.comments == ["spotify:track:4npv0xZO9fVLBmDS2XP9Bw"]
 
     assert track.uri == track.comments[0]
     assert track.has_uri
@@ -91,7 +91,7 @@ def test_loaded_attributes():
     assert track.path == path_track_m4a
     assert track.folder == basename(dirname(path_track_m4a))
     assert track.filename == splitext(basename(path_track_m4a))[0]
-    assert track.ext == '.m4a'
+    assert track.ext == ".m4a"
     assert track.size == 302199
     assert int(track.length) == 20
     assert track.date_modified == datetime.fromtimestamp(getmtime(path_track_m4a))

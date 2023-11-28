@@ -9,7 +9,7 @@ from syncify.spotify.api import APIMethodInputType
 from syncify.spotify.api.api import API
 
 
-class Spotify(PrettyPrinter, metaclass=ABCMeta):
+class SpotifyObject(PrettyPrinter, metaclass=ABCMeta):
     """
     Generic base class for Spotify-stored objects. Extracts key data from a Spotify API JSON response.
 
@@ -58,7 +58,7 @@ class Spotify(PrettyPrinter, metaclass=ABCMeta):
         kind = self.__class__.__name__.casefold().replace("spotify", "")
         if self.response.get("type") != kind:
             kind = ItemType.from_name(kind)
-            raise SpotifyItemTypeError(f"Response type invalid", kind=kind, value=self.response.get('type'))
+            raise SpotifyItemTypeError(f"Response type invalid", kind=kind, value=self.response.get("type"))
 
     @classmethod
     def _check_for_api(cls):
@@ -107,5 +107,10 @@ class Spotify(PrettyPrinter, metaclass=ABCMeta):
         self.__init__(response)
 
     def as_dict(self):
-        return {k: getattr(self, k) for k in self.__dir__() if not k.startswith("_") and k not in ["response", "name"]
-                and not callable(getattr(self, k)) and k not in Spotify.__annotations__}
+        return {
+            k: getattr(self, k) for k in self.__dir__()
+            if not k.startswith("_")
+            and k not in ["response", "name"]
+            and not callable(getattr(self, k))
+            and k not in SpotifyObject.__annotations__
+        }

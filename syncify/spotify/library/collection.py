@@ -6,14 +6,14 @@ from typing import Any, Self
 from syncify.abstract.collection import ItemCollection, Album
 from syncify.abstract.item import Item
 from syncify.spotify.api import APIMethodInputType
-from syncify.spotify.base import Spotify
+from syncify.spotify.base import SpotifyObject
 from syncify.spotify.enums import IDType, ItemType
 from syncify.spotify.exception import SpotifyIDTypeError
 from syncify.spotify.utils import validate_item_type, convert, extract_ids, get_id_type
 from syncify.spotify.library.item import SpotifyTrack, SpotifyArtist, SpotifyItem
 
 
-class SpotifyCollection(ItemCollection, Spotify, metaclass=ABCMeta):
+class SpotifyCollection(ItemCollection, SpotifyObject, metaclass=ABCMeta):
     """Generic class for storing a collection of Spotify tracks."""
 
     @property
@@ -137,7 +137,7 @@ class SpotifyAlbum(Album, SpotifyCollection):
 
     @property
     def compilation(self) -> bool:
-        return self.response['album_type'] == "compilation"
+        return self.response["album_type"] == "compilation"
 
     @property
     def image_links(self) -> Mapping[str, str]:
@@ -151,22 +151,22 @@ class SpotifyAlbum(Album, SpotifyCollection):
     @property
     def length(self) -> float | None:
         """Total duration of all tracks in this collection"""
-        lengths = [track.length for track in self.tracks]
+        lengths = {track.length for track in self.tracks}
         return sum(lengths) if lengths else None
 
     @property
     def rating(self) -> int | None:
-        return self.response.get('popularity')
+        return self.response.get("popularity")
 
     def __init__(self, response: MutableMapping[str, Any]):
-        Spotify.__init__(self, response)
+        SpotifyObject.__init__(self, response)
 
         album_only = copy(response)
         for track in response["tracks"]["items"]:
             track["album"] = album_only
 
-        self._artists = [SpotifyArtist(artist) for artist in response["artists"]]
-        self._tracks = [SpotifyTrack(track) for track in response["tracks"]["items"]]
+        self._artists = list(map(SpotifyArtist, response["artists"]))
+        self._tracks = list(map(SpotifyTrack, response["tracks"]["items"]))
 
         for track in self.tracks:
             track.disc_total = self.disc_total

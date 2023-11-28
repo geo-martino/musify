@@ -6,10 +6,10 @@ from syncify.abstract.item import Item, Track
 from syncify.spotify.api import APIMethodInputType
 from syncify.spotify.enums import IDType, ItemType
 from syncify.spotify.utils import convert, extract_ids
-from syncify.spotify.base import Spotify
+from syncify.spotify.base import SpotifyObject
 
 
-class SpotifyItem(Item, Spotify, metaclass=ABCMeta):
+class SpotifyItem(Item, SpotifyObject, metaclass=ABCMeta):
     """Generic class for storing a Spotify item."""
 
     @property
@@ -28,20 +28,7 @@ class SpotifyTrack(Track, SpotifyItem):
     :param response: The Spotify API JSON response.
     """
 
-    _song_keys = {
-        0: 'C',
-        1: 'C#/Db',
-        2: 'D',
-        3: 'D#/Eb',
-        4: 'E',
-        5: 'F',
-        6: 'F#/Gb',
-        7: 'G',
-        8: 'G#/Ab',
-        9: 'A',
-        10: 'A#/Bb',
-        11: 'B'
-    }
+    _song_keys = ("C", "C#/Db", "D", "D#/Eb", "E", "F", "F#/Gb", "G", "G#/Ab", "A", "A#/Bb", "B")
 
     @property
     def name(self):
@@ -119,7 +106,7 @@ class SpotifyTrack(Track, SpotifyItem):
         if "audio_features" in self.response:
             # correctly formatted song key string
             key: str = self._song_keys[self.response["audio_features"]["key"]]
-            is_minor: bool = self.response["audio_features"]['mode'] == 0
+            is_minor: bool = self.response["audio_features"]["mode"] == 0
             if '/' in key:
                 key_sep = key.split('/')
                 return f"{key_sep[0]}{'m'*is_minor}/{key_sep[1]}{'m'*is_minor}"
@@ -145,7 +132,7 @@ class SpotifyTrack(Track, SpotifyItem):
     def compilation(self) -> bool:
         """Is the album this track is featured on a compilation"""
         album = self.response.get("album", {})
-        return album.get('album_group', "") == "compilation"
+        return album.get("album_group", "") == "compilation"
 
     @property
     def comments(self) -> list[str] | None:
@@ -172,19 +159,19 @@ class SpotifyTrack(Track, SpotifyItem):
     @property
     def length(self) -> float:
         """Total duration of this track in seconds"""
-        return self.response['duration_ms'] / 1000
+        return self.response["duration_ms"] / 1000
 
     @property
     def rating(self) -> int | None:
         """The popularity of this track on Spotify"""
-        return self.response.get('popularity')
+        return self.response.get("popularity")
 
     def __init__(self, response: MutableMapping[str, Any]):
-        Spotify.__init__(self, response=response)
+        SpotifyObject.__init__(self, response=response)
         self._disc_total = None
         self._comments = None
 
-        self.artists = [SpotifyArtist(artist) for artist in response.get("artists", {})]
+        self.artists = list(map(SpotifyArtist, response.get("artists", {})))
 
     @classmethod
     def load(cls, value: APIMethodInputType, use_cache: bool = True) -> Self:
@@ -250,10 +237,10 @@ class SpotifyArtist(SpotifyItem):
     @property
     def rating(self) -> int | None:
         """The popularity of this artist on Spotify"""
-        return self.response.get('popularity')
+        return self.response.get("popularity")
 
     def __init__(self, response: MutableMapping[str, Any]):
-        Spotify.__init__(self, response)
+        SpotifyObject.__init__(self, response)
 
     @classmethod
     def load(cls, value: APIMethodInputType, use_cache: bool = True) -> Self:

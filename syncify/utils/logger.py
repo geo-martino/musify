@@ -134,9 +134,11 @@ class Logger:
         self._set_logger()
 
     @classmethod
-    def set_log_folder(cls,
-                       folder: str = join(dirname(dirname(__file__)), "_logs"),
-                       run_dt: datetime = datetime.now()):
+    def set_log_folder(
+            cls,
+            folder: str = join(dirname(dirname(__file__)), "_logs"),
+            run_dt: datetime = datetime.now()
+    ):
         """Set the path of the log folder. Defaults to a folder in the source code's root"""
         cls.log_folder = join(folder, run_dt.strftime(cls.dt_format))
 
@@ -153,8 +155,9 @@ class Logger:
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
             return
 
-        self.logger.critical("CRITICAL ERROR: Uncaught Exception",
-                             exc_info=(exc_type, exc_value, exc_traceback))
+        self.logger.critical(
+            "CRITICAL ERROR: Uncaught Exception", exc_info=(exc_type, exc_value, exc_traceback)
+        )
 
     def _set_logger(self):
         """Set logger object formatted for stdout and file handlers."""
@@ -179,12 +182,14 @@ class Logger:
     # noinspection SpellCheckingInspection
     def _set_stdout_handler(self):
         """Sets the stdout handler for the logger"""
-        stdout_pretty = ("\33[91m{asctime}.{msecs:0<3.0f}\33[0m | "
-                         "[\33[92m{levelname:>8}\33[0m] "
-                         f"\33[1;96m{{funcName:<{module_width}.{module_width}}}\33[0m "
-                         "[\33[95m{lineno:>4}\33[0m] | "
-                         "{message}")
         # logging formats
+        stdout_pretty = (
+            "\33[91m{asctime}.{msecs:0<3.0f}\33[0m | "
+            "[\33[92m{levelname:>8}\33[0m] "
+            f"\33[1;96m{{funcName:<{module_width}.{module_width}}}\33[0m "
+            "[\33[95m{lineno:>4}\33[0m] | "
+            "{message}"
+        )
         stdout_format = logging.Formatter(
             fmt=stdout_pretty if self.detailed or self.verbosity >= 4 else "{message}",
             datefmt="%Y-%m-%d %H:%M:%S", style="{"
@@ -227,7 +232,7 @@ class Logger:
             datefmt="%Y-%m-%d %H:%M:%S", style="{"
         )
 
-        file_h = logging.FileHandler(self.log_path, 'w', encoding='utf-8')
+        file_h = logging.FileHandler(self.log_path, 'w', encoding="utf-8")
         file_h.set_name("file")
         file_h.setLevel(logging.DEBUG)
         file_h.setFormatter(file_format)
@@ -252,21 +257,21 @@ class Logger:
         """Get max width of given list of items for column-aligned logging"""
         if len(items) == 0:
             return 0
-        items = [str(item) for item in items]
-        return max(min(len(max(items, key=len)) + 1, max_width), min_width)
+        max_len = len(max(map(str, items), key=len))
+        return max(min(max_len + 1, max_width), min_width)
 
     @staticmethod
     def align_and_truncate(value: Any, max_width: int = 0, right_align: bool = False) -> str:
         """Align string with space padding. Truncate any string longer than max width with ..."""
         if max_width == 0:
             return value
-        truncated = (str(value)[:(max_width-3)] + '...' if not right_align else '...' + str(value)[-(max_width-3):])
+        truncated = str(value)[:(max_width - 3)] + "..." if not right_align else "..." + str(value)[-(max_width - 3):]
         return f"{value if len(str(value)) < max_width else truncated:<{max_width}}"
 
     # noinspection SpellCheckingInspection
     def get_progress_bar(self, **kwargs) -> tqdm_std:
         """Wrapper for tqdm progress bar. For kwargs, see :class:`tqdm_std`"""
-        preset_keys = ["leave", "disable", "file", "ncols", "colour", "smoothing", "position"]
+        preset_keys = ("leave", "disable", "file", "ncols", "colour", "smoothing", "position")
         try:
             cols = os.get_terminal_size().columns
         except OSError:

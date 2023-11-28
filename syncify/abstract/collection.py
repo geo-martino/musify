@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Any, Self
 from collections.abc import Collection, Mapping
 
-from syncify.abstract.item import Item, Base, Track
+from syncify.abstract.item import Item, BaseObject, Track
 from syncify.abstract.misc import PrettyPrinter
 from syncify.enums.tags import TagName
 from syncify.spotify.enums import IDType
@@ -17,7 +17,7 @@ from syncify.utils.logger import Logger
 
 
 @dataclass
-class ItemCollection(Base, PrettyPrinter, metaclass=ABCMeta):
+class ItemCollection(BaseObject, PrettyPrinter, metaclass=ABCMeta):
     """Generic class for storing a collection of items."""
 
     @property
@@ -58,10 +58,13 @@ class ItemCollection(Base, PrettyPrinter, metaclass=ABCMeta):
         tag_names = set(TagName.to_tags(tags))
 
         if isinstance(self, Library):  # log status message and use progress bar for libraries
-            self.logger.info(f"\33[1;95m  >\33[1;97m "
-                             f"Merging library of {len(self)} items with {len(items)} items on tags: "
-                             f"{', '.join(tag_names)} \33[0m")
+            self.logger.info(
+                f"\33[1;95m  >\33[1;97m "
+                f"Merging library of {len(self)} items with {len(items)} items on tags: "
+                f"{', '.join(tag_names)} \33[0m"
+            )
             items = self.get_progress_bar(iterable=items, desc="Merging library", unit="tracks")
+
         if TagName.IMAGES in tags or TagName.ALL in tags:
             tag_names.add("image_links")
             tag_names.add("has_image")
@@ -82,12 +85,16 @@ class ItemCollection(Base, PrettyPrinter, metaclass=ABCMeta):
         """Uniqueness of collection is a combination of its name and the items it holds"""
         return hash((self.name, (item for item in self.items)))
 
-    def __eq__(self, collection):
+    def __eq__(self, collection: Self):
         """Names equal and all items equal in order"""
-        return self.name == collection.name and all(x == y for x, y in zip(self, collection))
+        return (
+            self.name == collection.name
+            and len(self) == len(collection)
+            and all(x == y for x, y in zip(self, collection))
+        )
 
-    def __ne__(self, item):
-        return not self.__eq__(item)
+    def __ne__(self, collection: Self):
+        return not self.__eq__(collection)
 
     def __len__(self):
         return len(self.items)
@@ -176,7 +183,7 @@ class Playlist(ItemCollection, metaclass=ABCMeta):
     @property
     def length(self) -> float | None:
         """Total duration of all tracks in this collection in seconds"""
-        lengths = [track.length for track in self.tracks]
+        lengths = {track.length for track in self.tracks}
         return sum(lengths) if lengths else None
 
     @property
@@ -222,8 +229,10 @@ class Library(ItemCollection, Logger, metaclass=ABCMeta):
             Parse a tag name as a parameter, any item matching the values given for this tag will be filtered out.
         :return: Filtered playlists.
         """
-        self.logger.info(f"\33[1;95m ->\33[1;97m Filtering playlists and tracks from {len(self.playlists)} playlists\n"
-                         f"\33[0;90m    Filter out tags: {filter_tags} \33[0m")
+        self.logger.info(
+            f"\33[1;95m ->\33[1;97m Filtering playlists and tracks from {len(self.playlists)} playlists\n"
+            f"\33[0;90m    Filter out tags: {filter_tags} \33[0m"
+        )
         max_width = self.get_max_width(self.playlists)
         bar = self.get_progress_bar(iterable=self.playlists.items(), desc="Filtering playlists", unit="playlists")
 
@@ -241,8 +250,10 @@ class Library(ItemCollection, Logger, metaclass=ABCMeta):
                             filtered[name].remove(item)
                             break
 
-            self.logger.debug(f"{self.align_and_truncate(name, max_width=max_width)} | "
-                              f"Filtered out {len(playlist) - len(filtered[name]):>3} items")
+            self.logger.debug(
+                f"{self.align_and_truncate(name, max_width=max_width)} | "
+                f"Filtered out {len(playlist) - len(filtered[name]):>3} items"
+            )
 
         self.print_line()
         return filtered
@@ -343,7 +354,7 @@ class Album(ItemCollection, metaclass=ABCMeta):
     @property
     def disc_total(self) -> int | None:
         """The highest value of disc number in this collection"""
-        disc_numbers = [track.disc_number for track in self.tracks if track.disc_number]
+        disc_numbers = {track.disc_number for track in self.tracks if track.disc_number}
         return max(disc_numbers) if disc_numbers else None
 
     @property

@@ -22,7 +22,7 @@ class MP3(LocalTrack):
         Useful for case-insensitive path loading and correcting paths to case-sensitive.
     """
 
-    valid_extensions = [".mp3"]
+    valid_extensions = {".mp3"}
 
     # noinspection SpellCheckingInspection
     tag_map = TagMap(
@@ -50,10 +50,10 @@ class MP3(LocalTrack):
         LocalTrack.__init__(self, file=file, available=available)
         self._file: mutagen.mp3.MP3 = self._file
 
-    def _read_tag(self, tag_ids: list[str]) -> list | None:
+    def _read_tag(self, tag_ids: list[str]) -> list[Any] | None:
         # mp3 tag ids come in parts separated by : i.e. 'COMM:ID3v1 Comment:eng'
         # need to search all actual mp3 tag ids to check if the first part equals any of the given base tag ids
-        tag_ids = [mp3_id for mp3_id in self._file.keys() for tag_id in tag_ids if mp3_id.split(":")[0] == tag_id]
+        tag_ids = tuple(mp3_id for mp3_id in self._file.keys() for tag_id in tag_ids if mp3_id.split(":")[0] == tag_id)
 
         values = []
         for tag_id in tag_ids:
@@ -128,7 +128,7 @@ class MP3(LocalTrack):
 
         for i, comment in enumerate(self.comments, 1):
             comm = mutagen.id3.COMM(
-                encoding=mutagen.id3.Encoding.UTF8, desc=f'ID3v1 Comment {i}', lang='eng', text=[comment]
+                encoding=mutagen.id3.Encoding.UTF8, desc=f"ID3v1 Comment {i}", lang="eng", text=[comment]
             )
             tag_id = f"{tag_id_prefix}:{comm.desc}:{comm.lang}"
             if not dry_run and tag_id is not None:
@@ -145,7 +145,7 @@ class MP3(LocalTrack):
             tag_id_prefix = next(iter(self.tag_map.comments), None)
             self.delete_tags(tags=self.uri_tag, dry_run=dry_run)
 
-            comm = mutagen.id3.COMM(encoding=mutagen.id3.Encoding.UTF8, lang='eng', desc='URI', text=[tag_value])
+            comm = mutagen.id3.COMM(encoding=mutagen.id3.Encoding.UTF8, lang="eng", desc="URI", text=[tag_value])
             tag_id = f"{tag_id_prefix}:{comm.desc}:{comm.lang}"
             if not dry_run and tag_id is not None:
                 self._file[tag_id] = comm

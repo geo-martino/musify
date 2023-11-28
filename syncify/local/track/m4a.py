@@ -9,7 +9,7 @@ from PIL import Image
 from syncify.enums.tags import TagMap
 from syncify.local.file import open_image, get_image_bytes
 from syncify.local.track.base.track import LocalTrack
-from syncify.utils.helpers import make_list
+from syncify.utils.helpers import to_collection
 
 
 class M4A(LocalTrack):
@@ -21,7 +21,7 @@ class M4A(LocalTrack):
         Useful for case-insensitive path loading and correcting paths to case-sensitive.
     """
 
-    valid_extensions = [".m4a"]
+    valid_extensions = {".m4a"}
 
     # noinspection SpellCheckingInspection
     tag_map = TagMap(
@@ -49,7 +49,7 @@ class M4A(LocalTrack):
         LocalTrack.__init__(self, file=file, available=available)
         self._file: mutagen.mp4.MP4 = self._file
 
-    def _read_tag(self, tag_ids: list[str]) -> list | None:
+    def _read_tag(self, tag_ids: list[str]) -> list[Any] | None:
         """Extract all tag values for a given list of tag IDs"""
         values = []
         for tag_id in tag_ids:
@@ -59,7 +59,7 @@ class M4A(LocalTrack):
                 continue
 
             if tag_id.startswith("----:com.apple.iTunes") and isinstance(value, list):
-                value = [v.decode("utf-8") for v in value]
+                value = list(v.decode("utf-8") for v in value)
             elif isinstance(value, bytes):
                 value = value.decode("utf-8")
 
@@ -97,11 +97,15 @@ class M4A(LocalTrack):
 
         if not dry_run and tag_id is not None:
             if tag_id.startswith("----:com.apple.iTunes"):
-                self._file[tag_id] = [mutagen.mp4.MP4FreeForm(str(v).encode("utf-8"), 1) for v in make_list(tag_value)]
+                self._file[tag_id] = [
+                    mutagen.mp4.MP4FreeForm(str(v).encode("utf-8"), 1) for v in to_collection(tag_value)
+                ]
             elif isinstance(tag_value, bool):
                 self._file[tag_id] = tag_value
+            elif isinstance(tag_value, tuple):
+                self._file[tag_id] = [tag_value]
             else:
-                self._file[tag_id] = make_list(tag_value)
+                self._file[tag_id] = to_collection(tag_value, list)
         return tag_id is not None
 
     def _write_track(self, dry_run: bool = True) -> bool:
@@ -131,7 +135,7 @@ class M4A(LocalTrack):
         for image_link in self.image_links.values():
             image = open_image(image_link)
 
-            if image.format == 'PNG':
+            if image.format == "PNG":
                 image_format = mutagen.mp4.MP4Cover.FORMAT_PNG
             else:
                 image_format = mutagen.mp4.MP4Cover.FORMAT_JPEG

@@ -34,7 +34,7 @@ class MusicBee(File, LocalLibrary):
     def path(self) -> str:
         return self._path
 
-    valid_extensions = [".xml"]
+    valid_extensions = {".xml"}
 
     def __init__(
             self,
@@ -51,8 +51,9 @@ class MusicBee(File, LocalLibrary):
         if not exists(musicbee_folder):
             in_library = join(library_folder.rstrip("\\/"), musicbee_folder.lstrip("\\/"))
             if not exists(in_library):
-                raise FileNotFoundError(f"Cannot find MusicBee library at given path: "
-                                        f"{musicbee_folder} OR {in_library}")
+                raise FileNotFoundError(
+                    f"Cannot find MusicBee library at given path: {musicbee_folder} OR {in_library}"
+                )
             musicbee_folder = in_library
 
         self._path: str = join(musicbee_folder, "iTunes Music Library.xml")
@@ -87,24 +88,25 @@ class MusicBee(File, LocalLibrary):
         tracks_paths = {track.path.lower(): track for track in self._load_tracks()}
         self.logger.debug("Enrich local tracks: START")
 
-        for track_xml in self.xml['Tracks'].values():
-            if not track_xml['Location'].startswith('file://localhost/'):
+        for track_xml in self.xml["Tracks"].values():
+            if not track_xml["Location"].startswith("file://localhost/"):
                 continue
 
-            track = tracks_paths.get(self._clean_xml_filepath(track_xml['Location']).lower())
+            track = tracks_paths.get(self._clean_xml_filepath(track_xml["Location"]).lower())
             if track is None:
                 continue
 
-            track.date_added = self._xml_ts_to_dt(track_xml.get('Date Added'))
-            track.last_played = self._xml_ts_to_dt(track_xml.get('Play Date UTC'))
-            track.play_count = int(track_xml.get('Play Count', 0))
-            track.rating = int(track_xml.get('Rating')) if track_xml.get('Rating') is not None else None
+            track.date_added = self._xml_ts_to_dt(track_xml.get("Date Added"))
+            track.last_played = self._xml_ts_to_dt(track_xml.get("Play Date UTC"))
+            track.play_count = int(track_xml.get("Play Count", 0))
+            track.rating = int(track_xml.get("Rating")) if track_xml.get("Rating") is not None else None
 
         self.logger.debug("Enrich local tracks: DONE\n")
         return list(tracks_paths.values())
 
 
 class ReadXmlLibrary:
+    # TODO: consider replacing with tree reader/xmltodict package?
     def __init__(self, fh):
         """
         Initialize 'iterparse' to generate 'start' and 'end' events on all tags
@@ -119,29 +121,29 @@ class ReadXmlLibrary:
         :return: yield current Element
         """
         for event, elem in self.context:
-            if elem.tag == 'plist' or \
-                    (event == 'start' and not elem.tag == 'dict'):
+            if elem.tag == "plist" or \
+                    (event == "start" and not elem.tag == "dict"):
                 continue
             yield elem
 
     def _parse_key_value(self, key=None):
         _dict = {}
         for elem in self._parse():
-            if elem.tag == 'key':
+            if elem.tag == "key":
                 key = elem.text
                 continue
 
-            if elem.tag in ['integer', 'string', 'date']:
+            if elem.tag in ["integer", "string", "date"]:
                 if key is not None:
                     _dict[key] = elem.text
                     key = None
                 else:
-                    print('Missing key for value {}'.format(elem.text))
+                    print("Missing key for value {}".format(elem.text))
 
-            elif elem.tag in ['true', 'false']:
-                _dict[key] = elem.tag == 'true'
+            elif elem.tag in ["true", "false"]:
+                _dict[key] = elem.tag == "true"
 
-            elif elem.tag == 'dict':
+            elif elem.tag == "dict":
                 if key is not None:
                     _dict[key] = self._parse_dict(key)
                     key = None
@@ -158,7 +160,7 @@ class ReadXmlLibrary:
 
     def __iter__(self):
         for elem in self._parse():
-            if elem.tag == 'dict':
+            if elem.tag == "dict":
                 try:
                     yield self._parse_dict()
                 except StopIteration:

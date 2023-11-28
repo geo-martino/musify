@@ -42,7 +42,7 @@ class Playlists:
         if not dry_run:
             for name, tracks in backup.items():
                 name = re.sub(r'[\\/*?:"<>|]', '', name)
-                self.save_m3u([t['path'] for t in tracks], name, **kwargs)
+                self.save_m3u([t["path"] for t in tracks], name, **kwargs)
 
             self.logger.info(f"\33[92mRestored {len(backup)} local playlists \33[0m")
 
@@ -82,12 +82,13 @@ class Playlists:
         Remove dead links and fix case of links in all xautopf and m3u playlists
         """
         # get playlist paths
-        playlists = glob(join(self._playlists_path, '**', '*.xautopf'), recursive=True)
-        playlists += glob(join(self._playlists_path, '**', '*.m3u'), recursive=True)
+        playlists = glob(join(self._playlists_path, "**", "*.xautopf"), recursive=True)
+        playlists += glob(join(self._playlists_path,"'**", "*.m3u"), recursive=True)
 
         print()
         self.logger.info(
-            f'\33[1;95m -> \33[1;97mCleaning paths in {len(playlists)} Local playlists\33[0m')
+            f"\33[1;95m -> \33[1;97mCleaning paths in {len(playlists)} Local playlists\33[0m"
+        )
         
         names = [splitext(basename(path))[0] for path in playlists]
         max_width = len(max(names, key=len)) + 1 if len(max(names, key=len)) + 1 < 50 else 50
@@ -96,28 +97,28 @@ class Playlists:
             name = basename(playlist_path)
             name_log = f"{name if len(name) < 50 else name[:47] + '...':<{max_width}}"
 
-            if playlist_path.endswith('.xautopf'):  # load xml like object
+            if playlist_path.endswith(".xautopf"):  # load xml like object
                 raw_xml = self.load_autoplaylist(playlist_path)
-                source = raw_xml['SmartPlaylist']['Source']
+                source = raw_xml["SmartPlaylist"]["Source"]
 
-                include = source.get('ExceptionsInclude')
+                include = source.get("ExceptionsInclude")
                 include = include.split('|') if isinstance(include, str) else []
                 include_filtered = self._filter_paths(include, f"{name_log} In")
                 if len(include_filtered) > 0:
-                    source['ExceptionsInclude'] = '|'.join(include_filtered)
-                elif source.get('ExceptionsInclude'):
-                    del source['ExceptionsInclude']
+                    source["ExceptionsInclude"] = '|'.join(include_filtered)
+                elif source.get("ExceptionsInclude"):
+                    del source["ExceptionsInclude"]
 
-                exclude = source.get('Exceptions')
+                exclude = source.get("Exceptions")
                 exclude = exclude.split('|') if isinstance(exclude, str) else []
                 exclude_filtered = self._filter_paths(exclude, f"{name_log} Ex")
                 if len(exclude_filtered) > 0:
-                    source['Exceptions'] = '|'.join(exclude_filtered)
-                elif source.get('Exceptions'):
-                    del source['Exceptions']
+                    source["Exceptions"] = '|'.join(exclude_filtered)
+                elif source.get("Exceptions"):
+                    del source["Exceptions"]
 
                 self.save_autoplaylist(raw_xml, name, **kwargs)
-            elif playlist_path.endswith('.m3u'):  # load list of paths
+            elif playlist_path.endswith(".m3u"):  # load list of paths
                 paths = self.load_m3u(playlist_path)
                 paths_filtered = self._filter_paths(paths, f"{name_log}   ")
                 self.save_m3u(paths_filtered, name, **kwargs)
@@ -147,13 +148,13 @@ class Playlists:
         if len(tracks) == 0:
             return tracks
         elif isinstance(tracks[0], dict):
-            tracks = [track['path'] for track in tracks]
+            tracks = [track["path"] for track in tracks]
         return [self._clean_path(path, remove_prefix, stems) for path in tracks if len(path) > 1]
 
     def _load_playlists(self, playlists_path: str, remove_prefix: str="", stems: list=None):
         if not exists(dirname(playlists_path)):
             os.makedirs(dirname(playlists_path))
-        m3u_paths = glob(join(playlists_path, '**', '*.m3u'), recursive=True)
+        m3u_paths = glob(join(playlists_path, "**", "*.m3u"), recursive=True)
         playlists = {}
         path_sep = '/'
         for playlist_path in m3u_paths:
@@ -243,7 +244,8 @@ class Playlists:
     def compare_playlists(self, playlists: dict, ext_playlists_path: str, export_alias: str, ext_path_prefix: str = "..", dry_run: bool=False, **kwargs):        
         print()
         self.logger.info(
-            f'\33[1;95m -> \33[1;97mSynchronising Local and {export_alias} playlists\33[0m')
+            f"\33[1;95m -> \33[1;97mSynchronising Local and {export_alias} playlists\33[0m"
+        )
 
         stem_path_map = self._get_stem_path_map()
 
@@ -300,9 +302,9 @@ class Playlists:
 
         # export playlists to sub-folders in export path
         export = {}
-        local_auto = glob(join(self._playlists_path, '**', '*.xautopf'), recursive=True)
+        local_auto = glob(join(self._playlists_path, "**", "*.xautopf"), recursive=True)
         local_auto = {splitext(basename(path))[0]: path for path in local_auto}
-        local_m3u = glob(join(self._playlists_path, '**', '*.m3u'), recursive=True)
+        local_m3u = glob(join(self._playlists_path, "**", "*.m3u"), recursive=True)
         local_m3u = {splitext(basename(path))[0]: path for path in local_m3u}
 
         if self._verbose > 0:
@@ -314,13 +316,13 @@ class Playlists:
                 logger(f"{name_log} | Removing playlist from external")
                 continue
             ext_tracks = [ext_sep.join([ext_path_prefix] + path.split("\\")) for path in tracks]
-            ext_tracks = [path[:-1] + '.mp3' for path in ext_tracks]
+            ext_tracks = [path[:-1] + ".mp3" for path in ext_tracks]
             export[join(ext_playlists_path, name)] = ext_tracks
 
             if name in local_m3u:
                 export[local_m3u[name]] = [stem_path_map[stem] for stem in tracks]
             elif name in local_auto and name in ext_changes:
-                current = [track['path'] for track in playlists[name]]
+                current = [track["path"] for track in playlists[name]]
                 added = [stem_path_map[stem] for stem in ext_changes[name]["added"]]
                 removed = [stem_path_map[stem] for stem in ext_changes[name]["removed"]]
                 xml = self._update_autoplaylist(local_auto[name], current, added, removed, max_width)
@@ -331,8 +333,8 @@ class Playlists:
             export[join(export_path, name)] = tracks
             
         if not dry_run:
-            [os.remove(path) for path in glob(join(ext_playlists_path, '*.m3u'))]
-            [os.remove(path) for path in glob(join(export_path, '*.m3u'))]
+            [os.remove(path) for path in glob(join(ext_playlists_path, "*.m3u"))]
+            [os.remove(path) for path in glob(join(export_path, "*.m3u"))]
         for path, data in export.items():
             if path.endswith(".xautopf"):
                 self.save_autoplaylist(data, path, append_path=False, dry_run=dry_run, **kwargs)

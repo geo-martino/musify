@@ -9,8 +9,8 @@ from .wma import WMA
 
 from syncify.local.exception import IllegalFileTypeError
 
-__TRACK_CLASSES__ = [FLAC, MP3, M4A, WMA]
-__TRACK_FILETYPES__ = [filetype for c in __TRACK_CLASSES__ for filetype in c.valid_extensions]
+__TRACK_CLASSES__ = {FLAC, MP3, M4A, WMA}
+__TRACK_FILETYPES__ = {filetype for c in __TRACK_CLASSES__ for filetype in c.valid_extensions}
 
 
 def load_track(path: str, available: Collection[str] | None = None) -> LocalTrack:
@@ -34,5 +34,6 @@ def load_track(path: str, available: Collection[str] | None = None) -> LocalTrac
     elif ext in WMA.valid_extensions:
         return WMA(file=path, available=available)
     else:
-        all_ext = [ext for c in __TRACK_CLASSES__ for ext in c.valid_extensions]
-        raise IllegalFileTypeError(ext, f"Not an accepted extension. Use only: {', '.join(all_ext)}")
+        raise IllegalFileTypeError(
+            ext, f"Not an accepted extension. Use only: {', '.join(__TRACK_FILETYPES__)}"
+        )

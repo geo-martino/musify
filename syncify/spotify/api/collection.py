@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from collections.abc import Mapping, MutableMapping
+from collections.abc import Mapping, MutableMapping, Collection, MutableSequence
 from itertools import batched
 from time import sleep
 from typing import Any
@@ -46,8 +46,10 @@ class Collections(APIBase, metaclass=ABCMeta):
         except SpotifyIDTypeError:
             playlists = {pl["name"]: pl["href"] for pl in self.get_collections_user(use_cache=use_cache)}
             if playlist not in playlists:
-                raise SpotifyIDTypeError(f"Given playlist is not a valid URL/URI/ID "
-                                         f"and name not found in user's playlists", value=playlist)
+                raise SpotifyIDTypeError(
+                    f"Given playlist is not a valid URL/URI/ID and name not found in user's playlists",
+                    value=playlist
+                )
             return playlists[playlist]
 
     ###########################################################################
@@ -76,23 +78,23 @@ class Collections(APIBase, metaclass=ABCMeta):
         :return: Raw API responses for each item
         """
         response: Mapping[str, Any] = {"href": url, "next": url} if isinstance(url, str) else url
-        unit = self.collection_types[kind.name] if kind else 'entries'
+        unit = self.collection_types[kind.name] if kind else "entries"
 
         bar = None
         pages = 0
         if "limit" in response and "total" in response:  # check if progress bar needed
             pages = (response["total"] - len(response.get("items", []))) // response["limit"]
             if pages > 5:  # show progress bar for batches which may take a long time
-                bar = self.get_progress_bar(total=pages, desc=f'Getting {unit}', unit="pages")
+                bar = self.get_progress_bar(total=pages, desc=f"Getting {unit}", unit="pages")
 
         # ISSUE: initial API response always gives items 0-100 no matter which limit given for some unknown reason
         # When limit is e.g. 50 (the max allowed value), the 'next' url is then ALWAYS {url}?offset=0&limit=50
         # This means items 50-100 will be added twice if extending the items by the response from the 'next' url
         # WORKAROUND: manually create a valid 'next' url when response given as input
-        if isinstance(url, dict) and isinstance(url.get(self.items_key), (list, set)) and url.get("next"):
-            url_parsed = urlparse(url['next'])
+        if isinstance(url, dict) and isinstance(url.get(self.items_key), Collection) and url.get("next"):
+            url_parsed = urlparse(url["next"])
             params = {"offset": len(url[self.items_key]), "limit": url["limit"]}
-            url['next'] = f"{url_parsed.scheme}://{url_parsed.netloc}{url_parsed.path}?{urlencode(params)}"
+            url["next"] = f"{url_parsed.scheme}://{url_parsed.netloc}{url_parsed.path}?{urlencode(params)}"
 
         i = 0
         results = []
@@ -115,7 +117,7 @@ class Collections(APIBase, metaclass=ABCMeta):
             bar.close()
 
         # if API response was given on input, update it with new responses
-        if isinstance(url, dict) and isinstance(url.get(self.items_key), (list, set)):
+        if isinstance(url, dict) and isinstance(url.get(self.items_key), Collection):
             url[self.items_key].extend(results)
 
         return results
@@ -154,8 +156,10 @@ class Collections(APIBase, metaclass=ABCMeta):
         if kind == ItemType.ARTIST or kind.name not in self.collection_types:
             raise SpotifyItemTypeError(f"{kind.name.title()}s are not a valid user collection type", kind=kind)
         if kind != ItemType.PLAYLIST and user is not None:
-            raise SpotifyItemTypeError(f"Only able to retrieve {kind.name.casefold()}s "
-                                       f"from the currently authenticated user", kind=kind)
+            raise SpotifyItemTypeError(
+                f"Only able to retrieve {kind.name.casefold()}s from the currently authenticated user",
+                kind=kind
+            )
 
         if user is not None:
             url = f"{convert(user, kind=ItemType.USER, type_out=IDType.URL)}/{kind.name.casefold()}s"
@@ -215,7 +219,7 @@ class Collections(APIBase, metaclass=ABCMeta):
 
         unit = kind.name.casefold() + "s"
         if len(id_list) > 5:  # show progress bar for collection batches which may take a long time
-            id_list = self.get_progress_bar(iterable=id_list, desc=f'Getting {unit}', unit=unit)
+            id_list = self.get_progress_bar(iterable=id_list, desc=f"Getting {unit}", unit=unit)
 
         collections = []
         for id_ in id_list:  # get responses for each collection in batches
@@ -226,15 +230,17 @@ class Collections(APIBase, metaclass=ABCMeta):
         self._enrich_collections_response(collections, kind=kind)
 
         item_count = sum(len(coll[self.collection_types[kind.name]][self.items_key]) for coll in collections)
-        self.logger.debug(f"{'DONE':<7}: {url:<71} | "
-                          f"Retrieved {item_count:>6} {self.collection_types[kind.name]} "
-                          f"across {len(collections):>5} {kind.name.casefold()}s")
+        self.logger.debug(
+            f"{'DONE':<7}: {url:<71} | "
+            f"Retrieved {item_count:>6} {self.collection_types[kind.name]} "
+            f"across {len(collections):>5} {kind.name.casefold()}s"
+        )
 
         # if API response was given on input, update it with new responses
         if isinstance(values, dict) and len(collections) == 1:
             values.clear()
             values.update(collections[0])
-        elif isinstance(values, (list, set)) and all(isinstance(item, dict) for item in values):
+        elif isinstance(values, MutableSequence) and all(isinstance(item, dict) for item in values):
             values.clear()
             values.extend(collections)
 
@@ -252,7 +258,7 @@ class Collections(APIBase, metaclass=ABCMeta):
         :param collaborative: Set playlist to collaborative i.e. other users may edit the playlist.
         :return: API URL for playlist.
         """
-        url = f'{__URL_API__}/users/{self.user_id}/playlists'
+        url = f"{__URL_API__}/users/{self.user_id}/playlists"
 
         body = {
             "name": name,
@@ -260,7 +266,7 @@ class Collections(APIBase, metaclass=ABCMeta):
             "public": public,
             "collaborative": collaborative,
         }
-        playlist = self.post(url, json=body, log_pad=71)['href']
+        playlist = self.post(url, json=body, log_pad=71)["href"]
 
         self.logger.debug(f"{'DONE':<7}: {url:<71} | Created playlist: '{name}' -> {playlist}")
         return playlist
@@ -290,11 +296,11 @@ class Collections(APIBase, metaclass=ABCMeta):
         if skip_dupes:  # skip tracks currently in playlist
             pl_current = self.get_collections(url, kind=ItemType.PLAYLIST, limit=limit, use_cache=False)[0]
             tracks = pl_current[self.collection_types[ItemType.PLAYLIST.name]][self.items_key]
-            uris_current = [track['track']['uri'] for track in tracks]
+            uris_current = [track["track"]["uri"] for track in tracks]
             uri_list = [uri for uri in uri_list if uri not in uris_current]
 
         for uris in batched(uri_list, limit):  # add tracks in batches
-            params = {'uris': ','.join(uris)}
+            params = {"uris": ','.join(uris)}
             log = [f"Adding {len(uris):>6} items"]
             self.post(url, params=params, log_pad=71, log_extra=log)
 
@@ -316,7 +322,7 @@ class Collections(APIBase, metaclass=ABCMeta):
         self.delete(url, log_pad=43)
         return url
 
-    def clear_from_playlist(self, playlist: str, items: list[str] | None = None, limit: int = 100) -> int:
+    def clear_from_playlist(self, playlist: str, items: Collection[str] | None = None, limit: int = 100) -> int:
         """
         ``DELETE: /playlists/{playlist_id}/tracks`` - Clear tracks from a given playlist.
         WARNING: This function can destructively modify your Spotify playlists.
@@ -340,13 +346,13 @@ class Collections(APIBase, metaclass=ABCMeta):
         else:  # clear everything
             pl_current = self.get_collections(url, kind=ItemType.PLAYLIST, use_cache=False)[0]
             tracks = pl_current[self.collection_types[ItemType.PLAYLIST.name]][self.items_key]
-            uri_list = [track['track']['uri'] for track in tracks]
+            uri_list = [track["track"]["uri"] for track in tracks]
 
         if not uri_list:  # skip when nothing to clear
             return 0
 
         for uris in batched(uri_list, limit):  # clear in batches
-            body = {'tracks': [{'uri': uri} for uri in uris]}
+            body = {"tracks": [{"uri": uri} for uri in uris]}
             log = [f"Clearing {len(uri_list):>3} tracks"]
             self.delete(url, json=body, log_pad=71, log_extra=log)
 

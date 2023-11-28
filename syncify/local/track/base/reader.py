@@ -1,5 +1,6 @@
 import re
 from abc import ABCMeta, abstractmethod
+from typing import Any
 
 from PIL import Image
 
@@ -33,7 +34,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
         self._uri, self._has_uri = self._read_uri()
         self.has_image = self._check_for_images()
 
-    def _read_tag(self, tag_ids: list[str]) -> list | None:
+    def _read_tag(self, tag_ids: list[str]) -> list[Any] | None:
         """Extract all tag values from file for a given list of tag IDs"""
         values = []
         for tag_id in tag_ids:
@@ -87,7 +88,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
     def _read_genres(self) -> list[str] | None:
         """Extract genre tags from file"""
         values = self._read_tag(self.tag_map.genres)
-        return [str(value) for value in values] if values is not None else None
+        return list(map(str, values)) if values is not None else None
 
     def _read_year(self) -> int | None:
         """Extract year tags from file"""
@@ -134,7 +135,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
         values = self._read_tag(self.tag_map.compilation)
         return bool(int(values[0])) if values is not None else None
 
-    def _read_comments(self) -> set[str] | None:
+    def _read_comments(self) -> list[str] | None:
         """Extract comment tags from file"""
         values = self._read_tag(self.tag_map.comments)
         return list({str(value) for value in values}) if values is not None else None
@@ -154,7 +155,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
             return None, None
 
         # WORKAROUND: for dodgy mp3 tag comments, split on null and take first value
-        possible_values: list[str] | None = [val for values in possible_values for val in values.split('\x00')]
+        possible_values: tuple[str] | None = tuple(val for values in possible_values for val in values.split("\x00"))
         for uri in possible_values:
             if uri == __UNAVAILABLE_URI_VALUE__:
                 return None, False

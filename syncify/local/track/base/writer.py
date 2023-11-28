@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from collections.abc import Mapping, MutableMapping
+from collections.abc import Mapping, MutableMapping, Collection
 from copy import copy
 from dataclasses import dataclass
 from typing import Any
@@ -8,7 +8,7 @@ from syncify.abstract.misc import Result
 from syncify.local.track.base.processor import TagName, TagProcessor
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 from syncify.utils import UnitList
-from syncify.utils.helpers import make_list
+from syncify.utils.helpers import to_collection
 
 
 @dataclass
@@ -36,98 +36,112 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
         file = copy(self)
         updated: MutableMapping[TagName, int] = {}
 
-        tags: set[TagName] = set(make_list(tags))
+        tags: Collection[TagName] = to_collection(tags, set)
         if TagName.ALL in tags:
             tags = TagName.all()
 
-        # all follow the same basic structure
+        # all chunks below follow the same basic structure
         # - check if any of the conditionals for this tag type are met
         # - if met, proceed to writing the tag data
         # - if data has been written (or would have been if not a dry run),
         #   append the tag name to a list of updated tags
 
         if TagName.TITLE in tags:
-            conditionals = [file.title is None and self.title is not None,
-                            replace and self.title != file.title]
+            conditionals = {
+                file.title is None and self.title is not None,
+                replace and self.title != file.title
+            }
             if any(conditionals) and self._write_title(dry_run):
                 updated.update({TagName.TITLE: [i for i, c in enumerate(conditionals) if c][0]})
                     
         if TagName.ARTIST in tags:
-            conditionals = [file.artist is None and self.artist is not None,
-                            replace and self.artist != file.artist]
+            conditionals = {
+                file.artist is None and self.artist is not None,
+                replace and self.artist != file.artist
+            }
             if any(conditionals) and self._write_artist(dry_run):
                 updated.update({TagName.ARTIST: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.ALBUM in tags:
-            conditionals = [file.album is None and self.album is not None,
-                            replace and self.album != file.album]
+            conditionals = {
+                file.album is None and self.album is not None,
+                replace and self.album != file.album
+            }
             if any(conditionals) and self._write_album(dry_run):
                 updated.update({TagName.ALBUM: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.ALBUM_ARTIST in tags:
-            conditionals = [file.album_artist is None and self.album_artist is not None,
-                            replace and self.album_artist != file.album_artist]
+            conditionals = {
+                file.album_artist is None and self.album_artist is not None,
+                replace and self.album_artist != file.album_artist
+            }
             if any(conditionals) and self._write_album_artist(dry_run):
                 updated.update({TagName.ALBUM_ARTIST: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.TRACK in tags:
-            conditionals = [
+            conditionals = {
                 file.track_number is None and file.track_total is None and
                 (self.track_number is not None or self.track_total is not None),
                 replace and (self.track_number != file.track_number or self.track_total != file.track_total)
-            ]
+            }
             if any(conditionals) and self._write_track(dry_run):
                 updated.update({TagName.TRACK: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.GENRES in tags:
-            conditionals = [file.genres is None and self.genres, replace and self.genres != file.genres]
+            conditionals = {file.genres is None and self.genres, replace and self.genres != file.genres}
             if any(conditionals) and self._write_genres(dry_run):
                 updated.update({TagName.GENRES: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.YEAR in tags:
-            conditionals = [file.year is None and self.year is not None, replace and self.year != file.year]
+            conditionals = {file.year is None and self.year is not None, replace and self.year != file.year}
             if any(conditionals) and self._write_year(dry_run):
                 updated.update({TagName.YEAR: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.BPM in tags:
             self_bpm = int(self["bpm"] if self["bpm"] is not None else 0)
             file_bpm = int(file["bpm"] if file["bpm"] is not None else 0)
-            conditionals = [file.bpm is None and self.bpm is not None and self.bpm > 30,
-                            file_bpm < 30 < self_bpm,
-                            replace and self_bpm != file_bpm]
+            conditionals = {
+                file.bpm is None and self.bpm is not None and self.bpm > 30,
+                file_bpm < 30 < self_bpm,
+                replace and self_bpm != file_bpm
+            }
             if any(conditionals) and self._write_bpm(dry_run):
                 updated.update({TagName.BPM: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.KEY in tags:
-            conditionals = [file.key is None and self.key is not None, replace and self.key != file.key]
+            conditionals = {file.key is None and self.key is not None, replace and self.key != file.key}
             if any(conditionals) and self._write_key(dry_run):
                 updated.update({TagName.KEY: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.DISC in tags:
-            conditionals = [file.disc_number is None and file.disc_total is None and
-                            (self.disc_number is not None or self.disc_total is not None),
-                            replace and (self.disc_number != file.disc_number or self.disc_total != file.disc_total)]
+            conditionals = {
+                file.disc_number is None and file.disc_total is None and
+                (self.disc_number is not None or self.disc_total is not None),
+                replace and (self.disc_number != file.disc_number or self.disc_total != file.disc_total)
+            }
             if any(conditionals) and self._write_disc(dry_run):
                 updated.update({TagName.DISC: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.COMPILATION in tags:
-            conditionals = [file.compilation is None and self.compilation is not None,
-                            replace and self.compilation != file.compilation]
+            conditionals = {
+                file.compilation is None and self.compilation is not None,
+                replace and self.compilation != file.compilation
+            }
             if any(conditionals) and self._write_compilation(dry_run):
                 updated.update({TagName.COMPILATION: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.COMMENTS in tags:
-            conditionals = [file.comments is None and self.comments, replace and self.comments != file.comments]
+            conditionals = {file.comments is None and self.comments, replace and self.comments != file.comments}
             if any(conditionals) and self._write_comments(dry_run):
                 updated.update({TagName.COMMENTS: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.URI in tags:
-            conditionals = [self.uri != file.uri or self.has_uri != file.has_uri]
+            conditionals = {self.uri != file.uri or self.has_uri != file.has_uri}
             if any(conditionals) and self._write_uri(dry_run):
                 updated.update({TagName.URI: [i for i, c in enumerate(conditionals) if c][0]})
 
         if TagName.IMAGES in tags:
-            conditionals = [file.has_image is False, replace]
+            conditionals = {file.has_image is False, replace}
             if any(conditionals) and self.image_links and self._write_images(dry_run):
                 updated.update({TagName.IMAGES: [i for i, c in enumerate(conditionals) if c][0]})
         
@@ -323,6 +337,7 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
         if save:
             self.file.save()
 
+        removed = sorted(removed, key=lambda x: TagName.all().index(x))
         return SyncResultTrack(saved=save, updated={u: 0 for u in removed})
 
     def delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:

@@ -30,7 +30,7 @@ path_track_img = join(path_track_resources, "track_image.jpg")
 def random_track(cls: type[LocalTrack] | None = None) -> LocalTrack:
     """Generates a new, random track of the given class."""
     if cls is None:
-        cls = choice(__TRACK_CLASSES__)
+        cls = choice(tuple(__TRACK_CLASSES__))
     track = cls.__new__(cls)
 
     track._file = _MutagenMock()
@@ -60,8 +60,9 @@ def random_track(cls: type[LocalTrack] | None = None) -> LocalTrack:
     track.image_links = {}
     track.has_image = False
 
-    track.path = join(path_track_cache,
-                      f"{str(track.track_number).zfill(2)} - {track.title}" + track.valid_extensions[0])
+    track.path = join(
+        path_track_cache, f"{str(track.track_number).zfill(2)} - {track.title}" + choice(tuple(track.valid_extensions))
+    )
 
     track.date_added = datetime.now() - relativedelta(days=randrange(8, 20), hours=randrange(1, 24))
     track.last_played = datetime.now() - relativedelta(days=randrange(1, 6), hours=randrange(1, 24))
@@ -154,16 +155,16 @@ def update_tags_test(track: LocalTrack):
     path_file_base, path_file_copy = copy_track(track)
     track_original = copy(track)
 
-    track.title = 'new title'
-    track.artist = 'new artist'
-    track.album = 'new album artist'
-    track.album_artist = 'new various'
+    track.title = "new title"
+    track.artist = "new artist"
+    track.album = "new album artist"
+    track.album_artist = "new various"
     track.track_number = 2
     track.track_total = 3
-    track.genres = ['Big Band', 'Swing']
+    track.genres = ["Big Band", "Swing"]
     track.year = 1956
     track.bpm = 98.0
-    track.key = 'F#'
+    track.key = "F#"
     track.disc_number = 2
     track.disc_total = 3
     track.compilation = False

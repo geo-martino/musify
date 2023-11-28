@@ -66,13 +66,13 @@ def test_loaded_attributes():
     track = MP3(file=path_track_mp3)
 
     # metadata
-    assert track.title == 'title 2'
-    assert track.artist == 'artist 2'
-    assert track.album == 'album artist 2'
-    assert track.album_artist == 'various'
+    assert track.title == "title 2"
+    assert track.artist == "artist 2"
+    assert track.album == "album artist 2"
+    assert track.album_artist == "various"
     assert track.track_number == 3
     assert track.track_total == 4
-    assert track.genres == ['Pop Rock', 'Musical']
+    assert track.genres == ["Pop Rock", "Musical"]
     assert track.year == 2024
     assert track.bpm == 200.56
     assert track.key == 'C'
@@ -80,7 +80,7 @@ def test_loaded_attributes():
     assert track.disc_total == 3
     assert not track.compilation
     # noinspection SpellCheckingInspection
-    assert track.comments == ['spotify:track:1TjVbzJUAuOvas1bL00TiH']
+    assert track.comments == ["spotify:track:1TjVbzJUAuOvas1bL00TiH"]
 
     assert track.uri == track.comments[0]
     assert track.has_uri
@@ -92,7 +92,7 @@ def test_loaded_attributes():
     assert track.path == path_track_mp3
     assert track.folder == basename(dirname(path_track_mp3))
     assert track.filename == splitext(basename(path_track_mp3))[0]
-    assert track.ext == '.mp3'
+    assert track.ext == ".mp3"
     assert track.size == 411038
     assert int(track.length) == 30
     assert track.date_modified == datetime.fromtimestamp(getmtime(path_track_mp3))

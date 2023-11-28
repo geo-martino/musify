@@ -19,7 +19,7 @@ from syncify.local.library.collection import LocalFolder
 from syncify.report import Report
 from syncify.settings import Settings
 from syncify.spotify.api.api import API
-from syncify.spotify.base import Spotify
+from syncify.spotify.base import SpotifyObject
 from syncify.spotify.library.library import SpotifyLibrary
 from syncify.spotify.processor.check import Checker
 from syncify.spotify.processor.search import Searcher, AlgorithmSettings
@@ -37,9 +37,10 @@ class Syncify(Settings, Report):
 
     @property
     def allowed_functions(self) -> list[str]:
-        return [method for method, value in Syncify.__dict__.items()
-                if not method.startswith('_') and callable(value)
-                and method not in ["set_func"]]
+        return [
+            method for method, value in Syncify.__dict__.items()
+            if not method.startswith('_') and callable(value) and method not in ["set_func"]
+        ]
 
     @property
     def time_taken(self) -> float:
@@ -52,7 +53,7 @@ class Syncify(Settings, Report):
         if self._api is None:
             self.logger.info(f"\33[1;95m ->\33[1;97m Authorising API access \33[0m")
             self._api = API(**self.cfg_run["spotify"]["api"]["settings"])
-            Spotify.api = self._api
+            SpotifyObject.api = self._api
             self.print_line()
         return self._api
 
@@ -73,11 +74,21 @@ class Syncify(Settings, Report):
             exclude = self.cfg_run["local"].get("playlists", {}).get("exclude")
 
             if musicbee_folder:
-                self._local_library = MusicBee(library_folder=library_folder, musicbee_folder=musicbee_folder,
-                                               other_folders=other_folders, include=include, exclude=exclude)
+                self._local_library = MusicBee(
+                    library_folder=library_folder,
+                    musicbee_folder=musicbee_folder,
+                    other_folders=other_folders,
+                    include=include,
+                    exclude=exclude
+                )
             else:
-                self._local_library = LocalLibrary(library_folder=library_folder, playlist_folder=playlist_folder,
-                                                   other_folders=other_folders, include=include, exclude=exclude)
+                self._local_library = LocalLibrary(
+                    library_folder=library_folder,
+                    playlist_folder=playlist_folder,
+                    other_folders=other_folders,
+                    include=include,
+                    exclude=exclude
+                )
 
         return self._local_library
 
@@ -155,9 +166,11 @@ class Syncify(Settings, Report):
         folders = []
         for folder in self.local_library.folders:  # apply filter
             name = folder.name.strip().lower()
-            conditionals = [not include_prefix or name.startswith(include_prefix),
-                            not exclude_prefix or not name.startswith(exclude_prefix),
-                            not start or name >= start, not stop or name <= stop]
+            conditionals = {
+                not include_prefix or name.startswith(include_prefix),
+                not exclude_prefix or not name.startswith(exclude_prefix),
+                not start or name >= start, not stop or name <= stop
+            }
             if all(conditionals):
                 folders.append(folder)
 
@@ -200,16 +213,18 @@ class Syncify(Settings, Report):
         # get current folders present
         logs = dirname(self.log_folder)
         output = dirname(self.output_folder)
-        current_logs = [d for d in glob(join(logs, "*")) if isdir(d) and d != self.log_path]
-        current_output = [d for d in glob(join(output, "*")) if isdir(d) and d != self.output_folder]
+        current_logs = tuple(d for d in glob(join(logs, "*")) if isdir(d) and d != self.log_path)
+        current_output = tuple(d for d in glob(join(output, "*")) if isdir(d) and d != self.output_folder)
 
-        self.logger.debug(f"Log folders: {len(current_logs)} | Output folders: {len(current_output)} | "
-                          f"Days: {days} | Runs: {runs}")
+        self.logger.debug(
+            f"Log folders: {len(current_logs)} | Output folders: {len(current_output)} | "
+            f"Days: {days} | Runs: {runs}"
+        )
 
         remove = []
         dates = []
 
-        def get_paths_to_remove(paths: list[str]):
+        def get_paths_to_remove(paths: tuple[str]):
             """Determine which folders to remove based on settings"""
             remaining = len(paths) + 1
 
@@ -256,15 +271,18 @@ class Syncify(Settings, Report):
     def restore(self):
         """Restore library data from a backup, getting user input for the settings"""
         output_parent = dirname(self.output_folder)
-        backup_names = [self.local_library_backup_name, self.spotify_library_backup_name]
-        available_backup_names = [relpath(path[0], output_parent) for path in os.walk(output_parent)
-                                  if path[0] != output_parent
-                                  and any(any(name in file for name in backup_names) for file in path[2])]
+        backup_names = (self.local_library_backup_name, self.spotify_library_backup_name)
+        available_backup_names = tuple(
+            relpath(path[0], output_parent) for path in os.walk(output_parent)
+            if path[0] != output_parent and any(any(name in file for name in backup_names) for file in path[2])
+        )
         if len(available_backup_names) == 0:
             self.logger.info("\33[93mNo backups found, skipping.\33[0m")
 
-        self.logger.info("\33[97mAvailable backups: \n\t\33[97m- \33[94m{n}\33[0m"
-                         .format(n='\33[0m\n\t\33[97m-\33[0m \33[94m'.join(available_backup_names)))
+        self.logger.info(
+            "\33[97mAvailable backups: \n\t\33[97m- \33[94m{n}\33[0m"
+            .format(n="\33[0m\n\t\33[97m-\33[0m \33[94m".join(available_backup_names))
+        )
 
         while True:  # get valid user input
             restore_from = get_user_input("Select the backup to use")
@@ -296,8 +314,10 @@ class Syncify(Settings, Report):
                 break
             print(f"\33[91mTags entered were not recognised ({', '.join(restore_tags)}), try again\33[0m")
 
-        self.logger.info(f"\33[1;95m ->\33[1;97m Restoring local track tags from backup: "
-                         f"{basename(folder)} | Tags: {', '.join(restore_tags)}\33[0m")
+        self.logger.info(
+            f"\33[1;95m ->\33[1;97m Restoring local track tags from backup: "
+            f"{basename(folder)} | Tags: {', '.join(restore_tags)}\33[0m"
+        )
         self.print_line()
         backup = self._load_json(self.local_library_backup_name, folder)
 
@@ -318,7 +338,7 @@ class Syncify(Settings, Report):
 
         # restore and sync
         self.spotify_library.restore_playlists(backup["playlists"])
-        results = self.spotify_library.sync(clear='all', reload=False, dry_run=False)
+        results = self.spotify_library.sync(clear="all", reload=False, dry_run=False)
         self.spotify_library.log_sync(results)
 
         self.logger.debug("Restore Spotify: DONE\n")
@@ -410,8 +430,10 @@ class Syncify(Settings, Report):
         self.local_library.merge_items(self.spotify_library, tags=tags)
 
         # save tags to files
-        self.logger.info(f"\33[1;95m ->\33[1;97m Updating tags for {len(self.local_library)} tracks: "
-                         f"{', '.join(t.name.lower() for t in tags)} \33[0m")
+        self.logger.info(
+            f"\33[1;95m ->\33[1;97m Updating tags for {len(self.local_library)} tracks: "
+            f"{', '.join(t.name.lower() for t in tags)} \33[0m"
+        )
         results = self.local_library.save_tracks(tags=tags, replace=replace, dry_run=self.dry_run)
 
         if results:
@@ -432,9 +454,11 @@ class Syncify(Settings, Report):
         tags = [TagName.ALL] if not tag_names else [TagName.from_name(tag_name) for tag_name in tag_names]
         item_count = sum(len(folder) for folder in folders)
 
-        self.logger.info(f"\33[1;95m ->\33[1;97m Setting and saving compilation style tags "
-                         f"for {item_count} tracks in {len(folders)} folders: "
-                         f"{', '.join(t.name.lower() for t in tags)} \33[0m")
+        self.logger.info(
+            f"\33[1;95m ->\33[1;97m Setting and saving compilation style tags "
+            f"for {item_count} tracks in {len(folders)} folders: "
+            f"{', '.join(t.name.lower() for t in tags)} \33[0m"
+        )
 
         results = {}
         for folder in self.get_progress_bar(iterable=folders, desc="Setting tags", unit="folders"):  # set tags
@@ -488,7 +512,7 @@ if __name__ == "__main__":
             title += " (DRYRUN)"
 
         if sys.platform == "win32":
-            os.system(f'title {title}')
+            os.system(f"title {title}")
         elif sys.platform == "linux" or sys.platform == "darwin":
             os.system(f"echo '\033]2;{title}\007'")
 
@@ -551,6 +575,8 @@ if __name__ == "__main__":
 
 
 ## NEEDED FOR v0.3
+# TODO: review necessity of exact 'list' types in typing
+# TODO: add docstrings to top of all scripts
 # TODO: how to read WMA images
 # TODO: write tests, write tests, write tests
 # TODO: Implement generic types where needed
