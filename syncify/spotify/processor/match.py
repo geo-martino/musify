@@ -38,7 +38,7 @@ class CleanTagConfig:
         return self._preprocess(value) if self._preprocess else value
 
 
-class Matcher(Logger):
+class SpotifyItemMatcher(Logger):
     """
     Matches source items/collections to given result(s).
 

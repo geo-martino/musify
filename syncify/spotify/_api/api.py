@@ -1,7 +1,7 @@
-from syncify.spotify.api.basic import Basic
-from syncify.spotify.api.collection import Collections
-from syncify.spotify.api.item import Items
-from syncify.spotify.api.request import RequestHandler
+from syncify.api.request import RequestHandler
+from syncify.spotify._api.basic import Basic
+from syncify.spotify._api.collection import Collections
+from syncify.spotify._api.item import Items
 from syncify.spotify.enums import IDType, ItemType
 from syncify.spotify.utils import get_item_type, convert
 from syncify.utils.logger import Logger

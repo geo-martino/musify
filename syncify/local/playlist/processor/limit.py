@@ -8,7 +8,7 @@ from syncify.enums import SyncifyEnum
 from syncify.enums.tags import PropertyName
 from syncify.local.exception import LimitError
 from syncify.local.playlist.processor.base import TrackProcessor
-from syncify.local.playlist.processor.sort import TrackSort
+from syncify.local.playlist.processor.sort import TrackSorter
 from syncify.local.track.base.track import LocalTrack
 
 
@@ -30,7 +30,7 @@ class LimitType(SyncifyEnum):
     TERABYTES = 24
 
 
-class TrackLimit(TrackProcessor):
+class TrackLimiter(TrackProcessor):
     """
     Sort tracks inplace based on given conditions.
 
@@ -156,35 +156,35 @@ class TrackLimit(TrackProcessor):
 
     @staticmethod
     def _sort_highest_rating(tracks: list[LocalTrack]) -> None:
-        TrackSort.sort_by_field(tracks, PropertyName.RATING, reverse=True)
+        TrackSorter.sort_by_field(tracks, PropertyName.RATING, reverse=True)
 
     @staticmethod
     def _sort_lowest_rating(tracks: list[LocalTrack]) -> None:
-        TrackSort.sort_by_field(tracks, PropertyName.RATING)
+        TrackSorter.sort_by_field(tracks, PropertyName.RATING)
 
     @staticmethod
     def _sort_most_recently_played(tracks: list[LocalTrack]) -> None:
-        TrackSort.sort_by_field(tracks, PropertyName.LAST_PLAYED, reverse=True)
+        TrackSorter.sort_by_field(tracks, PropertyName.LAST_PLAYED, reverse=True)
 
     @staticmethod
     def _sort_least_recently_played(tracks: list[LocalTrack]) -> None:
-        TrackSort.sort_by_field(tracks, PropertyName.LAST_PLAYED)
+        TrackSorter.sort_by_field(tracks, PropertyName.LAST_PLAYED)
 
     @staticmethod
     def _sort_most_often_played(tracks: list[LocalTrack]) -> None:
-        TrackSort.sort_by_field(tracks, PropertyName.PLAY_COUNT, reverse=True)
+        TrackSorter.sort_by_field(tracks, PropertyName.PLAY_COUNT, reverse=True)
 
     @staticmethod
     def _sort_least_often_played(tracks: list[LocalTrack]) -> None:
-        TrackSort.sort_by_field(tracks, PropertyName.PLAY_COUNT)
+        TrackSorter.sort_by_field(tracks, PropertyName.PLAY_COUNT)
 
     @staticmethod
     def _sort_most_recently_added(tracks: list[LocalTrack]) -> None:
-        TrackSort.sort_by_field(tracks, PropertyName.DATE_ADDED, reverse=True)
+        TrackSorter.sort_by_field(tracks, PropertyName.DATE_ADDED, reverse=True)
 
     @staticmethod
     def _sort_least_recently_added(tracks: list[LocalTrack]) -> None:
-        TrackSort.sort_by_field(tracks, PropertyName.DATE_ADDED)
+        TrackSorter.sort_by_field(tracks, PropertyName.DATE_ADDED)
 
     def _convert(self, track: LocalTrack) -> float:
         """

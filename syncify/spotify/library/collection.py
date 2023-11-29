@@ -5,7 +5,7 @@ from typing import Any, Self
 
 from syncify.abstract.collection import ItemCollection, Album
 from syncify.abstract.item import Item
-from syncify.spotify.api import APIMethodInputType
+from syncify.spotify import APIMethodInputType
 from syncify.spotify.base import SpotifyObject
 from syncify.spotify.enums import IDType, ItemType
 from syncify.spotify.exception import SpotifyIDTypeError

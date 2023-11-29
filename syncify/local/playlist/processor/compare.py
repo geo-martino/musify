@@ -37,7 +37,7 @@ field_name_map = {
 }
 
 
-class TrackCompare(TrackProcessor):
+class TrackComparer(TrackProcessor):
     """
     Compares a track with another track or a given set of expected values to find a match.
 

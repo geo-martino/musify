@@ -8,10 +8,10 @@ from syncify.abstract.item import Item, Track
 from syncify.abstract.misc import Result
 from syncify.enums.tags import TagName
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
-from syncify.spotify.api.api import API
+from syncify.spotify import API
 from syncify.spotify.enums import IDType, ItemType
 from syncify.spotify.library.library import SpotifyPlaylist
-from syncify.spotify.processor.match import Matcher
+from syncify.spotify.processor.match import SpotifyItemMatcher
 from syncify.spotify.utils import check_spotify_type, convert
 from syncify.utils.helpers import get_user_input
 from syncify.utils.logger import REPORT
@@ -25,7 +25,7 @@ class CheckResult(Result):
     unchanged: Sequence[Item] = field(default=tuple())
 
 
-class Checker(Matcher):
+class SpotifyItemChecker(SpotifyItemMatcher):
     """
     Runs operations for checking the URIs associated with a collection of items.
     When running :py:func:`check`, the object will do the following:
@@ -46,7 +46,7 @@ class Checker(Matcher):
     _default_name = "check"
 
     def __init__(self, api: API, allow_karaoke: bool = False):
-        Matcher.__init__(self, allow_karaoke=allow_karaoke)
+        SpotifyItemMatcher.__init__(self, allow_karaoke=allow_karaoke)
 
         self.api = api
         self.playlist_name_urls = {}

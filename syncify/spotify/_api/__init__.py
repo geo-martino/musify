@@ -7,7 +7,7 @@ from syncify.utils import UnitMutableSequence
 APIMethodInputType = UnitMutableSequence[str] | UnitMutableSequence[MutableMapping[str, Any]]
 
 # non-user authenticated access
-AUTH_ARGS_BASIC = {
+API_AUTH_BASIC = {
     "auth_args": {
         "url": f"{__URL_AUTH__}/api/token",
         "data": {
@@ -33,7 +33,7 @@ AUTH_ARGS_BASIC = {
 }
 
 # user authenticated access with scopes
-AUTH_ARGS_USER = {
+API_AUTH_USER = {
     "auth_args": {
         "url": f"{__URL_AUTH__}/api/token",
         "data": {

@@ -6,11 +6,11 @@ from syncify.abstract.collection import ItemCollection, Album
 from syncify.abstract.item import Item, Track, BaseObject
 from syncify.abstract.misc import Result
 from syncify.enums.tags import TagName, PropertyName
-from syncify.spotify.api.api import API
+from syncify.spotify import API
 from syncify.spotify.enums import ItemType
 from syncify.spotify.library.collection import SpotifyAlbum
 from syncify.spotify.library.item import SpotifyTrack
-from syncify.spotify.processor.match import Matcher
+from syncify.spotify.processor.match import SpotifyItemMatcher
 from syncify.utils.logger import REPORT
 
 
@@ -61,7 +61,7 @@ class AlgorithmSettings:
     )
 
 
-class Searcher(Matcher):
+class SpotifyItemSearcher(SpotifyItemMatcher):
     """
     Searches for Spotify matches for a list of item collections.
 
@@ -70,7 +70,7 @@ class Searcher(Matcher):
     """
 
     def __init__(self, api: API, allow_karaoke: bool = False):
-        Matcher.__init__(self, allow_karaoke=allow_karaoke)
+        SpotifyItemMatcher.__init__(self, allow_karaoke=allow_karaoke)
         self.api = api
 
     def _get_results(self, item: BaseObject, kind: ItemType, algorithm: Algorithm) -> list[dict[str, Any]] | None:

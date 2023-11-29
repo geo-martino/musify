@@ -44,7 +44,7 @@ class ShuffleBy(SyncifyEnum):
     ARTIST = 2
 
 
-class TrackSort(TrackProcessor):
+class TrackSorter(TrackProcessor):
     """
     Sort tracks inplace based on given conditions.
 

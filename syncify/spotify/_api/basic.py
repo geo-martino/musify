@@ -1,15 +1,10 @@
 from abc import ABCMeta
 from typing import Any
 
-from syncify.spotify.api import __URL_API__
-from syncify.spotify.api.request import RequestHandler
+from api import APIBase
+from syncify.spotify._api import __URL_API__
 from syncify.spotify.enums import ItemType
 from syncify.utils.helpers import limit_value
-from syncify.utils.logger import Logger
-
-
-class APIBase(RequestHandler, Logger):
-    pass
 
 
 class Basic(APIBase, metaclass=ABCMeta):

@@ -2,11 +2,11 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import MutableMapping
 from typing import Any, Self
 
+from syncify.api.exception import APIError
 from syncify.abstract.misc import PrettyPrinter
-from syncify.spotify.api import APIMethodInputType
-from syncify.spotify.api.api import API
+from syncify.spotify import API, APIMethodInputType
 from syncify.spotify.enums import ItemType
-from syncify.spotify.exception import APIError, SpotifyItemTypeError
+from syncify.spotify.exception import SpotifyItemTypeError
 
 
 class SpotifyObject(PrettyPrinter, metaclass=ABCMeta):

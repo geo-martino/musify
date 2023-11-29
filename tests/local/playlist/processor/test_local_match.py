@@ -6,22 +6,22 @@ from tests.common import random_str
 from tests.local.track.track import random_tracks
 
 from syncify.enums.tags import TagName
-from syncify.local.playlist.processor.compare import TrackCompare
-from syncify.local.playlist.processor.match import TrackMatch
+from syncify.local.playlist.processor.compare import TrackComparer
+from syncify.local.playlist.processor.match import TrackMatcher
 from syncify.local.track import LocalTrack
 
 
 def test_init():
     comparators = [
-        TrackCompare(field=TagName.ALBUM, condition="is", expected="album name"),
-        TrackCompare(field=TagName.ARTIST, condition="starts with", expected="artist")
+        TrackComparer(field=TagName.ALBUM, condition="is", expected="album name"),
+        TrackComparer(field=TagName.ARTIST, condition="starts with", expected="artist")
     ]
     library_folder = "/Path/to/LIBRARY/on/linux"
     other_folders = ["../", "D:\\paTh\\on\\Windows"]
     exclude_paths = [f"{other_folders[1]}\\exclude\\{random_str()}.MP3" for _ in range(20)]
     include_paths = [f"{other_folders[1]}\\include\\{random_str()}.MP3" for _ in range(20)]
 
-    matcher = TrackMatch(
+    matcher = TrackMatcher(
         comparators=comparators,
         include_paths=include_paths,
         exclude_paths=exclude_paths,
@@ -43,7 +43,7 @@ def test_init():
     exclude_paths = set(f"{other_folders[0]}/folder/{random_str(20, 50)}.MP3" for _ in range(20))
     include_paths = set(f"{other_folders[0]}/folder/{random_str(20, 50)}.MP3" for _ in range(20)) - exclude_paths
 
-    matcher = TrackMatch(
+    matcher = TrackMatcher(
         comparators=comparators,
         include_paths=sorted(include_paths) + sorted(exclude_paths)[:5],
         exclude_paths=sorted(exclude_paths),
@@ -62,15 +62,15 @@ def test_init():
     ]
 
     # none of the random file paths exist, check existence should return empty lists
-    matcher = TrackMatch(include_paths=include_paths, exclude_paths=exclude_paths, check_existence=True)
+    matcher = TrackMatcher(include_paths=include_paths, exclude_paths=exclude_paths, check_existence=True)
     assert matcher.include_paths == []
     assert matcher.exclude_paths == []
 
 
 def test_match():
     comparators = [
-        TrackCompare(field=TagName.ALBUM, condition="is", expected="album name"),
-        TrackCompare(field=TagName.ARTIST, condition="starts with", expected="artist")
+        TrackComparer(field=TagName.ALBUM, condition="is", expected="album name"),
+        TrackComparer(field=TagName.ARTIST, condition="starts with", expected="artist")
     ]
     library_folder = "/path/to/library"
     exclude_paths = [f"{library_folder}/exclude/{random_str()}.MP3" for _ in range(20)]
@@ -96,7 +96,7 @@ def test_match():
     sort_key: Callable[[LocalTrack], Any] = lambda t: t.path
 
     # match on paths only
-    matcher = TrackMatch(
+    matcher = TrackMatcher(
         include_paths=[track.path for track in tracks_include],
         exclude_paths=[track.path for track in tracks_exclude],
         check_existence=False
@@ -112,7 +112,7 @@ def test_match():
     assert len(match_result.compared) == 0
 
     # match on paths and any comparators
-    matcher = TrackMatch(
+    matcher = TrackMatcher(
         comparators=comparators,
         match_all=False,
         include_paths=[track.path for track in tracks_include],
@@ -130,7 +130,7 @@ def test_match():
     assert sorted(match_result.compared, key=sort_key) == sorted(tracks_album, key=sort_key)
 
     # match on paths and all comparators
-    matcher = TrackMatch(
+    matcher = TrackMatcher(
         comparators=comparators,
         match_all=True,
         include_paths=[track.path for track in tracks_include],

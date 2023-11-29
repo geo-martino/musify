@@ -10,7 +10,7 @@ from syncify.enums.tags import PropertyName, TagName
 from syncify.local.exception import IllegalFileTypeError, LocalCollectionError
 from syncify.local.library.collection import LocalCollectionFiltered, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from syncify.local.playlist import __PLAYLIST_FILETYPES__, LocalPlaylist, M3U, XAutoPF
-from syncify.local.playlist.processor.sort import TrackSort
+from syncify.local.playlist.processor.sort import TrackSorter
 from syncify.local.track import __TRACK_CLASSES__, LocalTrack, load_track
 from syncify.utils import UnitCollection, UnitIterable
 from syncify.utils.logger import Logger, REPORT
@@ -115,28 +115,28 @@ class LocalLibrary(LocalCollectionFiltered[LocalTrack], Library[LocalTrack]):
     @property
     def folders(self) -> list[LocalFolder]:
         """Dynamically generate a set of folder collections from the tracks in this library"""
-        grouped = TrackSort.group_by_field(tracks=self.tracks, field=PropertyName.FOLDER)
+        grouped = TrackSorter.group_by_field(tracks=self.tracks, field=PropertyName.FOLDER)
         collections = [LocalFolder(group, name=name) for name, group in grouped.items()]
         return sorted(collections, key=lambda x: x.name)
 
     @property
     def albums(self) -> list[LocalAlbum]:
         """Dynamically generate a set of album collections from the tracks in this library"""
-        grouped = TrackSort.group_by_field(tracks=self.tracks, field=TagName.ALBUM)
+        grouped = TrackSorter.group_by_field(tracks=self.tracks, field=TagName.ALBUM)
         collections = [LocalAlbum(group, name=name) for name, group in grouped.items()]
         return sorted(collections, key=lambda x: x.name)
 
     @property
     def artists(self) -> list[LocalArtist]:
         """Dynamically generate a set of artist collections from the tracks in this library"""
-        grouped = TrackSort.group_by_field(tracks=self.tracks, field=TagName.ARTIST)
+        grouped = TrackSorter.group_by_field(tracks=self.tracks, field=TagName.ARTIST)
         collections = [LocalArtist(group, name=name) for name, group in grouped.items()]
         return sorted(collections, key=lambda x: x.name)
 
     @property
     def genres(self) -> list[LocalGenres]:
         """Dynamically generate a set of genre collections from the tracks in this library"""
-        grouped = TrackSort.group_by_field(tracks=self.tracks, field=TagName.GENRES)
+        grouped = TrackSorter.group_by_field(tracks=self.tracks, field=TagName.GENRES)
         collections = [LocalGenres(group, name=name) for name, group in grouped.items()]
         return sorted(collections, key=lambda x: x.name)
 

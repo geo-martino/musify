@@ -2,9 +2,9 @@ from abc import ABCMeta
 from collections.abc import MutableMapping
 from typing import Any, Self
 
-from abstract.collection import Artist
+from syncify.abstract.collection import Artist
 from syncify.abstract.item import Item, Track
-from syncify.spotify.api import APIMethodInputType
+from syncify.spotify import APIMethodInputType
 from syncify.spotify.base import SpotifyObject
 from syncify.spotify.enums import IDType, ItemType
 from syncify.spotify.utils import convert, extract_ids

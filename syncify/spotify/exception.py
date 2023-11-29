@@ -43,10 +43,6 @@ class SpotifyCollectionError(SpotifyError):
         super().__init__(formatted)
 
 
-class APIError(SpotifyError):
-    """Exception raised for Spotify API errors."""
-
-
 ###########################################################################
 ## Type errors
 ###########################################################################

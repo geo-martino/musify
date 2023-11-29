@@ -6,7 +6,7 @@ from typing import Any, Self, Literal
 from syncify.abstract.collection import Playlist
 from syncify.abstract.item import Item
 from syncify.abstract.misc import Result
-from syncify.spotify.api import APIMethodInputType
+from syncify.spotify import APIMethodInputType
 from syncify.spotify.base import SpotifyObject
 from syncify.spotify.enums import ItemType
 from syncify.spotify.library.collection import SpotifyCollection

@@ -3,7 +3,7 @@ from typing import Any, Literal
 
 from syncify.abstract.collection import Library, Playlist
 from syncify.abstract.item import Item
-from syncify.spotify.api.api import API
+from syncify.spotify import API
 from syncify.spotify.base import SpotifyObject
 from syncify.spotify.enums import ItemType
 from syncify.spotify.library.item import SpotifyTrack

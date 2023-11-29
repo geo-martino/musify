@@ -12,7 +12,7 @@ from typing import Any
 import yaml
 
 from syncify.local.exception import IllegalFileTypeError
-from syncify.spotify.api import AUTH_ARGS_BASIC, AUTH_ARGS_USER
+from syncify.spotify import AUTH_ARGS_BASIC, API_AUTH_USER
 from syncify.spotify.processor.search import AlgorithmSettings
 from syncify.utils.helpers import to_collection
 from syncify.utils.logger import Logger
@@ -175,7 +175,7 @@ class Settings(metaclass=ABCMeta):
             if not settings or "client_id" not in settings or "client_secret" not in settings:
                 continue
 
-            template = AUTH_ARGS_USER if settings.get("user_auth", False) else AUTH_ARGS_BASIC
+            template = API_AUTH_USER if settings.get("user_auth", False) else AUTH_ARGS_BASIC
             token_file_path = settings.pop("token_file_path", "token.json")
             if not isabs(token_file_path):
                 token_file_path = join(dirname(self.output_folder), token_file_path)

@@ -4,8 +4,8 @@ from collections.abc import Mapping, MutableMapping, MutableSequence, Collection
 from itertools import batched
 from typing import Any
 
-from syncify.spotify.api import __URL_API__, APIMethodInputType
-from syncify.spotify.api.basic import APIBase
+from api import APIBase
+from syncify.spotify._api import __URL_API__, APIMethodInputType
 from syncify.spotify.enums import ItemType
 from syncify.spotify.utils import validate_item_type, get_item_type, extract_ids
 from syncify.utils.helpers import limit_value

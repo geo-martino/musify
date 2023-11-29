@@ -5,7 +5,7 @@ from typing import Any, Self
 
 from syncify.abstract.misc import Result
 from syncify.local.playlist.processor.base import TrackProcessor
-from syncify.local.playlist.processor.compare import TrackCompare
+from syncify.local.playlist.processor.compare import TrackComparer
 from syncify.local.track.base.track import LocalTrack
 from syncify.utils import UnitSequence, UnitCollection, UnitIterable
 from syncify.utils.helpers import to_collection
@@ -19,7 +19,7 @@ class MatchResult(Result):
     compared: Sequence[LocalTrack] = field(default=tuple())
 
 
-class TrackMatch(TrackProcessor):
+class TrackMatcher(TrackProcessor):
     """
     Get matches for tracks based on given comparators.
 
@@ -52,7 +52,7 @@ class TrackMatch(TrackProcessor):
         exclude_str: str = source.get("Exceptions")
         exclude = set(exclude_str.split("|")) if isinstance(exclude_str, str) else None
 
-        comparators: list[TrackCompare] | None = TrackCompare.from_xml(xml=xml)
+        comparators: list[TrackComparer] | None = TrackComparer.from_xml(xml=xml)
 
         if len(comparators) == 1:
             # when user has not set an explicit comparator, there will still be an 'allow all' comparator
@@ -71,7 +71,7 @@ class TrackMatch(TrackProcessor):
 
     def __init__(
             self,
-            comparators: UnitSequence[TrackCompare] | None = None,
+            comparators: UnitSequence[TrackComparer] | None = None,
             match_all: bool = True,
             include_paths: Collection[str] | None = None,
             exclude_paths: Collection[str] | None = None,
@@ -79,7 +79,7 @@ class TrackMatch(TrackProcessor):
             other_folders: UnitCollection[str] | None = None,
             check_existence: bool = True,
     ):
-        self.comparators: tuple[TrackCompare] = to_collection(comparators)
+        self.comparators: tuple[TrackComparer] = to_collection(comparators)
         self.match_all = match_all
 
         self.include_paths: Collection[str] | None = include_paths

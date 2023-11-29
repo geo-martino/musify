@@ -8,7 +8,7 @@ from random import choice, randrange, randint
 
 from dateutil.relativedelta import relativedelta
 
-from abstract.item import BaseObject
+from syncify.abstract.item import BaseObject
 from tests.common import path_resources, path_cache, random_str
 
 from syncify.enums.tags import TagName

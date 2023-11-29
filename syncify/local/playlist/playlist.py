@@ -8,9 +8,9 @@ from syncify.abstract.collection import Playlist
 from syncify.abstract.misc import Result
 from syncify.local.file import File
 from syncify.local.library.collection import LocalCollection
-from syncify.local.playlist.processor.limit import TrackLimit
-from syncify.local.playlist.processor.match import TrackMatch
-from syncify.local.playlist.processor.sort import TrackSort
+from syncify.local.playlist.processor.limit import TrackLimiter
+from syncify.local.playlist.processor.match import TrackMatcher
+from syncify.local.playlist.processor.sort import TrackSorter
 from syncify.local.track.base.track import LocalTrack
 
 
@@ -62,9 +62,9 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
     def __init__(
             self,
             path: str,
-            matcher: TrackMatch | None = None,
-            limiter: TrackLimit | None = None,
-            sorter: TrackSort | None = None,
+            matcher: TrackMatcher | None = None,
+            limiter: TrackLimiter | None = None,
+            sorter: TrackSorter | None = None,
     ):
         Playlist.__init__(self)
 

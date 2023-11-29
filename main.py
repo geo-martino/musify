@@ -18,11 +18,11 @@ from syncify.local.library import LocalLibrary, MusicBee
 from syncify.local.library.collection import LocalFolder
 from syncify.report import Report
 from syncify.settings import Settings
-from syncify.spotify.api.api import API
+from syncify.spotify import API
 from syncify.spotify.base import SpotifyObject
 from syncify.spotify.library.library import SpotifyLibrary
-from syncify.spotify.processor.check import Checker
-from syncify.spotify.processor.search import Searcher, AlgorithmSettings
+from syncify.spotify.processor.check import SpotifyItemChecker
+from syncify.spotify.processor.search import SpotifyItemSearcher, AlgorithmSettings
 from syncify.utils.helpers import get_user_input
 from syncify.utils.logger import Logger, STAT
 from syncify.utils.printers import print_logo, print_line, print_time
@@ -368,7 +368,7 @@ class Syncify(Settings, Report):
         folders = self._get_limited_folders()
 
         allow_karaoke = AlgorithmSettings.ITEMS.allow_karaoke
-        checker = Checker(api=self.api, allow_karaoke=allow_karaoke)
+        checker = SpotifyItemChecker(api=self.api, allow_karaoke=allow_karaoke)
         check_results = checker.check(folders, interval=self.cfg_run.get("interval", 10))
 
         if check_results:
@@ -397,10 +397,10 @@ class Syncify(Settings, Report):
             return
 
         allow_karaoke = AlgorithmSettings.ITEMS.allow_karaoke
-        searcher = Searcher(api=self.api, allow_karaoke=allow_karaoke)
+        searcher = SpotifyItemSearcher(api=self.api, allow_karaoke=allow_karaoke)
         searcher.search(albums)
 
-        checker = Checker(api=self.api, allow_karaoke=allow_karaoke)
+        checker = SpotifyItemChecker(api=self.api, allow_karaoke=allow_karaoke)
         checker.check(albums, interval=self.cfg_run.get("interval", 10))
 
         self.logger.info(f"\33[1;95m ->\33[1;97m Updating tags for {len(self.local_library)} tracks: uri \33[0m")

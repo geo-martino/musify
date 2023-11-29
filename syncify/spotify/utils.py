@@ -3,8 +3,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from syncify.enums import EnumNotFoundError
-from syncify.spotify import __URL_API__, __URL_EXT__
-from syncify.spotify.api import APIMethodInputType
+from syncify.spotify import __URL_API__, __URL_EXT__, APIMethodInputType
 from syncify.spotify.enums import IDType, ItemType
 from syncify.spotify.exception import SpotifyError, SpotifyIDTypeError, SpotifyItemTypeError
 from syncify.utils import UnitIterable

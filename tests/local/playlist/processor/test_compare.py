@@ -5,26 +5,26 @@ from tests.local.track.track import random_track
 
 from syncify.enums.tags import TagName, PropertyName
 from syncify.local.exception import LocalProcessorError
-from syncify.local.playlist.processor.compare import TrackCompare
+from syncify.local.playlist.processor.compare import TrackComparer
 from syncify.local.track import MP3, M4A, FLAC
 
 
 def test_init():
-    comparator = TrackCompare(field=TagName.IMAGES, condition="Contains")
+    comparator = TrackComparer(field=TagName.IMAGES, condition="Contains")
     assert comparator.field == TagName.IMAGES
     assert comparator._expected is None
     assert not comparator._converted
     assert comparator._condition == "Contains"
     assert comparator._method == comparator._cond_contains
 
-    comparator = TrackCompare(field=PropertyName.DATE_ADDED, condition="___greater than_  ")
+    comparator = TrackComparer(field=PropertyName.DATE_ADDED, condition="___greater than_  ")
     assert comparator.field == PropertyName.DATE_ADDED
     assert not comparator._converted
     assert comparator._expected is None
     assert comparator._condition == "GreaterThan"
     assert comparator._method == comparator._cond_is_after
 
-    comparator = TrackCompare(field=PropertyName.EXT, condition=" is  _", expected=[".mp3", ".flac"])
+    comparator = TrackComparer(field=PropertyName.EXT, condition=" is  _", expected=[".mp3", ".flac"])
     assert comparator.field == PropertyName.EXT
     assert not comparator._converted
     assert comparator._expected == [".mp3", ".flac"]
@@ -32,14 +32,14 @@ def test_init():
     assert comparator._method == comparator._cond_is
 
     with pytest.raises(LookupError):
-        TrackCompare(field=PropertyName.EXT, condition="this cond does not exist")
+        TrackComparer(field=PropertyName.EXT, condition="this cond does not exist")
 
 
 def test_compare_with_reference():
     track_1 = random_track()
     track_2 = random_track()
 
-    comparator = TrackCompare(field=TagName.ALBUM, condition="StartsWith")
+    comparator = TrackComparer(field=TagName.ALBUM, condition="StartsWith")
     assert comparator._expected is None
     assert not comparator._converted
 
@@ -60,7 +60,7 @@ def test_compare_str():
     track = random_track(MP3)
 
     # no expected values conversion
-    comparator = TrackCompare(field=PropertyName.EXT, condition=" is  _", expected=[".mp3", ".flac"])
+    comparator = TrackComparer(field=PropertyName.EXT, condition=" is  _", expected=[".mp3", ".flac"])
     assert comparator._expected == [".mp3", ".flac"]
     assert comparator._method == comparator._cond_is
 
@@ -74,7 +74,7 @@ def test_compare_str():
 def test_compare_int():
     track = random_track()
 
-    comparator = TrackCompare(field=TagName.TRACK, condition="is in", expected=["1", 2, "3"])
+    comparator = TrackComparer(field=TagName.TRACK, condition="is in", expected=["1", 2, "3"])
     assert comparator._expected == ["1", 2, "3"]
     assert not comparator._converted
     assert comparator._method == comparator._cond_is_in
@@ -90,7 +90,7 @@ def test_compare_int():
     assert comparator._converted
 
     # int: conversion when given a time str
-    comparator = TrackCompare(field=PropertyName.RATING, condition="greater than", expected="1:30,618")
+    comparator = TrackComparer(field=PropertyName.RATING, condition="greater than", expected="1:30,618")
     assert comparator._expected == ["1:30,618"]
     assert not comparator._converted
     assert comparator._method == comparator._cond_is_after
@@ -109,7 +109,7 @@ def test_compare_float():
     track = random_track()
 
     # float
-    comparator = TrackCompare(field=TagName.BPM, condition="in_range", expected=["81.96", 100.23])
+    comparator = TrackComparer(field=TagName.BPM, condition="in_range", expected=["81.96", 100.23])
     assert comparator._expected == ["81.96", 100.23]
     assert not comparator._converted
     assert comparator._method == comparator._cond_in_range
@@ -130,7 +130,7 @@ def test_compare_date():
     track = random_track()
 
     # all datetime comparisons only consider date part
-    comparator = TrackCompare(field=PropertyName.DATE_ADDED, condition="is", expected=datetime(2023, 4, 21, 19, 20))
+    comparator = TrackComparer(field=PropertyName.DATE_ADDED, condition="is", expected=datetime(2023, 4, 21, 19, 20))
     assert comparator._expected == [datetime(2023, 4, 21, 19, 20)]
     assert not comparator._converted
     assert comparator._method == comparator._cond_is
@@ -141,7 +141,7 @@ def test_compare_date():
     assert comparator._converted
 
     # converts supported strings
-    comparator = TrackCompare(field=PropertyName.DATE_ADDED, condition="is_not", expected="20/01/01")
+    comparator = TrackComparer(field=PropertyName.DATE_ADDED, condition="is_not", expected="20/01/01")
     assert comparator._expected == ["20/01/01"]
     assert not comparator._converted
     assert comparator._method == comparator._cond_is_not
@@ -150,7 +150,7 @@ def test_compare_date():
     assert comparator._expected == [date(2001, 1, 20)]
     assert comparator._converted
 
-    comparator = TrackCompare(field=PropertyName.DATE_ADDED, condition="is_not", expected="13/8/2004")
+    comparator = TrackComparer(field=PropertyName.DATE_ADDED, condition="is_not", expected="13/8/2004")
     assert comparator._expected == ["13/8/2004"]
     assert not comparator._converted
     assert comparator._method == comparator._cond_is_not
@@ -160,7 +160,7 @@ def test_compare_date():
     assert comparator._converted
 
     # converts date ranges
-    comparator = TrackCompare(field=PropertyName.DATE_ADDED, condition="is_in_the_last", expected="8h")
+    comparator = TrackComparer(field=PropertyName.DATE_ADDED, condition="is_in_the_last", expected="8h")
     assert comparator._expected == ["8h"]
     assert not comparator._converted
     assert comparator._method == comparator._cond_is_after

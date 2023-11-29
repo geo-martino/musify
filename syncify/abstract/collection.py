@@ -71,7 +71,7 @@ class ItemCollection[T: Item](BaseObject, list[T], PrettyPrinter, metaclass=ABCM
         """Sort the items in this collection in-place"""
         self.items.sort(key=key, reverse=reverse)
 
-    def merge_items(self, items: Collection[T] | Library, tags: UnitIterable[TagName] = TagName.ALL) -> None:
+    def merge_items(self, items: Collection[T], tags: UnitIterable[TagName] = TagName.ALL) -> None:
         """
         Merge this collection with another collection or list of items
         by performing an inner join on a given set of tags

@@ -4,7 +4,7 @@ from os.path import exists
 
 from syncify.abstract.misc import Result
 from syncify.local.playlist.playlist import LocalPlaylist
-from syncify.local.playlist.processor.match import TrackMatch
+from syncify.local.playlist.processor.match import TrackMatcher
 from syncify.local.track import LocalTrack, load_track
 from syncify.utils import UnitCollection
 
@@ -74,7 +74,7 @@ class M3U(LocalPlaylist):
 
         self._description = None
 
-        matcher = TrackMatch(
+        matcher = TrackMatcher(
             include_paths=paths,
             library_folder=library_folder,
             other_folders=other_folders,

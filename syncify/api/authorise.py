@@ -9,7 +9,7 @@ from webbrowser import open as webopen
 
 import requests
 
-from syncify.spotify.exception import APIError
+from syncify.api.exception import APIError
 from syncify.utils.logger import Logger
 
 
