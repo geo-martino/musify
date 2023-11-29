@@ -11,7 +11,7 @@ from syncify.spotify.library.playlist import SpotifyPlaylist, SyncResultSpotifyP
 from syncify.utils.logger import REPORT, STAT
 
 
-class SpotifyLibrary(Library):
+class SpotifyLibrary(Library[SpotifyTrack]):
     """
     Represents a Spotify library, providing various methods for manipulating
     tracks and playlists across an entire Spotify library collection.

@@ -24,7 +24,7 @@ class SyncResultSpotifyPlaylist(Result):
     final: int
 
 
-class SpotifyPlaylist(Playlist, SpotifyCollection):
+class SpotifyPlaylist(SpotifyCollection[SpotifyTrack], Playlist[SpotifyTrack]):
     """
     Extracts key ``playlist`` data from a Spotify API JSON response.
 
@@ -36,11 +36,11 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
         return self._name
 
     @property
-    def items(self) -> list[SpotifyTrack]:
+    def items(self):
         return self.tracks
 
     @property
-    def tracks(self) -> list[SpotifyTrack]:
+    def tracks(self):
         return self._tracks
 
     @property

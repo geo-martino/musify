@@ -12,7 +12,7 @@ from syncify.utils import UnitCollection
 from syncify.utils.helpers import to_collection
 
 
-class SpotifyItem(Item, SpotifyObject, metaclass=ABCMeta):
+class SpotifyItem(SpotifyObject, Item, metaclass=ABCMeta):
     """Generic class for storing a Spotify item."""
 
     @property
@@ -24,7 +24,7 @@ class SpotifyItem(Item, SpotifyObject, metaclass=ABCMeta):
         return not self.response.get("is_local", False)
 
 
-class SpotifyTrack(Track, SpotifyItem):
+class SpotifyTrack(SpotifyItem, Track):
     """
     Extracts key ``track`` data from a Spotify API JSON response.
 

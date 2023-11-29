@@ -16,7 +16,7 @@ from syncify.utils import UnitCollection, UnitIterable
 from syncify.utils.logger import Logger, REPORT
 
 
-class LocalLibrary(Library, LocalCollectionFiltered):
+class LocalLibrary(LocalCollectionFiltered[LocalTrack], Library[LocalTrack]):
     """
     Represents a local library, providing various methods for manipulating
     tracks and playlists across an entire local library collection.

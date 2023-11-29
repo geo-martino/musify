@@ -18,17 +18,17 @@ from syncify.utils.logger import Logger, STAT
 __max_str = "z" * 50
 
 
-class LocalCollection(ItemCollection, LocalObject, Logger, metaclass=ABCMeta):
+class LocalCollection[T: LocalObject](ItemCollection[T], Logger, metaclass=ABCMeta):
     """Generic class for storing a collection of local tracks."""
 
     @property
     @abstractmethod
-    def tracks(self) -> list[LocalTrack]:
+    def tracks(self):
         """The tracks in this collection"""
         raise NotImplementedError
 
     @property
-    def items(self) -> list[LocalTrack]:
+    def items(self):
         """The tracks in this collection"""
         return self.tracks
 
@@ -112,36 +112,36 @@ class LocalCollection(ItemCollection, LocalObject, Logger, metaclass=ABCMeta):
             "last_played": self.last_played,
         }
 
-    def __getitem__(self, key: str | int | Item) -> Item:
+    def __getitem__(self, __key: str | int | Item) -> Item:
         """
         Returns the item in this collection by matching on a given path/index/URI.
         If an item is given, the URI or path is extracted from this item.
         """
-        if isinstance(key, int):  # simply index the list or items
-            return self.items[key]
-        elif isinstance(key, LocalTrack):  # take the path
-            key = key.path
-        elif isinstance(key, Item):  # take the URI
-            if not key.has_uri or key.uri is None:
-                raise KeyError(f"Given item does not have a URI associated: {key.name}")
-            key = key.uri
+        if isinstance(__key, int):  # simply index the list or items
+            return self.items[__key]
+        elif isinstance(__key, LocalTrack):  # take the path
+            __key = __key.path
+        elif isinstance(__key, Item):  # take the URI
+            if not __key.has_uri or __key.uri is None:
+                raise KeyError(f"Given item does not have a URI associated: {__key.name}")
+            __key = __key.uri
 
-        if not validate_id_type(key, kind=IDType.URI):  # string is not a URI, assume it is a path or name
-            if key in self.track_paths:  # path is valid
-                return next(track for track in self.tracks if track.path == key)
+        if not validate_id_type(__key, kind=IDType.URI):  # string is not a URI, assume it is a path or name
+            if __key in self.track_paths:  # path is valid
+                return next(track for track in self.tracks if track.path == __key)
 
             try:  # last try, assume given string is a name
-                return next(item for item in self.items if item.name == key)
+                return next(item for item in self.items if item.name == __key)
             except StopIteration:
-                raise KeyError(f"No matching name found: '{key}'")
+                raise KeyError(f"No matching name found: '{__key}'")
 
         try:  # string is a URI
-            return next(item for item in self.items if item.uri == key)
+            return next(item for item in self.items if item.uri == __key)
         except StopIteration:
-            raise KeyError(f"No matching URI found: '{key}'")
+            raise KeyError(f"No matching URI found: '{__key}'")
 
 
-class LocalCollectionFiltered(LocalCollection):
+class LocalCollectionFiltered[T: LocalObject](LocalCollection[T]):
     """
     Generic class for storing and filtering on a collection of local tracks
     with methods for enriching the attributes of this object from the attributes of the collection of tracks
@@ -202,7 +202,7 @@ class LocalCollectionFiltered(LocalCollection):
         return matched
 
 
-class LocalFolder(LocalCollectionFiltered, Folder):
+class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
     """
     Object representing a collection of tracks in a folder on the local drive
 
@@ -280,7 +280,7 @@ class LocalFolder(LocalCollectionFiltered, Folder):
         }
 
 
-class LocalAlbum(LocalCollectionFiltered, Album):
+class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):
     """
     Object representing a collection of tracks of an album.
 
@@ -348,7 +348,7 @@ class LocalAlbum(LocalCollectionFiltered, Album):
         }
 
 
-class LocalArtist(LocalCollectionFiltered, Artist):
+class LocalArtist(LocalCollectionFiltered[LocalTrack], Artist[LocalTrack]):
     """
     Object representing a collection of tracks by a single artist.
 
@@ -387,7 +387,7 @@ class LocalArtist(LocalCollectionFiltered, Artist):
         }
 
 
-class LocalGenres(LocalCollectionFiltered, Genre):
+class LocalGenres(LocalCollectionFiltered[LocalTrack], Genre[LocalTrack]):
     """
     Object representing a collection of tracks within a genre.
 

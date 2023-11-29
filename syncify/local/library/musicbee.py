@@ -13,7 +13,7 @@ from syncify.utils import UnitCollection
 from syncify.utils.logger import Logger
 
 
-class MusicBee(File, LocalLibrary):
+class MusicBee(LocalLibrary, File):
     """
     Represents a local MusicBee library, providing various methods for manipulating
     tracks and playlists across an entire local library collection.

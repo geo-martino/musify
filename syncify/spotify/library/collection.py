@@ -13,18 +13,19 @@ from syncify.spotify.library.item import SpotifyTrack, SpotifyArtist, SpotifyIte
 from syncify.spotify.utils import validate_item_type, convert, extract_ids, get_id_type
 
 
-class SpotifyCollection(ItemCollection, SpotifyObject, metaclass=ABCMeta):
+# noinspection PyShadowingNames
+class SpotifyCollection[T: SpotifyItem](SpotifyObject, ItemCollection[T], metaclass=ABCMeta):
     """Generic class for storing a collection of Spotify tracks."""
 
     @property
     @abstractmethod
-    def items(self) -> list[SpotifyItem]:
+    def items(self):
         raise NotImplementedError
 
     @classmethod
     @abstractmethod
     def load(
-            cls, value: APIMethodInputType, use_cache: bool = True, items: Iterable[SpotifyItem] | None = None
+            cls, value: APIMethodInputType, use_cache: bool = True, items: Iterable[T] | None = None
     ) -> Self:
         """
         Generate a new object, calling all required endpoints to get a complete set of data for this item type.
@@ -60,41 +61,41 @@ class SpotifyCollection(ItemCollection, SpotifyObject, metaclass=ABCMeta):
         except (ValueError, AssertionError, TypeError):  # reload response from the API
             return cls.api.get_collections(value, kind=item_type, use_cache=use_cache)[0]
 
-    def __getitem__(self, key: str | int | Item) -> SpotifyItem:
-        if isinstance(key, int):  # simply index the list or items
-            return self.items[key]
-        elif isinstance(key, Item):  # take the URI
-            if not key.has_uri or key.uri is None:
-                raise KeyError(f"Given item does not have a URI associated: {key.name}")
-            key = key.uri
+    def __getitem__(self, __key: str | int | Item) -> T:
+        if isinstance(__key, int):  # simply index the list or items
+            return self.items[__key]
+        elif isinstance(__key, Item):  # take the URI
+            if not __key.has_uri or __key.uri is None:
+                raise KeyError(f"Given item does not have a URI associated: {__key.name}")
+            __key = __key.uri
             key_type = IDType.URI
         else:  # determine the ID type
             try:
-                key_type = get_id_type(key)
+                key_type = get_id_type(__key)
             except SpotifyIDTypeError:
                 try:
-                    return next(item for item in self.items if item.name == key)
+                    return next(item for item in self.items if item.name == __key)
                 except StopIteration:
-                    raise KeyError(f"No matching name found: '{key}'")
+                    raise KeyError(f"No matching name found: '{__key}'")
 
         try:  # get the item based on the ID type
             if key_type == IDType.URI:
-                return next(item for item in self.items if item.uri == key)
+                return next(item for item in self.items if item.uri == __key)
             elif key_type == IDType.ID:
-                return next(item for item in self.items if item.uri.split(":")[2] == key)
+                return next(item for item in self.items if item.uri.split(":")[2] == __key)
             elif key_type == IDType.URL:
-                key = convert(key, type_in=IDType.URL, type_out=IDType.URI)
-                return next(item for item in self.items if item.uri == key)
+                __key = convert(__key, type_in=IDType.URL, type_out=IDType.URI)
+                return next(item for item in self.items if item.uri == __key)
             elif key_type == IDType.URL_EXT:
-                key = convert(key, type_in=IDType.URL_EXT, type_out=IDType.URI)
-                return next(item for item in self.items if item.uri == key)
+                __key = convert(__key, type_in=IDType.URL_EXT, type_out=IDType.URI)
+                return next(item for item in self.items if item.uri == __key)
             else:
-                raise KeyError(f"ID Type not recognised: '{key}'")
+                raise KeyError(f"ID Type not recognised: '{__key}'")
         except StopIteration:
-            raise KeyError(f"No matching {key_type.name} found: '{key}'")
+            raise KeyError(f"No matching {key_type.name} found: '{__key}'")
 
 
-class SpotifyAlbum(Album, SpotifyCollection):
+class SpotifyAlbum(SpotifyCollection[SpotifyTrack], Album[SpotifyTrack]):
     """
     Extracts key ``album`` data from a Spotify API JSON response.
 
@@ -106,15 +107,15 @@ class SpotifyAlbum(Album, SpotifyCollection):
         return self.response["name"]
 
     @property
-    def items(self) -> list[SpotifyTrack]:
+    def items(self):
         return self.tracks
 
     @property
-    def tracks(self) -> list[SpotifyTrack]:
+    def tracks(self):
         return self._tracks
 
     @property
-    def artists(self) -> list[SpotifyArtist]:
+    def artists(self):
         return self._artists
 
     @property

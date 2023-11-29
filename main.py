@@ -551,6 +551,7 @@ if __name__ == "__main__":
 # TODO: new music playlist that adds songs from artists user follows that
 #  have been released within a given timeframe e.g. a day
 # TODO: implement XAutoPF full update functionality
+# TODO: expand docstrings everywhere
 
 
 ## SMALLER/GENERAL ONES
@@ -567,15 +568,11 @@ if __name__ == "__main__":
 #    this is due to case-sensitive paths not being found in linux
 #    from using lowercase path cleaning logic in TrackMatch
 
-# TODO: add collections inheritance on all classes with dunder funcs
-#  + extend near-collections to match abstractions
-
 # TODO: implement merge_playlists functions and,
 #  by extension, implement android library sync
 
 
 ## NEEDED FOR v0.3
-# TODO: add docstrings to top of all scripts
 # TODO: how to read WMA images
 # TODO: write tests, write tests, write tests
-# TODO: update the readme
+# TODO: update the readme (dynamic readme?)

@@ -14,7 +14,7 @@ from syncify.local.playlist.processor.sort import TrackSort
 from syncify.local.track.base.track import LocalTrack
 
 
-class LocalPlaylist(Playlist, LocalCollection, File, metaclass=ABCMeta):
+class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, metaclass=ABCMeta):
     """
     Generic class for manipulating local playlists.
 

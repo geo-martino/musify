@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, Mapping, Iterable, Container
 from copy import deepcopy
 from datetime import datetime
-from typing import Any, Self
+from typing import Any, Self, SupportsIndex
 
 from syncify.abstract.item import Item, BaseObject, Track
 from syncify.abstract.misc import PrettyPrinter
@@ -16,12 +16,13 @@ from syncify.utils.helpers import to_collection
 from syncify.utils.logger import Logger
 
 
-class ItemCollection(BaseObject, PrettyPrinter, metaclass=ABCMeta):
+# noinspection PyShadowingNames
+class ItemCollection[T: Item](BaseObject, list[T], PrettyPrinter, metaclass=ABCMeta):
     """Generic class for storing a collection of items."""
 
     @property
     @abstractmethod
-    def items(self) -> list[Item]:
+    def items(self) -> list[T]:
         """The items in this collection"""
         raise NotImplementedError
 
@@ -30,23 +31,47 @@ class ItemCollection(BaseObject, PrettyPrinter, metaclass=ABCMeta):
         """The total number of items in this collection"""
         return len(self)
 
-    def append(self, item: Item) -> None:
+    def index(self, __item: T, __start: SupportsIndex = None, __stop: SupportsIndex = None) -> int:
         """Append one item to the items in this collection"""
-        self.items.append(item)
+        return self.items.index(__item, __start, __stop)
 
-    def extend(self, __iterable: Iterable[Item]) -> None:
+    def count(self, __item: T) -> int:
+        """Append one item to the items in this collection"""
+        return self.items.count(__item)
+
+    def append(self, __item: T) -> None:
+        """Append one item to the items in this collection"""
+        self.items.append(__item)
+
+    def extend(self, __items: Iterable[T]) -> None:
         """Append many items to the items in this collection"""
-        self.items.extend(__iterable)
+        self.items.extend(__items)
 
-    def remove(self, item: Item) -> None:
+    def insert(self, __index: int, __item: T) -> None:
+        """Append many items to the items in this collection"""
+        self.items.insert(__index, __item)
+
+    def remove(self, __item: T) -> None:
         """Remove one item from the items in this collection"""
-        self.items.remove(item)
+        self.items.remove(__item)
+
+    def pop(self, __item: SupportsIndex = None) -> T:
+        """Remove one item from the items in this collection and return it"""
+        return self.items.pop(__item)
 
     def clear(self) -> None:
         """Remove all items from this collection"""
         self.items.clear()
 
-    def merge_items(self, items: Collection[Item] | Library, tags: UnitIterable[TagName] = TagName.ALL) -> None:
+    def reverse(self) -> None:
+        """Reverse the order of items in this collection in-place"""
+        self.items.reverse()
+
+    def sort(self, *, key: Any = None, reverse: bool = False) -> None:
+        """Sort the items in this collection in-place"""
+        self.items.sort(key=key, reverse=reverse)
+
+    def merge_items(self, items: Collection[T] | Library, tags: UnitIterable[TagName] = TagName.ALL) -> None:
         """
         Merge this collection with another collection or list of items
         by performing an inner join on a given set of tags
@@ -84,16 +109,20 @@ class ItemCollection(BaseObject, PrettyPrinter, metaclass=ABCMeta):
         """Uniqueness of collection is a combination of its name and the items it holds"""
         return hash((self.name, (item for item in self.items)))
 
-    def __eq__(self, collection: Self):
+    def __eq__(self, __collection: Self):
         """Names equal and all items equal in order"""
         return (
-            self.name == collection.name
-            and len(self) == len(collection)
-            and all(x == y for x, y in zip(self, collection))
+            self.name == __collection.name
+            and len(self) == len(__collection)
+            and all(x == y for x, y in zip(self, __collection))
         )
 
-    def __ne__(self, collection: Self):
-        return not self.__eq__(collection)
+    def __ne__(self, __collection: Self):
+        return not self.__eq__(__collection)
+
+    def __iadd__(self, __items: list[Item]):
+        self.extend(__items)
+        return self.items
 
     def __len__(self):
         return len(self.items)
@@ -104,57 +133,58 @@ class ItemCollection(BaseObject, PrettyPrinter, metaclass=ABCMeta):
     def __reversed__(self):
         return reversed(self.items)
 
-    def __contains__(self, item: Item):
-        return any(item == i for i in self.items)
+    def __contains__(self, __item: T):
+        return any(__item == i for i in self.items)
 
-    def __getitem__(self, key: str | int | Item) -> Item:
-        if isinstance(key, int):  # simply index the list or items
-            return self.items[key]
-        elif isinstance(key, Item):  # take the URI
-            if not key.has_uri or key.uri is None:
-                raise KeyError(f"Given item does not have a URI associated: {key.name}")
-            key = key.uri
-        elif not validate_id_type(key, kind=IDType.URI):  # assume the string is a name
+    def __getitem__(self, __key: str | int | Item) -> T:
+        if isinstance(__key, int):  # simply index the list or items
+            return self.items[__key]
+        elif isinstance(__key, Item):  # take the URI
+            if not __key.has_uri or __key.uri is None:
+                raise KeyError(f"Given item does not have a URI associated: {__key.name}")
+            __key = __key.uri
+        elif not validate_id_type(__key, kind=IDType.URI):  # assume the string is a name
             try:
-                return next(item for item in self.items if item.name == key)
+                return next(item for item in self.items if item.name == __key)
             except StopIteration:
-                raise KeyError(f"No matching name found: '{key}'")
+                raise KeyError(f"No matching name found: '{__key}'")
 
         try:  # string is a URI
-            return next(item for item in self.items if item.uri == key)
+            return next(item for item in self.items if item.uri == __key)
         except StopIteration:
-            raise KeyError(f"No matching URI found: '{key}'")
+            raise KeyError(f"No matching URI found: '{__key}'")
 
-    def __setitem__(self, key: str | int | Item, value: Item):
+    def __setitem__(self, __key: str | int | T, __value: T):
         try:
-            value_self = self[key]
+            value_self = self[__key]
         except KeyError:
-            if isinstance(key, int):  # don't append if key is index
-                raise KeyError(f"Given index is out of range: {key}")
-            self.append(value)
+            if isinstance(__key, int):  # don't append if key is index
+                raise KeyError(f"Given index is out of range: {__key}")
+            self.append(__value)
             return
 
-        if type(value) is not type(value_self):  # only merge attributes if matching types
+        if type(__value) is not type(value_self):  # only merge attributes if matching types
             raise ValueError("Trying to set value on mismatched item types")
 
-        for key, value in value.__dict__.items():  # merge attributes
-            setattr(value_self, key, deepcopy(value))
+        for __key, __value in __value.__dict__.items():  # merge attributes
+            setattr(value_self, __key, deepcopy(__value))
 
-    def __delitem__(self, key: str | int | Item):
-        del self[key]
+    def __delitem__(self, __key: str | int | T):
+        del self[__key]
 
 
-class BasicCollection(ItemCollection):
+# noinspection PyShadowingNames
+class BasicCollection[T: Item](ItemCollection[T]):
     @property
     def name(self):
         """The name of this collection"""
         return self._name
 
     @property
-    def items(self) -> list[Item]:
+    def items(self) -> list[T]:
         return self._items
 
-    def __init__(self, name: str, items: Collection[Item]):
+    def __init__(self, name: str, items: Collection[T]):
         super().__init__()
         self._name = name
         self._items = to_collection(items, list)
@@ -163,7 +193,7 @@ class BasicCollection(ItemCollection):
         return {"name": self.name, "items": self.items}
 
 
-class Playlist(ItemCollection, metaclass=ABCMeta):
+class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
     """A playlist of items and some of their derived properties/objects"""
 
     @property
@@ -173,13 +203,13 @@ class Playlist(ItemCollection, metaclass=ABCMeta):
         raise NotImplementedError
 
     @property
-    def items(self) -> list[Track]:
+    def items(self):
         """The tracks in this playlist"""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def tracks(self) -> list[Track]:
+    def tracks(self):
         """The tracks in this playlist"""
         raise NotImplementedError
 
@@ -224,7 +254,8 @@ class Playlist(ItemCollection, metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class Library(ItemCollection, Logger, metaclass=ABCMeta):
+# noinspection PyShadowingNames
+class Library[T: Track](ItemCollection[T], Logger, metaclass=ABCMeta):
     """A library of items and playlists"""
 
     @property
@@ -234,13 +265,13 @@ class Library(ItemCollection, Logger, metaclass=ABCMeta):
         raise NotImplementedError
 
     @property
-    def items(self) -> list[Track]:
+    def items(self):
         """The tracks in this library"""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def tracks(self) -> list[Track]:
+    def tracks(self):
         """The tracks in this library"""
         raise NotImplementedError
 
@@ -303,7 +334,7 @@ class Library(ItemCollection, Logger, metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class Folder(ItemCollection, metaclass=ABCMeta):
+class Folder[T: Track](ItemCollection[T], metaclass=ABCMeta):
     """A folder of items and some of their derived properties/objects"""
 
     @property
@@ -318,13 +349,13 @@ class Folder(ItemCollection, metaclass=ABCMeta):
         return self.name
 
     @property
-    def items(self) -> list[Track]:
+    def items(self):
         """The tracks in this folder"""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def tracks(self) -> list[Track]:
+    def tracks(self):
         """The tracks in this folder"""
         raise NotImplementedError
 
@@ -358,7 +389,7 @@ class Folder(ItemCollection, metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class Album(ItemCollection, metaclass=ABCMeta):
+class Album[T: Track](ItemCollection[T], metaclass=ABCMeta):
     """An album of items and some of their derived properties/objects"""
 
     @property
@@ -373,13 +404,13 @@ class Album(ItemCollection, metaclass=ABCMeta):
         return self.name
 
     @property
-    def items(self) -> list[Track]:
+    def items(self):
         """The tracks on this album"""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def tracks(self) -> list[Track]:
+    def tracks(self):
         """The tracks on this album"""
         raise NotImplementedError
 
@@ -449,7 +480,7 @@ class Album(ItemCollection, metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class Artist(ItemCollection, metaclass=ABCMeta):
+class Artist[T: Track](ItemCollection[T], metaclass=ABCMeta):
     """An artist of items and some of their derived properties/objects"""
 
     @property
@@ -504,7 +535,7 @@ class Artist(ItemCollection, metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class Genre(ItemCollection, metaclass=ABCMeta):
+class Genre[T: Track](ItemCollection[T], metaclass=ABCMeta):
     """A genre of items and some of their derived properties/objects"""
 
     @property
@@ -519,13 +550,13 @@ class Genre(ItemCollection, metaclass=ABCMeta):
         return self.name
 
     @property
-    def items(self) -> list[Track]:
+    def items(self):
         """The tracks for this genre"""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def tracks(self) -> list[Track]:
+    def tracks(self):
         """The tracks for this genre"""
         raise NotImplementedError
 

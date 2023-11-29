@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from collections.abc import Hashable
 from datetime import datetime
 from typing import Self, Any
 
@@ -26,7 +27,7 @@ class BaseObject:
         self._clean_tags: dict[str, Any] = {}
 
 
-class Item(BaseObject, PrettyPrinter, metaclass=ABCMeta):
+class Item(BaseObject, PrettyPrinter, Hashable, metaclass=ABCMeta):
     """Generic class for storing an item."""
 
     @property
