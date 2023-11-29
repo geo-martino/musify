@@ -5,8 +5,6 @@ from typing import Any
 
 from . import Number
 
-sort_ignore_words = frozenset(["The", "A"])
-
 
 def to_collection[T: (list, set, tuple)](data: Any, cls: T = tuple) -> T | None:
     """Safely turn any object into a collection unless None"""
@@ -14,33 +12,40 @@ def to_collection[T: (list, set, tuple)](data: Any, cls: T = tuple) -> T | None:
         return data
     elif isinstance(data, Iterable) and not isinstance(data, str) and not isinstance(data, Mapping):
         return cls(data)
-    elif cls is list:
-        return [data]
-    elif cls is set:
-        return {data}
     elif cls is tuple:
         return (data,)
-    raise Exception(f"Unable to convert data to {cls} (data = {data})")
+    elif cls is set:
+        return {data}
+    elif cls is list:
+        return [data]
+    raise TypeError(f"Unable to convert data to {cls.__name__} (data={data})")
 
 
-def strip_ignore_words(value: str, words: Iterable[str] = sort_ignore_words) -> (bool, str):
+def strip_ignore_words(value: str, words: Iterable[str] | None = frozenset(["The", "A"])) -> (bool, str):
     """
-    Remove ignorable words from a string.
+    Remove ignorable words from the beginning of a string.
+    Useful for sorting collections strings with ignorable start words and/or special characters.
+    Only removes the first word it finds at the start of the string.
 
     :returns: Tuple (True if the string starts with some special character, the formatted string)
     """
     if not value:
         return False, value
 
-    new_value = value
-    not_special = not any(value.startswith(c) for c in list('!"£$%^&*()_+-=…'))
+    special_chars = list('!"£$%^&*()_+-=…')
+    special_start = any(value.startswith(c) for c in special_chars)
+    value = re.sub(rf"^\W+", "", value).strip()
 
+    if not words:
+        return not special_start, value
+
+    new_value = value
     for word in words:
-        new_value = re.sub(f"^{word} ", "", value)
+        new_value = re.sub(rf"^{word}\s+", "", value, flags=re.IGNORECASE)
         if new_value != value:
             break
 
-    return not_special, new_value
+    return not special_start, new_value
 
 
 def flatten_nested[T: Any](nested: MutableMapping, previous: MutableSequence[T] | None = None) -> list[T]:

@@ -20,7 +20,7 @@ class PrettyPrinter(metaclass=ABCMeta):
     @staticmethod
     def _camel_to_snake(value: str, prefix: str | None = None) -> str:
         """Convert snake_case to CamelCase. Optionally, add a given prefix"""
-        value = re.sub("([A-Z])", lambda m: f"_{m.group(1).lower()}", value.strip("_ "))
+        value = re.sub(r"([A-Z])", lambda m: f"_{m.group(1).lower()}", value.strip("_ "))
         value = re.sub(r"[_ ]+", "_", value).strip("_ ")
         if prefix is not None:
             value = f"{prefix}_{value}"
@@ -30,8 +30,8 @@ class PrettyPrinter(metaclass=ABCMeta):
     def _snake_to_camel(value: str, prefix: str | None = None) -> str:
         """Convert snake_case to CamelCase. Optionally, remove a given prefix"""
         if prefix is not None:
-            value = re.sub(f"^{prefix}", "", value)
-        return re.sub("_(.)", lambda m: m.group(1).upper(), value.strip())
+            value = re.sub(rf"^{prefix}", "", value)
+        return re.sub(r"_(.)", lambda m: m.group(1).upper(), value.strip())
 
     @abstractmethod
     def as_dict(self) -> dict[str, Any]:

@@ -79,8 +79,8 @@ class LogFileFilter(logging.Filter):
 
     # noinspection PyMissingOrEmptyDocstring
     def filter(self, record: logging.LogRecord) -> logging.LogRecord:
-        # record.msg = re.sub("\n$", "", record.msg)
-        record.msg = re.sub("\33.*?m", "", record.msg)
+        # record.msg = re.sub(r"\n$", "", record.msg)
+        record.msg = re.sub(r"\33.*?m", "", record.msg)
         format_full_func_name(record)
         return record
 

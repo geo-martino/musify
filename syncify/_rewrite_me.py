@@ -132,9 +132,9 @@ class Playlists:
     def _clean_path(self, path: str, remove_prefix: str="", stems: list=None):
         remove_prefix = normpath(remove_prefix).replace("\\", "\\\\")
         remove_prefix = remove_prefix.replace(".", "\.")
-        path = re.sub(f"^{remove_prefix}", "", normpath(path)).lstrip(sep)
+        path = re.sub(rf"^{remove_prefix}", "", normpath(path)).lstrip(sep)
         for ext in self._tag_ids:
-            path = re.sub(f"{ext.replace('.', '')}$", "", normpath(path))
+            path = re.sub(rf"{ext.replace('.', '')}$", "", normpath(path))
         
         if stems and path not in stems:
             for stem in stems:
