@@ -3,12 +3,12 @@ from datetime import datetime
 from os.path import basename, dirname, splitext, getmtime
 
 import pytest
-
-from syncify.local.exception import IllegalFileTypeError
-from syncify.local.track import MP3
 from tests.common import path_txt
 from tests.local.track.track import path_track_mp3, path_track_resources
 from tests.local.track.track import update_tags_test, clear_tags_test, update_images_test
+
+from syncify.local.exception import IllegalFileTypeError
+from syncify.local.track import MP3
 
 
 def test_load():

@@ -10,8 +10,8 @@ from syncify.local.track.base.processor import TagProcessor
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 from syncify.spotify.enums import IDType
 from syncify.spotify.utils import check_spotify_type
-from utils import UnitIterable
-from utils.helpers import to_collection
+from syncify.utils import UnitIterable
+from syncify.utils.helpers import to_collection
 
 
 class TagReader(TagProcessor, metaclass=ABCMeta):
@@ -41,7 +41,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
     @property
     def artists(self) -> list[str]:
         """List of all artists featured on this track."""
-        return self._artist.split(self._list_sep)
+        return self._artist.split(self._tag_sep)
 
     @property
     def album(self):
@@ -209,6 +209,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
         self._play_count = value
 
     def __init__(self):
+        super().__init__()
         self._title = None
         self._artist = None
         self._album = None

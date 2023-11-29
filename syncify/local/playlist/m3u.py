@@ -1,12 +1,12 @@
+from collections.abc import Collection
 from dataclasses import dataclass
 from os.path import exists
-from collections.abc import Collection
 
 from syncify.abstract.misc import Result
 from syncify.local.playlist.playlist import LocalPlaylist
 from syncify.local.playlist.processor.match import TrackMatch
 from syncify.local.track import LocalTrack, load_track
-from utils import UnitCollection
+from syncify.utils import UnitCollection
 
 
 @dataclass(frozen=True)

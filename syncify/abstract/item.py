@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Self, Any
 
@@ -8,17 +7,23 @@ from syncify.enums.tags import TagName
 from syncify.utils import UnitIterable
 
 
-@dataclass
 class BaseObject:
     """Generic base class for all local/Spotify item/collections."""
-    clean_tags: dict[str, Any] = None
-    _list_sep: str = "; "
+    _tag_sep: str = "; "
 
     @property
     @abstractmethod
     def name(self) -> str:
         """A name for this object"""
         raise NotImplementedError
+
+    @property
+    def clean_tags(self) -> dict[str, Any]:
+        """A map of tags that have been cleaned to use when matching/searching"""
+        return self._clean_tags
+
+    def __init__(self):
+        self._clean_tags: dict[str, Any] = {}
 
 
 class Item(BaseObject, PrettyPrinter, metaclass=ABCMeta):

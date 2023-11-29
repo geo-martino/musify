@@ -1,9 +1,9 @@
 import re
+from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime, timedelta, date
 from functools import reduce
 from operator import mul
 from typing import Any, Self
-from collections.abc import Callable, Mapping, Sequence
 
 from dateutil.relativedelta import relativedelta
 
@@ -96,8 +96,6 @@ class TrackCompare(TrackProcessor):
         if xml is None:
             return
 
-        print(xml["SmartPlaylist"]["Source"]["Conditions"]["Condition"])
-        print(type(xml["SmartPlaylist"]["Source"]["Conditions"]["Condition"]))
         conditions: tuple[Mapping[str, str]] = to_collection(xml["SmartPlaylist"]["Source"]["Conditions"]["Condition"])
 
         objs = []

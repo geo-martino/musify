@@ -2,13 +2,14 @@ from abc import ABCMeta
 from collections.abc import MutableMapping
 from typing import Any, Self
 
+from abstract.collection import Artist
 from syncify.abstract.item import Item, Track
 from syncify.spotify.api import APIMethodInputType
 from syncify.spotify.base import SpotifyObject
 from syncify.spotify.enums import IDType, ItemType
 from syncify.spotify.utils import convert, extract_ids
-from utils import UnitCollection
-from utils.helpers import to_collection
+from syncify.utils import UnitCollection
+from syncify.utils.helpers import to_collection
 
 
 class SpotifyItem(Item, SpotifyObject, metaclass=ABCMeta):
@@ -43,7 +44,7 @@ class SpotifyTrack(Track, SpotifyItem):
     @property
     def artist(self):
         artists = self.response.get("artists", {})
-        artist = self._list_sep.join(artist["name"] for artist in artists)
+        artist = self._tag_sep.join(artist["name"] for artist in artists)
         return artist if artist else None
 
     @property
@@ -54,7 +55,7 @@ class SpotifyTrack(Track, SpotifyItem):
     @property
     def album_artist(self):
         album = self.response.get("album", {})
-        album_artist = self._list_sep.join(artist["name"] for artist in album.get("artists", []))
+        album_artist = self._tag_sep.join(artist["name"] for artist in album.get("artists", []))
         return album_artist if album_artist else None
 
     @property
@@ -150,7 +151,9 @@ class SpotifyTrack(Track, SpotifyItem):
         return self.response.get("popularity")
 
     def __init__(self, response: MutableMapping[str, Any]):
+        Track.__init__(self)
         SpotifyObject.__init__(self, response=response)
+
         self._disc_total = None
         self._comments = None
 
@@ -222,7 +225,8 @@ class SpotifyArtist(SpotifyItem):
         return self.response.get("popularity")
 
     def __init__(self, response: MutableMapping[str, Any]):
-        SpotifyObject.__init__(self, response)
+        Artist.__init__(self)
+        SpotifyObject.__init__(self, response=response)
 
     @classmethod
     def load(cls, value: APIMethodInputType, use_cache: bool = True) -> Self:

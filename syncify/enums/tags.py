@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import Self
 
+from syncify.utils import UnitIterable
 from syncify.utils.helpers import to_collection
-from utils import UnitIterable
 from . import SyncifyEnum, EnumNotFoundError
 
 

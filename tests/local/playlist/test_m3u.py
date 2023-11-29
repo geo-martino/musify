@@ -2,13 +2,14 @@ import os
 from os.path import dirname, join, splitext, basename, exists
 
 import pytest
+from tests.common import path_txt
+from tests.local.playlist.playlist import copy_playlist_file, path_playlist_m3u, path_resources, \
+    path_playlist_cache
+from tests.local.track.track import random_tracks, path_track_flac, path_track_m4a, path_track_wma
 
 from syncify.local.exception import IllegalFileTypeError
 from syncify.local.playlist import M3U
 from syncify.local.track import FLAC, M4A, WMA
-from tests.common import path_txt
-from tests.local.playlist.playlist import copy_playlist_file, path_playlist_m3u, path_resources, path_playlist_cache
-from tests.local.track.track import random_tracks, path_track_flac, path_track_m4a, path_track_wma
 
 
 def test_load():

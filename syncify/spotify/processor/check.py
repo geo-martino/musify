@@ -1,7 +1,7 @@
 import traceback
 from collections import Counter
 from collections.abc import Mapping, Sequence, MutableSequence, Collection
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from syncify.abstract.collection import ItemCollection
 from syncify.abstract.item import Item, Track
@@ -16,18 +16,13 @@ from syncify.spotify.utils import check_spotify_type, convert
 from syncify.utils.helpers import get_user_input
 from syncify.utils.logger import REPORT
 
-_T = Sequence[Item] | None
-
 
 @dataclass(frozen=True)
 class CheckResult(Result):
     """Stores the results of the checking process"""
-
-    def __init__(self, switched: _T = None, unavailable: _T = None, unchanged: _T = None):
-        Result.__init__(self)
-        self.__dict__["compared"] = switched if switched else tuple()
-        self.__dict__["unavailable"] = unavailable if unavailable else tuple()
-        self.__dict__["unchanged"] = unchanged if unchanged else tuple()
+    switched: Sequence[Item] = field(default=tuple())
+    unavailable: Sequence[Item] = field(default=tuple())
+    unchanged: Sequence[Item] = field(default=tuple())
 
 
 class Checker(Matcher):
@@ -81,7 +76,7 @@ class Checker(Matcher):
             self.api.add_to_playlist(url, items=uris, skip_dupes=False)
         except KeyboardInterrupt:
             self.quit = True
-        except BaseException:
+        except BaseException:  # TODO: too broad an exception clause
             self.logger.error(traceback.format_exc())
             self.quit = True
 

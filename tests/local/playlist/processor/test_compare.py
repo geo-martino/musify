@@ -1,12 +1,12 @@
 from datetime import datetime, date, timedelta
 
 import pytest
+from tests.local.track.track import random_track
 
 from syncify.enums.tags import TagName, PropertyName
 from syncify.local.exception import LocalProcessorError
 from syncify.local.playlist.processor.compare import TrackCompare
 from syncify.local.track import MP3, M4A, FLAC
-from tests.local.track.track import random_track
 
 
 def test_init():

@@ -8,7 +8,7 @@ from syncify.spotify.base import SpotifyObject
 from syncify.spotify.enums import ItemType
 from syncify.spotify.library.item import SpotifyTrack
 from syncify.spotify.library.playlist import SpotifyPlaylist, SyncResultSpotifyPlaylist
-from syncify.utils.logger import Logger, REPORT, STAT
+from syncify.utils.logger import REPORT, STAT
 
 
 class SpotifyLibrary(Library):
@@ -53,7 +53,7 @@ class SpotifyLibrary(Library):
             use_cache: bool = True,
             load: bool = True,
     ):
-        Logger.__init__(self)
+        Library.__init__(self)
 
         self._api = api
         self.include = include

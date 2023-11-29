@@ -95,7 +95,8 @@ class SpotifyPlaylist(Playlist, SpotifyCollection):
         return images is not None and len(images) > 0
 
     def __init__(self, response: MutableMapping[str, Any]):
-        SpotifyObject.__init__(self, response)
+        Playlist.__init__(self)
+        SpotifyObject.__init__(self, response=response)
 
         self._name: str = response["name"]
         self._description: str = response["description"]

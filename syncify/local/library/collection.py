@@ -11,9 +11,9 @@ from syncify.local.track.base.track import LocalTrack
 from syncify.local.track.base.writer import SyncResultTrack
 from syncify.spotify.enums import IDType
 from syncify.spotify.utils import validate_id_type
+from syncify.utils import UnitCollection
 from syncify.utils.helpers import get_most_common_values, to_collection
 from syncify.utils.logger import Logger, STAT
-from utils import UnitCollection
 
 __max_str = "z" * 50
 
@@ -164,7 +164,7 @@ class LocalCollectionFiltered(LocalCollection):
         return self._tracks
 
     def __init__(self, tracks: Collection[LocalTrack], name: str | None = None):
-        Logger.__init__(self)
+        LocalCollection.__init__(self)
         if len(tracks) == 0:
             raise LocalCollectionError("No tracks were given")
 

@@ -11,8 +11,8 @@ import requests_cache
 from requests.exceptions import ConnectionError
 from requests_cache.models.response import BaseResponse
 
-from syncify.spotify.exception import APIError
 from syncify.spotify.api.authorise import APIAuthoriser
+from syncify.spotify.exception import APIError
 from syncify.utils.logger import Logger
 
 

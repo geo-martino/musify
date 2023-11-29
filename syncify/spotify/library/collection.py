@@ -119,7 +119,7 @@ class SpotifyAlbum(Album, SpotifyCollection):
 
     @property
     def artist(self):
-        return self._list_sep.join(artist["name"] for artist in self.response["artists"])
+        return self._tag_sep.join(artist["name"] for artist in self.response["artists"])
 
     @property
     def album_artist(self) -> str:
@@ -160,7 +160,8 @@ class SpotifyAlbum(Album, SpotifyCollection):
         return self.response.get("popularity")
 
     def __init__(self, response: MutableMapping[str, Any]):
-        SpotifyObject.__init__(self, response)
+        Album.__init__(self)
+        SpotifyObject.__init__(self, response=response)
 
         album_only = copy(response)
         for track in response["tracks"]["items"]:

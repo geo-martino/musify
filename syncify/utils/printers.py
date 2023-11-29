@@ -1,6 +1,7 @@
 import os
-import pyfiglet
 import random
+
+import pyfiglet
 
 
 # noinspection SpellCheckingInspection

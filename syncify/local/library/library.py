@@ -149,6 +149,7 @@ class LocalLibrary(Library, LocalCollectionFiltered):
             exclude: Iterable[str] | None = None,
             load: bool = True,
     ):
+        Library.__init__(self)
         Logger.__init__(self)
 
         self.include = [name.strip().lower() for name in include] if include else None

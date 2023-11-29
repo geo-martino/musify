@@ -1,18 +1,17 @@
 import re
 from abc import ABCMeta, abstractmethod
+from collections.abc import Collection
 from datetime import datetime
 from os.path import dirname, join, getmtime, getctime
-from collections.abc import Collection
 
 from syncify.abstract.collection import Playlist
 from syncify.abstract.misc import Result
 from syncify.local.file import File
 from syncify.local.library.collection import LocalCollection
-from syncify.local.playlist.processor.match import TrackMatch
 from syncify.local.playlist.processor.limit import TrackLimit
+from syncify.local.playlist.processor.match import TrackMatch
 from syncify.local.playlist.processor.sort import TrackSort
 from syncify.local.track.base.track import LocalTrack
-from syncify.utils.logger import Logger
 
 
 class LocalPlaylist(Playlist, LocalCollection, File, metaclass=ABCMeta):
@@ -67,7 +66,8 @@ class LocalPlaylist(Playlist, LocalCollection, File, metaclass=ABCMeta):
             limiter: TrackLimit | None = None,
             sorter: TrackSort | None = None,
     ):
-        Logger.__init__(self)
+        Playlist.__init__(self)
+
         self._path: str = path
         self._tracks: list[LocalTrack] | None = None
         self._tracks_original: list[LocalTrack] | None = None

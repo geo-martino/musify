@@ -9,8 +9,8 @@ import xmltodict
 from syncify.local.file import File
 from syncify.local.library.library import LocalLibrary
 from syncify.local.track.base.track import LocalTrack
+from syncify.utils import UnitCollection
 from syncify.utils.logger import Logger
-from utils import UnitCollection
 
 
 class MusicBee(File, LocalLibrary):

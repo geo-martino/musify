@@ -2,7 +2,7 @@ from collections.abc import MutableMapping
 from typing import Any
 
 from syncify.spotify import __URL_AUTH__, __URL_API__
-from utils import UnitMutableSequence
+from syncify.utils import UnitMutableSequence
 
 APIMethodInputType = UnitMutableSequence[str] | UnitMutableSequence[MutableMapping[str, Any]]
 

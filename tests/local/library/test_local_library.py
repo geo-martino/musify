@@ -1,10 +1,11 @@
 from os.path import basename, splitext
 
-from syncify.local.library import LocalLibrary
 from tests.local.playlist.playlist import path_playlist_resources, path_playlist_m3u
 from tests.local.playlist.playlist import path_playlist_xautopf_bp, path_playlist_xautopf_ra
 from tests.local.track.track import path_track_m4a, path_track_wma
 from tests.local.track.track import path_track_resources, path_track_flac, path_track_mp3
+
+from syncify.local.library import LocalLibrary
 
 
 def test_init():

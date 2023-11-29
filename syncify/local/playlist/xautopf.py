@@ -1,19 +1,19 @@
+from collections.abc import Collection, Mapping
 from copy import deepcopy
 from dataclasses import dataclass
 from os.path import exists
 from typing import Any
-from collections.abc import Collection, Mapping
 
 import xmltodict
 
 from syncify.abstract.misc import Result
 from syncify.enums.tags import PropertyName
 from syncify.local.playlist.playlist import LocalPlaylist
-from syncify.local.playlist.processor.match import TrackMatch
 from syncify.local.playlist.processor.limit import TrackLimit
+from syncify.local.playlist.processor.match import TrackMatch
 from syncify.local.playlist.processor.sort import TrackSort
 from syncify.local.track import LocalTrack, load_track
-from utils import UnitCollection
+from syncify.utils import UnitCollection
 
 
 @dataclass(frozen=True)

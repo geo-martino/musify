@@ -575,7 +575,6 @@ if __name__ == "__main__":
 
 
 ## NEEDED FOR v0.3
-# TODO: review usefulness of TagMap and other dataclasses
 # TODO: add docstrings to top of all scripts
 # TODO: how to read WMA images
 # TODO: write tests, write tests, write tests

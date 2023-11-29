@@ -1,27 +1,22 @@
-from dataclasses import dataclass
+from collections.abc import Collection, Mapping, Sequence, Iterable
+from dataclasses import dataclass, field
 from os.path import exists
 from typing import Any, Self
-from collections.abc import Collection, Mapping, Sequence, Iterable
 
-from abstract.misc import Result
+from syncify.abstract.misc import Result
 from syncify.local.playlist.processor.base import TrackProcessor
 from syncify.local.playlist.processor.compare import TrackCompare
 from syncify.local.track.base.track import LocalTrack
 from syncify.utils import UnitSequence, UnitCollection, UnitIterable
 from syncify.utils.helpers import to_collection
 
-_T = Sequence[LocalTrack] | None
-
 
 @dataclass(frozen=True)
 class MatchResult(Result):
     """Results from matching a collection of tracks to a set of conditions."""
-
-    def __init__(self, include: _T = None, exclude: _T = None, compared: _T = None):
-        Result.__init__(self)
-        self.__dict__["include"] = include if include else tuple()
-        self.__dict__["exclude"] = exclude if exclude else tuple()
-        self.__dict__["compared"] = compared if compared else tuple()
+    include: Sequence[LocalTrack] = field(default=tuple())
+    exclude: Sequence[LocalTrack] = field(default=tuple())
+    compared: Sequence[LocalTrack] = field(default=tuple())
 
 
 class TrackMatch(TrackProcessor):

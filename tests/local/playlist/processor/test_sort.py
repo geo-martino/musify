@@ -1,12 +1,13 @@
+from collections.abc import Callable
 from itertools import groupby
 from random import choice, randrange
-from collections.abc import Callable
+
+from tests.local.track.track import random_tracks
 
 from syncify.enums.tags import TagName, PropertyName
-from syncify.local.track import LocalTrack
 from syncify.local.playlist.processor.sort import TrackSort, ShuffleMode
+from syncify.local.track import LocalTrack
 from syncify.utils.helpers import strip_ignore_words
-from tests.local.track.track import random_tracks
 
 
 def test_sort_by_field():

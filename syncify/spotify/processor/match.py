@@ -7,9 +7,9 @@ from typing import Any
 from syncify.abstract.collection import Album, ItemCollection
 from syncify.abstract.item import Track, BaseObject
 from syncify.enums.tags import TagName, PropertyName
+from syncify.utils import UnitIterable
 from syncify.utils.helpers import limit_value
 from syncify.utils.logger import Logger
-from utils import UnitIterable
 
 _MATCH_DEFAULT = frozenset({TagName.ALL, PropertyName.ALL})
 _MATCH_TYPE = Iterable[TagName | PropertyName]
@@ -113,7 +113,8 @@ class Matcher(Logger):
 
             return re.sub(r"[^\w']+", ' ', val).strip()
 
-        source.clean_tags = {"name": ""}
+        source.clean_tags.clear()
+        source.clean_tags["name"] = ""
         name = source.name
 
         # process string tags according to config
@@ -184,8 +185,8 @@ class Matcher(Logger):
             self._log_test(source=source, result=result, test=score, extra=[f"{source_val} -> {result_val}"])
             return score
 
-        artists_source = source_val.replace(BaseObject._list_sep, " ")
-        artists_result = result_val.split(BaseObject._list_sep)
+        artists_source = source_val.replace(BaseObject._tag_sep, " ")
+        artists_result = result_val.split(BaseObject._tag_sep)
 
         for i, artist in enumerate(artists_result, 1):
             score += (sum(word in artists_source for word in artist.split()) / len(artists_source.split())) * (1 / i)

@@ -1,5 +1,6 @@
-from syncify.spotify.processor.match import Matcher
 from tests.local.track.track import random_track
+
+from syncify.spotify.processor.match import Matcher
 
 
 # noinspection SpellCheckingInspection
@@ -77,9 +78,7 @@ def test_match_artist():
 
     track1 = random_track()
     track2 = random_track()
-    track1.clean_tags = {}
-    track2.clean_tags = {}
-    sep = track1._list_sep
+    sep = track1._tag_sep
 
     # no artists in at least one item always returns 0
     track1.clean_tags["artist"] = "artist"
@@ -173,7 +172,7 @@ def test_match_score():
 
     track1 = random_track()
     track2 = random_track()
-    sep = track1._list_sep
+    sep = track1._tag_sep
 
     track1.title = "a longer title"
     track2.title = "this is a different title"

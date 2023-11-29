@@ -16,12 +16,12 @@ from syncify.utils.helpers import to_collection
 from syncify.utils.logger import Logger
 
 
-class ItemCollection[T: Item](BaseObject, PrettyPrinter, metaclass=ABCMeta):
+class ItemCollection(BaseObject, PrettyPrinter, metaclass=ABCMeta):
     """Generic class for storing a collection of items."""
 
     @property
     @abstractmethod
-    def items(self) -> list[T]:
+    def items(self) -> list[Item]:
         """The items in this collection"""
         raise NotImplementedError
 
@@ -30,15 +30,15 @@ class ItemCollection[T: Item](BaseObject, PrettyPrinter, metaclass=ABCMeta):
         """The total number of items in this collection"""
         return len(self)
 
-    def append(self, item: T) -> None:
+    def append(self, item: Item) -> None:
         """Append one item to the items in this collection"""
         self.items.append(item)
 
-    def extend(self, items: Iterable[T]) -> None:
+    def extend(self, __iterable: Iterable[Item]) -> None:
         """Append many items to the items in this collection"""
-        self.items.extend(items)
+        self.items.extend(__iterable)
 
-    def remove(self, item: T) -> None:
+    def remove(self, item: Item) -> None:
         """Remove one item from the items in this collection"""
         self.items.remove(item)
 
@@ -46,7 +46,7 @@ class ItemCollection[T: Item](BaseObject, PrettyPrinter, metaclass=ABCMeta):
         """Remove all items from this collection"""
         self.items.clear()
 
-    def merge_items(self, items: Collection[T], tags: UnitIterable[TagName] = TagName.ALL) -> None:
+    def merge_items(self, items: Collection[Item] | Library, tags: UnitIterable[TagName] = TagName.ALL) -> None:
         """
         Merge this collection with another collection or list of items
         by performing an inner join on a given set of tags
@@ -104,13 +104,13 @@ class ItemCollection[T: Item](BaseObject, PrettyPrinter, metaclass=ABCMeta):
     def __reversed__(self):
         return reversed(self.items)
 
-    def __contains__(self, item: T):
+    def __contains__(self, item: Item):
         return any(item == i for i in self.items)
 
-    def __getitem__(self, key: str | int | T) -> T:
+    def __getitem__(self, key: str | int | Item) -> Item:
         if isinstance(key, int):  # simply index the list or items
             return self.items[key]
-        elif isinstance(key, T):  # take the URI
+        elif isinstance(key, Item):  # take the URI
             if not key.has_uri or key.uri is None:
                 raise KeyError(f"Given item does not have a URI associated: {key.name}")
             key = key.uri
@@ -125,7 +125,7 @@ class ItemCollection[T: Item](BaseObject, PrettyPrinter, metaclass=ABCMeta):
         except StopIteration:
             raise KeyError(f"No matching URI found: '{key}'")
 
-    def __setitem__(self, key: str | int | T, value: T):
+    def __setitem__(self, key: str | int | Item, value: Item):
         try:
             value_self = self[key]
         except KeyError:
@@ -140,7 +140,7 @@ class ItemCollection[T: Item](BaseObject, PrettyPrinter, metaclass=ABCMeta):
         for key, value in value.__dict__.items():  # merge attributes
             setattr(value_self, key, deepcopy(value))
 
-    def __delitem__(self, key: str | int | T):
+    def __delitem__(self, key: str | int | Item):
         del self[key]
 
 
@@ -155,6 +155,7 @@ class BasicCollection(ItemCollection):
         return self._items
 
     def __init__(self, name: str, items: Collection[Item]):
+        super().__init__()
         self._name = name
         self._items = to_collection(items, list)
 
@@ -397,7 +398,7 @@ class Album(ItemCollection, metaclass=ABCMeta):
     @property
     def artist(self) -> str:
         """Joined string representation of all artists on this album ordered by frequency of appearance"""
-        return self._list_sep.join(self.artists)
+        return self._tag_sep.join(self.artists)
 
     @property
     @abstractmethod

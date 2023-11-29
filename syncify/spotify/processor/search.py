@@ -1,5 +1,5 @@
 from collections.abc import Mapping, Sequence, Iterable, Collection
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from syncify.abstract.collection import ItemCollection, Album
@@ -13,18 +13,13 @@ from syncify.spotify.library.item import SpotifyTrack
 from syncify.spotify.processor.match import Matcher
 from syncify.utils.logger import REPORT
 
-_T = Sequence[Item] | None
-
 
 @dataclass(frozen=True)
 class SearchResult(Result):
     """Stores the results of the searching process"""
-
-    def __init__(self, matched: _T = None, unmatched: _T = None, skipped: _T = None):
-        Result.__init__(self)
-        self.__dict__["matched"] = matched if matched else tuple()
-        self.__dict__["unmatched"] = unmatched if unmatched else tuple()
-        self.__dict__["skipped"] = skipped if skipped else tuple()
+    matched: Sequence[Item] = field(default=tuple())
+    unmatched: Sequence[Item] = field(default=tuple())
+    skipped: Sequence[Item] = field(default=tuple())
 
 
 @dataclass(frozen=True)

@@ -8,14 +8,16 @@ from random import choice, randrange, randint
 
 from dateutil.relativedelta import relativedelta
 
-# noinspection PyProtectedMember
-from syncify.local.track.base.track import _MutagenMock
+from abstract.item import BaseObject
+from tests.common import path_resources, path_cache, random_str
+
 from syncify.enums.tags import TagName
 from syncify.local.file import open_image
 from syncify.local.track import __TRACK_CLASSES__, LocalTrack
+# noinspection PyProtectedMember
+from syncify.local.track.base.track import _MutagenMock
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 from syncify.spotify.enums import IDType, ItemType
-from tests.common import path_resources, path_cache, random_str
 
 path_track_cache = join(path_cache, basename(dirname(__file__)))
 
@@ -37,6 +39,7 @@ def random_track(cls: type[LocalTrack] | None = None) -> LocalTrack:
     if cls is None:
         cls = choice(tuple(__TRACK_CLASSES__))
     track = cls.__new__(cls)
+    BaseObject.__init__(track)
 
     track._file = _MutagenMock()
     track.file.info.length = randint(30, 600)

@@ -1,8 +1,8 @@
 import pytest
+from tests.local.track.track import random_tracks
 
 from syncify.local.exception import LocalCollectionError
 from syncify.local.library.collection import LocalFolder, LocalAlbum, LocalArtist, LocalGenres
-from tests.local.track.track import random_tracks
 
 
 def test_folder():
