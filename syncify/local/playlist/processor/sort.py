@@ -1,15 +1,15 @@
+from collections.abc import Callable, Mapping, MutableMapping, Sequence, MutableSequence
 from copy import copy
 from datetime import datetime
 from random import shuffle
 from typing import Any, Self
-from collections.abc import Callable, Mapping, MutableMapping
 
 from syncify.enums import SyncifyEnum
 from syncify.enums.tags import Name, PropertyName, TagName
 from syncify.local.exception import FieldError
-from syncify.local.track.base.track import LocalTrack
 from syncify.local.playlist.processor.base import TrackProcessor
-from syncify.utils import UnitList
+from syncify.local.track.base.track import LocalTrack
+from syncify.utils import UnitSequence, UnitIterable
 from syncify.utils.helpers import flatten_nested, strip_ignore_words, to_collection, limit_value
 
 
@@ -59,7 +59,7 @@ class TrackSort(TrackProcessor):
     """
 
     # define custom sort codes
-    _custom_sort: MutableMapping[int, Mapping[Name, bool]] = {
+    _custom_sort: dict[int, Mapping[Name, bool]] = {
         6: {
             TagName.ALBUM: False,
             TagName.DISC: False,
@@ -72,7 +72,7 @@ class TrackSort(TrackProcessor):
     _custom_sort[78] = _custom_sort[6]
 
     @classmethod
-    def sort_by_field(cls, tracks: list[LocalTrack], field: Name | None = None, reverse: bool = False):
+    def sort_by_field(cls, tracks: list[LocalTrack], field: Name | None = None, reverse: bool = False) -> None:
         """
         Sort tracks by the values of a given field.
 
@@ -111,9 +111,7 @@ class TrackSort(TrackProcessor):
         tracks.sort(key=sort_key, reverse=reverse)
 
     @classmethod
-    def group_by_field(
-            cls, tracks: list[LocalTrack], field: Name | None = None
-    ) -> MutableMapping[Any, list[LocalTrack]]:
+    def group_by_field(cls, tracks: UnitIterable[LocalTrack], field: Name | None = None) -> dict[Any, list[LocalTrack]]:
         """
         Group tracks by the values of a given field.
 
@@ -122,11 +120,11 @@ class TrackSort(TrackProcessor):
         :return: Map of grouped tracks.
         """
         if field is None:  # group by None
-            return {None: tracks}
+            return {None: to_collection(tracks, list)}
 
         tag_name = cls._get_tag(field)
 
-        grouped: MutableMapping[Any | None, list[LocalTrack]] = {}
+        grouped: dict[Any | None, list[LocalTrack]] = {}
         for track in tracks:  # produce map of grouped values
             value = track[tag_name]
             if grouped.get(value) is None:
@@ -143,7 +141,7 @@ class TrackSort(TrackProcessor):
         :param xml: The loaded XML object for this playlist.
             If None, sorter will shuffle randomly when calling ``sort``.
         """
-        fields: list[Name] | Mapping[Name | bool]
+        fields: Sequence[Name] | Mapping[Name | bool]
         if xml is None:
             return cls()
 
@@ -179,21 +177,21 @@ class TrackSort(TrackProcessor):
 
     def __init__(
             self,
-            fields: UnitList[Name | None] | Mapping[Name | None, bool] | None = None,
+            fields: UnitSequence[Name | None] | Mapping[Name | None, bool] | None = None,
             shuffle_mode: ShuffleMode = ShuffleMode.NONE,
             shuffle_by: ShuffleBy = ShuffleBy.TRACK,
             shuffle_weight: float = 1.0
     ):
         fields = to_collection(fields, list) if isinstance(fields, Name) else fields
-        self.sort_fields: Mapping[Name, bool]
-        self.sort_fields = {field: False for field in fields} if isinstance(fields, list) else fields
+        self.sort_fields: Mapping[Name | None, bool] | None
+        self.sort_fields = {field: False for field in fields} if isinstance(fields, Sequence) else fields
 
         self.shuffle_mode: ShuffleMode | None
         self.shuffle_mode = shuffle_mode if shuffle_mode in [ShuffleMode.NONE, ShuffleMode.RANDOM] else ShuffleMode.NONE
         self.shuffle_by: ShuffleBy | None = shuffle_by
         self.shuffle_weight = limit_value(shuffle_weight, floor=0, ceil=1)
 
-    def sort(self, tracks: list[LocalTrack]):
+    def sort(self, tracks: MutableSequence[LocalTrack]) -> None:
         """Sorts a list of tracks inplace."""
         if len(tracks) == 0:
             return
@@ -234,8 +232,11 @@ class TrackSort(TrackProcessor):
         return tracks_grouped
 
     def as_dict(self):
+        fields = None
+        if self.sort_fields:
+            fields = {field.name: "desc" if r else "asc" for field, r in self.sort_fields.items()}
         return {
-            "sort_fields": {field.name: "desc" if r else "asc" for field, r in self.sort_fields.items()},
+            "sort_fields": fields,
             "shuffle_mode": self.shuffle_mode,
             "shuffle_by": self.shuffle_by
         }

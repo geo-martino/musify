@@ -2,17 +2,16 @@ from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Self, Any
-from collections.abc import Collection, Mapping, MutableMapping
 
 from syncify.abstract.misc import PrettyPrinter
 from syncify.enums.tags import TagName
-from syncify.utils import UnitList
+from syncify.utils import UnitIterable
 
 
 @dataclass
 class BaseObject:
     """Generic base class for all local/Spotify item/collections."""
-    clean_tags: MutableMapping[str, Any] = None
+    clean_tags: dict[str, Any] = None
     _list_sep: str = "; "
 
     @property
@@ -22,14 +21,13 @@ class BaseObject:
         raise NotImplementedError
 
 
-@dataclass(repr=False, eq=False)
 class Item(BaseObject, PrettyPrinter, metaclass=ABCMeta):
     """Generic class for storing an item."""
 
     @property
     @abstractmethod
     def uri(self) -> str | None:
-        """The URI associated with this item."""
+        """URI (Uniform Resource Indicator) is the unique identifier for this item."""
         raise NotImplementedError
 
     @uri.setter
@@ -41,10 +39,10 @@ class Item(BaseObject, PrettyPrinter, metaclass=ABCMeta):
     @property
     @abstractmethod
     def has_uri(self) -> bool | None:
-        """Does this item have a valid URI."""
+        """Does this track have a valid associated URI. When None, answer is unknown."""
         raise NotImplementedError
 
-    def merge(self, item: Self, tags: UnitList[TagName] = TagName.ALL):
+    def merge(self, item: Self, tags: UnitIterable[TagName] = TagName.ALL) -> None:
         """Set the tags of this item equal to the given ``item``. Give a list of ``tags`` to limit which are set"""
         tag_names = set(TagName.to_tags(tags))
 
@@ -78,34 +76,139 @@ class Item(BaseObject, PrettyPrinter, metaclass=ABCMeta):
 class Track(Item, metaclass=ABCMeta):
     """Metadata/tags associated with a track."""
 
-    # metadata/tags
-    title: str | None = None
-    artist: str | None = None
-    album: str | None = None
-    album_artist: str | None = None
-    track_number: int | None = None
-    track_total: int | None = None
-    genres: Collection[str] | None = None
-    year: int | None = None
-    bpm: float | None = None
-    key: str | None = None
-    disc_number: int | None = None
-    disc_total: int | None = None
-    compilation: bool | None = None
-    comments: list[str] | None = None
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """This track's title"""
+        raise NotImplementedError
 
-    # images
-    image_links: Mapping[str, str] | None = None
-    has_image: bool = False
+    @property
+    @abstractmethod
+    def title(self) -> str | None:
+        """This track's title"""
+        raise NotImplementedError
 
-    # properties
-    length: float | None = None
-    rating: float | None = None
+    @property
+    @abstractmethod
+    def artist(self) -> str | None:
+        """Joined string representation of all artists featured on this track"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def album(self) -> str | None:
+        """The album this track is featured on"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def album_artist(self) -> str | None:
+        """The artist of the album this track is featured on"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def track_number(self) -> int | None:
+        """The position this track has on the album it is featured on"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def track_total(self) -> int | None:
+        """The track number of tracks on the album this track is featured on"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def genres(self) -> list[str] | None:
+        """List of genres associated with this track"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def year(self) -> int | None:
+        """The year this track was released"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def bpm(self) -> float | None:
+        """The tempo of this track"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def key(self) -> str | None:
+        """The key of this track in alphabetical musical notation format"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def disc_number(self) -> int | None:
+        """The number of the disc from the album this track is featured on"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def disc_total(self) -> int | None:
+        """The total number the discs from the album this track is featured on"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def compilation(self) -> bool | None:
+        """Is the album this track is featured on a compilation"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def comments(self) -> list[str] | None:
+        """Comments associated with this track set by the user"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def image_links(self) -> dict[str, str]:
+        """The images associated with the album this track is featured on in the form ``{image name: image link}``"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def has_image(self) -> bool:
+        """Does the album this track is associated with have an image"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def length(self) -> float:
+        """Total duration of this track in seconds"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def rating(self) -> float | None:
+        """The popularity of this track on Spotify"""
+        raise NotImplementedError
 
 
 class TrackProperties:
     """Properties associated with a track."""
 
-    date_added: datetime | None = None
-    last_played: datetime | None = None
-    play_count: int | None = None
+    @property
+    @abstractmethod
+    def date_added(self) -> datetime | None:
+        """The timestamp for when this track was added to the associated collection"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def last_played(self) -> datetime | None:
+        """The timestamp when this track was last played"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def play_count(self) -> int | None:
+        """The total number of times this track has been played"""
+        raise NotImplementedError
+

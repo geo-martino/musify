@@ -1,15 +1,16 @@
 import urllib.parse
-from collections.abc import MutableMapping
+from collections.abc import Iterable
 from datetime import datetime
 from os.path import join, exists, normpath
 from typing import Any
 
-from lxml import etree
+import xmltodict
 
 from syncify.local.file import File
-from syncify.local.track.base.track import LocalTrack
 from syncify.local.library.library import LocalLibrary
+from syncify.local.track.base.track import LocalTrack
 from syncify.utils.logger import Logger
+from utils import UnitCollection
 
 
 class MusicBee(File, LocalLibrary):
@@ -40,9 +41,9 @@ class MusicBee(File, LocalLibrary):
             self,
             library_folder: str | None = None,
             musicbee_folder: str = "MusicBee",
-            other_folders: set[str] | None = None,
-            include: list[str] | None = None,
-            exclude: list[str] | None = None,
+            other_folders: UnitCollection[str] | None = None,
+            include: Iterable[str] | None = None,
+            exclude: Iterable[str] | None = None,
             load: bool = True
     ):
         Logger.__init__(self)
@@ -57,10 +58,8 @@ class MusicBee(File, LocalLibrary):
             musicbee_folder = in_library
 
         self._path: str = join(musicbee_folder, "iTunes Music Library.xml")
-        self.xml: MutableMapping[str, Any] = {}
-        for record in ReadXmlLibrary(self._path):
-            for key, value in record.items():
-                self.xml[key] = value
+        with open(self._path, "r", encoding="utf-8") as f:
+            self.xml: dict[str, Any] = xmltodict.parse(f.read())
 
         self.print_line()
         LocalLibrary.__init__(
@@ -103,67 +102,3 @@ class MusicBee(File, LocalLibrary):
 
         self.logger.debug("Enrich local tracks: DONE\n")
         return list(tracks_paths.values())
-
-
-class ReadXmlLibrary:
-    # TODO: consider replacing with tree reader/xmltodict package?
-    def __init__(self, fh):
-        """
-        Initialize 'iterparse' to generate 'start' and 'end' events on all tags
-
-        :param fh: File Handle from the XML File to parse
-        """
-        self.context = etree.iterparse(fh, events=("start", "end",))
-
-    def _parse(self):
-        """
-        Yield only at 'end' event, except 'start' from tag 'dict'
-        :return: yield current Element
-        """
-        for event, elem in self.context:
-            if elem.tag == "plist" or \
-                    (event == "start" and not elem.tag == "dict"):
-                continue
-            yield elem
-
-    def _parse_key_value(self, key=None):
-        _dict = {}
-        for elem in self._parse():
-            if elem.tag == "key":
-                key = elem.text
-                continue
-
-            if elem.tag in ["integer", "string", "date"]:
-                if key is not None:
-                    _dict[key] = elem.text
-                    key = None
-                else:
-                    print("Missing key for value {}".format(elem.text))
-
-            elif elem.tag in ["true", "false"]:
-                _dict[key] = elem.tag == "true"
-
-            elif elem.tag == "dict":
-                if key is not None:
-                    _dict[key] = self._parse_dict(key)
-                    key = None
-                else:
-                    return elem, _dict
-            else:
-                pass
-
-    # noinspection PyUnusedLocal
-    def _parse_dict(self, key=None):
-        elem = next(self._parse())
-        elem, _dict = self._parse_key_value(elem.text)
-        return _dict
-
-    def __iter__(self):
-        for elem in self._parse():
-            if elem.tag == "dict":
-                try:
-                    yield self._parse_dict()
-                except StopIteration:
-                    return
-            else:
-                pass

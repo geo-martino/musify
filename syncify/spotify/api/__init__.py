@@ -1,9 +1,10 @@
+from collections.abc import MutableMapping
 from typing import Any
-from collections.abc import Collection, Mapping
 
 from syncify.spotify import __URL_AUTH__, __URL_API__
+from utils import UnitMutableSequence
 
-APIMethodInputType = str | Collection[str] | Mapping[str, Any] | list[Mapping[str, Any]]
+APIMethodInputType = UnitMutableSequence[str] | UnitMutableSequence[MutableMapping[str, Any]]
 
 # non-user authenticated access
 AUTH_ARGS_BASIC = {

@@ -1,5 +1,5 @@
 import struct
-from collections.abc import Collection
+from collections.abc import Collection, Iterable
 from typing import Any
 
 import mutagen
@@ -42,17 +42,15 @@ class WMA(LocalTrack):
     )
 
     # noinspection PyTypeChecker
-    def __init__(
-            self, file: str | mutagen.FileType | mutagen.asf.ASF, available: Collection[str] | None = None
-    ):
-        LocalTrack.__init__(self, file=file, available=available)
+    def __init__(self, file: str | mutagen.FileType | mutagen.asf.ASF, available: Iterable[str] | None = None):
+        super().__init__(file=file, available=available)
         self._file: mutagen.asf.ASF = self._file
 
-    def _read_tag(self, tag_ids: list[str]) -> list[Any] | None:
+    def _read_tag(self, tag_ids: Iterable[str]) -> list[Any] | None:
         # wma tag values are returned as mutagen.asf._attrs.ASFUnicodeAttribute
         values = []
         for tag_id in tag_ids:
-            value: list[mutagen.asf.ASFBaseAttribute] = self._file.get(tag_id)
+            value: Collection[mutagen.asf.ASFBaseAttribute] = self._file.get(tag_id)
             if value is None:
                 # skip null or empty/blank strings
                 continue
@@ -98,7 +96,7 @@ class WMA(LocalTrack):
             return self.delete_tag(tag_id, dry_run=dry_run)
 
         if not dry_run and tag_id is not None:
-            if isinstance(tag_value, list):
+            if isinstance(tag_value, (list, set, tuple)):
                 if all(isinstance(v, mutagen.asf.ASFByteArrayAttribute) for v in tag_value):
                     self._file[tag_id] = tag_value
                 else:

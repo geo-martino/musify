@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from collections.abc import Mapping
+from collections.abc import Mapping, Iterable
 from typing import Any, Self
 
 from syncify.abstract.misc import PrettyPrinter
@@ -19,9 +19,7 @@ class TrackProcessor(PrettyPrinter, metaclass=ABCMeta):
         """
         raise NotImplementedError
 
-    def _get_method_name(
-            self, value: str, valid: list[str] | Mapping[str | str], prefix: str | None = None
-    ) -> str:
+    def _get_method_name(self, value: str, valid: Iterable[str] | Mapping[str | str], prefix: str | None = None) -> str:
         """
         Find a method that matches the given string from a list of valid methods.
 

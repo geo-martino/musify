@@ -3,10 +3,10 @@ from collections.abc import MutableMapping
 from typing import Any, Self
 
 from syncify.abstract.misc import PrettyPrinter
-from syncify.spotify.enums import ItemType
-from syncify.spotify.exception import APIError, SpotifyItemTypeError
 from syncify.spotify.api import APIMethodInputType
 from syncify.spotify.api.api import API
+from syncify.spotify.enums import ItemType
+from syncify.spotify.exception import APIError, SpotifyItemTypeError
 
 
 class SpotifyObject(PrettyPrinter, metaclass=ABCMeta):
@@ -49,7 +49,7 @@ class SpotifyObject(PrettyPrinter, metaclass=ABCMeta):
         self.response = response
         self._check_type()
 
-    def _check_type(self):
+    def _check_type(self) -> None:
         """
         Checks the given response is compatible with this object type, raises an exception if not.
 
@@ -61,7 +61,7 @@ class SpotifyObject(PrettyPrinter, metaclass=ABCMeta):
             raise SpotifyItemTypeError(f"Response type invalid", kind=kind, value=self.response.get("type"))
 
     @classmethod
-    def _check_for_api(cls):
+    def _check_for_api(cls) -> None:
         """
         Checks the API has been set on the class, raises an exception if not.
 
@@ -78,9 +78,10 @@ class SpotifyObject(PrettyPrinter, metaclass=ABCMeta):
 
         The given ``value`` may be:
             * A string representing a URL/URI/ID.
-            * A collection of strings representing URLs/URIs/IDs of the same type.
+            * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
             * A Spotify API JSON response for a collection with a valid ID value under an ``id`` key.
-            * A list of Spotify API JSON responses for a collection with a valid ID value under an ``id`` key.
+            * A MutableSequence of Spotify API JSON responses for a collection with
+                a valid ID value under an ``id`` key.
 
         When a list is given, only the first item is processed.
 
@@ -90,7 +91,7 @@ class SpotifyObject(PrettyPrinter, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def reload(self, use_cache: bool = True):
+    def reload(self, use_cache: bool = True) -> None:
         """
         Reload this object from the API, calling all required endpoints
         to get a complete set of data for this item type
@@ -99,7 +100,7 @@ class SpotifyObject(PrettyPrinter, metaclass=ABCMeta):
         """
         raise NotImplementedError
 
-    def replace(self, response: MutableMapping[str, Any]):
+    def replace(self, response: MutableMapping[str, Any]) -> None:
         """
         Replace the extracted metadata on this object by extracting data from the given response
         No API calls are made for this function.

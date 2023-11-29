@@ -88,9 +88,7 @@ def test_load_playlist_1():
         track.artist = None
     for i, track in enumerate(tracks, 1):
         track.track_number = i
-    tracks_actual: list[LocalTrack] = [
-        FLAC(path_track_flac), WMA(path_track_wma), MP3(path_track_mp3), M4A(path_track_m4a)
-    ]
+    tracks_actual = [FLAC(path_track_flac), WMA(path_track_wma), MP3(path_track_mp3), M4A(path_track_m4a)]
     tracks += tracks_actual
 
     pl = XAutoPF(

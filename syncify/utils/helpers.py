@@ -1,7 +1,7 @@
 import re
 from collections import Counter
+from collections.abc import Iterable, MutableMapping, MutableSequence, Mapping
 from typing import Any
-from collections.abc import Iterable, Collection, MutableMapping
 
 from . import Number
 
@@ -12,7 +12,7 @@ def to_collection[T: (list, set, tuple)](data: Any, cls: T = tuple) -> T | None:
     """Safely turn any object into a collection unless None"""
     if data is None or isinstance(data, cls):
         return data
-    elif isinstance(data, (list, set, tuple)):
+    elif isinstance(data, Iterable) and not isinstance(data, str) and not isinstance(data, Mapping):
         return cls(data)
     elif cls is list:
         return [data]
@@ -23,7 +23,7 @@ def to_collection[T: (list, set, tuple)](data: Any, cls: T = tuple) -> T | None:
     raise Exception(f"Unable to convert data to {cls} (data = {data})")
 
 
-def strip_ignore_words(value: str, words: Collection[str] = sort_ignore_words) -> (bool, str):
+def strip_ignore_words(value: str, words: Iterable[str] = sort_ignore_words) -> (bool, str):
     """
     Remove ignorable words from a string.
 
@@ -43,15 +43,15 @@ def strip_ignore_words(value: str, words: Collection[str] = sort_ignore_words) -
     return not_special, new_value
 
 
-def flatten_nested[T: Any](nested: MutableMapping, previous: list[T] | None = None) -> list[T]:
+def flatten_nested[T: Any](nested: MutableMapping, previous: MutableSequence[T] | None = None) -> list[T]:
     """Flatten the final layers of the values of a nested map to a single list"""
     if previous is None:
         previous = []
 
-    if isinstance(nested, dict):
+    if isinstance(nested, MutableMapping):
         for key, value in nested.items():
             flatten_nested(value, previous=previous)
-    elif isinstance(nested, list):
+    elif isinstance(nested, (list, set, tuple)):
         previous.extend(nested)
     else:
         previous.append(nested)

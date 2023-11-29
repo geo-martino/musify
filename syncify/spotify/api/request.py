@@ -1,5 +1,5 @@
 import json
-from collections.abc import Mapping
+from collections.abc import Mapping, Iterable
 from datetime import datetime as dt
 from datetime import timedelta
 from http import HTTPStatus
@@ -9,7 +9,6 @@ from typing import Any
 
 import requests_cache
 from requests.exceptions import ConnectionError
-from requests.structures import CaseInsensitiveDict
 from requests_cache.models.response import BaseResponse
 
 from syncify.spotify.exception import APIError
@@ -49,7 +48,7 @@ class RequestHandler(APIAuthoriser, Logger):
 
         self.auth()
 
-    def request(self, method: str, url: str, *args, **kwargs) -> Mapping[str, Any]:
+    def request(self, method: str, url: str, *args, **kwargs) -> dict[str, Any]:
         """
         Generic method for handling API requests with back-off on failed requests.
         See :py:func:`request` for more arguments.
@@ -88,7 +87,7 @@ class RequestHandler(APIAuthoriser, Logger):
             url: str,
             use_cache: bool = True,
             log_pad: int = 43,
-            log_extra: list[str] | None = None,
+            log_extra: Iterable[str] | None = None,
             *args, **kwargs
     ) -> BaseResponse | None:
         """Handle logging a request, send the request, and return the response"""
@@ -117,11 +116,11 @@ class RequestHandler(APIAuthoriser, Logger):
             self.logger.warning(ex)
             return
 
-    def _log_response(self, response: BaseResponse, method: str, url: str):
+    def _log_response(self, response: BaseResponse, method: str, url: str) -> None:
         """Log the method, url, response text, and response headers."""
         response_headers = response.headers
-        if isinstance(response.headers, CaseInsensitiveDict):  # format headers if JSON
-            response_headers = json.dumps(dict(response.headers), indent=2)
+        if isinstance(response.headers, Mapping):  # format headers if JSON
+            response_headers = json.dumps(response.headers, indent=2)
         self.logger.warning(
             f"\33[91m{method.upper():<7}: {url} | Code: {response.status_code} | "
             f"Response text and headers follow:"
@@ -129,7 +128,7 @@ class RequestHandler(APIAuthoriser, Logger):
             f"\nHeaders:\n{response_headers} \33[0m"
         )
 
-    def _raise_exception(self, response: BaseResponse):
+    def _raise_exception(self, response: BaseResponse) -> None:
         """Check for response status codes that should raise an exception."""
         message = self._response_as_json(response).get("error", {}).get("message")
         if not message:
@@ -155,37 +154,37 @@ class RequestHandler(APIAuthoriser, Logger):
         return False
 
     @staticmethod
-    def _response_as_json(response: BaseResponse) -> Mapping[str, Any]:
+    def _response_as_json(response: BaseResponse) -> dict[str, Any]:
         try:
             return response.json()
         except json.decoder.JSONDecodeError:
             return {}
 
-    def get(self, url: str, **kwargs):
+    def get(self, url: str, **kwargs) -> dict[str, Any]:
         """Sends a GET request."""
         return self.request("get", url=url, **kwargs)
 
-    def post(self, url: str, **kwargs):
+    def post(self, url: str, **kwargs) -> dict[str, Any]:
         """Sends a POST request."""
         return self.request("post", url=url, **kwargs)
 
-    def put(self, url: str, **kwargs):
+    def put(self, url: str, **kwargs) -> dict[str, Any]:
         """Sends a PUT request."""
         return self.request("put", url=url, **kwargs)
 
-    def delete(self, url: str, **kwargs):
+    def delete(self, url: str, **kwargs) -> dict[str, Any]:
         """Sends a DELETE request."""
         return self.request("delete", url, **kwargs)
 
-    def options(self, url: str, **kwargs):
+    def options(self, url: str, **kwargs) -> dict[str, Any]:
         """Sends an OPTIONS request."""
         return self.request("options", url=url, **kwargs)
 
-    def head(self, url: str, **kwargs):
+    def head(self, url: str, **kwargs) -> dict[str, Any]:
         """Sends a HEAD request."""
         kwargs.setdefault("allow_redirects", False)
         return self.request("head", url=url, **kwargs)
 
-    def patch(self, url: str, **kwargs):
+    def patch(self, url: str, **kwargs) -> dict[str, Any]:
         """Sends a PATCH request."""
         return self.request("patch", url=url, **kwargs)

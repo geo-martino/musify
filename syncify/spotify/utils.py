@@ -1,4 +1,4 @@
-from collections.abc import Mapping, Collection
+from collections.abc import Mapping, Sequence, Container
 from typing import Any
 from urllib.parse import urlparse
 
@@ -7,11 +7,11 @@ from syncify.spotify import __URL_API__, __URL_EXT__
 from syncify.spotify.api import APIMethodInputType
 from syncify.spotify.enums import IDType, ItemType
 from syncify.spotify.exception import SpotifyError, SpotifyIDTypeError, SpotifyItemTypeError
-from syncify.utils import UnitList
+from syncify.utils import UnitIterable
 from syncify.utils.helpers import to_collection
 
 
-def check_spotify_type(value: str, types: UnitList[IDType] = IDType.ALL) -> IDType | None:
+def check_spotify_type(value: str, types: UnitIterable[IDType] = IDType.ALL) -> IDType | None:
     """
     Check that the given value is of a valid Spotify type.
 
@@ -22,9 +22,9 @@ def check_spotify_type(value: str, types: UnitList[IDType] = IDType.ALL) -> IDTy
     if not isinstance(value, str):
         return
 
-    types: Collection[IDType] = to_collection(types, set)
+    types: Container[IDType] = to_collection(types, set)
     if IDType.ALL in types:
-        types = IDType.all()
+        types = set(IDType.all())
 
     if IDType.URL in types and value.lower().startswith(__URL_API__):
         return IDType.URL
@@ -86,16 +86,17 @@ def get_item_type(values: APIMethodInputType) -> ItemType:
     """
     Determine the Spotify item type of ``values``. Values may be:
         * A string representing a URL/URI.
-        * A collection of strings representing URLs/URIs/IDs of the same type.
+        * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
         * A Spotify API JSON response for a collection with a valid item type value under a ``type`` key.
-        * A list of Spotify API JSON responses for a collection with a valid item type value under a ``type`` key.
+        * A MutableSequence of Spotify API JSON responses for a collection with
+            a valid type value under a ``type`` key.
 
     :param values: The values representing some Spotify items. See description for allowed value types.
         These items must all be of the same type of item to pass i.e. all tracks OR all artists etc.
     :raises SpotifyItemTypeError: Raised when the function cannot determine the item type of the input ``values``.
         Or when the list contains strings representing many differing Spotify item types or only IDs.
     """
-    if isinstance(values, str) or isinstance(values, dict):
+    if isinstance(values, str) or isinstance(values, Mapping):
         return __get_item_type(values)
 
     if len(values) == 0:
@@ -121,7 +122,7 @@ def __get_item_type(value: str | Mapping[str, Any]) -> ItemType | None:
     :raises SpotifyItemTypeError: Raised when the function cannot determine the item type of the input ``values``.
     :raises EnumNotFoundError: Raised when the item type of teh given ``value`` is not a valid Spotify item type.
     """
-    if isinstance(value, dict):
+    if isinstance(value, Mapping):
         if value.get("is_local", False):
             raise SpotifyItemTypeError("Cannot process local items")
         if "type" not in value:
@@ -146,13 +147,14 @@ def __get_item_type(value: str | Mapping[str, Any]) -> ItemType | None:
     raise SpotifyItemTypeError(f"Could not determine item type of given value: {value}")
 
 
-def validate_item_type(values: APIMethodInputType, kind: ItemType):
+def validate_item_type(values: APIMethodInputType, kind: ItemType) -> None:
     """
     Check that the given ``values`` is a type of item given by ``kind `` or a simple ID. Values may be:
         * A string representing a URL/URI/ID.
-        * A collection of strings representing URLs/URIs/IDs of the same type.
+        * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
         * A Spotify API JSON response for a collection with a valid item type value under a ``type`` key.
-        * A list of Spotify API JSON responses for a collection with a valid item type value under a ``type`` key.
+        * A MutableSequence of Spotify API JSON responses for a collection with
+            a valid type value under a ``type`` key.
 
     :param values: The values representing some Spotify items. See description for allowed value types.
         These items must all be of the same type of item to pass i.e. all tracks OR all artists etc.
@@ -226,9 +228,10 @@ def extract_ids(values: APIMethodInputType, kind: ItemType | None = None) -> lis
     """
     Extract a list of IDs from input ``values``. Items may be:
         * A string representing a URL/URI/ID.
-        * A collection of strings representing URLs/URIs/IDs of the same type.
+        * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
         * A Spotify API JSON response for a collection with a valid ID value under an ``id`` key.
-        * A list of Spotify API JSON responses for a collection with a valid ID value under an ``id`` key.
+        * A MutableSequence of Spotify API JSON responses for a collection with
+             a valid ID value under an ``id`` key.
 
     :param values: The values representing some Spotify items. See description for allowed value types.
         These items may be of mixed item types e.g. some tracks AND some artists.
@@ -240,14 +243,14 @@ def extract_ids(values: APIMethodInputType, kind: ItemType | None = None) -> lis
     """
     if isinstance(values, str):
         return [convert(values, kind=kind, type_out=IDType.ID)]
-    elif isinstance(values, dict) and "id" in values:  # is a raw API response from Spotify
+    elif isinstance(values, Mapping) and "id" in values:  # is a raw API response from Spotify
         return [values["id"]]
-    elif isinstance(values, Collection):
+    elif isinstance(values, Sequence):
         if len(values) == 0:
             return []
         elif all(isinstance(d, str) for d in values):
             return [convert(d, kind=kind, type_out=IDType.ID) for d in values]
-        elif all(isinstance(d, dict) and "id" in d for d in values):
+        elif all(isinstance(d, Mapping) and "id" in d for d in values):
             return [track["id"] for track in values]
 
     raise SpotifyError(f"Could not extract IDs. Input data not recognised: {type(values)}")

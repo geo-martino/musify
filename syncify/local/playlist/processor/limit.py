@@ -1,15 +1,15 @@
+from collections.abc import Callable, Collection, Mapping
 from functools import reduce
 from operator import mul
 from random import shuffle
 from typing import Any, Self
-from collections.abc import Callable, Collection, Mapping
 
 from syncify.enums import SyncifyEnum
 from syncify.enums.tags import PropertyName
 from syncify.local.exception import LimitError
-from syncify.local.track.base.track import LocalTrack
 from syncify.local.playlist.processor.base import TrackProcessor
 from syncify.local.playlist.processor.sort import TrackSort
+from syncify.local.track.base.track import LocalTrack
 
 
 class LimitType(SyncifyEnum):
@@ -59,7 +59,7 @@ class TrackLimit(TrackProcessor):
         """Sets the sorting method name and stored function"""
         if value is None:
             self._limit_sort: str | None = None
-            self._sort_method: Callable[[list[LocalTrack]], None] = lambda _: None
+            self._sort_method = lambda _: None
             return
 
         name = self._get_method_name(value, valid=self._valid_methods, prefix=self._sort_method_prefix)
@@ -103,9 +103,10 @@ class TrackLimit(TrackProcessor):
         } | {
             name: name for name in dir(self) if name.startswith(self._sort_method_prefix)
         }
+        self._sort_method: Callable[[list[LocalTrack]], None] = lambda _: None
         self.limit_sort = sorted_by
 
-    def limit(self, tracks: list[LocalTrack], ignore: Collection[str | LocalTrack] | None = None):
+    def limit(self, tracks: list[LocalTrack], ignore: Collection[str | LocalTrack] | None = None) -> None:
         """
         Limit ``tracks`` inplace based on set conditions.
 
@@ -126,7 +127,7 @@ class TrackLimit(TrackProcessor):
             tracks.clear()
             tracks.extend(tracks_ignore)
         else:  # make a copy of the given tracks and clear the original list
-            tracks_limit = tracks.copy()
+            tracks_limit = [t for t in tracks]
             tracks.clear()
 
         if self.kind == LimitType.ITEMS:  # limit on items
@@ -150,39 +151,39 @@ class TrackLimit(TrackProcessor):
                     break
 
     @staticmethod
-    def _sort_random(tracks: list[LocalTrack]):
+    def _sort_random(tracks: list[LocalTrack]) -> None:
         shuffle(tracks)
 
     @staticmethod
-    def _sort_highest_rating(tracks: list[LocalTrack]):
+    def _sort_highest_rating(tracks: list[LocalTrack]) -> None:
         TrackSort.sort_by_field(tracks, PropertyName.RATING, reverse=True)
 
     @staticmethod
-    def _sort_lowest_rating(tracks: list[LocalTrack]):
+    def _sort_lowest_rating(tracks: list[LocalTrack]) -> None:
         TrackSort.sort_by_field(tracks, PropertyName.RATING)
 
     @staticmethod
-    def _sort_most_recently_played(tracks: list[LocalTrack]):
+    def _sort_most_recently_played(tracks: list[LocalTrack]) -> None:
         TrackSort.sort_by_field(tracks, PropertyName.LAST_PLAYED, reverse=True)
 
     @staticmethod
-    def _sort_least_recently_played(tracks: list[LocalTrack]):
+    def _sort_least_recently_played(tracks: list[LocalTrack]) -> None:
         TrackSort.sort_by_field(tracks, PropertyName.LAST_PLAYED)
 
     @staticmethod
-    def _sort_most_often_played(tracks: list[LocalTrack]):
+    def _sort_most_often_played(tracks: list[LocalTrack]) -> None:
         TrackSort.sort_by_field(tracks, PropertyName.PLAY_COUNT, reverse=True)
 
     @staticmethod
-    def _sort_least_often_played(tracks: list[LocalTrack]):
+    def _sort_least_often_played(tracks: list[LocalTrack]) -> None:
         TrackSort.sort_by_field(tracks, PropertyName.PLAY_COUNT)
 
     @staticmethod
-    def _sort_most_recently_added(tracks: list[LocalTrack]):
+    def _sort_most_recently_added(tracks: list[LocalTrack]) -> None:
         TrackSort.sort_by_field(tracks, PropertyName.DATE_ADDED, reverse=True)
 
     @staticmethod
-    def _sort_least_recently_added(tracks: list[LocalTrack]):
+    def _sort_least_recently_added(tracks: list[LocalTrack]) -> None:
         TrackSort.sort_by_field(tracks, PropertyName.DATE_ADDED)
 
     def _convert(self, track: LocalTrack) -> float:

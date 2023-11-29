@@ -14,7 +14,7 @@ from syncify.enums.tags import TagName
 from syncify.local.file import open_image
 from syncify.local.track import __TRACK_CLASSES__, LocalTrack
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
-from syncify.spotify.enums import IDType
+from syncify.spotify.enums import IDType, ItemType
 from tests.common import path_resources, path_cache, random_str
 
 path_track_cache = join(path_cache, basename(dirname(__file__)))
@@ -25,6 +25,11 @@ path_track_mp3 = join(path_track_resources, "noise_mp3.mp3")
 path_track_m4a = join(path_track_resources, "noise_m4a.m4a")
 path_track_wma = join(path_track_resources, "noise_wma.wma")
 path_track_img = join(path_track_resources, "track_image.jpg")
+
+
+def random_uri(kind: ItemType = ItemType.TRACK) -> str:
+    """Generates a random Spotify URI of item type ``kind``"""
+    return f"spotify:{kind.name.lower()}:{random_str(IDType.ID.value, IDType.ID.value + 1)}"
 
 
 def random_track(cls: type[LocalTrack] | None = None) -> LocalTrack:
@@ -52,15 +57,12 @@ def random_track(cls: type[LocalTrack] | None = None) -> LocalTrack:
     track.comments = [random_str(20, 50) for _ in range(randrange(3))]
 
     has_uri = choice([True, False])
-    if has_uri:
-        track.uri = "spotify:track:" + random_str(IDType.ID.value, IDType.ID.value + 1)
-    else:
-        track.uri = __UNAVAILABLE_URI_VALUE__
+    track.uri = random_uri() if has_uri else __UNAVAILABLE_URI_VALUE__
 
-    track.image_links = {}
+    track._image_links = {}
     track.has_image = False
 
-    track.path = join(
+    track._path = join(
         path_track_cache, f"{str(track.track_number).zfill(2)} - {track.title}" + choice(tuple(track.valid_extensions))
     )
 
@@ -150,10 +152,12 @@ def clear_tags_test(track: LocalTrack):
     os.remove(path_file_copy)
 
 
-def update_tags_test(track: LocalTrack):
+def update_tags_test(track: LocalTrack) -> None:
     """Test for updating tags on a given track."""
     path_file_base, path_file_copy = copy_track(track)
     track_original = copy(track)
+
+    new_uri = __UNAVAILABLE_URI_VALUE__ if track.has_uri else random_uri()
 
     track.title = "new title"
     track.artist = "new artist"
@@ -168,8 +172,8 @@ def update_tags_test(track: LocalTrack):
     track.disc_number = 2
     track.disc_total = 3
     track.compilation = False
-    track.uri = __UNAVAILABLE_URI_VALUE__
-    track.image_links = None
+    track.uri = new_uri
+    track.image_links.clear()
 
     # dry run, no updates should happen
     result = track.save(tags=TagName.ALL, replace=False, dry_run=True)
@@ -216,9 +220,12 @@ def update_tags_test(track: LocalTrack):
     assert track_update.disc_number == track_original.disc_number
     assert track_update.disc_total == track_original.disc_total
     assert track_update.compilation == track_original.compilation
-    assert track_update.comments == [__UNAVAILABLE_URI_VALUE__]
+    assert track_update.comments == [new_uri]
 
-    assert track_update.uri is None
+    if new_uri == __UNAVAILABLE_URI_VALUE__:
+        assert track_update.uri is None
+    else:
+        assert track_update.uri == new_uri
     assert track_update.has_uri == track.has_uri
     assert track_update.has_image == track_original.has_image
 
@@ -241,9 +248,12 @@ def update_tags_test(track: LocalTrack):
     assert track_update_replace.disc_number == track.disc_number
     assert track_update_replace.disc_total == track.disc_total
     assert track_update_replace.compilation == track.compilation
-    assert track_update_replace.comments == [__UNAVAILABLE_URI_VALUE__]
+    assert track_update_replace.comments == [new_uri]
 
-    assert track_update_replace.uri is None
+    if new_uri == __UNAVAILABLE_URI_VALUE__:
+        assert track_update.uri is None
+    else:
+        assert track_update.uri == new_uri
     assert track_update_replace.image_links == track.image_links
     assert track_update_replace.has_image == track.has_image
 
@@ -251,12 +261,12 @@ def update_tags_test(track: LocalTrack):
 
 
 # noinspection PyProtectedMember
-def update_images_test(track: LocalTrack):
+def update_images_test(track: LocalTrack) -> None:
     """Test for updating images on a given track."""
     path_file_base, path_file_copy = copy_track(track)
     track_original = copy(track)
 
-    track.image_links = {"cover_front": path_track_img}
+    track._image_links = {"cover_front": path_track_img}
     image_original = track._read_images()[0]
     image_new = open_image(path_track_img)
 

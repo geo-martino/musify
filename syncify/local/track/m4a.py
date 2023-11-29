@@ -1,5 +1,5 @@
+from collections.abc import Iterable
 from io import BytesIO
-from collections.abc import Collection
 from typing import Any
 
 import mutagen
@@ -43,13 +43,11 @@ class M4A(LocalTrack):
     )
 
     # noinspection PyTypeChecker
-    def __init__(
-            self, file: str | mutagen.FileType | mutagen.mp4.MP4, available: Collection[str] | None = None
-    ):
-        LocalTrack.__init__(self, file=file, available=available)
+    def __init__(self, file: str | mutagen.FileType | mutagen.mp4.MP4, available: Iterable[str] | None = None):
+        super().__init__(file=file, available=available)
         self._file: mutagen.mp4.MP4 = self._file
 
-    def _read_tag(self, tag_ids: list[str]) -> list[Any] | None:
+    def _read_tag(self, tag_ids: Iterable[str]) -> list[Any] | None:
         """Extract all tag values for a given list of tag IDs"""
         values = []
         for tag_id in tag_ids:
@@ -58,12 +56,12 @@ class M4A(LocalTrack):
                 # skip null or empty/blank strings
                 continue
 
-            if tag_id.startswith("----:com.apple.iTunes") and isinstance(value, list):
+            if tag_id.startswith("----:com.apple.iTunes") and isinstance(value, (list, set, tuple)):
                 value = list(v.decode("utf-8") for v in value)
             elif isinstance(value, bytes):
                 value = value.decode("utf-8")
 
-            values.extend(value) if isinstance(value, list) else values.append(value)
+            values.extend(value) if isinstance(value, (list, set, tuple)) else values.append(value)
 
         return values if len(values) > 0 else None
 

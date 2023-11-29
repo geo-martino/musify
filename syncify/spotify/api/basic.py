@@ -1,5 +1,4 @@
 from abc import ABCMeta
-from collections.abc import Mapping
 from typing import Any
 
 from syncify.spotify.api import __URL_API__
@@ -18,13 +17,11 @@ class Basic(APIBase, metaclass=ABCMeta):
     ###########################################################################
     ## GET endpoints
     ###########################################################################
-    def get_self(self) -> Mapping[str, Any]:
+    def get_self(self) -> dict[str, Any]:
         """``GET: /me`` - Get API response for information on current user"""
         return self.get(url=f"{__URL_API__}/me", use_cache=True, log_pad=71)
 
-    def query(
-            self, query: str, kind: ItemType, limit: int = 10, use_cache: bool = True
-    ) -> list[Mapping[str, Any]]:
+    def query(self, query: str, kind: ItemType, limit: int = 10, use_cache: bool = True) -> list[dict[str, Any]]:
         """
         ``GET: /search`` - Query for items. Modify result types returned with kind parameter
 

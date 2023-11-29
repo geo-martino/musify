@@ -1,6 +1,8 @@
 import re
 from abc import ABCMeta, abstractmethod
-from typing import Any
+from collections.abc import Iterable
+from datetime import datetime
+from typing import Any, Self
 
 from PIL import Image
 
@@ -8,12 +10,236 @@ from syncify.local.track.base.processor import TagProcessor
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 from syncify.spotify.enums import IDType
 from syncify.spotify.utils import check_spotify_type
+from utils import UnitIterable
+from utils.helpers import to_collection
 
 
 class TagReader(TagProcessor, metaclass=ABCMeta):
     """Contains methods for extracting tags from a loaded file"""
 
-    def _read_metadata(self):
+    @property
+    def name(self):
+        """This track's title"""
+        return self.title if self.title else hash(self)
+
+    @property
+    def title(self):
+        return self._title
+
+    @title.setter
+    def title(self, value: str | None):
+        self._title = value
+
+    @property
+    def artist(self):
+        return self._artist
+
+    @artist.setter
+    def artist(self, value: str | None):
+        self._artist = value
+
+    @property
+    def artists(self) -> list[str]:
+        """List of all artists featured on this track."""
+        return self._artist.split(self._list_sep)
+
+    @property
+    def album(self):
+        return self._album
+
+    @album.setter
+    def album(self, value: str | None):
+        self._album = value
+
+    @property
+    def album_artist(self):
+        return self._album_artist
+
+    @album_artist.setter
+    def album_artist(self, value: str | None):
+        self._album_artist = value
+
+    @property
+    def track_number(self):
+        return self._track_number
+
+    @track_number.setter
+    def track_number(self, value: int | None):
+        self._track_number = value
+
+    @property
+    def track_total(self):
+        return self._track_total
+
+    @track_total.setter
+    def track_total(self, value: int | None):
+        self._track_total = value
+
+    @property
+    def genres(self):
+        return self._genres
+
+    @genres.setter
+    def genres(self, value: list[str] | None):
+        self._genres = value
+
+    @property
+    def year(self):
+        return self._year
+
+    @year.setter
+    def year(self, value: int | None):
+        self._year = value
+
+    @property
+    def bpm(self):
+        return self._bpm
+
+    @bpm.setter
+    def bpm(self, value: float | None):
+        self._bpm = value
+
+    @property
+    def key(self):
+        return self._key
+
+    @key.setter
+    def key(self, value: str | None):
+        self._key = value
+
+    @property
+    def disc_number(self):
+        return self._disc_number
+
+    @disc_number.setter
+    def disc_number(self, value: int | None):
+        self._disc_number = value
+
+    @property
+    def disc_total(self):
+        return self._disc_total
+
+    @disc_total.setter
+    def disc_total(self, value: int | None):
+        self._disc_total = value
+
+    @property
+    def compilation(self):
+        return self._compilation
+
+    @compilation.setter
+    def compilation(self, value: bool | None):
+        self._compilation = value
+
+    @property
+    def comments(self):
+        return self._comments
+
+    @comments.setter
+    def comments(self, value: UnitIterable[str] | None):
+        self._comments = [value] if isinstance(value, str) else to_collection(value, list)
+
+    @property
+    def uri(self):
+        return self._uri
+
+    @uri.setter
+    def uri(self, value: str | None):
+        if value is None:
+            self._uri = None
+            self._has_uri = None
+        elif value == __UNAVAILABLE_URI_VALUE__:
+            self._uri = None
+            self._has_uri = False
+        else:
+            self._uri = value
+            self._has_uri = True
+        setattr(self, self.uri_tag.name.casefold(), value)
+
+    @property
+    def has_uri(self):
+        return self._has_uri
+
+    @property
+    def image_links(self):
+        return self._image_links
+
+    @property
+    def has_image(self):
+        return self._has_image
+
+    @has_image.setter
+    def has_image(self, value: bool):
+        self._has_image = value
+
+    @property
+    def length(self):
+        return self.file.info.length
+
+    @property
+    def rating(self):
+        return self._rating
+
+    @rating.setter
+    def rating(self, value: float | None):
+        self._rating = value
+
+    @property
+    def date_added(self):
+        return self._date_added
+
+    @date_added.setter
+    def date_added(self, value: datetime | None):
+        self._date_added = value
+
+    @property
+    def last_played(self):
+        return self._last_played
+
+    @last_played.setter
+    def last_played(self, value: datetime | None):
+        self._last_played = value
+
+    @property
+    def play_count(self):
+        return self._play_count
+
+    @play_count.setter
+    def play_count(self, value: datetime | None):
+        self._play_count = value
+
+    def __init__(self):
+        self._title = None
+        self._artist = None
+        self._album = None
+        self._album_artist = None
+        self._track_number = None
+        self._track_total = None
+        self._genres = None
+        self._year = None
+        self._bpm = None
+        self._key = None
+        self._disc_number = None
+        self._disc_total = None
+        self._compilation = None
+        self._comments = None
+
+        self._uri = None
+        self._has_uri = None
+        self._has_image = None
+        self._image_links = {}
+
+        self._rating = None
+        self._date_added = None
+        self._last_played = None
+        self._play_count = None
+
+    def load_metadata(self) -> Self:
+        """General method for extracting metadata from loaded file"""
+        self._read_metadata()
+        return self
+
+    def _read_metadata(self) -> None:
         """Driver for extracting metadata from a loaded file"""
 
         self.title = self._read_title()
@@ -31,10 +257,10 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
         self.compilation = self._read_compilation()
         self.comments = self._read_comments()
 
-        self._uri, self._has_uri = self._read_uri()
+        self.uri = self._read_uri()
         self.has_image = self._check_for_images()
 
-    def _read_tag(self, tag_ids: list[str]) -> list[Any] | None:
+    def _read_tag(self, tag_ids: Iterable[str]) -> list[Any] | None:
         """Extract all tag values from file for a given list of tag IDs"""
         values = []
         for tag_id in tag_ids:
@@ -43,7 +269,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
                 # skip null or empty/blank strings
                 continue
 
-            values.extend(value) if isinstance(value, list) else values.append(value)
+            values.extend(value) if isinstance(value, (list, set, tuple)) else values.append(value)
 
         return values if len(values) > 0 else None
 
@@ -140,7 +366,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
         values = self._read_tag(self.tag_map.comments)
         return list({str(value) for value in values}) if values is not None else None
 
-    def _read_uri(self) -> (str | None, bool | None):
+    def _read_uri(self) -> str | None:
         """
         Extract data relating to Spotify URI from file
 
@@ -150,19 +376,17 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
             * None if the track has no URI, and it is not known whether it is available on remote server
         """
         # WORKAROUND: for dodgy mp3 tag comments, split on null and take first value
-        possible_values: list[str] | None = self[self.uri_tag.name.casefold()]
+        possible_values: tuple[str] | None = to_collection(self[self.uri_tag.name.casefold()])
         if possible_values is None or len(possible_values) == 0:
-            return None, None
+            return None
 
         # WORKAROUND: for dodgy mp3 tag comments, split on null and take first value
-        possible_values: tuple[str] | None = tuple(val for values in possible_values for val in values.split("\x00"))
+        possible_values = tuple(val for values in possible_values for val in values.split("\x00"))
         for uri in possible_values:
-            if uri == __UNAVAILABLE_URI_VALUE__:
-                return None, False
-            elif check_spotify_type(uri, types=IDType.URI) == IDType.URI:
-                return uri, True
+            if uri == __UNAVAILABLE_URI_VALUE__ or check_spotify_type(uri, types=IDType.URI) == IDType.URI:
+                return uri
 
-        return None, None
+        return None
 
     @abstractmethod
     def _read_images(self) -> list[Image.Image] | None:

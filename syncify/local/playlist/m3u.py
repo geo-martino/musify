@@ -6,9 +6,10 @@ from syncify.abstract.misc import Result
 from syncify.local.playlist.playlist import LocalPlaylist
 from syncify.local.playlist.processor.match import TrackMatch
 from syncify.local.track import LocalTrack, load_track
+from utils import UnitCollection
 
 
-@dataclass
+@dataclass(frozen=True)
 class SyncResultM3U(Result):
     """Stores the results of a sync with a local M3U playlist"""
     start: int
@@ -42,12 +43,24 @@ class M3U(LocalPlaylist):
 
     valid_extensions = {".m3u"}
 
+    @property
+    def image_links(self):
+        return {}
+
+    @property
+    def description(self):
+        return self._description
+
+    @description.setter
+    def description(self, value: str | None):
+        self._description = value
+
     def __init__(
             self,
             path: str,
-            tracks: list[LocalTrack] | None = None,
+            tracks: Collection[LocalTrack] | None = None,
             library_folder: str | None = None,
-            other_folders: str | Collection[str] | None = None,
+            other_folders: UnitCollection[str] | None = None,
             check_existence: bool = True
     ):
         self._validate_type(path)
@@ -59,6 +72,8 @@ class M3U(LocalPlaylist):
         elif tracks is not None:  # generating a new M3U
             paths = [track.path for track in tracks]
 
+        self._description = None
+
         matcher = TrackMatch(
             include_paths=paths,
             library_folder=library_folder,
@@ -69,7 +84,7 @@ class M3U(LocalPlaylist):
 
         self.load(tracks=tracks)
 
-    def load(self, tracks: list[LocalTrack] | None = None) -> list[LocalTrack]:
+    def load(self, tracks: Collection[LocalTrack] | None = None) -> list[LocalTrack]:
         if self.matcher.include_paths is None or len(self.matcher.include_paths) == 0:
             # use the given tracks if no valid matcher present
             self.tracks = tracks if tracks else []

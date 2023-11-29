@@ -1,14 +1,18 @@
 import inspect
 import re
+from collections.abc import Iterable, Callable, MutableSequence
 from dataclasses import dataclass
 from typing import Any
-from collections.abc import Iterable, Collection, Mapping, MutableMapping, Callable
 
 from syncify.abstract.collection import Album, ItemCollection
 from syncify.abstract.item import Track, BaseObject
 from syncify.enums.tags import TagName, PropertyName
 from syncify.utils.helpers import limit_value
 from syncify.utils.logger import Logger
+from utils import UnitIterable
+
+_MATCH_DEFAULT = frozenset({TagName.ALL, PropertyName.ALL})
+_MATCH_TYPE = Iterable[TagName | PropertyName]
 
 
 @dataclass
@@ -53,40 +57,42 @@ class Matcher(Logger):
         CleanTagConfig(name="album", _remove={"ep"}, _preprocess=lambda x: x.split('-')[0])
     ]
 
-    def _log_padded(self, log: list[str], pad: str = ' '):
+    def _log_padded(self, log: MutableSequence[str], pad: str = ' ') -> None:
         """Wrapper for logging lists in a correctly aligned format"""
         log[0] = pad * 3 + ' ' + (log[0] if log[0] else "unknown")
         self.logger.debug(" | ".join(log))
 
-    def _log_algorithm(self, source: BaseObject, extra: list[str] | None = None):
+    def _log_algorithm(self, source: BaseObject, extra: Iterable[str] | None = None) -> None:
         """Wrapper for initially logging an algorithm in a correctly aligned format"""
         algorithm = inspect.stack()[1][0].f_code.co_name.upper().lstrip("_").replace("_", " ")
         log = [source.name, algorithm]
         if extra:
-            log += extra
+            log.extend(extra)
         self._log_padded(log, pad='>')
 
-    def _log_test[T: (Track, Album)](self, source: BaseObject, result: T, test: Any, extra: list[str] | None = None):
+    def _log_test[T: (Track, Album)](
+            self, source: BaseObject, result: T, test: Any, extra: Iterable[str] | None = None
+    ) -> None:
         """Wrapper for initially logging a test result in a correctly aligned format"""
         algorithm = inspect.stack()[1][0].f_code.co_name.replace("match", "").upper().lstrip("_").replace("_", " ")
         log_result = f"> Testing URI: {result.uri}" if hasattr(result, "uri") else "> Test failed"
         log = [source.name, log_result, f"{algorithm:<10}={test:<5}"]
         if extra:
-            log += extra
+            log.extend(extra)
         self._log_padded(log)
 
-    def _log_match[T: (Track, Album)](self, source: BaseObject, result: T, extra: list[str] | None = None):
+    def _log_match[T: (Track, Album)](self, source: BaseObject, result: T, extra: Iterable[str] | None = None) -> None:
         """Wrapper for initially logging a match in a correctly aligned format"""
         log = [source.name, f"< Matched URI: {result.uri}"]
         if extra:
-            log += extra
+            log.extend(extra)
         self._log_padded(log, pad='<')
 
     def __init__(self, allow_karaoke: bool = False):
         Logger.__init__(self)
         self.allow_karaoke = allow_karaoke
 
-    def clean_tags(self, source: BaseObject):
+    def clean_tags(self, source: BaseObject) -> None:
         """
         Clean tags on the input item and assign to its ``clean_tags`` attribute. Used for better matching/searching.
         Clean by removing words, and only taking phrases before a certain word e.g. 'featuring', 'part'.
@@ -130,7 +136,7 @@ class Matcher(Logger):
     ###########################################################################
     def match_not_karaoke[T: (Track, Album)](self, source: T, result: T) -> int:
         """Checks if a result is not a karaoke item."""
-        def is_karaoke(values: str | list[str]) -> bool:
+        def is_karaoke(values: UnitIterable[str]) -> bool:
             """Check if the words in the given ``values`` match any word in ``karaoke_tags``"""
             karaoke = any(word in values for word in self.karaoke_tags)
             self._log_test(source=source, result=result, test=karaoke, extra=[f"{self.karaoke_tags} -> {values}"])
@@ -236,7 +242,7 @@ class Matcher(Logger):
             results: Iterable[T],
             min_score: float = 0.1,
             max_score: float = 0.8,
-            match_on: Collection[TagName | PropertyName] = frozenset([TagName.ALL, PropertyName.ALL])
+            match_on: _MATCH_TYPE = _MATCH_DEFAULT
     ) -> T | None:
         """
         Perform score match algorithm for a given item and its results.
@@ -267,11 +273,7 @@ class Matcher(Logger):
             self._log_test(source=source, result=result, test=score, extra=[f"NO MATCH: {score}<{min_score}"])
 
     def _score[T: (Track, Album)](
-            self,
-            source: T,
-            results: Iterable[T],
-            max_score: float = 0.8,
-            match_on:  Collection[TagName | PropertyName] = frozenset([TagName.ALL, PropertyName.ALL])
+            self, source: T, results: Iterable[T], max_score: float = 0.8, match_on: _MATCH_TYPE = _MATCH_DEFAULT
     ) -> (float, T | None):
         """
         Gets the score and result from a cleaned source and a given list of results.
@@ -321,11 +323,8 @@ class Matcher(Logger):
         return best_score, best_result
 
     def _get_scores[T: (Track, Album)](
-            self,
-            source: T,
-            result: T,
-            match_on: Collection[TagName | PropertyName] = frozenset([TagName.ALL, PropertyName.ALL])
-    ) -> Mapping[str, float]:
+            self, source: T, result: T, match_on: _MATCH_TYPE = _MATCH_DEFAULT
+    ) -> dict[str, float]:
         """
         Gets the scores from a cleaned source and result to match on.
         When an ItemCollection is given to match on, scores are also given for the items in the collection.
@@ -339,7 +338,7 @@ class Matcher(Logger):
         if not self.allow_karaoke and self.match_not_karaoke(source, result) < 1:
             return {}
 
-        scores_current: MutableMapping[str, float] = {}
+        scores_current: dict[str, float] = {}
 
         if TagName.TITLE in match_on:
             scores_current["title"] = self.match_name(source=source, result=result)

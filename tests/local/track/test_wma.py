@@ -9,7 +9,7 @@ from syncify.local.track import WMA
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 from tests.common import path_txt
 from tests.local.track.track import path_track_wma, path_track_resources
-from tests.local.track.track import update_tags_test, clear_tags_test, update_images_test
+from tests.local.track.track import update_tags_test, clear_tags_test
 
 
 def test_load():
@@ -85,7 +85,7 @@ def test_loaded_attributes():
     assert track.uri is None
     assert not track.has_uri
 
-    assert track.image_links is None
+    assert track.image_links == {}
     assert track.has_image
 
     # file properties

@@ -1,18 +1,18 @@
+from collections.abc import Collection, Mapping, Iterable
 from glob import glob
 from os.path import splitext, join, exists, basename
 from typing import Any
-from collections.abc import Collection, Mapping
 
+from syncify.abstract.collection import Playlist, Library
 from syncify.abstract.item import Item
-from syncify.abstract.collection import ItemCollection, Playlist, Library
 from syncify.abstract.misc import Result
 from syncify.enums.tags import PropertyName, TagName
-from syncify.local.track import __TRACK_CLASSES__, LocalTrack, load_track
+from syncify.local.exception import IllegalFileTypeError, LocalCollectionError
+from syncify.local.library.collection import LocalCollectionFiltered, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from syncify.local.playlist import __PLAYLIST_FILETYPES__, LocalPlaylist, M3U, XAutoPF
 from syncify.local.playlist.processor.sort import TrackSort
-from syncify.local.library.collection import LocalCollectionFiltered, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
-from syncify.local.exception import IllegalFileTypeError, LocalCollectionError
-from syncify.utils import UnitList
+from syncify.local.track import __TRACK_CLASSES__, LocalTrack, load_track
+from syncify.utils import UnitCollection, UnitIterable
 from syncify.utils.logger import Logger, REPORT
 
 
@@ -87,7 +87,7 @@ class LocalLibrary(Library, LocalCollectionFiltered):
                     splitext(basename(path.replace(self._playlist_folder, "").lower()))[0]: path
                     for path in paths
                 }
-                playlists.update(entry)
+                playlists |= entry
 
             playlists_total = len(playlists)
             self._playlist_paths = {
@@ -108,7 +108,7 @@ class LocalLibrary(Library, LocalCollectionFiltered):
         return basename(self.library_folder) if self.library_folder else None
 
     @property
-    def playlists(self) -> Mapping[str, LocalPlaylist]:
+    def playlists(self) -> dict[str, LocalPlaylist]:
         """The playlists in this library mapped as ``{name: playlist}``"""
         return self._playlists
 
@@ -144,9 +144,9 @@ class LocalLibrary(Library, LocalCollectionFiltered):
             self,
             library_folder: str | None = None,
             playlist_folder: str | None = None,
-            other_folders: set[str] | None = None,
-            include: list[str] | None = None,
-            exclude: list[str] | None = None,
+            other_folders: UnitCollection[str] | None = None,
+            include: Iterable[str] | None = None,
+            exclude: Iterable[str] | None = None,
             load: bool = True,
     ):
         Logger.__init__(self)
@@ -161,18 +161,18 @@ class LocalLibrary(Library, LocalCollectionFiltered):
 
         self._playlist_folder: str | None = None
         # playlist lowercase name mapped to its filepath for all accepted filetypes in playlist folder
-        self._playlist_paths: Mapping[str, str] | None = None
-        self.playlist_folder = playlist_folder
+        self._playlist_paths: dict[str, str] | None = None
+        self.playlist_folder: str | None = playlist_folder
 
-        self.other_folders = other_folders
+        self.other_folders: UnitCollection[str] | None = other_folders
 
         self._tracks: list[LocalTrack] = []
-        self._playlists: Mapping[str, LocalPlaylist] = {}
+        self._playlists: dict[str, LocalPlaylist] = {}
 
         if load:
             self.load()
 
-    def load(self, tracks: bool = True, playlists: bool = True, log: bool = True):
+    def load(self, tracks: bool = True, playlists: bool = True, log: bool = True) -> None:
         """Loads all tracks and playlists in this library from scratch and log results."""
         self.logger.debug("Load local library: START")
         self.logger.info(
@@ -220,7 +220,7 @@ class LocalLibrary(Library, LocalCollectionFiltered):
         self.logger.debug("Load local tracks: DONE\n")
         return tracks
 
-    def log_tracks(self):
+    def log_tracks(self) -> None:
         """Log stats on currently loaded tracks"""
         width = self.get_max_width(self._playlist_paths)
         self.logger.report(
@@ -275,11 +275,11 @@ class LocalLibrary(Library, LocalCollectionFiltered):
         self.logger.debug("Load local playlist data: DONE\n")
         return playlists
 
-    def save_playlists(self, dry_run: bool = True) -> Mapping[str, Result]:
+    def save_playlists(self, dry_run: bool = True) -> dict[str, Result]:
         """Saves the tags of all tracks in this library. Use arguments from :py:func:`LocalPlaylist.save()`"""
         return {name: pl.save(dry_run=dry_run) for name, pl in self.playlists.items()}
 
-    def log_playlists(self):
+    def log_playlists(self) -> None:
         """Log stats on currently loaded playlists"""
         max_width = self.get_max_width(self.playlists)
 
@@ -294,23 +294,22 @@ class LocalLibrary(Library, LocalCollectionFiltered):
             )
         self.print_line(REPORT)
 
-    def _log_errors(self, errors: list[str]):
+    def _log_errors(self, errors: Iterable[str]) -> None:
         """Log paths which had some error while loading"""
         errors = tuple(f"\33[91m{e}\33[0m" for e in errors)
         if len(errors) > 0:
             self.logger.warning("\33[97mCould not load: \33[0m\n\t- {errors} ".format(errors="\n\t- ".join(errors)))
             self.print_line()
 
-    def extend(self, items: ItemCollection | Collection[Item]):
+    def extend(self, items: Iterable[Item]):
         self.tracks.extend(track for track in items if isinstance(track, LocalTrack) and track not in self.tracks)
 
-    def merge_playlists(self, playlists: Library | Mapping[str, Playlist] | list[Playlist] | None = None):
-        # TODO: merge playlists adding/removing tracks as needed.
-        #  Most likely will need to implement some method on playlist class too
+    def merge_playlists(self, playlists: Library | Collection[Playlist] | Mapping[Any, Playlist] | None = None):
         raise NotImplementedError
-        pass
 
-    def restore_tracks(self, backup: Mapping[str, Mapping[str, Any]], tags: UnitList[TagName] = TagName.ALL) -> int:
+    def restore_tracks(
+            self, backup: Mapping[str, Mapping[str, Any]], tags: UnitIterable[TagName] = TagName.ALL
+    ) -> int:
         """
         Restore track tags from a backup to loaded track objects. This does not save the updated tags.
 

@@ -1,6 +1,6 @@
 import re
 from abc import ABCMeta
-from collections.abc import Mapping, MutableMapping, MutableSequence
+from collections.abc import Mapping, MutableMapping, MutableSequence, Collection
 from itertools import batched
 from typing import Any
 
@@ -20,12 +20,12 @@ class Items(APIBase, metaclass=ABCMeta):
     def _get_item_results(
             self,
             url: str,
-            id_list: list[str],
+            id_list: Collection[str],
             params: Mapping[str, Any] | None = None,
             key: str | None = None,
             unit: str | None = None,
             use_cache: bool = True,
-    ) -> list[MutableMapping[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Get responses from a given ``url`` appending an ID to each request from a given ``id_list`` i.e. ``{URL}/{ID}``.
         This function executes each URL request individually for each ID.
@@ -47,7 +47,7 @@ class Items(APIBase, metaclass=ABCMeta):
             id_list = self.get_progress_bar(iterable=id_list, desc=f"Getting {unit}", unit=unit)
 
         log = [f"{unit.title()}:{len(id_list):>5}"]
-        results: list[Any] = [
+        results: list[dict[str, Any]] = [
             self.get(f"{url}/{id_}", params=params, use_cache=use_cache, log_pad=43, log_extra=log)
             for id_ in id_list
         ]
@@ -56,13 +56,13 @@ class Items(APIBase, metaclass=ABCMeta):
     def _get_item_results_batch(
             self,
             url: str,
-            id_list: list[str],
+            id_list: Collection[str],
             params: Mapping[str, Any] | None = None,
             key: str | None = None,
             unit: str | None = None,
             use_cache: bool = True,
             limit: int = 50,
-    ) -> list[Mapping[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Get responses from a given ``url`` appending an ID to each request from a given ``id_list`` i.e. ``{URL}/{ID}``.
         This function executes each URL request in batches of IDs based on the given ``batch_size``.
@@ -90,7 +90,7 @@ class Items(APIBase, metaclass=ABCMeta):
         if len(id_chunks) >= 10:  # show progress bar for batches which may take a long time
             bar = self.get_progress_bar(iterable=bar, desc=f"Getting {unit}", unit="pages")
 
-        results = []
+        results: list[dict[str, Any]] = []
         params = params if params is not None else {}
         for i, idx in enumerate(bar, 1):  # get responses in batches
             id_chunk = id_chunks[idx]
@@ -107,17 +107,18 @@ class Items(APIBase, metaclass=ABCMeta):
     ###########################################################################
     def get_items(
             self, values: APIMethodInputType, kind: ItemType | None = None, limit: int = 50, use_cache: bool = True,
-    ) -> list[MutableMapping[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         ``GET: /{kind}s`` - Get information for given list of ``values``. Items may be:
             - A string representing a URL/URI/ID.
-            - A collection of strings representing URLs/URIs/IDs of the same type.
+            - A MutableSequence of strings representing URLs/URIs/IDs of the same type.
             - A Spotify API JSON response for a collection including some items under an ``items`` key,
-                a valid ID value under an ``id`` key,
+            a valid ID value under an ``id`` key,
                 and a valid item type value under a ``type`` key if ``kind`` is None.
-            - A list of Spotify API JSON responses for a collection including some items under an ``items`` key,
-                a valid ID value under an ``id`` key,
-                and a valid item type value under a ``type`` key if ``kind`` is None.
+            - A MutableSequence of Spotify API JSON responses for a collection including:
+                - some items under an ``items`` key
+                - a valid ID value under an ``id`` key
+                - a valid item type value under a ``type`` key if ``kind`` is None.
 
         If a JSON response is given, this replaces the ``items`` with the new results.
 
@@ -151,12 +152,12 @@ class Items(APIBase, metaclass=ABCMeta):
         self.logger.debug(f"{'DONE':<7}: {url:<43} | Retrieved {len(results):>6} {kind_str}")
 
         # if API response was given on input, update it with new responses
-        if isinstance(values, dict) and len(results) == 0:
+        if isinstance(values, MutableMapping) and len(results) == 0:
             values.clear()
-            values.update(results[0])
-        elif isinstance(values, MutableSequence) and all(isinstance(item, dict) for item in values):
+            values |= results[0]
+        elif isinstance(values, MutableSequence) and all(isinstance(item, MutableMapping) for item in values):
             values.clear()
-            values.extend(results)
+            values |= results
 
         return results
 
@@ -167,16 +168,17 @@ class Items(APIBase, metaclass=ABCMeta):
             analysis: bool = False,
             limit: int = 50,
             use_cache: bool = True,
-    ) -> Mapping[str, list[Mapping[str, Any]]]:
+    ) -> dict[str, list[dict[str, Any]]]:
         """
         ``GET: /audio-features`` and/or ``GET: /audio-analysis`` - Get audio features/analysis for list of items.
         Items may be:
             * A string representing a URL/URI/ID.
-            * A collection of strings representing URLs/URIs/IDs of the same type.
+            * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
             * A Spotify API JSON response for a collection including some items under an ``items`` key
                 and a valid ID value under an ``id`` key.
-            * A list of Spotify API JSON responses for a collection including some items under an ``items`` key
-                and a valid ID value under an ``id`` key.
+            * A MutableSequence of Spotify API JSON responses for a collection including:
+                - some items under an ``items`` key
+                - a valid ID value under an ``id`` key.
 
         If a JSON response is given, this updates ``items`` by adding the results
         under the ``audio_features`` and ``audio_analysis`` keys as appropriate.
@@ -204,7 +206,7 @@ class Items(APIBase, metaclass=ABCMeta):
         analysis_key = "audio_analysis"
         analysis_url = f"{__URL_API__}/audio-analysis"
 
-        results: MutableMapping[str, list[Mapping[str, Any]]] = {}
+        results: dict[str, list[dict[str, Any]]] = {}
         if len(id_list) == 1:
             if features:
                 results[features_key] = [self.get(f"{features_url}/{id_list[0]}", use_cache=use_cache, log_pad=43)]
@@ -221,10 +223,10 @@ class Items(APIBase, metaclass=ABCMeta):
                 )
 
         # if API response was given on input, update it with new responses
-        if isinstance(values, dict):
+        if isinstance(values, MutableMapping):
             for key, result in results.items():
                 values[key] = result[0]
-        elif isinstance(values, MutableSequence) and all(isinstance(item, dict) and "id" in item for item in values):
+        elif isinstance(values, MutableSequence) and all(isinstance(i, MutableMapping) and "id" in i for i in values):
             for key, result in results.items():
                 result_mapped = {r["id"]: r for r in result if r}
                 for item in values:
@@ -240,7 +242,7 @@ class Items(APIBase, metaclass=ABCMeta):
             analysis: bool = False,
             limit: int = 50,
             use_cache: bool = True
-    ) -> list[MutableMapping[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         ``GET: /{kind}s`` + GET: /audio-features`` and/or ``GET: /audio-analysis``
 
@@ -248,11 +250,12 @@ class Items(APIBase, metaclass=ABCMeta):
         Mostly just a wrapper for ``get_items`` and ``get_tracks`` functions.
         Items may be:
             * A string representing a URL/URI/ID.
-            * A collection of strings representing URLs/URIs/IDs of the same type.
+            * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
             * A Spotify API JSON response for a collection including some items under an ``items`` key
                 and a valid ID value under an ``id`` key.
-            * A list of Spotify API JSON responses for a collection including some items under an ``items`` key
-                and a valid ID value under an ``id`` key.
+            * A MutableSequence of Spotify API JSON responses for a collection including :
+                - some items under an ``items`` key
+                - a valid ID value under an ``id`` key.
 
         If a JSON response is given, this updates ``items`` by adding the results
         under the ``audio_features`` and ``audio_analysis`` keys as appropriate.

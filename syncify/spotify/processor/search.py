@@ -1,4 +1,4 @@
-from collections.abc import Mapping, MutableMapping
+from collections.abc import Mapping, Sequence, Iterable, Collection
 from dataclasses import dataclass
 from typing import Any
 
@@ -8,24 +8,29 @@ from syncify.abstract.misc import Result
 from syncify.enums.tags import TagName, PropertyName
 from syncify.spotify.api.api import API
 from syncify.spotify.enums import ItemType
-from syncify.spotify.library.item import SpotifyTrack
 from syncify.spotify.library.collection import SpotifyAlbum
+from syncify.spotify.library.item import SpotifyTrack
 from syncify.spotify.processor.match import Matcher
 from syncify.utils.logger import REPORT
 
+_T = Sequence[Item] | None
 
-@dataclass
+
+@dataclass(frozen=True)
 class SearchResult(Result):
     """Stores the results of the searching process"""
-    matched: list[Item]
-    unmatched: list[Item]
-    skipped: list[Item]
+
+    def __init__(self, matched: _T = None, unmatched: _T = None, skipped: _T = None):
+        Result.__init__(self)
+        self.__dict__["matched"] = matched if matched else tuple()
+        self.__dict__["unmatched"] = unmatched if unmatched else tuple()
+        self.__dict__["skipped"] = skipped if skipped else tuple()
 
 
 @dataclass(frozen=True)
 class Algorithm:
     """Key settings related to a search algorithm"""
-    search_fields_1: list[str]
+    search_fields_1: Iterable[str]
     match_fields: set[TagName | PropertyName]
     result_count: int
     allow_karaoke: bool = False
@@ -33,8 +38,8 @@ class Algorithm:
     min_score: float = 0.1
     max_score: float = 0.8
 
-    search_fields_2: list[str] | None = None
-    search_fields_3: list[str] | None = None
+    search_fields_2: Iterable[str] | None = None
+    search_fields_3: Iterable[str] | None = None
 
 
 @dataclass
@@ -73,13 +78,11 @@ class Searcher(Matcher):
         Matcher.__init__(self, allow_karaoke=allow_karaoke)
         self.api = api
 
-    def _get_results(
-            self, item: BaseObject, kind: ItemType, algorithm: Algorithm
-    ) -> list[MutableMapping[str, Any]] | None:
+    def _get_results(self, item: BaseObject, kind: ItemType, algorithm: Algorithm) -> list[dict[str, Any]] | None:
         """Calls the ``/search`` endpoint to get results for the current item based on algorithm settings"""
         self.clean_tags(item)
 
-        def execute_query(keys: list[str]) -> (list[Mapping[str, Any]], str):
+        def execute_query(keys: Iterable[str]) -> (list[dict[str, Any]], str):
             """Generate and execute the query against the API for the given item's cleaned ``keys``"""
             attributes = set(item.clean_tags.get(key) for key in keys)
             q = " ".join(attr for attr in attributes if attr)
@@ -97,7 +100,7 @@ class Searcher(Matcher):
             self._log_padded([item.name, f"Query: {query}", f"{len(results)} results"])
             return results
 
-    def _log_results(self, results: Mapping[ItemCollection, SearchResult]):
+    def _log_results(self, results: Mapping[ItemCollection, SearchResult]) -> None:
         """Logs the final results of the Searcher"""
         if not results:
             return
@@ -141,7 +144,7 @@ class Searcher(Matcher):
         )
         self.print_line(REPORT)
 
-    def search(self, collections: list[ItemCollection]) -> Mapping[ItemCollection, SearchResult]:
+    def search(self, collections: Collection[ItemCollection]) -> dict[ItemCollection, SearchResult]:
         """
         Searches for Spotify matches for the given list of item collections.
 
@@ -157,11 +160,11 @@ class Searcher(Matcher):
             f"Searching for matches on Spotify for {len(collections)} collections\33[0m"
         )
 
-        search_results: MutableMapping[ItemCollection, SearchResult] = {}
+        search_results: dict[ItemCollection, SearchResult] = {}
         for collection in self.get_progress_bar(iterable=collections, desc="Searching", unit="collections"):
             if not [item for item in collection.items if item.has_uri is None]:
                 self._log_padded([collection.name, "Skipping search, no tracks to search"], pad='<')
-            skipped = [item for item in collection if item.has_uri is not None]
+            skipped = tuple(item for item in collection if item.has_uri is not None)
 
             if getattr(collection, "compilation", True) is not False:
                 self._log_padded([collection.name, "Searching with item algorithm"], pad='>')
@@ -177,8 +180,8 @@ class Searcher(Matcher):
                     self._search_items(collection=collection)
 
             search_results[collection] = SearchResult(
-                matched=[item for item in collection if item.has_uri],
-                unmatched=[item for item in collection if item.has_uri is None],
+                matched=tuple(item for item in collection if item.has_uri),
+                unmatched=tuple(item for item in collection if item.has_uri is None),
                 skipped=skipped
             )
 
@@ -187,7 +190,7 @@ class Searcher(Matcher):
         self.logger.debug("Searching items: DONE\n")
         return search_results
 
-    def _search_items(self, collection: ItemCollection):
+    def _search_items(self, collection: ItemCollection) -> None:
         """Search for matches on individual items in an item collection that have ``None`` on ``has_uri`` attribute"""
         algorithm = AlgorithmSettings.ITEMS
         for item in [item for item in collection.items if item.has_uri is None]:
@@ -209,7 +212,7 @@ class Searcher(Matcher):
             if result and result.has_uri:
                 item.uri = result.uri
 
-    def _search_album(self, collection: Album):
+    def _search_album(self, collection: Album) -> None:
         """Search for matches on an entire item collection"""
         algorithm = AlgorithmSettings.ALBUM
         results = [

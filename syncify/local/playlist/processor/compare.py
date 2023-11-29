@@ -11,7 +11,7 @@ from syncify.enums.tags import Name, TagName, PropertyName
 from syncify.local.exception import FieldError, LocalProcessorError
 from syncify.local.playlist.processor.base import TrackProcessor
 from syncify.local.track.base.track import LocalTrack
-from syncify.utils import UnitList
+from syncify.utils import UnitSequence
 from syncify.utils.helpers import to_collection
 
 # Map of MusicBee field name to Tag or Property
@@ -96,7 +96,9 @@ class TrackCompare(TrackProcessor):
         if xml is None:
             return
 
-        conditions: list[Mapping[str, str]] = to_collection(xml["SmartPlaylist"]["Source"]["Conditions"]["Condition"])
+        print(xml["SmartPlaylist"]["Source"]["Conditions"]["Condition"])
+        print(type(xml["SmartPlaylist"]["Source"]["Conditions"]["Condition"]))
+        conditions: tuple[Mapping[str, str]] = to_collection(xml["SmartPlaylist"]["Source"]["Conditions"]["Condition"])
 
         objs = []
         for condition in conditions:
@@ -105,7 +107,7 @@ class TrackCompare(TrackProcessor):
             if field is None:
                 raise FieldError(f"Unrecognised field name", field=field_str)
 
-            expected: list[str] | None = [val for k, val in condition.items() if k.startswith("@Value")]
+            expected: tuple[str] | None = tuple(val for k, val in condition.items() if k.startswith("@Value"))
             if len(expected) == 0 or expected[0] == "[playing track]":
                 expected = None
 
@@ -113,7 +115,7 @@ class TrackCompare(TrackProcessor):
 
         return objs
 
-    def __init__(self, field: Name, condition: str, expected: UnitList[Any] | None = None):
+    def __init__(self, field: Name, condition: str, expected: UnitSequence[Any] | None = None):
         self._converted = False
         self._expected: list[Any] | None = None
 
@@ -130,7 +132,7 @@ class TrackCompare(TrackProcessor):
         }
         self.condition = condition
 
-    def compare(self, track: LocalTrack, reference: UnitList[LocalTrack] | None = None) -> bool:
+    def compare(self, track: LocalTrack, reference: UnitSequence[LocalTrack] | None = None) -> bool:
         """
         Compare a ``track`` to a ``reference`` or,
         if no ``reference`` is given, to this object's list of ``expected`` values
@@ -162,7 +164,7 @@ class TrackCompare(TrackProcessor):
         except TypeError:
             return False
 
-    def _convert_expected(self, value: Any):
+    def _convert_expected(self, value: Any) -> None:
         """Driver for converting expected values to the same type as given value"""
         if self._converted:
             return
@@ -196,7 +198,7 @@ class TrackCompare(TrackProcessor):
 
         return seconds
 
-    def _convert_expected_to_int(self):
+    def _convert_expected_to_int(self) -> None:
         """Convert expected values to integers"""
         converted: list[int] = []
         for exp in self.expected:
@@ -206,7 +208,7 @@ class TrackCompare(TrackProcessor):
             converted.append(int(exp))
         self._expected = converted
 
-    def _convert_expected_to_float(self):
+    def _convert_expected_to_float(self) -> None:
         """Convert expected values to floats"""
         converted: list[float] = []
         for exp in self.expected:
@@ -216,7 +218,7 @@ class TrackCompare(TrackProcessor):
             converted.append(float(exp))
         self._expected = converted
 
-    def _convert_expected_to_datetime(self):
+    def _convert_expected_to_datetime(self) -> None:
         """Convert expected values to datetime objects"""
         converted: list[date] = []
 

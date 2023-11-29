@@ -1,8 +1,8 @@
+from collections.abc import Collection, Mapping, Iterable
 from typing import Any, Literal
-from collections.abc import Collection, Mapping, MutableMapping
 
+from syncify.abstract.collection import Library, Playlist
 from syncify.abstract.item import Item
-from syncify.abstract.collection import Library, ItemCollection, Playlist
 from syncify.spotify.api.api import API
 from syncify.spotify.base import SpotifyObject
 from syncify.spotify.enums import ItemType
@@ -24,7 +24,7 @@ class SpotifyLibrary(Library):
     limit = 50
 
     @property
-    def name(self) -> str | None:
+    def name(self):
         """The user ID associated with this library"""
         return self.api.user_id
 
@@ -37,7 +37,7 @@ class SpotifyLibrary(Library):
         return self._tracks
 
     @property
-    def playlists(self) -> MutableMapping[str, SpotifyPlaylist]:
+    def playlists(self) -> dict[str, SpotifyPlaylist]:
         return self._playlists
 
     @property
@@ -48,8 +48,8 @@ class SpotifyLibrary(Library):
     def __init__(
             self,
             api: API,
-            include: list[str] | None = None,
-            exclude: list[str] | None = None,
+            include: Iterable[str] | None = None,
+            exclude: Iterable[str] | None = None,
             use_cache: bool = True,
             load: bool = True,
     ):
@@ -62,12 +62,12 @@ class SpotifyLibrary(Library):
         SpotifyObject.api = api
 
         self._tracks: list[SpotifyTrack] = []
-        self._playlists: MutableMapping[str, SpotifyPlaylist] = {}
+        self._playlists: dict[str, SpotifyPlaylist] = {}
 
         if load:
             self.load()
 
-    def load(self, log: bool = True):
+    def load(self, log: bool = True) -> None:
         """Loads all tracks and playlists in this library from scratch and log results."""
         self.logger.debug("Load Spotify library: START")
 
@@ -97,12 +97,12 @@ class SpotifyLibrary(Library):
 
         self.logger.debug("Load Spotify library: DONE\n")
 
-    def _get_tracks_data(self, playlists_data: list[Mapping[str, Any]]) -> list[Mapping[str, Any]]:
+    def _get_tracks_data(self, playlists_data: Collection[Mapping[str, Any]]) -> list[dict[str, Any]]:
         """Get a list of unique tracks with enhanced data (i.e. features, genres etc.) across all playlists"""
         self.logger.debug("Load Spotify tracks data: START")
         playlists_tracks_data = [pl["tracks"]["items"] for pl in playlists_data]
 
-        tracks_data = []
+        tracks_data: list[dict[str, Any]] = []
         tracks_seen = set()
         for track in [item["track"] for pl in playlists_tracks_data for item in pl]:
             if not track["is_local"] and track["uri"] not in tracks_seen:
@@ -119,7 +119,7 @@ class SpotifyLibrary(Library):
         self.logger.debug("Load Spotify tracks data: DONE\n")
         return tracks_data
 
-    def log_tracks(self):
+    def log_tracks(self) -> None:
         """Log stats on currently loaded tracks"""
         playlist_tracks = [track.uri for tracks in self.playlists.values() for track in tracks]
         in_playlists = len([track for track in self.tracks if track.uri in playlist_tracks])
@@ -132,7 +132,7 @@ class SpotifyLibrary(Library):
         )
         self.print_line(REPORT)
 
-    def enrich_tracks(self, albums: bool = False, artists: bool = False):
+    def enrich_tracks(self, albums: bool = False, artists: bool = False) -> None:
         """Call API to enrich elements of track objects improving metadata coverage"""
         if not albums and not artists:
             return
@@ -163,7 +163,7 @@ class SpotifyLibrary(Library):
         self.print_line()
         self.logger.debug("Enrich Spotify library: DONE\n")
 
-    def _get_playlists_data(self) -> list[Mapping[str, Any]]:
+    def _get_playlists_data(self) -> list[dict[str, Any]]:
         """Get playlists and all their tracks"""
         self.logger.debug("Get Spotify playlists data: START")
         playlists_data = self.api.get_collections_user(
@@ -196,7 +196,7 @@ class SpotifyLibrary(Library):
         self.logger.debug("Get Spotify playlists data: DONE\n")
         return playlists_data
 
-    def log_playlists(self):
+    def log_playlists(self) -> None:
         """Log stats on currently loaded playlists"""
         max_width = self.get_max_width(self.playlists)
 
@@ -212,7 +212,7 @@ class SpotifyLibrary(Library):
             clear: Literal["all", "extra"] | None = None,
             reload: bool = True,
             dry_run: bool = True
-    ) -> Mapping[str, SyncResultSpotifyPlaylist]:
+    ) -> dict[str, SyncResultSpotifyPlaylist]:
         """
         Synchronise this playlist object with the remote Spotify playlist it is associated with. Clear options:
 
@@ -258,7 +258,7 @@ class SpotifyLibrary(Library):
         self.logger.debug("Update Spotify: DONE\n")
         return results
 
-    def log_sync(self, results: Mapping[str, SyncResultSpotifyPlaylist]):
+    def log_sync(self, results: Mapping[str, SyncResultSpotifyPlaylist]) -> None:
         """Log stats from the results of a ``sync`` operation"""
         if not results:
             return
@@ -278,7 +278,7 @@ class SpotifyLibrary(Library):
             )
         self.print_line(STAT)
 
-    def extend(self, items: ItemCollection | Collection[Item]):
+    def extend(self, items: Iterable[Item]) -> None:
         self.logger.debug("Extend Spotify tracks data: START")
         self.logger.info(
             f"\33[1;95m ->\33[1;97m Extending library: checking if the given items are already in this library \33[0m"
@@ -308,12 +308,10 @@ class SpotifyLibrary(Library):
         self.log_tracks()
         self.logger.debug("Extend Spotify tracks data: DONE\n")
 
-    def merge_playlists(self, playlists: Library | Mapping[str, Playlist] | list[Playlist] | None = None):
-        # TODO: merge playlists adding/removing tracks as needed.
-        #  Most likely will need to implement some method on playlist class too
+    def merge_playlists(self, playlists: Library | Collection[Playlist] | Mapping[Any, Playlist] | None = None):
         raise NotImplementedError
 
-    def restore_playlists(self, backup: Mapping[str, list[str]]):
+    def restore_playlists(self, backup: Mapping[str, Iterable[str]]) -> None:
         """
         Restore playlists from a backup to loaded playlist objects.
         This does not sync the updated playlists with Spotify.
@@ -324,7 +322,7 @@ class SpotifyLibrary(Library):
         if uris:
             tracks_data = self.api.get_tracks(uris, features=True, use_cache=self.use_cache)
             tracks = list(map(SpotifyTrack, tracks_data))
-            uri_tracks.update({track.uri: track for track in tracks})
+            uri_tracks |= {track.uri: track for track in tracks}
 
         for name, uris in backup.items():
             tracks = [uri_tracks.get(uri) for uri in uris]

@@ -56,7 +56,7 @@ class File(metaclass=ABCMeta):
         """Allowed extensions in lowercase"""
         raise NotImplementedError
 
-    def _validate_type(self, path: str):
+    def _validate_type(self, path: str) -> None:
         """Raises exception if the path's extension is not accepted"""
         ext = splitext(path)[1].lower()
         if ext not in self.valid_extensions:

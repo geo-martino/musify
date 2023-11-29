@@ -4,12 +4,12 @@ import re
 import shutil
 import sys
 import traceback
+from collections.abc import Callable, Mapping, Collection
 from datetime import datetime as dt
 from glob import glob
 from os.path import basename, dirname, isdir, join, relpath
 from time import perf_counter
 from typing import Any
-from collections.abc import Callable, Mapping
 
 from dateutil.relativedelta import relativedelta
 
@@ -24,8 +24,8 @@ from syncify.spotify.library.library import SpotifyLibrary
 from syncify.spotify.processor.check import Checker
 from syncify.spotify.processor.search import Searcher, AlgorithmSettings
 from syncify.utils.helpers import get_user_input
-from syncify.utils.printers import print_logo, print_line, print_time
 from syncify.utils.logger import Logger, STAT
+from syncify.utils.printers import print_logo, print_line, print_time
 
 
 class Syncify(Settings, Report):
@@ -39,7 +39,7 @@ class Syncify(Settings, Report):
     def allowed_functions(self) -> list[str]:
         return [
             method for method, value in Syncify.__dict__.items()
-            if not method.startswith('_') and callable(value) and method not in ["set_func"]
+            if not method.startswith('_') and callable(value) and method not in [self.set_func.__name__]
         ]
 
     @property
@@ -93,7 +93,7 @@ class Syncify(Settings, Report):
         return self._local_library
 
     @property
-    def local_library_backup_name(self):
+    def local_library_backup_name(self) -> str:
         """The filename to use for backups of the LocalLibrary"""
         return f"{self.local_library.__class__.__name__} - {self.local_library.name}"
 
@@ -109,7 +109,7 @@ class Syncify(Settings, Report):
         return self._spotify_library
 
     @property
-    def spotify_library_backup_name(self):
+    def spotify_library_backup_name(self) -> str:
         """The filename to use for backups of the SpotifyLibrary"""
         return f"{self.spotify_library.__class__.__name__} - {self.spotify_library.name}"
 
@@ -128,12 +128,12 @@ class Syncify(Settings, Report):
 
         self.logger.debug(f"Initialisation of Syncify object: DONE\n")
 
-    def set_func(self, name: str):
+    def set_func(self, name: str) -> None:
         """Set the current runtime function to call at ``self.run`` and set its config for this run"""
         self.run = getattr(self, name)
         self.cfg_run = self.cfg_functions.get(name, self.cfg_general)
 
-    def _save_json(self, filename: str, data: Mapping[str, Any], folder: str | None = None):
+    def _save_json(self, filename: str, data: Mapping[str, Any], folder: str | None = None) -> None:
         """Save a JSON file to a given folder, or this run's folder if not given"""
         if not filename.lower().endswith(".json"):
             filename += ".json"
@@ -143,7 +143,7 @@ class Syncify(Settings, Report):
         with open(path, "w") as f:
             json.dump(data, f, indent=2)
 
-    def _load_json(self, filename: str, folder: str | None = None) -> Mapping[str, Any]:
+    def _load_json(self, filename: str, folder: str | None = None) -> dict[str, Any]:
         """Load a stored JSON file from a given folder, or this run's folder if not given"""
         if not filename.lower().endswith(".json"):
             filename += ".json"
@@ -179,13 +179,13 @@ class Syncify(Settings, Report):
     ###########################################################################
     ## Maintenance/Utilities
     ###########################################################################
-    def pause(self):
+    def pause(self) -> None:
         """Pause the program with a message and wait for user input to continue"""
         message = self.cfg_run.get("message", "Pausing, hit return to continue...").strip()
         input(f"\33[93m{message}\33[0m ")
         self.print_line()
 
-    def reload(self):
+    def reload(self) -> None:
         """Reload libraries if they are initialised"""
         self.logger.debug("Reload libraries: START")
 
@@ -199,11 +199,11 @@ class Syncify(Settings, Report):
 
         self.logger.debug("Reload libraries: DONE\n")
 
-    def print_data(self):
+    def print_data(self) -> None:
         """Pretty print data from user's input"""
         self.api.pretty_print_uris(use_cache=self.use_cache)
 
-    def clean_env(self):
+    def clean_env(self) -> None:
         """Clears files older than a number of days and only keeps max # of runs"""
         self.logger.debug("Clean Syncify files: START")
 
@@ -224,7 +224,7 @@ class Syncify(Settings, Report):
         remove = []
         dates = []
 
-        def get_paths_to_remove(paths: tuple[str]):
+        def get_paths_to_remove(paths: Collection[str]) -> None:
             """Determine which folders to remove based on settings"""
             remaining = len(paths) + 1
 
@@ -255,7 +255,7 @@ class Syncify(Settings, Report):
     ###########################################################################
     ## Backup/Restore
     ###########################################################################
-    def backup(self, is_final: bool = False):
+    def backup(self, is_final: bool = False) -> None:
         """Backup data for all tracks and playlists in all libraries"""
         self.logger.debug("Backup libraries: START")
 
@@ -268,7 +268,7 @@ class Syncify(Settings, Report):
         self._save_json(spotify_backup_name, self.spotify_library.as_json())
         self.logger.debug("Backup libraries: DONE\n")
 
-    def restore(self):
+    def restore(self) -> None:
         """Restore library data from a backup, getting user input for the settings"""
         output_parent = dirname(self.output_folder)
         backup_names = (self.local_library_backup_name, self.spotify_library_backup_name)
@@ -296,7 +296,7 @@ class Syncify(Settings, Report):
         if get_user_input("Restore Spotify library playlists? (enter 'y')").lower() == 'y':
             self._restore_spotify(restore_from)
 
-    def _restore_local(self, folder: str):
+    def _restore_local(self, folder: str) -> None:
         """Restore local library data from a backup, getting user input for the settings"""
         self.logger.debug("Restore local: START")
 
@@ -328,7 +328,7 @@ class Syncify(Settings, Report):
         self.local_library.log_save_tracks(results)
         self.logger.debug("Restore local: DONE\n")
 
-    def _restore_spotify(self, folder: str):
+    def _restore_spotify(self, folder: str) -> None:
         """Restore Spotify library data from a backup, getting user input for the settings"""
         self.logger.debug("Restore Spotify: START")
 
@@ -343,7 +343,7 @@ class Syncify(Settings, Report):
 
         self.logger.debug("Restore Spotify: DONE\n")
 
-    def extract(self):
+    def extract(self) -> None:
         """Extract and save images from local or Spotify items"""
         # TODO: add library-wide image extraction method
         raise NotImplementedError
@@ -351,7 +351,7 @@ class Syncify(Settings, Report):
     ###########################################################################
     ## Report/Search functions
     ###########################################################################
-    def report(self):
+    def report(self) -> None:
         """Produce various reports on loaded data"""
         self.logger.debug("Generate reports: START")
         cfg = self.cfg_run.get("reports", {})
@@ -361,7 +361,7 @@ class Syncify(Settings, Report):
             self.report_missing_tags(self.local_library.folders)
         self.logger.debug("Generate reports: DONE\n")
 
-    def check(self):
+    def check(self) -> None:
         """Run check on entire library by album and update URI tags on file"""
         self.logger.debug("Check and update URIs: START")
 
@@ -383,7 +383,7 @@ class Syncify(Settings, Report):
         self.print_line()
         self.logger.debug("Check and update URIs: DONE\n")
 
-    def search(self):
+    def search(self) -> None:
         """Run all methods for searching, checking, and saving URI associations for local files."""
         self.logger.debug("Search and match: START")
 
@@ -416,7 +416,7 @@ class Syncify(Settings, Report):
     ###########################################################################
     ## Export from Syncify to sources
     ###########################################################################
-    def get_tags(self):
+    def get_tags(self) -> None:
         """Run all methods for synchronising local data with Spotify and updating local track tags"""
         self.logger.debug("Update tags: START")
 
@@ -443,7 +443,7 @@ class Syncify(Settings, Report):
         self.print_line()
         self.logger.debug("Update tags: DONE\n")
 
-    def process_compilations(self):
+    def process_compilations(self) -> None:
         """Run all methods for setting and updating local track tags for compilation albums"""
         self.logger.debug("Update compilations: START")
         folders = self._get_limited_folders()
@@ -463,7 +463,7 @@ class Syncify(Settings, Report):
         results = {}
         for folder in self.get_progress_bar(iterable=folders, desc="Setting tags", unit="folders"):  # set tags
             folder.set_compilation_tags()
-            results.update(folder.save_tracks(tags=tags, replace=replace, dry_run=self.dry_run))
+            results |= folder.save_tracks(tags=tags, replace=replace, dry_run=self.dry_run)
 
         if results:
             self.print_line(STAT)
@@ -472,7 +472,7 @@ class Syncify(Settings, Report):
         self.print_line()
         self.logger.debug("Update compilations: Done\n")
 
-    def sync_spotify(self):
+    def sync_spotify(self) -> None:
         """Run all main functions for synchronising Spotify playlists with a local library"""
         self.logger.debug("Update Spotify: START")
 
@@ -575,9 +575,8 @@ if __name__ == "__main__":
 
 
 ## NEEDED FOR v0.3
-# TODO: review necessity of exact 'list' types in typing
+# TODO: review usefulness of TagMap and other dataclasses
 # TODO: add docstrings to top of all scripts
 # TODO: how to read WMA images
 # TODO: write tests, write tests, write tests
-# TODO: Implement generic types where needed
 # TODO: update the readme

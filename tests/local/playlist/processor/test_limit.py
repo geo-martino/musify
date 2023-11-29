@@ -39,7 +39,7 @@ def test_limit():
 
             track.album = f"album {i}"
             track.file.info.length = i * 60
-            track.path = random_file_path
+            track._path = random_file_path
             track.rating = i
 
             if i != 1 and i != 5:

@@ -1,6 +1,6 @@
 import json
 import os
-from collections.abc import Callable, Mapping, MutableMapping
+from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime
 from socket import socket, AF_INET, SOCK_STREAM
 from typing import Any
@@ -59,12 +59,12 @@ class APIAuthoriser(Logger):
     """
 
     @property
-    def token_safe(self) -> Mapping[str, Any]:
+    def token_safe(self) -> dict[str, Any]:
         """Returns a reformatted token, making it safe to log by removing sensitive values at predefined keys."""
         return {k: f"{v[:5]}..." if str(k).endswith("_token") else v for k, v in self.token.items()}
 
     @property
-    def headers(self) -> MutableMapping[str, str]:
+    def headers(self) -> dict[str, str]:
         """
         Format headers to usage appropriate format
 
@@ -96,7 +96,7 @@ class APIAuthoriser(Logger):
         test_expiry: int = 0,
         token: Mapping[str, Any] | None = None,
         token_file_path: str | None = None,
-        token_key_path: list[str] | None = None,
+        token_key_path: Sequence[str] | None = None,
         header_key: str = "Authorization",
         header_prefix: str | None = "Bearer ",
         header_extra: Mapping[str, str] | None = None,
@@ -116,14 +116,14 @@ class APIAuthoriser(Logger):
         # store token
         self.token: Mapping[str, Any] | None = token
         self.token_file_path: str | None = token_file_path
-        self.token_key_path: list[str] | None = token_key_path if token_key_path is not None else ["access_token"]
+        self.token_key_path: Sequence[str] | None = token_key_path if token_key_path is not None else ["access_token"]
 
         # information for the final headers
         self.header_key: str = header_key
         self.header_prefix: str = header_prefix if header_prefix else ""
         self.header_extra: Mapping[str, str] = header_extra if header_extra else {}
 
-    def auth(self, force_load: bool = False, force_new=False) -> Mapping[str, str]:
+    def auth(self, force_load: bool = False, force_new=False) -> dict[str, str]:
         """
         Main method for authentication, tests/refreshes/reauthorises as needed
 
@@ -174,7 +174,7 @@ class APIAuthoriser(Logger):
 
         return self.headers
 
-    def _auth_user(self, **requests_args):
+    def _auth_user(self, **requests_args) -> None:
         """
         Add user authentication code to request args by authorising through user's browser
 
@@ -208,7 +208,7 @@ class APIAuthoriser(Logger):
         path_raw = next(line for line in request.recv(8196).decode("utf-8").split('\n') if line.startswith("GET"))
         requests_args["data"]["code"] = parse_qs(urlparse(path_raw).query)["code"][0]
 
-    def _request_token(self, user: bool = True, **requests_args):
+    def _request_token(self, user: bool = True, **requests_args) -> None:
         """
         Authenticates/refreshes basic API access and returns token.
 
@@ -265,7 +265,7 @@ class APIAuthoriser(Logger):
 
         return all([token_has_no_error, valid_response, not_expired])
 
-    def load_token(self) -> Mapping[str, Any]:
+    def load_token(self) -> dict[str, Any]:
         """Load stored token from given path"""
         if self.token_file_path and os.path.exists(self.token_file_path):
             self.logger.debug("Saved access token found. Loading stored token...")
@@ -274,7 +274,7 @@ class APIAuthoriser(Logger):
 
         return self.token
 
-    def save_token(self):
+    def save_token(self) -> None:
         """Save new/updated token to given path"""
         self.logger.debug(f"Saving token: {self.token_safe}")
         with open(self.token_file_path, "w") as file:

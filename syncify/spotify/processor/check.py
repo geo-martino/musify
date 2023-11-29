@@ -1,6 +1,6 @@
 import traceback
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence, MutableSequence, Collection
 from dataclasses import dataclass
 
 from syncify.abstract.collection import ItemCollection
@@ -16,13 +16,18 @@ from syncify.spotify.utils import check_spotify_type, convert
 from syncify.utils.helpers import get_user_input
 from syncify.utils.logger import REPORT
 
+_T = Sequence[Item] | None
 
-@dataclass
+
+@dataclass(frozen=True)
 class CheckResult(Result):
     """Stores the results of the checking process"""
-    switched: list[Item]
-    unavailable: list[Item]
-    unchanged: list[Item]
+
+    def __init__(self, switched: _T = None, unavailable: _T = None, unchanged: _T = None):
+        Result.__init__(self)
+        self.__dict__["compared"] = switched if switched else tuple()
+        self.__dict__["unavailable"] = unavailable if unavailable else tuple()
+        self.__dict__["unchanged"] = unchanged if unchanged else tuple()
 
 
 class Checker(Matcher):
@@ -62,7 +67,7 @@ class Checker(Matcher):
         self.final_unavailable: list[Track] = []
         self.final_unchanged: list[Track] = []
 
-    def _make_temp_playlist(self, name: str, collection: ItemCollection):
+    def _make_temp_playlist(self, name: str, collection: ItemCollection) -> None:
         """Create a temporary playlist, store its URL for later unfollowing, and add all given URIs."""
         try:
             uris = [item.uri for item in collection if item.has_uri]
@@ -86,7 +91,7 @@ class Checker(Matcher):
         self.logger.debug(f"User input: {inp}")
         return inp.strip()
 
-    def _format_help_text(self, options: Mapping[str, str], header: list[str] | None = None) -> str:
+    def _format_help_text(self, options: Mapping[str, str], header: MutableSequence[str] | None = None) -> str:
         """Format help text with a given mapping of options. Add an option header to include before options."""
         max_width = self.get_max_width(options)
 
@@ -98,7 +103,7 @@ class Checker(Matcher):
 
         return "\n\t".join(help_text) + '\n'
 
-    def _delete_temp_playlists(self):
+    def _delete_temp_playlists(self) -> None:
         """Delete all temporary playlists stored and clear stored playlists and collections"""
         if not self.api.test():  # check if token has expired
             self.logger.info_extra("\33[93mAPI token has expired, re-authorising... \33[0m")
@@ -111,7 +116,7 @@ class Checker(Matcher):
         self.playlist_name_urls.clear()
         self.playlist_name_collection.clear()
 
-    def check(self, collections: list[ItemCollection], interval: int = 10) -> CheckResult | None:
+    def check(self, collections: Collection[ItemCollection], interval: int = 10) -> CheckResult | None:
         """
         Run the following operations to check a list of ItemCollections on Spotify.
 
@@ -181,6 +186,10 @@ class Checker(Matcher):
         )
         self.print_line(REPORT)
 
+        result = CheckResult(
+            switched=self.final_switched, unavailable=self.final_unavailable, unchanged=self.final_unchanged
+        )
+
         self.skip = True
         self.remaining.clear()
         self.switched.clear()
@@ -188,14 +197,12 @@ class Checker(Matcher):
         self.final_unavailable = []
         self.final_unchanged = []
 
-        return CheckResult(
-            switched=self.final_switched, unavailable=self.final_unavailable, unchanged=self.final_unchanged
-        )
+        return result
 
     ###########################################################################
     ## Pause to check items in current temp playlists
     ###########################################################################
-    def _check_pause(self, page: int, page_size: int, page_total: int):
+    def _check_pause(self, page: int, page_size: int, page_total: int) -> None:
         """
         Initial pause after the ``interval`` limit of playlists have been created.
 
@@ -255,7 +262,7 @@ class Checker(Matcher):
     ###########################################################################
     ## Match items user has added or removed
     ###########################################################################
-    def _check_uri(self):
+    def _check_uri(self) -> None:
         """Run operations to check that URIs are assigned to all the items in the current list of collections."""
         skip_hold = self.quit or self.skip
         self.skip = False
@@ -264,8 +271,8 @@ class Checker(Matcher):
                 self.logger.info_extra("\33[93mAPI token has expired, re-authorising... \33[0m")
                 self.api.auth()
 
-            name: str = self._default_name if isinstance(collection, list) else collection.name
-            items: list[Item] = collection if isinstance(collection, list) else collection.items
+            name: str = collection.name if isinstance(collection, ItemCollection) else self._default_name
+            items: list[Item] = collection.items if isinstance(collection, ItemCollection) else collection
             self._log_padded([name, f"{len(items):>6} total items"], pad='>')
 
             while True:
@@ -274,8 +281,8 @@ class Checker(Matcher):
                 if not self.remaining:
                     break
 
-            unavailable = [item for item in collection if item.has_uri is False]
-            unchanged = [item for item in collection if item.has_uri is None]
+            unavailable = tuple(item for item in collection if item.has_uri is False)
+            unchanged = tuple(item for item in collection if item.has_uri is None)
 
             self._log_padded([name, f"{len(unavailable):>6} items unavailable"])
             self._log_padded([name, f"{len(unchanged):>6} items unchanged"])
@@ -291,7 +298,7 @@ class Checker(Matcher):
 
         self.skip = skip_hold
 
-    def _match_to_remote(self, name: str):
+    def _match_to_remote(self, name: str) -> None:
         """
         Check the current temporary playlist given by ``name`` and attempt to match the source list of items
         to any modifications the user has made.
@@ -347,7 +354,7 @@ class Checker(Matcher):
         self._log_padded([name, f"{count_start - count_final:>6} items switched"])
         self._log_padded([name, f"{count_final:>6} items still not found"])
 
-    def _match_to_input(self, name: str):
+    def _match_to_input(self, name: str) -> None:
         """Get the user's input for any items in the collection given by ``name`` that are still missing URIs."""
         if not self.remaining:
             return

@@ -1,17 +1,15 @@
 import os
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
+from collections.abc import Mapping, Iterable
 from glob import glob
 from os.path import join, exists, dirname
 from typing import Self
-from collections.abc import Collection, Mapping
 
 import mutagen
 
 from syncify.abstract.item import Track, TrackProperties
 from syncify.local.file import File
-from syncify.local.track.base.reader import TagReader
 from syncify.local.track.base.writer import TagWriter
-from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 
 
 class _MutagenMock(mutagen.FileType):
@@ -25,7 +23,7 @@ class _MutagenMock(mutagen.FileType):
         self.pictures = []
 
 
-class LocalTrack(TagReader, TagWriter, metaclass=ABCMeta):
+class LocalTrack(TagWriter, metaclass=ABCMeta):
     """
     Generic track object for extracting, modifying, and saving tags for a given file.
 
@@ -34,57 +32,13 @@ class LocalTrack(TagReader, TagWriter, metaclass=ABCMeta):
         Useful for case-insensitive path loading and correcting paths to case-sensitive.
     """
 
-    _num_sep = "/"
-
     @property
-    @abstractmethod
-    def valid_extensions(self) -> list[str]:
-        """Allowed extensions in lowercase"""
-        raise NotImplementedError
-
-    @property
-    def name(self) -> str | None:
-        """Track title"""
-        return self.title
-
-    @property
-    def file(self) -> mutagen.FileType:
-        """Mutagen file object representing the loaded file from the disk"""
+    def file(self):
         return self._file
 
     @property
-    def path(self) -> str:
-        """The path to the file"""
+    def path(self):
         return self._path
-
-    @path.setter
-    def path(self, value: str):
-        self._path = value
-
-    @property
-    def uri(self) -> str | None:
-        """The Spotify URI associated with this track."""
-        return self._uri
-
-    @uri.setter
-    def uri(self, value: str | None):
-        self._uri = value
-        if value is None:
-            self._has_uri = None
-        elif value == __UNAVAILABLE_URI_VALUE__:
-            self._has_uri = False
-        else:
-            self._has_uri = True
-
-    @property
-    def has_uri(self) -> bool | None:
-        """Does this track have an associated URI on Spotify. When None, unknown if yes or no."""
-        return self._has_uri
-
-    @property
-    def length(self) -> float:
-        """The duration of the track in seconds"""
-        return self.file.info.length
 
     @classmethod
     def get_filepaths(cls, library_folder: str) -> set[str]:
@@ -94,23 +48,21 @@ class LocalTrack(TagReader, TagWriter, metaclass=ABCMeta):
         # noinspection PyTypeChecker
         for ext in cls.valid_extensions:
             # first glob doesn't get filenames that start with a period
-            paths.update(glob(join(library_folder, "**", f"*{ext}"), recursive=True))
+            paths |= set(glob(join(library_folder, "**", f"*{ext}"), recursive=True))
             # second glob only picks up filenames that start with a period
-            paths.update(glob(join(library_folder, "*", "**", f".*{ext}"), recursive=True))
+            paths |= set(glob(join(library_folder, "*", "**", f".*{ext}"), recursive=True))
 
         return paths
 
-    def __init__(self, file: str | mutagen.FileType, available: Collection[str] | None = None):
-        self._uri: str | None = None
-        self._has_uri: bool | None = None
+    def __init__(self, file: str | mutagen.FileType, available: Iterable[str] | None = None):
+        super().__init__()
 
         # all available paths for this file type
-        self._available_paths: Collection[str] | None = None
+        self._available_paths = set(available) if available is not None else None
+
         # all available paths mapped as lower case to actual
         self._available_paths_lower: Mapping[str, str] | None = None
-
         if available is not None:
-            self._available_paths = set(available)
             self._available_paths_lower = {path.casefold(): path for path in self._available_paths}
 
         if isinstance(file, str):
@@ -142,20 +94,6 @@ class LocalTrack(TagReader, TagWriter, metaclass=ABCMeta):
             raise FileNotFoundError(f"File not found | {self._path}")
 
         return mutagen.File(self._path)
-
-    def load_metadata(self) -> Self:
-        """General method for extracting metadata from loaded file"""
-        self._read_metadata()
-        return self
-
-    def save_file(self) -> bool:
-        """Save current tags to file and update object attributes relating to file properties.
-        Returns True if successful"""
-        try:
-            self._file.save()
-        except mutagen.MutagenError as ex:
-            raise ex
-        return True
 
     def extract_images_to_file(self, output_folder: str) -> int:
         """Extract and save all embedded images from file. Returns the number of images extracted."""
@@ -210,6 +148,6 @@ class LocalTrack(TagReader, TagWriter, metaclass=ABCMeta):
         else:
             return self.__class__(file=self.file)
 
-    def __deepcopy__(self, m: dict = None):
+    def __deepcopy__(self, _: dict = None):
         """Deepcopy Track object by reloading from the disk"""
         return self.__class__(file=self.path)

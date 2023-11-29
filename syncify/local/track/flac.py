@@ -1,6 +1,6 @@
 import io
+from collections.abc import Iterable
 from typing import Any
-from collections.abc import Collection
 
 import mutagen
 import mutagen.flac
@@ -43,10 +43,8 @@ class FLAC(LocalTrack):
     )
 
     # noinspection PyTypeChecker
-    def __init__(
-            self, file: str | mutagen.FileType | mutagen.flac.FLAC, available: Collection[str] | None = None
-    ):
-        LocalTrack.__init__(self, file=file, available=available)
+    def __init__(self, file: str | mutagen.FileType | mutagen.flac.FLAC, available: Iterable[str] | None = None):
+        super().__init__(file=file, available=available)
         self._file: mutagen.flac.FLAC = self._file
 
     def _read_images(self) -> list[Image.Image] | None:
@@ -61,7 +59,7 @@ class FLAC(LocalTrack):
             return self.delete_tag(tag_id, dry_run=dry_run)
 
         if not dry_run and tag_id is not None:
-            if isinstance(tag_value, list):
+            if isinstance(tag_value, (list, set, tuple)):
                 self._file[tag_id] = list(map(str, tag_value))
             else:
                 self._file[tag_id] = str(tag_value)

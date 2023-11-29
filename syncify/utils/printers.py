@@ -4,7 +4,7 @@ import random
 
 
 # noinspection SpellCheckingInspection
-def print_logo():
+def print_logo() -> None:
     """Pretty print the Syncify logo in the centre of the terminal"""
     fonts = ("basic", "broadway", "chunky", "doom", "drpepper", "epic", "hollywood", "isometric1", "isometric2",
              "isometric3", "isometric4", "larry3d", "shadow", "slant", "speed", "standard", "univers", "whimsy")
@@ -24,7 +24,7 @@ def print_logo():
     print()
 
 
-def print_line(text: str = "", line_char: str = "-"):
+def print_line(text: str = "", line_char: str = "-") -> None:
     """Print an aligned line with the given text in the centre of the terminal"""
     text = text.replace("_", " ").title()
     cols = os.get_terminal_size().columns
@@ -36,7 +36,7 @@ def print_line(text: str = "", line_char: str = "-"):
     print(f"\33[1;96m{line_char * amount_left}\33[95m{text}\33[1;96m{line_char * amount_right}\33[0m\n")
 
 
-def print_time(seconds: float):
+def print_time(seconds: float) -> None:
     """Print the time in minutes and seconds in the centre of the terminal"""
     mins = int(seconds // 60)
     secs = int(seconds % 60)

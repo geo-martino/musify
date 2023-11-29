@@ -11,16 +11,18 @@ from syncify.local.file import File
 class TagProcessor(Track, TrackProperties, LocalObject, File, metaclass=ABCMeta):
     """Generic base class for tag processing"""
 
-    uri_tag = TagName.COMMENTS
+    @property
+    def uri_tag(self) -> TagName:
+        """The tag to use as the URI tag in the file's metadata"""
+        return TagName.COMMENTS
 
     @property
-    @abstractmethod
     def _num_sep(self) -> str:
         """
         Some number values come as a combined string i.e. track number/track total
         Define the separator to use when representing both values as a combined string
         """
-        raise NotImplementedError
+        return "/"
 
     @property
     @abstractmethod

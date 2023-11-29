@@ -1,5 +1,5 @@
+from collections.abc import Iterable
 from io import BytesIO
-from collections.abc import Collection
 from typing import Any
 
 import mutagen
@@ -44,13 +44,11 @@ class MP3(LocalTrack):
     )
 
     # noinspection PyTypeChecker
-    def __init__(
-            self, file: str | mutagen.FileType | mutagen.mp3.MP3, available: Collection[str] | None = None
-    ):
-        LocalTrack.__init__(self, file=file, available=available)
+    def __init__(self, file: str | mutagen.FileType | mutagen.mp3.MP3, available: Iterable[str] | None = None):
+        super().__init__(file=file, available=available)
         self._file: mutagen.mp3.MP3 = self._file
 
-    def _read_tag(self, tag_ids: list[str]) -> list[Any] | None:
+    def _read_tag(self, tag_ids: Iterable[str]) -> list[Any] | None:
         # mp3 tag ids come in parts separated by : i.e. 'COMM:ID3v1 Comment:eng'
         # need to search all actual mp3 tag ids to check if the first part equals any of the given base tag ids
         tag_ids = tuple(mp3_id for mp3_id in self._file.keys() for tag_id in tag_ids if mp3_id.split(":")[0] == tag_id)

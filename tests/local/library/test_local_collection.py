@@ -9,7 +9,7 @@ def test_folder():
     tracks = random_tracks(10)
 
     for i, track in enumerate(tracks[:7]):
-        track.path = "/test/folder name/file.ext"
+        track._path = "/test/folder name/file.ext"
         if i < 4:
             track.compilation = True
         if i % 2 == 0:

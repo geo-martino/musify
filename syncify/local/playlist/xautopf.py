@@ -13,9 +13,10 @@ from syncify.local.playlist.processor.match import TrackMatch
 from syncify.local.playlist.processor.limit import TrackLimit
 from syncify.local.playlist.processor.sort import TrackSort
 from syncify.local.track import LocalTrack, load_track
+from utils import UnitCollection
 
 
-@dataclass
+@dataclass(frozen=True)
 class SyncResultXAutoPF(Result):
     """Stores the results of a sync with local a XAutoPF playlist"""
     start: int
@@ -54,12 +55,24 @@ class XAutoPF(LocalPlaylist):
 
     valid_extensions = {".xautopf"}
 
+    @property
+    def image_links(self):
+        return {}
+
+    @property
+    def description(self):
+        return self._description
+
+    @description.setter
+    def description(self, value: str | None):
+        self._description = value
+
     def __init__(
             self,
             path: str,
-            tracks: list[LocalTrack] | None = None,
+            tracks: Collection[LocalTrack] | None = None,
             library_folder: str | None = None,
-            other_folders: str | Collection[str] | None = None,
+            other_folders: UnitCollection[str] | None = None,
             check_existence: bool = True
     ):
         self._validate_type(path)
@@ -71,7 +84,9 @@ class XAutoPF(LocalPlaylist):
             )
 
         with open(path, "r", encoding="utf-8") as f:
-            self.xml: Mapping[str, Any] = xmltodict.parse(f.read())
+            self.xml: dict[str, Any] = xmltodict.parse(f.read())
+
+        self._description = self.xml["SmartPlaylist"]["Source"]["Description"]
 
         # generate track processors from the XML settings
         matcher = TrackMatch.from_xml(xml=self.xml)
@@ -82,12 +97,10 @@ class XAutoPF(LocalPlaylist):
 
         LocalPlaylist.__init__(self, path=path, matcher=matcher, limiter=limiter, sorter=sorter)
 
-        self.description = self.xml["SmartPlaylist"]["Source"]["Description"]
-
         self._tracks_original: list[LocalTrack]
         self.load(tracks=tracks)
 
-    def load(self, tracks: list[LocalTrack] | None = None) -> list[LocalTrack] | None:
+    def load(self, tracks: Collection[LocalTrack] | None = None) -> list[LocalTrack] | None:
         if tracks is None:
             tracks = [load_track(path=path) for path in self.matcher.include_paths if path is not None]
 
@@ -136,7 +149,7 @@ class XAutoPF(LocalPlaylist):
         )
 
     # noinspection PyTypeChecker
-    def _update_xml_paths(self):
+    def _update_xml_paths(self) -> None:
         tracks = self._tracks_original
 
         path_track_map: Mapping[str: LocalTrack] = {track.path.lower(): track for track in self.tracks}
@@ -168,19 +181,19 @@ class XAutoPF(LocalPlaylist):
         else:
             source.pop("Exceptions", None)
 
-    def _update_comparators(self):
+    def _update_comparators(self) -> None:
         # TODO: implement comparison XML part updater (low priority)
         raise NotImplementedError
 
-    def _update_limiter(self):
+    def _update_limiter(self) -> None:
         # TODO: implement limit XML part updater (low priority)
         raise NotImplementedError
 
-    def _update_sorter(self):
+    def _update_sorter(self) -> None:
         # TODO: implement sort XML part updater (low priority)
         raise NotImplementedError
 
-    def _save_xml(self):
+    def _save_xml(self) -> None:
         """Save XML representation of the playlist"""
         with open(self.path, 'w', encoding="utf-8") as f:
             xml_str = xmltodict.unparse(self.xml, pretty=True, short_empty_elements=True)

@@ -5,14 +5,14 @@ import pytest
 
 from syncify.local.exception import IllegalFileTypeError
 from syncify.local.playlist import M3U
-from syncify.local.track import LocalTrack, FLAC, M4A, WMA
+from syncify.local.track import FLAC, M4A, WMA
 from tests.common import path_txt
 from tests.local.playlist.playlist import copy_playlist_file, path_playlist_m3u, path_resources, path_playlist_cache
 from tests.local.track.track import random_tracks, path_track_flac, path_track_m4a, path_track_wma
 
 
 def test_load():
-    tracks: list[LocalTrack] = [FLAC(path_track_flac), WMA(path_track_wma), M4A(path_track_m4a)]
+    tracks = [FLAC(path_track_flac), WMA(path_track_wma), M4A(path_track_m4a)]
 
     # initialising on a non-existent file and no tracks
     path_fake = join(dirname(path_playlist_m3u), "does_not_exist.m3u")

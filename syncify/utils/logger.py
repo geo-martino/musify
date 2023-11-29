@@ -3,10 +3,10 @@ import logging
 import os
 import re
 import sys
+from collections.abc import Collection, Container
 from datetime import datetime
 from os.path import join, dirname, exists, splitext, split
-from typing import Literal, Any
-from collections.abc import Collection
+from typing import Any
 
 from tqdm.auto import tqdm as tqdm_auto
 from tqdm.std import tqdm as tqdm_std
@@ -22,7 +22,7 @@ logging.addLevelName(REPORT, "REPORT")
 logging.addLevelName(STAT, "STAT")
 
 
-def format_full_func_name(record: logging.LogRecord):
+def format_full_func_name(record: logging.LogRecord) -> None:
     """Get fully qualified path name to function including class name."""
     path = record.funcName.split(".")[-1]
     stack = inspect.stack()
@@ -58,13 +58,13 @@ def format_full_func_name(record: logging.LogRecord):
 class LogStdOutFilter(logging.Filter):
     """Filter for logging to stdout."""
 
-    def __init__(self, levels: list[int] = None):
+    def __init__(self, levels: Container[int] | None = None):
         """
         :param levels: Accepted log levels to return i.e. 'info', 'debug'
             If None, set to current log level.
         """
         super().__init__()
-        self.levels = levels
+        self.levels: Container[int] | None = levels
 
     # noinspection PyMissingOrEmptyDocstring
     def filter(self, record: logging.LogRecord) -> logging.LogRecord | None:
@@ -88,17 +88,17 @@ class LogFileFilter(logging.Filter):
 class SyncifyLogger(logging.Logger):
     """The logger for all logging operations in Syncify."""
 
-    def info_extra(self, msg, *args, **kwargs):
+    def info_extra(self, msg, *args, **kwargs) -> None:
         """Log 'msg % args' with severity 'INFO_EXTRA'."""
         if self.isEnabledFor(INFO_EXTRA):
             self._log(INFO_EXTRA, msg, args, **kwargs)
 
-    def report(self, msg, *args, **kwargs):
+    def report(self, msg, *args, **kwargs) -> None:
         """Log 'msg % args' with severity 'REPORT'."""
         if self.isEnabledFor(REPORT):
             self._log(REPORT, msg, args, **kwargs)
 
-    def stat(self, msg, *args, **kwargs):
+    def stat(self, msg, *args, **kwargs) -> None:
         """Log 'msg % args' with severity 'STAT'."""
         if self.isEnabledFor(STAT):
             self._log(STAT, msg, args, **kwargs)
@@ -107,7 +107,7 @@ class SyncifyLogger(logging.Logger):
         """Do not copy logger"""
         return self
 
-    def __deepcopy__(self, m: dict = None):
+    def __deepcopy__(self, _: dict = None):
         """Do not copy logger"""
         return self
 
@@ -143,13 +143,13 @@ class Logger:
         cls.log_folder = join(folder, run_dt.strftime(cls.dt_format))
 
     @classmethod
-    def set_dev(cls):
+    def set_dev(cls) -> None:
         """Set defaults for running in dev mode"""
         cls.set_log_folder("_logs/_dev")
         cls.verbosity = 5
         cls.is_dev = True
 
-    def _handle_exception(self, exc_type, exc_value, exc_traceback):
+    def _handle_exception(self, exc_type, exc_value, exc_traceback) -> None:
         """Custom exception handler. Handles exceptions through logger."""
         if issubclass(exc_type, KeyboardInterrupt):
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
@@ -159,7 +159,7 @@ class Logger:
             "CRITICAL ERROR: Uncaught Exception", exc_info=(exc_type, exc_value, exc_traceback)
         )
 
-    def _set_logger(self):
+    def _set_logger(self) -> None:
         """Set logger object formatted for stdout and file handlers."""
         # set log file path
         if not self.is_dev and not exists(self.log_folder):  # if log folder doesn't exist
@@ -180,7 +180,7 @@ class Logger:
         sys.excepthook = self._handle_exception
 
     # noinspection SpellCheckingInspection
-    def _set_stdout_handler(self):
+    def _set_stdout_handler(self) -> None:
         """Sets the stdout handler for the logger"""
         # logging formats
         stdout_pretty = (
@@ -195,7 +195,7 @@ class Logger:
             datefmt="%Y-%m-%d %H:%M:%S", style="{"
         )
 
-        levels: list[Literal] = [logging.INFO, logging.ERROR, logging.CRITICAL]
+        levels: list[int] = [logging.INFO, logging.ERROR, logging.CRITICAL]
         level_base = logging.DEBUG
         if self.verbosity == 0:
             log_filter = LogStdOutFilter(levels=levels)
@@ -221,7 +221,7 @@ class Logger:
         self.logger.addHandler(stdout_h)
 
     # noinspection SpellCheckingInspection
-    def _set_file_handler(self):
+    def _set_file_handler(self) -> None:
         """Sets the file handler for the logger."""
         file_format = logging.Formatter(
             fmt="{asctime}.{msecs:0<3.0f} | "
@@ -245,7 +245,7 @@ class Logger:
             if handler.name == name:
                 return handler
 
-    def close_handlers(self):
+    def close_handlers(self) -> None:
         """Close all handlers and end logging"""
         handlers = self.logger.handlers[:]
         for handler in handlers:
@@ -288,7 +288,7 @@ class Logger:
             **{k: v for k, v in kwargs.items() if k not in preset_keys}
         )
 
-    def print_line(self, level: int = logging.CRITICAL + 1):
+    def print_line(self, level: int = logging.CRITICAL + 1) -> None:
         """Print a new line only when : DEBUG < ``logger level`` <= ``level``"""
         handler = self._get_handler("stdout")
         if not self.compact and logging.DEBUG < handler.level <= level:

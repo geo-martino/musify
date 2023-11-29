@@ -1,21 +1,27 @@
 from dataclasses import dataclass
 from os.path import exists
 from typing import Any, Self
-from collections.abc import Collection, Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence, Iterable
 
+from abstract.misc import Result
 from syncify.local.playlist.processor.base import TrackProcessor
 from syncify.local.playlist.processor.compare import TrackCompare
 from syncify.local.track.base.track import LocalTrack
-from syncify.utils import UnitList
+from syncify.utils import UnitSequence, UnitCollection, UnitIterable
 from syncify.utils.helpers import to_collection
 
+_T = Sequence[LocalTrack] | None
 
-@dataclass
-class MatchResult:
+
+@dataclass(frozen=True)
+class MatchResult(Result):
     """Results from matching a collection of tracks to a set of conditions."""
-    include: list[LocalTrack]
-    exclude: list[LocalTrack]
-    compared: list[LocalTrack]
+
+    def __init__(self, include: _T = None, exclude: _T = None, compared: _T = None):
+        Result.__init__(self)
+        self.__dict__["include"] = include if include else tuple()
+        self.__dict__["exclude"] = exclude if exclude else tuple()
+        self.__dict__["compared"] = compared if compared else tuple()
 
 
 class TrackMatch(TrackProcessor):
@@ -45,11 +51,11 @@ class TrackMatch(TrackProcessor):
 
         # tracks to include even if they don't meet match conditions
         include_str: str = source.get("ExceptionsInclude")
-        include: set[str] | None = set(include_str.split("|")) if isinstance(include_str, str) else None
+        include = set(include_str.split("|")) if isinstance(include_str, str) else None
 
         # tracks to exclude even if they do meet match conditions
         exclude_str: str = source.get("Exceptions")
-        exclude: set[str] | None = set(exclude_str.split("|")) if isinstance(exclude_str, str) else None
+        exclude = set(exclude_str.split("|")) if isinstance(exclude_str, str) else None
 
         comparators: list[TrackCompare] | None = TrackCompare.from_xml(xml=xml)
 
@@ -70,18 +76,18 @@ class TrackMatch(TrackProcessor):
 
     def __init__(
             self,
-            comparators: UnitList[TrackCompare] | None = None,
+            comparators: UnitSequence[TrackCompare] | None = None,
             match_all: bool = True,
             include_paths: Collection[str] | None = None,
             exclude_paths: Collection[str] | None = None,
             library_folder: str | None = None,
-            other_folders: Collection[str] | None = None,
+            other_folders: UnitCollection[str] | None = None,
             check_existence: bool = True,
     ):
         self.comparators: tuple[TrackCompare] = to_collection(comparators)
         self.match_all = match_all
 
-        self.include_paths: Sequence[str] | None = include_paths
+        self.include_paths: Collection[str] | None = include_paths
         self.exclude_paths: Collection[str] | None = exclude_paths
 
         self.library_folder = library_folder.rstrip("\\/") if library_folder is not None else library_folder
@@ -89,8 +95,8 @@ class TrackMatch(TrackProcessor):
         self.sanitise_file_paths(other_folders=other_folders, check_existence=check_existence)
 
     def sanitise_file_paths(
-            self, other_folders: str | Collection[str] | None = None, check_existence: bool = True,
-    ):
+            self, other_folders: UnitCollection[str] | None = None, check_existence: bool = True
+    ) -> None:
         """
         Attempt to sanitise given include/exclude file paths
         based on current library folder and other possible folder stems.
@@ -122,7 +128,7 @@ class TrackMatch(TrackProcessor):
 
             self.include_paths = include
 
-    def _check_for_other_folder_stem(self, stems: str | Collection[str], *paths: list[str] | None):
+    def _check_for_other_folder_stem(self, stems: UnitIterable[str], *paths: Iterable[str] | None) -> None:
         """
         Checks for the presence of some other folder as the stem of one of the given paths.
         Useful when managing similar libraries across multiple operating systems.
@@ -174,7 +180,7 @@ class TrackMatch(TrackProcessor):
         return path
 
     def match(
-            self, tracks: list[LocalTrack], reference: LocalTrack | None = None, combine: bool = True
+            self, tracks: Collection[LocalTrack], reference: LocalTrack | None = None, combine: bool = True
     ) -> list[LocalTrack] | MatchResult:
         """
         Return a new list of tracks from input tracks that match the given conditions.
@@ -188,7 +194,7 @@ class TrackMatch(TrackProcessor):
             - List 3: Tracks that only match on comparators
         """
         if len(tracks) == 0:  # skip match
-            return [] if combine else MatchResult(include=[], exclude=[], compared=[])
+            return [] if combine else MatchResult()
 
         path_tracks: Mapping[str, LocalTrack] = {track.path.lower(): track for track in tracks}
 
@@ -203,7 +209,7 @@ class TrackMatch(TrackProcessor):
         if self.comparators is None or len(self.comparators) == 0:  # skip comparator checks
             if combine:
                 return [track for track in include if track not in exclude]
-            return MatchResult(include=include, exclude=exclude, compared=[])
+            return MatchResult(include=include, exclude=exclude)
 
         compared: list[LocalTrack] = []
         for track in tracks:  # run comparator checks

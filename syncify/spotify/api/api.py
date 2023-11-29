@@ -56,7 +56,7 @@ class API(Basic, Items, Collections):
             f"{convert(uri, type_in=IDType.URI, type_out=IDType.URL_EXT)}"
         )
 
-    def pretty_print_uris(self, value: str | None = None, kind: IDType | None = None, use_cache: bool = True):
+    def pretty_print_uris(self, value: str | None = None, kind: IDType | None = None, use_cache: bool = True) -> None:
         """
         Diagnostic function. Print tracks from a given link in ``<track> - <title> | <URI> - <URL>`` format
         for a given URL/URI/ID.

@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from collections.abc import Mapping, MutableMapping
+from collections.abc import Mapping, Iterable, MutableMapping
 from copy import copy
 from typing import Any, Self
 
@@ -9,8 +9,8 @@ from syncify.spotify.api import APIMethodInputType
 from syncify.spotify.base import SpotifyObject
 from syncify.spotify.enums import IDType, ItemType
 from syncify.spotify.exception import SpotifyIDTypeError
-from syncify.spotify.utils import validate_item_type, convert, extract_ids, get_id_type
 from syncify.spotify.library.item import SpotifyTrack, SpotifyArtist, SpotifyItem
+from syncify.spotify.utils import validate_item_type, convert, extract_ids, get_id_type
 
 
 class SpotifyCollection(ItemCollection, SpotifyObject, metaclass=ABCMeta):
@@ -23,15 +23,18 @@ class SpotifyCollection(ItemCollection, SpotifyObject, metaclass=ABCMeta):
 
     @classmethod
     @abstractmethod
-    def load(cls, value: APIMethodInputType, use_cache: bool = True, items: list[SpotifyItem] | None = None) -> Self:
+    def load(
+            cls, value: APIMethodInputType, use_cache: bool = True, items: Iterable[SpotifyItem] | None = None
+    ) -> Self:
         """
         Generate a new object, calling all required endpoints to get a complete set of data for this item type.
 
         The given ``value`` may be:
             * A string representing a URL/URI/ID.
-            * A collection of strings representing URLs/URIs/IDs of the same type.
+            * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
             * A Spotify API JSON response for a collection with a valid ID value under an ``id`` key.
-            * A list of Spotify API JSON responses for a collection with a valid ID value under an ``id`` key.
+            * A MutableSequence of Spotify API JSON responses for a collection with
+                a valid ID value under an ``id`` key.
 
         When a list is given, only the first item is processed.
 
@@ -44,14 +47,14 @@ class SpotifyCollection(ItemCollection, SpotifyObject, metaclass=ABCMeta):
         """
 
     @classmethod
-    def _load_response(cls, value: APIMethodInputType, use_cache: bool = True) -> MutableMapping[str, Any]:
+    def _load_response(cls, value: APIMethodInputType, use_cache: bool = True) -> dict[str, Any]:
         kind = cls.__name__.casefold().replace("spotify", "")
         item_type = ItemType.from_name(kind)
         key = cls.api.collection_types[item_type.name]
 
         try:  # attempt to get response from the given value alone
             validate_item_type(value, kind=item_type)
-            value: MutableMapping[str, Any]
+            value: dict[str, Any]
             assert len(value[key][cls.api.items_key]) == value[key]["total"]
             return value
         except (ValueError, AssertionError, TypeError):  # reload response from the API
@@ -99,8 +102,7 @@ class SpotifyAlbum(Album, SpotifyCollection):
     """
 
     @property
-    def name(self) -> str:
-        """The album title"""
+    def name(self):
         return self.response["name"]
 
     @property
@@ -116,7 +118,7 @@ class SpotifyAlbum(Album, SpotifyCollection):
         return self._artists
 
     @property
-    def artist(self) -> str:
+    def artist(self):
         return self._list_sep.join(artist["name"] for artist in self.response["artists"])
 
     @property
@@ -124,38 +126,37 @@ class SpotifyAlbum(Album, SpotifyCollection):
         return self.artist
 
     @property
-    def track_total(self) -> int:
+    def track_total(self):
         return self.response["total_tracks"]
 
     @property
-    def genres(self) -> list[str] | None:
-        return self.response.get("genres")
+    def genres(self):
+        return self.response.get("genres", [])
 
     @property
     def year(self) -> int:
         return int(self.response["release_date"][:4])
 
     @property
-    def compilation(self) -> bool:
+    def compilation(self):
         return self.response["album_type"] == "compilation"
 
     @property
-    def image_links(self) -> Mapping[str, str]:
+    def image_links(self):
         images = {image["height"]: image["url"] for image in self.response["images"]}
         return {"cover_front": url for height, url in images.items() if height == max(images)}
 
     @property
-    def has_image(self) -> bool:
-        return len(self.image_links) > 0
+    def has_image(self):
+        return len(self.response["images"]) > 0
 
     @property
-    def length(self) -> float | None:
-        """Total duration of all tracks in this collection"""
+    def length(self):
         lengths = {track.length for track in self.tracks}
         return sum(lengths) if lengths else None
 
     @property
-    def rating(self) -> int | None:
+    def rating(self):
         return self.response.get("popularity")
 
     def __init__(self, response: MutableMapping[str, Any]):
@@ -172,8 +173,7 @@ class SpotifyAlbum(Album, SpotifyCollection):
             track.disc_total = self.disc_total
 
     @classmethod
-    def load(cls, value: APIMethodInputType, use_cache: bool = True,
-             items: list[SpotifyTrack] | None = None) -> Self:
+    def load(cls, value: APIMethodInputType, use_cache: bool = True, items: Iterable[SpotifyTrack] | None = None):
         cls._check_for_api()
         obj = cls.__new__(cls)
         response = cls._load_response(value, use_cache=use_cache)
@@ -192,7 +192,7 @@ class SpotifyAlbum(Album, SpotifyCollection):
                 track: SpotifyTrack = uri_tracks.get(track_raw["track"]["uri"])
                 if track:  # replace the skeleton response with the response from the track
                     track_raw.clear()
-                    track_raw.update(track.response)
+                    track_raw |= track.response
                 elif not track_raw["is_local"]:  # add to get list
                     uri_get.append(track_raw["uri"])
 
@@ -204,7 +204,7 @@ class SpotifyAlbum(Album, SpotifyCollection):
                     track: Mapping[str, Any] = uri_tracks.get(track_raw["track"]["uri"])
                     if track:  # replace the skeleton response with the new response
                         track_raw.clear()
-                        track_raw.update(track)
+                        track_raw |= track
 
             obj.__init__(response)
 

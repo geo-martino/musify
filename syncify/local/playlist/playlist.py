@@ -27,7 +27,7 @@ class LocalPlaylist(Playlist, LocalCollection, File, metaclass=ABCMeta):
 
     @property
     def name(self) -> str:
-        """The name of this playlist, taken to always be the filename."""
+        """The name of this playlist, always the same as the filename."""
         return self.filename
 
     @name.setter
@@ -35,7 +35,7 @@ class LocalPlaylist(Playlist, LocalCollection, File, metaclass=ABCMeta):
         self._path = join(dirname(self._path), value + self.ext)
 
     @property
-    def items(self) -> list[LocalTrack]:
+    def items(self):
         return self._tracks
 
     @property
@@ -47,16 +47,16 @@ class LocalPlaylist(Playlist, LocalCollection, File, metaclass=ABCMeta):
         self._tracks = value
 
     @property
-    def path(self) -> str:
+    def path(self):
         return self._path
 
     @property
-    def date_modified(self) -> datetime | None:
+    def date_modified(self):
         if self.path:
             return datetime.fromtimestamp(getmtime(self.path))
 
     @property
-    def date_created(self) -> datetime | None:
+    def date_created(self):
         if self.path:
             return datetime.fromtimestamp(getctime(self.path))
 
@@ -76,22 +76,22 @@ class LocalPlaylist(Playlist, LocalCollection, File, metaclass=ABCMeta):
         self.limiter = limiter
         self.sorter = sorter
 
-    def _match(self, tracks: list[LocalTrack] | None = None, reference: LocalTrack | None = None):
+    def _match(self, tracks: Collection[LocalTrack] | None = None, reference: LocalTrack | None = None) -> None:
         """Wrapper for matcher"""
         m = self.matcher
         if m is not None and tracks is not None:
             if m.include_paths is None and m.exclude_paths is None and m.comparators is None:
                 # just return the tracks given if matcher has no settings applied
-                self.tracks: list[LocalTrack] = tracks.copy()
+                self.tracks: list[LocalTrack] = [t for t in tracks]
             else:  # run matcher
                 self.tracks: list[LocalTrack] = m.match(tracks=tracks, reference=reference)
 
-    def _limit(self, ignore: Collection[str] | Collection[LocalTrack] | None = None):
+    def _limit(self, ignore: Collection[str | LocalTrack] | None = None) -> None:
         """Wrapper for limiter"""
         if self.limiter is not None and self.tracks is not None:
             self.limiter.limit(tracks=self.tracks, ignore=ignore)
 
-    def _sort(self):
+    def _sort(self) -> None:
         """Wrapper for sorter"""
         if self.sorter is not None and self.tracks is not None:
             self.sorter.sort(tracks=self.tracks)
@@ -108,7 +108,7 @@ class LocalPlaylist(Playlist, LocalCollection, File, metaclass=ABCMeta):
         return paths
 
     @abstractmethod
-    def load(self, tracks: list[LocalTrack] | None = None) -> list[LocalTrack] | None:
+    def load(self, tracks: Collection[LocalTrack] | None = None) -> list[LocalTrack] | None:
         """
         Read the playlist file and update the tracks in this playlist instance.
 

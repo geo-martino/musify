@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from collections.abc import Mapping, MutableMapping, Collection, MutableSequence
+from collections.abc import Mapping, MutableMapping, Collection, MutableSequence, Iterable
 from itertools import batched
 from time import sleep
 from typing import Any
@@ -56,8 +56,8 @@ class Collections(APIBase, metaclass=ABCMeta):
     ## GET helpers: Generic methods for getting collections and their items
     ###########################################################################
     def _get_collection_items(
-            self, url: str | Mapping[str, Any], kind: ItemType | None = None, use_cache: bool = True,
-    ) -> list[Mapping[str, Any]]:
+            self, url: str | MutableMapping[str, Any], kind: ItemType | None = None, use_cache: bool = True,
+    ) -> list[dict[str, Any]]:
         """
         Get responses from a given ``url``.
         The function requests each page of the collection returning a list of all items
@@ -77,7 +77,7 @@ class Collections(APIBase, metaclass=ABCMeta):
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: Raw API responses for each item
         """
-        response: Mapping[str, Any] = {"href": url, "next": url} if isinstance(url, str) else url
+        response: MutableMapping[str, Any] = {"href": url, "next": url} if isinstance(url, str) else url
         unit = self.collection_types[kind.name] if kind else "entries"
 
         bar = None
@@ -91,7 +91,7 @@ class Collections(APIBase, metaclass=ABCMeta):
         # When limit is e.g. 50 (the max allowed value), the 'next' url is then ALWAYS {url}?offset=0&limit=50
         # This means items 50-100 will be added twice if extending the items by the response from the 'next' url
         # WORKAROUND: manually create a valid 'next' url when response given as input
-        if isinstance(url, dict) and isinstance(url.get(self.items_key), Collection) and url.get("next"):
+        if isinstance(url, MutableMapping) and isinstance(url.get(self.items_key), Iterable) and url.get("next"):
             url_parsed = urlparse(url["next"])
             params = {"offset": len(url[self.items_key]), "limit": url["limit"]}
             url["next"] = f"{url_parsed.scheme}://{url_parsed.netloc}{url_parsed.path}?{urlencode(params)}"
@@ -117,13 +117,13 @@ class Collections(APIBase, metaclass=ABCMeta):
             bar.close()
 
         # if API response was given on input, update it with new responses
-        if isinstance(url, dict) and isinstance(url.get(self.items_key), Collection):
+        if isinstance(url, Mapping) and isinstance(url.get(self.items_key), Iterable):
             url[self.items_key].extend(results)
 
         return results
 
     @staticmethod
-    def _enrich_collections_response(collections: list[MutableMapping[str, Any]], kind: ItemType):
+    def _enrich_collections_response(collections: Iterable[MutableMapping[str, Any]], kind: ItemType) -> None:
         """Add type to API collection response"""
         for collection in collections:
             if collection.get("type") is None:
@@ -133,12 +133,8 @@ class Collections(APIBase, metaclass=ABCMeta):
     ## GET endpoints
     ###########################################################################
     def get_collections_user(
-            self,
-            user: str | None = None,
-            kind: ItemType = ItemType.PLAYLIST,
-            limit: int = 50,
-            use_cache: bool = True,
-    ) -> list[Mapping[str, Any]]:
+            self, user: str | None = None, kind: ItemType = ItemType.PLAYLIST, limit: int = 50, use_cache: bool = True,
+    ) -> list[dict[str, Any]]:
         """
         ``GET: /{kind}s`` - Get collections for a given user.
 
@@ -179,17 +175,18 @@ class Collections(APIBase, metaclass=ABCMeta):
 
     def get_collections(
             self, values: APIMethodInputType, kind: ItemType | None = None, limit: int = 50, use_cache: bool = True,
-    ) -> list[MutableMapping[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         ``GET: /{kind}s/...`` - Get all items from a given list of ``values``. Items may be:
             * A string representing a URL/URI/ID.
-            * A collection of strings representing URLs/URIs/IDs of the same type.
+            * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
             * A Spotify API JSON response for a collection including some items under an ``items`` key,
-                a valid ID value under an ``id`` key,
+            a valid ID value under an ``id`` key,
                 and a valid item type value under a ``type`` key if ``kind`` is None.
-            * A list of Spotify API JSON responses for a collection including some items under an ``items`` key,
-                a valid ID value under an ``id`` key,
-                and a valid item type value under a ``type`` key if ``kind`` is None.
+            * A MutableSequence of Spotify API JSON responses for a collection including:
+                - some items under an ``items`` key,
+                - a valid ID value under an ``id`` key,
+                - and a valid item type value under a ``type`` key if ``kind`` is None.
 
         If JSON response/s are given, this updates the value of the ``items`` in-place
         by clearing and replacing its values.
@@ -237,10 +234,10 @@ class Collections(APIBase, metaclass=ABCMeta):
         )
 
         # if API response was given on input, update it with new responses
-        if isinstance(values, dict) and len(collections) == 1:
+        if isinstance(values, MutableMapping) and len(collections) == 1:
             values.clear()
-            values.update(collections[0])
-        elif isinstance(values, MutableSequence) and all(isinstance(item, dict) for item in values):
+            values |= collections[0]
+        elif isinstance(values, MutableSequence) and all(isinstance(item, MutableMapping) for item in values):
             values.clear()
             values.extend(collections)
 
@@ -271,7 +268,7 @@ class Collections(APIBase, metaclass=ABCMeta):
         self.logger.debug(f"{'DONE':<7}: {url:<71} | Created playlist: '{name}' -> {playlist}")
         return playlist
 
-    def add_to_playlist(self, playlist: str, items: list[str], limit: int = 50, skip_dupes: bool = True) -> int:
+    def add_to_playlist(self, playlist: str, items: Collection[str], limit: int = 50, skip_dupes: bool = True) -> int:
         """
         ``POST: /playlists/{playlist_id}/tracks`` - Add list of tracks to a given playlist.
 

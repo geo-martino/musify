@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import Self
-from collections.abc import Collection
 
-from . import SyncifyEnum, EnumNotFoundError
 from syncify.utils.helpers import to_collection
+from utils import UnitIterable
+from . import SyncifyEnum, EnumNotFoundError
 
 
 @dataclass(frozen=True)
@@ -98,7 +98,7 @@ class TagName(Name):
         return [tag for tag in tags if tag.startswith(self.name.casefold())]
 
     @classmethod
-    def to_tags(cls, tags: Self | Collection[Self]) -> list[str]:
+    def to_tags(cls, tags: UnitIterable[Self]) -> list[str]:
         """Convert the given tags to tag names as given by the attributes of an item/collection"""
         if isinstance(tags, cls):
             return tags.to_tag()

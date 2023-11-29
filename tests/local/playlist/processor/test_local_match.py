@@ -61,7 +61,7 @@ def test_init():
     ]
 
     # none of the random file paths exist, check existence should return empty lists
-    matcher = TrackMatch(include_paths=list(include_paths), exclude_paths=exclude_paths, check_existence=True)
+    matcher = TrackMatch(include_paths=include_paths, exclude_paths=exclude_paths, check_existence=True)
     assert matcher.include_paths == []
     assert matcher.exclude_paths == []
 

@@ -3,7 +3,7 @@ import os
 import sys
 from abc import ABCMeta, abstractmethod
 from ast import literal_eval
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping, Collection
 from copy import deepcopy
 from datetime import datetime
 from os.path import dirname, exists, join, splitext, isabs
@@ -18,7 +18,7 @@ from syncify.utils.helpers import to_collection
 from syncify.utils.logger import Logger
 
 
-def _update_map(source: dict, new: dict, extend: bool = True, overwrite: bool = False):
+def _update_map[T: MutableMapping](source: T, new: Mapping, extend: bool = True, overwrite: bool = False) -> T:
     """
     Recursively update a given ``source`` map in place with a ``new`` map.
 
@@ -28,19 +28,23 @@ def _update_map(source: dict, new: dict, extend: bool = True, overwrite: bool = 
         When False, only replace the list if overwrite is True.
     :param overwrite: When True, overwrite any value in the source list destructively.
     """
+    def is_collection(value: Any) -> bool:
+        """Return True if ``value`` is of type ``Collection`` and not a string or map"""
+        return isinstance(value, Collection) and not isinstance(value, str) and not isinstance(value, Mapping)
+
     for k, v in new.items():
-        if isinstance(v, dict) and isinstance(source.get(k, {}), dict):
+        if isinstance(v, Mapping) and isinstance(source.get(k, {}), Mapping):
             source[k] = _update_map(source.get(k, {}), v)
-        elif extend and isinstance(v, list) and isinstance(source.get(k, []), list):
-            source[k] = v + source.get(k, [])
+        elif extend and is_collection(v) and is_collection(source.get(k, [])):
+            source[k] = to_collection(v, list) + to_collection(source.get(k, []), list)
         elif overwrite or source.get(k) is None:
             source[k] = v
     return source
 
 
-def _format_map(value: Any, format_map: Mapping[str, Any]):
+def _format_map[T](value: T, format_map: Mapping[str, Any]) -> T:
     """Apply a ``format_map`` to a given ``value``, If ``value`` is a map, apply the ``format_map`` recursively"""
-    if isinstance(value, dict):
+    if isinstance(value, MutableMapping):
         for k, v in value.items():
             value[k] = _format_map(v, format_map)
     elif isinstance(value, str):
@@ -88,7 +92,7 @@ class Settings(metaclass=ABCMeta):
         return path
 
     @staticmethod
-    def _load_config(config_path: str) -> Mapping[Any, Any]:
+    def _load_config(config_path: str) -> dict[Any, Any]:
         """
         Load the config file
 
@@ -106,7 +110,7 @@ class Settings(metaclass=ABCMeta):
     ###########################################################################
     ## Wrangle general settings
     ###########################################################################
-    def set_logger(self):
+    def set_logger(self) -> None:
         """Set the logger according to the loaded settings"""
         log_folder = self._append_module_folder(self.cfg_logging.get("path", "_logs"))
         Logger.set_log_folder(log_folder, run_dt=self.run_dt)
@@ -115,7 +119,7 @@ class Settings(metaclass=ABCMeta):
         Logger.compact = self.cfg_logging.get("compact", False)
         Logger.detailed = self.cfg_logging.get("detailed", False)
 
-    def set_output(self):
+    def set_output(self) -> None:
         """Set the output according to the loaded settings"""
         parent_folder = self._append_module_folder(self.cfg_output.get("path", "_data"))
         self.output_folder = join(parent_folder, self.run_dt.strftime(Logger.dt_format))
@@ -125,7 +129,7 @@ class Settings(metaclass=ABCMeta):
     ###########################################################################
     ## Wrangle local settings
     ###########################################################################
-    def set_platform_paths(self):
+    def set_platform_paths(self) -> None:
         """Set the platform paths according to the loaded settings and current runtime platform"""
         for cfg in [self.cfg_general] + list(self.cfg_functions.values()):
             paths = cfg.get("local", {}).get("paths", {})
@@ -141,7 +145,7 @@ class Settings(metaclass=ABCMeta):
                 if key.startswith("library_") and value:
                     paths["other"].append(paths.pop(key))
 
-    def set_search_algorithm(self):
+    def set_search_algorithm(self) -> None:
         """
         Set the search algorithm config according to the loaded settings.
 
@@ -164,7 +168,7 @@ class Settings(metaclass=ABCMeta):
     ###########################################################################
     ## Wrangle Spotify settings
     ###########################################################################
-    def set_api_settings(self):
+    def set_api_settings(self) -> None:
         """Set the API config according to the loaded settings"""
         for cfg in [self.cfg_general] + list(self.cfg_functions.values()):
             settings = cfg.get("spotify", {}).get("api", {})
@@ -189,7 +193,7 @@ class Settings(metaclass=ABCMeta):
     ###########################################################################
     ## Finalise
     ###########################################################################
-    def merge_general_to_functions(self):
+    def merge_general_to_functions(self) -> None:
         """Merge the general config onto every function's settings non-destructively i.e. fill in the gaps"""
         if not self.cfg_general or not self.cfg_functions:
             return
@@ -197,7 +201,7 @@ class Settings(metaclass=ABCMeta):
         for cfg in self.cfg_functions.values():
             _update_map(cfg, self.cfg_general, extend=True)
 
-    def set(self):
+    def set(self) -> None:
         """Run all setting functions"""
         self.set_output()
         self.set_logger()
@@ -209,7 +213,7 @@ class Settings(metaclass=ABCMeta):
     ###########################################################################
     ## Parse prompt args
     ###########################################################################
-    def _parse_args(self, func_name: str, cfg_processed: dict):
+    def _parse_args(self, func_name: str, cfg_processed: dict[str, Any]) -> dict[str, Any]:
         """DEPRECATED: Figure out what this did"""
         # parse function specific arguments
         if func_name in self.cfg_functions and cfg_processed["args"]:
@@ -224,7 +228,7 @@ class Settings(metaclass=ABCMeta):
         cfg_processed.pop("args")
         return cfg_processed
 
-    def parse_from_prompt(self):
+    def parse_from_prompt(self) -> None:
         """Parse user input from the terminal"""
         parser = self.get_parser()
         parsed = parser.parse_known_args()
@@ -251,7 +255,7 @@ class Settings(metaclass=ABCMeta):
         # return self.runtime_settings
 
     # noinspection PyProtectedMember,SpellCheckingInspection
-    def get_parser(self):
+    def get_parser(self) -> argparse.ArgumentParser:
         """Get the terminal input parser"""
         parser = argparse.ArgumentParser(
             description="Sync your local library to Spotify.",

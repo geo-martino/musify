@@ -1,28 +1,31 @@
 from abc import ABCMeta, abstractmethod
-from collections.abc import Mapping, MutableMapping, Collection
+from collections.abc import Mapping, Collection
 from copy import copy
 from dataclasses import dataclass
 from typing import Any
 
+import mutagen
+
 from syncify.abstract.misc import Result
-from syncify.local.track.base.processor import TagName, TagProcessor
+from syncify.local.track.base.processor import TagName
+from syncify.local.track.base.reader import TagReader
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
-from syncify.utils import UnitList
+from syncify.utils import UnitIterable
 from syncify.utils.helpers import to_collection
 
 
-@dataclass
+@dataclass(frozen=True)
 class SyncResultTrack(Result):
     """Stores the results of a sync with local track"""
     saved: bool  # if changes to the file on the disk were made
     updated: Mapping[TagName, int]  # The tag updated and the condition index it satisfied to be updated
 
 
-class TagWriter(TagProcessor, metaclass=ABCMeta):
+class TagWriter(TagReader, metaclass=ABCMeta):
     """Contains methods for updating and removing tags from a loaded file"""
 
     def save(
-            self, tags: UnitList[TagName] = TagName.ALL, replace: bool = False, dry_run: bool = True
+            self, tags: UnitIterable[TagName] = TagName.ALL, replace: bool = False, dry_run: bool = True
     ) -> SyncResultTrack:
         """
         Update file's tags from given dictionary of tags.
@@ -34,9 +37,9 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
         """
         self.get_file()
         file = copy(self)
-        updated: MutableMapping[TagName, int] = {}
+        updated: dict[TagName, int] = {}
 
-        tags: Collection[TagName] = to_collection(tags, set)
+        tags: list[TagName] = to_collection(tags, list)
         if TagName.ALL in tags:
             tags = TagName.all()
 
@@ -52,7 +55,7 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
                 replace and self.title != file.title
             }
             if any(conditionals) and self._write_title(dry_run):
-                updated.update({TagName.TITLE: [i for i, c in enumerate(conditionals) if c][0]})
+                updated |= {TagName.TITLE: [i for i, c in enumerate(conditionals) if c][0]}
                     
         if TagName.ARTIST in tags:
             conditionals = {
@@ -60,7 +63,7 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
                 replace and self.artist != file.artist
             }
             if any(conditionals) and self._write_artist(dry_run):
-                updated.update({TagName.ARTIST: [i for i, c in enumerate(conditionals) if c][0]})
+                updated |= {TagName.ARTIST: [i for i, c in enumerate(conditionals) if c][0]}
 
         if TagName.ALBUM in tags:
             conditionals = {
@@ -68,7 +71,7 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
                 replace and self.album != file.album
             }
             if any(conditionals) and self._write_album(dry_run):
-                updated.update({TagName.ALBUM: [i for i, c in enumerate(conditionals) if c][0]})
+                updated |= {TagName.ALBUM: [i for i, c in enumerate(conditionals) if c][0]}
 
         if TagName.ALBUM_ARTIST in tags:
             conditionals = {
@@ -76,7 +79,7 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
                 replace and self.album_artist != file.album_artist
             }
             if any(conditionals) and self._write_album_artist(dry_run):
-                updated.update({TagName.ALBUM_ARTIST: [i for i, c in enumerate(conditionals) if c][0]})
+                updated |= {TagName.ALBUM_ARTIST: [i for i, c in enumerate(conditionals) if c][0]}
 
         if TagName.TRACK in tags:
             conditionals = {
@@ -85,17 +88,17 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
                 replace and (self.track_number != file.track_number or self.track_total != file.track_total)
             }
             if any(conditionals) and self._write_track(dry_run):
-                updated.update({TagName.TRACK: [i for i, c in enumerate(conditionals) if c][0]})
+                updated |= {TagName.TRACK: [i for i, c in enumerate(conditionals) if c][0]}
 
         if TagName.GENRES in tags:
             conditionals = {file.genres is None and self.genres, replace and self.genres != file.genres}
             if any(conditionals) and self._write_genres(dry_run):
-                updated.update({TagName.GENRES: [i for i, c in enumerate(conditionals) if c][0]})
+                updated |= {TagName.GENRES: [i for i, c in enumerate(conditionals) if c][0]}
 
         if TagName.YEAR in tags:
             conditionals = {file.year is None and self.year is not None, replace and self.year != file.year}
             if any(conditionals) and self._write_year(dry_run):
-                updated.update({TagName.YEAR: [i for i, c in enumerate(conditionals) if c][0]})
+                updated |= {TagName.YEAR: [i for i, c in enumerate(conditionals) if c][0]}
 
         if TagName.BPM in tags:
             self_bpm = int(self["bpm"] if self["bpm"] is not None else 0)
@@ -106,12 +109,12 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
                 replace and self_bpm != file_bpm
             }
             if any(conditionals) and self._write_bpm(dry_run):
-                updated.update({TagName.BPM: [i for i, c in enumerate(conditionals) if c][0]})
+                updated |= {TagName.BPM: [i for i, c in enumerate(conditionals) if c][0]}
 
         if TagName.KEY in tags:
             conditionals = {file.key is None and self.key is not None, replace and self.key != file.key}
             if any(conditionals) and self._write_key(dry_run):
-                updated.update({TagName.KEY: [i for i, c in enumerate(conditionals) if c][0]})
+                updated |= {TagName.KEY: [i for i, c in enumerate(conditionals) if c][0]}
 
         if TagName.DISC in tags:
             conditionals = {
@@ -120,7 +123,7 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
                 replace and (self.disc_number != file.disc_number or self.disc_total != file.disc_total)
             }
             if any(conditionals) and self._write_disc(dry_run):
-                updated.update({TagName.DISC: [i for i, c in enumerate(conditionals) if c][0]})
+                updated |= {TagName.DISC: [i for i, c in enumerate(conditionals) if c][0]}
 
         if TagName.COMPILATION in tags:
             conditionals = {
@@ -128,26 +131,29 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
                 replace and self.compilation != file.compilation
             }
             if any(conditionals) and self._write_compilation(dry_run):
-                updated.update({TagName.COMPILATION: [i for i, c in enumerate(conditionals) if c][0]})
+                updated |= {TagName.COMPILATION: [i for i, c in enumerate(conditionals) if c][0]}
 
         if TagName.COMMENTS in tags:
             conditionals = {file.comments is None and self.comments, replace and self.comments != file.comments}
             if any(conditionals) and self._write_comments(dry_run):
-                updated.update({TagName.COMMENTS: [i for i, c in enumerate(conditionals) if c][0]})
+                updated |= {TagName.COMMENTS: [i for i, c in enumerate(conditionals) if c][0]}
 
         if TagName.URI in tags:
             conditionals = {self.uri != file.uri or self.has_uri != file.has_uri}
             if any(conditionals) and self._write_uri(dry_run):
-                updated.update({TagName.URI: [i for i, c in enumerate(conditionals) if c][0]})
+                updated |= {TagName.URI: [i for i, c in enumerate(conditionals) if c][0]}
 
         if TagName.IMAGES in tags:
             conditionals = {file.has_image is False, replace}
             if any(conditionals) and self.image_links and self._write_images(dry_run):
-                updated.update({TagName.IMAGES: [i for i, c in enumerate(conditionals) if c][0]})
+                updated |= {TagName.IMAGES: [i for i, c in enumerate(conditionals) if c][0]}
         
         save = not dry_run and len(updated) > 0
         if save:
-            self.file.save()
+            try:
+                self.file.save()
+            except mutagen.MutagenError as ex:
+                raise ex
 
         return SyncResultTrack(saved=save, updated=updated)
                     
@@ -315,7 +321,7 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
         :returns: True if the file was updated or would have been when dry_run is True, False otherwise.
         """
 
-    def delete_tags(self, tags: UnitList[TagName] | None = None, dry_run: bool = True) -> SyncResultTrack:
+    def delete_tags(self, tags: UnitIterable[TagName] | None = None, dry_run: bool = True) -> SyncResultTrack:
         """
         Remove tags from file.
 
@@ -323,7 +329,7 @@ class TagWriter(TagProcessor, metaclass=ABCMeta):
         :param dry_run: Run function, but do not modify file at all.
         :returns: List of tags that have been removed.
         """
-        if tags is None or (isinstance(tags, list) and len(tags) == 0):
+        if tags is None or (isinstance(tags, Collection) and len(tags) == 0):
             return SyncResultTrack(saved=False, updated={})
 
         # noinspection PyTypeChecker
