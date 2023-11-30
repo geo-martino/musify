@@ -20,6 +20,11 @@ def test_get_id_type():
 
 # noinspection SpellCheckingInspection
 def test_validate_id_type():
+    assert validate_id_type("1234567890ASDFGHJKLZXC")
+    assert validate_id_type("spotify:show:1234567890ASDFGHJKLZXC")
+    assert validate_id_type(f"{__URL_API__}/1234567890ASDFGHJKLZXC")
+    assert validate_id_type(f"{__URL_EXT__}/1234567890ASDFGHJKLZXC")
+
     assert validate_id_type("1234567890ASDFGHJKLZXC", kind=IDType.ID)
     assert validate_id_type("spotify:show:1234567890ASDFGHJKLZXC", kind=IDType.URI)
     assert validate_id_type(f"{__URL_API__}/1234567890ASDFGHJKLZXC", kind=IDType.URL)
@@ -103,30 +108,16 @@ def test_validate_item_type():
     assert validate_item_type(
         f"{__URL_API__}/playlist/1234567890ASDFGHJKLZXC/followers", kind=ItemType.PLAYLIST
     ) is None
-    assert validate_item_type(
-        "1234567890ASDFGHJKLZXC", kind=ItemType.TRACK
-    ) is None
-    assert validate_item_type(
-        {"type": "album", "id": "1234567890ASDFGHJKLZXC"}, kind=ItemType.ALBUM
-    ) is None
-    assert validate_item_type(
-        "spotify:artist:1234567890ASDFGHJKLZXC", kind=ItemType.ARTIST
-    ) is None
-    assert validate_item_type(
-        "spotify:user:ausername", kind=ItemType.USER
-    ) is None
-    assert validate_item_type(
-        f"{__URL_API__}/show/1234567890ASDFGHJKLZXC/episodes", kind=ItemType.SHOW
-    ) is None
-    assert validate_item_type(
-        "spotify:episode:1234567890ASDFGHJKLZXC", kind=ItemType.EPISODE
-    ) is None
+    assert validate_item_type("1234567890ASDFGHJKLZXC", kind=ItemType.TRACK) is None
+    assert validate_item_type({"type": "album", "id": "1234567890ASDFGHJKLZXC"}, kind=ItemType.ALBUM) is None
+    assert validate_item_type("spotify:artist:1234567890ASDFGHJKLZXC", kind=ItemType.ARTIST) is None
+    assert validate_item_type("spotify:user:ausername", kind=ItemType.USER) is None
+    assert validate_item_type(f"{__URL_API__}/show/1234567890ASDFGHJKLZXC/episodes", kind=ItemType.SHOW) is None
+    assert validate_item_type("spotify:episode:1234567890ASDFGHJKLZXC", kind=ItemType.EPISODE) is None
     assert validate_item_type(
         f"{__URL_EXT__}/audiobook/1234567890ASDFGHJKLZXC/chapters", kind=ItemType.AUDIOBOOK
     ) is None
-    assert validate_item_type(
-        "spotify:chapter:1234567890ASDFGHJKLZXC", kind=ItemType.CHAPTER
-    ) is None
+    assert validate_item_type("spotify:chapter:1234567890ASDFGHJKLZXC", kind=ItemType.CHAPTER) is None
 
     values = [
         {"type": "playlist"},

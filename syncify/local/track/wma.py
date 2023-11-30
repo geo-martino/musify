@@ -9,7 +9,7 @@ from PIL import Image
 
 from syncify.enums.tags import TagMap
 from syncify.local.file import open_image, get_image_bytes
-from syncify.local.track.base.track import LocalTrack
+from .base.track import LocalTrack
 
 
 class WMA(LocalTrack):
@@ -21,7 +21,7 @@ class WMA(LocalTrack):
         Useful for case-insensitive path loading and correcting paths to case-sensitive.
     """
 
-    valid_extensions = {".wma"}
+    valid_extensions = frozenset({".wma"})
 
     tag_map = TagMap(
         title=["Title"],

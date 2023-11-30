@@ -8,8 +8,8 @@ from PIL import Image
 
 from syncify.enums.tags import TagMap
 from syncify.local.file import open_image, get_image_bytes
-from syncify.local.track.base.track import LocalTrack
 from syncify.utils.helpers import to_collection
+from .base.track import LocalTrack
 
 
 class M4A(LocalTrack):
@@ -21,7 +21,7 @@ class M4A(LocalTrack):
         Useful for case-insensitive path loading and correcting paths to case-sensitive.
     """
 
-    valid_extensions = {".m4a"}
+    valid_extensions = frozenset({".m4a"})
 
     # noinspection SpellCheckingInspection
     tag_map = TagMap(

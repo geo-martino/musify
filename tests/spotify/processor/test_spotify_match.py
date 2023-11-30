@@ -1,6 +1,5 @@
-from tests.local.track.track import random_track
-
 from syncify.spotify.processor.match import SpotifyItemMatcher
+from tests.local.track.common import random_track
 
 
 # noinspection SpellCheckingInspection

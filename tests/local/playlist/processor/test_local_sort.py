@@ -2,12 +2,11 @@ from collections.abc import Callable
 from itertools import groupby
 from random import choice, randrange
 
-from tests.local.track.track import random_tracks
-
 from syncify.enums.tags import TagName, PropertyName
 from syncify.local.playlist.processor.sort import TrackSorter, ShuffleMode
 from syncify.local.track import LocalTrack
 from syncify.utils.helpers import strip_ignore_words
+from tests.local.track.common import random_tracks
 
 
 def test_sort_by_field():
@@ -59,11 +58,18 @@ def test_group_by_field():
     assert sum(len(t) for t in groups.values()) == len(tracks)
 
 
-def test_sort():
+def get_tracks_for_sort_test() -> list[LocalTrack]:
+    """Generate a list of random tracks with dynamically configured properties for sort tests"""
     tracks = random_tracks(30)
     for i, track in enumerate(tracks, 1):
         track.track_number = i
         track.track_total = len(tracks)
+
+    return tracks
+
+
+def test_random_shuffle():
+    tracks = get_tracks_for_sort_test()
 
     # random shuffle
     tracks_copy = tracks.copy()
@@ -73,6 +79,10 @@ def test_sort():
     assert tracks != tracks_copy
     TrackSorter(fields=TagName.TITLE, shuffle_mode=ShuffleMode.RANDOM).sort(tracks)
     assert tracks != tracks_copy
+
+
+def test_multi_sort():
+    tracks = get_tracks_for_sort_test()
 
     # prepare tracks
     for track in tracks:

@@ -6,12 +6,12 @@ from typing import Any, Self
 
 from PIL import Image
 
-from syncify.local.track.base.processor import TagProcessor
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 from syncify.spotify.enums import IDType
-from syncify.spotify.utils import check_spotify_type
+from syncify.spotify.utils import validate_id_type
 from syncify.utils import UnitIterable
 from syncify.utils.helpers import to_collection
+from .processor import TagProcessor
 
 
 class TagReader(TagProcessor, metaclass=ABCMeta):
@@ -384,7 +384,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
         # WORKAROUND: for dodgy mp3 tag comments, split on null and take first value
         possible_values = tuple(val for values in possible_values for val in values.split("\x00"))
         for uri in possible_values:
-            if uri == __UNAVAILABLE_URI_VALUE__ or check_spotify_type(uri, types=IDType.URI) == IDType.URI:
+            if uri == __UNAVAILABLE_URI_VALUE__ or validate_id_type(uri, kind=IDType.URI):
                 return uri
 
         return None

@@ -2,10 +2,10 @@ import os
 from copy import copy
 from datetime import datetime
 
-from tests.common import random_file
-from tests.local.track.track import random_tracks
-
 from syncify.local.playlist.processor.limit import TrackLimiter, LimitType
+from syncify.local.track import LocalTrack
+from tests.common import random_file
+from tests.local.track.common import random_tracks
 
 
 def test_init():
@@ -19,17 +19,8 @@ def test_init():
     assert limiter._sort_method == limiter._sort_most_recently_played
 
 
-def test_limit():
-    tracks = random_tracks(50)
-
-    limiter = TrackLimiter()
-    limiter.limit(tracks)
-    assert len(tracks) == 50
-
-    limiter = TrackLimiter(on=LimitType.ITEMS)
-    limiter.limit(tracks)
-    assert len(tracks) == 50
-
+def get_tracks_for_limit_test() -> tuple[list[LocalTrack], list[str]]:
+    """Generate a list of random tracks with dynamically configured properties for limit tests"""
     # prepare tracks for tests
     tracks = random_tracks(50)
     random_files = []
@@ -49,7 +40,24 @@ def test_limit():
             if i == 1 or i == 3:
                 track.play_count = 1000000
 
-    # on items
+    return tracks, random_files
+
+
+def test_limit_basic():
+    tracks = random_tracks(50)
+
+    limiter = TrackLimiter()
+    limiter.limit(tracks)
+    assert len(tracks) == 50
+
+    limiter = TrackLimiter(on=LimitType.ITEMS)
+    limiter.limit(tracks)
+    assert len(tracks) == 50
+
+
+def test_limit_on_items():
+    tracks, _ = get_tracks_for_limit_test()
+
     limiter = TrackLimiter(limit=25)
     tracks_copy = copy(tracks)
     limiter.limit(tracks_copy)
@@ -73,7 +81,10 @@ def test_limit():
     assert len(tracks_copy) == 30
     assert set(track.album for track in tracks_copy) == {"album 1", "album 3", "album 5"}
 
-    # on albums
+
+def test_limit_on_albums():
+    tracks, _ = get_tracks_for_limit_test()
+
     limiter = TrackLimiter(limit=3, on=LimitType.ALBUMS)
     tracks_copy = copy(tracks)
     limiter.limit(tracks_copy)
@@ -91,7 +102,10 @@ def test_limit():
     assert len(tracks_copy) == 30
     assert set(track.album for track in tracks_copy) == {"album 1", "album 3", "album 5"}
 
-    # on seconds
+
+def test_limit_on_seconds():
+    tracks, _ = get_tracks_for_limit_test()
+
     limiter = TrackLimiter(limit=30, on=LimitType.MINUTES)
     tracks_copy = copy(tracks)
     limiter.limit(tracks_copy)
@@ -102,7 +116,10 @@ def test_limit():
     limiter.limit(tracks_copy)
     assert len(tracks_copy) == 21
 
-    # on bytes
+
+def test_limit_on_bytes():
+    tracks, random_files = get_tracks_for_limit_test()
+
     limiter = TrackLimiter(limit=30, on=LimitType.KILOBYTES)
     tracks_copy = copy(tracks)
     limiter.limit(tracks_copy)

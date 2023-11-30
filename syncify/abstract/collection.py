@@ -6,14 +6,14 @@ from copy import deepcopy
 from datetime import datetime
 from typing import Any, Self, SupportsIndex
 
-from syncify.abstract.item import Item, BaseObject, Track
-from syncify.abstract.misc import PrettyPrinter
 from syncify.enums.tags import TagName
 from syncify.spotify.enums import IDType
 from syncify.spotify.utils import validate_id_type
 from syncify.utils import UnitIterable
 from syncify.utils.helpers import to_collection
 from syncify.utils.logger import Logger
+from .item import Item, BaseObject, Track
+from .misc import PrettyPrinter
 
 
 # noinspection PyShadowingNames

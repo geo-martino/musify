@@ -7,10 +7,10 @@ from typing import Any
 import xmltodict
 
 from syncify.local.file import File
-from syncify.local.library.library import LocalLibrary
 from syncify.local.track.base.track import LocalTrack
 from syncify.utils import UnitCollection
 from syncify.utils.logger import Logger
+from .library import LocalLibrary
 
 
 class MusicBee(LocalLibrary, File):
@@ -35,7 +35,7 @@ class MusicBee(LocalLibrary, File):
     def path(self) -> str:
         return self._path
 
-    valid_extensions = {".xml"}
+    valid_extensions = frozenset({".xml"})
 
     def __init__(
             self,

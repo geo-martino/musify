@@ -9,7 +9,7 @@ import mutagen
 
 from syncify.abstract.item import Track, TrackProperties
 from syncify.local.file import File
-from syncify.local.track.base.writer import TagWriter
+from .writer import TagWriter
 
 
 class _MutagenMock(mutagen.FileType):

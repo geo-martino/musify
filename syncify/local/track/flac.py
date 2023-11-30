@@ -9,7 +9,7 @@ from PIL import Image
 
 from syncify.enums.tags import TagName, TagMap
 from syncify.local.file import open_image, get_image_bytes
-from syncify.local.track.base.track import LocalTrack
+from .base.track import LocalTrack
 
 
 class FLAC(LocalTrack):
@@ -21,7 +21,7 @@ class FLAC(LocalTrack):
         Useful for case-insensitive path loading and correcting paths to case-sensitive.
     """
 
-    valid_extensions = {".flac"}
+    valid_extensions = frozenset({".flac"})
 
     # noinspection SpellCheckingInspection
     tag_map = TagMap(

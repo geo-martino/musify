@@ -7,9 +7,9 @@ from typing import Any, Self
 from syncify.enums import SyncifyEnum
 from syncify.enums.tags import PropertyName
 from syncify.local.exception import LimitError
-from syncify.local.playlist.processor.base import TrackProcessor
-from syncify.local.playlist.processor.sort import TrackSorter
 from syncify.local.track.base.track import LocalTrack
+from .base import TrackProcessor
+from .sort import TrackSorter
 
 
 class LimitType(SyncifyEnum):

@@ -1,6 +1,6 @@
 import re
 from abc import ABCMeta, abstractmethod
-from collections.abc import Collection
+from collections.abc import Collection, Iterable
 from datetime import datetime
 from os.path import dirname, join, getmtime, getctime
 
@@ -8,10 +8,11 @@ from syncify.abstract.collection import Playlist
 from syncify.abstract.misc import Result
 from syncify.local.file import File
 from syncify.local.library.collection import LocalCollection
-from syncify.local.playlist.processor.limit import TrackLimiter
-from syncify.local.playlist.processor.match import TrackMatcher
-from syncify.local.playlist.processor.sort import TrackSorter
+from syncify.local.track import load_track
 from syncify.local.track.base.track import LocalTrack
+from .processor.limit import TrackLimiter
+from .processor.match import TrackMatcher
+from .processor.sort import TrackSorter
 
 
 class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, metaclass=ABCMeta):
@@ -65,6 +66,7 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
             matcher: TrackMatcher | None = None,
             limiter: TrackLimiter | None = None,
             sorter: TrackSorter | None = None,
+            available_track_paths: Iterable[str] | None = None,
     ):
         Playlist.__init__(self)
 
@@ -76,15 +78,23 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
         self.limiter = limiter
         self.sorter = sorter
 
+        self.available_track_paths: Iterable[str] | None = available_track_paths
+
+    def _load_track(self, path: str) -> LocalTrack:
+        """Wrapper for LocalTrack loader"""
+        return load_track(path=path, available=self.available_track_paths)
+
     def _match(self, tracks: Collection[LocalTrack] | None = None, reference: LocalTrack | None = None) -> None:
         """Wrapper for matcher"""
-        m = self.matcher
-        if m is not None and tracks is not None:
-            if m.include_paths is None and m.exclude_paths is None and m.comparators is None:
-                # just return the tracks given if matcher has no settings applied
-                self.tracks: list[LocalTrack] = [t for t in tracks]
-            else:  # run matcher
-                self.tracks: list[LocalTrack] = m.match(tracks=tracks, reference=reference)
+        matcher = self.matcher
+        if matcher is None or tracks is None:
+            return
+
+        if matcher.include_paths is None and matcher.exclude_paths is None and matcher.comparators is None:
+            # just return the tracks given if matcher has no settings applied
+            self.tracks: list[LocalTrack] = [t for t in tracks]
+        else:  # run matcher
+            self.tracks: list[LocalTrack] = matcher.match(tracks=tracks, reference=reference)
 
     def _limit(self, ignore: Collection[str | LocalTrack] | None = None) -> None:
         """Wrapper for limiter"""

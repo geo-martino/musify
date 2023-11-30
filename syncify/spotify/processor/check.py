@@ -7,14 +7,14 @@ from syncify.abstract.collection import ItemCollection
 from syncify.abstract.item import Item, Track
 from syncify.abstract.misc import Result
 from syncify.enums.tags import TagName
-from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 from syncify.spotify import API
+from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 from syncify.spotify.enums import IDType, ItemType
 from syncify.spotify.library.library import SpotifyPlaylist
-from syncify.spotify.processor.match import SpotifyItemMatcher
-from syncify.spotify.utils import check_spotify_type, convert
+from syncify.spotify.utils import convert, validate_id_type
 from syncify.utils.helpers import get_user_input
 from syncify.utils.logger import REPORT
+from .match import SpotifyItemMatcher
 
 
 @dataclass(frozen=True)
@@ -246,7 +246,7 @@ class SpotifyItemChecker(SpotifyItemMatcher):
                     )
                     print(formatted_item_data)
                 print()
-            elif check_spotify_type(current_input) is not None:  # print URL/URI/ID result
+            elif validate_id_type(current_input):  # print URL/URI/ID result
                 if not self.api.test():
                     self.api.auth()
                 self.api.pretty_print_uris(current_input)
@@ -401,7 +401,7 @@ class SpotifyItemChecker(SpotifyItemMatcher):
                     print("\n" + help_text)
                 elif current_input.casefold() == 'p' and hasattr(item, "path"):  # print item path
                     print(f"\33[96m{item.path}\33[0m")
-                elif check_spotify_type(current_input) is not None:  # update URI and add item to switched list
+                elif validate_id_type(current_input):  # update URI and add item to switched list
                     uri = convert(current_input, kind=ItemType.TRACK, type_out=IDType.URI)
 
                     self._log_padded([name, f"Updating URI: {item.uri} -> {uri}"], pad="<")

@@ -1,44 +1,11 @@
-from collections.abc import Mapping, Sequence, Container
+from collections.abc import Mapping, Sequence
 from typing import Any
 from urllib.parse import urlparse
 
 from syncify.enums import EnumNotFoundError
-from syncify.spotify import __URL_API__, __URL_EXT__, APIMethodInputType
-from syncify.spotify.enums import IDType, ItemType
-from syncify.spotify.exception import SpotifyError, SpotifyIDTypeError, SpotifyItemTypeError
-from syncify.utils import UnitIterable
-from syncify.utils.helpers import to_collection
-
-
-def check_spotify_type(value: str, types: UnitIterable[IDType] = IDType.ALL) -> IDType | None:
-    """
-    Check that the given value is of a valid Spotify type.
-
-    :param value: URL/URI/ID to check.
-    :param types: Spotify types to check for. None checks all.
-    :return: The Spotify type if value is valid, None if invalid.
-    """
-    if not isinstance(value, str):
-        return
-
-    types: Container[IDType] = to_collection(types, set)
-    if IDType.ALL in types:
-        types = set(IDType.all())
-
-    if IDType.URL in types and value.lower().startswith(__URL_API__):
-        return IDType.URL
-    elif IDType.URL_EXT in types and value.lower().startswith(__URL_EXT__):
-        return IDType.URL_EXT
-    elif IDType.URI in types and len(value.split(":")) == IDType.URI.value:
-        uri_list = value.split(":")
-        if not uri_list[0] == "spotify":
-            return None
-        elif uri_list[1] == "user":
-            return IDType.URI
-        elif uri_list[1] != "user" and len(uri_list[2]) == IDType.ID.value:
-            return IDType.URI
-    elif IDType.ID in types and len(value) == IDType.ID.value:
-        return IDType.ID
+from . import __URL_API__, __URL_EXT__, APIMethodInputType
+from .enums import IDType, ItemType
+from .exception import SpotifyError, SpotifyIDTypeError, SpotifyItemTypeError
 
 
 def get_id_type(value: str) -> IDType:
@@ -50,22 +17,23 @@ def get_id_type(value: str) -> IDType:
     :raises SpotifyIDTypeError: Raised when the function cannot determine the ID type of the input ``value``.
     """
     value = value.strip().casefold()
-    url_check = tuple(i for i in urlparse(value).netloc.split(".") if i)
-    uri_check = value.split(':')
+    uri_split = value.split(':')
 
-    if len(url_check) > 0:
-        if url_check[0] == "api":  # open/api URL
-            return IDType.URL
-        elif url_check[0] == "open":
-            return IDType.URL_EXT
-    elif len(uri_check) == IDType.URI.value:
-        return IDType.URI
+    if value.startswith(__URL_API__):
+        return IDType.URL
+    elif value.startswith(__URL_EXT__):
+        return IDType.URL_EXT
+    elif len(uri_split) == IDType.URI.value and uri_split[0] == "spotify":  # URI
+        if uri_split[1] == "user":
+            return IDType.URI
+        elif uri_split[1] != "user" and len(uri_split[2]) == IDType.ID.value:
+            return IDType.URI
     elif len(value) == IDType.ID.value:  # use manually defined kind for a given id
         return IDType.ID
     raise SpotifyIDTypeError(f"Could not determine ID type of given value: {value}")
 
 
-def validate_id_type(value: str, kind: IDType) -> bool:
+def validate_id_type(value: str, kind: IDType = IDType.ALL) -> bool:
     """Check that the given ``value`` is a type of Spotify ID given by ``kind ``"""
     value = value.strip().casefold()
 
@@ -75,9 +43,17 @@ def validate_id_type(value: str, kind: IDType) -> bool:
         return value.startswith(__URL_EXT__)
     elif kind == IDType.URI:
         uri_split = value.split(':')
-        return len(uri_split) == IDType.URI.value and uri_split[0] == "spotify"
+        if len(uri_split) != IDType.URI.value or uri_split[0] != "spotify":
+            return False
+        return uri_split[1] == "user" or (uri_split[1] != "user" and len(uri_split[2]) == IDType.ID.value)
     elif kind == IDType.ID:
         return len(value) == IDType.ID.value
+    elif kind == IDType.ALL:
+        try:
+            get_id_type(value)
+            return True
+        except SpotifyIDTypeError:
+            pass
     return False
 
 

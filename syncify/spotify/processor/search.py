@@ -10,8 +10,8 @@ from syncify.spotify import API
 from syncify.spotify.enums import ItemType
 from syncify.spotify.library.collection import SpotifyAlbum
 from syncify.spotify.library.item import SpotifyTrack
-from syncify.spotify.processor.match import SpotifyItemMatcher
 from syncify.utils.logger import REPORT
+from .match import SpotifyItemMatcher
 
 
 @dataclass(frozen=True)

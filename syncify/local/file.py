@@ -2,13 +2,13 @@ from abc import ABCMeta, abstractmethod
 from datetime import datetime
 from http.client import HTTPResponse
 from io import BytesIO
-from os.path import splitext, basename, dirname, getsize, getmtime, getctime
+from os.path import splitext, basename, dirname, getsize, getmtime, getctime, exists
 from urllib.error import URLError
 from urllib.request import urlopen
 
 from PIL import Image, UnidentifiedImageError
 
-from syncify.local.exception import IllegalFileTypeError, ImageLoadError
+from .exception import IllegalFileTypeError, ImageLoadError
 
 
 class File(metaclass=ABCMeta):
@@ -36,23 +36,23 @@ class File(metaclass=ABCMeta):
         return splitext(self.path)[1].lower()
 
     @property
-    def size(self) -> int:
+    def size(self) -> int | None:
         """The size of the file in bytes"""
-        return getsize(self.path)
+        return getsize(self.path) if exists(self.path) else None
 
     @property
-    def date_created(self) -> datetime:
+    def date_created(self) -> datetime | None:
         """datetime object representing when the file was created"""
-        return datetime.fromtimestamp(getctime(self.path))
+        return datetime.fromtimestamp(getctime(self.path)) if exists(self.path) else None
 
     @property
-    def date_modified(self) -> datetime:
+    def date_modified(self) -> datetime | None:
         """datetime object representing when the file was last modified"""
-        return datetime.fromtimestamp(getmtime(self.path))
+        return datetime.fromtimestamp(getmtime(self.path)) if exists(self.path) else None
 
     @property
     @abstractmethod
-    def valid_extensions(self) -> set[str]:
+    def valid_extensions(self) -> frozenset[str]:
         """Allowed extensions in lowercase"""
         raise NotImplementedError
 

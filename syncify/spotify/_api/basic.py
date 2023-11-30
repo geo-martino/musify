@@ -2,9 +2,9 @@ from abc import ABCMeta
 from typing import Any
 
 from api import APIBase
-from syncify.spotify._api import __URL_API__
 from syncify.spotify.enums import ItemType
 from syncify.utils.helpers import limit_value
+from . import __URL_API__
 
 
 class Basic(APIBase, metaclass=ABCMeta):

@@ -1,4 +1,4 @@
-from collections.abc import Collection, Mapping
+from collections.abc import Collection, Mapping, Iterable
 from copy import deepcopy
 from dataclasses import dataclass
 from os.path import exists
@@ -8,12 +8,12 @@ import xmltodict
 
 from syncify.abstract.misc import Result
 from syncify.enums.tags import PropertyName
-from syncify.local.playlist.playlist import LocalPlaylist
-from syncify.local.playlist.processor.limit import TrackLimiter
-from syncify.local.playlist.processor.match import TrackMatcher
-from syncify.local.playlist.processor.sort import TrackSorter
-from syncify.local.track import LocalTrack, load_track
+from syncify.local.track import LocalTrack
 from syncify.utils import UnitCollection
+from .playlist import LocalPlaylist
+from .processor.limit import TrackLimiter
+from .processor.match import TrackMatcher
+from .processor.sort import TrackSorter
 
 
 @dataclass(frozen=True)
@@ -53,7 +53,7 @@ class XAutoPF(LocalPlaylist):
         check for the existence of the file paths on the file system and reject any that don't.
     """
 
-    valid_extensions = {".xautopf"}
+    valid_extensions = frozenset({".xautopf"})
 
     @property
     def image_links(self):
@@ -73,7 +73,8 @@ class XAutoPF(LocalPlaylist):
             tracks: Collection[LocalTrack] | None = None,
             library_folder: str | None = None,
             other_folders: UnitCollection[str] | None = None,
-            check_existence: bool = True
+            check_existence: bool = True,
+            available_track_paths: Iterable[str] | None = None,
     ):
         self._validate_type(path)
         if not exists(path):
@@ -95,14 +96,21 @@ class XAutoPF(LocalPlaylist):
         limiter = TrackLimiter.from_xml(xml=self.xml)
         sorter = TrackSorter.from_xml(xml=self.xml)
 
-        LocalPlaylist.__init__(self, path=path, matcher=matcher, limiter=limiter, sorter=sorter)
+        LocalPlaylist.__init__(
+            self,
+            path=path,
+            matcher=matcher,
+            limiter=limiter,
+            sorter=sorter,
+            available_track_paths=available_track_paths
+        )
 
         self._tracks_original: list[LocalTrack]
         self.load(tracks=tracks)
 
     def load(self, tracks: Collection[LocalTrack] | None = None) -> list[LocalTrack] | None:
         if tracks is None:
-            tracks = [load_track(path=path) for path in self.matcher.include_paths if path is not None]
+            tracks = [self._load_track(path) for path in self.matcher.include_paths if path is not None]
 
         self.sorter.sort_by_field(tracks, field=PropertyName.LAST_PLAYED, reverse=True)
         self._match(tracks=tracks, reference=tracks[0] if len(tracks) > 0 else None)

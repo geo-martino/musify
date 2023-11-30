@@ -4,11 +4,11 @@ from os.path import exists
 from typing import Any, Self
 
 from syncify.abstract.misc import Result
-from syncify.local.playlist.processor.base import TrackProcessor
-from syncify.local.playlist.processor.compare import TrackComparer
 from syncify.local.track.base.track import LocalTrack
 from syncify.utils import UnitSequence, UnitCollection, UnitIterable
 from syncify.utils.helpers import to_collection
+from .base import TrackProcessor
+from .compare import TrackComparer
 
 
 @dataclass(frozen=True)
@@ -110,7 +110,7 @@ class TrackMatcher(TrackProcessor):
             for path in self.exclude_paths:
                 path = self.sanitise_file_path(path, check_existence=check_existence)
                 if path is not None:
-                    exclude.append(path.lower())
+                    exclude.append(path.casefold())
 
             self.exclude_paths = exclude
 
@@ -118,8 +118,8 @@ class TrackMatcher(TrackProcessor):
             include = []
             for path in self.include_paths:
                 path = self.sanitise_file_path(path, check_existence=check_existence)
-                if path is not None and (self.exclude_paths is None or path.lower() not in self.exclude_paths):
-                    include.append(path.lower())
+                if path is not None and (self.exclude_paths is None or path.casefold() not in self.exclude_paths):
+                    include.append(path.casefold())
 
             self.include_paths = include
 
@@ -191,7 +191,7 @@ class TrackMatcher(TrackProcessor):
         if len(tracks) == 0:  # skip match
             return [] if combine else MatchResult()
 
-        path_tracks: Mapping[str, LocalTrack] = {track.path.lower(): track for track in tracks}
+        path_tracks: Mapping[str, LocalTrack] = {track.path.casefold(): track for track in tracks}
 
         include: list[LocalTrack] = []
         if self.include_paths:  # include filter

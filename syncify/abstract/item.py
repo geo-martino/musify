@@ -3,9 +3,9 @@ from collections.abc import Hashable
 from datetime import datetime
 from typing import Self, Any
 
-from syncify.abstract.misc import PrettyPrinter
 from syncify.enums.tags import TagName
 from syncify.utils import UnitIterable
+from .misc import PrettyPrinter
 
 
 class BaseObject:

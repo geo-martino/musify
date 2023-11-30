@@ -8,12 +8,12 @@ from syncify.abstract.item import Item
 from syncify.abstract.misc import Result
 from syncify.enums.tags import PropertyName, TagName
 from syncify.local.exception import IllegalFileTypeError, LocalCollectionError
-from syncify.local.library.collection import LocalCollectionFiltered, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from syncify.local.playlist import __PLAYLIST_FILETYPES__, LocalPlaylist, M3U, XAutoPF
 from syncify.local.playlist.processor.sort import TrackSorter
 from syncify.local.track import __TRACK_CLASSES__, LocalTrack, load_track
 from syncify.utils import UnitCollection, UnitIterable
 from syncify.utils.logger import Logger, REPORT
+from .collection import LocalCollectionFiltered, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 
 
 class LocalLibrary(LocalCollectionFiltered[LocalTrack], Library[LocalTrack]):
@@ -149,8 +149,9 @@ class LocalLibrary(LocalCollectionFiltered[LocalTrack], Library[LocalTrack]):
             exclude: Iterable[str] | None = None,
             load: bool = True,
     ):
+        if not getattr(self, "logger", None):
+            Logger.__init__(self)
         Library.__init__(self)
-        Logger.__init__(self)
 
         self.include = [name.strip().lower() for name in include] if include else None
         self.exclude = [name.strip().lower() for name in exclude] if exclude else None
@@ -211,7 +212,7 @@ class LocalLibrary(LocalCollectionFiltered[LocalTrack], Library[LocalTrack]):
         for path in self.get_progress_bar(iterable=self._track_paths, desc="Loading tracks", unit="tracks"):
             # noinspection PyBroadException
             try:
-                tracks.append(load_track(path=path))
+                tracks.append(load_track(path=path, available=self._track_paths))
             except Exception:
                 errors.append(path)
                 continue
@@ -260,11 +261,19 @@ class LocalLibrary(LocalCollectionFiltered[LocalTrack], Library[LocalTrack]):
             ext = splitext(path)[1].lower()
             if ext in M3U.valid_extensions:
                 pl = M3U(
-                    path=path, tracks=self.tracks, library_folder=self.library_folder, other_folders=self.other_folders
+                    path=path,
+                    tracks=self.tracks,
+                    library_folder=self.library_folder,
+                    other_folders=self.other_folders,
+                    available_track_paths=self._track_paths,
                 )
             elif ext in XAutoPF.valid_extensions:
                 pl = XAutoPF(
-                    path=path, tracks=self.tracks, library_folder=self.library_folder, other_folders=self.other_folders
+                    path=path,
+                    tracks=self.tracks,
+                    library_folder=self.library_folder,
+                    other_folders=self.other_folders,
+                    available_track_paths=self._track_paths,
                 )
             else:
                 raise IllegalFileTypeError(ext)

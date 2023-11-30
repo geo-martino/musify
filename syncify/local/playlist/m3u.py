@@ -1,12 +1,12 @@
-from collections.abc import Collection
+from collections.abc import Collection, Iterable
 from dataclasses import dataclass
 from os.path import exists
 
 from syncify.abstract.misc import Result
-from syncify.local.playlist.playlist import LocalPlaylist
-from syncify.local.playlist.processor.match import TrackMatcher
-from syncify.local.track import LocalTrack, load_track
+from syncify.local.track import LocalTrack
 from syncify.utils import UnitCollection
+from .playlist import LocalPlaylist
+from .processor.match import TrackMatcher
 
 
 @dataclass(frozen=True)
@@ -41,7 +41,7 @@ class M3U(LocalPlaylist):
         check for the existence of the file paths on the file system and reject any that don't.
     """
 
-    valid_extensions = {".m3u"}
+    valid_extensions = frozenset({".m3u"})
 
     @property
     def image_links(self):
@@ -61,7 +61,8 @@ class M3U(LocalPlaylist):
             tracks: Collection[LocalTrack] | None = None,
             library_folder: str | None = None,
             other_folders: UnitCollection[str] | None = None,
-            check_existence: bool = True
+            check_existence: bool = True,
+            available_track_paths: Iterable[str] | None = None,
     ):
         self._validate_type(path)
 
@@ -80,18 +81,19 @@ class M3U(LocalPlaylist):
             other_folders=other_folders,
             check_existence=check_existence
         )
-        LocalPlaylist.__init__(self, path=path, matcher=matcher)
+        LocalPlaylist.__init__(self, path=path, matcher=matcher, available_track_paths=available_track_paths)
 
         self.load(tracks=tracks)
 
     def load(self, tracks: Collection[LocalTrack] | None = None) -> list[LocalTrack]:
+
         if self.matcher.include_paths is None or len(self.matcher.include_paths) == 0:
             # use the given tracks if no valid matcher present
             self.tracks = tracks if tracks else []
         elif tracks is not None:  # match paths from given tracks using the matcher
             self._match(tracks)
         else:  # use the paths in the matcher to load tracks from scratch
-            self.tracks = [load_track(path=path) for path in self.matcher.include_paths if path is not None]
+            self.tracks = [self._load_track(path) for path in self.matcher.include_paths if path is not None]
 
         self._limit(ignore=self.matcher.include_paths)
         self._sort()

@@ -9,8 +9,8 @@ from syncify.abstract.misc import Result
 from syncify.spotify import APIMethodInputType
 from syncify.spotify.base import SpotifyObject
 from syncify.spotify.enums import ItemType
-from syncify.spotify.library.collection import SpotifyCollection
-from syncify.spotify.library.item import SpotifyTrack
+from .collection import SpotifyCollection
+from .item import SpotifyTrack
 
 
 @dataclass(frozen=True)

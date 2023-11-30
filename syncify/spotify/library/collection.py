@@ -9,8 +9,8 @@ from syncify.spotify import APIMethodInputType
 from syncify.spotify.base import SpotifyObject
 from syncify.spotify.enums import IDType, ItemType
 from syncify.spotify.exception import SpotifyIDTypeError
-from syncify.spotify.library.item import SpotifyTrack, SpotifyArtist, SpotifyItem
 from syncify.spotify.utils import validate_item_type, convert, extract_ids, get_id_type
+from .item import SpotifyTrack, SpotifyArtist, SpotifyItem
 
 
 # noinspection PyShadowingNames

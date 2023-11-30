@@ -9,8 +9,8 @@ from PIL import Image
 
 from syncify.enums.tags import TagName, TagMap
 from syncify.local.file import open_image, get_image_bytes
-from syncify.local.track.base.track import LocalTrack
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
+from .base.track import LocalTrack
 
 
 class MP3(LocalTrack):
@@ -22,7 +22,7 @@ class MP3(LocalTrack):
         Useful for case-insensitive path loading and correcting paths to case-sensitive.
     """
 
-    valid_extensions = {".mp3"}
+    valid_extensions = frozenset({".mp3"})
 
     # noinspection SpellCheckingInspection
     tag_map = TagMap(

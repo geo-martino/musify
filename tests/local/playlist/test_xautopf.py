@@ -3,11 +3,6 @@ from datetime import datetime
 from os.path import dirname, join, splitext, basename
 
 import pytest
-from tests.common import path_txt
-from tests.local.playlist.playlist import copy_playlist_file, path_resources
-from tests.local.playlist.playlist import path_playlist_xautopf_ra, path_playlist_xautopf_bp
-from tests.local.track.track import random_tracks, path_track_flac, path_track_m4a, path_track_wma, \
-    path_track_mp3
 
 from syncify.enums.tags import TagName, PropertyName
 from syncify.local.exception import IllegalFileTypeError
@@ -15,6 +10,10 @@ from syncify.local.playlist import XAutoPF
 from syncify.local.playlist.processor.limit import LimitType
 from syncify.local.playlist.processor.sort import ShuffleMode, ShuffleBy
 from syncify.local.track import LocalTrack, FLAC, M4A, WMA, MP3
+from tests.common import path_txt
+from tests.local.playlist.common import copy_playlist_file, path_resources
+from tests.local.playlist.common import path_playlist_xautopf_ra, path_playlist_xautopf_bp
+from tests.local.track.common import random_tracks, path_track_flac, path_track_m4a, path_track_wma, path_track_mp3
 
 
 def test_init_fails():
@@ -225,5 +224,3 @@ def test_save_playlist():
     assert pl.date_modified > original_dt
 
     os.remove(path_file_copy)
-
-

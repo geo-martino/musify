@@ -1,6 +1,6 @@
 from typing import Any
 
-from syncify.spotify.enums import IDType, ItemType
+from .enums import IDType, ItemType
 
 
 class SpotifyError(Exception):

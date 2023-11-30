@@ -6,18 +6,19 @@ from datetime import datetime
 from os.path import join, basename, dirname, exists
 from random import choice, randrange, randint
 
+import pytest
 from dateutil.relativedelta import relativedelta
 
 from syncify.abstract.item import BaseObject
-from tests.common import path_resources, path_cache, random_str
-
 from syncify.enums.tags import TagName
+from syncify.local.exception import IllegalFileTypeError
 from syncify.local.file import open_image
-from syncify.local.track import __TRACK_CLASSES__, LocalTrack
+from syncify.local.track import __TRACK_CLASSES__, LocalTrack, FLAC, M4A, MP3, WMA
 # noinspection PyProtectedMember
 from syncify.local.track.base.track import _MutagenMock
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 from syncify.spotify.enums import IDType, ItemType
+from tests.common import path_resources, path_cache, path_txt, random_str
 
 path_track_cache = join(path_cache, basename(dirname(__file__)))
 
@@ -27,6 +28,14 @@ path_track_mp3 = join(path_track_resources, "noise_mp3.mp3")
 path_track_m4a = join(path_track_resources, "noise_m4a.m4a")
 path_track_wma = join(path_track_resources, "noise_wma.wma")
 path_track_img = join(path_track_resources, "track_image.jpg")
+
+
+class_path_map: dict[type[LocalTrack], str] = {
+    FLAC: path_track_flac,
+    MP3: path_track_mp3,
+    M4A: path_track_m4a,
+    WMA: path_track_wma,
+}
 
 
 def random_uri(kind: ItemType = ItemType.TRACK) -> str:
@@ -97,8 +106,63 @@ def copy_track(track: LocalTrack) -> (str, str):
     return path_file_base, path_file_copy
 
 
-def clear_tags_test(track: LocalTrack):
-    """Test for clearing tags on a given track."""
+def load_track_test(cls: type[LocalTrack], path: str):
+    """Generic test for loading a file to LocalTrack object"""
+    track = cls(file=path)
+
+    track_file = track.file
+
+    track._file = track.get_file()
+    track_reload_1 = track.file
+
+    track.load()
+    track_reload_2 = track.file
+
+    # has actually reloaded the file in each reload
+    assert id(track_file) != id(track_reload_1) != id(track_reload_2)
+
+    # raises error on unrecognised file type
+    with pytest.raises(IllegalFileTypeError):
+        cls(path_txt)
+
+    # raises error on files that do not exist
+    with pytest.raises(FileNotFoundError):
+        cls(f"does_not_exist.{set(track.valid_extensions).pop()}")
+
+
+def copy_track_test(cls: type[LocalTrack], path: str):
+    """Generic test for copying a LocalTrack object"""
+    track = cls(file=path)
+
+    track_from_file = cls(file=track.file)
+    assert id(track.file) == id(track_from_file.file)
+
+    track_copy = copy(track)
+    assert id(track.file) == id(track_copy.file)
+    for key, value in vars(track).items():
+        assert value == track_copy[key]
+
+    track_deepcopy = deepcopy(track)
+    assert id(track.file) != id(track_deepcopy.file)
+    for key, value in vars(track).items():
+        assert value == track_deepcopy[key]
+
+
+def set_and_find_file_paths_test(cls: type[LocalTrack], path: str):
+    """Generic test for settings and finding file paths for local track"""
+    track = cls(file=path.upper())
+    assert track.path == path.upper()
+
+    paths = cls.get_filepaths(path_track_resources)
+    assert paths == {path}
+
+    track = cls(file=path.upper(), available=paths)
+    assert track.path != path.upper()
+
+
+def clear_tags_test(cls: type[LocalTrack], path: str):
+    """Generic test for clearing tags on a given track."""
+    track = cls(path)
     path_file_base, path_file_copy = copy_track(track)
     track_original = copy(track)
 
@@ -155,8 +219,9 @@ def clear_tags_test(track: LocalTrack):
     os.remove(path_file_copy)
 
 
-def update_tags_test(track: LocalTrack) -> None:
-    """Test for updating tags on a given track."""
+def update_tags_test(cls: type[LocalTrack], path: str) -> None:
+    """Generic test for updating tags on a given track."""
+    track = cls(path)
     path_file_base, path_file_copy = copy_track(track)
     track_original = copy(track)
 
@@ -264,8 +329,9 @@ def update_tags_test(track: LocalTrack) -> None:
 
 
 # noinspection PyProtectedMember
-def update_images_test(track: LocalTrack) -> None:
-    """Test for updating images on a given track."""
+def update_images_test(cls: type[LocalTrack], path: str) -> None:
+    """Generic test for updating images on a given track."""
+    track = cls(path)
     path_file_base, path_file_copy = copy_track(track)
     track_original = copy(track)
 
@@ -306,3 +372,16 @@ def update_images_test(track: LocalTrack) -> None:
     assert image_update_replace.size == image_new.size
 
     os.remove(path_file_copy)
+
+
+def all_local_track_tests(cls: type[LocalTrack]):
+    """Wrapper for all LocalTrack tests"""
+    path = class_path_map[cls]
+
+    load_track_test(cls, path)
+    copy_track_test(cls, path)
+    set_and_find_file_paths_test(cls, path)
+    clear_tags_test(cls, path)
+    update_tags_test(cls, path)
+    if not cls == WMA:  # TODO: remove condition when WMA images IO implemented
+        update_images_test(cls, path)

@@ -9,10 +9,10 @@ from dateutil.relativedelta import relativedelta
 
 from syncify.enums.tags import Name, TagName, PropertyName
 from syncify.local.exception import FieldError, LocalProcessorError
-from syncify.local.playlist.processor.base import TrackProcessor
 from syncify.local.track.base.track import LocalTrack
 from syncify.utils import UnitSequence
 from syncify.utils.helpers import to_collection
+from .base import TrackProcessor
 
 # Map of MusicBee field name to Tag or Property
 field_name_map = {

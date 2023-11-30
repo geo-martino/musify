@@ -80,7 +80,7 @@ class LogFileFilter(logging.Filter):
     # noinspection PyMissingOrEmptyDocstring
     def filter(self, record: logging.LogRecord) -> logging.LogRecord:
         # record.msg = re.sub(r"\n$", "", record.msg)
-        record.msg = re.sub(r"\33.*?m", "", record.msg)
+        record.msg = re.sub("\33.*?m", "", record.msg)
         format_full_func_name(record)
         return record
 
@@ -178,6 +178,8 @@ class Logger:
 
         # return exceptions to logger
         sys.excepthook = self._handle_exception
+
+        self.logger.info("INDEED")
 
     # noinspection SpellCheckingInspection
     def _set_stdout_handler(self) -> None:

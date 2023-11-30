@@ -5,10 +5,10 @@ from itertools import batched
 from typing import Any
 
 from api import APIBase
-from syncify.spotify._api import __URL_API__, APIMethodInputType
 from syncify.spotify.enums import ItemType
 from syncify.spotify.utils import validate_item_type, get_item_type, extract_ids
 from syncify.utils.helpers import limit_value
+from . import __URL_API__, APIMethodInputType
 
 
 class Items(APIBase, metaclass=ABCMeta):

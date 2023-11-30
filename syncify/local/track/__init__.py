@@ -8,8 +8,8 @@ from .m4a import M4A
 from .mp3 import MP3
 from .wma import WMA
 
-__TRACK_CLASSES__ = {FLAC, MP3, M4A, WMA}
-__TRACK_FILETYPES__ = {filetype for c in __TRACK_CLASSES__ for filetype in c.valid_extensions}
+__TRACK_CLASSES__ = frozenset({FLAC, MP3, M4A, WMA})
+__TRACK_FILETYPES__ = frozenset(filetype for c in __TRACK_CLASSES__ for filetype in c.valid_extensions)
 
 
 def load_track(path: str, available: Iterable[str] | None = None) -> LocalTrack:

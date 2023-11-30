@@ -9,8 +9,8 @@ from webbrowser import open as webopen
 
 import requests
 
-from syncify.api.exception import APIError
 from syncify.utils.logger import Logger
+from .exception import APIError
 
 
 class APIAuthoriser(Logger):

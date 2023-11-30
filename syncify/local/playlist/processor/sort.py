@@ -7,10 +7,10 @@ from typing import Any, Self
 from syncify.enums import SyncifyEnum
 from syncify.enums.tags import Name, PropertyName, TagName
 from syncify.local.exception import FieldError
-from syncify.local.playlist.processor.base import TrackProcessor
 from syncify.local.track.base.track import LocalTrack
 from syncify.utils import UnitSequence, UnitIterable
 from syncify.utils.helpers import flatten_nested, strip_ignore_words, to_collection, limit_value
+from .base import TrackProcessor
 
 
 def get_field_from_code(field_code: int) -> Name | None:
