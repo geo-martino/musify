@@ -383,5 +383,4 @@ def all_local_track_tests(cls: type[LocalTrack]):
     set_and_find_file_paths_test(cls, path)
     clear_tags_test(cls, path)
     update_tags_test(cls, path)
-    if not cls == WMA:  # TODO: remove condition when WMA images IO implemented
-        update_images_test(cls, path)
+    update_images_test(cls, path)

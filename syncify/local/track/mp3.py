@@ -49,8 +49,8 @@ class MP3(LocalTrack):
         self._file: mutagen.mp3.MP3 = self._file
 
     def _read_tag(self, tag_ids: Iterable[str]) -> list[Any] | None:
-        # mp3 tag ids come in parts separated by : i.e. 'COMM:ID3v1 Comment:eng'
-        # need to search all actual mp3 tag ids to check if the first part equals any of the given base tag ids
+        # MP3 tag ids come in parts separated by : i.e. 'COMM:ID3v1 Comment:eng'
+        # need to search all actual MP3 tag ids to check if the first part equals any of the given base tag ids
         tag_ids = tuple(mp3_id for mp3_id in self._file.keys() for tag_id in tag_ids if mp3_id.split(":")[0] == tag_id)
 
         values = []

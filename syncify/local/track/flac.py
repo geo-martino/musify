@@ -1,5 +1,5 @@
-import io
 from collections.abc import Iterable
+from io import BytesIO
 from typing import Any
 
 import mutagen
@@ -49,7 +49,7 @@ class FLAC(LocalTrack):
 
     def _read_images(self) -> list[Image.Image] | None:
         values = self._file.pictures
-        return [Image.open(io.BytesIO(value.data)) for value in values] if len(values) > 0 else None
+        return [Image.open(BytesIO(value.data)) for value in values] if len(values) > 0 else None
 
     def _check_for_images(self) -> bool:
         return len(self._file.pictures) > 0

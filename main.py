@@ -565,14 +565,15 @@ if __name__ == "__main__":
 # TODO: test on linux/mac
 #  - concerned about local playlist saving
 #  - linux does not pick up 'include' paths when loading xautopf playlists
-#    this is due to case-sensitive paths not being found in linux
+#    this is possibly due to case-sensitive paths not being found in linux
 #    from using lowercase path cleaning logic in TrackMatch
+#  This may now be fixed by extending functionality of playlists to include
+#   available track paths on load
 
 # TODO: implement merge_playlists functions and,
 #  by extension, implement android library sync
 
 
 ## NEEDED FOR v0.3
-# TODO: how to read WMA images
 # TODO: write tests, write tests, write tests
 # TODO: update the readme (dynamic readme?)

@@ -1,15 +1,16 @@
 import struct
 from collections.abc import Collection, Iterable
+from io import BytesIO
 from typing import Any
 
 import mutagen
 import mutagen.asf
 import mutagen.id3
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 from syncify.enums.tags import TagMap
 from syncify.local.file import open_image, get_image_bytes
-from .base.track import LocalTrack
+from syncify.local.track.base.track import LocalTrack
 
 
 class WMA(LocalTrack):
@@ -47,7 +48,7 @@ class WMA(LocalTrack):
         self._file: mutagen.asf.ASF = self._file
 
     def _read_tag(self, tag_ids: Iterable[str]) -> list[Any] | None:
-        # wma tag values are returned as mutagen.asf._attrs.ASFUnicodeAttribute
+        # WMA tag values are returned as mutagen.asf._attrs.ASFUnicodeAttribute
         values = []
         for tag_id in tag_ids:
             value: Collection[mutagen.asf.ASFBaseAttribute] = self._file.get(tag_id)
@@ -59,17 +60,22 @@ class WMA(LocalTrack):
 
         return values if len(values) > 0 else None
 
-    # noinspection PyUnreachableCode
     def _read_images(self) -> list[Image.Image] | None:
-        # TODO: figure out how to read images from WMA
-        raise NotImplementedError("Image extraction not supported for WMA files")
-
         values = self._read_tag(self.tag_map.images)
         if values is None:
             return
 
         images: list[Image.Image] = []
         for i, value in enumerate(values):
+            try:
+                # first attempt to open image from bytes; assumes bytes value refer only to the image data
+                images.append(Image.open(BytesIO(value)))
+                continue
+            except UnidentifiedImageError:
+                # the bytes are encoded per WMA spec
+                # bytes need to be analysed first to extract the bytes that refer to the image data
+                pass
+
             v_type, v_size = struct.unpack_from(b"<bi", value)
 
             pos = 5
@@ -87,7 +93,7 @@ class WMA(LocalTrack):
             pos += 2
 
             image_data: bytes = value[pos:pos + v_size]
-            images.append(Image.open(image_data))
+            images.append(Image.open(BytesIO(image_data)))
 
         return images
 

@@ -3,8 +3,9 @@ from datetime import datetime
 from http.client import HTTPResponse
 from io import BytesIO
 from os.path import splitext, basename, dirname, getsize, getmtime, getctime, exists
+from pathlib import Path
 from urllib.error import URLError
-from urllib.request import urlopen
+from urllib.request import urlopen, Request
 
 from PIL import Image, UnidentifiedImageError
 
@@ -67,7 +68,7 @@ class File(metaclass=ABCMeta):
             )
 
 
-def open_image(image_link: str) -> Image.Image:
+def open_image(source: str | bytes | Path | Request) -> Image.Image:
     """
     Open Image object from a given URL or file path
 
@@ -75,16 +76,19 @@ def open_image(image_link: str) -> Image.Image:
     """
 
     try:  # open image from link
-        if image_link.startswith("http"):
-            response: HTTPResponse = urlopen(image_link)
+        if isinstance(source, Request) or (isinstance(source, str) and source.startswith("http")):
+            response: HTTPResponse = urlopen(source)
             image = Image.open(response)
             response.close()
-        else:
-            image = Image.open(image_link)
+            return image
 
-        return image
+        elif not isinstance(source, Request):
+            return Image.open(source)
+
     except (URLError, FileNotFoundError, UnidentifiedImageError):
-        raise ImageLoadError(f"{image_link} | Failed to open image")
+        pass
+
+    raise ImageLoadError(f"{source} | Failed to open image")
 
 
 def get_image_bytes(image: Image.Image) -> bytes:

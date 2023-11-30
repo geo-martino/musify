@@ -376,12 +376,12 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
             * False if the track has no URI and is not available on remote server
             * None if the track has no URI, and it is not known whether it is available on remote server
         """
-        # WORKAROUND: for dodgy mp3 tag comments, split on null and take first value
+        # WORKAROUND: for dodgy MP3 tag comments, split on null and take first value
         possible_values: tuple[str] | None = to_collection(self[self.uri_tag.name.casefold()])
         if possible_values is None or len(possible_values) == 0:
             return None
 
-        # WORKAROUND: for dodgy mp3 tag comments, split on null and take first value
+        # WORKAROUND: for dodgy MP3 tag comments, split on null and take first value
         possible_values = tuple(val for values in possible_values for val in values.split("\x00"))
         for uri in possible_values:
             if uri == __UNAVAILABLE_URI_VALUE__ or validate_id_type(uri, kind=IDType.URI):
