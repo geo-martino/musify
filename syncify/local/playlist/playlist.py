@@ -8,11 +8,11 @@ from syncify.abstract.collection import Playlist
 from syncify.abstract.misc import Result
 from syncify.local.file import File
 from syncify.local.library.collection import LocalCollection
+from syncify.processor.limit import ItemLimiter
+from syncify.local.playlist.match import LocalMatcher
+from syncify.processor.sort import ItemSorter
 from syncify.local.track import load_track
 from syncify.local.track.base.track import LocalTrack
-from .processor.limit import TrackLimiter
-from .processor.match import TrackMatcher
-from .processor.sort import TrackSorter
 
 
 class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, metaclass=ABCMeta):
@@ -33,10 +33,6 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
     @name.setter
     def name(self, value: str):
         self._path = join(dirname(self._path), value + self.ext)
-
-    @property
-    def items(self):
-        return self._tracks
 
     @property
     def tracks(self) -> list[LocalTrack]:
@@ -63,9 +59,9 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
     def __init__(
             self,
             path: str,
-            matcher: TrackMatcher | None = None,
-            limiter: TrackLimiter | None = None,
-            sorter: TrackSorter | None = None,
+            matcher: LocalMatcher | None = None,
+            limiter: ItemLimiter | None = None,
+            sorter: ItemSorter | None = None,
             available_track_paths: Iterable[str] | None = None,
     ):
         Playlist.__init__(self)
@@ -99,7 +95,10 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
     def _limit(self, ignore: Collection[str | LocalTrack] | None = None) -> None:
         """Wrapper for limiter"""
         if self.limiter is not None and self.tracks is not None:
-            self.limiter.limit(tracks=self.tracks, ignore=ignore)
+            track_path_map = {track.path: track for track in self.tracks}
+            if ignore:
+                ignore: set[LocalTrack] = {i if isinstance(i, LocalTrack) else track_path_map.get(i) for i in ignore}
+            self.limiter.limit(items=self.tracks, ignore=ignore)
 
     def _sort(self) -> None:
         """Wrapper for sorter"""

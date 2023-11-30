@@ -3,10 +3,10 @@ from dataclasses import dataclass
 from os.path import exists
 
 from syncify.abstract.misc import Result
+from syncify.local.playlist.playlist import LocalPlaylist
+from syncify.local.playlist.match import LocalMatcher
 from syncify.local.track import LocalTrack
 from syncify.utils import UnitCollection
-from .playlist import LocalPlaylist
-from .processor.match import TrackMatcher
 
 
 @dataclass(frozen=True)
@@ -75,7 +75,7 @@ class M3U(LocalPlaylist):
 
         self._description = None
 
-        matcher = TrackMatcher(
+        matcher = LocalMatcher(
             include_paths=paths,
             library_folder=library_folder,
             other_folders=other_folders,

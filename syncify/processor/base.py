@@ -6,18 +6,8 @@ from syncify.abstract.misc import PrettyPrinter
 from syncify.enums.tags import TagName, Name
 
 
-class TrackProcessor(PrettyPrinter, metaclass=ABCMeta):
+class ItemProcessor(PrettyPrinter, metaclass=ABCMeta):
     """Base object for processing tracks in a playlist"""
-
-    @classmethod
-    @abstractmethod
-    def from_xml(cls, xml: Mapping[str, Any] | None = None) -> Self:
-        """
-        Initialise object from XML playlist.
-
-        :param xml: The loaded XML object for this playlist.
-        """
-        raise NotImplementedError
 
     def _get_method_name(self, value: str, valid: Iterable[str] | Mapping[str | str], prefix: str | None = None) -> str:
         """
@@ -45,3 +35,16 @@ class TrackProcessor(PrettyPrinter, metaclass=ABCMeta):
     @classmethod
     def _get_tag(cls, tag: Name | None = None) -> str:
         return tag.to_tag()[0] if isinstance(tag, TagName) else tag.name.casefold()
+
+
+class MusicBeeProcessor(ItemProcessor):
+
+    @classmethod
+    @abstractmethod
+    def from_xml(cls, xml: Mapping[str, Any] | None = None) -> Self:
+        """
+        Initialise object from XML playlist.
+
+        :param xml: The loaded XML object for this playlist.
+        """
+        raise NotImplementedError

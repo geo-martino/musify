@@ -5,11 +5,11 @@ import pytest
 
 from syncify.local.exception import IllegalFileTypeError
 from syncify.local.playlist import M3U
-from syncify.local.track import LocalTrack, FLAC, M4A, MP3, WMA, __TRACK_CLASSES__
+from syncify.local.track import LocalTrack, FLAC, M4A, MP3, WMA
 from tests.common import path_txt
 from tests.local.playlist.common import copy_playlist_file, path_playlist_m3u, path_resources, path_playlist_cache
-from tests.local.track.common import random_tracks, path_track_flac, path_track_m4a, path_track_wma, \
-    path_track_resources, path_track_mp3
+from tests.local.track.common import path_track_flac, path_track_m4a, path_track_wma, path_track_mp3, path_track_all
+from tests.local.track.common import random_tracks
 
 path_fake = join(dirname(path_playlist_m3u), "does_not_exist.m3u")
 
@@ -48,7 +48,12 @@ def test_load_fake_file_with_bad_tracks():
 
 def test_load_file_with_no_tracks():
     # initialising on a real file and no tracks
-    pl = M3U(path=path_playlist_m3u, library_folder=path_resources, other_folders="../")
+    pl = M3U(
+        path=path_playlist_m3u,
+        library_folder=path_resources,
+        other_folders="../",
+        available_track_paths=path_track_all
+    )
     assert pl.path == path_playlist_m3u
     assert len(pl.tracks) == 3
     assert sorted(track.ext for track in pl.tracks) == sorted([".wma", ".mp3", ".flac"])
@@ -67,15 +72,13 @@ def test_load_file_with_no_tracks():
 def test_load_file_with_tracks():
     tracks = get_tracks()
 
-    available_paths = {path for c in __TRACK_CLASSES__ for path in c.get_filepaths(path_track_resources)}
-
     # initialising on a real file and tracks given
     pl = M3U(
         path=path_playlist_m3u,
         tracks=tracks,
         library_folder=path_resources,
         other_folders="../",
-        available_track_paths=available_paths,
+        available_track_paths=path_track_all,
     )
     assert pl.path == path_playlist_m3u
     assert pl.tracks == tracks[:2]
@@ -162,7 +165,12 @@ def test_save_new_file():
 def test_save_existing_file():
     # loading from an existing M3U file and giving it a new name
     _, path_file_copy = copy_playlist_file(path_playlist_m3u)
-    pl = M3U(path=path_file_copy, library_folder=path_resources, other_folders="../")
+    pl = M3U(
+        path=path_file_copy,
+        library_folder=path_resources,
+        other_folders="../",
+        available_track_paths=path_track_all
+    )
     assert pl.path == path_file_copy
     assert len(pl.tracks) == 3
 

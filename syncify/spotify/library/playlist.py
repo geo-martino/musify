@@ -9,8 +9,8 @@ from syncify.abstract.misc import Result
 from syncify.spotify import APIMethodInputType
 from syncify.spotify.base import SpotifyObject
 from syncify.spotify.enums import ItemType
-from .collection import SpotifyCollection
-from .item import SpotifyTrack
+from syncify.spotify.library.collection import SpotifyCollection
+from syncify.spotify.library.item import SpotifyTrack
 
 
 @dataclass(frozen=True)
@@ -34,10 +34,6 @@ class SpotifyPlaylist(SpotifyCollection[SpotifyTrack], Playlist[SpotifyTrack]):
     @property
     def name(self) -> str:
         return self._name
-
-    @property
-    def items(self):
-        return self.tracks
 
     @property
     def tracks(self):

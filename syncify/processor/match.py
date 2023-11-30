@@ -4,6 +4,7 @@ from collections.abc import Iterable, Callable, MutableSequence
 from dataclasses import dataclass
 from typing import Any
 
+from processor.base import ItemProcessor
 from syncify.abstract.collection import Album, ItemCollection
 from syncify.abstract.item import Track, BaseObject
 from syncify.enums.tags import TagName, PropertyName
@@ -38,7 +39,7 @@ class CleanTagConfig:
         return self._preprocess(value) if self._preprocess else value
 
 
-class SpotifyItemMatcher(Logger):
+class ItemMatcher(ItemProcessor, Logger):
     """
     Matches source items/collections to given result(s).
 
@@ -366,3 +367,14 @@ class SpotifyItemMatcher(Logger):
                 scores_current["items"] += score / len(source.items)
 
         return scores_current
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "clean_tags": {
+                "remove_all": self._clean_tags_remove_all,
+                "split_all": self._clean_tags_split_all,
+                "config": self._clean_tags_config,
+            },
+            "allow_karaoke": self.allow_karaoke,
+            "karaoke_tags": self.karaoke_tags,
+        }

@@ -28,6 +28,7 @@ path_track_mp3 = join(path_track_resources, "noise_mp3.mp3")
 path_track_m4a = join(path_track_resources, "noise_m4a.m4a")
 path_track_wma = join(path_track_resources, "noise_wma.wma")
 path_track_img = join(path_track_resources, "track_image.jpg")
+path_track_all = {path for c in __TRACK_CLASSES__ for path in c.get_filepaths(path_track_resources)}
 
 
 class_path_map: dict[type[LocalTrack], str] = {
@@ -108,7 +109,7 @@ def copy_track(track: LocalTrack) -> (str, str):
 
 def load_track_test(cls: type[LocalTrack], path: str):
     """Generic test for loading a file to LocalTrack object"""
-    track = cls(file=path)
+    track = cls(file=path, available=path_track_all)
 
     track_file = track.file
 
@@ -123,18 +124,18 @@ def load_track_test(cls: type[LocalTrack], path: str):
 
     # raises error on unrecognised file type
     with pytest.raises(IllegalFileTypeError):
-        cls(path_txt)
+        cls(file=path_txt, available=path_track_all)
 
     # raises error on files that do not exist
     with pytest.raises(FileNotFoundError):
-        cls(f"does_not_exist.{set(track.valid_extensions).pop()}")
+        cls(file=f"does_not_exist.{set(track.valid_extensions).pop()}", available=path_track_all)
 
 
 def copy_track_test(cls: type[LocalTrack], path: str):
     """Generic test for copying a LocalTrack object"""
-    track = cls(file=path)
+    track = cls(file=path, available=path_track_all)
 
-    track_from_file = cls(file=track.file)
+    track_from_file = cls(file=track.file, available=path_track_all)
     assert id(track.file) == id(track_from_file.file)
 
     track_copy = copy(track)
@@ -150,19 +151,19 @@ def copy_track_test(cls: type[LocalTrack], path: str):
 
 def set_and_find_file_paths_test(cls: type[LocalTrack], path: str):
     """Generic test for settings and finding file paths for local track"""
-    track = cls(file=path.upper())
-    assert track.path == path.upper()
+    track = cls(file=path)
+    assert track.path == path
 
     paths = cls.get_filepaths(path_track_resources)
     assert paths == {path}
 
     track = cls(file=path.upper(), available=paths)
-    assert track.path != path.upper()
+    assert track.path == path
 
 
 def clear_tags_test(cls: type[LocalTrack], path: str):
     """Generic test for clearing tags on a given track."""
-    track = cls(path)
+    track = cls(file=path, available=path_track_all)
     path_file_base, path_file_copy = copy_track(track)
     track_original = copy(track)
 
@@ -221,7 +222,7 @@ def clear_tags_test(cls: type[LocalTrack], path: str):
 
 def update_tags_test(cls: type[LocalTrack], path: str) -> None:
     """Generic test for updating tags on a given track."""
-    track = cls(path)
+    track = cls(file=path, available=path_track_all)
     path_file_base, path_file_copy = copy_track(track)
     track_original = copy(track)
 
@@ -331,7 +332,7 @@ def update_tags_test(cls: type[LocalTrack], path: str) -> None:
 # noinspection PyProtectedMember
 def update_images_test(cls: type[LocalTrack], path: str) -> None:
     """Generic test for updating images on a given track."""
-    track = cls(path)
+    track = cls(file=path, available=path_track_all)
     path_file_base, path_file_copy = copy_track(track)
     track_original = copy(track)
 

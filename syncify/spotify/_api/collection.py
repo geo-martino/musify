@@ -5,12 +5,12 @@ from time import sleep
 from typing import Any
 from urllib.parse import urlparse, urlencode
 
-from api import APIBase
+from syncify.api import APIBase
+from syncify.spotify._api import __URL_API__, APIMethodInputType
 from syncify.spotify.enums import IDType, ItemType
 from syncify.spotify.exception import SpotifyIDTypeError, SpotifyItemTypeError
 from syncify.spotify.utils import validate_item_type, convert, get_item_type, extract_ids
 from syncify.utils.helpers import limit_value
-from . import __URL_API__, APIMethodInputType
 
 
 class Collections(APIBase, metaclass=ABCMeta):

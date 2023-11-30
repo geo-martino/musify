@@ -4,12 +4,13 @@ from operator import mul
 from random import shuffle
 from typing import Any, Self
 
+from syncify.abstract.item import Item, Track
+from syncify.local.file import File
 from syncify.enums import SyncifyEnum
 from syncify.enums.tags import PropertyName
-from syncify.local.exception import LimitError
-from syncify.local.track.base.track import LocalTrack
-from .base import TrackProcessor
-from .sort import TrackSorter
+from syncify.processor.exception import ItemLimiterError
+from syncify.processor.base import MusicBeeProcessor
+from syncify.processor.sort import ItemSorter
 
 
 class LimitType(SyncifyEnum):
@@ -30,13 +31,13 @@ class LimitType(SyncifyEnum):
     TERABYTES = 24
 
 
-class TrackLimiter(TrackProcessor):
+class ItemLimiter(MusicBeeProcessor):
     """
-    Sort tracks inplace based on given conditions.
+    Sort items in-place based on given conditions.
 
-    :param limit: The number of tracks to limit to. A value of 0 applies no limiting.
+    :param limit: The number of items to limit to. A value of 0 applies no limiting.
     :param on: The type to limit on e.g. items, albums, minutes.
-    :param sorted_by: When limiting, sort the collection of tracks by this function first.
+    :param sorted_by: When limiting, sort the collection of items by this function first.
     :param allowance: When limiting on bytes or length, add this extra allowance factor to
         the max size limit on comparison.
         e.g. say the limiter currently has 29 minutes worth of songs in its final list and the max limit is 30 minutes.
@@ -103,103 +104,105 @@ class TrackLimiter(TrackProcessor):
         } | {
             name: name for name in dir(self) if name.startswith(self._sort_method_prefix)
         }
-        self._sort_method: Callable[[list[LocalTrack]], None] = lambda _: None
+        self._sort_method: Callable[[list[Item]], None] = lambda _: None
         self.limit_sort = sorted_by
 
-    def limit(self, tracks: list[LocalTrack], ignore: Collection[str | LocalTrack] | None = None) -> None:
+    def limit[T: Item](self, items: list[T], ignore: Collection[T] | None = None) -> None:
         """
-        Limit ``tracks`` inplace based on set conditions.
+        Limit ``items`` in-place based on set conditions.
 
-        :param tracks: The list of tracks to limit.
-        :param ignore: list of tracks or paths of tracks to ignore when limiting.
-            i.e. keep them in the list regardless.
+        :param items: The list of items to limit.
+        :param ignore: list of items to ignore when limiting. i.e. keep them in the list regardless.
         """
-        if len(tracks) == 0 or self.limit_max == 0:
+        if len(items) == 0 or self.limit_max == 0:
             return
 
-        self._sort_method(tracks)  # sort the input tracks in-place if sort method given
+        self._sort_method(items)  # sort the input items in-place if sort method given
 
-        if ignore is not None and len(ignore) > 0:  # filter out the ignore tracks if given
-            ignore = {track.path if isinstance(track, LocalTrack) else track for track in ignore}
-
-            tracks_limit = [track for track in tracks if track.path not in ignore]
-            tracks_ignore = [track for track in tracks if track.path in ignore]
-            tracks.clear()
-            tracks.extend(tracks_ignore)
-        else:  # make a copy of the given tracks and clear the original list
-            tracks_limit = [t for t in tracks]
-            tracks.clear()
+        if ignore is not None and len(ignore) > 0:  # filter out the ignore items if given
+            items_limit = [item for item in items if item not in ignore]
+            items_ignore = [item for item in items if item in ignore]
+            items.clear()
+            items.extend(items_ignore)
+        else:  # make a copy of the given items and clear the original list
+            items_limit = [t for t in items]
+            items.clear()
 
         if self.kind == LimitType.ITEMS:  # limit on items
-            tracks.extend(tracks_limit[:self.limit_max])
-        elif self.kind == LimitType.ALBUMS:  # limit on albums
+            items.extend(items_limit[:self.limit_max])
+        elif self.kind == LimitType.ALBUMS:  # limit on albums            
             seen_albums = []
-            for track in tracks_limit:
-                if len(seen_albums) < self.limit_max and track.album not in seen_albums:
+            for item in items_limit:
+                if not isinstance(item, Track):
+                    ItemLimiterError("In order to limit on Album, all items must be of type 'Track'")
+                
+                if len(seen_albums) < self.limit_max and item.album not in seen_albums:
                     # album limit not yet reached
-                    seen_albums.append(track.album)
-                if track.album in seen_albums:
-                    tracks.append(track)
+                    seen_albums.append(item.album)
+                if item.album in seen_albums:
+                    items.append(item)
         else:  # limit on duration or size
             count = 0
-            for track in tracks_limit:
-                value = self._convert(track)
+            for item in items_limit:
+                value = self._convert(item)
                 if count + value <= self.limit_max * self.allowance:  # limit not yet reached
-                    tracks.append(track)
+                    items.append(item)
                     count += value
                 if count > self.limit_max:  # limit reached
                     break
 
     @staticmethod
-    def _sort_random(tracks: list[LocalTrack]) -> None:
-        shuffle(tracks)
+    def _sort_random(items: list[Item]) -> None:
+        shuffle(items)
 
     @staticmethod
-    def _sort_highest_rating(tracks: list[LocalTrack]) -> None:
-        TrackSorter.sort_by_field(tracks, PropertyName.RATING, reverse=True)
+    def _sort_highest_rating(items: list[Item]) -> None:
+        ItemSorter.sort_by_field(items, PropertyName.RATING, reverse=True)
 
     @staticmethod
-    def _sort_lowest_rating(tracks: list[LocalTrack]) -> None:
-        TrackSorter.sort_by_field(tracks, PropertyName.RATING)
+    def _sort_lowest_rating(items: list[Item]) -> None:
+        ItemSorter.sort_by_field(items, PropertyName.RATING)
 
     @staticmethod
-    def _sort_most_recently_played(tracks: list[LocalTrack]) -> None:
-        TrackSorter.sort_by_field(tracks, PropertyName.LAST_PLAYED, reverse=True)
+    def _sort_most_recently_played(items: list[Item]) -> None:
+        ItemSorter.sort_by_field(items, PropertyName.LAST_PLAYED, reverse=True)
 
     @staticmethod
-    def _sort_least_recently_played(tracks: list[LocalTrack]) -> None:
-        TrackSorter.sort_by_field(tracks, PropertyName.LAST_PLAYED)
+    def _sort_least_recently_played(items: list[Item]) -> None:
+        ItemSorter.sort_by_field(items, PropertyName.LAST_PLAYED)
 
     @staticmethod
-    def _sort_most_often_played(tracks: list[LocalTrack]) -> None:
-        TrackSorter.sort_by_field(tracks, PropertyName.PLAY_COUNT, reverse=True)
+    def _sort_most_often_played(items: list[Item]) -> None:
+        ItemSorter.sort_by_field(items, PropertyName.PLAY_COUNT, reverse=True)
 
     @staticmethod
-    def _sort_least_often_played(tracks: list[LocalTrack]) -> None:
-        TrackSorter.sort_by_field(tracks, PropertyName.PLAY_COUNT)
+    def _sort_least_often_played(items: list[Item]) -> None:
+        ItemSorter.sort_by_field(items, PropertyName.PLAY_COUNT)
 
     @staticmethod
-    def _sort_most_recently_added(tracks: list[LocalTrack]) -> None:
-        TrackSorter.sort_by_field(tracks, PropertyName.DATE_ADDED, reverse=True)
+    def _sort_most_recently_added(items: list[Item]) -> None:
+        ItemSorter.sort_by_field(items, PropertyName.DATE_ADDED, reverse=True)
 
     @staticmethod
-    def _sort_least_recently_added(tracks: list[LocalTrack]) -> None:
-        TrackSorter.sort_by_field(tracks, PropertyName.DATE_ADDED)
+    def _sort_least_recently_added(items: list[Item]) -> None:
+        ItemSorter.sort_by_field(items, PropertyName.DATE_ADDED)
 
-    def _convert(self, track: LocalTrack) -> float:
+    def _convert(self, item: Item) -> float:
         """
-        Convert units for track length or size
+        Convert units for item length or size
 
         :raises LimitError: When the given limit type cannot be found
         """
         if 10 < self.kind.value < 20:
             factors = (1, 60, 60, 24, 7)[:self.kind.value % 10]
-            return track.length / reduce(mul, factors, 1)
+            return item.length / reduce(mul, factors, 1)
         elif 20 <= self.kind.value < 30:
+            if not isinstance(item, File):
+                raise ItemLimiterError("The given item cannot be limited on bytes as it is not a file.")
             bytes_scale = 1000
-            return track.size / (bytes_scale ** (self.kind.value % 10))
+            return item.size / (bytes_scale ** (self.kind.value % 10))
         else:
-            raise LimitError(f"Unrecognised LimitType: {self.kind}")
+            raise ItemLimiterError(f"Unrecognised LimitType: {self.kind}")
 
     def as_dict(self):
         return {

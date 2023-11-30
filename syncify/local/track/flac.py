@@ -9,7 +9,7 @@ from PIL import Image
 
 from syncify.enums.tags import TagName, TagMap
 from syncify.local.file import open_image, get_image_bytes
-from .base.track import LocalTrack
+from syncify.local.track.base.track import LocalTrack
 
 
 class FLAC(LocalTrack):

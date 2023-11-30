@@ -6,9 +6,9 @@ from syncify.abstract.item import Item
 from syncify.spotify import API
 from syncify.spotify.base import SpotifyObject
 from syncify.spotify.enums import ItemType
+from syncify.spotify.library.item import SpotifyTrack
+from syncify.spotify.library.playlist import SpotifyPlaylist, SyncResultSpotifyPlaylist
 from syncify.utils.logger import REPORT, STAT
-from .item import SpotifyTrack
-from .playlist import SpotifyPlaylist, SyncResultSpotifyPlaylist
 
 
 class SpotifyLibrary(Library[SpotifyTrack]):
@@ -27,10 +27,6 @@ class SpotifyLibrary(Library[SpotifyTrack]):
     def name(self):
         """The user ID associated with this library"""
         return self.api.user_id
-
-    @property
-    def items(self) -> list[SpotifyTrack]:
-        return self.tracks
 
     @property
     def tracks(self) -> list[SpotifyTrack]:

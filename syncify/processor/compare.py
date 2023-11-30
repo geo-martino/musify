@@ -7,12 +7,13 @@ from typing import Any, Self
 
 from dateutil.relativedelta import relativedelta
 
+from syncify.processor.exception import ItemComparerError
+from syncify.abstract.item import Item
 from syncify.enums.tags import Name, TagName, PropertyName
-from syncify.local.exception import FieldError, LocalProcessorError
-from syncify.local.track.base.track import LocalTrack
+from syncify.local.exception import FieldError
+from syncify.processor.base import MusicBeeProcessor
 from syncify.utils import UnitSequence
 from syncify.utils.helpers import to_collection
-from .base import TrackProcessor
 
 # Map of MusicBee field name to Tag or Property
 field_name_map = {
@@ -37,7 +38,7 @@ field_name_map = {
 }
 
 
-class TrackComparer(TrackProcessor):
+class ItemComparer(MusicBeeProcessor):
     """
     Compares a track with another track or a given set of expected values to find a match.
 
@@ -130,7 +131,7 @@ class TrackComparer(TrackProcessor):
         }
         self.condition = condition
 
-    def compare(self, track: LocalTrack, reference: UnitSequence[LocalTrack] | None = None) -> bool:
+    def compare[T: Item](self, track: T, reference: UnitSequence[T] | None = None) -> bool:
         """
         Compare a ``track`` to a ``reference`` or,
         if no ``reference`` is given, to this object's list of ``expected`` values
@@ -138,7 +139,7 @@ class TrackComparer(TrackProcessor):
         :raises LocalProcessorError: If no reference given and no expected values set for this comparator.
         """
         if reference is None and self.expected is None:
-            raise LocalProcessorError("No comparative track given and no expected values set")
+            raise ItemComparerError("No comparative track given and no expected values set")
 
         tag_name = self._get_tag(self.field)
         actual = track[tag_name]

@@ -11,9 +11,9 @@ import requests_cache
 from requests.exceptions import ConnectionError
 from requests_cache.models.response import BaseResponse
 
+from syncify.api.authorise import APIAuthoriser
+from syncify.api.exception import APIError
 from syncify.utils.logger import Logger
-from .authorise import APIAuthoriser
-from .exception import APIError
 
 
 class RequestHandler(APIAuthoriser, Logger):

@@ -559,6 +559,7 @@ if __name__ == "__main__":
 # TODO: generally improve performance
 # TODO: look into the requests_cache, it grows way too big sometimes?
 # TODO: implement terminal parser for function-specific kwargs?
+# TODO: add abstractions for generic 'remote' package
 
 
 ## SELECTED FOR DEVELOPMENT
@@ -575,5 +576,7 @@ if __name__ == "__main__":
 
 
 ## NEEDED FOR v0.3
+# TODO: expand out Name enum to cover all object types
+#  with fixed mapping to MusicBee values
 # TODO: write tests, write tests, write tests
 # TODO: update the readme (dynamic readme?)

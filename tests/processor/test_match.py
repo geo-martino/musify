@@ -1,10 +1,10 @@
-from syncify.spotify.processor.match import SpotifyItemMatcher
+from syncify.processor.match import ItemMatcher
 from tests.local.track.common import random_track
 
 
 # noinspection SpellCheckingInspection
 def test_clean_tags():
-    matcher = SpotifyItemMatcher()
+    matcher = ItemMatcher()
 
     track = random_track()
     track.uri = "spotify:track:ASDFGHJKLQWERTYUIOPZX"
@@ -20,7 +20,7 @@ def test_clean_tags():
 
 
 def test_match_not_karaoke():
-    matcher = SpotifyItemMatcher()
+    matcher = ItemMatcher()
 
     track = random_track()
     track.title = "title"
@@ -38,7 +38,7 @@ def test_match_not_karaoke():
 
 
 def test_match_name():
-    matcher = SpotifyItemMatcher()
+    matcher = ItemMatcher()
 
     track1 = random_track()
     track2 = random_track()
@@ -73,7 +73,7 @@ def test_match_name():
 
 
 def test_match_artist():
-    matcher = SpotifyItemMatcher()
+    matcher = ItemMatcher()
 
     track1 = random_track()
     track2 = random_track()
@@ -97,7 +97,7 @@ def test_match_artist():
 
 
 def test_match_album():
-    matcher = SpotifyItemMatcher()
+    matcher = ItemMatcher()
 
     track1 = random_track()
     track2 = random_track()
@@ -121,7 +121,7 @@ def test_match_album():
 
 
 def test_match_length():
-    matcher = SpotifyItemMatcher()
+    matcher = ItemMatcher()
 
     track1 = random_track()
     track2 = random_track()
@@ -139,7 +139,7 @@ def test_match_length():
 
 
 def test_match_year():
-    matcher = SpotifyItemMatcher()
+    matcher = ItemMatcher()
     matcher.year_range = 10  # 10 year range max difference
 
     track1 = random_track()
@@ -166,7 +166,7 @@ def test_match_year():
 
 
 def test_match_score():
-    matcher = SpotifyItemMatcher()
+    matcher = ItemMatcher()
     matcher.year_range = 10  # 10 year range max difference
 
     track1 = random_track()

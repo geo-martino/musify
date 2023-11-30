@@ -7,11 +7,11 @@ from typing import Any
 import mutagen
 
 from syncify.abstract.misc import Result
+from syncify.local.track.base.processor import TagName
+from syncify.local.track.base.reader import TagReader
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 from syncify.utils import UnitIterable
 from syncify.utils.helpers import to_collection
-from .processor import TagName
-from .reader import TagReader
 
 
 @dataclass(frozen=True)

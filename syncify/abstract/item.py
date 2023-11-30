@@ -3,9 +3,9 @@ from collections.abc import Hashable
 from datetime import datetime
 from typing import Self, Any
 
+from syncify.abstract.misc import PrettyPrinter
 from syncify.enums.tags import TagName
 from syncify.utils import UnitIterable
-from .misc import PrettyPrinter
 
 
 class BaseObject:
@@ -46,6 +46,12 @@ class Item(BaseObject, PrettyPrinter, Hashable, metaclass=ABCMeta):
     @abstractmethod
     def has_uri(self) -> bool | None:
         """Does this track have a valid associated URI. When None, answer is unknown."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def length(self) -> float:
+        """Total duration of this track in seconds"""
         raise NotImplementedError
 
     def merge(self, item: Self, tags: UnitIterable[TagName] = TagName.ALL) -> None:
@@ -182,12 +188,6 @@ class Track(Item, metaclass=ABCMeta):
     @abstractmethod
     def has_image(self) -> bool:
         """Does the album this track is associated with have an image"""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def length(self) -> float:
-        """Total duration of this track in seconds"""
         raise NotImplementedError
 
     @property

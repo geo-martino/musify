@@ -3,7 +3,7 @@ from collections import Counter
 from collections.abc import Iterable, MutableMapping, MutableSequence, Mapping
 from typing import Any
 
-from . import Number
+from syncify.utils import Number
 
 
 def to_collection[T: (list, set, tuple)](data: Any, cls: T = tuple) -> T | None:

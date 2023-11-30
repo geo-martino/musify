@@ -7,8 +7,8 @@ import pytest
 from syncify.enums.tags import TagName, PropertyName
 from syncify.local.exception import IllegalFileTypeError
 from syncify.local.playlist import XAutoPF
-from syncify.local.playlist.processor.limit import LimitType
-from syncify.local.playlist.processor.sort import ShuffleMode, ShuffleBy
+from syncify.processor.limit import LimitType
+from syncify.processor.sort import ShuffleMode, ShuffleBy
 from syncify.local.track import LocalTrack, FLAC, M4A, WMA, MP3
 from tests.common import path_txt
 from tests.local.playlist.common import copy_playlist_file, path_resources

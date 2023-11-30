@@ -1,9 +1,10 @@
 from typing import Any
 
-from .enums import IDType, ItemType
+from syncify.exception import SyncifyError
+from syncify.spotify.enums import IDType, ItemType
 
 
-class SpotifyError(Exception):
+class SpotifyError(SyncifyError):
     """
     Exception raised for Spotify ID errors.
 

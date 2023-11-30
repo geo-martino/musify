@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import Self
 
+from syncify.enums import SyncifyEnum, EnumNotFoundError
 from syncify.utils import UnitIterable
 from syncify.utils.helpers import to_collection
-from . import SyncifyEnum, EnumNotFoundError
 
 
 @dataclass(frozen=True)

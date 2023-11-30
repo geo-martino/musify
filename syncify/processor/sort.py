@@ -4,13 +4,13 @@ from datetime import datetime
 from random import shuffle
 from typing import Any, Self
 
+from syncify.abstract.item import Item
 from syncify.enums import SyncifyEnum
 from syncify.enums.tags import Name, PropertyName, TagName
 from syncify.local.exception import FieldError
-from syncify.local.track.base.track import LocalTrack
+from syncify.processor.base import MusicBeeProcessor
 from syncify.utils import UnitSequence, UnitIterable
 from syncify.utils.helpers import flatten_nested, strip_ignore_words, to_collection, limit_value
-from .base import TrackProcessor
 
 
 def get_field_from_code(field_code: int) -> Name | None:
@@ -44,9 +44,9 @@ class ShuffleBy(SyncifyEnum):
     ARTIST = 2
 
 
-class TrackSorter(TrackProcessor):
+class ItemSorter(MusicBeeProcessor):
     """
-    Sort tracks inplace based on given conditions.
+    Sort tracks in-place based on given conditions.
 
     :param fields:
         * When None and ShuffleMode is RANDOM, shuffle the tracks. Otherwise, do nothing.
@@ -72,7 +72,7 @@ class TrackSorter(TrackProcessor):
     _custom_sort[78] = _custom_sort[6]
 
     @classmethod
-    def sort_by_field(cls, tracks: list[LocalTrack], field: Name | None = None, reverse: bool = False) -> None:
+    def sort_by_field(cls, tracks: list[Item], field: Name | None = None, reverse: bool = False) -> None:
         """
         Sort tracks by the values of a given field.
 
@@ -99,19 +99,19 @@ class TrackSorter(TrackProcessor):
 
         # get sort key based on value type
         if isinstance(example_value, datetime):  # key converts datetime to floats
-            def sort_key(t: LocalTrack) -> float:
+            def sort_key(t: Item) -> float:
                 """Get the sort key for timestamp tags from the given ``t``"""
                 value = t[tag_name]
                 return value.timestamp() if value is not None else 0.0
         elif isinstance(example_value, str):  # key strips ignore words from string
-            sort_key: Callable[[LocalTrack], (bool, str)] = lambda t: strip_ignore_words(t[tag_name])
+            sort_key: Callable[[Item], (bool, str)] = lambda t: strip_ignore_words(t[tag_name])
         else:
-            sort_key: Callable[[LocalTrack], object] = lambda t: t[tag_name]
+            sort_key: Callable[[Item], object] = lambda t: t[tag_name]
 
         tracks.sort(key=sort_key, reverse=reverse)
 
     @classmethod
-    def group_by_field(cls, tracks: UnitIterable[LocalTrack], field: Name | None = None) -> dict[Any, list[LocalTrack]]:
+    def group_by_field[T: Item](cls, tracks: UnitIterable[T], field: Name | None = None) -> dict[Any, list[T]]:
         """
         Group tracks by the values of a given field.
 
@@ -124,7 +124,7 @@ class TrackSorter(TrackProcessor):
 
         tag_name = cls._get_tag(field)
 
-        grouped: dict[Any | None, list[LocalTrack]] = {}
+        grouped: dict[Any | None, list[T]] = {}
         for track in tracks:  # produce map of grouped values
             value = track[tag_name]
             if grouped.get(value) is None:
@@ -191,8 +191,8 @@ class TrackSorter(TrackProcessor):
         self.shuffle_by: ShuffleBy | None = shuffle_by
         self.shuffle_weight = limit_value(shuffle_weight, floor=0, ceil=1)
 
-    def sort(self, tracks: MutableSequence[LocalTrack]) -> None:
-        """Sorts a list of tracks inplace."""
+    def sort(self, tracks: MutableSequence[Item]) -> None:
+        """Sorts a list of tracks in-place."""
         if len(tracks) == 0:
             return
 

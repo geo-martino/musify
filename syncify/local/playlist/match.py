@@ -4,11 +4,11 @@ from os.path import exists
 from typing import Any, Self
 
 from syncify.abstract.misc import Result
+from syncify.processor.base import ItemProcessor
+from syncify.processor.compare import ItemComparer
 from syncify.local.track.base.track import LocalTrack
 from syncify.utils import UnitSequence, UnitCollection, UnitIterable
 from syncify.utils.helpers import to_collection
-from .base import TrackProcessor
-from .compare import TrackComparer
 
 
 @dataclass(frozen=True)
@@ -19,7 +19,7 @@ class MatchResult(Result):
     compared: Sequence[LocalTrack] = field(default=tuple())
 
 
-class TrackMatcher(TrackProcessor):
+class LocalMatcher(ItemProcessor):
     """
     Get matches for tracks based on given comparators.
 
@@ -52,7 +52,7 @@ class TrackMatcher(TrackProcessor):
         exclude_str: str = source.get("Exceptions")
         exclude = set(exclude_str.split("|")) if isinstance(exclude_str, str) else None
 
-        comparators: list[TrackComparer] | None = TrackComparer.from_xml(xml=xml)
+        comparators: list[ItemComparer] | None = ItemComparer.from_xml(xml=xml)
 
         if len(comparators) == 1:
             # when user has not set an explicit comparator, there will still be an 'allow all' comparator
@@ -71,7 +71,7 @@ class TrackMatcher(TrackProcessor):
 
     def __init__(
             self,
-            comparators: UnitSequence[TrackComparer] | None = None,
+            comparators: UnitSequence[ItemComparer] | None = None,
             match_all: bool = True,
             include_paths: Collection[str] | None = None,
             exclude_paths: Collection[str] | None = None,
@@ -79,7 +79,7 @@ class TrackMatcher(TrackProcessor):
             other_folders: UnitCollection[str] | None = None,
             check_existence: bool = True,
     ):
-        self.comparators: tuple[TrackComparer] = to_collection(comparators)
+        self.comparators: tuple[ItemComparer] = to_collection(comparators)
         self.match_all = match_all
 
         self.include_paths: Collection[str] | None = include_paths

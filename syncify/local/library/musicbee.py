@@ -1,3 +1,4 @@
+import hashlib
 import urllib.parse
 from collections.abc import Iterable
 from datetime import datetime
@@ -6,11 +7,13 @@ from typing import Any
 
 import xmltodict
 
+from syncify.local.exception import MusicBeeIDError
 from syncify.local.file import File
+from syncify.local.library.library import LocalLibrary
+from syncify.local.playlist import LocalPlaylist
 from syncify.local.track.base.track import LocalTrack
-from syncify.utils import UnitCollection
+from syncify.utils import UnitCollection, Number
 from syncify.utils.logger import Logger
-from .library import LocalLibrary
 
 
 class MusicBee(LocalLibrary, File):
@@ -31,11 +34,14 @@ class MusicBee(LocalLibrary, File):
     :param load: When True, load the library on intialisation.
     """
 
+    valid_extensions = frozenset({".xml"})
+    library_filename = "iTunes Music Library.xml"
+
+    _xml_timestamp_fmt = "%Y-%m-%dT%H:%M:%S%z"
+
     @property
     def path(self) -> str:
         return self._path
-
-    valid_extensions = frozenset({".xml"})
 
     def __init__(
             self,
@@ -57,7 +63,7 @@ class MusicBee(LocalLibrary, File):
                 )
             musicbee_folder = in_library
 
-        self._path: str = join(musicbee_folder, "iTunes Music Library.xml")
+        self._path: str = join(musicbee_folder, self.library_filename)
         with open(self._path, "r", encoding="utf-8") as f:
             self.xml: dict[str, Any] = xmltodict.parse(f.read())
 
@@ -72,11 +78,17 @@ class MusicBee(LocalLibrary, File):
             load=load
         )
 
-    @staticmethod
-    def _xml_ts_to_dt(timestamp_str: str | None) -> datetime | None:
+    @classmethod
+    def _xml_dt_to_ts(cls, timestamp: datetime | None) -> str | None:
+        """Convert timestamp string as found in the MusicBee XML library file to a ``datetime`` object"""
+        if timestamp:
+            return timestamp.strftime(cls._xml_timestamp_fmt)
+
+    @classmethod
+    def _xml_ts_to_dt(cls, timestamp_str: str | None) -> datetime | None:
         """Convert timestamp string as found in the MusicBee XML library file to a ``datetime`` object"""
         if timestamp_str:
-            return datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S%z")
+            return datetime.strptime(timestamp_str, cls._xml_timestamp_fmt)
 
     @staticmethod
     def _clean_xml_filepath(path: str) -> str:
@@ -102,3 +114,96 @@ class MusicBee(LocalLibrary, File):
 
         self.logger.debug("Enrich local tracks: DONE\n")
         return list(tracks_paths.values())
+
+    @staticmethod
+    def generate_persistent_id(id_: str | None = None, value: str | None = None) -> str:
+        """
+        Validates a given persistent ID as given by ``id_``,
+        or generates a valid persistent ID from a given ``value``.
+
+        :param id_: A persistent ID to validate
+        :param value: A value to generate a persistent ID from.
+        :return: The valid persistent ID.
+        """
+        if not value and not id_:
+            raise MusicBeeIDError(
+                "You must provide either a persistent ID to validate or a value to generate a persistent ID from."
+            )
+
+        id_ = id_ if id_ else hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
+        if len(id_) != 16:
+            raise MusicBeeIDError(f"Persistent ID is not 16-characters in length (length={len(id_)}): {id_}")
+        return id_
+
+    @classmethod
+    def track_to_xml(
+            cls, track: LocalTrack, track_id: int, persistent_id: str | None = None
+    ) -> dict[str, str | Number]:
+        """
+        Convert a local track into a dict representation of XML data for a MusicBee library file
+
+        :param track: The track to convert.
+        :param track_id: An incremental ID to assign to the track.
+        :param persistent_id: An 16-character unique ID to assign to the track.
+        :return: A dict representation of XML data for the given track.
+        """
+        data = {
+            "Track ID": track_id,
+            # "Encoder": ,
+            "Comments": track.comments,
+            "BPM": track.bpm,
+            "Disc Count": track.disc_total,
+            "Track Count": track.track_total,
+            "Disc Number": track.disc_number,
+            "Track Number": track.track_number,
+            "Compilation": track.compilation,
+            "Name": track.title,
+            "Artist": track.artist,
+            "Album Artist": track.album_artist,
+            "Album": track.album,
+            "Year": track.year,
+            "Genre": track.genres,
+            "Kind": track.kind,
+            "Size": track.size,
+            "Total Time": track.length,
+            "Date Modified": cls._xml_dt_to_ts(track.date_modified),
+            "Date Added": cls._xml_dt_to_ts(track.date_added),
+            "Bit Rate": track.bit_rate,
+            "Sample Rate": track.sample_rate,
+            "Play Count": track.play_count,
+            "Play Date UTC": cls._xml_dt_to_ts(track.last_played),
+            "Persistent ID": cls.generate_persistent_id(id_=persistent_id, value=track.path),
+            "Track Type": "File",
+            "Location": f"file://localhost/{urllib.parse.quote(track.path.replace('\\', '/'), safe=':/')}",
+        }
+
+        return {k: v for k, v in data.items() if v is not None}
+
+    @classmethod
+    def playlist_to_xml(
+            cls,
+            playlist: LocalPlaylist,
+            playlist_id: int,
+            persistent_id: str | None = None,
+            tracks: list[LocalTrack] = None,
+    ) -> dict[str, str | Number]:
+        """
+        Convert a local playlist into a dict representation of XML data for a MusicBee library file.
+
+        :param playlist: The playlist to convert.
+        :param playlist_id: An incremental ID to assign to the playlist.
+        :param persistent_id: An 16-character unique ID to assign to the playlist.
+        :param tracks: A list of all available tracks in the library.
+            The function will use this as an index to get a list of Track IDs for this playlist.
+        :return: A dict representation of XML data for the given playlist.
+        """
+        data = {
+            "Playlist ID": playlist_id,
+            "Playlist Persistent ID": cls.generate_persistent_id(id_=persistent_id, value=playlist.path),
+            "All Items": True,
+            "Name": playlist.name,
+            "Description": playlist.description,
+            "Playlist Items": {"Track ID": tracks.index(track) for track in playlist},
+        }
+
+        return {k: v for k, v in data.items() if v is not None}

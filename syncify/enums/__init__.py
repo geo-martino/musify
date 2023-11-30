@@ -1,6 +1,8 @@
 from enum import IntEnum
 from typing import Self, Any
 
+from syncify.exception import SyncifyError
+
 
 class SyncifyEnum(IntEnum):
     """Generic class for storing IntEnums."""
@@ -23,7 +25,7 @@ class SyncifyEnum(IntEnum):
         raise EnumNotFoundError(name)
 
 
-class EnumNotFoundError(Exception):
+class EnumNotFoundError(SyncifyError):
     """Exception raised when unable to find an enum by search.
 
     :param value: The value that caused the error.

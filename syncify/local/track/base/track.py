@@ -9,7 +9,7 @@ import mutagen
 
 from syncify.abstract.item import Track, TrackProperties
 from syncify.local.file import File
-from .writer import TagWriter
+from syncify.local.track.base.writer import TagWriter
 
 
 class _MutagenMock(mutagen.FileType):
@@ -146,8 +146,8 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
                 setattr(obj, k, v)
             return obj
         else:
-            return self.__class__(file=self.file)
+            return self.__class__(file=self.file, available=self._available_paths)
 
     def __deepcopy__(self, _: dict = None):
         """Deepcopy Track object by reloading from the disk"""
-        return self.__class__(file=self.path)
+        return self.__class__(file=self.path, available=self._available_paths)

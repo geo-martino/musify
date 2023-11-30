@@ -6,12 +6,12 @@ from typing import Any, Self
 
 from PIL import Image
 
+from syncify.local.track.base.processor import TagProcessor
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 from syncify.spotify.enums import IDType
 from syncify.spotify.utils import validate_id_type
 from syncify.utils import UnitIterable
 from syncify.utils.helpers import to_collection
-from .processor import TagProcessor
 
 
 class TagReader(TagProcessor, metaclass=ABCMeta):
@@ -175,6 +175,21 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
     @property
     def length(self):
         return self.file.info.length
+
+    @property
+    def bit_rate(self):
+        """The bit rate of this track in kilobytes per second"""
+        return self.file.info.bitrate / 1000
+
+    @property
+    def sample_rate(self):
+        """The sample rate of this track in kHz"""
+        return self.file.info.sample_rate / 1000
+
+    @property
+    def kind(self):
+        """The kind of audio file of this track"""
+        return self.__class__.__name__
 
     @property
     def rating(self):

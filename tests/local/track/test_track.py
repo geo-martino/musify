@@ -7,7 +7,7 @@ from syncify.local.exception import IllegalFileTypeError
 from syncify.local.track import FLAC, M4A, MP3, WMA, load_track
 from syncify.spotify import __UNAVAILABLE_URI_VALUE__
 from tests.common import path_txt
-from tests.local.track.common import class_path_map, all_local_track_tests
+from tests.local.track.common import class_path_map, all_local_track_tests, path_track_all
 
 
 def test_load_track():
@@ -25,7 +25,7 @@ def test_flac():
     all_local_track_tests(FLAC)
 
     path = class_path_map[FLAC]
-    track = FLAC(file=path)
+    track = FLAC(file=path, available=path_track_all)
 
     # metadata
     assert track.title == "title 1"

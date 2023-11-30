@@ -3,9 +3,9 @@ from typing import Any
 from urllib.parse import urlparse
 
 from syncify.enums import EnumNotFoundError
-from . import __URL_API__, __URL_EXT__, APIMethodInputType
-from .enums import IDType, ItemType
-from .exception import SpotifyError, SpotifyIDTypeError, SpotifyItemTypeError
+from syncify.spotify import __URL_API__, __URL_EXT__, APIMethodInputType
+from syncify.spotify.enums import IDType, ItemType
+from syncify.spotify.exception import SpotifyError, SpotifyIDTypeError, SpotifyItemTypeError
 
 
 def get_id_type(value: str) -> IDType:

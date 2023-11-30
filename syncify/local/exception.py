@@ -1,7 +1,9 @@
 from typing import Any
 
+from syncify.exception import SyncifyError
 
-class LocalError(Exception):
+
+class LocalError(SyncifyError):
     """
     Exception raised for local errors.
 
@@ -100,5 +102,5 @@ class FieldError(MusicBeeError):
         super().__init__(message=formatted)
 
 
-class LimitError(MusicBeeError):
-    """Exception raised for errors related to MusicBee limit settings."""
+class MusicBeeIDError(MusicBeeError):
+    """Exception raised for errors related to MusicBee a persistent ID."""

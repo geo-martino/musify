@@ -8,12 +8,12 @@ import xmltodict
 
 from syncify.abstract.misc import Result
 from syncify.enums.tags import PropertyName
+from syncify.local.playlist.playlist import LocalPlaylist
+from syncify.processor.limit import ItemLimiter
+from syncify.local.playlist.match import LocalMatcher
+from syncify.processor.sort import ItemSorter
 from syncify.local.track import LocalTrack
 from syncify.utils import UnitCollection
-from .playlist import LocalPlaylist
-from .processor.limit import TrackLimiter
-from .processor.match import TrackMatcher
-from .processor.sort import TrackSorter
 
 
 @dataclass(frozen=True)
@@ -90,11 +90,11 @@ class XAutoPF(LocalPlaylist):
         self._description = self.xml["SmartPlaylist"]["Source"]["Description"]
 
         # generate track processors from the XML settings
-        matcher = TrackMatcher.from_xml(xml=self.xml)
+        matcher = LocalMatcher.from_xml(xml=self.xml)
         matcher.library_folder = library_folder
         matcher.sanitise_file_paths(other_folders, check_existence=check_existence)
-        limiter = TrackLimiter.from_xml(xml=self.xml)
-        sorter = TrackSorter.from_xml(xml=self.xml)
+        limiter = ItemLimiter.from_xml(xml=self.xml)
+        sorter = ItemSorter.from_xml(xml=self.xml)
 
         LocalPlaylist.__init__(
             self,

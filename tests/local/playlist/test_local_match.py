@@ -4,8 +4,8 @@ from random import sample
 from typing import Any
 
 from syncify.enums.tags import TagName
-from syncify.local.playlist.processor.compare import TrackComparer
-from syncify.local.playlist.processor.match import TrackMatcher
+from syncify.processor.compare import ItemComparer
+from syncify.local.playlist.match import LocalMatcher
 from syncify.local.track import LocalTrack
 from tests.common import random_str
 from tests.local.track.common import random_tracks
@@ -13,15 +13,15 @@ from tests.local.track.common import random_tracks
 
 def test_init():
     comparators = [
-        TrackComparer(field=TagName.ALBUM, condition="is", expected="album name"),
-        TrackComparer(field=TagName.ARTIST, condition="starts with", expected="artist")
+        ItemComparer(field=TagName.ALBUM, condition="is", expected="album name"),
+        ItemComparer(field=TagName.ARTIST, condition="starts with", expected="artist")
     ]
     library_folder = "/Path/to/LIBRARY/on/linux"
     other_folders = ["../", "D:\\paTh\\on\\Windows"]
     exclude_paths = [f"{other_folders[1]}\\exclude\\{random_str()}.MP3" for _ in range(20)]
     include_paths = [f"{other_folders[1]}\\include\\{random_str()}.MP3" for _ in range(20)]
 
-    matcher = TrackMatcher(
+    matcher = LocalMatcher(
         comparators=comparators,
         include_paths=include_paths,
         exclude_paths=exclude_paths,
@@ -43,7 +43,7 @@ def test_init():
     exclude_paths = set(f"{other_folders[0]}/folder/{random_str(20, 50)}.MP3" for _ in range(20))
     include_paths = set(f"{other_folders[0]}/folder/{random_str(20, 50)}.MP3" for _ in range(20)) - exclude_paths
 
-    matcher = TrackMatcher(
+    matcher = LocalMatcher(
         comparators=comparators,
         include_paths=sorted(include_paths) + sorted(exclude_paths)[:5],
         exclude_paths=sorted(exclude_paths),
@@ -62,7 +62,7 @@ def test_init():
     ]
 
     # none of the random file paths exist, check existence should return empty lists
-    matcher = TrackMatcher(include_paths=include_paths, exclude_paths=exclude_paths, check_existence=True)
+    matcher = LocalMatcher(include_paths=include_paths, exclude_paths=exclude_paths, check_existence=True)
     assert matcher.include_paths == []
     assert matcher.exclude_paths == []
 
@@ -70,7 +70,7 @@ def test_init():
 @dataclass
 class MatchTestConfig:
     """Config setter for each match test"""
-    comparators: list[TrackComparer]
+    comparators: list[ItemComparer]
     library_folder: str
 
     tracks: list[LocalTrack]
@@ -107,8 +107,8 @@ def get_config_for_match_test() -> MatchTestConfig:
 
     return MatchTestConfig(
         comparators=[
-            TrackComparer(field=TagName.ALBUM, condition="is", expected="album name"),
-            TrackComparer(field=TagName.ARTIST, condition="starts with", expected="artist")
+            ItemComparer(field=TagName.ALBUM, condition="is", expected="album name"),
+            ItemComparer(field=TagName.ARTIST, condition="starts with", expected="artist")
         ],
         library_folder=library_folder,
         tracks=tracks,
@@ -123,7 +123,7 @@ def get_config_for_match_test() -> MatchTestConfig:
 
 def test_match_on_paths_only():
     config = get_config_for_match_test()
-    matcher = TrackMatcher(
+    matcher = LocalMatcher(
         include_paths=[track.path for track in config.tracks_include],
         exclude_paths=[track.path for track in config.tracks_exclude],
         check_existence=False
@@ -141,7 +141,7 @@ def test_match_on_paths_only():
 
 def test_match_on_paths_and_any_comparators():
     config = get_config_for_match_test()
-    matcher = TrackMatcher(
+    matcher = LocalMatcher(
         comparators=config.comparators,
         match_all=False,
         include_paths=[track.path for track in config.tracks_include],
@@ -161,7 +161,7 @@ def test_match_on_paths_and_any_comparators():
 
 def test_match_on_paths_and_all_comparators():
     config = get_config_for_match_test()
-    matcher = TrackMatcher(
+    matcher = LocalMatcher(
         comparators=config.comparators,
         match_all=True,
         include_paths=[track.path for track in config.tracks_include],
