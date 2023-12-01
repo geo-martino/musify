@@ -336,7 +336,7 @@ class Settings(metaclass=ABCMeta):
         # runtime = parser.add_argument_group("Runtime options")
         # runtime.add_argument('-o', '--no-output',
         #                      action='store_true',
-        #                      help="Suppress all json file output, apart from files saved to the parent folder "
+        #                      help="Suppress all JSON file output, apart from files saved to the parent folder "
         #                           "i.e. API token file and URIs.json")
         # runtime.add_argument('-v', '--verbose',
         #                      action='count', default=0,

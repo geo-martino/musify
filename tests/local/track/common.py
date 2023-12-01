@@ -269,7 +269,7 @@ def update_tags_test(cls: type[LocalTrack], path: str) -> None:
     assert track_update_dry.has_uri == track_original.has_uri
     assert track_update_dry.has_image == track_original.has_image
 
-    # update and don't replace current tags (except uri if uri is False)
+    # update and don't replace current tags (except URI if URI is False)
     shutil.copyfile(path_file_base, path_file_copy)
     result = track.save(tags=TagName.ALL, replace=False, dry_run=False)
     assert result.saved

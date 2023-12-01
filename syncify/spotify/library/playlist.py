@@ -104,7 +104,7 @@ class SpotifyPlaylist(SpotifyCollection[SpotifyTrack], Playlist[SpotifyTrack]):
             "cover_front": url for height, url in images.items() if height == max(images)
         }
 
-        # uri: date item was added
+        # URI: date item was added
         self._date_added: dict[str, datetime] = {
             track["track"]["uri"]: datetime.strptime(track["added_at"], "%Y-%m-%dT%H:%M:%S%z")
             for track in response["tracks"]["items"]

@@ -51,7 +51,7 @@ class Item(BaseObject, PrettyPrinter, Hashable, metaclass=ABCMeta):
     @property
     @abstractmethod
     def length(self) -> float:
-        """Total duration of this track in seconds"""
+        """Total duration of this item in seconds"""
         raise NotImplementedError
 
     def merge(self, item: Self, tags: UnitIterable[TagName] = TagName.ALL) -> None:
@@ -92,6 +92,12 @@ class Track(Item, metaclass=ABCMeta):
     @abstractmethod
     def name(self) -> str:
         """This track's title"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def length(self) -> float:
+        """Total duration of this track in seconds"""
         raise NotImplementedError
 
     @property
@@ -217,4 +223,3 @@ class TrackProperties:
     def play_count(self) -> int | None:
         """The total number of times this track has been played"""
         raise NotImplementedError
-

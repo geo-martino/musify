@@ -138,7 +138,7 @@ class MP3(LocalTrack):
     def _write_uri(self, dry_run: bool = True) -> bool:
         tag_value = __UNAVAILABLE_URI_VALUE__ if not self.has_uri else self.uri
 
-        # if applying uri as comment, clear comments and add manually with custom description
+        # if applying URI as comment, clear comments and add manually with custom description
         if self.uri_tag == TagName.COMMENTS:
             tag_id_prefix = next(iter(self.tag_map.comments), None)
             self.delete_tags(tags=self.uri_tag, dry_run=dry_run)

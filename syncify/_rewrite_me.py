@@ -10,7 +10,7 @@ class Playlists:
         """
         Restore local playlists from backup.
 
-        :param backup: str. Filename of backup json in form <name>: <list of dicts of track's metadata>
+        :param backup: str. Filename of backup JSON in form <name>: <list of dicts of track's metadata>
         :param in_playlists: list, default=None. Only restore playlists in this list.
         :param ex_playlists: list, default=None. Don't restore playlists in this list.
         :param dry_run: bool, default=True. Don't save if True, save if False.

@@ -68,9 +68,41 @@ class ItemCollection[T: Item](BaseObject, list[T], PrettyPrinter, metaclass=ABCM
         """Reverse the order of items in this collection in-place"""
         self.items.reverse()
 
-    def sort(self, *, key: Any = None, reverse: bool = False) -> None:
-        """Sort the items in this collection in-place"""
-        self.items.sort(key=key, reverse=reverse)
+    def sort(
+            self,
+            fields: UnitSequence[Name | None] | Mapping[Name | None, bool] | None = None,
+            shuffle_mode: ShuffleMode = ShuffleMode.NONE,
+            shuffle_by: ShuffleBy = ShuffleBy.TRACK,
+            shuffle_weight: float = 1.0,
+            key: Name | None = None,
+            reverse: bool = False,
+    ) -> None:
+        """
+        Sort tracks in this collection in-place based on given conditions.
+        If key is given,
+
+        :param fields:
+            * When None and ShuffleMode is RANDOM, shuffle the tracks. Otherwise, do nothing.
+            * List of tags/properties to sort by.
+            * Map of {``tag/property``: ``reversed``}. If reversed is true, sort the ``tag/property`` in reverse.
+        :param shuffle_mode: The mode to use for shuffling.
+        :param shuffle_by: The field to shuffle by when shuffling.
+        :param shuffle_weight: The weights (between 0 and 1) to apply to shuffling modes that can use it.
+            This value will automatically be limited to within the accepted range 0 and 1.
+        :param key: Tag or property to sort on. Can be given instead of ``fields`` for a simple sort.
+            If set, all other fields apart from ``reverse`` are ignored.
+            If None, ``fields``, ``shuffle_mode``, ``shuffle_by``, and ``shuffle_weight`` are used to apply sorting.
+        :param reverse: If true, reverse the order of the sort at the end.
+        """
+        if key is not None:
+            ItemSorter.sort_by_field(self.items, field=key)
+        else:
+            ItemSorter(
+                fields=fields, shuffle_mode=shuffle_mode, shuffle_by=shuffle_by, shuffle_weight=shuffle_weight
+            ).sort(self.items)
+
+        if reverse:
+            self.items.reverse()
 
     def merge_items(self, items: Collection[T], tags: UnitIterable[TagName] = TagName.ALL) -> None:
         """
@@ -174,58 +206,6 @@ class ItemCollection[T: Item](BaseObject, list[T], PrettyPrinter, metaclass=ABCM
         del self[__key]
 
 
-class TrackCollection[T: Track](ItemCollection[T], metaclass=ABCMeta):
-    """Generic class for storing a collection of tracks."""
-
-    @property
-    def items(self):
-        """The tracks in this collection"""
-        return self.tracks
-
-    @property
-    @abstractmethod
-    def tracks(self):
-        """The tracks in this collection"""
-        raise NotImplementedError
-
-    def sort(
-            self,
-            fields: UnitSequence[Name | None] | Mapping[Name | None, bool] | None = None,
-            shuffle_mode: ShuffleMode = ShuffleMode.NONE,
-            shuffle_by: ShuffleBy = ShuffleBy.TRACK,
-            shuffle_weight: float = 1.0,
-            key: Name | None = None,
-            reverse: bool = False,
-    ) -> None:
-        """
-        Sort tracks in this collection in-place based on given conditions.
-        If key is given,
-
-        :param fields:
-            * When None and ShuffleMode is RANDOM, shuffle the tracks. Otherwise, do nothing.
-            * List of tags/properties to sort by.
-            * Map of {``tag/property``: ``reversed``}. If reversed is true, sort the ``tag/property`` in reverse.
-        :param shuffle_mode: The mode to use for shuffling.
-        :param shuffle_by: The field to shuffle by when shuffling.
-        :param shuffle_weight: The weights (between 0 and 1) to apply to shuffling modes that can use it.
-            This value will automatically be limited to within the accepted range 0 and 1.
-        :param key: Tag or property to sort on.
-            If set, all other fields apart from ``reverse`` are ignored.
-            If None, ``fields``, ``shuffle_mode``, ``shuffle_by``, and ``shuffle_weight`` are used to apply sorting.
-        :param reverse: If true, reverse the order of the sort at the end.
-        """
-        if key is not None:
-            ItemSorter.sort_by_field(self.tracks, field=key)
-        else:
-            sorter = ItemSorter(
-                fields=fields, shuffle_mode=shuffle_mode, shuffle_by=shuffle_by, shuffle_weight=shuffle_weight
-            )
-            sorter.sort(self.tracks)
-
-        if reverse:
-            self.tracks.reverse()
-
-
 # noinspection PyShadowingNames
 class BasicCollection[T: Item](ItemCollection[T]):
     @property
@@ -246,7 +226,7 @@ class BasicCollection[T: Item](ItemCollection[T]):
         return {"name": self.name, "items": self.items}
 
 
-class Playlist[T: Track](TrackCollection[T], metaclass=ABCMeta):
+class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
     """A playlist of items and some of their derived properties/objects"""
 
     @property
@@ -254,6 +234,11 @@ class Playlist[T: Track](TrackCollection[T], metaclass=ABCMeta):
     def name(self):
         """The name of this playlist"""
         raise NotImplementedError
+
+    @property
+    def items(self):
+        """The tracks in this collection"""
+        return self.tracks
 
     @property
     @abstractmethod
@@ -303,7 +288,7 @@ class Playlist[T: Track](TrackCollection[T], metaclass=ABCMeta):
 
 
 # noinspection PyShadowingNames
-class Library[T: Track](TrackCollection[T], Logger, metaclass=ABCMeta):
+class Library[T: Track](ItemCollection[T], Logger, metaclass=ABCMeta):
     """A library of items and playlists"""
 
     @property
@@ -311,6 +296,11 @@ class Library[T: Track](TrackCollection[T], Logger, metaclass=ABCMeta):
     def name(self):
         """The library name"""
         raise NotImplementedError
+
+    @property
+    def items(self):
+        """The tracks in this collection"""
+        return self.tracks
 
     @property
     @abstractmethod
@@ -377,7 +367,7 @@ class Library[T: Track](TrackCollection[T], Logger, metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class Folder[T: Track](TrackCollection[T], metaclass=ABCMeta):
+class Folder[T: Track](ItemCollection[T], metaclass=ABCMeta):
     """A folder of items and some of their derived properties/objects"""
 
     @property
@@ -390,6 +380,11 @@ class Folder[T: Track](TrackCollection[T], metaclass=ABCMeta):
     def folder(self) -> str:
         """The folder name"""
         return self.name
+
+    @property
+    def items(self):
+        """The tracks in this collection"""
+        return self.tracks
 
     @property
     @abstractmethod
@@ -427,7 +422,7 @@ class Folder[T: Track](TrackCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class Album[T: Track](TrackCollection[T], metaclass=ABCMeta):
+class Album[T: Track](ItemCollection[T], metaclass=ABCMeta):
     """An album of items and some of their derived properties/objects"""
 
     @property
@@ -435,6 +430,11 @@ class Album[T: Track](TrackCollection[T], metaclass=ABCMeta):
     def name(self):
         """The album name"""
         raise NotImplementedError
+
+    @property
+    def items(self):
+        """The tracks in this collection"""
+        return self.tracks
 
     @property
     def album(self) -> str:
@@ -513,7 +513,7 @@ class Album[T: Track](TrackCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class Artist[T: Track](TrackCollection[T], metaclass=ABCMeta):
+class Artist[T: Track](ItemCollection[T], metaclass=ABCMeta):
     """An artist of items and some of their derived properties/objects"""
 
     @property
@@ -521,6 +521,11 @@ class Artist[T: Track](TrackCollection[T], metaclass=ABCMeta):
     def name(self):
         """The artist name"""
         raise NotImplementedError
+
+    @property
+    def items(self):
+        """The tracks in this collection"""
+        return self.tracks
 
     @property
     def artist(self) -> str:
@@ -563,7 +568,7 @@ class Artist[T: Track](TrackCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class Genre[T: Track](TrackCollection[T], metaclass=ABCMeta):
+class Genre[T: Track](ItemCollection[T], metaclass=ABCMeta):
     """A genre of items and some of their derived properties/objects"""
 
     @property
@@ -571,6 +576,11 @@ class Genre[T: Track](TrackCollection[T], metaclass=ABCMeta):
     def name(self):
         """The genre"""
         raise NotImplementedError
+
+    @property
+    def items(self):
+        """The tracks in this collection"""
+        return self.tracks
 
     @property
     def genre(self) -> str:

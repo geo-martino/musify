@@ -208,17 +208,16 @@ class SpotifyItemSearcher(ItemMatcher):
                 item.uri = result.uri
 
     def _search_album(self, collection: Album) -> None:
-        """Search for matches on an entire item collection"""
+        """Search for matches on an entire album"""
         algorithm = AlgorithmSettings.ALBUM
-        results = [
-            SpotifyAlbum.load(r["uri"]) for r in self._get_results(collection, kind=ItemType.ALBUM, algorithm=algorithm)
-        ]
+        results = self._get_results(collection, kind=ItemType.ALBUM, algorithm=algorithm)
+        albums = [SpotifyAlbum.load(r["uri"]) for r in results]
 
         # order and prioritise results that are closer to the item count of the input collection
-        results = sorted(results, key=lambda x: abs(x.track_total - len(collection)))
+        albums.sort(key=lambda x: abs(x.track_total - len(collection)))
         result = self.score_match(
             collection,
-            results=results,
+            results=albums,
             match_on=algorithm.match_fields,
             min_score=algorithm.min_score,
             max_score=algorithm.max_score

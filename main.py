@@ -560,6 +560,7 @@ if __name__ == "__main__":
 # TODO: look into the requests_cache, it grows way too big sometimes?
 # TODO: implement terminal parser for function-specific kwargs?
 # TODO: add abstractions for generic 'remote' package
+# TODO: implement GitHub actions for testing builds + implement release structure
 
 
 ## SELECTED FOR DEVELOPMENT
@@ -570,13 +571,14 @@ if __name__ == "__main__":
 #    from using lowercase path cleaning logic in TrackMatch
 #  This may now be fixed by extending functionality of playlists to include
 #   available track paths on load
-
 # TODO: implement merge_playlists functions and,
 #  by extension, implement android library sync
 
 
 ## NEEDED FOR v0.3
-# TODO: expand out Name enum to cover all object types
-#  with fixed mapping to MusicBee values
+# TODO: expand out Name enum to cover all object types with fixed mapping to MusicBee values
+#  - rename it to Field
+#  - have it dynamically generated on each type of abstract Item based on abstract properties?
+#  -
 # TODO: write tests, write tests, write tests
 # TODO: update the readme (dynamic readme?)
