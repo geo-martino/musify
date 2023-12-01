@@ -220,6 +220,11 @@ class SpotifyArtist(SpotifyItem):
         return images is not None and len(images) > 0
 
     @property
+    def length(self) -> int | None:
+        """The total number of followers for this artist"""
+        return self.response.get("followers", {}).get("total")
+
+    @property
     def rating(self) -> int | None:
         """The popularity of this artist on Spotify"""
         return self.response.get("popularity")

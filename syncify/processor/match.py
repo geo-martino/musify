@@ -4,7 +4,7 @@ from collections.abc import Iterable, Callable, MutableSequence
 from dataclasses import dataclass
 from typing import Any
 
-from processor.base import ItemProcessor
+from syncify.processor.base import ItemProcessor
 from syncify.abstract.collection import Album, ItemCollection
 from syncify.abstract.item import Track, BaseObject
 from syncify.enums.tags import TagName, PropertyName

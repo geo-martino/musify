@@ -1,4 +1,4 @@
-from collections.abc import Callable, Collection, Mapping
+from collections.abc import Collection, Mapping
 from functools import reduce
 from operator import mul
 from random import shuffle
@@ -9,8 +9,9 @@ from syncify.local.file import File
 from syncify.enums import SyncifyEnum
 from syncify.enums.tags import PropertyName
 from syncify.processor.exception import ItemLimiterError
-from syncify.processor.base import MusicBeeProcessor
+from syncify.processor.base import MusicBeeProcessor, DynamicProcessor
 from syncify.processor.sort import ItemSorter
+from syncify.processor.decorators import dynamicprocessormethod
 
 
 class LimitType(SyncifyEnum):
@@ -31,7 +32,7 @@ class LimitType(SyncifyEnum):
     TERABYTES = 24
 
 
-class ItemLimiter(MusicBeeProcessor):
+class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
     """
     Sort items in-place based on given conditions.
 
@@ -48,24 +49,10 @@ class ItemLimiter(MusicBeeProcessor):
         processing.
     """
 
-    _valid_methods: Mapping[str, str] = {}
-
     @property
     def limit_sort(self) -> str | None:
         """String representation of the sorting method to use before limiting"""
-        return self._limit_sort
-
-    @limit_sort.setter
-    def limit_sort(self, value: str | None):
-        """Sets the sorting method name and stored function"""
-        if value is None:
-            self._limit_sort: str | None = None
-            self._sort_method = lambda _: None
-            return
-
-        name = self._get_method_name(value, valid=self._valid_methods, prefix=self._sort_method_prefix)
-        self._limit_sort = self._snake_to_camel(name, prefix=self._sort_method_prefix)
-        self._sort_method = getattr(self, self._valid_methods[name])
+        return self._processor_name.lstrip("_")
 
     @classmethod
     def from_xml(cls, xml: Mapping[str, Any] | None = None) -> Self | None:
@@ -92,20 +79,13 @@ class ItemLimiter(MusicBeeProcessor):
             sorted_by: str | None = None,
             allowance: float = 1.0,
     ):
+        super().__init__()
+
         self.limit_max = limit
         self.kind = on
         self.allowance = allowance
 
-        prefix = "_sort"
-        self._sort_method_prefix = "_sort"
-        self._valid_methods = {
-            k if k.startswith(prefix) else prefix + k: v if v.startswith(prefix) else prefix + v
-            for k, v in self._valid_methods.items()
-        } | {
-            name: name for name in dir(self) if name.startswith(self._sort_method_prefix)
-        }
-        self._sort_method: Callable[[list[Item]], None] = lambda _: None
-        self.limit_sort = sorted_by
+        self._set_processor_name(sorted_by, fail_on_empty=False)
 
     def limit[T: Item](self, items: list[T], ignore: Collection[T] | None = None) -> None:
         """
@@ -117,7 +97,8 @@ class ItemLimiter(MusicBeeProcessor):
         if len(items) == 0 or self.limit_max == 0:
             return
 
-        self._sort_method(items)  # sort the input items in-place if sort method given
+        if self._processor_name:  # sort the input items in-place if sort method given
+            self._process(items)
 
         if ignore is not None and len(ignore) > 0:  # filter out the ignore items if given
             items_limit = [item for item in items if item not in ignore]
@@ -151,40 +132,40 @@ class ItemLimiter(MusicBeeProcessor):
                 if count > self.limit_max:  # limit reached
                     break
 
-    @staticmethod
-    def _sort_random(items: list[Item]) -> None:
+    @dynamicprocessormethod
+    def _random(self, items: list[Item]) -> None:
         shuffle(items)
 
-    @staticmethod
-    def _sort_highest_rating(items: list[Item]) -> None:
+    @dynamicprocessormethod
+    def _highest_rating(self, items: list[Item]) -> None:
         ItemSorter.sort_by_field(items, PropertyName.RATING, reverse=True)
 
-    @staticmethod
-    def _sort_lowest_rating(items: list[Item]) -> None:
+    @dynamicprocessormethod
+    def _lowest_rating(self, items: list[Item]) -> None:
         ItemSorter.sort_by_field(items, PropertyName.RATING)
 
-    @staticmethod
-    def _sort_most_recently_played(items: list[Item]) -> None:
+    @dynamicprocessormethod
+    def _most_recently_played(self, items: list[Item]) -> None:
         ItemSorter.sort_by_field(items, PropertyName.LAST_PLAYED, reverse=True)
 
-    @staticmethod
-    def _sort_least_recently_played(items: list[Item]) -> None:
+    @dynamicprocessormethod
+    def _least_recently_played(self, items: list[Item]) -> None:
         ItemSorter.sort_by_field(items, PropertyName.LAST_PLAYED)
 
-    @staticmethod
-    def _sort_most_often_played(items: list[Item]) -> None:
+    @dynamicprocessormethod
+    def _most_often_played(self, items: list[Item]) -> None:
         ItemSorter.sort_by_field(items, PropertyName.PLAY_COUNT, reverse=True)
 
-    @staticmethod
-    def _sort_least_often_played(items: list[Item]) -> None:
+    @dynamicprocessormethod
+    def _least_often_played(self, items: list[Item]) -> None:
         ItemSorter.sort_by_field(items, PropertyName.PLAY_COUNT)
 
-    @staticmethod
-    def _sort_most_recently_added(items: list[Item]) -> None:
+    @dynamicprocessormethod
+    def _most_recently_added(self, items: list[Item]) -> None:
         ItemSorter.sort_by_field(items, PropertyName.DATE_ADDED, reverse=True)
 
-    @staticmethod
-    def _sort_least_recently_added(items: list[Item]) -> None:
+    @dynamicprocessormethod
+    def _least_recently_added(self, items: list[Item]) -> None:
         ItemSorter.sort_by_field(items, PropertyName.DATE_ADDED)
 
     def _convert(self, item: Item) -> float:

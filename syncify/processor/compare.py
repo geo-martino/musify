@@ -1,19 +1,19 @@
 import re
-from collections.abc import Callable, Mapping, Sequence
-from datetime import datetime, timedelta, date
+from collections.abc import Mapping, Sequence
+from datetime import datetime, date
 from functools import reduce
 from operator import mul
 from typing import Any, Self
 
-from dateutil.relativedelta import relativedelta
-
-from syncify.processor.exception import ItemComparerError
 from syncify.abstract.item import Item
 from syncify.enums.tags import Name, TagName, PropertyName
 from syncify.local.exception import FieldError
-from syncify.processor.base import MusicBeeProcessor
+from syncify.processor.base import MusicBeeProcessor, DynamicProcessor
+from syncify.processor.time import TimeMapper
+from syncify.processor.exception import ItemComparerError
 from syncify.utils import UnitSequence
 from syncify.utils.helpers import to_collection
+from syncify.processor.decorators import dynamicprocessormethod
 
 # Map of MusicBee field name to Tag or Property
 field_name_map = {
@@ -38,7 +38,7 @@ field_name_map = {
 }
 
 
-class ItemComparer(MusicBeeProcessor):
+class ItemComparer(MusicBeeProcessor, DynamicProcessor):
     """
     Compares a track with another track or a given set of expected values to find a match.
 
@@ -48,38 +48,10 @@ class ItemComparer(MusicBeeProcessor):
         Types of the values in this list are automatically converted to the type of the track field's value.
     """
 
-    # map of time character representation to it unit conversion from seconds
-    _td_str_mapper = {
-        "h": lambda x: timedelta(hours=int(x)),
-        "d": lambda x: timedelta(days=int(x)),
-        "w": lambda x: timedelta(weeks=int(x)),
-        "m": lambda x: relativedelta(months=int(x))
-    }
-
-    # map of conditions and their equivalent functions
-    _valid_methods: Mapping[str, str] = {
-        "_greater_than": "_is_after",
-        "_less_than": "_is_before",
-        "_cond_is_in_the_last": "_is_after",
-        "_cond_is_not_in_the_last": "_is_before",
-    }
-
     @property
     def condition(self) -> str:
         """String representation of the current condition name of this object"""
-        return self._condition
-
-    @condition.setter
-    def condition(self, value: str):
-        """Sets the condition name and stored method"""
-        if value is None:
-            self._condition: str | None = None
-            self._method: Callable[[Any | None, Sequence[Any] | None], bool] = lambda _, __: False
-            return
-
-        name = self._get_method_name(value=value, valid=self._valid_methods, prefix=self._cond_method_prefix)
-        self._condition = self._snake_to_camel(name, prefix=self._cond_method_prefix)
-        self._method = getattr(self, self._valid_methods[name])
+        return self._processor_name.lstrip("_")
 
     @property
     def expected(self) -> Sequence[Any] | None:
@@ -115,29 +87,25 @@ class ItemComparer(MusicBeeProcessor):
         return objs
 
     def __init__(self, field: Name, condition: str, expected: UnitSequence[Any] | None = None):
-        self._converted = False
+        super().__init__()
         self._expected: list[Any] | None = None
+        self._converted = False
 
         self.field: Name = field
         self.expected: list[Any] | None = to_collection(expected, list)
 
-        prefix = "_cond"
-        self._cond_method_prefix = "_cond"
-        self._valid_methods = {
-            k if k.startswith(prefix) else prefix + k: v if v.startswith(prefix) else prefix + v
-            for k, v in self._valid_methods.items()
-        } | {
-            name: name for name in dir(self) if name.startswith(self._cond_method_prefix)
-        }
-        self.condition = condition
+        self._set_processor_name(condition)
 
     def compare[T: Item](self, track: T, reference: UnitSequence[T] | None = None) -> bool:
         """
         Compare a ``track`` to a ``reference`` or,
         if no ``reference`` is given, to this object's list of ``expected`` values
 
-        :raises LocalProcessorError: If no reference given and no expected values set for this comparator.
+        :raises LocalProcessorError: If no reference given and no expected values set for this comparer.
         """
+        if self.condition is None:
+            return False
+
         if reference is None and self.expected is None:
             raise ItemComparerError("No comparative track given and no expected values set")
 
@@ -158,10 +126,7 @@ class ItemComparer(MusicBeeProcessor):
             elif not isinstance(actual, datetime) and isinstance(expected[0], datetime):
                 expected = [exp.date() for exp in expected]
 
-        try:  # do the comparison
-            return self._method(actual, expected)
-        except TypeError:
-            return False
+        return self._process(actual, expected)
 
     def _convert_expected(self, value: Any) -> None:
         """Driver for converting expected values to the same type as given value"""
@@ -241,77 +206,77 @@ class ItemComparer(MusicBeeProcessor):
             else:  # value is durational difference, calculate datetime using the current time
                 digit = int(re.sub(r"\D+", "", exp))
                 mapper_key = re.sub(r"\d+", "", exp)
-                converted.append(datetime.now() - self._td_str_mapper[mapper_key](digit))
+                converted.append(datetime.now() - TimeMapper(mapper_key)(digit))
 
         self._expected = converted
 
-    @staticmethod
-    def _cond_is(value: Any | None, expected: Sequence[Any] | None) -> bool:
+    @dynamicprocessormethod
+    def _is(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
         return value == expected[0]
 
-    @classmethod
-    def _cond_is_not(cls, value: Any | None, expected: Sequence[Any] | None) -> bool:
-        return not cls._cond_is(value=value, expected=expected)
+    @dynamicprocessormethod
+    def _is_not(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
+        return not self._is(value=value, expected=expected)
 
-    @staticmethod
-    def _cond_is_after(value: Any | None, expected: Sequence[Any] | None) -> bool:
+    @dynamicprocessormethod("greater_than", "_is_in_the_last")
+    def _is_after(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
         return value > expected[0] if value is not None and expected[0] is not None else False
 
-    @staticmethod
-    def _cond_is_before(value: Any | None, expected: Sequence[Any] | None) -> bool:
+    @dynamicprocessormethod("less_than", "_is_not_in_the_last")
+    def _is_before(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
         return value < expected[0] if value is not None and expected[0] is not None else False
 
-    @staticmethod
-    def _cond_is_in(value: Any | None, expected: Sequence[Any] | None) -> bool:
+    @dynamicprocessormethod
+    def _is_in(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
         return value in expected
 
-    @classmethod
-    def _cond_is_not_in(cls, value: Any | None, expected: Sequence[Any] | None) -> bool:
-        return not cls._cond_is_in(value=value, expected=expected)
+    @dynamicprocessormethod
+    def _is_not_in(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
+        return not self._is_in(value=value, expected=expected)
 
-    @staticmethod
-    def _cond_in_range(value: Any | None, expected: Sequence[Any] | None) -> bool:
+    @dynamicprocessormethod
+    def _in_range(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
         return expected[0] < value < expected[1] if value is not None and expected[0] is not None else False
 
-    @classmethod
-    def _cond_not_in_range(cls, value: Any | None, expected: Sequence[Any] | None) -> bool:
-        return not cls._cond_in_range(value=value, expected=expected)
+    @dynamicprocessormethod
+    def _not_in_range(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
+        return not self._in_range(value=value, expected=expected)
 
-    @staticmethod
-    def _cond_is_not_null(value: Any | None, _: Sequence[Any] | None = None) -> bool:
+    @dynamicprocessormethod
+    def _is_not_null(self, value: Any | None, _: Sequence[Any] | None = None) -> bool:
         return value is not None or value is True
 
-    @staticmethod
-    def _cond_is_null(value: Any | None, _: Sequence[Any] | None = None) -> bool:
+    @dynamicprocessormethod
+    def _is_null(self, value: Any | None, _: Sequence[Any] | None = None) -> bool:
         return value is None or value is False
 
-    @staticmethod
-    def _cond_starts_with(value: Any | None, expected: Sequence[Any] | None) -> bool:
+    @dynamicprocessormethod
+    def _starts_with(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
         return value.startswith(expected[0]) if value is not None and expected[0] is not None else False
 
-    @staticmethod
-    def _cond_ends_with(value: Any | None, expected: Sequence[Any] | None) -> bool:
+    @dynamicprocessormethod
+    def _ends_with(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
         return value.endswith(expected[0]) if value is not None and expected[0] is not None else False
 
-    @staticmethod
-    def _cond_contains(value: Any | None, expected: Sequence[Any] | None) -> bool:
+    @dynamicprocessormethod
+    def _contains(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
         return expected[0] in value if value is not None and expected[0] is not None else False
 
-    @classmethod
-    def _cond_does_not_contain(cls, value: Any | None, expected: Sequence[Any] | None) -> bool:
-        return not cls._cond_contains(value=value, expected=expected)
+    @dynamicprocessormethod
+    def _does_not_contain(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
+        return not self._contains(value=value, expected=expected)
 
-    @staticmethod
-    def _cond_in_tag_hierarchy(value: Any | None, expected: Sequence[Any] | None) -> bool:
+    @dynamicprocessormethod
+    def _in_tag_hierarchy(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
         # TODO: what does this even mean
         raise NotImplementedError
 
-    @staticmethod
-    def _cond_matches_reg_ex(value: Any | None, expected: Sequence[Any] | None) -> bool:
+    @dynamicprocessormethod
+    def _matches_reg_ex(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
         return bool(re.search(expected[0], value)) if value is not None and expected[0] is not None else False
 
-    @staticmethod
-    def _cond_matches_reg_ex_ignore_case(value: Any | None, expected: Sequence[Any] | None) -> bool:
+    @dynamicprocessormethod
+    def _matches_reg_ex_ignore_case(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
         if value is not None and expected[0] is not None:
             return False
         return bool(re.search(expected[0], value, flags=re.IGNORECASE))

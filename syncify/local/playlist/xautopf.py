@@ -167,7 +167,7 @@ class XAutoPF(LocalPlaylist):
         matches: list[LocalTrack] = self.matcher.match(tracks, reference=tracks[0], combine=False).compared
         compared: Mapping[str: LocalTrack] = {track.path.lower(): track for track in matches}
 
-        # get new include/exclude paths based on the leftovers after matching on comparators
+        # get new include/exclude paths based on the leftovers after matching on comparers
         self.matcher.include_paths = list(path_track_map - compared.keys())
         self.matcher.exclude_paths = list(compared.keys() - path_track_map)
 

@@ -3,7 +3,7 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Collection, Iterable, Container
 from datetime import datetime
 
-from syncify.abstract.collection import TrackCollection, Folder, Album, Artist, Genre
+from syncify.abstract.collection import ItemCollection, Folder, Album, Artist, Genre
 from syncify.abstract.item import Item
 from syncify.local.base import LocalObject
 from syncify.local.exception import LocalCollectionError
@@ -19,8 +19,13 @@ __max_str = "z" * 50
 
 
 # noinspection PyShadowingNames
-class LocalCollection[T: LocalObject](TrackCollection[T], Logger, metaclass=ABCMeta):
+class LocalCollection[T: LocalObject](ItemCollection[T], Logger, metaclass=ABCMeta):
     """Generic class for storing a collection of local tracks."""
+
+    @property
+    def items(self):
+        """The tracks in this collection"""
+        return self.tracks
 
     @property
     @abstractmethod

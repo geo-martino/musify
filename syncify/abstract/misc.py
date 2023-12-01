@@ -9,6 +9,7 @@ from syncify.utils.helpers import to_collection
 
 _T_JSON = str | int | float | list | dict | bool | None
 
+
 @dataclass(frozen=True)
 class Result(metaclass=ABCMeta):
     """Stores the results of an operation within Syncify"""

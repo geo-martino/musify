@@ -12,13 +12,13 @@ from tests.local.track.common import random_tracks
 
 def test_init():
     limiter = ItemLimiter(sorted_by="HighestRating")
-    assert limiter._sort_method == limiter._sort_highest_rating
+    assert limiter._processor == limiter._highest_rating
 
     limiter = ItemLimiter(sorted_by="__ least_ recently_  added __ ")
-    assert limiter._sort_method == limiter._sort_least_recently_added
+    assert limiter._processor == limiter._least_recently_added
 
     limiter = ItemLimiter(sorted_by="__most recently played__")
-    assert limiter._sort_method == limiter._sort_most_recently_played
+    assert limiter._processor == limiter._most_recently_played
 
 
 def get_tracks_for_limit_test() -> tuple[list[LocalTrack], list[str]]:

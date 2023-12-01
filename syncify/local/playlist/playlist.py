@@ -86,7 +86,7 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
         if matcher is None or tracks is None:
             return
 
-        if matcher.include_paths is None and matcher.exclude_paths is None and matcher.comparators is None:
+        if matcher.include_paths is None and matcher.exclude_paths is None and matcher.comparers is None:
             # just return the tracks given if matcher has no settings applied
             self.tracks: list[LocalTrack] = [t for t in tracks]
         else:  # run matcher

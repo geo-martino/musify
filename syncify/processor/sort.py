@@ -182,6 +182,7 @@ class ItemSorter(MusicBeeProcessor):
             shuffle_by: ShuffleBy = ShuffleBy.TRACK,
             shuffle_weight: float = 1.0
     ):
+        super().__init__()
         fields = to_collection(fields, list) if isinstance(fields, Name) else fields
         self.sort_fields: Mapping[Name | None, bool] | None
         self.sort_fields = {field: False for field in fields} if isinstance(fields, Sequence) else fields

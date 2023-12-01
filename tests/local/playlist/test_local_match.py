@@ -12,7 +12,7 @@ from tests.local.track.common import random_tracks
 
 
 def test_init():
-    comparators = [
+    comparers = [
         ItemComparer(field=TagName.ALBUM, condition="is", expected="album name"),
         ItemComparer(field=TagName.ARTIST, condition="starts with", expected="artist")
     ]
@@ -22,7 +22,7 @@ def test_init():
     include_paths = [f"{other_folders[1]}\\include\\{random_str()}.MP3" for _ in range(20)]
 
     matcher = LocalMatcher(
-        comparators=comparators,
+        comparers=comparers,
         include_paths=include_paths,
         exclude_paths=exclude_paths,
         library_folder=library_folder,
@@ -30,7 +30,7 @@ def test_init():
         check_existence=False
     )
 
-    assert matcher.comparators == matcher.comparators
+    assert matcher.comparers == matcher.comparers
     assert matcher.original_folder == other_folders[1].rstrip("/\\")
     assert matcher.include_paths == [
         path.replace(other_folders[1], library_folder).replace("\\", "/").casefold() for path in include_paths
@@ -44,7 +44,7 @@ def test_init():
     include_paths = set(f"{other_folders[0]}/folder/{random_str(20, 50)}.MP3" for _ in range(20)) - exclude_paths
 
     matcher = LocalMatcher(
-        comparators=comparators,
+        comparers=comparers,
         include_paths=sorted(include_paths) + sorted(exclude_paths)[:5],
         exclude_paths=sorted(exclude_paths),
         library_folder=library_folder,
@@ -52,7 +52,7 @@ def test_init():
         check_existence=False
     )
 
-    assert matcher.comparators == matcher.comparators
+    assert matcher.comparers == matcher.comparers
     assert matcher.original_folder == other_folders[0].rstrip("/\\")
     assert matcher.include_paths == [
         path.replace(other_folders[0], library_folder).casefold() for path in sorted(include_paths)
@@ -70,7 +70,7 @@ def test_init():
 @dataclass
 class MatchTestConfig:
     """Config setter for each match test"""
-    comparators: list[ItemComparer]
+    comparers: list[ItemComparer]
     library_folder: str
 
     tracks: list[LocalTrack]
@@ -106,7 +106,7 @@ def get_config_for_match_test() -> MatchTestConfig:
         track._path = exclude_paths[i]
 
     return MatchTestConfig(
-        comparators=[
+        comparers=[
             ItemComparer(field=TagName.ALBUM, condition="is", expected="album name"),
             ItemComparer(field=TagName.ARTIST, condition="starts with", expected="artist")
         ],
@@ -142,7 +142,7 @@ def test_match_on_paths_only():
 def test_match_on_paths_and_any_comparators():
     config = get_config_for_match_test()
     matcher = LocalMatcher(
-        comparators=config.comparators,
+        comparers=config.comparers,
         match_all=False,
         include_paths=[track.path for track in config.tracks_include],
         exclude_paths=[track.path for track in config.tracks_exclude],
@@ -162,7 +162,7 @@ def test_match_on_paths_and_any_comparators():
 def test_match_on_paths_and_all_comparators():
     config = get_config_for_match_test()
     matcher = LocalMatcher(
-        comparators=config.comparators,
+        comparers=config.comparers,
         match_all=True,
         include_paths=[track.path for track in config.tracks_include],
         exclude_paths=[track.path for track in config.tracks_exclude],

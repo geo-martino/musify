@@ -43,22 +43,22 @@ def test_load_playlist_1():
     assert pl.ext == splitext(basename(path_playlist_xautopf_bp))[1]
     assert pl.description == "I am a description"
 
-    # comparators
-    assert pl.matcher.comparators[0].field == TagName.ALBUM
-    assert pl.matcher.comparators[0].expected == ["an album"]
-    assert not pl.matcher.comparators[0]._converted
-    assert pl.matcher.comparators[0].condition == "Contains"
-    assert pl.matcher.comparators[0]._method == pl.matcher.comparators[0]._cond_contains
-    assert pl.matcher.comparators[1].field == TagName.ARTIST
-    assert pl.matcher.comparators[1].expected is None
-    assert not pl.matcher.comparators[1]._converted
-    assert pl.matcher.comparators[1].condition == "IsNull"
-    assert pl.matcher.comparators[1]._method == pl.matcher.comparators[1]._cond_is_null
-    assert pl.matcher.comparators[2].field == TagName.TRACK
-    assert pl.matcher.comparators[2].expected == [30]
-    assert pl.matcher.comparators[2]._converted
-    assert pl.matcher.comparators[2].condition == "LessThan"
-    assert pl.matcher.comparators[2]._method == pl.matcher.comparators[2]._cond_is_before
+    # comparers
+    assert pl.matcher.comparers[0].field == TagName.ALBUM
+    assert pl.matcher.comparers[0].expected == ["an album"]
+    assert not pl.matcher.comparers[0]._converted
+    assert pl.matcher.comparers[0].condition == "contains"
+    assert pl.matcher.comparers[0]._processor == pl.matcher.comparers[0]._contains
+    assert pl.matcher.comparers[1].field == TagName.ARTIST
+    assert pl.matcher.comparers[1].expected is None
+    assert not pl.matcher.comparers[1]._converted
+    assert pl.matcher.comparers[1].condition == "is_null"
+    assert pl.matcher.comparers[1]._processor == pl.matcher.comparers[1]._is_null
+    assert pl.matcher.comparers[2].field == TagName.TRACK
+    assert pl.matcher.comparers[2].expected == [30]
+    assert pl.matcher.comparers[2]._converted
+    assert pl.matcher.comparers[2].condition == "less_than"
+    assert pl.matcher.comparers[2]._processor == pl.matcher.comparers[2]._is_before
 
     # matcher
     assert pl.matcher.match_all
@@ -129,7 +129,7 @@ def test_load_playlist_2():
     assert pl.description is None
 
     # matcher
-    assert pl.matcher.comparators is None
+    assert pl.matcher.comparers is None
     assert not pl.matcher.match_all
     assert pl.matcher.library_folder == path_resources.rstrip("\\/")
     assert pl.matcher.original_folder is None
@@ -140,7 +140,7 @@ def test_load_playlist_2():
     assert pl.limiter.limit_max == 20
     assert pl.limiter.kind == LimitType.ITEMS
     assert pl.limiter.allowance == 1.25
-    assert pl.limiter._sort_method == pl.limiter._sort_most_recently_added
+    assert pl.limiter._processor == pl.limiter._most_recently_added
 
     # sorter
     assert pl.sorter.sort_fields == {PropertyName.DATE_ADDED: True}

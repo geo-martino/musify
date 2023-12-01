@@ -4,7 +4,7 @@ from os.path import exists
 from typing import Any, Self
 
 from syncify.abstract.misc import Result
-from syncify.processor.base import ItemProcessor
+from syncify.processor.base import MusicBeeProcessor
 from syncify.processor.compare import ItemComparer
 from syncify.local.track.base.track import LocalTrack
 from syncify.utils import UnitSequence, UnitCollection, UnitIterable
@@ -19,17 +19,17 @@ class MatchResult(Result):
     compared: Sequence[LocalTrack] = field(default=tuple())
 
 
-class LocalMatcher(ItemProcessor):
+class LocalMatcher(MusicBeeProcessor):
     """
-    Get matches for tracks based on given comparators.
+    Get matches for tracks based on given comparers.
 
-    :param comparators: List of comparators to compare a list of tracks against.
+    :param comparers: List of comparers to compare a list of tracks against.
         When None, returns all tracks unless include_paths or exclude_paths are defined.
-    :param match_all: If True, the track must match all comparators to be valid.
-        If False, match any of comparators i.e. only one match needed to be valid.
-        Ignored when comparators equal None.
-    :param include_paths: List of paths for tracks to include regardless of comparator matches.
-    :param exclude_paths: List of paths for tracks to exclude regardless of comparator matches.
+    :param match_all: If True, the track must match all comparers to be valid.
+        If False, match any of comparers i.e. only one match needed to be valid.
+        Ignored when comparers equal None.
+    :param include_paths: List of paths for tracks to include regardless of comparer matches.
+    :param exclude_paths: List of paths for tracks to exclude regardless of comparer matches.
     :param library_folder: Absolute path of the folder containing all tracks.
     :param other_folders: Absolute paths of other possible library paths.
         Use to replace path stems from other libraries for the paths in loaded playlists.
@@ -52,17 +52,17 @@ class LocalMatcher(ItemProcessor):
         exclude_str: str = source.get("Exceptions")
         exclude = set(exclude_str.split("|")) if isinstance(exclude_str, str) else None
 
-        comparators: list[ItemComparer] | None = ItemComparer.from_xml(xml=xml)
+        comparers: list[ItemComparer] | None = ItemComparer.from_xml(xml=xml)
 
-        if len(comparators) == 1:
-            # when user has not set an explicit comparator, there will still be an 'allow all' comparator
-            # check for this 'allow all' comparator and remove if present to speed up comparisons
-            c = comparators[0]
+        if len(comparers) == 1:
+            # when user has not set an explicit comparer, there will still be an 'allow all' comparer
+            # check for this 'allow all' comparer and remove if present to speed up comparisons
+            c = comparers[0]
             if "contains" in c.condition.casefold() and len(c.expected) == 1 and not c.expected[0]:
-                comparators = None
+                comparers = None
 
         return cls(
-            comparators=comparators,
+            comparers=comparers,
             match_all=match_all,
             include_paths=include,
             exclude_paths=exclude,
@@ -71,7 +71,7 @@ class LocalMatcher(ItemProcessor):
 
     def __init__(
             self,
-            comparators: UnitSequence[ItemComparer] | None = None,
+            comparers: UnitSequence[ItemComparer] | None = None,
             match_all: bool = True,
             include_paths: Collection[str] | None = None,
             exclude_paths: Collection[str] | None = None,
@@ -79,7 +79,7 @@ class LocalMatcher(ItemProcessor):
             other_folders: UnitCollection[str] | None = None,
             check_existence: bool = True,
     ):
-        self.comparators: tuple[ItemComparer] = to_collection(comparators)
+        self.comparers: tuple[ItemComparer] = to_collection(comparers)
         self.match_all = match_all
 
         self.include_paths: Collection[str] | None = include_paths
@@ -181,12 +181,12 @@ class LocalMatcher(ItemProcessor):
         Return a new list of tracks from input tracks that match the given conditions.
 
         :param tracks: List of tracks to search through for matches.
-        :param reference: Optional reference track to use when comparator has no expected value.
+        :param reference: Optional reference track to use when comparer has no expected value.
         :param combine: If True, return one list of all tracks. If False, return tuple of 3 lists.
         :return: If combine=True, list of tracks that match the conditions. If combine=False, tuple of 3 lists:
             - List 1: Tracks that only match on include_paths
             - List 2: Tracks that only match on exclude_paths
-            - List 3: Tracks that only match on comparators
+            - List 3: Tracks that only match on comparers
         """
         if len(tracks) == 0:  # skip match
             return [] if combine else MatchResult()
@@ -201,19 +201,19 @@ class LocalMatcher(ItemProcessor):
         if self.exclude_paths:  # filter out exclude paths
             exclude.extend([path_tracks[path] for path in self.exclude_paths if path in path_tracks])
 
-        if self.comparators is None or len(self.comparators) == 0:  # skip comparator checks
+        if self.comparers is None or len(self.comparers) == 0:  # skip comparer checks
             if combine:
                 return [track for track in include if track not in exclude]
             return MatchResult(include=include, exclude=exclude)
 
         compared: list[LocalTrack] = []
-        for track in tracks:  # run comparator checks
+        for track in tracks:  # run comparer checks
             match_results = []
-            for comparator in self.comparators:
-                if comparator.expected is None:  # compare with a reference
-                    match_results.append(comparator.compare(track=track, reference=reference))
-                else:  # compare with the comparators expected values
-                    match_results.append(comparator.compare(track=track))
+            for comparer in self.comparers:
+                if comparer.expected is None:  # compare with a reference
+                    match_results.append(comparer.compare(track=track, reference=reference))
+                else:  # compare with the comparers expected values
+                    match_results.append(comparer.compare(track=track))
 
             if self.match_all and all(match_results):
                 compared.append(track)
@@ -232,5 +232,5 @@ class LocalMatcher(ItemProcessor):
             "library_folder": self.library_folder,
             "original_folder": self.original_folder,
             "match_all": self.match_all,
-            "comparators": self.comparators
+            "comparers": self.comparers
         }

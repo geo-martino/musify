@@ -3,35 +3,35 @@ from datetime import datetime, date, timedelta
 import pytest
 
 from syncify.enums.tags import TagName, PropertyName
-from syncify.processor.exception import ItemComparerError
+from syncify.processor.exception import ItemComparerError, ProcessorLookupError
 from syncify.processor.compare import ItemComparer
 from syncify.local.track import MP3, M4A, FLAC
 from tests.local.track.common import random_track
 
 
 def test_init():
-    comparator = ItemComparer(field=TagName.IMAGES, condition="Contains")
-    assert comparator.field == TagName.IMAGES
-    assert comparator._expected is None
-    assert not comparator._converted
-    assert comparator._condition == "Contains"
-    assert comparator._method == comparator._cond_contains
+    comparer = ItemComparer(field=TagName.IMAGES, condition="Contains")
+    assert comparer.field == TagName.IMAGES
+    assert comparer._expected is None
+    assert not comparer._converted
+    assert comparer.condition == "contains"
+    assert comparer._processor == comparer._contains
 
-    comparator = ItemComparer(field=PropertyName.DATE_ADDED, condition="___greater than_  ")
-    assert comparator.field == PropertyName.DATE_ADDED
-    assert not comparator._converted
-    assert comparator._expected is None
-    assert comparator._condition == "GreaterThan"
-    assert comparator._method == comparator._cond_is_after
+    comparer = ItemComparer(field=PropertyName.DATE_ADDED, condition="___greater than_  ")
+    assert comparer.field == PropertyName.DATE_ADDED
+    assert not comparer._converted
+    assert comparer._expected is None
+    assert comparer.condition == "greater_than"
+    assert comparer._processor == comparer._is_after
 
-    comparator = ItemComparer(field=PropertyName.EXT, condition=" is  _", expected=[".mp3", ".flac"])
-    assert comparator.field == PropertyName.EXT
-    assert not comparator._converted
-    assert comparator._expected == [".mp3", ".flac"]
-    assert comparator._condition == "Is"
-    assert comparator._method == comparator._cond_is
+    comparer = ItemComparer(field=PropertyName.EXT, condition=" is  _", expected=[".mp3", ".flac"])
+    assert comparer.field == PropertyName.EXT
+    assert not comparer._converted
+    assert comparer._expected == [".mp3", ".flac"]
+    assert comparer.condition == "is"
+    assert comparer._processor == comparer._is
 
-    with pytest.raises(LookupError):
+    with pytest.raises(ProcessorLookupError):
         ItemComparer(field=PropertyName.EXT, condition="this cond does not exist")
 
 
@@ -39,139 +39,136 @@ def test_compare_with_reference():
     track_1 = random_track()
     track_2 = random_track()
 
-    comparator = ItemComparer(field=TagName.ALBUM, condition="StartsWith")
-    assert comparator._expected is None
-    assert not comparator._converted
+    comparer = ItemComparer(field=TagName.ALBUM, condition="StartsWith")
+    assert comparer._expected is None
+    assert not comparer._converted
 
     with pytest.raises(ItemComparerError):
-        comparator.compare(track=track_1)
+        comparer.compare(track=track_1)
 
     track_1.album = "album 124 is a great album"
     track_2.album = "album"
-    assert comparator.compare(track=track_1, reference=track_2)
-    assert comparator._expected is None
-    assert not comparator._converted
+    assert comparer.compare(track=track_1, reference=track_2)
+    assert comparer._expected is None
+    assert not comparer._converted
 
     with pytest.raises(ItemComparerError):
-        comparator.compare(track=track_1)
+        comparer.compare(track=track_1)
 
 
 def test_compare_str():
     track = random_track(MP3)
 
     # no expected values conversion
-    comparator = ItemComparer(field=PropertyName.EXT, condition=" is  _", expected=[".mp3", ".flac"])
-    assert comparator._expected == [".mp3", ".flac"]
-    assert comparator._method == comparator._cond_is
+    comparer = ItemComparer(field=PropertyName.EXT, condition=" is  _", expected=[".mp3", ".flac"])
+    assert comparer._expected == [".mp3", ".flac"]
+    assert comparer._processor == comparer._is
 
     assert track.ext == ".mp3"
-    assert comparator.compare(track)
-    assert comparator._expected == [".mp3", ".flac"]
-    assert not comparator.compare(random_track(FLAC))
-    assert not comparator.compare(random_track(M4A))
+    assert comparer.compare(track)
+    assert comparer._expected == [".mp3", ".flac"]
+    assert not comparer.compare(random_track(FLAC))
+    assert not comparer.compare(random_track(M4A))
 
 
 def test_compare_int():
     track = random_track()
 
-    comparator = ItemComparer(field=TagName.TRACK, condition="is in", expected=["1", 2, "3"])
-    assert comparator._expected == ["1", 2, "3"]
-    assert not comparator._converted
-    assert comparator._method == comparator._cond_is_in
+    comparer = ItemComparer(field=TagName.TRACK, condition="is in", expected=["1", 2, "3"])
+    assert comparer._expected == ["1", 2, "3"]
+    assert not comparer._converted
+    assert comparer._processor == comparer._is_in
 
     track.track_number = 3
-    assert comparator.compare(track)
-    assert comparator._expected == [1, 2, 3]
-    assert comparator._converted
+    assert comparer.compare(track)
+    assert comparer._expected == [1, 2, 3]
+    assert comparer._converted
 
     track.track_number = 4
-    assert not comparator.compare(track)
-    assert comparator._expected == [1, 2, 3]
-    assert comparator._converted
+    assert not comparer.compare(track)
+    assert comparer._expected == [1, 2, 3]
+    assert comparer._converted
 
     # int: conversion when given a time str
-    comparator = ItemComparer(field=PropertyName.RATING, condition="greater than", expected="1:30,618")
-    assert comparator._expected == ["1:30,618"]
-    assert not comparator._converted
-    assert comparator._method == comparator._cond_is_after
+    comparer = ItemComparer(field=PropertyName.RATING, condition="greater than", expected="1:30,618")
+    assert comparer._expected == ["1:30,618"]
+    assert not comparer._converted
+    assert comparer._processor == comparer._is_after
 
     track.rating = 120
-    assert comparator.compare(track)
-    assert comparator._expected == [90]
-    assert comparator._converted
+    assert comparer.compare(track)
+    assert comparer._expected == [90]
+    assert comparer._converted
     track.rating = 60
-    assert not comparator.compare(track)
-    assert comparator._expected == [90]
-    assert comparator._converted
+    assert not comparer.compare(track)
+    assert comparer._expected == [90]
+    assert comparer._converted
 
 
 def test_compare_float():
     track = random_track()
 
     # float
-    comparator = ItemComparer(field=TagName.BPM, condition="in_range", expected=["81.96", 100.23])
-    assert comparator._expected == ["81.96", 100.23]
-    assert not comparator._converted
-    assert comparator._method == comparator._cond_in_range
+    comparer = ItemComparer(field=TagName.BPM, condition="in_range", expected=["81.96", 100.23])
+    assert comparer._expected == ["81.96", 100.23]
+    assert not comparer._converted
+    assert comparer._processor == comparer._in_range
 
     track.bpm = 90.0
-    assert comparator.compare(track)
-    assert comparator._expected == [81.96, 100.23]
-    assert comparator._converted
+    assert comparer.compare(track)
+    assert comparer._expected == [81.96, 100.23]
+    assert comparer._converted
 
     # does not convert again when giving a value of a different type
     track.bpm = 120
-    assert not comparator.compare(track)
-    assert comparator._expected == [81.96, 100.23]
-    assert comparator._converted
+    assert not comparer.compare(track)
+    assert comparer._expected == [81.96, 100.23]
+    assert comparer._converted
 
 
 def test_compare_date():
     track = random_track()
 
     # all datetime comparisons only consider date part
-    comparator = ItemComparer(field=PropertyName.DATE_ADDED, condition="is", expected=datetime(2023, 4, 21, 19, 20))
-    assert comparator._expected == [datetime(2023, 4, 21, 19, 20)]
-    assert not comparator._converted
-    assert comparator._method == comparator._cond_is
+    comparer = ItemComparer(field=PropertyName.DATE_ADDED, condition="is", expected=datetime(2023, 4, 21, 19, 20))
+    assert comparer._expected == [datetime(2023, 4, 21, 19, 20)]
+    assert not comparer._converted
+    assert comparer._processor == comparer._is
 
     track.date_added = datetime(2023, 4, 21, 11, 30, 49, 203)
-    assert comparator.compare(track)
-    assert comparator._expected == [date(2023, 4, 21)]
-    assert comparator._converted
+    assert comparer.compare(track)
+    assert comparer._expected == [date(2023, 4, 21)]
+    assert comparer._converted
 
     # converts supported strings
-    comparator = ItemComparer(field=PropertyName.DATE_ADDED, condition="is_not", expected="20/01/01")
-    assert comparator._expected == ["20/01/01"]
-    assert not comparator._converted
-    assert comparator._method == comparator._cond_is_not
+    comparer = ItemComparer(field=PropertyName.DATE_ADDED, condition="is_not", expected="20/01/01")
+    assert comparer._expected == ["20/01/01"]
+    assert not comparer._converted
+    assert comparer._processor == comparer._is_not
 
-    assert comparator.compare(track)
-    assert comparator._expected == [date(2001, 1, 20)]
-    assert comparator._converted
+    assert comparer.compare(track)
+    assert comparer._expected == [date(2001, 1, 20)]
+    assert comparer._converted
 
-    comparator = ItemComparer(field=PropertyName.DATE_ADDED, condition="is_not", expected="13/8/2004")
-    assert comparator._expected == ["13/8/2004"]
-    assert not comparator._converted
-    assert comparator._method == comparator._cond_is_not
+    comparer = ItemComparer(field=PropertyName.DATE_ADDED, condition="is_not", expected="13/8/2004")
+    assert comparer._expected == ["13/8/2004"]
+    assert not comparer._converted
+    assert comparer._processor == comparer._is_not
 
-    assert comparator.compare(track)
-    assert comparator._expected == [date(2004, 8, 13)]
-    assert comparator._converted
+    assert comparer.compare(track)
+    assert comparer._expected == [date(2004, 8, 13)]
+    assert comparer._converted
 
     # converts date ranges
-    comparator = ItemComparer(field=PropertyName.DATE_ADDED, condition="is_in_the_last", expected="8h")
-    assert comparator._expected == ["8h"]
-    assert not comparator._converted
-    assert comparator._method == comparator._cond_is_after
+    comparer = ItemComparer(field=PropertyName.DATE_ADDED, condition="is_in_the_last", expected="8h")
+    assert comparer._expected == ["8h"]
+    assert not comparer._converted
+    assert comparer._processor == comparer._is_after
 
     track.date_added = datetime.now() - timedelta(hours=4)
-    assert comparator.compare(track)
+    assert comparer.compare(track)
     # truncate to avoid time lag between assignment and test making the test fail
-    exp_truncated = comparator._expected[0].replace(second=0, microsecond=0)
+    exp_truncated = comparer._expected[0].replace(second=0, microsecond=0)
     test_truncated = datetime.now().replace(second=0, microsecond=0) - timedelta(hours=8)
     assert exp_truncated == test_truncated
-    assert comparator._converted
-
-
-
+    assert comparer._converted
