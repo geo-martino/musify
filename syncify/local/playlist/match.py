@@ -3,12 +3,12 @@ from dataclasses import dataclass, field
 from os.path import exists
 from typing import Any, Self, Callable
 
-from enums.tags import PropertyName
-from processors.sort import ItemSorter
 from syncify.abstract.misc import Result
 from syncify.abstract.processor import MusicBeeProcessor
+from syncify.enums.tags import PropertyName
 from syncify.local.track.base.track import LocalTrack
 from syncify.processors.compare import ItemComparer
+from syncify.processors.sort import ItemSorter
 from syncify.utils import UnitSequence, UnitCollection
 from syncify.utils.helpers import to_collection
 

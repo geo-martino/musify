@@ -9,6 +9,8 @@ from syncify.spotify.library.collection import SpotifyCollection
 from syncify.spotify.library.item import SpotifyTrack
 
 
+# TODO: cannot view superclasses, something is messed up with the inheritance here
+#  also method/properties do not inherit docstrings from parent classes
 class SpotifyPlaylist(SpotifyCollection, RemotePlaylist[SpotifyTrack]):
     """
     Extracts key ``playlist`` data from a Spotify API JSON response.

@@ -16,7 +16,7 @@ class DynamicProcessor(Processor, metaclass=ABCMeta):
     """
     Base class for implementations with :py:function:`dynamicprocessormethod` methods.
 
-    Classes that implement this base class have a ``_processor_methods`` class attribute
+    Classes that implement this base class have a ``__processormethods__`` class attribute
     which is a list of strings of all the processor methods this class contains.
     If a :py:function:`dynamicprocessormethod` has alternative method names, these names will be added
     to the class' ``__dict__`` as callable methods which point to the decorated method.
@@ -27,18 +27,18 @@ class DynamicProcessor(Processor, metaclass=ABCMeta):
     The transformation is always applied before extending the class with any given
     alternative method names.
 
-    :ivar _processor_methods: The set of processor methods on this processor and any alternative names for them.
+    :ivar __processormethods__: The set of processor methods on this processor and any alternative names for them.
     """
 
-    _processor_methods: frozenset[str] = frozenset()
+    __processormethods__: frozenset[str] = frozenset()
 
     @property
     def processor_methods(self) -> frozenset[str]:
         """String representation of the current processor name of this object"""
-        return frozenset(self._processor_method_fmt(name) for name in self._processor_methods)
+        return frozenset(self._processor_method_fmt(name) for name in self.__processormethods__)
 
     def __new__(cls, *args, **kwargs):
-        processor_methods = list(cls._processor_methods)
+        processor_methods = list(cls.__processormethods__)
 
         for method in cls.__dict__.copy().values():
             if not isinstance(method, dynamicprocessormethod):
@@ -54,7 +54,7 @@ class DynamicProcessor(Processor, metaclass=ABCMeta):
             for name in method.alternative_names:
                 setattr(cls, cls._processor_method_fmt(name), method)
 
-        cls._processor_methods = frozenset(processor_methods)
+        cls.__processormethods__ = frozenset(processor_methods)
         return super().__new__(cls)
 
     def __init__(self):

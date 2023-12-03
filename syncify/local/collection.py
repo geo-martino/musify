@@ -1,4 +1,3 @@
-import inspect
 import sys
 from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Collection, Iterable, Container
@@ -257,7 +256,10 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
         return (sum(track.compilation is True for track in self.tracks) / len(self.tracks)) > 0.5
 
     def __init__(
-            self, tracks: Collection[LocalTrack] = (), name: str | None = None, remote_wrangler: RemoteDataWrangler = None
+            self,
+            tracks: Collection[LocalTrack] = (),
+            name: str | None = None,
+            remote_wrangler: RemoteDataWrangler = None
     ):
         if len(tracks) == 0 and name is not None and exists(name) and isdir(name):
             # name is path to a folder, load tracks in that folder

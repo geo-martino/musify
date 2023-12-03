@@ -17,7 +17,13 @@ class SpotifyRemote(Remote):
         return __SPOTIFY_SOURCE_NAME__
 
 
-class SpotifyObject(SpotifyRemote, RemoteObject, PrettyPrinter, metaclass=ABCMeta):
+class SpotifyObjectMixin(SpotifyRemote, RemoteObject, metaclass=ABCMeta):
+
+    def __init__(self, response: MutableMapping[str, Any]):
+        RemoteObject.__init__(self, response=response)
+
+
+class SpotifyObject(SpotifyObjectMixin, PrettyPrinter, metaclass=ABCMeta):
     """
     Generic base class for Spotify-stored objects. Extracts key data from a Spotify API JSON response.
 
@@ -52,7 +58,7 @@ class SpotifyObject(SpotifyRemote, RemoteObject, PrettyPrinter, metaclass=ABCMet
         return self.response["external_urls"].get("spotify")
 
     def __init__(self, response: MutableMapping[str, Any]):
-        RemoteObject.__init__(self, response=response)
+        SpotifyObjectMixin.__init__(self, response=response)
 
     def _check_type(self) -> None:
         """
@@ -67,6 +73,11 @@ class SpotifyObject(SpotifyRemote, RemoteObject, PrettyPrinter, metaclass=ABCMet
 
 
 class SpotifyItem(SpotifyObject, RemoteItem, metaclass=ABCMeta):
+    """
+    Generic base class for Spotify-stored items. Extracts key data from a Spotify API JSON response.
+
+    :param response: The remote API JSON response
+    """
     def __init__(self, response: MutableMapping[str, Any]):
         RemoteItem.__init__(self, response=response)
         SpotifyObject.__init__(self, response=response)

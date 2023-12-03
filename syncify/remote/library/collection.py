@@ -9,15 +9,15 @@ from syncify.remote.base import RemoteObject
 from syncify.remote.enums import RemoteIDType
 from syncify.remote.exception import RemoteIDTypeError
 from syncify.remote.library.item import RemoteTrack
-from syncify.remote.processors.wrangle import RemoteDataWrangler
+from syncify.remote.processors.wrangle import RemoteObjectWranglerMixin
 
 
-class RemoteCollection[T: RemoteObject](RemoteObject, ItemCollection[T], RemoteDataWrangler, metaclass=ABCMeta):
+class RemoteCollection[T: RemoteObject](RemoteObjectWranglerMixin, ItemCollection[T], metaclass=ABCMeta):
     """Generic class for storing a collection of remote tracks."""
 
     def __init__(self, response: MutableMapping[str, Any]):
+        RemoteObjectWranglerMixin.__init__(self, response=response)
         ItemCollection.__init__(self, remote_wrangler=self)
-        RemoteObject.__init__(self, response=response)
 
     @classmethod
     @abstractmethod

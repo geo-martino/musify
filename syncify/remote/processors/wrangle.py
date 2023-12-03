@@ -1,9 +1,9 @@
 from abc import ABCMeta, abstractmethod
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
 from typing import Any
 
 from syncify.remote.api import APIMethodInputType
-from syncify.remote.base import Remote
+from syncify.remote.base import Remote, RemoteObject
 from syncify.remote.enums import RemoteIDType, RemoteItemType
 from syncify.remote.exception import RemoteItemTypeError
 
@@ -145,3 +145,9 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
             Or when it does not recognise the type of the input ``values`` parameter.
         """
         raise NotImplementedError
+
+
+class RemoteObjectWranglerMixin[T: RemoteObject](RemoteObject, RemoteDataWrangler, metaclass=ABCMeta):
+
+    def __init__(self, response: MutableMapping[str, Any]):
+        RemoteObject.__init__(self, response=response)

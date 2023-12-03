@@ -6,14 +6,13 @@ from syncify.remote.enums import RemoteItemType
 from syncify.remote.library.library import RemoteLibrary
 from syncify.remote.types import RemoteObjectClasses
 from syncify.spotify.api.api import SpotifyAPI
-from syncify.spotify.base import SpotifyRemote
 from syncify.spotify.library.collection import SpotifyAlbum
 from syncify.spotify.library.item import SpotifyTrack
 from syncify.spotify.library.playlist import SpotifyPlaylist
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 
 
-class SpotifyLibrary(SpotifyRemote, RemoteLibrary[SpotifyTrack], SpotifyDataWrangler):
+class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyDataWrangler):
     """
     Represents a Spotify library, providing various methods for manipulating
     tracks and playlists across an entire Spotify library collection.
@@ -41,7 +40,6 @@ class SpotifyLibrary(SpotifyRemote, RemoteLibrary[SpotifyTrack], SpotifyDataWran
         RemoteLibrary.__init__(self, api=api, include=include, exclude=exclude, use_cache=use_cache, load=load)
 
     def _get_tracks_data(self, playlists_data: Collection[Mapping[str, Any]]) -> list[dict[str, Any]]:
-        """Get a list of unique tracks with enhanced data (i.e. features, genres etc.) across all playlists"""
         self.logger.debug("Load Spotify tracks data: START")
         playlists_tracks_data = [pl["tracks"]["items"] for pl in playlists_data]
 
@@ -63,7 +61,6 @@ class SpotifyLibrary(SpotifyRemote, RemoteLibrary[SpotifyTrack], SpotifyDataWran
         return tracks_data
 
     def enrich_tracks(self, albums: bool = False, artists: bool = False) -> None:
-        """Call API to enrich elements of track objects improving metadata coverage"""
         if not albums and not artists:
             return
         self.logger.debug("Enrich Spotify library: START")
@@ -94,7 +91,6 @@ class SpotifyLibrary(SpotifyRemote, RemoteLibrary[SpotifyTrack], SpotifyDataWran
         self.logger.debug("Enrich Spotify library: DONE\n")
 
     def _get_playlists_data(self) -> list[dict[str, Any]]:
-        """Get playlists and all their tracks"""
         self.logger.debug("Get Spotify playlists data: START")
         playlists_data = self.api.get_collections_user(
             kind=RemoteItemType.PLAYLIST, limit=self.limit, use_cache=self.use_cache
@@ -129,5 +125,4 @@ class SpotifyLibrary(SpotifyRemote, RemoteLibrary[SpotifyTrack], SpotifyDataWran
         return playlists_data
 
     def merge_playlists(self, playlists: Library | Collection[Playlist] | Mapping[Any, Playlist] | None = None):
-        """Merge playlists from given list/map/library to this library"""
         raise NotImplementedError

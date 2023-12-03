@@ -1,6 +1,5 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Hashable
-from datetime import datetime
 from typing import Self, Any
 
 from syncify.abstract.misc import PrettyPrinter
@@ -8,7 +7,7 @@ from syncify.enums.tags import TagName
 from syncify.utils import UnitIterable
 
 
-class BaseObject:
+class BaseObject(ABC, Hashable):
     """
     Generic base class for all local/remote item/collections.
     
@@ -30,8 +29,18 @@ class BaseObject:
     def __init__(self):
         self._clean_tags: dict[str, Any] = {}
 
+    def __hash__(self):
+        """Uniqueness of an item is its URI + name"""
+        return hash(self.name)
 
-class Item(BaseObject, PrettyPrinter, Hashable, metaclass=ABCMeta):
+
+class ObjectPrinterMixin(BaseObject, PrettyPrinter, metaclass=ABCMeta):
+
+    def __init__(self):
+        BaseObject.__init__(self)
+
+
+class Item(ObjectPrinterMixin, metaclass=ABCMeta):
     """
     Generic class for storing an item.
     
@@ -63,7 +72,7 @@ class Item(BaseObject, PrettyPrinter, Hashable, metaclass=ABCMeta):
         raise NotImplementedError
 
     def __init__(self):
-        BaseObject.__init__(self)
+        ObjectPrinterMixin.__init__(self)
 
     def merge(self, item: Self, tags: UnitIterable[TagName] = TagName.ALL) -> None:
         """Set the tags of this item equal to the given ``item``. Give a list of ``tags`` to limit which are set"""

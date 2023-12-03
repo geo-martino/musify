@@ -6,8 +6,7 @@ from copy import deepcopy
 from datetime import datetime
 from typing import Any, Self, SupportsIndex
 
-from syncify.abstract.item import Item, BaseObject, Track
-from syncify.abstract.misc import PrettyPrinter
+from syncify.abstract.item import Item, Track, ObjectPrinterMixin
 from syncify.enums.tags import TagName, Name
 from syncify.processors.sort import ShuffleMode, ShuffleBy, ItemSorter
 from syncify.remote.enums import RemoteIDType
@@ -18,7 +17,7 @@ from syncify.utils.logger import Logger
 
 
 # noinspection PyShadowingNames
-class ItemCollection[T: Item](PrettyPrinter, BaseObject, list[T], metaclass=ABCMeta):
+class ItemCollection[T: Item](ObjectPrinterMixin, list[T], metaclass=ABCMeta):
     """
     Generic class for storing a collection of items.
 
@@ -39,7 +38,7 @@ class ItemCollection[T: Item](PrettyPrinter, BaseObject, list[T], metaclass=ABCM
         return len(self)
 
     def __init__(self, remote_wrangler: RemoteDataWrangler = None):
-        BaseObject.__init__(self)
+        ObjectPrinterMixin.__init__(self)
         self.remote_wrangler = remote_wrangler
 
     def index(self, __item: T, __start: SupportsIndex = None, __stop: SupportsIndex = None) -> int:

@@ -610,4 +610,4 @@ if __name__ == "__main__":
 #             super(MyParentClass, self).__init__()
 # TODO: ensure all classes still print as expected
 #  add tests for to_dict(), str() and repr() methods on all inheritors on PrettyPrinter
-# TODO: SpotifyCollections don't appear to inherit from Remote parent classes correctly?
+# TODO: solve multiple inheritance issues on Spotify classes

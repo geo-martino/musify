@@ -4,13 +4,12 @@ from typing import Any, Self
 from syncify.remote.api import APIMethodInputType
 from syncify.remote.enums import RemoteIDType, RemoteItemType
 from syncify.remote.library.item import RemoteTrack, RemoteArtist
-from syncify.spotify.base import SpotifyObject
-from syncify.spotify.processors.wrangle import SpotifyDataWrangler
+from syncify.spotify.processors.wrangle import SpotifyObjectWranglerMixin
 from syncify.utils import UnitCollection
 from syncify.utils.helpers import to_collection
 
 
-class SpotifyTrack(SpotifyObject, RemoteTrack, SpotifyDataWrangler):
+class SpotifyTrack(SpotifyObjectWranglerMixin, RemoteTrack):
     """
     Extracts key ``track`` data from a Spotify API JSON response.
 
@@ -137,6 +136,7 @@ class SpotifyTrack(SpotifyObject, RemoteTrack, SpotifyDataWrangler):
         return self.response.get("popularity")
 
     def __init__(self, response: MutableMapping[str, Any]):
+        SpotifyObjectWranglerMixin.__init__(self, response=response)
         RemoteTrack.__init__(self, response=response)
 
         self._disc_total = None
@@ -157,10 +157,6 @@ class SpotifyTrack(SpotifyObject, RemoteTrack, SpotifyDataWrangler):
         obj.reload(use_cache=use_cache)
         return obj
 
-    def refresh(self, use_cache: bool = True) -> None:
-        """Quickly refresh this item, calling the stored ``url`` and extracting metadata from the response"""
-        self.__init__(self.api.get(url=self.url, use_cache=use_cache, log_pad=self._url_pad))
-
     def reload(self, use_cache: bool = True):
         self._check_for_api()
 
@@ -173,7 +169,7 @@ class SpotifyTrack(SpotifyObject, RemoteTrack, SpotifyDataWrangler):
         self.__init__(response)
 
 
-class SpotifyArtist(SpotifyObject, RemoteArtist, SpotifyDataWrangler):
+class SpotifyArtist(SpotifyObjectWranglerMixin, RemoteArtist):
     """
     Extracts key ``artist`` data from a Spotify API JSON response.
 
@@ -185,38 +181,33 @@ class SpotifyArtist(SpotifyObject, RemoteArtist, SpotifyDataWrangler):
         return self.artist
 
     @property
-    def artist(self) -> str:
-        """The artist's name"""
+    def artist(self):
         return self.response["name"]
 
     @property
-    def genres(self) -> list[str] | None:
-        """List of genres associated with this artist"""
+    def genres(self):
         return self.response.get("genres")
 
     @property
-    def image_links(self) -> dict[str, str]:
-        """The images associated with this artist in the form ``{image name: image link}``"""
+    def image_links(self):
         images = {image["height"]: image["url"] for image in self.response.get("images", [])}
         return {"cover_front": url for height, url in images.items() if height == max(images)}
 
     @property
-    def has_image(self) -> bool:
-        """Does the album this track is associated with have an image"""
+    def has_image(self):
         images = self.response.get("album", {}).get("images", [])
         return images is not None and len(images) > 0
 
     @property
-    def length(self) -> int | None:
-        """The total number of followers for this artist"""
+    def length(self):
         return self.response.get("followers", {}).get("total")
 
     @property
-    def rating(self) -> int | None:
-        """The popularity of this artist on Spotify"""
+    def rating(self):
         return self.response.get("popularity")
 
     def __init__(self, response: MutableMapping[str, Any]):
+        SpotifyObjectWranglerMixin.__init__(self, response=response)
         RemoteArtist.__init__(self, response=response)
 
     @classmethod

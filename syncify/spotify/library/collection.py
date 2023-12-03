@@ -8,12 +8,15 @@ from syncify.remote.enums import RemoteIDType, RemoteItemType
 from syncify.remote.library.collection import RemoteAlbum
 from syncify.spotify.base import SpotifyObject
 from syncify.spotify.library.item import SpotifyTrack, SpotifyArtist
-from syncify.spotify.processors.wrangle import SpotifyDataWrangler
+from syncify.spotify.processors.wrangle import SpotifyObjectWranglerMixin
 
 
 # noinspection PyShadowingNames
-class SpotifyCollection[T: SpotifyObject](SpotifyObject, SpotifyDataWrangler, metaclass=ABCMeta):
+class SpotifyCollection[T: SpotifyObject](SpotifyObjectWranglerMixin, metaclass=ABCMeta):
     """Generic class for storing a collection of Spotify tracks."""
+
+    def __init__(self, response: MutableMapping[str, Any]):
+        SpotifyObjectWranglerMixin.__init__(self, response=response)
 
     @classmethod
     def _load_response(cls, value: APIMethodInputType, use_cache: bool = True) -> dict[str, Any]:
@@ -34,7 +37,9 @@ class SpotifyCollection[T: SpotifyObject](SpotifyObject, SpotifyDataWrangler, me
             return cls.api.get_collections(value, kind=item_type, use_cache=use_cache)[0]
 
 
-class SpotifyAlbum(SpotifyCollection, RemoteAlbum[SpotifyTrack]):
+# TODO: cannot view superclasses, something is messed up with the inheritance here
+#  also method/properties do not inherit docstrings from parent classes
+class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollection):
     """
     Extracts key ``album`` data from a Spotify API JSON response.
 
