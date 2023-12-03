@@ -34,7 +34,7 @@ class File(metaclass=ABCMeta):
     @property
     def ext(self) -> str:
         """The file extension in lowercase."""
-        return splitext(self.path)[1].lower()
+        return splitext(self.path)[1].casefold()
 
     @property
     def size(self) -> int | None:
@@ -59,7 +59,7 @@ class File(metaclass=ABCMeta):
 
     def _validate_type(self, path: str) -> None:
         """Raises exception if the path's extension is not accepted"""
-        ext = splitext(path)[1].lower()
+        ext = splitext(path)[1].casefold()
         if ext not in self.valid_extensions:
             raise InvalidFileType(
                 ext,

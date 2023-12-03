@@ -101,12 +101,12 @@ class SpotifyLibrary(SpotifyRemote, RemoteLibrary[SpotifyTrack], SpotifyDataWran
         )
         playlists_total = len(playlists_data)
         if self.include:  # filter on include playlist names
-            include = {name.lower() for name in self.include}
-            playlists_data = [pl for pl in playlists_data if pl["name"].lower() in include]
+            include = {name.casefold() for name in self.include}
+            playlists_data = [pl for pl in playlists_data if pl["name"].casefold() in include]
 
         if self.exclude:  # filter out exclude playlist names
-            exclude = {name.lower() for name in self.exclude}
-            playlists_data = [pl for pl in playlists_data if pl["name"].lower() not in exclude]
+            exclude = {name.casefold() for name in self.exclude}
+            playlists_data = [pl for pl in playlists_data if pl["name"].casefold() not in exclude]
 
         self.logger.debug(
             f"Filtered out {playlists_total - len(playlists_data)} playlists "

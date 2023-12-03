@@ -89,7 +89,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             for filetype in __PLAYLIST_FILETYPES__:
                 paths = glob(join(self._playlist_folder, "**", f"*{filetype}"), recursive=True)
                 entry = {
-                    splitext(basename(path.replace(self._playlist_folder, "").lower()))[0]: path
+                    splitext(basename(path.replace(self._playlist_folder, "").casefold()))[0]: path
                     for path in paths
                 }
                 playlists |= entry
@@ -176,8 +176,8 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         self.logger.info(f"\33[1;95m ->\33[1;97m Loading {log_name} library \33[0m")
         self.print_line()
 
-        self.include = [name.strip().lower() for name in include]
-        self.exclude = [name.strip().lower() for name in exclude]
+        self.include = [name.strip().casefold() for name in include]
+        self.exclude = [name.strip().casefold() for name in exclude]
 
         self._library_folder: str | None = None
         # name of track object to set of paths valid for that track object
@@ -275,7 +275,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         playlists: list[LocalPlaylist] = []
         errors: list[str] = []
         for name in self.get_progress_bar(iterable=names, desc="Loading playlists", unit="playlists"):
-            path = self._playlist_paths.get(name.strip().lower())
+            path = self._playlist_paths.get(name.strip().casefold())
             if path is None:
                 raise LocalCollectionError(
                     f"Playlist name not found in the stored paths of this manager: {name}", kind="playlist"
@@ -346,11 +346,11 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         :return: The number of tracks restored
         """
         tag_names = set(TagName.to_tags(tags))
-        backup = {path.lower(): track_map for path, track_map in backup.items()}
+        backup = {path.casefold(): track_map for path, track_map in backup.items()}
 
         count = 0
         for track in self.tracks:
-            track_map = backup.get(track.path.lower())
+            track_map = backup.get(track.path.casefold())
             if not track_map:
                 continue
 

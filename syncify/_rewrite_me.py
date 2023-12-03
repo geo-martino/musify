@@ -29,14 +29,14 @@ class Playlists:
 
         if in_playlists is not None:
             for name, tracks in backup.copy().items():
-                if name.lower() not in [p.lower() for p in in_playlists]:
+                if name.casefold() not in [p.casefold() for p in in_playlists]:
                     del backup[name]
         else:
             in_playlists = list(backup.keys())
 
         if ex_playlists is not None:
             for name in backup.copy().keys():
-                if name.lower() in [p.lower() for p in ex_playlists]:
+                if name.casefold() in [p.casefold() for p in ex_playlists]:
                     del backup[name]
 
         if not dry_run:
@@ -58,7 +58,7 @@ class Playlists:
             if path in missing:
                 found = False
                 for actual_path in self._all_files:
-                    if path.lower() == actual_path.lower():
+                    if path.casefold() == actual_path.casefold():
                         paths[i] = actual_path
                         found = True
                         changed_count += 1
@@ -138,7 +138,7 @@ class Playlists:
         
         if stems and path not in stems:
             for stem in stems:
-                if path.lower() == stem.lower():
+                if path.casefold() == stem.casefold():
                     return stem
             raise FileNotFoundError(f"Stem not found: {path}")
         

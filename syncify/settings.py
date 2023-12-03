@@ -101,7 +101,7 @@ class Settings(metaclass=ABCMeta):
         :return: The config file.
         :raise InvalidFileType: When the given config file is not of the correct type.
         """
-        if splitext(config_path)[1].lower() not in [".yml", ".yaml"]:
+        if splitext(config_path)[1].casefold() not in [".yml", ".yaml"]:
             raise InvalidFileType(f"Unrecognised file type: {config_path}")
         elif not exists(config_path):
             raise FileNotFoundError(f"Config file not found: {config_path}")

@@ -154,7 +154,7 @@ class Syncify(Settings, Report):
 
     def _save_json(self, filename: str, data: Mapping[str, Any], folder: str | None = None) -> None:
         """Save a JSON file to a given folder, or this run's folder if not given"""
-        if not filename.lower().endswith(".json"):
+        if not filename.casefold().endswith(".json"):
             filename += ".json"
         folder = folder if folder else self.output_folder
         path = join(folder, filename)
@@ -164,7 +164,7 @@ class Syncify(Settings, Report):
 
     def _load_json(self, filename: str, folder: str | None = None) -> dict[str, Any]:
         """Load a stored JSON file from a given folder, or this run's folder if not given"""
-        if not filename.lower().endswith(".json"):
+        if not filename.casefold().endswith(".json"):
             filename += ".json"
         folder = folder if folder else self.output_folder
         path = join(folder, filename)
@@ -177,14 +177,14 @@ class Syncify(Settings, Report):
     def _get_limited_folders(self) -> list[LocalFolder]:
         """Returns a limited set of local folders based on config conditions"""
         # get filter conditions
-        include_prefix = self.cfg_run.get("filter", {}).get("include", {}).get("prefix", "").strip().lower()
-        exclude_prefix = self.cfg_run.get("filter", {}).get("exclude", {}).get("prefix", "").strip().lower()
-        start = self.cfg_run.get("filter", {}).get("start", "").strip().lower()
-        stop = self.cfg_run.get("filter", {}).get("stop", "").strip().lower()
+        include_prefix = self.cfg_run.get("filter", {}).get("include", {}).get("prefix", "").strip().casefold()
+        exclude_prefix = self.cfg_run.get("filter", {}).get("exclude", {}).get("prefix", "").strip().casefold()
+        start = self.cfg_run.get("filter", {}).get("start", "").strip().casefold()
+        stop = self.cfg_run.get("filter", {}).get("stop", "").strip().casefold()
 
         folders = []
         for folder in self.local_library.folders:  # apply filter
-            name = folder.name.strip().lower()
+            name = folder.name.strip().casefold()
             conditionals = {
                 not include_prefix or name.startswith(include_prefix),
                 not exclude_prefix or not name.startswith(exclude_prefix),
@@ -310,9 +310,9 @@ class Syncify(Settings, Report):
             print(f"\33[91mBackup '{restore_from}' not recognised, try again\33[0m")
         restore_from = join(output_parent, restore_from)
 
-        if get_user_input("Restore local library tracks? (enter 'y')").lower() == 'y':
+        if get_user_input("Restore local library tracks? (enter 'y')").casefold() == 'y':
             self._restore_local(restore_from)
-        if get_user_input(f"Restore {self.remote_source} library playlists? (enter 'y')").lower() == 'y':
+        if get_user_input(f"Restore {self.remote_source} library playlists? (enter 'y')").casefold() == 'y':
             self._restore_spotify(restore_from)
 
     def _restore_local(self, folder: str) -> None:
@@ -324,7 +324,7 @@ class Syncify(Settings, Report):
         message = "Select tags to restore separated by a space (entering nothing restores all available tags)"
 
         while True:  # get valid user input
-            restore_tags = [t.lower().strip() for t in get_user_input(message).split()]
+            restore_tags = [t.casefold().strip() for t in get_user_input(message).split()]
             if not restore_tags:  # user entered nothing, restore all tags
                 restore_tags = TagName.ALL.to_tag()
                 break

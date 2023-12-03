@@ -101,14 +101,14 @@ class MusicBee(LocalLibrary, File):
         return normpath(urllib.parse.unquote(path.replace("file://localhost/", "")))
 
     def load_tracks(self) -> list[LocalTrack]:
-        tracks_paths = {track.path.lower(): track for track in self._load_tracks()}
+        tracks_paths = {track.path.casefold(): track for track in self._load_tracks()}
         self.logger.debug("Enrich local tracks: START")
 
         for track_xml in self.xml["Tracks"].values():
             if not track_xml["Location"].startswith("file://localhost/"):
                 continue
 
-            track = tracks_paths.get(self._clean_xml_filepath(track_xml["Location"]).lower())
+            track = tracks_paths.get(self._clean_xml_filepath(track_xml["Location"]).casefold())
             if track is None:
                 continue
 

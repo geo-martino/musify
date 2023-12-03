@@ -393,7 +393,7 @@ class Library[T: Track](ItemCollection[T], Logger, metaclass=ABCMeta):
                 for tag, filter_vals in filter_tags.items():
                     item_val = item[tag]
                     if isinstance(item_val, str):
-                        if any(v.strip().lower() in item_val.strip().lower() for v in filter_vals):
+                        if any(v.strip().casefold() in item_val.strip().casefold() for v in filter_vals):
                             filtered[name].remove(item)
                             break
 

@@ -130,7 +130,7 @@ class M3U(LocalPlaylist):
         :param dry_run: Run function, but do not modify file at all.
         :return: The results of the sync as a :py:class:`SyncResultM3U` object.
         """
-        start_paths = set(self._prepare_paths_for_output({track.path.lower() for track in self._tracks_original}))
+        start_paths = set(self._prepare_paths_for_output({track.path.casefold() for track in self._tracks_original}))
 
         if not dry_run:
             with open(self.path, "w", encoding="utf-8") as f:
@@ -139,9 +139,9 @@ class M3U(LocalPlaylist):
                 f.writelines(path.strip() + '\n' for path in paths)
 
             with open(self.path, "r", encoding="utf-8") as f:  # get list of paths that were saved for logging
-                final_paths = {line.rstrip().lower() for line in f if line.rstrip()}
+                final_paths = {line.rstrip().casefold() for line in f if line.rstrip()}
         else:  # use current list of tracks as a proxy of paths that were saved for logging
-            final_paths = {track.path.lower() for track in self._tracks}
+            final_paths = {track.path.casefold() for track in self._tracks}
 
         self._tracks_original = self.tracks.copy()
         return SyncResultM3U(

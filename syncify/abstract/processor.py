@@ -109,8 +109,13 @@ class MusicBeeProcessor(ItemProcessor):
     @abstractmethod
     def from_xml(cls, xml: Mapping[str, Any], **kwargs) -> Self:
         """
-        Initialise object from XML playlist.
+        Initialise object from XML playlist data.
 
         :param xml: The loaded XML object for this playlist.
         """
+        raise NotImplementedError
+
+    @abstractmethod
+    def to_xml(self, **kwargs) -> Mapping[str, Any]:
+        """Export this object's settings to a map ready for export to an XML playlist file."""
         raise NotImplementedError

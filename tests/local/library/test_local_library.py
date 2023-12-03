@@ -22,9 +22,9 @@ def test_init():
     library_blank.playlist_folder = path_playlist_resources
     assert library_blank.playlist_folder == path_playlist_resources
     assert library_blank._playlist_paths == {
-        splitext(basename(path_playlist_m3u).lower())[0]: path_playlist_m3u,
-        splitext(basename(path_playlist_xautopf_bp).lower())[0]: path_playlist_xautopf_bp,
-        splitext(basename(path_playlist_xautopf_ra).lower())[0]: path_playlist_xautopf_ra,
+        splitext(basename(path_playlist_m3u).casefold())[0]: path_playlist_m3u,
+        splitext(basename(path_playlist_xautopf_bp).casefold())[0]: path_playlist_xautopf_bp,
+        splitext(basename(path_playlist_xautopf_ra).casefold())[0]: path_playlist_xautopf_ra,
     }
 
     library_include = LocalLibrary(
@@ -38,8 +38,8 @@ def test_init():
     assert library_include._track_paths == {path_track_flac, path_track_mp3, path_track_m4a, path_track_wma}
     assert library_include.playlist_folder == path_playlist_resources
     assert library_include._playlist_paths == {
-        splitext(basename(path_playlist_m3u).lower())[0]: path_playlist_m3u,
-        splitext(basename(path_playlist_xautopf_bp).lower())[0]: path_playlist_xautopf_bp,
+        splitext(basename(path_playlist_m3u).casefold())[0]: path_playlist_m3u,
+        splitext(basename(path_playlist_xautopf_bp).casefold())[0]: path_playlist_xautopf_bp,
     }
 
     library_exclude = LocalLibrary(
@@ -51,8 +51,8 @@ def test_init():
     )
     assert library_exclude.playlist_folder == path_playlist_resources
     assert library_exclude._playlist_paths == {
-        splitext(basename(path_playlist_m3u).lower())[0]: path_playlist_m3u,
-        splitext(basename(path_playlist_xautopf_ra).lower())[0]: path_playlist_xautopf_ra,
+        splitext(basename(path_playlist_m3u).casefold())[0]: path_playlist_m3u,
+        splitext(basename(path_playlist_xautopf_ra).casefold())[0]: path_playlist_xautopf_ra,
     }
 
 

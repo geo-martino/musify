@@ -1,8 +1,10 @@
 from collections.abc import Collection, Mapping, Sequence, Iterable
 from dataclasses import dataclass, field
 from os.path import exists
-from typing import Any, Self
+from typing import Any, Self, Callable
 
+from enums.tags import PropertyName
+from processors.sort import ItemSorter
 from syncify.abstract.misc import Result
 from syncify.abstract.processor import MusicBeeProcessor
 from syncify.local.track.base.track import LocalTrack
@@ -239,6 +241,55 @@ class LocalMatcher(MusicBeeProcessor):
             compared_reduced = {track for track in compared if track not in include}
             return [track for results in [compared_reduced, include] for track in results if track not in exclude]
         return MatchResult(include=include, exclude=exclude, compare=compared)
+
+    def to_xml(
+            self,
+            tracks: list[LocalTrack],
+            tracks_original: list[LocalTrack],
+            path_mapper: Callable[[Collection[str]], Collection[str]] = lambda x: x,
+            **kwargs
+    ) -> Mapping[str, Any]:
+        """
+        Export this object's settings to a map ready for export to an XML playlist file.
+
+        :param tracks: The tracks to export.
+        :param tracks_original: The original tracks this playlist held when loading from the file.
+        :param path_mapper: A mapper to apply for paths before formatting to a string value for the XML-like output.
+        :return: A map representing the values to be exported to the XML playlist file.
+        """
+        output_path_map: Mapping[str, LocalTrack] = {track.path.casefold(): track for track in tracks}
+
+        if self.comparers:
+            # match again on current conditions to check for differences from original list
+            # this ensures that the paths included in the XML output
+            # do not include paths that match any of the conditions in the comparers
+
+            # copy the list of tracks as the sorter will modify the list order
+            tracks_original = tracks_original.copy()
+            # get the last played track as reference in case comparer is looking for the playing tracks as reference
+            ItemSorter.sort_by_field(tracks_original, field=PropertyName.LAST_PLAYED, reverse=True)
+            matches: MatchResult = self.match(tracks_original, reference=tracks_original[0], combine=False)
+            compared_path_map: Mapping[str, LocalTrack] = {track.path.casefold(): track for track in matches.compare}
+
+            # get new include/exclude paths based on the leftovers after matching on comparers
+            self.include_paths = list(output_path_map - compared_path_map.keys())
+            self.exclude_paths = list(compared_path_map.keys() - output_path_map)
+        else:
+            compared_path_map = output_path_map
+
+        # get the track objects related to these paths and their actual paths as stored in their objects
+        include_tracks: tuple[LocalTrack | None] = tuple(output_path_map.get(p) for p in self.include_paths)
+        exclude_tracks: tuple[LocalTrack | None] = tuple(compared_path_map.get(p) for p in self.exclude_paths)
+        include_paths: tuple[str] = tuple(track.path for track in include_tracks if track is not None)
+        exclude_paths: tuple[str] = tuple(track.path for track in exclude_tracks if track is not None)
+
+        xml = {}
+        if len(include_paths) > 0:  # assign include paths to XML object
+            xml["ExceptionsInclude"] = "|".join(path_mapper(include_paths))
+        if len(exclude_paths) > 0:  # assign exclude paths to XML object
+            xml["Exceptions"] = "|".join(path_mapper(exclude_paths))
+
+        return xml
 
     def as_dict(self):
         return {

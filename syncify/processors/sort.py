@@ -225,6 +225,9 @@ class ItemSorter(MusicBeeProcessor):
 
         return tracks_grouped
 
+    def to_xml(self, **kwargs) -> Mapping[str, Any]:
+        raise NotImplementedError
+
     def as_dict(self):
         fields = None
         if isinstance(self.sort_fields, Mapping):

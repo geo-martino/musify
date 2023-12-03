@@ -144,22 +144,6 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
             self._expected.clear()
             self._converted = True
 
-    @staticmethod
-    def _get_seconds(time_str: str) -> float:
-        """Convert string representation of time to seconds e.g. 4:30 -> 270s"""
-        factors = (24, 60, 60, 1)
-        digits_split = time_str.split(":")
-        digits = tuple(int(n.split(",")[0]) for n in digits_split)
-
-        seconds = 0
-        if "," in digits_split[-1]:  # add milliseconds if present
-            seconds += int(digits_split[-1].split(",")[1]) / 1000
-
-        for i, digit in enumerate(reversed(digits), 1):  # convert to seconds
-            seconds += digit * reduce(mul, factors[-i:], 1)
-
-        return seconds
-
     def _convert_expected_to_int(self) -> None:
         """Convert expected values to integers"""
         converted: list[int] = []
@@ -207,6 +191,22 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
                 converted.append(datetime.now() - TimeMapper(mapper_key)(digit))
 
         self._expected = converted
+
+    @staticmethod
+    def _get_seconds(time_str: str) -> float:
+        """Convert string representation of time to seconds e.g. 4:30 -> 270s"""
+        factors = (24, 60, 60, 1)
+        digits_split = time_str.split(":")
+        digits = tuple(int(n.split(",")[0]) for n in digits_split)
+
+        seconds = 0
+        if "," in digits_split[-1]:  # add milliseconds if present
+            seconds += int(digits_split[-1].split(",")[1]) / 1000
+
+        for i, digit in enumerate(reversed(digits), 1):  # convert to seconds
+            seconds += digit * reduce(mul, factors[-i:], 1)
+
+        return seconds
 
     @dynamicprocessormethod
     def _is(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
@@ -278,6 +278,9 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
         if value is not None and expected[0] is not None:
             return False
         return bool(re.search(expected[0], value, flags=re.IGNORECASE))
+
+    def to_xml(self, **kwargs) -> Mapping[str, Any]:
+        raise NotImplementedError
 
     def as_dict(self):
         return {"field": self.field.name, "condition": self.condition, "expected": self.expected}

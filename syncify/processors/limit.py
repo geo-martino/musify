@@ -129,6 +129,23 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
                 if count > self.limit_max:  # limit reached
                     break
 
+    def _convert(self, item: Item) -> float:
+        """
+        Convert units for item length or size and return the value.
+
+        :raise LimitError: When the given limit type cannot be found
+        """
+        if 10 < self.kind.value < 20:
+            factors = (1, 60, 60, 24, 7)[:self.kind.value % 10]
+            return item.length / reduce(mul, factors, 1)
+        elif 20 <= self.kind.value < 30:
+            if not isinstance(item, File):
+                raise ItemLimiterError("The given item cannot be limited on bytes as it is not a file.")
+            bytes_scale = 1000
+            return item.size / (bytes_scale ** (self.kind.value % 10))
+        else:
+            raise ItemLimiterError(f"Unrecognised LimitType: {self.kind}")
+
     @dynamicprocessormethod
     def _random(self, items: list[Item]) -> None:
         shuffle(items)
@@ -165,22 +182,8 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
     def _least_recently_added(self, items: list[Item]) -> None:
         ItemSorter.sort_by_field(items, PropertyName.DATE_ADDED)
 
-    def _convert(self, item: Item) -> float:
-        """
-        Convert units for item length or size and return the value.
-
-        :raise LimitError: When the given limit type cannot be found
-        """
-        if 10 < self.kind.value < 20:
-            factors = (1, 60, 60, 24, 7)[:self.kind.value % 10]
-            return item.length / reduce(mul, factors, 1)
-        elif 20 <= self.kind.value < 30:
-            if not isinstance(item, File):
-                raise ItemLimiterError("The given item cannot be limited on bytes as it is not a file.")
-            bytes_scale = 1000
-            return item.size / (bytes_scale ** (self.kind.value % 10))
-        else:
-            raise ItemLimiterError(f"Unrecognised LimitType: {self.kind}")
+    def to_xml(self, **kwargs) -> Mapping[str, Any]:
+        raise NotImplementedError
 
     def as_dict(self):
         return {

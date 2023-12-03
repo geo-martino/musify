@@ -189,36 +189,16 @@ class XAutoPF(LocalPlaylist):
     # noinspection PyTypeChecker
     def _update_xml_paths(self) -> None:
         """Update the stored, parsed XML object with valid include and exclude paths"""
-        tracks = self._tracks_original
-
-        path_track_map: Mapping[str: LocalTrack] = {track.path.lower(): track for track in self.tracks}
-
-        # match again on current conditions to check differences
-        self.sorter.sort_by_field(tracks, field=PropertyName.LAST_PLAYED, reverse=True)
-        matches: list[LocalTrack] = self.matcher.match(tracks, reference=tracks[0], combine=False).compare
-        compared: Mapping[str: LocalTrack] = {track.path.lower(): track for track in matches}
-
-        # get new include/exclude paths based on the leftovers after matching on comparers
-        self.matcher.include_paths = list(path_track_map - compared.keys())
-        self.matcher.exclude_paths = list(compared.keys() - path_track_map)
-
-        # get the track objects related to these paths and their actual paths as stored in their objects
-        include_tracks: tuple[LocalTrack | None] = tuple(path_track_map.get(p) for p in self.matcher.include_paths)
-        exclude_tracks: tuple[LocalTrack | None] = tuple(compared.get(p) for p in self.matcher.exclude_paths)
-        include_paths: tuple[str] = tuple(track.path for track in include_tracks if track is not None)
-        exclude_paths: tuple[str] = tuple(track.path for track in exclude_tracks if track is not None)
-
         source = self.xml["SmartPlaylist"]["Source"]
+        output = self.matcher.to_xml(
+            tracks=self.tracks, tracks_original=self._tracks_original, path_mapper=self._prepare_paths_for_output
+        )
 
-        if len(include_paths) > 0:  # assign include paths to XML object
-            source["ExceptionsInclude"] = "|".join(self._prepare_paths_for_output(include_paths))
-        else:
-            source.pop("ExceptionsInclude", None)
-
-        if len(exclude_paths) > 0:  # assign exclude paths to XML object
-            source["Exceptions"] = "|".join(self._prepare_paths_for_output(exclude_paths))
-        else:
-            source.pop("Exceptions", None)
+        # assign values to stored, parsed XML map
+        for k, v in output.items():
+            source.pop(k, None)
+            if output.get(k):
+                source[k] = v
 
     def _update_comparers(self) -> None:
         """Update the stored, parsed XML object with appropriately formatted comparer settings"""

@@ -8,7 +8,6 @@ from syncify.abstract.collection import Album, ItemCollection
 from syncify.abstract.item import Track, BaseObject
 from syncify.abstract.processor import ItemProcessor
 from syncify.enums.tags import TagName, PropertyName
-from syncify.utils import UnitIterable
 from syncify.utils.helpers import limit_value
 from syncify.utils.logger import Logger
 
@@ -157,17 +156,18 @@ class ItemMatcher(ItemProcessor, Logger):
     ###########################################################################
     def match_not_karaoke[T: (Track, Album)](self, source: T, result: T) -> int:
         """Checks if a result is not a karaoke item that is either 0 when item is karaoke or 1 when not karaoke."""
-        def is_karaoke(values: UnitIterable[str]) -> bool:
+        def is_karaoke(*values: str) -> bool:
             """Check if the words in the given ``values`` match any word in ``karaoke_tags``"""
-            karaoke = any(word in values for word in self.karaoke_tags)
+            values = {v for value in values for v in value.casefold().split()}
+            karaoke = any(word.casefold() in values for word in self.karaoke_tags)
             self._log_test(source=source, result=result, test=karaoke, extra=[f"{self.karaoke_tags} -> {values}"])
             return karaoke
 
-        if is_karaoke(result.name.lower()):  # title/album name
+        if is_karaoke(result.name):  # title/album name
             return 0
-        if is_karaoke(result.artist.lower()):  # artists
+        if is_karaoke(result.artist):  # artists
             return 0
-        if is_karaoke(result.album.lower()):  # album
+        if is_karaoke(result.album):  # album
             return 0
         return 1
 
@@ -183,7 +183,8 @@ class ItemMatcher(ItemProcessor, Logger):
             # reduce a score if certain keywords are present in result and not source
             reduce_factor = 0.5
             reduce_on = {"live", "demo", "acoustic"} | self.karaoke_tags  # TODO: factor these strings out
-            if any(word in result.name.lower() and word not in source.name.lower() for word in reduce_on):
+            reduce_on = {word.casefold() for word in reduce_on}
+            if any(word in result.name.casefold() and word not in source.name.casefold() for word in reduce_on):
                 score = max(score - reduce_factor, 0)
 
         self._log_test(source=source, result=result, test=round(score, 2), extra=[f"{source_val} -> {result_val}"])
