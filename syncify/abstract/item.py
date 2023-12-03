@@ -9,8 +9,12 @@ from syncify.utils import UnitIterable
 
 
 class BaseObject:
-    """Generic base class for all local/Spotify item/collections."""
-    _tag_sep: str = "; "
+    """
+    Generic base class for all local/remote item/collections.
+    
+    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
+    """
+    tag_sep: str = "; "
 
     @property
     @abstractmethod
@@ -28,7 +32,11 @@ class BaseObject:
 
 
 class Item(BaseObject, PrettyPrinter, Hashable, metaclass=ABCMeta):
-    """Generic class for storing an item."""
+    """
+    Generic class for storing an item.
+    
+    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
+    """
 
     @property
     @abstractmethod
@@ -39,7 +47,7 @@ class Item(BaseObject, PrettyPrinter, Hashable, metaclass=ABCMeta):
     @uri.setter
     @abstractmethod
     def uri(self, value: str | None) -> None:
-        """Should set both the ``uri`` property and the ``has_uri`` property ."""
+        """Set both the ``uri`` property and the ``has_uri`` property ."""
         raise NotImplementedError
 
     @property
@@ -53,6 +61,9 @@ class Item(BaseObject, PrettyPrinter, Hashable, metaclass=ABCMeta):
     def length(self) -> float:
         """Total duration of this item in seconds"""
         raise NotImplementedError
+
+    def __init__(self):
+        BaseObject.__init__(self)
 
     def merge(self, item: Self, tags: UnitIterable[TagName] = TagName.ALL) -> None:
         """Set the tags of this item equal to the given ``item``. Give a list of ``tags`` to limit which are set"""
@@ -77,6 +88,7 @@ class Item(BaseObject, PrettyPrinter, Hashable, metaclass=ABCMeta):
         return not self.__eq__(item)
 
     def __getitem__(self, key: str) -> Any:
+        """Get the value of a given attribute key"""
         return getattr(self, key)
 
     def __setitem__(self, key: str, value: Any):
@@ -86,19 +98,16 @@ class Item(BaseObject, PrettyPrinter, Hashable, metaclass=ABCMeta):
 
 
 class Track(Item, metaclass=ABCMeta):
-    """Metadata/tags associated with a track."""
+    """
+    Metadata/tags associated with a track.
+    
+    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
+    """
 
     @property
-    @abstractmethod
     def name(self) -> str:
         """This track's title"""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def length(self) -> float:
-        """Total duration of this track in seconds"""
-        raise NotImplementedError
+        return self.title
 
     @property
     @abstractmethod
@@ -191,35 +200,71 @@ class Track(Item, metaclass=ABCMeta):
         raise NotImplementedError
 
     @property
-    @abstractmethod
     def has_image(self) -> bool:
         """Does the album this track is associated with have an image"""
+        return len(self.image_links) > 0
+
+    @property
+    @abstractmethod
+    def length(self) -> float:
+        """Total duration of this track in seconds"""
         raise NotImplementedError
 
     @property
     @abstractmethod
     def rating(self) -> float | None:
-        """The popularity of this track on Spotify"""
+        """The rating for this track"""
         raise NotImplementedError
 
+    def __init__(self):
+        Item.__init__(self)
 
-class TrackProperties:
-    """Properties associated with a track."""
+
+class Artist(Item, metaclass=ABCMeta):
+    """
+    Metadata/tags associated with an artist.
+    
+    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
+    """
+
+    @property
+    def name(self):
+        return self.artist
 
     @property
     @abstractmethod
-    def date_added(self) -> datetime | None:
-        """The timestamp for when this track was added to the associated collection"""
+    def artist(self) -> str:
+        """The artist's name"""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def last_played(self) -> datetime | None:
-        """The timestamp when this track was last played"""
+    def genres(self) -> list[str] | None:
+        """List of genres associated with this artist"""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def play_count(self) -> int | None:
-        """The total number of times this track has been played"""
+    def image_links(self) -> dict[str, str]:
+        """The images associated with this artist in the form ``{image name: image link}``"""
         raise NotImplementedError
+
+    @property
+    def has_image(self) -> bool:
+        """Does this artist have images associated with them"""
+        return len(self.image_links) > 0
+
+    @property
+    @abstractmethod
+    def length(self) -> int | None:
+        """The total number of followers for this artist"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def rating(self) -> int | None:
+        """The popularity of this artist"""
+        raise NotImplementedError
+
+    def __init__(self):
+        Item.__init__(self)

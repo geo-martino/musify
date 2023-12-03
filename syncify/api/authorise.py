@@ -9,6 +9,7 @@ from webbrowser import open as webopen
 
 import requests
 
+from syncify import __PROGRAM_NAME__
 from syncify.api.exception import APIError
 from syncify.utils.logger import Logger
 
@@ -18,6 +19,7 @@ class APIAuthoriser(Logger):
     Authorises and validates an API token for given input parameters.
     Functions for returning formatted headers for future, authorised requests.
 
+    :param name: The name of the service being accessed.
     :param auth_args: The parameters to be passed to the requests.post() function for initial token authorisation.
         e.g.    {
                     "url": token_url,
@@ -34,11 +36,11 @@ class APIAuthoriser(Logger):
     :param user_args: Parameters to be passed to the requests.post() function
         for requesting user authenticated access to API services.
         The code response from this request is then added to the authentication request args
-        to grant user authorisation to Spotify
-        See auth_args doc string for possible example values.
+        to grant user authorisation to the API.
+        See ``auth_args`` for possible example values.
     :param refresh_args: Parameters to be passed to the requests.post() function
         for refreshing an expired token when a refresh_token is present.
-        See auth_args doc string for possible example values.
+        See ``auth_args`` for possible example values.
     :param test_args: Parameters to be passed to the requests.get() function for testing validity of the token.
         Must be set in conjunction with test_condition to work.
         See auth_args doc string for possible example values.
@@ -46,10 +48,12 @@ class APIAuthoriser(Logger):
         test_args. e.g. lambda r: "error" not in r
     :param test_expiry: The time allowance in seconds left until the token is due to expire to use when testing.
         Useful at ensuring the token will be valid for long enough to run your operations.
-        e.g. if a token has 600 second total expiry time, it is 60 seconds old,
-        and you test_expiry=300, the token will pass tests.
-        However, if the same token is tested again later when it is 500 seconds old with test_expiry=300,
-        it will now fail the tests and will need to be refreshed.
+        e.g. if a token has 600 second total expiry time,
+            it is 60 seconds old and therefore still had 540 seconds of authorised time left,
+            and you set ``test_expiry``=300, the token will pass tests.
+            However, if the same token is tested again later when it is 500 seconds old
+            and has only 100 seconds of authorised time left,
+            it will now fail the tests and will need to be refreshed.
     :param token: Define a custom input token for initialisation.
     :param token_file_path: Path to use for loading and saving a token.
     :param token_key_path: Keys to the token in auth response. Looks for key 'access_token' by default.
@@ -68,7 +72,7 @@ class APIAuthoriser(Logger):
         """
         Format headers to usage appropriate format
 
-        :raises APIError: If no token has been loaded,
+        :raise APIError: If no token has been loaded,
             or a valid value was not found at the ``token_key_path`` within the token
         """
         if self.token is None:
@@ -88,6 +92,7 @@ class APIAuthoriser(Logger):
 
     def __init__(
         self,
+        name: str,
         auth_args: Mapping[str, Any],
         user_args: Mapping[str, Any] | None = None,
         refresh_args: Mapping[str, Any] | None = None,
@@ -96,12 +101,13 @@ class APIAuthoriser(Logger):
         test_expiry: int = 0,
         token: Mapping[str, Any] | None = None,
         token_file_path: str | None = None,
-        token_key_path: Sequence[str] | None = None,
+        token_key_path: Sequence[str] = (),
         header_key: str = "Authorization",
         header_prefix: str | None = "Bearer ",
         header_extra: Mapping[str, str] | None = None,
     ):
         Logger.__init__(self)
+        self.name = name
 
         # maps of requests parameters to be passed to `requests` functions
         self.auth_args: Mapping[str, Any] = auth_args
@@ -116,7 +122,7 @@ class APIAuthoriser(Logger):
         # store token
         self.token: Mapping[str, Any] | None = token
         self.token_file_path: str | None = token_file_path
-        self.token_key_path: Sequence[str] | None = token_key_path if token_key_path is not None else ["access_token"]
+        self.token_key_path: Sequence[str] = token_key_path if token_key_path else ("access_token",)
 
         # information for the final headers
         self.header_key: str = header_key
@@ -131,7 +137,7 @@ class APIAuthoriser(Logger):
             Ignored when force_new is True.
         :param force_new: Ignore saved/loaded token and generate new token.
         :return: Headers for request authorisation.
-        :raises APIError: If the token cannot be validated.
+        :raise APIError: If the token cannot be validated.
         """
         # attempt to load stored token if found
         if (self.token is None or force_load) and not force_new:
@@ -185,14 +191,17 @@ class APIAuthoriser(Logger):
 
         self.logger.info_extra("Authorising user privilege access...")
 
-        # set up socket to listen for the redirect from Spotify
+        # set up socket to listen for the redirect from
         address = ("localhost", 8080)
         code_listener = socket(AF_INET, SOCK_STREAM)
         code_listener.bind(address)
         code_listener.settimeout(120)
         code_listener.listen(1)
 
-        print("\33[1mOpening Spotify in your browser. Log in to Spotify, authorise, and return here after \33[0m")
+        print(
+            f"\33[1mOpening {self.name} in your browser. "
+            f"Log in to {self.name}, authorise, and return here after \33[0m"
+        )
         print(f"\33[1mWaiting for code, timeout in {code_listener.timeout} seconds... \33[0m")
 
         # open authorise webpage and wait for the redirect
@@ -200,7 +209,9 @@ class APIAuthoriser(Logger):
         webopen(requests.post(**self.user_args).url)
         request, _ = code_listener.accept()
 
-        request.send("Code received! You may now close this window and return to Syncify...".encode("utf-8"))
+        request.send(
+            f"Code received! You may now close this window and return to {__PROGRAM_NAME__}...".encode("utf-8")
+        )
         print("\33[92;1mCode received! \33[0m")
         code_listener.close()
 

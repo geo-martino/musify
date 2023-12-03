@@ -6,23 +6,31 @@ from os.path import dirname, join, getmtime, getctime
 
 from syncify.abstract.collection import Playlist
 from syncify.abstract.misc import Result
+from syncify.local.collection import LocalCollection
 from syncify.local.file import File
-from syncify.local.library.collection import LocalCollection
-from syncify.processor.limit import ItemLimiter
 from syncify.local.playlist.match import LocalMatcher
-from syncify.processor.sort import ItemSorter
 from syncify.local.track import load_track
 from syncify.local.track.base.track import LocalTrack
+from syncify.processors.limit import ItemLimiter
+from syncify.processors.sort import ItemSorter
+from syncify.remote.processors.wrangle import RemoteDataWrangler
 
 
 class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, metaclass=ABCMeta):
     """
-    Generic class for manipulating local playlists.
+    Generic class for loading and manipulating local playlists.
 
     :param path: Absolute path of the playlist.
-    :param matcher: :class:`TrackMatch` object to use for matching tracks.
-    :param limiter: :class:`TrackLimit` object to use for limiting the number of tracks matched.
-    :param sorter: :class:`TrackSort` object to use for sorting the final track list.
+    :param matcher: :py:class:`TrackMatch` object to use for matching tracks.
+    :param limiter: :py:class:`TrackLimit` object to use for limiting the number of tracks matched.
+    :param sorter: :py:class:`TrackSort` object to use for sorting the final track list.
+    :param available_track_paths: A list of available track paths that are known to exist
+        and are valid for the track types supported by this program.
+        Useful for case-insensitive path loading and correcting paths to case-sensitive.
+    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
+        If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
+        The wrangler is also used when loading tracks to allow them to process URI tags.
+        For more info on this, see :py:class:`LocalTrack`.
     """
 
     @property
@@ -62,9 +70,11 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
             matcher: LocalMatcher | None = None,
             limiter: ItemLimiter | None = None,
             sorter: ItemSorter | None = None,
-            available_track_paths: Iterable[str] | None = None,
+            available_track_paths: Iterable[str] = (),
+            remote_wrangler: RemoteDataWrangler = None,
     ):
-        Playlist.__init__(self)
+        Playlist.__init__(self, remote_wrangler=remote_wrangler)
+        LocalCollection.__init__(self, remote_wrangler=remote_wrangler)
 
         self._path: str = path
         self._tracks: list[LocalTrack] | None = None
@@ -74,16 +84,16 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
         self.limiter = limiter
         self.sorter = sorter
 
-        self.available_track_paths: Iterable[str] | None = available_track_paths
+        self.available_track_paths: Iterable[str] = available_track_paths
 
     def _load_track(self, path: str) -> LocalTrack:
-        """Wrapper for LocalTrack loader"""
-        return load_track(path=path, available=self.available_track_paths)
+        """Wrapper for LocalTrack loader. Returns the loaded track."""
+        return load_track(path=path, available=self.available_track_paths, remote_wrangler=self.remote_wrangler)
 
-    def _match(self, tracks: Collection[LocalTrack] | None = None, reference: LocalTrack | None = None) -> None:
+    def _match(self, tracks: Collection[LocalTrack] = (), reference: LocalTrack | None = None) -> None:
         """Wrapper for matcher"""
         matcher = self.matcher
-        if matcher is None or tracks is None:
+        if matcher is None or not tracks:
             return
 
         if matcher.include_paths is None and matcher.exclude_paths is None and matcher.comparers is None:
@@ -92,12 +102,11 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
         else:  # run matcher
             self.tracks: list[LocalTrack] = matcher.match(tracks=tracks, reference=reference)
 
-    def _limit(self, ignore: Collection[str | LocalTrack] | None = None) -> None:
+    def _limit(self, ignore: Collection[str | LocalTrack]) -> None:
         """Wrapper for limiter"""
         if self.limiter is not None and self.tracks is not None:
             track_path_map = {track.path: track for track in self.tracks}
-            if ignore:
-                ignore: set[LocalTrack] = {i if isinstance(i, LocalTrack) else track_path_map.get(i) for i in ignore}
+            ignore: set[LocalTrack] = {i if isinstance(i, LocalTrack) else track_path_map.get(i) for i in ignore}
             self.limiter.limit(items=self.tracks, ignore=ignore)
 
     def _sort(self) -> None:
@@ -106,7 +115,10 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
             self.sorter.sort(tracks=self.tracks)
 
     def _prepare_paths_for_output(self, paths: Collection[str]) -> list[str]:
-        """Add the original library folder back to a list of paths for output"""
+        """
+        Reconfigure the given list of paths by adding back the original library folder.
+        Used to ensure saving of correct and valid paths back to playlists.
+        """
         library_folder = self.matcher.library_folder
         original_folder = self.matcher.original_folder
 
@@ -132,7 +144,7 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
         Write the tracks in this Playlist and its settings (if applicable) to file.
 
         :param dry_run: Run function, but do not modify file at all.
-        :return: UpdateResult object with stats on the changes to the playlist.
+        :return: :py:class:`Result` object with stats on the changes to the playlist.
         """
 
     def as_dict(self):
@@ -146,4 +158,5 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
             "date_created": self.date_created,
             "date_modified": self.date_modified,
             "last_played": self.last_played,
+            "remote_source": self.remote_wrangler.remote_source if self.remote_wrangler else None,
         }

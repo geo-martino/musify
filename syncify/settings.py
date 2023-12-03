@@ -11,9 +11,10 @@ from typing import Any
 
 import yaml
 
-from syncify.local.exception import IllegalFileTypeError
-from syncify.spotify import API_AUTH_BASIC, API_AUTH_USER
-from syncify.spotify.processor.search import AlgorithmSettings
+from syncify import __PROGRAM_NAME__
+from syncify.local.exception import InvalidFileType
+from syncify.remote.processors.search import AlgorithmSettings
+from syncify.spotify.api import API_AUTH_BASIC, API_AUTH_USER
 from syncify.utils.helpers import to_collection
 from syncify.utils.logger import Logger
 
@@ -27,6 +28,7 @@ def _update_map[T: MutableMapping](source: T, new: Mapping, extend: bool = True,
     :param extend: When a value is a list and a list is already present in the source map, extend the list when True.
         When False, only replace the list if overwrite is True.
     :param overwrite: When True, overwrite any value in the source list destructively.
+    :return: The updated dict.
     """
     def is_collection(value: Any) -> bool:
         """Return True if ``value`` is of type ``Collection`` and not a string or map"""
@@ -43,7 +45,7 @@ def _update_map[T: MutableMapping](source: T, new: Mapping, extend: bool = True,
 
 
 def _format_map[T](value: T, format_map: Mapping[str, Any]) -> T:
-    """Apply a ``format_map`` to a given ``value``, If ``value`` is a map, apply the ``format_map`` recursively"""
+    """Apply a ``format_map`` to a given ``value``. If ``value`` is a map, apply the ``format_map`` recursively"""
     if isinstance(value, MutableMapping):
         for k, v in value.items():
             value[k] = _format_map(v, format_map)
@@ -96,10 +98,11 @@ class Settings(metaclass=ABCMeta):
         """
         Load the config file
 
-        :raises IllegalFileTypeError: When the given config file is not of the correct type.
+        :return: The config file.
+        :raise InvalidFileType: When the given config file is not of the correct type.
         """
         if splitext(config_path)[1].lower() not in [".yml", ".yaml"]:
-            raise IllegalFileTypeError(f"Unrecognised file type: {config_path}")
+            raise InvalidFileType(f"Unrecognised file type: {config_path}")
         elif not exists(config_path):
             raise FileNotFoundError(f"Config file not found: {config_path}")
 
@@ -149,7 +152,7 @@ class Settings(metaclass=ABCMeta):
         """
         Set the search algorithm config according to the loaded settings.
 
-        :raises LookupError: When the given algorithm name cannot be found in the AlgorithmSettings object.
+        :raise LookupError: When the given algorithm name cannot be found in the AlgorithmSettings object.
         """
         settings = list(AlgorithmSettings.__annotations__.keys())
 
@@ -259,7 +262,7 @@ class Settings(metaclass=ABCMeta):
         """Get the terminal input parser"""
         parser = argparse.ArgumentParser(
             description="Sync your local library to Spotify.",
-            prog="syncify",
+            prog=__PROGRAM_NAME__,
             usage="%(prog)s [options] [function]"
         )
         parser._positionals.title = "Functions"
@@ -270,7 +273,7 @@ class Settings(metaclass=ABCMeta):
         #                     action='store_true',
         #                     help=f"Use saved config in config.yml instead of cli settings.")
         parser.add_argument(
-            "functions", nargs='*', choices=self.allowed_functions, help=f"Syncify function to run."
+            "functions", nargs='*', choices=self.allowed_functions, help=f"{__PROGRAM_NAME__} function to run."
         )
 
         # local = parser.add_argument_group("Local library filters and options")

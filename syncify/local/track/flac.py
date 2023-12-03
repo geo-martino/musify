@@ -7,18 +7,31 @@ import mutagen.flac
 import mutagen.id3
 from PIL import Image
 
-from syncify.enums.tags import TagName, TagMap
+from syncify.enums.tags import TagName
+from syncify.local.base import TagMap
 from syncify.local.file import open_image, get_image_bytes
 from syncify.local.track.base.track import LocalTrack
+from syncify.remote.processors.wrangle import RemoteDataWrangler
 
 
 class FLAC(LocalTrack):
     """
     Track object for extracting, modifying, and saving tags from FLAC files.
 
+    :ivar valid_extensions: Extensions of files that can be loaded by this class.
+    :ivar tag_map: Map of tag names as recognised by this object to the tag names in the file.
+    :ivar uri_tag: The tag field to use as the URI tag in the file's metadata.
+    :ivar num_sep: Some number values come as a combined string i.e. track number/track total
+        Define the separator to use when representing both values as a combined string.
+    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
+
     :param file: The path or Mutagen object of the file to load.
     :param available: A list of available track paths that are known to exist and are valid for this track type.
         Useful for case-insensitive path loading and correcting paths to case-sensitive.
+    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs.
+        This object will be used to check for and validate a URI tag on the file.
+        The tag that is used for reading and writing is set by the ``uri_tag`` class attribute.
+        If no ``remote_wrangler`` is given, no URI processing will occur.
     """
 
     valid_extensions = frozenset({".flac"})
@@ -28,6 +41,7 @@ class FLAC(LocalTrack):
         title=["title"],
         artist=["artist"],
         album=["album"],
+        album_artist=["albumartist"],
         track_number=["tracknumber"],
         track_total=["tracktotal"],
         genres=["genre"],
@@ -37,14 +51,18 @@ class FLAC(LocalTrack):
         disc_number=["discnumber"],
         disc_total=["disctotal"],
         compilation=["compilation"],
-        album_artist=["albumartist"],
         comments=["comment", "description"],
         images=[],
     )
 
     # noinspection PyTypeChecker
-    def __init__(self, file: str | mutagen.FileType | mutagen.flac.FLAC, available: Iterable[str] | None = None):
-        super().__init__(file=file, available=available)
+    def __init__(
+            self,
+            file: str | mutagen.FileType | mutagen.flac.FLAC,
+            available: Iterable[str] = (),
+            remote_wrangler: RemoteDataWrangler = None,
+    ):
+        LocalTrack.__init__(self, file=file, available=available, remote_wrangler=remote_wrangler)
         self._file: mutagen.flac.FLAC = self._file
 
     def _read_images(self) -> list[Image.Image] | None:

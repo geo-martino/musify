@@ -1,30 +1,16 @@
-from abc import ABCMeta
 from collections.abc import MutableMapping
 from typing import Any, Self
 
-from syncify.abstract.collection import Artist
-from syncify.abstract.item import Item, Track
-from syncify.spotify import APIMethodInputType
+from syncify.remote.api import APIMethodInputType
+from syncify.remote.enums import RemoteIDType, RemoteItemType
+from syncify.remote.library.item import RemoteTrack, RemoteArtist
 from syncify.spotify.base import SpotifyObject
-from syncify.spotify.enums import IDType, ItemType
-from syncify.spotify.utils import convert, extract_ids
+from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 from syncify.utils import UnitCollection
 from syncify.utils.helpers import to_collection
 
 
-class SpotifyItem(SpotifyObject, Item, metaclass=ABCMeta):
-    """Generic class for storing a Spotify item."""
-
-    @property
-    def uri(self) -> str:  # TODO: this should be implemented by SpotifyObject but logic is invalid
-        return self.response["uri"]
-
-    @property
-    def has_uri(self) -> bool:  # TODO: this should be implemented by SpotifyObject but logic is invalid
-        return not self.response.get("is_local", False)
-
-
-class SpotifyTrack(SpotifyItem, Track):
+class SpotifyTrack(SpotifyObject, RemoteTrack, SpotifyDataWrangler):
     """
     Extracts key ``track`` data from a Spotify API JSON response.
 
@@ -44,7 +30,7 @@ class SpotifyTrack(SpotifyItem, Track):
     @property
     def artist(self):
         artists = self.response.get("artists", {})
-        artist = self._tag_sep.join(artist["name"] for artist in artists)
+        artist = self.tag_sep.join(artist["name"] for artist in artists)
         return artist if artist else None
 
     @property
@@ -55,7 +41,7 @@ class SpotifyTrack(SpotifyItem, Track):
     @property
     def album_artist(self):
         album = self.response.get("album", {})
-        album_artist = self._tag_sep.join(artist["name"] for artist in album.get("artists", []))
+        album_artist = self.tag_sep.join(artist["name"] for artist in album.get("artists", []))
         return album_artist if album_artist else None
 
     @property
@@ -151,8 +137,7 @@ class SpotifyTrack(SpotifyItem, Track):
         return self.response.get("popularity")
 
     def __init__(self, response: MutableMapping[str, Any]):
-        Track.__init__(self)
-        SpotifyObject.__init__(self, response=response)
+        RemoteTrack.__init__(self, response=response)
 
         self._disc_total = None
         self._comments = None
@@ -160,13 +145,15 @@ class SpotifyTrack(SpotifyItem, Track):
         self.artists = list(map(SpotifyArtist, response.get("artists", {})))
 
     @classmethod
-    def load(cls, value: APIMethodInputType, use_cache: bool = True) -> Self:
+    def load(cls, value: APIMethodInputType, use_cache: bool = True, *args, **kwargs) -> Self:
         cls._check_for_api()
         obj = cls.__new__(cls)
 
         # set a mock response with URL to load from
-        id_ = extract_ids(value)[0]
-        obj.response = {"href": convert(id_, kind=ItemType.TRACK, type_in=IDType.ID, type_out=IDType.URL)}
+        id_ = cls.extract_ids(value)[0]
+        obj.response = {
+            "href": cls.convert(id_, kind=RemoteItemType.TRACK, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
+        }
         obj.reload(use_cache=use_cache)
         return obj
 
@@ -179,14 +166,14 @@ class SpotifyTrack(SpotifyItem, Track):
 
         # reload with enriched data
         response = self.api.get(self.url, use_cache=use_cache, log_pad=self._url_pad)
-        self.api.get_items(response["album"], kind=ItemType.ALBUM, use_cache=use_cache)
-        self.api.get_items(response["artists"], kind=ItemType.ARTIST, use_cache=use_cache)
+        self.api.get_items(response["album"], kind=RemoteItemType.ALBUM, use_cache=use_cache)
+        self.api.get_items(response["artists"], kind=RemoteItemType.ARTIST, use_cache=use_cache)
         self.api.get_tracks_extra(response, features=True, use_cache=use_cache)
 
         self.__init__(response)
 
 
-class SpotifyArtist(SpotifyItem):
+class SpotifyArtist(SpotifyObject, RemoteArtist, SpotifyDataWrangler):
     """
     Extracts key ``artist`` data from a Spotify API JSON response.
 
@@ -230,17 +217,18 @@ class SpotifyArtist(SpotifyItem):
         return self.response.get("popularity")
 
     def __init__(self, response: MutableMapping[str, Any]):
-        Artist.__init__(self)
-        SpotifyObject.__init__(self, response=response)
+        RemoteArtist.__init__(self, response=response)
 
     @classmethod
-    def load(cls, value: APIMethodInputType, use_cache: bool = True) -> Self:
+    def load(cls, value: APIMethodInputType, use_cache: bool = True, *args, **kwargs) -> Self:
         cls._check_for_api()
         obj = cls.__new__(cls)
 
         # set a mock response with URL to load from
-        id_ = extract_ids(value)[0]
-        obj.response = {"href": convert(id_, kind=ItemType.ARTIST, type_in=IDType.ID, type_out=IDType.URL)}
+        id_ = cls.extract_ids(value)[0]
+        obj.response = {
+            "href": cls.convert(id_, kind=RemoteItemType.ARTIST, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
+        }
         obj.reload(use_cache=use_cache)
         return obj
 

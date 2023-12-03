@@ -11,6 +11,8 @@ from typing import Any
 from tqdm.auto import tqdm as tqdm_auto
 from tqdm.std import tqdm as tqdm_std
 
+from syncify import __PROGRAM_NAME__
+
 module_width = 40
 
 INFO_EXTRA = logging.INFO - 1
@@ -22,8 +24,12 @@ logging.addLevelName(REPORT, "REPORT")
 logging.addLevelName(STAT, "STAT")
 
 
-def format_full_func_name(record: logging.LogRecord) -> None:
-    """Get fully qualified path name to function including class name."""
+def format_full_func_name(record: logging.LogRecord, width: int = module_width) -> None:
+    """
+    Set fully qualified path name to function including class name to the given record.
+    Optionally, provide a max ``width`` to attempt to truncate the path name to
+    by taking only the first letter of each part of the path until the length is equal to ``width``.
+    """
     path = record.funcName.split(".")[-1]
     stack = inspect.stack()
     f_locals = stack[8][0].f_locals
@@ -34,7 +40,7 @@ def format_full_func_name(record: logging.LogRecord) -> None:
         # get relative path to 'syncify' sources root
         folder = ""
         path_split = []
-        while folder != "syncify":
+        while folder != __PROGRAM_NAME__.casefold():
             path, folder = split(path)
             path_split.append(folder)
 
@@ -46,7 +52,7 @@ def format_full_func_name(record: logging.LogRecord) -> None:
     # truncate long paths by taking first letters of each part until short enough
     path_split = path.split(".")
     for i, part in enumerate(path_split):
-        if len(path) <= module_width:
+        if len(path) <= width:
             break
 
         path_split[i] = part[0]
@@ -58,17 +64,17 @@ def format_full_func_name(record: logging.LogRecord) -> None:
 class LogStdOutFilter(logging.Filter):
     """Filter for logging to stdout."""
 
-    def __init__(self, levels: Container[int] | None = None):
+    def __init__(self, levels: Container[int] = ()):
         """
         :param levels: Accepted log levels to return i.e. 'info', 'debug'
             If None, set to current log level.
         """
         super().__init__()
-        self.levels: Container[int] | None = levels
+        self.levels: Container[int] = levels
 
     # noinspection PyMissingOrEmptyDocstring
     def filter(self, record: logging.LogRecord) -> logging.LogRecord | None:
-        if self.levels is not None and record.levelno not in self.levels:
+        if record.levelno not in self.levels:
             return
         format_full_func_name(record)
         return record
@@ -179,8 +185,6 @@ class Logger:
         # return exceptions to logger
         sys.excepthook = self._handle_exception
 
-        self.logger.info("INDEED")
-
     # noinspection SpellCheckingInspection
     def _set_stdout_handler(self) -> None:
         """Sets the stdout handler for the logger"""
@@ -242,6 +246,7 @@ class Logger:
         self.logger.addHandler(file_h)
 
     def _get_handler(self, name: str) -> logging.Handler | None:
+        """Get the logging handler that matches the given ``name``"""
         handlers = self.logger.handlers[:]
         for handler in handlers:
             if handler.name == name:
@@ -272,7 +277,7 @@ class Logger:
 
     # noinspection SpellCheckingInspection
     def get_progress_bar(self, **kwargs) -> tqdm_std:
-        """Wrapper for tqdm progress bar. For kwargs, see :class:`tqdm_std`"""
+        """Wrapper for tqdm progress bar. For kwargs, see :py:class:`tqdm_std`"""
         preset_keys = ("leave", "disable", "file", "ncols", "colour", "smoothing", "position")
         try:
             cols = os.get_terminal_size().columns

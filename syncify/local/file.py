@@ -9,7 +9,7 @@ from urllib.request import urlopen, Request
 
 from PIL import Image, UnidentifiedImageError
 
-from syncify.local.exception import IllegalFileTypeError, ImageLoadError
+from syncify.local.exception import InvalidFileType, ImageLoadError
 
 
 class File(metaclass=ABCMeta):
@@ -61,7 +61,7 @@ class File(metaclass=ABCMeta):
         """Raises exception if the path's extension is not accepted"""
         ext = splitext(path)[1].lower()
         if ext not in self.valid_extensions:
-            raise IllegalFileTypeError(
+            raise InvalidFileType(
                 ext,
                 f"Not an accepted {self.__class__.__qualname__} file extension. "
                 f"Use only: {', '.join(self.valid_extensions)}"
@@ -72,7 +72,8 @@ def open_image(source: str | bytes | Path | Request) -> Image.Image:
     """
     Open Image object from a given URL or file path
 
-    :raises ImageLoadError: If the image cannot be loaded.
+    :return: The loaded :py:class:`Image.Image`
+    :raise ImageLoadError: If the image cannot be loaded.
     """
 
     try:  # open image from link

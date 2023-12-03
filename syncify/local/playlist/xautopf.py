@@ -8,22 +8,41 @@ import xmltodict
 
 from syncify.abstract.misc import Result
 from syncify.enums.tags import PropertyName
-from syncify.local.playlist.playlist import LocalPlaylist
-from syncify.processor.limit import ItemLimiter
 from syncify.local.playlist.match import LocalMatcher
-from syncify.processor.sort import ItemSorter
+from syncify.local.playlist.playlist import LocalPlaylist
 from syncify.local.track import LocalTrack
+from syncify.processors.limit import ItemLimiter
+from syncify.processors.sort import ItemSorter
+from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitCollection
 
 
 @dataclass(frozen=True)
 class SyncResultXAutoPF(Result):
-    """Stores the results of a sync with local a XAutoPF playlist"""
+    """
+    Stores the results of a sync with a local XAutoPF playlist
+
+    :ivar start: The total number of tracks in the playlist before the sync.
+    :ivar start_description: The description of the playlist before sync.
+    :ivar start_include: The number of tracks that matched the include settings before the sync.
+    :ivar start_exclude: The number of tracks that matched the exclude settings before the sync.
+    :ivar start_comparers: The number of tracks that matched all the :py:class:`ItemComparer` settings before the sync.
+    :ivar start_limiter: Was a limiter present on the playlist before the sync.
+    :ivar start_sorter: Was a sorter present on the playlist before the sync.
+
+    :ivar final: The total number of tracks in the playlist after the sync.
+    :ivar final_description: The description of the playlist after sync.
+    :ivar final_include: The number of tracks that matched the include settings after the sync.
+    :ivar final_exclude: The number of tracks that matched the exclude settings after the sync.
+    :ivar final_comparers: The number of tracks that matched all the :py:class:`ItemComparer` settings after the sync.
+    :ivar final_limiter: Was a limiter present on the playlist after the sync.
+    :ivar final_sorter: Was a sorter present on the playlist after the sync.
+    """
     start: int
     start_description: str
     start_include: int
     start_exclude: int
-    start_comparators: int
+    start_comparers: int
     start_limiter: bool
     start_sorter: bool
 
@@ -31,7 +50,7 @@ class SyncResultXAutoPF(Result):
     final_description: str
     final_include: int
     final_exclude: int
-    final_comparators: int
+    final_comparers: int
     final_limiter: bool
     final_sorter: bool
 
@@ -51,6 +70,13 @@ class XAutoPF(LocalPlaylist):
         Useful when managing similar libraries on multiple platforms.
     :param check_existence: If True, when processing paths,
         check for the existence of the file paths on the file system and reject any that don't.
+    :param available_track_paths: A list of available track paths that are known to exist
+        and are valid for the track types supported by this program.
+        Useful for case-insensitive path loading and correcting paths to case-sensitive.
+    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
+        If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
+        The wrangler is also used when loading tracks to allow them to process URI tags.
+        For more info on this, see :py:class:`LocalTrack`.
     """
 
     valid_extensions = frozenset({".xautopf"})
@@ -70,11 +96,12 @@ class XAutoPF(LocalPlaylist):
     def __init__(
             self,
             path: str,
-            tracks: Collection[LocalTrack] | None = None,
+            tracks: Collection[LocalTrack] = (),
             library_folder: str | None = None,
-            other_folders: UnitCollection[str] | None = None,
+            other_folders: UnitCollection[str] = (),
             check_existence: bool = True,
-            available_track_paths: Iterable[str] | None = None,
+            available_track_paths: Iterable[str] = (),
+            remote_wrangler: RemoteDataWrangler = None,
     ):
         self._validate_type(path)
         if not exists(path):
@@ -89,20 +116,17 @@ class XAutoPF(LocalPlaylist):
 
         self._description = self.xml["SmartPlaylist"]["Source"]["Description"]
 
-        # generate track processors from the XML settings
-        matcher = LocalMatcher.from_xml(xml=self.xml)
-        matcher.library_folder = library_folder
-        matcher.sanitise_file_paths(other_folders, check_existence=check_existence)
-        limiter = ItemLimiter.from_xml(xml=self.xml)
-        sorter = ItemSorter.from_xml(xml=self.xml)
-
+        matcher = LocalMatcher.from_xml(
+            xml=self.xml, library_folder=library_folder, other_folders=other_folders, check_existence=check_existence
+        )
         LocalPlaylist.__init__(
             self,
             path=path,
             matcher=matcher,
-            limiter=limiter,
-            sorter=sorter,
-            available_track_paths=available_track_paths
+            limiter=ItemLimiter.from_xml(xml=self.xml),
+            sorter=ItemSorter.from_xml(xml=self.xml),
+            available_track_paths=available_track_paths,
+            remote_wrangler=remote_wrangler,
         )
 
         self._tracks_original: list[LocalTrack]
@@ -121,12 +145,18 @@ class XAutoPF(LocalPlaylist):
         return tracks
 
     def save(self, dry_run: bool = True) -> SyncResultXAutoPF:
+        """
+        Write the tracks in this Playlist and its settings (if applicable) to file.
+
+        :param dry_run: Run function, but do not modify file at all.
+        :return: The results of the sync as a :py:class:`SyncResultXAutoPF` object.
+        """
         start_xml = deepcopy(self.xml)
 
         # update the stored XML object
         self.xml["SmartPlaylist"]["Source"]["Description"] = self.description
         self._update_xml_paths()
-        # self._update_comparators()
+        # self._update_comparers()
         # self._update_limiter()
         # self._update_sorter()
 
@@ -144,27 +174,28 @@ class XAutoPF(LocalPlaylist):
             start_description=start_source["Description"],
             start_include=len([p for p in start_source.get("ExceptionsInclude", "").split("|") if p]),
             start_exclude=len([p for p in start_source.get("Exceptions", "").split("|") if p]),
-            start_comparators=len(start_source["Conditions"].get("Condition", [])),
+            start_comparers=len(start_source["Conditions"].get("Condition", [])),
             start_limiter=start_source["Limit"].get("@Enabled", "False") == "True",
             start_sorter=len(start_source.get("SortBy", start_source.get("DefinedSort", []))) > 0,
             final=len(self._tracks_original),
             final_description=final_source["Description"],
             final_include=len([p for p in final_source.get("ExceptionsInclude", "").split("|") if p]),
             final_exclude=len([p for p in final_source.get("Exceptions", "").split("|") if p]),
-            final_comparators=len(final_source["Conditions"].get("Condition", [])),
+            final_comparers=len(final_source["Conditions"].get("Condition", [])),
             final_limiter=final_source["Limit"].get("@Enabled", "False") == "True",
             final_sorter=len(final_source.get("SortBy", final_source.get("DefinedSort", []))) > 0,
         )
 
     # noinspection PyTypeChecker
     def _update_xml_paths(self) -> None:
+        """Update the stored, parsed XML object with valid include and exclude paths"""
         tracks = self._tracks_original
 
         path_track_map: Mapping[str: LocalTrack] = {track.path.lower(): track for track in self.tracks}
 
         # match again on current conditions to check differences
         self.sorter.sort_by_field(tracks, field=PropertyName.LAST_PLAYED, reverse=True)
-        matches: list[LocalTrack] = self.matcher.match(tracks, reference=tracks[0], combine=False).compared
+        matches: list[LocalTrack] = self.matcher.match(tracks, reference=tracks[0], combine=False).compare
         compared: Mapping[str: LocalTrack] = {track.path.lower(): track for track in matches}
 
         # get new include/exclude paths based on the leftovers after matching on comparers
@@ -189,15 +220,18 @@ class XAutoPF(LocalPlaylist):
         else:
             source.pop("Exceptions", None)
 
-    def _update_comparators(self) -> None:
+    def _update_comparers(self) -> None:
+        """Update the stored, parsed XML object with appropriately formatted comparer settings"""
         # TODO: implement comparison XML part updater (low priority)
         raise NotImplementedError
 
     def _update_limiter(self) -> None:
+        """Update the stored, parsed XML object with appropriately formatted limiter settings"""
         # TODO: implement limit XML part updater (low priority)
         raise NotImplementedError
 
     def _update_sorter(self) -> None:
+        """Update the stored, parsed XML object with appropriately formatted sorter settings"""
         # TODO: implement sort XML part updater (low priority)
         raise NotImplementedError
 

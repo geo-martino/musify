@@ -3,29 +3,29 @@ from os.path import basename, dirname, splitext, getmtime
 
 import pytest
 
-from syncify.local.exception import IllegalFileTypeError
+from syncify.local.exception import InvalidFileType
 from syncify.local.track import FLAC, M4A, MP3, WMA, load_track
-from syncify.spotify import __UNAVAILABLE_URI_VALUE__
-from tests.common import path_txt
-from tests.local.track.common import class_path_map, all_local_track_tests, path_track_all
+from tests import path_txt
+from tests.local import remote_wrangler
+from tests.local.track import class_path_map, all_local_track_tests, path_track_all
 
 
 def test_load_track():
     for cls, path in class_path_map.items():
-        track = load_track(path)
+        track = load_track(path, remote_wrangler=remote_wrangler)
         assert track.__class__ == cls
         assert track.path == path
 
     # raises error on unrecognised file type
-    with pytest.raises(IllegalFileTypeError):
-        load_track(path_txt)
+    with pytest.raises(InvalidFileType):
+        load_track(path_txt, remote_wrangler=remote_wrangler)
 
 
 def test_flac():
     all_local_track_tests(FLAC)
 
     path = class_path_map[FLAC]
-    track = FLAC(file=path, available=path_track_all)
+    track = FLAC(file=path, available=path_track_all, remote_wrangler=remote_wrangler)
 
     # metadata
     assert track.title == "title 1"
@@ -70,7 +70,7 @@ def test_mp3():
     all_local_track_tests(MP3)
 
     path = class_path_map[MP3]
-    track = MP3(file=path)
+    track = MP3(file=path, remote_wrangler=remote_wrangler)
 
     # metadata
     assert track.title == "title 2"
@@ -115,7 +115,7 @@ def test_m4a():
     all_local_track_tests(M4A)
 
     path = class_path_map[M4A]
-    track = M4A(file=path)
+    track = M4A(file=path, remote_wrangler=remote_wrangler)
 
     # metadata
     assert track.title == "title 3"
@@ -159,7 +159,7 @@ def test_loaded_attributes():
     all_local_track_tests(WMA)
 
     path = class_path_map[WMA]
-    track = WMA(file=path)
+    track = WMA(file=path, remote_wrangler=remote_wrangler)
 
     # metadata
     assert track.title == "title 4"
@@ -175,7 +175,7 @@ def test_loaded_attributes():
     assert track.disc_number == 3
     assert track.disc_total == 4
     assert not track.compilation
-    assert track.comments == [__UNAVAILABLE_URI_VALUE__]
+    assert track.comments == [remote_wrangler.unavailable_uri_dummy]
 
     assert track.uri is None
     assert not track.has_uri

@@ -7,15 +7,26 @@ from typing import Any, Self
 from PIL import Image
 
 from syncify.local.track.base.processor import TagProcessor
-from syncify.spotify import __UNAVAILABLE_URI_VALUE__
-from syncify.spotify.enums import IDType
-from syncify.spotify.utils import validate_id_type
+from syncify.remote.enums import RemoteIDType
+from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitIterable
 from syncify.utils.helpers import to_collection
 
 
 class TagReader(TagProcessor, metaclass=ABCMeta):
-    """Contains methods for extracting tags from a loaded file"""
+    """
+    Contains methods for extracting tags from a loaded file
+    
+    :ivar uri_tag: The tag field to use as the URI tag in the file's metadata.
+    :ivar num_sep: Some number values come as a combined string i.e. track number/track total
+        Define the separator to use when representing both values as a combined string.
+    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
+
+    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs.
+        This object will be used to check for and validate a URI tag on the file.
+        The tag that is used for reading and writing is set by the ``uri_tag`` class attribute.
+        If no ``remote_wrangler`` is given, no URI processing will occur.
+    """
 
     @property
     def name(self):
@@ -41,7 +52,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
     @property
     def artists(self) -> list[str]:
         """List of all artists featured on this track."""
-        return self._artist.split(self._tag_sep)
+        return self._artist.split(self.tag_sep)
 
     @property
     def album(self):
@@ -148,7 +159,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
         if value is None:
             self._uri = None
             self._has_uri = None
-        elif value == __UNAVAILABLE_URI_VALUE__:
+        elif self.remote_wrangler is not None and value == self.remote_wrangler.unavailable_uri_dummy:
             self._uri = None
             self._has_uri = False
         else:
@@ -223,8 +234,10 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
     def play_count(self, value: datetime | None):
         self._play_count = value
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, remote_wrangler: RemoteDataWrangler = None):
+        TagProcessor.__init__(self)
+        self.remote_wrangler = remote_wrangler
+
         self._title = None
         self._artist = None
         self._album = None
@@ -316,7 +329,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
             return
 
         value = str(values[0])
-        return int(value.split(self._num_sep)[0]) if self._num_sep in value else int(value)
+        return int(value.split(self.num_sep)[0]) if self.num_sep in value else int(value)
 
     def _read_track_total(self) -> int | None:
         """Extract total track count tags from file"""
@@ -325,7 +338,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
             return
 
         value = str(values[0])
-        return int(value.split(self._num_sep)[1]) if self._num_sep in value else int(value)
+        return int(value.split(self.num_sep)[1]) if self.num_sep in value else int(value)
 
     def _read_genres(self) -> list[str] | None:
         """Extract genre tags from file"""
@@ -361,7 +374,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
             return
 
         value = str(values[0])
-        return int(value.split(self._num_sep)[0]) if self._num_sep in value else int(value)
+        return int(value.split(self.num_sep)[0]) if self.num_sep in value else int(value)
 
     def _read_disc_total(self) -> int | None:
         """Extract total disc count tags from file"""
@@ -370,7 +383,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
             return
 
         value = str(values[0])
-        return int(value.split(self._num_sep)[1]) if self._num_sep in value else int(value)
+        return int(value.split(self.num_sep)[1]) if self.num_sep in value else int(value)
 
     def _read_compilation(self) -> bool | None:
         """Extract compilation tags from file"""
@@ -383,23 +396,20 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
         return list({str(value) for value in values}) if values is not None else None
 
     def _read_uri(self) -> str | None:
-        """
-        Extract data relating to Spotify URI from file
+        """Extract data relating to remote URI value from file"""
+        wrangler = self.remote_wrangler
+        if not wrangler:
+            return
 
-        :return: Tuple of URI, plus:
-            * True if the track contains a URI and is available on remote server
-            * False if the track has no URI and is not available on remote server
-            * None if the track has no URI, and it is not known whether it is available on remote server
-        """
         # WORKAROUND: for dodgy MP3 tag comments, split on null and take first value
         possible_values: tuple[str] | None = to_collection(self[self.uri_tag.name.casefold()])
-        if possible_values is None or len(possible_values) == 0:
+        if not possible_values:
             return None
 
         # WORKAROUND: for dodgy MP3 tag comments, split on null and take first value
         possible_values = tuple(val for values in possible_values for val in values.split("\x00"))
         for uri in possible_values:
-            if uri == __UNAVAILABLE_URI_VALUE__ or validate_id_type(uri, kind=IDType.URI):
+            if uri == wrangler.unavailable_uri_dummy or wrangler.validate_id_type(uri, kind=RemoteIDType.URI):
                 return uri
 
         return None

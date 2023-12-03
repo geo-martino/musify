@@ -1,10 +1,7 @@
-from typing import Any
-
-from syncify.exception import SyncifyError
-from syncify.spotify.enums import IDType, ItemType
+from syncify.remote.exception import RemoteError
 
 
-class SpotifyError(SyncifyError):
+class SpotifyError(RemoteError):
     """
     Exception raised for Spotify ID errors.
 
@@ -41,38 +38,4 @@ class SpotifyCollectionError(SpotifyError):
         self.message = message
         self.kind = kind
         formatted = f"{kind} | {message}" if kind else message
-        super().__init__(formatted)
-
-
-###########################################################################
-## Type errors
-###########################################################################
-class SpotifyIDTypeError(SpotifyError):
-    """
-    Exception raised for Spotify ID type errors.
-
-    :param message: Explanation of the error.
-    :param kind: The ID type related to the error.
-    """
-
-    def __init__(self, message: str | None = None, kind: IDType | None = None, value: Any = None):
-        self.kind = kind
-        self.message = message
-        formatted = f"{kind} | {message}" if kind else message
-        formatted += f": {value}" if value else ""
-        super().__init__(formatted)
-
-
-class SpotifyItemTypeError(SpotifyError):
-    """
-    Exception raised for Spotify item type errors.
-
-    :param message: Explanation of the error.
-    :param kind: The item type related to the error.
-    """
-
-    def __init__(self, message: str | None = None, kind: ItemType | None = None, value: Any = None):
-        self.kind = kind
-        formatted = f"{kind} | {message}" if kind else message
-        formatted += f": {value}" if value else ""
         super().__init__(formatted)

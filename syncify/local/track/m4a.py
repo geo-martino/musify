@@ -6,9 +6,10 @@ import mutagen
 import mutagen.mp4
 from PIL import Image
 
-from syncify.enums.tags import TagMap
+from syncify.local.base import TagMap
 from syncify.local.file import open_image, get_image_bytes
 from syncify.local.track.base.track import LocalTrack
+from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils.helpers import to_collection
 
 
@@ -16,9 +17,20 @@ class M4A(LocalTrack):
     """
     Track object for extracting, modifying, and saving tags from M4A files.
 
+    :ivar valid_extensions: Extensions of files that can be loaded by this class.
+    :ivar tag_map: Map of tag names as recognised by this object to the tag names in the file.
+    :ivar uri_tag: The tag field to use as the URI tag in the file's metadata.
+    :ivar num_sep: Some number values come as a combined string i.e. track number/track total
+        Define the separator to use when representing both values as a combined string.
+    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
+
     :param file: The path or Mutagen object of the file to load.
     :param available: A list of available track paths that are known to exist and are valid for this track type.
         Useful for case-insensitive path loading and correcting paths to case-sensitive.
+    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs.
+        This object will be used to check for and validate a URI tag on the file.
+        The tag that is used for reading and writing is set by the ``uri_tag`` class attribute.
+        If no ``remote_wrangler`` is given, no URI processing will occur.
     """
 
     valid_extensions = frozenset({".m4a"})
@@ -28,6 +40,7 @@ class M4A(LocalTrack):
         title=["©nam"],
         artist=["©ART"],
         album=["©alb"],
+        album_artist=["aART"],
         track_number=["trkn"],
         track_total=["trkn"],
         genres=["----:com.apple.iTunes:genre", "©gen", "gnre"],
@@ -37,14 +50,18 @@ class M4A(LocalTrack):
         disc_number=["disk"],
         disc_total=["disk"],
         compilation=["cpil"],
-        album_artist=["aART"],
         comments=["©cmt"],
         images=["covr"],
     )
 
     # noinspection PyTypeChecker
-    def __init__(self, file: str | mutagen.FileType | mutagen.mp4.MP4, available: Iterable[str] | None = None):
-        super().__init__(file=file, available=available)
+    def __init__(
+            self,
+            file: str | mutagen.FileType | mutagen.mp4.MP4,
+            available: Iterable[str] = (),
+            remote_wrangler: RemoteDataWrangler = None,
+    ):
+        LocalTrack.__init__(self, file=file, available=available, remote_wrangler=remote_wrangler)
         self._file: mutagen.mp4.MP4 = self._file
 
     def _read_tag(self, tag_ids: Iterable[str]) -> list[Any] | None:

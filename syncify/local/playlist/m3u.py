@@ -3,15 +3,25 @@ from dataclasses import dataclass
 from os.path import exists
 
 from syncify.abstract.misc import Result
-from syncify.local.playlist.playlist import LocalPlaylist
 from syncify.local.playlist.match import LocalMatcher
+from syncify.local.playlist.playlist import LocalPlaylist
 from syncify.local.track import LocalTrack
+from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitCollection
 
 
 @dataclass(frozen=True)
 class SyncResultM3U(Result):
-    """Stores the results of a sync with a local M3U playlist"""
+    """
+    Stores the results of a sync with a local M3U playlist
+
+    :ivar start: The total number of tracks in the playlist before the sync.
+    :ivar added: The number of tracks added to the playlist.
+    :ivar removed: The number of tracks removed from the playlist.
+    :ivar unchanged: The number of tracks that were in the playlist before and after the sync.
+    :ivar difference: The difference between the total number tracks in the playlist from before and after the sync.
+    :ivar final: The total number of tracks in the playlist after the sync.
+    """
     start: int
     added: int
     removed: int
@@ -39,6 +49,13 @@ class M3U(LocalPlaylist):
         Useful when managing similar libraries on multiple platforms.
     :param check_existence: If True, when processing paths,
         check for the existence of the file paths on the file system and reject any that don't.
+    :param available_track_paths: A list of available track paths that are known to exist
+        and are valid for the track types supported by this program.
+        Useful for case-insensitive path loading and correcting paths to case-sensitive.
+    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
+        If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
+        The wrangler is also used when loading tracks to allow them to process URI tags.
+        For more info on this, see :py:class:`LocalTrack`.
     """
 
     valid_extensions = frozenset({".m3u"})
@@ -58,19 +75,19 @@ class M3U(LocalPlaylist):
     def __init__(
             self,
             path: str,
-            tracks: Collection[LocalTrack] | None = None,
+            tracks: Collection[LocalTrack] = (),
             library_folder: str | None = None,
-            other_folders: UnitCollection[str] | None = None,
+            other_folders: UnitCollection[str] = (),
             check_existence: bool = True,
-            available_track_paths: Iterable[str] | None = None,
+            available_track_paths: Iterable[str] = (),
+            remote_wrangler: RemoteDataWrangler = None,
     ):
         self._validate_type(path)
 
-        paths = []
         if exists(path):  # load from file
             with open(path, "r", encoding="utf-8") as f:
                 paths = [line.strip() for line in f]
-        elif tracks is not None:  # generating a new M3U
+        else:  # generating a new M3U
             paths = [track.path for track in tracks]
 
         self._description = None
@@ -79,18 +96,23 @@ class M3U(LocalPlaylist):
             include_paths=paths,
             library_folder=library_folder,
             other_folders=other_folders,
-            check_existence=check_existence
+            check_existence=check_existence,
         )
-        LocalPlaylist.__init__(self, path=path, matcher=matcher, available_track_paths=available_track_paths)
+        LocalPlaylist.__init__(
+            self,
+            path=path,
+            matcher=matcher,
+            available_track_paths=available_track_paths,
+            remote_wrangler=remote_wrangler,
+        )
 
         self.load(tracks=tracks)
 
-    def load(self, tracks: Collection[LocalTrack] | None = None) -> list[LocalTrack]:
-
-        if self.matcher.include_paths is None or len(self.matcher.include_paths) == 0:
+    def load(self, tracks: Collection[LocalTrack] = ()) -> list[LocalTrack]:
+        if not self.matcher.include_paths:
             # use the given tracks if no valid matcher present
             self.tracks = tracks if tracks else []
-        elif tracks is not None:  # match paths from given tracks using the matcher
+        elif tracks:  # match paths from given tracks using the matcher
             self._match(tracks)
         else:  # use the paths in the matcher to load tracks from scratch
             self.tracks = [self._load_track(path) for path in self.matcher.include_paths if path is not None]
@@ -102,6 +124,12 @@ class M3U(LocalPlaylist):
         return self.tracks
 
     def save(self, dry_run: bool = True) -> SyncResultM3U:
+        """
+        Write the tracks in this Playlist and its settings (if applicable) to file.
+
+        :param dry_run: Run function, but do not modify file at all.
+        :return: The results of the sync as a :py:class:`SyncResultM3U` object.
+        """
         start_paths = set(self._prepare_paths_for_output({track.path.lower() for track in self._tracks_original}))
 
         if not dry_run:

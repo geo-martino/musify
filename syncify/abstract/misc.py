@@ -1,5 +1,5 @@
 import re
-from abc import ABCMeta, abstractmethod
+from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
@@ -7,7 +7,7 @@ from typing import Any
 
 from syncify.utils.helpers import to_collection
 
-_T_JSON = str | int | float | list | dict | bool | None
+_T_JSON_VALUE = str | int | float | list | dict | bool | None
 
 
 @dataclass(frozen=True)
@@ -16,7 +16,7 @@ class Result(metaclass=ABCMeta):
     pass
 
 
-class PrettyPrinter(metaclass=ABCMeta):
+class PrettyPrinter(ABC):
     """Generic base class for pretty printing. Classes can inherit this class to gain pretty print functionality."""
 
     @staticmethod
@@ -41,18 +41,18 @@ class PrettyPrinter(metaclass=ABCMeta):
         Return a dictionary representation of the key attributes of this object.
 
         The results of this function are used to produce the following:
-            * A JSON representation of the object when calling :py:func:`as_json()`
+            * A JSON representation of the object when calling :py:func:`as_json`
             * The string representation of the object when calling str() on the object
             * The representation of the object when calling repr() on the object
         """
         raise NotImplementedError
 
-    def as_json(self) -> dict[str, _T_JSON]:
+    def as_json(self) -> dict[str, _T_JSON_VALUE]:
         """Return a dictionary representation of the key attributes of this object that is safe to output to JSON"""
         return self.__as_json(self.as_dict())
 
-    def __as_json(self, attributes: Mapping[str, _T_JSON]) -> dict[str, _T_JSON]:
-        result: dict[str, _T_JSON] = {}
+    def __as_json(self, attributes: Mapping[str, _T_JSON_VALUE]) -> dict[str, _T_JSON_VALUE]:
+        result: dict[str, _T_JSON_VALUE] = {}
 
         for attr_key, attr_val in attributes.items():
             if isinstance(attr_val, set):

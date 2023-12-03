@@ -9,17 +9,23 @@ from typing import Any, Self, SupportsIndex
 from syncify.abstract.item import Item, BaseObject, Track
 from syncify.abstract.misc import PrettyPrinter
 from syncify.enums.tags import TagName, Name
-from syncify.processor.sort import ShuffleMode, ShuffleBy, ItemSorter
-from syncify.spotify.enums import IDType
-from syncify.spotify.utils import validate_id_type
+from syncify.processors.sort import ShuffleMode, ShuffleBy, ItemSorter
+from syncify.remote.enums import RemoteIDType
+from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitIterable, UnitSequence
 from syncify.utils.helpers import to_collection
 from syncify.utils.logger import Logger
 
 
 # noinspection PyShadowingNames
-class ItemCollection[T: Item](BaseObject, list[T], PrettyPrinter, metaclass=ABCMeta):
-    """Generic class for storing a collection of items."""
+class ItemCollection[T: Item](PrettyPrinter, BaseObject, list[T], metaclass=ABCMeta):
+    """
+    Generic class for storing a collection of items.
+
+    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
+    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on items.
+        If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
+    """
 
     @property
     @abstractmethod
@@ -31,6 +37,10 @@ class ItemCollection[T: Item](BaseObject, list[T], PrettyPrinter, metaclass=ABCM
     def track_total(self) -> int:
         """The total number of items in this collection"""
         return len(self)
+
+    def __init__(self, remote_wrangler: RemoteDataWrangler = None):
+        BaseObject.__init__(self)
+        self.remote_wrangler = remote_wrangler
 
     def index(self, __item: T, __start: SupportsIndex = None, __stop: SupportsIndex = None) -> int:
         """Append one item to the items in this collection"""
@@ -70,7 +80,7 @@ class ItemCollection[T: Item](BaseObject, list[T], PrettyPrinter, metaclass=ABCM
 
     def sort(
             self,
-            fields: UnitSequence[Name | None] | Mapping[Name | None, bool] | None = None,
+            fields: UnitSequence[Name | None] | Mapping[Name | None, bool] = (),
             shuffle_mode: ShuffleMode = ShuffleMode.NONE,
             shuffle_by: ShuffleBy = ShuffleBy.TRACK,
             shuffle_weight: float = 1.0,
@@ -170,13 +180,19 @@ class ItemCollection[T: Item](BaseObject, list[T], PrettyPrinter, metaclass=ABCM
         return any(__item == i for i in self.items)
 
     def __getitem__(self, __key: str | int | Item) -> T:
+        """
+        Returns the item in this collection by matching on a given index/Item/URI.
+        If an item is given, the URI is extracted from this item
+        and the matching Item from this collection is returned.
+        """
         if isinstance(__key, int):  # simply index the list or items
             return self.items[__key]
         elif isinstance(__key, Item):  # take the URI
             if not __key.has_uri or __key.uri is None:
                 raise KeyError(f"Given item does not have a URI associated: {__key.name}")
             __key = __key.uri
-        elif not validate_id_type(__key, kind=IDType.URI):  # assume the string is a name
+        elif self.remote_wrangler is None or not self.remote_wrangler.validate_id_type(__key, kind=RemoteIDType.URI):
+            # assume the string is a name
             try:
                 return next(item for item in self.items if item.name == __key)
             except StopIteration:
@@ -208,6 +224,16 @@ class ItemCollection[T: Item](BaseObject, list[T], PrettyPrinter, metaclass=ABCM
 
 # noinspection PyShadowingNames
 class BasicCollection[T: Item](ItemCollection[T]):
+    """
+    A basic implementation of ItemCollection for storing ``items`` with a given ``name``.
+
+    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
+
+    :param name: The name of this collection.
+    :param items: The items in this collection
+    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on items.
+        If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
+    """
     @property
     def name(self):
         """The name of this collection"""
@@ -217,8 +243,8 @@ class BasicCollection[T: Item](ItemCollection[T]):
     def items(self) -> list[T]:
         return self._items
 
-    def __init__(self, name: str, items: Collection[T]):
-        super().__init__()
+    def __init__(self, name: str, items: Collection[T], remote_wrangler: RemoteDataWrangler = None):
+        ItemCollection.__init__(self, remote_wrangler=remote_wrangler)
         self._name = name
         self._items = to_collection(items, list)
 
@@ -227,12 +253,23 @@ class BasicCollection[T: Item](ItemCollection[T]):
 
 
 class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
-    """A playlist of items and some of their derived properties/objects"""
+    """
+    A playlist of items and some of their derived properties/objects
+
+    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on items.
+        If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
+    """
 
     @property
     @abstractmethod
     def name(self):
         """The name of this playlist"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def description(self) -> str | None:
+        """Description of this playlist"""
         raise NotImplementedError
 
     @property
@@ -276,20 +313,24 @@ class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def description(self) -> str | None:
-        """Description of this playlist"""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
     def date_modified(self) -> datetime | None:
         """datetime object representing when the playlist was last modified"""
         raise NotImplementedError
 
+    def __init__(self, remote_wrangler: RemoteDataWrangler = None):
+        ItemCollection.__init__(self, remote_wrangler=remote_wrangler)
+
 
 # noinspection PyShadowingNames
 class Library[T: Track](ItemCollection[T], Logger, metaclass=ABCMeta):
-    """A library of items and playlists"""
+    """
+    A library of items and playlists
+
+    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
+
+    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on items.
+        If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
+    """
 
     @property
     @abstractmethod
@@ -309,9 +350,14 @@ class Library[T: Track](ItemCollection[T], Logger, metaclass=ABCMeta):
         raise NotImplementedError
 
     @property
+    @abstractmethod
     def playlists(self) -> dict[str, Playlist]:
         """The playlists in this library"""
         raise NotImplementedError
+
+    def __init__(self, remote_wrangler: RemoteDataWrangler = None):
+        ItemCollection.__init__(self, remote_wrangler=remote_wrangler)
+        Logger.__init__(self)
 
     def get_filtered_playlists(
             self,
@@ -360,7 +406,7 @@ class Library[T: Track](ItemCollection[T], Logger, metaclass=ABCMeta):
         return filtered
 
     @abstractmethod
-    def merge_playlists(self, playlists: Self | Collection[Playlist] | Mapping[Any, Playlist] | None = None) -> None:
+    def merge_playlists(self, playlists: Self | Collection[Playlist] | Mapping[Any, Playlist]) -> None:
         """Merge playlists from given list/map/library to this library"""
         # TODO: merge playlists adding/removing tracks as needed.
         #  Most likely will need to implement some method on playlist class too
@@ -368,7 +414,14 @@ class Library[T: Track](ItemCollection[T], Logger, metaclass=ABCMeta):
 
 
 class Folder[T: Track](ItemCollection[T], metaclass=ABCMeta):
-    """A folder of items and some of their derived properties/objects"""
+    """
+    A folder of items and some of their derived properties/objects
+
+    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
+
+    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on items.
+        If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
+    """
 
     @property
     @abstractmethod
@@ -411,6 +464,7 @@ class Folder[T: Track](ItemCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
     @property
+    @abstractmethod
     def length(self) -> float | None:
         """Total duration of all tracks in this folder"""
         raise NotImplementedError
@@ -421,13 +475,23 @@ class Folder[T: Track](ItemCollection[T], metaclass=ABCMeta):
         """Is this folder a compilation"""
         raise NotImplementedError
 
+    def __init__(self, remote_wrangler: RemoteDataWrangler = None):
+        ItemCollection.__init__(self, remote_wrangler=remote_wrangler)
+
 
 class Album[T: Track](ItemCollection[T], metaclass=ABCMeta):
-    """An album of items and some of their derived properties/objects"""
+    """
+    An album of items and some of their derived properties/objects.
+
+    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
+
+    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on items.
+        If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
+    """
 
     @property
     @abstractmethod
-    def name(self):
+    def name(self) -> str:
         """The album name"""
         raise NotImplementedError
 
@@ -443,7 +507,7 @@ class Album[T: Track](ItemCollection[T], metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def tracks(self):
+    def tracks(self) -> list[Track]:
         """The tracks on this album"""
         raise NotImplementedError
 
@@ -454,20 +518,20 @@ class Album[T: Track](ItemCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
     @property
-    @abstractmethod
-    def genres(self) -> list[str]:
-        """List of genres ordered by frequency of appearance on the tracks on this album"""
-        raise NotImplementedError
-
-    @property
     def artist(self) -> str:
         """Joined string representation of all artists on this album ordered by frequency of appearance"""
-        return self._tag_sep.join(self.artists)
+        return self.tag_sep.join(self.artists)
 
     @property
     @abstractmethod
     def album_artist(self) -> str | None:
         """The album artist for this album"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def genres(self) -> list[str]:
+        """List of genres ordered by frequency of appearance on the tracks on this album"""
         raise NotImplementedError
 
     @property
@@ -495,10 +559,9 @@ class Album[T: Track](ItemCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
     @property
-    @abstractmethod
     def has_image(self) -> bool:
         """Does this album have an image"""
-        raise NotImplementedError
+        return len(self.image_links) > 0
 
     @property
     @abstractmethod
@@ -512,9 +575,19 @@ class Album[T: Track](ItemCollection[T], metaclass=ABCMeta):
         """Rating of this album"""
         raise NotImplementedError
 
+    def __init__(self, remote_wrangler: RemoteDataWrangler = None):
+        ItemCollection.__init__(self, remote_wrangler=remote_wrangler)
+
 
 class Artist[T: Track](ItemCollection[T], metaclass=ABCMeta):
-    """An artist of items and some of their derived properties/objects"""
+    """
+    An artist of items and some of their derived properties/objects
+
+    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
+
+    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on items.
+        If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
+    """
 
     @property
     @abstractmethod
@@ -563,13 +636,24 @@ class Artist[T: Track](ItemCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
     @property
+    @abstractmethod
     def rating(self) -> float | None:
         """Rating of this artist"""
         raise NotImplementedError
 
+    def __init__(self, remote_wrangler: RemoteDataWrangler = None):
+        ItemCollection.__init__(self, remote_wrangler=remote_wrangler)
+
 
 class Genre[T: Track](ItemCollection[T], metaclass=ABCMeta):
-    """A genre of items and some of their derived properties/objects"""
+    """
+    A genre of items and some of their derived properties/objects
+
+    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
+
+    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on items.
+        If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
+    """
 
     @property
     @abstractmethod
@@ -610,3 +694,6 @@ class Genre[T: Track](ItemCollection[T], metaclass=ABCMeta):
     def genres(self) -> list[str]:
         """List of genres ordered by frequency of appearance on the tracks for this genre"""
         raise NotImplementedError
+
+    def __init__(self, remote_wrangler: RemoteDataWrangler = None):
+        ItemCollection.__init__(self, remote_wrangler=remote_wrangler)

@@ -1,22 +1,28 @@
 import os
 import random
+from collections.abc import Sequence
 
 import pyfiglet
 
+from syncify import __PROGRAM_NAME__
+
+__LOGO_FONTS__ = (
+    "basic", "broadway", "chunky", "doom", "drpepper", "epic", "hollywood", "isometric1", "isometric2",
+    "isometric3", "isometric4", "larry3d", "shadow", "slant", "speed", "standard", "univers", "whimsy"
+)
+__LOGO_COLOURS__ = (91, 93, 92, 94, 96, 95)
+
 
 # noinspection SpellCheckingInspection
-def print_logo() -> None:
+def print_logo(fonts: Sequence[str] = __LOGO_FONTS__, colours: list[int] = __LOGO_COLOURS__) -> None:
     """Pretty print the Syncify logo in the centre of the terminal"""
-    fonts = ("basic", "broadway", "chunky", "doom", "drpepper", "epic", "hollywood", "isometric1", "isometric2",
-             "isometric3", "isometric4", "larry3d", "shadow", "slant", "speed", "standard", "univers", "whimsy")
-    colours = [91, 93, 92, 94, 96, 95]
     if bool(random.getrandbits(1)):
         colours.reverse()
 
     cols = os.get_terminal_size().columns
     figlet = pyfiglet.Figlet(font=random.choice(fonts), direction=0, justify="left", width=cols)
 
-    text = figlet.renderText("SYNCIFY").rstrip().split("\n")
+    text = figlet.renderText(__PROGRAM_NAME__.upper()).rstrip().split("\n")
     text_width = max(len(line) for line in text)
     indent = int((cols - text_width) / 2)
 

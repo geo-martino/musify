@@ -64,7 +64,7 @@ class FileError(LocalError):
         super().__init__(formatted)
 
 
-class IllegalFileTypeError(FileError):
+class InvalidFileType(FileError):
     """
     Exception raised for unrecognised file types.
 

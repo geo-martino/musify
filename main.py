@@ -13,16 +13,18 @@ from typing import Any
 
 from dateutil.relativedelta import relativedelta
 
+from syncify import __PROGRAM_NAME__
+from syncify.config import __REMOTE_CONFIG__
 from syncify.enums.tags import TagName
+from syncify.exception import SyncifyError
 from syncify.local.library import LocalLibrary, MusicBee
-from syncify.local.library.collection import LocalFolder
+from syncify.local.collection import LocalFolder
 from syncify.report import Report
 from syncify.settings import Settings
-from syncify.spotify import API
-from syncify.spotify.base import SpotifyObject
-from syncify.spotify.library.library import SpotifyLibrary
-from syncify.spotify.processor.check import SpotifyItemChecker
-from syncify.spotify.processor.search import SpotifyItemSearcher, AlgorithmSettings
+from syncify.remote.api.api import RemoteAPI
+from syncify.remote.config import RemoteClasses
+from syncify.remote.library.library import RemoteLibrary
+from syncify.remote.processors.search import AlgorithmSettings
 from syncify.utils.helpers import get_user_input
 from syncify.utils.logger import Logger, STAT
 from syncify.utils.printers import print_logo, print_line, print_time
@@ -48,19 +50,29 @@ class Syncify(Settings, Report):
         return perf_counter() - self._start_time
 
     @property
-    def api(self) -> API:
+    def remote_source(self) -> str | None:
+        """Remote source name setting according to current config"""
+        return self.cfg_run.get("remote", {}).get("source")
+
+    @property
+    def remote_config(self) -> RemoteClasses:
+        """Remote source config to current remote source name"""
+        return __REMOTE_CONFIG__[self.remote_source.casefold().strip()]
+
+    @property
+    def api(self) -> RemoteAPI:
         """Set the API if not already set and return"""
         if self._api is None:
             self.logger.info(f"\33[1;95m ->\33[1;97m Authorising API access \33[0m")
-            self._api = API(**self.cfg_run["spotify"]["api"]["settings"])
-            SpotifyObject.api = self._api
+            self._api = self.remote_config.api(**self.cfg_run[self.remote_source]["api"]["settings"])
+            self.remote_config.object.api = self._api
             self.print_line()
         return self._api
 
     @property
     def use_cache(self) -> bool:
-        """use_cache setting according to current config"""
-        return self.cfg_run.get("spotify", {}).get("api", {}).get("use_cache", True)
+        """``use_cache`` setting according to current config"""
+        return self.cfg_run.get(self.remote_source, {}).get("api", {}).get("use_cache", True)
 
     @property
     def local_library(self) -> LocalLibrary:
@@ -79,7 +91,8 @@ class Syncify(Settings, Report):
                     musicbee_folder=musicbee_folder,
                     other_folders=other_folders,
                     include=include,
-                    exclude=exclude
+                    exclude=exclude,
+                    remote_wrangler=self.remote_config.wrangler()
                 )
             else:
                 self._local_library = LocalLibrary(
@@ -87,7 +100,8 @@ class Syncify(Settings, Report):
                     playlist_folder=playlist_folder,
                     other_folders=other_folders,
                     include=include,
-                    exclude=exclude
+                    exclude=exclude,
+                    remote_wrangler=self.remote_config.wrangler()
                 )
 
         return self._local_library
@@ -98,20 +112,22 @@ class Syncify(Settings, Report):
         return f"{self.local_library.__class__.__name__} - {self.local_library.name}"
 
     @property
-    def spotify_library(self) -> SpotifyLibrary:
-        """Set the SpotifyLibrary if not already set and return"""
-        if self._spotify_library is None:
-            use_cache = self.cfg_run["spotify"]["api"].get("use_cache", True)
-            include = self.cfg_run["spotify"].get("playlists", {}).get("include")
-            exclude = self.cfg_run["spotify"].get("playlists", {}).get("exclude")
+    def remote_library(self) -> RemoteLibrary:
+        """Set the RemoteLibrary if not already set and return"""
+        if self._remote_library is None:
+            use_cache = self.cfg_run[self.remote_source]["api"].get("use_cache", True)
+            include = self.cfg_run[self.remote_source].get("playlists", {}).get("include")
+            exclude = self.cfg_run[self.remote_source].get("playlists", {}).get("exclude")
 
-            self._spotify_library = SpotifyLibrary(api=self.api, include=include, exclude=exclude, use_cache=use_cache)
-        return self._spotify_library
+            self._remote_library = self.remote_config.library(
+                api=self.api, include=include, exclude=exclude, use_cache=use_cache
+            )
+        return self._remote_library
 
     @property
     def spotify_library_backup_name(self) -> str:
-        """The filename to use for backups of the SpotifyLibrary"""
-        return f"{self.spotify_library.__class__.__name__} - {self.spotify_library.name}"
+        """The filename to use for backups of the RemoteLibrary"""
+        return f"{self.remote_library.__class__.__name__} - {self.remote_library.name}"
 
     def __init__(self, config_path: str = "config.yml"):
         self._start_time = perf_counter()  # for measuring total runtime
@@ -121,12 +137,15 @@ class Syncify(Settings, Report):
         self.run: Callable[[], Any] | None = None
         self.cfg_run: Mapping[Any, Any] = self.cfg_general
 
-        self._api: API | None = None
+        if self.remote_source not in __REMOTE_CONFIG__:
+            raise SyncifyError(f"Given remote source is not supported: {self.remote_source}")
+
+        self._api: RemoteAPI | None = None
         self._local_library: LocalLibrary | None = None
         self._android_library: LocalLibrary | None = None
-        self._spotify_library: SpotifyLibrary | None = None
+        self._remote_library: RemoteLibrary | None = None
 
-        self.logger.debug(f"Initialisation of Syncify object: DONE\n")
+        self.logger.debug(f"Initialisation of {__PROGRAM_NAME__} object: DONE\n")
 
     def set_func(self, name: str) -> None:
         """Set the current runtime function to call at ``self.run`` and set its config for this run"""
@@ -191,11 +210,11 @@ class Syncify(Settings, Report):
 
         if self._local_library is not None:
             self.local_library.load(log=False)
-        if self._spotify_library is not None:
-            self.spotify_library.use_cache = self.use_cache
-            self.spotify_library.load(log=False)
-            self.spotify_library.extend(self.local_library)
-            self.spotify_library.enrich_tracks(artists=True)
+        if self._remote_library is not None:
+            self.remote_library.use_cache = self.use_cache
+            self.remote_library.load(log=False)
+            self.remote_library.extend(self.local_library)
+            self.remote_library.enrich_tracks(artists=True)
 
         self.logger.debug("Reload libraries: DONE\n")
 
@@ -205,7 +224,7 @@ class Syncify(Settings, Report):
 
     def clean_env(self) -> None:
         """Clears files older than a number of days and only keeps max # of runs"""
-        self.logger.debug("Clean Syncify files: START")
+        self.logger.debug(f"Clean {__PROGRAM_NAME__} files: START")
 
         days = self.cfg_general["cleanup"]["days"]
         runs = self.cfg_general["cleanup"]["runs"]
@@ -250,7 +269,7 @@ class Syncify(Settings, Report):
 
         self.logger.info(f"\33[1;95m ->\33[1;92m Removed {len(remove)} folders\33[0m")
         self.print_line()
-        self.logger.debug("Clean Syncify files: DONE\n")
+        self.logger.debug(f"Clean {__PROGRAM_NAME__} files: DONE\n")
 
     ###########################################################################
     ## Backup/Restore
@@ -265,7 +284,7 @@ class Syncify(Settings, Report):
 
         spotify_backup_name = self.spotify_library_backup_name
         spotify_backup_name = f"[FINAL] - {spotify_backup_name}" if is_final else spotify_backup_name
-        self._save_json(spotify_backup_name, self.spotify_library.as_json())
+        self._save_json(spotify_backup_name, self.remote_library.as_json())
         self.logger.debug("Backup libraries: DONE\n")
 
     def restore(self) -> None:
@@ -293,7 +312,7 @@ class Syncify(Settings, Report):
 
         if get_user_input("Restore local library tracks? (enter 'y')").lower() == 'y':
             self._restore_local(restore_from)
-        if get_user_input("Restore Spotify library playlists? (enter 'y')").lower() == 'y':
+        if get_user_input(f"Restore {self.remote_source} library playlists? (enter 'y')").lower() == 'y':
             self._restore_spotify(restore_from)
 
     def _restore_local(self, folder: str) -> None:
@@ -329,22 +348,24 @@ class Syncify(Settings, Report):
         self.logger.debug("Restore local: DONE\n")
 
     def _restore_spotify(self, folder: str) -> None:
-        """Restore Spotify library data from a backup, getting user input for the settings"""
-        self.logger.debug("Restore Spotify: START")
+        """Restore remote library data from a backup, getting user input for the settings"""
+        self.logger.debug(f"Restore {self.remote_source}: START")
 
-        self.logger.info(f"\33[1;95m ->\33[1;97m Restoring Spotify playlists from backup: {basename(folder)} \33[0m")
+        self.logger.info(
+            f"\33[1;95m ->\33[1;97m Restoring {self.remote_source} playlists from backup: {basename(folder)} \33[0m"
+        )
         self.print_line()
         backup = self._load_json(self.spotify_library_backup_name, folder)
 
         # restore and sync
-        self.spotify_library.restore_playlists(backup["playlists"])
-        results = self.spotify_library.sync(clear="all", reload=False, dry_run=False)
-        self.spotify_library.log_sync(results)
+        self.remote_library.restore_playlists(backup["playlists"])
+        results = self.remote_library.sync(clear="all", reload=False, dry_run=False)
+        self.remote_library.log_sync(results)
 
-        self.logger.debug("Restore Spotify: DONE\n")
+        self.logger.debug(f"Restore {self.remote_source}: DONE\n")
 
     def extract(self) -> None:
-        """Extract and save images from local or Spotify items"""
+        """Extract and save images from local or remote items"""
         # TODO: add library-wide image extraction method
         raise NotImplementedError
 
@@ -356,7 +377,7 @@ class Syncify(Settings, Report):
         self.logger.debug("Generate reports: START")
         cfg = self.cfg_run.get("reports", {})
         if cfg.get("library_differences").get("enabled", True):
-            self.report_library_differences(self.local_library, self.spotify_library)
+            self.report_library_differences(self.local_library, self.remote_library)
         if cfg.get("missing_tags").get("enabled", True):
             self.report_missing_tags(self.local_library.folders)
         self.logger.debug("Generate reports: DONE\n")
@@ -368,7 +389,7 @@ class Syncify(Settings, Report):
         folders = self._get_limited_folders()
 
         allow_karaoke = AlgorithmSettings.ITEMS.allow_karaoke
-        checker = SpotifyItemChecker(api=self.api, allow_karaoke=allow_karaoke)
+        checker = self.remote_config.checker(api=self.api, allow_karaoke=allow_karaoke)
         check_results = checker.check(folders, interval=self.cfg_run.get("interval", 10))
 
         if check_results:
@@ -397,10 +418,10 @@ class Syncify(Settings, Report):
             return
 
         allow_karaoke = AlgorithmSettings.ITEMS.allow_karaoke
-        searcher = SpotifyItemSearcher(api=self.api, allow_karaoke=allow_karaoke)
+        searcher = self.remote_config.searcher(api=self.api, allow_karaoke=allow_karaoke)
         searcher.search(albums)
 
-        checker = SpotifyItemChecker(api=self.api, allow_karaoke=allow_karaoke)
+        checker = self.remote_config.checker(api=self.api, allow_karaoke=allow_karaoke)
         checker.check(albums, interval=self.cfg_run.get("interval", 10))
 
         self.logger.info(f"\33[1;95m ->\33[1;97m Updating tags for {len(self.local_library)} tracks: uri \33[0m")
@@ -417,17 +438,17 @@ class Syncify(Settings, Report):
     ## Export from Syncify to sources
     ###########################################################################
     def get_tags(self) -> None:
-        """Run all methods for synchronising local data with Spotify and updating local track tags"""
+        """Run all methods for synchronising local data with remote and updating local track tags"""
         self.logger.debug("Update tags: START")
 
         replace = self.cfg_run.get("local", {}).get("update", {}).get("replace", False)
         tag_names = self.cfg_run.get("local", {}).get("update", {}).get("tags")
         tags = TagName.ALL if not tag_names else [TagName.from_name(tag_name) for tag_name in tag_names]
 
-        # add extra local tracks to Spotify library and merge Spotify items to local library
-        self.spotify_library.extend(self.local_library)
-        self._spotify_library.enrich_tracks(artists=True)
-        self.local_library.merge_items(self.spotify_library, tags=tags)
+        # add extra local tracks to remote library and merge remote items to local library
+        self.remote_library.extend(self.local_library)
+        self._remote_library.enrich_tracks(artists=True)
+        self.local_library.merge_items(self.remote_library, tags=tags)
 
         # save tags to files
         self.logger.info(
@@ -473,8 +494,8 @@ class Syncify(Settings, Report):
         self.logger.debug("Update compilations: Done\n")
 
     def sync_spotify(self) -> None:
-        """Run all main functions for synchronising Spotify playlists with a local library"""
-        self.logger.debug("Update Spotify: START")
+        """Run all main functions for synchronising remote playlists with a local library"""
+        self.logger.debug(f"Update {self.remote_source}: START")
 
         if self._local_library is not None:  # reload local library
             self.local_library.load(tracks=False, log=False)
@@ -486,13 +507,13 @@ class Syncify(Settings, Report):
         exclude = cfg_playlists.get("exclude")
         playlists = self.local_library.get_filtered_playlists(include=include, exclude=exclude, **filter_tags)
 
-        # sync to Spotify
+        # sync to remote
         clear = cfg_playlists.get("sync", {}).get("clear")
         reload = cfg_playlists.get("sync", {}).get("reload")
-        results = self.spotify_library.sync(playlists, clear=clear, reload=reload, dry_run=self.dry_run)
-        self.spotify_library.log_sync(results)
+        results = self.remote_library.sync(playlists, clear=clear, reload=reload, dry_run=self.dry_run)
+        self.remote_library.log_sync(results)
 
-        self.logger.debug("Update Spotify: DONE\n")
+        self.logger.debug(f"Update {self.remote_source}: DONE\n")
 
 
 if __name__ == "__main__":
@@ -507,7 +528,7 @@ if __name__ == "__main__":
 
     failed = False
     for i, func in enumerate(main.functions, 1):
-        title = f"Syncify: {func}"
+        title = f"{__PROGRAM_NAME__}: {func}"
         if main.dry_run:
             title += " (DRYRUN)"
 
@@ -541,10 +562,10 @@ if __name__ == "__main__":
 ## BIGGER ONES
 # TODO: function to open search website tabs for all songs in 2get playlist
 #  on common music stores/torrent sites
-# TODO: Automatically add songs added to each Spotify playlist to '2get'?
+# TODO: Automatically add songs added to each remote playlist to '2get'?
 #  Then somehow update local library playlists after...
-#  Maybe add a final step that syncs Spotify back to library if
-#  uris for extra songs in Spotify playlists found in library
+#  Maybe add a final step that syncs remote back to library if
+#  uris for extra songs in remote playlists found in library
 # TODO: track audio recognition when searching using Shazam like service?
 #  Maybe https://audd.io/ ?
 # TODO: expand search/match functionality to include all item types
@@ -559,7 +580,6 @@ if __name__ == "__main__":
 # TODO: generally improve performance
 # TODO: look into the requests_cache, it grows way too big sometimes?
 # TODO: implement terminal parser for function-specific kwargs?
-# TODO: add abstractions for generic 'remote' package
 # TODO: implement GitHub actions for testing builds + implement release structure
 
 
@@ -573,7 +593,9 @@ if __name__ == "__main__":
 #   available track paths on load
 # TODO: implement merge_playlists functions and,
 #  by extension, implement android library sync
-
+# TODO: improve separation of concerns for main and settings
+#  settings object should contain all settings as properties to be accessed by main
+#  main should never need to access the yaml dict config at all
 
 ## NEEDED FOR v0.3
 # TODO: expand out Name enum to cover all object types with fixed mapping to MusicBee values
@@ -582,3 +604,10 @@ if __name__ == "__main__":
 #  -
 # TODO: write tests, write tests, write tests
 # TODO: update the readme (dynamic readme?)
+# TODO: inherit correctly i.e.
+#     class MyParentClass(SubClass1, SubClass2):
+#         def __init__(self):
+#             super(MyParentClass, self).__init__()
+# TODO: ensure all classes still print as expected
+#  add tests for to_dict(), str() and repr() methods on all inheritors on PrettyPrinter
+# TODO: SpotifyCollections don't appear to inherit from Remote parent classes correctly?

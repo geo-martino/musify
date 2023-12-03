@@ -5,15 +5,16 @@ from os.path import dirname, join, splitext, basename
 import pytest
 
 from syncify.enums.tags import TagName, PropertyName
-from syncify.local.exception import IllegalFileTypeError
+from syncify.local.exception import InvalidFileType
 from syncify.local.playlist import XAutoPF
-from syncify.processor.limit import LimitType
-from syncify.processor.sort import ShuffleMode, ShuffleBy
 from syncify.local.track import LocalTrack, FLAC, M4A, WMA, MP3
-from tests.common import path_txt
-from tests.local.playlist.common import copy_playlist_file, path_resources
-from tests.local.playlist.common import path_playlist_xautopf_ra, path_playlist_xautopf_bp
-from tests.local.track.common import random_tracks, path_track_flac, path_track_m4a, path_track_wma, path_track_mp3
+from syncify.processors.limit import LimitType
+from syncify.processors.sort import ShuffleMode, ShuffleBy
+from tests import path_txt
+from tests.local import remote_wrangler
+from tests.local.playlist import copy_playlist_file, path_resources
+from tests.local.playlist import path_playlist_xautopf_ra, path_playlist_xautopf_bp
+from tests.local.track import random_tracks, path_track_flac, path_track_m4a, path_track_wma, path_track_mp3
 
 
 def test_init_fails():
@@ -21,10 +22,14 @@ def test_init_fails():
 
     # raises error on non-existent file, remove this once supported
     with pytest.raises(NotImplementedError):
-        XAutoPF(path=join(dirname(path_playlist_xautopf_bp), "does_not_exist.xautopf"), tracks=tracks)
+        XAutoPF(
+            path=join(dirname(path_playlist_xautopf_bp), "does_not_exist.xautopf"),
+            tracks=tracks,
+            remote_wrangler=remote_wrangler
+        )
 
-    with pytest.raises(IllegalFileTypeError):
-        XAutoPF(path=path_txt, tracks=tracks)
+    with pytest.raises(InvalidFileType):
+        XAutoPF(path=path_txt, tracks=tracks, remote_wrangler=remote_wrangler)
 
 
 def test_load_playlist_1():
@@ -35,7 +40,8 @@ def test_load_playlist_1():
         tracks=tracks,
         library_folder=path_resources,
         other_folders="../",
-        check_existence=False
+        check_existence=False,
+        remote_wrangler=remote_wrangler
     )
 
     assert pl.path == path_playlist_xautopf_bp
@@ -88,7 +94,12 @@ def test_load_playlist_1():
         track.artist = None
     for i, track in enumerate(tracks, 1):
         track.track_number = i
-    tracks_actual = [FLAC(path_track_flac), WMA(path_track_wma), MP3(path_track_mp3), M4A(path_track_m4a)]
+    tracks_actual = [
+        FLAC(path_track_flac, remote_wrangler=remote_wrangler),
+        WMA(path_track_wma, remote_wrangler=remote_wrangler),
+        MP3(path_track_mp3, remote_wrangler=remote_wrangler),
+        M4A(path_track_m4a, remote_wrangler=remote_wrangler)
+    ]
     tracks += tracks_actual
 
     pl = XAutoPF(
@@ -96,7 +107,8 @@ def test_load_playlist_1():
         tracks=tracks_actual,
         library_folder=path_resources,
         other_folders="../",
-        check_existence=True
+        check_existence=True,
+        remote_wrangler=remote_wrangler
     )
     assert pl.tracks == tracks_actual[:2]
 
@@ -105,7 +117,8 @@ def test_load_playlist_1():
         tracks=tracks,
         library_folder=path_resources,
         other_folders="../",
-        check_existence=False
+        check_existence=False,
+        remote_wrangler=remote_wrangler
     )
     assert len(pl.tracks) == 11
     tracks_expected = tracks_actual[:2] + [track for track in tracks if 20 < track.track_number < 30]
@@ -120,7 +133,8 @@ def test_load_playlist_2():
         tracks=tracks,
         library_folder=path_resources,
         other_folders="../",
-        check_existence=False
+        check_existence=False,
+        remote_wrangler=remote_wrangler
     )
 
     assert pl.path == path_playlist_xautopf_ra
@@ -129,12 +143,12 @@ def test_load_playlist_2():
     assert pl.description is None
 
     # matcher
-    assert pl.matcher.comparers is None
+    assert len(pl.matcher.comparers) == 0
     assert not pl.matcher.match_all
     assert pl.matcher.library_folder == path_resources.rstrip("\\/")
     assert pl.matcher.original_folder is None
-    assert pl.matcher.include_paths is None
-    assert pl.matcher.exclude_paths is None
+    assert len(pl.matcher.include_paths) == 0
+    assert len(pl.matcher.exclude_paths) == 0
 
     # limit
     assert pl.limiter.limit_max == 20
@@ -158,7 +172,8 @@ def test_load_playlist_2():
         tracks=tracks,
         library_folder=path_resources,
         other_folders="../",
-        check_existence=False
+        check_existence=False,
+        remote_wrangler=remote_wrangler
     )
     limit = pl.limiter.limit_max
     assert len(pl.tracks) == limit
@@ -177,7 +192,9 @@ def test_save_playlist():
         track.artist = None
     for i, track in enumerate(tracks, 1):
         track.track_number = i
-    tracks_actual: list[LocalTrack] = [FLAC(path_track_flac), WMA(path_track_wma)]
+    tracks_actual: list[LocalTrack] = [
+        FLAC(path_track_flac, remote_wrangler=remote_wrangler), WMA(path_track_wma, remote_wrangler=remote_wrangler)
+    ]
     tracks += tracks_actual
 
     pl = XAutoPF(
@@ -185,7 +202,8 @@ def test_save_playlist():
         tracks=tracks,
         library_folder=path_resources,
         other_folders="../",
-        check_existence=False
+        check_existence=False,
+        remote_wrangler=remote_wrangler
     )
     assert pl.path == path_file_copy
     assert len(pl.tracks) == 11
@@ -206,14 +224,14 @@ def test_save_playlist():
     assert result.start_description == "I am a description"
     assert result.start_include == 3
     assert result.start_exclude == 3
-    assert result.start_comparators == 3
+    assert result.start_comparers == 3
     assert not result.start_limiter
     assert result.start_sorter
     assert result.final == len(pl.tracks)
     assert result.final_description == pl.description
     assert result.final_include == 4
     assert result.final_exclude == 2
-    assert result.final_comparators == 3
+    assert result.final_comparers == 3
     assert not result.start_limiter
     assert result.start_sorter
 

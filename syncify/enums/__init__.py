@@ -17,7 +17,7 @@ class SyncifyEnum(IntEnum):
         """
         Returns the first enum that matches the given name
 
-        :raises EnumNotFoundError: If a corresponding enum cannot be found.
+        :raise EnumNotFoundError: If a corresponding enum cannot be found.
         """
         for enum in cls:
             if name.strip().upper() == enum.name.upper():

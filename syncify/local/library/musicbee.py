@@ -12,14 +12,17 @@ from syncify.local.file import File
 from syncify.local.library.library import LocalLibrary
 from syncify.local.playlist import LocalPlaylist
 from syncify.local.track.base.track import LocalTrack
+from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitCollection, Number
-from syncify.utils.logger import Logger
 
 
 class MusicBee(LocalLibrary, File):
     """
     Represents a local MusicBee library, providing various methods for manipulating
     tracks and playlists across an entire local library collection.
+
+    :ivar valid_extensions: Extensions of library files that can be loaded by this class.
+    :ivar musicbee_library_filename: The filename of the MusicBee library folder.
 
     :param library_folder: The absolute path of the library folder containing all tracks.
         The intialiser will check for the existence of this path and only store it if it exists.
@@ -32,10 +35,14 @@ class MusicBee(LocalLibrary, File):
     :param include: An optional list of playlist names to include when loading playlists.
     :param exclude: An optional list of playlist names to exclude when loading playlists.
     :param load: When True, load the library on intialisation.
+    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
+        If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
+        The wrangler is also used when loading tracks to allow them to process URI tags.
+        For more info on this, see :py:class:`LocalTrack`.
     """
 
     valid_extensions = frozenset({".xml"})
-    library_filename = "iTunes Music Library.xml"
+    musicbee_library_filename = "iTunes Music Library.xml"
 
     _xml_timestamp_fmt = "%Y-%m-%dT%H:%M:%S%z"
 
@@ -47,14 +54,12 @@ class MusicBee(LocalLibrary, File):
             self,
             library_folder: str | None = None,
             musicbee_folder: str = "MusicBee",
-            other_folders: UnitCollection[str] | None = None,
-            include: Iterable[str] | None = None,
-            exclude: Iterable[str] | None = None,
-            load: bool = True
+            other_folders: UnitCollection[str] = (),
+            include: Iterable[str] = (),
+            exclude: Iterable[str] = (),
+            load: bool = True,
+            remote_wrangler: RemoteDataWrangler = None,
     ):
-        Logger.__init__(self)
-        self.logger.info(f"\33[1;95m ->\33[1;97m Loading MusicBee library \33[0m")
-
         if not exists(musicbee_folder):
             in_library = join(library_folder.rstrip("\\/"), musicbee_folder.lstrip("\\/"))
             if not exists(in_library):
@@ -63,11 +68,10 @@ class MusicBee(LocalLibrary, File):
                 )
             musicbee_folder = in_library
 
-        self._path: str = join(musicbee_folder, self.library_filename)
+        self._path: str = join(musicbee_folder, self.musicbee_library_filename)
         with open(self._path, "r", encoding="utf-8") as f:
             self.xml: dict[str, Any] = xmltodict.parse(f.read())
 
-        self.print_line()
         LocalLibrary.__init__(
             self,
             library_folder=library_folder,
@@ -75,7 +79,8 @@ class MusicBee(LocalLibrary, File):
             other_folders=other_folders,
             include=include,
             exclude=exclude,
-            load=load
+            load=load,
+            remote_wrangler=remote_wrangler,
         )
 
     @classmethod
@@ -124,6 +129,7 @@ class MusicBee(LocalLibrary, File):
         :param id_: A persistent ID to validate
         :param value: A value to generate a persistent ID from.
         :return: The valid persistent ID.
+        :raise MusicBeeIDError: When no ``id_`` and no ``value`` is given, or the given ``id_`` is invalid.
         """
         if not value and not id_:
             raise MusicBeeIDError(
@@ -146,6 +152,7 @@ class MusicBee(LocalLibrary, File):
         :param track_id: An incremental ID to assign to the track.
         :param persistent_id: An 16-character unique ID to assign to the track.
         :return: A dict representation of XML data for the given track.
+        :raise MusicBeeIDError: When the given ``persistent_id`` is invalid.
         """
         data = {
             "Track ID": track_id,
@@ -196,6 +203,7 @@ class MusicBee(LocalLibrary, File):
         :param tracks: A list of all available tracks in the library.
             The function will use this as an index to get a list of Track IDs for this playlist.
         :return: A dict representation of XML data for the given playlist.
+        :raise MusicBeeIDError: When the given ``persistent_id`` is invalid.
         """
         data = {
             "Playlist ID": playlist_id,

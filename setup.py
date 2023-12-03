@@ -1,21 +1,23 @@
 from cx_Freeze import setup, Executable
 
+from syncify import __PROGRAM_NAME__
+
 # Dependencies are automatically detected, but it might need fine-tuning.
 options = {"build_exe": {"packages": [],
                          "include_files": ["README.md", "LICENSE"],
                          "optimize": 1},
-           "build": {"build_exe": "build/syncify_v0.3"},
+           "build": {"build_exe": f"build/{__PROGRAM_NAME__.casefold()}_v0.3"},
            "install_exe": {"force": True},
            }
 
 target = Executable(
     script="main.py",
-    target_name="syncify",
+    target_name=__PROGRAM_NAME__.casefold(),
     base="Console"
 )
 
 setup(
-    name="Syncify",
+    name=__PROGRAM_NAME__,
     version="0.3",
     description="Synchronise your music library to Spotify",
     author="George M. Marino",

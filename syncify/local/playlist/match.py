@@ -4,24 +4,30 @@ from os.path import exists
 from typing import Any, Self
 
 from syncify.abstract.misc import Result
-from syncify.processor.base import MusicBeeProcessor
-from syncify.processor.compare import ItemComparer
+from syncify.abstract.processor import MusicBeeProcessor
 from syncify.local.track.base.track import LocalTrack
-from syncify.utils import UnitSequence, UnitCollection, UnitIterable
+from syncify.processors.compare import ItemComparer
+from syncify.utils import UnitSequence, UnitCollection
 from syncify.utils.helpers import to_collection
 
 
 @dataclass(frozen=True)
 class MatchResult(Result):
-    """Results from matching a collection of tracks to a set of conditions."""
+    """
+    Results from matching a collection of tracks to a set of conditions.
+
+    :ivar include: Sequence of LocalTracks that matched include settings.
+    :ivar exclude: Sequence of LocalTracks that matched exclude settings.
+    :ivar compare: Sequence of LocalTracks that matched :py:class:`ItemComparer` settings
+    """
     include: Sequence[LocalTrack] = field(default=tuple())
     exclude: Sequence[LocalTrack] = field(default=tuple())
-    compared: Sequence[LocalTrack] = field(default=tuple())
+    compare: Sequence[LocalTrack] = field(default=tuple())
 
 
 class LocalMatcher(MusicBeeProcessor):
     """
-    Get matches for tracks based on given comparers.
+    Get matches for local tracks based on given comparers.
 
     :param comparers: List of comparers to compare a list of tracks against.
         When None, returns all tracks unless include_paths or exclude_paths are defined.
@@ -39,18 +45,36 @@ class LocalMatcher(MusicBeeProcessor):
     """
 
     @classmethod
-    def from_xml(cls, xml: Mapping[str, Any] | None = None) -> Self:
+    def from_xml(
+            cls,
+            xml: Mapping[str, Any],
+            library_folder: str | None = None,
+            other_folders: UnitCollection[str] = (),
+            check_existence: bool = True,
+            **kwargs
+    ) -> Self:
+        """
+        Initialise object from XML playlist.
+
+        :param xml: The loaded XML object for this playlist.
+        :param library_folder: Absolute path of the folder containing all tracks.
+        :param other_folders: Absolute paths of other possible library paths.
+            Use to replace path stems from other libraries for the paths in loaded playlists.
+            Useful when managing similar libraries on multiple platforms.
+        :param check_existence: Check for the existence of the file paths on the file system
+            when sanitising the given paths and reject any that don't.
+        """
         source = xml["SmartPlaylist"]["Source"]
 
         match_all: bool = source["Conditions"]["@CombineMethod"] == "All"
 
         # tracks to include even if they don't meet match conditions
         include_str: str = source.get("ExceptionsInclude")
-        include = set(include_str.split("|")) if isinstance(include_str, str) else None
+        include = set(include_str.split("|")) if isinstance(include_str, str) else ()
 
         # tracks to exclude even if they do meet match conditions
         exclude_str: str = source.get("Exceptions")
-        exclude = set(exclude_str.split("|")) if isinstance(exclude_str, str) else None
+        exclude = set(exclude_str.split("|")) if isinstance(exclude_str, str) else ()
 
         comparers: list[ItemComparer] | None = ItemComparer.from_xml(xml=xml)
 
@@ -62,68 +86,65 @@ class LocalMatcher(MusicBeeProcessor):
                 comparers = None
 
         return cls(
-            comparers=comparers,
+            comparers=comparers if comparers else (),
             match_all=match_all,
             include_paths=include,
             exclude_paths=exclude,
-            check_existence=False
+            library_folder=library_folder,
+            other_folders=other_folders,
+            check_existence=check_existence
         )
 
     def __init__(
             self,
-            comparers: UnitSequence[ItemComparer] | None = None,
+            comparers: UnitSequence[ItemComparer] = (),
             match_all: bool = True,
-            include_paths: Collection[str] | None = None,
-            exclude_paths: Collection[str] | None = None,
+            include_paths: Collection[str] = (),
+            exclude_paths: Collection[str] = (),
             library_folder: str | None = None,
-            other_folders: UnitCollection[str] | None = None,
+            other_folders: UnitCollection[str] = (),
             check_existence: bool = True,
     ):
         self.comparers: tuple[ItemComparer] = to_collection(comparers)
         self.match_all = match_all
 
-        self.include_paths: Collection[str] | None = include_paths
-        self.exclude_paths: Collection[str] | None = exclude_paths
+        self.include_paths: Collection[str] = include_paths
+        self.exclude_paths: Collection[str] = exclude_paths
 
         self.library_folder = library_folder.rstrip("\\/") if library_folder is not None else library_folder
         self.original_folder: str | None = None
-        self.sanitise_file_paths(other_folders=other_folders, check_existence=check_existence)
+        self.sanitise_file_paths(*to_collection(other_folders), check_existence=check_existence)
 
-    def sanitise_file_paths(
-            self, other_folders: UnitCollection[str] | None = None, check_existence: bool = True
-    ) -> None:
+    def sanitise_file_paths(self, *other_folders: str, check_existence: bool = True) -> None:
         """
-        Attempt to sanitise given include/exclude file paths
-        based on current library folder and other possible folder stems.
+        Attempt to sanitise include/exclude file paths stored in this object
+        based on currently stored library folder and other possible folder stems.
 
         :param other_folders: Absolute paths of other possible library paths.
             Use to replace path stems from other libraries for the paths in loaded playlists.
             Useful when managing similar libraries on multiple platforms.
         :param check_existence: Check for the existence of the file paths on the file system.
         """
-        if self.library_folder is not None and other_folders is not None and self.original_folder is None:
+        if self.library_folder and other_folders and self.original_folder is None:
             # determine original_folder from other_folders using include/exclude paths
-            self._check_for_other_folder_stem(other_folders, self.include_paths, self.exclude_paths)
+            self._check_for_other_folder_stem(other_folders, *self.include_paths, *self.exclude_paths)
 
-        if self.exclude_paths is not None:  # filter out exclude paths
-            exclude = []
-            for path in self.exclude_paths:
-                path = self.sanitise_file_path(path, check_existence=check_existence)
-                if path is not None:
-                    exclude.append(path.casefold())
+        exclude = []
+        for path in self.exclude_paths:
+            path = self.sanitise_file_path(path, check_existence=check_existence)
+            if path is not None:
+                exclude.append(path.casefold())
 
-            self.exclude_paths = exclude
+        include = []
+        for path in self.include_paths:
+            path = self.sanitise_file_path(path, check_existence=check_existence)
+            if path is not None and (len(exclude) == 0 or path.casefold() not in exclude):
+                include.append(path.casefold())
 
-        if self.include_paths is not None:  # include filtering
-            include = []
-            for path in self.include_paths:
-                path = self.sanitise_file_path(path, check_existence=check_existence)
-                if path is not None and (self.exclude_paths is None or path.casefold() not in self.exclude_paths):
-                    include.append(path.casefold())
+        self.exclude_paths = exclude
+        self.include_paths = include
 
-            self.include_paths = include
-
-    def _check_for_other_folder_stem(self, stems: UnitIterable[str], *paths: Iterable[str] | None) -> None:
+    def _check_for_other_folder_stem(self, stems: Iterable[str], *paths: str | None) -> None:
         """
         Checks for the presence of some other folder as the stem of one of the given paths.
         Useful when managing similar libraries across multiple operating systems.
@@ -131,18 +152,19 @@ class LocalMatcher(MusicBeeProcessor):
         :param stems: Absolute paths of possible stems.
         :param paths: Paths to search through for a match.
         """
-        stems = tuple(folder.rstrip("\\/") for folder in to_collection(stems) if folder is not None)
+        stems = tuple(folder.rstrip("\\/") for folder in stems if folder is not None)
         self.original_folder = None
+        if not stems:
+            return
 
-        for paths_list in paths:
-            if paths_list is None:
+        for path in paths:
+            if path is None:
                 continue
 
-            for path in paths_list:
-                result = next((stem for stem in stems if path.casefold().startswith(stem.casefold())), None)
-                if result:
-                    self.original_folder = result
-                    break
+            result = next((stem for stem in stems if path.casefold().startswith(stem.casefold())), None)
+            if result:
+                self.original_folder = result
+                break
 
     def sanitise_file_path(self, path: str | None, check_existence: bool = True) -> str | None:
         """
@@ -163,16 +185,14 @@ class LocalMatcher(MusicBeeProcessor):
                 path = path.replace(self.original_folder, self.library_folder).replace("//", "/").replace("\\\\", "\\")
 
             # sanitise path separators
-            path = self.correct_path_separator(path)
+            if self.library_folder is not None:
+                if "/" in self.library_folder:
+                    path = path.replace("\\", "/")
+                else:
+                    path = path.replace("/", "\\")
 
         if not check_existence or exists(path):
             return path
-
-    def correct_path_separator(self, path: str) -> str:
-        """Align a paths separators with the separators in the path for the library folder"""
-        if self.library_folder is not None:
-            return path.replace("\\", "/") if "/" in self.library_folder else path.replace("/", "\\")
-        return path
 
     def match(
             self, tracks: Collection[LocalTrack], reference: LocalTrack | None = None, combine: bool = True
@@ -183,25 +203,20 @@ class LocalMatcher(MusicBeeProcessor):
         :param tracks: List of tracks to search through for matches.
         :param reference: Optional reference track to use when comparer has no expected value.
         :param combine: If True, return one list of all tracks. If False, return tuple of 3 lists.
-        :return: If combine=True, list of tracks that match the conditions. If combine=False, tuple of 3 lists:
-            - List 1: Tracks that only match on include_paths
-            - List 2: Tracks that only match on exclude_paths
-            - List 3: Tracks that only match on comparers
+        :return: If ``combine`` is True, list of tracks that match the conditions.
+            If ``combine`` is False, return :py:class:`MatchResult`
         """
         if len(tracks) == 0:  # skip match
             return [] if combine else MatchResult()
 
         path_tracks: Mapping[str, LocalTrack] = {track.path.casefold(): track for track in tracks}
 
-        include: list[LocalTrack] = []
-        if self.include_paths:  # include filter
-            include.extend([path_tracks[path] for path in self.include_paths if path in path_tracks])
+        include: list[LocalTrack] = [path_tracks[path] for path in self.include_paths if path in path_tracks]
+        exclude: list[LocalTrack] = [path_tracks[path] for path in self.exclude_paths if path in path_tracks]
 
-        exclude: list[LocalTrack] = []
-        if self.exclude_paths:  # filter out exclude paths
-            exclude.extend([path_tracks[path] for path in self.exclude_paths if path in path_tracks])
-
-        if self.comparers is None or len(self.comparers) == 0:  # skip comparer checks
+        if not self.comparers:  # skip comparer checks
+            if not self.include_paths:
+                include = list(tracks)
             if combine:
                 return [track for track in include if track not in exclude]
             return MatchResult(include=include, exclude=exclude)
@@ -223,7 +238,7 @@ class LocalMatcher(MusicBeeProcessor):
         if combine:
             compared_reduced = {track for track in compared if track not in include}
             return [track for results in [compared_reduced, include] for track in results if track not in exclude]
-        return MatchResult(include=include, exclude=exclude, compared=compared)
+        return MatchResult(include=include, exclude=exclude, compare=compared)
 
     def as_dict(self):
         return {
@@ -232,5 +247,5 @@ class LocalMatcher(MusicBeeProcessor):
             "library_folder": self.library_folder,
             "original_folder": self.original_folder,
             "match_all": self.match_all,
-            "comparers": self.comparers
+            "comparers": self.comparers,
         }

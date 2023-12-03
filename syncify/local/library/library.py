@@ -7,16 +7,17 @@ from syncify.abstract.collection import Playlist, Library
 from syncify.abstract.item import Item
 from syncify.abstract.misc import Result
 from syncify.enums.tags import PropertyName, TagName
-from syncify.local.exception import IllegalFileTypeError, LocalCollectionError
-from syncify.local.library.collection import LocalCollectionFiltered, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
-from syncify.local.playlist import __PLAYLIST_FILETYPES__, LocalPlaylist, M3U, XAutoPF
-from syncify.processor.sort import ItemSorter
+from syncify.local.collection import LocalCollection, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
+from syncify.local.exception import LocalCollectionError
+from syncify.local.playlist import __PLAYLIST_FILETYPES__, LocalPlaylist, load_playlist
 from syncify.local.track import __TRACK_CLASSES__, LocalTrack, load_track
+from syncify.processors.sort import ItemSorter
+from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitCollection, UnitIterable
-from syncify.utils.logger import Logger, REPORT
+from syncify.utils.logger import REPORT
 
 
-class LocalLibrary(LocalCollectionFiltered[LocalTrack], Library[LocalTrack]):
+class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     """
     Represents a local library, providing various methods for manipulating
     tracks and playlists across an entire local library collection.
@@ -32,6 +33,10 @@ class LocalLibrary(LocalCollectionFiltered[LocalTrack], Library[LocalTrack]):
     :param include: An optional list of playlist names to include when loading playlists.
     :param exclude: An optional list of playlist names to exclude when loading playlists.
     :param load: When True, load the library on intialisation.
+    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
+        If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
+        The wrangler is also used when loading tracks to allow them to process URI tags.
+        For more info on this, see :py:class:`LocalTrack`.
     """
 
     @property
@@ -53,7 +58,7 @@ class LocalLibrary(LocalCollectionFiltered[LocalTrack], Library[LocalTrack]):
         if value is None:
             return
         self._library_folder: str = value.rstrip("\\/")
-        self._track_paths = None
+        self._track_paths = set()
         if value is not None:
             self._track_paths = {path for c in __TRACK_CLASSES__ for path in c.get_filepaths(self._library_folder)}
 
@@ -97,15 +102,19 @@ class LocalLibrary(LocalCollectionFiltered[LocalTrack], Library[LocalTrack]):
 
             self.logger.debug(
                 f"Filtered out {playlists_total - len(self._playlist_paths)} playlists "
-                f"from {playlists_total} Spotify playlists"
+                f"from {playlists_total} local playlists"
             )
 
         self.logger.debug(f"Set playlist folder: {self.library_folder} | {len(self._track_paths)} playlists found")
 
     @property
-    def name(self) -> str | None:
+    def name(self) -> str:
         """The basename of the library folder"""
-        return basename(self.library_folder) if self.library_folder else None
+        tmp_name = "Local"
+        try:
+            return basename(self.library_folder) if self.library_folder else tmp_name
+        except AttributeError:
+            return tmp_name
 
     @property
     def playlists(self) -> dict[str, LocalPlaylist]:
@@ -116,49 +125,63 @@ class LocalLibrary(LocalCollectionFiltered[LocalTrack], Library[LocalTrack]):
     def folders(self) -> list[LocalFolder]:
         """Dynamically generate a set of folder collections from the tracks in this library"""
         grouped = ItemSorter.group_by_field(tracks=self.tracks, field=PropertyName.FOLDER)
-        collections = [LocalFolder(group, name=name) for name, group in grouped.items()]
+        collections = [
+            LocalFolder(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
+            for name, group in grouped.items()
+        ]
         return sorted(collections, key=lambda x: x.name)
 
     @property
     def albums(self) -> list[LocalAlbum]:
         """Dynamically generate a set of album collections from the tracks in this library"""
         grouped = ItemSorter.group_by_field(tracks=self.tracks, field=TagName.ALBUM)
-        collections = [LocalAlbum(group, name=name) for name, group in grouped.items()]
+        collections = [
+            LocalAlbum(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
+            for name, group in grouped.items()
+        ]
         return sorted(collections, key=lambda x: x.name)
 
     @property
     def artists(self) -> list[LocalArtist]:
         """Dynamically generate a set of artist collections from the tracks in this library"""
         grouped = ItemSorter.group_by_field(tracks=self.tracks, field=TagName.ARTIST)
-        collections = [LocalArtist(group, name=name) for name, group in grouped.items()]
+        collections = [
+            LocalArtist(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
+            for name, group in grouped.items()
+        ]
         return sorted(collections, key=lambda x: x.name)
 
     @property
     def genres(self) -> list[LocalGenres]:
         """Dynamically generate a set of genre collections from the tracks in this library"""
         grouped = ItemSorter.group_by_field(tracks=self.tracks, field=TagName.GENRES)
-        collections = [LocalGenres(group, name=name) for name, group in grouped.items()]
+        collections = [
+            LocalGenres(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
+            for name, group in grouped.items()
+        ]
         return sorted(collections, key=lambda x: x.name)
 
     def __init__(
             self,
             library_folder: str | None = None,
             playlist_folder: str | None = None,
-            other_folders: UnitCollection[str] | None = None,
-            include: Iterable[str] | None = None,
-            exclude: Iterable[str] | None = None,
+            other_folders: UnitCollection[str] = (),
+            include: Iterable[str] = (),
+            exclude: Iterable[str] = (),
             load: bool = True,
+            remote_wrangler: RemoteDataWrangler = None,
     ):
-        if not getattr(self, "logger", None):
-            Logger.__init__(self)
-        Library.__init__(self)
+        LocalCollection.__init__(self, remote_wrangler=remote_wrangler)
+        log_name = basename(library_folder) if library_folder else self.name
+        self.logger.info(f"\33[1;95m ->\33[1;97m Loading {log_name} library \33[0m")
+        self.print_line()
 
-        self.include = [name.strip().lower() for name in include] if include else None
-        self.exclude = [name.strip().lower() for name in exclude] if exclude else None
+        self.include = [name.strip().lower() for name in include]
+        self.exclude = [name.strip().lower() for name in exclude]
 
         self._library_folder: str | None = None
         # name of track object to set of paths valid for that track object
-        self._track_paths: set[str] | None = None
+        self._track_paths: set[str] = set()
         self.library_folder = library_folder
 
         self._playlist_folder: str | None = None
@@ -166,7 +189,7 @@ class LocalLibrary(LocalCollectionFiltered[LocalTrack], Library[LocalTrack]):
         self._playlist_paths: dict[str, str] | None = None
         self.playlist_folder: str | None = playlist_folder
 
-        self.other_folders: UnitCollection[str] | None = other_folders
+        self.other_folders: UnitCollection[str] = other_folders
 
         self._tracks: list[LocalTrack] = []
         self._playlists: dict[str, LocalPlaylist] = {}
@@ -212,7 +235,7 @@ class LocalLibrary(LocalCollectionFiltered[LocalTrack], Library[LocalTrack]):
         for path in self.get_progress_bar(iterable=self._track_paths, desc="Loading tracks", unit="tracks"):
             # noinspection PyBroadException
             try:
-                tracks.append(load_track(path=path, available=self._track_paths))
+                tracks.append(load_track(path=path, available=self._track_paths, remote_wrangler=self.remote_wrangler))
             except Exception:
                 errors.append(path)
                 continue
@@ -241,7 +264,7 @@ class LocalLibrary(LocalCollectionFiltered[LocalTrack], Library[LocalTrack]):
 
         :param names: Playlist paths to load relative to the playlist folder.
         :return: The loaded playlists.
-        :raises LocalCollectionError: If a given playlist name cannot be found.
+        :raise LocalCollectionError: If a given playlist name cannot be found.
         """
         self.logger.debug("Load local playlist data: START")
         if names is None:
@@ -258,25 +281,14 @@ class LocalLibrary(LocalCollectionFiltered[LocalTrack], Library[LocalTrack]):
                     f"Playlist name not found in the stored paths of this manager: {name}", kind="playlist"
                 )
 
-            ext = splitext(path)[1].lower()
-            if ext in M3U.valid_extensions:
-                pl = M3U(
-                    path=path,
-                    tracks=self.tracks,
-                    library_folder=self.library_folder,
-                    other_folders=self.other_folders,
-                    available_track_paths=self._track_paths,
-                )
-            elif ext in XAutoPF.valid_extensions:
-                pl = XAutoPF(
-                    path=path,
-                    tracks=self.tracks,
-                    library_folder=self.library_folder,
-                    other_folders=self.other_folders,
-                    available_track_paths=self._track_paths,
-                )
-            else:
-                raise IllegalFileTypeError(ext)
+            pl = load_playlist(
+                path=path,
+                tracks=self.tracks,
+                library_folder=self.library_folder,
+                other_folders=self.other_folders,
+                available_track_paths=self._track_paths,
+                remote_wrangler=self.remote_wrangler,
+            )
 
             playlists.append(pl)
 
@@ -286,7 +298,13 @@ class LocalLibrary(LocalCollectionFiltered[LocalTrack], Library[LocalTrack]):
         return playlists
 
     def save_playlists(self, dry_run: bool = True) -> dict[str, Result]:
-        """Saves the tags of all tracks in this library. Use arguments from :py:func:`LocalPlaylist.save()`"""
+        """
+        For each Playlist in this Library, saves its associate tracks and its settings (if applicable) to file.
+        
+        :param dry_run: Run function, but do not modify file at all.
+        :return: A map of the playlist name to the results of its sync as a :py:class:`Result` object.
+        """
+        
         return {name: pl.save(dry_run=dry_run) for name, pl in self.playlists.items()}
 
     def log_playlists(self) -> None:
@@ -314,7 +332,7 @@ class LocalLibrary(LocalCollectionFiltered[LocalTrack], Library[LocalTrack]):
     def extend(self, items: Iterable[Item]):
         self.tracks.extend(track for track in items if isinstance(track, LocalTrack) and track not in self.tracks)
 
-    def merge_playlists(self, playlists: Library | Collection[Playlist] | Mapping[Any, Playlist] | None = None):
+    def merge_playlists(self, playlists: Library | Collection[Playlist] | Mapping[Any, Playlist]):
         raise NotImplementedError
 
     def restore_tracks(
@@ -325,7 +343,7 @@ class LocalLibrary(LocalCollectionFiltered[LocalTrack], Library[LocalTrack]):
 
         :param backup: Backup data in the form ``{path: {JSON formatted track data}}``
         :param tags: Set of tags to restore.
-        :returns: The number of tracks restored
+        :return: The number of tracks restored
         """
         tag_names = set(TagName.to_tags(tags))
         backup = {path.lower(): track_map for path, track_map in backup.items()}
@@ -349,6 +367,7 @@ class LocalLibrary(LocalCollectionFiltered[LocalTrack], Library[LocalTrack]):
             "other_folders": self.other_folders,
             "track_count": len(self.tracks),
             "playlist_counts": {name: len(pl) for name, pl in self._playlists.items()},
+            "remote_source": self.remote_wrangler.remote_source if self.remote_wrangler else None,
         }
 
     def as_json(self):

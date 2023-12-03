@@ -1,17 +1,18 @@
 from os.path import basename, splitext
 
 from syncify.local.library import LocalLibrary
-from tests.local.playlist.common import path_playlist_resources, path_playlist_m3u
-from tests.local.playlist.common import path_playlist_xautopf_bp, path_playlist_xautopf_ra
-from tests.local.track.common import path_track_m4a, path_track_wma
-from tests.local.track.common import path_track_resources, path_track_flac, path_track_mp3
+from tests.local import remote_wrangler
+from tests.local.playlist import path_playlist_resources, path_playlist_m3u
+from tests.local.playlist import path_playlist_xautopf_bp, path_playlist_xautopf_ra
+from tests.local.track import path_track_m4a, path_track_wma
+from tests.local.track import path_track_resources, path_track_flac, path_track_mp3
 
 
 def test_init():
-    library_blank = LocalLibrary(load=False)
+    library_blank = LocalLibrary(load=False, remote_wrangler=remote_wrangler)
 
     assert library_blank.library_folder is None
-    assert library_blank._track_paths is None
+    assert len(library_blank._track_paths) == 0
     library_blank.library_folder = path_track_resources
     assert library_blank.library_folder == path_track_resources
     assert library_blank._track_paths == {path_track_flac, path_track_mp3, path_track_m4a, path_track_wma}
@@ -29,10 +30,9 @@ def test_init():
     library_include = LocalLibrary(
         library_folder=path_track_resources,
         playlist_folder=path_playlist_resources,
-        include=[splitext(basename(path_playlist_m3u))[0],
-                 splitext(basename(path_playlist_xautopf_bp))[0]],
-        exclude=None,
-        load=False
+        include=[splitext(basename(path_playlist_m3u))[0], splitext(basename(path_playlist_xautopf_bp))[0]],
+        load=False,
+        remote_wrangler=remote_wrangler,
     )
     assert library_include.library_folder == path_track_resources
     assert library_include._track_paths == {path_track_flac, path_track_mp3, path_track_m4a, path_track_wma}
@@ -45,9 +45,9 @@ def test_init():
     library_exclude = LocalLibrary(
         library_folder=path_track_resources,
         playlist_folder=path_playlist_resources,
-        include=None,
         exclude=[splitext(basename(path_playlist_xautopf_bp))[0]],
-        load=False
+        load=False,
+        remote_wrangler=remote_wrangler,
     )
     assert library_exclude.playlist_folder == path_playlist_resources
     assert library_exclude._playlist_paths == {
@@ -57,7 +57,11 @@ def test_init():
 
 
 def test_load():
-    library = LocalLibrary(library_folder=path_track_resources, playlist_folder=path_playlist_resources)
+    library = LocalLibrary(
+        library_folder=path_track_resources,
+        playlist_folder=path_playlist_resources,
+        remote_wrangler=remote_wrangler,
+    )
     tracks = {track.path for track in library.tracks}
     playlists = {name: pl.path for name, pl in library.playlists.items()}
 

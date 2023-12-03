@@ -7,7 +7,11 @@ from syncify.utils import Number
 
 
 def to_collection[T: (list, set, tuple)](data: Any, cls: T = tuple) -> T | None:
-    """Safely turn any object into a collection unless None"""
+    """
+    Safely turn any object into a collection of a given type ``T``.
+    Strings are converted to collections of size 1 where the first element is the string.
+    Returns None if value is None.
+    """
     if data is None or isinstance(data, cls):
         return data
     elif isinstance(data, Iterable) and not isinstance(data, str) and not isinstance(data, Mapping):
@@ -21,13 +25,13 @@ def to_collection[T: (list, set, tuple)](data: Any, cls: T = tuple) -> T | None:
     raise TypeError(f"Unable to convert data to {cls.__name__} (data={data})")
 
 
-def strip_ignore_words(value: str, words: Iterable[str] | None = frozenset(["The", "A"])) -> (bool, str):
+def strip_ignore_words(value: str, words: Iterable[str] | None = frozenset(["The", "A"])) -> tuple[bool, str]:
     """
     Remove ignorable words from the beginning of a string.
     Useful for sorting collections strings with ignorable start words and/or special characters.
     Only removes the first word it finds at the start of the string.
 
-    :returns: Tuple (True if the string starts with some special character, the formatted string)
+    :return: Tuple of (True if the string starts with some special character, the formatted string)
     """
     if not value:
         return False, value

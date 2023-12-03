@@ -1,33 +1,9 @@
-from dataclasses import dataclass
 from typing import Self
 
 from syncify.enums import SyncifyEnum, EnumNotFoundError
+from syncify.local.base import TagMap
 from syncify.utils import UnitIterable
 from syncify.utils.helpers import to_collection
-
-
-@dataclass(frozen=True)
-class TagMap:
-    """Map of human-friendly tag name to ID3 tag ids for a given file type"""
-
-    title: list[str]
-    artist: list[str]
-    album: list[str]
-    album_artist: list[str]
-    track_number: list[str]
-    track_total: list[str]
-    genres: list[str]
-    year: list[str]
-    bpm: list[str]
-    key: list[str]
-    disc_number: list[str]
-    disc_total: list[str]
-    compilation: list[str]
-    comments: list[str]
-    images: list[str]
-
-    def __getitem__(self, key: str) -> list[str]:
-        return getattr(self, key, [])
 
 
 class Name(SyncifyEnum):
@@ -38,7 +14,7 @@ class Name(SyncifyEnum):
         """
         Returns the first enum that matches the given name
 
-        :raises EnumNotFoundError: If a corresponding enum cannot be found.
+        :raise EnumNotFoundError: If a corresponding enum cannot be found.
         """
         name = name.strip().upper()
         if name == "ALBUM_ARTIST":
@@ -56,7 +32,7 @@ class Name(SyncifyEnum):
         """
         Returns the first enum that matches the given enum value
 
-        :raises EnumNotFoundError: If a corresponding enum cannot be found.
+        :raise EnumNotFoundError: If a corresponding enum cannot be found.
         """
         for enum in cls:
             if enum.value == value:

@@ -1,30 +1,15 @@
 from collections.abc import Mapping, Iterable, MutableMapping
-from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Self, Literal
+from typing import Any, Self
 
-from syncify.abstract.collection import Playlist
-from syncify.abstract.item import Item
-from syncify.abstract.misc import Result
-from syncify.spotify import APIMethodInputType
-from syncify.spotify.base import SpotifyObject
-from syncify.spotify.enums import ItemType
+from syncify.remote.api import APIMethodInputType
+from syncify.remote.enums import RemoteItemType
+from syncify.remote.library.playlist import RemotePlaylist
 from syncify.spotify.library.collection import SpotifyCollection
 from syncify.spotify.library.item import SpotifyTrack
 
 
-@dataclass(frozen=True)
-class SyncResultSpotifyPlaylist(Result):
-    """Stores the results of a sync with a remote Spotify playlist"""
-    start: int
-    added: int
-    removed: int
-    unchanged: int
-    difference: int
-    final: int
-
-
-class SpotifyPlaylist(SpotifyCollection[SpotifyTrack], Playlist[SpotifyTrack]):
+class SpotifyPlaylist(SpotifyCollection, RemotePlaylist[SpotifyTrack]):
     """
     Extracts key ``playlist`` data from a Spotify API JSON response.
 
@@ -33,18 +18,31 @@ class SpotifyPlaylist(SpotifyCollection[SpotifyTrack], Playlist[SpotifyTrack]):
 
     @property
     def name(self) -> str:
+        """The name of this playlist"""
         return self._name
 
     @property
+    def description(self) -> str | None:
+        """Description of this playlist"""
+        return self._description
+
+    @description.setter
+    def description(self, value: str | None):
+        self._description = value
+
+    @property
     def tracks(self):
+        """The tracks in this collection"""
         return self._tracks
 
     @property
     def track_total(self) -> int:
+        """The total number of tracks in this playlist"""
         return self.response["tracks"]["total"]
 
     @property
     def image_links(self) -> dict[str, str]:
+        """The images associated with this playlist in the form ``{image name: image link}``"""
         return self._image_links
 
     @property
@@ -63,14 +61,6 @@ class SpotifyPlaylist(SpotifyCollection[SpotifyTrack], Playlist[SpotifyTrack]):
         return self._date_added
 
     @property
-    def description(self) -> str | None:
-        return self._description
-
-    @description.setter
-    def description(self, value: str | None):
-        self._description = value
-
-    @property
     def followers(self) -> int:
         """The number of followers this playlist has"""
         return self.response["followers"]["total"]
@@ -87,12 +77,12 @@ class SpotifyPlaylist(SpotifyCollection[SpotifyTrack], Playlist[SpotifyTrack]):
 
     @property
     def has_image(self) -> bool:
+        """Does this playlist have an image"""
         images = self.response.get("album", {}).get("images", [])
         return images is not None and len(images) > 0
 
     def __init__(self, response: MutableMapping[str, Any]):
-        Playlist.__init__(self)
-        SpotifyObject.__init__(self, response=response)
+        RemotePlaylist.__init__(self, response=response)
 
         self._name: str = response["name"]
         self._description: str = response["description"]
@@ -114,8 +104,27 @@ class SpotifyPlaylist(SpotifyCollection[SpotifyTrack], Playlist[SpotifyTrack]):
 
     @classmethod
     def load(
-            cls, value: APIMethodInputType, use_cache: bool = True, items: Iterable[SpotifyTrack] | None = None
+            cls, value: APIMethodInputType, use_cache: bool = True, items: Iterable[SpotifyTrack] = (), *args, **kwargs
     ) -> Self:
+        """
+        Generate a new object, calling all required endpoints to get a complete set of data for this item type.
+
+        The given ``value`` may be:
+            * A string representing a URL/URI/ID.
+            * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
+            * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
+            * A MutableSequence of remote API JSON responses for a collection with
+                a valid ID value under an ``id`` key.
+
+        When a list is given, only the first item is processed.
+
+        :param value: The value representing some remote artist. See description for allowed value types.
+        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param items: Optionally, give a list of available items to build a response for this collection.
+            In doing so, the method will first try to find the API responses for the items of this collection
+            in the given list before calling the API for any items not found there.
+            This helps reduce the number of API calls made on initialisation.
+        """
         cls._check_for_api()
         obj = cls.__new__(cls)
         response = cls._load_response(value, use_cache=use_cache)
@@ -150,10 +159,16 @@ class SpotifyPlaylist(SpotifyCollection[SpotifyTrack], Playlist[SpotifyTrack]):
         return obj
 
     def reload(self, use_cache: bool = True):
+        """
+        Reload this object from the API, calling all required endpoints
+        to get a complete set of data for this item type
+
+        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        """
         self._check_for_api()
 
         # reload with enriched data
-        response = self.api.get_collections(self.url, kind=ItemType.PLAYLIST, use_cache=use_cache)[0]
+        response = self.api.get_collections(self.url, kind=RemoteItemType.PLAYLIST, use_cache=use_cache)[0]
         tracks = [track["track"] for track in response["tracks"]["items"]]
         self.api.get_tracks(tracks, features=True, use_cache=use_cache)
 
@@ -161,91 +176,6 @@ class SpotifyPlaylist(SpotifyCollection[SpotifyTrack], Playlist[SpotifyTrack]):
             old["track"] = new
         self.__init__(response)
 
-    @classmethod
-    def create(cls, name: str, public: bool = True, collaborative: bool = False) -> Self:
-        """
-        Create an empty playlist for the current user with the given name
-        and initialise and return a new SpotifyPlaylist object from this new playlist.
-
-        :param name: Name of playlist to create.
-        :param public: Set playlist availability as `public` if True and `private` if False.
-        :param collaborative: Set playlist to collaborative i.e. other users may edit the playlist.
-        :return: SpotifyPlaylist object for the generated playlist.
-        """
-        cls._check_for_api()
-
-        url = cls.api.create_playlist(name=name, public=public, collaborative=collaborative)
-
-        obj = cls.__new__(cls)
-        obj.__init__(cls.api.get(url))
-        return obj
-
-    def delete(self) -> None:
-        """
-        Unfollow the current playlist and clear all attributes from this object.
-        WARNING: This function will destructively modify your Spotify playlists.
-        """
-        self._check_for_api()
-        self.api.delete_playlist(self.url)
-        for key in list(self.__dict__.keys()):
-            delattr(self, key)
-
-    def sync(
-            self,
-            items: Iterable[Item] | None = None,
-            clear: Literal["all", "extra"] | None = None,
-            reload: bool = True,
-            dry_run: bool = False,
-    ) -> SyncResultSpotifyPlaylist:
-        """
-        Synchronise this playlist object with the remote Spotify playlist it is associated with. Clear options:
-
-        * None: Do not clear any items from the remote playlist and only add any tracks
-            from this playlist object not currently in the remote playlist.
-        * 'all': Clear all items from the remote playlist first, then add all items from this playlist object.
-        * 'extra': Clear all items not currently in this object's items list, then add all tracks
-            from this playlist object not currently in the remote playlist.
-
-        :param items: Provide an item collection or list of items to synchronise to the remote playlist.
-            Use the currently loaded ``tracks`` in this object if not given.
-        :param clear: Clear option for the remote playlist. See description.
-        :param reload: When True, once synchronisation is complete, reload this SpotifyPlaylist object
-            to reflect the changes on the remote playlist if enabled. Skip if False.
-        :param dry_run: Run function, but do not modify the remote playlists at all.
-        :return: UpdateResult object with stats on the changes to the remote playlist.
-        """
-        self._check_for_api()
-
-        uris_obj = {track.uri for track in (items if items else self.tracks) if track.uri}
-        uris_remote = {track["track"]["uri"] for track in self.response["tracks"]["items"]}
-
-        uris_add = [uri for uri in uris_obj if uri not in uris_remote]
-        uris_unchanged = uris_remote
-        removed = 0
-
-        # process the remote playlist. when dry_run, mock the results
-        if clear == "all":  # remove all items from the remote playlist on Spotify
-            removed = self.api.clear_from_playlist(self.url) if not dry_run else len(uris_remote)
-            uris_add = uris_obj
-            uris_unchanged = set()
-        elif clear == "extra":  # remove items not present in the current list from the remote playlist on Spotify
-            uris_clear = {uri for uri in uris_remote if uri not in uris_obj}
-            removed = self.api.clear_from_playlist(self.url, items=uris_clear) if not dry_run else len(uris_clear)
-            uris_unchanged = {uri for uri in uris_remote if uri in uris_obj}
-
-        if not dry_run:
-            added = self.api.add_to_playlist(self.url, items=uris_add, skip_dupes=clear != "all")
-        else:
-            added = len(uris_add) if clear != "all" else len(set(uris_add) - uris_remote)
-
-        if not dry_run and reload:  # reload the current playlist object from remote
-            self.reload(use_cache=False)
-
-        return SyncResultSpotifyPlaylist(
-            start=len(uris_remote),
-            added=added,
-            removed=removed,
-            unchanged=len(set(uris_remote).intersection(uris_unchanged)),
-            difference=len(self.tracks) - len(uris_remote),
-            final=len(self.tracks)
-        )
+    def _get_track_uris_from_api_response(self) -> set[str]:
+        """Extract a set of URIs from this playlist's stored API response"""
+        return {track["track"]["uri"] for track in self.response["tracks"]["items"]}

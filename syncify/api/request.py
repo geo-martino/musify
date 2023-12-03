@@ -56,8 +56,8 @@ class RequestHandler(APIAuthoriser, Logger):
         :param method: method for the new :class:`Request` object:
             ``GET``, ``OPTIONS``, ``HEAD``, ``POST``, ``PUT``, ``PATCH``, or ``DELETE``.
         :param url: URL for the new :class:`Request` object.
-        :returns: The JSON formatted response or, if JSON formatting not possible, the text response.
-        :raises APIError: On any logic breaking error/response.
+        :return: The JSON formatted response or, if JSON formatting not possible, the text response.
+        :raise APIError: On any logic breaking error/response.
         """
         kwargs.pop("headers", None)
         response = self._request(method=method, url=url, *args, **kwargs)
@@ -87,8 +87,9 @@ class RequestHandler(APIAuthoriser, Logger):
             url: str,
             use_cache: bool = True,
             log_pad: int = 43,
-            log_extra: Iterable[str] | None = None,
-            *args, **kwargs
+            log_extra: Iterable[str] = (),
+            *args,
+            **kwargs
     ) -> BaseResponse | None:
         """Handle logging a request, send the request, and return the response"""
         try:  # reauthorise if needed
@@ -117,7 +118,7 @@ class RequestHandler(APIAuthoriser, Logger):
             return
 
     def _log_response(self, response: BaseResponse, method: str, url: str) -> None:
-        """Log the method, url, response text, and response headers."""
+        """Log the method, URL, response text, and response headers."""
         response_headers = response.headers
         if isinstance(response.headers, Mapping):  # format headers if JSON
             response_headers = json.dumps(response.headers, indent=2)
@@ -155,6 +156,7 @@ class RequestHandler(APIAuthoriser, Logger):
 
     @staticmethod
     def _response_as_json(response: BaseResponse) -> dict[str, Any]:
+        """Format the response to JSON and handle any errors"""
         try:
             return response.json()
         except json.decoder.JSONDecodeError:
