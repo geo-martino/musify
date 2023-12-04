@@ -9,7 +9,7 @@ from syncify.abstract.collection import ItemCollection, Folder, Album, Artist, G
 from syncify.abstract.item import Item
 from syncify.local.base import LocalItem
 from syncify.local.exception import LocalCollectionError
-from syncify.local.track import load_track, __TRACK_FILETYPES__
+from syncify.local.track import load_track, TRACK_FILETYPES
 from syncify.local.track.base.track import LocalTrack
 from syncify.local.track.base.writer import SyncResultTrack
 from syncify.remote.enums import RemoteIDType
@@ -113,12 +113,11 @@ class LocalCollection[T: LocalItem](ItemCollection[T], Logger, metaclass=ABCMeta
         self.logger.stat("\33[1;96mSaved tags to the following tracks: \33[0m")
         for track, result in results.items():
             name = self.align_and_truncate(track.path, max_width=max_width, right_align=True)
-            updated = tuple(t for tag in result.updated.keys() for t in tag.to_tag())
 
             self.logger.stat(
                 f"\33[97m{name} \33[0m| " +
                 ("\33[92mSAVED \33[0m| " if result.saved else "\33[91mNOT SAVED \33[0m| ") +
-                f"\33[94m{', '.join(updated)} \33[0m"
+                f"\33[94m{', '.join(tag.name for tag in result.updated.keys())} \33[0m"
             )
         self.print_line(STAT)
 
@@ -268,7 +267,7 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
     ):
         if len(tracks) == 0 and name is not None and exists(name) and isdir(name):
             # name is path to a folder, load tracks in that folder
-            tracks = [load_track(path) for path in glob(join(name, "*")) if splitext(path)[1] in __TRACK_FILETYPES__]
+            tracks = [load_track(path) for path in glob(join(name, "*")) if splitext(path)[1] in TRACK_FILETYPES]
             name = basename(name)
         Folder.__init__(self, remote_wrangler=remote_wrangler)
         LocalCollectionFiltered.__init__(self, tracks=tracks, name=name, remote_wrangler=remote_wrangler)

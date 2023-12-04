@@ -3,27 +3,27 @@ from collections.abc import Mapping, Sequence, MutableMapping
 from typing import Any
 from urllib.parse import urlparse
 
-from syncify.enums import EnumNotFoundError
+from syncify.exception import EnumNotFoundError
 from syncify.remote.api import APIMethodInputType
 from syncify.remote.enums import RemoteIDType, RemoteItemType
 from syncify.remote.exception import RemoteError, RemoteIDTypeError, RemoteItemTypeError
 from syncify.remote.processors.wrangle import RemoteDataWrangler
-from syncify.spotify import __URL_API__, __URL_EXT__, __UNAVAILABLE_URI_VALUE__
+from syncify.spotify import URL_API, URL_EXT, SPOTIFY_UNAVAILABLE_URI
 from syncify.spotify.base import SpotifyRemote, SpotifyObject
 
 
 class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
 
-    unavailable_uri_dummy = __UNAVAILABLE_URI_VALUE__
+    unavailable_uri_dummy = SPOTIFY_UNAVAILABLE_URI
 
     @staticmethod
     def get_id_type(value: str) -> RemoteIDType:
         value = value.strip().casefold()
         uri_split = value.split(':')
 
-        if value.startswith(__URL_API__):
+        if value.startswith(URL_API):
             return RemoteIDType.URL
-        elif value.startswith(__URL_EXT__):
+        elif value.startswith(URL_EXT):
             return RemoteIDType.URL_EXT
         elif len(uri_split) == RemoteIDType.URI.value and uri_split[0] == "spotify":  # URI
             if uri_split[1] == "user":
@@ -39,9 +39,9 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
         value = value.strip().casefold()
 
         if kind == RemoteIDType.URL:
-            return value.startswith(__URL_API__)
+            return value.startswith(URL_API)
         elif kind == RemoteIDType.URL_EXT:
-            return value.startswith(__URL_EXT__)
+            return value.startswith(URL_EXT)
         elif kind == RemoteIDType.URI:
             uri_split = value.split(':')
             if len(uri_split) != RemoteIDType.URI.value or uri_split[0] != "spotify":
@@ -124,9 +124,9 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
         # reformat
         item = kind.name.casefold().rstrip('s')
         if type_out == RemoteIDType.URL:
-            return f'{__URL_API__}/{item}s/{id_}'
+            return f'{URL_API}/{item}s/{id_}'
         elif type_out == RemoteIDType.URL_EXT:
-            return f'{__URL_EXT__}/{item}/{id_}'
+            return f'{URL_EXT}/{item}/{id_}'
         elif type_out == RemoteIDType.URI:
             return f"spotify:{item}:{id_}"
         else:

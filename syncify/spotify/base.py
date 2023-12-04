@@ -6,7 +6,7 @@ from syncify.abstract.misc import PrettyPrinter
 from syncify.remote.base import Remote, RemoteObject, RemoteItem
 from syncify.remote.enums import RemoteItemType
 from syncify.remote.exception import RemoteItemTypeError
-from syncify.spotify import __SPOTIFY_SOURCE_NAME__
+from syncify.spotify import SPOTIFY_SOURCE_NAME
 
 
 class SpotifyRemote(Remote):
@@ -14,7 +14,7 @@ class SpotifyRemote(Remote):
 
     @property
     def remote_source(self) -> str:
-        return __SPOTIFY_SOURCE_NAME__
+        return SPOTIFY_SOURCE_NAME
 
 
 class SpotifyObjectMixin(SpotifyRemote, RemoteObject, metaclass=ABCMeta):

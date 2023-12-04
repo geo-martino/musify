@@ -7,8 +7,8 @@ import mutagen.flac
 import mutagen.id3
 from PIL import Image
 
-from syncify.enums.tags import TagName, TagMap
-from syncify.local.file import open_image, get_image_bytes
+from syncify.abstract.fields import LocalTrackField
+from syncify.local.file import TagMap, open_image, get_image_bytes
 from syncify.local.track.base.track import LocalTrack
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 
@@ -108,7 +108,7 @@ class FLAC(LocalTrack):
         return updated
 
     def delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:
-        if tag_name == TagName.IMAGES.name.casefold():
+        if tag_name == LocalTrackField.IMAGES.name.casefold():
             self._file.clear_pictures()
             return True
 

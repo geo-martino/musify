@@ -6,11 +6,11 @@ from typing import Any
 from syncify.abstract.collection import Playlist, Library
 from syncify.abstract.item import Item
 from syncify.abstract.misc import Result
-from syncify.enums.tags import PropertyName, TagName
+from syncify.abstract.fields import LocalTrackField
 from syncify.local.collection import LocalCollection, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from syncify.local.exception import LocalCollectionError
-from syncify.local.playlist import __PLAYLIST_FILETYPES__, LocalPlaylist, load_playlist
-from syncify.local.track import __TRACK_CLASSES__, LocalTrack, load_track
+from syncify.local.playlist import PLAYLIST_FILETYPES, LocalPlaylist, load_playlist
+from syncify.local.track import TRACK_CLASSES, LocalTrack, load_track
 from syncify.processors.sort import ItemSorter
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitCollection, UnitIterable
@@ -60,7 +60,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         self._library_folder: str = value.rstrip("\\/")
         self._track_paths = set()
         if value is not None:
-            self._track_paths = {path for c in __TRACK_CLASSES__ for path in c.get_filepaths(self._library_folder)}
+            self._track_paths = {path for c in TRACK_CLASSES for path in c.get_filepaths(self._library_folder)}
 
         self.logger.debug(f"Set library folder: {self.library_folder} | {len(self._track_paths)} track paths found")
 
@@ -86,7 +86,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         self._playlist_paths = None
         if value is not None:
             playlists = {}
-            for filetype in __PLAYLIST_FILETYPES__:
+            for filetype in PLAYLIST_FILETYPES:
                 paths = glob(join(self._playlist_folder, "**", f"*{filetype}"), recursive=True)
                 entry = {
                     splitext(basename(path.replace(self._playlist_folder, "").casefold()))[0]: path
@@ -124,7 +124,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     @property
     def folders(self) -> list[LocalFolder]:
         """Dynamically generate a set of folder collections from the tracks in this library"""
-        grouped = ItemSorter.group_by_field(tracks=self.tracks, field=PropertyName.FOLDER)
+        grouped = ItemSorter.group_by_field(tracks=self.tracks, field=LocalTrackField.FOLDER)
         collections = [
             LocalFolder(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
             for name, group in grouped.items()
@@ -134,7 +134,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     @property
     def albums(self) -> list[LocalAlbum]:
         """Dynamically generate a set of album collections from the tracks in this library"""
-        grouped = ItemSorter.group_by_field(tracks=self.tracks, field=TagName.ALBUM)
+        grouped = ItemSorter.group_by_field(tracks=self.tracks, field=LocalTrackField.ALBUM)
         collections = [
             LocalAlbum(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
             for name, group in grouped.items()
@@ -144,7 +144,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     @property
     def artists(self) -> list[LocalArtist]:
         """Dynamically generate a set of artist collections from the tracks in this library"""
-        grouped = ItemSorter.group_by_field(tracks=self.tracks, field=TagName.ARTIST)
+        grouped = ItemSorter.group_by_field(tracks=self.tracks, field=LocalTrackField.ARTIST)
         collections = [
             LocalArtist(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
             for name, group in grouped.items()
@@ -154,7 +154,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     @property
     def genres(self) -> list[LocalGenres]:
         """Dynamically generate a set of genre collections from the tracks in this library"""
-        grouped = ItemSorter.group_by_field(tracks=self.tracks, field=TagName.GENRES)
+        grouped = ItemSorter.group_by_field(tracks=self.tracks, field=LocalTrackField.GENRES)
         collections = [
             LocalGenres(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
             for name, group in grouped.items()
@@ -336,7 +336,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         raise NotImplementedError
 
     def restore_tracks(
-            self, backup: Mapping[str, Mapping[str, Any]], tags: UnitIterable[TagName] = TagName.ALL
+            self, backup: Mapping[str, Mapping[str, Any]], tags: UnitIterable[LocalTrackField] = LocalTrackField.ALL
     ) -> int:
         """
         Restore track tags from a backup to loaded track objects. This does not save the updated tags.
@@ -345,7 +345,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         :param tags: Set of tags to restore.
         :return: The number of tracks restored
         """
-        tag_names = set(TagName.to_tags(tags))
+        tag_names = set(LocalTrackField.to_tags(tags))
         backup = {path.casefold(): track_map for path, track_map in backup.items()}
 
         count = 0

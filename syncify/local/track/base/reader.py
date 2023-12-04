@@ -30,8 +30,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
 
     @property
     def name(self):
-        """This track's title"""
-        return self.title if self.title else hash(self)
+        return self.title if self.title else str(hash(self))
 
     @property
     def title(self):
@@ -188,13 +187,26 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
         return self.file.info.length
 
     @property
-    def bit_rate(self):
+    def bit_rate(self) -> float:
         """The bit rate of this track in kilobytes per second"""
         return self.file.info.bitrate / 1000
 
     @property
-    def sample_rate(self):
+    def bit_depth(self) -> int | None:
+        """The bit depth of this track in bits"""
+        try:
+            return self.file.info.bits_per_sample / 1000
+        except AttributeError:
+            return None
+
+    @property
+    def sample_rate(self) -> float:
         """The sample rate of this track in kHz"""
+        return self.file.info.sample_rate / 1000
+
+    @property
+    def channels(self) -> float:
+        """The number of channels in this audio file i.e. 1 for mono, 2 for stereo, ..."""
         return self.file.info.sample_rate / 1000
 
     @property

@@ -13,9 +13,9 @@ from typing import Any
 
 from dateutil.relativedelta import relativedelta
 
-from syncify import __PROGRAM_NAME__
-from syncify.config import __REMOTE_CONFIG__
-from syncify.enums.tags import TagName
+from syncify import PROGRAM_NAME
+from syncify.config import REMOTE_CONFIG
+from syncify.abstract.fields import LocalTrackField
 from syncify.exception import SyncifyError
 from syncify.local.library import LocalLibrary, MusicBee
 from syncify.local.collection import LocalFolder
@@ -32,7 +32,7 @@ from syncify.utils.printers import print_logo, print_line, print_time
 
 class Syncify(Settings, Report):
     """
-    Core functionality and meta-functions for Syncify
+    Core functionality and meta-functions for the program
 
     :param config_path: Path of the config file to use.
     """
@@ -57,7 +57,7 @@ class Syncify(Settings, Report):
     @property
     def remote_config(self) -> RemoteClasses:
         """Remote source config to current remote source name"""
-        return __REMOTE_CONFIG__[self.remote_source.casefold().strip()]
+        return REMOTE_CONFIG[self.remote_source.casefold().strip()]
 
     @property
     def api(self) -> RemoteAPI:
@@ -137,7 +137,7 @@ class Syncify(Settings, Report):
         self.run: Callable[[], Any] | None = None
         self.cfg_run: Mapping[Any, Any] = self.cfg_general
 
-        if self.remote_source not in __REMOTE_CONFIG__:
+        if self.remote_source not in REMOTE_CONFIG:
             raise SyncifyError(f"Given remote source is not supported: {self.remote_source}")
 
         self._api: RemoteAPI | None = None
@@ -145,7 +145,7 @@ class Syncify(Settings, Report):
         self._android_library: LocalLibrary | None = None
         self._remote_library: RemoteLibrary | None = None
 
-        self.logger.debug(f"Initialisation of {__PROGRAM_NAME__} object: DONE\n")
+        self.logger.debug(f"Initialisation of {PROGRAM_NAME} object: DONE\n")
 
     def set_func(self, name: str) -> None:
         """Set the current runtime function to call at ``self.run`` and set its config for this run"""
@@ -224,7 +224,7 @@ class Syncify(Settings, Report):
 
     def clean_env(self) -> None:
         """Clears files older than a number of days and only keeps max # of runs"""
-        self.logger.debug(f"Clean {__PROGRAM_NAME__} files: START")
+        self.logger.debug(f"Clean {PROGRAM_NAME} files: START")
 
         days = self.cfg_general["cleanup"]["days"]
         runs = self.cfg_general["cleanup"]["runs"]
@@ -269,7 +269,7 @@ class Syncify(Settings, Report):
 
         self.logger.info(f"\33[1;95m ->\33[1;92m Removed {len(remove)} folders\33[0m")
         self.print_line()
-        self.logger.debug(f"Clean {__PROGRAM_NAME__} files: DONE\n")
+        self.logger.debug(f"Clean {PROGRAM_NAME} files: DONE\n")
 
     ###########################################################################
     ## Backup/Restore
@@ -319,17 +319,16 @@ class Syncify(Settings, Report):
         """Restore local library data from a backup, getting user input for the settings"""
         self.logger.debug("Restore local: START")
 
-        tags = TagName.ALL.to_tag()
+        tags = LocalTrackField.ALL.to_tag()
         self.logger.info(f"\33[97mAvailable tags to restore: \33[94m{', '.join(tags)}\33[0m")
         message = "Select tags to restore separated by a space (entering nothing restores all available tags)"
 
         while True:  # get valid user input
-            restore_tags = [t.casefold().strip() for t in get_user_input(message).split()]
+            restore_tags = {t.casefold().strip() for t in get_user_input(message).split()}
             if not restore_tags:  # user entered nothing, restore all tags
-                restore_tags = TagName.ALL.to_tag()
+                restore_tags = LocalTrackField.ALL.to_tag()
                 break
             elif all(t in tags for t in restore_tags):  # input is valid
-                restore_tags = set(restore_tags)
                 break
             print(f"\33[91mTags entered were not recognised ({', '.join(restore_tags)}), try again\33[0m")
 
@@ -341,7 +340,7 @@ class Syncify(Settings, Report):
         backup = self._load_json(self.local_library_backup_name, folder)
 
         # restore and save
-        self.local_library.restore_tracks(backup["tracks"], tags=[TagName.from_name(tag) for tag in restore_tags])
+        self.local_library.restore_tracks(backup["tracks"], tags=LocalTrackField.from_name(*restore_tags))
         results = self.local_library.save_tracks(tags=tags, replace=True, dry_run=self.dry_run)
 
         self.local_library.log_save_tracks(results)
@@ -394,7 +393,7 @@ class Syncify(Settings, Report):
 
         if check_results:
             self.logger.info(f"\33[1;95m ->\33[1;97m Updating tags for {len(self.local_library)} tracks: uri \33[0m")
-            results = self.local_library.save_tracks(tags=TagName.URI, replace=True, dry_run=self.dry_run)
+            results = self.local_library.save_tracks(tags=LocalTrackField.URI, replace=True, dry_run=self.dry_run)
 
             if results:
                 self.print_line(STAT)
@@ -425,7 +424,7 @@ class Syncify(Settings, Report):
         checker.check(albums, interval=self.cfg_run.get("interval", 10))
 
         self.logger.info(f"\33[1;95m ->\33[1;97m Updating tags for {len(self.local_library)} tracks: uri \33[0m")
-        results = self.local_library.save_tracks(tags=TagName.URI, replace=True, dry_run=self.dry_run)
+        results = self.local_library.save_tracks(tags=LocalTrackField.URI, replace=True, dry_run=self.dry_run)
 
         if results:
             self.print_line(STAT)
@@ -443,7 +442,7 @@ class Syncify(Settings, Report):
 
         replace = self.cfg_run.get("local", {}).get("update", {}).get("replace", False)
         tag_names = self.cfg_run.get("local", {}).get("update", {}).get("tags")
-        tags = TagName.ALL if not tag_names else [TagName.from_name(tag_name) for tag_name in tag_names]
+        tags = LocalTrackField.ALL if not tag_names else LocalTrackField.from_name(*tag_names)
 
         # add extra local tracks to remote library and merge remote items to local library
         self.remote_library.extend(self.local_library)
@@ -472,7 +471,7 @@ class Syncify(Settings, Report):
         # get settings
         replace = self.cfg_run.get("local", {}).get("update", {}).get("replace", False)
         tag_names = self.cfg_run.get("local", {}).get("update", {}).get("tags")
-        tags = [TagName.ALL] if not tag_names else [TagName.from_name(tag_name) for tag_name in tag_names]
+        tags = [LocalTrackField.ALL] if not tag_names else LocalTrackField.from_name(*tag_names)
         item_count = sum(len(folder) for folder in folders)
 
         self.logger.info(
@@ -528,7 +527,7 @@ if __name__ == "__main__":
 
     failed = False
     for i, func in enumerate(main.functions, 1):
-        title = f"{__PROGRAM_NAME__}: {func}"
+        title = f"{PROGRAM_NAME}: {func}"
         if main.dry_run:
             title += " (DRYRUN)"
 
@@ -595,13 +594,11 @@ if __name__ == "__main__":
 #  by extension, implement android library sync
 # TODO: improve separation of concerns for main and settings
 #  settings object should contain all settings as properties to be accessed by main
-#  main should never need to access the yaml dict config at all
+#  main should never need to access the yaml dict config directly
 
 ## NEEDED FOR v0.3
-# TODO: expand out Name enum to cover all object types with fixed mapping to MusicBee values
-#  - rename it to Field
-#  - have it dynamically generated on each type of abstract Item based on abstract properties?
-#  -
+# TODO: write tests to validate Field enum names are all present in related abstract classes
+#  and write test to ensure all mapped fields are present in FieldCombined enum
 # TODO: write tests, write tests, write tests
 # TODO: update the readme (dynamic readme?)
 # TODO: inherit correctly i.e.

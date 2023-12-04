@@ -6,8 +6,8 @@ from typing import Any, Self
 
 from syncify.abstract.item import Item, Track
 from syncify.abstract.processor import MusicBeeProcessor, DynamicProcessor
-from syncify.enums import SyncifyEnum
-from syncify.enums.tags import PropertyName
+from syncify.abstract.enums import SyncifyEnum
+from syncify.abstract.fields import FieldCombined
 from syncify.local.file import File
 from syncify.processors.decorators import dynamicprocessormethod
 from syncify.processors.exception import ItemLimiterError
@@ -152,35 +152,35 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
 
     @dynamicprocessormethod
     def _highest_rating(self, items: list[Item]) -> None:
-        ItemSorter.sort_by_field(items, PropertyName.RATING, reverse=True)
+        ItemSorter.sort_by_field(items, FieldCombined.RATING, reverse=True)
 
     @dynamicprocessormethod
     def _lowest_rating(self, items: list[Item]) -> None:
-        ItemSorter.sort_by_field(items, PropertyName.RATING)
+        ItemSorter.sort_by_field(items, FieldCombined.RATING)
 
     @dynamicprocessormethod
     def _most_recently_played(self, items: list[Item]) -> None:
-        ItemSorter.sort_by_field(items, PropertyName.LAST_PLAYED, reverse=True)
+        ItemSorter.sort_by_field(items, FieldCombined.LAST_PLAYED, reverse=True)
 
     @dynamicprocessormethod
     def _least_recently_played(self, items: list[Item]) -> None:
-        ItemSorter.sort_by_field(items, PropertyName.LAST_PLAYED)
+        ItemSorter.sort_by_field(items, FieldCombined.LAST_PLAYED)
 
     @dynamicprocessormethod
     def _most_often_played(self, items: list[Item]) -> None:
-        ItemSorter.sort_by_field(items, PropertyName.PLAY_COUNT, reverse=True)
+        ItemSorter.sort_by_field(items, FieldCombined.PLAY_COUNT, reverse=True)
 
     @dynamicprocessormethod
     def _least_often_played(self, items: list[Item]) -> None:
-        ItemSorter.sort_by_field(items, PropertyName.PLAY_COUNT)
+        ItemSorter.sort_by_field(items, FieldCombined.PLAY_COUNT)
 
     @dynamicprocessormethod
     def _most_recently_added(self, items: list[Item]) -> None:
-        ItemSorter.sort_by_field(items, PropertyName.DATE_ADDED, reverse=True)
+        ItemSorter.sort_by_field(items, FieldCombined.DATE_ADDED, reverse=True)
 
     @dynamicprocessormethod
     def _least_recently_added(self, items: list[Item]) -> None:
-        ItemSorter.sort_by_field(items, PropertyName.DATE_ADDED)
+        ItemSorter.sort_by_field(items, FieldCombined.DATE_ADDED)
 
     def to_xml(self, **kwargs) -> Mapping[str, Any]:
         raise NotImplementedError

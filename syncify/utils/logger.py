@@ -11,7 +11,7 @@ from typing import Any
 from tqdm.auto import tqdm as tqdm_auto
 from tqdm.std import tqdm as tqdm_std
 
-from syncify import __PROGRAM_NAME__
+from syncify import PROGRAM_NAME
 
 module_width = 40
 
@@ -40,7 +40,7 @@ def format_full_func_name(record: logging.LogRecord, width: int = module_width) 
         # get relative path to 'syncify' sources root
         folder = ""
         path_split = []
-        while folder != __PROGRAM_NAME__.casefold():
+        while folder != PROGRAM_NAME.casefold():
             path, folder = split(path)
             path_split.append(folder)
 

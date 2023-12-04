@@ -3,7 +3,7 @@ from collections.abc import Hashable
 from typing import Self, Any
 
 from syncify.abstract.misc import PrettyPrinter
-from syncify.enums.tags import TagName
+from syncify.abstract.fields import TagField, FieldCombined
 from syncify.utils import UnitIterable
 
 
@@ -74,9 +74,9 @@ class Item(ObjectPrinterMixin, metaclass=ABCMeta):
     def __init__(self):
         ObjectPrinterMixin.__init__(self)
 
-    def merge(self, item: Self, tags: UnitIterable[TagName] = TagName.ALL) -> None:
+    def merge(self, item: Self, tags: UnitIterable[TagField] = FieldCombined.ALL) -> None:
         """Set the tags of this item equal to the given ``item``. Give a list of ``tags`` to limit which are set"""
-        tag_names = set(TagName.to_tags(tags))
+        tag_names = set(TagField.to_tags(tags))
 
         for tag in tag_names:  # merge on each tag
             if hasattr(item, tag):

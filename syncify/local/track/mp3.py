@@ -7,8 +7,8 @@ import mutagen.id3
 import mutagen.mp3
 from PIL import Image
 
-from syncify.enums.tags import TagName, TagMap
-from syncify.local.file import open_image, get_image_bytes
+from syncify.abstract.fields import LocalTrackField
+from syncify.local.file import TagMap, open_image, get_image_bytes
 from syncify.local.track.base.track import LocalTrack
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 
@@ -138,7 +138,7 @@ class MP3(LocalTrack):
     # noinspection PyUnresolvedReferences
     def _write_comments(self, dry_run: bool = True) -> bool:
         tag_id_prefix = next(iter(self.tag_map.comments), None)
-        self.delete_tags(tags=TagName.COMMENTS, dry_run=dry_run)
+        self.delete_tags(tags=LocalTrackField.COMMENTS, dry_run=dry_run)
 
         for i, comment in enumerate(self.comments, 1):
             comm = mutagen.id3.COMM(
@@ -158,7 +158,7 @@ class MP3(LocalTrack):
         tag_value = self.remote_wrangler.unavailable_uri_dummy if not self.has_uri else self.uri
 
         # if applying URI as comment, clear comments and add manually with custom description
-        if self.uri_tag == TagName.COMMENTS:
+        if self.uri_tag == LocalTrackField.COMMENTS:
             tag_id_prefix = next(iter(self.tag_map.comments), None)
             self.delete_tags(tags=self.uri_tag, dry_run=dry_run)
 

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from random import sample
 from typing import Any
 
-from syncify.enums.tags import TagName
+from syncify.abstract.fields import LocalTrackField
 from syncify.local.playlist.match import LocalMatcher
 from syncify.local.track import LocalTrack
 from syncify.processors.compare import ItemComparer
@@ -13,8 +13,8 @@ from tests.local.track import random_tracks
 
 def test_init():
     comparers = [
-        ItemComparer(field=TagName.ALBUM, condition="is", expected="album name"),
-        ItemComparer(field=TagName.ARTIST, condition="starts with", expected="artist")
+        ItemComparer(field=LocalTrackField.ALBUM, condition="is", expected="album name"),
+        ItemComparer(field=LocalTrackField.ARTIST, condition="starts with", expected="artist")
     ]
     library_folder = "/Path/to/LIBRARY/on/linux"
     other_folders = ["../", "D:\\paTh\\on\\Windows"]
@@ -107,8 +107,8 @@ def get_config_for_match_test() -> MatchTestConfig:
 
     return MatchTestConfig(
         comparers=[
-            ItemComparer(field=TagName.ALBUM, condition="is", expected="album name"),
-            ItemComparer(field=TagName.ARTIST, condition="starts with", expected="artist")
+            ItemComparer(field=LocalTrackField.ALBUM, condition="is", expected="album name"),
+            ItemComparer(field=LocalTrackField.ARTIST, condition="starts with", expected="artist")
         ],
         library_folder=library_folder,
         tracks=tracks,

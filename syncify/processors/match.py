@@ -7,12 +7,10 @@ from typing import Any
 from syncify.abstract.collection import Album, ItemCollection
 from syncify.abstract.item import Track, BaseObject
 from syncify.abstract.processor import ItemProcessor
-from syncify.enums.tags import TagName, PropertyName
-from syncify.utils.helpers import limit_value
+from syncify.abstract.fields import FieldCombined, Field
+from syncify.utils.helpers import limit_value, to_collection
 from syncify.utils.logger import Logger
-
-_MATCH_DEFAULT = frozenset({TagName.ALL, PropertyName.ALL})
-_MATCH_TYPE = Iterable[TagName | PropertyName]
+from utils import UnitIterable
 
 
 @dataclass
@@ -265,7 +263,7 @@ class ItemMatcher(ItemProcessor, Logger):
             results: Iterable[T],
             min_score: float = 0.1,
             max_score: float = 0.8,
-            match_on: _MATCH_TYPE = _MATCH_DEFAULT
+            match_on: UnitIterable[Field] = FieldCombined.ALL
     ) -> T | None:
         """
         Perform score match algorithm for a given item and its results.
@@ -282,7 +280,16 @@ class ItemMatcher(ItemProcessor, Logger):
         """
         if not source.clean_tags:
             self.clean_tags(source)
-        score, result = self._score(source=source, results=results, max_score=max_score, match_on=match_on)
+
+        # process and limit match options
+        match_on_filtered = set()
+        for field in to_collection(match_on, set):
+            if field == FieldCombined.ALL:
+                match_on_filtered.update(field.all())
+            else:
+                match_on_filtered.add(field)
+
+        score, result = self._score(source=source, results=results, max_score=max_score, match_on=match_on_filtered)
 
         min_score = limit_value(min_score, floor=0.01, ceil=1.0)
         if score > min_score:
@@ -297,7 +304,11 @@ class ItemMatcher(ItemProcessor, Logger):
             self._log_test(source=source, result=result, test=score, extra=[f"NO MATCH: {score}<{min_score}"])
 
     def _score[T: (Track, Album)](
-            self, source: T, results: Iterable[T], max_score: float = 0.8, match_on: _MATCH_TYPE = _MATCH_DEFAULT
+            self,
+            source: T,
+            results: Iterable[T],
+            max_score: float = 0.8,
+            match_on: set[Field] = frozenset(FieldCombined.all())
     ) -> tuple[float, T | None]:
         """
         Gets the score and result from a cleaned source and a given list of results.
@@ -315,15 +326,6 @@ class ItemMatcher(ItemProcessor, Logger):
             return 0, None
         max_score = limit_value(max_score, floor=0.01, ceil=1.0)
         self._log_algorithm(source=source, extra=[f"max_score={max_score}"])
-
-        # process and limit match options
-        match_on = set(match_on)
-        if TagName.ALL in match_on:
-            match_on.remove(TagName.ALL)
-            match_on |= set(TagName.all())
-        if PropertyName.ALL in match_on:
-            match_on.remove(PropertyName.ALL)
-            match_on |= set(PropertyName.all())
 
         best_score = 0
         best_result = None
@@ -347,7 +349,7 @@ class ItemMatcher(ItemProcessor, Logger):
         return best_score, best_result
 
     def _get_scores[T: (Track, Album)](
-            self, source: T, result: T, match_on: _MATCH_TYPE = _MATCH_DEFAULT
+            self, source: T, result: T, match_on: set[Field] = frozenset(FieldCombined.all())
     ) -> dict[str, float]:
         """
         Gets the scores from a cleaned source and result to match on.
@@ -365,16 +367,16 @@ class ItemMatcher(ItemProcessor, Logger):
 
         scores_current: dict[str, float] = {}
 
-        if TagName.TITLE in match_on:
-            scores_current["title"] = self.match_name(source=source, result=result)
-        if TagName.ARTIST in match_on:
-            scores_current["artist"] = self.match_artist(source=source, result=result)
-        if TagName.ALBUM in match_on:
-            scores_current["album"] = self.match_album(source=source, result=result)
-        if PropertyName.LENGTH in match_on:
-            scores_current["length"] = self.match_length(source=source, result=result)
-        if TagName.YEAR in match_on:
-            scores_current["year"] = self.match_year(source=source, result=result)
+        if FieldCombined.TITLE in match_on:
+            scores_current[FieldCombined.TITLE.name] = self.match_name(source=source, result=result)
+        if FieldCombined.ARTIST in match_on:
+            scores_current[FieldCombined.ARTIST.name] = self.match_artist(source=source, result=result)
+        if FieldCombined.ALBUM in match_on:
+            scores_current[FieldCombined.ALBUM.name] = self.match_album(source=source, result=result)
+        if FieldCombined.LENGTH in match_on:
+            scores_current[FieldCombined.LENGTH.name] = self.match_length(source=source, result=result)
+        if FieldCombined.YEAR in match_on:
+            scores_current[FieldCombined.YEAR.name] = self.match_year(source=source, result=result)
         if isinstance(source, ItemCollection) and isinstance(result, ItemCollection):
             # skip this if not a collection of tracks
             if not all(isinstance(i, Track) for i in source.items):

@@ -7,7 +7,7 @@ from typing import Any
 import xmltodict
 
 from syncify.abstract.misc import Result
-from syncify.enums.tags import PropertyName
+from syncify.abstract.fields import FieldCombined
 from syncify.local.playlist.match import LocalMatcher
 from syncify.local.playlist.playlist import LocalPlaylist
 from syncify.local.track import LocalTrack
@@ -136,7 +136,7 @@ class XAutoPF(LocalPlaylist):
         if tracks is None:
             tracks = [self._load_track(path) for path in self.matcher.include_paths if path is not None]
 
-        self.sorter.sort_by_field(tracks, field=PropertyName.LAST_PLAYED, reverse=True)
+        self.sorter.sort_by_field(tracks, field=FieldCombined.LAST_PLAYED, reverse=True)
         self._match(tracks=tracks, reference=tracks[0] if len(tracks) > 0 else None)
         self._limit(ignore=self.matcher.include_paths)
         self._sort()

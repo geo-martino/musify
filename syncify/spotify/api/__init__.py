@@ -1,10 +1,12 @@
-from syncify import __PROGRAM_NAME__
-from syncify.spotify import __URL_AUTH__, __URL_API__
+from syncify import PROGRAM_NAME
+
+URL_AUTH = "https://accounts.spotify.com"
+URL_API = "https://api.spotify.com/v1"
 
 # non-user authenticated access
 API_AUTH_BASIC = {
     "auth_args": {
-        "url": f"{__URL_AUTH__}/api/token",
+        "url": f"{URL_AUTH}/api/token",
         "data": {
             "grant_type": "client_credentials",
             "client_id": "{client_id}",
@@ -13,7 +15,7 @@ API_AUTH_BASIC = {
     },
     "user_args": None,
     "refresh_args": {
-        "url": f"{__URL_AUTH__}/api/token",
+        "url": f"{URL_AUTH}/api/token",
         "data": {
             "grant_type": "refresh_token",
             "refresh_token": None,
@@ -30,7 +32,7 @@ API_AUTH_BASIC = {
 # user authenticated access with scopes
 API_AUTH_USER = {
     "auth_args": {
-        "url": f"{__URL_AUTH__}/api/token",
+        "url": f"{URL_AUTH}/api/token",
         "data": {
             "grant_type": "authorization_code",
             "code": None,
@@ -40,7 +42,7 @@ API_AUTH_USER = {
         },
     },
     "user_args": {
-        "url": f"{__URL_AUTH__}/authorize",
+        "url": f"{URL_AUTH}/authorize",
         "params": {
             "response_type": "code",
             "client_id": "{client_id}",
@@ -52,11 +54,11 @@ API_AUTH_USER = {
                 ]
             ),
             "redirect_uri": "http://localhost:8080/",
-            "state": __PROGRAM_NAME__,
+            "state": PROGRAM_NAME,
         },
     },
     "refresh_args": {
-        "url": f"{__URL_AUTH__}/api/token",
+        "url": f"{URL_AUTH}/api/token",
         "data": {
             "grant_type": "refresh_token",
             "refresh_token": None,
@@ -64,7 +66,7 @@ API_AUTH_USER = {
             "client_secret": "{client_secret}",
         },
     },
-    "test_args": {"url": f"{__URL_API__}/me"},
+    "test_args": {"url": f"{URL_API}/me"},
     "test_condition": lambda r: "href" in r and "display_name" in r,
     "test_expiry": 600,
     "token_file_path": "{token_file_path}",

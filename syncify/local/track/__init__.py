@@ -9,8 +9,8 @@ from .m4a import M4A
 from .mp3 import MP3
 from .wma import WMA
 
-__TRACK_CLASSES__ = frozenset({FLAC, MP3, M4A, WMA})
-__TRACK_FILETYPES__ = frozenset(filetype for c in __TRACK_CLASSES__ for filetype in c.valid_extensions)
+TRACK_CLASSES = frozenset({FLAC, MP3, M4A, WMA})
+TRACK_FILETYPES = frozenset(filetype for c in TRACK_CLASSES for filetype in c.valid_extensions)
 
 
 def load_track(path: str, available: Iterable[str] = (), remote_wrangler: RemoteDataWrangler = None) -> LocalTrack:
@@ -40,5 +40,5 @@ def load_track(path: str, available: Iterable[str] = (), remote_wrangler: Remote
         return WMA(file=path, available=available, remote_wrangler=remote_wrangler)
 
     raise InvalidFileType(
-        ext, f"Not an accepted extension. Use only: {', '.join(__TRACK_FILETYPES__)}"
+        ext, f"Not an accepted extension. Use only: {', '.join(TRACK_FILETYPES)}"
     )

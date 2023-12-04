@@ -4,7 +4,7 @@ from os.path import dirname, join, splitext, basename
 
 import pytest
 
-from syncify.enums.tags import TagName, PropertyName
+from syncify.abstract.fields import LocalTrackField
 from syncify.local.exception import InvalidFileType
 from syncify.local.playlist import XAutoPF
 from syncify.local.track import LocalTrack, FLAC, M4A, WMA, MP3
@@ -50,17 +50,17 @@ def test_load_playlist_1():
     assert pl.description == "I am a description"
 
     # comparers
-    assert pl.matcher.comparers[0].field == TagName.ALBUM
+    assert pl.matcher.comparers[0].field == LocalTrackField.ALBUM
     assert pl.matcher.comparers[0].expected == ["an album"]
     assert not pl.matcher.comparers[0]._converted
     assert pl.matcher.comparers[0].condition == "contains"
     assert pl.matcher.comparers[0]._processor == pl.matcher.comparers[0]._contains
-    assert pl.matcher.comparers[1].field == TagName.ARTIST
+    assert pl.matcher.comparers[1].field == LocalTrackField.ARTIST
     assert pl.matcher.comparers[1].expected is None
     assert not pl.matcher.comparers[1]._converted
     assert pl.matcher.comparers[1].condition == "is_null"
     assert pl.matcher.comparers[1]._processor == pl.matcher.comparers[1]._is_null
-    assert pl.matcher.comparers[2].field == TagName.TRACK
+    assert pl.matcher.comparers[2].field == LocalTrackField.TRACK_NUMBER
     assert pl.matcher.comparers[2].expected == [30]
     assert pl.matcher.comparers[2]._converted
     assert pl.matcher.comparers[2].condition == "less_than"
@@ -81,7 +81,7 @@ def test_load_playlist_1():
     assert pl.limiter is None
 
     # sorter
-    assert pl.sorter.sort_fields == {TagName.TRACK: False}
+    assert pl.sorter.sort_fields == {LocalTrackField.TRACK_NUMBER: False}
     assert pl.sorter.shuffle_mode == ShuffleMode.NONE  # switch to ShuffleMode.RECENT_ADDED once implemented
     assert pl.sorter.shuffle_by == ShuffleBy.ALBUM
     assert pl.sorter.shuffle_weight == 0.5
@@ -157,7 +157,7 @@ def test_load_playlist_2():
     assert pl.limiter._processor == pl.limiter._most_recently_added
 
     # sorter
-    assert pl.sorter.sort_fields == {PropertyName.DATE_ADDED: True}
+    assert pl.sorter.sort_fields == {LocalTrackField.DATE_ADDED: True}
     assert pl.sorter.shuffle_mode == ShuffleMode.NONE
     assert pl.sorter.shuffle_by == ShuffleBy.TRACK
     assert pl.sorter.shuffle_weight == 0

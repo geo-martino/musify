@@ -9,10 +9,10 @@ from random import choice, randrange, randint
 import pytest
 from dateutil.relativedelta import relativedelta
 
-from syncify.enums.tags import TagName
+from syncify.abstract.fields import LocalTrackField
 from syncify.local.exception import InvalidFileType
 from syncify.local.file import open_image
-from syncify.local.track import __TRACK_CLASSES__, LocalTrack, FLAC, M4A, MP3, WMA
+from syncify.local.track import TRACK_CLASSES, LocalTrack, FLAC, M4A, MP3, WMA
 # noinspection PyProtectedMember
 from syncify.local.track.base.track import _MutagenMock
 from syncify.local.track.base.writer import TagWriter
@@ -28,7 +28,7 @@ path_track_mp3 = join(path_track_resources, "noise_mp3.mp3")
 path_track_m4a = join(path_track_resources, "noise_m4a.m4a")
 path_track_wma = join(path_track_resources, "noise_wma.wma")
 path_track_img = join(path_track_resources, "track_image.jpg")
-path_track_all = {path for c in __TRACK_CLASSES__ for path in c.get_filepaths(path_track_resources)}
+path_track_all = {path for c in TRACK_CLASSES for path in c.get_filepaths(path_track_resources)}
 
 
 class_path_map: dict[type[LocalTrack], str] = {
@@ -47,7 +47,7 @@ def random_uri(kind: RemoteItemType = RemoteItemType.TRACK) -> str:
 def random_track(cls: type[LocalTrack] | None = None) -> LocalTrack:
     """Generates a new, random track of the given class."""
     if cls is None:
-        cls = choice(tuple(__TRACK_CLASSES__))
+        cls = choice(tuple(TRACK_CLASSES))
     track = cls.__new__(cls)
     TagWriter.__init__(track, remote_wrangler=remote_wrangler)
 
@@ -172,7 +172,7 @@ def clear_tags_test(cls: type[LocalTrack], path: str):
     track_original = copy(track)
 
     # dry run, no updates should happen
-    result = track.delete_tags(tags=TagName.ALL, dry_run=True)
+    result = track.delete_tags(tags=LocalTrackField.ALL, dry_run=True)
     assert not result.saved
 
     track_update_dry = deepcopy(track)
@@ -197,7 +197,7 @@ def clear_tags_test(cls: type[LocalTrack], path: str):
     assert track_update_dry.has_image == track_original.has_image
 
     # clear
-    result = track.delete_tags(tags=TagName.ALL, dry_run=False)
+    result = track.delete_tags(tags=LocalTrackField.ALL, dry_run=False)
     assert result.saved
 
     track_update = deepcopy(track)
@@ -249,7 +249,7 @@ def update_tags_test(cls: type[LocalTrack], path: str) -> None:
     track.image_links.clear()
 
     # dry run, no updates should happen
-    result = track.save(tags=TagName.ALL, replace=False, dry_run=True)
+    result = track.save(tags=LocalTrackField.ALL, replace=False, dry_run=True)
     assert not result.saved
 
     track_update_dry = deepcopy(track)
@@ -275,7 +275,7 @@ def update_tags_test(cls: type[LocalTrack], path: str) -> None:
 
     # update and don't replace current tags (except URI if URI is False)
     shutil.copyfile(path_file_base, path_file_copy)
-    result = track.save(tags=TagName.ALL, replace=False, dry_run=False)
+    result = track.save(tags=LocalTrackField.ALL, replace=False, dry_run=False)
     assert result.saved
 
     track_update = deepcopy(track)
@@ -304,7 +304,7 @@ def update_tags_test(cls: type[LocalTrack], path: str) -> None:
 
     # update and replace
     shutil.copyfile(path_file_base, path_file_copy)
-    result = track.save(tags=TagName.ALL, replace=True, dry_run=False)
+    result = track.save(tags=LocalTrackField.ALL, replace=True, dry_run=False)
     assert result.saved
     track_update_replace = deepcopy(track)
 
@@ -345,7 +345,7 @@ def update_images_test(cls: type[LocalTrack], path: str) -> None:
     image_new = open_image(path_track_img)
 
     # dry run, no updates should happen
-    result = track.save(tags=TagName.IMAGES, replace=False, dry_run=True)
+    result = track.save(tags=LocalTrackField.IMAGES, replace=False, dry_run=True)
     assert not result.saved
 
     track_update_dry = deepcopy(track)
@@ -355,10 +355,10 @@ def update_images_test(cls: type[LocalTrack], path: str) -> None:
 
     # clear current image and update
     shutil.copyfile(path_file_base, path_file_copy)
-    track.delete_tags(TagName.IMAGES, dry_run=False)
+    track.delete_tags(LocalTrackField.IMAGES, dry_run=False)
     assert not track.has_image
 
-    result = track.save(tags=TagName.IMAGES, replace=False, dry_run=False)
+    result = track.save(tags=LocalTrackField.IMAGES, replace=False, dry_run=False)
     assert result.saved
 
     track_update = deepcopy(track)
@@ -368,7 +368,7 @@ def update_images_test(cls: type[LocalTrack], path: str) -> None:
 
     # update and replace
     shutil.copyfile(path_file_base, path_file_copy)
-    result = track.save(tags=TagName.IMAGES, replace=True, dry_run=False)
+    result = track.save(tags=LocalTrackField.IMAGES, replace=True, dry_run=False)
     assert result.saved
 
     track_update_replace = deepcopy(track)

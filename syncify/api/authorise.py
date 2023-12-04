@@ -9,7 +9,7 @@ from webbrowser import open as webopen
 
 import requests
 
-from syncify import __PROGRAM_NAME__
+from syncify import PROGRAM_NAME
 from syncify.api.exception import APIError
 from syncify.utils.logger import Logger
 
@@ -210,7 +210,7 @@ class APIAuthoriser(Logger):
         request, _ = code_listener.accept()
 
         request.send(
-            f"Code received! You may now close this window and return to {__PROGRAM_NAME__}...".encode("utf-8")
+            f"Code received! You may now close this window and return to {PROGRAM_NAME}...".encode("utf-8")
         )
         print("\33[92;1mCode received! \33[0m")
         code_listener.close()

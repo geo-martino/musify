@@ -5,7 +5,7 @@ from time import sleep
 from typing import Any
 from urllib.parse import urlparse, urlencode
 
-from syncify import __PROGRAM_NAME__, __PROGRAM_URL__
+from syncify import PROGRAM_NAME, PROGRAM_URL
 from syncify.remote.api import APIMethodInputType
 from syncify.remote.api.collection import RemoteAPICollections
 from syncify.remote.enums import RemoteIDType, RemoteItemType
@@ -262,7 +262,7 @@ class SpotifyAPICollections(RemoteAPICollections, metaclass=ABCMeta):
 
         body = {
             "name": name,
-            "description": f"Generated using {__PROGRAM_NAME__}: {__PROGRAM_URL__}",
+            "description": f"Generated using {PROGRAM_NAME}: {PROGRAM_URL}",
             "public": public,
             "collaborative": collaborative,
         }

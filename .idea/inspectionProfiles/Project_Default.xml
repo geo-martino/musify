@@ -30,6 +30,7 @@
       <option name="ignoredIdentifiers">
         <list>
           <option value="abstract.item.Item.album" />
+          <option value="abstract.fields.TrackFieldMixin.*" />
         </list>
       </option>
     </inspection_tool>

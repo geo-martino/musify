@@ -4,8 +4,9 @@ from datetime import datetime
 import mutagen
 
 from syncify.abstract.item import Track
-from syncify.enums.tags import TagName, TagMap
+from syncify.abstract.fields import LocalTrackField
 from syncify.local.base import LocalItem
+from syncify.local.file import TagMap
 
 
 class TagProcessor(LocalItem, Track, metaclass=ABCMeta):
@@ -18,8 +19,7 @@ class TagProcessor(LocalItem, Track, metaclass=ABCMeta):
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
 
-    # 
-    uri_tag: TagName = TagName.COMMENTS
+    uri_tag: LocalTrackField = LocalTrackField.COMMENTS
     num_sep: str = "/"
 
     @property

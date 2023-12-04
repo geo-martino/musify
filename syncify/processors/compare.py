@@ -7,7 +7,7 @@ from typing import Any, Self
 
 from syncify.abstract.item import Item
 from syncify.abstract.processor import MusicBeeProcessor, DynamicProcessor
-from syncify.enums.tags import Name, TagName, PropertyName
+from syncify.abstract.fields import Field, LocalTrackField
 from syncify.local.exception import FieldError
 from syncify.processors.decorators import dynamicprocessormethod
 from syncify.processors.exception import ItemComparerError
@@ -15,26 +15,26 @@ from syncify.processors.time import TimeMapper
 from syncify.utils import UnitSequence
 from syncify.utils.helpers import to_collection
 
-# Map of MusicBee field name to Tag or Property
+# Map of MusicBee field name to Field enum
 field_name_map = {
     "None": None,
-    "Title": TagName.TITLE,
-    "ArtistPeople": TagName.ARTIST,
-    "Album": TagName.ALBUM,  # album ignoring articles like 'the' and 'a' etc.
-    "TrackNo": TagName.TRACK,
-    "GenreSplits": TagName.GENRES,
-    "Year": TagName.YEAR,
-    "Tempo": TagName.BPM,
-    "DiscNo": TagName.DISC,
-    "AlbumArtist": TagName.ALBUM_ARTIST,
-    "Comment": TagName.COMMENTS,
-    "FileDuration": PropertyName.LENGTH,
-    "FolderName": PropertyName.FOLDER,
-    "FilePath": PropertyName.PATH,
-    "FileName": PropertyName.FILENAME,
-    "FileExtension": PropertyName.EXT,
-    "FileDateAdded": PropertyName.DATE_ADDED,
-    "FilePlayCount": PropertyName.PLAY_COUNT,
+    "Title": LocalTrackField.TITLE,
+    "ArtistPeople": LocalTrackField.ARTIST,
+    "Album": LocalTrackField.ALBUM,  # album ignoring articles like 'the' and 'a' etc.
+    "TrackNo": LocalTrackField.TRACK_NUMBER,
+    "GenreSplits": LocalTrackField.GENRES,
+    "Year": LocalTrackField.YEAR,
+    "Tempo": LocalTrackField.BPM,
+    "DiscNo": LocalTrackField.DISC_NUMBER,
+    "AlbumArtist": LocalTrackField.ALBUM_ARTIST,
+    "Comment": LocalTrackField.COMMENTS,
+    "FileDuration": LocalTrackField.LENGTH,
+    "FolderName": LocalTrackField.FOLDER,
+    "FilePath": LocalTrackField.PATH,
+    "FileName": LocalTrackField.FILENAME,
+    "FileExtension": LocalTrackField.EXT,
+    "FileDateAdded": LocalTrackField.DATE_ADDED,
+    "FilePlayCount": LocalTrackField.PLAY_COUNT,
 }
 
 
@@ -71,7 +71,7 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
         objs = []
         for condition in conditions:
             field_str = condition.get("@Field", "None")
-            field: Name = field_name_map.get(field_str)
+            field: Field = field_name_map.get(field_str)
             if field is None:
                 raise FieldError(f"Unrecognised field name", field=field_str)
 
@@ -83,12 +83,12 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
 
         return objs
 
-    def __init__(self, field: Name, condition: str, expected: UnitSequence[Any] | None = None):
+    def __init__(self, field: Field, condition: str, expected: UnitSequence[Any] | None = None):
         DynamicProcessor.__init__(self)
         self._expected: list[Any] | None = None
         self._converted = False
 
-        self.field: Name = field
+        self.field: Field = field.map(field)[0]
         self.expected: list[Any] | None = expected
 
         self._set_processor_name(condition)
@@ -107,7 +107,7 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
         if reference is None and not self.expected:
             raise ItemComparerError("No comparative track given and no expected values set")
 
-        tag_name = self._get_tag(self.field)
+        tag_name = self.field.name.lower()
         actual = track[tag_name]
 
         if reference is None:

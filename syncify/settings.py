@@ -11,7 +11,7 @@ from typing import Any
 
 import yaml
 
-from syncify import __PROGRAM_NAME__
+from syncify import PROGRAM_NAME
 from syncify.local.exception import InvalidFileType
 from syncify.remote.processors.search import AlgorithmSettings
 from syncify.spotify.api import API_AUTH_BASIC, API_AUTH_USER
@@ -56,7 +56,7 @@ def _format_map[T](value: T, format_map: Mapping[str, Any]) -> T:
 
 class Settings(metaclass=ABCMeta):
     """
-    Set the settings for the main functionality of Syncify from a config file and terminal arguments.
+    Set the settings for the main functionality of the program from a config file and terminal arguments.
 
     :param config_path: Path of the config file to use.
     """
@@ -262,7 +262,7 @@ class Settings(metaclass=ABCMeta):
         """Get the terminal input parser"""
         parser = argparse.ArgumentParser(
             description="Sync your local library to Spotify.",
-            prog=__PROGRAM_NAME__,
+            prog=PROGRAM_NAME,
             usage="%(prog)s [options] [function]"
         )
         parser._positionals.title = "Functions"
@@ -273,7 +273,7 @@ class Settings(metaclass=ABCMeta):
         #                     action='store_true',
         #                     help=f"Use saved config in config.yml instead of cli settings.")
         parser.add_argument(
-            "functions", nargs='*', choices=self.allowed_functions, help=f"{__PROGRAM_NAME__} function to run."
+            "functions", nargs='*', choices=self.allowed_functions, help=f"{PROGRAM_NAME} function to run."
         )
 
         # local = parser.add_argument_group("Local library filters and options")

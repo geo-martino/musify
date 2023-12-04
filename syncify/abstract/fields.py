@@ -1,0 +1,235 @@
+from typing import Self
+
+from local.file import TagMap
+from syncify.abstract.enums import SyncifyEnum
+from syncify.exception import EnumNotFoundError
+from syncify.utils import UnitIterable
+
+
+class Field(SyncifyEnum):
+    """Base class for field names of an item."""
+
+    @classmethod
+    def map(cls, enum: Self) -> list[Self]:
+        """Optional mapper to apply to the enum found during :py:meth:`from_name` and :py:meth:`from_value` calls"""
+        return [enum]
+
+    @classmethod
+    def from_name(cls, *names: str) -> list[Self]:
+        """
+        Returns all enums that match the given name
+
+        :raise EnumNotFoundError: If a corresponding enum cannot be found.
+        """
+        names_upper = [name.strip().upper() for name in names]
+        enums = [e for enum in cls if enum.name in names_upper for e in cls.map(enum)]
+        if len(enums) == 0:
+            raise EnumNotFoundError(names)
+        return enums
+
+    @classmethod
+    def from_value(cls, *values: int) -> list[Self]:
+        """
+        Returns all enums that match the given enum name
+
+        :raise EnumNotFoundError: If a corresponding enum cannot be found.
+        """
+        enums = [e for enum in cls if enum.value in values for e in cls.map(enum)]
+        if len(enums) == 0:
+            raise EnumNotFoundError(values)
+        return enums
+
+
+class FieldCombined(Field):
+    """
+    Contains all possible Field enums in this program.
+
+    This is used to ensure all Field enum implementations have the same values for their enum names.
+    """
+    # all numbers relate to the number of the field value as mapped by MusicBee
+    # changing these numbers will break all MusicBee functionality unless it is noted
+    # that a mapping with a MusicBee field is not present for that enum
+
+    ALL = 0
+
+    # tags/core properties
+    TITLE = 65
+    ARTIST = 32
+    ALBUM = 30  # MusicBee album ignoring articles like 'the' and 'a' etc.
+    ALBUM_ARTIST = 31
+    TRACK_NUMBER = 86
+    TRACK_TOTAL = 87
+    GENRES = 59
+    YEAR = 35
+    BPM = 85
+    KEY = 901  # unknown MusicBee mapping
+    DISC_NUMBER = 52
+    DISC_TOTAL = 54
+    COMPILATION = 902  # unknown MusicBee mapping
+    COMMENTS = 44
+    IMAGES = 904  # no MusicBee mapping
+    LENGTH = 16
+    RATING = 75
+    COMPOSER = 43
+    CONDUCTOR = 45
+    PUBLISHER = 73
+
+    # file properties
+    PATH = 106
+    FOLDER = 179
+    FILENAME = 52
+    EXT = 100
+    SIZE = 7
+    KIND = 4
+    BIT_RATE = 10
+    BIT_DEPTH = 183
+    SAMPLE_RATE = 9
+    CHANNELS = 8
+
+    # date properties
+    DATE_CREATED = 921  # no MusicBee mapping
+    DATE_MODIFIED = 11
+    DATE_ADDED = 12
+    LAST_PLAYED = 13
+
+    # miscellaneous properties
+    PLAY_COUNT = 14
+    DESCRIPTION = 931  # no MusicBee mapping
+
+    # remote properties
+    URI = 941  # no MusicBee mapping
+    USER_ID = 942  # no MusicBee mapping
+    USER_NAME = 943  # no MusicBee mapping
+    OWNER_ID = 944  # no MusicBee mapping
+    OWNER_NAME = 945  # no MusicBee mapping
+    FOLLOWERS = 946  # no MusicBee mapping
+
+
+class TagField(Field):
+    """Applies extra functionality to the Field enum for Field types relating to :py:class:`Track` types"""
+
+    __tags__ = frozenset(TagMap.__annotations__.keys())
+
+    def to_tag(self) -> set[str]:
+        """
+        Returns all human-friendly tag names for the current enum value.
+
+        Applies mapper to enums before returning as per :py:meth:`map`.
+        This will only return tag names if they are found in :py:class:`TagMap`.
+        """
+        if self == FieldCombined.ALL:
+            return {tag.name.lower() for tag in self.all() if tag.name.lower() in self.__tags__}
+        return {tag.name.lower() for tag in self.map(self) if tag.name.lower() in self.__tags__}
+
+    @classmethod
+    def to_tags(cls, tags: UnitIterable[Self]) -> set[str]:
+        """
+        Returns all human-friendly tag names for the given enum value.
+
+        Applies mapper to enums before returning as per :py:meth:`map`.
+        This will only return tag names if they are found in :py:class:`TagMap`.
+        """
+        if isinstance(tags, cls):
+            return tags.to_tag()
+        return {t.name.lower() for tag in tags for t in tag.to_tag()}
+
+
+class TrackFieldMixin(TagField):
+    """Applies extra functionality to the Field enum for Field types relating to :py:class:`Track` types"""
+
+    @classmethod
+    def map(cls, enum: Self) -> list[Self]:
+        """
+        Mapper to apply to the enum found during :py:meth:`from_name` and :py:meth:`from_value` calls,
+        or from :py:meth:`to_tag` and :py:meth:`to_tags` calls
+
+        Applies the following mapping:
+
+        * ``TRACK`` returns both ``TRACK_NUMBER`` and ``TRACK_TOTAL`` enums
+        * ``DISC`` returns both ``DISC_NUMBER`` and ``DISC_TOTAL`` enums
+        * all other enums return the enum in a unit list
+        """
+        if enum == cls.TRACK:
+            return [cls.TRACK_NUMBER, cls.TRACK_TOTAL]
+        elif enum == cls.DISC:
+            return [cls.DISC_NUMBER, cls.DISC_TOTAL]
+        return [enum]
+
+
+class TrackField(TrackFieldMixin):
+    """Represent all currently supported fields for objects of type :py:class:`Track`"""
+    ALL = FieldCombined.ALL.value
+
+    TITLE = FieldCombined.TITLE.value
+    ARTIST = FieldCombined.ARTIST.value
+    ALBUM = FieldCombined.ALBUM.value
+    ALBUM_ARTIST = FieldCombined.ALBUM_ARTIST.value
+    TRACK = FieldCombined.TRACK_NUMBER.value + 500
+    TRACK_NUMBER = FieldCombined.TRACK_NUMBER.value
+    TRACK_TOTAL = FieldCombined.TRACK_TOTAL.value
+    GENRES = FieldCombined.GENRES.value
+    YEAR = FieldCombined.YEAR.value
+    BPM = FieldCombined.BPM.value
+    KEY = FieldCombined.KEY.value
+    DISC = FieldCombined.DISC_NUMBER.value + 500
+    DISC_NUMBER = FieldCombined.DISC_NUMBER.value
+    DISC_TOTAL = FieldCombined.DISC_TOTAL.value
+    COMPILATION = FieldCombined.COMPILATION.value
+    COMMENTS = FieldCombined.COMMENTS.value
+    IMAGES = FieldCombined.IMAGES.value
+    LENGTH = FieldCombined.LENGTH.value
+    RATING = FieldCombined.RATING.value
+
+    # date properties
+    DATE_ADDED = FieldCombined.DATE_ADDED.value
+
+    # remote properties
+    URI = FieldCombined.URI.value
+
+
+class LocalTrackField(TrackFieldMixin):
+    """Represent all currently supported fields for objects of type :py:class:`LocalTrack`"""
+    ALL = FieldCombined.ALL.value
+
+    TITLE = FieldCombined.TITLE.value
+    ARTIST = FieldCombined.ARTIST.value
+    ALBUM = FieldCombined.ALBUM.value
+    ALBUM_ARTIST = FieldCombined.ALBUM_ARTIST.value
+    TRACK = FieldCombined.TRACK_NUMBER.value + 500
+    TRACK_NUMBER = FieldCombined.TRACK_NUMBER.value
+    TRACK_TOTAL = FieldCombined.TRACK_TOTAL.value
+    GENRES = FieldCombined.GENRES.value
+    YEAR = FieldCombined.YEAR.value
+    BPM = FieldCombined.BPM.value
+    KEY = FieldCombined.KEY.value
+    DISC = FieldCombined.DISC_NUMBER.value + 500
+    DISC_NUMBER = FieldCombined.DISC_NUMBER.value
+    DISC_TOTAL = FieldCombined.DISC_TOTAL.value
+    COMPILATION = FieldCombined.COMPILATION.value
+    COMMENTS = FieldCombined.COMMENTS.value
+    IMAGES = FieldCombined.IMAGES.value
+    LENGTH = FieldCombined.LENGTH.value
+    RATING = FieldCombined.RATING.value
+
+    # file properties
+    PATH = FieldCombined.PATH.value
+    FOLDER = FieldCombined.FOLDER.value
+    FILENAME = FieldCombined.FILENAME.value
+    EXT = FieldCombined.EXT.value
+    SIZE = FieldCombined.SIZE.value
+    KIND = FieldCombined.KIND.value
+    BIT_RATE = FieldCombined.BIT_RATE.value
+    BIT_DEPTH = FieldCombined.BIT_DEPTH.value
+    SAMPLE_RATE = FieldCombined.SAMPLE_RATE.value
+    CHANNELS = FieldCombined.CHANNELS.value
+
+    # date properties
+    DATE_MODIFIED = FieldCombined.DATE_MODIFIED.value
+    DATE_ADDED = FieldCombined.DATE_ADDED.value
+    LAST_PLAYED = FieldCombined.LAST_PLAYED.value
+
+    # miscellaneous properties
+    PLAY_COUNT = FieldCombined.PLAY_COUNT.value
+
+    # remote properties
+    URI = FieldCombined.URI.value

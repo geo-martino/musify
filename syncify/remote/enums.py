@@ -1,4 +1,4 @@
-from syncify.enums import SyncifyEnum
+from syncify.abstract.enums import SyncifyEnum
 
 
 class RemoteIDType(SyncifyEnum):

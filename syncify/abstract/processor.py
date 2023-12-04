@@ -3,7 +3,6 @@ from collections.abc import Mapping
 from typing import Any, Self, Callable
 
 from syncify.abstract.misc import PrettyPrinter
-from syncify.enums.tags import TagName, Name
 from syncify.processors.decorators import dynamicprocessormethod
 from syncify.processors.exception import ProcessorLookupError
 
@@ -91,11 +90,6 @@ class DynamicProcessor(Processor, metaclass=ABCMeta):
 
 class ItemProcessor(Processor, metaclass=ABCMeta):
     """Base object for processing tracks in a playlist"""
-
-    @classmethod
-    def _get_tag(cls, tag: Name | None = None) -> str:
-        """Get the human-friendly tag name as a string of the given tag name enum"""
-        return tag.to_tag()[0] if isinstance(tag, TagName) else tag.name.casefold()
 
 
 class MusicBeeProcessor(ItemProcessor):

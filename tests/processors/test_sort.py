@@ -2,7 +2,7 @@ from collections.abc import Callable
 from itertools import groupby
 from random import choice, randrange
 
-from syncify.enums.tags import TagName, PropertyName
+from syncify.abstract.fields import TrackField
 from syncify.local.track import LocalTrack
 from syncify.processors.sort import ItemSorter, ShuffleMode
 from syncify.utils.helpers import strip_ignore_words
@@ -25,9 +25,9 @@ def test_sort_by_field():
         track.track_total = len(tracks)
 
     tracks_sorted = sorted(tracks, key=lambda t: t.track_number)
-    ItemSorter.sort_by_field(tracks, field=TagName.TRACK)
+    ItemSorter.sort_by_field(tracks, field=TrackField.TRACK)
     assert tracks == tracks_sorted
-    ItemSorter.sort_by_field(tracks, field=TagName.TRACK, reverse=True)
+    ItemSorter.sort_by_field(tracks, field=TrackField.TRACK, reverse=True)
     assert tracks == list(reversed(tracks_sorted))
 
     # sort on datetime
@@ -35,16 +35,16 @@ def test_sort_by_field():
         track.date_added = track.date_added.replace(second=i)
 
     tracks_sorted = sorted(tracks, key=lambda t: t.date_added)
-    ItemSorter.sort_by_field(tracks, field=PropertyName.DATE_ADDED)
+    ItemSorter.sort_by_field(tracks, field=TrackField.DATE_ADDED)
     assert tracks == tracks_sorted
-    ItemSorter.sort_by_field(tracks, field=PropertyName.DATE_ADDED, reverse=True)
+    ItemSorter.sort_by_field(tracks, field=TrackField.DATE_ADDED, reverse=True)
     assert tracks == list(reversed(tracks_sorted))
 
     # sort on str, ignoring defined words like 'The' and 'A'
     tracks_sorted = sorted(tracks, key=lambda t: strip_ignore_words(t.title))
-    ItemSorter.sort_by_field(tracks, field=TagName.TITLE)
+    ItemSorter.sort_by_field(tracks, field=TrackField.TITLE)
     assert tracks == tracks_sorted
-    ItemSorter.sort_by_field(tracks, field=TagName.TITLE, reverse=True)
+    ItemSorter.sort_by_field(tracks, field=TrackField.TITLE, reverse=True)
     assert tracks == list(reversed(tracks_sorted))
 
 
@@ -53,7 +53,7 @@ def test_group_by_field():
 
     assert ItemSorter.group_by_field(tracks) == {None: tracks}
 
-    groups = ItemSorter.group_by_field(tracks, TagName.KEY)
+    groups = ItemSorter.group_by_field(tracks, TrackField.KEY)
     assert sorted(groups) == sorted(set(track.key for track in tracks))
     assert sum(len(t) for t in groups.values()) == len(tracks)
 
@@ -77,7 +77,7 @@ def test_random_shuffle():
     assert tracks == tracks_copy
     ItemSorter(shuffle_mode=ShuffleMode.RANDOM).sort(tracks)
     assert tracks != tracks_copy
-    ItemSorter(fields=TagName.TITLE, shuffle_mode=ShuffleMode.RANDOM).sort(tracks)
+    ItemSorter(fields=TrackField.TITLE, shuffle_mode=ShuffleMode.RANDOM).sort(tracks)
     assert tracks != tracks_copy
 
 
@@ -91,7 +91,7 @@ def test_multi_sort():
 
     # simple multi-sort
     tracks_sorted = sorted(tracks, key=lambda t: (t.album, t.disc_number, t.track_number))
-    ItemSorter(fields=[TagName.ALBUM, TagName.DISC, TagName.TRACK], shuffle_mode=ShuffleMode.NONE).sort(tracks)
+    ItemSorter(fields=[TrackField.ALBUM, TrackField.DISC, TrackField.TRACK], shuffle_mode=ShuffleMode.NONE).sort(tracks)
     assert tracks == tracks_sorted
 
     # complex multi-sort, includes reverse options
@@ -104,6 +104,6 @@ def test_multi_sort():
             for ___, group_3 in groupby(sorted(group_2, key=sort_key_3, reverse=True), key=sort_key_3):
                 tracks_sorted.extend(list(group_3))
 
-    fields = {TagName.ALBUM: True, TagName.DISC: False, TagName.TRACK: True}
+    fields = {TrackField.ALBUM: True, TrackField.DISC: False, TrackField.TRACK: True}
     ItemSorter(fields=fields, shuffle_mode=ShuffleMode.NONE).sort(tracks)
     assert tracks == tracks_sorted

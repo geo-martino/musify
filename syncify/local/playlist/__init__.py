@@ -10,8 +10,8 @@ from .m3u import M3U
 from .playlist import LocalPlaylist
 from .xautopf import XAutoPF
 
-__PLAYLIST_CLASSES__ = frozenset({M3U, XAutoPF})
-__PLAYLIST_FILETYPES__ = frozenset(filetype for c in __PLAYLIST_CLASSES__ for filetype in c.valid_extensions)
+PLAYLIST_CLASSES = frozenset({M3U, XAutoPF})
+PLAYLIST_FILETYPES = frozenset(filetype for c in PLAYLIST_CLASSES for filetype in c.valid_extensions)
 
 
 def load_playlist(
@@ -72,6 +72,6 @@ def load_playlist(
         )
 
     raise InvalidFileType(
-        ext, f"Not an accepted extension. Use only: {', '.join(__PLAYLIST_FILETYPES__)}"
+        ext, f"Not an accepted extension. Use only: {', '.join(PLAYLIST_FILETYPES)}"
     )
 

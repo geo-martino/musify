@@ -3,7 +3,6 @@ from functools import partial, update_wrapper
 from typing import Optional
 
 
-# noinspection PyCapWords
 class dynamicprocessormethod:
     """
     Decorator for methods on a class decorated with the :py:func:`processor` decorator

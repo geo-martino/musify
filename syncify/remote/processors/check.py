@@ -4,11 +4,11 @@ from collections import Counter
 from collections.abc import Mapping, Sequence, MutableSequence, Collection
 from dataclasses import dataclass, field
 
-from syncify import __PROGRAM_NAME__
+from syncify import PROGRAM_NAME
 from syncify.abstract.collection import ItemCollection
 from syncify.abstract.item import Item, Track
 from syncify.abstract.misc import Result
-from syncify.enums.tags import TagName
+from syncify.abstract.fields import FieldCombined
 from syncify.processors.match import ItemMatcher
 from syncify.remote.api.api import RemoteAPI
 from syncify.remote.enums import RemoteItemType, RemoteIDType
@@ -351,7 +351,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
             if not added:
                 break
 
-            result = self.score_match(item, results=added, match_on=[TagName.TITLE])
+            result = self.score_match(item, results=added, match_on=[FieldCombined.TITLE])
             if not result:
                 continue
 
@@ -374,7 +374,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         header = ["\t\33[1;94m{name}:\33[91m The following items were removed and/or matches were not found. \33[0m"]
         options = {
             "u": f"Mark item as 'Unavailable on {self.remote_source}'",
-            "n": f"Leave item with no URI. ({__PROGRAM_NAME__} will still attempt to find this item at the next run)",
+            "n": f"Leave item with no URI. ({PROGRAM_NAME} will still attempt to find this item at the next run)",
             "a": "Add in addition to 'u' or 'n' options to apply this setting to all items in this playlist",
             "r": "Recheck playlist for all items in the album",
             "p": "Print the local path of the current item if available",

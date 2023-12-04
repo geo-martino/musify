@@ -1,2 +1,3 @@
-__PROGRAM_NAME__ = "Syncify"
-__PROGRAM_URL__ = f"https://github.com/geo-martino/{__PROGRAM_NAME__.casefold()}"
+PROGRAM_NAME = "Syncify"
+PROGRAM_OWNER = "geo-martino"
+PROGRAM_URL = f"https://github.com/{PROGRAM_OWNER}/{PROGRAM_NAME.casefold()}"

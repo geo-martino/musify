@@ -3,7 +3,7 @@ from typing import Any
 
 from syncify.remote.api.core import RemoteAPICore
 from syncify.remote.enums import RemoteItemType
-from syncify.spotify.api import __URL_API__
+from syncify.spotify.api import URL_API
 from syncify.utils.helpers import limit_value
 
 
@@ -11,7 +11,7 @@ class SpotifyAPICore(RemoteAPICore, metaclass=ABCMeta):
 
     @property
     def api_url_base(self) -> str:
-        return __URL_API__
+        return URL_API
 
     ###########################################################################
     ## GET endpoints

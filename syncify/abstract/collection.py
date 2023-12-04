@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Any, Self, SupportsIndex
 
 from syncify.abstract.item import Item, Track, ObjectPrinterMixin
-from syncify.enums.tags import TagName, Name
+from syncify.abstract.fields import Field, TagField, FieldCombined
 from syncify.processors.sort import ShuffleMode, ShuffleBy, ItemSorter
 from syncify.remote.enums import RemoteIDType
 from syncify.remote.processors.wrangle import RemoteDataWrangler
@@ -74,11 +74,11 @@ class ItemCollection[T: Item](ObjectPrinterMixin, list[T], metaclass=ABCMeta):
 
     def sort(
             self,
-            fields: UnitSequence[Name | None] | Mapping[Name | None, bool] = (),
+            fields: UnitSequence[Field | None] | Mapping[Field | None, bool] = (),
             shuffle_mode: ShuffleMode = ShuffleMode.NONE,
             shuffle_by: ShuffleBy = ShuffleBy.TRACK,
             shuffle_weight: float = 1.0,
-            key: Name | None = None,
+            key: Field | None = None,
             reverse: bool = False,
     ) -> None:
         """
@@ -108,7 +108,7 @@ class ItemCollection[T: Item](ObjectPrinterMixin, list[T], metaclass=ABCMeta):
         if reverse:
             self.items.reverse()
 
-    def merge_items(self, items: Collection[T], tags: UnitIterable[TagName] = TagName.ALL) -> None:
+    def merge_items(self, items: Collection[T], tags: UnitIterable[TagField] = FieldCombined.ALL) -> None:
         """
         Merge this collection with another collection or list of items
         by performing an inner join on a given set of tags
@@ -116,7 +116,7 @@ class ItemCollection[T: Item](ObjectPrinterMixin, list[T], metaclass=ABCMeta):
         :param items: List of items or ItemCollection to merge with
         :param tags: List of tags to merge on. 
         """
-        tag_names = set(TagName.to_tags(tags))
+        tag_names = set(TagField.to_tags(tags))
 
         if isinstance(self, Library):  # log status message and use progress bar for libraries
             self.logger.info(
@@ -126,7 +126,7 @@ class ItemCollection[T: Item](ObjectPrinterMixin, list[T], metaclass=ABCMeta):
             )
             items = self.get_progress_bar(iterable=items, desc="Merging library", unit="tracks")
 
-        if TagName.IMAGES in tags or TagName.ALL in tags:
+        if FieldCombined.IMAGES in tags or FieldCombined.ALL in tags:
             tag_names.add("image_links")
             tag_names.add("has_image")
 

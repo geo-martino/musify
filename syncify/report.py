@@ -2,7 +2,7 @@ from collections.abc import Iterable
 
 from syncify.abstract.collection import Library, ItemCollection
 from syncify.abstract.item import Item
-from syncify.enums.tags import TagName
+from syncify.abstract.fields import TagField, FieldCombined
 from syncify.local.library import LocalLibrary
 from syncify.utils.helpers import to_collection
 from syncify.utils.logger import Logger, REPORT
@@ -73,7 +73,7 @@ class Report(Logger):
     def report_missing_tags(
             self,
             collections: LocalLibrary | Iterable[ItemCollection],
-            tags: Iterable[TagName] = TagName.ALL,
+            tags: Iterable[TagField] = FieldCombined.ALL,
             match_all: bool = False
     ) -> dict[ItemCollection, dict[Item, tuple[str]]]:
         """
@@ -89,7 +89,7 @@ class Report(Logger):
         self.logger.debug("Report missing tags: START")
 
         tags = to_collection(tags)
-        tag_names = set(TagName.to_tags(tags))
+        tag_names = set(TagField.to_tags(tags))
 
         if isinstance(collections, LocalLibrary):
             collections = collections.albums
@@ -101,15 +101,15 @@ class Report(Logger):
             f"    \33[90m{', '.join(tag_names)}\33[0m"
         )
 
-        if TagName.URI in tags or TagName.ALL in tags:
+        if FieldCombined.URI in tags or FieldCombined.ALL in tags:
             tag_names.remove("uri")
             tag_names.add("has_uri")
-        if TagName.IMAGES in tags or TagName.ALL in tags:
+        if FieldCombined.IMAGES in tags or FieldCombined.ALL in tags:
             tag_names.remove("images")
             tag_names.add("has_image")
 
         missing: dict[ItemCollection, dict[Item, tuple[str]]] = {}
-        order = TagName.all()
+        order = FieldCombined.all()
         for collection in collections:
             missing_collection: dict[Item, tuple[str]] = {}
             for item in collection.items:

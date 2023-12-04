@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, Mapping, Iterable
 from typing import Any, Literal
 
-from syncify import __PROGRAM_NAME__
+from syncify import PROGRAM_NAME
 from syncify.abstract.collection import Library, Playlist
 from syncify.abstract.item import Item
 from syncify.remote.api.api import RemoteAPI
@@ -184,7 +184,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteDataWrangler, metaclass=AB
 
         count = len(playlists if playlists else self.playlists)
         clearing = f", clearing {clear} tracks" if clear else ""
-        reloading = f" and reloading {__PROGRAM_NAME__}" if reload else ""
+        reloading = f" and reloading {PROGRAM_NAME}" if reload else ""
         self.logger.info(
             f"\33[1;95m ->\33[1;97m Synchronising {count} {self.remote_source} playlists{clearing}{reloading} \33[0m"
         )

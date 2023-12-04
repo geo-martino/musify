@@ -6,25 +6,23 @@ from typing import Any, Self
 
 from syncify.abstract.item import Item
 from syncify.abstract.processor import MusicBeeProcessor
-from syncify.enums import SyncifyEnum
-from syncify.enums.tags import Name, PropertyName, TagName
+from syncify.abstract.enums import SyncifyEnum
+from syncify.abstract.fields import Field, FieldCombined
 from syncify.local.exception import FieldError
 from syncify.utils import UnitSequence, UnitIterable
 from syncify.utils.helpers import flatten_nested, strip_ignore_words, to_collection, limit_value
 
 
-def get_field_from_code(field_code: int) -> Name | None:
+def get_field_from_code(field_code: int) -> Field | None:
     """
-    Get the Tag or Property for a given MusicBee field code.
+    Get the :py:class:`Field` enum for a given MusicBee field code.
 
     :raise FieldError: When the given ``field_code`` cannot be found.
     """
     if field_code == 0:
         return
-    elif field_code in list(map(lambda x: x.value, TagName.all())):
-        return TagName.from_value(field_code)
-    elif field_code in list(map(lambda x: x.value, PropertyName.all())):
-        return PropertyName.from_value(field_code)
+    elif field_code in {x.value for x in FieldCombined.all()}:
+        return FieldCombined.from_value(field_code)[0]
     raise FieldError(f"Field code not recognised", field=field_code)
 
 
@@ -61,12 +59,12 @@ class ItemSorter(MusicBeeProcessor):
     """
 
     # define custom sort codes
-    _custom_sort: dict[int, Mapping[Name, bool]] = {
+    _custom_sort: dict[int, Mapping[Field, bool]] = {
         6: {
-            TagName.ALBUM: False,
-            TagName.DISC: False,
-            TagName.TRACK: False,
-            PropertyName.FILENAME: False
+            FieldCombined.ALBUM: False,
+            FieldCombined.DISC_NUMBER: False,
+            FieldCombined.TRACK_NUMBER: False,
+            FieldCombined.FILENAME: False
         }
     }
     # TODO: implement field_code 78 - manual order according to MusicBee library file.
@@ -74,7 +72,7 @@ class ItemSorter(MusicBeeProcessor):
     _custom_sort[78] = _custom_sort[6]
 
     @classmethod
-    def sort_by_field(cls, tracks: list[Item], field: Name | None = None, reverse: bool = False) -> None:
+    def sort_by_field(cls, tracks: list[Item], field: Field | None = None, reverse: bool = False) -> None:
         """
         Sort tracks by the values of a given field.
 
@@ -87,7 +85,7 @@ class ItemSorter(MusicBeeProcessor):
                 tracks.reverse()
             return
 
-        tag_name = cls._get_tag(field)
+        tag_name = field.map(field)[0].name.lower()
 
         # attempt to find an example value to determine the value type for this sort
         example_value = None
@@ -113,7 +111,7 @@ class ItemSorter(MusicBeeProcessor):
         tracks.sort(key=sort_key, reverse=reverse)
 
     @classmethod
-    def group_by_field[T: Item](cls, tracks: UnitIterable[T], field: Name | None = None) -> dict[Any, list[T]]:
+    def group_by_field[T: Item](cls, tracks: UnitIterable[T], field: Field | None = None) -> dict[Any, list[T]]:
         """
         Group tracks by the values of a given field.
 
@@ -124,7 +122,7 @@ class ItemSorter(MusicBeeProcessor):
         if field is None:  # group by None
             return {None: to_collection(tracks, list)}
 
-        tag_name = cls._get_tag(field)
+        tag_name = field.map(field)[0].name.lower()
 
         grouped: dict[Any | None, list[T]] = {}
         for track in tracks:  # produce map of grouped values
@@ -137,7 +135,7 @@ class ItemSorter(MusicBeeProcessor):
 
     @classmethod
     def from_xml(cls, xml: Mapping[str, Any], **kwargs) -> Self:
-        fields: Sequence[Name] | Mapping[Name | bool]
+        fields: Sequence[Field] | Mapping[Field | bool]
         source = xml["SmartPlaylist"]["Source"]
 
         if "SortBy" in source:
@@ -170,14 +168,14 @@ class ItemSorter(MusicBeeProcessor):
 
     def __init__(
             self,
-            fields: UnitSequence[Name | None] | Mapping[Name | None, bool] = (),
+            fields: UnitSequence[Field | None] | Mapping[Field | None, bool] = (),
             shuffle_mode: ShuffleMode = ShuffleMode.NONE,
             shuffle_by: ShuffleBy = ShuffleBy.TRACK,
             shuffle_weight: float = 1.0
     ):
         super().__init__()
-        fields = to_collection(fields, list) if isinstance(fields, Name) else fields
-        self.sort_fields: Mapping[Name | None, bool]
+        fields = to_collection(fields, list) if isinstance(fields, Field) else fields
+        self.sort_fields: Mapping[Field | None, bool]
         self.sort_fields = {field: False for field in fields} if isinstance(fields, Sequence) else fields
 
         self.shuffle_mode: ShuffleMode | None
@@ -203,7 +201,7 @@ class ItemSorter(MusicBeeProcessor):
             raise NotImplementedError(f"Shuffle mode not yet implemented: {self.shuffle_mode}")
 
     @classmethod
-    def _sort_by_fields(cls, tracks_grouped: MutableMapping, fields: MutableMapping[Name, bool]) -> MutableMapping:
+    def _sort_by_fields(cls, tracks_grouped: MutableMapping, fields: MutableMapping[Field, bool]) -> MutableMapping:
         """
         Sort tracks by the given fields recursively in the order given.
 

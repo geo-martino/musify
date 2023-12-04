@@ -6,7 +6,7 @@ from typing import Any
 from syncify.abstract.collection import ItemCollection, Album
 from syncify.abstract.item import Item, Track, BaseObject
 from syncify.abstract.misc import Result
-from syncify.enums.tags import TagName, PropertyName
+from syncify.abstract.fields import Field, FieldCombined
 from syncify.processors.match import ItemMatcher
 from syncify.remote.api.api import RemoteAPI
 from syncify.remote.base import Remote
@@ -47,7 +47,7 @@ class Algorithm:
         After this score is reached by an item, any other items are disregarded as potential matches.
     """
     search_fields_1: Iterable[str]
-    match_fields: set[TagName | PropertyName]
+    match_fields: set[Field]
     result_count: int
     allow_karaoke: bool = False
 
@@ -65,7 +65,7 @@ class AlgorithmSettings:
         search_fields_1=["name", "artist"],
         search_fields_2=["name", "album"],
         search_fields_3=["name"],
-        match_fields={TagName.TITLE, TagName.ARTIST, TagName.ALBUM, PropertyName.LENGTH},
+        match_fields={FieldCombined.TITLE, FieldCombined.ARTIST, FieldCombined.ALBUM, FieldCombined.LENGTH},
         result_count=10,
         allow_karaoke=False,
         min_score=0.1,
@@ -74,7 +74,7 @@ class AlgorithmSettings:
     ALBUM: Algorithm = Algorithm(
         search_fields_1=["name", "artist"],
         search_fields_2=["name"],
-        match_fields={TagName.ARTIST, TagName.ALBUM, PropertyName.LENGTH},
+        match_fields={FieldCombined.ARTIST, FieldCombined.ALBUM, FieldCombined.LENGTH},
         result_count=5,
         allow_karaoke=False,
         min_score=0.1,
@@ -256,7 +256,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
 
         for item in collection:
             item_result = self.score_match(
-                item, results=result.items, match_on=[TagName.TITLE], min_score=algorithm.min_score, max_score=0.8
+                item, results=result.items, match_on=[FieldCombined.TITLE], min_score=algorithm.min_score, max_score=0.8
             )
             if item_result:
                 item.uri = item_result.uri
