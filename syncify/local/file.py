@@ -4,6 +4,7 @@ from http.client import HTTPResponse
 from io import BytesIO
 from os.path import splitext, basename, dirname, getsize, getmtime, getctime, exists
 from pathlib import Path
+from typing import Any
 from urllib.error import URLError
 from urllib.request import urlopen, Request
 
@@ -66,6 +67,16 @@ class File(metaclass=ABCMeta):
                 f"Not an accepted {self.__class__.__qualname__} file extension. "
                 f"Use only: {', '.join(self.valid_extensions)}"
             )
+
+    @abstractmethod
+    def load(self, *args, **kwargs) -> Any:
+        """Load the file to this object"""
+        raise NotImplementedError
+
+    @abstractmethod
+    def save(self, dry_run: bool = True, *args, **kwargs) -> Any:
+        """Save this object to file"""
+        raise NotImplementedError
 
 
 def open_image(source: str | bytes | Path | Request) -> Image.Image:

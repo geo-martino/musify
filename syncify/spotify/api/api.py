@@ -1,3 +1,5 @@
+from abc import ABCMeta
+
 from syncify.remote.api.api import RemoteAPI
 from syncify.remote.enums import RemoteIDType, RemoteItemType
 from syncify.spotify.api.collection import SpotifyAPICollections
@@ -6,7 +8,12 @@ from syncify.spotify.api.item import SpotifyAPIItems
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 
 
-class SpotifyAPI(RemoteAPI, SpotifyAPICore, SpotifyAPIItems, SpotifyAPICollections, SpotifyDataWrangler):
+class SpotifyAPIWranglerMixin(RemoteAPI, SpotifyDataWrangler, metaclass=ABCMeta):
+    def __init__(self, **handler_kwargs):
+        RemoteAPI.__init__(self, **handler_kwargs)
+
+
+class SpotifyAPI(SpotifyAPIWranglerMixin, SpotifyAPICore, SpotifyAPIItems, SpotifyAPICollections):
     """
     Collection of endpoints for a remote API.
     See :py:class:`RequestHandler` and :py:class:`APIAuthoriser`
@@ -16,7 +23,7 @@ class SpotifyAPI(RemoteAPI, SpotifyAPICore, SpotifyAPIItems, SpotifyAPICollectio
     """
 
     def __init__(self, **handler_kwargs):
-        RemoteAPI.__init__(self, name=self.remote_source, **handler_kwargs)
+        SpotifyAPIWranglerMixin.__init__(self, **handler_kwargs)
 
         try:
             user_data = self.get_self()

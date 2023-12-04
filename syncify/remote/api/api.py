@@ -14,7 +14,7 @@ class RemoteAPI(RemoteAPICore, RemoteAPIItems, RemoteAPICollections, metaclass=A
     See :py:class:`RequestHandler` and :py:class:`APIAuthoriser`
     for more info on which params to pass to authorise and execute requests.
 
-    :param handler_kwargs: The authorisation kwargs to be passed to :py:class:`RequestHandler`.
+    :param handler_kwargs: The authorisation kwargs to be passed to :py:class:`APIAuthoriser`.
     """
 
     @property
@@ -26,8 +26,10 @@ class RemoteAPI(RemoteAPICore, RemoteAPIItems, RemoteAPICollections, metaclass=A
         return self._user_name
 
     def __init__(self, **handler_kwargs):
+        handler_kwargs = {k: v for k, v in handler_kwargs.items() if k != "name"}
         Logger.__init__(self)
-        RequestHandler.__init__(self, **handler_kwargs)
+        RequestHandler.__init__(self, name=self.remote_source, **handler_kwargs)
+
         self._user_id = None
         self._user_name = None
 

@@ -100,6 +100,10 @@ class MusicBee(LocalLibrary, File):
         """Clean the file paths as found in the MusicBee XML library file to a standard system path"""
         return normpath(urllib.parse.unquote(path.replace("file://localhost/", "")))
 
+    def load(self, *args, **kwargs) -> list[LocalTrack]:
+        """Alias for load_tracks method"""
+        return self.load_tracks()
+
     def load_tracks(self) -> list[LocalTrack]:
         tracks_paths = {track.path.casefold(): track for track in self._load_tracks()}
         self.logger.debug("Enrich local tracks: START")
@@ -119,6 +123,11 @@ class MusicBee(LocalLibrary, File):
 
         self.logger.debug("Enrich local tracks: DONE\n")
         return list(tracks_paths.values())
+
+    def save(self, dry_run: bool = True, *args, **kwargs) -> Any:
+        """Generate and save the XML library file for this MusicBee library"""
+        # TODO: implement me
+        raise NotImplementedError
 
     @staticmethod
     def generate_persistent_id(id_: str | None = None, value: str | None = None) -> str:

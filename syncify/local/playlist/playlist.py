@@ -139,7 +139,7 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
         raise NotImplementedError
 
     @abstractmethod
-    def save(self, dry_run: bool = True) -> Result:
+    def save(self, dry_run: bool = True, *args, **kwargs) -> Result:
         """
         Write the tracks in this Playlist and its settings (if applicable) to file.
 

@@ -1,31 +1,17 @@
-from dataclasses import dataclass
+from abc import ABCMeta
+
+from syncify.abstract.item import BaseObject, Item
+from syncify.local.file import File
 
 
-class LocalObject:
+class LocalObject(BaseObject, File, metaclass=ABCMeta):
     """Generic base class for locally-stored objects"""
-    pass
+    def __init__(self):
+        BaseObject.__init__(self)
 
 
-@dataclass(frozen=True)
-class TagMap:
-    """Map of human-friendly tag name to ID3 tag ids for a given file type"""
-
-    title: list[str]
-    artist: list[str]
-    album: list[str]
-    album_artist: list[str]
-    track_number: list[str]
-    track_total: list[str]
-    genres: list[str]
-    year: list[str]
-    bpm: list[str]
-    key: list[str]
-    disc_number: list[str]
-    disc_total: list[str]
-    compilation: list[str]
-    comments: list[str]
-    images: list[str]
-
-    def __getitem__(self, key: str) -> list[str]:
-        """Safely get the value of a given attribute key, returning an empty string if the key is not found"""
-        return getattr(self, key, [])
+class LocalItem(LocalObject, Item, metaclass=ABCMeta):
+    """Generic base class for locally-stored items"""
+    def __init__(self):
+        LocalObject.__init__(self)
+        Item.__init__(self)

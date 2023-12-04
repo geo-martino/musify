@@ -7,8 +7,7 @@ import mutagen.id3
 import mutagen.mp3
 from PIL import Image
 
-from syncify.enums.tags import TagName
-from syncify.local.base import TagMap
+from syncify.enums.tags import TagName, TagMap
 from syncify.local.file import open_image, get_image_bytes
 from syncify.local.track.base.track import LocalTrack
 from syncify.remote.processors.wrangle import RemoteDataWrangler

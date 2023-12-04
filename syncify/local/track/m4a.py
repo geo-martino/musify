@@ -6,7 +6,7 @@ import mutagen
 import mutagen.mp4
 from PIL import Image
 
-from syncify.local.base import TagMap
+from syncify.enums.tags import TagMap
 from syncify.local.file import open_image, get_image_bytes
 from syncify.local.track.base.track import LocalTrack
 from syncify.remote.processors.wrangle import RemoteDataWrangler

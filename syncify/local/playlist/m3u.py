@@ -123,7 +123,7 @@ class M3U(LocalPlaylist):
         self._tracks_original = self.tracks.copy() if exists(self._path) else []
         return self.tracks
 
-    def save(self, dry_run: bool = True) -> SyncResultM3U:
+    def save(self, dry_run: bool = True, *args, **kwargs) -> SyncResultM3U:
         """
         Write the tracks in this Playlist and its settings (if applicable) to file.
 

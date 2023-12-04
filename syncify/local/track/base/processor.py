@@ -4,12 +4,11 @@ from datetime import datetime
 import mutagen
 
 from syncify.abstract.item import Track
-from syncify.enums.tags import TagName
-from syncify.local.base import LocalObject, TagMap
-from syncify.local.file import File
+from syncify.enums.tags import TagName, TagMap
+from syncify.local.base import LocalItem
 
 
-class TagProcessor(Track, LocalObject, File, metaclass=ABCMeta):
+class TagProcessor(LocalItem, Track, metaclass=ABCMeta):
     """
     Generic base class for tag processing
     
@@ -54,6 +53,7 @@ class TagProcessor(Track, LocalObject, File, metaclass=ABCMeta):
         raise NotImplementedError
 
     def __init__(self):
+        LocalItem.__init__(self)
         Track.__init__(self)
 
     @abstractmethod

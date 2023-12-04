@@ -7,7 +7,7 @@ from os.path import splitext, join, basename, exists, isdir
 
 from syncify.abstract.collection import ItemCollection, Folder, Album, Artist, Genre
 from syncify.abstract.item import Item
-from syncify.local.base import LocalObject
+from syncify.local.base import LocalItem
 from syncify.local.exception import LocalCollectionError
 from syncify.local.track import load_track, __TRACK_FILETYPES__
 from syncify.local.track.base.track import LocalTrack
@@ -22,7 +22,7 @@ __max_str = "z" * 50
 
 
 # noinspection PyShadowingNames
-class LocalCollection[T: LocalObject](ItemCollection[T], Logger, metaclass=ABCMeta):
+class LocalCollection[T: LocalItem](ItemCollection[T], Logger, metaclass=ABCMeta):
     """
     Generic class for storing a collection of local tracks.
 
@@ -163,7 +163,7 @@ class LocalCollection[T: LocalObject](ItemCollection[T], Logger, metaclass=ABCMe
 
 
 # noinspection PyShadowingNames
-class LocalCollectionFiltered[T: LocalObject](LocalCollection[T]):
+class LocalCollectionFiltered[T: LocalItem](LocalCollection[T]):
     """
     Generic class for storing and filtering on a collection of local tracks
     with methods for enriching the attributes of this object from the attributes of the collection of tracks

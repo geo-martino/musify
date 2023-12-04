@@ -144,7 +144,7 @@ class XAutoPF(LocalPlaylist):
         self._tracks_original = self.tracks.copy()
         return tracks
 
-    def save(self, dry_run: bool = True) -> SyncResultXAutoPF:
+    def save(self, dry_run: bool = True, *args, **kwargs) -> SyncResultXAutoPF:
         """
         Write the tracks in this Playlist and its settings (if applicable) to file.
 
