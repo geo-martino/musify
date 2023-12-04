@@ -149,7 +149,7 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
         raise RemoteError(f"Could not extract IDs. Input data not recognised: {type(values)}")
 
 
-class SpotifyObjectWranglerMixin(SpotifyObject, SpotifyDataWrangler, metaclass=ABCMeta):
+class SpotifyObjectWranglerMixin(SpotifyDataWrangler, SpotifyObject, metaclass=ABCMeta):
     """Mix-in for handling inheritance on SpotifyObject + SpotifyDataWrangler implementations"""
 
     def __init__(self, response: MutableMapping[str, Any]):

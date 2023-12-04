@@ -43,14 +43,14 @@ class LocalCollection[T: LocalItem](ItemCollection[T], Logger, metaclass=ABCMeta
         raise NotImplementedError
 
     @property
-    def track_paths(self) -> set[str]:
-        """Set of all unique track paths in this collection"""
-        return {track.path for track in self.tracks}
-
-    @property
     def artists(self) -> list[str]:
         """List of artists ordered by frequency of appearance on the tracks in this collection"""
         return get_most_common_values(track.artist for track in self.tracks if track.artist)
+
+    @property
+    def track_total(self) -> int:
+        """The total number of tracks in this collection"""
+        return len(self)
 
     @property
     def genres(self) -> list[str]:
@@ -81,6 +81,11 @@ class LocalCollection[T: LocalItem](ItemCollection[T], Logger, metaclass=ABCMeta
         """Timestamp of the last played track in this collection"""
         sort = sorted(filter(lambda t: t.last_played, self.tracks), key=lambda t: t.last_played, reverse=True)
         return sort[0].last_played if sort else None
+
+    @property
+    def track_paths(self) -> set[str]:
+        """Set of all unique track paths in this collection"""
+        return {track.path for track in self.tracks}
 
     def __init__(self, remote_wrangler: RemoteDataWrangler = None):
         ItemCollection.__init__(self, remote_wrangler=remote_wrangler)

@@ -44,12 +44,12 @@ class File(metaclass=ABCMeta):
 
     @property
     def date_created(self) -> datetime | None:
-        """datetime object representing when the file was created"""
+        """:py:class:`datetime` object representing when the file was created"""
         return datetime.fromtimestamp(getctime(self.path)) if exists(self.path) else None
 
     @property
     def date_modified(self) -> datetime | None:
-        """datetime object representing when the file was last modified"""
+        """:py:class:`datetime` object representing when the file was last modified"""
         return datetime.fromtimestamp(getmtime(self.path)) if exists(self.path) else None
 
     @property

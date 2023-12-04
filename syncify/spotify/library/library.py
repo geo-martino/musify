@@ -124,5 +124,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyDataWrangler):
         self.logger.debug("Get Spotify playlists data: DONE\n")
         return playlists_data
 
-    def merge_playlists(self, playlists: Library | Collection[Playlist] | Mapping[Any, Playlist] | None = None):
+    def merge_playlists(
+            self, playlists: Library | Collection[Playlist] | Mapping[Any, Playlist] | None = None
+    ) -> None:
         raise NotImplementedError

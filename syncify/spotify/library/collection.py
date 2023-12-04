@@ -47,70 +47,57 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollection):
     """
 
     @property
-    def name(self) -> str:
-        """The album name"""
+    def name(self):
         return self.response["name"]
 
     @property
     def tracks(self) -> list[SpotifyTrack]:
-        """The tracks in this collection"""
         return self._tracks
 
     @property
     def artists(self) -> list[SpotifyArtist]:
-        """List of artists ordered by frequency of appearance on the tracks on this album"""
         return self._artists
 
     @property
-    def artist(self) -> str:
-        """Joined string representation of all artists on this album ordered by frequency of appearance"""
+    def artist(self):
         return self.tag_sep.join(artist["name"] for artist in self.response["artists"])
 
     @property
-    def album_artist(self) -> str:
-        """The album artist for this album"""
+    def album_artist(self):
         return self.artist
 
     @property
-    def track_total(self) -> int:
-        """The total number of items in this collection"""
+    def track_total(self):
         return self.response["total_tracks"]
 
     @property
-    def genres(self) -> list[str]:
-        """List of genres ordered by frequency of appearance on the tracks on this album"""
+    def genres(self):
         return self.response.get("genres", [])
 
     @property
-    def year(self) -> int:
-        """The year this album was released"""
+    def year(self):
         return int(self.response["release_date"][:4])
 
     @property
-    def compilation(self) -> bool:
-        """Is this album a compilation"""
+    def compilation(self):
         return self.response["album_type"] == "compilation"
 
     @property
-    def image_links(self) -> dict[str, str]:
-        """The images associated with this album in the form ``{image name: image link}``"""
+    def image_links(self):
         images = {image["height"]: image["url"] for image in self.response["images"]}
         return {"cover_front": url for height, url in images.items() if height == max(images)}
 
     @property
-    def has_image(self) -> bool:
-        """Does this album have an image"""
+    def has_image(self):
         return len(self.response["images"]) > 0
 
     @property
-    def length(self) -> int:
-        """Total duration of all tracks on this album in seconds"""
+    def length(self):
         lengths = {track.length for track in self.tracks}
         return sum(lengths) if lengths else None
 
     @property
-    def rating(self) -> float | None:
-        """Rating of this album"""
+    def rating(self):
         return self.response.get("popularity")
 
     def __init__(self, response: MutableMapping[str, Any]):
@@ -131,25 +118,6 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollection):
     def load(
             cls, value: APIMethodInputType, use_cache: bool = True, items: Iterable[SpotifyTrack] = (), *args, **kwargs
     ) -> Self:
-        """
-        Generate a new object, calling all required endpoints to get a complete set of data for this item type.
-
-        The given ``value`` may be:
-            * A string representing a URL/URI/ID.
-            * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
-            * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
-            * A MutableSequence of remote API JSON responses for a collection with
-                a valid ID value under an ``id`` key.
-
-        When a list is given, only the first item is processed.
-
-        :param value: The value representing some remote artist. See description for allowed value types.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
-        :param items: Optionally, give a list of available items to build a response for this collection.
-            In doing so, the method will first try to find the API responses for the items of this collection
-            in the given list before calling the API for any items not found there.
-            This helps reduce the number of API calls made on initialisation.
-        """
         cls._check_for_api()
         obj = cls.__new__(cls)
         response = cls._load_response(value, use_cache=use_cache)
@@ -188,13 +156,7 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollection):
 
         return obj
 
-    def reload(self, use_cache: bool = True):
-        """
-        Reload this object from the API, calling all required endpoints
-        to get a complete set of data for this item type
-
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
-        """
+    def reload(self, use_cache: bool = True) -> None:
         self._check_for_api()
 
         # reload with enriched data

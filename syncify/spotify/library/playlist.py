@@ -9,8 +9,6 @@ from syncify.spotify.library.collection import SpotifyCollection
 from syncify.spotify.library.item import SpotifyTrack
 
 
-# TODO: cannot view superclasses, something is messed up with the inheritance here
-#  also method/properties do not inherit docstrings from parent classes
 class SpotifyPlaylist(SpotifyCollection, RemotePlaylist[SpotifyTrack]):
     """
     Extracts key ``playlist`` data from a Spotify API JSON response.
@@ -19,13 +17,11 @@ class SpotifyPlaylist(SpotifyCollection, RemotePlaylist[SpotifyTrack]):
     """
 
     @property
-    def name(self) -> str:
-        """The name of this playlist"""
+    def name(self):
         return self._name
 
     @property
-    def description(self) -> str | None:
-        """Description of this playlist"""
+    def description(self):
         return self._description
 
     @description.setter
@@ -33,55 +29,47 @@ class SpotifyPlaylist(SpotifyCollection, RemotePlaylist[SpotifyTrack]):
         self._description = value
 
     @property
+    def followers(self):
+        return self.response["followers"]["total"]
+
+    @property
+    def owner_name(self):
+        return self.response["owner"]["display_name"]
+
+    @property
+    def owner_id(self):
+        return self.response["owner"]["id"]
+
+    @property
     def tracks(self):
-        """The tracks in this collection"""
         return self._tracks
 
     @property
-    def track_total(self) -> int:
-        """The total number of tracks in this playlist"""
+    def track_total(self):
         return self.response["tracks"]["total"]
 
     @property
-    def image_links(self) -> dict[str, str]:
-        """The images associated with this playlist in the form ``{image name: image link}``"""
+    def image_links(self):
         return self._image_links
 
     @property
+    def has_image(self):
+        images = self.response.get("album", {}).get("images", [])
+        return images is not None and len(images) > 0
+
+    @property
     def date_created(self):
-        """datetime object representing when the first track was added to this playlist"""
+        """:py:class:`datetime` object representing when the first track was added to this playlist"""
         return min(self.date_added.values()) if self.date_added else None
 
     @property
     def date_modified(self):
-        """datetime object representing when a track was most recently added/removed"""
+        """:py:class:`datetime` object representing when a track was most recently added/removed"""
         return max(self.date_added.values()) if self.date_added else None
 
     @property
-    def date_added(self) -> dict[str, datetime]:
-        """A map of ``{URI: date}`` for each item for when that item was added to the playlist"""
+    def date_added(self):
         return self._date_added
-
-    @property
-    def followers(self) -> int:
-        """The number of followers this playlist has"""
-        return self.response["followers"]["total"]
-
-    @property
-    def owner_name(self) -> str:
-        """The name of the owner of this playlist"""
-        return self.response["owner"]["display_name"]
-
-    @property
-    def owner_id(self) -> str:
-        """The ID of the owner of this playlist"""
-        return self.response["owner"]["id"]
-
-    @property
-    def has_image(self) -> bool:
-        """Does this playlist have an image"""
-        images = self.response.get("album", {}).get("images", [])
-        return images is not None and len(images) > 0
 
     def __init__(self, response: MutableMapping[str, Any]):
         RemotePlaylist.__init__(self, response=response)
@@ -108,25 +96,6 @@ class SpotifyPlaylist(SpotifyCollection, RemotePlaylist[SpotifyTrack]):
     def load(
             cls, value: APIMethodInputType, use_cache: bool = True, items: Iterable[SpotifyTrack] = (), *args, **kwargs
     ) -> Self:
-        """
-        Generate a new object, calling all required endpoints to get a complete set of data for this item type.
-
-        The given ``value`` may be:
-            * A string representing a URL/URI/ID.
-            * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
-            * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
-            * A MutableSequence of remote API JSON responses for a collection with
-                a valid ID value under an ``id`` key.
-
-        When a list is given, only the first item is processed.
-
-        :param value: The value representing some remote artist. See description for allowed value types.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
-        :param items: Optionally, give a list of available items to build a response for this collection.
-            In doing so, the method will first try to find the API responses for the items of this collection
-            in the given list before calling the API for any items not found there.
-            This helps reduce the number of API calls made on initialisation.
-        """
         cls._check_for_api()
         obj = cls.__new__(cls)
         response = cls._load_response(value, use_cache=use_cache)
@@ -160,13 +129,7 @@ class SpotifyPlaylist(SpotifyCollection, RemotePlaylist[SpotifyTrack]):
 
         return obj
 
-    def reload(self, use_cache: bool = True):
-        """
-        Reload this object from the API, calling all required endpoints
-        to get a complete set of data for this item type
-
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
-        """
+    def reload(self, use_cache: bool = True) -> None:
         self._check_for_api()
 
         # reload with enriched data
@@ -179,5 +142,4 @@ class SpotifyPlaylist(SpotifyCollection, RemotePlaylist[SpotifyTrack]):
         self.__init__(response)
 
     def _get_track_uris_from_api_response(self) -> set[str]:
-        """Extract a set of URIs from this playlist's stored API response"""
         return {track["track"]["uri"] for track in self.response["tracks"]["items"]}

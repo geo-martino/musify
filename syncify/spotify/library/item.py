@@ -76,20 +76,23 @@ class SpotifyTrack(SpotifyObjectWranglerMixin, RemoteTrack):
 
     @property
     def bpm(self):
-        if "audio_features" in self.response:
-            return self.response["audio_features"]["tempo"]
+        if "audio_features" not in self.response:
+            return
+        return self.response["audio_features"]["tempo"]
 
     @property
     def key(self):
-        if "audio_features" in self.response:
-            # correctly formatted song key string
-            key: str = self._song_keys[self.response["audio_features"]["key"]]
-            is_minor: bool = self.response["audio_features"]["mode"] == 0
-            if '/' in key:
-                key_sep = key.split('/')
-                return f"{key_sep[0]}{'m'*is_minor}/{key_sep[1]}{'m'*is_minor}"
-            else:
-                return f"{key}{'m'*is_minor}"
+        if "audio_features" not in self.response:
+            return
+
+        # correctly formatted song key string
+        key: str = self._song_keys[self.response["audio_features"]["key"]]
+        is_minor: bool = self.response["audio_features"]["mode"] == 0
+        if '/' in key:
+            key_sep = key.split('/')
+            return f"{key_sep[0]}{'m'*is_minor}/{key_sep[1]}{'m'*is_minor}"
+        else:
+            return f"{key}{'m'*is_minor}"
 
     @property
     def disc_number(self) -> int:
@@ -157,7 +160,7 @@ class SpotifyTrack(SpotifyObjectWranglerMixin, RemoteTrack):
         obj.reload(use_cache=use_cache)
         return obj
 
-    def reload(self, use_cache: bool = True):
+    def reload(self, use_cache: bool = True) -> None:
         self._check_for_api()
 
         # reload with enriched data
@@ -223,5 +226,5 @@ class SpotifyArtist(SpotifyObjectWranglerMixin, RemoteArtist):
         obj.reload(use_cache=use_cache)
         return obj
 
-    def reload(self, use_cache: bool = True):
+    def reload(self, use_cache: bool = True) -> None:
         self.__init__(self.api.get(url=self.url, use_cache=use_cache, log_pad=self._url_pad))

@@ -32,11 +32,6 @@ class ItemCollection[T: Item](ObjectPrinterMixin, list[T], metaclass=ABCMeta):
         """The items in this collection"""
         raise NotImplementedError
 
-    @property
-    def track_total(self) -> int:
-        """The total number of items in this collection"""
-        return len(self)
-
     def __init__(self, remote_wrangler: RemoteDataWrangler = None):
         ObjectPrinterMixin.__init__(self)
         self.remote_wrangler = remote_wrangler
@@ -307,13 +302,13 @@ class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
     @property
     @abstractmethod
     def date_created(self) -> datetime | None:
-        """datetime object representing when the playlist was created"""
+        """:py:class:`datetime` object representing when the playlist was created"""
         raise NotImplementedError
 
     @property
     @abstractmethod
     def date_modified(self) -> datetime | None:
-        """datetime object representing when the playlist was last modified"""
+        """:py:class:`datetime` object representing when the playlist was last modified"""
         raise NotImplementedError
 
     def __init__(self, remote_wrangler: RemoteDataWrangler = None):
@@ -347,6 +342,11 @@ class Library[T: Track](ItemCollection[T], Logger, metaclass=ABCMeta):
     def tracks(self):
         """The tracks in this library"""
         raise NotImplementedError
+
+    @property
+    def track_total(self) -> int:
+        """The total number of tracks in this library"""
+        return len(self)
 
     @property
     @abstractmethod
@@ -457,6 +457,11 @@ class Folder[T: Track](ItemCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
     @property
+    def track_total(self) -> int:
+        """The total number of tracks in this folder"""
+        return len(self)
+
+    @property
     @abstractmethod
     def genres(self) -> list[str]:
         """List of genres ordered by frequency of appearance on the tracks in this folder"""
@@ -526,6 +531,11 @@ class Album[T: Track](ItemCollection[T], metaclass=ABCMeta):
     def album_artist(self) -> str | None:
         """The album artist for this album"""
         raise NotImplementedError
+
+    @property
+    def track_total(self) -> int:
+        """The total number of tracks on this album"""
+        return len(self)
 
     @property
     @abstractmethod
@@ -621,6 +631,11 @@ class Artist[T: Track](ItemCollection[T], metaclass=ABCMeta):
     def albums(self) -> list[str]:
         """List of albums ordered by frequency of appearance on the tracks by this artist"""
         raise NotImplementedError
+
+    @property
+    def track_total(self) -> int:
+        """The total number of tracks by this artist"""
+        return len(self)
 
     @property
     @abstractmethod

@@ -165,7 +165,7 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
         self._expected = converted
 
     def _convert_expected_to_datetime(self) -> None:
-        """Convert expected values to datetime objects"""
+        """Convert expected values to :py:class:`datetime` objects"""
         converted: list[date] = []
 
         for exp in self.expected:
