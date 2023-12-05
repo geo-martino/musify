@@ -15,7 +15,7 @@ from dateutil.relativedelta import relativedelta
 
 from syncify import PROGRAM_NAME
 from syncify.config import REMOTE_CONFIG
-from syncify.abstract.fields import LocalTrackField
+from syncify.fields import LocalTrackField
 from syncify.exception import SyncifyError
 from syncify.local.library import LocalLibrary, MusicBee
 from syncify.local.collection import LocalFolder

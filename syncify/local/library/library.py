@@ -6,7 +6,7 @@ from typing import Any
 from syncify.abstract.collection import Playlist, Library
 from syncify.abstract.item import Item
 from syncify.abstract.misc import Result
-from syncify.abstract.fields import LocalTrackField
+from syncify.fields import LocalTrackField
 from syncify.local.collection import LocalCollection, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from syncify.local.exception import LocalCollectionError
 from syncify.local.playlist import PLAYLIST_FILETYPES, LocalPlaylist, load_playlist
@@ -124,7 +124,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     @property
     def folders(self) -> list[LocalFolder]:
         """Dynamically generate a set of folder collections from the tracks in this library"""
-        grouped = ItemSorter.group_by_field(tracks=self.tracks, field=LocalTrackField.FOLDER)
+        grouped = ItemSorter.group_by_field(items=self.tracks, field=LocalTrackField.FOLDER)
         collections = [
             LocalFolder(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
             for name, group in grouped.items()
@@ -134,7 +134,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     @property
     def albums(self) -> list[LocalAlbum]:
         """Dynamically generate a set of album collections from the tracks in this library"""
-        grouped = ItemSorter.group_by_field(tracks=self.tracks, field=LocalTrackField.ALBUM)
+        grouped = ItemSorter.group_by_field(items=self.tracks, field=LocalTrackField.ALBUM)
         collections = [
             LocalAlbum(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
             for name, group in grouped.items()
@@ -144,7 +144,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     @property
     def artists(self) -> list[LocalArtist]:
         """Dynamically generate a set of artist collections from the tracks in this library"""
-        grouped = ItemSorter.group_by_field(tracks=self.tracks, field=LocalTrackField.ARTIST)
+        grouped = ItemSorter.group_by_field(items=self.tracks, field=LocalTrackField.ARTIST)
         collections = [
             LocalArtist(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
             for name, group in grouped.items()
@@ -154,7 +154,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     @property
     def genres(self) -> list[LocalGenres]:
         """Dynamically generate a set of genre collections from the tracks in this library"""
-        grouped = ItemSorter.group_by_field(tracks=self.tracks, field=LocalTrackField.GENRES)
+        grouped = ItemSorter.group_by_field(items=self.tracks, field=LocalTrackField.GENRES)
         collections = [
             LocalGenres(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
             for name, group in grouped.items()

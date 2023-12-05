@@ -2,8 +2,8 @@ from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Hashable
 from typing import Self, Any
 
-from syncify.abstract.misc import PrettyPrinter
 from syncify.abstract.fields import TagField, FieldCombined
+from syncify.abstract.misc import PrettyPrinter
 from syncify.utils import UnitIterable
 
 

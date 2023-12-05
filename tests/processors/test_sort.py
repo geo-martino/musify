@@ -2,7 +2,7 @@ from collections.abc import Callable
 from itertools import groupby
 from random import choice, randrange
 
-from syncify.abstract.fields import TrackField
+from syncify.fields import TrackField
 from syncify.local.track import LocalTrack
 from syncify.processors.sort import ItemSorter, ShuffleMode
 from syncify.utils.helpers import strip_ignore_words

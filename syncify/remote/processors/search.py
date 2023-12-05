@@ -4,9 +4,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from syncify.abstract.collection import ItemCollection, Album
+from syncify.abstract.fields import Field, FieldCombined
 from syncify.abstract.item import Item, Track, BaseObject
 from syncify.abstract.misc import Result
-from syncify.abstract.fields import Field, FieldCombined
 from syncify.processors.match import ItemMatcher
 from syncify.remote.api.api import RemoteAPI
 from syncify.remote.base import Remote

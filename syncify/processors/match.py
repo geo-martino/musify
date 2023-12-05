@@ -5,9 +5,9 @@ from dataclasses import dataclass
 from typing import Any
 
 from syncify.abstract.collection import Album, ItemCollection
+from syncify.abstract.fields import Field, FieldCombined, ALL_FIELDS
 from syncify.abstract.item import Track, BaseObject
 from syncify.abstract.processor import ItemProcessor
-from syncify.abstract.fields import FieldCombined, Field
 from syncify.utils.helpers import limit_value, to_collection
 from syncify.utils.logger import Logger
 from utils import UnitIterable
@@ -48,7 +48,7 @@ class ItemMatcher(ItemProcessor, Logger):
     """
     Matches source items/collections to given result(s).
 
-    :ivar karaoke_tags: A set of words to search for in tag values that identify the track as being a karaoke track.
+    :ivar karaoke_tags: A set of words to search for in tag values that identify the item as being a karaoke item.
     :ivar year_range: A difference in years of this value gives a score of 0 for the :py:meth:`match_year` algorithm.
         See the :py:meth:`match_year` method for more information.
     :ivar _clean_tags_remove_all: Apply these remove settings to all tags 
@@ -61,7 +61,7 @@ class ItemMatcher(ItemProcessor, Logger):
         to apply for each tag type. See also :py:class:`CleanTagConfig` for more info.
     
     :param allow_karaoke: When True, items determined to be karaoke are allowed when matching added items.
-        Skip karaoke results otherwise. Karaoke tracks are identified using the ``karaoke_tags`` attribute.
+        Skip karaoke results otherwise. Karaoke items are identified using the ``karaoke_tags`` attribute.
     """
 
     karaoke_tags = {"karaoke", "backing", "instrumental"}
@@ -263,7 +263,7 @@ class ItemMatcher(ItemProcessor, Logger):
             results: Iterable[T],
             min_score: float = 0.1,
             max_score: float = 0.8,
-            match_on: UnitIterable[Field] = FieldCombined.ALL
+            match_on: UnitIterable[Field] = ALL_FIELDS
     ) -> T | None:
         """
         Perform score match algorithm for a given item and its results.
@@ -274,8 +274,8 @@ class ItemMatcher(ItemProcessor, Logger):
             Value will be limited to between 0.01 and 1.0.
         :param max_score: Stop matching once this score has been reached.
             Value will be limited to between 0.01 and 1.0.
-        :param match_on: List of tags to match on. Currently only the following tags/properties are supported:
-            track, artist, album, year, length.
+        :param match_on: List of tags to match on. Currently only the following fields are supported:
+            title, artist, album, year, length.
         :return: T. The item that matched best if found, None if no item matched conditions.
         """
         if not source.clean_tags:
@@ -304,11 +304,7 @@ class ItemMatcher(ItemProcessor, Logger):
             self._log_test(source=source, result=result, test=score, extra=[f"NO MATCH: {score}<{min_score}"])
 
     def _score[T: (Track, Album)](
-            self,
-            source: T,
-            results: Iterable[T],
-            max_score: float = 0.8,
-            match_on: set[Field] = frozenset(FieldCombined.all())
+            self, source: T, results: Iterable[T], max_score: float = 0.8, match_on: set[Field] = ALL_FIELDS
     ) -> tuple[float, T | None]:
         """
         Gets the score and result from a cleaned source and a given list of results.
@@ -317,8 +313,8 @@ class ItemMatcher(ItemProcessor, Logger):
         :param results: Result items for comparisons.
         :param max_score: Stop matching once this score has been reached.
             Value will be limited to between 0.01 and 1.0.
-        :param match_on: List of tags to match on. Currently only the following tags/properties are supported:
-            track, artist, album, year, length.
+        :param match_on: List of tags to match on. Currently only the following fields are supported:
+            title, artist, album, year, length.
         :return: Tuple of (the score between 0-1, the item that had the best score)
         """
         if not results:
@@ -349,7 +345,7 @@ class ItemMatcher(ItemProcessor, Logger):
         return best_score, best_result
 
     def _get_scores[T: (Track, Album)](
-            self, source: T, result: T, match_on: set[Field] = frozenset(FieldCombined.all())
+            self, source: T, result: T, match_on: set[Field] = ALL_FIELDS
     ) -> dict[str, float]:
         """
         Gets the scores from a cleaned source and result to match on.
@@ -358,8 +354,8 @@ class ItemMatcher(ItemProcessor, Logger):
 
         :param source: Source item to compare against and find a match for with assigned ``clean_tags``.
         :param result: Result item to compare against with assigned ``clean_tags``.
-        :param match_on: List of tags to match on. Currently only the following tags/properties are supported:
-            track, artist, album, year, length.
+        :param match_on: List of tags to match on. Currently only the following fields are supported:
+            title, artist, album, year, length.
         :return: Map of score type name to score.
         """
         if not self.allow_karaoke and self.match_not_karaoke(source, result) < 1:
@@ -368,17 +364,23 @@ class ItemMatcher(ItemProcessor, Logger):
         scores_current: dict[str, float] = {}
 
         if FieldCombined.TITLE in match_on:
-            scores_current[FieldCombined.TITLE.name] = self.match_name(source=source, result=result)
+            key = FieldCombined.TITLE.name.lower()
+            scores_current[key] = self.match_name(source=source, result=result)
         if FieldCombined.ARTIST in match_on:
-            scores_current[FieldCombined.ARTIST.name] = self.match_artist(source=source, result=result)
+            key = FieldCombined.ARTIST.name.lower()
+            scores_current[key] = self.match_artist(source=source, result=result)
         if FieldCombined.ALBUM in match_on:
-            scores_current[FieldCombined.ALBUM.name] = self.match_album(source=source, result=result)
+            key = FieldCombined.ALBUM.name.lower()
+            scores_current[key] = self.match_album(source=source, result=result)
         if FieldCombined.LENGTH in match_on:
-            scores_current[FieldCombined.LENGTH.name] = self.match_length(source=source, result=result)
+            key = FieldCombined.LENGTH.name.lower()
+            scores_current[key] = self.match_length(source=source, result=result)
         if FieldCombined.YEAR in match_on:
-            scores_current[FieldCombined.YEAR.name] = self.match_year(source=source, result=result)
+            key = FieldCombined.YEAR.name.lower()
+            scores_current[key] = self.match_year(source=source, result=result)
+
         if isinstance(source, ItemCollection) and isinstance(result, ItemCollection):
-            # skip this if not a collection of tracks
+            # skip this if not a collection of items
             if not all(isinstance(i, Track) for i in source.items):
                 return scores_current
             if not all(isinstance(i, Track) for i in result.items):

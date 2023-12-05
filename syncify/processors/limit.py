@@ -4,10 +4,10 @@ from operator import mul
 from random import shuffle
 from typing import Any, Self
 
-from syncify.abstract.item import Item, Track
-from syncify.abstract.processor import MusicBeeProcessor, DynamicProcessor
 from syncify.abstract.enums import SyncifyEnum
 from syncify.abstract.fields import FieldCombined
+from syncify.abstract.item import Item, Track
+from syncify.abstract.processor import MusicBeeProcessor, DynamicProcessor
 from syncify.local.file import File
 from syncify.processors.decorators import dynamicprocessormethod
 from syncify.processors.exception import ItemLimiterError

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from random import sample
 from typing import Any
 
-from syncify.abstract.fields import LocalTrackField
+from syncify.fields import LocalTrackField
 from syncify.local.playlist.match import LocalMatcher
 from syncify.local.track import LocalTrack
 from syncify.processors.compare import ItemComparer

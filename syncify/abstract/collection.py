@@ -6,8 +6,8 @@ from copy import deepcopy
 from datetime import datetime
 from typing import Any, Self, SupportsIndex
 
+from syncify.abstract.fields import Field, FieldCombined, TagField
 from syncify.abstract.item import Item, Track, ObjectPrinterMixin
-from syncify.abstract.fields import Field, TagField, FieldCombined
 from syncify.processors.sort import ShuffleMode, ShuffleBy, ItemSorter
 from syncify.remote.enums import RemoteIDType
 from syncify.remote.processors.wrangle import RemoteDataWrangler
@@ -82,7 +82,7 @@ class ItemCollection[T: Item](ObjectPrinterMixin, list[T], metaclass=ABCMeta):
             reverse: bool = False,
     ) -> None:
         """
-        Sort tracks in this collection in-place based on given conditions.
+        Sort items in this collection in-place based on given conditions.
         If key is given,
 
         :param fields:
@@ -469,14 +469,14 @@ class Folder[T: Track](ItemCollection[T], metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def length(self) -> float | None:
-        """Total duration of all tracks in this folder"""
+    def compilation(self) -> bool:
+        """Is this folder a compilation"""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def compilation(self) -> bool:
-        """Is this folder a compilation"""
+    def length(self) -> float | None:
+        """Total duration of all tracks in this folder"""
         raise NotImplementedError
 
     def __init__(self, remote_wrangler: RemoteDataWrangler = None):
@@ -516,15 +516,15 @@ class Album[T: Track](ItemCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
     @property
+    def artist(self) -> str:
+        """Joined string representation of all artists on this album ordered by frequency of appearance"""
+        return self.tag_sep.join(self.artists)
+
+    @property
     @abstractmethod
     def artists(self) -> list[str]:
         """List of artists ordered by frequency of appearance on the tracks on this album"""
         raise NotImplementedError
-
-    @property
-    def artist(self) -> str:
-        """Joined string representation of all artists on this album ordered by frequency of appearance"""
-        return self.tag_sep.join(self.artists)
 
     @property
     @abstractmethod

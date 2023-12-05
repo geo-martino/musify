@@ -6,9 +6,9 @@ from dataclasses import dataclass, field
 
 from syncify import PROGRAM_NAME
 from syncify.abstract.collection import ItemCollection
+from syncify.abstract.fields import FieldCombined
 from syncify.abstract.item import Item, Track
 from syncify.abstract.misc import Result
-from syncify.abstract.fields import FieldCombined
 from syncify.processors.match import ItemMatcher
 from syncify.remote.api.api import RemoteAPI
 from syncify.remote.enums import RemoteItemType, RemoteIDType

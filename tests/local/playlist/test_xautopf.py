@@ -4,7 +4,7 @@ from os.path import dirname, join, splitext, basename
 
 import pytest
 
-from syncify.abstract.fields import LocalTrackField
+from syncify.fields import LocalTrackField
 from syncify.local.exception import InvalidFileType
 from syncify.local.playlist import XAutoPF
 from syncify.local.track import LocalTrack, FLAC, M4A, WMA, MP3

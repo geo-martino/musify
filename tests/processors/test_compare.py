@@ -2,7 +2,7 @@ from datetime import datetime, date, timedelta
 
 import pytest
 
-from syncify.abstract.fields import TrackField, LocalTrackField
+from syncify.fields import TrackField, LocalTrackField
 from syncify.local.track import MP3, M4A, FLAC
 from syncify.processors.compare import ItemComparer
 from syncify.processors.exception import ItemComparerError, ProcessorLookupError
@@ -44,16 +44,16 @@ def test_compare_with_reference():
     assert not comparer._converted
 
     with pytest.raises(ItemComparerError):
-        comparer.compare(track=track_1)
+        comparer.compare(item=track_1)
 
     track_1.album = "album 124 is a great album"
     track_2.album = "album"
-    assert comparer.compare(track=track_1, reference=track_2)
+    assert comparer.compare(item=track_1, reference=track_2)
     assert comparer._expected is None
     assert not comparer._converted
 
     with pytest.raises(ItemComparerError):
-        comparer.compare(track=track_1)
+        comparer.compare(item=track_1)
 
 
 def test_compare_str():

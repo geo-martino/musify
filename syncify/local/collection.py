@@ -32,13 +32,13 @@ class LocalCollection[T: LocalItem](ItemCollection[T], Logger, metaclass=ABCMeta
     """
 
     @property
-    def items(self):
+    def items(self) -> list[LocalTrack]:
         """The tracks in this collection"""
         return self.tracks
 
     @property
     @abstractmethod
-    def tracks(self):
+    def tracks(self) -> list[LocalTrack]:
         """The tracks in this collection"""
         raise NotImplementedError
 
@@ -81,6 +81,11 @@ class LocalCollection[T: LocalItem](ItemCollection[T], Logger, metaclass=ABCMeta
         """Timestamp of the last played track in this collection"""
         sort = sorted(filter(lambda t: t.last_played, self.tracks), key=lambda t: t.last_played, reverse=True)
         return sort[0].last_played if sort else None
+
+    @property
+    def play_count(self) -> int:
+        """Total number of plays of all tracks in this collection"""
+        return sum(track.play_count for track in self.tracks if track.play_count)
 
     @property
     def track_paths(self) -> set[str]:

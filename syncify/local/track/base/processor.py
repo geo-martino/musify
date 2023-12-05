@@ -4,7 +4,7 @@ from datetime import datetime
 import mutagen
 
 from syncify.abstract.item import Track
-from syncify.abstract.fields import LocalTrackField
+from syncify.fields import LocalTrackField
 from syncify.local.base import LocalItem
 from syncify.local.file import TagMap
 

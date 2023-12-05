@@ -112,7 +112,7 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
     def _sort(self) -> None:
         """Wrapper for sorter"""
         if self.sorter is not None and self.tracks is not None:
-            self.sorter.sort(tracks=self.tracks)
+            self.sorter.sort(items=self.tracks)
 
     def _prepare_paths_for_output(self, paths: Collection[str]) -> list[str]:
         """

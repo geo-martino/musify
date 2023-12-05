@@ -9,7 +9,7 @@ from random import choice, randrange, randint
 import pytest
 from dateutil.relativedelta import relativedelta
 
-from syncify.abstract.fields import LocalTrackField
+from syncify.fields import LocalTrackField
 from syncify.local.exception import InvalidFileType
 from syncify.local.file import open_image
 from syncify.local.track import TRACK_CLASSES, LocalTrack, FLAC, M4A, MP3, WMA

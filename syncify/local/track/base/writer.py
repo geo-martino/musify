@@ -7,7 +7,7 @@ from typing import Any
 import mutagen
 
 from syncify.abstract.misc import Result
-from syncify.abstract.fields import LocalTrackField
+from syncify.fields import LocalTrackField
 from syncify.local.track.base.reader import TagReader
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitIterable

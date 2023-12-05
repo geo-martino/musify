@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
-from collections.abc import Mapping
-from typing import Any, Self, Callable
+from collections.abc import Mapping, Callable
+from typing import Any, Self
 
 from syncify.abstract.misc import PrettyPrinter
 from syncify.processors.decorators import dynamicprocessormethod

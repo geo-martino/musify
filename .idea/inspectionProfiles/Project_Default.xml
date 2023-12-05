@@ -31,6 +31,7 @@
         <list>
           <option value="abstract.item.Item.album" />
           <option value="abstract.fields.TrackFieldMixin.*" />
+          <option value="fields.TrackFieldMixin.*" />
         </list>
       </option>
     </inspection_tool>

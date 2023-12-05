@@ -1,11 +1,11 @@
-from collections.abc import Collection, Mapping, Sequence, Iterable
+from collections.abc import Collection, Mapping, Sequence, Iterable, Callable
 from dataclasses import dataclass, field
 from os.path import exists
-from typing import Any, Self, Callable
+from typing import Any, Self
 
+from syncify.abstract.fields import FieldCombined
 from syncify.abstract.misc import Result
 from syncify.abstract.processor import MusicBeeProcessor
-from syncify.abstract.fields import FieldCombined
 from syncify.local.track.base.track import LocalTrack
 from syncify.processors.compare import ItemComparer
 from syncify.processors.sort import ItemSorter
@@ -228,9 +228,9 @@ class LocalMatcher(MusicBeeProcessor):
             match_results = []
             for comparer in self.comparers:
                 if comparer.expected is None:  # compare with a reference
-                    match_results.append(comparer.compare(track=track, reference=reference))
+                    match_results.append(comparer.compare(item=track, reference=reference))
                 else:  # compare with the comparers expected values
-                    match_results.append(comparer.compare(track=track))
+                    match_results.append(comparer.compare(item=track))
 
             if self.match_all and all(match_results):
                 compared.append(track)

@@ -5,9 +5,10 @@ from functools import reduce
 from operator import mul
 from typing import Any, Self
 
+from syncify.abstract.fields import Field
 from syncify.abstract.item import Item
 from syncify.abstract.processor import MusicBeeProcessor, DynamicProcessor
-from syncify.abstract.fields import Field, LocalTrackField
+from syncify.fields import LocalTrackField
 from syncify.local.exception import FieldError
 from syncify.processors.decorators import dynamicprocessormethod
 from syncify.processors.exception import ItemComparerError
@@ -45,7 +46,7 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
     :param field: The field to match on.
     :param condition: The condition to match on e.g. Is, LessThan, InRange, Contains.
     :param expected: Optional list of expected values to match on.
-        Types of the values in this list are automatically converted to the type of the track field's value.
+        Types of the values in this list are automatically converted to the type of the item field's value.
     """
 
     @property
@@ -93,9 +94,9 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
 
         self._set_processor_name(condition)
 
-    def compare[T: Item](self, track: T, reference: UnitSequence[T] | None = None) -> bool:
+    def compare[T: Item](self, item: T, reference: UnitSequence[T] | None = None) -> bool:
         """
-        Compare a ``track`` to a ``reference`` or,
+        Compare a ``item`` to a ``reference`` or,
         if no ``reference`` is given, to this object's list of ``expected`` values
 
         :return: True if a match is found, False otherwise.
@@ -105,10 +106,10 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
             return False
 
         if reference is None and not self.expected:
-            raise ItemComparerError("No comparative track given and no expected values set")
+            raise ItemComparerError("No comparative item given and no expected values set")
 
         tag_name = self.field.name.lower()
-        actual = track[tag_name]
+        actual = item[tag_name]
 
         if reference is None:
             # convert the expected values to the same type as the actual value if not yet converted

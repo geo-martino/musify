@@ -4,10 +4,10 @@ from datetime import datetime
 from random import shuffle
 from typing import Any, Self
 
-from syncify.abstract.item import Item
-from syncify.abstract.processor import MusicBeeProcessor
 from syncify.abstract.enums import SyncifyEnum
 from syncify.abstract.fields import Field, FieldCombined
+from syncify.abstract.item import Item
+from syncify.abstract.processor import MusicBeeProcessor
 from syncify.local.exception import FieldError
 from syncify.utils import UnitSequence, UnitIterable
 from syncify.utils.helpers import flatten_nested, strip_ignore_words, to_collection, limit_value
@@ -27,7 +27,7 @@ def get_field_from_code(field_code: int) -> Field | None:
 
 
 class ShuffleMode(SyncifyEnum):
-    """Represents the possible shuffle modes to use when shuffling tracks in a playlist."""
+    """Represents the possible shuffle modes to use when shuffling items in a playlist."""
     NONE = 0
     RANDOM = 1
     HIGHER_RATING = 2
@@ -36,7 +36,7 @@ class ShuffleMode(SyncifyEnum):
 
 
 class ShuffleBy(SyncifyEnum):
-    """Represents the possible items/properties to shuffle by when shuffling tracks in a playlist."""
+    """Represents the possible items/properties to shuffle by when shuffling items in a playlist."""
     TRACK = 0
     ALBUM = 1
     ARTIST = 2
@@ -44,12 +44,12 @@ class ShuffleBy(SyncifyEnum):
 
 class ItemSorter(MusicBeeProcessor):
     """
-    Sort tracks in-place based on given conditions.
+    Sort items in-place based on given conditions.
 
     :ivar _custom_sort: Settings for custom sort codes.
 
     :param fields:
-        * When None and ShuffleMode is RANDOM, shuffle the tracks. Otherwise, do nothing.
+        * When None and ShuffleMode is RANDOM, shuffle the items. Otherwise, do nothing.
         * List of tags/properties to sort by.
         * Map of {``tag/property``: ``reversed``}. If reversed is true, sort the ``tag/property`` in reverse.
     :param shuffle_mode: The mode to use for shuffling.
@@ -72,25 +72,25 @@ class ItemSorter(MusicBeeProcessor):
     _custom_sort[78] = _custom_sort[6]
 
     @classmethod
-    def sort_by_field(cls, tracks: list[Item], field: Field | None = None, reverse: bool = False) -> None:
+    def sort_by_field(cls, items: list[Item], field: Field | None = None, reverse: bool = False) -> None:
         """
-        Sort tracks by the values of a given field.
+        Sort items by the values of a given field.
 
-        :param tracks: List of tracks to sort
+        :param items: List of items to sort
         :param field: Tag or property to sort on. If None and reverse is True, reverse the order of the list.
         :param reverse: If true, reverse the order of the sort.
         """
         if field is None:
             if reverse:
-                tracks.reverse()
+                items.reverse()
             return
 
         tag_name = field.map(field)[0].name.lower()
 
         # attempt to find an example value to determine the value type for this sort
         example_value = None
-        for track in tracks:
-            example_value = track[tag_name]
+        for item in items:
+            example_value = item[tag_name]
             if example_value is not None:
                 break
         if example_value is None:
@@ -108,28 +108,28 @@ class ItemSorter(MusicBeeProcessor):
         else:
             sort_key: Callable[[Item], object] = lambda t: t[tag_name]
 
-        tracks.sort(key=sort_key, reverse=reverse)
+        items.sort(key=sort_key, reverse=reverse)
 
     @classmethod
-    def group_by_field[T: Item](cls, tracks: UnitIterable[T], field: Field | None = None) -> dict[Any, list[T]]:
+    def group_by_field[T: Item](cls, items: UnitIterable[T], field: Field | None = None) -> dict[Any, list[T]]:
         """
-        Group tracks by the values of a given field.
+        Group items by the values of a given field.
 
-        :param tracks: List of tracks to sort.
-        :param field: Tag or property to group by. None returns map of {``None``: ``tracks``}.
-        :return: Map of grouped tracks.
+        :param items: List of items to sort.
+        :param field: Tag or property to group by. None returns map of {``None``: ``items``}.
+        :return: Map of grouped items.
         """
         if field is None:  # group by None
-            return {None: to_collection(tracks, list)}
+            return {None: to_collection(items, list)}
 
         tag_name = field.map(field)[0].name.lower()
 
         grouped: dict[Any | None, list[T]] = {}
-        for track in tracks:  # produce map of grouped values
-            value = track[tag_name]
+        for item in items:  # produce map of grouped values
+            value = item[tag_name]
             if grouped.get(value) is None:
                 grouped[value] = []
-            grouped[value].append(track)
+            grouped[value].append(item)
 
         return grouped
 
@@ -183,17 +183,17 @@ class ItemSorter(MusicBeeProcessor):
         self.shuffle_by: ShuffleBy | None = shuffle_by
         self.shuffle_weight = limit_value(shuffle_weight, floor=0, ceil=1)
 
-    def sort(self, tracks: MutableSequence[Item]) -> None:
-        """Sorts a list of tracks in-place."""
-        if len(tracks) == 0:
+    def sort(self, items: MutableSequence[Item]) -> None:
+        """Sorts a list of items in-place."""
+        if len(items) == 0:
             return
 
         if self.shuffle_mode == ShuffleMode.RANDOM:  # random
-            shuffle(tracks)
+            shuffle(items)
         elif self.shuffle_mode == ShuffleMode.NONE and self.sort_fields:  # sort by fields
-            tracks_nested = self._sort_by_fields({None: tracks}, fields=self.sort_fields)
-            tracks.clear()
-            tracks.extend(flatten_nested(tracks_nested))
+            items_nested = self._sort_by_fields({None: items}, fields=self.sort_fields)
+            items.clear()
+            items.extend(flatten_nested(items_nested))
         elif not self.sort_fields:  # no sort
             return
         else:
@@ -201,27 +201,27 @@ class ItemSorter(MusicBeeProcessor):
             raise NotImplementedError(f"Shuffle mode not yet implemented: {self.shuffle_mode}")
 
     @classmethod
-    def _sort_by_fields(cls, tracks_grouped: MutableMapping, fields: MutableMapping[Field, bool]) -> MutableMapping:
+    def _sort_by_fields(cls, items_grouped: MutableMapping, fields: MutableMapping[Field, bool]) -> MutableMapping:
         """
-        Sort tracks by the given fields recursively in the order given.
+        Sort items by the given fields recursively in the order given.
 
-        :param tracks_grouped: Map of tracks grouped by the last sort value.
+        :param items_grouped: Map of items grouped by the last sort value.
         :param fields: Map of ``{tag/property: reversed}``. If reversed is True, sort the ``tag/property`` in reverse.
-        :return: Map of grouped and sorted tracks.
+        :return: Map of grouped and sorted items.
         """
         field, reverse = next(iter(fields.items()), (None, None))
         if field is None:  # sorting complete
-            return tracks_grouped
+            return items_grouped
 
         fields = copy(fields)
         fields.pop(field)
 
         # sort each group and recurse through each field for each group
-        for i, (key, tracks) in enumerate(tracks_grouped.items(), 1):
-            cls.sort_by_field(tracks=tracks, field=field, reverse=reverse)
-            tracks_grouped[key] = cls._sort_by_fields(cls.group_by_field(tracks, field=field), fields=fields)
+        for i, (key, items) in enumerate(items_grouped.items(), 1):
+            cls.sort_by_field(items=items, field=field, reverse=reverse)
+            items_grouped[key] = cls._sort_by_fields(cls.group_by_field(items, field=field), fields=fields)
 
-        return tracks_grouped
+        return items_grouped
 
     def to_xml(self, **kwargs) -> Mapping[str, Any]:
         raise NotImplementedError
