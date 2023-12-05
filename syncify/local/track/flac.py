@@ -61,7 +61,7 @@ class FLAC(LocalTrack):
             available: Iterable[str] = (),
             remote_wrangler: RemoteDataWrangler = None,
     ):
-        LocalTrack.__init__(self, file=file, available=available, remote_wrangler=remote_wrangler)
+        super().__init__(file=file, available=available, remote_wrangler=remote_wrangler)
         self._file: mutagen.flac.FLAC = self._file
 
     def _read_images(self) -> list[Image.Image] | None:

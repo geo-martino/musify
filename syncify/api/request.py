@@ -37,7 +37,7 @@ class RequestHandler(APIAuthoriser, Logger):
             cache_expiry=timedelta(weeks=4),
             **auth_kwargs
     ):
-        APIAuthoriser.__init__(self, **auth_kwargs)
+        super().__init__(**auth_kwargs)
 
         self.backoff_final = self.backoff_start * self.backoff_factor ** self.backoff_count
         self.timeout = sum(self.backoff_start * self.backoff_factor ** i for i in range(self.backoff_count + 1))

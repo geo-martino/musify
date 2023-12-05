@@ -97,7 +97,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
         raise NotImplementedError
 
     def __init__(self, api: RemoteAPI, allow_karaoke: bool = False):
-        ItemMatcher.__init__(self, allow_karaoke=allow_karaoke)
+        super().__init__(allow_karaoke=allow_karaoke)
         self.api = api
 
     def _get_results(self, item: BaseObject, kind: RemoteItemType, algorithm: Algorithm) -> list[dict[str, Any]] | None:

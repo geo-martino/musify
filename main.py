@@ -131,8 +131,7 @@ class Syncify(Settings, Report):
 
     def __init__(self, config_path: str = "config.yml"):
         self._start_time = perf_counter()  # for measuring total runtime
-        Settings.__init__(self, config_path=config_path)
-        Logger.__init__(self)
+        super().__init__(config_path=config_path)
 
         self.run: Callable[[], Any] | None = None
         self.cfg_run: Mapping[Any, Any] = self.cfg_general
@@ -601,9 +600,5 @@ if __name__ == "__main__":
 #  and write test to ensure all mapped fields are present in FieldCombined enum
 # TODO: write tests, write tests, write tests
 # TODO: update the readme (dynamic readme?)
-# TODO: inherit correctly i.e.
-#     class MyParentClass(SubClass1, SubClass2):
-#         def __init__(self):
-#             super(MyParentClass, self).__init__()
 # TODO: ensure all classes still print as expected
 #  add tests for to_dict(), str() and repr() methods on all inheritors on PrettyPrinter

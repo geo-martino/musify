@@ -72,8 +72,7 @@ class MusicBee(LocalLibrary, File):
         with open(self._path, "r", encoding="utf-8") as f:
             self.xml: dict[str, Any] = xmltodict.parse(f.read())
 
-        LocalLibrary.__init__(
-            self,
+        super().__init__(
             library_folder=library_folder,
             playlist_folder=join(musicbee_folder, "Playlists"),
             other_folders=other_folders,

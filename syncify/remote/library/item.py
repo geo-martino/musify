@@ -12,10 +12,7 @@ class RemoteTrack(RemoteItem, Track, metaclass=ABCMeta):
 
     :param response: The remote API JSON response.
     """
-
-    def __init__(self, response: MutableMapping[str, Any]):
-        Track.__init__(self)
-        RemoteItem.__init__(self, response=response)
+    pass
 
 
 class RemoteArtist(RemoteItem, Artist, metaclass=ABCMeta):
@@ -24,7 +21,4 @@ class RemoteArtist(RemoteItem, Artist, metaclass=ABCMeta):
 
     :param response: The remote API JSON response.
     """
-
-    def __init__(self, response: MutableMapping[str, Any]):
-        Artist.__init__(self)
-        RemoteItem.__init__(self, response=response)
+    pass

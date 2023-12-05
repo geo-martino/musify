@@ -41,9 +41,6 @@ class TagWriter(TagReader, metaclass=ABCMeta):
         If no ``remote_wrangler`` is given, no URI processing will occur.
     """
 
-    def __init__(self, remote_wrangler: RemoteDataWrangler = None):
-        TagReader.__init__(self, remote_wrangler=remote_wrangler)
-
     def save(
             self, tags: UnitIterable[LocalTrackField] = LocalTrackField.ALL, replace: bool = False, dry_run: bool = True
     ) -> SyncResultTrack:

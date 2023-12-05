@@ -60,7 +60,7 @@ class WMA(LocalTrack):
             available: Iterable[str] = (),
             remote_wrangler: RemoteDataWrangler = None,
     ):
-        LocalTrack.__init__(self, file=file, available=available, remote_wrangler=remote_wrangler)
+        super().__init__(file=file, available=available, remote_wrangler=remote_wrangler)
         self._file: mutagen.asf.ASF = self._file
 
     def _read_tag(self, tag_ids: Iterable[str]) -> list[Any] | None:

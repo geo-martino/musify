@@ -33,7 +33,7 @@ class ItemCollection[T: Item](ObjectPrinterMixin, list[T], metaclass=ABCMeta):
         raise NotImplementedError
 
     def __init__(self, remote_wrangler: RemoteDataWrangler = None):
-        ObjectPrinterMixin.__init__(self)
+        super().__init__()
         self.remote_wrangler = remote_wrangler
 
     def index(self, __item: T, __start: SupportsIndex = None, __stop: SupportsIndex = None) -> int:
@@ -238,7 +238,7 @@ class BasicCollection[T: Item](ItemCollection[T]):
         return self._items
 
     def __init__(self, name: str, items: Collection[T], remote_wrangler: RemoteDataWrangler = None):
-        ItemCollection.__init__(self, remote_wrangler=remote_wrangler)
+        super().__init__(remote_wrangler=remote_wrangler)
         self._name = name
         self._items = to_collection(items, list)
 
@@ -311,12 +311,9 @@ class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
         """:py:class:`datetime` object representing when the playlist was last modified"""
         raise NotImplementedError
 
-    def __init__(self, remote_wrangler: RemoteDataWrangler = None):
-        ItemCollection.__init__(self, remote_wrangler=remote_wrangler)
-
 
 # noinspection PyShadowingNames
-class Library[T: Track](ItemCollection[T], Logger, metaclass=ABCMeta):
+class Library[T: Track](Logger, ItemCollection[T], metaclass=ABCMeta):
     """
     A library of items and playlists
 
@@ -355,8 +352,7 @@ class Library[T: Track](ItemCollection[T], Logger, metaclass=ABCMeta):
         raise NotImplementedError
 
     def __init__(self, remote_wrangler: RemoteDataWrangler = None):
-        ItemCollection.__init__(self, remote_wrangler=remote_wrangler)
-        Logger.__init__(self)
+        super().__init__(remote_wrangler=remote_wrangler)
 
     def get_filtered_playlists(
             self,
@@ -479,9 +475,6 @@ class Folder[T: Track](ItemCollection[T], metaclass=ABCMeta):
         """Total duration of all tracks in this folder"""
         raise NotImplementedError
 
-    def __init__(self, remote_wrangler: RemoteDataWrangler = None):
-        ItemCollection.__init__(self, remote_wrangler=remote_wrangler)
-
 
 class Album[T: Track](ItemCollection[T], metaclass=ABCMeta):
     """
@@ -584,9 +577,6 @@ class Album[T: Track](ItemCollection[T], metaclass=ABCMeta):
         """Rating of this album"""
         raise NotImplementedError
 
-    def __init__(self, remote_wrangler: RemoteDataWrangler = None):
-        ItemCollection.__init__(self, remote_wrangler=remote_wrangler)
-
 
 class Artist[T: Track](ItemCollection[T], metaclass=ABCMeta):
     """
@@ -655,9 +645,6 @@ class Artist[T: Track](ItemCollection[T], metaclass=ABCMeta):
         """Rating of this artist"""
         raise NotImplementedError
 
-    def __init__(self, remote_wrangler: RemoteDataWrangler = None):
-        ItemCollection.__init__(self, remote_wrangler=remote_wrangler)
-
 
 class Genre[T: Track](ItemCollection[T], metaclass=ABCMeta):
     """
@@ -708,6 +695,3 @@ class Genre[T: Track](ItemCollection[T], metaclass=ABCMeta):
     def genres(self) -> list[str]:
         """List of genres ordered by frequency of appearance on the tracks for this genre"""
         raise NotImplementedError
-
-    def __init__(self, remote_wrangler: RemoteDataWrangler = None):
-        ItemCollection.__init__(self, remote_wrangler=remote_wrangler)

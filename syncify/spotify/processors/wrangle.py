@@ -151,6 +151,4 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
 
 class SpotifyObjectWranglerMixin(SpotifyDataWrangler, SpotifyObject, metaclass=ABCMeta):
     """Mix-in for handling inheritance on SpotifyObject + SpotifyDataWrangler implementations"""
-
-    def __init__(self, response: MutableMapping[str, Any]):
-        SpotifyObject.__init__(self, response=response)
+    pass

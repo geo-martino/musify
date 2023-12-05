@@ -15,9 +15,6 @@ from syncify.spotify.processors.wrangle import SpotifyObjectWranglerMixin
 class SpotifyCollection[T: SpotifyObject](SpotifyObjectWranglerMixin, metaclass=ABCMeta):
     """Generic class for storing a collection of Spotify tracks."""
 
-    def __init__(self, response: MutableMapping[str, Any]):
-        SpotifyObjectWranglerMixin.__init__(self, response=response)
-
     @classmethod
     def _load_response(cls, value: APIMethodInputType, use_cache: bool = True) -> dict[str, Any]:
         """
@@ -101,8 +98,7 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollection):
         return self.response.get("popularity")
 
     def __init__(self, response: MutableMapping[str, Any]):
-        RemoteAlbum.__init__(self, response=response)
-        SpotifyCollection.__init__(self, response=response)
+        super().__init__(response=response)
 
         album_only = copy(response)
         for track in response["tracks"]["items"]:

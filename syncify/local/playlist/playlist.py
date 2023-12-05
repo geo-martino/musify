@@ -73,8 +73,7 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
             available_track_paths: Iterable[str] = (),
             remote_wrangler: RemoteDataWrangler = None,
     ):
-        Playlist.__init__(self, remote_wrangler=remote_wrangler)
-        LocalCollection.__init__(self, remote_wrangler=remote_wrangler)
+        super().__init__(remote_wrangler=remote_wrangler)
 
         self._path: str = path
         self._tracks: list[LocalTrack] | None = None

@@ -148,6 +148,4 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
 
 
 class RemoteObjectWranglerMixin[T: RemoteObject](RemoteDataWrangler, RemoteObject, metaclass=ABCMeta):
-
-    def __init__(self, response: MutableMapping[str, Any]):
-        RemoteObject.__init__(self, response=response)
+    pass

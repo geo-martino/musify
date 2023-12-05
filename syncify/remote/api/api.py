@@ -27,8 +27,7 @@ class RemoteAPI(RemoteAPICore, RemoteAPIItems, RemoteAPICollections, metaclass=A
 
     def __init__(self, **handler_kwargs):
         handler_kwargs = {k: v for k, v in handler_kwargs.items() if k != "name"}
-        Logger.__init__(self)
-        RequestHandler.__init__(self, name=self.remote_source, **handler_kwargs)
+        super().__init__(name=self.remote_source, **handler_kwargs)
 
         self._user_id = None
         self._user_name = None

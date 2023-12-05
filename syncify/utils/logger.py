@@ -129,7 +129,8 @@ class Logger:
     compact: bool = False
     detailed: bool = False
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         if self.log_folder is None:
             self.set_dev()
 

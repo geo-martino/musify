@@ -29,16 +29,6 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyDataWrangler):
             track=SpotifyTrack, album=SpotifyAlbum, playlist=SpotifyPlaylist
         )
 
-    def __init__(
-            self,
-            api: SpotifyAPI,
-            include: Iterable[str] | None = None,
-            exclude: Iterable[str] | None = None,
-            use_cache: bool = True,
-            load: bool = True,
-    ):
-        RemoteLibrary.__init__(self, api=api, include=include, exclude=exclude, use_cache=use_cache, load=load)
-
     def _get_tracks_data(self, playlists_data: Collection[Mapping[str, Any]]) -> list[dict[str, Any]]:
         self.logger.debug("Load Spotify tracks data: START")
         playlists_tracks_data = [pl["tracks"]["items"] for pl in playlists_data]

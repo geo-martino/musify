@@ -9,8 +9,7 @@ from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 
 
 class SpotifyAPIWranglerMixin(RemoteAPI, SpotifyDataWrangler, metaclass=ABCMeta):
-    def __init__(self, **handler_kwargs):
-        RemoteAPI.__init__(self, **handler_kwargs)
+    pass
 
 
 class SpotifyAPI(SpotifyAPIWranglerMixin, SpotifyAPICore, SpotifyAPIItems, SpotifyAPICollections):
@@ -23,7 +22,7 @@ class SpotifyAPI(SpotifyAPIWranglerMixin, SpotifyAPICore, SpotifyAPIItems, Spoti
     """
 
     def __init__(self, **handler_kwargs):
-        SpotifyAPIWranglerMixin.__init__(self, **handler_kwargs)
+        super().__init__(**handler_kwargs)
 
         try:
             user_data = self.get_self()

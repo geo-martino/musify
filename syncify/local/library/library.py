@@ -171,7 +171,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             load: bool = True,
             remote_wrangler: RemoteDataWrangler = None,
     ):
-        LocalCollection.__init__(self, remote_wrangler=remote_wrangler)
+        super().__init__(remote_wrangler=remote_wrangler)
         log_name = basename(library_folder) if library_folder else self.name
         self.logger.info(f"\33[1;95m ->\33[1;97m Loading {log_name} library \33[0m")
         self.print_line()

@@ -247,7 +247,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
         self._play_count = value
 
     def __init__(self, remote_wrangler: RemoteDataWrangler = None):
-        TagProcessor.__init__(self)
+        super().__init__()
         self.remote_wrangler = remote_wrangler
 
         self._title = None

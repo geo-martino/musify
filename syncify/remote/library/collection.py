@@ -15,10 +15,6 @@ from syncify.remote.processors.wrangle import RemoteObjectWranglerMixin
 class RemoteCollection[T: RemoteObject](RemoteObjectWranglerMixin, ItemCollection[T], metaclass=ABCMeta):
     """Generic class for storing a collection of remote tracks."""
 
-    def __init__(self, response: MutableMapping[str, Any]):
-        RemoteObjectWranglerMixin.__init__(self, response=response)
-        ItemCollection.__init__(self, remote_wrangler=self)
-
     @classmethod
     @abstractmethod
     def load(
@@ -90,7 +86,4 @@ class RemoteAlbum[T: RemoteTrack](RemoteCollection[T], Album[T], metaclass=ABCMe
 
     :param response: The remote API JSON response
     """
-
-    def __init__(self, response: MutableMapping[str, Any]):
-        Album.__init__(self, remote_wrangler=self)
-        RemoteCollection.__init__(self, response=response)
+    pass

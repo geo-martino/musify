@@ -60,7 +60,7 @@ class M4A(LocalTrack):
             available: Iterable[str] = (),
             remote_wrangler: RemoteDataWrangler = None,
     ):
-        LocalTrack.__init__(self, file=file, available=available, remote_wrangler=remote_wrangler)
+        super().__init__(file=file, available=available, remote_wrangler=remote_wrangler)
         self._file: mutagen.mp4.MP4 = self._file
 
     def _read_tag(self, tag_ids: Iterable[str]) -> list[Any] | None:

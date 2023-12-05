@@ -15,7 +15,7 @@ class TimeMapper(DynamicProcessor):
         return name.casefold().strip()[0]
 
     def __init__(self, func: str):
-        DynamicProcessor.__init__(self)
+        super().__init__()
         self._set_processor_name(func)
 
     def __call__(self, value: SupportsInt):

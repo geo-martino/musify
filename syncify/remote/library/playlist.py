@@ -60,10 +60,6 @@ class RemotePlaylist[T: RemoteTrack](RemoteCollection[T], Playlist[T], metaclass
         """A map of ``{URI: date}`` for each item for when that item was added to the playlist"""
         raise NotImplementedError
 
-    def __init__(self, response: MutableMapping[str, Any]):
-        Playlist.__init__(self, remote_wrangler=self)
-        RemoteCollection.__init__(self, response=response)
-
     @classmethod
     def create(cls, name: str, public: bool = True, collaborative: bool = False) -> Self:
         """

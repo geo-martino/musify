@@ -19,9 +19,7 @@ class Remote(ABC):
 
 
 class RemoteObjectMixin(Remote, BaseObject, metaclass=ABCMeta):
-
-    def __init__(self):
-        BaseObject.__init__(self)
+    pass
 
 
 class RemoteObject(RemoteObjectMixin, PrettyPrinter, metaclass=ABCMeta):
@@ -68,7 +66,7 @@ class RemoteObject(RemoteObjectMixin, PrettyPrinter, metaclass=ABCMeta):
         raise NotImplementedError
 
     def __init__(self, response: MutableMapping[str, Any]):
-        RemoteObjectMixin.__init__(self)
+        super().__init__()
         self.response = response
         self._check_type()
 
@@ -153,6 +151,4 @@ class RemoteItem(RemoteObject, Item, metaclass=ABCMeta):
 
     :param response: The remote API JSON response
     """
-    def __init__(self, response: MutableMapping[str, Any]):
-        Item.__init__(self)
-        RemoteObject.__init__(self, response=response)
+    pass

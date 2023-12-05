@@ -71,7 +71,7 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
             available: Iterable[str] = (),
             remote_wrangler: RemoteDataWrangler = None,
     ):
-        TagWriter.__init__(self, remote_wrangler=remote_wrangler)
+        super().__init__(remote_wrangler=remote_wrangler)
 
         # all available paths for this file type
         self._available_paths = set(available)

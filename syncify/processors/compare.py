@@ -85,7 +85,7 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
         return objs
 
     def __init__(self, field: Field, condition: str, expected: UnitSequence[Any] | None = None):
-        DynamicProcessor.__init__(self)
+        super().__init__()
         self._expected: list[Any] | None = None
         self._converted = False
 

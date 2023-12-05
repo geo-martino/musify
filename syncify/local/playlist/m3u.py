@@ -98,12 +98,8 @@ class M3U(LocalPlaylist):
             other_folders=other_folders,
             check_existence=check_existence,
         )
-        LocalPlaylist.__init__(
-            self,
-            path=path,
-            matcher=matcher,
-            available_track_paths=available_track_paths,
-            remote_wrangler=remote_wrangler,
+        super().__init__(
+            path=path, matcher=matcher, available_track_paths=available_track_paths, remote_wrangler=remote_wrangler,
         )
 
         self.load(tracks=tracks)

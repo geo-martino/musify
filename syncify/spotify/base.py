@@ -18,9 +18,7 @@ class SpotifyRemote(Remote):
 
 
 class SpotifyObjectMixin(SpotifyRemote, RemoteObject, metaclass=ABCMeta):
-
-    def __init__(self, response: MutableMapping[str, Any]):
-        RemoteObject.__init__(self, response=response)
+    pass
 
 
 class SpotifyObject(SpotifyObjectMixin, PrettyPrinter, metaclass=ABCMeta):
@@ -57,9 +55,6 @@ class SpotifyObject(SpotifyObjectMixin, PrettyPrinter, metaclass=ABCMeta):
         """The external URL of this item/collection."""
         return self.response["external_urls"].get("spotify")
 
-    def __init__(self, response: MutableMapping[str, Any]):
-        SpotifyObjectMixin.__init__(self, response=response)
-
     def _check_type(self) -> None:
         """
         Checks the given response is compatible with this object type, raises an exception if not.
@@ -78,6 +73,4 @@ class SpotifyItem(SpotifyObject, RemoteItem, metaclass=ABCMeta):
 
     :param response: The remote API JSON response
     """
-    def __init__(self, response: MutableMapping[str, Any]):
-        RemoteItem.__init__(self, response=response)
-        SpotifyObject.__init__(self, response=response)
+    pass

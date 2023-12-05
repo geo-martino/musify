@@ -58,7 +58,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteDataWrangler, metaclass=AB
             use_cache: bool = True,
             load: bool = True,
     ):
-        Library.__init__(self, remote_wrangler=self)
+        super().__init__(remote_wrangler=self)
 
         self._api = api
         self.include = include

@@ -106,7 +106,7 @@ class ItemMatcher(ItemProcessor, Logger):
         self._log_padded(log, pad='<')
 
     def __init__(self, allow_karaoke: bool = False):
-        Logger.__init__(self)
+        super().__init__()
         self.allow_karaoke = allow_karaoke
 
     def clean_tags(self, source: BaseObject) -> None:

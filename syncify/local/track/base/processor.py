@@ -52,10 +52,6 @@ class TagProcessor(LocalItem, Track, metaclass=ABCMeta):
         """The mutagen file object representing the loaded file."""
         raise NotImplementedError
 
-    def __init__(self):
-        LocalItem.__init__(self)
-        Track.__init__(self)
-
     @abstractmethod
     def get_file(self) -> mutagen.FileType:
         """

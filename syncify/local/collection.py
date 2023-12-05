@@ -22,7 +22,7 @@ __max_str = "z" * 50
 
 
 # noinspection PyShadowingNames
-class LocalCollection[T: LocalItem](ItemCollection[T], Logger, metaclass=ABCMeta):
+class LocalCollection[T: LocalItem](Logger, ItemCollection[T], metaclass=ABCMeta):
     """
     Generic class for storing a collection of local tracks.
 
@@ -93,8 +93,7 @@ class LocalCollection[T: LocalItem](ItemCollection[T], Logger, metaclass=ABCMeta
         return {track.path for track in self.tracks}
 
     def __init__(self, remote_wrangler: RemoteDataWrangler = None):
-        ItemCollection.__init__(self, remote_wrangler=remote_wrangler)
-        Logger.__init__(self)
+        super().__init__(remote_wrangler=remote_wrangler)
 
     def save_tracks(self, **kwargs) -> dict[LocalTrack, SyncResultTrack]:
         """
@@ -201,7 +200,7 @@ class LocalCollectionFiltered[T: LocalItem](LocalCollection[T]):
     def __init__(
             self, tracks: Collection[LocalTrack], name: str | None = None, remote_wrangler: RemoteDataWrangler = None
     ):
-        LocalCollection.__init__(self, remote_wrangler=remote_wrangler)
+        super().__init__(remote_wrangler=remote_wrangler)
         if len(tracks) == 0:
             raise LocalCollectionError("No tracks were given")
 
@@ -274,8 +273,7 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
             # name is path to a folder, load tracks in that folder
             tracks = [load_track(path) for path in glob(join(name, "*")) if splitext(path)[1] in TRACK_FILETYPES]
             name = basename(name)
-        Folder.__init__(self, remote_wrangler=remote_wrangler)
-        LocalCollectionFiltered.__init__(self, tracks=tracks, name=name, remote_wrangler=remote_wrangler)
+        super().__init__(tracks=tracks, name=name, remote_wrangler=remote_wrangler)
         self.tracks.sort(key=lambda x: x.filename or __max_str)
 
     def set_compilation_tags(self) -> None:
@@ -381,8 +379,7 @@ class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):
     def __init__(
             self, tracks: Collection[LocalTrack], name: str | None = None, remote_wrangler: RemoteDataWrangler = None
     ):
-        Album.__init__(self, remote_wrangler=remote_wrangler)
-        LocalCollectionFiltered.__init__(self, tracks=tracks, name=name, remote_wrangler=remote_wrangler)
+        super().__init__(tracks=tracks, name=name, remote_wrangler=remote_wrangler)
         self.tracks.sort(
             key=lambda x: (x.disc_number or sys.maxsize, x.track_number or sys.maxsize, x.filename or __max_str)
         )
@@ -437,8 +434,7 @@ class LocalArtist(LocalCollectionFiltered[LocalTrack], Artist[LocalTrack]):
     def __init__(
             self, tracks: Collection[LocalTrack], name: str | None = None, remote_wrangler: RemoteDataWrangler = None
     ):
-        Artist.__init__(self, remote_wrangler=remote_wrangler)
-        LocalCollectionFiltered.__init__(self, tracks=tracks, name=name, remote_wrangler=remote_wrangler)
+        super().__init__(tracks=tracks, name=name, remote_wrangler=remote_wrangler)
         self.tracks.sort(
             key=lambda x: (x.album or __max_str,
                            x.disc_number or sys.maxsize,
@@ -484,8 +480,7 @@ class LocalGenres(LocalCollectionFiltered[LocalTrack], Genre[LocalTrack]):
     def __init__(
             self, tracks: Collection[LocalTrack], name: str | None = None, remote_wrangler: RemoteDataWrangler = None
     ):
-        Genre.__init__(self, remote_wrangler=remote_wrangler)
-        LocalCollectionFiltered.__init__(self, tracks=tracks, name=name, remote_wrangler=remote_wrangler)
+        super().__init__(tracks=tracks, name=name, remote_wrangler=remote_wrangler)
         self.tracks.sort(
             key=lambda x: (x.artist or __max_str,
                            x.album or __max_str,

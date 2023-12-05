@@ -72,7 +72,7 @@ class SpotifyPlaylist(SpotifyCollection, RemotePlaylist[SpotifyTrack]):
         return self._date_added
 
     def __init__(self, response: MutableMapping[str, Any]):
-        RemotePlaylist.__init__(self, response=response)
+        super().__init__(response=response)
 
         self._name: str = response["name"]
         self._description: str = response["description"]

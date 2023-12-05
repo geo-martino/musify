@@ -139,8 +139,7 @@ class SpotifyTrack(SpotifyObjectWranglerMixin, RemoteTrack):
         return self.response.get("popularity")
 
     def __init__(self, response: MutableMapping[str, Any]):
-        SpotifyObjectWranglerMixin.__init__(self, response=response)
-        RemoteTrack.__init__(self, response=response)
+        super().__init__(response=response)
 
         self._disc_total = None
         self._comments = None
@@ -208,10 +207,6 @@ class SpotifyArtist(SpotifyObjectWranglerMixin, RemoteArtist):
     @property
     def rating(self):
         return self.response.get("popularity")
-
-    def __init__(self, response: MutableMapping[str, Any]):
-        SpotifyObjectWranglerMixin.__init__(self, response=response)
-        RemoteArtist.__init__(self, response=response)
 
     @classmethod
     def load(cls, value: APIMethodInputType, use_cache: bool = True, *args, **kwargs) -> Self:

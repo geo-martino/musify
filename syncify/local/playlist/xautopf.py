@@ -119,8 +119,7 @@ class XAutoPF(LocalPlaylist):
         matcher = LocalMatcher.from_xml(
             xml=self.xml, library_folder=library_folder, other_folders=other_folders, check_existence=check_existence
         )
-        LocalPlaylist.__init__(
-            self,
+        super().__init__(
             path=path,
             matcher=matcher,
             limiter=ItemLimiter.from_xml(xml=self.xml),

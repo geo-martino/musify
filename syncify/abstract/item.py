@@ -35,9 +35,7 @@ class BaseObject(ABC, Hashable):
 
 
 class ObjectPrinterMixin(BaseObject, PrettyPrinter, metaclass=ABCMeta):
-
-    def __init__(self):
-        BaseObject.__init__(self)
+    pass
 
 
 class Item(ObjectPrinterMixin, metaclass=ABCMeta):
@@ -70,9 +68,6 @@ class Item(ObjectPrinterMixin, metaclass=ABCMeta):
     def length(self) -> float:
         """Total duration of this item in seconds"""
         raise NotImplementedError
-
-    def __init__(self):
-        ObjectPrinterMixin.__init__(self)
 
     def merge(self, item: Self, tags: UnitIterable[TagField] = FieldCombined.ALL) -> None:
         """Set the tags of this item equal to the given ``item``. Give a list of ``tags`` to limit which are set"""
@@ -225,9 +220,6 @@ class Track(Item, metaclass=ABCMeta):
         """The rating for this track"""
         raise NotImplementedError
 
-    def __init__(self):
-        Item.__init__(self)
-
 
 class Artist(Item, metaclass=ABCMeta):
     """
@@ -274,6 +266,3 @@ class Artist(Item, metaclass=ABCMeta):
     def rating(self) -> int | None:
         """The popularity of this artist"""
         raise NotImplementedError
-
-    def __init__(self):
-        Item.__init__(self)

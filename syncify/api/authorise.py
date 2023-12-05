@@ -106,7 +106,7 @@ class APIAuthoriser(Logger):
         header_prefix: str | None = "Bearer ",
         header_extra: Mapping[str, str] | None = None,
     ):
-        Logger.__init__(self)
+        super().__init__()
         self.name = name
 
         # maps of requests parameters to be passed to `requests` functions
