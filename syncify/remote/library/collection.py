@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
-from collections.abc import Iterable, MutableMapping
-from typing import Any, Self
+from collections.abc import Iterable
+from typing import Self
 
 from syncify.abstract.collection import ItemCollection, Album
 from syncify.abstract.item import Item
@@ -81,9 +81,5 @@ class RemoteCollection[T: RemoteObject](RemoteObjectWranglerMixin, ItemCollectio
 
 
 class RemoteAlbum[T: RemoteTrack](RemoteCollection[T], Album[T], metaclass=ABCMeta):
-    """
-    Extracts key ``album`` data from a remote API JSON response.
-
-    :param response: The remote API JSON response
-    """
+    """Extracts key ``album`` data from a remote API JSON response."""
     pass

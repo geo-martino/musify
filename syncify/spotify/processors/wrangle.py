@@ -1,5 +1,5 @@
 from abc import ABCMeta
-from collections.abc import Mapping, Sequence, MutableMapping
+from collections.abc import Mapping, Sequence
 from typing import Any
 from urllib.parse import urlparse
 

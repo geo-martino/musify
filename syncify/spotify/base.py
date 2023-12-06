@@ -1,6 +1,4 @@
 from abc import ABCMeta
-from collections.abc import MutableMapping
-from typing import Any
 
 from syncify.abstract.misc import PrettyPrinter
 from syncify.remote.base import Remote, RemoteObject, RemoteItem
@@ -22,11 +20,7 @@ class SpotifyObjectMixin(SpotifyRemote, RemoteObject, metaclass=ABCMeta):
 
 
 class SpotifyObject(SpotifyObjectMixin, PrettyPrinter, metaclass=ABCMeta):
-    """
-    Generic base class for Spotify-stored objects. Extracts key data from a Spotify API JSON response.
-
-    :param response: The Spotify API JSON response
-    """
+    """Generic base class for Spotify-stored objects. Extracts key data from a Spotify API JSON response."""
 
     _url_pad = 71
 
@@ -68,9 +62,5 @@ class SpotifyObject(SpotifyObjectMixin, PrettyPrinter, metaclass=ABCMeta):
 
 
 class SpotifyItem(SpotifyObject, RemoteItem, metaclass=ABCMeta):
-    """
-    Generic base class for Spotify-stored items. Extracts key data from a Spotify API JSON response.
-
-    :param response: The remote API JSON response
-    """
+    """Generic base class for Spotify-stored items. Extracts key data from a Spotify API JSON response."""
     pass

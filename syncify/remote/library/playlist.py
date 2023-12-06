@@ -1,8 +1,8 @@
 from abc import ABCMeta, abstractmethod
-from collections.abc import Iterable, MutableMapping
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Self, Literal
+from typing import Self, Literal
 
 from syncify.abstract.collection import Playlist
 from syncify.abstract.item import Item
@@ -32,11 +32,7 @@ class SyncResultRemotePlaylist(Result):
 
 
 class RemotePlaylist[T: RemoteTrack](RemoteCollection[T], Playlist[T], metaclass=ABCMeta):
-    """
-    Extracts key ``playlist`` data from a remote API JSON response.
-
-    :param response: The remote API JSON response
-    """
+    """Extracts key ``playlist`` data from a remote API JSON response."""
 
     @property
     def owner_id(self) -> str:

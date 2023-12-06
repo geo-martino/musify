@@ -9,7 +9,6 @@ import mutagen
 from syncify.abstract.misc import Result
 from syncify.fields import LocalTrackField
 from syncify.local.track.base.reader import TagReader
-from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitIterable
 from syncify.utils.helpers import to_collection
 
@@ -34,11 +33,6 @@ class TagWriter(TagReader, metaclass=ABCMeta):
     :ivar num_sep: Some number values come as a combined string i.e. track number/track total
         Define the separator to use when representing both values as a combined string.
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
-
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs.
-        This object will be used to check for and validate a URI tag on the file.
-        The tag that is used for reading and writing is set by the ``uri_tag`` class attribute.
-        If no ``remote_wrangler`` is given, no URI processing will occur.
     """
 
     def save(

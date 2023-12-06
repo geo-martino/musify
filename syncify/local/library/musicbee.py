@@ -1,11 +1,11 @@
 import hashlib
 import urllib.parse
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping, Sequence, Generator
 from datetime import datetime
 from os.path import join, exists, normpath
 from typing import Any
 
-import xmltodict
+from lxml import etree
 
 from syncify.local.exception import MusicBeeIDError
 from syncify.local.file import File
@@ -44,8 +44,6 @@ class MusicBee(LocalLibrary, File):
     valid_extensions = frozenset({".xml"})
     musicbee_library_filename = "iTunes Music Library.xml"
 
-    _xml_timestamp_fmt = "%Y-%m-%dT%H:%M:%S%z"
-
     @property
     def path(self) -> str:
         return self._path
@@ -69,8 +67,8 @@ class MusicBee(LocalLibrary, File):
             musicbee_folder = in_library
 
         self._path: str = join(musicbee_folder, self.musicbee_library_filename)
-        with open(self._path, "r", encoding="utf-8") as f:
-            self.xml: dict[str, Any] = xmltodict.parse(f.read())
+        self._xml_parser = XMLLibraryParser(self._path)
+        self.xml: dict[str, Any] = self._xml_parser.parse()
 
         super().__init__(
             library_folder=library_folder,
@@ -82,57 +80,81 @@ class MusicBee(LocalLibrary, File):
             remote_wrangler=remote_wrangler,
         )
 
-    @classmethod
-    def _xml_dt_to_ts(cls, timestamp: datetime | None) -> str | None:
-        """Convert timestamp string as found in the MusicBee XML library file to a ``datetime`` object"""
-        if timestamp:
-            return timestamp.strftime(cls._xml_timestamp_fmt)
-
-    @classmethod
-    def _xml_ts_to_dt(cls, timestamp_str: str | None) -> datetime | None:
-        """Convert timestamp string as found in the MusicBee XML library file to a ``datetime`` object"""
-        if timestamp_str:
-            return datetime.strptime(timestamp_str, cls._xml_timestamp_fmt)
-
-    @staticmethod
-    def _clean_xml_filepath(path: str) -> str:
-        """Clean the file paths as found in the MusicBee XML library file to a standard system path"""
-        return normpath(urllib.parse.unquote(path.replace("file://localhost/", "")))
-
-    def load(self, *args, **kwargs) -> list[LocalTrack]:
-        """Alias for load_tracks method"""
-        return self.load_tracks()
-
     def load_tracks(self) -> list[LocalTrack]:
         tracks_paths = {track.path.casefold(): track for track in self._load_tracks()}
         self.logger.debug("Enrich local tracks: START")
 
         for track_xml in self.xml["Tracks"].values():
-            if not track_xml["Location"].startswith("file://localhost/"):
+            if track_xml["Track Type"] != "File":
                 continue
 
-            track = tracks_paths.get(self._clean_xml_filepath(track_xml["Location"]).casefold())
+            track = tracks_paths.get(track_xml["Location"].casefold())
             if track is None:
                 continue
 
-            track.date_added = self._xml_ts_to_dt(track_xml.get("Date Added"))
-            track.last_played = self._xml_ts_to_dt(track_xml.get("Play Date UTC"))
-            track.play_count = int(track_xml.get("Play Count", 0))
+            track.date_added = track_xml.get("Date Added")
+            track.last_played = track_xml.get("Play Date UTC")
+            track.play_count = track_xml.get("Play Count", 0)
             track.rating = int(track_xml.get("Rating")) if track_xml.get("Rating") is not None else None
 
         self.logger.debug("Enrich local tracks: DONE\n")
         return list(tracks_paths.values())
 
     def save(self, dry_run: bool = True, *args, **kwargs) -> Any:
-        """Generate and save the XML library file for this MusicBee library"""
-        # TODO: implement me
-        raise NotImplementedError
+        """
+        Generate and save the XML library file for this MusicBee library.
+
+        :param dry_run: Run function, but do not modify file at all.
+        """
+        tracks_paths = {track.path.casefold(): track for track in self.tracks}
+        track_id_map: dict[LocalTrack, tuple[int, str]] = {}
+        for track_xml in self.xml["Tracks"].values():
+            if track_xml["Track Type"] != "File":
+                continue
+
+            track = tracks_paths.get(track_xml["Location"].casefold())
+            if not track:
+                continue
+
+            track_id_map[track] = (track_xml["Track ID"], track_xml["Persistent ID"])
+
+        tracks = {}
+        max_track_id = max(id_ for id_, _ in track_id_map.values()) if track_id_map else 0
+        for i, track in enumerate(self.tracks, max_track_id):
+            track_id, persistent_id = track_id_map.get(track, [i, None])
+            tracks[track_id] = self.track_to_xml(track, track_id=track_id, persistent_id=persistent_id)
+
+        playlist_id_map = {
+            playlist_xml["Name"]: (playlist_xml["Playlist ID"], playlist_xml["Playlist Persistent ID"])
+            for playlist_xml in self.xml["Playlists"]
+        }
+
+        playlists = {}
+        max_playlist_id = max(id_ for id_, _ in playlist_id_map.values()) if playlist_id_map else 0
+        for i, (name, playlist) in enumerate(self.playlists.items(), max_playlist_id):
+            playlist_id, persistent_id = track_id_map.get(name, [i, None])
+            playlists[playlist_id] = self.playlist_to_xml(
+                playlist, tracks=track_id_map, playlist_id=playlist_id, persistent_id=persistent_id
+            )
+
+        xml = {
+            "Major Version": self.xml.get("Major Version", "1"),
+            "Minor Version": self.xml.get("Minor Version", "1"),
+            "Application Version": self.xml.get("Application Version", "1"),
+            "Music Folder": XMLLibraryParser.to_xml_path(self.library_folder),
+            "Library Persistent ID":
+                self.xml.get("Library Persistent ID", self.generate_persistent_id(self.library_folder)),
+            "Tracks": tracks,
+            "Playlists": playlists,
+        }
+
+        return xml
 
     @staticmethod
-    def generate_persistent_id(id_: str | None = None, value: str | None = None) -> str:
+    def generate_persistent_id(value: str | None = None, id_: str | None = None) -> str:
         """
-        Validates a given persistent ID as given by ``id_``,
-        or generates a valid persistent ID from a given ``value``.
+        Generates a valid persistent ID from a given ``value``
+        or validates a given persistent ID as given by ``id_``,
 
         :param id_: A persistent ID to validate
         :param value: A value to generate a persistent ID from.
@@ -145,9 +167,9 @@ class MusicBee(LocalLibrary, File):
             )
 
         id_ = id_ if id_ else hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
-        if len(id_) != 16:
-            raise MusicBeeIDError(f"Persistent ID is not 16-characters in length (length={len(id_)}): {id_}")
-        return id_
+        if len(id_) > 16:
+            raise MusicBeeIDError(f"Persistent ID is >16-characters in length (length={len(id_)}): {id_}")
+        return id_.upper()
 
     @classmethod
     def track_to_xml(
@@ -162,34 +184,46 @@ class MusicBee(LocalLibrary, File):
         :return: A dict representation of XML data for the given track.
         :raise MusicBeeIDError: When the given ``persistent_id`` is invalid.
         """
+        genres = {}
+        if track.genres and len(track.genres) == 1:
+            genres = {"Genre": track.genres}
+        elif track.genres:
+            genres = {f"Genre{i}": genre for i, genre in enumerate(track.genres, 1)}
+
         data = {
             "Track ID": track_id,
-            # "Encoder": ,
-            "Comments": track.comments,
-            "BPM": track.bpm,
-            "Disc Count": track.disc_total,
-            "Track Count": track.track_total,
-            "Disc Number": track.disc_number,
-            "Track Number": track.track_number,
-            "Compilation": track.compilation,
+            "Persistent ID": cls.generate_persistent_id(id_=persistent_id, value=track.path),
             "Name": track.title,
             "Artist": track.artist,
-            "Album Artist": track.album_artist,
             "Album": track.album,
+            "Album Artist": track.album_artist,
+            "Track Number": str(track.track_number).zfill(len(str(track.track_total)) if track.track_total else 0),
+            "Track Count": track.track_total,
+        } | genres | {
             "Year": track.year,
-            "Genre": track.genres,
-            "Kind": track.kind,
+            "BPM": track.bpm,
+            "Disc Number": track.disc_number,
+            "Disc Count": track.disc_total,
+            "Compilation": track.compilation,
+            "Comments": track.comments,
+            "Total Time": int(track.length * 1000),  # in milliseconds
+            "Rating": track.rating,
+            # "Composer": track.composer,  # currently not supported by this program
+            # "Conductor": track.conductor,  # currently not supported by this program
+            # "Publisher": track.publisher,  # currently not supported by this program
+            # "Encoder": track.encoder,  # currently not supported by this program
             "Size": track.size,
-            "Total Time": track.length,
-            "Date Modified": cls._xml_dt_to_ts(track.date_modified),
-            "Date Added": cls._xml_dt_to_ts(track.date_added),
-            "Bit Rate": track.bit_rate,
-            "Sample Rate": track.sample_rate,
+            "Kind": track.kind,
+            # "": track.channels,  # unknown MusicBee mapping
+            "Bit Rate": int(track.bit_rate),
+            # "": track.bit_depth,  # unknown MusicBee mapping
+            "Sample Rate": int(track.sample_rate * 1000),  # in Hz
+            "Date Modified": XMLLibraryParser.to_xml_timestamp(track.date_modified),
+            "Date Added": XMLLibraryParser.to_xml_timestamp(track.date_added),
+            "Play Date UTC": XMLLibraryParser.to_xml_timestamp(track.last_played),
             "Play Count": track.play_count,
-            "Play Date UTC": cls._xml_dt_to_ts(track.last_played),
-            "Persistent ID": cls.generate_persistent_id(id_=persistent_id, value=track.path),
-            "Track Type": "File",
-            "Location": f"file://localhost/{urllib.parse.quote(track.path.replace('\\', '/'), safe=':/')}",
+            "Track Type": "File",  # can also be 'URL' for streams
+            "Location": XMLLibraryParser.to_xml_path(track.path),
         }
 
         return {k: v for k, v in data.items() if v is not None}
@@ -198,28 +232,177 @@ class MusicBee(LocalLibrary, File):
     def playlist_to_xml(
             cls,
             playlist: LocalPlaylist,
+            tracks: Mapping[LocalTrack, int | Sequence[int, str]] | list[LocalTrack],
             playlist_id: int,
             persistent_id: str | None = None,
-            tracks: list[LocalTrack] = None,
     ) -> dict[str, str | Number]:
         """
         Convert a local playlist into a dict representation of XML data for a MusicBee library file.
 
         :param playlist: The playlist to convert.
+        :param tracks: A map of all available tracks in the library to their track IDs, or a simple list of tracks.
+            If a map is given and the values are :py:class:`Sequence`, take the first index as the Track ID.
+            If a list is given, the function will use the track's index as the Track ID.
         :param playlist_id: An incremental ID to assign to the playlist.
         :param persistent_id: An 16-character unique ID to assign to the playlist.
-        :param tracks: A list of all available tracks in the library.
-            The function will use this as an index to get a list of Track IDs for this playlist.
         :return: A dict representation of XML data for the given playlist.
         :raise MusicBeeIDError: When the given ``persistent_id`` is invalid.
         """
+        items: list[dict[str, int]] = []
+        for track in playlist:
+            if isinstance(tracks, dict):
+                result = tracks[track]
+                items.append({"Track ID": result if isinstance(result, int) else result[0]})
+            else:
+                items.append({"Track ID":  tracks.index(track)})
+
         data = {
             "Playlist ID": playlist_id,
             "Playlist Persistent ID": cls.generate_persistent_id(id_=persistent_id, value=playlist.path),
-            "All Items": True,
+            "All Items": True,  # unknown what this does, what happens if 'False'?
             "Name": playlist.name,
             "Description": playlist.description,
-            "Playlist Items": {"Track ID": tracks.index(track) for track in playlist},
+            "Playlist Items": items,
         }
 
         return {k: v for k, v in data.items() if v is not None}
+
+
+# noinspection PyProtectedMember
+class XMLLibraryParser:
+    """
+    Parses the MusicBee library to and from iTunes style XML
+
+    :param path: Path to the XML file.
+    """
+
+    _xml_timestamp_fmt = "%Y-%m-%dT%H:%M:%SZ"
+    _xml_path_keys = frozenset({"Location", "Music Folder"})
+
+    def __init__(self, path: str):
+        self.path = path
+        self.iterparse = None
+
+    @classmethod
+    def to_xml_timestamp(cls, timestamp: datetime | None) -> str | None:
+        """Convert timestamp string as found in the MusicBee XML library file to a ``datetime`` object"""
+        if timestamp:
+            return timestamp.strftime(cls._xml_timestamp_fmt)
+
+    @classmethod
+    def from_xml_timestamp(cls, timestamp_str: str | None) -> datetime | None:
+        """Convert timestamp string as found in the MusicBee XML library file to a ``datetime`` object"""
+        if timestamp_str:
+            return datetime.strptime(timestamp_str, cls._xml_timestamp_fmt)
+
+    @staticmethod
+    def to_xml_path(path: str) -> str:
+        """Convert a standard system path to a file path as found in the MusicBee XML library file"""
+        return f"file://localhost/{urllib.parse.quote(path.replace('\\', '/'), safe=':/')}"
+
+    @staticmethod
+    def from_xml_path(path: str) -> str:
+        """Clean the file paths as found in the MusicBee XML library file to a standard system path"""
+        return normpath(urllib.parse.unquote(path.replace("file://localhost/", "")))
+
+    def _iter_elements(self) -> Generator[etree._Element, [], []]:
+        for event, element in self.iterparse:
+            yield element
+
+    def _parse_value(self, value: Any, tag: str, parent: str | None = None):
+        if tag == 'string':
+            if parent in self._xml_path_keys:
+                return self.from_xml_path(value)
+            else:
+                return value
+        elif tag == 'integer':
+            try:
+                return int(value) if "." not in value else float(value)
+            except ValueError:
+                return value
+        elif tag == 'date':
+            return self.from_xml_timestamp(value)
+        elif tag in ['true', 'false']:
+            return tag == 'true'
+
+    def _parse_element(self, element: etree._Element | None = None) -> Any:
+        elem = next(self._iter_elements())
+        peek = element.getnext() if element is not None else None
+
+        if elem.tag in ['string', 'integer', 'date', 'true', 'false']:
+            return self._parse_value(
+                value=elem.text, tag=elem.tag, parent=element.text if element is not None else None
+            )
+        elif peek is not None and peek.tag == "dict":
+            next_elem = next(self._iter_elements())
+            value = self._parse_value(value=next_elem.text, tag=next_elem.tag, parent=elem.text)
+            return {elem.text: value} | self._parse_dict()
+        elif peek is not None and peek.tag == "array":
+            return self._parse_array(elem)
+        elif peek is not None:
+            raise Exception(f"Unrecognised element: {element.tag}, {element.text}, {peek.tag}, {peek.text}")
+        else:
+            raise Exception(f"Unrecognised element: {element.tag}, {element.text}")
+
+    def _parse_array(self, element: etree._Element | None = None) -> list[Any]:
+        array = []
+
+        for elem in self._iter_elements():
+            if elem is None or elem.tag == "array":
+                break
+
+            peek = elem.getnext()
+            if elem is not None and elem.tag == "key":
+                next_elem = next(self._iter_elements())
+                value = self._parse_value(value=next_elem.text, tag=next_elem.tag, parent=elem.text)
+                array.append({elem.text: value} | self._parse_dict())
+            elif peek is None and element is not None:
+                value = self._parse_value(value=elem.text, tag=elem.tag, parent=element.text)
+                array.append({element.text: value} | self._parse_dict())
+            else:
+                array.append(self._parse_element())
+
+        return array
+
+    def _parse_dict(self) -> dict[str, Any]:
+        record = {}
+
+        for elem in self._iter_elements():
+            if elem is None or elem.tag == "dict":
+                break
+
+            peek = elem.getnext()
+
+            if elem.text == "Playlist ID":
+                print(elem.text, peek.text)
+            if peek is not None and peek.tag == "dict":
+                record[elem.text] = self._parse_dict()
+            else:
+                record[elem.text] = self._parse_element(elem)
+
+        return record
+
+    def parse(self) -> dict[str, Any]:
+        """Parse the XML file from the currently stored ``path`` to a dictionary"""
+        self.iterparse = etree.iterparse(self.path)
+        results = {}
+
+        for element in self._iter_elements():
+            peek = element.getnext()
+            if peek is None:
+                break
+
+            if element.tag == "plist":
+                continue
+            elif element.tag == "key":
+                key = element.text
+                if peek.tag == "dict":
+                    results[key] = self._parse_dict()
+                elif peek.tag == "array":
+                    results[key] = self._parse_array()
+                else:
+                    results[key] = self._parse_element(element)
+            else:
+                raise NotImplementedError
+
+        return results

@@ -15,18 +15,18 @@ from dateutil.relativedelta import relativedelta
 
 from syncify import PROGRAM_NAME
 from syncify.config import REMOTE_CONFIG
-from syncify.fields import LocalTrackField
 from syncify.exception import SyncifyError
-from syncify.local.library import LocalLibrary, MusicBee
+from syncify.fields import LocalTrackField
 from syncify.local.collection import LocalFolder
-from syncify.report import Report
-from syncify.settings import Settings
+from syncify.local.library import LocalLibrary, MusicBee
 from syncify.remote.api.api import RemoteAPI
 from syncify.remote.config import RemoteClasses
 from syncify.remote.library.library import RemoteLibrary
 from syncify.remote.processors.search import AlgorithmSettings
+from syncify.report import Report
+from syncify.settings import Settings
 from syncify.utils.helpers import get_user_input
-from syncify.utils.logger import Logger, STAT
+from syncify.utils.logger import STAT
 from syncify.utils.printers import print_logo, print_line, print_time
 
 
@@ -557,6 +557,7 @@ if __name__ == "__main__":
     print_logo()
     print_time(main.time_taken)
 
+
 ## BIGGER ONES
 # TODO: function to open search website tabs for all songs in 2get playlist
 #  on common music stores/torrent sites
@@ -595,7 +596,9 @@ if __name__ == "__main__":
 #  settings object should contain all settings as properties to be accessed by main
 #  main should never need to access the yaml dict config directly
 
+
 ## NEEDED FOR v0.3
+# TODO: parse all string fields to quoted for MusicBee XML
 # TODO: write tests to validate Field enum names are all present in related abstract classes
 #  and write test to ensure all mapped fields are present in FieldCombined enum
 # TODO: write tests, write tests, write tests

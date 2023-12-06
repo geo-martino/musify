@@ -187,6 +187,24 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
         return self.file.info.length
 
     @property
+    def rating(self):
+        return self._rating
+
+    @rating.setter
+    def rating(self, value: float | None):
+        self._rating = value
+
+    @property
+    def kind(self):
+        """The kind of audio file of this track"""
+        return self.__class__.__name__
+
+    @property
+    def channels(self) -> int:
+        """The number of channels in this audio file i.e. 1 for mono, 2 for stereo, ..."""
+        return self.file.info.channels
+
+    @property
     def bit_rate(self) -> float:
         """The bit rate of this track in kilobytes per second"""
         return self.file.info.bitrate / 1000
@@ -203,24 +221,6 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
     def sample_rate(self) -> float:
         """The sample rate of this track in kHz"""
         return self.file.info.sample_rate / 1000
-
-    @property
-    def channels(self) -> float:
-        """The number of channels in this audio file i.e. 1 for mono, 2 for stereo, ..."""
-        return self.file.info.sample_rate / 1000
-
-    @property
-    def kind(self):
-        """The kind of audio file of this track"""
-        return self.__class__.__name__
-
-    @property
-    def rating(self):
-        return self._rating
-
-    @rating.setter
-    def rating(self, value: float | None):
-        self._rating = value
 
     @property
     def date_added(self):

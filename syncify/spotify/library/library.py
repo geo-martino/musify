@@ -1,11 +1,10 @@
-from collections.abc import Collection, Mapping, Iterable
+from collections.abc import Collection, Mapping
 from typing import Any
 
 from syncify.abstract.collection import Playlist, Library
 from syncify.remote.enums import RemoteItemType
 from syncify.remote.library.library import RemoteLibrary
 from syncify.remote.types import RemoteObjectClasses
-from syncify.spotify.api.api import SpotifyAPI
 from syncify.spotify.library.collection import SpotifyAlbum
 from syncify.spotify.library.item import SpotifyTrack
 from syncify.spotify.library.playlist import SpotifyPlaylist
@@ -16,11 +15,6 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyDataWrangler):
     """
     Represents a Spotify library, providing various methods for manipulating
     tracks and playlists across an entire Spotify library collection.
-
-    :param api: An authorised Spotify API object for the authenticated user you wish to load the library from.
-    :param include: An optional list of playlist names to include when loading playlists.
-    :param exclude: An optional list of playlist names to exclude when loading playlists.
-    :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
     """
     
     @property

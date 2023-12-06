@@ -76,7 +76,11 @@ class File(metaclass=ABCMeta):
 
     @abstractmethod
     def save(self, dry_run: bool = True, *args, **kwargs) -> Any:
-        """Save this object to file"""
+        """
+        Save this object to file.
+
+        :param dry_run: Run function, but do not modify file at all.
+        """
         raise NotImplementedError
 
 

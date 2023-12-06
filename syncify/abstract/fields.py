@@ -1,8 +1,8 @@
 from typing import Self
 
-from local.file import TagMap
 from syncify.abstract.enums import SyncifyEnum
 from syncify.exception import EnumNotFoundError
+from syncify.local.file import TagMap
 from syncify.utils import UnitIterable
 
 
@@ -81,10 +81,10 @@ class FieldCombined(Field):
     EXT = 100
     SIZE = 7
     KIND = 4
+    CHANNELS = 8
     BIT_RATE = 10
     BIT_DEPTH = 183
     SAMPLE_RATE = 9
-    CHANNELS = 8
 
     # date properties
     DATE_CREATED = 921  # no MusicBee mapping

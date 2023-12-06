@@ -105,7 +105,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
                 f"from {playlists_total} local playlists"
             )
 
-        self.logger.debug(f"Set playlist folder: {self.library_folder} | {len(self._track_paths)} playlists found")
+        self.logger.debug(f"Set playlist folder: {self.playlist_folder} | {len(self._playlist_paths)} playlists found")
 
     @property
     def name(self) -> str:
@@ -304,7 +304,6 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         :param dry_run: Run function, but do not modify file at all.
         :return: A map of the playlist name to the results of its sync as a :py:class:`Result` object.
         """
-        
         return {name: pl.save(dry_run=dry_run) for name, pl in self.playlists.items()}
 
     def log_playlists(self) -> None:

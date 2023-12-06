@@ -146,9 +146,5 @@ class RemoteObject(RemoteObjectMixin, PrettyPrinter, metaclass=ABCMeta):
 
 
 class RemoteItem(RemoteObject, Item, metaclass=ABCMeta):
-    """
-    Generic base class for remote items. Extracts key data from a remote API JSON response.
-
-    :param response: The remote API JSON response
-    """
+    """Generic base class for remote items. Extracts key data from a remote API JSON response."""
     pass

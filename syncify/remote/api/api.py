@@ -1,11 +1,9 @@
 from abc import ABCMeta, abstractmethod
 
-from syncify.api.request import RequestHandler
 from syncify.remote.api.collection import RemoteAPICollections
 from syncify.remote.api.core import RemoteAPICore
 from syncify.remote.api.item import RemoteAPIItems
 from syncify.remote.enums import RemoteIDType
-from syncify.utils.logger import Logger
 
 
 class RemoteAPI(RemoteAPICore, RemoteAPIItems, RemoteAPICollections, metaclass=ABCMeta):

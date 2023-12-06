@@ -87,10 +87,10 @@ class LocalTrackField(TrackFieldMixin):
     EXT = FieldCombined.EXT.value
     SIZE = FieldCombined.SIZE.value
     KIND = FieldCombined.KIND.value
+    CHANNELS = FieldCombined.CHANNELS.value
     BIT_RATE = FieldCombined.BIT_RATE.value
     BIT_DEPTH = FieldCombined.BIT_DEPTH.value
     SAMPLE_RATE = FieldCombined.SAMPLE_RATE.value
-    CHANNELS = FieldCombined.CHANNELS.value
 
     # date properties
     DATE_MODIFIED = FieldCombined.DATE_MODIFIED.value

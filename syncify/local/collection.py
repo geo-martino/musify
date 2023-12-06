@@ -143,17 +143,20 @@ class LocalCollection[T: LocalItem](Logger, ItemCollection[T], metaclass=ABCMeta
         if self.remote_wrangler is None or not self.remote_wrangler.validate_id_type(__key, kind=RemoteIDType.URI):
             # string is not a URI, assume it is a path or name
             if __key in self.track_paths:  # path is valid
-                return next(track for track in self.tracks if track.path == __key)
+                try:
+                    return next(track for track in self.tracks if track.path == __key)
+                except StopIteration:
+                    raise KeyError(f"No matching item found for path: '{__key}'")
 
             try:  # last try, assume given string is a name
                 return next(item for item in self.items if item.name == __key)
             except StopIteration:
-                raise KeyError(f"No matching name found: '{__key}'")
+                raise KeyError(f"No matching item found for name: '{__key}'")
 
         try:  # string is a URI
             return next(item for item in self.items if item.uri == __key)
         except StopIteration:
-            raise KeyError(f"No matching URI found: '{__key}'")
+            raise KeyError(f"No matching item found for URI: '{__key}'")
 
     def as_dict(self):
         return {

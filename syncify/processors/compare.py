@@ -22,19 +22,35 @@ field_name_map = {
     "Title": LocalTrackField.TITLE,
     "ArtistPeople": LocalTrackField.ARTIST,
     "Album": LocalTrackField.ALBUM,  # album ignoring articles like 'the' and 'a' etc.
+    "Album Artist": LocalTrackField.ALBUM_ARTIST,
     "TrackNo": LocalTrackField.TRACK_NUMBER,
+    "TrackCount": LocalTrackField.TRACK_TOTAL,
     "GenreSplits": LocalTrackField.GENRES,
-    "Year": LocalTrackField.YEAR,
-    "Tempo": LocalTrackField.BPM,
+    "Year": LocalTrackField.YEAR,  # could also be 'YearOnly'?
+    "BeatsPerMin": LocalTrackField.BPM,
     "DiscNo": LocalTrackField.DISC_NUMBER,
-    "AlbumArtist": LocalTrackField.ALBUM_ARTIST,
+    "DiscCount": LocalTrackField.DISC_TOTAL,
+    # "": LocalTrackField.COMPILATION,  # unmapped for compare
     "Comment": LocalTrackField.COMMENTS,
     "FileDuration": LocalTrackField.LENGTH,
-    "FolderName": LocalTrackField.FOLDER,
+    "Rating": LocalTrackField.RATING,
+    # "ComposerPeople": LocalTrackField.COMPOSER,  # currently not supported by this program
+    # "Conductor": LocalTrackField.CONDUCTOR,  # currently not supported by this program
+    # "Publisher": LocalTrackField.PUBLISHER,  # currently not supported by this program
     "FilePath": LocalTrackField.PATH,
+    "FolderName": LocalTrackField.FOLDER,
     "FileName": LocalTrackField.FILENAME,
     "FileExtension": LocalTrackField.EXT,
+    # "": LocalTrackField.SIZE,  # unmapped for compare
+    "FileKind": LocalTrackField.KIND,
+    "FileBitrate": LocalTrackField.BIT_RATE,
+    "BitDepth": LocalTrackField.BIT_DEPTH,
+    "FileSampleRate": LocalTrackField.SAMPLE_RATE,
+    "FileChannels": LocalTrackField.CHANNELS,
+    # "": LocalTrackField.DATE_CREATED,  # unmapped for compare
+    "FileDateModified": LocalTrackField.DATE_MODIFIED,
     "FileDateAdded": LocalTrackField.DATE_ADDED,
+    "FileLastPlayed": LocalTrackField.LAST_PLAYED,
     "FilePlayCount": LocalTrackField.PLAY_COUNT,
 }
 

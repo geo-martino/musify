@@ -247,12 +247,7 @@ class BasicCollection[T: Item](ItemCollection[T]):
 
 
 class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
-    """
-    A playlist of items and some of their derived properties/objects
-
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on items.
-        If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
-    """
+    """A playlist of items and some of their derived properties/objects."""
 
     @property
     @abstractmethod
@@ -413,9 +408,6 @@ class Folder[T: Track](ItemCollection[T], metaclass=ABCMeta):
     A folder of items and some of their derived properties/objects
 
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
-
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on items.
-        If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
     """
 
     @property
@@ -481,9 +473,6 @@ class Album[T: Track](ItemCollection[T], metaclass=ABCMeta):
     An album of items and some of their derived properties/objects.
 
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
-
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on items.
-        If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
     """
 
     @property
@@ -583,9 +572,6 @@ class Artist[T: Track](ItemCollection[T], metaclass=ABCMeta):
     An artist of items and some of their derived properties/objects
 
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
-
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on items.
-        If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
     """
 
     @property
@@ -651,9 +637,6 @@ class Genre[T: Track](ItemCollection[T], metaclass=ABCMeta):
     A genre of items and some of their derived properties/objects
 
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
-
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on items.
-        If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
     """
 
     @property

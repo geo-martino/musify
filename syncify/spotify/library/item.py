@@ -172,11 +172,7 @@ class SpotifyTrack(SpotifyObjectWranglerMixin, RemoteTrack):
 
 
 class SpotifyArtist(SpotifyObjectWranglerMixin, RemoteArtist):
-    """
-    Extracts key ``artist`` data from a Spotify API JSON response.
-
-    :param response: The Spotify API JSON response.
-    """
+    """Extracts key ``artist`` data from a Spotify API JSON response."""
 
     @property
     def name(self):
