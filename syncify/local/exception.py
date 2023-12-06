@@ -104,3 +104,7 @@ class FieldError(MusicBeeError):
 
 class MusicBeeIDError(MusicBeeError):
     """Exception raised for errors related to MusicBee a persistent ID."""
+
+
+class XMLReaderError(MusicBeeError):
+    """Exception raised for errors related to reading a MusicBee library XML file."""

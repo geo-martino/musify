@@ -6,6 +6,7 @@ from typing import Any
 from syncify.abstract.collection import Playlist, Library
 from syncify.abstract.item import Item
 from syncify.abstract.misc import Result
+from syncify.exception import SyncifyError
 from syncify.fields import LocalTrackField
 from syncify.local.collection import LocalCollection, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from syncify.local.exception import LocalCollectionError
@@ -236,7 +237,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             # noinspection PyBroadException
             try:
                 tracks.append(load_track(path=path, available=self._track_paths, remote_wrangler=self.remote_wrangler))
-            except Exception:
+            except SyncifyError:
                 errors.append(path)
                 continue
 

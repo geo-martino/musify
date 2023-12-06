@@ -1,6 +1,6 @@
 from typing import Self
 
-from abstract.fields import Field, FieldCombined, TagField
+from syncify.abstract.fields import Field, FieldCombined, TagField
 
 
 class TrackFieldMixin(TagField):

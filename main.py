@@ -548,7 +548,7 @@ if __name__ == "__main__":
                 main.run()
 
             main.logger.debug(f"DONE  function: {func}")
-        except BaseException:
+        except SyncifyError:
             main.logger.critical(traceback.format_exc())
             failed = True
             break
@@ -598,7 +598,6 @@ if __name__ == "__main__":
 
 
 ## NEEDED FOR v0.3
-# TODO: parse all string fields to quoted for MusicBee XML
 # TODO: write tests to validate Field enum names are all present in related abstract classes
 #  and write test to ensure all mapped fields are present in FieldCombined enum
 # TODO: write tests, write tests, write tests
