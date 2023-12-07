@@ -1,6 +1,7 @@
+import os
 from collections.abc import Collection, Iterable
 from dataclasses import dataclass
-from os.path import exists
+from os.path import exists, dirname
 
 from syncify.abstract.misc import Result
 from syncify.local.playlist.match import LocalMatcher
@@ -127,6 +128,7 @@ class M3U(LocalPlaylist):
         :return: The results of the sync as a :py:class:`SyncResultM3U` object.
         """
         start_paths = set(self._prepare_paths_for_output({track.path.casefold() for track in self._tracks_original}))
+        os.makedirs(dirname(self.path), exist_ok=True)
 
         if not dry_run:
             with open(self.path, "w", encoding="utf-8") as f:

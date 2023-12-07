@@ -26,12 +26,13 @@ def test_parser():
     os.makedirs(dirname(parser_filepath), exist_ok=True)
     shutil.copyfile(library_filepath, parser_filepath)
 
-    parser = XMLLibraryParser(path=parser_filepath)
+    parser = XMLLibraryParser(path=parser_filepath, path_keys=MusicBee.xml_path_keys)
 
     xml = parser.parse()
     assert xml["Major Version"] == 3
     assert xml["Minor Version"] == 5
     assert xml["Application Version"] == "3.5.8447.35892"
+    print(xml["Music Folder"], path_library_resources, relpath(dirname(path_library_resources)).lstrip("./\\"))
     assert xml["Music Folder"].endswith(relpath(dirname(path_library_resources)).lstrip("./\\"))
     assert xml["Library Persistent ID"] == "3D76B2A6FD362901"
     assert len(xml["Tracks"]) == 6
@@ -39,14 +40,14 @@ def test_parser():
 
     xml["Major Version"] = 7
     xml["Minor Version"] = 9
-    xml["Music Folder"] = "this/is/a/new/path"
+    xml["Music Folder"] = join("this", "is", "a", "new", "path")
     parser.unparse(xml, dry_run=False)
 
     xml_new = parser.parse()
     assert xml_new["Major Version"] == 7
     assert xml_new["Minor Version"] == 9
     assert xml_new["Application Version"] == xml["Application Version"]
-    assert xml_new["Music Folder"] == "this/is/a/new/path"
+    assert xml_new["Music Folder"] == xml["Music Folder"]
     assert xml_new["Library Persistent ID"] == xml["Library Persistent ID"]
     assert len(xml_new["Tracks"]) == len(xml["Tracks"])
     assert len(xml_new["Playlists"]) == len(xml["Playlists"])

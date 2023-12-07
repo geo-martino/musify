@@ -1,5 +1,6 @@
 import os
 from os.path import dirname, join, splitext, basename, exists
+from time import sleep
 
 import pytest
 
@@ -107,10 +108,8 @@ def test_load_file_with_tracks():
 
 def test_save_new_file():
     path_new = join(path_playlist_cache, "new_playlist.m3u")
-    try:
+    if exists(path_new):
         os.remove(path_new)
-    except FileNotFoundError:
-        pass
 
     # creates a new M3U file
     pl = M3U(path=path_new)
@@ -187,6 +186,7 @@ def test_save_existing_file():
     assert len(pl.tracks) == 3
     original_dt_modified = pl.date_modified
     original_dt_created = pl.date_created
+    sleep(0.1)
 
     tracks_random = random_tracks(10)
     pl.tracks = pl.tracks[:2] + tracks_random
