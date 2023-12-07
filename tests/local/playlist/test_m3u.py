@@ -1,6 +1,5 @@
 import os
 from os.path import dirname, join, splitext, basename, exists
-from time import sleep
 
 import pytest
 
@@ -137,12 +136,14 @@ def test_save_new_file():
     pl = M3U(path=path_new)
     pl.load(tracks_random)
     result = pl.save(dry_run=False)
+
     assert result.start == 0
     assert result.added == len(tracks_random)
     assert result.removed == 0
     assert result.unchanged == 0
     assert result.difference == len(tracks_random)
     assert result.final == len(tracks_random)
+
     assert pl.date_modified is not None
     assert pl.date_created is not None
 
@@ -163,6 +164,7 @@ def test_save_new_file():
     assert result.unchanged == 20
     assert result.difference == 5
     assert result.final == 35
+
     assert pl.date_modified > original_dt_modified
     assert pl.date_created == original_dt_created
 
@@ -186,21 +188,28 @@ def test_save_existing_file():
     assert len(pl.tracks) == 3
     original_dt_modified = pl.date_modified
     original_dt_created = pl.date_created
-    sleep(0.1)
 
     tracks_random = random_tracks(10)
     pl.tracks = pl.tracks[:2] + tracks_random
-    pl.name = "New Playlist"
     result = pl.save(dry_run=False)
 
-    assert pl.date_modified > original_dt_modified
-    assert pl.date_created > original_dt_created
     assert result.start == 3
     assert result.added == len(tracks_random)
     assert result.removed == 1
     assert result.unchanged == 2
     assert result.difference == 9
     assert result.final == 12
+
+    assert pl.date_modified > original_dt_modified
+    assert pl.date_created == original_dt_created
+    new_dt_modified = pl.date_modified
+
+    # change the name and save to new file
+    pl.name = "New Playlist"
+    pl.save(dry_run=False)
+
+    assert pl.date_modified > new_dt_modified
+    assert pl.date_created > original_dt_created
 
     with open(pl.path, 'r') as f:
         paths = [line.strip() for line in f]

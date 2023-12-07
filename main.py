@@ -579,7 +579,7 @@ if __name__ == "__main__":
 # TODO: generally improve performance
 # TODO: look into the requests_cache, it grows way too big sometimes?
 # TODO: implement terminal parser for function-specific kwargs?
-# TODO: implement GitHub actions for testing builds + implement release structure
+# TODO: implement release structure on GitHub
 
 
 ## SELECTED FOR DEVELOPMENT
@@ -598,5 +598,6 @@ if __name__ == "__main__":
 
 
 ## NEEDED FOR v0.3
+# TODO: fix date issues on GitHub tests
 # TODO: write tests, write tests, write tests
 # TODO: update the readme (dynamic readme?)

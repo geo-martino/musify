@@ -233,7 +233,7 @@ def test_save_playlist():
     assert pl.date_modified == original_dt_modified
     assert pl.date_created == original_dt_created
 
-    # save the file and check it has been updated
+    # save the file and check it has been modified
     pl.save(dry_run=False)
     assert pl.date_modified > original_dt_modified
     assert pl.date_created == original_dt_created
