@@ -261,7 +261,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
         :param names: Playlist paths to load relative to the playlist folder.
         :return: The loaded playlists.
-        :raise LocalCollectionError: If a given playlist name cannot be found.
+        :raise :py:class:`LocalCollectionError`: If a given playlist name cannot be found.
         """
         self.logger.debug(f"Load {self.name} playlist data: START")
         if names is None:

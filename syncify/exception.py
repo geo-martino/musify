@@ -5,8 +5,8 @@ class SyncifyError(Exception):
     """Generic base class for all Syncify-related errors"""
 
 
-class EnumNotFoundError(SyncifyError):
-    """Exception raised when unable to find an enum by search.
+class SyncifyEnumError(SyncifyError):
+    """Exception raised when searching enums gives an exception.
 
     :param value: The value that caused the error.
     :param message: Explanation of the error.

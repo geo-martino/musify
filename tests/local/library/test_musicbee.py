@@ -126,7 +126,6 @@ def test_load():
         library_folder=path_track_resources,
         musicbee_folder=path_library_resources,
         playlist_folder=path_playlist_resources,
-        remote_wrangler=remote_wrangler,
     )
     tracks = {track.path for track in library.tracks}
     playlists = {name: pl.path for name, pl in library.playlists.items()}
@@ -183,8 +182,7 @@ def test_save():
     library.save(dry_run=False)
     assert exists(path_output_xml)
     with open(path_output_xml, "r") as f_in, open(library_filepath, "r") as f_out:
-        for i, (line_in, line_out) in enumerate(zip(f_in, f_out)):
-            print(i)
+        for line_in, line_out in zip(f_in, f_out):
             assert line_in == line_out
 
     os.remove(path_output_xml)

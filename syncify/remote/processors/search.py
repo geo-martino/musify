@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from syncify.abstract.collection import ItemCollection, Album
-from syncify.abstract.fields import Field, FieldCombined
+from syncify.abstract.enums import Field, FieldCombined
 from syncify.abstract.item import Item, Track, BaseObject
 from syncify.abstract.misc import Result
 from syncify.processors.match import ItemMatcher

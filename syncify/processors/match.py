@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from syncify.abstract.collection import Album, ItemCollection
-from syncify.abstract.fields import Field, FieldCombined, ALL_FIELDS
+from syncify.abstract.enums import Field, FieldCombined, ALL_FIELDS
 from syncify.abstract.item import Track, BaseObject
 from syncify.abstract.processor import ItemProcessor
 from syncify.utils import UnitIterable
@@ -60,14 +60,21 @@ class ItemMatcher(ItemProcessor, Logger):
     :ivar karaoke_tags: A set of words to search for in tag values that identify the item as being a karaoke item.
     :ivar year_range: A difference in years of this value gives a score of 0 for the :py:meth:`match_year` algorithm.
         See the :py:meth:`match_year` method for more information.
-    :ivar _clean_tags_remove_all: Apply these remove settings to all tags 
+    :ivar clean_tags_remove_all: Apply these remove settings to all tags 
         when processing tags as per :py:meth:`clean_tags` method. 
         See also :py:class:`CleanTagConfig` for more info on this configuration.
-    :ivar _clean_tags_split_all: Apply these split settings to all tags 
+    :ivar clean_tags_split_all: Apply these split settings to all tags 
         when processing tags as per :py:meth:`clean_tags` method. 
         See also :py:class:`CleanTagConfig` for more info on this configuration.
-    :ivar _clean_tags_config: A list of configurations in the form of :py:class:`CleanTagConfig`
+    :ivar clean_tags_config: A list of configurations in the form of :py:class:`CleanTagConfig`
         to apply for each tag type. See also :py:class:`CleanTagConfig` for more info.
+    :ivar reduce_name_score_on: A set of words to check for when applying name score reduction logic.
+        If a word from this list is present in the name of the result to score against 
+        but not in the source :py:class:`Item`, reduce the score for the name match by 
+        the ``_reduce_name_score_factor``. 
+        This set is always combined with the ``karaoke_tags``.
+    :ivar reduce_name_score_factor: The factor to reduce a name score on when a word from 
+        ``_reduce_name_score_on`` is found in the result but not in the source :py:class:`Item`.
     
     :param allow_karaoke: When True, items determined to be karaoke are allowed when matching added items.
         Skip karaoke results otherwise. Karaoke items are identified using the ``karaoke_tags`` attribute.
@@ -77,13 +84,17 @@ class ItemMatcher(ItemProcessor, Logger):
     year_range = 10
 
     # config for cleaning string-type tags for matching
-    _clean_tags_remove_all = {"the", "a", "&", "and"}
-    _clean_tags_split_all = set()
-    _clean_tags_config = [
+    clean_tags_remove_all = {"the", "a", "&", "and"}
+    clean_tags_split_all = set()
+    clean_tags_config = (
         CleanTagConfig(name="title", _remove={"part"}, _split={"featuring", "feat.", "ft.", "/"}),
         CleanTagConfig(name="artist", _split={"featuring", "feat.", "ft.", "vs"}),
         CleanTagConfig(name="album", _remove={"ep"}, _preprocess=lambda x: x.split('-')[0])
-    ]
+    )
+
+    # config for name score reduction
+    reduce_name_score_on = {"live", "demo", "acoustic"}
+    reduce_name_score_factor = 0.5
 
     def _log_padded(self, log: MutableSequence[str], pad: str = ' ') -> None:
         """Wrapper for logging lists in a correctly aligned format"""
@@ -131,10 +142,10 @@ class ItemMatcher(ItemProcessor, Logger):
             val = conf.preprocess(val)
             val = re.sub(r"[(\[].*?[)\]]", "", val).casefold()
 
-            for word in conf.remove | self._clean_tags_remove_all:
+            for word in conf.remove | self.clean_tags_remove_all:
                 val = re.sub(rf"\s{word}\s|^{word}\s|\s{word}$", " ", val)
 
-            for word in conf.split | self._clean_tags_split_all:
+            for word in conf.split | self.clean_tags_split_all:
                 val = val.split(word)[0].rstrip()
 
             return re.sub(r"[^\w']+", ' ', val).strip()
@@ -144,7 +155,7 @@ class ItemMatcher(ItemProcessor, Logger):
         name = source.name
 
         # process string tags according to config
-        for config in self._clean_tags_config:
+        for config in self.clean_tags_config:
             value = getattr(source, config.name, None)
             if not value:
                 source.clean_tags[config.name] = ""
@@ -188,11 +199,10 @@ class ItemMatcher(ItemProcessor, Logger):
             score = sum(word in result_val for word in source_val.split()) / len(source_val.split())
 
             # reduce a score if certain keywords are present in result and not source
-            reduce_factor = 0.5
-            reduce_on = {"live", "demo", "acoustic"} | self.karaoke_tags  # TODO: factor these strings out
+            reduce_on = self.reduce_name_score_on | self.karaoke_tags
             reduce_on = {word.casefold() for word in reduce_on}
             if any(word in result.name.casefold() and word not in source.name.casefold() for word in reduce_on):
-                score = max(score - reduce_factor, 0)
+                score = max(score - self.reduce_name_score_factor, 0)
 
         self._log_test(source=source, result=result, test=round(score, 2), extra=[f"{source_val} -> {result_val}"])
         return score
@@ -407,9 +417,9 @@ class ItemMatcher(ItemProcessor, Logger):
     def as_dict(self) -> dict[str, Any]:
         return {
             "clean_tags": {
-                "remove_all": self._clean_tags_remove_all,
-                "split_all": self._clean_tags_split_all,
-                "config": self._clean_tags_config,
+                "remove_all": self.clean_tags_remove_all,
+                "split_all": self.clean_tags_split_all,
+                "config": self.clean_tags_config,
             },
             "allow_karaoke": self.allow_karaoke,
             "karaoke_tags": self.karaoke_tags,
@@ -419,9 +429,9 @@ class ItemMatcher(ItemProcessor, Logger):
     def as_json(self) -> dict[str, Any]:
         return {
             "clean_tags": {
-                "remove_all": [value for value in self._clean_tags_remove_all],
-                "split_all": [value for value in self._clean_tags_split_all],
-                "config": [config.as_json() for config in self._clean_tags_config],
+                "remove_all": [value for value in self.clean_tags_remove_all],
+                "split_all": [value for value in self.clean_tags_split_all],
+                "config": [config.as_json() for config in self.clean_tags_config],
             },
             "allow_karaoke": self.allow_karaoke,
             "karaoke_tags": [value for value in self.karaoke_tags],

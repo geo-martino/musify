@@ -6,7 +6,7 @@ from copy import deepcopy
 from datetime import datetime
 from typing import Any, Self, SupportsIndex
 
-from syncify.abstract.fields import Field, FieldCombined, TagField
+from syncify.abstract.enums import Field, FieldCombined, TagField
 from syncify.abstract.item import Item, Track, ObjectPrinterMixin
 from syncify.processors.sort import ShuffleMode, ShuffleBy, ItemSorter
 from syncify.remote.enums import RemoteIDType

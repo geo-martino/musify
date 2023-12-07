@@ -1,2 +1,55 @@
-# TODO: write generic tests for the functions of the abstract classes
-#  run these tests on all implementations of abstract classes
+from typing import Any
+
+from syncify.abstract.processor import DynamicProcessor, dynamicprocessormethod
+
+
+def test_dynamicprocessormethod_decorator():
+    @dynamicprocessormethod
+    def test_1():
+        return 1
+
+    assert isinstance(test_1, dynamicprocessormethod)
+    assert not test_1.alternative_names
+    assert test_1() == 1
+
+    @dynamicprocessormethod("alt_1", "alt_2")
+    def test_2():
+        return 2
+
+    assert isinstance(test_1, dynamicprocessormethod)
+    assert test_1.alternative_names == ("alt_1", "alt_2")
+    assert test_2() == 2
+
+
+# noinspection PyMissingOrEmptyDocstring
+class TestDynamicProcessor(DynamicProcessor):
+
+    @dynamicprocessormethod
+    def processor_1(self):
+        return 1
+
+    @dynamicprocessormethod("processor_2_alt")
+    def processor_2(self):
+        return 2
+
+    @dynamicprocessormethod("processor_3_alternative", "processor_extra")
+    def processor_3(self):
+        return 3
+
+    def as_dict(self) -> dict[str, Any]:
+        return {}
+
+
+def test_dynamic_processor():
+    obj = TestDynamicProcessor()
+    assert obj.__processormethods__ == {
+        "processor_1", "processor_2", "processor_2_alt", "processor_extra", "processor_3", "processor_3_alt"
+    }
+    obj._processor_name = "processor_1"
+    assert obj._processor == obj.processor_1
+    assert obj._process() == 1
+
+    obj._processor_name = "processor_extra"
+    assert obj._processor == obj.processor_3
+    assert obj._process == 3
+

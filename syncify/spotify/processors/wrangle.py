@@ -3,7 +3,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 from urllib.parse import urlparse
 
-from syncify.exception import EnumNotFoundError
+from syncify.exception import SyncifyEnumError
 from syncify.remote.api import APIMethodInputType
 from syncify.remote.enums import RemoteIDType, RemoteItemType
 from syncify.remote.exception import RemoteError, RemoteIDTypeError, RemoteItemTypeError
@@ -64,7 +64,7 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
                 raise RemoteItemTypeError("Cannot process local items")
             if "type" not in value:
                 raise RemoteItemTypeError(f"Given map does not contain a 'type' key: {value}")
-            return RemoteItemType.from_name(value["type"].casefold().rstrip('s'))
+            return RemoteItemType.from_name(value["type"].casefold().rstrip('s'))[0]
 
         value = value.strip()
         url_check = urlparse(value.replace("/v1/", '/')).netloc.split(".")
@@ -74,11 +74,11 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
             url_path = urlparse(value.replace("/v1/", '/')).path.split("/")
             for chunk in url_path:
                 try:
-                    return RemoteItemType.from_name(chunk.casefold().rstrip('s'))
-                except EnumNotFoundError:
+                    return RemoteItemType.from_name(chunk.casefold().rstrip('s'))[0]
+                except SyncifyEnumError:
                     continue
         elif len(uri_check) == RemoteIDType.URI.value and uri_check[0].casefold() == "spotify":
-            return RemoteItemType.from_name(uri_check[1])
+            return RemoteItemType.from_name(uri_check[1])[0]
         elif len(value) == RemoteIDType.ID.value:
             return None
         raise RemoteItemTypeError(f"Could not determine item type of given value: {value}")
@@ -102,9 +102,9 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
             url_path = urlparse(value).path.split("/")
             for chunk in url_path:
                 try:
-                    kind = RemoteItemType.from_name(chunk.rstrip('s'))
+                    kind = RemoteItemType.from_name(chunk.rstrip('s'))[0]
                     break
-                except EnumNotFoundError:
+                except SyncifyEnumError:
                     continue
             if kind == RemoteItemType.USER:
                 id_ = url_path[url_path.index(kind.name.casefold()) + 1]
@@ -112,7 +112,7 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
                 id_ = next(p for p in url_path if len(p) == RemoteIDType.ID.value)
         elif type_in == RemoteIDType.URI:
             uri_split = value.split(':')
-            kind = RemoteItemType.from_name(uri_split[1])
+            kind = RemoteItemType.from_name(uri_split[1])[0]
             id_ = uri_split[2]
         elif type_in == RemoteIDType.ID:
             if kind is None:

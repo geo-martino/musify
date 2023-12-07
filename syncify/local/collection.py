@@ -186,7 +186,7 @@ class LocalCollectionFiltered[T: LocalItem](LocalCollection[T]):
     :param name: The name of this collection.
         If given, the object only stores tracks that match the name given on the attribute of this object.
         If None, the list of tracks given are taken to be all the tracks contained in this collection.
-    :raise LocalCollectionError: If the given tracks contain more than one unique value
+    :raise :py:class:`LocalCollectionError`: If the given tracks contain more than one unique value
         for the attribute of this collection when name is None.
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
@@ -209,7 +209,7 @@ class LocalCollectionFiltered[T: LocalItem](LocalCollection[T]):
             raise LocalCollectionError("No tracks were given")
 
         # get the tag key dynamically from the name of this class
-        self._tag_key = self._camel_to_snake(self.__class__.__name__.replace("Local", ""))
+        self._tag_key = self._pascal_to_snake(self.__class__.__name__.replace("Local", ""))
 
         if name is None:  # attempt to determine the name of this collection from the given tracks
             names: list[UnitCollection[str]] = [track[self._tag_key] for track in tracks if track[self._tag_key]]
@@ -254,7 +254,7 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
         If None, the list of tracks given are taken to be all the tracks contained in this folder.
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
-    :raise LocalCollectionError: If the given tracks contain more than one unique value for
+    :raise :py:class:`LocalCollectionError`: If the given tracks contain more than one unique value for
         ``folder`` when name is None.
     """
 
@@ -346,7 +346,7 @@ class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):
         If None, the list of tracks given are taken to be all the tracks for this album.
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
-    :raise LocalCollectionError: If the given tracks contain more than one unique value for
+    :raise :py:class:`LocalCollectionError`: If the given tracks contain more than one unique value for
         ``album`` when name is None.
     """
 
@@ -421,7 +421,7 @@ class LocalArtist(LocalCollectionFiltered[LocalTrack], Artist[LocalTrack]):
         If None, the list of tracks given are taken to be all the tracks by this artist.
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
-    :raise LocalCollectionError: If the given tracks contain more than one unique value for
+    :raise :py:class:`LocalCollectionError`: If the given tracks contain more than one unique value for
         ``artist`` when name is None.
     """
 
@@ -473,7 +473,7 @@ class LocalGenres(LocalCollectionFiltered[LocalTrack], Genre[LocalTrack]):
         If None, the list of tracks given are taken to be all the tracks within this genre.
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
-    :raise LocalCollectionError: If the given tracks contain more than one unique value for
+    :raise :py:class:`LocalCollectionError`: If the given tracks contain more than one unique value for
         ``genre`` when name is None.
     """
 
@@ -505,9 +505,3 @@ class LocalGenres(LocalCollectionFiltered[LocalTrack], Genre[LocalTrack]):
             "last_played": self.last_played,
             "remote_source": self.remote_wrangler.remote_source if self.remote_wrangler else None,
         }
-
-
-if __name__ == "__main__":
-    from syncify.spotify.processors.wrangle import SpotifyDataWrangler
-    folder = LocalFolder(name=r"D:\Music\Before the Night", remote_wrangler=SpotifyDataWrangler())
-    print(repr(folder))

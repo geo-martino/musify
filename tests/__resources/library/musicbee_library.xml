@@ -14,7 +14,7 @@
 			<key>Track ID</key><integer>1</integer>
 			<key>Persistent ID</key><string>E8C4D399F0878EA7</string>
 			<key>Name</key><string>title 2</string>
-			<key>Artist</key><string>artist 2</string>
+			<key>Artist</key><string>artist 2; another artist</string>
 			<key>Album</key><string>album artist 2</string>
 			<key>Album Artist</key><string>various</string>
 			<key>Track Number</key><integer>3</integer>
@@ -33,7 +33,7 @@
 			<key>Kind</key><string>MP3</string>
 			<key>Bit Rate</key><integer>96</integer>
 			<key>Sample Rate</key><integer>44100</integer>
-			<key>Date Modified</key><date>2023-05-20T20:43:36Z</date>
+			<key>Date Modified</key><date>2023-12-07T15:46:22Z</date>
 			<key>Date Added</key><date>2023-05-20T23:22:11Z</date>
 			<key>Play Date UTC</key><date>2023-07-20T06:12:26Z</date>
 			<key>Play Count</key><integer>5</integer>

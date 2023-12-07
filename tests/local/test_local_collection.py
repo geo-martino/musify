@@ -3,12 +3,12 @@ import pytest
 from syncify.local.collection import LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from syncify.local.exception import LocalCollectionError
 from tests.abstract.misc import pretty_printer_tests
-from tests.local import remote_wrangler
-from tests.local.track import random_tracks
+from tests.local.track import random_tracks, path_track_resources, path_track_all
 
+
+# TODO: add test for getting items from collection using __getitem__ from LocalCollection
 
 def test_folder():
-    # TODO: add test for loading folder with no tracks given
     tracks = random_tracks(10)
 
     for i, track in enumerate(tracks[:7]):
@@ -27,9 +27,9 @@ def test_folder():
 
     # test generic collection functionality
     with pytest.raises(LocalCollectionError):
-        LocalFolder(tracks=tracks, remote_wrangler=remote_wrangler)
+        LocalFolder(tracks=tracks)
 
-    collection = LocalFolder(tracks=tracks[:7], remote_wrangler=remote_wrangler)
+    collection = LocalFolder(tracks=tracks[:7])
     assert collection.name == tracks[0].folder
     assert collection.tracks == tracks[:7]
     assert collection.last_played == last_played
@@ -40,6 +40,10 @@ def test_folder():
     assert collection.compilation
 
     pretty_printer_tests(collection)
+
+    # load folder when no tracks given and folder path given
+    collection = LocalFolder(name=path_track_resources)
+    assert {track.path for track in collection} == path_track_all
 
 
 def test_album():
@@ -58,7 +62,7 @@ def test_album():
             track.artist = None
             track.genres = None
 
-    collection = LocalAlbum(tracks=tracks, name=tracks[0].album, remote_wrangler=remote_wrangler)
+    collection = LocalAlbum(tracks=tracks, name=tracks[0].album)
     assert collection.name == tracks[0].album
     assert collection.artists == [tracks[0].artist]
     assert collection.genres == tracks[0].genres
@@ -78,7 +82,7 @@ def test_artist():
             track.album = "another album"
             track.genres = None
 
-    collection = LocalArtist(tracks=tracks, name=tracks[0].artist, remote_wrangler=remote_wrangler)
+    collection = LocalArtist(tracks=tracks, name=tracks[0].artist)
     assert collection.name == tracks[0].artist
     assert collection.albums == [tracks[0].album, tracks[1].album]
     assert collection.genres == tracks[0].genres
@@ -102,7 +106,7 @@ def test_genre():
             track.artist = "artist name 3"
             track.album = "album name"
 
-    collection = LocalGenres(tracks=tracks, name="rock", remote_wrangler=remote_wrangler)
+    collection = LocalGenres(tracks=tracks, name="rock")
     assert collection.name == list(tracks[0].genres)[0]
     assert collection.artists == [tracks[0].artist, tracks[-1].artist]
     assert collection.albums == [tracks[0].album]

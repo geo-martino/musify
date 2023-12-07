@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from os.path import exists
 from typing import Any, Self
 
-from syncify.abstract.fields import FieldCombined
+from syncify.abstract.enums import FieldCombined
 from syncify.abstract.misc import Result
 from syncify.abstract.processor import MusicBeeProcessor
 from syncify.local.track.base.track import LocalTrack

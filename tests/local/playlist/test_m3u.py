@@ -8,7 +8,6 @@ from syncify.local.playlist import M3U
 from syncify.local.track import LocalTrack, FLAC, M4A, MP3, WMA
 from tests import path_txt
 from tests.abstract.misc import pretty_printer_tests
-from tests.local import remote_wrangler
 from tests.local.playlist import copy_playlist_file, path_playlist_m3u, path_resources, path_playlist_cache
 from tests.local.track import path_track_flac, path_track_m4a, path_track_wma, path_track_mp3, path_track_all
 from tests.local.track import random_tracks
@@ -18,16 +17,12 @@ path_fake = join(dirname(path_playlist_m3u), "does_not_exist.m3u")
 
 def get_tracks() -> list[LocalTrack]:
     """Load list of real LocalTracks"""
-    return [
-        FLAC(file=path_track_flac, remote_wrangler=remote_wrangler),
-        WMA(file=path_track_wma, remote_wrangler=remote_wrangler),
-        M4A(file=path_track_m4a, remote_wrangler=remote_wrangler)
-    ]
+    return [FLAC(file=path_track_flac), WMA(file=path_track_wma), M4A(file=path_track_m4a)]
 
 
 def test_load_fake_file_with_no_tracks():
     # initialising on a non-existent file and no tracks
-    pl = M3U(path=path_fake, remote_wrangler=remote_wrangler)
+    pl = M3U(path=path_fake)
     assert pl.path == path_fake
     assert pl.name == splitext(basename(path_fake))[0]
     assert pl.ext == splitext(basename(path_fake))[1]
@@ -44,7 +39,7 @@ def test_load_fake_file_with_no_tracks():
 def test_load_fake_file_with_bad_tracks():
     # initialising on a non-existent file and tracks
     tracks_random = random_tracks(30)
-    pl = M3U(path=path_fake, tracks=tracks_random, remote_wrangler=remote_wrangler)
+    pl = M3U(path=path_fake, tracks=tracks_random)
     assert pl.path == path_fake
     assert pl.tracks == tracks_random
 
@@ -63,7 +58,6 @@ def test_load_file_with_no_tracks():
         library_folder=path_resources,
         other_folders="../",
         available_track_paths=path_track_all,
-        remote_wrangler=remote_wrangler
     )
     assert pl.path == path_playlist_m3u
     assert len(pl.tracks) == 3
@@ -92,7 +86,6 @@ def test_load_file_with_tracks():
         library_folder=path_resources,
         other_folders="../",
         available_track_paths=path_track_all,
-        remote_wrangler=remote_wrangler
     )
     assert pl.path == path_playlist_m3u
     assert pl.tracks == tracks[:2]
@@ -103,15 +96,11 @@ def test_load_file_with_tracks():
 
     # ...and then reloads all tracks from disk that match conditions when no tracks are given
     pl.load()
-    assert pl.tracks == [
-        FLAC(path_track_flac, remote_wrangler=remote_wrangler),
-        MP3(path_track_mp3, remote_wrangler=remote_wrangler),
-        WMA(path_track_wma, remote_wrangler=remote_wrangler)
-    ]
+    assert pl.tracks == [FLAC(path_track_flac), MP3(path_track_mp3), WMA(path_track_wma)]
 
     # raises error on unrecognised file type
     with pytest.raises(InvalidFileType):
-        M3U(path=path_txt, remote_wrangler=remote_wrangler)
+        M3U(path=path_txt)
 
     pretty_printer_tests(pl)
 
@@ -124,7 +113,7 @@ def test_save_new_file():
         pass
 
     # creates a new M3U file
-    pl = M3U(path=path_new, remote_wrangler=remote_wrangler)
+    pl = M3U(path=path_new)
     assert pl.path == path_new
     assert len(pl.tracks) == 0
 
@@ -146,7 +135,7 @@ def test_save_new_file():
     assert pl.date_created is None
 
     # ...save these loaded tracks for real
-    pl = M3U(path=path_new, remote_wrangler=remote_wrangler)
+    pl = M3U(path=path_new)
     pl.load(tracks_random)
     result = pl.save(dry_run=False)
     assert result.start == 0
@@ -193,16 +182,19 @@ def test_save_existing_file():
         library_folder=path_resources,
         other_folders="../",
         available_track_paths=path_track_all,
-        remote_wrangler=remote_wrangler
     )
     assert pl.path == path_file_copy
     assert len(pl.tracks) == 3
+    original_dt_modified = pl.date_modified
+    original_dt_created = pl.date_created
 
     tracks_random = random_tracks(10)
     pl.tracks = pl.tracks[:2] + tracks_random
     pl.name = "New Playlist"
     result = pl.save(dry_run=False)
 
+    assert pl.date_modified > original_dt_modified
+    assert pl.date_created > original_dt_created
     assert result.start == 3
     assert result.added == len(tracks_random)
     assert result.removed == 1

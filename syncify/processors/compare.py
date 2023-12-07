@@ -5,12 +5,11 @@ from functools import reduce
 from operator import mul
 from typing import Any, Self
 
-from syncify.abstract.fields import Field
+from syncify.abstract.enums import Field
 from syncify.abstract.item import Item
-from syncify.abstract.processor import MusicBeeProcessor, DynamicProcessor
+from syncify.abstract.processor import DynamicProcessor, MusicBeeProcessor, dynamicprocessormethod
 from syncify.fields import LocalTrackField
 from syncify.local.exception import FieldError
-from syncify.processors.decorators import dynamicprocessormethod
 from syncify.processors.exception import ItemComparerError
 from syncify.processors.time import TimeMapper
 from syncify.utils import UnitSequence
@@ -116,7 +115,7 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
         if no ``reference`` is given, to this object's list of ``expected`` values
 
         :return: True if a match is found, False otherwise.
-        :raise LocalProcessorError: If no reference given and no expected values set for this comparer.
+        :raise :py:class:`LocalProcessorError`: If no reference given and no expected values set for this comparer.
         """
         if self.condition is None:
             return False

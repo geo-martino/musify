@@ -1,6 +1,6 @@
 import pytest
 
-from syncify.exception import EnumNotFoundError
+from syncify.exception import SyncifyEnumError
 from syncify.remote.enums import RemoteIDType, RemoteItemType
 from syncify.remote.exception import RemoteError, RemoteIDTypeError, RemoteItemTypeError
 from syncify.spotify import URL_API, URL_EXT
@@ -109,7 +109,7 @@ def test_get_item_type():
     with pytest.raises(RemoteItemTypeError):
         wrangler.get_item_type("bad_uri:chapter:1234567890ASDFGHJKLZXC")
 
-    with pytest.raises(EnumNotFoundError):
+    with pytest.raises(SyncifyEnumError):
         wrangler.get_item_type("spotify:bad_type:1234567890ASDFGHJKLZXC")
 
 

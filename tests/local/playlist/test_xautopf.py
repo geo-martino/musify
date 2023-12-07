@@ -12,7 +12,6 @@ from syncify.processors.limit import LimitType
 from syncify.processors.sort import ShuffleMode, ShuffleBy
 from tests import path_txt
 from tests.abstract.misc import pretty_printer_tests
-from tests.local import remote_wrangler
 from tests.local.playlist import copy_playlist_file, path_resources
 from tests.local.playlist import path_playlist_xautopf_ra, path_playlist_xautopf_bp
 from tests.local.track import random_tracks, path_track_flac, path_track_m4a, path_track_wma, path_track_mp3
@@ -24,13 +23,11 @@ def test_init_fails():
     # raises error on non-existent file, remove this once supported
     with pytest.raises(NotImplementedError):
         XAutoPF(
-            path=join(dirname(path_playlist_xautopf_bp), "does_not_exist.xautopf"),
-            tracks=tracks,
-            remote_wrangler=remote_wrangler
+            path=join(dirname(path_playlist_xautopf_bp), "does_not_exist.xautopf"), tracks=tracks,
         )
 
     with pytest.raises(InvalidFileType):
-        XAutoPF(path=path_txt, tracks=tracks, remote_wrangler=remote_wrangler)
+        XAutoPF(path=path_txt, tracks=tracks)
 
 
 def test_load_playlist_1():
@@ -42,13 +39,12 @@ def test_load_playlist_1():
         library_folder=path_resources,
         other_folders="../",
         check_existence=False,
-        remote_wrangler=remote_wrangler
     )
 
-    assert pl.path == path_playlist_xautopf_bp
     assert pl.name == splitext(basename(path_playlist_xautopf_bp))[0]
-    assert pl.ext == splitext(basename(path_playlist_xautopf_bp))[1]
     assert pl.description == "I am a description"
+    assert pl.path == path_playlist_xautopf_bp
+    assert pl.ext == splitext(basename(path_playlist_xautopf_bp))[1]
 
     # comparers
     assert pl.matcher.comparers[0].field == LocalTrackField.ALBUM
@@ -97,12 +93,7 @@ def test_load_playlist_1():
         track.artist = None
     for i, track in enumerate(tracks, 1):
         track.track_number = i
-    tracks_actual = [
-        FLAC(path_track_flac, remote_wrangler=remote_wrangler),
-        WMA(path_track_wma, remote_wrangler=remote_wrangler),
-        MP3(path_track_mp3, remote_wrangler=remote_wrangler),
-        M4A(path_track_m4a, remote_wrangler=remote_wrangler)
-    ]
+    tracks_actual = [FLAC(path_track_flac), WMA(path_track_wma), MP3(path_track_mp3), M4A(path_track_m4a)]
     tracks += tracks_actual
 
     pl = XAutoPF(
@@ -111,7 +102,6 @@ def test_load_playlist_1():
         library_folder=path_resources,
         other_folders="../",
         check_existence=True,
-        remote_wrangler=remote_wrangler
     )
     assert pl.tracks == tracks_actual[:2]
     pretty_printer_tests(pl)
@@ -122,7 +112,6 @@ def test_load_playlist_1():
         library_folder=path_resources,
         other_folders="../",
         check_existence=False,
-        remote_wrangler=remote_wrangler
     )
     assert len(pl.tracks) == 11
     tracks_expected = tracks_actual[:2] + [track for track in tracks if 20 < track.track_number < 30]
@@ -140,13 +129,12 @@ def test_load_playlist_2():
         library_folder=path_resources,
         other_folders="../",
         check_existence=False,
-        remote_wrangler=remote_wrangler
     )
 
-    assert pl.path == path_playlist_xautopf_ra
     assert pl.name == splitext(basename(path_playlist_xautopf_ra))[0]
-    assert pl.ext == splitext(basename(path_playlist_xautopf_ra))[1]
     assert pl.description is None
+    assert pl.path == path_playlist_xautopf_ra
+    assert pl.ext == splitext(basename(path_playlist_xautopf_ra))[1]
 
     # matcher
     assert len(pl.matcher.comparers) == 0
@@ -181,7 +169,6 @@ def test_load_playlist_2():
         library_folder=path_resources,
         other_folders="../",
         check_existence=False,
-        remote_wrangler=remote_wrangler
     )
     limit = pl.limiter.limit_max
     assert len(pl.tracks) == limit
@@ -202,9 +189,7 @@ def test_save_playlist():
         track.artist = None
     for i, track in enumerate(tracks, 1):
         track.track_number = i
-    tracks_actual: list[LocalTrack] = [
-        FLAC(path_track_flac, remote_wrangler=remote_wrangler), WMA(path_track_wma, remote_wrangler=remote_wrangler)
-    ]
+    tracks_actual: list[LocalTrack] = [FLAC(path_track_flac), WMA(path_track_wma)]
     tracks += tracks_actual
 
     pl = XAutoPF(
@@ -213,7 +198,6 @@ def test_save_playlist():
         library_folder=path_resources,
         other_folders="../",
         check_existence=False,
-        remote_wrangler=remote_wrangler
     )
     assert pl.path == path_file_copy
     assert len(pl.tracks) == 11
@@ -227,7 +211,8 @@ def test_save_playlist():
     pl.tracks.remove(tracks_actual[0])
 
     # first test results on a dry run
-    original_dt = pl.date_modified
+    original_dt_modified = pl.date_modified
+    original_dt_created = pl.date_created
     result = pl.save()
 
     assert result.start == 11
@@ -245,10 +230,12 @@ def test_save_playlist():
     assert not result.start_limiter
     assert result.start_sorter
 
-    assert pl.date_modified == original_dt
+    assert pl.date_modified == original_dt_modified
+    assert pl.date_created == original_dt_created
 
     # save the file and check it has been updated
     pl.save(dry_run=False)
-    assert pl.date_modified > original_dt
+    assert pl.date_modified > original_dt_modified
+    assert pl.date_created == original_dt_created
 
     os.remove(path_file_copy)

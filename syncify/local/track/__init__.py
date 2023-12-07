@@ -26,7 +26,7 @@ def load_track(path: str, available: Iterable[str] = (), remote_wrangler: Remote
         The tag that is used for reading and writing is set by the ``uri_tag`` class attribute on the track object.
         If no ``remote_wrangler`` is given, no URI processing will occur.
     :return: Loaded :py:class:`LocalTrack` object
-    :raise InvalidFileType: If the file type is not supported.
+    :raise :py:class:`InvalidFileType`: If the file type is not supported.
     """
     ext = splitext(path)[1].casefold()
 

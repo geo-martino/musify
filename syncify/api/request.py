@@ -57,7 +57,7 @@ class RequestHandler(APIAuthoriser, Logger):
             ``GET``, ``OPTIONS``, ``HEAD``, ``POST``, ``PUT``, ``PATCH``, or ``DELETE``.
         :param url: URL for the new :class:`Request` object.
         :return: The JSON formatted response or, if JSON formatting not possible, the text response.
-        :raise APIError: On any logic breaking error/response.
+        :raise :py:class:`APIError`: On any logic breaking error/response.
         """
         kwargs.pop("headers", None)
         response = self._request(method=method, url=url, *args, **kwargs)

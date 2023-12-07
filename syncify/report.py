@@ -1,7 +1,7 @@
 from collections.abc import Iterable
 
 from syncify.abstract.collection import Library, ItemCollection
-from syncify.abstract.fields import TagField, FieldCombined
+from syncify.abstract.enums import TagField, FieldCombined
 from syncify.abstract.item import Item
 from syncify.local.library import LocalLibrary
 from syncify.utils.helpers import to_collection

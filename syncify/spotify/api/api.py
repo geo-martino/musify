@@ -49,7 +49,7 @@ class SpotifyAPI(SpotifyAPIWranglerMixin, SpotifyAPICore, SpotifyAPIItems, Spoti
             kind = self.get_item_type(value)
 
         while kind is None:  # get user to input ID type
-            kind = RemoteItemType.from_name(input("\33[1mEnter ID type: \33[0m"))
+            kind = RemoteItemType.from_name(input("\33[1mEnter ID type: \33[0m"))[0]
 
         url = self.convert(value, kind=kind, type_out=RemoteIDType.URL)
         name = self.get(url, log_pad=43)["name"]

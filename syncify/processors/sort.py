@@ -4,8 +4,7 @@ from datetime import datetime
 from random import shuffle
 from typing import Any, Self
 
-from syncify.abstract.enums import SyncifyEnum
-from syncify.abstract.fields import Field, FieldCombined
+from syncify.abstract.enums import SyncifyEnum, Field, FieldCombined
 from syncify.abstract.item import Item
 from syncify.abstract.processor import MusicBeeProcessor
 from syncify.local.exception import FieldError
@@ -17,7 +16,7 @@ def get_field_from_code(field_code: int) -> Field | None:
     """
     Get the :py:class:`Field` enum for a given MusicBee field code.
 
-    :raise FieldError: When the given ``field_code`` cannot be found.
+    :raise :py:class:`FieldError`: When the given ``field_code`` cannot be found.
     """
     if field_code == 0:
         return
@@ -160,8 +159,8 @@ class ItemSorter(MusicBeeProcessor):
         else:
             raise NotImplementedError("Sort type in XML not recognised")
 
-        shuffle_mode = ShuffleMode.from_name(cls._camel_to_snake(xml["SmartPlaylist"]["@ShuffleMode"]))
-        shuffle_by = ShuffleBy.from_name(cls._camel_to_snake(xml["SmartPlaylist"]["@GroupBy"]))
+        shuffle_mode = ShuffleMode.from_name(cls._pascal_to_snake(xml["SmartPlaylist"]["@ShuffleMode"]))[0]
+        shuffle_by = ShuffleBy.from_name(cls._pascal_to_snake(xml["SmartPlaylist"]["@GroupBy"]))[0]
         shuffle_weight = float(xml["SmartPlaylist"].get("@ShuffleSameArtistWeight", 1))
 
         return cls(fields=fields, shuffle_mode=shuffle_mode, shuffle_by=shuffle_by, shuffle_weight=shuffle_weight)

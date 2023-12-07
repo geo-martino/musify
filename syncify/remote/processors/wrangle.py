@@ -27,7 +27,8 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
 
         :param value: URL/URI/ID to check.
         :return: The :py:class:`RemoteIDType`.
-        :raise RemoteIDTypeError: Raised when the function cannot determine the ID type of the input ``value``.
+        :raise :py:class:`RemoteIDTypeError`: Raised when the function cannot determine the ID type
+            of the input ``value``.
         """
         raise NotImplementedError
 
@@ -50,7 +51,8 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
         :param values: The values representing some remote items. See description for allowed value types.
             These items must all be of the same type of item to pass i.e. all tracks OR all artists etc.
         :return: :py:class:`RemoteItemType`
-        :raise RemoteItemTypeError: Raised when the function cannot determine the item type of the input ``values``.
+        :raise :py:class:`RemoteItemTypeError`: Raised when the function cannot determine the item type
+            of the input ``values``.
             Or when the list contains strings representing many differing remote item types or only IDs.
         """
         if isinstance(values, str) or isinstance(values, Mapping):
@@ -77,8 +79,10 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
     
         :param value: The value representing some remote item. See description for allowed value types.
         :return: The :py:class:`RemoteItemType`. If the given value is determined to be an ID, returns None.
-        :raise RemoteItemTypeError: Raised when the function cannot determine the item type of the input ``values``.
-        :raise EnumNotFoundError: Raised when the item type of teh given ``value`` is not a valid remote item type.
+        :raise :py:class:`RemoteItemTypeError`: Raised when the function cannot determine the item type
+            of the input ``values``.
+        :raise :py:class:`EnumNotFoundError`: Raised when the item type of teh given ``value`` is not
+            a valid remote item type.
         """
         raise NotImplementedError
 
@@ -95,8 +99,8 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
         :param values: The values representing some remote items. See description for allowed value types.
             These items must all be of the same type of item to pass i.e. all tracks OR all artists etc.
         :param kind: The remote item type to check for.
-        :raise RemoteItemTypeError: Raised when the function cannot validate the item type of the input ``values``
-            is of type ``kind`` or a simple ID.
+        :raise :py:class:`RemoteItemTypeError`: Raised when the function cannot validate the item type
+            of the input ``values`` is of type ``kind`` or a simple ID.
         """
         item_type = cls.get_item_type(values)
         if item_type is not None and not item_type == kind:
@@ -121,7 +125,8 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
         :param type_in: Optionally, give the ID type of the input ``value`` to skip some checks.
         :param type_out: The ID type of the output ``value``.
         :return: Formatted string.
-        :raise RemoteIDTypeError: Raised when the function cannot determine the item type of the input ``value``.
+        :raise :py:class:`RemoteIDTypeError`: Raised when the function cannot determine the item type
+            of the input ``value``.
         """
         raise NotImplementedError
 
@@ -141,7 +146,7 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
         :param kind: Optionally, give the item type of the input ``value`` to skip some checks.
             This is required when the given ``value`` is an ID.
         :return: List of IDs.
-        :raise RemoteError: Raised when the function cannot determine the item type of the input ``values``.
+        :raise :py:class:`RemoteError`: Raised when the function cannot determine the item type of the input ``values``.
             Or when it does not recognise the type of the input ``values`` parameter.
         """
         raise NotImplementedError

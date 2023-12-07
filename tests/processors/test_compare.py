@@ -10,6 +10,8 @@ from tests.abstract.misc import pretty_printer_tests
 from tests.local.track import random_track
 
 
+# TODO: add test for to_xml
+
 def test_init():
     comparer = ItemComparer(field=TrackField.IMAGES, condition="Contains")
     assert comparer.field == TrackField.IMAGES

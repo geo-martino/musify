@@ -33,8 +33,8 @@ class SpotifyAPICollections(RemoteAPICollections, metaclass=ABCMeta):
         :param playlist: In URL/URI/ID form, or the name of one of the currently authenticated user's playlists.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: The playlist URL.
-        :raise RemoteIDTypeError: Raised when the function cannot determine the item type of the input ``playlist``.
-            Or when it does not recognise the type of the input ``playlist`` parameter.
+        :raise :py:class:`RemoteIDTypeError`: Raised when the function cannot determine the item type of
+            the input ``playlist``. Or when it does not recognise the type of the input ``playlist`` parameter.
         """
         try:
             return self.convert(playlist, kind=RemoteItemType.PLAYLIST, type_out=RemoteIDType.URL)
@@ -144,8 +144,8 @@ class SpotifyAPICollections(RemoteAPICollections, metaclass=ABCMeta):
             This value will be limited to be between ``1`` and ``50``.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: API JSON responses for each collection.
-        :raise RemoteIDTypeError: Raised when the input ``user`` does not represent a user URL/URI/ID.
-        :raise RemoteItemTypeError: Raised a user is given and the ``kind`` is not ``PLAYLIST``.
+        :raise :py:class:`RemoteIDTypeError`: Raised when the input ``user`` does not represent a user URL/URI/ID.
+        :raise :py:class:`RemoteItemTypeError`: Raised a user is given and the ``kind`` is not ``PLAYLIST``.
             Or when the given ``kind`` is not a valid collection.
         """
         if kind == RemoteItemType.ARTIST or kind.name not in self.collection_types:
@@ -202,8 +202,8 @@ class SpotifyAPICollections(RemoteAPICollections, metaclass=ABCMeta):
             This value will be limited to be between ``1`` and the object's current ``batch_size_max``. Maximum=50.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: API JSON responses for each collection containing the collections items under the ``items`` key.
-        :raise RemoteItemTypeError: Raised when the function cannot determine the item type of the input ``values``.
-            Or when the given ``kind`` is not a valid collection.
+        :raise :py:class:`RemoteItemTypeError`: Raised when the function cannot determine the item type of the
+            input ``values``. Or when the given ``kind`` is not a valid collection.
         """
         if kind is None:  # determine kind if not given
             kind = self.get_item_type(values)
@@ -280,8 +280,10 @@ class SpotifyAPICollections(RemoteAPICollections, metaclass=ABCMeta):
         :param limit: Size of each batch of IDs to add. This value will be limited to be between ``1`` and ``50``.
         :param skip_dupes: Skip duplicates.
         :return: The number of tracks added to the playlist.
-        :raise RemoteIDTypeError: Raised when the input ``playlist`` does not represent a playlist URL/URI/ID.
-        :raise RemoteItemTypeError: Raised when the item types of the input ``items`` are not all tracks or IDs.
+        :raise :py:class:`RemoteIDTypeError`: Raised when the input ``playlist`` does not represent
+            a playlist URL/URI/ID.
+        :raise :py:class:`RemoteItemTypeError`: Raised when the item types of the input ``items``
+            are not all tracks or IDs.
         """
         url = f"{self.get_playlist_url(playlist, use_cache=False)}/tracks"
         limit = limit_value(limit, ceil=50)
@@ -332,8 +334,10 @@ class SpotifyAPICollections(RemoteAPICollections, metaclass=ABCMeta):
         :param limit: Size of each batch of IDs to clear in a single request.
             This value will be limited to be between ``1`` and ``100``.
         :return: The number of tracks cleared from the playlist.
-        :raise RemoteIDTypeError: Raised when the input ``playlist`` does not represent a playlist URL/URI/ID.
-        :raise RemoteItemTypeError: Raised when the item types of the input ``items`` are not all tracks or IDs.
+        :raise :py:class:`RemoteIDTypeError`: Raised when the input ``playlist`` does not represent
+            a playlist URL/URI/ID.
+        :raise :py:class:`RemoteItemTypeError`: Raised when the item types of the input ``items``
+            are not all tracks or IDs.
         """
         url = f"{self.get_playlist_url(playlist, use_cache=False)}/tracks"
         limit = limit_value(limit, ceil=100)

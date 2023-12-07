@@ -1,5 +1,3 @@
-# TODO: write generic tests for the functions of the abstract classes
-#  run these tests on all implementations of abstract classes
 import json
 import re
 
@@ -25,3 +23,9 @@ def pretty_printer_tests(obj: PrettyPrinter, dict_json_equal: bool = True) -> No
 
     # check json is serialisable
     assert isinstance(json.dumps(obj_as_json), str)
+
+
+def test_case_conversion():
+    assert PrettyPrinter._pascal_to_snake("PascalCase") == "pascal_case"
+    assert PrettyPrinter._pascal_to_snake("camelCase") == "camel_case"
+    assert PrettyPrinter._snake_to_pascal("snake_case") == "SnakeCase"

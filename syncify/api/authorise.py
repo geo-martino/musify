@@ -72,7 +72,7 @@ class APIAuthoriser(Logger):
         """
         Format headers to usage appropriate format
 
-        :raise APIError: If no token has been loaded,
+        :raise :py:class:`APIError`: If no token has been loaded,
             or a valid value was not found at the ``token_key_path`` within the token
         """
         if self.token is None:
@@ -137,7 +137,7 @@ class APIAuthoriser(Logger):
             Ignored when force_new is True.
         :param force_new: Ignore saved/loaded token and generate new token.
         :return: Headers for request authorisation.
-        :raise APIError: If the token cannot be validated.
+        :raise :py:class:`APIError`: If the token cannot be validated.
         """
         # attempt to load stored token if found
         if (self.token is None or force_load) and not force_new:

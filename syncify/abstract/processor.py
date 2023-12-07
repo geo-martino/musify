@@ -1,14 +1,40 @@
 from abc import ABCMeta, abstractmethod
-from collections.abc import Mapping, Callable
-from typing import Any, Self
+from collections.abc import Mapping, Callable, Iterable
+from functools import partial, update_wrapper
+from typing import Any, Self, Optional
 
 from syncify.abstract.misc import PrettyPrinter
-from syncify.processors.decorators import dynamicprocessormethod
 from syncify.processors.exception import ProcessorLookupError
 
 
 class Processor(PrettyPrinter, metaclass=ABCMeta):
     """Generic base class for processors"""
+
+
+# noinspection PyPep8Naming
+class dynamicprocessormethod:
+    """
+    Decorator for methods on a class decorated with the :py:func:`processor` decorator
+
+    This assigns the method a processor method which can be dynamically called by the processor class.
+    Optionally, provide a list of alternative names from which this processor method can also be called.
+    """
+    def __new__(cls, *args, **kwargs):
+        func: Optional[Callable] = next((a for a in args if callable(a)), None)
+
+        self = partial(cls, *args) if func is None else super().__new__(cls)
+        return update_wrapper(self, func)
+
+    def __init__(self, *args: Optional[Callable] | Iterable[str]):
+        self.func = next((a for a in args if callable(a)), None)
+        self.alternative_names = tuple(a for a in args if isinstance(a, str))
+
+    def __get__(self, instance, owner):
+        self.instance_ = instance
+        return self.__call__
+
+    def __call__(self, *args, **kwargs):
+        return self.func(self.instance_, *args, **kwargs)
 
 
 class DynamicProcessor(Processor, metaclass=ABCMeta):
@@ -97,7 +123,7 @@ class MusicBeeProcessor(ItemProcessor):
     @classmethod
     def _processor_method_fmt(cls, name: str) -> str:
         """A custom formatter to apply to the dynamic processor name"""
-        return "_" + cls._camel_to_snake(name).lstrip("_")
+        return "_" + cls._pascal_to_snake(name)
 
     @classmethod
     @abstractmethod

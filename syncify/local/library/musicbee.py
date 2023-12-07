@@ -189,7 +189,7 @@ class MusicBee(LocalLibrary, File):
         :param id_: A persistent ID to validate
         :param value: A value to generate a persistent ID from.
         :return: The valid persistent ID.
-        :raise MusicBeeIDError: When no ``id_`` and no ``value`` is given, or the given ``id_`` is invalid.
+        :raise :py:class:`MusicBeeIDError`: When no ``id_`` and no ``value`` is given, or the given ``id_`` is invalid.
         """
         if not value and not id_:
             raise MusicBeeIDError(
@@ -210,7 +210,7 @@ class MusicBee(LocalLibrary, File):
         :param track_id: An incremental ID to assign to the track.
         :param persistent_id: An 16-character unique ID to assign to the track.
         :return: A dict representation of XML data for the given track.
-        :raise MusicBeeIDError: When the given ``persistent_id`` is invalid.
+        :raise :py:class:`MusicBeeIDError`: When the given ``persistent_id`` is invalid.
         """
         genres = {}
         if track.genres and len(track.genres) == 1:
@@ -274,7 +274,7 @@ class MusicBee(LocalLibrary, File):
         :param playlist_id: An incremental ID to assign to the playlist.
         :param persistent_id: An 16-character unique ID to assign to the playlist.
         :return: A dict representation of XML data for the given playlist.
-        :raise MusicBeeIDError: When the given ``persistent_id`` is invalid.
+        :raise :py:class:`MusicBeeIDError`: When the given ``persistent_id`` is invalid.
         """
         items: list[dict[str, int]] = []
         for track in playlist:
@@ -408,9 +408,6 @@ class XMLLibraryParser:
                 break
 
             peek = elem.getnext()
-
-            if elem.text == "Playlist ID":
-                print(elem.text, peek.text)
             if peek is not None and peek.tag == "dict":
                 record[elem.text] = self._parse_dict()
             else:

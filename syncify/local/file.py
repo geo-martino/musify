@@ -84,30 +84,6 @@ class File(metaclass=ABCMeta):
         raise NotImplementedError
 
 
-def open_image(source: str | bytes | Path | Request) -> Image.Image:
-    """
-    Open Image object from a given URL or file path
-
-    :return: The loaded :py:class:`Image.Image`
-    :raise ImageLoadError: If the image cannot be loaded.
-    """
-
-    try:  # open image from link
-        if isinstance(source, Request) or (isinstance(source, str) and source.startswith("http")):
-            response: HTTPResponse = urlopen(source)
-            image = Image.open(response)
-            response.close()
-            return image
-
-        elif not isinstance(source, Request):
-            return Image.open(source)
-
-    except (URLError, FileNotFoundError, UnidentifiedImageError):
-        pass
-
-    raise ImageLoadError(f"{source} | Failed to open image")
-
-
 @dataclass(frozen=True)
 class TagMap:
     """Map of human-friendly tag name to ID3 tag ids for a given file type"""
@@ -131,6 +107,30 @@ class TagMap:
     def __getitem__(self, key: str) -> list[str]:
         """Safely get the value of a given attribute key, returning an empty string if the key is not found"""
         return getattr(self, key, [])
+
+
+def open_image(source: str | bytes | Path | Request) -> Image.Image:
+    """
+    Open Image object from a given URL or file path
+
+    :return: The loaded :py:class:`Image.Image`
+    :raise :py:class:`ImageLoadError`: If the image cannot be loaded.
+    """
+
+    try:  # open image from link
+        if isinstance(source, Request) or (isinstance(source, str) and source.startswith("http")):
+            response: HTTPResponse = urlopen(source)
+            image = Image.open(response)
+            response.close()
+            return image
+
+        elif not isinstance(source, Request):
+            return Image.open(source)
+
+    except (URLError, FileNotFoundError, UnidentifiedImageError):
+        pass
+
+    raise ImageLoadError(f"{source} | Failed to open image")
 
 
 def get_image_bytes(image: Image.Image) -> bytes:

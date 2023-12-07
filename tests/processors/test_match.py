@@ -1,11 +1,32 @@
-from syncify.processors.match import ItemMatcher
+from syncify.processors.match import ItemMatcher, CleanTagConfig
 from tests.abstract.misc import pretty_printer_tests
 from tests.local.track import random_track
 
 
+def get_matcher() -> ItemMatcher:
+    """Return an :py:class:`ItemMatcher` object with expected config for subsequent tests."""
+    matcher = ItemMatcher()
+
+    matcher.karaoke_tags = {"karaoke", "backing", "instrumental"}
+    matcher.year_range = 10
+
+    matcher.clean_tags_remove_all = {"the", "a", "&", "and"}
+    matcher.clean_tags_split_all = set()
+    matcher.clean_tags_config = (
+        CleanTagConfig(name="title", _remove={"part"}, _split={"featuring", "feat.", "ft.", "/"}),
+        CleanTagConfig(name="artist", _split={"featuring", "feat.", "ft.", "vs"}),
+        CleanTagConfig(name="album", _remove={"ep"}, _preprocess=lambda x: x.split('-')[0])
+    )
+
+    matcher.reduce_name_score_on = {"live", "demo", "acoustic"}
+    matcher.reduce_name_score_factor = 0.5
+
+    return matcher
+
+
 # noinspection SpellCheckingInspection
 def test_init_and_clean_tags():
-    matcher = ItemMatcher()
+    matcher = get_matcher()
     pretty_printer_tests(matcher)
 
     track = random_track()
@@ -22,7 +43,7 @@ def test_init_and_clean_tags():
 
 
 def test_match_not_karaoke():
-    matcher = ItemMatcher()
+    matcher = get_matcher()
 
     track = random_track()
     track.title = "title"
@@ -40,7 +61,7 @@ def test_match_not_karaoke():
 
 
 def test_match_name():
-    matcher = ItemMatcher()
+    matcher = get_matcher()
 
     track1 = random_track()
     track2 = random_track()
@@ -75,7 +96,7 @@ def test_match_name():
 
 
 def test_match_artist():
-    matcher = ItemMatcher()
+    matcher = get_matcher()
 
     track1 = random_track()
     track2 = random_track()
@@ -99,7 +120,7 @@ def test_match_artist():
 
 
 def test_match_album():
-    matcher = ItemMatcher()
+    matcher = get_matcher()
 
     track1 = random_track()
     track2 = random_track()
@@ -123,7 +144,7 @@ def test_match_album():
 
 
 def test_match_length():
-    matcher = ItemMatcher()
+    matcher = get_matcher()
 
     track1 = random_track()
     track2 = random_track()
@@ -141,8 +162,7 @@ def test_match_length():
 
 
 def test_match_year():
-    matcher = ItemMatcher()
-    matcher.year_range = 10  # 10 year range max difference
+    matcher = get_matcher()
 
     track1 = random_track()
     track2 = random_track()
@@ -168,8 +188,7 @@ def test_match_year():
 
 
 def test_match_score():
-    matcher = ItemMatcher()
-    matcher.year_range = 10  # 10 year range max difference
+    matcher = get_matcher()
 
     track1 = random_track()
     track2 = random_track()

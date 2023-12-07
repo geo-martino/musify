@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 
 from syncify import PROGRAM_NAME
 from syncify.abstract.collection import ItemCollection
-from syncify.abstract.fields import FieldCombined
+from syncify.abstract.enums import FieldCombined
 from syncify.abstract.item import Item, Track
 from syncify.abstract.misc import Result
 from syncify.processors.match import ItemMatcher
@@ -75,6 +75,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         self.final_unavailable: list[Track] = []
         self.final_unchanged: list[Track] = []
 
+    # noinspection PyBroadException
     def _make_temp_playlist(self, name: str, collection: ItemCollection) -> None:
         """Create a temporary playlist, store its URL for later unfollowing, and add all given URIs."""
         try:
@@ -87,10 +88,10 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
             self.playlist_name_collection[name] = collection
 
             self.api.add_to_playlist(url, items=uris, skip_dupes=False)
-        except KeyboardInterrupt:
-            self.quit = True
-        except BaseException:  # TODO: too broad an exception clause
+        except Exception:  # some kind of logic error, log it, delete playlists, and quit
             self.logger.error(traceback.format_exc())
+            self.quit = True
+        except BaseException:  # user has tried to exit the program, delete playlists, and quit
             self.quit = True
 
     def _get_user_input(self, text: str | None = None) -> str:

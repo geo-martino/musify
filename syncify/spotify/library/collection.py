@@ -22,7 +22,7 @@ class SpotifyCollection[T: SpotifyObject](SpotifyObjectWranglerMixin, metaclass=
         ``use_cache`` forces request to return a cached result if available.
         """
         kind = cls.__name__.casefold().replace("spotify", "")
-        item_type = RemoteItemType.from_name(kind)
+        item_type = RemoteItemType.from_name(kind)[0]
         key = cls.api.collection_types[item_type.name]
 
         try:  # attempt to get response from the given value alone
@@ -34,8 +34,6 @@ class SpotifyCollection[T: SpotifyObject](SpotifyObjectWranglerMixin, metaclass=
             return cls.api.get_collections(value, kind=item_type, use_cache=use_cache)[0]
 
 
-# TODO: cannot view superclasses, something is messed up with the inheritance here
-#  also method/properties do not inherit docstrings from parent classes
 class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollection):
     """
     Extracts key ``album`` data from a Spotify API JSON response.

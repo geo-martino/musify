@@ -9,7 +9,7 @@ from tests.abstract.misc import pretty_printer_tests
 from tests.local.track import random_tracks
 
 
-# TODO: add tests for new exception cases
+# TODO: add test for to_xml
 
 
 def test_init():

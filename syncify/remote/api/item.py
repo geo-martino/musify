@@ -40,8 +40,8 @@ class RemoteAPIItems(RemoteAPIBase, metaclass=ABCMeta):
         :param limit: Size of batches to request.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: API JSON responses for each item.
-        :raise RemoteItemTypeError: Raised when the function cannot determine the item type of the input ``values``.
-            Or when it does not recognise the type of the input ``values`` parameter.
+        :raise :py:class:`RemoteItemTypeError`: Raised when the function cannot determine the item type
+            of the input ``values``. Or when it does not recognise the type of the input ``values`` parameter.
         """
         raise NotImplementedError
 
@@ -70,6 +70,7 @@ class RemoteAPIItems(RemoteAPIBase, metaclass=ABCMeta):
         :param limit: Size of batches to request when getting audio features.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: API JSON responses for each item.
-        :raise RemoteItemTypeError: Raised when the item types of the input ``tracks`` are not all tracks or IDs.
+        :raise :py:class:`RemoteItemTypeError`: Raised when the item types of the input ``tracks``
+            are not all tracks or IDs.
         """
         raise NotImplementedError

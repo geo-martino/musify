@@ -4,12 +4,10 @@ from operator import mul
 from random import shuffle
 from typing import Any, Self
 
-from syncify.abstract.enums import SyncifyEnum
-from syncify.abstract.fields import FieldCombined
+from syncify.abstract.enums import SyncifyEnum, FieldCombined
 from syncify.abstract.item import Item, Track
-from syncify.abstract.processor import MusicBeeProcessor, DynamicProcessor
+from syncify.abstract.processor import DynamicProcessor, MusicBeeProcessor, dynamicprocessormethod
 from syncify.local.file import File
-from syncify.processors.decorators import dynamicprocessormethod
 from syncify.processors.exception import ItemLimiterError
 from syncify.processors.sort import ItemSorter
 
@@ -64,7 +62,7 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
         # MusicBee appears to have some extra allowance on time and byte limits of ~1.25
         return cls(
             limit=int(conditions["@Count"]),
-            on=LimitType.from_name(conditions["@Type"]),
+            on=LimitType.from_name(conditions["@Type"])[0],
             sorted_by=conditions["@SelectedBy"],
             allowance=1.25
         )
@@ -133,7 +131,7 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
         """
         Convert units for item length or size and return the value.
 
-        :raise LimitError: When the given limit type cannot be found
+        :raise :py:class:`ItemLimiterError`: When the given limit type cannot be found
         """
         if 10 < self.kind.value < 20:
             factors = (1, 60, 60, 24, 7)[:self.kind.value % 10]

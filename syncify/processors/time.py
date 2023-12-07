@@ -1,10 +1,9 @@
 from datetime import timedelta
-from typing import SupportsInt, Any
+from typing import Any
 
 from dateutil.relativedelta import relativedelta
 
-from syncify.abstract.processor import DynamicProcessor
-from syncify.processors.decorators import dynamicprocessormethod
+from syncify.abstract.processor import DynamicProcessor, dynamicprocessormethod
 
 
 class TimeMapper(DynamicProcessor):
@@ -18,26 +17,26 @@ class TimeMapper(DynamicProcessor):
         super().__init__()
         self._set_processor_name(func)
 
-    def __call__(self, value: SupportsInt):
+    def __call__(self, value: Any):
         return self._process(value)
 
     @dynamicprocessormethod
-    def hours(self, value: SupportsInt) -> timedelta:
+    def hours(self, value: Any) -> timedelta:
         """Map given ``value`` in hours to :py:class:`timedelta`"""
         return timedelta(hours=int(value))
 
     @dynamicprocessormethod
-    def days(self, value: SupportsInt) -> timedelta:
+    def days(self, value: Any) -> timedelta:
         """Map given ``value`` in days to :py:class:`timedelta`"""
         return timedelta(days=int(value))
 
     @dynamicprocessormethod
-    def weeks(self, value: SupportsInt) -> timedelta:
+    def weeks(self, value: Any) -> timedelta:
         """Map given ``value`` in weeks to :py:class:`timedelta`"""
         return timedelta(weeks=int(value))
 
     @dynamicprocessormethod
-    def months(self, value: SupportsInt) -> relativedelta:
+    def months(self, value: Any) -> relativedelta:
         """Map given ``value`` in months to :py:class:`timedelta`"""
         return relativedelta(months=int(value))
 
