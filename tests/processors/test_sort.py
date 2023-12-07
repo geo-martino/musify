@@ -2,7 +2,7 @@ from collections.abc import Callable
 from itertools import groupby
 from random import choice, randrange
 
-from syncify.fields import TrackField
+from syncify.fields import TrackField, LocalTrackField
 from syncify.local.track import LocalTrack
 from syncify.processors.sort import ItemSorter, ShuffleMode
 from syncify.utils.helpers import strip_ignore_words
@@ -36,9 +36,9 @@ def test_sort_by_field():
         track.date_added = track.date_added.replace(second=i)
 
     tracks_sorted = sorted(tracks, key=lambda t: t.date_added)
-    ItemSorter.sort_by_field(tracks, field=TrackField.DATE_ADDED)
+    ItemSorter.sort_by_field(tracks, field=LocalTrackField.DATE_ADDED)
     assert tracks == tracks_sorted
-    ItemSorter.sort_by_field(tracks, field=TrackField.DATE_ADDED, reverse=True)
+    ItemSorter.sort_by_field(tracks, field=LocalTrackField.DATE_ADDED, reverse=True)
     assert tracks == list(reversed(tracks_sorted))
 
     # sort on str, ignoring defined words like 'The' and 'A'

@@ -49,9 +49,6 @@ class TrackField(TrackFieldMixin):
     LENGTH = FieldCombined.LENGTH.value
     RATING = FieldCombined.RATING.value
 
-    # date properties
-    DATE_ADDED = FieldCombined.DATE_ADDED.value
-
     # remote properties
     URI = FieldCombined.URI.value
 
@@ -140,6 +137,7 @@ class FolderField(Field):
     # tags/core properties
     TRACK_TOTAL = FieldCombined.TRACK_TOTAL.value
     GENRES = FieldCombined.GENRES.value
+    IMAGES = FieldCombined.IMAGES.value
     COMPILATION = FieldCombined.COMPILATION.value
     LENGTH = FieldCombined.LENGTH.value
 
@@ -163,9 +161,6 @@ class AlbumField(Field):
     LENGTH = FieldCombined.LENGTH.value
     RATING = FieldCombined.RATING.value
 
-    # remote properties
-    URI = FieldCombined.URI.value
-
 
 class ArtistField(Field):
     ALL = FieldCombined.ALL.value
@@ -177,6 +172,3 @@ class ArtistField(Field):
     IMAGES = FieldCombined.IMAGES.value
     LENGTH = FieldCombined.LENGTH.value
     RATING = FieldCombined.RATING.value
-
-    # remote properties
-    URI = FieldCombined.URI.value

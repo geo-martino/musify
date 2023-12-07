@@ -134,4 +134,4 @@ class TagField(Field):
         """
         if isinstance(tags, cls):
             return tags.to_tag()
-        return {t.name.lower() for tag in tags for t in tag.to_tag()}
+        return {t for tag in tags for t in tag.to_tag()}

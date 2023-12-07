@@ -19,8 +19,8 @@ def test_init():
     assert comparer._processor == comparer._contains
     pretty_printer_tests(comparer)
 
-    comparer = ItemComparer(field=TrackField.DATE_ADDED, condition="___greater than_  ")
-    assert comparer.field == TrackField.DATE_ADDED
+    comparer = ItemComparer(field=LocalTrackField.DATE_ADDED, condition="___greater than_  ")
+    assert comparer.field == LocalTrackField.DATE_ADDED
     assert not comparer._converted
     assert comparer._expected is None
     assert comparer.condition == "greater_than"
@@ -134,7 +134,7 @@ def test_compare_date():
     track = random_track()
 
     # all datetime comparisons only consider date part
-    comparer = ItemComparer(field=TrackField.DATE_ADDED, condition="is", expected=datetime(2023, 4, 21, 19, 20))
+    comparer = ItemComparer(field=LocalTrackField.DATE_ADDED, condition="is", expected=datetime(2023, 4, 21, 19, 20))
     assert comparer._expected == [datetime(2023, 4, 21, 19, 20)]
     assert not comparer._converted
     assert comparer._processor == comparer._is
@@ -145,7 +145,7 @@ def test_compare_date():
     assert comparer._converted
 
     # converts supported strings
-    comparer = ItemComparer(field=TrackField.DATE_ADDED, condition="is_not", expected="20/01/01")
+    comparer = ItemComparer(field=LocalTrackField.DATE_ADDED, condition="is_not", expected="20/01/01")
     assert comparer._expected == ["20/01/01"]
     assert not comparer._converted
     assert comparer._processor == comparer._is_not
@@ -154,7 +154,7 @@ def test_compare_date():
     assert comparer._expected == [date(2001, 1, 20)]
     assert comparer._converted
 
-    comparer = ItemComparer(field=TrackField.DATE_ADDED, condition="is_not", expected="13/8/2004")
+    comparer = ItemComparer(field=LocalTrackField.DATE_ADDED, condition="is_not", expected="13/8/2004")
     assert comparer._expected == ["13/8/2004"]
     assert not comparer._converted
     assert comparer._processor == comparer._is_not
@@ -164,7 +164,7 @@ def test_compare_date():
     assert comparer._converted
 
     # converts date ranges
-    comparer = ItemComparer(field=TrackField.DATE_ADDED, condition="is_in_the_last", expected="8h")
+    comparer = ItemComparer(field=LocalTrackField.DATE_ADDED, condition="is_in_the_last", expected="8h")
     assert comparer._expected == ["8h"]
     assert not comparer._converted
     assert comparer._processor == comparer._is_after

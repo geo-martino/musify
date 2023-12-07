@@ -598,7 +598,5 @@ if __name__ == "__main__":
 
 
 ## NEEDED FOR v0.3
-# TODO: write tests to validate Field enum names are all present in related abstract classes
-#  and write test to ensure all mapped fields are present in FieldCombined enum
 # TODO: write tests, write tests, write tests
 # TODO: update the readme (dynamic readme?)
