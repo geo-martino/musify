@@ -18,6 +18,7 @@ from syncify.local.track.base.track import _MutagenMock
 from syncify.local.track.base.writer import TagWriter
 from syncify.remote.enums import RemoteIDType, RemoteItemType
 from tests import path_resources, path_cache, path_txt, random_str
+from tests.abstract.misc import pretty_printer_tests
 from tests.local import remote_wrangler
 
 path_track_cache = join(path_cache, basename(dirname(__file__)))
@@ -106,7 +107,7 @@ def copy_track(track: LocalTrack) -> tuple[str, str]:
     return path_file_base, path_file_copy
 
 
-def load_track_test(cls: type[LocalTrack], path: str):
+def load_track_test(cls: type[LocalTrack], path: str) -> None:
     """Generic test for loading a file to LocalTrack object"""
     track = cls(file=path, available=path_track_all, remote_wrangler=remote_wrangler)
 
@@ -134,7 +135,7 @@ def load_track_test(cls: type[LocalTrack], path: str):
         )
 
 
-def copy_track_test(cls: type[LocalTrack], path: str):
+def copy_track_test(cls: type[LocalTrack], path: str) -> None:
     """Generic test for copying a LocalTrack object"""
     track = cls(file=path, available=path_track_all, remote_wrangler=remote_wrangler)
 
@@ -152,7 +153,7 @@ def copy_track_test(cls: type[LocalTrack], path: str):
         assert value == track_deepcopy[key]
 
 
-def set_and_find_file_paths_test(cls: type[LocalTrack], path: str):
+def set_and_find_file_paths_test(cls: type[LocalTrack], path: str) -> None:
     """Generic test for settings and finding file paths for local track"""
     track = cls(file=path, remote_wrangler=remote_wrangler)
     assert track.path == path
@@ -164,7 +165,7 @@ def set_and_find_file_paths_test(cls: type[LocalTrack], path: str):
     assert track.path == path
 
 
-def clear_tags_test(cls: type[LocalTrack], path: str):
+def clear_tags_test(cls: type[LocalTrack], path: str) -> None:
     """Generic test for clearing tags on a given track."""
     track = cls(file=path, available=path_track_all, remote_wrangler=remote_wrangler)
     path_file_base, path_file_copy = copy_track(track)
@@ -378,7 +379,7 @@ def update_images_test(cls: type[LocalTrack], path: str) -> None:
     os.remove(path_file_copy)
 
 
-def all_local_track_tests(cls: type[LocalTrack]):
+def all_local_track_tests(cls: type[LocalTrack]) -> None:
     """Wrapper for all LocalTrack tests"""
     path = class_path_map[cls]
 
@@ -388,3 +389,4 @@ def all_local_track_tests(cls: type[LocalTrack]):
     clear_tags_test(cls, path)
     update_tags_test(cls, path)
     update_images_test(cls, path)
+    pretty_printer_tests(cls(path))

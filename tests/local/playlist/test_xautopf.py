@@ -11,6 +11,7 @@ from syncify.local.track import LocalTrack, FLAC, M4A, WMA, MP3
 from syncify.processors.limit import LimitType
 from syncify.processors.sort import ShuffleMode, ShuffleBy
 from tests import path_txt
+from tests.abstract.misc import pretty_printer_tests
 from tests.local import remote_wrangler
 from tests.local.playlist import copy_playlist_file, path_resources
 from tests.local.playlist import path_playlist_xautopf_ra, path_playlist_xautopf_bp
@@ -86,6 +87,8 @@ def test_load_playlist_1():
     assert pl.sorter.shuffle_by == ShuffleBy.ALBUM
     assert pl.sorter.shuffle_weight == 0.5
 
+    pretty_printer_tests(pl)
+
     # prepare tracks to search through
     tracks = random_tracks(30)
     for i, track in enumerate(tracks[10:40]):
@@ -111,6 +114,7 @@ def test_load_playlist_1():
         remote_wrangler=remote_wrangler
     )
     assert pl.tracks == tracks_actual[:2]
+    pretty_printer_tests(pl)
 
     pl = XAutoPF(
         path=path_playlist_xautopf_bp,
@@ -123,6 +127,8 @@ def test_load_playlist_1():
     assert len(pl.tracks) == 11
     tracks_expected = tracks_actual[:2] + [track for track in tracks if 20 < track.track_number < 30]
     assert pl.tracks == sorted(tracks_expected, key=lambda t: t.track_number)
+    
+    pretty_printer_tests(pl)
 
 
 def test_load_playlist_2():
@@ -162,6 +168,8 @@ def test_load_playlist_2():
     assert pl.sorter.shuffle_by == ShuffleBy.TRACK
     assert pl.sorter.shuffle_weight == 0
 
+    pretty_printer_tests(pl)
+
     # prepare tracks to search through
     tracks = random_tracks(50)
     for i, track in enumerate(tracks):
@@ -179,6 +187,8 @@ def test_load_playlist_2():
     assert len(pl.tracks) == limit
     tracks_expected = sorted(tracks, key=lambda t: t.date_added, reverse=True)[:limit]
     assert pl.tracks == sorted(tracks_expected, key=lambda t: t.date_added, reverse=True)
+
+    pretty_printer_tests(pl)
 
 
 def test_save_playlist():

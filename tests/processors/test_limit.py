@@ -5,6 +5,7 @@ from datetime import datetime
 from syncify.local.track import LocalTrack
 from syncify.processors.limit import ItemLimiter, LimitType
 from tests import random_file
+from tests.abstract.misc import pretty_printer_tests
 from tests.local.track import random_tracks
 
 
@@ -14,12 +15,15 @@ from tests.local.track import random_tracks
 def test_init():
     limiter = ItemLimiter(sorted_by="HighestRating")
     assert limiter._processor == limiter._highest_rating
+    pretty_printer_tests(limiter)
 
     limiter = ItemLimiter(sorted_by="__ least_ recently_  added __ ")
     assert limiter._processor == limiter._least_recently_added
+    pretty_printer_tests(limiter)
 
     limiter = ItemLimiter(sorted_by="__most recently played__")
     assert limiter._processor == limiter._most_recently_played
+    pretty_printer_tests(limiter)
 
 
 def get_tracks_for_limit_test() -> tuple[list[LocalTrack], list[str]]:

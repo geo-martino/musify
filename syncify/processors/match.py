@@ -43,6 +43,15 @@ class CleanTagConfig:
         """Apply the preprocess function to value if given, return value unprocessed if not"""
         return self._preprocess(value) if self._preprocess else value
 
+    def as_json(self) -> dict[str, Any]:
+        """Return a dictionary representation of the key attributes of this object that is safe to output to JSON"""
+        return {
+            "name": self.name,
+            "remove": [value for value in self.remove],
+            "split": [value for value in self.split],
+            "preprocess": self._preprocess is not None,
+        }
+
 
 class ItemMatcher(ItemProcessor, Logger):
     """
@@ -404,5 +413,17 @@ class ItemMatcher(ItemProcessor, Logger):
             },
             "allow_karaoke": self.allow_karaoke,
             "karaoke_tags": self.karaoke_tags,
+            "year_range": self.year_range,
+        }
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            "clean_tags": {
+                "remove_all": [value for value in self._clean_tags_remove_all],
+                "split_all": [value for value in self._clean_tags_split_all],
+                "config": [config.as_json() for config in self._clean_tags_config],
+            },
+            "allow_karaoke": self.allow_karaoke,
+            "karaoke_tags": [value for value in self.karaoke_tags],
             "year_range": self.year_range,
         }

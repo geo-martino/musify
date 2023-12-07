@@ -8,6 +8,7 @@ from syncify.local.playlist.match import LocalMatcher
 from syncify.local.track import LocalTrack
 from syncify.processors.compare import ItemComparer
 from tests import random_str
+from tests.abstract.misc import pretty_printer_tests
 from tests.local.track import random_tracks
 
 
@@ -65,6 +66,8 @@ def test_init():
     matcher = LocalMatcher(include_paths=include_paths, exclude_paths=exclude_paths, check_existence=True)
     assert matcher.include_paths == []
     assert matcher.exclude_paths == []
+
+    pretty_printer_tests(matcher)
 
 
 @dataclass

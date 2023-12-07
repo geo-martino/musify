@@ -6,6 +6,7 @@ from syncify.fields import TrackField, LocalTrackField
 from syncify.local.track import MP3, M4A, FLAC
 from syncify.processors.compare import ItemComparer
 from syncify.processors.exception import ItemComparerError, ProcessorLookupError
+from tests.abstract.misc import pretty_printer_tests
 from tests.local.track import random_track
 
 
@@ -16,6 +17,7 @@ def test_init():
     assert not comparer._converted
     assert comparer.condition == "contains"
     assert comparer._processor == comparer._contains
+    pretty_printer_tests(comparer)
 
     comparer = ItemComparer(field=TrackField.DATE_ADDED, condition="___greater than_  ")
     assert comparer.field == TrackField.DATE_ADDED
@@ -23,6 +25,7 @@ def test_init():
     assert comparer._expected is None
     assert comparer.condition == "greater_than"
     assert comparer._processor == comparer._is_after
+    pretty_printer_tests(comparer)
 
     comparer = ItemComparer(field=LocalTrackField.EXT, condition=" is  _", expected=[".mp3", ".flac"])
     assert comparer.field == LocalTrackField.EXT
@@ -30,6 +33,7 @@ def test_init():
     assert comparer._expected == [".mp3", ".flac"]
     assert comparer.condition == "is"
     assert comparer._processor == comparer._is
+    pretty_printer_tests(comparer)
 
     with pytest.raises(ProcessorLookupError):
         ItemComparer(field=LocalTrackField.EXT, condition="this cond does not exist")

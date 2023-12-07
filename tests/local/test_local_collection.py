@@ -2,6 +2,7 @@ import pytest
 
 from syncify.local.collection import LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from syncify.local.exception import LocalCollectionError
+from tests.abstract.misc import pretty_printer_tests
 from tests.local import remote_wrangler
 from tests.local.track import random_tracks
 
@@ -38,6 +39,8 @@ def test_folder():
     assert sorted(collection.genres) == sorted(set(tracks[0].genres) | set(tracks[1].genres))
     assert collection.compilation
 
+    pretty_printer_tests(collection)
+
 
 def test_album():
     tracks = random_tracks(10)
@@ -61,6 +64,8 @@ def test_album():
     assert collection.genres == tracks[0].genres
     assert not collection.compilation
 
+    pretty_printer_tests(collection)
+
 
 def test_artist():
     tracks = random_tracks(10)
@@ -77,6 +82,8 @@ def test_artist():
     assert collection.name == tracks[0].artist
     assert collection.albums == [tracks[0].album, tracks[1].album]
     assert collection.genres == tracks[0].genres
+
+    pretty_printer_tests(collection)
 
 
 def test_genre():
@@ -100,3 +107,5 @@ def test_genre():
     assert collection.artists == [tracks[0].artist, tracks[-1].artist]
     assert collection.albums == [tracks[0].album]
     assert sorted(collection.genres) == sorted(set(tracks[0].genres) | set(tracks[-1].genres))
+
+    pretty_printer_tests(collection)

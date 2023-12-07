@@ -602,5 +602,3 @@ if __name__ == "__main__":
 #  and write test to ensure all mapped fields are present in FieldCombined enum
 # TODO: write tests, write tests, write tests
 # TODO: update the readme (dynamic readme?)
-# TODO: ensure all classes still print as expected
-#  add tests for to_dict(), str() and repr() methods on all inheritors on PrettyPrinter

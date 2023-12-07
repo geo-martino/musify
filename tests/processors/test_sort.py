@@ -6,6 +6,7 @@ from syncify.fields import TrackField
 from syncify.local.track import LocalTrack
 from syncify.processors.sort import ItemSorter, ShuffleMode
 from syncify.utils.helpers import strip_ignore_words
+from tests.abstract.misc import pretty_printer_tests
 from tests.local.track import random_tracks
 
 
@@ -81,7 +82,7 @@ def test_random_shuffle():
     assert tracks != tracks_copy
 
 
-def test_multi_sort():
+def test_multi_sort_and_printer():
     tracks = get_tracks_for_sort_test()
 
     # prepare tracks
@@ -91,8 +92,10 @@ def test_multi_sort():
 
     # simple multi-sort
     tracks_sorted = sorted(tracks, key=lambda t: (t.album, t.disc_number, t.track_number))
-    ItemSorter(fields=[TrackField.ALBUM, TrackField.DISC, TrackField.TRACK], shuffle_mode=ShuffleMode.NONE).sort(tracks)
+    sorter = ItemSorter(fields=[TrackField.ALBUM, TrackField.DISC, TrackField.TRACK], shuffle_mode=ShuffleMode.NONE)
+    sorter.sort(tracks)
     assert tracks == tracks_sorted
+    pretty_printer_tests(sorter)
 
     # complex multi-sort, includes reverse options
     tracks_sorted = []
@@ -105,5 +108,7 @@ def test_multi_sort():
                 tracks_sorted.extend(list(group_3))
 
     fields = {TrackField.ALBUM: True, TrackField.DISC: False, TrackField.TRACK: True}
-    ItemSorter(fields=fields, shuffle_mode=ShuffleMode.NONE).sort(tracks)
+    sorter = ItemSorter(fields=fields, shuffle_mode=ShuffleMode.NONE)
+    sorter.sort(tracks)
     assert tracks == tracks_sorted
+    pretty_printer_tests(sorter)

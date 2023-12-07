@@ -7,6 +7,7 @@ from syncify.local.exception import InvalidFileType
 from syncify.local.playlist import M3U
 from syncify.local.track import LocalTrack, FLAC, M4A, MP3, WMA
 from tests import path_txt
+from tests.abstract.misc import pretty_printer_tests
 from tests.local import remote_wrangler
 from tests.local.playlist import copy_playlist_file, path_playlist_m3u, path_resources, path_playlist_cache
 from tests.local.track import path_track_flac, path_track_m4a, path_track_wma, path_track_mp3, path_track_all
@@ -37,6 +38,8 @@ def test_load_fake_file_with_no_tracks():
     pl.load(tracks)
     assert pl.tracks == tracks
 
+    pretty_printer_tests(pl)
+
 
 def test_load_fake_file_with_bad_tracks():
     # initialising on a non-existent file and tracks
@@ -49,6 +52,8 @@ def test_load_fake_file_with_bad_tracks():
     tracks = get_tracks()
     pl.load(tracks)
     assert pl.tracks == tracks
+
+    pretty_printer_tests(pl)
 
 
 def test_load_file_with_no_tracks():
@@ -73,6 +78,8 @@ def test_load_file_with_no_tracks():
     # ...and then reloads all tracks from disk that match conditions when no tracks are given
     pl.load()
     assert pl.tracks == tracks_original
+
+    pretty_printer_tests(pl)
 
 
 def test_load_file_with_tracks():
@@ -106,6 +113,8 @@ def test_load_file_with_tracks():
     with pytest.raises(InvalidFileType):
         M3U(path=path_txt, remote_wrangler=remote_wrangler)
 
+    pretty_printer_tests(pl)
+
 
 def test_save_new_file():
     path_new = join(path_playlist_cache, "new_playlist.m3u")
@@ -133,8 +142,8 @@ def test_save_new_file():
     assert result.difference == len(tracks_random)
     assert result.final == len(tracks_random)
     assert not exists(path_new)
-    with pytest.raises(FileNotFoundError):
-        assert pl.date_modified is None
+    assert pl.date_modified is None
+    assert pl.date_created is None
 
     # ...save these loaded tracks for real
     pl = M3U(path=path_new, remote_wrangler=remote_wrangler)
@@ -147,6 +156,7 @@ def test_save_new_file():
     assert result.difference == len(tracks_random)
     assert result.final == len(tracks_random)
     assert pl.date_modified is not None
+    assert pl.date_created is not None
 
     with open(path_new, 'r') as f:
         paths = [line.strip() for line in f]
@@ -155,7 +165,8 @@ def test_save_new_file():
     # ...remove some tracks and add some new ones
     tracks_random_new = random_tracks(15)
     pl.tracks = pl.tracks[:20] + tracks_random_new
-    original_dt = pl.date_modified
+    original_dt_modified = pl.date_modified
+    original_dt_created = pl.date_created
     result = pl.save(dry_run=False)
 
     assert result.start == len(tracks_random)
@@ -164,7 +175,8 @@ def test_save_new_file():
     assert result.unchanged == 20
     assert result.difference == 5
     assert result.final == 35
-    assert pl.date_modified > original_dt
+    assert pl.date_modified > original_dt_modified
+    assert pl.date_created == original_dt_created
 
     with open(path_new, 'r') as f:
         paths = [line.strip() for line in f]

@@ -2,7 +2,7 @@ import re
 from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, Iterable
 from datetime import datetime
-from os.path import dirname, join, getmtime, getctime
+from os.path import dirname, join, getmtime, getctime, exists
 
 from syncify.abstract.collection import Playlist
 from syncify.abstract.misc import Result
@@ -56,12 +56,12 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
 
     @property
     def date_modified(self):
-        if self.path:
+        if self.path and exists(self.path):
             return datetime.fromtimestamp(getmtime(self.path))
 
     @property
     def date_created(self):
-        if self.path:
+        if self.path and exists(self.path):
             return datetime.fromtimestamp(getctime(self.path))
 
     def __init__(

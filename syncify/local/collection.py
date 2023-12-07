@@ -68,7 +68,8 @@ class LocalCollection[T: LocalItem](Logger, ItemCollection[T], metaclass=ABCMeta
     def last_modified(self) -> datetime:
         """Timestamp of the last modified track in this collection"""
         sort = sorted(filter(lambda t: t.date_modified, self.tracks), key=lambda t: t.date_modified, reverse=True)
-        return sort[0].date_modified
+        # None condition will only be returned when using dummy tracks in tests therefore not included in typing
+        return sort[0].date_modified if sort else None
 
     @property
     def last_added(self) -> datetime | None:

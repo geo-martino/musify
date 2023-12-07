@@ -2,6 +2,7 @@ from os.path import basename, splitext, join, dirname
 
 from syncify.local.library.library import LocalLibrary
 from tests import path_resources, path_cache
+from tests.abstract.misc import pretty_printer_tests
 from tests.local.playlist import path_playlist_resources, path_playlist_m3u
 from tests.local.playlist import path_playlist_xautopf_bp, path_playlist_xautopf_ra
 from tests.local.track import path_track_resources, path_track_all
@@ -11,7 +12,7 @@ path_library_cache = join(path_cache, basename(dirname(__file__)))
 
 
 # noinspection PyProtectedMember
-def init_blank_test(library: LocalLibrary):
+def init_blank_test(library: LocalLibrary) -> None:
     """General tests to run for every implementation of :py:class:`LocalLibrary`"""
     assert library.library_folder is None
     assert len(library._track_paths) == 0
@@ -28,3 +29,5 @@ def init_blank_test(library: LocalLibrary):
         splitext(basename(path_playlist_xautopf_bp).casefold())[0]: path_playlist_xautopf_bp,
         splitext(basename(path_playlist_xautopf_ra).casefold())[0]: path_playlist_xautopf_ra,
     }
+
+    pretty_printer_tests(library, dict_json_equal=False)

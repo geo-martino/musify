@@ -133,4 +133,4 @@ class PrettyPrinter(ABC):
         return attributes_repr
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({self.as_dict()})"
+        return f"{self.__class__.__name__}({repr(self.as_dict())})"

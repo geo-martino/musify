@@ -1,10 +1,12 @@
 from syncify.processors.match import ItemMatcher
+from tests.abstract.misc import pretty_printer_tests
 from tests.local.track import random_track
 
 
 # noinspection SpellCheckingInspection
-def test_clean_tags():
+def test_init_and_clean_tags():
     matcher = ItemMatcher()
+    pretty_printer_tests(matcher)
 
     track = random_track()
     track.uri = "spotify:track:ASDFGHJKLQWERTYUIOPZX"
