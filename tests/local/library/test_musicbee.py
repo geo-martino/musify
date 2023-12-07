@@ -184,6 +184,8 @@ def test_save():
     assert exists(path_output_xml)
     with open(path_output_xml, "r") as f_in, open(library_filepath, "r") as f_out:
         for line_in, line_out in zip(f_in, f_out):
+            if ">Music Folder<" in line_in:  # fails on other systems so skip
+                continue
             assert line_in == line_out
 
     os.remove(path_output_xml)
