@@ -3,7 +3,7 @@ import shutil
 import string
 from copy import copy, deepcopy
 from datetime import datetime
-from os.path import join, basename, dirname, exists
+from os.path import join, basename, dirname
 from random import choice, randrange, randint
 
 import pytest
@@ -96,8 +96,7 @@ def copy_track(track: LocalTrack) -> tuple[str, str]:
     """Copy a track to the test cache, returning the original and copy paths."""
     path_file_base = track.path
     path_file_copy = join(path_track_cache, basename(path_file_base))
-    if not exists(dirname(path_file_copy)):
-        os.makedirs(dirname(path_file_copy))
+    os.makedirs(dirname(path_file_copy), exist_ok=True)
 
     shutil.copyfile(path_file_base, path_file_copy)
 

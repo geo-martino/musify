@@ -1,13 +1,12 @@
 import os
 import string
-from os.path import join, dirname, exists
+from os.path import join, dirname
 from random import choice, randrange
 
 path_root = dirname(dirname(__file__))
 
 path_cache = join(path_root, ".test_cache")
-if not exists(path_cache):
-    os.makedirs(path_cache)
+os.makedirs(path_cache, exist_ok=True)
 
 path_resources = join(dirname(__file__), "__resources")
 

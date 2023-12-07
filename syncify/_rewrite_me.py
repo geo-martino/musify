@@ -152,8 +152,7 @@ class Playlists:
         return [self._clean_path(path, remove_prefix, stems) for path in tracks if len(path) > 1]
 
     def _load_playlists(self, playlists_path: str, remove_prefix: str="", stems: list=None):
-        if not exists(dirname(playlists_path)):
-            os.makedirs(dirname(playlists_path))
+        os.makedirs(dirname(playlists_path), exist_ok=True)
         m3u_paths = glob(join(playlists_path, "**", "*.m3u"), recursive=True)
         playlists = {}
         path_sep = '/'

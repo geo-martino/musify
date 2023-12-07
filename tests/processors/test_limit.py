@@ -59,7 +59,7 @@ def test_limit_basic():
 
 
 def test_limit_on_items():
-    tracks, _ = get_tracks_for_limit_test()
+    tracks, paths = get_tracks_for_limit_test()
 
     limiter = ItemLimiter(limit=25)
     tracks_copy = copy(tracks)
@@ -84,9 +84,12 @@ def test_limit_on_items():
     assert len(tracks_copy) == 30
     assert set(track.album for track in tracks_copy) == {"album 1", "album 3", "album 5"}
 
+    for path in paths:
+        os.remove(path)
+
 
 def test_limit_on_albums():
-    tracks, _ = get_tracks_for_limit_test()
+    tracks, paths = get_tracks_for_limit_test()
 
     limiter = ItemLimiter(limit=3, on=LimitType.ALBUMS)
     tracks_copy = copy(tracks)
@@ -105,9 +108,12 @@ def test_limit_on_albums():
     assert len(tracks_copy) == 30
     assert set(track.album for track in tracks_copy) == {"album 1", "album 3", "album 5"}
 
+    for path in paths:
+        os.remove(path)
+
 
 def test_limit_on_seconds():
-    tracks, _ = get_tracks_for_limit_test()
+    tracks, paths = get_tracks_for_limit_test()
 
     limiter = ItemLimiter(limit=30, on=LimitType.MINUTES)
     tracks_copy = copy(tracks)
@@ -119,9 +125,12 @@ def test_limit_on_seconds():
     limiter.limit(tracks_copy)
     assert len(tracks_copy) == 21
 
+    for path in paths:
+        os.remove(path)
+
 
 def test_limit_on_bytes():
-    tracks, random_files = get_tracks_for_limit_test()
+    tracks, paths = get_tracks_for_limit_test()
 
     limiter = ItemLimiter(limit=30, on=LimitType.KILOBYTES)
     tracks_copy = copy(tracks)
@@ -133,5 +142,5 @@ def test_limit_on_bytes():
     limiter.limit(tracks_copy)
     assert len(tracks_copy) == 21
 
-    for path in random_files:
+    for path in paths:
         os.remove(path)

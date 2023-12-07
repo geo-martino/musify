@@ -103,7 +103,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
             self.logger.debug(
                 f"Filtered out {playlists_total - len(self._playlist_paths)} playlists "
-                f"from {playlists_total} local playlists"
+                f"from {playlists_total} {self.name} playlists"
             )
 
         self.logger.debug(f"Set playlist folder: {self.playlist_folder} | {len(self._playlist_paths)} playlists found")
@@ -111,11 +111,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     @property
     def name(self) -> str:
         """The basename of the library folder"""
-        tmp_name = "Local"
-        try:
-            return basename(self.library_folder) if self.library_folder else tmp_name
-        except AttributeError:
-            return tmp_name
+        return self.__class__.__name__.replace("Library", "")
 
     @property
     def playlists(self) -> dict[str, LocalPlaylist]:
@@ -200,9 +196,9 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
     def load(self, tracks: bool = True, playlists: bool = True, log: bool = True) -> None:
         """Loads all tracks and playlists in this library from scratch and log results."""
-        self.logger.debug("Load local library: START")
+        self.logger.debug(f"Load {self.name} library: START")
         self.logger.info(
-            f"\33[1;95m ->\33[1;97m Loading local library of "
+            f"\33[1;95m ->\33[1;97m Loading {self.name} library of "
             f"{len(self._track_paths)} tracks and {len(self._playlist_paths)} playlists \33[0m"
         )
         self.print_line()
@@ -217,7 +213,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             if log:
                 self.log_playlists()
 
-        self.logger.debug("Load local library: DONE\n")
+        self.logger.debug(f"Load {self.name} library: DONE\n")
 
     def load_tracks(self) -> list[LocalTrack]:
         """Returns a list of loaded tracks from all the valid paths in this library"""
@@ -225,7 +221,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
     def _load_tracks(self) -> list[LocalTrack]:
         """Returns a list of loaded tracks from all the valid paths in this library"""
-        self.logger.debug("Load local tracks: START")
+        self.logger.debug(f"Load {self.name} tracks: START")
         self.logger.info(
             f"\33[1;95m  >\33[1;97m "
             f"Extracting metadata and properties for {len(self._track_paths)} tracks \33[0m"
@@ -243,7 +239,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
         self.print_line()
         self._log_errors(errors)
-        self.logger.debug("Load local tracks: DONE\n")
+        self.logger.debug(f"Load {self.name} tracks: DONE\n")
         return tracks
 
     def log_tracks(self) -> None:
@@ -267,7 +263,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         :return: The loaded playlists.
         :raise LocalCollectionError: If a given playlist name cannot be found.
         """
-        self.logger.debug("Load local playlist data: START")
+        self.logger.debug(f"Load {self.name} playlist data: START")
         if names is None:
             names = self._playlist_paths.keys()
 
@@ -295,7 +291,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
         self.print_line()
         self._log_errors(errors)
-        self.logger.debug("Load local playlist data: DONE\n")
+        self.logger.debug(f"Load {self.name} playlist data: DONE\n")
         return playlists
 
     def save_playlists(self, dry_run: bool = True) -> dict[str, Result]:
@@ -311,7 +307,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         """Log stats on currently loaded playlists"""
         max_width = self.get_max_width(self.playlists)
 
-        self.logger.report("\33[1;96mFound the following local playlists: \33[0m")
+        self.logger.report(f"\33[1;96mFound the following {self.name} playlists: \33[0m")
         for name, playlist in self.playlists.items():
             self.logger.report(
                 f"\33[97m{self.align_and_truncate(name, max_width=max_width)} \33[0m|"

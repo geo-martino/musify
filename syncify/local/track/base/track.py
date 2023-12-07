@@ -117,8 +117,7 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
 
         for i, image in enumerate(images):
             output_path = join(output_folder, self.filename + f"_{str(i).zfill(2)}" + image.format.casefold())
-            if not exists(dirname(output_path)):
-                os.makedirs(dirname(output_path))
+            os.makedirs(dirname(output_path), exist_ok=True)
 
             image.save(output_path)
             count += 1
@@ -129,8 +128,10 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
         """Return a dictionary representation of the tags for this track."""
         exclude = {
             inspect.currentframe().f_code.co_name,
-            "name"
+            "name",
             "valid_extensions",
+            "load",
+            "save",
             "remote_wrangler",
             "_clean_tags",
             "_available_paths",

@@ -9,7 +9,7 @@ from typing import Any
 from lxml import etree
 from lxml.etree import iterparse
 
-from syncify.local.exception import MusicBeeIDError, XMLReaderError
+from syncify.local.exception import MusicBeeIDError, XMLReaderError, MusicBeeError
 from syncify.local.file import File
 from syncify.local.library.library import LocalLibrary
 from syncify.local.playlist import LocalPlaylist
@@ -31,6 +31,9 @@ class MusicBee(LocalLibrary, File):
         The intialiser will check for the existence of this path and only store it if it exists.
     :param musicbee_folder: The absolute path of the playlist folder containing all playlists
         or the relative path within the given ``library_folder``.
+        The intialiser will check for the existence of this path and only store the absolute path if it exists.
+    :param playlist_folder: The absolute path of the playlist folder containing all playlists
+        or the relative path within the given ``library_folder`` or ``library_folder``/``musicbee_folder``.
         The intialiser will check for the existence of this path and only store the absolute path if it exists.
     :param other_folders: Absolute paths of other possible library paths.
         Use to replace path stems from other libraries for the paths in loaded playlists.
@@ -55,28 +58,46 @@ class MusicBee(LocalLibrary, File):
     def __init__(
             self,
             library_folder: str | None = None,
-            musicbee_folder: str = "MusicBee",
+            musicbee_folder: str | None = "MusicBee",
+            playlist_folder: str | None = "Playlists",
             other_folders: UnitCollection[str] = (),
             include: Iterable[str] = (),
             exclude: Iterable[str] = (),
             load: bool = True,
             remote_wrangler: RemoteDataWrangler = None,
     ):
-        if not exists(musicbee_folder):
+        if library_folder is None and musicbee_folder is None:
+            raise MusicBeeError("Must give either library_folder or musicbee_folder")
+
+        # try to resolve the musicbee folder if relative path to library_folder given
+        if musicbee_folder and not exists(musicbee_folder):
+            if not library_folder:
+                raise FileNotFoundError(f"Cannot find MusicBee library at given path: {musicbee_folder}")
+
             in_library = join(library_folder.rstrip("\\/"), musicbee_folder.lstrip("\\/"))
             if not exists(in_library):
                 raise FileNotFoundError(
                     f"Cannot find MusicBee library at given path: {musicbee_folder} OR {in_library}"
                 )
             musicbee_folder = in_library
+        elif library_folder and (not musicbee_folder or not exists(musicbee_folder)):
+            musicbee_folder = library_folder
+
+        # try to resolve the playlist folder if relative path to musicbee_folder given
+        musicbee_playlist_folder = join(musicbee_folder, playlist_folder)
+        if exists(musicbee_playlist_folder):
+            playlist_folder = musicbee_playlist_folder
 
         self._path: str = join(musicbee_folder, self.xml_library_filename)
+        if not exists(self._path):
+            raise FileNotFoundError(f"Cannot find MusicBee library at given path: {self._path}")
+
         self._xml_parser = XMLLibraryParser(self._path, path_keys=self.xml_path_keys)
         self.xml: dict[str, Any] = self._xml_parser.parse()
 
         super().__init__(
             library_folder=library_folder,
-            playlist_folder=join(musicbee_folder, "Playlists"),
+            playlist_folder=playlist_folder,
             other_folders=other_folders,
             include=include,
             exclude=exclude,
@@ -86,7 +107,7 @@ class MusicBee(LocalLibrary, File):
 
     def load_tracks(self) -> list[LocalTrack]:
         tracks_paths = {track.path.casefold(): track for track in self._load_tracks()}
-        self.logger.debug("Enrich local tracks: START")
+        self.logger.debug(f"Enrich {self.name} tracks: START")
 
         for track_xml in self.xml["Tracks"].values():
             if track_xml["Track Type"] != "File":
@@ -96,19 +117,20 @@ class MusicBee(LocalLibrary, File):
             if track is None:
                 continue
 
+            track.rating = int(track_xml.get("Rating")) if track_xml.get("Rating") is not None else None
             track.date_added = track_xml.get("Date Added")
             track.last_played = track_xml.get("Play Date UTC")
             track.play_count = track_xml.get("Play Count", 0)
-            track.rating = int(track_xml.get("Rating")) if track_xml.get("Rating") is not None else None
 
-        self.logger.debug("Enrich local tracks: DONE\n")
+        self.logger.debug(f"Enrich {self.name} tracks: DONE\n")
         return list(tracks_paths.values())
 
-    def save(self, dry_run: bool = True, *args, **kwargs) -> None:
+    def save(self, dry_run: bool = True, *args, **kwargs) -> dict[str, Any]:
         """
         Generate and save the XML library file for this MusicBee library.
 
         :param dry_run: Run function, but do not modify file at all.
+        :return: Map representation of the saved XML file.
         """
         tracks_paths = {track.path.casefold(): track for track in self.tracks}
         track_id_map: dict[LocalTrack, tuple[int, str]] = {}
@@ -124,9 +146,10 @@ class MusicBee(LocalLibrary, File):
 
         tracks: dict[str, Any] = {}
         max_track_id = max(id_ for id_, _ in track_id_map.values()) if track_id_map else 0
-        for i, track in enumerate(self.tracks, max_track_id):
+        for i, track in enumerate(self.tracks, max(1, max_track_id)):
             track_id, persistent_id = track_id_map.get(track, [i, None])
             tracks[track_id] = self.track_to_xml(track, track_id=track_id, persistent_id=persistent_id)
+            track_id_map[track] = (tracks[track_id]["Track ID"], tracks[track_id]["Persistent ID"])
 
         playlist_id_map = {
             playlist_xml["Name"]: (playlist_xml["Playlist ID"], playlist_xml["Playlist Persistent ID"])
@@ -146,14 +169,16 @@ class MusicBee(LocalLibrary, File):
             "Major Version": self.xml.get("Major Version", "1"),
             "Minor Version": self.xml.get("Minor Version", "1"),
             "Application Version": self.xml.get("Application Version", "1"),
-            "Music Folder": XMLLibraryParser.to_xml_path(self.library_folder),
+            "Music Folder": self.library_folder,
             "Library Persistent ID":
                 self.xml.get("Library Persistent ID", self.generate_persistent_id(self.library_folder)),
             "Tracks": dict(sorted(((id_, track) for id_, track in tracks.items()), key=lambda x: x[0])),
             "Playlists": sorted(playlists, key=lambda x: x["Playlist ID"]),
         }
 
-        self._xml_parser.unparse(xml)
+        self._xml_parser.unparse(data=xml, dry_run=dry_run)
+        self.xml = xml
+        return self.xml
 
     @staticmethod
     def generate_persistent_id(value: str | None = None, id_: str | None = None) -> str:
@@ -208,7 +233,7 @@ class MusicBee(LocalLibrary, File):
             "Disc Number": track.disc_number,
             "Disc Count": track.disc_total,
             "Compilation": track.compilation,
-            "Comments": track.comments,
+            "Comments": track.tag_sep.join(track.comments) if track.comments else None,
             "Total Time": int(track.length * 1000),  # in milliseconds
             "Rating": track.rating,
             # "Composer": track.composer,  # currently not supported by this program
@@ -416,6 +441,10 @@ class XMLLibraryParser:
             else:
                 raise NotImplementedError
 
+        # close the iterator
+        for _ in self.iterparse:
+            pass
+
         return results
 
     def _unparse_dict(self, element: etree._Element, data: Mapping[str, Any]):
@@ -430,12 +459,7 @@ class XMLLibraryParser:
                 if key in self.path_keys:
                     etree.SubElement(sub_element, "string").text = self.to_xml_path(value)
                 else:
-                    try:
-                        etree.SubElement(sub_element, "string").text = str(value)
-                    except:
-                        # TODO: one genre has null values in it, fix it
-                        #  'Estonian Metal\x00Estonian Pop\x00Estonian Rock'
-                        print(repr(value))
+                    etree.SubElement(sub_element, "string").text = str(value)
             elif isinstance(value, Number):
                 etree.SubElement(sub_element, "integer").text = str(value)
             elif isinstance(value, datetime):
@@ -449,11 +473,12 @@ class XMLLibraryParser:
             else:
                 raise XMLReaderError(f"Unexpected value type: {value} ({type(value)})")
 
-    def unparse(self, data: Mapping[str, Any]) -> None:
+    def unparse(self, data: Mapping[str, Any], dry_run: bool = True) -> None:
         """
         Un-parse a map of XML data to XML and save to file.
 
-        :param data: Map of XML data to export
+        :param data: Map of XML data to export.
+        :param dry_run: Run function, but do not modify file at all.
         """
         root: etree.Element = etree.Element("plist")
         root.set("version", str(self.schema_version))
@@ -467,5 +492,6 @@ class XMLLibraryParser:
         output = re.sub("\n\t", "\n", output)
         output = output.replace("'", '"')
 
-        with open(self.path, "w", encoding="utf-8") as f:
-            f.write(output.rstrip('\n') + '\n')
+        if not dry_run:
+            with open(self.path, "w", encoding="utf-8") as f:
+                f.write(output.rstrip('\n') + '\n')

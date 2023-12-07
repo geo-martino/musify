@@ -1,6 +1,6 @@
 import os
 import shutil
-from os.path import join, basename, dirname, exists
+from os.path import join, basename, dirname
 
 from tests import path_resources, path_cache
 
@@ -16,8 +16,7 @@ def copy_playlist_file(path: str) -> tuple[str, str]:
     """Copy a playlist file to the test cache, returning the original and copy paths."""
     path_file_base = path
     path_file_copy = join(path_playlist_cache, basename(path_file_base))
-    if not exists(dirname(path_file_copy)):
-        os.makedirs(dirname(path_file_copy))
+    os.makedirs(dirname(path_file_copy), exist_ok=True)
 
     shutil.copyfile(path_file_base, path_file_copy)
 

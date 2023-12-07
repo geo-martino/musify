@@ -8,9 +8,9 @@ from syncify.abstract.collection import Album, ItemCollection
 from syncify.abstract.fields import Field, FieldCombined, ALL_FIELDS
 from syncify.abstract.item import Track, BaseObject
 from syncify.abstract.processor import ItemProcessor
+from syncify.utils import UnitIterable
 from syncify.utils.helpers import limit_value, to_collection
 from syncify.utils.logger import Logger
-from syncify.utils import UnitIterable
 
 
 @dataclass

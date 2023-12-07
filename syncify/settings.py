@@ -126,8 +126,7 @@ class Settings(metaclass=ABCMeta):
         """Set the output according to the loaded settings"""
         parent_folder = self._append_module_folder(self.cfg_output.get("path", "_data"))
         self.output_folder = join(parent_folder, self.run_dt.strftime(Logger.dt_format))
-        if not exists(self.output_folder):
-            os.makedirs(self.output_folder)
+        os.makedirs(self.output_folder, exist_ok=True)
 
     ###########################################################################
     ## Wrangle local settings
