@@ -14,7 +14,7 @@
 **.secrets*
 **.log*
 **.bak*
-**.yml*
+/*.yml*
 
 # caches
 **cache
