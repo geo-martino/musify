@@ -203,7 +203,6 @@ def test_save_playlist():
     assert len(pl.tracks) == 11
     original_dt_modified = pl.date_modified
     original_dt_created = pl.date_created
-    print(pl)
 
     # perform some operations on the playlist
     pl.description = "new description"
@@ -215,8 +214,9 @@ def test_save_playlist():
 
     # first test results on a dry run
     print(pl)
+    print(os.path.getctime(path_file_copy))
     result = pl.save(dry_run=True)
-    print(pl)
+    print(os.path.getctime(path_file_copy))
 
     assert result.start == 11
     assert result.start_description == "I am a description"
@@ -239,6 +239,7 @@ def test_save_playlist():
     # save the file and check it has been modified
     pl.save(dry_run=False)
     print(pl)
+    print(os.path.getctime(path_file_copy))
     assert pl.date_modified > original_dt_modified
     assert pl.date_created == original_dt_created
 
