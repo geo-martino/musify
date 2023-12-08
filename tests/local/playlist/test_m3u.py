@@ -210,17 +210,13 @@ def test_save_existing_file():
         # linux appears to always update the date created when modifying a file, skip this test on linux
         assert pl.date_created == original_dt_created
     new_dt_modified = pl.date_modified
-    print(new_dt_modified)
-    print(os.path.getctime(path_file_copy), os.path.getmtime(path_file_copy))
-    print(os.path.getctime(pl.path), os.path.getmtime(pl.path))
 
     # change the name and save to new file
     pl.name = "New Playlist"
     assert pl.path == join(dirname(path_file_copy), "New Playlist" + pl.ext)
-    sleep(1)
+    sleep(0.01)
     pl.save(dry_run=False)
 
-    print(os.path.getctime(pl.path), os.path.getmtime(pl.path))
     assert pl.date_modified > new_dt_modified
     assert pl.date_created > original_dt_created
 
