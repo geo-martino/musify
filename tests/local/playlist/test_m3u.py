@@ -1,6 +1,7 @@
 import os
 import sys
 from os.path import dirname, join, splitext, basename, exists
+from time import sleep
 
 import pytest
 
@@ -216,6 +217,7 @@ def test_save_existing_file():
     # change the name and save to new file
     pl.name = "New Playlist"
     assert pl.path == join(dirname(path_file_copy), "New Playlist" + pl.ext)
+    sleep(1)
     pl.save(dry_run=False)
 
     print(os.path.getctime(pl.path), os.path.getmtime(pl.path))
