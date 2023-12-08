@@ -115,6 +115,8 @@ class MusicBee(LocalLibrary, File):
 
             track = tracks_paths.get(track_xml["Location"].casefold())
             if track is None:
+                print(tracks_paths.keys())
+                print(track_xml["Location"].casefold())
                 continue
 
             track.rating = int(track_xml.get("Rating")) if track_xml.get("Rating") is not None else None
