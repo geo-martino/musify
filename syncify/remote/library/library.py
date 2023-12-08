@@ -231,20 +231,22 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteDataWrangler, metaclass=AB
             )
         self.print_line(STAT)
 
-    def extend(self, items: Iterable[Item]) -> None:
+    def extend(self, __items: Iterable[Item], allow_duplicates: bool = True) -> None:
         self.logger.debug(f"Extend {self.remote_source} tracks data: START")
-        self.logger.info(
-            f"\33[1;95m ->\33[1;97m Extending library: checking if the given items are already in this library \33[0m"
-        )
+        if not allow_duplicates:
+            self.logger.info(
+                f"\33[1;95m ->\33[1;97m Extending library: "
+                "checking if the given items are already in this library \33[0m"
+            )
 
         load_uris = []
-        for track in items:
-            if track in self.tracks:
+        for item in __items:
+            if not allow_duplicates and item in self.items:
                 continue
-            elif isinstance(track, self._remote_types.track):
-                self.tracks.append(track)
-            elif track.has_uri:
-                load_uris.append(track.uri)
+            elif isinstance(item, self._remote_types.track):
+                self.items.append(item)
+            elif item.has_uri:
+                load_uris.append(item.uri)
 
         self.print_line()
         if not load_uris:

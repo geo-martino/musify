@@ -1,8 +1,5 @@
-from copy import deepcopy
-
 import pytest
 
-from syncify.local.track import LocalTrack
 from syncify.local.collection import LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from syncify.local.exception import LocalCollectionError
 from tests import random_str

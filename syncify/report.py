@@ -4,7 +4,6 @@ from syncify.abstract.collection import Library, ItemCollection
 from syncify.abstract.enums import TagField, FieldCombined
 from syncify.abstract.item import Item
 from syncify.local.library import LocalLibrary
-from syncify.utils.helpers import to_collection
 from syncify.utils.logger import Logger, REPORT
 
 
@@ -112,7 +111,7 @@ class Report(Logger):
         for collection in collections:
             missing_collection: dict[Item, tuple[str]] = {}
             for item in collection.items:
-                missing_tags = [tag for tag in tag_names if item[tag] is None]
+                missing_tags: list[str] = [tag for tag in tag_names if item[tag] is None]
                 if all(missing_tags) if match_all else any(missing_tags):
                     missing_collection[item] = tuple(sorted(missing_tags, key=lambda x: order.index(x)))
 

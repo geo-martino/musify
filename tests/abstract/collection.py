@@ -1,11 +1,11 @@
-from copy import deepcopy
 from collections.abc import Iterable, Collection
+from copy import deepcopy
 
 import pytest
 
-from local.collection import LocalCollection
-from syncify.abstract.item import Item
 from syncify.abstract.collection import ItemCollection, BasicCollection, Library
+from syncify.abstract.item import Item
+from syncify.local.collection import LocalCollection
 
 
 def item_collection_tests(collection: ItemCollection, merge_items: Collection[Item]) -> None:
@@ -17,7 +17,7 @@ def item_collection_tests(collection: ItemCollection, merge_items: Collection[It
     """
     assert len(collection.items) >= 3
 
-    collection_basic_operation_tests(collection, merge_items=merge_items)
+    collection_basic_operation_tests(collection)
     collection_basic_dunder_tests(collection)
     collection_iterator_and_container_tests(collection, merge_items=merge_items)
     collection_get_and_set_tests(collection)
@@ -26,7 +26,7 @@ def item_collection_tests(collection: ItemCollection, merge_items: Collection[It
     collection_delete_and_clear_tests(collection)
 
 
-def collection_basic_operation_tests(collection: ItemCollection, merge_items: Collection[Item]) -> None:
+def collection_basic_operation_tests(collection: ItemCollection) -> None:
     """:py:class:`ItemCollection` basic list operation tests"""
     collection = deepcopy(collection)
 

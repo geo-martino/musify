@@ -132,6 +132,7 @@ class ItemCollection[T: Item](ObjectPrinterMixin, list[T], Hashable, metaclass=A
         :param items: List of items or ItemCollection to merge with
         :param tags: List of tags to merge on. 
         """
+        # noinspection PyTypeChecker
         tag_names = set(TagField.__tags__) if tags == FieldCombined.ALL else set(TagField.to_tags(tags))
 
         if isinstance(self, Library):  # log status message and use progress bar for libraries
