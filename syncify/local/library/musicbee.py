@@ -106,17 +106,17 @@ class MusicBee(LocalLibrary, File):
         )
 
     def load_tracks(self) -> list[LocalTrack]:
-        tracks_paths = {track.path.casefold(): track for track in self._load_tracks()}
+        # need to remove the library folder to make it os agnostic
+        tracks_paths = {track.path.replace(self.library_folder, "").casefold(): track for track in self._load_tracks()}
         self.logger.debug(f"Enrich {self.name} tracks: START")
 
         for track_xml in self.xml["Tracks"].values():
             if track_xml["Track Type"] != "File":
                 continue
 
-            track = tracks_paths.get(track_xml["Location"].casefold())
+            # need to remove the XML music folder to make it os agnostic
+            track = tracks_paths.get(track_xml["Location"].replace(self.xml["Music Folder"], "").casefold())
             if track is None:
-                print(tracks_paths.keys())
-                print(track_xml["Location"].casefold())
                 continue
 
             track.rating = int(track_xml.get("Rating")) if track_xml.get("Rating") is not None else None
