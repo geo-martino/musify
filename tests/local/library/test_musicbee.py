@@ -136,7 +136,7 @@ def test_load():
         splitext(basename(path_playlist_xautopf_ra))[0]: path_playlist_xautopf_ra,
     }
 
-    assert library.last_played == datetime(2023, 11, 1, 15, 11, 11)
+    assert library.last_played == datetime(2023, 11, 9, 11, 22, 33)
     assert library.last_added == datetime(2023, 10, 17, 14, 42, 37)
     assert library.last_modified == max(track.date_modified for track in library.tracks)
 
