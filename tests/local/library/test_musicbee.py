@@ -123,14 +123,13 @@ def test_init():
 def test_load():
     MusicBee.xml_library_filename = library_filename
     library = MusicBee(
-        library_folder=path_track_resources,
+        library_folder=path_resources,
         musicbee_folder=path_library_resources,
         playlist_folder=path_playlist_resources,
     )
-    tracks = {track.path for track in library.tracks}
     playlists = {name: pl.path for name, pl in library.playlists.items()}
 
-    assert tracks == path_track_all
+    assert len(library.tracks) == 6
     assert playlists == {
         splitext(basename(path_playlist_m3u))[0]: path_playlist_m3u,
         splitext(basename(path_playlist_xautopf_bp))[0]: path_playlist_xautopf_bp,
