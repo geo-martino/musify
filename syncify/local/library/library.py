@@ -318,11 +318,11 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             )
         self.print_line(REPORT)
 
-    def _log_errors(self, errors: Iterable[str]) -> None:
+    def _log_errors(self, errors: Iterable[str], message: str = "Could not load") -> None:
         """Log paths which had some error while loading"""
         errors = tuple(f"\33[91m{e}\33[0m" for e in errors)
         if len(errors) > 0:
-            self.logger.warning("\33[97mCould not load: \33[0m\n\t- {errors} ".format(errors="\n\t- ".join(errors)))
+            self.logger.warning(f"\33[97m{message}: \33[0m\n\t- {"\n\t- ".join(errors)} ")
             self.print_line()
 
     def extend(self, items: Iterable[Item]):

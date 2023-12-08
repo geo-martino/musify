@@ -183,7 +183,7 @@ def test_save():
     assert exists(path_output_xml)
 
     # these keys fail on other systems, ignore them in line checks
-    ignore_keys = ["Music Folder", "Date Modified"]
+    ignore_keys = ["Music Folder", "Date Modified", "Location"]
     with open(library_filepath, "r") as f_in, open(path_output_xml, "r") as f_out:
         for line_in, line_out in zip(f_in, f_out):
             if any(f"<key>{key}</key>" in line_in for key in ignore_keys):

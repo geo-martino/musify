@@ -110,6 +110,8 @@ class MusicBee(LocalLibrary, File):
         tracks_paths = {track.path.replace(self.library_folder, "").casefold(): track for track in self._load_tracks()}
         self.logger.debug(f"Enrich {self.name} tracks: START")
 
+        errors = []
+
         for track_xml in self.xml["Tracks"].values():
             if track_xml["Track Type"] != "File":
                 continue
@@ -117,10 +119,7 @@ class MusicBee(LocalLibrary, File):
             # need to remove the XML music folder to make it os agnostic
             track = tracks_paths.get(track_xml["Location"].replace(self.xml["Music Folder"], "").casefold())
             if track is None:
-                print(f"load - can't find {track_xml["Location"]}")
-                print(self.xml["Music Folder"], self.library_folder)
-                print(tracks_paths.keys())
-                print()
+                errors.append(track_xml["Location"])
                 continue
 
             track.rating = int(track_xml.get("Rating")) if track_xml.get("Rating") is not None else None
@@ -128,6 +127,8 @@ class MusicBee(LocalLibrary, File):
             track.last_played = track_xml.get("Play Date UTC")
             track.play_count = track_xml.get("Play Count", 0)
 
+        error_message = "Could not find a loaded track for these paths from the MusicBee library file"
+        self._log_errors(errors=errors, message=error_message)
         self.logger.debug(f"Enrich {self.name} tracks: DONE\n")
         return list(tracks_paths.values())
 
@@ -140,19 +141,21 @@ class MusicBee(LocalLibrary, File):
         """
         tracks_paths = {track.path.replace(self.library_folder, "").casefold(): track for track in self.tracks}
         track_id_map: dict[LocalTrack, tuple[int, str]] = {}
+
+        errors = []
         for track_xml in self.xml["Tracks"].values():
             if track_xml["Track Type"] != "File":
                 continue
 
             track = tracks_paths.get(track_xml["Location"].replace(self.xml["Music Folder"], "").casefold())
             if not track:
-                print(f"save - can't find {track_xml["Location"]}")
-                print(self.xml["Music Folder"], self.library_folder)
-                print(tracks_paths.keys())
-                print()
+                errors.append(track_xml["Location"])
                 continue
 
             track_id_map[track] = (track_xml["Track ID"], track_xml["Persistent ID"])
+
+        error_message = "Could not find a loaded track for these paths from the MusicBee library file"
+        self._log_errors(errors=errors, message=error_message)
 
         tracks: dict[str, Any] = {}
         max_track_id = max(id_ for id_, _ in track_id_map.values()) if track_id_map else 0

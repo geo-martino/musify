@@ -298,8 +298,8 @@ class Syncify(Settings, Report):
             self.logger.info("\33[93mNo backups found, skipping.\33[0m")
 
         self.logger.info(
-            "\33[97mAvailable backups: \n\t\33[97m- \33[94m{n}\33[0m"
-            .format(n="\33[0m\n\t\33[97m-\33[0m \33[94m".join(available_backup_names))
+            "\33[97mAvailable backups: \n\t\33[97m- \33[94m{}\33[0m"
+            .format("\33[0m\n\t\33[97m-\33[0m \33[94m".join(available_backup_names))
         )
 
         while True:  # get valid user input
