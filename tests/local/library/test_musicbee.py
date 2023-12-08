@@ -182,6 +182,10 @@ def test_save():
 
     library.save(dry_run=False)
     assert exists(path_output_xml)
+
+    with open(library_filepath, "r") as f_out:
+        print(f_out.read())
+
     with open(path_output_xml, "r") as f_in, open(library_filepath, "r") as f_out:
         for line_in, line_out in zip(f_in, f_out):
             if ">Music Folder<" in line_in:  # fails on other systems so skip
