@@ -1,4 +1,5 @@
 import os
+import sys
 from datetime import datetime
 from os.path import dirname, join, splitext, basename
 
@@ -213,10 +214,7 @@ def test_save_playlist():
     pl.tracks.remove(tracks_actual[0])
 
     # first test results on a dry run
-    print(pl)
-    print(os.path.getctime(path_file_copy))
     result = pl.save(dry_run=True)
-    print(os.path.getctime(path_file_copy))
 
     assert result.start == 11
     assert result.start_description == "I am a description"
@@ -238,9 +236,9 @@ def test_save_playlist():
 
     # save the file and check it has been modified
     pl.save(dry_run=False)
-    print(pl)
-    print(os.path.getctime(path_file_copy))
     assert pl.date_modified > original_dt_modified
-    assert pl.date_created == original_dt_created
+    if sys.platform != "linux":
+        # linux appears to always update the date created when modifying a file, skip this test on linux
+        assert pl.date_created == original_dt_created
 
     os.remove(path_file_copy)

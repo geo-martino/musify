@@ -1,4 +1,5 @@
 import os
+import sys
 from os.path import dirname, join, splitext, basename, exists
 
 import pytest
@@ -135,7 +136,6 @@ def test_save_new_file():
     # ...save these loaded tracks for real
     pl = M3U(path=path_new)
     pl.load(tracks_random)
-    print(pl)
     result = pl.save(dry_run=False)
 
     assert result.start == 0
@@ -158,10 +158,7 @@ def test_save_new_file():
     # ...remove some tracks and add some new ones
     tracks_random_new = random_tracks(15)
     pl.tracks = pl.tracks[:20] + tracks_random_new
-    print(pl)
-    print(os.path.getctime(path_new))
     result = pl.save(dry_run=False)
-    print(os.path.getctime(path_new))
 
     assert result.start == len(tracks_random)
     assert result.added == len(tracks_random_new)
@@ -171,7 +168,9 @@ def test_save_new_file():
     assert result.final == 35
 
     assert pl.date_modified > original_dt_modified
-    assert pl.date_created == original_dt_created
+    if sys.platform != "linux":
+        # linux appears to always update the date created when modifying a file, skip this test on linux
+        assert pl.date_created == original_dt_created
 
     with open(path_new, 'r') as f:
         paths = [line.strip() for line in f]
@@ -196,10 +195,7 @@ def test_save_existing_file():
 
     tracks_random = random_tracks(10)
     pl.tracks = pl.tracks[:2] + tracks_random
-    print(pl)
-    print(os.path.getctime(path_file_copy))
     result = pl.save(dry_run=False)
-    print(os.path.getctime(path_file_copy))
 
     assert result.start == 3
     assert result.added == len(tracks_random)
@@ -209,7 +205,9 @@ def test_save_existing_file():
     assert result.final == 12
 
     assert pl.date_modified > original_dt_modified
-    assert pl.date_created == original_dt_created
+    if sys.platform != "linux":
+        # linux appears to always update the date created when modifying a file, skip this test on linux
+        assert pl.date_created == original_dt_created
     new_dt_modified = pl.date_modified
 
     # change the name and save to new file
