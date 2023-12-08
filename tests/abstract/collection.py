@@ -93,7 +93,6 @@ def collection_iterator_and_container_tests(collection: ItemCollection, merge_it
     assert len([item for item in collection]) == len(collection)
     assert len([item for item in reversed(collection)]) == len(collection)
     for i, item in enumerate(reversed(collection)):
-        print(i, collection.index(item), len(collection) - 1 - i)
         assert collection.index(item) == len(collection) - 1 - i
 
     assert all(item in collection for item in collection)
@@ -180,7 +179,23 @@ def library_filtered_playlists_tests(library: Library) -> None:
     # exclude should always take priority
     assert len(library.get_filtered_playlists(include=include, exclude=include)) == 0
 
-    # TODO: add filter_kwargs test
+    # filters out tags
+    filter_names = [item.name for item in next(pl for pl in library.playlists.values())[:2]]
+    filter_tags = {"name": [name.upper() + "  " for name in filter_names]}
+    expected_counts = {}
+    for name, pl in library.playlists.items():
+        count_remaining = len([item for item in pl if item.name not in filter_names])
+        if count_remaining < len(pl):
+            expected_counts[name] = count_remaining
+
+    if len(expected_counts) == 0:
+        raise Exception("Can't check filter_tags logic, no items to filter out from playlists")
+
+    filtered_playlists = library.get_filtered_playlists(**filter_tags)
+    for name, pl in filtered_playlists.items():
+        if name not in expected_counts:
+            continue
+        assert len(pl) == expected_counts[name]
 
 
 def library_merge_playlists_tests(library: Library) -> None:

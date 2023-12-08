@@ -61,7 +61,7 @@ class ItemCollection[T: Item](ObjectPrinterMixin, list[T], Hashable, metaclass=A
         if allow_duplicates:
             self.items.extend(__items)
         else:
-            self.items.extend(item for item in self.items if item not in self.items)
+            self.items.extend(item for item in __items if item not in self.items)
 
     def insert(self, __index: int, __item: T, allow_duplicates: bool = True) -> None:
         """Insert given :py:class:`Item` before the given index"""
@@ -418,10 +418,12 @@ class Library[T: Track](Logger, ItemCollection[T], metaclass=ABCMeta):
             for item in playlist.items:
                 for tag, filter_vals in filter_tags.items():
                     item_val = item[tag]
-                    if isinstance(item_val, str):
-                        if any(v.strip().casefold() in item_val.strip().casefold() for v in filter_vals):
-                            filtered[name].remove(item)
-                            break
+                    if not isinstance(item_val, str):
+                        continue
+
+                    if any(v.strip().casefold() in item_val.strip().casefold() for v in filter_vals):
+                        filtered[name].remove(item)
+                        break
 
             self.logger.debug(
                 f"{self.align_and_truncate(name, max_width=max_width)} | "

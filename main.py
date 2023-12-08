@@ -212,7 +212,7 @@ class Syncify(Settings, Report):
         if self._remote_library is not None:
             self.remote_library.use_cache = self.use_cache
             self.remote_library.load(log=False)
-            self.remote_library.extend(self.local_library)
+            self.remote_library.extend(self.local_library, allow_duplicates=False)
             self.remote_library.enrich_tracks(artists=True)
 
         self.logger.debug("Reload libraries: DONE\n")
@@ -444,7 +444,7 @@ class Syncify(Settings, Report):
         tags = LocalTrackField.ALL if not tag_names else LocalTrackField.from_name(*tag_names)
 
         # add extra local tracks to remote library and merge remote items to local library
-        self.remote_library.extend(self.local_library)
+        self.remote_library.extend(self.local_library, allow_duplicates=False)
         self._remote_library.enrich_tracks(artists=True)
         self.local_library.merge_items(self.remote_library, tags=tags)
 
