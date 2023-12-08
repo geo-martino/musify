@@ -598,6 +598,5 @@ if __name__ == "__main__":
 
 
 ## NEEDED FOR v0.3
-# TODO: fix date issues on GitHub tests
 # TODO: write tests, write tests, write tests
 # TODO: update the readme (dynamic readme?)

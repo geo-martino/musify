@@ -114,7 +114,7 @@ def open_image(source: str | bytes | Path | Request) -> Image.Image:
     Open Image object from a given URL or file path
 
     :return: The loaded :py:class:`Image.Image`
-    :raise :py:class:`ImageLoadError`: If the image cannot be loaded.
+    :raise ImageLoadError: If the image cannot be loaded.
     """
 
     try:  # open image from link

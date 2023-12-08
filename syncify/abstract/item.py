@@ -71,7 +71,7 @@ class Item(ObjectPrinterMixin, metaclass=ABCMeta):
 
     def merge(self, item: Self, tags: UnitIterable[TagField] = FieldCombined.ALL) -> None:
         """Set the tags of this item equal to the given ``item``. Give a list of ``tags`` to limit which are set"""
-        tag_names = set(TagField.to_tags(tags))
+        tag_names = TagField.__tags__ if tags == FieldCombined.ALL else set(TagField.to_tags(tags))
 
         for tag in tag_names:  # merge on each tag
             if hasattr(item, tag):
@@ -85,8 +85,7 @@ class Item(ObjectPrinterMixin, metaclass=ABCMeta):
         """URI attributes equal if at least one item has a URI, names equal otherwise"""
         if self.has_uri or item.has_uri:
             return self.has_uri == item.has_uri and self.uri == item.uri
-        else:
-            return self.name == item.name
+        return self.name == item.name
 
     def __ne__(self, item):
         return not self.__eq__(item)
@@ -98,6 +97,11 @@ class Item(ObjectPrinterMixin, metaclass=ABCMeta):
     def __setitem__(self, key: str, value: Any):
         if not hasattr(self, key):
             raise KeyError(f"Given key is not a valid attribute of this item: {key}")
+
+        attr = getattr(self, key)
+        if isinstance(attr, property) and attr.fset is None:
+            raise AttributeError(f"Cannot values on the given key, it is protected: {key}")
+
         return setattr(self, key, value)
 
 

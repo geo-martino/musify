@@ -1,18 +1,21 @@
+from copy import deepcopy
+
 import pytest
 
+from syncify.local.track import LocalTrack
 from syncify.local.collection import LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from syncify.local.exception import LocalCollectionError
+from tests import random_str
+from tests.abstract.collection import item_collection_tests
 from tests.abstract.misc import pretty_printer_tests
-from tests.local.track import random_tracks, path_track_resources, path_track_all
+from tests.local.track import random_tracks, random_track, path_track_resources, path_track_all
 
-
-# TODO: add test for getting items from collection using __getitem__ from LocalCollection
 
 def test_folder():
     tracks = random_tracks(10)
 
     for i, track in enumerate(tracks[:7]):
-        track._path = "/test/folder name/file.ext"
+        track._path = f"/test/folder name/{random_str()}{track.ext}"
         if i < 4:
             track.compilation = True
         if i % 2 == 0:
@@ -31,7 +34,7 @@ def test_folder():
 
     collection = LocalFolder(tracks=tracks[:7])
     assert collection.name == tracks[0].folder
-    assert collection.tracks == tracks[:7]
+    assert set(collection.tracks) == set(tracks[:7])
     assert collection.last_played == last_played
     assert collection.last_added == last_added
 
@@ -39,6 +42,10 @@ def test_folder():
     assert sorted(collection.genres) == sorted(set(tracks[0].genres) | set(tracks[1].genres))
     assert collection.compilation
 
+    # generic item collection tests
+    # append needed to ensure __setitem__ check passes
+    collection.items.append(random_track(collection[0].__class__))
+    item_collection_tests(collection, merge_items=random_tracks(5))
     pretty_printer_tests(collection)
 
     # load folder when no tracks given and folder path given
@@ -68,6 +75,10 @@ def test_album():
     assert collection.genres == tracks[0].genres
     assert not collection.compilation
 
+    # generic item collection tests
+    # append needed to ensure __setitem__ check passes
+    collection.items.append(random_track(collection[0].__class__))
+    item_collection_tests(collection, merge_items=random_tracks(5))
     pretty_printer_tests(collection)
 
 
@@ -87,6 +98,10 @@ def test_artist():
     assert collection.albums == [tracks[0].album, tracks[1].album]
     assert collection.genres == tracks[0].genres
 
+    # generic item collection tests
+    # append needed to ensure __setitem__ check passes
+    collection.items.append(random_track(collection[0].__class__))
+    item_collection_tests(collection, merge_items=random_tracks(5))
     pretty_printer_tests(collection)
 
 
@@ -112,4 +127,8 @@ def test_genre():
     assert collection.albums == [tracks[0].album]
     assert sorted(collection.genres) == sorted(set(tracks[0].genres) | set(tracks[-1].genres))
 
+    # generic item collection tests
+    # append needed to ensure __setitem__ check passes
+    collection.items.append(random_track(collection[0].__class__))
+    item_collection_tests(collection, merge_items=random_tracks(5))
     pretty_printer_tests(collection)

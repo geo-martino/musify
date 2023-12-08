@@ -115,7 +115,7 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
         if no ``reference`` is given, to this object's list of ``expected`` values
 
         :return: True if a match is found, False otherwise.
-        :raise :py:class:`LocalProcessorError`: If no reference given and no expected values set for this comparer.
+        :raise LocalProcessorError: If no reference given and no expected values set for this comparer.
         """
         if self.condition is None:
             return False

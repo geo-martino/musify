@@ -75,7 +75,7 @@ class RemoteObject(RemoteObjectMixin, PrettyPrinter, metaclass=ABCMeta):
         """
         Checks the given response is compatible with this object type, raises an exception if not.
 
-        :raise :py:class:`RemoteItemTypeError`: When the response type is not compatible with this object.
+        :raise RemoteItemTypeError: When the response type is not compatible with this object.
         """
         raise NotImplementedError
 
@@ -84,7 +84,7 @@ class RemoteObject(RemoteObjectMixin, PrettyPrinter, metaclass=ABCMeta):
         """
         Checks the API has been set on the class, raises an exception if not.
 
-        :raise :py:class:`APIError`: When the API has not been set for this class.
+        :raise APIError: When the API has not been set for this class.
         """
         if cls.api is None:
             raise APIError("API is not set. Assign an API to this class first.")

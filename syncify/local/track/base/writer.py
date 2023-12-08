@@ -346,7 +346,6 @@ class TagWriter(TagReader, metaclass=ABCMeta):
         if tags is None or (isinstance(tags, Collection) and len(tags) == 0):
             return SyncResultTrack(saved=False, updated={})
 
-        # noinspection PyTypeChecker
         tag_names = set(LocalTrackField.to_tags(tags))
         removed = set()
         for tag_name in tag_names:

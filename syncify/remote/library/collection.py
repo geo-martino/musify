@@ -41,13 +41,13 @@ class RemoteCollection[T: RemoteObject](RemoteObjectWranglerMixin, ItemCollectio
         """
         raise NotImplementedError
 
-    def __getitem__(self, __key: str | int | Item) -> T:
+    def __getitem__(self, __key: str | int | slice | Item) -> T | list[T]:
         """
         Returns the item in this collection by matching on a given index/Item/URI/ID/URL.
         If an item is given, the URI is extracted from this item
         and the matching Item from this collection is returned.
         """
-        if isinstance(__key, int):  # simply index the list or items
+        if isinstance(__key, int) or isinstance(__key, slice):  # simply index the list or items
             return self.items[__key]
         elif isinstance(__key, Item):  # take the URI
             if not __key.has_uri or __key.uri is None:

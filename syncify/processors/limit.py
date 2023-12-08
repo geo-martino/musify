@@ -131,7 +131,7 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
         """
         Convert units for item length or size and return the value.
 
-        :raise :py:class:`ItemLimiterError`: When the given limit type cannot be found
+        :raise ItemLimiterError: When the given limit type cannot be found
         """
         if 10 < self.kind.value < 20:
             factors = (1, 60, 60, 24, 7)[:self.kind.value % 10]

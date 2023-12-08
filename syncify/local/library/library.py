@@ -261,7 +261,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
         :param names: Playlist paths to load relative to the playlist folder.
         :return: The loaded playlists.
-        :raise :py:class:`LocalCollectionError`: If a given playlist name cannot be found.
+        :raise LocalCollectionError: If a given playlist name cannot be found.
         """
         self.logger.debug(f"Load {self.name} playlist data: START")
         if names is None:
@@ -324,9 +324,6 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         if len(errors) > 0:
             self.logger.warning(f"\33[97m{message}: \33[0m\n\t- {"\n\t- ".join(errors)} ")
             self.print_line()
-
-    def extend(self, items: Iterable[Item]):
-        self.tracks.extend(track for track in items if isinstance(track, LocalTrack) and track not in self.tracks)
 
     def merge_playlists(self, playlists: Library | Collection[Playlist] | Mapping[Any, Playlist]):
         raise NotImplementedError

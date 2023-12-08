@@ -88,8 +88,7 @@ class Report(Logger):
         """
         self.logger.debug("Report missing tags: START")
 
-        tags = to_collection(tags)
-        tag_names = set(TagField.to_tags(tags))
+        tag_names = TagField.__tags__ if tags == FieldCombined.ALL else set(TagField.to_tags(tags))
 
         if isinstance(collections, LocalLibrary):
             collections = collections.albums

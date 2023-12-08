@@ -126,13 +126,13 @@ class LocalCollection[T: LocalItem](Logger, ItemCollection[T], metaclass=ABCMeta
             )
         self.print_line(STAT)
 
-    def __getitem__(self, __key: str | int | Item) -> Item:
+    def __getitem__(self, __key: str | int | slice | Item) -> Item | list[T]:
         """
         Returns the item in this collection by matching on a given path/index/URI.
         If an item is given, the URI or path is extracted from this item
         and the matching Item from this collection is returned.
         """
-        if isinstance(__key, int):  # simply index the list or items
+        if isinstance(__key, int) or isinstance(__key, slice):  # simply index the list or items
             return self.items[__key]
         elif isinstance(__key, LocalTrack):  # take the path
             __key = __key.path
@@ -186,7 +186,7 @@ class LocalCollectionFiltered[T: LocalItem](LocalCollection[T]):
     :param name: The name of this collection.
         If given, the object only stores tracks that match the name given on the attribute of this object.
         If None, the list of tracks given are taken to be all the tracks contained in this collection.
-    :raise :py:class:`LocalCollectionError`: If the given tracks contain more than one unique value
+    :raise LocalCollectionError: If the given tracks contain more than one unique value
         for the attribute of this collection when name is None.
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
@@ -254,7 +254,7 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
         If None, the list of tracks given are taken to be all the tracks contained in this folder.
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
-    :raise :py:class:`LocalCollectionError`: If the given tracks contain more than one unique value for
+    :raise LocalCollectionError: If the given tracks contain more than one unique value for
         ``folder`` when name is None.
     """
 
@@ -346,7 +346,7 @@ class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):
         If None, the list of tracks given are taken to be all the tracks for this album.
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
-    :raise :py:class:`LocalCollectionError`: If the given tracks contain more than one unique value for
+    :raise LocalCollectionError: If the given tracks contain more than one unique value for
         ``album`` when name is None.
     """
 
@@ -421,7 +421,7 @@ class LocalArtist(LocalCollectionFiltered[LocalTrack], Artist[LocalTrack]):
         If None, the list of tracks given are taken to be all the tracks by this artist.
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
-    :raise :py:class:`LocalCollectionError`: If the given tracks contain more than one unique value for
+    :raise LocalCollectionError: If the given tracks contain more than one unique value for
         ``artist`` when name is None.
     """
 
@@ -473,7 +473,7 @@ class LocalGenres(LocalCollectionFiltered[LocalTrack], Genre[LocalTrack]):
         If None, the list of tracks given are taken to be all the tracks within this genre.
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
-    :raise :py:class:`LocalCollectionError`: If the given tracks contain more than one unique value for
+    :raise LocalCollectionError: If the given tracks contain more than one unique value for
         ``genre`` when name is None.
     """
 

@@ -99,7 +99,7 @@ class Settings(metaclass=ABCMeta):
         Load the config file
 
         :return: The config file.
-        :raise :py:class:`InvalidFileType`: When the given config file is not of the correct type.
+        :raise InvalidFileType: When the given config file is not of the correct type.
         """
         if splitext(config_path)[1].casefold() not in [".yml", ".yaml"]:
             raise InvalidFileType(f"Unrecognised file type: {config_path}")
@@ -151,7 +151,7 @@ class Settings(metaclass=ABCMeta):
         """
         Set the search algorithm config according to the loaded settings.
 
-        :raise :py:class:`LookupError`: When the given algorithm name cannot be found in the AlgorithmSettings object.
+        :raise LookupError: When the given algorithm name cannot be found in the AlgorithmSettings object.
         """
         settings = list(AlgorithmSettings.__annotations__.keys())
 

@@ -53,7 +53,7 @@ class SpotifyObject(SpotifyObjectMixin, PrettyPrinter, metaclass=ABCMeta):
         """
         Checks the given response is compatible with this object type, raises an exception if not.
 
-        :raise :py:class:`RemoteItemTypeError`: When the response type is not compatible with this object.
+        :raise RemoteItemTypeError: When the response type is not compatible with this object.
         """
         kind = self.__class__.__name__.casefold().replace("spotify", "")
         if self.response.get("type") != kind:

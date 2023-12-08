@@ -9,9 +9,11 @@ from syncify.local.exception import InvalidFileType
 from syncify.local.playlist import M3U
 from syncify.local.track import LocalTrack, FLAC, M4A, MP3, WMA
 from tests import path_txt
+from tests.abstract.collection import item_collection_tests
 from tests.abstract.misc import pretty_printer_tests
 from tests.local.playlist import copy_playlist_file, path_playlist_m3u, path_resources, path_playlist_cache
-from tests.local.track import path_track_flac, path_track_m4a, path_track_wma, path_track_mp3, path_track_all
+from tests.local.track import path_track_flac, path_track_m4a, path_track_wma, path_track_mp3, path_track_all, \
+    random_track
 from tests.local.track import random_tracks
 
 path_fake = join(dirname(path_playlist_m3u), "does_not_exist.m3u")
@@ -35,6 +37,9 @@ def test_load_fake_file_with_no_tracks():
     pl.load(tracks)
     assert pl.tracks == tracks
 
+    # append needed to ensure __setitem__ check passes
+    pl.items.append(random_track(pl[0].__class__))
+    item_collection_tests(pl, merge_items=random_tracks(5))
     pretty_printer_tests(pl)
 
 
@@ -50,6 +55,9 @@ def test_load_fake_file_with_bad_tracks():
     pl.load(tracks)
     assert pl.tracks == tracks
 
+    # append needed to ensure __setitem__ check passes
+    pl.items.append(random_track(pl[0].__class__))
+    item_collection_tests(pl, merge_items=random_tracks(5))
     pretty_printer_tests(pl)
 
 
@@ -75,6 +83,9 @@ def test_load_file_with_no_tracks():
     pl.load()
     assert pl.tracks == tracks_original
 
+    # append needed to ensure __setitem__ check passes
+    pl.items.append(random_track(pl[0].__class__))
+    item_collection_tests(pl, merge_items=random_tracks(5))
     pretty_printer_tests(pl)
 
 
@@ -104,6 +115,10 @@ def test_load_file_with_tracks():
     with pytest.raises(InvalidFileType):
         M3U(path=path_txt)
 
+    # generic item collection tests
+    # append needed to ensure __setitem__ check passes
+    pl.items.append(random_track(pl[0].__class__))
+    item_collection_tests(pl, merge_items=random_tracks(5))
     pretty_printer_tests(pl)
 
 

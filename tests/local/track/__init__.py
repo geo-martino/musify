@@ -16,10 +16,11 @@ from syncify.local.track import TRACK_CLASSES, LocalTrack, FLAC, M4A, MP3, WMA
 # noinspection PyProtectedMember
 from syncify.local.track.base.track import _MutagenMock
 from syncify.local.track.base.writer import TagWriter
-from syncify.remote.enums import RemoteIDType, RemoteItemType
 from tests import path_resources, path_cache, path_txt, random_str
+from tests.abstract.item import item_tests
 from tests.abstract.misc import pretty_printer_tests
 from tests.local import remote_wrangler
+from tests.remote import random_uri
 
 path_track_cache = join(path_cache, basename(dirname(__file__)))
 
@@ -40,17 +41,14 @@ class_path_map: dict[type[LocalTrack], str] = {
 }
 
 
-def random_uri(kind: RemoteItemType = RemoteItemType.TRACK) -> str:
-    """Generates a random Spotify URI of item type ``kind``"""
-    return f"spotify:{kind.name.lower()}:{random_str(RemoteIDType.ID.value, RemoteIDType.ID.value + 1)}"
-
-
 def random_track(cls: type[LocalTrack] | None = None) -> LocalTrack:
     """Generates a new, random track of the given class."""
     if cls is None:
         cls = choice(tuple(TRACK_CLASSES))
     track = cls.__new__(cls)
     TagWriter.__init__(track, remote_wrangler=remote_wrangler)
+    track._available_paths = set()
+    track._available_paths_lower = set()
 
     track._file = _MutagenMock()
     track.file.info.length = randint(30, 600)
@@ -79,6 +77,7 @@ def random_track(cls: type[LocalTrack] | None = None) -> LocalTrack:
     track._path = join(
         path_track_cache, f"{str(track.track_number).zfill(2)} - {track.title}" + choice(tuple(track.valid_extensions))
     )
+    track.file.filename = track._path
 
     track.date_added = datetime.now() - relativedelta(days=randrange(8, 20), hours=randrange(1, 24))
     track.last_played = datetime.now() - relativedelta(days=randrange(1, 6), hours=randrange(1, 24))
@@ -132,7 +131,7 @@ def load_track_test(cls: type[LocalTrack], path: str) -> None:
 
 
 def copy_track_test(cls: type[LocalTrack], path: str) -> None:
-    """Generic test for copying a LocalTrack object"""
+    """Generic test for copying a :py:class:`LocalTrack` object"""
     track = cls(file=path, available=path_track_all)
 
     track_from_file = cls(file=track.file, available=path_track_all)
@@ -380,10 +379,12 @@ def all_local_track_tests(cls: type[LocalTrack]) -> None:
     # TODO: add extract images test
     path = class_path_map[cls]
 
+    item_tests(cls(path, remote_wrangler=remote_wrangler))
+    pretty_printer_tests(cls(path))
+
     load_track_test(cls, path)
     copy_track_test(cls, path)
     set_and_find_file_paths_test(cls, path)
     clear_tags_test(cls, path)
     update_tags_test(cls, path)
     update_images_test(cls, path)
-    pretty_printer_tests(cls(path))

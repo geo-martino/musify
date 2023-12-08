@@ -46,7 +46,7 @@ def load_playlist(
         The wrangler is also used when loading tracks to allow them to process URI tags.
         For more info on this, see :py:class:`LocalTrack`.
     :return: Loaded :py:class:`LocalPlaylist` object
-    :raise :py:class:`InvalidFileType`: If the file type is not supported.
+    :raise InvalidFileType: If the file type is not supported.
     """
     ext = splitext(path)[1].casefold()
 

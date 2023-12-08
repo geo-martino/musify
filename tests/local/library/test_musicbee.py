@@ -9,13 +9,15 @@ from syncify.local.exception import MusicBeeError
 from syncify.local.library.musicbee import MusicBee, XMLLibraryParser
 from syncify.local.track import LocalTrack
 from tests import path_resources
+from tests.abstract.collection import item_collection_tests, library_tests
 from tests.abstract.misc import pretty_printer_tests
 from tests.local import remote_wrangler
 from tests.local.library import init_blank_test
 from tests.local.library import path_library_resources, path_library_cache
 from tests.local.playlist import path_playlist_resources, path_playlist_m3u
 from tests.local.playlist import path_playlist_xautopf_bp, path_playlist_xautopf_ra
-from tests.local.track import path_track_resources, path_track_all, path_track_mp3, path_track_flac, path_track_wma
+from tests.local.track import path_track_all, path_track_mp3, path_track_flac, path_track_wma, \
+    random_track, random_tracks
 
 library_filename = "musicbee_library.xml"
 library_filepath = join(path_library_resources, library_filename)
@@ -158,6 +160,13 @@ def test_load():
     assert track_wma.date_added == datetime(2023, 5, 29, 15, 26, 22)
     assert track_wma.last_played == datetime(2023, 5, 30, 22, 57, 24)
     assert track_wma.play_count == 200
+
+    # generic item collection tests
+    # append needed to ensure __setitem__ check passes
+    library.items.append(random_track(library[0].__class__))
+    item_collection_tests(library, merge_items=random_tracks(5))
+    library_tests(library)
+    pretty_printer_tests(library, dict_json_equal=False)
 
 
 def test_save():

@@ -20,7 +20,7 @@ class SyncifyEnum(IntEnum):
         Returns the enums that match the given names
 
         :param fail_on_many: If more than one enum is found, raise an exception.
-        :raise :py:class:`EnumNotFoundError`: If a corresponding enum cannot be found.
+        :raise EnumNotFoundError: If a corresponding enum cannot be found.
         """
         names_upper = [name.strip().upper() for name in names]
         enums = [enum for enum in cls if enum.name in names_upper]
@@ -38,7 +38,7 @@ class SyncifyEnum(IntEnum):
         Returns all enums that match the given enum name
 
         :param fail_on_many: If more than one enum is found, raise an exception.
-        :raise :py:class:`EnumNotFoundError`: If a corresponding enum cannot be found.
+        :raise EnumNotFoundError: If a corresponding enum cannot be found.
         """
         enums = [enum for enum in cls if enum.value in values]
         if len(enums) == 0:
@@ -143,7 +143,7 @@ ALL_FIELDS = frozenset(FieldCombined.all())
 class TagField(Field):
     """Applies extra functionality to the Field enum for Field types relating to :py:class:`Track` types"""
 
-    __tags__ = frozenset(TagMap.__annotations__.keys())
+    __tags__: frozenset[str] = frozenset(list(TagMap.__annotations__.keys()) + ["uri"])
 
     def to_tag(self) -> set[str]:
         """

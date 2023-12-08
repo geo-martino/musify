@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, Mapping, Iterable, Container
 from copy import deepcopy
 from datetime import datetime
-from typing import Any, Self, SupportsIndex
+from typing import Any, Self, SupportsIndex, Hashable
 
 from syncify.abstract.enums import Field, FieldCombined, TagField
 from syncify.abstract.item import Item, Track, ObjectPrinterMixin
@@ -17,7 +17,7 @@ from syncify.utils.logger import Logger
 
 
 # noinspection PyShadowingNames
-class ItemCollection[T: Item](ObjectPrinterMixin, list[T], metaclass=ABCMeta):
+class ItemCollection[T: Item](ObjectPrinterMixin, list[T], Hashable, metaclass=ABCMeta):
     """
     Generic class for storing a collection of items.
 
@@ -37,24 +37,36 @@ class ItemCollection[T: Item](ObjectPrinterMixin, list[T], metaclass=ABCMeta):
         self.remote_wrangler = remote_wrangler
 
     def index(self, __item: T, __start: SupportsIndex = None, __stop: SupportsIndex = None) -> int:
-        """Append one item to the items in this collection"""
-        return self.items.index(__item, __start, __stop)
+        """
+        Return first index of item from items in this collection.
+
+        :raise ValueError: If the value is not present.
+        """
+        return self.items.index(__item, __start if __start else 0, __stop if __stop else len(self.items))
 
     def count(self, __item: T) -> int:
-        """Append one item to the items in this collection"""
+        """Return the number of occurences of the given :py:class:`Item` in this collection"""
         return self.items.count(__item)
 
-    def append(self, __item: T) -> None:
+    def append(self, __item: T, allow_duplicates: bool = True) -> None:
         """Append one item to the items in this collection"""
-        self.items.append(__item)
+        if allow_duplicates or __item not in self.items:
+            self.items.append(__item)
 
-    def extend(self, __items: Iterable[T]) -> None:
+    def extend(self, __items: Iterable[T], allow_duplicates: bool = True) -> None:
         """Append many items to the items in this collection"""
-        self.items.extend(__items)
+        if isinstance(__items, ItemCollection):
+            __items = __items.items
 
-    def insert(self, __index: int, __item: T) -> None:
-        """Append many items to the items in this collection"""
-        self.items.insert(__index, __item)
+        if allow_duplicates:
+            self.items.extend(__items)
+        else:
+            self.items.extend(item for item in self.items if item not in self.items)
+
+    def insert(self, __index: int, __item: T, allow_duplicates: bool = True) -> None:
+        """Insert given :py:class:`Item` before the given index"""
+        if allow_duplicates or __item not in self.items:
+            self.items.insert(__index, __item)
 
     def remove(self, __item: T) -> None:
         """Remove one item from the items in this collection"""
@@ -62,7 +74,7 @@ class ItemCollection[T: Item](ObjectPrinterMixin, list[T], metaclass=ABCMeta):
 
     def pop(self, __item: SupportsIndex = None) -> T:
         """Remove one item from the items in this collection and return it"""
-        return self.items.pop(__item)
+        return self.items.pop(__item) if __item else self.items.pop()
 
     def clear(self) -> None:
         """Remove all items from this collection"""
@@ -71,6 +83,10 @@ class ItemCollection[T: Item](ObjectPrinterMixin, list[T], metaclass=ABCMeta):
     def reverse(self) -> None:
         """Reverse the order of items in this collection in-place"""
         self.items.reverse()
+
+    def copy(self) -> list[T]:
+        """Return a shallow copy of the list of items in this collection"""
+        return [item for item in self.items]
 
     def sort(
             self,
@@ -116,7 +132,7 @@ class ItemCollection[T: Item](ObjectPrinterMixin, list[T], metaclass=ABCMeta):
         :param items: List of items or ItemCollection to merge with
         :param tags: List of tags to merge on. 
         """
-        tag_names = set(TagField.to_tags(tags))
+        tag_names = set(TagField.__tags__) if tags == FieldCombined.ALL else set(TagField.to_tags(tags))
 
         if isinstance(self, Library):  # log status message and use progress bar for libraries
             self.logger.info(
@@ -126,40 +142,40 @@ class ItemCollection[T: Item](ObjectPrinterMixin, list[T], metaclass=ABCMeta):
             )
             items = self.get_progress_bar(iterable=items, desc="Merging library", unit="tracks")
 
+        tags = to_collection(tags)
         if FieldCombined.IMAGES in tags or FieldCombined.ALL in tags:
             tag_names.add("image_links")
             tag_names.add("has_image")
 
         for item in items:  # perform the merge
-            item_in_library = next((i for i in self.items if i == item), None)
-            if not item_in_library:  # skip if the item does not exist in this collection
+            item_in_collection = next((i for i in self.items if i == item), None)
+            if not item_in_collection:  # skip if the item does not exist in this collection
                 continue
 
             for tag in tag_names:  # merge on each tag
                 if hasattr(item, tag):
-                    item_in_library[tag] = item[tag]
+                    item_in_collection[tag] = item[tag]
 
         if isinstance(self, Library):
             self.print_line()
 
     def __hash__(self):
         """Uniqueness of collection is a combination of its name and the items it holds"""
-        return hash((self.name, (item for item in self.items)))
+        return hash((self.name, len(self.items), (item for item in self.items)))
 
-    def __eq__(self, __collection: Self):
+    def __eq__(self, __collection: ItemCollection | list[T]):
         """Names equal and all items equal in order"""
-        return (
-            self.name == __collection.name
-            and len(self) == len(__collection)
-            and all(x == y for x, y in zip(self, __collection))
-        )
+        name = self.name == __collection.name if isinstance(__collection, ItemCollection) else True
+        length = len(self) == len(__collection)
+        items = all(x == y for x, y in zip(self, __collection))
+        return name and length and items
 
-    def __ne__(self, __collection: Self):
+    def __ne__(self, __collection: ItemCollection):
         return not self.__eq__(__collection)
 
-    def __iadd__(self, __items: list[Item]):
+    def __iadd__(self, __items: Iterable[T]):
         self.extend(__items)
-        return self.items
+        return self
 
     def __len__(self):
         return len(self.items)
@@ -173,13 +189,13 @@ class ItemCollection[T: Item](ObjectPrinterMixin, list[T], metaclass=ABCMeta):
     def __contains__(self, __item: T):
         return any(__item == i for i in self.items)
 
-    def __getitem__(self, __key: str | int | Item) -> T:
+    def __getitem__(self, __key: str | int | slice | Item) -> T | list[T]:
         """
         Returns the item in this collection by matching on a given index/Item/URI.
         If an item is given, the URI is extracted from this item
         and the matching Item from this collection is returned.
         """
-        if isinstance(__key, int):  # simply index the list or items
+        if isinstance(__key, int) or isinstance(__key, slice):  # simply index the list or items
             return self.items[__key]
         elif isinstance(__key, Item):  # take the URI
             if not __key.has_uri or __key.uri is None:
@@ -198,22 +214,41 @@ class ItemCollection[T: Item](ObjectPrinterMixin, list[T], metaclass=ABCMeta):
             raise KeyError(f"No matching URI found: '{__key}'")
 
     def __setitem__(self, __key: str | int | T, __value: T):
+        """
+        Set attributes of the :py:class:`Item` matching ``__key``
+        in this collection to the attributes of ``__value``
+        """
         try:
-            value_self = self[__key]
+            item = self[__key]
         except KeyError:
-            if isinstance(__key, int):  # don't append if key is index
-                raise KeyError(f"Given index is out of range: {__key}")
-            self.append(__value)
-            return
+            raise KeyError(f"Given index is out of range: {__key}")
 
-        if type(__value) is not type(value_self):  # only merge attributes if matching types
-            raise ValueError("Trying to set value on mismatched item types")
+        if type(__value) is not type(item):  # only merge attributes if matching types
+            raise ValueError("Trying to set on mismatched item types")
 
         for __key, __value in __value.__dict__.items():  # merge attributes
-            setattr(value_self, __key, deepcopy(__value))
+            setattr(item, __key, deepcopy(__value))
 
     def __delitem__(self, __key: str | int | T):
-        del self[__key]
+        self.remove(__key)
+
+    def __copy__(self):
+        obj = self.__new__(self.__class__)
+        for k, v in vars(self).items():
+            if isinstance(v, list) and all(isinstance(i, Item) for i in v):
+                v = [deepcopy(i) for i in v]
+            setattr(obj, k, v)
+        return obj
+
+    def __deepcopy__(self, _: dict = None):
+        obj = self.__new__(self.__class__)
+        for k, v in vars(self).items():
+            if isinstance(v, list) and all(isinstance(i, Item) for i in v):
+                v = [deepcopy(i) for i in v]
+            else:
+                v = deepcopy(v)
+            setattr(obj, k, v)
+        return obj
 
 
 # noinspection PyShadowingNames

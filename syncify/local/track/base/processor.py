@@ -58,6 +58,6 @@ class TagProcessor(LocalItem, Track, metaclass=ABCMeta):
         Load local file using mutagen and set object file path and extension properties.
 
         :return: Mutagen file object or None if load error.
-        :raise :py:class:`FileNotFoundError`: If the file cannot be found.
-        :raise :py:class:`InvalidFileType`: If the file type is not supported.
+        :raise FileNotFoundError: If the file cannot be found.
+        :raise InvalidFileType: If the file type is not supported.
         """

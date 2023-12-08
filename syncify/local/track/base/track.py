@@ -166,8 +166,7 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
             return self.path == item.path
         elif self.has_uri or item.has_uri:
             return self.has_uri == item.has_uri and self.uri == item.uri
-        else:
-            return self.name == self.name
+        return self.name == self.name
 
     def __copy__(self):
         """
@@ -185,4 +184,5 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
 
     def __deepcopy__(self, _: dict = None):
         """Deepcopy Track object by reloading from the disk"""
-        return self.__class__(file=self.path, available=self._available_paths, remote_wrangler=self.remote_wrangler)
+        file = self.file if isinstance(self.file, _MutagenMock) else self.path
+        return self.__class__(file=file, available=self._available_paths, remote_wrangler=self.remote_wrangler)

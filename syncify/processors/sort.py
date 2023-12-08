@@ -16,7 +16,7 @@ def get_field_from_code(field_code: int) -> Field | None:
     """
     Get the :py:class:`Field` enum for a given MusicBee field code.
 
-    :raise :py:class:`FieldError`: When the given ``field_code`` cannot be found.
+    :raise FieldError: When the given ``field_code`` cannot be found.
     """
     if field_code == 0:
         return
@@ -93,7 +93,7 @@ class ItemSorter(MusicBeeProcessor):
             if example_value is not None:
                 break
         if example_value is None:
-            # if no example value found, all values are None and no sort can happen safely. Skip
+            # if no example value found, all values are None and so no sort can happen safely. Skip
             return
 
         # get sort key based on value type

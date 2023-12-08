@@ -27,7 +27,7 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
 
         :param value: URL/URI/ID to check.
         :return: The :py:class:`RemoteIDType`.
-        :raise :py:class:`RemoteIDTypeError`: Raised when the function cannot determine the ID type
+        :raise RemoteIDTypeError: Raised when the function cannot determine the ID type
             of the input ``value``.
         """
         raise NotImplementedError
@@ -51,7 +51,7 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
         :param values: The values representing some remote items. See description for allowed value types.
             These items must all be of the same type of item to pass i.e. all tracks OR all artists etc.
         :return: :py:class:`RemoteItemType`
-        :raise :py:class:`RemoteItemTypeError`: Raised when the function cannot determine the item type
+        :raise RemoteItemTypeError: Raised when the function cannot determine the item type
             of the input ``values``.
             Or when the list contains strings representing many differing remote item types or only IDs.
         """
@@ -79,9 +79,9 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
     
         :param value: The value representing some remote item. See description for allowed value types.
         :return: The :py:class:`RemoteItemType`. If the given value is determined to be an ID, returns None.
-        :raise :py:class:`RemoteItemTypeError`: Raised when the function cannot determine the item type
+        :raise RemoteItemTypeError: Raised when the function cannot determine the item type
             of the input ``values``.
-        :raise :py:class:`EnumNotFoundError`: Raised when the item type of teh given ``value`` is not
+        :raise EnumNotFoundError: Raised when the item type of teh given ``value`` is not
             a valid remote item type.
         """
         raise NotImplementedError
@@ -99,7 +99,7 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
         :param values: The values representing some remote items. See description for allowed value types.
             These items must all be of the same type of item to pass i.e. all tracks OR all artists etc.
         :param kind: The remote item type to check for.
-        :raise :py:class:`RemoteItemTypeError`: Raised when the function cannot validate the item type
+        :raise RemoteItemTypeError: Raised when the function cannot validate the item type
             of the input ``values`` is of type ``kind`` or a simple ID.
         """
         item_type = cls.get_item_type(values)
@@ -125,7 +125,7 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
         :param type_in: Optionally, give the ID type of the input ``value`` to skip some checks.
         :param type_out: The ID type of the output ``value``.
         :return: Formatted string.
-        :raise :py:class:`RemoteIDTypeError`: Raised when the function cannot determine the item type
+        :raise RemoteIDTypeError: Raised when the function cannot determine the item type
             of the input ``value``.
         """
         raise NotImplementedError
@@ -146,7 +146,7 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
         :param kind: Optionally, give the item type of the input ``value`` to skip some checks.
             This is required when the given ``value`` is an ID.
         :return: List of IDs.
-        :raise :py:class:`RemoteError`: Raised when the function cannot determine the item type of the input ``values``.
+        :raise RemoteError: Raised when the function cannot determine the item type of the input ``values``.
             Or when it does not recognise the type of the input ``values`` parameter.
         """
         raise NotImplementedError
