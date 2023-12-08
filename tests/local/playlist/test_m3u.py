@@ -135,6 +135,9 @@ def test_save_new_file():
     # ...save these loaded tracks for real
     pl = M3U(path=path_new)
     pl.load(tracks_random)
+    original_dt_modified = pl.date_modified
+    original_dt_created = pl.date_created
+    print(pl)
     result = pl.save(dry_run=False)
 
     assert result.start == 0
@@ -154,9 +157,9 @@ def test_save_new_file():
     # ...remove some tracks and add some new ones
     tracks_random_new = random_tracks(15)
     pl.tracks = pl.tracks[:20] + tracks_random_new
-    original_dt_modified = pl.date_modified
-    original_dt_created = pl.date_created
+    print(pl)
     result = pl.save(dry_run=False)
+    print(pl)
 
     assert result.start == len(tracks_random)
     assert result.added == len(tracks_random_new)
@@ -188,10 +191,13 @@ def test_save_existing_file():
     assert len(pl.tracks) == 3
     original_dt_modified = pl.date_modified
     original_dt_created = pl.date_created
+    print(pl)
 
     tracks_random = random_tracks(10)
     pl.tracks = pl.tracks[:2] + tracks_random
+    print(pl)
     result = pl.save(dry_run=False)
+    print(pl)
 
     assert result.start == 3
     assert result.added == len(tracks_random)
