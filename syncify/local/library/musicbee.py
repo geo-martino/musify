@@ -117,6 +117,8 @@ class MusicBee(LocalLibrary, File):
             # need to remove the XML music folder to make it os agnostic
             track = tracks_paths.get(track_xml["Location"].replace(self.xml["Music Folder"], "").casefold())
             if track is None:
+                print(f"load - can't find {track_xml["Location"]}")
+                print(tracks_paths.keys)
                 continue
 
             track.rating = int(track_xml.get("Rating")) if track_xml.get("Rating") is not None else None
@@ -134,14 +136,16 @@ class MusicBee(LocalLibrary, File):
         :param dry_run: Run function, but do not modify file at all.
         :return: Map representation of the saved XML file.
         """
-        tracks_paths = {track.path.casefold(): track for track in self.tracks}
+        tracks_paths = {track.path.replace(self.library_folder, "").casefold(): track for track in self.tracks}
         track_id_map: dict[LocalTrack, tuple[int, str]] = {}
         for track_xml in self.xml["Tracks"].values():
             if track_xml["Track Type"] != "File":
                 continue
 
-            track = tracks_paths.get(track_xml["Location"].casefold())
+            track = tracks_paths.get(track_xml["Location"].replace(self.xml["Music Folder"], "").casefold())
             if not track:
+                print(f"save - can't find {track_xml["Location"]}")
+                print(tracks_paths.keys)
                 continue
 
             track_id_map[track] = (track_xml["Track ID"], track_xml["Persistent ID"])
