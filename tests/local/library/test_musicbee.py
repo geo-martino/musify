@@ -32,7 +32,6 @@ def test_parser():
     assert xml["Major Version"] == 3
     assert xml["Minor Version"] == 5
     assert xml["Application Version"] == "3.5.8447.35892"
-    print(xml["Music Folder"], path_library_resources, relpath(dirname(path_library_resources)).lstrip("./\\"))
     assert xml["Music Folder"].endswith(relpath(dirname(path_library_resources)).lstrip("./\\"))
     assert xml["Library Persistent ID"] == "3D76B2A6FD362901"
     assert len(xml["Tracks"]) == 6
@@ -183,15 +182,11 @@ def test_save():
     library.save(dry_run=False)
     assert exists(path_output_xml)
 
-    with open(path_output_xml, "r") as f:
-        print(f.read())
-
-    with open(library_filepath, "r") as f:
-        print(f.read())
-
+    # these keys fail on other systems, ignore them in line checks
+    ignore_keys = ["Music Folder", "Date Modified"]
     with open(library_filepath, "r") as f_in, open(path_output_xml, "r") as f_out:
         for line_in, line_out in zip(f_in, f_out):
-            if ">Music Folder<" in line_in:  # fails on other systems so skip
+            if any(f"<key>{key}</key>" in line_in for key in ignore_keys):
                 continue
             assert line_in == line_out
 
