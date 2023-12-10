@@ -590,13 +590,14 @@ if __name__ == "__main__":
 #    from using lowercase path cleaning logic in TrackMatch
 #  This may now be fixed by extending functionality of playlists to include
 #   available track paths on load
-# TODO: implement merge_playlists functions and,
-#  by extension, implement android library sync
+# TODO: implement merge_playlists functions and, by extension, implement android library sync
 # TODO: improve separation of concerns for main and settings
 #  settings object should contain all settings as properties to be accessed by main
 #  main should never need to access the yaml dict config directly
 
 
 ## NEEDED FOR v0.3
+# TODO: refactor abstract tests to class with inheritance whereby inherited classes
 # TODO: write tests, write tests, write tests
+#  implement setup/teardown and any other necessary tests and/or values to use in base class
 # TODO: update the readme (dynamic readme?)

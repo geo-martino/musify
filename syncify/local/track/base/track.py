@@ -14,6 +14,7 @@ from syncify.local.track.base.writer import TagWriter
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 
 
+# TODO: see if this can be moved to tests
 class _MutagenMock(mutagen.FileType):
     class _MutagenInfoMock(mutagen.StreamInfo):
         def __init__(self):

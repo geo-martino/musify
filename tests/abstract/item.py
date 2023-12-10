@@ -1,58 +1,65 @@
+from abc import ABCMeta, abstractmethod
 from copy import copy
 
 import pytest
 
 from syncify.abstract.item import Item
+from syncify.abstract.misc import PrettyPrinter
 from syncify.local.base import LocalObject
+from tests.abstract.misc import PrettyPrinterTester
 from tests.remote import random_uri
 
 
-def item_tests(item: Item) -> None:
-    """Run generic tests on any :py:class:`Item`."""
-    item_basic_dunder_tests(item)
-    item_get_and_set_tests(item)
-    item_merge_tests(item)
+class ItemTester(PrettyPrinterTester, metaclass=ABCMeta):
+    """Run generic tests for :py:class:`Item` implementations"""
 
+    @staticmethod
+    @abstractmethod
+    def item(*args, **kwargs) -> Item:
+        """Yields an :py:class:`Item` object to be tested as pytest.fixture"""
+        raise NotImplementedError
 
-def item_basic_dunder_tests(item: Item) -> None:
-    """:py:class:`Item` basic dunder operation tests"""
-    item_modified = copy(item)
-    item_modified.uri = random_uri()
+    @staticmethod
+    @pytest.fixture
+    def obj(item: Item) -> PrettyPrinter:
+        return item
 
-    assert hash(item) == hash(item)
-    assert hash(item) != hash(item_modified)
-    assert item == item
+    @staticmethod
+    def test_equality(item: Item):
+        item_modified = copy(item)
+        item_modified.uri = random_uri()
 
-    if isinstance(item, LocalObject):
-        # still matches on path
-        assert item == item_modified
-    else:
-        assert item != item_modified
+        assert hash(item) == hash(item)
+        assert hash(item) != hash(item_modified)
+        assert item == item
 
+        if isinstance(item, LocalObject):
+            # still matches on path
+            assert item == item_modified
+        else:
+            assert item != item_modified
 
-def item_get_and_set_tests(item: Item) -> None:
-    """:py:class:`Item` __getitem__ and __setitem__ tests"""
-    item = copy(item)
+    @staticmethod
+    def test_get_and_set_attributes(item: Item):
+        assert item["name"] == item.name
+        assert item["uri"] == item.uri
 
-    assert item["name"] == item.name
-    assert item["uri"] == item.uri
+        assert item.uri != "new_uri"
+        item["uri"] = "new_uri"
+        assert item.uri == "new_uri"
 
-    assert item.uri != "new_uri"
-    item["uri"] = "new_uri"
-    assert item.uri == "new_uri"
+        with pytest.raises(KeyError):
+            item["bad key"] = "value"
 
-    with pytest.raises(KeyError):
-        item["bad key"] = "value"
+        with pytest.raises(AttributeError):
+            item["name"] = "value"
 
-    with pytest.raises(AttributeError):
-        item["name"] = "value"
+    @staticmethod
+    def test_merge_item(item: Item):
+        """:py:class:`Item` `merge` tests"""
+        item_modified = copy(item)
+        item_modified.uri = "new_uri"
 
-
-def item_merge_tests(item: Item) -> None:
-    """:py:class:`Item` `merge` tests"""
-    item_modified = copy(item)
-    item_modified.uri = "new_uri"
-
-    assert item.uri != item_modified.uri
-    item.merge(item_modified)
-    assert item.uri == item_modified.uri
+        assert item.uri != item_modified.uri
+        item.merge(item_modified)
+        assert item.uri == item_modified.uri

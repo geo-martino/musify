@@ -211,7 +211,7 @@ class Playlists:
                 f"\33[93m{len(include_added):>4} added \33[0m|"
                 f"\33[91m{len(include_removed):>4} removed \33[0m|"
                 f"\33[92;1m {len(include):>4} final \33[0m")
-        else:    
+        else:
             log_str = "\33[1m No changes\33[0m"
         logger(f"{name_log} | xautopf - include |"
             f"\33[96m{len(include_initial):>4} initial \33[0m|{log_str}")
@@ -227,7 +227,7 @@ class Playlists:
                 f"\33[93m{len(exclude_added):>4} added \33[0m|"
                 f"\33[91m{len(exclude_removed):>4} removed \33[0m|"
                 f"\33[92;1m {len(exclude):>4} final \33[0m")
-        else:    
+        else:
             log_str = "\33[1m No changes\33[0m"
         logger(f"{name_log} | xautopf - exclude |"
             f"\33[96m{len(exclude_initial):>4} initial \33[0m|{log_str}")
@@ -240,7 +240,7 @@ class Playlists:
         return xml
         
 
-    def compare_playlists(self, playlists: dict, ext_playlists_path: str, export_alias: str, ext_path_prefix: str = "..", dry_run: bool=False, **kwargs):        
+    def compare_playlists(self, playlists: dict, ext_playlists_path: str, export_alias: str, ext_path_prefix: str = "..", dry_run: bool=False, **kwargs):
         print()
         self.logger.info(
             f"\33[1;95m -> \33[1;97mSynchronising Local and {export_alias} playlists\33[0m"
@@ -295,7 +295,7 @@ class Playlists:
                     f"\33[93m{len(set(tracks_added)):>4} added \33[0m|"
                     f"\33[91m{len(set(tracks_removed)):>4} removed \33[0m|"
                     f"\33[92;1m {len(synced_playlists[name]):>4} final \33[0m")
-            else:    
+            else:
                 log_str = "\33[1m No changes\33[0m"
             logger(f"{name_log} | \33[96m{len(tracks_initial):>4} initial \33[0m|{log_str}")
 

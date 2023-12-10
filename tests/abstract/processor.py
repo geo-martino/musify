@@ -52,4 +52,3 @@ def test_dynamic_processor():
     obj._processor_name = "processor_extra"
     assert obj._processor == obj.processor_3
     assert obj._process == 3
-

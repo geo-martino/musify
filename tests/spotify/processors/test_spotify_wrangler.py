@@ -8,9 +8,7 @@ from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 
 
 # noinspection SpellCheckingInspection
-def test_get_id_type():
-    wrangler = SpotifyDataWrangler()
-        
+def test_get_id_type(wrangler: SpotifyDataWrangler):
     assert wrangler.get_id_type("1234567890ASDFGHJKLZXC") == RemoteIDType.ID
     assert wrangler.get_id_type("spotify:show:1234567890ASDFGHJKLZXC") == RemoteIDType.URI
     assert wrangler.get_id_type(f"{URL_API}/1234567890ASDFGHJKLZXC") == RemoteIDType.URL
@@ -21,9 +19,7 @@ def test_get_id_type():
 
 
 # noinspection SpellCheckingInspection
-def test_validate_id_type():
-    wrangler = SpotifyDataWrangler()
-    
+def test_validate_id_type(wrangler: SpotifyDataWrangler):
     assert wrangler.validate_id_type("1234567890ASDFGHJKLZXC")
     assert wrangler.validate_id_type("spotify:show:1234567890ASDFGHJKLZXC")
     assert wrangler.validate_id_type(f"{URL_API}/1234567890ASDFGHJKLZXC")
@@ -39,9 +35,7 @@ def test_validate_id_type():
 
 
 # noinspection SpellCheckingInspection
-def test_get_item_type():
-    wrangler = SpotifyDataWrangler()
-    
+def test_get_item_type(wrangler: SpotifyDataWrangler):
     assert wrangler.get_item_type("spotify:playlist:1234567890ASDFGHJKLZXC") == RemoteItemType.PLAYLIST
     assert wrangler.get_item_type("spotify:TRACK:1234567890ASDFGHJKLZXC") == RemoteItemType.TRACK
     assert wrangler.get_item_type("spotify:ALBUM:1234567890ASDFGHJKLZXC") == RemoteItemType.ALBUM
@@ -114,9 +108,7 @@ def test_get_item_type():
 
 
 # noinspection SpellCheckingInspection
-def test_validate_item_type():
-    wrangler = SpotifyDataWrangler()
-    
+def test_validate_item_type(wrangler: SpotifyDataWrangler):
     assert wrangler.validate_item_type(
         f"{URL_API}/playlist/1234567890ASDFGHJKLZXC/followers", kind=RemoteItemType.PLAYLIST
     ) is None
@@ -154,9 +146,7 @@ def test_validate_item_type():
 
 
 # noinspection SpellCheckingInspection
-def test_convert():
-    wrangler = SpotifyDataWrangler()
-    
+def test_convert(wrangler: SpotifyDataWrangler):
     id_ = "1234567890ASDFGHJKLZXC"
     assert wrangler.convert(
         id_, kind=RemoteItemType.EPISODE, type_out=RemoteIDType.URL
@@ -214,9 +204,7 @@ def test_convert():
 
 
 # noinspection SpellCheckingInspection
-def test_extract_ids():
-    wrangler = SpotifyDataWrangler()
-    
+def test_extract_ids(wrangler: SpotifyDataWrangler):
     value = f"{URL_API}/playlists/8188181818181818129321/followers"
     assert wrangler.extract_ids(value) == ["8188181818181818129321"]
     value = f"{URL_EXT}/playlist/bnmhjkyuidfgertsdfertw/followers"

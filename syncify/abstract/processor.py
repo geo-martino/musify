@@ -46,7 +46,7 @@ class DynamicProcessor(Processor, metaclass=ABCMeta):
     If a :py:function:`dynamicprocessormethod` has alternative method names, these names will be added
     to the class' ``__dict__`` as callable methods which point to the decorated method.
 
-    Optionally, you may also define a ``_processor_method_fmt`` classmethod which
+    Optionally, you may also define a ``_processor_method_fmt`` class method which
     applies some transformation to all method names.
     The transformed method name is then appended to the class' ``__dict__``.
     The transformation is always applied before extending the class with any given

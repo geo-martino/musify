@@ -353,7 +353,8 @@ class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):
     @property
     def album_artist(self):
         """The most common artist in this collection"""
-        return self.artists[0] if self.artists else None
+        artists = get_most_common_values(artist for track in self.tracks if track.artist for artist in track.artists)
+        return artists[0] if artists else None
 
     @property
     def year(self):

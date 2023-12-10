@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from collections.abc import Collection, Mapping, Iterable, Container
+from collections.abc import Collection, Mapping, Iterable, Container, MutableSequence
 from copy import deepcopy
 from datetime import datetime
 from typing import Any, Self, SupportsIndex, Hashable
@@ -17,7 +17,7 @@ from syncify.utils.logger import Logger
 
 
 # noinspection PyShadowingNames
-class ItemCollection[T: Item](ObjectPrinterMixin, list[T], Hashable, metaclass=ABCMeta):
+class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], Hashable, metaclass=ABCMeta):
     """
     Generic class for storing a collection of items.
 
@@ -45,8 +45,12 @@ class ItemCollection[T: Item](ObjectPrinterMixin, list[T], Hashable, metaclass=A
         return self.items.index(__item, __start if __start else 0, __stop if __stop else len(self.items))
 
     def count(self, __item: T) -> int:
-        """Return the number of occurences of the given :py:class:`Item` in this collection"""
+        """Return the number of occurrences of the given :py:class:`Item` in this collection"""
         return self.items.count(__item)
+
+    def copy(self) -> list[T]:
+        """Return a shallow copy of the list of items in this collection"""
+        return [item for item in self.items]
 
     def append(self, __item: T, allow_duplicates: bool = True) -> None:
         """Append one item to the items in this collection"""
@@ -76,17 +80,13 @@ class ItemCollection[T: Item](ObjectPrinterMixin, list[T], Hashable, metaclass=A
         """Remove one item from the items in this collection and return it"""
         return self.items.pop(__item) if __item else self.items.pop()
 
-    def clear(self) -> None:
-        """Remove all items from this collection"""
-        self.items.clear()
-
     def reverse(self) -> None:
         """Reverse the order of items in this collection in-place"""
         self.items.reverse()
 
-    def copy(self) -> list[T]:
-        """Return a shallow copy of the list of items in this collection"""
-        return [item for item in self.items]
+    def clear(self) -> None:
+        """Remove all items from this collection"""
+        self.items.clear()
 
     def sort(
             self,

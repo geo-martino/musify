@@ -6,6 +6,7 @@ import pyfiglet
 
 from syncify import PROGRAM_NAME
 
+# noinspection SpellCheckingInspection
 LOGO_FONTS = (
     "basic", "broadway", "chunky", "doom", "drpepper", "epic", "hollywood", "isometric1", "isometric2",
     "isometric3", "isometric4", "larry3d", "shadow", "slant", "speed", "standard", "univers", "whimsy"

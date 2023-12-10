@@ -1,150 +1,135 @@
-import os
-from copy import copy
 from datetime import datetime
+
+import pytest
 
 from syncify.local.track import LocalTrack
 from syncify.processors.limit import ItemLimiter, LimitType
 from tests import random_file
-from tests.abstract.misc import pretty_printer_tests
+from tests.abstract.misc import PrettyPrinterTester
 from tests.local.track import random_tracks
 
 
 # TODO: add test for to_xml
 
+class TestItemComparer(PrettyPrinterTester):
 
-def test_init():
-    limiter = ItemLimiter(sorted_by="HighestRating")
-    assert limiter._processor == limiter._highest_rating
-    pretty_printer_tests(limiter)
+    @staticmethod
+    @pytest.fixture
+    def obj() -> ItemLimiter:
+        return ItemLimiter(limit=30, on=LimitType.MINUTES, sorted_by="HighestRating", allowance=2)
 
-    limiter = ItemLimiter(sorted_by="__ least_ recently_  added __ ")
-    assert limiter._processor == limiter._least_recently_added
-    pretty_printer_tests(limiter)
+    @staticmethod
+    @pytest.fixture
+    def tracks(tmp_path: str) -> list[LocalTrack]:
+        """Yields a list of random tracks with dynamically configured properties for limit tests"""
+        tracks = random_tracks(50)
+        for i in range(1, 6):
+            random_file_path = random_file(tmp_path=tmp_path, size=i * 1000)
+            for track in tracks[(i-1)*10:i*10]:
 
-    limiter = ItemLimiter(sorted_by="__most recently played__")
-    assert limiter._processor == limiter._most_recently_played
-    pretty_printer_tests(limiter)
+                track.album = f"album {i}"
+                track.file.info.length = i * 60
+                track._path = random_file_path
+                track.rating = i
 
+                if i != 1 and i != 5:
+                    track.last_played = datetime.now()
 
-def get_tracks_for_limit_test() -> tuple[list[LocalTrack], list[str]]:
-    """Generate a list of random tracks with dynamically configured properties for limit tests"""
-    # prepare tracks for tests
-    tracks = random_tracks(50)
-    random_files = []
-    for i in range(1, 6):
-        random_file_path = random_file(i * 1000)
-        random_files.append(random_file_path)
-        for track in tracks[(i-1)*10:i*10]:
+                if i == 1 or i == 3:
+                    track.play_count = 1000000
 
-            track.album = f"album {i}"
-            track.file.info.length = i * 60
-            track._path = random_file_path
-            track.rating = i
+        return tracks
 
-            if i != 1 and i != 5:
-                track.last_played = datetime.now()
+    @staticmethod
+    def test_init():
+        limiter = ItemLimiter(sorted_by="HighestRating")
+        assert limiter._processor == limiter._highest_rating
 
-            if i == 1 or i == 3:
-                track.play_count = 1000000
+        limiter = ItemLimiter(sorted_by="__ least_ recently_  added __ ")
+        assert limiter._processor == limiter._least_recently_added
 
-    return tracks, random_files
+        limiter = ItemLimiter(sorted_by="__most recently played__")
+        assert limiter._processor == limiter._most_recently_played
 
+    @staticmethod
+    def test_limit_below_threshold(tracks: list[LocalTrack]):
+        assert len(tracks) == 50
 
-def test_limit_basic():
-    tracks = random_tracks(50)
+        limiter = ItemLimiter()
+        limiter.limit(tracks)
+        assert len(tracks) == 50
 
-    limiter = ItemLimiter()
-    limiter.limit(tracks)
-    assert len(tracks) == 50
+        limiter = ItemLimiter(on=LimitType.ITEMS)
+        limiter.limit(tracks)
+        assert len(tracks) == 50
 
-    limiter = ItemLimiter(on=LimitType.ITEMS)
-    limiter.limit(tracks)
-    assert len(tracks) == 50
+    @staticmethod
+    def test_limit_on_items_1(tracks: list[LocalTrack]):
+        limiter = ItemLimiter(limit=25)
+        limiter.limit(tracks)
+        assert len(tracks) == 25
 
+    @staticmethod
+    def test_limit_on_items_2(tracks: list[LocalTrack]):
+        limiter = ItemLimiter(limit=10, sorted_by="HighestRating")
+        limiter.limit(tracks)
+        assert len(tracks) == 10
+        assert set(track.album for track in tracks) == {"album 5"}
 
-def test_limit_on_items():
-    tracks, paths = get_tracks_for_limit_test()
+    @staticmethod
+    def test_limit_on_items_3(tracks: list[LocalTrack]):
+        limiter = ItemLimiter(limit=20, sorted_by="most often played")
+        limiter.limit(tracks)
+        assert len(tracks) == 20
+        assert set(track.album for track in tracks) == {"album 1", "album 3"}
 
-    limiter = ItemLimiter(limit=25)
-    tracks_copy = copy(tracks)
-    limiter.limit(tracks_copy)
-    assert len(tracks_copy) == 25
+    @staticmethod
+    def test_limit_on_items_4(tracks: list[LocalTrack]):
+        limiter = ItemLimiter(limit=20, sorted_by="most often played")
+        limiter.limit(tracks, ignore=[track for track in tracks if track.album == "album 5"])
+        assert len(tracks) == 30
+        assert set(track.album for track in tracks) == {"album 1", "album 3", "album 5"}
 
-    limiter = ItemLimiter(limit=10, sorted_by="HighestRating")
-    tracks_copy = copy(tracks)
-    limiter.limit(tracks_copy)
-    assert len(tracks_copy) == 10
-    assert set(track.album for track in tracks_copy) == {"album 5"}
+    @staticmethod
+    def test_limit_on_albums_1(tracks: list[LocalTrack]):
+        limiter = ItemLimiter(limit=3, on=LimitType.ALBUMS)
+        limiter.limit(tracks)
+        assert len(tracks) == 30
 
-    limiter = ItemLimiter(limit=20, sorted_by="most often played")
-    tracks_copy = copy(tracks)
-    limiter.limit(tracks_copy)
-    assert len(tracks_copy) == 20
-    assert set(track.album for track in tracks_copy) == {"album 1", "album 3"}
+    @staticmethod
+    def test_limit_on_albums_2(tracks: list[LocalTrack]):
+        limiter = ItemLimiter(limit=2, on=LimitType.ALBUMS, sorted_by="least recently played")
+        limiter.limit(tracks)
+        assert len(tracks) == 20
+        assert set(track.album for track in tracks) == {"album 1", "album 5"}
 
-    limiter = ItemLimiter(limit=20, sorted_by="most often played")
-    tracks_copy = copy(tracks)
-    limiter.limit(tracks_copy, ignore=[track for track in tracks if track.album == "album 5"])
-    assert len(tracks_copy) == 30
-    assert set(track.album for track in tracks_copy) == {"album 1", "album 3", "album 5"}
+    @staticmethod
+    def test_limit_on_albums_3(tracks: list[LocalTrack]):
+        limiter = ItemLimiter(limit=2, on=LimitType.ALBUMS, sorted_by="least recently played")
+        limiter.limit(tracks, ignore={track for track in tracks if track.album == "album 3"})
+        assert len(tracks) == 30
+        assert set(track.album for track in tracks) == {"album 1", "album 3", "album 5"}
 
-    for path in paths:
-        os.remove(path)
+    @staticmethod
+    def test_limit_on_seconds_1(tracks: list[LocalTrack]):
+        limiter = ItemLimiter(limit=30, on=LimitType.MINUTES)
+        limiter.limit(tracks)
+        assert len(tracks) == 20
 
+    @staticmethod
+    def test_limit_on_seconds_2(tracks: list[LocalTrack]):
+        limiter = ItemLimiter(limit=30, on=LimitType.MINUTES, allowance=2)
+        limiter.limit(tracks)
+        assert len(tracks) == 21
 
-def test_limit_on_albums():
-    tracks, paths = get_tracks_for_limit_test()
+    @staticmethod
+    def test_limit_on_bytes_1(tracks: list[LocalTrack]):
+        limiter = ItemLimiter(limit=30, on=LimitType.KILOBYTES)
+        limiter.limit(tracks)
+        assert len(tracks) == 20
 
-    limiter = ItemLimiter(limit=3, on=LimitType.ALBUMS)
-    tracks_copy = copy(tracks)
-    limiter.limit(tracks_copy)
-    assert len(tracks_copy) == 30
-
-    limiter = ItemLimiter(limit=2, on=LimitType.ALBUMS, sorted_by="least recently played")
-    tracks_copy = copy(tracks)
-    limiter.limit(tracks_copy)
-    assert len(tracks_copy) == 20
-    assert set(track.album for track in tracks_copy) == {"album 1", "album 5"}
-
-    limiter = ItemLimiter(limit=2, on=LimitType.ALBUMS, sorted_by="least recently played")
-    tracks_copy = copy(tracks)
-    limiter.limit(tracks_copy, ignore={track for track in tracks if track.album == "album 3"})
-    assert len(tracks_copy) == 30
-    assert set(track.album for track in tracks_copy) == {"album 1", "album 3", "album 5"}
-
-    for path in paths:
-        os.remove(path)
-
-
-def test_limit_on_seconds():
-    tracks, paths = get_tracks_for_limit_test()
-
-    limiter = ItemLimiter(limit=30, on=LimitType.MINUTES)
-    tracks_copy = copy(tracks)
-    limiter.limit(tracks_copy)
-    assert len(tracks_copy) == 20
-
-    limiter = ItemLimiter(limit=30, on=LimitType.MINUTES, allowance=2)
-    tracks_copy = copy(tracks)
-    limiter.limit(tracks_copy)
-    assert len(tracks_copy) == 21
-
-    for path in paths:
-        os.remove(path)
-
-
-def test_limit_on_bytes():
-    tracks, paths = get_tracks_for_limit_test()
-
-    limiter = ItemLimiter(limit=30, on=LimitType.KILOBYTES)
-    tracks_copy = copy(tracks)
-    limiter.limit(tracks_copy)
-    assert len(tracks_copy) == 20
-
-    limiter = ItemLimiter(limit=30, on=LimitType.KILOBYTES, allowance=2)
-    tracks_copy = copy(tracks)
-    limiter.limit(tracks_copy)
-    assert len(tracks_copy) == 21
-
-    for path in paths:
-        os.remove(path)
+    @staticmethod
+    def test_limit_on_bytes_2(tracks: list[LocalTrack]):
+        limiter = ItemLimiter(limit=30, on=LimitType.KILOBYTES, allowance=2)
+        limiter.limit(tracks)
+        assert len(tracks) == 21
