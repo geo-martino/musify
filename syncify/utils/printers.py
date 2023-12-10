@@ -14,13 +14,13 @@ LOGO_FONTS = (
 LOGO_COLOURS = (91, 93, 92, 94, 96, 95)
 
 
-# noinspection SpellCheckingInspection
 def print_logo(fonts: Sequence[str] = LOGO_FONTS, colours: list[int] = LOGO_COLOURS) -> None:
     """Pretty print the Syncify logo in the centre of the terminal"""
     if bool(random.getrandbits(1)):
         colours.reverse()
 
     cols = os.get_terminal_size().columns
+    # noinspection SpellCheckingInspection
     figlet = pyfiglet.Figlet(font=random.choice(fonts), direction=0, justify="left", width=cols)
 
     text = figlet.renderText(PROGRAM_NAME.upper()).rstrip().split("\n")

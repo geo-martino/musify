@@ -279,11 +279,11 @@ class Syncify(Settings, Report):
 
         local_backup_name = self.local_library_backup_name
         local_backup_name = f"[FINAL] - {local_backup_name}" if is_final else local_backup_name
-        self._save_json(local_backup_name, self.local_library.as_json())
+        self._save_json(local_backup_name, self.local_library.json())
 
         spotify_backup_name = self.spotify_library_backup_name
         spotify_backup_name = f"[FINAL] - {spotify_backup_name}" if is_final else spotify_backup_name
-        self._save_json(spotify_backup_name, self.remote_library.as_json())
+        self._save_json(spotify_backup_name, self.remote_library.json())
         self.logger.debug("Backup libraries: DONE\n")
 
     def restore(self) -> None:
@@ -535,7 +535,6 @@ if __name__ == "__main__":
         elif sys.platform == "linux" or sys.platform == "darwin":
             os.system(f"echo '\033]2;{title}\007'")
 
-        # noinspection PyBroadException
         try:  # run the functions requested by the user
             main.logger.debug(f"START function: {func}")
             main.set_func(func)
@@ -597,7 +596,8 @@ if __name__ == "__main__":
 
 
 ## NEEDED FOR v0.3
-# TODO: refactor abstract tests to class with inheritance whereby inherited classes
+# TODO: fix local collection tests
+# TODO: review scope of functions/attributes/properties e.g. logger methods on Logger implementations
+# TODO: review copy and deepcopy ItemCollection methods
 # TODO: write tests, write tests, write tests
-#  implement setup/teardown and any other necessary tests and/or values to use in base class
 # TODO: update the readme (dynamic readme?)

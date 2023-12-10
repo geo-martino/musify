@@ -185,7 +185,6 @@ class XAutoPF(LocalPlaylist):
             final_sorter=len(final_source.get("SortBy", final_source.get("DefinedSort", []))) > 0,
         )
 
-    # noinspection PyTypeChecker
     def _update_xml_paths(self) -> None:
         """Update the stored, parsed XML object with valid include and exclude paths"""
         source = self.xml["SmartPlaylist"]["Source"]

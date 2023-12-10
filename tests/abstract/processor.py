@@ -3,7 +3,7 @@ from typing import Any
 from syncify.abstract.processor import DynamicProcessor, dynamicprocessormethod
 
 
-def test_dynamicprocessormethod_decorator():
+def test_dynamic_processor_method_decorator():
     @dynamicprocessormethod
     def test_1():
         return 1

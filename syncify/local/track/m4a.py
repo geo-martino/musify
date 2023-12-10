@@ -53,7 +53,6 @@ class M4A(LocalTrack):
         images=["covr"],
     )
 
-    # noinspection PyTypeChecker
     def __init__(
             self,
             file: str | mutagen.FileType | mutagen.mp4.MP4,
@@ -61,6 +60,7 @@ class M4A(LocalTrack):
             remote_wrangler: RemoteDataWrangler = None,
     ):
         super().__init__(file=file, available=available, remote_wrangler=remote_wrangler)
+        # noinspection PyTypeChecker
         self._file: mutagen.mp4.MP4 = self._file
 
     def _read_tag(self, tag_ids: Iterable[str]) -> list[Any] | None:

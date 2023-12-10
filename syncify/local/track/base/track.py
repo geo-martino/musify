@@ -57,7 +57,6 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
         """Get all files in a given library that match this Track object's valid filetypes."""
         paths = set()
 
-        # noinspection PyTypeChecker
         for ext in cls.valid_extensions:
             # first glob doesn't get filenames that start with a period
             paths |= set(glob(join(library_folder, "**", f"*{ext}"), recursive=True))
@@ -183,7 +182,7 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
         else:
             return self.__class__(file=self.file, available=self._available_paths, remote_wrangler=self.remote_wrangler)
 
-    def __deepcopy__(self, _: dict = None):
+    def __deepcopy__(self, _: as_dict = None):
         """Deepcopy Track object by reloading from the disk"""
         file = self.file if isinstance(self.file, _MutagenMock) else self.path
         return self.__class__(file=file, available=self._available_paths, remote_wrangler=self.remote_wrangler)

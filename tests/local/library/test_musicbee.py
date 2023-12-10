@@ -128,7 +128,6 @@ class TestMusicBee(LocalLibraryTester):
             splitext(basename(path_playlist_xautopf_ra).casefold())[0]: path_playlist_xautopf_ra,
         }
 
-    # noinspection PyTypeChecker
     @staticmethod
     def test_load():
         MusicBee.xml_library_filename = library_filename

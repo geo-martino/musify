@@ -75,9 +75,9 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         self.final_unavailable: list[Track] = []
         self.final_unchanged: list[Track] = []
 
-    # noinspection PyBroadException
     def _make_temp_playlist(self, name: str, collection: ItemCollection) -> None:
         """Create a temporary playlist, store its URL for later unfollowing, and add all given URIs."""
+        # noinspection PyBroadException
         try:
             uris = [item.uri for item in collection if item.has_uri]
             if not uris:

@@ -17,6 +17,8 @@ from syncify.local.exception import InvalidFileType, ImageLoadError
 class File(metaclass=ABCMeta):
     """Generic class for representing a file on a system."""
 
+    valid_extensions: frozenset[str]
+
     @property
     @abstractmethod
     def path(self) -> str:
@@ -52,12 +54,6 @@ class File(metaclass=ABCMeta):
     def date_modified(self) -> datetime | None:
         """:py:class:`datetime` object representing when the file was last modified"""
         return datetime.fromtimestamp(getmtime(self.path)) if exists(self.path) else None
-
-    @property
-    @abstractmethod
-    def valid_extensions(self) -> frozenset[str]:
-        """Allowed extensions in lowercase"""
-        raise NotImplementedError
 
     def _validate_type(self, path: str) -> None:
         """Raises exception if the path's extension is not accepted"""

@@ -79,7 +79,7 @@ class RequestHandler(APIAuthoriser, Logger):
 
             response = self._request(method=method, url=url, *args, **kwargs)
 
-        return self._response_as_json(response)
+        return self._response_json(response)
 
     def _request(
             self,
@@ -131,7 +131,7 @@ class RequestHandler(APIAuthoriser, Logger):
 
     def _raise_exception(self, response: BaseResponse) -> None:
         """Check for response status codes that should raise an exception."""
-        message = self._response_as_json(response).get("error", {}).get("message")
+        message = self._response_json(response).get("error", {}).get("message")
         if not message:
             status = HTTPStatus(response.status_code)
             message = f"{status.phrase} | {status.description}"
@@ -155,7 +155,7 @@ class RequestHandler(APIAuthoriser, Logger):
         return False
 
     @staticmethod
-    def _response_as_json(response: BaseResponse) -> dict[str, Any]:
+    def _response_json(response: BaseResponse) -> dict[str, Any]:
         """Format the response to JSON and handle any errors"""
         try:
             return response.json()

@@ -54,7 +54,6 @@ class MP3(LocalTrack):
         images=["APIC"],
     )
 
-    # noinspection PyTypeChecker
     def __init__(
             self,
             file: str | mutagen.FileType | mutagen.mp3.MP3,
@@ -62,6 +61,7 @@ class MP3(LocalTrack):
             remote_wrangler: RemoteDataWrangler = None,
     ):
         super().__init__(file=file, available=available, remote_wrangler=remote_wrangler)
+        # noinspection PyTypeChecker
         self._file: mutagen.mp3.MP3 = self._file
 
     def _read_tag(self, tag_ids: Iterable[str]) -> list[Any] | None:
@@ -109,7 +109,6 @@ class MP3(LocalTrack):
         values = ";".join(self.genres if self.genres is not None else [])
         return self._write_tag(next(iter(self.tag_map.genres), None), values, dry_run)
 
-    # noinspection PyUnresolvedReferences
     def _write_images(self, dry_run: bool = True) -> bool:
         tag_id_prefix = next(iter(self.tag_map.images), None)
 
@@ -122,6 +121,7 @@ class MP3(LocalTrack):
                 image_type: mutagen.id3.PictureType = getattr(mutagen.id3.PictureType, image_kind_attr)
                 tag_id = f"{tag_id_prefix}:{image_kind}"
 
+                # noinspection PyUnresolvedReferences
                 self._file[tag_id] = mutagen.id3.APIC(
                     encoding=mutagen.id3.Encoding.UTF8,
                     # desc=image_kind,
@@ -135,22 +135,22 @@ class MP3(LocalTrack):
             updated = tag_id_prefix is not None
         return updated
 
-    # noinspection PyUnresolvedReferences
     def _write_comments(self, dry_run: bool = True) -> bool:
         tag_id_prefix = next(iter(self.tag_map.comments), None)
         self.delete_tags(tags=LocalTrackField.COMMENTS, dry_run=dry_run)
 
         for i, comment in enumerate(self.comments, 1):
+            # noinspection PyUnresolvedReferences
             comm = mutagen.id3.COMM(
                 encoding=mutagen.id3.Encoding.UTF8, desc=f"ID3v1 Comment {i}", lang="eng", text=[comment]
             )
+            # noinspection PyUnresolvedReferences
             tag_id = f"{tag_id_prefix}:{comm.desc}:{comm.lang}"
             if not dry_run and tag_id is not None:
                 self._file[tag_id] = comm
 
         return tag_id_prefix is not None
 
-    # noinspection PyUnresolvedReferences
     def _write_uri(self, dry_run: bool = True) -> bool:
         if not self.remote_wrangler:
             return False
@@ -162,7 +162,9 @@ class MP3(LocalTrack):
             tag_id_prefix = next(iter(self.tag_map.comments), None)
             self.delete_tags(tags=self.uri_tag, dry_run=dry_run)
 
+            # noinspection PyUnresolvedReferences
             comm = mutagen.id3.COMM(encoding=mutagen.id3.Encoding.UTF8, lang="eng", desc="URI", text=[tag_value])
+            # noinspection PyUnresolvedReferences
             tag_id = f"{tag_id_prefix}:{comm.desc}:{comm.lang}"
             if not dry_run and tag_id is not None:
                 self._file[tag_id] = comm

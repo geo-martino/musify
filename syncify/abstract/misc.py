@@ -37,17 +37,17 @@ class PrettyPrinter(ABC):
         Return a dictionary representation of the key attributes of this object.
 
         The results of this function are used to produce the following:
-            * A JSON representation of the object when calling :py:func:`as_json`
+            * A JSON representation of the object when calling :py:func:`json`
             * The string representation of the object when calling str() on the object
             * The representation of the object when calling repr() on the object
         """
         raise NotImplementedError
 
-    def as_json(self) -> dict[str, _T_JSON_VALUE]:
+    def json(self) -> dict[str, _T_JSON_VALUE]:
         """Return a dictionary representation of the key attributes of this object that is safe to output to JSON"""
-        return self.__as_json(self.as_dict())
+        return self.__to_json(self.as_dict())
 
-    def __as_json(self, attributes: Mapping[str, _T_JSON_VALUE]) -> dict[str, _T_JSON_VALUE]:
+    def __to_json(self, attributes: Mapping[str, _T_JSON_VALUE]) -> dict[str, _T_JSON_VALUE]:
         result: dict[str, _T_JSON_VALUE] = {}
 
         for attr_key, attr_val in attributes.items():
@@ -58,15 +58,15 @@ class PrettyPrinter(ABC):
                 result[attr_key] = []
                 for item in attr_val:
                     if isinstance(item, PrettyPrinter):
-                        result[attr_key].append(item.as_json())
+                        result[attr_key].append(item.json())
                     elif isinstance(item, datetime):
                         result[attr_key].append(item.strftime("%Y-%m-%d %H:%M:%S"))
                     else:
                         result[attr_key].append(item)
             elif isinstance(attr_val, Mapping):
-                result[attr_key] = self.__as_json(attr_val)
+                result[attr_key] = self.__to_json(attr_val)
             elif isinstance(attr_val, PrettyPrinter):
-                result[attr_key] = attr_val.as_json()
+                result[attr_key] = attr_val.json()
             elif isinstance(attr_val, datetime):
                 result[attr_key] = attr_val.strftime("%Y-%m-%d %H:%M:%S")
             else:
@@ -75,14 +75,14 @@ class PrettyPrinter(ABC):
         return result
 
     def __str__(self):
-        as_dict = self.as_dict()
-        if not as_dict:
+        obj_dict = self.as_dict()
+        if not obj_dict:
             return f"{self.__class__.__name__}()"
 
         result = f"{self.__class__.__name__}(\n{{}}\n)"
 
         indent = 2
-        attributes_repr = self.__to_str(as_dict, indent=indent, increment=indent)
+        attributes_repr = self.__to_str(obj_dict, indent=indent, increment=indent)
 
         return result.format("\n".join([" " * indent + attribute for attribute in attributes_repr]))
 

@@ -52,7 +52,6 @@ class LocalTrackTester(ItemTester, metaclass=ABCMeta):
         return track
 
     def test_does_not_load_other_supported_track_types(self):
-        # noinspection PyTypeChecker
         paths = [
             path for path in path_track_all
             if not all(path.casefold().endswith(ext) for ext in self.track_class.valid_extensions)
@@ -276,14 +275,13 @@ class LocalTrackTester(ItemTester, metaclass=ABCMeta):
         assert track_update_replace.image_links == track_update.image_links
         assert track_update_replace.has_image == track_update.has_image
 
-    # noinspection PyProtectedMember
     @staticmethod
     def get_update_image_test_track(track: LocalTrack) -> tuple[LocalTrack, LocalTrack]:
         """Load track and modify its tags for update tags tests"""
+        # noinspection PyProtectedMember
         track._image_links = {"cover_front": path_track_img}
         return track, copy(track)
 
-    # noinspection PyProtectedMember
     def test_update_image_dry_run(self, track: LocalTrack):
         track_update, track_original = self.get_update_image_test_track(track)
 
@@ -294,6 +292,7 @@ class LocalTrackTester(ItemTester, metaclass=ABCMeta):
         assert not result.saved
 
         track_update_dry = deepcopy(track_update)
+        # noinspection PyProtectedMember
         image_update_dry = track_update_dry._read_images()[0]
         assert track_update_dry.has_image == track_original.has_image
         assert image_update_dry.size == image_original.size

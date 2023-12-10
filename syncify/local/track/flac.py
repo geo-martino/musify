@@ -54,7 +54,6 @@ class FLAC(LocalTrack):
         images=[],
     )
 
-    # noinspection PyTypeChecker
     def __init__(
             self,
             file: str | mutagen.FileType | mutagen.flac.FLAC,
@@ -62,6 +61,7 @@ class FLAC(LocalTrack):
             remote_wrangler: RemoteDataWrangler = None,
     ):
         super().__init__(file=file, available=available, remote_wrangler=remote_wrangler)
+        # noinspection PyTypeChecker
         self._file: mutagen.flac.FLAC = self._file
 
     def _read_images(self) -> list[Image.Image] | None:
@@ -88,7 +88,6 @@ class FLAC(LocalTrack):
             image = open_image(image_link)
 
             picture = mutagen.flac.Picture()
-            # noinspection PyUnresolvedReferences
             picture.type = getattr(mutagen.id3.PictureType, image_type.upper())
             picture.mime = Image.MIME[image.format]
             picture.data = get_image_bytes(image)

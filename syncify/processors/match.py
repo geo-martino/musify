@@ -43,7 +43,7 @@ class CleanTagConfig:
         """Apply the preprocess function to value if given, return value unprocessed if not"""
         return self._preprocess(value) if self._preprocess else value
 
-    def as_json(self) -> dict[str, Any]:
+    def json(self) -> dict[str, Any]:
         """Return a dictionary representation of the key attributes of this object that is safe to output to JSON"""
         return {
             "name": self.name,
@@ -207,7 +207,6 @@ class ItemMatcher(ItemProcessor, Logger):
         self._log_test(source=source, result=result, test=round(score, 2), extra=[f"{source_val} -> {result_val}"])
         return score
 
-    # noinspection PyProtectedMember
     def match_artist[T: (Track, Album)](self, source: T, result: T) -> float:
         """
         Match on artists and return a score between 0-1. Score=0 when either value is None.
@@ -426,12 +425,12 @@ class ItemMatcher(ItemProcessor, Logger):
             "year_range": self.year_range,
         }
 
-    def as_json(self) -> dict[str, Any]:
+    def json(self) -> dict[str, Any]:
         return {
             "clean_tags": {
                 "remove_all": [value for value in self.clean_tags_remove_all],
                 "split_all": [value for value in self.clean_tags_split_all],
-                "config": [config.as_json() for config in self.clean_tags_config],
+                "config": [config.json() for config in self.clean_tags_config],
             },
             "allow_karaoke": self.allow_karaoke,
             "karaoke_tags": [value for value in self.karaoke_tags],

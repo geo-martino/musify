@@ -18,24 +18,24 @@ class PrettyPrinterTester(ABC):
     @staticmethod
     def test_dict(obj: PrettyPrinter):
         # check dict output and str+repr dunder methods that use this output
-        obj_as_dict = obj.as_dict()
+        obj_dict = obj.as_dict()
         name = obj.__class__.__name__
 
         assert re.match(rf"^{name}\([\s\S]*\)$", str(obj))
         # plus 2 for class name line and final closing bracket line
-        assert len(str(obj).split('\n')) >= len(obj_as_dict) + 2
-        assert repr(obj) == f"{name}({obj_as_dict})"
+        assert len(str(obj).split('\n')) >= len(obj_dict) + 2
+        assert repr(obj) == f"{name}({obj_dict})"
 
     def test_json(self, obj: PrettyPrinter):
-        obj_as_dict = obj.as_dict()
-        obj_as_json = obj.as_json()
+        obj_dict = obj.as_dict()
+        obj_json = obj.json()
 
         if self.dict_json_equal:
-            assert len(obj_as_dict) == len(obj_as_json)
-            assert obj_as_dict.keys() == obj_as_json.keys()
+            assert len(obj_dict) == len(obj_json)
+            assert obj_dict.keys() == obj_json.keys()
 
-        # check json is serialisable
-        assert isinstance(json.dumps(obj_as_json), str)
+        # check json is serializable
+        assert isinstance(json.dumps(obj_json), str)
 
 
 def test_case_conversion():

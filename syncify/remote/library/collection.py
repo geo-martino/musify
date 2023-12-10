@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from collections.abc import Iterable
+from collections.abc import Iterable, MutableSequence
 from typing import Self
 
 from syncify.abstract.collection import ItemCollection, Album
@@ -41,7 +41,7 @@ class RemoteCollection[T: RemoteObject](RemoteObjectWranglerMixin, ItemCollectio
         """
         raise NotImplementedError
 
-    def __getitem__(self, __key: str | int | slice | Item) -> T | list[T]:
+    def __getitem__(self, __key: str | int | slice | Item) -> T | MutableSequence[T, None, None]:
         """
         Returns the item in this collection by matching on a given index/Item/URI/ID/URL.
         If an item is given, the URI is extracted from this item

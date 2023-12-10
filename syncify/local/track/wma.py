@@ -53,7 +53,6 @@ class WMA(LocalTrack):
         images=["WM/Picture"],
     )
 
-    # noinspection PyTypeChecker
     def __init__(
             self,
             file: str | mutagen.FileType | mutagen.asf.ASF,
@@ -61,6 +60,7 @@ class WMA(LocalTrack):
             remote_wrangler: RemoteDataWrangler = None,
     ):
         super().__init__(file=file, available=available, remote_wrangler=remote_wrangler)
+        # noinspection PyTypeChecker
         self._file: mutagen.asf.ASF = self._file
 
     def _read_tag(self, tag_ids: Iterable[str]) -> list[Any] | None:

@@ -11,7 +11,7 @@ class Processor(PrettyPrinter, metaclass=ABCMeta):
     """Generic base class for processors"""
 
 
-# noinspection PyPep8Naming
+# noinspection PyPep8Naming,SpellCheckingInspection
 class dynamicprocessormethod:
     """
     Decorator for methods on a class decorated with the :py:func:`processor` decorator
@@ -37,6 +37,7 @@ class dynamicprocessormethod:
         return self.func(self.instance_, *args, **kwargs)
 
 
+# noinspection SpellCheckingInspection
 class DynamicProcessor(Processor, metaclass=ABCMeta):
     """
     Base class for implementations with :py:function:`dynamicprocessormethod` methods.

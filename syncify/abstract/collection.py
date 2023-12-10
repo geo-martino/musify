@@ -190,7 +190,7 @@ class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], Hashable, 
     def __contains__(self, __item: T):
         return any(__item == i for i in self.items)
 
-    def __getitem__(self, __key: str | int | slice | Item) -> T | list[T]:
+    def __getitem__(self, __key: str | int | slice | Item) -> T | MutableSequence[T, None, None]:
         """
         Returns the item in this collection by matching on a given index/Item/URI.
         If an item is given, the URI is extracted from this item

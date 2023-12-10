@@ -229,7 +229,6 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         tracks: list[LocalTrack] = []
         errors: list[str] = []
         for path in self.get_progress_bar(iterable=self._track_paths, desc="Loading tracks", unit="tracks"):
-            # noinspection PyBroadException
             try:
                 tracks.append(load_track(path=path, available=self._track_paths, remote_wrangler=self.remote_wrangler))
             except SyncifyError:
@@ -362,11 +361,11 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             "remote_source": self.remote_wrangler.remote_source if self.remote_wrangler else None,
         }
 
-    def as_json(self):
+    def json(self):
         return {
             "library_folder": self.library_folder,
             "playlists_folder": self.playlist_folder,
             "other_folders": self.other_folders,
-            "tracks": dict(sorted(((track.path, track.as_json()) for track in self.tracks), key=lambda x: x[0])),
+            "tracks": dict(sorted(((track.path, track.json()) for track in self.tracks), key=lambda x: x[0])),
             "playlists": {name: [tr.path for tr in pl] for name, pl in self.playlists.items()},
         }

@@ -11,7 +11,6 @@ from syncify.spotify.library.item import SpotifyTrack, SpotifyArtist
 from syncify.spotify.processors.wrangle import SpotifyObjectWranglerMixin
 
 
-# noinspection PyShadowingNames
 class SpotifyCollection[T: SpotifyObject](SpotifyObjectWranglerMixin, metaclass=ABCMeta):
     """Generic class for storing a collection of Spotify tracks."""
 

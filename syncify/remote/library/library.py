@@ -294,10 +294,10 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteDataWrangler, metaclass=AB
             "playlist_counts": {name: len(pl) for name, pl in self.playlists.items()},
         }
 
-    def as_json(self):
+    def json(self):
         return {
             "user_name": self.api.user_name,
             "user_id": self.api.user_id,
-            "tracks": dict(sorted(((track.uri, track.as_json()) for track in self.tracks), key=lambda x: x[0])),
+            "tracks": dict(sorted(((track.uri, track.json()) for track in self.tracks), key=lambda x: x[0])),
             "playlists": {name: [tr.uri for tr in pl] for name, pl in self.playlists.items()},
         }

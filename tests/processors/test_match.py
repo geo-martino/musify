@@ -45,9 +45,9 @@ class TestItemMatcher(PrettyPrinterTester):
         """Generate a random :py:class:`LocalTrack` for matching"""
         return random_track()
 
-    # noinspection SpellCheckingInspection
     @staticmethod
     def test_clean_tags(matcher: ItemMatcher, track1: LocalTrack):
+        # noinspection SpellCheckingInspection
         track1.uri = "spotify:track:ASDFGHJKLQWERTYUIOPZX"
 
         track1.title = "A Song Part 2"

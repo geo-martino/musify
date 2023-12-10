@@ -276,9 +276,9 @@ class Logger:
         truncated = str(value)[:(max_width - 3)] + "..." if not right_align else "..." + str(value)[-(max_width - 3):]
         return f"{value if len(str(value)) < max_width else truncated:<{max_width}}"
 
-    # noinspection SpellCheckingInspection
     def get_progress_bar(self, **kwargs) -> tqdm_std:
         """Wrapper for tqdm progress bar. For kwargs, see :py:class:`tqdm_std`"""
+        # noinspection SpellCheckingInspection
         preset_keys = ("leave", "disable", "file", "ncols", "colour", "smoothing", "position")
         try:
             cols = os.get_terminal_size().columns
