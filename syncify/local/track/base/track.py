@@ -166,7 +166,7 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
             return self.path == item.path
         elif self.has_uri or item.has_uri:
             return self.has_uri == item.has_uri and self.uri == item.uri
-        return self.name == self.name
+        return self.name == item.name
 
     def __copy__(self):
         """

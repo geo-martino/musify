@@ -1,5 +1,6 @@
 from abc import ABCMeta
 from collections.abc import Iterable
+from copy import copy
 from random import randrange
 
 import pytest
@@ -34,7 +35,7 @@ class TestLocalFolder(LocalCollectionTester):
     @pytest.fixture
     def folder(self, tracks: list[LocalTrack]) -> LocalFolder:
         """Yields a :py:class:`LocalFolder` object to be tested as pytest.fixture"""
-        return LocalFolder(tracks=[track for track in tracks if track.folder == self.name])
+        return LocalFolder(tracks=[copy(track) for track in tracks if track.folder == self.name])
 
     @pytest.fixture(scope="class")
     def tracks(self) -> list[LocalTrack]:
@@ -45,9 +46,10 @@ class TestLocalFolder(LocalCollectionTester):
         tracks = random_tracks(10)
 
         for i, track in enumerate(tracks[:7]):
-            track._path = f"/test/{self.name}/{random_str(15, 20)}{track.ext}"
-            if i < 4:
-                track.compilation = True
+            track.file.filename = f"/test/{self.name}/{random_str(15, 20)}{track.ext}"
+            track._path = track.file.filename
+            track.compilation = i > 2
+
             if i % 2 == 0:
                 track.artist = "artist name"
                 track.genres = ["rock", "pop"]
@@ -103,7 +105,7 @@ class TestLocalAlbum(LocalCollectionTester):
     @pytest.fixture
     def album(self, tracks: list[LocalTrack]) -> LocalAlbum:
         """Yields a :py:class:`LocalAlbum` object to be tested as pytest.fixture"""
-        return LocalAlbum(tracks=tracks.copy(), name=self.name)
+        return LocalAlbum(tracks=[copy(track) for track in tracks], name=self.name)
 
     @pytest.fixture(scope="class")
     def tracks(self) -> list[LocalTrack]:
@@ -147,7 +149,7 @@ class TestLocalAlbum(LocalCollectionTester):
         genres = {genre for track in tracks_filtered if track.genres for genre in track.genres}
         assert sorted(album.genres) == sorted(genres)
         assert not album.compilation
-        ratings = list(track.rating for track in tracks_filtered if track.rating)
+        ratings = list(track.rating for track in tracks_filtered if track.rating is not None)
         if ratings:
             assert album.rating == sum(ratings) / len(ratings)
         else:
@@ -173,7 +175,7 @@ class TestLocalArtist(LocalCollectionTester):
     @pytest.fixture
     def artist(self, tracks: list[LocalTrack]) -> LocalArtist:
         """Yields a :py:class:`LocalArtist` object to be tested as pytest.fixture"""
-        return LocalArtist(tracks=tracks.copy(), name=self.name)
+        return LocalArtist(tracks=[copy(track) for track in tracks], name=self.name)
 
     @pytest.fixture(scope="class")
     def tracks(self) -> list[LocalTrack]:
@@ -212,7 +214,7 @@ class TestLocalArtist(LocalCollectionTester):
         assert artist.track_total == len(artist.tracks)
         genres = {genre for track in tracks_filtered if track.genres for genre in track.genres}
         assert sorted(artist.genres) == sorted(genres)
-        ratings = list(track.rating for track in tracks_filtered if track.rating)
+        ratings = list(track.rating for track in tracks_filtered if track.rating is not None)
         if ratings:
             assert artist.rating == sum(ratings) / len(ratings)
         else:
@@ -238,7 +240,7 @@ class TestLocalGenres(LocalCollectionTester):
     @pytest.fixture
     def genre(self, tracks: list[LocalTrack]) -> LocalGenres:
         """Yields a :py:class:`LocalGenres` object to be tested as pytest.fixture"""
-        return LocalGenres(tracks=tracks.copy(), name=self.name)
+        return LocalGenres(tracks=[copy(track) for track in tracks], name=self.name)
 
     @pytest.fixture(scope="class")
     def tracks(self) -> list[LocalTrack]:

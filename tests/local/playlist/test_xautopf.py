@@ -23,7 +23,7 @@ class TestXAutoPF(LocalPlaylistTester):
     @pytest.fixture
     def collection() -> XAutoPF:
         # needed to ensure __setitem__ check passes
-        tracks = random_tracks(randrange(5, 20))
+        tracks = random_tracks(randrange(5, 15))
         tracks.append(random_track(cls=tracks[0].__class__))
         playlist = XAutoPF(path=path_playlist_xautopf_ra, tracks=tracks, check_existence=False)
         return playlist

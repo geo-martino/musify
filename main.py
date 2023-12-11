@@ -596,8 +596,6 @@ if __name__ == "__main__":
 
 
 ## NEEDED FOR v0.3
-# TODO: fix local collection tests
 # TODO: review scope of functions/attributes/properties e.g. logger methods on Logger implementations
-# TODO: review copy and deepcopy ItemCollection methods
 # TODO: write tests, write tests, write tests
 # TODO: update the readme (dynamic readme?)

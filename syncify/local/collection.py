@@ -217,10 +217,10 @@ class LocalCollectionFiltered[T: LocalItem](LocalCollection[T]):
 
             if len(names) == 0:  # no valid name found
                 raise LocalCollectionError(f"No {self._tag_key.rstrip('s')}s found in the given tracks")
-            if len(names) != 1:  # too many names found
+            elif len(names) != 1:  # too many names found
                 raise LocalCollectionError(
-                    f"Too many {self._tag_key.rstrip('s')}s found in the given tracks."
-                    f" Only provide tracks from the same {self._tag_key.rstrip('s')}."
+                    f"Too many {self._tag_key.rstrip('s')}s found in the given tracks. "
+                    f"Only provide tracks from the same {self._tag_key.rstrip('s')}."
                 )
 
             self._name: str = names.pop()
@@ -378,7 +378,7 @@ class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):
     @property
     def rating(self):
         """Average rating of all tracks in this collection"""
-        ratings = {track.rating for track in self.tracks if track.rating}
+        ratings = tuple(track.rating for track in self.tracks if track.rating is not None)
         return sum(ratings) / len(ratings) if ratings else None
 
     def __init__(
@@ -433,7 +433,7 @@ class LocalArtist(LocalCollectionFiltered[LocalTrack], Artist[LocalTrack]):
     @property
     def rating(self) -> float | None:
         """Average rating of all tracks by this artist"""
-        ratings = tuple(track.rating for track in self.tracks)
+        ratings = tuple(track.rating for track in self.tracks if track.rating is not None)
         return sum(ratings) / len(ratings) if ratings else None
 
     def __init__(

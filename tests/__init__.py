@@ -11,7 +11,7 @@ path_txt = join(path_resources, "test.txt")
 
 def random_str(start: int = 1, stop: int = 20) -> str:
     """Generates a random string of upper and lower case characters with a random length between the values given."""
-    return "".join(choice(string.ascii_letters) for _ in range(randrange(start, stop)))
+    return "".join(choice(string.ascii_letters) for _ in range(randrange(start=start, stop=stop)))
 
 
 def random_file(tmp_path: str, size: int = randrange(6000, 10000000)) -> str:

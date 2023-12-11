@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable, Collection
-from copy import copy
+from copy import copy, deepcopy
 
 import pytest
 
@@ -81,7 +81,7 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
     @staticmethod
     def test_basic_dunder_methods(collection: ItemCollection):
         """:py:class:`ItemCollection` basic dunder operation tests"""
-        collection_original = copy(collection)
+        collection_original = deepcopy(collection)
         collection_basic = BasicCollection(name="this is a basic collection", items=collection.items)
 
         assert len(collection) == len(collection.items)
@@ -140,7 +140,7 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
 
     @staticmethod
     def test_delitem_dunder_method(collection: ItemCollection):
-        item = collection.items[2]
+        item = next(i for i in collection.items if collection.items.count(i) == 1)
 
         del collection[item]
         assert item not in collection
@@ -216,5 +216,5 @@ class LibraryTester(ItemCollectionTester, metaclass=ABCMeta):
 
     @staticmethod
     def test_merge_playlists(library: Library):
-        # TODO: write tests
+        # TODO: write merge_playlists tests
         pass

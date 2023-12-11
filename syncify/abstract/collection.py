@@ -164,14 +164,14 @@ class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], Hashable, 
         """Uniqueness of collection is a combination of its name and the items it holds"""
         return hash((self.name, len(self.items), (item for item in self.items)))
 
-    def __eq__(self, __collection: ItemCollection | list[T]):
+    def __eq__(self, __collection: ItemCollection | Iterable[T]):
         """Names equal and all items equal in order"""
         name = self.name == __collection.name if isinstance(__collection, ItemCollection) else True
         length = len(self) == len(__collection)
         items = all(x == y for x, y in zip(self, __collection))
         return name and length and items
 
-    def __ne__(self, __collection: ItemCollection):
+    def __ne__(self, __collection: ItemCollection | Iterable[T]):
         return not self.__eq__(__collection)
 
     def __iadd__(self, __items: Iterable[T]):
@@ -232,24 +232,6 @@ class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], Hashable, 
 
     def __delitem__(self, __key: str | int | T):
         self.remove(__key)
-
-    def __copy__(self):
-        obj = self.__new__(self.__class__)
-        for k, v in vars(self).items():
-            if isinstance(v, list) and all(isinstance(i, Item) for i in v):
-                v = [deepcopy(i) for i in v]
-            setattr(obj, k, v)
-        return obj
-
-    def __deepcopy__(self, _: dict = None):
-        obj = self.__new__(self.__class__)
-        for k, v in vars(self).items():
-            if isinstance(v, list) and all(isinstance(i, Item) for i in v):
-                v = [deepcopy(i) for i in v]
-            else:
-                v = deepcopy(v)
-            setattr(obj, k, v)
-        return obj
 
 
 # noinspection PyShadowingNames
