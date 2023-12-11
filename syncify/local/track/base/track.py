@@ -14,18 +14,6 @@ from syncify.local.track.base.writer import TagWriter
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 
 
-# TODO: see if this can be moved to tests
-class _MutagenMock(mutagen.FileType):
-    class _MutagenInfoMock(mutagen.StreamInfo):
-        def __init__(self):
-            self.length = 0
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.info = self._MutagenInfoMock()
-        self.pictures = []
-
-
 class LocalTrack(TagWriter, metaclass=ABCMeta):
     """
     Generic track object for extracting, modifying, and saving tags for a given file.
@@ -169,12 +157,8 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
         return self.name == item.name
 
     def __copy__(self):
-        """
-        Copy Track object by reloading from the file object in memory
-        If current object has no file object present, generated new class and shallow copy attributes
-        (as used for testing purposes).
-        """
-        if isinstance(self.file, _MutagenMock):
+        """Copy object by reloading from the file object in memory"""
+        if not self.file.tags:  # file is not a real file, used in testing
             obj = self.__class__.__new__(self.__class__)
             for k, v in self.__dict__.items():
                 setattr(obj, k, v)
@@ -183,6 +167,7 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
             return self.__class__(file=self.file, available=self._available_paths, remote_wrangler=self.remote_wrangler)
 
     def __deepcopy__(self, _: as_dict = None):
-        """Deepcopy Track object by reloading from the disk"""
-        file = self.file if isinstance(self.file, _MutagenMock) else self.path
+        """Deepcopy object by reloading from the disk"""
+        # use path if file is a real file, use file object otherwise (when testing)
+        file = self.file if not self.file.tags else self.path
         return self.__class__(file=file, available=self._available_paths, remote_wrangler=self.remote_wrangler)

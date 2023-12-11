@@ -3,11 +3,10 @@ from datetime import datetime
 from os.path import join, basename, dirname
 from random import choice, randrange, randint
 
+import mutagen
 from dateutil.relativedelta import relativedelta
 
 from syncify.local.track import TRACK_CLASSES, LocalTrack, FLAC, M4A, MP3, WMA
-# noinspection PyProtectedMember
-from syncify.local.track.base.track import _MutagenMock
 from syncify.local.track.base.writer import TagWriter
 from tests import path_resources, random_str
 from tests.local import remote_wrangler
@@ -22,6 +21,18 @@ path_track_img = join(path_track_resources, "track_image.jpg")
 path_track_all: set[str] = {path for c in TRACK_CLASSES for path in c.get_filepaths(path_track_resources)}
 
 
+class MutagenMock(mutagen.FileType):
+    class MutagenInfoMock(mutagen.StreamInfo):
+        def __init__(self):
+            self.length = 0
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.mock = True
+        self.info = self.MutagenInfoMock()
+        self.pictures = []
+
+
 def random_track[T: LocalTrack](cls: type[T] | None = None) -> T:
     """Generates a new, random track of the given class."""
     if cls is None:
@@ -31,7 +42,7 @@ def random_track[T: LocalTrack](cls: type[T] | None = None) -> T:
     track._available_paths = set()
     track._available_paths_lower = set()
 
-    track._file = _MutagenMock()
+    track._file = MutagenMock()
     track.file.info.length = randint(30, 600)
 
     track.title = random_str(20, 50)
