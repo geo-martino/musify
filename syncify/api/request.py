@@ -67,7 +67,7 @@ class RequestHandler(APIAuthoriser, Logger):
             waited = False
             if response is not None:
                 self._log_response(response=response, method=method, url=url)
-                self._raise_exception(response=response)
+                self._check_response_codes(response=response)
                 waited = self._check_for_wait_time(response=response)
 
             if not waited and backoff < self.backoff_final:  # exponential backoff
@@ -129,7 +129,7 @@ class RequestHandler(APIAuthoriser, Logger):
             f"\nHeaders:\n{response_headers} \33[0m"
         )
 
-    def _raise_exception(self, response: BaseResponse) -> None:
+    def _check_response_codes(self, response: BaseResponse) -> None:
         """Check for response status codes that should raise an exception."""
         message = self._response_json(response).get("error", {}).get("message")
         if not message:
@@ -141,18 +141,19 @@ class RequestHandler(APIAuthoriser, Logger):
 
     def _check_for_wait_time(self, response: BaseResponse) -> bool:
         """Handle when a wait time is included in the response headers."""
-        if "retry-after" in response.headers:  # wait if time is short
-            wait_time = int(response.headers["retry-after"])
-            wait_str = (dt.now() + timedelta(seconds=wait_time)).strftime("%Y-%m-%d %H:%M:%S")
-            self.logger.info(f"\33[91mRate limit exceeded. Retrying again at {wait_str}\33[0m")
+        if "retry-after" not in response.headers:
+            return False
 
-            if wait_time > self.timeout:  # exception if too long
-                raise APIError(f"Rate limit exceeded and wait time is greater than timeout of {self.timeout} seconds")
-            else:
-                sleep(wait_time)
-                return True
+        wait_time = int(response.headers["retry-after"])
+        wait_str = (dt.now() + timedelta(seconds=wait_time)).strftime("%Y-%m-%d %H:%M:%S")
+        self.logger.info(f"\33[91mRate limit exceeded. Retrying again at {wait_str}\33[0m")
 
-        return False
+        if wait_time > self.timeout:  # exception if too long
+            raise APIError(f"Rate limit exceeded and wait time is greater than timeout of {self.timeout} seconds")
+
+        # wait if time is short
+        sleep(wait_time)
+        return True
 
     @staticmethod
     def _response_json(response: BaseResponse) -> dict[str, Any]:

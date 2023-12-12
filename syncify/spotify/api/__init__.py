@@ -38,7 +38,6 @@ API_AUTH_USER = {
             "code": None,
             "client_id": "{client_id}",
             "client_secret": "{client_secret}",
-            "redirect_uri": "http://localhost:8080/",
         },
     },
     "user_args": {
@@ -53,7 +52,6 @@ API_AUTH_USER = {
                     "playlist-read-collaborative",
                 ]
             ),
-            "redirect_uri": "http://localhost:8080/",
             "state": PROGRAM_NAME,
         },
     },

@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable, Collection
-from copy import copy, deepcopy
+from copy import deepcopy
 
 import pytest
 

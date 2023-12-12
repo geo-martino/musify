@@ -16,6 +16,7 @@ from syncify.utils import UnitSequence
 from syncify.utils.helpers import to_collection
 
 # Map of MusicBee field name to Field enum
+# noinspection SpellCheckingInspection
 field_name_map = {
     "None": None,
     "Title": LocalTrackField.TITLE,
