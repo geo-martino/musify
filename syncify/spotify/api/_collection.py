@@ -6,14 +6,13 @@ from typing import Any
 from urllib.parse import urlparse, urlencode
 
 from syncify import PROGRAM_NAME, PROGRAM_URL
-from syncify.remote.api import APIMethodInputType
-from syncify.remote.api.collection import RemoteAPICollections
+from syncify.remote.api import RemoteAPI, APIMethodInputType
 from syncify.remote.enums import RemoteIDType, RemoteItemType
 from syncify.remote.exception import RemoteIDTypeError, RemoteItemTypeError
 from syncify.utils.helpers import limit_value
 
 
-class SpotifyAPICollections(RemoteAPICollections, metaclass=ABCMeta):
+class SpotifyAPICollections(RemoteAPI, metaclass=ABCMeta):
     """API endpoints for processing collections i.e. playlists, albums, shows, and audiobooks"""
 
     items_key = "items"

@@ -9,13 +9,13 @@ from typing import Any
 from lxml import etree
 from lxml.etree import iterparse
 
+from syncify.local import File
 from syncify.local.exception import MusicBeeIDError, XMLReaderError, MusicBeeError
-from syncify.local.file import File
-from syncify.local.library.library import LocalLibrary
 from syncify.local.playlist import LocalPlaylist
-from syncify.local.track.base.track import LocalTrack
+from syncify.local.track import LocalTrack
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitCollection, Number
+from ._library import LocalLibrary
 
 
 class MusicBee(LocalLibrary, File):

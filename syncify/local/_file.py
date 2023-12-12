@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod
-from dataclasses import dataclass
 from datetime import datetime
 from http.client import HTTPResponse
 from io import BytesIO
@@ -11,7 +10,7 @@ from urllib.request import urlopen, Request
 
 from PIL import Image, UnidentifiedImageError
 
-from syncify.local.exception import InvalidFileType, ImageLoadError
+from .exception import InvalidFileType, ImageLoadError
 
 
 class File(metaclass=ABCMeta):
@@ -78,31 +77,6 @@ class File(metaclass=ABCMeta):
         :param dry_run: Run function, but do not modify file at all.
         """
         raise NotImplementedError
-
-
-@dataclass(frozen=True)
-class TagMap:
-    """Map of human-friendly tag name to ID3 tag ids for a given file type"""
-
-    title: list[str]
-    artist: list[str]
-    album: list[str]
-    album_artist: list[str]
-    track_number: list[str]
-    track_total: list[str]
-    genres: list[str]
-    year: list[str]
-    bpm: list[str]
-    key: list[str]
-    disc_number: list[str]
-    disc_total: list[str]
-    compilation: list[str]
-    comments: list[str]
-    images: list[str]
-
-    def __getitem__(self, key: str) -> list[str]:
-        """Safely get the value of a given attribute key, returning an empty string if the key is not found"""
-        return getattr(self, key, [])
 
 
 def open_image(source: str | bytes | Path | Request) -> Image.Image:

@@ -1,10 +1,10 @@
 from collections.abc import Iterable
 
-from syncify.abstract.collection import Library, ItemCollection
-from syncify.abstract.enums import TagField, FieldCombined
-from syncify.abstract.item import Item
-from syncify.local.library import LocalLibrary
-from syncify.utils.logger import Logger, REPORT
+from .abstract.collection import Library, ItemCollection
+from .abstract.enums import TagField, FieldCombined
+from .abstract.item import Item
+from .local.library import LocalLibrary
+from .utils.logger import Logger, REPORT
 
 
 class Report(Logger):

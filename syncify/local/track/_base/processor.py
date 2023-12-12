@@ -3,10 +3,10 @@ from datetime import datetime
 
 import mutagen
 
+from syncify.abstract.enums import TagMap
 from syncify.abstract.item import Track
 from syncify.fields import LocalTrackField
-from syncify.local.base import LocalItem
-from syncify.local.file import TagMap
+from syncify.local import LocalItem
 
 
 class TagProcessor(LocalItem, Track, metaclass=ABCMeta):

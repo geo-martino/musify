@@ -16,7 +16,7 @@ from syncify.utils.logger import Logger
 @dataclass
 class CleanTagConfig:
     """
-    Config for processing string-type tag values before matching
+    Config for processing string-type tag values before matching with :py:class:`ItemMatcher`
     
     :ivar name: The name of the tag to clean.
     :ivar _remove: A set of string values to remove from this tag.

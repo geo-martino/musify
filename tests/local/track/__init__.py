@@ -7,7 +7,8 @@ import mutagen
 from dateutil.relativedelta import relativedelta
 
 from syncify.local.track import TRACK_CLASSES, LocalTrack, FLAC, M4A, MP3, WMA
-from syncify.local.track.base.writer import TagWriter
+# noinspection PyProtectedMember
+from syncify.local.track._base.writer import TagWriter
 from tests import path_resources, random_str
 from tests.local import remote_wrangler
 from tests.remote import random_uri

@@ -1,35 +1,12 @@
 from abc import ABCMeta
+from typing import Any
 
-from syncify.remote.api.api import RemoteAPI
+from syncify.remote.api import RemoteAPI
 from syncify.remote.enums import RemoteIDType, RemoteItemType
-from syncify.spotify.api.collection import SpotifyAPICollections
-from syncify.spotify.api.core import SpotifyAPICore
-from syncify.spotify.api.item import SpotifyAPIItems
-from syncify.spotify.processors.wrangle import SpotifyDataWrangler
+from syncify.utils.helpers import limit_value
 
 
-class SpotifyAPIWranglerMixin(RemoteAPI, SpotifyDataWrangler, metaclass=ABCMeta):
-    pass
-
-
-class SpotifyAPI(SpotifyAPIWranglerMixin, SpotifyAPICore, SpotifyAPIItems, SpotifyAPICollections):
-    """
-    Collection of endpoints for a remote API.
-    See :py:class:`RequestHandler` and :py:class:`APIAuthoriser`
-    for more info on which params to pass to authorise and execute requests.
-
-    :param handler_kwargs: The authorisation kwargs to be passed to :py:class:`RequestHandler`.
-    """
-
-    def __init__(self, **handler_kwargs):
-        super().__init__(**handler_kwargs)
-
-        try:
-            user_data = self.get_self()
-            self._user_id: str | None = user_data["id"]
-            self._user_name: str | None = user_data["display_name"]
-        except (ConnectionError, KeyError, TypeError):
-            pass
+class SpotifyAPICore(RemoteAPI, metaclass=ABCMeta):
 
     def pretty_print_uris(
             self, value: str | None = None, kind: RemoteIDType | None = None, use_cache: bool = True
@@ -79,3 +56,33 @@ class SpotifyAPI(SpotifyAPIWranglerMixin, SpotifyAPICore, SpotifyAPIItems, Spoti
                 )
                 print(formatted_item_data)
             print()
+
+    ###########################################################################
+    ## GET endpoints
+    ###########################################################################
+    def get_self(self) -> dict[str, Any]:
+        """``GET: /me`` - Get API response for information on current user"""
+        return self.get(url=f"{self.api_url_base}/me", use_cache=True, log_pad=71)
+
+    def query(self, query: str, kind: RemoteItemType, limit: int = 10, use_cache: bool = True) -> list[dict[str, Any]]:
+        """
+        ``GET: /search`` - Query for items. Modify result types returned with kind parameter
+
+        :param query: Search query.
+        :param kind: The remote item type to search for.
+        :param limit: Number of results to get and return.
+        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :return: The response from the endpoint.
+        """
+        if not query or len(query) > 150:  # query is too short or too long, skip
+            return []
+
+        url = f"{self.api_url_base}/search"
+        params = {'q': query, "type": kind.name.casefold(), "limit": limit_value(limit)}
+        r = self.get(url, params=params, use_cache=use_cache)
+
+        if "error" in r:
+            self.logger.error(f"{'ERROR':<7}: {url:<43} | Query: {query} | {r['error']}")
+            return []
+
+        return r[f"{kind.name.casefold()}s"]["items"]

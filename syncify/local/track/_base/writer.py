@@ -8,9 +8,9 @@ import mutagen
 
 from syncify.abstract.misc import Result
 from syncify.fields import LocalTrackField
-from syncify.local.track.base.reader import TagReader
 from syncify.utils import UnitIterable
 from syncify.utils.helpers import to_collection
+from .reader import TagReader
 
 
 @dataclass(frozen=True)

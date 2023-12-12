@@ -11,9 +11,9 @@ import requests_cache
 from requests import Response
 from requests.exceptions import ConnectionError
 
-from syncify.api.authorise import APIAuthoriser
-from syncify.api.exception import APIError
 from syncify.utils.logger import Logger
+from ._authorise import APIAuthoriser
+from .exception import APIError
 
 _DEFAULT_CACHE_PATH = join(dirname(dirname(dirname(__file__))), ".api_cache")
 

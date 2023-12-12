@@ -9,9 +9,9 @@ from typing import Self
 import mutagen
 
 from syncify.abstract.item import Track, Item
-from syncify.local.file import File
-from syncify.local.track.base.writer import TagWriter
+from syncify.local import File
 from syncify.remote.processors.wrangle import RemoteDataWrangler
+from .writer import TagWriter
 
 
 class LocalTrack(TagWriter, metaclass=ABCMeta):

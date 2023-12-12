@@ -5,7 +5,9 @@ from typing import Any, Self
 from syncify.abstract.item import BaseObject, Item
 from syncify.abstract.misc import PrettyPrinter
 from syncify.api.exception import APIError
-from syncify.remote.api import APIMethodInputType
+from syncify.utils import UnitMutableSequence
+
+APIMethodInputType = UnitMutableSequence[str] | UnitMutableSequence[MutableMapping[str, Any]]
 
 
 class Remote(ABC):

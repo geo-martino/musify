@@ -8,13 +8,13 @@ import xmltodict
 
 from syncify.abstract.enums import FieldCombined
 from syncify.abstract.misc import Result
-from syncify.local.playlist.match import LocalMatcher
-from syncify.local.playlist.playlist import LocalPlaylist
 from syncify.local.track import LocalTrack
 from syncify.processors.limit import ItemLimiter
 from syncify.processors.sort import ItemSorter
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitCollection
+from ._match import LocalMatcher
+from ._playlist import LocalPlaylist
 
 
 @dataclass(frozen=True)

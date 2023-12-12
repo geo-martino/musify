@@ -3,7 +3,7 @@ from random import sample
 import pytest
 
 from syncify.fields import LocalTrackField
-from syncify.local.playlist.match import LocalMatcher
+from syncify.local.playlist import LocalMatcher
 from syncify.local.track import LocalTrack
 from syncify.processors.compare import ItemComparer
 from tests import random_str

@@ -2,9 +2,9 @@ from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Hashable
 from typing import Self, Any
 
-from syncify.abstract.enums import TagField, FieldCombined
-from syncify.abstract.misc import PrettyPrinter
 from syncify.utils import UnitIterable
+from .enums import TagField, FieldCombined
+from .misc import PrettyPrinter
 
 
 class BaseObject(ABC, Hashable):

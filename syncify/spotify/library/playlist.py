@@ -5,8 +5,8 @@ from typing import Any, Self
 from syncify.remote.api import APIMethodInputType
 from syncify.remote.enums import RemoteItemType
 from syncify.remote.library.playlist import RemotePlaylist
-from syncify.spotify.library.collection import SpotifyCollection
-from syncify.spotify.library.item import SpotifyTrack
+from .collection import SpotifyCollection
+from .item import SpotifyTrack
 
 
 class SpotifyPlaylist(SpotifyCollection, RemotePlaylist[SpotifyTrack]):

@@ -6,14 +6,13 @@ from os.path import dirname, join, getmtime, getctime, exists
 
 from syncify.abstract.collection import Playlist
 from syncify.abstract.misc import Result
+from syncify.local import File
 from syncify.local.collection import LocalCollection
-from syncify.local.file import File
-from syncify.local.playlist.match import LocalMatcher
-from syncify.local.track import load_track
-from syncify.local.track.base.track import LocalTrack
+from syncify.local.track import LocalTrack, load_track
 from syncify.processors.limit import ItemLimiter
 from syncify.processors.sort import ItemSorter
 from syncify.remote.processors.wrangle import RemoteDataWrangler
+from ._match import LocalMatcher
 
 
 class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, metaclass=ABCMeta):

@@ -1,7 +1,7 @@
 from typing import Any
 
 from syncify.exception import SyncifyError
-from syncify.remote.enums import RemoteIDType, RemoteItemType
+from .enums import RemoteIDType, RemoteItemType
 
 
 class RemoteError(SyncifyError):

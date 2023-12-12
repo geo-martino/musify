@@ -2,24 +2,82 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import Collection
 from typing import Any
 
-from syncify.remote.api import APIMethodInputType
-from syncify.remote.api.base import RemoteAPIBase
-from syncify.remote.enums import RemoteItemType
+from syncify.api import RequestHandler
+from .base import APIMethodInputType
+from .enums import RemoteIDType, RemoteItemType
+from .processors.wrangle import RemoteDataWrangler
 
 
-class RemoteAPICollections(RemoteAPIBase, metaclass=ABCMeta):
-    """API endpoints for processing collections i.e. playlists, albums, shows, and audiobooks"""
+class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
+    """
+    Collection of endpoints for a remote API.
+    See :py:class:`RequestHandler` and :py:class:`APIAuthoriser`
+    for more info on which params to pass to authorise and execute requests.
+
+    :param handler_kwargs: The authorisation kwargs to be passed to :py:class:`APIAuthoriser`.
+    """
 
     @property
     @abstractmethod
-    def user_id(self) -> str | None:
-        """ID of the currently authenticated user"""
+    def api_url_base(self) -> str:
+        """The base URL for making calls to the remote API"""
         raise NotImplementedError
 
     @property
-    @abstractmethod
+    def user_id(self) -> str | None:
+        """ID of the currently authenticated user"""
+        return self._user_id
+
+    @property
     def user_name(self) -> str | None:
         """Name of the currently authenticated user"""
+        return self._user_name
+
+    def __init__(self, **handler_kwargs):
+        handler_kwargs = {k: v for k, v in handler_kwargs.items() if k != "name"}
+        super().__init__(name=self.remote_source, **handler_kwargs)
+
+        self._user_id: str | None = None
+        self._user_name: str | None = None
+
+    ###########################################################################
+    ## Misc helpers
+    ###########################################################################
+    def format_item_data(
+            self, i: int, name: str, uri: str, length: float = 0, total: int = 1, max_width: int = 50
+    ) -> str:
+        """
+        Pretty format item data for displaying to the user
+
+        :param i: The position of this item in the collection.
+        :param name: The name of the item.
+        :param uri: The URI of the item.
+        :param length: The duration of the item in seconds.
+        :param total: The total number of items in the collection
+        :param max_width: The maximum width to print names as. Any name lengths longer than this will be truncated.
+        :return: The formatted string.
+        """
+        return (
+            f"\t\33[92m{str(i).zfill(len(str(total)))} \33[0m- "
+            f"\33[97m{self.align_and_truncate(name, max_width=max_width)} \33[0m| "
+            f"\33[91m{str(int(length // 60)).zfill(2)}:{str(round(length % 60)).zfill(2)} \33[0m| "
+            f"\33[93m{uri} \33[0m- "
+            f"{self.convert(uri, type_in=RemoteIDType.URI, type_out=RemoteIDType.URL_EXT)}"
+        )
+
+    @abstractmethod
+    def pretty_print_uris(
+            self, value: str | None = None, kind: RemoteIDType | None = None, use_cache: bool = True
+    ) -> None:
+        """
+        Diagnostic function. Print tracks from a given link in ``<track> - <title> | <URI> - <URL>`` format
+        for a given URL/URI/ID.
+
+        :param value: URL/URI/ID to print information for.
+        :param kind: When an ID is provided, give the kind of ID this is here.
+            If None and ID is given, user will be prompted to give the kind anyway.
+        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        """
         raise NotImplementedError
 
     @abstractmethod
@@ -38,7 +96,94 @@ class RemoteAPICollections(RemoteAPIBase, metaclass=ABCMeta):
         raise NotImplementedError
 
     ###########################################################################
-    ## GET endpoints
+    ## Core - GET endpoints
+    ###########################################################################
+    @abstractmethod
+    def get_self(self) -> dict[str, Any]:
+        """``GET`` - Get API response for information on current user"""
+        raise NotImplementedError
+
+    @abstractmethod
+    def query(self, query: str, kind: RemoteItemType, limit: int = 10, use_cache: bool = True) -> list[dict[str, Any]]:
+        """
+        ``GET`` - Query for items. Modify result types returned with kind parameter
+
+        :param query: Search query.
+        :param kind: The remote item type to search for.
+        :param limit: Number of results to get and return.
+        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :return: The response from the endpoint.
+        """
+        raise NotImplementedError
+
+    ###########################################################################
+    ## Item - GET endpoints
+    ###########################################################################
+    @abstractmethod
+    def get_items(
+            self,
+            values: APIMethodInputType,
+            kind: RemoteItemType | None = None,
+            limit: int = 50,
+            use_cache: bool = True,
+    ) -> list[dict[str, Any]]:
+        """
+        ``GET`` - Get information for given list of ``values``. Items may be:
+            - A string representing a URL/URI/ID.
+            - A MutableSequence of strings representing URLs/URIs/IDs of the same type.
+            - A remote API JSON response for a collection including some items under an ``items`` key,
+            a valid ID value under an ``id`` key,
+                and a valid item type value under a ``type`` key if ``kind`` is None.
+            - A MutableSequence of remote API JSON responses for a collection including:
+                - some items under an ``items`` key
+                - a valid ID value under an ``id`` key
+                - a valid item type value under a ``type`` key if ``kind`` is None.
+
+        If a JSON response is given, this replaces the ``items`` with the new results.
+
+        :param values: The values representing some remote items. See description for allowed value types.
+            These items must all be of the same type of item i.e. all tracks OR all artists etc.
+        :param kind: Item type if given string is ID.
+        :param limit: Size of batches to request.
+        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :return: API JSON responses for each item.
+        :raise RemoteItemTypeError: Raised when the function cannot determine the item type
+            of the input ``values``. Or when it does not recognise the type of the input ``values`` parameter.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_tracks(
+            self, values: APIMethodInputType, limit: int = 50, use_cache: bool = True, *args, **kwargs,
+    ) -> list[dict[str, Any]]:
+        """
+        ``GET`` + GET: /audio-features`` and/or ``GET: /audio-analysis``
+
+        Get audio features/analysis for list of tracks.
+        Mostly just a wrapper for ``get_items`` and ``get_tracks`` functions.
+        Items may be:
+            * A string representing a URL/URI/ID.
+            * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
+            * A remote API JSON response for a collection including some items under an ``items`` key
+                and a valid ID value under an ``id`` key.
+            * A MutableSequence of remote API JSON responses for a collection including :
+                - some items under an ``items`` key
+                - a valid ID value under an ``id`` key.
+
+        If a JSON response is given, this updates ``items`` by adding the results
+        under the ``audio_features`` and ``audio_analysis`` keys as appropriate.
+
+        :param values: The values representing some remote tracks. See description for allowed value types.
+        :param limit: Size of batches to request when getting audio features.
+        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :return: API JSON responses for each item.
+        :raise RemoteItemTypeError: Raised when the item types of the input ``tracks``
+            are not all tracks or IDs.
+        """
+        raise NotImplementedError
+
+    ###########################################################################
+    ## Collection - GET endpoints
     ###########################################################################
     @abstractmethod
     def get_collections_user(
@@ -100,7 +245,7 @@ class RemoteAPICollections(RemoteAPIBase, metaclass=ABCMeta):
         raise NotImplementedError
 
     ###########################################################################
-    ## POST endpoints
+    ## Collection - POST endpoints
     ###########################################################################
     @abstractmethod
     def create_playlist(self, name: str, *args, **kwargs) -> str:
@@ -130,7 +275,7 @@ class RemoteAPICollections(RemoteAPIBase, metaclass=ABCMeta):
         raise NotImplementedError
 
     ###########################################################################
-    ## DELETE endpoints
+    ## Collection - DELETE endpoints
     ###########################################################################
     @abstractmethod
     def delete_playlist(self, playlist: str) -> str:

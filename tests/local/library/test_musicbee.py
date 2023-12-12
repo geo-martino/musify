@@ -4,8 +4,9 @@ from os.path import basename, splitext, join, dirname, relpath, getmtime
 import pytest
 
 from syncify.local.exception import MusicBeeError
-from syncify.local.library import LocalLibrary
-from syncify.local.library.musicbee import MusicBee, XMLLibraryParser
+from syncify.local.library import LocalLibrary, MusicBee
+# noinspection PyProtectedMember
+from syncify.local.library._musicbee import XMLLibraryParser
 from syncify.local.track import LocalTrack
 from tests import path_resources
 from tests.local import remote_wrangler

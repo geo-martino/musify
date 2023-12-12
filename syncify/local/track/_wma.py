@@ -8,9 +8,10 @@ import mutagen.asf
 import mutagen.id3
 from PIL import Image, UnidentifiedImageError
 
-from syncify.local.file import TagMap, open_image, get_image_bytes
-from syncify.local.track.base.track import LocalTrack
+from syncify.abstract.enums import TagMap
+from syncify.local import open_image, get_image_bytes
 from syncify.remote.processors.wrangle import RemoteDataWrangler
+from ._base import LocalTrack
 
 
 class WMA(LocalTrack):

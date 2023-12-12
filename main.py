@@ -19,7 +19,7 @@ from syncify.exception import SyncifyError
 from syncify.fields import LocalTrackField
 from syncify.local.collection import LocalFolder
 from syncify.local.library import LocalLibrary, MusicBee
-from syncify.remote.api.api import RemoteAPI
+from syncify.remote.api import RemoteAPI
 from syncify.remote.config import RemoteClasses
 from syncify.remote.library.library import RemoteLibrary
 from syncify.remote.processors.search import AlgorithmSettings

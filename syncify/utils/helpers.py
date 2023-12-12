@@ -1,9 +1,15 @@
 import re
 from collections import Counter
-from collections.abc import Iterable, MutableMapping, MutableSequence, Mapping
-from typing import Any
+from collections.abc import Iterable, Collection, Sequence, MutableSequence, Mapping, MutableMapping
+from typing import Any, TypeVar
 
-from syncify.utils import Number
+UT = TypeVar('UT')
+UnitIterable = UT | Iterable[UT]
+UnitSequence = UT | Sequence[UT]
+UnitMutableSequence = UT | MutableSequence[UT]
+UnitCollection = UT | Collection[UT]
+
+Number = int | float
 
 
 def to_collection[T: (list, set, tuple)](data: Any, cls: T = tuple) -> T | None:

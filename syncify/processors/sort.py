@@ -12,7 +12,7 @@ from syncify.utils import UnitSequence, UnitIterable
 from syncify.utils.helpers import flatten_nested, strip_ignore_words, to_collection, limit_value
 
 
-def get_field_from_code(field_code: int) -> Field | None:
+def _get_field_from_code(field_code: int) -> Field | None:
     """
     Get the :py:class:`Field` enum for a given MusicBee field code.
 
@@ -148,7 +148,7 @@ class ItemSorter(MusicBeeProcessor):
             fields = cls._custom_sort[field_code]
             return cls(fields=fields)
         else:
-            field = get_field_from_code(field_code)
+            field = _get_field_from_code(field_code)
 
         if field is None:
             return cls()

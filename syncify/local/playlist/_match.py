@@ -6,7 +6,7 @@ from typing import Any, Self
 from syncify.abstract.enums import FieldCombined
 from syncify.abstract.misc import Result
 from syncify.abstract.processor import MusicBeeProcessor
-from syncify.local.track.base.track import LocalTrack
+from syncify.local.track import LocalTrack
 from syncify.processors.compare import ItemComparer
 from syncify.processors.sort import ItemSorter
 from syncify.utils import UnitSequence, UnitCollection

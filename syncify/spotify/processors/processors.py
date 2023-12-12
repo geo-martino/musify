@@ -4,7 +4,7 @@ from syncify.remote.types import RemoteObjectClasses
 from syncify.spotify.library.collection import SpotifyAlbum
 from syncify.spotify.library.item import SpotifyTrack
 from syncify.spotify.library.playlist import SpotifyPlaylist
-from syncify.spotify.processors.wrangle import SpotifyDataWrangler
+from .wrangle import SpotifyDataWrangler
 
 SPOTIFY_OBJECT_TYPES = RemoteObjectClasses(
     track=SpotifyTrack, album=SpotifyAlbum, playlist=SpotifyPlaylist

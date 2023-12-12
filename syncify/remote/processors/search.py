@@ -8,7 +8,7 @@ from syncify.abstract.enums import Field, FieldCombined
 from syncify.abstract.item import Item, Track, BaseObject
 from syncify.abstract.misc import Result
 from syncify.processors.match import ItemMatcher
-from syncify.remote.api.api import RemoteAPI
+from syncify.remote.api import RemoteAPI
 from syncify.remote.base import Remote
 from syncify.remote.enums import RemoteItemType
 from syncify.remote.types import RemoteObjectClasses

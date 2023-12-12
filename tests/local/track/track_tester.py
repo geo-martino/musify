@@ -7,8 +7,8 @@ import pytest
 
 from syncify.abstract.item import Item
 from syncify.fields import LocalTrackField
+from syncify.local import open_image
 from syncify.local.exception import InvalidFileType
-from syncify.local.file import open_image
 from syncify.local.track import LocalTrack, load_track
 from tests import path_resources, path_txt
 from tests.abstract.item import ItemTester

@@ -96,11 +96,22 @@ class TestRequestHandler:
     def test_cache_usage(request_handler: RequestHandler, requests_mock: Mocker):
         url = "http://localhost/test"
         expected_json = {"key": "value"}
-
         requests_mock.get(url, json=expected_json)
-        assert isinstance(request_handler._request(method="GET", url=url, use_cache=True), OriginalResponse)
-        assert isinstance(request_handler._request(method="GET", url=url, use_cache=True), CachedResponse)
-        assert isinstance(request_handler._request(method="GET", url=url, use_cache=False), OriginalResponse)
+
+        response = request_handler._request(method="GET", url=url, use_cache=True)
+        assert isinstance(response, OriginalResponse)
+        assert response.json() == expected_json
+        assert requests_mock.call_count == 1
+
+        response = request_handler._request(method="GET", url=url, use_cache=True)
+        assert isinstance(response, CachedResponse)
+        assert response.json() == expected_json
+        assert requests_mock.call_count == 1
+
+        response = request_handler._request(method="GET", url=url, use_cache=False)
+        assert isinstance(response, OriginalResponse)
+        assert response.json() == expected_json
+        assert requests_mock.call_count == 2
 
     @staticmethod
     def test_request(request_handler: RequestHandler, requests_mock: Mocker):
@@ -135,20 +146,17 @@ class TestRequestHandler:
     def test_backoff(request_handler: RequestHandler, requests_mock: Mocker):
         url = "http://localhost/test"
         expected_json = {"key": "value"}
-        backoff_count = 0
-        backoff_count_max = 3
+        backoff_limit = 3
 
         # force backoff settings to be short for testing purposes
-        request_handler.backoff_start = 0.2
+        request_handler.backoff_start = 0.1
         request_handler.backoff_factor = 2
-        request_handler.backoff_count = 5
+        request_handler.backoff_count = backoff_limit + 2
 
         def backoff(_, context) -> dict[str, Any]:
             """Return response based on how many times backoff process has happened"""
-            nonlocal backoff_count
-            if backoff_count < backoff_count_max:
+            if requests_mock.call_count < backoff_limit:
                 context.status_code = 408
-                backoff_count += 1
                 return {"error": {"message": "fail"}}
 
             context.status_code = 200
@@ -156,4 +164,4 @@ class TestRequestHandler:
 
         requests_mock.patch(url, json=backoff)
         assert request_handler.patch(url=url, use_cache=False) == expected_json
-        assert backoff_count == backoff_count_max
+        assert requests_mock.call_count == backoff_limit

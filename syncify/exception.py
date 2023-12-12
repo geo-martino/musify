@@ -15,4 +15,3 @@ class SyncifyEnumError(SyncifyError):
     def __init__(self, value: Any, message: str = "Could not find enum"):
         self.message = message
         super().__init__(f"{self.message}: {value}")
-

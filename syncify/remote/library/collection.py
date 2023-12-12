@@ -8,8 +8,8 @@ from syncify.remote.api import APIMethodInputType
 from syncify.remote.base import RemoteObject
 from syncify.remote.enums import RemoteIDType
 from syncify.remote.exception import RemoteIDTypeError
-from syncify.remote.library.item import RemoteTrack
 from syncify.remote.processors.wrangle import RemoteObjectWranglerMixin
+from .item import RemoteTrack
 
 
 class RemoteCollection[T: RemoteObject](RemoteObjectWranglerMixin, ItemCollection[T], metaclass=ABCMeta):

@@ -1,12 +1,12 @@
 from collections.abc import Mapping
 
-from syncify.remote.config import RemoteClasses
-from syncify.spotify import SPOTIFY_SOURCE_NAME
-from syncify.spotify.api.api import SpotifyAPI
-from syncify.spotify.base import SpotifyObject
-from syncify.spotify.library.library import SpotifyLibrary
-from syncify.spotify.processors.processors import SpotifyItemChecker, SpotifyItemSearcher
-from syncify.spotify.processors.wrangle import SpotifyDataWrangler
+from .remote.config import RemoteClasses
+from .spotify import SPOTIFY_SOURCE_NAME
+from .spotify.api import SpotifyAPI
+from .spotify.base import SpotifyObject
+from .spotify.library.library import SpotifyLibrary
+from .spotify.processors.processors import SpotifyItemChecker, SpotifyItemSearcher
+from .spotify.processors.wrangle import SpotifyDataWrangler
 
 # map of the names of all supported remote sources and their associated implementations
 REMOTE_CONFIG: Mapping[str, RemoteClasses] = {

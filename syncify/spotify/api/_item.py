@@ -4,13 +4,12 @@ from collections.abc import Mapping, MutableMapping, MutableSequence, Collection
 from itertools import batched
 from typing import Any
 
-from syncify.remote.api import APIMethodInputType
-from syncify.remote.api.item import RemoteAPIItems
+from syncify.remote.api import RemoteAPI, APIMethodInputType
 from syncify.remote.enums import RemoteItemType
 from syncify.utils.helpers import limit_value
 
 
-class SpotifyAPIItems(RemoteAPIItems, metaclass=ABCMeta):
+class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
     ###########################################################################
     ## GET helpers: Generic methods for getting items
     ###########################################################################

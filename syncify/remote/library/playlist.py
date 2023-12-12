@@ -7,8 +7,8 @@ from typing import Self, Literal
 from syncify.abstract.collection import Playlist
 from syncify.abstract.item import Item
 from syncify.abstract.misc import Result
-from syncify.remote.library.collection import RemoteCollection
-from syncify.remote.library.item import RemoteTrack
+from .collection import RemoteCollection
+from .item import RemoteTrack
 
 
 @dataclass(frozen=True)
