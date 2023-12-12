@@ -145,6 +145,7 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
         :param dry_run: Run function, but do not modify file at all.
         :return: :py:class:`Result` object with stats on the changes to the playlist.
         """
+        raise NotImplementedError
 
     def as_dict(self):
         return {

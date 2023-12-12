@@ -132,7 +132,7 @@ class MusicBee(LocalLibrary, File):
         self.logger.debug(f"Enrich {self.name} tracks: DONE\n")
         return list(tracks_paths.values())
 
-    def save(self, dry_run: bool = True, *args, **kwargs) -> dict[str, Any]:
+    def save(self, dry_run: bool = True, *_, **__) -> dict[str, Any]:
         """
         Generate and save the XML library file for this MusicBee library.
 

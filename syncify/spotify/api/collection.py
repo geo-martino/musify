@@ -249,7 +249,7 @@ class SpotifyAPICollections(RemoteAPICollections, metaclass=ABCMeta):
     ###########################################################################
     ## POST endpoints
     ###########################################################################
-    def create_playlist(self, name: str, public: bool = True, collaborative: bool = False, *args, **kwargs) -> str:
+    def create_playlist(self, name: str, public: bool = True, collaborative: bool = False, *_, **__) -> str:
         """
         ``POST: /users/{user_id}/playlists`` - Create an empty playlist for the current user with the given name.
 

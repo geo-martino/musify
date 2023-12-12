@@ -8,12 +8,14 @@ from time import sleep
 from typing import Any
 
 import requests_cache
+from requests import Response
 from requests.exceptions import ConnectionError
-from requests_cache.models.response import BaseResponse
 
 from syncify.api.authorise import APIAuthoriser
 from syncify.api.exception import APIError
 from syncify.utils.logger import Logger
+
+_DEFAULT_CACHE_PATH = join(dirname(dirname(dirname(__file__))), ".api_cache")
 
 
 class RequestHandler(APIAuthoriser, Logger):
@@ -31,22 +33,34 @@ class RequestHandler(APIAuthoriser, Logger):
     backoff_factor = 2
     backoff_count = 10
 
+    @property
+    def backoff_final(self) -> int:
+        """
+        The maximum wait time to retry a request in seconds
+        until giving up when applying backoff to failed requests
+        """
+        return self.backoff_start * self.backoff_factor ** self.backoff_count
+
+    @property
+    def timeout(self) -> int:
+        """
+        When the response gives a time to wait until (i.e. retry-after),
+        the program will exit if this time is above this timeout (in seconds)
+        """
+        return sum(self.backoff_start * self.backoff_factor ** i for i in range(self.backoff_count + 1))
+
     def __init__(
-            self,
-            cache_path: str = join(dirname(dirname(dirname(dirname(__file__)))), ".api_cache", "cache"),
-            cache_expiry=timedelta(weeks=4),
-            **auth_kwargs
+            self, cache_path: str = _DEFAULT_CACHE_PATH, cache_expiry=timedelta(weeks=4), **auth_kwargs
     ):
         super().__init__(**auth_kwargs)
 
-        self.backoff_final = self.backoff_start * self.backoff_factor ** self.backoff_count
-        self.timeout = sum(self.backoff_start * self.backoff_factor ** i for i in range(self.backoff_count + 1))
-
-        self.session = requests_cache.CachedSession(
-            cache_path, expire_after=cache_expiry, allowable_methods=["GET"]
-        )
-
+        self.session = requests_cache.CachedSession(cache_path, expire_after=cache_expiry, allowable_methods=["GET"])
         self.auth()
+
+    def auth(self, force_load: bool = False, force_new: bool = False) -> dict[str, str]:
+        headers = super().auth(force_load=force_load, force_new=force_new)
+        self.session.headers = headers
+        return headers
 
     def request(self, method: str, url: str, *args, **kwargs) -> dict[str, Any]:
         """
@@ -67,8 +81,8 @@ class RequestHandler(APIAuthoriser, Logger):
             waited = False
             if response is not None:
                 self._log_response(response=response, method=method, url=url)
-                self._check_response_codes(response=response)
-                waited = self._check_for_wait_time(response=response)
+                self._handle_unexpected_response(response=response)
+                waited = self._handle_wait_time(response=response)
 
             if not waited and backoff < self.backoff_final:  # exponential backoff
                 self.logger.warning(f"Request failed: retrying in {backoff} seconds...")
@@ -79,7 +93,7 @@ class RequestHandler(APIAuthoriser, Logger):
 
             response = self._request(method=method, url=url, *args, **kwargs)
 
-        return self._response_json(response)
+        return self._response_as_json(response)
 
     def _request(
             self,
@@ -90,13 +104,8 @@ class RequestHandler(APIAuthoriser, Logger):
             log_extra: Iterable[str] = (),
             *args,
             **kwargs
-    ) -> BaseResponse | None:
+    ) -> Response | None:
         """Handle logging a request, send the request, and return the response"""
-        try:  # reauthorise if needed
-            headers = self.headers
-        except APIError:
-            headers = self.auth()
-
         # format logs
         log = [f"{method.upper():<7}: {url:<{log_pad}}"]
         if log_extra:
@@ -111,35 +120,39 @@ class RequestHandler(APIAuthoriser, Logger):
         self.logger.debug(" | ".join(log))
         try:
             return self.session.request(
-                method=method.upper(), url=url, headers=headers, force_refresh=not use_cache, *args, **kwargs
+                method=method.upper(), url=url, force_refresh=not use_cache, *args, **kwargs
             )
         except ConnectionError as ex:
-            self.logger.warning(ex)
+            self.logger.warning(str(ex))
             return
 
-    def _log_response(self, response: BaseResponse, method: str, url: str) -> None:
+    def _log_response(self, response: Response, method: str, url: str) -> None:
         """Log the method, URL, response text, and response headers."""
         response_headers = response.headers
         if isinstance(response.headers, Mapping):  # format headers if JSON
-            response_headers = json.dumps(response.headers, indent=2)
+            response_headers = json.dumps(dict(response.headers), indent=2)
         self.logger.warning(
             f"\33[91m{method.upper():<7}: {url} | Code: {response.status_code} | "
-            f"Response text and headers follow:"
-            f"\nResponse text:\n{response.text}"
-            f"\nHeaders:\n{response_headers} \33[0m"
+            f"Response text and headers follow:\n"
+            f"Response text:\n{response.text}\n"
+            f"Headers:\n{response_headers}\33[0m"
         )
 
-    def _check_response_codes(self, response: BaseResponse) -> None:
-        """Check for response status codes that should raise an exception."""
-        message = self._response_json(response).get("error", {}).get("message")
-        if not message:
+    def _handle_unexpected_response(self, response: Response) -> bool:
+        """Handle bad response by extracting message and handling status codes that should raise an exception."""
+        message = self._response_as_json(response).get("error", {}).get("message")
+        error_message_found = message is not None
+
+        if not error_message_found:
             status = HTTPStatus(response.status_code)
             message = f"{status.phrase} | {status.description}"
 
-        if response.status_code in [400, 403, 404]:
+        if 400 <= response.status_code < 408:
             raise APIError(message)
 
-    def _check_for_wait_time(self, response: BaseResponse) -> bool:
+        return error_message_found
+
+    def _handle_wait_time(self, response: Response) -> bool:
         """Handle when a wait time is included in the response headers."""
         if "retry-after" not in response.headers:
             return False
@@ -156,7 +169,7 @@ class RequestHandler(APIAuthoriser, Logger):
         return True
 
     @staticmethod
-    def _response_json(response: BaseResponse) -> dict[str, Any]:
+    def _response_as_json(response: Response) -> dict[str, Any]:
         """Format the response to JSON and handle any errors"""
         try:
             return response.json()
@@ -165,29 +178,36 @@ class RequestHandler(APIAuthoriser, Logger):
 
     def get(self, url: str, **kwargs) -> dict[str, Any]:
         """Sends a GET request."""
+        kwargs.pop("method", None)
         return self.request("get", url=url, **kwargs)
 
     def post(self, url: str, **kwargs) -> dict[str, Any]:
         """Sends a POST request."""
+        kwargs.pop("method", None)
         return self.request("post", url=url, **kwargs)
 
     def put(self, url: str, **kwargs) -> dict[str, Any]:
         """Sends a PUT request."""
+        kwargs.pop("method", None)
         return self.request("put", url=url, **kwargs)
 
     def delete(self, url: str, **kwargs) -> dict[str, Any]:
         """Sends a DELETE request."""
+        kwargs.pop("method", None)
         return self.request("delete", url, **kwargs)
 
     def options(self, url: str, **kwargs) -> dict[str, Any]:
         """Sends an OPTIONS request."""
+        kwargs.pop("method", None)
         return self.request("options", url=url, **kwargs)
 
     def head(self, url: str, **kwargs) -> dict[str, Any]:
         """Sends a HEAD request."""
+        kwargs.pop("method", None)
         kwargs.setdefault("allow_redirects", False)
         return self.request("head", url=url, **kwargs)
 
     def patch(self, url: str, **kwargs) -> dict[str, Any]:
         """Sends a PATCH request."""
+        kwargs.pop("method", None)
         return self.request("patch", url=url, **kwargs)

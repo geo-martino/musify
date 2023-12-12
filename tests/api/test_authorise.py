@@ -4,15 +4,14 @@ import socket
 from datetime import datetime, timedelta
 from os.path import join
 from typing import Any
-
 from urllib.parse import urlparse, parse_qs
 
 import pytest
 from pytest_mock import MockerFixture
-from requests_mock.mocker import Mocker
+from requests_mock import Mocker
 
-from syncify.api.exception import APIError
 from syncify.api.authorise import APIAuthoriser
+from syncify.api.exception import APIError
 from tests.api import path_api_resources
 
 

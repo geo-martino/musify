@@ -147,7 +147,7 @@ class SpotifyTrack(SpotifyObjectWranglerMixin, RemoteTrack):
         self.artists = list(map(SpotifyArtist, response.get("artists", {})))
 
     @classmethod
-    def load(cls, value: APIMethodInputType, use_cache: bool = True, *args, **kwargs) -> Self:
+    def load(cls, value: APIMethodInputType, use_cache: bool = True, *_, **__) -> Self:
         cls._check_for_api()
         obj = cls.__new__(cls)
 
@@ -205,7 +205,7 @@ class SpotifyArtist(SpotifyObjectWranglerMixin, RemoteArtist):
         return self.response.get("popularity")
 
     @classmethod
-    def load(cls, value: APIMethodInputType, use_cache: bool = True, *args, **kwargs) -> Self:
+    def load(cls, value: APIMethodInputType, use_cache: bool = True, *_, **__) -> Self:
         cls._check_for_api()
         obj = cls.__new__(cls)
 

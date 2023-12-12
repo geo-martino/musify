@@ -244,8 +244,8 @@ class SpotifyAPIItems(RemoteAPIItems, metaclass=ABCMeta):
             analysis: bool = False,
             limit: int = 50,
             use_cache: bool = True,
-            *args,
-            **kwargs,
+            *_,
+            **__,
     ) -> list[dict[str, Any]]:
         """
         ``GET: /{kind}s`` + GET: /audio-features`` and/or ``GET: /audio-analysis``

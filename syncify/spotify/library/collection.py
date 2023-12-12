@@ -109,7 +109,7 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollection):
 
     @classmethod
     def load(
-            cls, value: APIMethodInputType, use_cache: bool = True, items: Iterable[SpotifyTrack] = (), *args, **kwargs
+            cls, value: APIMethodInputType, use_cache: bool = True, items: Iterable[SpotifyTrack] = (), *_, **__
     ) -> Self:
         cls._check_for_api()
         obj = cls.__new__(cls)
