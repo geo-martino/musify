@@ -6,6 +6,7 @@ from .abstract.enums import Field, FieldCombined, TagField
 class TrackFieldMixin(TagField):
     """Applies extra functionality to the Field enum for Field types relating to :py:class:`Track` types"""
 
+    # noinspection PyUnresolvedReferences
     @classmethod
     def map(cls, enum: Self) -> list[Self]:
         """

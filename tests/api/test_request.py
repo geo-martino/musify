@@ -7,6 +7,10 @@ import pytest
 from requests import Response
 from requests_cache import OriginalResponse, CachedResponse
 from requests_mock import Mocker
+# noinspection PyProtectedMember
+from requests_mock.request import _RequestObjectProxy as Request
+# noinspection PyProtectedMember
+from requests_mock.response import _Context as Context
 
 from syncify.api import RequestHandler
 from syncify.api.exception import APIError
@@ -157,7 +161,7 @@ class TestRequestHandler:
         request_handler.backoff_factor = 2
         request_handler.backoff_count = backoff_limit + 2
 
-        def backoff(_, context) -> dict[str, Any]:
+        def backoff(_: Request, context: Context) -> dict[str, Any]:
             """Return response based on how many times backoff process has happened"""
             if requests_mock.call_count < backoff_limit:
                 context.status_code = 408

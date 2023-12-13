@@ -3,10 +3,9 @@ from typing import Any
 import pytest
 
 from syncify.spotify.api import SpotifyAPI
-
-from tests.spotify.api.spotify_api_collection import SpotifyAPICollectionsTester
-from tests.spotify.api.spotify_api_core import SpotifyAPICoreTester
-from tests.spotify.api.spotify_api_item import SpotifyAPIItemsTester
+from tests.spotify.api.collection import SpotifyAPICollectionsTester
+from tests.spotify.api.core import SpotifyAPICoreTester
+from tests.spotify.api.item import SpotifyAPIItemsTester
 
 
 class TestSpotifyAPI(SpotifyAPICoreTester, SpotifyAPIItemsTester, SpotifyAPICollectionsTester):

@@ -8,7 +8,6 @@ import pytest
 from syncify.local.collection import LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from syncify.local.exception import LocalCollectionError
 from syncify.local.track import LocalTrack
-
 from tests.abstract.collection import ItemCollectionTester
 from tests.local.track.utils import random_tracks, random_track, path_track_resources, path_track_all
 from tests.utils import random_str

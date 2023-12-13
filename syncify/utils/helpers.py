@@ -12,7 +12,7 @@ UnitCollection = UT | Collection[UT]
 Number = int | float
 
 
-def to_collection[T: (list, set, tuple)](data: Any, cls: T = tuple) -> T | None:
+def to_collection[T: (list, set, tuple)](data: Any, cls: type[T] = tuple) -> T | None:
     """
     Safely turn any object into a collection of a given type ``T``.
     Strings are converted to collections of size 1 where the first element is the string.

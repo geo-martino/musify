@@ -11,7 +11,6 @@ from syncify.local.playlist import XAutoPF
 from syncify.local.track import LocalTrack
 from syncify.processors.limit import LimitType
 from syncify.processors.sort import ShuffleMode, ShuffleBy
-
 from tests.local.playlist.playlist_tester import LocalPlaylistTester
 from tests.local.playlist.utils import path_playlist_xautopf_ra, path_playlist_xautopf_bp
 from tests.local.track.utils import random_tracks, path_track_flac, path_track_wma, path_track_mp3, random_track

@@ -414,7 +414,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
             return
 
         # WORKAROUND: for dodgy MP3 tag comments, split on null and take first value
-        possible_values: tuple[str] | None = to_collection(self[self.uri_tag.name.casefold()])
+        possible_values: tuple[str, ...] | None = to_collection(self[self.uri_tag.name.casefold()])
         if not possible_values:
             return None
 

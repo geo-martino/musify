@@ -7,13 +7,12 @@ from pycountry import countries
 from syncify.remote.enums import RemoteItemType
 from syncify.spotify import URL_API, URL_EXT, SPOTIFY_SOURCE_NAME
 from syncify.spotify.api import SpotifyAPI
-
 from tests.spotify.utils import random_id
 from tests.utils import random_str, random_date_str, random_dt, random_genres
 
-# noinspection PyTypeChecker
+# noinspection PyTypeChecker,PyUnresolvedReferences
 COUNTRY_CODES: list[str] = tuple(country.alpha_2 for country in countries)
-IMAGE_SIZES: tuple[int] = tuple([64, 160, 300, 320, 500, 640, 800, 1000])
+IMAGE_SIZES: tuple[int, ...] = tuple([64, 160, 300, 320, 500, 640, 800, 1000])
 
 
 class SpotifyTestResponses:

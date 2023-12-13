@@ -17,7 +17,7 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
     unavailable_uri_dummy = SPOTIFY_UNAVAILABLE_URI
 
     @staticmethod
-    def get_id_type(value: str) -> RemoteIDType:
+    def get_id_type(value: str, kind: RemoteItemType | None = None) -> RemoteIDType:
         value = value.strip().casefold()
         uri_split = value.split(':')
 
@@ -30,7 +30,7 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
                 return RemoteIDType.URI
             elif uri_split[1] != "user" and len(uri_split[2]) == RemoteIDType.ID.value:
                 return RemoteIDType.URI
-        elif len(value) == RemoteIDType.ID.value:  # use manually defined kind for a given id
+        elif len(value) == RemoteIDType.ID.value or kind == RemoteItemType.USER:
             return RemoteIDType.ID
         raise RemoteIDTypeError(f"Could not determine ID type of given value: {value}")
 
@@ -58,7 +58,7 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
         return False
 
     @staticmethod
-    def _get_item_type(value: str | Mapping[str, Any]) -> RemoteItemType | None:
+    def _get_item_type(value: str | Mapping[str, Any], kind: RemoteItemType) -> RemoteItemType | None:
         if isinstance(value, Mapping):
             if value.get("is_local", False):
                 raise RemoteItemTypeError("Cannot process local items")
@@ -79,8 +79,8 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
                     continue
         elif len(uri_check) == RemoteIDType.URI.value and uri_check[0].casefold() == "spotify":
             return RemoteItemType.from_name(uri_check[1])[0]
-        elif len(value) == RemoteIDType.ID.value:
-            return None
+        elif len(value) == RemoteIDType.ID.value or kind == RemoteItemType.USER:
+            return kind
         raise RemoteItemTypeError(f"Could not determine item type of given value: {value}")
 
     @classmethod
@@ -94,7 +94,7 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
         if cls.validate_id_type(value, kind=type_out):
             return value
         if type_in == RemoteIDType.ALL or not cls.validate_id_type(value, kind=type_in):
-            type_in = cls.get_id_type(value)
+            type_in = cls.get_id_type(value, kind=kind)
 
         value = value.strip()
 
@@ -106,18 +106,27 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
                     break
                 except SyncifyEnumError:
                     continue
+
             if kind == RemoteItemType.USER:
-                id_ = url_path[url_path.index(kind.name.casefold()) + 1]
+                # get name as it appears in the URL
+                name = kind.name.casefold()
+                if type_in == RemoteIDType.URL:
+                    name += "s"
+
+                id_ = url_path[url_path.index(name) + 1]
             else:
                 id_ = next(p for p in url_path if len(p) == RemoteIDType.ID.value)
+
         elif type_in == RemoteIDType.URI:
             uri_split = value.split(':')
             kind = RemoteItemType.from_name(uri_split[1])[0]
             id_ = uri_split[2]
+
         elif type_in == RemoteIDType.ID:
             if kind is None:
                 raise RemoteIDTypeError("Input value is an ID and no defined 'kind' has been given.", RemoteIDType.ID)
             id_ = value
+
         else:
             raise RemoteIDTypeError(f"Could not determine item type: {value}")
 

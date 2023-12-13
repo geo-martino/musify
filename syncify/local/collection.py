@@ -1,6 +1,6 @@
 import sys
 from abc import ABCMeta, abstractmethod
-from collections.abc import Mapping, Collection, Iterable, Container, MutableSequence
+from collections.abc import Mapping, Collection, Iterable, Container
 from datetime import datetime
 from glob import glob
 from os.path import splitext, join, basename, exists, isdir
@@ -124,7 +124,7 @@ class LocalCollection[T: LocalItem](Logger, ItemCollection[T], metaclass=ABCMeta
             )
         self.print_line(STAT)
 
-    def __getitem__(self, __key: str | int | slice | Item) -> T | MutableSequence[T, None, None]:
+    def __getitem__(self, __key: str | int | slice | Item) -> T | list[T] | list[T, None, None]:
         """
         Returns the item in this collection by matching on a given path/index/URI.
         If an item is given, the URI or path is extracted from this item

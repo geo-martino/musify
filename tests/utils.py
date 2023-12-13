@@ -37,7 +37,7 @@ def random_date_str() -> str:
 
 
 # noinspection SpellCheckingInspection
-GENRES: tuple[str] = tuple(genre.lower() for genre in (
+GENRES: tuple[str, ...] = tuple(genre.lower() for genre in (
     "Adult Contemporary",
     "Arab Pop",
     "Baroque",

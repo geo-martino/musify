@@ -21,11 +21,12 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
-    def get_id_type(value: str) -> RemoteIDType:
+    def get_id_type(value: str, kind: RemoteItemType | None = None) -> RemoteIDType:
         """
         Determine the remote ID type of the given ``value`` and return its type.
 
         :param value: URL/URI/ID to check.
+        :param kind: When this is equal to ``USER``, ignore checks and always return ``ID`` as  type.
         :return: The :py:class:`RemoteIDType`.
         :raise RemoteIDTypeError: Raised when the function cannot determine the ID type
             of the input ``value``.
@@ -39,7 +40,7 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
         raise NotImplementedError
 
     @classmethod
-    def get_item_type(cls, values: APIMethodInputType) -> RemoteItemType:
+    def get_item_type(cls, values: APIMethodInputType, kind: RemoteItemType | None = None) -> RemoteItemType:
         """
         Determine the remote item type of ``values``. Values may be:
             * A string representing a URL/URI.
@@ -50,18 +51,19 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
 
         :param values: The values representing some remote items. See description for allowed value types.
             These items must all be of the same type of item to pass i.e. all tracks OR all artists etc.
+        :param kind: The :py:class:`RemoteItemType` if the value is found to be an ID.
         :return: :py:class:`RemoteItemType`
         :raise RemoteItemTypeError: Raised when the function cannot determine the item type
             of the input ``values``.
             Or when the list contains strings representing many differing remote item types or only IDs.
         """
         if isinstance(values, str) or isinstance(values, Mapping):
-            return cls._get_item_type(values)
+            return cls._get_item_type(value=values, kind=kind)
     
         if len(values) == 0:
             raise RemoteItemTypeError("No values given: collection is empty")
     
-        kinds = {cls._get_item_type(value) for value in values if value is not None}
+        kinds = {cls._get_item_type(value=value, kind=kind) for value in values if value is not None}
         kinds.discard(None)
         if len(kinds) == 0:
             raise RemoteItemTypeError("Given items are invalid or are IDs with no kind given")
@@ -71,13 +73,14 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
-    def _get_item_type(value: str | Mapping[str, Any]) -> RemoteItemType | None:
+    def _get_item_type(value: str | Mapping[str, Any], kind: RemoteItemType) -> RemoteItemType | None:
         """
         Determine the remote item type of the given ``value`` and return its type. Value may be:
             * A string representing a URL/URI/ID.
             * A remote API JSON response for a collection with a valid item type value under a ``type`` key.
     
         :param value: The value representing some remote item. See description for allowed value types.
+        :param kind: The :py:class:`RemoteItemType` if the value is found to be an ID.
         :return: The :py:class:`RemoteItemType`. If the given value is determined to be an ID, returns None.
         :raise RemoteItemTypeError: Raised when the function cannot determine the item type
             of the input ``values``.
@@ -102,7 +105,7 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
         :raise RemoteItemTypeError: Raised when the function cannot validate the item type
             of the input ``values`` is of type ``kind`` or a simple ID.
         """
-        item_type = cls.get_item_type(values)
+        item_type = cls.get_item_type(values, kind=kind)
         if item_type is not None and not item_type == kind:
             item_str = "unknown" if item_type is None else item_type.name.casefold() + "s"
             raise RemoteItemTypeError(f"Given items must all be {kind.name.casefold()} URLs/URIs/IDs, not {item_str}")
@@ -139,7 +142,7 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
             * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
             * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
             * A MutableSequence of remote API JSON responses for a collection with
-                 a valid ID value under an ``id`` key.
+                a valid ID value under an ``id`` key.
 
         :param values: The values representing some remote items. See description for allowed value types.
             These items may be of mixed item types e.g. some tracks AND some artists.

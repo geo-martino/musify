@@ -7,9 +7,9 @@ from os.path import dirname, join
 from time import sleep
 from typing import Any
 
-from requests_cache import CachedSession
 from requests import Response, Session
 from requests.exceptions import ConnectionError
+from requests_cache import CachedSession
 
 from syncify.utils.logger import Logger
 from ._authorise import APIAuthoriser

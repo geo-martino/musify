@@ -71,7 +71,9 @@ class SpotifyAPICore(RemoteAPI, metaclass=ABCMeta):
             self._user_data = r
         return r
 
-    def query(self, query: str, kind: RemoteItemType, limit: int = 10, use_cache: bool = True) -> list[dict[str, Any]]:
+    def query(
+            self, query: str | None, kind: RemoteItemType, limit: int = 10, use_cache: bool = True
+    ) -> list[dict[str, Any]]:
         """
         ``GET: /search`` - Query for items. Modify result types returned with kind parameter
 
@@ -85,7 +87,7 @@ class SpotifyAPICore(RemoteAPI, metaclass=ABCMeta):
             return []
 
         url = f"{self.api_url_base}/search"
-        params = {'q': query, "type": kind.name.casefold(), "limit": limit_value(limit)}
+        params = {'q': query, "type": kind.name.casefold(), "limit": limit_value(limit, floor=1, ceil=50)}
         r = self.get(url, params=params, use_cache=use_cache)
 
         if "error" in r:

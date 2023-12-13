@@ -10,7 +10,6 @@ from syncify.fields import LocalTrackField
 from syncify.local import open_image
 from syncify.local.exception import InvalidFileType
 from syncify.local.track import LocalTrack, load_track
-
 from tests.abstract.item import ItemTester
 from tests.local.track.utils import path_track_all, path_track_img
 from tests.local.utils import remote_wrangler

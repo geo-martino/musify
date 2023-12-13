@@ -6,7 +6,6 @@ import pytest
 from syncify.abstract.item import Item
 from syncify.abstract.misc import PrettyPrinter
 from syncify.local import LocalObject
-
 from tests.abstract.misc import PrettyPrinterTester
 from tests.spotify.utils import random_uri
 

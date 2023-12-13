@@ -239,7 +239,8 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
         """Search for matches on an entire album"""
         algorithm = AlgorithmSettings.ALBUM
         results = self._get_results(collection, kind=RemoteItemType.ALBUM, algorithm=algorithm)
-        albums = [self._remote_types.album(r).reload() for r in results]
+        albums = [self._remote_types.album(r) for r in results]
+        [album.reload() for album in albums]
 
         # order and prioritise results that are closer to the item count of the input collection
         albums.sort(key=lambda x: abs(x.track_total - len(collection)))

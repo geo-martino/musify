@@ -8,7 +8,6 @@ from syncify.local.library import LocalLibrary, MusicBee
 # noinspection PyProtectedMember
 from syncify.local.library._musicbee import XMLLibraryParser
 from syncify.local.track import LocalTrack
-
 from tests.local.library.library_tester import LocalLibraryTester
 from tests.local.library.utils import path_library_resources
 from tests.local.playlist.utils import path_playlist_resources, path_playlist_m3u

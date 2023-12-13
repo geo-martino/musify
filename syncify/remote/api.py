@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from collections.abc import Collection
+from collections.abc import Collection, MutableMapping, MutableSequence
 from typing import Any
 
 from syncify.api import RequestHandler
@@ -43,6 +43,100 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
     ###########################################################################
     ## Misc helpers
     ###########################################################################
+    @staticmethod
+    def _merge_results_to_input(
+            original: APIMethodInputType, results: list[dict[str, Any]], ordered: bool = True
+    ) -> None:
+        """
+        If API response type given on input, update with new results.
+        Assumes on a one-to-one relationship between ``original`` and the list of ``results``.
+
+        :param original: The original values given to the function.
+        :param results: The new results from the API.
+        :param ordered: When True, function assumes the order of items in ``original`` and ``results`` is the same.
+            When False, the function will attempt to match each input value to each result by matching on
+            the ``id`` key of each dictionary.
+        """
+        id_key = "id"
+
+        if isinstance(original, MutableMapping):
+            if not len(results) == 1:
+                return
+
+            original.clear()
+            original |= results[0]
+        elif not isinstance(original, MutableSequence):
+            return
+
+        # process as lists
+        valid_input_types = all(isinstance(item, MutableMapping) for item in original)
+        valid_lengths = len(original) == len(results)
+        if not valid_input_types or not valid_lengths:
+            return
+
+        if ordered:
+            for item, res in zip(original, results):
+                item.clear()
+                item |= res
+            return
+
+        valid_keys_values = all(id_key in item for item in original)
+        valid_keys_results = all(id_key in item for item in results)
+        if not valid_keys_values or not valid_keys_results:
+            return
+
+        result_mapped = {r[id_key]: r for r in results if r}
+        for item in original:
+            item.clear()
+            item |= result_mapped[item[id_key]]
+
+    @staticmethod
+    def _extend_input_with_results(
+            original: APIMethodInputType, results: dict[str, list[dict[str, Any]]], ordered: bool = True
+    ) -> None:
+        """
+        If API response type given on input, update with new results.
+        Assumes on a one-to-one relationship between ``original`` and the values of the ``results`` dict.
+
+        :param original: The original values given to the function.
+        :param results: The new results from the API in the form {<key to update on ``original``>: [``results``]}.
+        :param ordered: When True, function assumes the order of items in ``original``
+            and values of ``results`` is the same.
+            When False, the function will attempt to match each input value to each result by matching on
+            the ``id`` key of each dictionary.
+        """
+        id_key = "id"
+
+        if isinstance(original, MutableMapping):
+            for key, result in results.items():
+                original[key] = result[0]
+            return
+
+        elif not isinstance(original, MutableSequence):
+            return
+
+        # process as lists
+        valid_input_types = all(isinstance(item, MutableMapping) for item in original)
+        valid_lengths = all(len(original) == len(result) for result in results.values())
+        if not valid_input_types or not valid_lengths:
+            return
+
+        if ordered:
+            for key, result in results.items():
+                for item, res in zip(original, result):
+                    item[key] = res
+            return
+
+        valid_keys_values = all(id_key in item for item in original)
+        valid_keys_results = all(id_key in item for result in results.values() for item in result)
+        if not valid_keys_values or not valid_keys_results:
+            return
+
+        for key, result in results.items():
+            result_mapped = {r[id_key]: r for r in result if r}
+            for item in original:
+                item[key] = result_mapped[item[id_key]]
+
     def format_item_data(
             self, i: int, name: str, uri: str, length: float = 0, total: int = 1, max_width: int = 50
     ) -> str:
@@ -132,14 +226,14 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
     ) -> list[dict[str, Any]]:
         """
         ``GET`` - Get information for given list of ``values``. Items may be:
-            - A string representing a URL/URI/ID.
-            - A MutableSequence of strings representing URLs/URIs/IDs of the same type.
-            - A remote API JSON response for a collection including some items under an ``items`` key,
-            a valid ID value under an ``id`` key,
+            * A string representing a URL/URI/ID.
+            * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
+            * A remote API JSON response for a collection including some items under an ``items`` key,
+                a valid ID value under an ``id`` key,
                 and a valid item type value under a ``type`` key if ``kind`` is None.
-            - A MutableSequence of remote API JSON responses for a collection including:
-                - some items under an ``items`` key
-                - a valid ID value under an ``id`` key
+            * A MutableSequence of remote API JSON responses for a collection including:
+                - some items under an ``items`` key,
+                - a valid ID value under an ``id`` key,
                 - a valid item type value under a ``type`` key if ``kind`` is None.
 
         If a JSON response is given, this replaces the ``items`` with the new results.
@@ -160,28 +254,8 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
             self, values: APIMethodInputType, limit: int = 50, use_cache: bool = True, *args, **kwargs,
     ) -> list[dict[str, Any]]:
         """
-        ``GET`` + GET: /audio-features`` and/or ``GET: /audio-analysis``
-
-        Get audio features/analysis for list of tracks.
-        Mostly just a wrapper for ``get_items`` and ``get_tracks`` functions.
-        Items may be:
-            * A string representing a URL/URI/ID.
-            * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
-            * A remote API JSON response for a collection including some items under an ``items`` key
-                and a valid ID value under an ``id`` key.
-            * A MutableSequence of remote API JSON responses for a collection including :
-                - some items under an ``items`` key
-                - a valid ID value under an ``id`` key.
-
-        If a JSON response is given, this updates ``items`` by adding the results
-        under the ``audio_features`` and ``audio_analysis`` keys as appropriate.
-
-        :param values: The values representing some remote tracks. See description for allowed value types.
-        :param limit: Size of batches to request when getting audio features.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
-        :return: API JSON responses for each item.
-        :raise RemoteItemTypeError: Raised when the item types of the input ``tracks``
-            are not all tracks or IDs.
+        Wrapper for :py:meth:`get_items` which only returns Track type responses.
+        See :py:meth:`get_items` for more info.
         """
         raise NotImplementedError
 
@@ -224,12 +298,12 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
             * A string representing a URL/URI/ID.
             * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
             * A remote API JSON response for a collection including some items under an ``items`` key,
-            a valid ID value under an ``id`` key,
+                a valid ID value under an ``id`` key,
                 and a valid item type value under a ``type`` key if ``kind`` is None.
             * A MutableSequence of remote API JSON responses for a collection including:
                 - some items under an ``items`` key,
                 - a valid ID value under an ``id`` key,
-                - and a valid item type value under a ``type`` key if ``kind`` is None.
+                - a valid item type value under a ``type`` key if ``kind`` is None.
 
         If JSON response/s are given, this updates the value of the ``items`` in-place
         by clearing and replacing its values.

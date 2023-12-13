@@ -12,7 +12,6 @@ from requests_mock import Mocker
 
 from syncify.api import APIAuthoriser
 from syncify.api.exception import APIError
-
 from tests.api.utils import path_api_resources
 
 

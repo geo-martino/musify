@@ -10,7 +10,7 @@ from .utils.logger import Logger, REPORT
 class Report(Logger):
     """Various methods for reporting on items/collections/libraries etc."""
 
-    def report_library_differences(self, source: Library, compare: Library) -> dict[str, dict[str, tuple[Item]]]:
+    def report_library_differences(self, source: Library, compare: Library) -> dict[str, dict[str, tuple[Item, ...]]]:
         """
         Generate a report on the differences between two library's playlists.
 
@@ -20,9 +20,9 @@ class Report(Logger):
         :return: Report on extra, missing, and unavailable tracks for the compare library.
         """
         self.logger.debug("Report library differences: START")
-        extra: dict[str, tuple[Item]] = {}
-        missing: dict[str, tuple[Item]] = {}
-        unavailable: dict[str, tuple[Item]] = {}
+        extra: dict[str, tuple[Item, ...]] = {}
+        missing: dict[str, tuple[Item, ...]] = {}
+        unavailable: dict[str, tuple[Item, ...]] = {}
 
         max_width = self.get_max_width(source.playlists.keys())
 
@@ -52,7 +52,7 @@ class Report(Logger):
                 f"\33[94m{len(source_playlist):>6} in source \33[0m"
             )
 
-        report: dict[str, dict[str, tuple[Item]]] = {
+        report: dict[str, dict[str, tuple[Item, ...]]] = {
             "Source ✗ | Compare ✓": extra,
             "Source ✓ | Compare ✗": missing,
             "Items unavailable (no URI)": unavailable
@@ -74,7 +74,7 @@ class Report(Logger):
             collections: LocalLibrary | Iterable[ItemCollection],
             tags: Iterable[TagField] = FieldCombined.ALL,
             match_all: bool = False
-    ) -> dict[ItemCollection, dict[Item, tuple[str]]]:
+    ) -> dict[ItemCollection, dict[Item, tuple[str, ...]]]:
         """
         Generate a report on the items with a set of collections that have missing tags.
 
@@ -106,10 +106,10 @@ class Report(Logger):
             tag_names.remove("images")
             tag_names.add("has_image")
 
-        missing: dict[ItemCollection, dict[Item, tuple[str]]] = {}
+        missing: dict[ItemCollection, dict[Item, tuple[str, ...]]] = {}
         order = FieldCombined.all()
         for collection in collections:
-            missing_collection: dict[Item, tuple[str]] = {}
+            missing_collection: dict[Item, tuple[str, ...]] = {}
             for item in collection.items:
                 missing_tags: list[str] = [tag for tag in tag_names if item[tag] is None]
                 if all(missing_tags) if match_all else any(missing_tags):

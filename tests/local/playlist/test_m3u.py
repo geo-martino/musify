@@ -8,7 +8,6 @@ import pytest
 from syncify.local.exception import InvalidFileType
 from syncify.local.playlist import M3U
 from syncify.local.track import LocalTrack
-
 from tests.local.playlist.playlist_tester import LocalPlaylistTester
 from tests.local.playlist.utils import path_playlist_m3u, path_resources
 from tests.local.track.utils import random_track, random_tracks, path_track_all

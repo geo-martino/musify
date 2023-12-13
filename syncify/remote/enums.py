@@ -5,8 +5,8 @@ class RemoteIDType(SyncifyEnum):
     """Represents remote ID type"""
     ALL: int = 0
 
-    ID: int = 22
-    URI: int = 3
+    ID: int = 22  # value is the expected length of ID string
+    URI: int = 3  # value is the expected number of chunks in a URI
     URL: int = 1
     URL_EXT: int = 2
 

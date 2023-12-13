@@ -278,10 +278,10 @@ class LocalMatcher(MusicBeeProcessor):
             compared_path_map = output_path_map
 
         # get the track objects related to these paths and their actual paths as stored in their objects
-        include_tracks: tuple[LocalTrack | None] = tuple(output_path_map.get(p) for p in self.include_paths)
-        exclude_tracks: tuple[LocalTrack | None] = tuple(compared_path_map.get(p) for p in self.exclude_paths)
-        include_paths: tuple[str] = tuple(track.path for track in include_tracks if track is not None)
-        exclude_paths: tuple[str] = tuple(track.path for track in exclude_tracks if track is not None)
+        include_tracks: tuple[LocalTrack | None, ...] = tuple(output_path_map.get(p) for p in self.include_paths)
+        exclude_tracks: tuple[LocalTrack | None, ...] = tuple(compared_path_map.get(p) for p in self.exclude_paths)
+        include_paths: tuple[str, ...] = tuple(track.path for track in include_tracks if track is not None)
+        exclude_paths: tuple[str, ...] = tuple(track.path for track in exclude_tracks if track is not None)
 
         xml = {}
         if len(include_paths) > 0:  # assign include paths to XML object

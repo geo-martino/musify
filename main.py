@@ -290,8 +290,8 @@ class Syncify(Settings, Report):
         """Restore library data from a backup, getting user input for the settings"""
         output_parent = dirname(self.output_folder)
         backup_names = (self.local_library_backup_name, self.spotify_library_backup_name)
-        available_backup_names = tuple(
-            relpath(path[0], output_parent) for path in os.walk(output_parent)
+        available_backup_names: tuple[str, ...] = tuple(
+            str(relpath(path[0], output_parent)) for path in os.walk(output_parent)
             if path[0] != output_parent and any(any(name in file for name in backup_names) for file in path[2])
         )
         if len(available_backup_names) == 0:

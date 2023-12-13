@@ -92,7 +92,7 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
             if field is None:
                 raise FieldError(f"Unrecognised field name", field=field_str)
 
-            expected: tuple[str] | None = tuple(val for k, val in condition.items() if k.startswith("@Value"))
+            expected: tuple[str, ...] | None = tuple(val for k, val in condition.items() if k.startswith("@Value"))
             if len(expected) == 0 or expected[0] == "[playing track]":
                 expected = None
 
@@ -294,7 +294,7 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
     def _matches_reg_ex_ignore_case(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
         if value is not None and expected[0] is not None:
             return False
-        return bool(re.search(expected[0], value, flags=re.IGNORECASE))
+        return bool(re.search(str(expected[0]), str(value), flags=re.IGNORECASE))
 
     def to_xml(self, **kwargs) -> Mapping[str, Any]:
         raise NotImplementedError

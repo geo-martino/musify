@@ -2,7 +2,6 @@ import pytest
 
 from syncify.local.track import LocalTrack
 from syncify.processors.match import ItemMatcher, CleanTagConfig
-
 from tests.abstract.misc import PrettyPrinterTester
 from tests.local.track.utils import random_track
 

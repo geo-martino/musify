@@ -132,7 +132,7 @@ class APIAuthoriser(Logger):
         # information for the final headers
         self.header_key: str = header_key
         self.header_prefix: str = header_prefix if header_prefix else ""
-        self.header_extra: Mapping[str, str] = header_extra if header_extra else {}
+        self.header_extra: dict[str, str] = header_extra if header_extra else {}
 
     def load_token(self) -> dict[str, Any] | None:
         """Load stored token from given path"""

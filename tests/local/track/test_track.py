@@ -1,7 +1,6 @@
 import pytest
 
 from syncify.local.track import LocalTrack, FLAC, M4A, MP3, WMA
-
 from tests.local.track.track_tester import LocalTrackTester
 from tests.local.track.utils import path_track_flac, path_track_mp3, path_track_m4a, path_track_wma
 from tests.local.utils import remote_wrangler

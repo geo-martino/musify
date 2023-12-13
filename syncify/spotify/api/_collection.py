@@ -1,5 +1,5 @@
 from abc import ABCMeta
-from collections.abc import Mapping, MutableMapping, Collection, MutableSequence, Iterable
+from collections.abc import Mapping, MutableMapping, Collection, Iterable
 from itertools import batched
 from time import sleep
 from typing import Any
@@ -183,12 +183,12 @@ class SpotifyAPICollections(RemoteAPI, metaclass=ABCMeta):
             * A string representing a URL/URI/ID.
             * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
             * A remote API JSON response for a collection including some items under an ``items`` key,
-            a valid ID value under an ``id`` key,
+                a valid ID value under an ``id`` key,
                 and a valid item type value under a ``type`` key if ``kind`` is None.
             * A MutableSequence of remote API JSON responses for a collection including:
                 - some items under an ``items`` key,
                 - a valid ID value under an ``id`` key,
-                - and a valid item type value under a ``type`` key if ``kind`` is None.
+                - a valid item type value under a ``type`` key if ``kind`` is None.
 
         If JSON response/s are given, this updates the value of the ``items`` in-place
         by clearing and replacing its values.
@@ -234,14 +234,7 @@ class SpotifyAPICollections(RemoteAPI, metaclass=ABCMeta):
             f"Retrieved {item_count:>6} {self.collection_types[kind.name]} "
             f"across {len(collections):>5} {kind.name.casefold()}s"
         )
-
-        # if API response was given on input, update it with new responses
-        if isinstance(values, MutableMapping) and len(collections) == 1:
-            values.clear()
-            values |= collections[0]
-        elif isinstance(values, MutableSequence) and all(isinstance(item, MutableMapping) for item in values):
-            values.clear()
-            values.extend(collections)
+        self._merge_results_to_input(original=values, results=collections, ordered=True)
 
         return collections
 
