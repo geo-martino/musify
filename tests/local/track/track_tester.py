@@ -10,11 +10,12 @@ from syncify.fields import LocalTrackField
 from syncify.local import open_image
 from syncify.local.exception import InvalidFileType
 from syncify.local.track import LocalTrack, load_track
-from tests import path_resources, path_txt
+
 from tests.abstract.item import ItemTester
-from tests.local import remote_wrangler
-from tests.local.track import path_track_all, path_track_img
-from tests.remote import random_uri
+from tests.local.track.utils import path_track_all, path_track_img
+from tests.local.utils import remote_wrangler
+from tests.spotify.utils import random_uri
+from tests.utils import path_resources, path_txt
 
 
 def test_does_not_load_invalid_track():
@@ -24,6 +25,7 @@ def test_does_not_load_invalid_track():
 
 
 class LocalTrackTester(ItemTester, metaclass=ABCMeta):
+    """Run generic tests for :py:class:`LocalTrack` implementations"""
 
     @property
     @abstractmethod

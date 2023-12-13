@@ -86,9 +86,13 @@ class SpotifyTrack(SpotifyObjectWranglerMixin, RemoteTrack):
             return
 
         # correctly formatted song key string
-        key: str = self._song_keys[self.response["audio_features"]["key"]]
+        key_value: int = self.response["audio_features"]["key"]
+        key: str | None = self._song_keys[key_value] if key_value >= 0 else None
         is_minor: bool = self.response["audio_features"]["mode"] == 0
-        if '/' in key:
+
+        if not key:
+            return None
+        elif '/' in key:
             key_sep = key.split('/')
             return f"{key_sep[0]}{'m'*is_minor}/{key_sep[1]}{'m'*is_minor}"
         else:

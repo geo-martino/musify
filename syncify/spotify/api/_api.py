@@ -1,3 +1,5 @@
+from typing import Any
+
 from syncify import PROGRAM_NAME
 from syncify.spotify import URL_API, URL_AUTH
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
@@ -89,12 +91,20 @@ class SpotifyAPI(SpotifyDataWrangler, SpotifyAPICore, SpotifyAPIItems, SpotifyAP
     def api_url_base(self) -> str:
         return URL_API
 
+    @property
+    def user_id(self) -> str | None:
+        """ID of the currently authenticated user"""
+        if not self._user_data:
+            self._user_data = self.get_self()
+        return self._user_data["id"]
+
+    @property
+    def user_name(self) -> str | None:
+        """Name of the currently authenticated user"""
+        if not self._user_data:
+            self._user_data = self.get_self()
+        return self._user_data["display_name"]
+
     def __init__(self, **handler_kwargs):
         super().__init__(**handler_kwargs)
-
-        try:
-            user_data = self.get_self()
-            self._user_id: str | None = user_data["id"]
-            self._user_name: str | None = user_data["display_name"]
-        except (ConnectionError, KeyError, TypeError):
-            pass
+        self._user_data: dict[str, Any] = {}

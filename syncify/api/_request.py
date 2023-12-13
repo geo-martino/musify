@@ -7,8 +7,8 @@ from os.path import dirname, join
 from time import sleep
 from typing import Any
 
-import requests_cache
-from requests import Response
+from requests_cache import CachedSession
+from requests import Response, Session
 from requests.exceptions import ConnectionError
 
 from syncify.utils.logger import Logger
@@ -49,12 +49,22 @@ class RequestHandler(APIAuthoriser, Logger):
         """
         return sum(self.backoff_start * self.backoff_factor ** i for i in range(self.backoff_count + 1))
 
+    @property
+    def cached_session(self) -> bool:
+        """True if stored session is a :py:class:`CachedSession`"""
+        return isinstance(self.session, CachedSession)
+
     def __init__(
-            self, cache_path: str = _DEFAULT_CACHE_PATH, cache_expiry=timedelta(weeks=4), **auth_kwargs
+            self, cache_path: str | None = _DEFAULT_CACHE_PATH, cache_expiry=timedelta(weeks=4), **auth_kwargs
     ):
         super().__init__(**auth_kwargs)
 
-        self.session = requests_cache.CachedSession(cache_path, expire_after=cache_expiry, allowable_methods=["GET"])
+        self.session: CachedSession | Session
+        if cache_path:
+            self.session = CachedSession(cache_path, expire_after=cache_expiry, allowable_methods=["GET"])
+        else:
+            self.session = Session()
+
         self.auth()
 
     def auth(self, force_load: bool = False, force_new: bool = False) -> dict[str, str]:
@@ -114,14 +124,16 @@ class RequestHandler(APIAuthoriser, Logger):
             log.append(f"Args: ({', '.join(args)})")
         if len(kwargs) > 0:
             log.extend(f"{k.title()}: {v}" for k, v in kwargs.items())
-        if use_cache and method.upper() in self.session.settings.allowable_methods:
+        # noinspection PyUnresolvedReferences
+        if use_cache and self.cached_session and method.upper() in self.session.settings.allowable_methods:
             log.append("Cached")
 
         self.logger.debug(" | ".join(log))
         try:
-            return self.session.request(
-                method=method.upper(), url=url, force_refresh=not use_cache, *args, **kwargs
-            )
+            if not self.cached_session:
+                return self.session.request(method=method.upper(), url=url, *args, **kwargs)
+            # noinspection PyArgumentList
+            return self.session.request(method=method.upper(), force_refresh=not use_cache, url=url, *args, **kwargs)
         except ConnectionError as ex:
             self.logger.warning(str(ex))
             return

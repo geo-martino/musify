@@ -17,7 +17,7 @@
 /*.yml*
 
 # caches
-**cache
+**cache*
 
 # large data & log folders
 _data/

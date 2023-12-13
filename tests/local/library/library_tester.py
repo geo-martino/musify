@@ -7,10 +7,11 @@ import pytest
 
 from syncify.local.library import LocalLibrary
 from syncify.local.track import LocalTrack
+
 from tests.abstract.collection import LibraryTester
-from tests.local.playlist import path_playlist_resources, path_playlist_m3u, path_playlist_xautopf_bp, \
-    path_playlist_xautopf_ra
-from tests.local.track import random_tracks, path_track_resources, path_track_all
+from tests.local.playlist.utils import path_playlist_resources, path_playlist_m3u
+from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
+from tests.local.track.utils import random_tracks, path_track_resources, path_track_all
 
 
 class LocalLibraryTester(LibraryTester, metaclass=ABCMeta):

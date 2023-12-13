@@ -6,12 +6,13 @@ from random import choice, randrange, randint
 import mutagen
 from dateutil.relativedelta import relativedelta
 
-from syncify.local.track import TRACK_CLASSES, LocalTrack, FLAC, M4A, MP3, WMA
+from syncify.local.track import TRACK_CLASSES, LocalTrack
 # noinspection PyProtectedMember
 from syncify.local.track._base.writer import TagWriter
-from tests import path_resources, random_str
-from tests.local import remote_wrangler
-from tests.remote import random_uri
+
+from tests.local.utils import remote_wrangler
+from tests.spotify.utils import random_uri
+from tests.utils import path_resources, random_str
 
 path_track_resources = join(path_resources, basename(dirname(__file__)))
 path_track_flac = join(path_track_resources, "noise_flac.flac")

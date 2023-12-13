@@ -32,6 +32,7 @@
           <option value="abstract.item.Item.album" />
           <option value="abstract.fields.TrackFieldMixin.*" />
           <option value="fields.TrackFieldMixin.*" />
+          <option value="pycountry.db.Database.alpha_2" />
         </list>
       </option>
     </inspection_tool>

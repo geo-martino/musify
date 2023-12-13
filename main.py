@@ -597,5 +597,6 @@ if __name__ == "__main__":
 
 ## NEEDED FOR v0.3
 # TODO: review scope of functions/attributes/properties e.g. logger methods on Logger implementations
+# TODO: fix - XAutoPF ItemCollection tests sometimes fail on __setitem__ test
 # TODO: write tests, write tests, write tests
 # TODO: update the readme (dynamic readme?)

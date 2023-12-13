@@ -60,9 +60,16 @@ class SpotifyAPICore(RemoteAPI, metaclass=ABCMeta):
     ###########################################################################
     ## GET endpoints
     ###########################################################################
-    def get_self(self) -> dict[str, Any]:
-        """``GET: /me`` - Get API response for information on current user"""
-        return self.get(url=f"{self.api_url_base}/me", use_cache=True, log_pad=71)
+    def get_self(self, update_user_data: bool = True) -> dict[str, Any]:
+        """
+        ``GET: /me`` - Get API response for information on current user.
+
+        :param update_user_data: When True, update the ``_user_data`` stored in this API object.
+        """
+        r = self.get(url=f"{self.api_url_base}/me", use_cache=True, log_pad=71)
+        if update_user_data:
+            self._user_data = r
+        return r
 
     def query(self, query: str, kind: RemoteItemType, limit: int = 10, use_cache: bool = True) -> list[dict[str, Any]]:
         """

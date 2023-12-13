@@ -5,6 +5,7 @@ from syncify.abstract.item import Track, Artist as ArtistItem
 from syncify.fields import FolderField, PlaylistField, AlbumField, ArtistField
 from syncify.fields import TrackField, LocalTrackField, ArtistItemField
 from syncify.local.track import LocalTrack
+
 from tests.abstract.enums import FieldTester, TagFieldTester
 
 

@@ -17,7 +17,7 @@ class TestRequestHandler:
     @staticmethod
     @pytest.fixture
     def request_handler(token: dict[str, Any], tmp_path: str) -> RequestHandler:
-        """Yield a simple :py:class:`APIAuthoriser` object"""
+        """Yield a simple :py:class:`RequestHandler` object"""
         return RequestHandler(name="test", token=token, cache_path=join(tmp_path, "api_cache"))
 
     @staticmethod
@@ -32,11 +32,15 @@ class TestRequestHandler:
 
     @staticmethod
     def test_init(token: dict[str, Any], tmp_path: str):
+        request_handler = RequestHandler(name="test", token=token, cache_path=None)
+        assert not request_handler.cached_session
+
         cache_path = join(tmp_path, "test")
         cache_expiry = timedelta(days=6)
         request_handler = RequestHandler(
             name="test", token=token, cache_expiry=cache_expiry, cache_path=cache_path
         )
+        assert request_handler.cached_session
         assert request_handler.token == token
         assert request_handler.session.cache.cache_name == cache_path
         assert request_handler.session.expire_after == cache_expiry

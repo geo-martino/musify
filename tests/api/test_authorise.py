@@ -12,7 +12,8 @@ from requests_mock import Mocker
 
 from syncify.api import APIAuthoriser
 from syncify.api.exception import APIError
-from tests.api import path_api_resources
+
+from tests.api.utils import path_api_resources
 
 
 class TestAPIAuthoriser:
@@ -22,7 +23,7 @@ class TestAPIAuthoriser:
     @staticmethod
     @pytest.fixture
     def authoriser() -> APIAuthoriser:
-        """Yield a simple :py:class:`APIAuthoriser` object"""
+        """Yield an authorised :py:class:`SpotifyAPI` object"""
         return APIAuthoriser(name="test")
 
     @staticmethod

@@ -5,9 +5,9 @@ from random import randrange
 import pytest
 
 from syncify.local.track import LocalTrack, FLAC, M4A, MP3, WMA
+
 from tests.abstract.collection import ItemCollectionTester
-from tests.local.track import path_track_flac, path_track_m4a, path_track_wma, path_track_mp3
-from tests.local.track import random_tracks
+from tests.local.track.utils import random_tracks, path_track_flac, path_track_m4a, path_track_wma, path_track_mp3
 
 
 class LocalPlaylistTester(ItemCollectionTester, metaclass=ABCMeta):

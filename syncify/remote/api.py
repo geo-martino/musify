@@ -24,21 +24,21 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
         raise NotImplementedError
 
     @property
+    @abstractmethod
     def user_id(self) -> str | None:
         """ID of the currently authenticated user"""
-        return self._user_id
+        raise NotImplementedError
 
     @property
+    @abstractmethod
     def user_name(self) -> str | None:
         """Name of the currently authenticated user"""
-        return self._user_name
+        raise NotImplementedError
 
     def __init__(self, **handler_kwargs):
         handler_kwargs = {k: v for k, v in handler_kwargs.items() if k != "name"}
         super().__init__(name=self.remote_source, **handler_kwargs)
-
-        self._user_id: str | None = None
-        self._user_name: str | None = None
+        self._user_data: dict[str, Any] = {}
 
     ###########################################################################
     ## Misc helpers
@@ -99,8 +99,11 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
     ## Core - GET endpoints
     ###########################################################################
     @abstractmethod
-    def get_self(self) -> dict[str, Any]:
-        """``GET`` - Get API response for information on current user"""
+    def get_self(self, update_user_data: bool = True) -> dict[str, Any]:
+        """
+        ``GET`` - Get API response for information on current user
+
+        :param update_user_data: When True, update the ``_user_data`` stored in this API object."""
         raise NotImplementedError
 
     @abstractmethod
