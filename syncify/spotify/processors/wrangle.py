@@ -108,12 +108,11 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
                     continue
 
             if kind == RemoteItemType.USER:
-                # get name as it appears in the URL
                 name = kind.name.casefold()
-                if type_in == RemoteIDType.URL:
-                    name += "s"
-
-                id_ = url_path[url_path.index(name) + 1]
+                try:
+                    id_ = url_path[url_path.index(name) + 1]
+                except ValueError:
+                    id_ = url_path[url_path.index(name + "s") + 1]
             else:
                 id_ = next(p for p in url_path if len(p) == RemoteIDType.ID.value)
 

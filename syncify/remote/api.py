@@ -287,11 +287,7 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
 
     @abstractmethod
     def get_collections(
-            self,
-            values: APIMethodInputType,
-            kind: RemoteItemType | None = None,
-            limit: int = 50,
-            use_cache: bool = True,
+            self, values: APIMethodInputType, kind: RemoteItemType | None = None, use_cache: bool = True,
     ) -> list[dict[str, Any]]:
         """
         ``GET`` - Get all items from a given list of ``values``. Items may be:
@@ -312,8 +308,6 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
             These items must all be of the same type of collection i.e. all playlists OR all shows etc.
         :param kind: Item type of the given collection.
             If None, function will attempt to determine the type of the given values
-        :param limit: Size of each batch of items to request in a collection items request.
-            This value will be limited to be between ``1`` and the object's current ``batch_size_max``. Maximum=50.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: API JSON responses for each collection containing the collections items under the ``items`` key.
         :raise RemoteItemTypeError: Raised when the function cannot determine the item type of

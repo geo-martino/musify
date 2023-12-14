@@ -1,6 +1,5 @@
 from collections.abc import Callable
 from functools import partial
-from random import randrange
 from typing import Any
 from urllib.parse import urlparse, parse_qs
 
@@ -12,19 +11,18 @@ from requests_mock.response import _Context as Context
 
 from syncify.remote.enums import RemoteItemType
 from syncify.spotify.api import SpotifyAPI
-from tests.spotify.api.base_tester import SpotifyAPITesterHelpers
-from tests.spotify.api.utils import SpotifyTestResponses as Responses
+from tests.spotify.api.utils import SpotifyTestResponses as Responses, assert_limit_parameter_valid
 from tests.utils import random_str
 
 
-class SpotifyAPICoreTester(SpotifyAPITesterHelpers):
+class TestSpotifyAPICore:
     """Tester for core endpoints of :py:class:`SpotifyAPI`"""
 
     @staticmethod
     def test_get_self(api: SpotifyAPI, requests_mock: Mocker):
         url = f"{api.api_url_base}/me"
         expected = Responses.user()
-        requests_mock.get(url=url, status_code=200, json=expected)
+        requests_mock.get(url=url, json=expected)
 
         assert api._user_data == {}
         assert api.get_self(update_user_data=False) == expected
@@ -34,25 +32,25 @@ class SpotifyAPICoreTester(SpotifyAPITesterHelpers):
         assert api._user_data == expected
 
     @staticmethod
-    def test_query_fails_safely(api: SpotifyAPI, requests_mock: Mocker):
+    def test_query_input_validation(api: SpotifyAPI, requests_mock: Mocker):
         assert api.query(query=None, kind=RemoteItemType.EPISODE) == []
         assert api.query(query="", kind=RemoteItemType.SHOW) == []
         # long queries that would cause the API to give an error should fail safely
         assert api.query(query=random_str(151, 200), kind=RemoteItemType.CHAPTER) == []
 
         url = f"{api.api_url_base}/search"
-        requests_mock.get(url=url, status_code=200, json={"error": "message"})
-        assert api.query(query="valid query", kind=RemoteItemType.ARTIST, use_cache=False) == []
+        requests_mock.get(url=url, json={"error": "message"})
+        assert api.query(query="valid query", kind=RemoteItemType.ARTIST) == []
 
-    def test_query_limits_limit(self, api: SpotifyAPI, requests_mock: Mocker):
+    @staticmethod
+    def test_query_params_limited(api: SpotifyAPI, requests_mock: Mocker):
         url = f"{api.api_url_base}/search"
         query = "valid query"
         kind = RemoteItemType.TRACK
 
-        requests_mock.get(url=url, status_code=200, json={f"tracks": {"items": []}})
-        self.limit_parameter_limited_test(
-            test_function=partial(api.query, query=query, kind=kind, use_cache=False),
-            requests_mock=requests_mock,
+        requests_mock.get(url=url, json={f"tracks": {"items": []}})
+        assert_limit_parameter_valid(
+            test_function=partial(api.query, query=query, kind=kind), requests_mock=requests_mock,
         )
 
     @staticmethod
@@ -74,8 +72,8 @@ class SpotifyAPICoreTester(SpotifyAPITesterHelpers):
             expected = expected_getter(req)
             return expected
 
-        requests_mock.get(url=url, status_code=200, json=get_expected_json)
-        response = api.query(query=query, kind=kind, limit=limit, use_cache=False)
+        requests_mock.get(url=url, json=get_expected_json)
+        response = api.query(query=query, kind=kind, limit=limit)
 
         assert response == expected[f"{kind.name.casefold()}s"]["items"]
         assert expected[f"{kind.name.casefold()}s"]["limit"] == limit
@@ -94,9 +92,8 @@ class SpotifyAPICoreTester(SpotifyAPITesterHelpers):
 
         def get_expected_json(request: Request) -> dict[str, Any]:
             """Dynamically generate expected response"""
-            total = limit + randrange(0, 50)
-            items = [Responses.track(album=True, artists=True) for _ in range(total)]
-            items_block = Responses.format_items_block(url_base=request.url, items=items, limit=limit)
+            items = [Responses.track(album=True, artists=True) for _ in range(limit)]
+            items_block = Responses.format_items_block(url=request.url, items=items, limit=limit, total=50)
             return {f"tracks": items_block}
 
         self.assert_query_valid(
@@ -114,9 +111,8 @@ class SpotifyAPICoreTester(SpotifyAPITesterHelpers):
 
         def get_expected_json(request: Request) -> dict[str, Any]:
             """Dynamically generate expected response"""
-            total = limit + randrange(0, 50)
-            items = [Responses.album(extend=False, artists=True, tracks=False) for _ in range(total)]
-            items_block = Responses.format_items_block(url_base=request.url, items=items, limit=limit)
+            items = [Responses.album(extend=False, artists=True, tracks=False) for _ in range(limit)]
+            items_block = Responses.format_items_block(url=request.url, items=items, limit=limit, total=50)
             return {f"albums": items_block}
 
         self.assert_query_valid(

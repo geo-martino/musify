@@ -1,14 +1,68 @@
+from collections.abc import Callable, Iterable
 from copy import deepcopy
+from functools import partial
 from random import choice, randrange, sample, random
 from typing import Any
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse, quote
 
 from pycountry import countries
+from requests_mock.mocker import Mocker
 
-from syncify.remote.enums import RemoteItemType
+from syncify.remote.enums import RemoteIDType, RemoteItemType
 from syncify.spotify import URL_API, URL_EXT, SPOTIFY_SOURCE_NAME
 from syncify.spotify.api import SpotifyAPI
-from tests.spotify.utils import random_id
+from tests.spotify.utils import random_id, random_ids
 from tests.utils import random_str, random_date_str, random_dt, random_genres
+
+ALL_ID_TYPES = RemoteIDType.all()
+ALL_ITEM_TYPES = RemoteItemType.all()
+
+
+def random_id_type(api: SpotifyAPI, kind: RemoteItemType, id_: str = random_id()) -> str:
+    """Convert the given ``id_`` to a random ID type"""
+    type_in = RemoteIDType.ID
+    type_out = choice(ALL_ID_TYPES)
+    return api.convert(id_, kind=kind, type_in=type_in, type_out=type_out)
+
+
+def random_id_types(
+        api: SpotifyAPI,
+        kind: RemoteItemType,
+        id_list: Iterable[str] | None = None,
+        start: int = 1,
+        stop: int = 10
+) -> list[str]:
+    """Generate list of random ID types based on input item type"""
+    if id_list:
+        pass
+    elif kind == RemoteItemType.USER:
+        id_list = [random_str() for _ in range(randrange(start=start, stop=stop))]
+    else:
+        id_list = random_ids(start=start, stop=stop)
+
+    return [random_id_type(id_=id_, api=api, kind=kind) for id_ in id_list]
+
+
+def assert_limit_parameter_valid(
+        test_function: Callable,
+        requests_mock: Mocker,
+        floor: int = 1,
+        ceil: int = 50,
+        **kwargs
+):
+    """Test to ensure the limit value was limited to be within acceptable values."""
+    # too small
+    test_function(limit=floor - 20, **kwargs)
+    params = parse_qs(urlparse(requests_mock.last_request.url).query)
+    assert "limit" in params
+    assert int(params["limit"][0]) == floor
+
+    # too big
+    test_function(limit=ceil + 100, **kwargs)
+    params = parse_qs(urlparse(requests_mock.last_request.url).query)
+    assert "limit" in params
+    assert int(params["limit"][0]) == ceil
+
 
 # noinspection PyTypeChecker,PyUnresolvedReferences
 COUNTRY_CODES: list[str] = tuple(country.alpha_2 for country in countries)
@@ -37,22 +91,67 @@ class SpotifyTestResponses:
         return f"{choice(COUNTRY_CODES)}{random_str(3, 3)}{year}{randrange(int(10e5), int(10e6 - 1))}".upper()
 
     @staticmethod
+    def format_next_url(url: str, offset: int = 0, limit: int = 20) -> str:
+        """Format a `next` style URL for looping through API pages"""
+        url_parsed = urlparse(url)
+        params: dict[str, Any] = parse_qs(url_parsed.query)
+        params["offset"] = offset
+        params["limit"] = limit
+
+        url_parts = list(url_parsed[:])
+        url_parts[4] = urlencode(params, quote_via=quote)
+        return str(urlunparse(url_parts))
+
+    @classmethod
     def format_items_block(
-            url_base: str, items: list[dict[str, Any]], offset: int = 0, limit: int = 20
+            cls, url: str, items: list[dict[str, Any]], offset: int = 0, limit: int = 20, total: int = 50
     ) -> dict[str, Any]:
         """Format an items block response from a list of items and a URL base."""
+        href = cls.format_next_url(url=url, offset=offset, limit=limit)
+        limit = max(limit, 1)  # limit must be above 1
+
         prev_offset = offset - limit
+        prev_url = cls.format_next_url(url=url, offset=prev_offset, limit=limit)
         next_offset = offset + limit
+        next_url = cls.format_next_url(url=url, offset=next_offset, limit=limit)
 
         return {
-            "href": f"{url_base}?offset={offset}&limit={limit}",
+            "href": href,
             "limit": limit,
-            "next": None if len(items) < next_offset else f"{url_base}?offset={next_offset}&limit={limit}",
+            "next": None if total < next_offset else next_url,
             "offset": offset,
-            "previous": None if prev_offset <= 0 else f"{url_base}?offset={prev_offset}&limit={limit}",
-            "total": len(items),
+            "previous": None if prev_offset <= 0 else prev_url,
+            "total": total,
             "items": items
         }
+
+    @classmethod
+    def generate_items_block(
+            cls, generator: Callable[[int], list[dict[str, Any]]], url: str, total: int,
+    ) -> dict[str, Any]:
+        """Return a formatted items block from the given ``generator``"""
+        pages = 3
+        limit = total // pages if 0 < total // pages < total else total
+        items = generator(limit)
+        return cls.format_items_block(url=url, items=items, limit=limit, total=total)
+
+    @staticmethod
+    def owner(user_id: str = random_id(), user_name: str = random_str(5, 30)) -> dict[str, Any]:
+        """Return a randomly generated Spotify API response for an owner"""
+        kind = RemoteItemType.USER.name.lower()
+        return {
+            "display_name": user_name,
+            "external_urls": {"spotify": f"{URL_EXT}/{kind}/{user_id}"},
+            "href": f"{URL_API}/{kind}s/{user_id}",
+            "id": user_id,
+            "type": "user",
+            "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{user_id}",
+        }
+
+    @classmethod
+    def owner_from_api(cls, api: SpotifyAPI | None = None) -> dict[str, Any]:
+        """Return an owner block from the properties of the given :py:class:`SpotifyAPI` object"""
+        return cls.owner(user_id=api.user_id, user_name=api.user_name)
 
     @classmethod
     def user(cls) -> dict[str, Any]:
@@ -111,13 +210,20 @@ class SpotifyTestResponses:
         return response
 
     @classmethod
-    def album(cls, extend: bool = True, artists: bool = True, tracks: bool = False) -> dict[str, Any]:
+    def album(
+            cls,
+            extend: bool = True,
+            artists: bool = True,
+            tracks: bool = False,
+            track_count: int = randrange(1, 50)
+    ) -> dict[str, Any]:
         """
         Return a randomly generated Spotify API response for an Album.
 
         :param extend: Add extra randomly generated information to the response as per documentation.
         :param artists: Add randomly generated artists information to the response as per documentation.
         :param tracks: Add randomly generated tracks information to the response as per documentation.
+        :param track_count: The total number of tracks this album should have.
         """
         album_id = random_id()
         kind = RemoteItemType.ALBUM.name.lower()
@@ -125,7 +231,7 @@ class SpotifyTestResponses:
 
         response = {
             "album_type": choice((kind, "single", "compilation")),
-            "total_tracks": randrange(1, 50),
+            "total_tracks": track_count,
             "available_markets": sample(COUNTRY_CODES, k=randrange(1, 5)),
             "external_urls": {"spotify": f"{URL_EXT}/{kind}s/{album_id}"},
             "href": url,
@@ -142,8 +248,9 @@ class SpotifyTestResponses:
             response["artists"] = [cls.artist(extend=False) for _ in range(randrange(1, 4))]
 
         if tracks:
-            tracks = cls.album_tracks(url=url, count=response["total_tracks"], artists=response.get("artists"))
-            response["tracks"] = tracks
+            total = response["total_tracks"]
+            generator = partial(cls.album_tracks, artists=response.get("artists"))
+            response["tracks"] = cls.generate_items_block(generator=generator, total=total, url=url)
 
         if extend:
             response |= {
@@ -164,24 +271,20 @@ class SpotifyTestResponses:
 
     @classmethod
     def album_tracks(
-            cls,
-            url: str = f"{URL_API}/{RemoteItemType.ALBUM.name.lower()}s/{random_id()}",
-            count: int = randrange(1, 50),
-            artists: list[dict[str, Any]] | None = None
-    ) -> dict[str, Any]:
+            cls, count: int = randrange(1, 50), artists: list[dict[str, Any]] | None = None
+    ) -> list[dict[str, Any]]:
         """
         Return a randomly generated Spotify API response for an Album's tracks.
 
-        :param url: The URL to use for this Album.
-        :param count: The number of tracks to generate.
+        :param count: The total number of tracks to generate.
         :param artists: A list of Artist responses to use. Will randomly generate for each track if not given.
         """
         if artists is None:
             artists = cls.artist(extend=False)
+
         items = [cls.track(album=False, artists=False) for _ in range(count)]
         [item.pop("popularity") for item in items]
-        items = [item | {"artists": artists, "track_number": i} for i, item in enumerate(items, 1)]
-        return cls.format_items_block(url_base=url, items=items)
+        return [item | {"artists": artists, "track_number": i} for i, item in enumerate(items, 1)]
 
     @classmethod
     def track(cls, album: bool = False, artists: bool = False) -> dict[str, Any]:
@@ -262,33 +365,26 @@ class SpotifyTestResponses:
         }
 
     @classmethod
-    def playlist(cls, api: SpotifyAPI = None, tracks: bool = True) -> dict[str, Any]:
+    def playlist(
+            cls,
+            api: SpotifyAPI | None = None,
+            user_id: str | None = None,
+            tracks: bool = True,
+            item_count: int = randrange(0, 100),
+    ) -> dict[str, Any]:
         """
         Return a randomly generated Spotify API response for a Playlist.
 
         :param api: An optional, authenticated :py:class:`SpotifyAPI` object to extract user information from.
+        :param user_id: An optional ``user_id`` to use as the owner of the playlist.
         :param tracks: Add randomly generated tracks information to the response as per documentation.
+        :param item_count: The total number of items this playlist should have.
         """
         playlist_id = random_id()
         kind = RemoteItemType.PLAYLIST.name.lower()
         url = f"{URL_API}/{kind}s/{playlist_id}"
 
-        user_kind = RemoteItemType.USER.name.lower()
-        if api:
-            user_id = api.user_id
-            user_name = api.user_name
-        else:
-            user_id = random_id()
-            user_name = random_str(5, 30)
-
-        owner = {
-            "external_urls": {"spotify": f"{URL_EXT}/{user_kind}/{user_id}"},
-            "href": f"{URL_API}/{user_kind}s/{user_id}",
-            "id": user_id,
-            "type": "user",
-            "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{user_kind}:{user_id}",
-        }
-
+        owner = cls.owner_from_api(api=api) if api else cls.owner(user_id=user_id)
         response = {
             "collaborative": choice([True, False]),
             "description": random_str(20, 100),
@@ -298,46 +394,36 @@ class SpotifyTestResponses:
             "id": playlist_id,
             "images": cls.images(),
             "name": random_str(5, 50),
-            "owner": {"display_name": user_name} | owner,
+            "owner": deepcopy(owner),
             "primary_color": None,
             "public": choice([True, False]),
             "snapshot_id": random_str(60, 60),
-            "tracks": {"href": f"{url}/tracks", "total": randrange(0, 100)},
+            "tracks": {"href": f"{url}/tracks", "total": item_count},
             "type": "playlist",
             "uri": "spotify:playlist:3cEYpjA9oz9GiPac4AsH4n"
         }
 
         if tracks:
-            response["tracks"] = cls.playlist_tracks(url=url, count=response["tracks"]["total"], owner=owner)
+            owner.pop("display_name", None)
+            total = response["tracks"]["total"]
+            generator = partial(cls.playlist_tracks, owner=owner)
+            response["tracks"] = cls.generate_items_block(generator=generator, total=total, url=url)
 
         return response
 
     @classmethod
     def playlist_tracks(
-            cls,
-            url: str = f"{URL_API}/{RemoteItemType.PLAYLIST.name.lower()}s/{random_id()}",
-            count: int = randrange(1, 50),
-            owner: dict[str, Any] = None,
-    ) -> dict[str, Any]:
+            cls, count: int = randrange(1, 50), owner: dict[str, Any] = None,
+    ) -> list[dict[str, Any]]:
         """
         Return a randomly generated Spotify API response for a Playlist's tracks.
 
-        :param url: The URL to use for this Playlist.
         :param count: The number of tracks to generate.
         :param owner: Owner data to assign to each track response.
             Will randomly generate one owner for all tracks if not given.
         """
         if owner is None:
-            user_id = random_id()
-            user_kind = RemoteItemType.USER.name.lower()
-
-            owner = {
-                "external_urls": {"spotify": f"{URL_EXT}/{user_kind}/{user_id}"},
-                "href": f"{URL_API}/{user_kind}s/{user_id}",
-                "id": user_id,
-                "type": "user",
-                "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{user_kind}:{user_id}",
-            }
+            owner = cls.owner()
 
         tracks = []
         for _ in range(count):
@@ -350,4 +436,4 @@ class SpotifyTestResponses:
             }
             tracks.append(track)
 
-        return cls.format_items_block(url_base=url, items=tracks)
+        return tracks

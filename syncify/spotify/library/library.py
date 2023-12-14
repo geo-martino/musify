@@ -100,9 +100,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyDataWrangler):
         )
 
         # make API calls
-        self.api.get_collections(
-            playlists_data, kind=RemoteItemType.PLAYLIST, limit=self.limit, use_cache=self.use_cache
-        )
+        self.api.get_collections(playlists_data, kind=RemoteItemType.PLAYLIST, use_cache=self.use_cache)
 
         self.print_line()
         self.logger.debug("Get Spotify playlists data: DONE\n")

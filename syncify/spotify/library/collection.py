@@ -22,7 +22,7 @@ class SpotifyCollection[T: SpotifyObject](SpotifyObjectWranglerMixin, metaclass=
         """
         kind = cls.__name__.casefold().replace("spotify", "")
         item_type = RemoteItemType.from_name(kind)[0]
-        key = cls.api.collection_types[item_type.name]
+        key = cls.api.collection_item_map[item_type.name]
 
         try:  # attempt to get response from the given value alone
             cls.validate_item_type(value, kind=item_type)

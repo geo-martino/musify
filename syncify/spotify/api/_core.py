@@ -31,13 +31,13 @@ class SpotifyAPICore(RemoteAPI, metaclass=ABCMeta):
         url = self.convert(value, kind=kind, type_out=RemoteIDType.URL)
         name = self.get(url, log_pad=43)["name"]
 
-        r = {"next": f"{url}/tracks"}
+        response = {"next": f"{url}/tracks"}
         i = 0
-        while r["next"]:  # loop through each page, printing data in blocks of 20
-            url = r["next"]
-            r = self.get(url, params={"limit": 20}, use_cache=use_cache)
+        while response["next"]:  # loop through each page, printing data in blocks of 20
+            url = response["next"]
+            response = self.get(url, params={"limit": 20}, use_cache=use_cache)
 
-            if r["offset"] == 0:  # first page, show header
+            if response["offset"] == 0:  # first page, show header
                 url_open = self.convert(url, type_in=RemoteIDType.URL_EXT, type_out=RemoteIDType.URL_EXT)
                 print(
                     f"\n\t\33[96mShowing tracks for {kind.name.casefold()}\33[0m: "
@@ -45,14 +45,15 @@ class SpotifyAPICore(RemoteAPI, metaclass=ABCMeta):
                 )
                 pass
 
-            if "error" in r:  # fail
+            if "error" in response:  # fail
                 self.logger.warning(f"{"ERROR":<7}: {url:<43}")
                 return
 
-            tracks = [item["track"] if kind == RemoteItemType.PLAYLIST else item for item in r["items"]]
+            tracks = [item["track"] if kind == RemoteItemType.PLAYLIST else item for item in response["items"]]
             for i, track in enumerate(tracks, i + 1):  # print each item in this page
                 formatted_item_data = self.format_item_data(
-                    i=i, name=track["name"], uri=track["uri"], length=track["duration_ms"] / 1000, total=r["total"]
+                    i=i, name=track["name"], uri=track["uri"],
+                    length=track["duration_ms"] / 1000, total=response["total"]
                 )
                 print(formatted_item_data)
             print()

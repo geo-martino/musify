@@ -1,9 +1,9 @@
 from abc import ABCMeta
-from collections.abc import Mapping, MutableMapping, Collection, Iterable
+from collections.abc import MutableMapping, Collection, Iterable
 from itertools import batched
 from time import sleep
 from typing import Any
-from urllib.parse import urlparse, urlencode
+from urllib.parse import urlparse
 
 from syncify import PROGRAM_NAME, PROGRAM_URL
 from syncify.remote.api import RemoteAPI, APIMethodInputType
@@ -16,12 +16,18 @@ class SpotifyAPICollections(RemoteAPI, metaclass=ABCMeta):
     """API endpoints for processing collections i.e. playlists, albums, shows, and audiobooks"""
 
     items_key = "items"
-    collection_types = {
-        RemoteItemType.PLAYLIST.name: RemoteItemType.TRACK.name.casefold().rstrip("s") + "s",
-        RemoteItemType.ALBUM.name: RemoteItemType.TRACK.name.casefold().rstrip("s") + "s",
-        RemoteItemType.AUDIOBOOK.name: RemoteItemType.CHAPTER.name.casefold().rstrip("s") + "s",
-        RemoteItemType.SHOW.name: RemoteItemType.EPISODE.name.casefold().rstrip("s") + "s",
+    collection_item_map = {
+        RemoteItemType.PLAYLIST: RemoteItemType.TRACK,
+        RemoteItemType.ALBUM: RemoteItemType.TRACK,
+        RemoteItemType.AUDIOBOOK: RemoteItemType.CHAPTER,
+        RemoteItemType.SHOW: RemoteItemType.EPISODE,
     }
+
+    def _collection_items_key(self, kind: RemoteItemType) -> str:
+        """Returns the string-formatted items key for the given collection kind"""
+        if kind in [RemoteItemType.TRACK, RemoteItemType.EPISODE]:
+            return kind.name.casefold()
+        return self.collection_item_map[kind].name.casefold()
 
     def get_playlist_url(self, playlist: str, use_cache: bool = True) -> str:
         """
@@ -41,7 +47,7 @@ class SpotifyAPICollections(RemoteAPI, metaclass=ABCMeta):
             playlists = {pl["name"]: pl["href"] for pl in self.get_collections_user(use_cache=use_cache)}
             if playlist not in playlists:
                 raise RemoteIDTypeError(
-                    f"Given playlist is not a valid URL/URI/ID and name not found in user's playlists",
+                    "Given playlist is not a valid URL/URI/ID and name not found in user's playlists",
                     value=playlist
                 )
             return playlists[playlist]
@@ -49,72 +55,61 @@ class SpotifyAPICollections(RemoteAPI, metaclass=ABCMeta):
     ###########################################################################
     ## GET helpers: Generic methods for getting collections and their items
     ###########################################################################
-    def _get_collection_items(
-            self, url: str | MutableMapping[str, Any], kind: RemoteItemType | None = None, use_cache: bool = True,
+    def _extend_items(
+            self, items_block: MutableMapping[str, Any], kind: RemoteItemType | None = None, use_cache: bool = True,
     ) -> list[dict[str, Any]]:
         """
-        Get responses from a given ``url``.
+        Extend the items for a given ``items_block`` API response.
         The function requests each page of the collection returning a list of all items
         found across all pages for this URL.
 
-        The input ``url`` may either be:
-            * A URL string
-            * A remote API JSON response for an items type endpoint which includes a required
+        Updates the value of the ``items`` key in-place by extending the value of the ``items`` key with new results.
+
+        :param items_block: A remote API JSON response for an items type endpoint which includes a required
             ``next`` key plus optional keys ``total``, ``limit``, ``items`` etc.
-
-        If a JSON response is given, this updates the value of the ``items`` key in-place 
-        by extending the ``items`` with new results.
-
-        :param url: The URL for the required requests, or a remote API JSON response for an items type endpoint.
-            See description for allowed value types.
         :param kind: Item type of the given collection for logging purposes. If None, defaults to 'entries'.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: API JSON responses for each item
         """
-        response: MutableMapping[str, Any] = {"href": url, "next": url} if isinstance(url, str) else url
-        unit = self.collection_types[kind.name] if kind else "entries"
+        if not kind:
+            kind = RemoteItemType.from_name(urlparse(items_block["href"]).path.split("/")[-1].rstrip("s"))[0]
+        unit = self._collection_items_key(kind) + "s"
 
-        bar = None
-        pages = 0
-        if "limit" in response and "total" in response:  # check if progress bar needed
-            pages = (response["total"] - len(response.get("items", []))) // response["limit"]
-            if pages > 5:  # show progress bar for batches which may take a long time
-                bar = self.get_progress_bar(total=pages, desc=f"Getting {unit}", unit="pages")
+        if self.items_key not in items_block:
+            items_block[self.items_key] = []
 
-        # ISSUE: initial API response always gives items 0-100 no matter which limit given for some unknown reason
-        # When limit is e.g. 50 (the max allowed value), the 'next' url is then ALWAYS {url}?offset=0&limit=50
-        # This means items 50-100 will be added twice if extending the items by the response from the 'next' url
+        # enable progress bar for longer calls
+        total = items_block["total"]
+        # pages = (total - len(items_block[self.items_key])) // items_block["limit"]
+        bar = self.get_progress_bar(total=total, desc=f"Getting {kind.name.lower()}", unit=unit)
+
+        # TODO: check this assumption
+        # ISSUE: Spotify ALWAYS gives the initial 'next' url as {url}?offset=0&limit={limit}
+        # This means items 0-{limit} will be added twice if extending the items by the response from the 'next' url
         # WORKAROUND: manually create a valid 'next' url when response given as input
-        if isinstance(url, MutableMapping) and isinstance(url.get(self.items_key), Iterable) and url.get("next"):
-            url_parsed = urlparse(url["next"])
-            params = {"offset": len(url[self.items_key]), "limit": url["limit"]}
-            url["next"] = f"{url_parsed.scheme}://{url_parsed.netloc}{url_parsed.path}?{urlencode(params)}"
+        # if isinstance(items_block.get(self.items_key), Collection) and items_block.get("next"):
+        #     url_parsed = urlparse(items_block["next"])
+        #     params = {"offset": len(items_block[self.items_key]), "limit": items_block["limit"]}
+        #
+        #     url_parts = list(url_parsed[:])
+        #     url_parts[4] = urlencode(params)
+        #     items_block["next"] = str(urlunparse(url_parts))
 
-        i = 0
-        results = []
-        count = 0 if isinstance(url, str) else len(url[self.items_key])
-        while response.get("next"):  # loop through each page
-            i += 1
-            log = None
-            if "limit" in response and "total" in response:  # log the current page count
-                log = [f"{min(count + response['limit'], response['total']):>6}/{response['total']:<6} {unit}"]
+        response = items_block
+        while response.get("next") and bar.n < total:  # loop through each page
+            log_count = min(bar.n + response['limit'], response['total'])
+            log = [f"{log_count:>6}/{response['total']:<6} {unit}"]
 
             response = self.get(response["next"], use_cache=use_cache, log_pad=95, log_extra=log)
-            results.extend(response[self.items_key])
-            count += len(response[self.items_key])
+            items_block[self.items_key].extend(response[self.items_key])
 
-            if bar and i <= pages:  # update progress bar
-                sleep(0.1)
-                bar.update()
+            sleep(0.1)
+            bar.update(len(response[self.items_key]))
 
         if bar is not None:
             bar.close()
 
-        # if API response was given on input, update it with new responses
-        if isinstance(url, Mapping) and isinstance(url.get(self.items_key), Iterable):
-            url[self.items_key].extend(results)
-
-        return results
+        return items_block[self.items_key]
 
     @staticmethod
     def _enrich_collections_response(collections: Iterable[MutableMapping[str, Any]], kind: RemoteItemType) -> None:
@@ -147,7 +142,8 @@ class SpotifyAPICollections(RemoteAPI, metaclass=ABCMeta):
         :raise RemoteItemTypeError: Raised a user is given and the ``kind`` is not ``PLAYLIST``.
             Or when the given ``kind`` is not a valid collection.
         """
-        if kind == RemoteItemType.ARTIST or kind.name not in self.collection_types:
+        # input validation
+        if kind not in {RemoteItemType.TRACK, RemoteItemType.EPISODE} and kind not in self.collection_item_map:
             raise RemoteItemTypeError(f"{kind.name.title()}s are not a valid user collection type", kind=kind)
         if kind != RemoteItemType.PLAYLIST and user is not None:
             raise RemoteItemTypeError(
@@ -161,22 +157,18 @@ class SpotifyAPICollections(RemoteAPI, metaclass=ABCMeta):
             url = f"{self.api_url_base}/me/{kind.name.casefold()}s"
 
         # get response
-        params = {"limit": limit_value(limit, ceil=50)}
-        r = self.get(url, params=params, use_cache=use_cache, log_pad=71)
-        self._get_collection_items(r, kind=kind, use_cache=use_cache)
-        collections = r[self.items_key]
+        params = {"limit": limit_value(limit, floor=1, ceil=50)}
+        initial = self.get(url, params=params, use_cache=use_cache, log_pad=71)
+        results = self._extend_items(initial, kind=kind, use_cache=use_cache)
 
         # enrich response
-        self._enrich_collections_response(collections, kind=kind)
-        self.logger.debug(f"{'DONE':<7}: {url:<71} | Retrieved {len(collections):>6} {kind.name.casefold()}s")
-        return collections
+        self._enrich_collections_response(results, kind=kind)
+        self.logger.debug(f"{'DONE':<7}: {url:<71} | Retrieved {len(results):>6} {kind.name.casefold()}s")
+
+        return results
 
     def get_collections(
-            self,
-            values: APIMethodInputType,
-            kind: RemoteItemType | None = None,
-            limit: int = 50,
-            use_cache: bool = True,
+            self, values: APIMethodInputType, kind: RemoteItemType | None = None, use_cache: bool = True,
     ) -> list[dict[str, Any]]:
         """
         ``GET: /{kind}s/...`` - Get all items from a given list of ``values``. Items may be:
@@ -197,23 +189,22 @@ class SpotifyAPICollections(RemoteAPI, metaclass=ABCMeta):
             These items must all be of the same type of collection i.e. all playlists OR all shows etc.
         :param kind: Item type of the given collection.
             If None, function will attempt to determine the type of the given values
-        :param limit: Size of each batch of items to request in a collection items request.
-            This value will be limited to be between ``1`` and the object's current ``batch_size_max``. Maximum=50.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: API JSON responses for each collection containing the collections items under the ``items`` key.
         :raise RemoteItemTypeError: Raised when the function cannot determine the item type of the
             input ``values``. Or when the given ``kind`` is not a valid collection.
         """
+        # input validation
         if kind is None:  # determine kind if not given
             kind = self.get_item_type(values)
-        if kind.name not in self.collection_types:
+        if kind not in self.collection_item_map:
             raise RemoteItemTypeError(f"{kind.name.title()}s are not a valid collection type", kind=kind)
+        self.validate_item_type(values, kind=kind)
 
         if kind == RemoteItemType.PLAYLIST and isinstance(values, str):
             values = self.get_playlist_url(values, use_cache=use_cache)
 
         url = f"{self.api_url_base}/{kind.name.casefold()}s"
-        params = {"limit": limit_value(limit, ceil=50)}
         id_list = self.extract_ids(values, kind=kind)
 
         unit = kind.name.casefold() + "s"
@@ -221,18 +212,19 @@ class SpotifyAPICollections(RemoteAPI, metaclass=ABCMeta):
             id_list = self.get_progress_bar(iterable=id_list, desc=f"Getting {unit}", unit=unit)
 
         collections = []
+        key = self._collection_items_key(kind) + "s"
         for id_ in id_list:  # get responses for each collection in batches
-            r = self.get(f"{url}/{id_}", params=params, use_cache=use_cache, log_pad=71)
-            self._get_collection_items(r[self.collection_types[kind.name]], kind=kind, use_cache=use_cache)
-            collections.append(r)
+            response = self.get(f"{url}/{id_}", use_cache=use_cache, log_pad=71)
+            if response[key]["next"]:
+                self._extend_items(response[key], kind=kind, use_cache=use_cache)
+            collections.append(response)
 
         self._enrich_collections_response(collections, kind=kind)
 
-        item_count = sum(len(coll[self.collection_types[kind.name]][self.items_key]) for coll in collections)
+        item_count = sum(len(coll[key][self.items_key]) for coll in collections)
         self.logger.debug(
             f"{'DONE':<7}: {url:<71} | "
-            f"Retrieved {item_count:>6} {self.collection_types[kind.name]} "
-            f"across {len(collections):>5} {kind.name.casefold()}s"
+            f"Retrieved {item_count:>6} {key} across {len(collections):>5} {kind.name.casefold()}s"
         )
         self._merge_results_to_input(original=values, results=collections, ordered=True)
 
@@ -288,8 +280,9 @@ class SpotifyAPICollections(RemoteAPI, metaclass=ABCMeta):
 
         uri_list = [self.convert(item, kind=RemoteItemType.TRACK, type_out=RemoteIDType.URI) for item in items]
         if skip_dupes:  # skip tracks currently in playlist
-            pl_current = self.get_collections(url, kind=RemoteItemType.PLAYLIST, limit=limit, use_cache=False)[0]
-            tracks = pl_current[self.collection_types[RemoteItemType.PLAYLIST.name]][self.items_key]
+            pl_current = self.get_collections(url, kind=RemoteItemType.PLAYLIST, use_cache=False)[0]
+            pl_items_key = self._collection_items_key(RemoteItemType.PLAYLIST)
+            tracks = pl_current[pl_items_key][self.items_key]
             uris_current = [track["track"]["uri"] for track in tracks]
             uri_list = [uri for uri in uri_list if uri not in uris_current]
 
@@ -341,7 +334,8 @@ class SpotifyAPICollections(RemoteAPI, metaclass=ABCMeta):
             uri_list = [self.convert(item, kind=RemoteItemType.TRACK, type_out=RemoteIDType.URI) for item in items]
         else:  # clear everything
             pl_current = self.get_collections(url, kind=RemoteItemType.PLAYLIST, use_cache=False)[0]
-            tracks = pl_current[self.collection_types[RemoteItemType.PLAYLIST.name]][self.items_key]
+            pl_items_key = self._collection_items_key(RemoteItemType.PLAYLIST)
+            tracks = pl_current[pl_items_key][self.items_key]
             uri_list = [track["track"]["uri"] for track in tracks]
 
         if not uri_list:  # skip when nothing to clear

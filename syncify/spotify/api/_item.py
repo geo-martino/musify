@@ -44,6 +44,7 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
         :param unit: The unit to use for logging. If None, determine from ``key`` or default to ``items``.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: API JSON responses for each item at the given ``key``.
+        :raise APIError: When the given ``key`` is not in the API response.
         """
         url = url.rstrip("/")
         unit = self._get_unit(key=key, unit=unit)
@@ -89,6 +90,7 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :param limit: Size of each batch of IDs to get. This value will be limited to be between ``1`` and ``50``.
         :return: API JSON responses for each item at the given ``key``.
+        :raise APIError: When the given ``key`` is not in the API response.
         """
         url = url.rstrip("/")
         unit = self._get_unit(key=key, unit=unit)
@@ -239,7 +241,7 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
             use_cache: bool = True,
             *_,
             **__,
-    ) -> list[dict[str, Any]] | dict[str, Any]:
+    ) -> list[dict[str, Any]]:
         """
         ``GET: /{kind}s`` + GET: /audio-features`` and/or ``GET: /audio-analysis``
 
@@ -269,9 +271,13 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
         tracks = self.get_items(values=values, kind=RemoteItemType.TRACK, limit=limit, use_cache=use_cache)
 
         # ensure that response are being assigned back to the original values if API response/s given
-        is_response_sequence = (isinstance(values, Sequence) and all(isinstance(v, Mapping) for v in values))
+        is_response_sequence = (
+                not isinstance(values, str)
+                and isinstance(values, Sequence)
+                and all(isinstance(v, Mapping) for v in values)
+        )
         if isinstance(values, Mapping) or is_response_sequence:
-            tracks = values
+            tracks = [values]
 
         self.get_tracks_extra(values=tracks, features=features, analysis=analysis, limit=limit, use_cache=use_cache)
         return tracks

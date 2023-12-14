@@ -12,6 +12,7 @@ from tqdm.auto import tqdm as tqdm_auto
 from tqdm.std import tqdm as tqdm_std
 
 from syncify import PROGRAM_NAME
+from syncify.utils.helpers import limit_value
 
 module_width = 40
 
@@ -266,7 +267,7 @@ class Logger:
         if len(items) == 0:
             return 0
         max_len = len(max(map(str, items), key=len))
-        return max(min(max_len + 1, max_width), min_width)
+        return limit_value(value=max_len + 1, floor=min_width, ceil=max_width)
 
     @staticmethod
     def align_and_truncate(value: Any, max_width: int = 0, right_align: bool = False) -> str:
