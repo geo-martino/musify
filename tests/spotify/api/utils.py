@@ -1,4 +1,4 @@
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from copy import deepcopy
 from functools import partial
 from random import choice, randrange, sample, random
@@ -8,39 +8,22 @@ from urllib.parse import urlparse, parse_qs, urlencode, urlunparse, quote
 from pycountry import countries
 from requests_mock.mocker import Mocker
 
-from syncify.remote.enums import RemoteIDType, RemoteItemType
+from syncify.abstract.enums import SyncifyEnum
+from syncify.remote.enums import RemoteItemType
 from syncify.spotify import URL_API, URL_EXT, SPOTIFY_SOURCE_NAME
 from syncify.spotify.api import SpotifyAPI
-from tests.spotify.utils import random_id, random_ids
+from tests.spotify.utils import random_id
 from tests.utils import random_str, random_date_str, random_dt, random_genres
 
-ALL_ID_TYPES = RemoteIDType.all()
-ALL_ITEM_TYPES = RemoteItemType.all()
 
-
-def random_id_type(api: SpotifyAPI, kind: RemoteItemType, id_: str = random_id()) -> str:
-    """Convert the given ``id_`` to a random ID type"""
-    type_in = RemoteIDType.ID
-    type_out = choice(ALL_ID_TYPES)
-    return api.convert(id_, kind=kind, type_in=type_in, type_out=type_out)
-
-
-def random_id_types(
-        api: SpotifyAPI,
-        kind: RemoteItemType,
-        id_list: Iterable[str] | None = None,
-        start: int = 1,
-        stop: int = 10
-) -> list[str]:
-    """Generate list of random ID types based on input item type"""
-    if id_list:
-        pass
-    elif kind == RemoteItemType.USER:
-        id_list = [random_str() for _ in range(randrange(start=start, stop=stop))]
-    else:
-        id_list = random_ids(start=start, stop=stop)
-
-    return [random_id_type(id_=id_, api=api, kind=kind) for id_ in id_list]
+# noinspection SpellCheckingInspection
+def idfn(value: Any) -> str | None:
+    """Generate test ID for Spotify API tests"""
+    if isinstance(value, SyncifyEnum):
+        return value.name
+    if callable(value):
+        return "generator"
+    return value
 
 
 def assert_limit_parameter_valid(
@@ -144,7 +127,7 @@ class SpotifyTestResponses:
             "external_urls": {"spotify": f"{URL_EXT}/{kind}/{user_id}"},
             "href": f"{URL_API}/{kind}s/{user_id}",
             "id": user_id,
-            "type": "user",
+            "type": kind,
             "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{user_id}",
         }
 
@@ -399,8 +382,8 @@ class SpotifyTestResponses:
             "public": choice([True, False]),
             "snapshot_id": random_str(60, 60),
             "tracks": {"href": f"{url}/tracks", "total": item_count},
-            "type": "playlist",
-            "uri": "spotify:playlist:3cEYpjA9oz9GiPac4AsH4n"
+            "type": kind,
+            "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{playlist_id}",
         }
 
         if tracks:
@@ -424,6 +407,7 @@ class SpotifyTestResponses:
         """
         if owner is None:
             owner = cls.owner()
+            owner.pop("display_name", None)
 
         tracks = []
         for _ in range(count):

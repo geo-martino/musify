@@ -18,7 +18,8 @@ from syncify.api.exception import APIError
 from syncify.remote.enums import RemoteItemType, RemoteIDType
 from syncify.remote.exception import RemoteItemTypeError
 from syncify.spotify.api import SpotifyAPI
-from tests.spotify.api.utils import SpotifyTestResponses as Responses, random_id_type, random_id_types, ALL_ITEM_TYPES
+from tests.remote.utils import random_id_type, random_id_types, ALL_ITEM_TYPES
+from tests.spotify.api.utils import SpotifyTestResponses as Responses, idfn
 from tests.spotify.utils import random_ids, random_id, random_uri, random_api_url, random_ext_url
 
 ITEM_MULTI_CALL_KINDS = {RemoteItemType.USER, RemoteItemType.PLAYLIST}
@@ -70,13 +71,20 @@ class TestSpotifyAPIItems:
         requests_mock.get(url=re.compile(url + r"\?"), json=self.get_items_json_response)
 
         def test_batch_limited(limit: int):
-            api._get_items_batched(url=url, id_list=random_ids(), key=kind, limit=limit)
-            for request in requests_mock.request_history:
+            requests_mock.reset_mock()
+            api._get_items_batched(url=url, id_list=random_ids(100, 150), key=kind, limit=limit)
+
+            for i, request in enumerate(requests_mock.request_history, 1):
                 request_params = parse_qs(urlparse(request.url).query)
-                assert len(request_params["ids"][0].split(",")) >= 1
-                assert len(request_params["ids"][0].split(",")) <= 50
+                count = len(request_params["ids"][0].split(","))
+                assert count >= 1
+                assert count <= 50
+
+                if 1 < count < 50 and i != len(requests_mock.request_history):
+                    assert count == limit
 
         test_batch_limited(-10)
+        test_batch_limited(35)
         test_batch_limited(200)
 
     @staticmethod
@@ -94,30 +102,48 @@ class TestSpotifyAPIItems:
     ###########################################################################
     ## Multi and Batched tests for each supported item type
     ###########################################################################
+    @staticmethod
+    def assert_expected_items_response(
+            results:  list[dict[str, Any]],
+            params: dict[str, Any],
+            kind: str,
+            items: list[dict[str, Any]],
+            requests_mock: Mocker,
+    ):
+        """Run assertions on response from get item endpoint functions"""
+        assert results == items
+        for result in results:
+            assert result["type"] == kind.rstrip("s")
+
+        for request in requests_mock.request_history:
+            request_params = parse_qs(urlparse(request.url).query)
+            assert "key" in params
+            assert request_params["key"][0] == params["key"]
+
     # TODO: expand to test for all RemoteItemTypes
-    @pytest.mark.parametrize("kind,item_getter", [
+    @pytest.mark.parametrize("kind,generator", [
         (RemoteItemType.PLAYLIST, partial(Responses.playlist, tracks=True)),
         (RemoteItemType.TRACK, partial(Responses.track, album=True, artists=True)),
-        (RemoteItemType.ARTIST, partial(Responses.artist, extend=True)),
         (RemoteItemType.ALBUM, partial(Responses.album, extend=True, artists=True, tracks=True)),
+        (RemoteItemType.ARTIST, partial(Responses.artist, extend=True)),
         (RemoteItemType.USER, partial(Responses.user)),
         # (RemoteItemType.SHOW, partial()),
         # (RemoteItemType.EPISODE, partial()),
         # (RemoteItemType.AUDIOBOOK, partial()),
         # (RemoteItemType.CHAPTER, partial()),
-    ])
+    ], ids=idfn)
     def test_item_result(
             self,
             api: SpotifyAPI,
             kind: RemoteItemType,
-            item_getter: Callable[[], dict[str, Any]],
+            generator: Callable[[], dict[str, Any]],
             requests_mock: Mocker,
     ):
         kind = kind.name.casefold() + "s"
         url = f"{api.api_url_base}/{kind}"
         params = {"key": "value"}
 
-        items = [item_getter() for _ in range(randrange(5, 20))]
+        items = [generator() for _ in range(randrange(5, 20))]
         item_map = {item["id"]: item for item in items}
 
         # multi-call test
@@ -150,24 +176,6 @@ class TestSpotifyAPIItems:
             assert "ids" in request_params
             assert request_params["ids"][0].split(",") == list(id_chunk)
 
-    @staticmethod
-    def assert_expected_items_response(
-            results:  list[dict[str, Any]],
-            params: dict[str, Any],
-            kind: str,
-            items: list[dict[str, Any]],
-            requests_mock: Mocker,
-    ):
-        """Run assertions on response from get item endpoint functions"""
-        assert results == items
-        for result in results:
-            assert result["type"] == kind.rstrip("s")
-
-        for request in requests_mock.request_history:
-            request_params = parse_qs(urlparse(request.url).query)
-            assert "key" in params
-            assert request_params["key"][0] == params["key"]
-
     ###########################################################################
     ## get_items input types tests
     ###########################################################################
@@ -182,8 +190,9 @@ class TestSpotifyAPIItems:
         with pytest.raises(RemoteItemTypeError):
             api.get_items(values=random_ext_url(kind=RemoteItemType.CHAPTER), kind=RemoteItemType.AUDIOBOOK)
 
+    # TODO: logic is similar here, see if these 5 test functions can be condensed
     # TODO: expand to test for all RemoteItemTypes
-    @pytest.mark.parametrize("kind,item_getter", [
+    @pytest.mark.parametrize("kind,generator", [
         (RemoteItemType.PLAYLIST, partial(Responses.playlist, tracks=True)),
         (RemoteItemType.TRACK, partial(Responses.track, album=True, artists=True)),
         (RemoteItemType.ALBUM, partial(Responses.album, extend=True, artists=True, tracks=True)),
@@ -193,18 +202,18 @@ class TestSpotifyAPIItems:
         # (RemoteItemType.EPISODE, partial()),
         # (RemoteItemType.AUDIOBOOK, partial()),
         # (RemoteItemType.CHAPTER, partial()),
-    ])
+    ], ids=idfn)
     def test_get_items_on_single_string(
             self,
             api: SpotifyAPI,
             kind: RemoteItemType,
-            item_getter: Callable[[], dict[str, Any]],
+            generator: Callable[[], dict[str, Any]],
             requests_mock: Mocker,
     ):
         url = f"{api.api_url_base}/{kind.name.casefold()}s"
 
-        item_source = item_getter()
-        item_test = random_id_type(api=api, kind=kind)
+        item_source = generator()
+        item_test = random_id_type(wrangler=api, kind=kind)
 
         requests_mock.get(url=re.compile(url + "/"), json=item_source)
         results = api.get_items(values=item_test, kind=kind)
@@ -219,23 +228,23 @@ class TestSpotifyAPIItems:
         api.get_items(values=random_api_url(kind=kind))
         api.get_items(values=random_ext_url(kind=kind))
 
-    @pytest.mark.parametrize("kind,item_getter", [
+    @pytest.mark.parametrize("kind,generator", [
         (RemoteItemType.PLAYLIST, partial(Responses.playlist, tracks=True)),
         (RemoteItemType.USER, partial(Responses.user)),
-    ])
+    ], ids=idfn)
     def test_get_items_on_many_strings_multi(
             self,
             api: SpotifyAPI,
             kind: RemoteItemType,
-            item_getter: Callable[[], dict[str, Any]],
+            generator: Callable[[], dict[str, Any]],
             requests_mock: Mocker,
     ):
         # this test also checks that the function calls the appropriate API call method
         url = f"{api.api_url_base}/{kind.name.casefold()}s"
 
-        items_source = [item_getter() for _ in range(randrange(5, 10))]
+        items_source = [generator() for _ in range(randrange(5, 10))]
         item_map = {str(item["id"]): item for item in items_source}
-        items_test = random_id_types(id_list=item_map, api=api, kind=kind)
+        items_test = random_id_types(id_list=item_map, wrangler=api, kind=kind)
 
         response_getter = partial(self.get_items_json_response, item_map=item_map)
         requests_mock.get(url=re.compile(url + "/"), json=response_getter)
@@ -248,7 +257,7 @@ class TestSpotifyAPIItems:
             assert result == item_map[result["id"]]
 
     # TODO: expand to test for all RemoteItemTypes
-    @pytest.mark.parametrize("kind,item_getter", [
+    @pytest.mark.parametrize("kind,generator", [
         (RemoteItemType.TRACK, partial(Responses.track, album=True, artists=True)),
         (RemoteItemType.ALBUM, partial(Responses.album, extend=True, artists=True, tracks=True)),
         (RemoteItemType.ARTIST, partial(Responses.artist, extend=True)),
@@ -256,20 +265,20 @@ class TestSpotifyAPIItems:
         # (RemoteItemType.EPISODE, partial()),
         # (RemoteItemType.AUDIOBOOK, partial()),
         # (RemoteItemType.CHAPTER, partial()),
-    ])
+    ], ids=idfn)
     def test_get_items_on_many_strings_batched(
             self,
             api: SpotifyAPI,
             kind: RemoteItemType,
-            item_getter: Callable[[], dict[str, Any]],
+            generator: Callable[[], dict[str, Any]],
             requests_mock: Mocker,
     ):
         # this test also checks that the function calls the appropriate API call method
         url = f"{api.api_url_base}/{kind.name.casefold()}s"
 
-        items_source = [item_getter() for _ in range(randrange(10, 30))]
+        items_source = [generator() for _ in range(randrange(10, 30))]
         item_map = {str(item["id"]): item for item in items_source}
-        items_test = random_id_types(id_list=item_map, api=api, kind=kind)
+        items_test = random_id_types(id_list=item_map, wrangler=api, kind=kind)
         limit = len(items_test) // 3
 
         response_getter = partial(self.get_items_json_response, item_map=item_map)
@@ -380,10 +389,11 @@ class TestSpotifyAPIItems:
         with pytest.raises(RemoteItemTypeError):
             api.get_tracks_extra(values=value, features=True)
 
+    # TODO: logic is similar here, see if these 4 test functions can be condensed
     def test_get_tracks_extra_single_string(self, api: SpotifyAPI, requests_mock: Mocker):
         item_source = Responses.track(album=True, artists=True)
         item_map = {item_source["id"]: copy(item_source)}
-        item_test = random_id_type(id_=item_source["id"], api=api, kind=RemoteItemType.TRACK)
+        item_test = random_id_type(id_=item_source["id"], wrangler=api, kind=RemoteItemType.TRACK)
 
         self.apply_tracks_extra_mock(api=api, requests_mock=requests_mock, item_map=item_map)
         item_expected = item_map[item_source["id"]]  # get back enriched item
@@ -397,7 +407,7 @@ class TestSpotifyAPIItems:
     def test_get_tracks_extra_many_strings(self, api: SpotifyAPI, requests_mock: Mocker):
         items_source = [Responses.track(album=True, artists=True) for _ in range(randrange(10, 30))]
         item_map = {str(item["id"]): copy(item) for item in items_source}
-        items_test = random_id_types(id_list=item_map, api=api, kind=RemoteItemType.TRACK)
+        items_test = random_id_types(id_list=item_map, wrangler=api, kind=RemoteItemType.TRACK)
         limit = len(items_test) // 3
 
         self.apply_tracks_extra_mock(api=api, requests_mock=requests_mock, item_map=item_map)
@@ -454,7 +464,7 @@ class TestSpotifyAPIItems:
         item_source = Responses.track(album=True, artists=True)
         item_map = {item_source["id"]: copy(item_source)}
         item_test = {k: v for k, v in item_source.items() if k not in self.track_extra_keys}
-        item_test_value = random_id_type(id_=item_source["id"], api=api, kind=kind)
+        item_test_value = random_id_type(id_=item_source["id"], wrangler=api, kind=kind)
 
         self.apply_tracks_extra_mock(api=api, requests_mock=requests_mock, item_map=item_map)
         item_expected = item_map[item_source["id"]]  # get back enriched item

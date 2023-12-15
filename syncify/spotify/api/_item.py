@@ -1,8 +1,8 @@
 import re
 from abc import ABCMeta
-from collections.abc import Sequence
+from collections.abc import Sequence, Collection, Mapping
 from itertools import batched
-from typing import Any, Collection, Mapping
+from typing import Any
 
 from syncify.api.exception import APIError
 from syncify.remote.api import RemoteAPI, APIMethodInputType
