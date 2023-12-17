@@ -4,7 +4,7 @@ from typing import Any
 
 from syncify.api import RequestHandler
 from .base import APIMethodInputType
-from .enums import RemoteIDType, RemoteItemType
+from .enums import RemoteIDType, RemoteObjectType
 from .processors.wrangle import RemoteDataWrangler
 
 
@@ -201,12 +201,12 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def query(self, query: str, kind: RemoteItemType, limit: int = 10, use_cache: bool = True) -> list[dict[str, Any]]:
+    def query(self, query: str, kind: RemoteObjectType, limit: int = 10, use_cache: bool = True) -> list[dict[str, Any]]:
         """
         ``GET`` - Query for items. Modify result types returned with kind parameter
 
         :param query: Search query.
-        :param kind: The remote item type to search for.
+        :param kind: The remote object type to search for.
         :param limit: Number of results to get and return.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: The response from the endpoint.
@@ -220,7 +220,7 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
     def get_items(
             self,
             values: APIMethodInputType,
-            kind: RemoteItemType | None = None,
+            kind: RemoteObjectType | None = None,
             limit: int = 50,
             extend: bool = True,
             use_cache: bool = True,
@@ -239,7 +239,7 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
 
         If a JSON response is given, this replaces the ``items`` with the new results.
 
-        :param values: The values representing some remote items. See description for allowed value types.
+        :param values: The values representing some remote objects. See description for allowed value types.
             These items must all be of the same type of item i.e. all tracks OR all artists etc.
         :param kind: Item type if given string is ID.
         :param limit: Size of batches to request.
@@ -247,7 +247,7 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
             extend the response to include all items in this collection.
        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: API JSON responses for each item.
-        :raise RemoteItemTypeError: Raised when the function cannot determine the item type
+        :raise RemoteObjectTypeError: Raised when the function cannot determine the item type
             of the input ``values``. Or when it does not recognise the type of the input ``values`` parameter.
         """
         raise NotImplementedError
@@ -256,7 +256,7 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
     def get_user_items(
             self,
             user: str | None = None,
-            kind: RemoteItemType = RemoteItemType.PLAYLIST,
+            kind: RemoteObjectType = RemoteObjectType.PLAYLIST,
             limit: int = 50,
             use_cache: bool = True,
     ) -> list[dict[str, Any]]:
@@ -270,7 +270,7 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: API JSON responses for each collection.
         :raise RemoteIDTypeError: Raised when the input ``user`` does not represent a user URL/URI/ID.
-        :raise RemoteItemTypeError: Raised a user is given and the ``kind`` is not ``PLAYLIST``.
+        :raise RemoteObjectTypeError: Raised a user is given and the ``kind`` is not ``PLAYLIST``.
             Or when the given ``kind`` is not a valid collection.
         """
         raise NotImplementedError
@@ -315,7 +315,7 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
         :return: The number of tracks added to the playlist.
         :raise RemoteIDTypeError: Raised when the input ``playlist`` does not represent
             a playlist URL/URI/ID.
-        :raise RemoteItemTypeError: Raised when the item types of the input ``items``
+        :raise RemoteObjectTypeError: Raised when the item types of the input ``items``
             are not all tracks or IDs.
         """
         raise NotImplementedError
@@ -355,7 +355,7 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
         :return: The number of tracks cleared from the playlist.
         :raise RemoteIDTypeError: Raised when the input ``playlist`` does not represent
             a playlist URL/URI/ID.
-        :raise RemoteItemTypeError: Raised when the item types of the input ``items``
+        :raise RemoteObjectTypeError: Raised when the item types of the input ``items``
             are not all tracks or IDs.
         """
         raise NotImplementedError

@@ -10,7 +10,7 @@ from syncify.abstract.misc import Result
 from syncify.processors.match import ItemMatcher
 from syncify.remote.api import RemoteAPI
 from syncify.remote.base import Remote
-from syncify.remote.enums import RemoteItemType
+from syncify.remote.enums import RemoteObjectType
 from syncify.remote.types import RemoteObjectClasses
 from syncify.utils.logger import REPORT
 
@@ -100,7 +100,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
         super().__init__(allow_karaoke=allow_karaoke)
         self.api = api
 
-    def _get_results(self, item: BaseObject, kind: RemoteItemType, algorithm: Algorithm) -> list[dict[str, Any]] | None:
+    def _get_results(self, item: BaseObject, kind: RemoteObjectType, algorithm: Algorithm) -> list[dict[str, Any]] | None:
         """Query the API to get results for the current item based on algorithm settings"""
         self.clean_tags(item)
 
@@ -222,7 +222,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
                     f"Currently only able to search for Track items, not {item.__class__.__name__}"
                 )
 
-            results = self._get_results(item, kind=RemoteItemType.TRACK, algorithm=algorithm)
+            results = self._get_results(item, kind=RemoteObjectType.TRACK, algorithm=algorithm)
             tracks = list(map(self._remote_types.track, results))
             result = self.score_match(
                 item,
@@ -238,7 +238,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
     def _search_album(self, collection: Album) -> None:
         """Search for matches on an entire album"""
         algorithm = AlgorithmSettings.ALBUM
-        results = self._get_results(collection, kind=RemoteItemType.ALBUM, algorithm=algorithm)
+        results = self._get_results(collection, kind=RemoteObjectType.ALBUM, algorithm=algorithm)
         albums = [self._remote_types.album(r) for r in results]
         [album.reload() for album in albums]
 

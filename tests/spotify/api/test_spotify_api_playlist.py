@@ -9,8 +9,8 @@ from requests_mock.request import _RequestObjectProxy as Request
 from requests_mock.response import _Context as Context
 
 from syncify import PROGRAM_NAME
-from syncify.remote.enums import RemoteItemType
-from syncify.remote.exception import RemoteItemTypeError, RemoteIDTypeError
+from syncify.remote.enums import RemoteObjectType
+from syncify.remote.exception import RemoteObjectTypeError, RemoteIDTypeError
 from syncify.spotify.api import SpotifyAPI
 from tests.remote.utils import random_id_type, random_id_types, ALL_ITEM_TYPES
 from tests.spotify.api.mock import SpotifyMock
@@ -70,16 +70,16 @@ class TestSpotifyAPIPlaylists:
     def test_add_to_playlist_input_validation_and_skips(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
         url = f"{api.api_url_base}/playlists/{random_id()}"
         for kind in ALL_ITEM_TYPES:
-            if kind == RemoteItemType.TRACK:
+            if kind == RemoteObjectType.TRACK:
                 continue
 
-            with pytest.raises(RemoteItemTypeError):
+            with pytest.raises(RemoteObjectTypeError):
                 api.add_to_playlist(playlist=url, items=random_uris(kind=kind))
 
-            with pytest.raises(RemoteItemTypeError):
+            with pytest.raises(RemoteObjectTypeError):
                 api.add_to_playlist(playlist=url, items=random_api_urls(kind=kind))
 
-            with pytest.raises(RemoteItemTypeError):
+            with pytest.raises(RemoteObjectTypeError):
                 api.add_to_playlist(playlist=url, items=random_ext_urls(kind=kind))
 
         assert api.add_to_playlist(playlist=url, items=()) == 0
@@ -113,7 +113,7 @@ class TestSpotifyAPIPlaylists:
         total = playlist["tracks"]["total"]
         limit = total // 3
 
-        id_list = random_id_types(wrangler=api, kind=RemoteItemType.TRACK, start=total - 30, stop=total - 1)
+        id_list = random_id_types(wrangler=api, kind=RemoteObjectType.TRACK, start=total - 30, stop=total - 1)
         assert len(id_list) < total
         result = api.add_to_playlist(playlist=playlist["id"], items=id_list, limit=limit, skip_dupes=False)
         assert result == len(id_list)
@@ -135,7 +135,7 @@ class TestSpotifyAPIPlaylists:
 
         track_sample = sample(playlist["tracks"]["items"], k=randrange(start=available // 3, stop=available // 2))
         id_list_dupes = [track["track"]["id"] for track in track_sample]
-        id_list_new = random_id_types(wrangler=api, kind=RemoteItemType.TRACK, start=10, stop=randrange(20, 30))
+        id_list_new = random_id_types(wrangler=api, kind=RemoteObjectType.TRACK, start=10, stop=randrange(20, 30))
         id_list = id_list_dupes + id_list_new
 
         result = api.add_to_playlist(playlist=playlist["uri"], items=id_list, limit=limit)
@@ -153,22 +153,22 @@ class TestSpotifyAPIPlaylists:
     ###########################################################################
     def test_delete_playlist(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
         playlist = spotify_mock.user_playlists[0]
-        result = api.delete_playlist(random_id_type(id_=playlist["id"], wrangler=api, kind=RemoteItemType.PLAYLIST))
+        result = api.delete_playlist(random_id_type(id_=playlist["id"], wrangler=api, kind=RemoteObjectType.PLAYLIST))
         assert result == playlist["href"] + "/followers"
 
     def test_clear_from_playlist_input_validation_and_skips(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
         url = f"{api.api_url_base}/playlists/{random_id()}"
         for kind in ALL_ITEM_TYPES:
-            if kind == RemoteItemType.TRACK:
+            if kind == RemoteObjectType.TRACK:
                 continue
 
-            with pytest.raises(RemoteItemTypeError):
+            with pytest.raises(RemoteObjectTypeError):
                 api.clear_from_playlist(playlist=url, items=random_uris(kind=kind))
 
-            with pytest.raises(RemoteItemTypeError):
+            with pytest.raises(RemoteObjectTypeError):
                 api.clear_from_playlist(playlist=url, items=random_api_urls(kind=kind))
 
-            with pytest.raises(RemoteItemTypeError):
+            with pytest.raises(RemoteObjectTypeError):
                 api.clear_from_playlist(playlist=url, items=random_ext_urls(kind=kind))
 
         result = api.clear_from_playlist(playlist=url, items=())
@@ -201,7 +201,7 @@ class TestSpotifyAPIPlaylists:
         total = playlist["tracks"]["total"]
         limit = total // 3
 
-        id_list = random_id_types(wrangler=api, kind=RemoteItemType.TRACK, start=total - 30, stop=total - 1)
+        id_list = random_id_types(wrangler=api, kind=RemoteObjectType.TRACK, start=total - 30, stop=total - 1)
         assert len(id_list) < total
 
         result = api.clear_from_playlist(playlist=playlist["uri"], items=id_list, limit=limit)

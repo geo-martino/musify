@@ -1,8 +1,8 @@
 import pytest
 
 from syncify.exception import SyncifyEnumError
-from syncify.remote.enums import RemoteIDType as IDType, RemoteItemType as ItemType
-from syncify.remote.exception import RemoteError, RemoteIDTypeError, RemoteItemTypeError
+from syncify.remote.enums import RemoteIDType as IDType, RemoteObjectType as ObjectType
+from syncify.remote.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
 from syncify.spotify import URL_API, URL_EXT
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 from tests.spotify.utils import random_id, random_ids
@@ -40,35 +40,35 @@ def test_validate_id_type(wrangler: SpotifyDataWrangler):
 
 # noinspection SpellCheckingInspection
 def test_get_item_type(wrangler: SpotifyDataWrangler):
-    assert wrangler.get_item_type(f"spotify:playlist:{random_id()}") == ItemType.PLAYLIST
-    assert wrangler.get_item_type(f"spotify:TRACK:{random_id()}") == ItemType.TRACK
-    assert wrangler.get_item_type(f"spotify:ALBUM:{random_id()}") == ItemType.ALBUM
-    assert wrangler.get_item_type(f"spotify:artist:{random_id()}") == ItemType.ARTIST
-    assert wrangler.get_item_type("spotify:user:ausername") == ItemType.USER
-    assert wrangler.get_item_type(f"spotify:show:{random_id()}") == ItemType.SHOW
-    assert wrangler.get_item_type(f"spotify:episode:{random_id()}") == ItemType.EPISODE
-    assert wrangler.get_item_type(f"spotify:audiobook:{random_id()}") == ItemType.AUDIOBOOK
-    assert wrangler.get_item_type(f"spotify:chapter:{random_id()}") == ItemType.CHAPTER
+    assert wrangler.get_item_type(f"spotify:playlist:{random_id()}") == ObjectType.PLAYLIST
+    assert wrangler.get_item_type(f"spotify:TRACK:{random_id()}") == ObjectType.TRACK
+    assert wrangler.get_item_type(f"spotify:ALBUM:{random_id()}") == ObjectType.ALBUM
+    assert wrangler.get_item_type(f"spotify:artist:{random_id()}") == ObjectType.ARTIST
+    assert wrangler.get_item_type("spotify:user:ausername") == ObjectType.USER
+    assert wrangler.get_item_type(f"spotify:show:{random_id()}") == ObjectType.SHOW
+    assert wrangler.get_item_type(f"spotify:episode:{random_id()}") == ObjectType.EPISODE
+    assert wrangler.get_item_type(f"spotify:audiobook:{random_id()}") == ObjectType.AUDIOBOOK
+    assert wrangler.get_item_type(f"spotify:chapter:{random_id()}") == ObjectType.CHAPTER
 
-    assert wrangler.get_item_type(f"{URL_API}/playlists/{random_id()}/followers") == ItemType.PLAYLIST
-    assert wrangler.get_item_type(f"{URL_EXT}/TRACKS/{random_id()}") == ItemType.TRACK
-    assert wrangler.get_item_type(f"{URL_API}/ALBUMS/{random_id()}") == ItemType.ALBUM
-    assert wrangler.get_item_type(f"{URL_EXT}/artists/{random_id()}") == ItemType.ARTIST
-    assert wrangler.get_item_type(f"{URL_EXT}/users/ausername") == ItemType.USER
-    assert wrangler.get_item_type(f"{URL_API}/shows/{random_id()}/episodes") == ItemType.SHOW
-    assert wrangler.get_item_type(f"{URL_EXT}/episodes/{random_id()}") == ItemType.EPISODE
-    assert wrangler.get_item_type(f"{URL_API}/audiobooks/{random_id()}/chapters") == ItemType.AUDIOBOOK
-    assert wrangler.get_item_type(f"{URL_EXT}/chapters/{random_id()}") == ItemType.CHAPTER
+    assert wrangler.get_item_type(f"{URL_API}/playlists/{random_id()}/followers") == ObjectType.PLAYLIST
+    assert wrangler.get_item_type(f"{URL_EXT}/TRACKS/{random_id()}") == ObjectType.TRACK
+    assert wrangler.get_item_type(f"{URL_API}/ALBUMS/{random_id()}") == ObjectType.ALBUM
+    assert wrangler.get_item_type(f"{URL_EXT}/artists/{random_id()}") == ObjectType.ARTIST
+    assert wrangler.get_item_type(f"{URL_EXT}/users/ausername") == ObjectType.USER
+    assert wrangler.get_item_type(f"{URL_API}/shows/{random_id()}/episodes") == ObjectType.SHOW
+    assert wrangler.get_item_type(f"{URL_EXT}/episodes/{random_id()}") == ObjectType.EPISODE
+    assert wrangler.get_item_type(f"{URL_API}/audiobooks/{random_id()}/chapters") == ObjectType.AUDIOBOOK
+    assert wrangler.get_item_type(f"{URL_EXT}/chapters/{random_id()}") == ObjectType.CHAPTER
 
-    assert wrangler.get_item_type({"type": "playlist"}) == ItemType.PLAYLIST
-    assert wrangler.get_item_type({"type": "TRACK"}) == ItemType.TRACK
-    assert wrangler.get_item_type({"type": "album"}) == ItemType.ALBUM
-    assert wrangler.get_item_type({"type": "ARTIST"}) == ItemType.ARTIST
-    assert wrangler.get_item_type({"type": "user"}) == ItemType.USER
-    assert wrangler.get_item_type({"type": "show"}) == ItemType.SHOW
-    assert wrangler.get_item_type({"type": "episode"}) == ItemType.EPISODE
-    assert wrangler.get_item_type({"type": "audiobook"}) == ItemType.AUDIOBOOK
-    assert wrangler.get_item_type({"type": "chapter"}) == ItemType.CHAPTER
+    assert wrangler.get_item_type({"type": "playlist"}) == ObjectType.PLAYLIST
+    assert wrangler.get_item_type({"type": "TRACK"}) == ObjectType.TRACK
+    assert wrangler.get_item_type({"type": "album"}) == ObjectType.ALBUM
+    assert wrangler.get_item_type({"type": "ARTIST"}) == ObjectType.ARTIST
+    assert wrangler.get_item_type({"type": "user"}) == ObjectType.USER
+    assert wrangler.get_item_type({"type": "show"}) == ObjectType.SHOW
+    assert wrangler.get_item_type({"type": "episode"}) == ObjectType.EPISODE
+    assert wrangler.get_item_type({"type": "audiobook"}) == ObjectType.AUDIOBOOK
+    assert wrangler.get_item_type({"type": "chapter"}) == ObjectType.CHAPTER
 
     values = [
         {"type": "playlist"},
@@ -76,31 +76,31 @@ def test_get_item_type(wrangler: SpotifyDataWrangler):
         "spotify:playlist:{random_id()}",
         "qwertyuiopASDFGHJKLZ12"
     ]
-    assert wrangler.get_item_type(values) == ItemType.PLAYLIST
+    assert wrangler.get_item_type(values) == ObjectType.PLAYLIST
 
-    with pytest.raises(RemoteItemTypeError):
+    with pytest.raises(RemoteObjectTypeError):
         wrangler.get_item_type([])
 
-    with pytest.raises(RemoteItemTypeError):
+    with pytest.raises(RemoteObjectTypeError):
         wrangler.get_item_type([random_id(), "qwertyuiopASDFGHJKLZ12"])
 
-    with pytest.raises(RemoteItemTypeError):
+    with pytest.raises(RemoteObjectTypeError):
         values = [f"spotify:show:{random_id()}", {"type": "track"}]
         wrangler.get_item_type(values)
 
-    with pytest.raises(RemoteItemTypeError):
+    with pytest.raises(RemoteObjectTypeError):
         values = [f"spotify:show:{random_id()}", f"{URL_API}/playlists/qwertyuiopASDFGHJKLZ12"]
         wrangler.get_item_type(values)
 
-    with pytest.raises(RemoteItemTypeError):
+    with pytest.raises(RemoteObjectTypeError):
         response = {"type": "track", "is_local": True}
         wrangler.get_item_type(response)
 
-    with pytest.raises(RemoteItemTypeError):
+    with pytest.raises(RemoteObjectTypeError):
         response = {"not_a_type": "track", "is_local": False}
         wrangler.get_item_type(response)
 
-    with pytest.raises(RemoteItemTypeError):
+    with pytest.raises(RemoteObjectTypeError):
         wrangler.get_item_type(f"bad_uri:chapter:{random_id()}")
 
     with pytest.raises(SyncifyEnumError):
@@ -110,16 +110,16 @@ def test_get_item_type(wrangler: SpotifyDataWrangler):
 # noinspection SpellCheckingInspection
 def test_validate_item_type(wrangler: SpotifyDataWrangler):
     assert wrangler.validate_item_type(
-        f"{URL_API}/playlist/{random_id()}/followers", kind=ItemType.PLAYLIST
+        f"{URL_API}/playlist/{random_id()}/followers", kind=ObjectType.PLAYLIST
     ) is None
-    assert wrangler.validate_item_type(random_id(), kind=ItemType.TRACK) is None
-    assert wrangler.validate_item_type({"type": "album", "id": random_id()}, kind=ItemType.ALBUM) is None
-    assert wrangler.validate_item_type(f"spotify:artist:{random_id()}", kind=ItemType.ARTIST) is None
-    assert wrangler.validate_item_type("spotify:user:ausername", kind=ItemType.USER) is None
-    assert wrangler.validate_item_type(f"{URL_API}/show/{random_id()}/episodes", kind=ItemType.SHOW) is None
-    assert wrangler.validate_item_type(f"spotify:episode:{random_id()}", kind=ItemType.EPISODE) is None
-    assert wrangler.validate_item_type(f"{URL_EXT}/audiobook/{random_id()}/chapters", kind=ItemType.AUDIOBOOK) is None
-    assert wrangler.validate_item_type(f"spotify:chapter:{random_id()}", kind=ItemType.CHAPTER) is None
+    assert wrangler.validate_item_type(random_id(), kind=ObjectType.TRACK) is None
+    assert wrangler.validate_item_type({"type": "album", "id": random_id()}, kind=ObjectType.ALBUM) is None
+    assert wrangler.validate_item_type(f"spotify:artist:{random_id()}", kind=ObjectType.ARTIST) is None
+    assert wrangler.validate_item_type("spotify:user:ausername", kind=ObjectType.USER) is None
+    assert wrangler.validate_item_type(f"{URL_API}/show/{random_id()}/episodes", kind=ObjectType.SHOW) is None
+    assert wrangler.validate_item_type(f"spotify:episode:{random_id()}", kind=ObjectType.EPISODE) is None
+    assert wrangler.validate_item_type(f"{URL_EXT}/audiobook/{random_id()}/chapters", kind=ObjectType.AUDIOBOOK) is None
+    assert wrangler.validate_item_type(f"spotify:chapter:{random_id()}", kind=ObjectType.CHAPTER) is None
 
     values = [
         {"type": "playlist"},
@@ -127,19 +127,19 @@ def test_validate_item_type(wrangler: SpotifyDataWrangler):
         "spotify:playlist:{random_id()}",
         "qwertyuiopASDFGHJKLZ12"
     ]
-    assert wrangler.validate_item_type(values, kind=ItemType.PLAYLIST) is None
+    assert wrangler.validate_item_type(values, kind=ObjectType.PLAYLIST) is None
 
-    with pytest.raises(RemoteItemTypeError):
-        wrangler.validate_item_type(values, kind=ItemType.TRACK)
+    with pytest.raises(RemoteObjectTypeError):
+        wrangler.validate_item_type(values, kind=ObjectType.TRACK)
 
 
 # noinspection SpellCheckingInspection
 def test_convert(wrangler: SpotifyDataWrangler):
     id_ = random_id()
-    assert wrangler.convert(id_, kind=ItemType.EPISODE, type_out=IDType.URL) == f"{URL_API}/episodes/{id_}"
-    assert wrangler.convert(id_, kind=ItemType.EPISODE, type_out=IDType.URL_EXT) == f"{URL_EXT}/episode/{id_}"
-    assert wrangler.convert(id_, kind=ItemType.EPISODE, type_out=IDType.URI) == f"spotify:episode:{id_}"
-    assert wrangler.convert(id_, kind=ItemType.EPISODE) == id_
+    assert wrangler.convert(id_, kind=ObjectType.EPISODE, type_out=IDType.URL) == f"{URL_API}/episodes/{id_}"
+    assert wrangler.convert(id_, kind=ObjectType.EPISODE, type_out=IDType.URL_EXT) == f"{URL_EXT}/episode/{id_}"
+    assert wrangler.convert(id_, kind=ObjectType.EPISODE, type_out=IDType.URI) == f"spotify:episode:{id_}"
+    assert wrangler.convert(id_, kind=ObjectType.EPISODE) == id_
 
     assert wrangler.convert(f"spotify:episode:{id_}", type_out=IDType.URL) == f"{URL_API}/episodes/{id_}"
     assert wrangler.convert(f" spotify:episode:{id_} ", type_out=IDType.URL_EXT) == f"{URL_EXT}/episode/{id_}"

@@ -11,7 +11,7 @@ from syncify.abstract.item import Item, Track
 from syncify.abstract.misc import Result
 from syncify.processors.match import ItemMatcher
 from syncify.remote.api import RemoteAPI
-from syncify.remote.enums import RemoteItemType, RemoteIDType
+from syncify.remote.enums import RemoteObjectType, RemoteIDType
 from syncify.remote.types import RemoteObjectClasses
 from syncify.utils.helpers import get_user_input
 from syncify.utils.logger import REPORT
@@ -420,7 +420,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
                 elif current_input.casefold() == 'p' and hasattr(item, "path"):  # print item path
                     print(f"\33[96m{item.path}\33[0m")
                 elif self.validate_id_type(current_input):  # update URI and add item to switched list
-                    uri = self.convert(current_input, kind=RemoteItemType.TRACK, type_out=RemoteIDType.URI)
+                    uri = self.convert(current_input, kind=RemoteObjectType.TRACK, type_out=RemoteIDType.URI)
 
                     self._log_padded([name, f"Updating URI: {item.uri} -> {uri}"], pad="<")
                     item.uri = uri

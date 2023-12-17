@@ -2,7 +2,7 @@ from collections.abc import Collection, Mapping
 from typing import Any
 
 from syncify.abstract.collection import Playlist, Library
-from syncify.remote.enums import RemoteItemType
+from syncify.remote.enums import RemoteObjectType
 from syncify.remote.library.library import RemoteLibrary
 from syncify.remote.types import RemoteObjectClasses
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
@@ -54,7 +54,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyDataWrangler):
         if albums:  # enrich track albums
             album_uris: set[str] = {track.response["album"]["uri"] for track in self.tracks}
             album_responses = self.api.get_items(
-                album_uris, kind=RemoteItemType.ALBUM, limit=20, use_cache=self.use_cache
+                album_uris, kind=RemoteObjectType.ALBUM, limit=20, use_cache=self.use_cache
             )
 
             albums = {response["uri"]: response for response in album_responses}
@@ -64,7 +64,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyDataWrangler):
         if artists:  # enrich track artists
             artist_uris: set[str] = {artist["uri"] for track in self.tracks for artist in track.response["artists"]}
             artist_responses = self.api.get_items(
-                artist_uris, kind=RemoteItemType.ARTIST, limit=20, use_cache=self.use_cache
+                artist_uris, kind=RemoteObjectType.ARTIST, limit=20, use_cache=self.use_cache
             )
 
             artists = {response["uri"]: response for response in artist_responses}
@@ -77,7 +77,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyDataWrangler):
     def _get_playlists_data(self) -> list[dict[str, Any]]:
         self.logger.debug("Get Spotify playlists data: START")
         playlists_data = self.api.get_user_items(
-            kind=RemoteItemType.PLAYLIST, limit=self.limit, use_cache=self.use_cache
+            kind=RemoteObjectType.PLAYLIST, limit=self.limit, use_cache=self.use_cache
         )
         playlists_total = len(playlists_data)
         if self.include:  # filter on include playlist names
@@ -100,7 +100,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyDataWrangler):
         )
 
         # make API calls
-        self.api.get_items(playlists_data, kind=RemoteItemType.PLAYLIST, use_cache=self.use_cache)
+        self.api.get_items(playlists_data, kind=RemoteObjectType.PLAYLIST, use_cache=self.use_cache)
 
         self.print_line()
         self.logger.debug("Get Spotify playlists data: DONE\n")

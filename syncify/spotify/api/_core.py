@@ -2,7 +2,7 @@ from abc import ABCMeta
 from typing import Any
 
 from syncify.remote.api import RemoteAPI
-from syncify.remote.enums import RemoteIDType, RemoteItemType
+from syncify.remote.enums import RemoteIDType, RemoteObjectType
 from syncify.utils.helpers import limit_value
 
 
@@ -26,7 +26,7 @@ class SpotifyAPICore(RemoteAPI, metaclass=ABCMeta):
             kind = self.get_item_type(value)
 
         while kind is None:  # get user to input ID type
-            kind = RemoteItemType.from_name(input("\33[1mEnter ID type: \33[0m"))[0]
+            kind = RemoteObjectType.from_name(input("\33[1mEnter ID type: \33[0m"))[0]
 
         url = self.convert(value, kind=kind, type_out=RemoteIDType.URL)
         name = self.get(url, log_pad=43)["name"]
@@ -49,7 +49,7 @@ class SpotifyAPICore(RemoteAPI, metaclass=ABCMeta):
                 self.logger.warning(f"{"ERROR":<7}: {url:<43}")
                 return
 
-            tracks = [item["track"] if kind == RemoteItemType.PLAYLIST else item for item in response["items"]]
+            tracks = [item["track"] if kind == RemoteObjectType.PLAYLIST else item for item in response["items"]]
             for i, track in enumerate(tracks, i + 1):  # print each item in this page
                 formatted_item_data = self.format_item_data(
                     i=i, name=track["name"], uri=track["uri"],
@@ -73,13 +73,13 @@ class SpotifyAPICore(RemoteAPI, metaclass=ABCMeta):
         return r
 
     def query(
-            self, query: str | None, kind: RemoteItemType, limit: int = 10, use_cache: bool = True
+            self, query: str | None, kind: RemoteObjectType, limit: int = 10, use_cache: bool = True
     ) -> list[dict[str, Any]]:
         """
         ``GET: /search`` - Query for items. Modify result types returned with kind parameter
 
         :param query: Search query.
-        :param kind: The remote item type to search for.
+        :param kind: The remote object type to search for.
         :param limit: Number of results to get and return.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: The response from the endpoint.

@@ -11,8 +11,8 @@ class RemoteIDType(SyncifyEnum):
     URL_EXT: int = 2
 
 
-class RemoteItemType(SyncifyEnum):
-    """Represents remote item types"""
+class RemoteObjectType(SyncifyEnum):
+    """Represents remote object types"""
     ALL = 0
     PLAYLIST = 1
     TRACK = 2

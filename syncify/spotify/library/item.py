@@ -2,7 +2,7 @@ from collections.abc import MutableMapping
 from typing import Any, Self
 
 from syncify.remote.api import APIMethodInputType
-from syncify.remote.enums import RemoteIDType, RemoteItemType
+from syncify.remote.enums import RemoteIDType, RemoteObjectType
 from syncify.remote.library.item import RemoteTrack, RemoteArtist
 from syncify.spotify.processors.wrangle import SpotifyObjectWranglerMixin
 from syncify.utils import UnitCollection
@@ -158,7 +158,7 @@ class SpotifyTrack(SpotifyObjectWranglerMixin, RemoteTrack):
         # set a mock response with URL to load from
         id_ = cls.extract_ids(value)[0]
         obj.response = {
-            "href": cls.convert(id_, kind=RemoteItemType.TRACK, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
+            "href": cls.convert(id_, kind=RemoteObjectType.TRACK, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
         }
         obj.reload(use_cache=use_cache)
         return obj
@@ -168,8 +168,8 @@ class SpotifyTrack(SpotifyObjectWranglerMixin, RemoteTrack):
 
         # reload with enriched data
         response = self.api.get(self.url, use_cache=use_cache, log_pad=self._url_pad)
-        self.api.get_items(response["album"], kind=RemoteItemType.ALBUM, use_cache=use_cache)
-        self.api.get_items(response["artists"], kind=RemoteItemType.ARTIST, use_cache=use_cache)
+        self.api.get_items(response["album"], kind=RemoteObjectType.ALBUM, use_cache=use_cache)
+        self.api.get_items(response["artists"], kind=RemoteObjectType.ARTIST, use_cache=use_cache)
         self.api.get_tracks_extra(response, features=True, use_cache=use_cache)
 
         self.__init__(response)
@@ -216,7 +216,7 @@ class SpotifyArtist(SpotifyObjectWranglerMixin, RemoteArtist):
         # set a mock response with URL to load from
         id_ = cls.extract_ids(value)[0]
         obj.response = {
-            "href": cls.convert(id_, kind=RemoteItemType.ARTIST, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
+            "href": cls.convert(id_, kind=RemoteObjectType.ARTIST, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
         }
         obj.reload(use_cache=use_cache)
         return obj

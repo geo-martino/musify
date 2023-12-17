@@ -4,7 +4,7 @@ from copy import copy
 from typing import Any, Self
 
 from syncify.remote.api import APIMethodInputType
-from syncify.remote.enums import RemoteIDType, RemoteItemType
+from syncify.remote.enums import RemoteIDType, RemoteObjectType
 from syncify.remote.library.collection import RemoteAlbum
 from syncify.spotify.base import SpotifyObject
 from syncify.spotify.processors.wrangle import SpotifyObjectWranglerMixin
@@ -21,7 +21,7 @@ class SpotifyCollection[T: SpotifyObject](SpotifyObjectWranglerMixin, metaclass=
         ``use_cache`` forces request to return a cached result if available.
         """
         kind = cls.__name__.casefold().replace("spotify", "")
-        item_type = RemoteItemType.from_name(kind)[0]
+        item_type = RemoteObjectType.from_name(kind)[0]
         key = cls.api.collection_item_map[item_type.name]
 
         try:  # attempt to get response from the given value alone
@@ -118,7 +118,7 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollection):
         if not items:  # no items given, regenerate API response from the URL
             id_ = cls.extract_ids(value)[0]
             obj.response = {
-                "href": cls.convert(id_, kind=RemoteItemType.ALBUM, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
+                "href": cls.convert(id_, kind=RemoteObjectType.ALBUM, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
             }
             obj.reload(use_cache=use_cache)
         else:  # attempt to find items for this album in the given items

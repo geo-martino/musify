@@ -77,7 +77,7 @@ class RemoteObject(RemoteObjectMixin, PrettyPrinter, metaclass=ABCMeta):
         """
         Checks the given response is compatible with this object type, raises an exception if not.
 
-        :raise RemoteItemTypeError: When the response type is not compatible with this object.
+        :raise RemoteObjectTypeError: When the response type is not compatible with this object.
         """
         raise NotImplementedError
 

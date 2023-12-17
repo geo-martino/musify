@@ -5,8 +5,8 @@ from urllib.parse import urlparse
 
 from syncify.exception import SyncifyEnumError
 from syncify.remote.api import APIMethodInputType
-from syncify.remote.enums import RemoteIDType, RemoteItemType
-from syncify.remote.exception import RemoteError, RemoteIDTypeError, RemoteItemTypeError
+from syncify.remote.enums import RemoteIDType, RemoteObjectType
+from syncify.remote.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.spotify import URL_API, URL_EXT, SPOTIFY_UNAVAILABLE_URI
 from syncify.spotify.base import SpotifyRemote, SpotifyObject
@@ -17,7 +17,7 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
     unavailable_uri_dummy = SPOTIFY_UNAVAILABLE_URI
 
     @staticmethod
-    def get_id_type(value: str, kind: RemoteItemType | None = None) -> RemoteIDType:
+    def get_id_type(value: str, kind: RemoteObjectType | None = None) -> RemoteIDType:
         value = value.strip().casefold()
         uri_split = value.split(':')
 
@@ -30,7 +30,7 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
                 return RemoteIDType.URI
             elif uri_split[1] != "user" and len(uri_split[2]) == RemoteIDType.ID.value:
                 return RemoteIDType.URI
-        elif len(value) == RemoteIDType.ID.value or kind == RemoteItemType.USER:
+        elif len(value) == RemoteIDType.ID.value or kind == RemoteObjectType.USER:
             return RemoteIDType.ID
         raise RemoteIDTypeError(f"Could not determine ID type of given value: {value}")
 
@@ -58,13 +58,13 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
         return False
 
     @staticmethod
-    def _get_item_type(value: str | Mapping[str, Any], kind: RemoteItemType) -> RemoteItemType | None:
+    def _get_item_type(value: str | Mapping[str, Any], kind: RemoteObjectType) -> RemoteObjectType | None:
         if isinstance(value, Mapping):
             if value.get("is_local", False):
-                raise RemoteItemTypeError("Cannot process local items")
+                raise RemoteObjectTypeError("Cannot process local items")
             if "type" not in value:
-                raise RemoteItemTypeError(f"Given map does not contain a 'type' key: {value}")
-            return RemoteItemType.from_name(value["type"].casefold().rstrip('s'))[0]
+                raise RemoteObjectTypeError(f"Given map does not contain a 'type' key: {value}")
+            return RemoteObjectType.from_name(value["type"].casefold().rstrip('s'))[0]
 
         value = value.strip()
         url_check = urlparse(value.replace("/v1/", '/')).netloc.split(".")
@@ -74,20 +74,20 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
             url_path = urlparse(value.replace("/v1/", '/')).path.split("/")
             for chunk in url_path:
                 try:
-                    return RemoteItemType.from_name(chunk.casefold().rstrip('s'))[0]
+                    return RemoteObjectType.from_name(chunk.casefold().rstrip('s'))[0]
                 except SyncifyEnumError:
                     continue
         elif len(uri_check) == RemoteIDType.URI.value and uri_check[0].casefold() == "spotify":
-            return RemoteItemType.from_name(uri_check[1])[0]
-        elif len(value) == RemoteIDType.ID.value or kind == RemoteItemType.USER:
+            return RemoteObjectType.from_name(uri_check[1])[0]
+        elif len(value) == RemoteIDType.ID.value or kind == RemoteObjectType.USER:
             return kind
-        raise RemoteItemTypeError(f"Could not determine item type of given value: {value}")
+        raise RemoteObjectTypeError(f"Could not determine item type of given value: {value}")
 
     @classmethod
     def convert(
             cls,
             value: str,
-            kind: RemoteItemType | None = None,
+            kind: RemoteObjectType | None = None,
             type_in: RemoteIDType = RemoteIDType.ALL,
             type_out: RemoteIDType = RemoteIDType.ID
     ) -> str:
@@ -102,12 +102,12 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
             url_path = urlparse(value).path.split("/")
             for chunk in url_path:
                 try:
-                    kind = RemoteItemType.from_name(chunk.rstrip('s'))[0]
+                    kind = RemoteObjectType.from_name(chunk.rstrip('s'))[0]
                     break
                 except SyncifyEnumError:
                     continue
 
-            if kind == RemoteItemType.USER:
+            if kind == RemoteObjectType.USER:
                 name = kind.name.casefold()
                 try:
                     id_ = url_path[url_path.index(name) + 1]
@@ -118,7 +118,7 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
 
         elif type_in == RemoteIDType.URI:
             uri_split = value.split(':')
-            kind = RemoteItemType.from_name(uri_split[1])[0]
+            kind = RemoteObjectType.from_name(uri_split[1])[0]
             id_ = uri_split[2]
 
         elif type_in == RemoteIDType.ID:
@@ -141,7 +141,7 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
             return id_
 
     @classmethod
-    def extract_ids(cls, values: APIMethodInputType, kind: RemoteItemType | None = None) -> list[str]:
+    def extract_ids(cls, values: APIMethodInputType, kind: RemoteObjectType | None = None) -> list[str]:
         if isinstance(values, str):
             return [cls.convert(values, kind=kind, type_out=RemoteIDType.ID)]
         elif isinstance(values, Mapping) and "id" in values:  # is a raw API response from Spotify

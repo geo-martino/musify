@@ -2,8 +2,8 @@ from abc import ABCMeta
 
 from syncify.abstract.misc import PrettyPrinter
 from syncify.remote.base import Remote, RemoteObject, RemoteItem
-from syncify.remote.enums import RemoteItemType
-from syncify.remote.exception import RemoteItemTypeError
+from syncify.remote.enums import RemoteObjectType
+from syncify.remote.exception import RemoteObjectTypeError
 from syncify.spotify import SPOTIFY_SOURCE_NAME
 
 
@@ -53,12 +53,12 @@ class SpotifyObject(SpotifyObjectMixin, PrettyPrinter, metaclass=ABCMeta):
         """
         Checks the given response is compatible with this object type, raises an exception if not.
 
-        :raise RemoteItemTypeError: When the response type is not compatible with this object.
+        :raise RemoteObjectTypeError: When the response type is not compatible with this object.
         """
         kind = self.__class__.__name__.casefold().replace("spotify", "")
         if self.response.get("type") != kind:
-            kind = RemoteItemType.from_name(kind)[0]
-            raise RemoteItemTypeError(f"Response type invalid", kind=kind, value=self.response.get("type"))
+            kind = RemoteObjectType.from_name(kind)[0]
+            raise RemoteObjectTypeError(f"Response type invalid", kind=kind, value=self.response.get("type"))
 
 
 class SpotifyItem(SpotifyObject, RemoteItem, metaclass=ABCMeta):

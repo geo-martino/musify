@@ -5,7 +5,7 @@ from typing import Any
 
 from syncify import PROGRAM_NAME, PROGRAM_URL
 from syncify.remote.api import RemoteAPI
-from syncify.remote.enums import RemoteIDType, RemoteItemType
+from syncify.remote.enums import RemoteIDType, RemoteObjectType
 from syncify.remote.exception import RemoteIDTypeError
 from syncify.utils.helpers import limit_value
 
@@ -36,17 +36,17 @@ class SpotifyAPIPlaylists(RemoteAPI, metaclass=ABCMeta):
                 return playlist["href"]
             elif "id" in playlist:
                 return self.convert(
-                    playlist["id"], kind=RemoteItemType.PLAYLIST, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL
+                    playlist["id"], kind=RemoteObjectType.PLAYLIST, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL
                 )
             elif "uri" in playlist:
                 return self.convert(
-                    playlist["uri"], kind=RemoteItemType.PLAYLIST, type_in=RemoteIDType.URI, type_out=RemoteIDType.URL
+                    playlist["uri"], kind=RemoteObjectType.PLAYLIST, type_in=RemoteIDType.URI, type_out=RemoteIDType.URL
                 )
 
         try:
-            return self.convert(playlist, kind=RemoteItemType.PLAYLIST, type_out=RemoteIDType.URL)
+            return self.convert(playlist, kind=RemoteObjectType.PLAYLIST, type_out=RemoteIDType.URL)
         except RemoteIDTypeError:
-            playlists = self.get_user_items(kind=RemoteItemType.PLAYLIST, use_cache=use_cache)
+            playlists = self.get_user_items(kind=RemoteObjectType.PLAYLIST, use_cache=use_cache)
             playlists = {pl["name"]: pl["href"] for pl in playlists}
             if playlist not in playlists:
                 raise RemoteIDTypeError(
@@ -96,7 +96,7 @@ class SpotifyAPIPlaylists(RemoteAPI, metaclass=ABCMeta):
         :return: The number of tracks added to the playlist.
         :raise RemoteIDTypeError: Raised when the input ``playlist`` does not represent
             a playlist URL/URI/ID.
-        :raise RemoteItemTypeError: Raised when the item types of the input ``items``
+        :raise RemoteObjectTypeError: Raised when the item types of the input ``items``
             are not all tracks or IDs.
         """
         url = f"{self.get_playlist_url(playlist, use_cache=False)}/tracks"
@@ -106,11 +106,11 @@ class SpotifyAPIPlaylists(RemoteAPI, metaclass=ABCMeta):
             self.logger.debug(f"{'SKIP':<7}: {url:<43} | No data given")
             return 0
 
-        self.validate_item_type(items, kind=RemoteItemType.TRACK)
+        self.validate_item_type(items, kind=RemoteObjectType.TRACK)
 
-        uri_list = [self.convert(item, kind=RemoteItemType.TRACK, type_out=RemoteIDType.URI) for item in items]
+        uri_list = [self.convert(item, kind=RemoteObjectType.TRACK, type_out=RemoteIDType.URI) for item in items]
         if skip_dupes:  # skip tracks currently in playlist
-            pl_current = self.get_items(url, kind=RemoteItemType.PLAYLIST, use_cache=False)[0]
+            pl_current = self.get_items(url, kind=RemoteObjectType.PLAYLIST, use_cache=False)[0]
             tracks = pl_current[self.playlist_items_key][self.items_key]
             uris_current = [track["track"]["uri"] for track in tracks]
             uri_list = [uri for uri in uri_list if uri not in uris_current]
@@ -155,7 +155,7 @@ class SpotifyAPIPlaylists(RemoteAPI, metaclass=ABCMeta):
         :return: The number of tracks cleared from the playlist.
         :raise RemoteIDTypeError: Raised when the input ``playlist`` does not represent
             a playlist URL/URI/ID.
-        :raise RemoteItemTypeError: Raised when the item types of the input ``items``
+        :raise RemoteObjectTypeError: Raised when the item types of the input ``items``
             are not all tracks or IDs.
         """
         url = f"{self.get_playlist_url(playlist, use_cache=False)}/tracks"
@@ -164,10 +164,10 @@ class SpotifyAPIPlaylists(RemoteAPI, metaclass=ABCMeta):
         if items is not None and len(items) == 0:
             return 0
         elif items is not None:  # clear only the items given
-            self.validate_item_type(items, kind=RemoteItemType.TRACK)
-            uri_list = [self.convert(item, kind=RemoteItemType.TRACK, type_out=RemoteIDType.URI) for item in items]
+            self.validate_item_type(items, kind=RemoteObjectType.TRACK)
+            uri_list = [self.convert(item, kind=RemoteObjectType.TRACK, type_out=RemoteIDType.URI) for item in items]
         else:  # clear everything
-            pl_current = self.get_items(url, kind=RemoteItemType.PLAYLIST, extend=True, use_cache=False)[0]
+            pl_current = self.get_items(url, kind=RemoteObjectType.PLAYLIST, extend=True, use_cache=False)[0]
             tracks = pl_current[self.playlist_items_key][self.items_key]
             uri_list = [track[self.playlist_items_key.rstrip("s")]["uri"] for track in tracks]
 
