@@ -14,7 +14,7 @@ from requests_mock.request import _RequestObjectProxy as Request
 from requests_mock.response import _Context as Context
 
 from syncify.abstract.enums import SyncifyEnum
-from syncify.remote.enums import RemoteObjectType
+from syncify.remote.enums import RemoteObjectType as ObjectType
 from syncify.spotify import URL_API, URL_EXT, SPOTIFY_SOURCE_NAME
 from syncify.spotify.api import SpotifyAPI
 from tests.spotify.utils import random_id
@@ -41,24 +41,24 @@ class SpotifyMock(Mocker):
     range_stop = 50
 
     @property
-    def item_type_map(self) -> dict[RemoteObjectType, list[dict[str, Any]]]:
-        """Map of :py:class:`RemoteObjectType` to the mocked items mapped as {``id``: <item>}"""
+    def item_type_map(self) -> dict[ObjectType, list[dict[str, Any]]]:
+        """Map of :py:class:`ObjectType` to the mocked items mapped as {``id``: <item>}"""
         return {
-            RemoteObjectType.PLAYLIST: self.playlists,
-            RemoteObjectType.ALBUM: self.albums,
-            RemoteObjectType.TRACK: self.tracks,
-            RemoteObjectType.ARTIST: self.artists,
-            RemoteObjectType.USER: self.users,
+            ObjectType.PLAYLIST: self.playlists,
+            ObjectType.ALBUM: self.albums,
+            ObjectType.TRACK: self.tracks,
+            ObjectType.ARTIST: self.artists,
+            ObjectType.USER: self.users,
         }
 
     @property
-    def item_type_map_user(self) -> dict[RemoteObjectType, list[dict[str, Any]]]:
-        """Map of :py:class:`RemoteObjectType` to the mocked user items mapped as {``id``: <item>}"""
+    def item_type_map_user(self) -> dict[ObjectType, list[dict[str, Any]]]:
+        """Map of :py:class:`ObjectType` to the mocked user items mapped as {``id``: <item>}"""
         return {
-            RemoteObjectType.PLAYLIST: self.user_playlists,
-            RemoteObjectType.ALBUM: self.user_albums,
-            RemoteObjectType.TRACK: self.user_tracks,
-            RemoteObjectType.ARTIST: self.user_artists,
+            ObjectType.PLAYLIST: self.user_playlists,
+            ObjectType.ALBUM: self.user_albums,
+            ObjectType.TRACK: self.user_tracks,
+            ObjectType.ARTIST: self.user_artists,
         }
 
     def __init__(self, **kwargs):
@@ -83,26 +83,26 @@ class SpotifyMock(Mocker):
 
         # setup responses as needed for each item type
         playlists_map = {item["id"]: item for item in self.playlists}
-        self.setup_items_response(kind=RemoteObjectType.PLAYLIST, id_map=playlists_map, batchable=False)
+        self.setup_items_response(kind=ObjectType.PLAYLIST, id_map=playlists_map, batchable=False)
         for id_, item in playlists_map.items():
             self.setup_items_block_response_from_generator(
-                kind=RemoteObjectType.PLAYLIST, id_=id_, item=item, generator=self.generate_playlist_tracks
+                kind=ObjectType.PLAYLIST, id_=id_, item=item, generator=self.generate_playlist_tracks
             )
 
         albums_map = {item["id"]: item for item in self.albums}
-        self.setup_items_response(kind=RemoteObjectType.ALBUM, id_map=albums_map)
+        self.setup_items_response(kind=ObjectType.ALBUM, id_map=albums_map)
         for id_, item in albums_map.items():
             self.setup_items_block_response_from_generator(
-                kind=RemoteObjectType.ALBUM, id_=id_, item=item, generator=self.generate_album_tracks
+                kind=ObjectType.ALBUM, id_=id_, item=item, generator=self.generate_album_tracks
             )
 
-        self.setup_items_response(kind=RemoteObjectType.TRACK, id_map={item["id"]: item for item in self.tracks})
+        self.setup_items_response(kind=ObjectType.TRACK, id_map={item["id"]: item for item in self.tracks})
         self.setup_items_response(kind="audio-features", id_map=self.audio_features)
         self.setup_items_response(kind="audio-analysis", id_map=self.audio_analysis, batchable=False)
 
-        self.setup_items_response(kind=RemoteObjectType.ARTIST, id_map={item["id"]: item for item in self.artists})
+        self.setup_items_response(kind=ObjectType.ARTIST, id_map={item["id"]: item for item in self.artists})
         self.setup_items_response(
-            kind=RemoteObjectType.USER, id_map={item["id"]: item for item in self.users}, batchable=False
+            kind=ObjectType.USER, id_map={item["id"]: item for item in self.users}, batchable=False
         )
 
         # randomly choose currently authenticated user and setup mock
@@ -112,8 +112,8 @@ class SpotifyMock(Mocker):
 
         # generate responses for saved user's item calls and id_map for reference by tests
         self.user_playlists = deepcopy(self.playlists)
-        self.user_tracks = [self.format_user_item(deepcopy(item), RemoteObjectType.TRACK) for item in self.tracks]
-        self.user_albums = [self.format_user_item(deepcopy(item), RemoteObjectType.ALBUM) for item in self.albums]
+        self.user_tracks = [self.format_user_item(deepcopy(item), ObjectType.TRACK) for item in self.tracks]
+        self.user_albums = [self.format_user_item(deepcopy(item), ObjectType.ALBUM) for item in self.albums]
         self.user_artists = deepcopy(self.artists)
 
         # assign currently authenticated user info as owner to user playlists and strip items block
@@ -174,7 +174,7 @@ class SpotifyMock(Mocker):
             total = 0
             results = {}
             for kind in kinds:
-                values = self.item_type_map[RemoteObjectType.from_name(kind)[0]]
+                values = self.item_type_map[ObjectType.from_name(kind)[0]]
                 available = len(values)
                 results[kind + "s"] = sample(values, k=min(available, limit - count))
                 total += available
@@ -188,7 +188,7 @@ class SpotifyMock(Mocker):
         self.get(url=re.compile(url + r"\?"), json=response_getter)
 
     def setup_items_response(
-            self, kind: RemoteObjectType | str, id_map: dict[str, dict[str, Any]], batchable: bool = True
+            self, kind: ObjectType | str, id_map: dict[str, dict[str, Any]], batchable: bool = True
     ) -> None:
         """
         Setup requests mock for getting responses from the given ``id_map``.
@@ -201,7 +201,7 @@ class SpotifyMock(Mocker):
             id_list = req_params["ids"][0].split(",")
             return {req_kind: [deepcopy(id_map[i]) for i in id_list]}
 
-        url = f"{URL_API}/{kind.name.casefold()}s" if isinstance(kind, RemoteObjectType) else f"{URL_API}/{kind}"
+        url = f"{URL_API}/{kind.name.casefold()}s" if isinstance(kind, ObjectType) else f"{URL_API}/{kind}"
         if batchable:
             self.get(url=re.compile(url + r"\?"), json=response_getter)  # item batched calls
 
@@ -210,7 +210,7 @@ class SpotifyMock(Mocker):
 
     def setup_items_block_response_from_generator(
             self,
-            kind: RemoteObjectType,
+            kind: ObjectType,
             id_: str,
             item: dict[str, Any],
             generator: Callable[[dict[str, Any], int], list[dict[str, Any]]],
@@ -306,7 +306,7 @@ class SpotifyMock(Mocker):
         }
 
     @staticmethod
-    def format_user_item(response: dict[str, Any], kind: RemoteObjectType) -> dict[str, Any]:
+    def format_user_item(response: dict[str, Any], kind: ObjectType) -> dict[str, Any]:
         """Format a response to expected response for a 'saved user's...' endpoint type"""
         return {
             "added_at": random_dt(start=datetime(2008, 10, 7)).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -343,7 +343,7 @@ class SpotifyMock(Mocker):
     @staticmethod
     def generate_owner(user_id: str = random_id(), user_name: str = random_str(5, 30)) -> dict[str, Any]:
         """Return a randomly generated Spotify API response for an owner"""
-        kind = RemoteObjectType.USER.name.lower()
+        kind = ObjectType.USER.name.lower()
         return {
             "display_name": user_name,
             "external_urls": {"spotify": f"{URL_EXT}/{kind}/{user_id}"},
@@ -363,7 +363,7 @@ class SpotifyMock(Mocker):
         """Return a randomly generated Spotify API response for a User."""
 
         user_id = random_id()
-        kind = RemoteObjectType.USER.name.lower()
+        kind = ObjectType.USER.name.lower()
 
         response = {
             "country": choice(COUNTRY_CODES),
@@ -393,7 +393,7 @@ class SpotifyMock(Mocker):
         :param properties: Add extra randomly generated information to the response as per documentation.
         """
         artist_id = random_id()
-        kind = RemoteObjectType.ARTIST.name.lower()
+        kind = ObjectType.ARTIST.name.lower()
 
         response = {
             "external_urls": {"spotify": f"{URL_EXT}/{kind}/{artist_id}"},
@@ -432,7 +432,7 @@ class SpotifyMock(Mocker):
         :param artists: Add randomly generated artists information to the response as per documentation.
         """
         track_id = random_id()
-        kind = RemoteObjectType.TRACK.name.lower()
+        kind = ObjectType.TRACK.name.lower()
 
         response = {
             "available_markets": sample(COUNTRY_CODES, k=randrange(1, 5)),
@@ -483,7 +483,7 @@ class SpotifyMock(Mocker):
         :param track_id: The Track ID to use in the response. Will randomly generate if not given.
         :param duration_ms: The duration of the track in ms to use in the response. Will randomly generate if not given.
         """
-        kind = RemoteObjectType.TRACK.name.lower()
+        kind = ObjectType.TRACK.name.lower()
 
         # noinspection SpellCheckingInspection
         return {
@@ -523,7 +523,7 @@ class SpotifyMock(Mocker):
         :param properties: Add extra randomly generated properties information to the response as per documentation.
         """
         album_id = random_id()
-        kind = RemoteObjectType.ALBUM.name.lower()
+        kind = ObjectType.ALBUM.name.lower()
 
         response = {
             "album_type": choice((kind, "single", "compilation")),
@@ -617,7 +617,7 @@ class SpotifyMock(Mocker):
         :param api: An optional, authenticated :py:class:`SpotifyAPI` object to extract user information from.
         """
         playlist_id = random_id()
-        kind = RemoteObjectType.PLAYLIST.name.lower()
+        kind = ObjectType.PLAYLIST.name.lower()
         url = f"{URL_API}/{kind}s/{playlist_id}"
 
         owner = cls.generate_owner_from_api(api=api) if api else cls.generate_owner(user_id=user_id)
@@ -669,7 +669,7 @@ class SpotifyMock(Mocker):
         items = []
         for _ in range(count):
             track = cls.generate_track(album=True, artists=True) | {"episode": False, "track": True}
-            track = cls.format_user_item(response=track, kind=RemoteObjectType.TRACK)
+            track = cls.format_user_item(response=track, kind=ObjectType.TRACK)
             track |= {"added_by": choice((owner, cls.generate_owner())), "is_local": track["track"]["is_local"]}
             items.append(track)
 
