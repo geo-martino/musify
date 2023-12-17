@@ -3,9 +3,9 @@ from typing import Any
 from syncify import PROGRAM_NAME
 from syncify.spotify import URL_API, URL_AUTH
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
-from ._collection import SpotifyAPICollections
 from ._core import SpotifyAPICore
 from ._item import SpotifyAPIItems
+from ._playlist import SpotifyAPIPlaylists
 
 # non-user authenticated access
 API_AUTH_BASIC = {
@@ -78,7 +78,7 @@ API_AUTH_USER = {
 
 
 # noinspection PyShadowingNames
-class SpotifyAPI(SpotifyDataWrangler, SpotifyAPICore, SpotifyAPIItems, SpotifyAPICollections):
+class SpotifyAPI(SpotifyDataWrangler, SpotifyAPICore, SpotifyAPIItems, SpotifyAPIPlaylists):
     """
     Collection of endpoints for the Spotify API.
     See :py:class:`RequestHandler` and :py:class:`APIAuthoriser`

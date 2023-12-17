@@ -76,7 +76,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyDataWrangler):
 
     def _get_playlists_data(self) -> list[dict[str, Any]]:
         self.logger.debug("Get Spotify playlists data: START")
-        playlists_data = self.api.get_collections_user(
+        playlists_data = self.api.get_user_items(
             kind=RemoteItemType.PLAYLIST, limit=self.limit, use_cache=self.use_cache
         )
         playlists_total = len(playlists_data)
@@ -100,7 +100,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyDataWrangler):
         )
 
         # make API calls
-        self.api.get_collections(playlists_data, kind=RemoteItemType.PLAYLIST, use_cache=self.use_cache)
+        self.api.get_items(playlists_data, kind=RemoteItemType.PLAYLIST, use_cache=self.use_cache)
 
         self.print_line()
         self.logger.debug("Get Spotify playlists data: DONE\n")

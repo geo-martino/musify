@@ -1,5 +1,5 @@
 from abc import ABCMeta
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping, Collection
 from typing import Any
 from urllib.parse import urlparse
 
@@ -146,7 +146,7 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
             return [cls.convert(values, kind=kind, type_out=RemoteIDType.ID)]
         elif isinstance(values, Mapping) and "id" in values:  # is a raw API response from Spotify
             return [values["id"]]
-        elif isinstance(values, Sequence):
+        elif isinstance(values, Collection):
             if len(values) == 0:
                 return []
             elif all(isinstance(d, str) for d in values):

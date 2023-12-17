@@ -133,7 +133,7 @@ class SpotifyPlaylist(SpotifyCollection, RemotePlaylist[SpotifyTrack]):
         self._check_for_api()
 
         # reload with enriched data
-        response = self.api.get_collections(self.url, kind=RemoteItemType.PLAYLIST, use_cache=use_cache)[0]
+        response = self.api.get_items(self.url, kind=RemoteItemType.PLAYLIST, use_cache=use_cache)[0]
         tracks = [track["track"] for track in response["tracks"]["items"]]
         self.api.get_tracks(tracks, features=True, use_cache=use_cache)
 

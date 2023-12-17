@@ -321,7 +321,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         pl_processor = self._remote_types.playlist
 
         source = self.playlist_name_collection[name]
-        remote = pl_processor(self.api.get_collections(self.playlist_name_urls[name], use_cache=False)[0]).tracks
+        remote = pl_processor(self.api.get_items(self.playlist_name_urls[name], use_cache=False)[0]).tracks
         source_valid = [item for item in source if item.has_uri]
         remote_valid = [item for item in remote if item.has_uri]
 

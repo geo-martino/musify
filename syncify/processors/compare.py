@@ -92,7 +92,7 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
             if field is None:
                 raise FieldError(f"Unrecognised field name", field=field_str)
 
-            expected: tuple[str, ...] | None = tuple(val for k, val in condition.items() if k.startswith("@Value"))
+            expected: tuple[str, ...] | None = tuple(v for k, v in condition.items() if k.startswith("@Value"))
             if len(expected) == 0 or expected[0] == "[playing track]":
                 expected = None
 

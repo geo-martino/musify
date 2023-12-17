@@ -30,7 +30,7 @@ class SpotifyCollection[T: SpotifyObject](SpotifyObjectWranglerMixin, metaclass=
             assert len(value[key][cls.api.items_key]) == value[key]["total"]
             return value
         except (ValueError, AssertionError, TypeError):  # reload response from the API
-            return cls.api.get_collections(value, kind=item_type, use_cache=use_cache)[0]
+            return cls.api.get_items(value, kind=item_type, use_cache=use_cache)[0]
 
 
 class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollection):

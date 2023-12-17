@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from collections.abc import Collection, MutableMapping, MutableSequence
+from collections.abc import Collection, MutableMapping, Mapping
 from typing import Any
 
 from syncify.api import RequestHandler
@@ -65,7 +65,7 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
 
             original.clear()
             original |= results[0]
-        elif not isinstance(original, MutableSequence):
+        elif not isinstance(original, Collection):
             return
 
         # process as lists
@@ -112,7 +112,7 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
                 original[key] = result[0]
             return
 
-        elif not isinstance(original, MutableSequence):
+        elif not isinstance(original, Collection):
             return
 
         # process as lists
@@ -222,6 +222,7 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
             values: APIMethodInputType,
             kind: RemoteItemType | None = None,
             limit: int = 50,
+            extend: bool = True,
             use_cache: bool = True,
     ) -> list[dict[str, Any]]:
         """
@@ -242,7 +243,9 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
             These items must all be of the same type of item i.e. all tracks OR all artists etc.
         :param kind: Item type if given string is ID.
         :param limit: Size of batches to request.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param extend: When True and the given ``kind`` is a collection of items,
+            extend the response to include all items in this collection.
+       :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: API JSON responses for each item.
         :raise RemoteItemTypeError: Raised when the function cannot determine the item type
             of the input ``values``. Or when it does not recognise the type of the input ``values`` parameter.
@@ -250,20 +253,7 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def get_tracks(
-            self, values: APIMethodInputType, limit: int = 50, use_cache: bool = True, *args, **kwargs,
-    ) -> list[dict[str, Any]]:
-        """
-        Wrapper for :py:meth:`get_items` which only returns Track type responses.
-        See :py:meth:`get_items` for more info.
-        """
-        raise NotImplementedError
-
-    ###########################################################################
-    ## Collection - GET endpoints
-    ###########################################################################
-    @abstractmethod
-    def get_collections_user(
+    def get_user_items(
             self,
             user: str | None = None,
             kind: RemoteItemType = RemoteItemType.PLAYLIST,
@@ -271,10 +261,10 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
             use_cache: bool = True,
     ) -> list[dict[str, Any]]:
         """
-        ``GET`` - Get collections for a given user.
+        ``GET`` - Get saved items for a given user.
 
         :param user: The ID of the user to get playlists for. If None, use the currently authenticated user.
-        :param kind: Item type if given string is ID.
+        :param kind: Item type to retrieve for the user.
         :param limit: Size of each batch of items to request in the collection items request.
             This value will be limited to be between ``1`` and ``50``.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
@@ -286,32 +276,12 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def get_collections(
-            self, values: APIMethodInputType, kind: RemoteItemType | None = None, use_cache: bool = True,
+    def get_tracks(
+            self, values: APIMethodInputType, limit: int = 50, use_cache: bool = True, *args, **kwargs,
     ) -> list[dict[str, Any]]:
         """
-        ``GET`` - Get all items from a given list of ``values``. Items may be:
-            * A string representing a URL/URI/ID.
-            * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
-            * A remote API JSON response for a collection including some items under an ``items`` key,
-                a valid ID value under an ``id`` key,
-                and a valid item type value under a ``type`` key if ``kind`` is None.
-            * A MutableSequence of remote API JSON responses for a collection including:
-                - some items under an ``items`` key,
-                - a valid ID value under an ``id`` key,
-                - a valid item type value under a ``type`` key if ``kind`` is None.
-
-        If JSON response/s are given, this updates the value of the ``items`` in-place
-        by clearing and replacing its values.
-
-        :param values: The values representing some remote collection. See description for allowed value types.
-            These items must all be of the same type of collection i.e. all playlists OR all shows etc.
-        :param kind: Item type of the given collection.
-            If None, function will attempt to determine the type of the given values
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
-        :return: API JSON responses for each collection containing the collections items under the ``items`` key.
-        :raise RemoteItemTypeError: Raised when the function cannot determine the item type of
-            the input ``values``. Or when the given ``kind`` is not a valid collection.
+        Wrapper for :py:meth:`get_items` which only returns Track type responses.
+        See :py:meth:`get_items` for more info.
         """
         raise NotImplementedError
 
@@ -329,11 +299,16 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def add_to_playlist(self, playlist: str, items: Collection[str], limit: int = 50, skip_dupes: bool = True) -> int:
+    def add_to_playlist(
+            self, playlist: str | Mapping[str, Any], items: Collection[str], limit: int = 50, skip_dupes: bool = True
+    ) -> int:
         """
         ``POST`` - Add list of tracks to a given playlist.
 
-        :param playlist: Playlist URL/URI/ID to add to OR the name of the playlist in the current user's playlists.
+        :param playlist: One of the following to identify the playlist to clear:
+            - playlist URL/URI/ID,
+            - the name of the playlist in the current user's playlists,
+            - the API response of a playlist.
         :param items: List of URLs/URIs/IDs of the tracks to add.
         :param limit: Size of each batch of IDs to add. This value will be limited to be between ``1`` and ``50``.
         :param skip_dupes: Skip duplicates.
@@ -349,23 +324,31 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
     ## Collection - DELETE endpoints
     ###########################################################################
     @abstractmethod
-    def delete_playlist(self, playlist: str) -> str:
+    def delete_playlist(self, playlist: str | Mapping[str, Any]) -> str:
         """
         ``DELETE`` - Unfollow/delete a given playlist.
         WARNING: This function will destructively modify your remote playlists.
 
-        :param playlist. Playlist URL/URI/ID to unfollow OR the name of the playlist in the current user's playlists.
+        :param playlist: One of the following to identify the playlist to clear:
+            - playlist URL/URI/ID,
+            - the name of the playlist in the current user's playlists,
+            - the API response of a playlist.
         :return: API URL for playlist.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def clear_from_playlist(self, playlist: str, items: Collection[str] | None = None, limit: int = 100) -> int:
+    def clear_from_playlist(
+            self, playlist: str | Mapping[str, Any], items: Collection[str] | None = None, limit: int = 100
+    ) -> int:
         """
         ``DELETE`` - Clear tracks from a given playlist.
         WARNING: This function can destructively modify your remote playlists.
 
-        :param playlist: Playlist URL/URI/ID to clear OR the name of the playlist in the current user's playlists.
+        :param playlist: One of the following to identify the playlist to clear:
+            - playlist URL/URI/ID,
+            - the name of the playlist in the current user's playlists,
+            - the API response of a playlist.
         :param items: List of URLs/URIs/IDs of the tracks to remove. If None, clear all songs from the playlist.
         :param limit: Size of each batch of IDs to clear in a single request.
             This value will be limited to be between ``1`` and ``100``.
