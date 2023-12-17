@@ -51,10 +51,10 @@ class TestLocalFolder(LocalCollectionTester):
             track.compilation = i > 2
 
             if i % 2 == 0:
-                track.generate_artist = "artist name"
+                track.artist = "artist name"
                 track.genres = ["rock", "pop"]
             if i % 2 != 0:
-                track.generate_artist = "another artist"
+                track.artist = "another artist"
                 track.genres = ["metal", "jazz"]
 
         return tracks
@@ -122,10 +122,10 @@ class TestLocalAlbum(LocalCollectionTester):
                 track.compilation = False
 
             if i % 2 == 0:
-                track.generate_artist = "artist name"
+                track.artist = "artist name"
                 track.genres = ["rock", "pop"]
             if i % 2 != 0:
-                track.generate_artist = None
+                track.artist = None
                 track.genres = None
 
         return tracks
@@ -185,7 +185,7 @@ class TestLocalArtist(LocalCollectionTester):
         """
         tracks = random_tracks(10)
         for i, track in enumerate(tracks[:5]):
-            track.generate_artist = self.name
+            track.artist = self.name
             if i % 2 == 0:
                 track.album = "album name"
                 track.genres = ["rock", "pop"]
@@ -252,15 +252,15 @@ class TestLocalGenres(LocalCollectionTester):
         for i, track in enumerate(tracks):
             if i % 2 == 0 and i < 7:
                 track.genres = [self.name, "pop"]
-                track.generate_artist = "artist name 1"
+                track.artist = "artist name 1"
                 track.album = "album name"
             elif i % 2 != 0 and i < 7:
                 track.genres = ["metal", "jazz"]
-                track.generate_artist = "artist name 2"
+                track.artist = "artist name 2"
                 track.album = "album name"
             else:
                 track.genres = ["dance", self.name]
-                track.generate_artist = "artist name 3"
+                track.artist = "artist name 3"
                 track.album = "album name"
 
         return tracks

@@ -47,7 +47,7 @@ def random_track[T: LocalTrack](cls: type[T] | None = None) -> T:
     track.file.info.length = randint(30, 600)
 
     track.title = random_str(20, 50)
-    track.generate_artist = random_str(20, 50)
+    track.artist = random_str(20, 50)
     track.album = random_str(20, 50)
     track.album_artist = random_str(20, 50)
     track.track_number = randrange(1, 20)

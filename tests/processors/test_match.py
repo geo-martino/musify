@@ -176,7 +176,7 @@ class TestItemMatcher(PrettyPrinterTester):
         track1.title = "a longer title"
         track2.title = "this is a different title"
         track1.artist = f"band{sep}a singer{sep}artist"
-        track2.artist = f"nope"
+        track2.artist = "nope"
         track1.album = "album"
         track2.album = "name"
         track1.file.info.length = 100
@@ -190,14 +190,14 @@ class TestItemMatcher(PrettyPrinterTester):
         # track3 score is above min_score
         track3 = random_track()
         track3.title = "this is a different title"
-        track3.generate_artist = f"artist{sep}nope{sep}other"
+        track3.artist = f"artist{sep}nope{sep}other"
         track3.year = 2015
         assert matcher.score_match(track1, [track2, track3], min_score=0.2, max_score=0.8) == track3
 
         # track4 score is above max_score causing an early stop
         track4 = random_track()
         track4.title = "a longer title"
-        track4.generate_artist = f"band{sep}a singer{sep}artist"
+        track4.artist = f"band{sep}a singer{sep}artist"
         track4.album = "album"
         track4.file.info.length = 100
         track4.year = 2015

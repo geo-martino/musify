@@ -101,7 +101,7 @@ class TestXAutoPF(LocalPlaylistTester):
         for i, track in enumerate(tracks[10:40]):
             track.album = "an album"
         for i, track in enumerate(tracks[20:50]):
-            track.generate_artist = None
+            track.artist = None
         for i, track in enumerate(tracks, 1):
             track.track_number = i
         tracks += tracks_actual
@@ -189,7 +189,7 @@ class TestXAutoPF(LocalPlaylistTester):
         for i, track in enumerate(tracks[10:40]):
             track.album = "an album"
         for i, track in enumerate(tracks[20:50]):
-            track.generate_artist = None
+            track.artist = None
         for i, track in enumerate(tracks, 1):
             track.track_number = i
         tracks += tracks_actual
