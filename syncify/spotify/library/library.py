@@ -1,10 +1,11 @@
-from collections.abc import Collection, Mapping
+from collections.abc import Collection, Mapping, Iterable
 from typing import Any
 
 from syncify.abstract.collection import Playlist, Library
 from syncify.remote.enums import RemoteObjectType
 from syncify.remote.library.library import RemoteLibrary
 from syncify.remote.types import RemoteObjectClasses
+from syncify.spotify.base import SpotifyItem
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 from .collection import SpotifyAlbum
 from .item import SpotifyTrack
@@ -16,6 +17,12 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyDataWrangler):
     Represents a Spotify library, providing various methods for manipulating
     tracks and playlists across an entire Spotify library collection.
     """
+
+    @staticmethod
+    def _validate_item_type(items: Any | Iterable[Any]) -> bool:
+        if isinstance(items, Iterable):
+            return all(isinstance(item, SpotifyItem) for item in items)
+        return isinstance(items, SpotifyItem)
     
     @property
     def _remote_types(self) -> RemoteObjectClasses:

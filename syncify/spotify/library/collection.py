@@ -3,16 +3,23 @@ from collections.abc import Mapping, Iterable, MutableMapping
 from copy import copy
 from typing import Any, Self
 
-from syncify.remote.api import APIMethodInputType
+from syncify.abstract.collection import ItemCollection
+from syncify.remote import APIMethodInputType
 from syncify.remote.enums import RemoteIDType, RemoteObjectType
 from syncify.remote.library.collection import RemoteAlbum
-from syncify.spotify.base import SpotifyObject
+from syncify.spotify.base import SpotifyItem
 from syncify.spotify.processors.wrangle import SpotifyObjectWranglerMixin
 from .item import SpotifyTrack, SpotifyArtist
 
 
-class SpotifyCollection[T: SpotifyObject](SpotifyObjectWranglerMixin, metaclass=ABCMeta):
+class SpotifyCollection[T: SpotifyItem](SpotifyObjectWranglerMixin, ItemCollection, metaclass=ABCMeta):
     """Generic class for storing a collection of Spotify tracks."""
+
+    @staticmethod
+    def _validate_item_type(items: Any | Iterable[Any]) -> bool:
+        if isinstance(items, Iterable):
+            return all(isinstance(item, SpotifyItem) for item in items)
+        return isinstance(items, SpotifyItem)
 
     @classmethod
     def _load_response(cls, value: APIMethodInputType, use_cache: bool = True) -> dict[str, Any]:
@@ -118,7 +125,7 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollection):
         if not items:  # no items given, regenerate API response from the URL
             id_ = cls.extract_ids(value)[0]
             obj.response = {
-                "href": cls.convert(id_, kind=RemoteObjectType.ALBUM, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
+                "href": cls.convert(id_, RemoteObjectType.ALBUM, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
             }
             obj.reload(use_cache=use_cache)
         else:  # attempt to find items for this album in the given items

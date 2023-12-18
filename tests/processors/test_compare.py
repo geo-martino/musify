@@ -7,7 +7,7 @@ from syncify.local.track import MP3, M4A, FLAC
 from syncify.processors.compare import ItemComparer
 from syncify.processors.exception import ItemComparerError, ProcessorLookupError
 from tests.abstract.misc import PrettyPrinterTester
-from tests.local.track.utils import random_track
+from tests.local.utils import random_track
 
 
 # TODO: add test for to_xml

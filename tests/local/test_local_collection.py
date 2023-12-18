@@ -1,15 +1,18 @@
 from abc import ABCMeta
 from collections.abc import Iterable
 from copy import copy
-from random import randrange
+from random import randrange, sample
 
 import pytest
 
+from spotify.library.item import SpotifyTrack
 from syncify.local.collection import LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from syncify.local.exception import LocalCollectionError
 from syncify.local.track import LocalTrack
+from syncify.remote.base import RemoteItem
 from tests.abstract.collection import ItemCollectionTester
-from tests.local.track.utils import random_tracks, random_track, path_track_resources, path_track_all
+from tests.local.utils import random_tracks, random_track, path_track_resources, path_track_all
+from tests.spotify.api.mock import SpotifyMock
 from tests.utils import random_str
 
 
@@ -19,6 +22,11 @@ class LocalCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
     @pytest.fixture
     def collection_merge_items() -> Iterable[LocalTrack]:
         return random_tracks(randrange(5, 10))
+
+    @staticmethod
+    @pytest.fixture(scope="module")
+    def collection_merge_invalid(spotify_mock: SpotifyMock) -> Iterable[RemoteItem]:
+        return tuple(SpotifyTrack(response) for response in sample(spotify_mock.tracks, k=5))
 
 
 class TestLocalFolder(LocalCollectionTester):

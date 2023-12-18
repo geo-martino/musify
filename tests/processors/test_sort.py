@@ -9,7 +9,7 @@ from syncify.local.track import LocalTrack
 from syncify.processors.sort import ItemSorter, ShuffleMode
 from syncify.utils.helpers import strip_ignore_words
 from tests.abstract.misc import PrettyPrinterTester
-from tests.local.track.utils import random_tracks
+from tests.local.utils import random_tracks
 
 
 # TODO: add test for to_xml

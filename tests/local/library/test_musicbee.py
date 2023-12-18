@@ -8,12 +8,12 @@ from syncify.local.library import LocalLibrary, MusicBee
 # noinspection PyProtectedMember
 from syncify.local.library._musicbee import XMLLibraryParser
 from syncify.local.track import LocalTrack
-from tests.local.library.library_tester import LocalLibraryTester
+from syncify.remote.processors.wrangle import RemoteDataWrangler
+from tests.local.library.utils import LocalLibraryTester
 from tests.local.library.utils import path_library_resources
 from tests.local.playlist.utils import path_playlist_resources, path_playlist_m3u
 from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
-from tests.local.track.utils import random_track, path_track_all, path_track_mp3, path_track_flac, path_track_wma
-from tests.local.utils import remote_wrangler
+from tests.local.utils import random_track, path_track_all, path_track_mp3, path_track_flac, path_track_wma
 from tests.utils import path_resources
 
 library_filename = "musicbee_library.xml"
@@ -170,7 +170,7 @@ class TestMusicBee(LocalLibraryTester):
 
     @staticmethod
     @pytest.mark.parametrize("path", [library_filepath], ["path"])
-    def test_save(path: str):
+    def test_save(path: str, remote_wrangler: RemoteDataWrangler):
         MusicBee.xml_library_filename = library_filename
 
         library = MusicBee(

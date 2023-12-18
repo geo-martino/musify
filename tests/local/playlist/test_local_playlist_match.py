@@ -7,7 +7,7 @@ from syncify.local.playlist import LocalMatcher
 from syncify.local.track import LocalTrack
 from syncify.processors.compare import ItemComparer
 from tests.abstract.misc import PrettyPrinterTester
-from tests.local.track.utils import random_tracks
+from tests.local.utils import random_tracks
 from tests.utils import random_str
 
 

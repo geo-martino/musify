@@ -4,7 +4,7 @@ from typing import Self
 
 from syncify.abstract.collection import ItemCollection, Album
 from syncify.abstract.item import Item
-from syncify.remote.api import APIMethodInputType
+from syncify.remote import APIMethodInputType
 from syncify.remote.base import RemoteObject
 from syncify.remote.enums import RemoteIDType
 from syncify.remote.exception import RemoteIDTypeError

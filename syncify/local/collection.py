@@ -4,6 +4,7 @@ from collections.abc import Mapping, Collection, Iterable, Container
 from datetime import datetime
 from glob import glob
 from os.path import splitext, join, basename, exists, isdir
+from typing import Any
 
 from syncify.abstract.collection import ItemCollection, Folder, Album, Artist, Genre
 from syncify.abstract.item import Item
@@ -28,6 +29,12 @@ class LocalCollection[T: LocalItem](Logger, ItemCollection[T], metaclass=ABCMeta
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
     """
+
+    @staticmethod
+    def _validate_item_type(items: Any | Iterable[Any]) -> bool:
+        if isinstance(items, Iterable):
+            return all(isinstance(item, LocalItem) for item in items)
+        return isinstance(items, LocalItem)
 
     @property
     def items(self) -> list[LocalTrack]:

@@ -109,12 +109,12 @@ class TestSpotifyAPIPlaylists:
     def test_add_to_playlist(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
         spotify_mock.reset_mock()  # test checks the number of requests made
 
-        playlist = next(playlist for playlist in spotify_mock.playlists if playlist["tracks"]["total"] > 30)
+        playlist = next(playlist for playlist in spotify_mock.playlists if playlist["tracks"]["total"] > 10)
         total = playlist["tracks"]["total"]
         limit = total // 3
         assert total > limit  # ensure ranges are valid for test to work
 
-        id_list = random_id_types(wrangler=api, kind=ObjectType.TRACK, start=total - 30, stop=total - 1)
+        id_list = random_id_types(wrangler=api, kind=ObjectType.TRACK, start=total - 10, stop=total - 1)
         assert len(id_list) < total
         result = api.add_to_playlist(playlist=playlist["id"], items=id_list, limit=limit, skip_dupes=False)
         assert result == len(id_list)
@@ -198,12 +198,12 @@ class TestSpotifyAPIPlaylists:
     def test_clear_from_playlist_items(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
         spotify_mock.reset_mock()  # test checks the number of requests made
 
-        playlist = next(playlist for playlist in spotify_mock.playlists if playlist["tracks"]["total"] > 30)
+        playlist = next(playlist for playlist in spotify_mock.playlists if playlist["tracks"]["total"] > 10)
         total = playlist["tracks"]["total"]
         limit = total // 3
         assert total > limit  # ensure ranges are valid for test to work
 
-        id_list = random_id_types(wrangler=api, kind=ObjectType.TRACK, start=total - 30, stop=total - 1)
+        id_list = random_id_types(wrangler=api, kind=ObjectType.TRACK, start=total - 10, stop=total - 1)
         assert len(id_list) < total
 
         result = api.clear_from_playlist(playlist=playlist["uri"], items=id_list, limit=limit)

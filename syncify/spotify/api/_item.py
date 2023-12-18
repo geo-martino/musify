@@ -6,7 +6,8 @@ from time import sleep
 from typing import Any
 
 from syncify.api.exception import APIError
-from syncify.remote.api import RemoteAPI, APIMethodInputType
+from syncify.remote import APIMethodInputType
+from syncify.remote.api import RemoteAPI
 from syncify.remote.enums import RemoteObjectType, RemoteIDType
 from syncify.remote.exception import RemoteObjectTypeError
 from syncify.utils.helpers import limit_value
@@ -21,7 +22,9 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
         RemoteObjectType.AUDIOBOOK: RemoteObjectType.CHAPTER,
         RemoteObjectType.SHOW: RemoteObjectType.EPISODE,
     }
-    user_item_types = set(collection_item_map) | {RemoteObjectType.TRACK, RemoteObjectType.ARTIST, RemoteObjectType.EPISODE}
+    user_item_types = (
+            set(collection_item_map) | {RemoteObjectType.TRACK, RemoteObjectType.ARTIST, RemoteObjectType.EPISODE}
+    )
 
     def _get_unit(self, key: str | None = None, unit: str | None = None) -> str:
         """Determine the unit type to use in the progress bar"""

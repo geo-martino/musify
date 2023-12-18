@@ -1,15 +1,15 @@
 from collections.abc import MutableMapping
 from typing import Any, Self
 
-from syncify.remote.api import APIMethodInputType
+from syncify.remote import APIMethodInputType
 from syncify.remote.enums import RemoteIDType, RemoteObjectType
 from syncify.remote.library.item import RemoteTrack, RemoteArtist
-from syncify.spotify.processors.wrangle import SpotifyObjectWranglerMixin
+from syncify.spotify.processors.wrangle import SpotifyItemWranglerMixin
 from syncify.utils import UnitCollection
 from syncify.utils.helpers import to_collection
 
 
-class SpotifyTrack(SpotifyObjectWranglerMixin, RemoteTrack):
+class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
     """
     Extracts key ``track`` data from a Spotify API JSON response.
 
@@ -175,7 +175,7 @@ class SpotifyTrack(SpotifyObjectWranglerMixin, RemoteTrack):
         self.__init__(response)
 
 
-class SpotifyArtist(SpotifyObjectWranglerMixin, RemoteArtist):
+class SpotifyArtist(SpotifyItemWranglerMixin, RemoteArtist):
     """Extracts key ``artist`` data from a Spotify API JSON response."""
 
     @property

@@ -3,7 +3,7 @@ from collections.abc import Collection, MutableMapping, Mapping
 from typing import Any
 
 from syncify.api import RequestHandler
-from .base import APIMethodInputType
+from . import APIMethodInputType
 from .enums import RemoteIDType, RemoteObjectType
 from .processors.wrangle import RemoteDataWrangler
 
@@ -201,7 +201,9 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def query(self, query: str, kind: RemoteObjectType, limit: int = 10, use_cache: bool = True) -> list[dict[str, Any]]:
+    def query(
+            self, query: str, kind: RemoteObjectType, limit: int = 10, use_cache: bool = True
+    ) -> list[dict[str, Any]]:
         """
         ``GET`` - Query for items. Modify result types returned with kind parameter
 

@@ -7,6 +7,7 @@ import pytest
 from syncify.abstract.collection import ItemCollection, BasicCollection, Library
 from syncify.abstract.item import Item
 from syncify.abstract.misc import PrettyPrinter
+from syncify.exception import SyncifyTypeError
 from syncify.local.collection import LocalCollection
 from tests.abstract.misc import PrettyPrinterTester
 
@@ -32,9 +33,30 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
         raise NotImplementedError
 
     @staticmethod
+    @abstractmethod
+    def collection_merge_invalid(*args, **kwargs) -> Iterable[Item]:
+        """Yields an Iterable of :py:class:`Item` for use in :py:class:`ItemCollection` tests as pytest.fixture"""
+        raise NotImplementedError
+
+    @staticmethod
     @pytest.fixture
     def obj(collection: ItemCollection) -> PrettyPrinter:
         return collection
+
+    @staticmethod
+    def test_input_validation(collection: ItemCollection, collection_merge_invalid: Iterable[Item]):
+        with pytest.raises(SyncifyTypeError):
+            collection.index(next(c for c in collection_merge_invalid))
+        with pytest.raises(SyncifyTypeError):
+            collection.count(next(c for c in collection_merge_invalid))
+        with pytest.raises(SyncifyTypeError):
+            collection.append(next(c for c in collection_merge_invalid))
+        with pytest.raises(SyncifyTypeError):
+            collection.extend(collection_merge_invalid)
+        with pytest.raises(SyncifyTypeError):
+            collection.insert(0, next(c for c in collection_merge_invalid))
+        with pytest.raises(SyncifyTypeError):
+            collection += collection_merge_invalid
 
     @staticmethod
     def test_mutable_sequence_methods(collection: ItemCollection):
@@ -94,11 +116,18 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert collection != collection_basic
 
         # math dunder operations
-        collection += collection
-        assert len(collection) == len(collection_original) * 2 == len(collection.items)
+        assert collection + collection == collection.items + collection.items
+        assert collection - collection == []
 
+        collection += collection_original
+        assert len(collection) == len(collection_original) * 2 == len(collection.items)
         assert hash(collection) != hash(collection_original)
         assert collection != collection_original
+
+        collection -= collection_original
+        assert len(collection) == len(collection_original) == len(collection.items)
+        assert hash(collection) == hash(collection_original)
+        assert collection == collection_original
 
     @staticmethod
     def test_iterator_and_container_dunder_methods(collection: ItemCollection, collection_merge_items: Iterable[Item]):

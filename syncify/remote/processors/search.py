@@ -100,7 +100,9 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
         super().__init__(allow_karaoke=allow_karaoke)
         self.api = api
 
-    def _get_results(self, item: BaseObject, kind: RemoteObjectType, algorithm: Algorithm) -> list[dict[str, Any]] | None:
+    def _get_results(
+            self, item: BaseObject, kind: RemoteObjectType, algorithm: Algorithm
+    ) -> list[dict[str, Any]] | None:
         """Query the API to get results for the current item based on algorithm settings"""
         self.clean_tags(item)
 

@@ -6,6 +6,7 @@ from copy import deepcopy
 from datetime import datetime
 from typing import Any, Self, SupportsIndex
 
+from syncify.exception import SyncifyTypeError
 from syncify.processors.sort import ItemSorter, ShuffleMode, ShuffleBy
 from syncify.remote.enums import RemoteIDType
 from syncify.remote.processors.wrangle import RemoteDataWrangler
@@ -36,16 +37,33 @@ class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], Hashable, 
         super().__init__()
         self.remote_wrangler = remote_wrangler
 
+    @staticmethod
+    @abstractmethod
+    def _validate_item_type(items: Any | Iterable[Any]) -> bool:
+        """
+        Validate the given :py:class:`Item` by ensuring it matches the allowed item type for this collection.
+        Used to validate input :py:class:`Item` types given to functions that
+        modify the stored items in this collection.
+
+        :param items: The item or items to validate
+        :return: True if valid, False if not.
+        """
+        raise NotImplementedError
+
     def index(self, __item: T, __start: SupportsIndex = None, __stop: SupportsIndex = None) -> int:
         """
         Return first index of item from items in this collection.
 
         :raise ValueError: If the value is not present.
         """
+        if not self._validate_item_type(__item):
+            raise SyncifyTypeError(type(__item).__name__)
         return self.items.index(__item, __start if __start else 0, __stop if __stop else len(self.items))
 
     def count(self, __item: T) -> int:
         """Return the number of occurrences of the given :py:class:`Item` in this collection"""
+        if not self._validate_item_type(__item):
+            raise SyncifyTypeError(type(__item).__name__)
         return self.items.count(__item)
 
     def copy(self) -> list[T]:
@@ -54,11 +72,15 @@ class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], Hashable, 
 
     def append(self, __item: T, allow_duplicates: bool = True) -> None:
         """Append one item to the items in this collection"""
+        if not self._validate_item_type(__item):
+            raise SyncifyTypeError(type(__item).__name__)
         if allow_duplicates or __item not in self.items:
             self.items.append(__item)
 
     def extend(self, __items: Iterable[T], allow_duplicates: bool = True) -> None:
         """Append many items to the items in this collection"""
+        if not self._validate_item_type(__items):
+            raise SyncifyTypeError([type(i).__name__ for i in __items])
         if isinstance(__items, ItemCollection):
             __items = __items.items
 
@@ -69,11 +91,15 @@ class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], Hashable, 
 
     def insert(self, __index: int, __item: T, allow_duplicates: bool = True) -> None:
         """Insert given :py:class:`Item` before the given index"""
+        if not self._validate_item_type(__item):
+            raise SyncifyTypeError(type(__item))
         if allow_duplicates or __item not in self.items:
             self.items.insert(__index, __item)
 
     def remove(self, __item: T) -> None:
         """Remove one item from the items in this collection"""
+        if not self._validate_item_type(__item):
+            raise SyncifyTypeError(type(__item))
         self.items.remove(__item)
 
     def pop(self, __item: SupportsIndex = None) -> T:
@@ -174,10 +200,6 @@ class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], Hashable, 
     def __ne__(self, __collection: ItemCollection | Iterable[T]):
         return not self.__eq__(__collection)
 
-    def __iadd__(self, __items: Iterable[T]):
-        self.extend(__items)
-        return self
-
     def __len__(self):
         return len(self.items)
 
@@ -189,6 +211,26 @@ class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], Hashable, 
 
     def __contains__(self, __item: T):
         return any(__item == i for i in self.items)
+
+    def __add__(self, __items: list[T] | Self):
+        if isinstance(__items, ItemCollection):
+            return self.items + __items.items
+        return self.items + __items
+
+    def __iadd__(self, __items: Iterable[T]):
+        self.extend(__items)
+        return self
+
+    def __sub__(self, __items: Iterable[T]):
+        items = self.copy()
+        for item in __items:
+            items.remove(item)
+        return items
+
+    def __isub__(self, __items: Iterable[T]):
+        for item in __items:
+            self.remove(item)
+        return self
 
     def __getitem__(self, __key: str | int | slice | Item) -> T | list[T] | list[T, None, None]:
         """
@@ -246,6 +288,12 @@ class BasicCollection[T: Item](ItemCollection[T]):
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on items.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
     """
+    @staticmethod
+    def _validate_item_type(items: Any | Iterable[Any]) -> bool:
+        if isinstance(items, Iterable):
+            return all(isinstance(item, Item) for item in items)
+        return isinstance(items, Item)
+
     @property
     def name(self):
         """The name of this collection"""
