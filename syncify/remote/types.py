@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
-from .library.collection import RemoteAlbum
-from .library.item import RemoteTrack
-from .library.playlist import RemotePlaylist
+from syncify.remote.library.collection import RemoteAlbum
+from syncify.remote.library.item import RemoteTrack
+from syncify.remote.library.playlist import RemotePlaylist
 
 
 @dataclass

@@ -8,11 +8,11 @@ from syncify.abstract.collection import Playlist
 from syncify.abstract.misc import Result
 from syncify.local import File
 from syncify.local.collection import LocalCollection
+from syncify.local.playlist._match import LocalMatcher
 from syncify.local.track import LocalTrack, load_track
 from syncify.processors.limit import ItemLimiter
 from syncify.processors.sort import ItemSorter
 from syncify.remote.processors.wrangle import RemoteDataWrangler
-from ._match import LocalMatcher
 
 
 class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, metaclass=ABCMeta):

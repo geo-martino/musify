@@ -8,14 +8,14 @@ from typing import Any
 
 from syncify.abstract.collection import ItemCollection, Folder, Album, Artist, Genre
 from syncify.abstract.item import Item
+from syncify.local._base import LocalItem
+from syncify.local.exception import LocalCollectionError
+from syncify.local.track import LocalTrack, SyncResultTrack, load_track, TRACK_FILETYPES
 from syncify.remote.enums import RemoteIDType
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitCollection
 from syncify.utils.helpers import get_most_common_values, to_collection
 from syncify.utils.logger import Logger, STAT
-from ._base import LocalItem
-from .exception import LocalCollectionError
-from .track import LocalTrack, SyncResultTrack, load_track, TRACK_FILETYPES
 
 __max_str = "z" * 50
 

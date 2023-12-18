@@ -6,6 +6,8 @@ from copy import deepcopy
 from datetime import datetime
 from typing import Any, Self, SupportsIndex
 
+from syncify.abstract.enums import Field, FieldCombined, TagField
+from syncify.abstract.item import Item, Track, ObjectPrinterMixin
 from syncify.exception import SyncifyTypeError
 from syncify.processors.sort import ItemSorter, ShuffleMode, ShuffleBy
 from syncify.remote.enums import RemoteIDType
@@ -13,8 +15,6 @@ from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitIterable, UnitSequence
 from syncify.utils.helpers import to_collection
 from syncify.utils.logger import Logger
-from .enums import Field, FieldCombined, TagField
-from .item import Item, Track, ObjectPrinterMixin
 
 
 # noinspection PyShadowingNames

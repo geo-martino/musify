@@ -6,11 +6,11 @@ from typing import Any, Self
 
 from PIL import Image
 
+from syncify.local.track._base.processor import TagProcessor
 from syncify.remote.enums import RemoteIDType
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitIterable
 from syncify.utils.helpers import to_collection
-from .processor import TagProcessor
 
 
 class TagReader(TagProcessor, metaclass=ABCMeta):

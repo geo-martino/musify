@@ -68,7 +68,8 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
         if len(kinds) == 0:
             raise RemoteObjectTypeError("Given items are invalid or are IDs with no kind given")
         if len(kinds) != 1:
-            raise RemoteObjectTypeError(f"Ensure all the given items are of the same type! Found", value=kinds)
+            value = [kind.name for kind in kinds]
+            raise RemoteObjectTypeError(f"Ensure all the given items are of the same type! Found", value=value)
         return kinds.pop()
 
     @staticmethod
@@ -84,7 +85,7 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
         :return: The :py:class:`RemoteObjectType`. If the given value is determined to be an ID, returns None.
         :raise RemoteObjectTypeError: Raised when the function cannot determine the item type
             of the input ``values``.
-        :raise EnumNotFoundError: Raised when the item type of teh given ``value`` is not
+        :raise EnumNotFoundError: Raised when the item type of the given ``value`` is not
             a valid remote object type.
         """
         raise NotImplementedError

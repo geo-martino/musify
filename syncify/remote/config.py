@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 
-from .api import RemoteAPI
-from .base import RemoteObject
-from .library.library import RemoteLibrary
-from .processors.check import RemoteItemChecker
-from .processors.search import RemoteItemSearcher
-from .processors.wrangle import RemoteDataWrangler
+from syncify.remote.api import RemoteAPI
+from syncify.remote.base import RemoteObject
+from syncify.remote.library.library import RemoteLibrary
+from syncify.remote.processors.check import RemoteItemChecker
+from syncify.remote.processors.search import RemoteItemSearcher
+from syncify.remote.processors.wrangle import RemoteDataWrangler
 
 
 @dataclass

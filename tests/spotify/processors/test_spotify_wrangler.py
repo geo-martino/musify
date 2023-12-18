@@ -6,14 +6,13 @@ from syncify.remote.exception import RemoteError, RemoteIDTypeError, RemoteObjec
 from syncify.spotify import URL_API, URL_EXT
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 from tests.spotify.utils import random_id, random_ids
-
-
-# TODO: add more test cases for when IDType is ID and ItemType is USER
+from tests.utils import random_str
 
 
 # noinspection SpellCheckingInspection
 def test_get_id_type(wrangler: SpotifyDataWrangler):
     assert wrangler.get_id_type(random_id()) == IDType.ID
+    assert wrangler.get_id_type(random_str(1, IDType.ID.value - 1), kind=ObjectType.USER) == IDType.ID
     assert wrangler.get_id_type(f"spotify:show:{random_id()}") == IDType.URI
     assert wrangler.get_id_type(f"{URL_API}/{random_id()}") == IDType.URL
     assert wrangler.get_id_type(f"{URL_EXT}/{random_id()}") == IDType.URL_EXT
@@ -113,6 +112,7 @@ def test_validate_item_type(wrangler: SpotifyDataWrangler):
         f"{URL_API}/playlist/{random_id()}/followers", kind=ObjectType.PLAYLIST
     ) is None
     assert wrangler.validate_item_type(random_id(), kind=ObjectType.TRACK) is None
+    assert wrangler.validate_item_type(random_str(1, IDType.ID.value - 1), kind=ObjectType.USER) is None
     assert wrangler.validate_item_type({"type": "album", "id": random_id()}, kind=ObjectType.ALBUM) is None
     assert wrangler.validate_item_type(f"spotify:artist:{random_id()}", kind=ObjectType.ARTIST) is None
     assert wrangler.validate_item_type("spotify:user:ausername", kind=ObjectType.USER) is None

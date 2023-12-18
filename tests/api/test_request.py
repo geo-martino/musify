@@ -48,6 +48,8 @@ class TestRequestHandler:
         assert request_handler.token == token
         assert request_handler.session.cache.cache_name == cache_path
         assert request_handler.session.expire_after == cache_expiry
+
+        request_handler.auth()
         assert request_handler.session.headers == request_handler.headers
 
     @staticmethod

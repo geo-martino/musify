@@ -6,10 +6,10 @@ from syncify.remote.enums import RemoteObjectType
 from syncify.remote.library.library import RemoteLibrary
 from syncify.remote.types import RemoteObjectClasses
 from syncify.spotify.base import SpotifyItem
+from syncify.spotify.library.collection import SpotifyAlbum
+from syncify.spotify.library.item import SpotifyTrack
+from syncify.spotify.library.playlist import SpotifyPlaylist
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
-from .collection import SpotifyAlbum
-from .item import SpotifyTrack
-from .playlist import SpotifyPlaylist
 
 
 class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyDataWrangler):

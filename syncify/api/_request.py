@@ -11,9 +11,9 @@ from requests import Response, Session
 from requests.exceptions import ConnectionError
 from requests_cache import CachedSession
 
+from syncify.api._authorise import APIAuthoriser
+from syncify.api.exception import APIError
 from syncify.utils.logger import Logger
-from ._authorise import APIAuthoriser
-from .exception import APIError
 
 _DEFAULT_CACHE_PATH = join(dirname(dirname(dirname(__file__))), ".api_cache")
 
@@ -64,8 +64,6 @@ class RequestHandler(APIAuthoriser, Logger):
             self.session = CachedSession(cache_path, expire_after=cache_expiry, allowable_methods=["GET"])
         else:
             self.session = Session()
-
-        self.auth()
 
     def auth(self, force_load: bool = False, force_new: bool = False) -> dict[str, str]:
         headers = super().auth(force_load=force_load, force_new=force_new)

@@ -100,6 +100,7 @@ class TestAPIAuthoriser:
     @staticmethod
     def test_user_auth(authoriser: APIAuthoriser, mocker: MockerFixture, requests_mock: Mocker):
         user_url = f"http://{APIAuthoriser._user_auth_socket_address}:{APIAuthoriser._user_auth_socket_port + 1}"
+        authoriser.auth_args = {"url": ""}
         authoriser.user_args = {"url": user_url}
 
         redirect_uri = f"http://{authoriser._user_auth_socket_address}:{authoriser._user_auth_socket_port}/"
@@ -121,8 +122,9 @@ class TestAPIAuthoriser:
 
         assert authoriser._auth_user() == code
 
-        authoriser._enrich_user_args()
-        assert authoriser.user_args["data"]["code"] == code
+        authoriser._authenticate_user()
+        assert authoriser.auth_args["data"]["code"] == code
+        assert authoriser.auth_args["data"]["redirect_uri"] == redirect_uri
 
     def test_request_token_1(self, authoriser: APIAuthoriser, token: dict[str, Any], requests_mock: Mocker):
         authoriser.auth_args = {

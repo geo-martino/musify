@@ -10,7 +10,7 @@ from urllib.request import urlopen, Request
 
 from PIL import Image, UnidentifiedImageError
 
-from .exception import InvalidFileType, ImageLoadError
+from syncify.local.exception import InvalidFileType, ImageLoadError
 
 
 class File(metaclass=ABCMeta):

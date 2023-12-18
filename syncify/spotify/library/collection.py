@@ -8,8 +8,8 @@ from syncify.remote import APIMethodInputType
 from syncify.remote.enums import RemoteIDType, RemoteObjectType
 from syncify.remote.library.collection import RemoteAlbum
 from syncify.spotify.base import SpotifyItem
+from syncify.spotify.library.item import SpotifyTrack, SpotifyArtist
 from syncify.spotify.processors.wrangle import SpotifyObjectWranglerMixin
-from .item import SpotifyTrack, SpotifyArtist
 
 
 class SpotifyCollection[T: SpotifyItem](SpotifyObjectWranglerMixin, ItemCollection, metaclass=ABCMeta):

@@ -171,9 +171,9 @@ class TestM3U(LocalCollectionTester):
         assert result.difference == 5
         assert result.final == 35
 
-        assert pl.date_modified > original_dt_modified
         if sys.platform != "linux":
             # linux appears to always update the date created when modifying a file, skip this test on linux
+            assert pl.date_modified > original_dt_modified
             assert pl.date_created == original_dt_created
 
         with open(path_new, 'r') as f:

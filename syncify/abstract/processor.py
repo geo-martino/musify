@@ -3,8 +3,8 @@ from collections.abc import Mapping, Callable, Iterable
 from functools import partial, update_wrapper
 from typing import Any, Self, Optional
 
+from syncify.abstract.misc import PrettyPrinter
 from syncify.processors.exception import ProcessorLookupError
-from .misc import PrettyPrinter
 
 
 class Processor(PrettyPrinter, metaclass=ABCMeta):

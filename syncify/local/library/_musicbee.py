@@ -11,11 +11,11 @@ from lxml.etree import iterparse
 
 from syncify.local import File
 from syncify.local.exception import MusicBeeIDError, XMLReaderError, MusicBeeError
+from syncify.local.library._library import LocalLibrary
 from syncify.local.playlist import LocalPlaylist
 from syncify.local.track import LocalTrack
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitCollection, Number
-from ._library import LocalLibrary
 
 
 class MusicBee(LocalLibrary, File):

@@ -10,10 +10,10 @@ from syncify.abstract.item import Item
 from syncify.abstract.processor import DynamicProcessor, MusicBeeProcessor, dynamicprocessormethod
 from syncify.fields import LocalTrackField
 from syncify.local.exception import FieldError
+from syncify.processors.exception import ItemComparerError
+from syncify.processors.time import TimeMapper
 from syncify.utils import UnitSequence
 from syncify.utils.helpers import to_collection
-from .exception import ItemComparerError
-from .time import TimeMapper
 
 # Map of MusicBee field name to Field enum
 # noinspection SpellCheckingInspection

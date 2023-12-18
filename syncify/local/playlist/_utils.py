@@ -2,12 +2,12 @@ from collections.abc import Iterable, Collection
 from os.path import splitext
 
 from syncify.local.exception import InvalidFileType
+from syncify.local.playlist._m3u import M3U
+from syncify.local.playlist._playlist import LocalPlaylist
+from syncify.local.playlist._xautopf import XAutoPF
 from syncify.local.track import LocalTrack
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitCollection
-from ._m3u import M3U
-from ._playlist import LocalPlaylist
-from ._xautopf import XAutoPF
 
 PLAYLIST_CLASSES = frozenset({M3U, XAutoPF})
 PLAYLIST_FILETYPES = frozenset(filetype for c in PLAYLIST_CLASSES for filetype in c.valid_extensions)

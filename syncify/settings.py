@@ -11,12 +11,12 @@ from typing import Any
 
 import yaml
 
-from . import PROGRAM_NAME
-from .local.exception import InvalidFileType
-from .remote.processors.search import AlgorithmSettings
-from .spotify.api import API_AUTH_BASIC, API_AUTH_USER
-from .utils.helpers import to_collection
-from .utils.logger import Logger
+from syncify import PROGRAM_NAME
+from syncify.local.exception import InvalidFileType
+from syncify.remote.processors.search import AlgorithmSettings
+from syncify.spotify.api import API_AUTH_BASIC, API_AUTH_USER
+from syncify.utils.helpers import to_collection
+from syncify.utils.logger import Logger
 
 
 def _update_map[T: MutableMapping](source: T, new: Mapping, extend: bool = True, overwrite: bool = False) -> T:

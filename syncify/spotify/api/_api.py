@@ -1,11 +1,12 @@
+import os
 from typing import Any
 
 from syncify import PROGRAM_NAME
 from syncify.spotify import URL_API, URL_AUTH
+from syncify.spotify.api._core import SpotifyAPICore
+from syncify.spotify.api._item import SpotifyAPIItems
+from syncify.spotify.api._playlist import SpotifyAPIPlaylists
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
-from ._core import SpotifyAPICore
-from ._item import SpotifyAPIItems
-from ._playlist import SpotifyAPIPlaylists
 
 # non-user authenticated access
 API_AUTH_BASIC = {
@@ -23,8 +24,9 @@ API_AUTH_BASIC = {
         "data": {
             "grant_type": "refresh_token",
             "refresh_token": None,
-            "client_id": "{client_id}",
-            "client_secret": "{client_secret}",
+        },
+        "headers": {
+            "content-type": "application/x-www-form-urlencoded",
         },
     },
     "test_expiry": 600,
@@ -40,23 +42,22 @@ API_AUTH_USER = {
         "data": {
             "grant_type": "authorization_code",
             "code": None,
-            "client_id": "{client_id}",
-            "client_secret": "{client_secret}",
+            "redirect_uri": None,
+        },
+        "headers": {
+            "content-type": "application/x-www-form-urlencoded",
+            "Authorization": "Basic ..."
         },
     },
     "user_args": {
         "url": f"{URL_AUTH}/authorize",
         "params": {
-            "response_type": "code",
             "client_id": "{client_id}",
-            "scope": " ".join(
-                [
-                    "playlist-modify-public",
-                    "playlist-modify-private",
-                    "playlist-read-collaborative",
-                ]
-            ),
+            "response_type": "code",
+            "redirect_uri": None,
             "state": PROGRAM_NAME,
+            "scope": "{scopes}",
+            "show_dialog": False,
         },
     },
     "refresh_args": {
@@ -64,8 +65,10 @@ API_AUTH_USER = {
         "data": {
             "grant_type": "refresh_token",
             "refresh_token": None,
-            "client_id": "{client_id}",
-            "client_secret": "{client_secret}",
+        },
+        "headers": {
+            "content-type": "application/x-www-form-urlencoded",
+            "Authorization": "Basic ..."
         },
     },
     "test_args": {"url": f"{URL_API}/me"},
@@ -108,3 +111,34 @@ class SpotifyAPI(SpotifyDataWrangler, SpotifyAPICore, SpotifyAPIItems, SpotifyAP
     def __init__(self, **handler_kwargs):
         super().__init__(**handler_kwargs)
         self._user_data: dict[str, Any] = {}
+
+
+if __name__ == "__main__":
+    import base64
+    import json
+
+    from syncify.remote.enums import RemoteObjectType as ObjectType
+    from syncify.settings import _format_map
+
+    client_id = os.getenv("CLIENT_ID")
+    client_secret = os.getenv("CLIENT_SECRET")
+    client_base64 = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
+
+    format_map = {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "token_file_path": "_data/token.json",
+        "scopes": " ".join([
+            "user-library-read",
+            "user-follow-read",
+            "playlist-modify-public",
+            "playlist-modify-private",
+            "playlist-read-collaborative"
+        ]),
+    }
+    _format_map(API_AUTH_USER, format_map=format_map)
+    API_AUTH_USER["auth_args"]["headers"]["Authorization"] = f"Basic {client_base64}"
+    API_AUTH_USER["refresh_args"]["headers"]["Authorization"] = f"Basic {client_base64}"
+
+    api = SpotifyAPI(**API_AUTH_USER)
+    api.auth(force_new=False)

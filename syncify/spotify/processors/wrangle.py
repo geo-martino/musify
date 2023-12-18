@@ -67,11 +67,11 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
             return RemoteObjectType.from_name(value["type"].casefold().rstrip('s'))[0]
 
         value = value.strip()
-        url_check = urlparse(value.replace("/v1/", '/')).netloc.split(".")
         uri_check = value.split(':')
 
-        if len(url_check) > 0 and url_check[0] == "open" or url_check[0] == "api":  # open/api URL
-            url_path = urlparse(value.replace("/v1/", '/')).path.split("/")
+        if value.startswith(URL_API) or value.startswith(URL_EXT):  # open/api URL
+            value = value.replace(URL_API, "") if value.startswith(URL_API) else value.replace(URL_EXT, "")
+            url_path = urlparse(value).path.split("/")
             for chunk in url_path:
                 try:
                     return RemoteObjectType.from_name(chunk.casefold().rstrip('s'))[0]

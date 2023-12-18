@@ -1,7 +1,7 @@
 from abc import ABCMeta
 
 from syncify.abstract.item import BaseObject, Item
-from ._file import File
+from syncify.local._file import File
 
 
 class LocalObject(BaseObject, File, metaclass=ABCMeta):

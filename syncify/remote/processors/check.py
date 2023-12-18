@@ -12,10 +12,10 @@ from syncify.abstract.misc import Result
 from syncify.processors.match import ItemMatcher
 from syncify.remote.api import RemoteAPI
 from syncify.remote.enums import RemoteObjectType, RemoteIDType
+from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.remote.types import RemoteObjectClasses
 from syncify.utils.helpers import get_user_input
 from syncify.utils.logger import REPORT
-from .wrangle import RemoteDataWrangler
 
 
 @dataclass(frozen=True)

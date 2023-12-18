@@ -10,8 +10,8 @@ from webbrowser import open as webopen
 import requests
 
 from syncify import PROGRAM_NAME
+from syncify.api.exception import APIError
 from syncify.utils.logger import Logger
-from .exception import APIError
 
 
 class APIAuthoriser(Logger):
@@ -173,7 +173,7 @@ class APIAuthoriser(Logger):
         if self.auth_args and self.token is None:
             log = "Saved access token not found" if self.token is None else "New token generation forced"
             self.logger.debug(f"{log}. Generating new token...")
-            self._enrich_user_args()
+            self._authenticate_user()
             self.token = self._request_token(**self.auth_args)
 
         # test current token
@@ -200,7 +200,7 @@ class APIAuthoriser(Logger):
                 log = "Access token is not valid and and no refresh data found"
             self.logger.debug(f"{log}. Generating new token...")
 
-            self._enrich_user_args()
+            self._authenticate_user()
             self.token = self._request_token(**self.auth_args)
             valid = self.test()
 
@@ -222,7 +222,6 @@ class APIAuthoriser(Logger):
         :param data: requests.post() ``data`` parameter to send as a request for authorisation.
         :param requests_args: Other requests.post() parameters to send as a request for authorisation.
         """
-        # post auth request
         auth_response = requests.post(**requests_args).json()
 
         # add granted and expiry times to token
@@ -236,14 +235,14 @@ class APIAuthoriser(Logger):
             if self.token is not None and "refresh_token" in self.token:
                 auth_response["refresh_token"] = self.token["refresh_token"]
 
-        self.logger.debug("New token successfully generated.")
+        self.logger.debug(f"New token successfully generated: {self.token_safe}")
         return auth_response
 
-    def _enrich_user_args(self) -> None:
-        if self.user_args and not self.user_args.get("data", {}).get("code"):
-            if "data" not in self.user_args:
-                self.user_args["data"] = {}
-            self.user_args["data"]["code"] = self._auth_user()
+    def _authenticate_user(self) -> None:
+        if self.user_args and self.auth_args and not self.auth_args.get("data", {}).get("code"):
+            if "data" not in self.auth_args:
+                self.auth_args["data"] = {}
+            self.auth_args["data"]["code"] = self._auth_user()
 
     def _auth_user(self) -> str:
         """
@@ -265,10 +264,13 @@ class APIAuthoriser(Logger):
         )
         print(f"\33[1mWaiting for code, timeout in {socket_listener.timeout} seconds... \33[0m")
 
-        # add redirect uri to user_args
+        # add redirect uri to auth_args and user_args
+        if not self.auth_args.get("data"):
+            self.auth_args["data"] = {}
         if not self.user_args.get("params"):
             self.user_args["params"] = {}
         redirect_uri = f"http://{self._user_auth_socket_address}:{self._user_auth_socket_port}/"
+        self.auth_args["data"]["redirect_uri"] = redirect_uri
         self.user_args["params"]["redirect_uri"] = redirect_uri
 
         # open authorise webpage and wait for the redirect

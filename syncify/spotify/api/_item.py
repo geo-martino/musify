@@ -118,7 +118,7 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
         params = params if params is not None else {}
         for idx in bar:  # get responses in batches
             id_chunk = id_chunks[idx]
-            params_chunk = params | {"ids": ','.join(id_chunk)}
+            params_chunk = params | {"ids": ",".join(id_chunk)}
             log = [f"{unit.title() + ':':<11} {len(results) + len(id_chunk):>6}/{len(id_list):<6}"]
 
             response = self.get(url, params=params_chunk, use_cache=use_cache, log_pad=43, log_extra=log)
@@ -158,30 +158,18 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
 
         # this usually happens on the items block of a current user's playlist
         if "limit" not in items_block:
-            items_block['limit'] = 50
+            items_block["limit"] = 50
         if "next" not in items_block:
-            items_block['next'] = items_block['href']
+            items_block["next"] = items_block["href"]
 
         if "cursors" in items_block:  # happens on some item types e.g. user's followed artists
-            items_block['next'] = items_block['cursors']["after"]
-            items_block['previous'] = items_block['cursors']["before"]
-
-        # TODO: check this assumption
-        # ISSUE: Spotify ALWAYS gives the initial 'next' url as {url}?offset=0&limit={limit}
-        # This means items 0-{limit} will be added twice if extending the items by the response from the 'next' url
-        # WORKAROUND: manually create a valid 'next' url when response given as input
-        # if isinstance(items_block.get(self.items_key), Collection) and items_block.get("next"):
-        #     url_parsed = urlparse(items_block["next"])
-        #     params = {"offset": len(items_block[self.items_key]), "limit": items_block["limit"]}
-        #
-        #     url_parts = list(url_parsed[:])
-        #     url_parts[4] = urlencode(params)
-        #     items_block["next"] = str(urlunparse(url_parts))
+            items_block["next"] = items_block["cursors"].get("after")
+            items_block["previous"] = items_block["cursors"].get("before")
 
         response = items_block
         while response.get("next"):  # loop through each page
-            log_count = min(bar.n + response['limit'], response['total'])
-            log = [f"{log_count:>6}/{response['total']:<6} {unit}"]
+            log_count = min(bar.n + response["limit"], response["total"])
+            log = [f"{log_count:>6}/{response["total"]:<6} {unit}"]
 
             response = self.get(response["next"], use_cache=use_cache, log_pad=95, log_extra=log)
             if key.rstrip("s") + "s" in response:
@@ -192,8 +180,8 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
             bar.update(len(response[self.items_key]))
 
             if "cursors" in response:  # happens on some item types e.g. user's followed artists
-                response['next'] = response['cursors']["after"]
-                response['previous'] = response['cursors']["before"]
+                response["next"] = response["cursors"].get("after")
+                response["previous"] = response["cursors"].get("before")
 
         if bar is not None:
             bar.close()
@@ -303,18 +291,20 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
                 kind=kind
             )
 
+        unit = kind.name.casefold() + "s"
+        params = {"limit": limit_value(limit, floor=1, ceil=50)}
+
         if user is not None:
             url = f"{self.convert(user, kind=RemoteObjectType.USER, type_out=RemoteIDType.URL)}/{kind.name.casefold()}s"
             unit_prefix = "user"
         elif kind == RemoteObjectType.ARTIST:
             url = f"{self.api_url_base}/me/following"
             unit_prefix = "current user's followed"
+            params["type"] = "artist"
         else:
             url = f"{self.api_url_base}/me/{kind.name.casefold()}s"
             unit_prefix = "current user's" if kind == RemoteObjectType.PLAYLIST else "current user's saved"
 
-        unit = kind.name.casefold() + "s"
-        params = {"limit": limit_value(limit, floor=1, ceil=50)}
         initial = self.get(url, params=params, use_cache=use_cache, log_pad=71)
         results = self._extend_items(initial, key=unit, unit=f"{unit_prefix} {unit}", use_cache=use_cache)
 

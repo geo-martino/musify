@@ -7,11 +7,11 @@ from syncify.abstract.collection import Library, Playlist
 from syncify.abstract.item import Item
 from syncify.remote.api import RemoteAPI
 from syncify.remote.base import RemoteObject
+from syncify.remote.library.item import RemoteTrack
+from syncify.remote.library.playlist import SyncResultRemotePlaylist, RemotePlaylist
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.remote.types import RemoteObjectClasses
 from syncify.utils.logger import REPORT, STAT
-from .item import RemoteTrack
-from .playlist import SyncResultRemotePlaylist, RemotePlaylist
 
 
 # noinspection PyShadowingNames
