@@ -2,9 +2,9 @@ from collections.abc import Collection, Mapping, Iterable
 from typing import Any
 
 from syncify.abstract.collection import Playlist, Library
+from syncify.remote.config import RemoteObjectClasses
 from syncify.remote.enums import RemoteObjectType
 from syncify.remote.library.library import RemoteLibrary
-from syncify.remote.config import RemoteObjectClasses
 from syncify.spotify.library.base import SpotifyItem
 from syncify.spotify.library.collection import SpotifyAlbum
 from syncify.spotify.library.item import SpotifyTrack
@@ -66,7 +66,8 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyDataWrangler):
 
             albums = {response["uri"]: response for response in album_responses}
             for track in self.tracks:
-                track.response["album"] = albums[track.response["album"]["uri"]]
+                # noinspection PyProtectedMember
+                track._response["album"] = albums[track.response["album"]["uri"]]
 
         if artists:  # enrich track artists
             artist_uris: set[str] = {artist["uri"] for track in self.tracks for artist in track.response["artists"]}
@@ -76,7 +77,8 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyDataWrangler):
 
             artists = {response["uri"]: response for response in artist_responses}
             for track in self.tracks:
-                track.response["artists"] = [artists[artist["uri"]] for artist in track.response["artists"]]
+                # noinspection PyProtectedMember
+                track._response["artists"] = [artists[artist["uri"]] for artist in track.response["artists"]]
 
         self.print_line()
         self.logger.debug("Enrich Spotify library: DONE\n")

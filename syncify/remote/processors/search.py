@@ -10,8 +10,8 @@ from syncify.abstract.misc import Result
 from syncify.processors.match import ItemMatcher
 from syncify.remote.api import RemoteAPI
 from syncify.remote.base import Remote
-from syncify.remote.enums import RemoteObjectType
 from syncify.remote.config import RemoteObjectClasses
+from syncify.remote.enums import RemoteObjectType
 from syncify.utils.logger import REPORT
 
 

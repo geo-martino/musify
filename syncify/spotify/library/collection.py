@@ -4,9 +4,9 @@ from copy import copy
 from typing import Any, Self
 
 from syncify.abstract.collection import ItemCollection
-from syncify.remote.types import APIMethodInputType
 from syncify.remote.enums import RemoteIDType, RemoteObjectType
 from syncify.remote.library.collection import RemoteAlbum
+from syncify.remote.types import APIMethodInputType
 from syncify.spotify.library.base import SpotifyItem, SpotifyObjectWranglerMixin
 from syncify.spotify.library.item import SpotifyTrack, SpotifyArtist
 
@@ -123,7 +123,7 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollection):
 
         if not items:  # no items given, regenerate API response from the URL
             id_ = cls.extract_ids(value)[0]
-            obj.response = {
+            obj._response = {
                 "href": cls.convert(id_, RemoteObjectType.ALBUM, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
             }
             obj.reload(use_cache=use_cache)
@@ -155,7 +155,7 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollection):
 
         return obj
 
-    def reload(self, use_cache: bool = True) -> None:
+    def reload(self, use_cache: bool = True, *_, **__) -> None:
         self._check_for_api()
 
         # reload with enriched data

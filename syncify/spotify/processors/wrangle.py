@@ -3,10 +3,10 @@ from typing import Any
 from urllib.parse import urlparse
 
 from syncify.exception import SyncifyEnumError
-from syncify.remote.types import APIMethodInputType
 from syncify.remote.enums import RemoteIDType, RemoteObjectType
 from syncify.remote.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
 from syncify.remote.processors.wrangle import RemoteDataWrangler
+from syncify.remote.types import APIMethodInputType
 from syncify.spotify import URL_API, URL_EXT, SPOTIFY_UNAVAILABLE_URI
 from syncify.spotify.base import SpotifyRemote
 

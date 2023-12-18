@@ -1,6 +1,6 @@
 import re
 from collections.abc import Callable
-from copy import deepcopy, copy
+from copy import deepcopy
 from datetime import datetime
 from random import choice, randrange, sample, random
 from typing import Any
@@ -83,6 +83,8 @@ class SpotifyMock(Mocker):
         }
         self.audio_analysis = {t["id"]: {"track": {"duration": t["duration_ms"] / 1000}} for t in self.tracks}
 
+        self.setup_limited_valid_responses()
+
         # setup responses as needed for each item type
         playlists_map = {item["id"]: item for item in self.playlists}
         self.setup_items_response(kind=ObjectType.PLAYLIST, id_map=playlists_map, batchable=False)
@@ -161,6 +163,18 @@ class SpotifyMock(Mocker):
                 requests.append(request)
 
         return requests
+
+    def setup_limited_valid_responses(self):
+        """Sets up limited number of cross-referenced valid responses for RemoteObject tests"""
+        self.tracks[0]["artists"] = deepcopy(self.artists[0:2])
+        for artist in self.tracks[0]["artists"]:
+            for key in {"followers", "genres", "images", "popularity"}:
+                artist.pop(key)
+
+        self.tracks[0]["album"] = deepcopy(self.albums[0])
+        self.tracks[0]["album"]["artists"] = deepcopy(self.tracks[0]["artists"])
+        for key in {"tracks", "copyrights", "external_ids", "genres", "label", "popularity"}:
+            self.tracks[0]["album"].pop(key)
 
     def setup_search_response(self):
         """Setup requests mock for getting responses from the ``/search`` endpoint"""
@@ -445,7 +459,7 @@ class SpotifyMock(Mocker):
             "name": random_str(10, 30),
             "popularity": randrange(0, 100),
             "preview_url": None,
-            "track_number": random_str(1, 30),
+            "track_number": randrange(1, 30),
             "type": kind,
             "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{track_id}",
             "is_local": False

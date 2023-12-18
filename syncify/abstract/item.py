@@ -63,12 +63,6 @@ class Item(ObjectPrinterMixin, metaclass=ABCMeta):
         """Does this track have a valid associated URI. When None, answer is unknown."""
         raise NotImplementedError
 
-    @property
-    @abstractmethod
-    def length(self) -> float:
-        """Total duration of this item in seconds"""
-        raise NotImplementedError
-
     def merge(self, item: Self, tags: UnitIterable[TagField] = FieldCombined.ALL) -> None:
         """Set the tags of this item equal to the given ``item``. Give a list of ``tags`` to limit which are set"""
         tag_names = TagField.__tags__ if tags == FieldCombined.ALL else set(TagField.to_tags(tags))
@@ -105,10 +99,51 @@ class Item(ObjectPrinterMixin, metaclass=ABCMeta):
         return setattr(self, key, value)
 
 
+class Artist(Item, metaclass=ABCMeta):
+    """
+    Metadata/tags associated with an artist.
+    
+    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
+    """
+
+    @property
+    def name(self):
+        return self.artist
+
+    @property
+    @abstractmethod
+    def artist(self) -> str:
+        """The artist's name"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def genres(self) -> list[str] | None:
+        """List of genres associated with this artist"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def image_links(self) -> dict[str, str]:
+        """The images associated with this artist in the form ``{image name: image link}``"""
+        raise NotImplementedError
+
+    @property
+    def has_image(self) -> bool:
+        """Does this artist have images associated with them"""
+        return len(self.image_links) > 0
+
+    @property
+    @abstractmethod
+    def rating(self) -> int | None:
+        """The popularity of this artist"""
+        raise NotImplementedError
+
+
 class Track(Item, metaclass=ABCMeta):
     """
     Metadata/tags associated with a track.
-    
+
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
 
@@ -127,6 +162,12 @@ class Track(Item, metaclass=ABCMeta):
     @abstractmethod
     def artist(self) -> str | None:
         """Joined string representation of all artists featured on this track"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def artists(self) -> list[str | Artist]:
+        """List of all artists featured on this track."""
         raise NotImplementedError
 
     @property
@@ -224,49 +265,3 @@ class Track(Item, metaclass=ABCMeta):
         """The rating for this track"""
         raise NotImplementedError
 
-
-class Artist(Item, metaclass=ABCMeta):
-    """
-    Metadata/tags associated with an artist.
-    
-    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
-    """
-
-    @property
-    def name(self):
-        return self.artist
-
-    @property
-    @abstractmethod
-    def artist(self) -> str:
-        """The artist's name"""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def genres(self) -> list[str] | None:
-        """List of genres associated with this artist"""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def image_links(self) -> dict[str, str]:
-        """The images associated with this artist in the form ``{image name: image link}``"""
-        raise NotImplementedError
-
-    @property
-    def has_image(self) -> bool:
-        """Does this artist have images associated with them"""
-        return len(self.image_links) > 0
-
-    @property
-    @abstractmethod
-    def length(self) -> int | None:
-        """The total number of followers for this artist"""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def rating(self) -> int | None:
-        """The popularity of this artist"""
-        raise NotImplementedError

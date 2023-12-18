@@ -134,13 +134,20 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
         :raise ItemLimiterError: When the given limit type cannot be found
         """
         if 10 < self.kind.value < 20:
+            if not hasattr(item, "length"):
+                raise ItemLimiterError("The given item cannot be limited on length as it does not have a length.")
+
             factors = (1, 60, 60, 24, 7)[:self.kind.value % 10]
+            # noinspection PyUnresolvedReferences
             return item.length / reduce(mul, factors, 1)
+
         elif 20 <= self.kind.value < 30:
             if not isinstance(item, File):
                 raise ItemLimiterError("The given item cannot be limited on bytes as it is not a file.")
+
             bytes_scale = 1000
             return item.size / (bytes_scale ** (self.kind.value % 10))
+
         else:
             raise ItemLimiterError(f"Unrecognised LimitType: {self.kind}")
 

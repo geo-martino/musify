@@ -4,12 +4,12 @@ from typing import Self
 
 from syncify.abstract.collection import ItemCollection, Album
 from syncify.abstract.item import Item
-from syncify.remote.types import APIMethodInputType
-from syncify.remote.library.base import RemoteObject
 from syncify.remote.enums import RemoteIDType
 from syncify.remote.exception import RemoteIDTypeError
-from syncify.remote.library.item import RemoteTrack
+from syncify.remote.library.base import RemoteObject
 from syncify.remote.library.base import RemoteObjectWranglerMixin
+from syncify.remote.library.item import RemoteTrack
+from syncify.remote.types import APIMethodInputType
 
 
 class RemoteCollection[T: RemoteObject](RemoteObjectWranglerMixin, ItemCollection[T], metaclass=ABCMeta):

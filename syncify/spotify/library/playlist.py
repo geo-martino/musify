@@ -2,9 +2,9 @@ from collections.abc import Mapping, Iterable, MutableMapping
 from datetime import datetime
 from typing import Any, Self
 
-from syncify.remote.types import APIMethodInputType
 from syncify.remote.enums import RemoteObjectType
 from syncify.remote.library.playlist import RemotePlaylist
+from syncify.remote.types import APIMethodInputType
 from syncify.spotify.library.collection import SpotifyCollection
 from syncify.spotify.library.item import SpotifyTrack
 
@@ -101,7 +101,7 @@ class SpotifyPlaylist(SpotifyCollection, RemotePlaylist[SpotifyTrack]):
         response = cls._load_response(value, use_cache=use_cache)
 
         if not items:  # no items given, regenerate API response from the URL
-            obj.response = {"href": cls.api.get_playlist_url(value)}
+            obj._response = {"href": cls.api.get_playlist_url(value)}
             obj.reload(use_cache=use_cache)
         else:  # attempt to find items for this playlist in the given items
             uri_tracks: Mapping[str, SpotifyTrack] = {track.uri: track for track in items}
@@ -129,7 +129,7 @@ class SpotifyPlaylist(SpotifyCollection, RemotePlaylist[SpotifyTrack]):
 
         return obj
 
-    def reload(self, use_cache: bool = True) -> None:
+    def reload(self, use_cache: bool = True, *_, **__) -> None:
         self._check_for_api()
 
         # reload with enriched data

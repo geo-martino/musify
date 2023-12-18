@@ -2,10 +2,10 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping
 from typing import Any
 
-from syncify.remote.types import APIMethodInputType
 from syncify.remote.base import Remote
 from syncify.remote.enums import RemoteIDType, RemoteObjectType
 from syncify.remote.exception import RemoteObjectTypeError
+from syncify.remote.types import APIMethodInputType
 
 
 class RemoteDataWrangler(Remote, metaclass=ABCMeta):

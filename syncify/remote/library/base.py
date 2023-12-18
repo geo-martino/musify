@@ -1,14 +1,14 @@
 from abc import ABCMeta, abstractmethod
-from collections.abc import MutableMapping
+from collections.abc import MutableMapping, Mapping
 from typing import Any, Self
 
-from syncify.remote.api import RemoteAPI
-from syncify.remote.processors.wrangle import RemoteDataWrangler
-from syncify.remote.types import APIMethodInputType
-from syncify.remote.base import Remote
 from syncify.abstract.item import BaseObject, Item
 from syncify.abstract.misc import PrettyPrinter
 from syncify.api.exception import APIError
+from syncify.remote.api import RemoteAPI
+from syncify.remote.base import Remote
+from syncify.remote.processors.wrangle import RemoteDataWrangler
+from syncify.remote.types import APIMethodInputType
 
 
 class RemoteObjectMixin(Remote, BaseObject, metaclass=ABCMeta):
@@ -57,9 +57,14 @@ class RemoteObject(RemoteObjectMixin, PrettyPrinter, metaclass=ABCMeta):
         """The external URL of this item/collection."""
         raise NotImplementedError
 
+    @property
+    def response(self) -> Mapping[str, Any]:
+        """The stored API response for this item/collection."""
+        return self._response
+
     def __init__(self, response: MutableMapping[str, Any]):
         super().__init__()
-        self.response = response
+        self._response = response
         self._check_type()
 
     @abstractmethod
@@ -78,7 +83,7 @@ class RemoteObject(RemoteObjectMixin, PrettyPrinter, metaclass=ABCMeta):
 
         :raise APIError: When the API has not been set for this class.
         """
-        if cls.api is None:
+        if not hasattr(cls, "api") or cls.api is None:
             raise APIError("API is not set. Assign an API to this class first.")
 
     @classmethod
@@ -103,7 +108,7 @@ class RemoteObject(RemoteObjectMixin, PrettyPrinter, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def reload(self, use_cache: bool = True) -> None:
+    def reload(self, use_cache: bool = True, *args, **kwargs) -> None:
         """
         Reload this object from the API, calling all required endpoints
         to get a complete set of data for this item type
@@ -111,21 +116,6 @@ class RemoteObject(RemoteObjectMixin, PrettyPrinter, metaclass=ABCMeta):
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         """
         raise NotImplementedError
-
-    def refresh(self, use_cache: bool = True) -> None:
-        """
-        Quickly refresh this item, calling the stored ``url`` and extracting metadata from the response
-
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
-        """
-        self.__init__(self.api.get(url=self.url, use_cache=use_cache, log_pad=self._url_pad))
-
-    def replace(self, response: MutableMapping[str, Any]) -> None:
-        """
-        Replace the extracted metadata on this object by extracting data from the given response
-        No API calls are made for this function.
-        """
-        self.__init__(response)
 
     def as_dict(self):
         return {

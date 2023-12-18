@@ -109,7 +109,6 @@ class ArtistItemField(TagField):
     ARTIST = FieldCombined.ARTIST.value
     GENRES = FieldCombined.GENRES.value
     IMAGES = FieldCombined.IMAGES.value
-    LENGTH = FieldCombined.LENGTH.value
     RATING = FieldCombined.RATING.value
 
     # remote properties

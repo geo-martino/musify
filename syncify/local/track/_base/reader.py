@@ -50,8 +50,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
 
     @property
     def artists(self) -> list[str]:
-        """List of all artists featured on this track."""
-        return self._artist.split(self.tag_sep)
+        return self._artist.split(self.tag_sep) if self._artist else []
 
     @artists.setter
     def artists(self, value: list[str]):

@@ -1,12 +1,12 @@
 from abc import ABCMeta
 
+from syncify.abstract.misc import PrettyPrinter
+from syncify.remote.enums import RemoteObjectType
+from syncify.remote.exception import RemoteObjectTypeError
+from syncify.remote.library.base import RemoteObject, RemoteItem
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.base import SpotifyRemote
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
-from syncify.abstract.misc import PrettyPrinter
-from syncify.remote.enums import RemoteObjectType
-from syncify.remote.library.base import RemoteObject, RemoteItem
-from syncify.remote.exception import RemoteObjectTypeError
 
 
 class SpotifyObjectMixin(SpotifyRemote, RemoteObject, metaclass=ABCMeta):
@@ -14,7 +14,11 @@ class SpotifyObjectMixin(SpotifyRemote, RemoteObject, metaclass=ABCMeta):
 
 
 class SpotifyObject(SpotifyObjectMixin, PrettyPrinter, metaclass=ABCMeta):
-    """Generic base class for Spotify-stored objects. Extracts key data from a Spotify API JSON response."""
+    """
+    Generic base class for Spotify-stored objects. Extracts key data from a Spotify API JSON response.
+
+    :ivar api: The instantiated and authorised :py:class:`SpotifyAPI` object for this source type.
+    """
 
     _url_pad = 71
     api: SpotifyAPI

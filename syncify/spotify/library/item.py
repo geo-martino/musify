@@ -1,12 +1,62 @@
 from collections.abc import MutableMapping
 from typing import Any, Self
 
-from syncify.remote.types import APIMethodInputType
 from syncify.remote.enums import RemoteIDType, RemoteObjectType
 from syncify.remote.library.item import RemoteTrack, RemoteArtist
+from syncify.remote.types import APIMethodInputType
 from syncify.spotify.library.base import SpotifyItemWranglerMixin
 from syncify.utils import UnitCollection
 from syncify.utils.helpers import to_collection
+
+
+class SpotifyArtist(SpotifyItemWranglerMixin, RemoteArtist):
+    """Extracts key ``artist`` data from a Spotify API JSON response."""
+
+    @property
+    def name(self):
+        return self.artist
+
+    @property
+    def artist(self):
+        return self.response["name"]
+
+    @property
+    def genres(self):
+        return self.response.get("genres")
+
+    @property
+    def image_links(self):
+        images = {image["height"]: image["url"] for image in self.response.get("images", [])}
+        return {"cover_front": url for height, url in images.items() if height == max(images)}
+
+    @property
+    def has_image(self):
+        return len(self.response.get("images", [])) > 0
+
+    @property
+    def rating(self):
+        return self.response.get("popularity")
+
+    @property
+    def followers(self) -> int | None:
+        """The total number of followers for this artist"""
+        return self.response.get("followers", {}).get("total")
+
+    @classmethod
+    def load(cls, value: APIMethodInputType, use_cache: bool = True, *_, **__) -> Self:
+        cls._check_for_api()
+        obj = cls.__new__(cls)
+
+        # set a mock response with URL to load from
+        id_ = cls.extract_ids(value)[0]
+        obj._response = {
+            "href": cls.convert(id_, kind=RemoteObjectType.ARTIST, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
+        }
+        obj.reload(use_cache=use_cache)
+        return obj
+
+    def reload(self, use_cache: bool = True, *_, **__) -> None:
+        self.__init__(self.api.get(url=self.url, use_cache=use_cache, log_pad=self._url_pad))
 
 
 class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
@@ -33,9 +83,12 @@ class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
         return artist if artist else None
 
     @property
+    def artists(self) -> list[SpotifyArtist]:
+        return self._artists
+
+    @property
     def album(self):
-        album = self.response.get("album", {})
-        return album.get("name")
+        return self.response.get("album", {}).get("name")
 
     @property
     def album_artist(self):
@@ -49,8 +102,7 @@ class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
 
     @property
     def track_total(self):
-        album = self.response.get("album", {})
-        return album.get("total_tracks")
+        return self.response.get("album", {}).get("total_tracks")
 
     @property
     def genres(self):
@@ -113,7 +165,7 @@ class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
     @property
     def compilation(self) -> bool:
         album = self.response.get("album", {})
-        return album.get("album_group", "") == "compilation"
+        return album.get("album_type", "") == "compilation"
 
     @property
     def comments(self):
@@ -127,12 +179,13 @@ class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
     def image_links(self):
         album = self.response.get("album", {})
         images = {image["height"]: image["url"] for image in album.get("images", [])}
-        return {"cover_front": url for height, url in images.items() if height == max(images)}
+        if not images:
+            return {}
+        return {"cover_front": next(url for height, url in images.items() if height == max(images))}
 
     @property
     def has_image(self):
-        images = self.response.get("album", {}).get("images", [])
-        return images is not None and len(images) > 0
+        return len(self.response.get("album", {}).get("images", [])) > 0
 
     @property
     def length(self):
@@ -148,7 +201,7 @@ class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
         self._disc_total = None
         self._comments = None
 
-        self.artists = list(map(SpotifyArtist, response.get("artists", {})))
+        self._artists = list(map(SpotifyArtist, response.get("artists", {})))
 
     @classmethod
     def load(cls, value: APIMethodInputType, use_cache: bool = True, *_, **__) -> Self:
@@ -157,69 +210,19 @@ class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
 
         # set a mock response with URL to load from
         id_ = cls.extract_ids(value)[0]
-        obj.response = {
+        obj._response = {
             "href": cls.convert(id_, kind=RemoteObjectType.TRACK, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
         }
         obj.reload(use_cache=use_cache)
         return obj
 
-    def reload(self, use_cache: bool = True) -> None:
+    def reload(self, use_cache: bool = True, *_, **__) -> None:
         self._check_for_api()
 
         # reload with enriched data
         response = self.api.get(self.url, use_cache=use_cache, log_pad=self._url_pad)
-        self.api.get_items(response["album"], kind=RemoteObjectType.ALBUM, use_cache=use_cache)
+        self.api.get_items(response["album"], kind=RemoteObjectType.ALBUM, extend=False, use_cache=use_cache)
         self.api.get_items(response["artists"], kind=RemoteObjectType.ARTIST, use_cache=use_cache)
         self.api.get_tracks_extra(response, features=True, use_cache=use_cache)
 
         self.__init__(response)
-
-
-class SpotifyArtist(SpotifyItemWranglerMixin, RemoteArtist):
-    """Extracts key ``artist`` data from a Spotify API JSON response."""
-
-    @property
-    def name(self):
-        return self.artist
-
-    @property
-    def artist(self):
-        return self.response["name"]
-
-    @property
-    def genres(self):
-        return self.response.get("genres")
-
-    @property
-    def image_links(self):
-        images = {image["height"]: image["url"] for image in self.response.get("images", [])}
-        return {"cover_front": url for height, url in images.items() if height == max(images)}
-
-    @property
-    def has_image(self):
-        images = self.response.get("album", {}).get("images", [])
-        return images is not None and len(images) > 0
-
-    @property
-    def length(self):
-        return self.response.get("followers", {}).get("total")
-
-    @property
-    def rating(self):
-        return self.response.get("popularity")
-
-    @classmethod
-    def load(cls, value: APIMethodInputType, use_cache: bool = True, *_, **__) -> Self:
-        cls._check_for_api()
-        obj = cls.__new__(cls)
-
-        # set a mock response with URL to load from
-        id_ = cls.extract_ids(value)[0]
-        obj.response = {
-            "href": cls.convert(id_, kind=RemoteObjectType.ARTIST, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
-        }
-        obj.reload(use_cache=use_cache)
-        return obj
-
-    def reload(self, use_cache: bool = True) -> None:
-        self.__init__(self.api.get(url=self.url, use_cache=use_cache, log_pad=self._url_pad))
