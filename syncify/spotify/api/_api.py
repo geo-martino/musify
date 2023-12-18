@@ -46,7 +46,7 @@ API_AUTH_USER = {
         },
         "headers": {
             "content-type": "application/x-www-form-urlencoded",
-            "Authorization": "Basic ..."
+            "Authorization": "Basic {client_base64}"
         },
     },
     "user_args": {
@@ -68,7 +68,7 @@ API_AUTH_USER = {
         },
         "headers": {
             "content-type": "application/x-www-form-urlencoded",
-            "Authorization": "Basic ..."
+            "Authorization": "Basic {client_base64}"
         },
     },
     "test_args": {"url": f"{URL_API}/me"},
@@ -124,11 +124,11 @@ if __name__ == "__main__":
 
     client_id = os.getenv("CLIENT_ID")
     client_secret = os.getenv("CLIENT_SECRET")
-    client_base64 = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
 
     format_map = {
         "client_id": client_id,
         "client_secret": client_secret,
+        "client_base64": base64.b64encode(f"{client_id}:{client_secret}".encode()).decode(),
         "token_file_path": "_data/token.json",
         "scopes": " ".join([
             "user-library-read",
@@ -139,8 +139,8 @@ if __name__ == "__main__":
         ]),
     }
     _format_map(API_AUTH_USER, format_map=format_map)
-    API_AUTH_USER["auth_args"]["headers"]["Authorization"] = f"Basic {client_base64}"
-    API_AUTH_USER["refresh_args"]["headers"]["Authorization"] = f"Basic {client_base64}"
 
     api = SpotifyAPI(**API_AUTH_USER)
     api.auth(force_new=False)
+
+    print(api.get_self())

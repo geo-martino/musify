@@ -35,14 +35,16 @@ class RemotePlaylist[T: RemoteTrack](RemoteCollection[T], Playlist[T], metaclass
     """Extracts key ``playlist`` data from a remote API JSON response."""
 
     @property
+    @abstractmethod
     def owner_id(self) -> str:
         """The ID of the owner of this playlist"""
-        return self.response["owner"]["id"]
+        raise NotImplementedError
 
     @property
+    @abstractmethod
     def owner_name(self) -> str:
         """The name of the owner of this playlist"""
-        return self.response["owner"]["display_name"]
+        raise NotImplementedError
 
     @property
     @abstractmethod
@@ -81,6 +83,7 @@ class RemotePlaylist[T: RemoteTrack](RemoteCollection[T], Playlist[T], metaclass
         WARNING: This function will destructively modify your remote playlists.
         """
         self._check_for_api()
+
         self.api.delete_playlist(self.url)
         for key in list(self.__dict__.keys()):
             delattr(self, key)

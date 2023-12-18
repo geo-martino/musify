@@ -14,13 +14,12 @@ from typing import Any
 from dateutil.relativedelta import relativedelta
 
 from syncify import PROGRAM_NAME
-from syncify.config import REMOTE_CONFIG
+from syncify.config import RemoteClasses, REMOTE_CONFIG
 from syncify.exception import SyncifyError
 from syncify.fields import LocalTrackField
 from syncify.local.collection import LocalFolder
 from syncify.local.library import LocalLibrary, MusicBee
 from syncify.remote.api import RemoteAPI
-from syncify.remote.config import RemoteClasses
 from syncify.remote.library.library import RemoteLibrary
 from syncify.remote.processors.search import AlgorithmSettings
 from syncify.report import Report
