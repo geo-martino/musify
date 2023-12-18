@@ -1,13 +1,7 @@
-from dataclasses import dataclass
+from collections.abc import MutableMapping
+from typing import Any
 
-from syncify.remote.library.collection import RemoteAlbum
-from syncify.remote.library.item import RemoteTrack
-from syncify.remote.library.playlist import RemotePlaylist
+from syncify.utils import UnitMutableSequence
 
+APIMethodInputType = UnitMutableSequence[str] | UnitMutableSequence[MutableMapping[str, Any]]
 
-@dataclass
-class RemoteObjectClasses:
-    """Stores the key object classes for a remote source"""
-    track: type[RemoteTrack]
-    album: type[RemoteAlbum]
-    playlist: type[RemotePlaylist]

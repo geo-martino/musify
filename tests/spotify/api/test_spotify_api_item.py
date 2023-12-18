@@ -173,13 +173,14 @@ class TestSpotifyAPIItems:
         key = api.collection_item_map.get(kind, kind).name.casefold() + "s"
         source = next(item[key] for item in spotify_mock.item_type_map[kind] if item[key]["total"] > 3)
         total = source["total"]
-        limit = source["total"] // 3  # force pagination
+        limit = min(source["total"] // 3, len(source[api.items_key]) // 3, 50)  # force pagination
+        items = source[api.items_key][:limit]
 
-        test = spotify_mock.format_items_block(
-            url=source["href"], items=source[api.items_key][:limit], limit=limit, total=source["total"]
-        )
+        test = spotify_mock.format_items_block(url=source["href"], items=items, limit=limit, total=source["total"])
 
-        # assert test value generated correctly and ranges are valid for test to work
+        # assert ranges are valid for test to work and test value generated correctly
+        assert len(source[api.items_key]) > limit
+        assert len(items) <= limit
         assert source["total"] == test["total"]
         assert test["total"] > test["limit"]
         assert test["total"] > len(test[api.items_key])

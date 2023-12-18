@@ -11,7 +11,7 @@ from syncify.processors.match import ItemMatcher
 from syncify.remote.api import RemoteAPI
 from syncify.remote.base import Remote
 from syncify.remote.enums import RemoteObjectType
-from syncify.remote.types import RemoteObjectClasses
+from syncify.remote.config import RemoteObjectClasses
 from syncify.utils.logger import REPORT
 
 

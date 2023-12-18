@@ -3,7 +3,7 @@ from collections.abc import Mapping
 from syncify.remote.config import RemoteClasses
 from syncify.spotify import SPOTIFY_SOURCE_NAME
 from syncify.spotify.api import SpotifyAPI
-from syncify.spotify.base import SpotifyObject
+from syncify.spotify.library.base import SpotifyObject
 from syncify.spotify.library.library import SpotifyLibrary
 from syncify.spotify.processors.processors import SpotifyItemChecker, SpotifyItemSearcher
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler

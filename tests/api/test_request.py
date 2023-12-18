@@ -34,6 +34,7 @@ class TestRequestHandler:
             "scope": "test-read"
         }
 
+    # noinspection PyTestUnpassedFixture
     @staticmethod
     def test_init(token: dict[str, Any], tmp_path: str):
         request_handler = RequestHandler(name="test", token=token, cache_path=None)

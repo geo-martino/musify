@@ -17,6 +17,7 @@ from tests.local.utils import random_tracks, path_track_flac, path_track_wma, pa
 from tests.utils import path_txt, path_resources
 
 
+# noinspection PyTestUnpassedFixture
 class TestXAutoPF(LocalCollectionTester):
 
     @staticmethod

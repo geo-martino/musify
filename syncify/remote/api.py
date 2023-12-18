@@ -3,9 +3,9 @@ from collections.abc import Collection, MutableMapping, Mapping
 from typing import Any
 
 from syncify.api import RequestHandler
-from syncify.remote import APIMethodInputType
 from syncify.remote.enums import RemoteIDType, RemoteObjectType
 from syncify.remote.processors.wrangle import RemoteDataWrangler
+from syncify.remote.types import APIMethodInputType
 
 
 class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):

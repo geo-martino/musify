@@ -4,12 +4,11 @@ from copy import copy
 from typing import Any, Self
 
 from syncify.abstract.collection import ItemCollection
-from syncify.remote import APIMethodInputType
+from syncify.remote.types import APIMethodInputType
 from syncify.remote.enums import RemoteIDType, RemoteObjectType
 from syncify.remote.library.collection import RemoteAlbum
-from syncify.spotify.base import SpotifyItem
+from syncify.spotify.library.base import SpotifyItem, SpotifyObjectWranglerMixin
 from syncify.spotify.library.item import SpotifyTrack, SpotifyArtist
-from syncify.spotify.processors.wrangle import SpotifyObjectWranglerMixin
 
 
 class SpotifyCollection[T: SpotifyItem](SpotifyObjectWranglerMixin, ItemCollection, metaclass=ABCMeta):

@@ -1,10 +1,10 @@
 from collections.abc import MutableMapping
 from typing import Any, Self
 
-from syncify.remote import APIMethodInputType
+from syncify.remote.types import APIMethodInputType
 from syncify.remote.enums import RemoteIDType, RemoteObjectType
 from syncify.remote.library.item import RemoteTrack, RemoteArtist
-from syncify.spotify.processors.wrangle import SpotifyItemWranglerMixin
+from syncify.spotify.library.base import SpotifyItemWranglerMixin
 from syncify.utils import UnitCollection
 from syncify.utils.helpers import to_collection
 

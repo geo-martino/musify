@@ -68,6 +68,8 @@ class SpotifyMock(Mocker):
 
         # generate initial responses for generic item calls
         self.playlists = [self.generate_playlist() for _ in range(randrange(self.range_start, self.range_stop))]
+        # ensure at least one playlist has enough items for playlist operations tests
+        self.playlists.append(self.generate_playlist(item_count=30))
         self.albums = [self.generate_album() for _ in range(randrange(self.range_start, self.range_stop))]
         self.tracks = [self.generate_track() for _ in range(randrange(self.range_start, self.range_stop))]
         self.artists = [self.generate_artist() for _ in range(randrange(self.range_start, self.range_stop))]
@@ -198,6 +200,7 @@ class SpotifyMock(Mocker):
             """Dynamically generate expected batched response from a request with an 'ids' param"""
             req_params = parse_qs(req.query)
             req_kind = req.path.split("/")[-1].replace("-", "_")
+
             id_list = req_params["ids"][0].split(",")
             return {req_kind: [deepcopy(id_map[i]) for i in id_list]}
 
@@ -223,10 +226,9 @@ class SpotifyMock(Mocker):
         def response_getter(req: Request, _: Context) -> dict[str, Any]:
             """Dynamically generate expected response for an items block from the given ``generator``"""
             req_params = parse_qs(req.query)
-
-            total = item[req.path.split("/")[-1]]["total"]
             limit = int(req_params["limit"][0])
             offset = int(req_params.get("offset", [0])[0])
+            total = item[req.path.split("/")[-1]]["total"]
 
             items = generator(item, min(total - offset, limit))
             return self.format_items_block(url=req.url, items=items, offset=offset, limit=limit, total=total)
@@ -241,17 +243,14 @@ class SpotifyMock(Mocker):
         Not providing a ``user_id`` will set up mocks for /me/{``kind``}?... endpoints.
         Providing a ``user_id`` will set up mocks for /users/{``user_id``}/{``kind``}?... endpoints.
         """
-        items = copy(items)  # don't modify the original list
-        total = len(items)
-
         def response_getter(req: Request, _: Context) -> dict[str, Any]:
             """Dynamically generate expected response for an items block from the given ``generator``"""
             req_params = parse_qs(req.query)
             limit = int(req_params["limit"][0])
             offset = int(req_params.get("offset", [0])[0])
 
-            it = [deepcopy(items.pop()) for _ in range(min(total - offset, limit, len(items)))]
-            items_block = self.format_items_block(url=req.url, items=it, offset=offset, limit=limit, total=total)
+            it = deepcopy(items[offset:min(offset + limit, len(items))])
+            items_block = self.format_items_block(url=req.url, items=it, offset=offset, limit=limit, total=len(items))
 
             if url.endswith("me/following"):  # special case for following artists
                 items_block["cursors"] = {"after": items_block["next"], "before": items_block["previous"]}

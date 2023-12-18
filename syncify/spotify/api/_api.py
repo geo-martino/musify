@@ -115,8 +115,10 @@ class SpotifyAPI(SpotifyDataWrangler, SpotifyAPICore, SpotifyAPIItems, SpotifyAP
 
 if __name__ == "__main__":
     import base64
+    # noinspection PyUnresolvedReferences
     import json
 
+    # noinspection PyUnresolvedReferences
     from syncify.remote.enums import RemoteObjectType as ObjectType
     from syncify.settings import _format_map
 

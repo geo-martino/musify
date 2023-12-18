@@ -4,8 +4,8 @@ from typing import Any
 from syncify.abstract.collection import Playlist, Library
 from syncify.remote.enums import RemoteObjectType
 from syncify.remote.library.library import RemoteLibrary
-from syncify.remote.types import RemoteObjectClasses
-from syncify.spotify.base import SpotifyItem
+from syncify.remote.config import RemoteObjectClasses
+from syncify.spotify.library.base import SpotifyItem
 from syncify.spotify.library.collection import SpotifyAlbum
 from syncify.spotify.library.item import SpotifyTrack
 from syncify.spotify.library.playlist import SpotifyPlaylist

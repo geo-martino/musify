@@ -1,15 +1,14 @@
-from abc import ABCMeta
 from collections.abc import Mapping, Collection
 from typing import Any
 from urllib.parse import urlparse
 
 from syncify.exception import SyncifyEnumError
-from syncify.remote import APIMethodInputType
+from syncify.remote.types import APIMethodInputType
 from syncify.remote.enums import RemoteIDType, RemoteObjectType
 from syncify.remote.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.spotify import URL_API, URL_EXT, SPOTIFY_UNAVAILABLE_URI
-from syncify.spotify.base import SpotifyRemote, SpotifyObject, SpotifyItem
+from syncify.spotify.base import SpotifyRemote
 
 
 class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
@@ -155,13 +154,3 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
                 return [track["id"] for track in values]
 
         raise RemoteError(f"Could not extract IDs. Input data not recognised: {type(values)}")
-
-
-class SpotifyObjectWranglerMixin(SpotifyDataWrangler, SpotifyObject, metaclass=ABCMeta):
-    """Mix-in for handling inheritance on SpotifyObject + SpotifyDataWrangler implementations"""
-    pass
-
-
-class SpotifyItemWranglerMixin(SpotifyDataWrangler, SpotifyItem, metaclass=ABCMeta):
-    """Mix-in for handling inheritance on SpotifyItem + SpotifyDataWrangler implementations"""
-    pass

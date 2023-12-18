@@ -6,8 +6,7 @@ from time import sleep
 from typing import Any
 
 from syncify.api.exception import APIError
-from syncify.remote import APIMethodInputType
-from syncify.remote.api import RemoteAPI
+from syncify.remote.api import RemoteAPI, APIMethodInputType
 from syncify.remote.enums import RemoteObjectType, RemoteIDType
 from syncify.remote.exception import RemoteObjectTypeError
 from syncify.utils.helpers import limit_value

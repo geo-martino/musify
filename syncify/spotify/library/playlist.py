@@ -2,7 +2,7 @@ from collections.abc import Mapping, Iterable, MutableMapping
 from datetime import datetime
 from typing import Any, Self
 
-from syncify.remote import APIMethodInputType
+from syncify.remote.types import APIMethodInputType
 from syncify.remote.enums import RemoteObjectType
 from syncify.remote.library.playlist import RemotePlaylist
 from syncify.spotify.library.collection import SpotifyCollection

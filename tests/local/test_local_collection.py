@@ -8,7 +8,7 @@ import pytest
 from syncify.local.collection import LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from syncify.local.exception import LocalCollectionError
 from syncify.local.track import LocalTrack
-from syncify.remote.base import RemoteItem
+from syncify.remote.library.base import RemoteItem
 from syncify.spotify.library.item import SpotifyTrack
 from tests.abstract.collection import ItemCollectionTester
 from tests.local.utils import random_tracks, random_track, path_track_resources, path_track_all
@@ -29,6 +29,7 @@ class LocalCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
         return tuple(SpotifyTrack(response) for response in sample(spotify_mock.tracks, k=5))
 
 
+# noinspection PyTestUnpassedFixture
 class TestLocalFolder(LocalCollectionTester):
 
     name = "folder name"
@@ -99,6 +100,7 @@ class TestLocalFolder(LocalCollectionTester):
         assert {track.path for track in collection} == path_track_all
 
 
+# noinspection PyTestUnpassedFixture
 class TestLocalAlbum(LocalCollectionTester):
 
     name = "album name"
@@ -169,6 +171,7 @@ class TestLocalAlbum(LocalCollectionTester):
         assert album.play_count == sum(track.play_count for track in tracks_filtered if track.play_count)
 
 
+# noinspection PyTestUnpassedFixture
 class TestLocalArtist(LocalCollectionTester):
 
     name = "artist name"
@@ -234,6 +237,7 @@ class TestLocalArtist(LocalCollectionTester):
         assert artist.play_count == sum(track.play_count for track in tracks_filtered if track.play_count)
 
 
+# noinspection PyTestUnpassedFixture
 class TestLocalGenres(LocalCollectionTester):
 
     name = "rock"
