@@ -256,7 +256,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
 
     def _write_bpm(self, dry_run: bool = True) -> bool:
         """
-        Write bpm tags to file
+        Write BPM tags to file
         
         :param dry_run: Run function, but do not modify file at all.
         :return: True if the file was updated or would have been when dry_run is True, False otherwise.

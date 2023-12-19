@@ -17,7 +17,7 @@ class TestSpotifyArtist(ItemTester):
 
     @staticmethod
     @pytest.fixture
-    def item(response_random) -> Item:
+    def item(response_random: dict[str, Any]) -> Item:
         return SpotifyArtist(response_random)
 
     @pytest.fixture
@@ -30,13 +30,16 @@ class TestSpotifyArtist(ItemTester):
         """Yield a valid enriched response from the Spotify API for an artist item type."""
         return deepcopy(spotify_mock.artists[0])
 
-    def test_input_validation(self, spotify_mock: SpotifyMock):
+    def test_input_validation(self, response_random: dict[str, Any], spotify_mock: SpotifyMock):
         with pytest.raises(RemoteObjectTypeError):
             SpotifyArtist(spotify_mock.generate_track(artists=False, album=False))
 
         url = spotify_mock.artists[0]["href"]
+        assert "api" not in dir(SpotifyArtist)
         with pytest.raises(APIError):
             SpotifyArtist.load(url)
+        with pytest.raises(APIError):
+            SpotifyArtist(response_random).reload()
 
     def test_attributes(self, response_random: dict[str, Any]):
         artist = SpotifyArtist(response_random)
@@ -74,23 +77,23 @@ class TestSpotifyArtist(ItemTester):
         artist._response["followers"]["total"] = new_followers
         assert artist.followers == new_followers
 
-    def test_reload(self, response_valid, api: SpotifyAPI):
+    def test_reload(self, response_valid: dict[str, Any], api: SpotifyAPI):
         response_valid.pop("genres", None)
         response_valid.pop("popularity", None)
         response_valid.pop("followers", None)
 
         artist = SpotifyArtist(response_valid)
         assert not artist.genres
-        assert not artist.rating
-        assert not artist.followers
+        assert artist.rating is None
+        assert artist.followers is None
 
         SpotifyArtist.api = api
         artist.reload()
         assert artist.genres
-        assert artist.rating
-        assert artist.followers
+        assert artist.rating is not None
+        assert artist.followers is not None
 
-    def test_load(self, response_valid, api: SpotifyAPI):
+    def test_load(self, response_valid: dict[str, Any], api: SpotifyAPI):
         SpotifyArtist.api = api
         artist = SpotifyArtist.load(response_valid["href"])
 
@@ -119,13 +122,16 @@ class TestSpotifyTrack(ItemTester):
         """
         return deepcopy(spotify_mock.tracks[0])
 
-    def test_input_validation(self, spotify_mock: SpotifyMock):
+    def test_input_validation(self, response_random: dict[str, Any], spotify_mock: SpotifyMock):
         with pytest.raises(RemoteObjectTypeError):
             SpotifyTrack(spotify_mock.generate_artist(properties=False))
 
         url = spotify_mock.tracks[0]["href"]
+        assert "api" not in dir(SpotifyTrack)
         with pytest.raises(APIError):
             SpotifyTrack.load(url)
+        with pytest.raises(APIError):
+            SpotifyTrack(response_random).reload()
 
     def test_attributes(self, response_random: dict[str, Any]):
         track = SpotifyTrack(response_random)
@@ -245,7 +251,10 @@ class TestSpotifyTrack(ItemTester):
         track.reload()
         assert track.genres
         assert track.album
-        assert track.key
+        if track.response["audio_features"]["key"] > -1:
+            assert track.key
+        else:
+            assert track.key is None
         assert track.bpm
 
     def test_load(self, response_valid: dict[str, Any], api: SpotifyAPI):

@@ -353,7 +353,7 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
 
         id_list = self.extract_ids(values, kind=RemoteObjectType.TRACK)
 
-        # value list takes the form [url, key, batched]
+        # value list takes the form [URL, key, batched]
         config: dict[str, tuple[str, str, bool]] = {}
         if features:
             config["features"] = (f"{self.api_url_base}/audio-features", "audio_features", True)

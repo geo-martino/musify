@@ -56,6 +56,7 @@ class SpotifyArtist(SpotifyItemWranglerMixin, RemoteArtist):
         return obj
 
     def reload(self, use_cache: bool = True, *_, **__) -> None:
+        self._check_for_api()
         self.__init__(self.api.get(url=self.url, use_cache=use_cache, log_pad=self._url_pad))
 
 

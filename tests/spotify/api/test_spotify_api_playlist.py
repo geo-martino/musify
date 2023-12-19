@@ -1,12 +1,7 @@
 from random import randrange, sample
-from typing import Any
 from urllib.parse import parse_qs
 
 import pytest
-# noinspection PyProtectedMember
-from requests_mock.request import _RequestObjectProxy as Request
-# noinspection PyProtectedMember
-from requests_mock.response import _Context as Context
 
 from syncify import PROGRAM_NAME
 from syncify.remote.enums import RemoteObjectType as ObjectType
@@ -15,6 +10,10 @@ from syncify.spotify.api import SpotifyAPI
 from tests.remote.utils import random_id_type, random_id_types, ALL_ITEM_TYPES
 from tests.spotify.api.mock import SpotifyMock
 from tests.spotify.utils import random_id, random_ids, random_uris, random_api_urls, random_ext_urls
+
+
+# noinspection PyProtectedMember
+# noinspection PyProtectedMember
 
 
 class TestSpotifyAPIPlaylists:
@@ -39,26 +38,7 @@ class TestSpotifyAPIPlaylists:
     @staticmethod
     def test_create_playlist(api: SpotifyAPI, spotify_mock: SpotifyMock):
         name = "test playlist"
-
-        def response_getter(req: Request, _: Context) -> dict[str, Any]:
-            """Process body and generate playlist response data"""
-            data = req.json()
-
-            assert data["name"] == name
-            assert PROGRAM_NAME in data["description"]
-            assert not data["public"]
-            assert data["collaborative"]
-
-            response = spotify_mock.generate_playlist(api=api, item_count=0)
-            response["name"] = data["name"]
-            response["description"] = data["description"]
-            response["public"] = data["public"]
-            response["collaborative"] = data["collaborative"]
-
-            return response
-
         url = f"{api.api_url_base}/users/{spotify_mock.user_id}/playlists"
-        spotify_mock.post(url=url, json=response_getter)
         result = api.create_playlist(name=name, public=False, collaborative=True)
 
         body = spotify_mock.get_requests(url=url, response={"name": name})[0].json()

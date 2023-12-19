@@ -264,7 +264,7 @@ class APIAuthoriser(Logger):
         )
         print(f"\33[1mWaiting for code, timeout in {socket_listener.timeout} seconds... \33[0m")
 
-        # add redirect uri to auth_args and user_args
+        # add redirect URI to auth_args and user_args
         if not self.auth_args.get("data"):
             self.auth_args["data"] = {}
         if not self.user_args.get("params"):

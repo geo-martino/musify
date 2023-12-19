@@ -373,7 +373,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
             return
 
     def _read_bpm(self) -> float | None:
-        """Extract bpm tags from file"""
+        """Extract BPM tags from file"""
         values = self._read_tag(self.tag_map.bpm)
         return float(values[0]) if values is not None else None
 

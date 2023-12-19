@@ -19,6 +19,8 @@ class Result(metaclass=ABCMeta):
 class PrettyPrinter(ABC):
     """Generic base class for pretty printing. Classes can inherit this class to gain pretty print functionality."""
 
+    _upper_key_words = {"id", "uri", "url", "bpm"}
+
     @staticmethod
     def _pascal_to_snake(value: str) -> str:
         """Convert snake_case to CamelCase."""
@@ -98,6 +100,9 @@ class PrettyPrinter(ABC):
 
         for attr_key, attr_val in attributes.items():
             attr_key = attr_key.title().replace('_', ' ')
+            for word in self._upper_key_words:
+                pattern = re.compile(rf"(^{word}$|^{word} | {word}$| {word})", flags=re.IGNORECASE)
+                attr_key = re.sub(pattern, lambda m: m.group(1).upper(), attr_key)
             attr_val_repr = f"{attr_key: <{max_key_width}} = {repr(attr_val)}"
 
             if isinstance(attr_val, set):

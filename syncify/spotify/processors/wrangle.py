@@ -68,7 +68,7 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
         value = value.strip()
         uri_check = value.split(':')
 
-        if value.startswith(URL_API) or value.startswith(URL_EXT):  # open/api URL
+        if value.startswith(URL_API) or value.startswith(URL_EXT):  # open/API URL
             value = value.replace(URL_API, "") if value.startswith(URL_API) else value.replace(URL_EXT, "")
             url_path = urlparse(value).path.split("/")
             for chunk in url_path:
@@ -97,7 +97,7 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
 
         value = value.strip()
 
-        if type_in == RemoteIDType.URL_EXT or type_in == RemoteIDType.URL:  # open/api URL
+        if type_in == RemoteIDType.URL_EXT or type_in == RemoteIDType.URL:  # open/API URL
             url_path = urlparse(value).path.split("/")
             for chunk in url_path:
                 try:

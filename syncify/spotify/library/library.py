@@ -7,8 +7,8 @@ from syncify.remote.enums import RemoteObjectType
 from syncify.remote.library.library import RemoteLibrary
 from syncify.spotify.library.base import SpotifyItem
 from syncify.spotify.library.collection import SpotifyAlbum
+from syncify.spotify.library.collection import SpotifyPlaylist
 from syncify.spotify.library.item import SpotifyTrack
-from syncify.spotify.library.playlist import SpotifyPlaylist
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 
 

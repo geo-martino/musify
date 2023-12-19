@@ -25,6 +25,7 @@ class RemoteCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
     @staticmethod
     def test_getitem_dunder_method(collection: RemoteCollection):
         """:py:class:`ItemCollection` __getitem__ and __setitem__ tests"""
+        # TODO: expand to include all RemoteIDTypes
         item = collection.items[2]
 
         assert collection[1] == collection.items[1]

@@ -118,10 +118,11 @@ class RemoteObject(RemoteObjectMixin, PrettyPrinter, metaclass=ABCMeta):
         raise NotImplementedError
 
     def as_dict(self):
+        ignore = {"response", "name", "remote_source", "unavailable_uri_dummy", "tag_sep", "clean_tags"}
         return {
             k: getattr(self, k) for k in self.__dir__()
             if not k.startswith("_")
-            and k not in ["response", "name"]
+            and k not in ignore
             and not callable(getattr(self, k))
             and k not in self.__annotations__
         }

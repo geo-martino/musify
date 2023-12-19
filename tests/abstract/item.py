@@ -59,6 +59,7 @@ class ItemTester(PrettyPrinterTester, metaclass=ABCMeta):
     @staticmethod
     def test_merge_item(item: Item):
         """:py:class:`Item` `merge` tests"""
+        # TODO: add fixture for item_modified and make this a different type for each ItemTester implementation
         if isinstance(item, RemoteItem):
             return
 

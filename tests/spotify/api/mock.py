@@ -101,9 +101,9 @@ class SpotifyMock(Mocker):
         self.artists = [self.generate_artist() for _ in range(randrange(self.range_start, self.range_stop))]
         self.users = [self.generate_user() for _ in range(randrange(self.range_start, self.range_stop))]
 
-        # ensure at least one playlist and album has enough items for playlist operations tests
-        self.playlists.append(self.generate_playlist(item_count=30))
-        self.albums.append(self.generate_album(track_count=30))
+        # ensure at least one of each collection has enough items for later tests that require a large number of items
+        self.playlists.append(self.generate_playlist(item_count=100))
+        self.albums.append(self.generate_album(track_count=100))
 
         self.audio_features = {
             t["id"]: self.generate_audio_features(track_id=t["id"], duration_ms=t["duration_ms"]) for t in self.tracks
@@ -184,6 +184,22 @@ class SpotifyMock(Mocker):
                 track["album"] = album_no_extra
                 track["artists"] = deepcopy(artists)
             album["tracks"]["items"] = deepcopy(tracks)
+
+        artist_ids = {artist["id"] for artist in self.artists}
+        album_ids = {album["id"] for album in self.albums}
+        for track in self.tracks:
+            if track["album"]["id"] not in album_ids:
+                track["album"] = {
+                    k: v for k, v in choice(self.albums).items()
+                    if k not in {"tracks", "copyrights", "external_ids", "genres", "label", "popularity"}
+                }
+            for artist in track["artists"]:
+                if artist["id"] not in artist_ids:
+                    artist.clear()
+                    artist |= {
+                        k: v for k, v in choice(self.artists).items()
+                        if k not in {"followers", "genres", "images", "popularity"}
+                    }
 
         for playlist in self.playlists:
             # ensure all assigned playlist owners are in the list of available users
@@ -300,6 +316,21 @@ class SpotifyMock(Mocker):
             self.post(url=re.compile(rf"{playlist["href"]}/tracks"), json={"snapshot_id": random_str()})
             self.delete(url=re.compile(rf"{playlist["href"]}/tracks"), json={"snapshot_id": random_str()})
             self.delete(url=re.compile(playlist["href"]), json={"snapshot_id": random_str()})
+
+        def create_response_getter(req: Request, _: Context) -> dict[str, Any]:
+            """Process body and generate playlist response data"""
+            data = req.json()
+
+            response = self.generate_playlist(user_id=self.user_id, item_count=0)
+            response["name"] = data["name"]
+            response["description"] = data["description"]
+            response["public"] = data["public"]
+            response["collaborative"] = data["collaborative"]
+            response["owner"] = self.user_playlists[0]["owner"]
+            return response
+
+        url = f"{URL_API}/users/{self.user_id}/playlists"
+        self.post(url=url, json=create_response_getter)
 
     ###########################################################################
     ## Formatters
@@ -660,8 +691,10 @@ class SpotifyMock(Mocker):
         url = f"{URL_API}/{kind}s/{playlist_id}"
 
         owner = self.generate_owner_from_api(api=api) if api else self.generate_owner(user_id=user_id)
+        public = choice([True, False])
+
         response = {
-            "collaborative": choice([True, False]),
+            "collaborative": choice([True, False]) if not public else False,
             "description": random_str(20, 100),
             "external_urls": {"spotify": f"{URL_EXT}/{kind}/{playlist_id}"},
             "followers": {"href": None, "total": randrange(0, int(8e10))},
@@ -671,7 +704,7 @@ class SpotifyMock(Mocker):
             "name": random_str(5, 50),
             "owner": owner,
             "primary_color": None,
-            "public": choice([True, False]),
+            "public": public,
             "snapshot_id": random_str(60, 60),
             "tracks": {"href": f"{url}/tracks", "total": item_count},
             "type": kind,
