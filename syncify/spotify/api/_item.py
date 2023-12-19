@@ -128,7 +128,7 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
 
         return results
 
-    def _extend_items(
+    def extend_items(
             self, items_block: MutableMapping[str, Any], key: str, unit: str, use_cache: bool = True,
     ) -> list[dict[str, Any]]:
         """
@@ -153,7 +153,8 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
 
         # enable progress bar for longer calls
         total = items_block["total"]
-        bar = self.get_progress_bar(total=total, desc=f"Getting {unit}", unit=key)
+        initial = len(items_block[self.items_key])
+        bar = self.get_progress_bar(total=total, desc=f"Getting {unit}", unit=key, initial=initial)
 
         # this usually happens on the items block of a current user's playlist
         if "limit" not in items_block:
@@ -250,7 +251,7 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
 
         for result in bar:
             if result[key]["next"]:
-                self._extend_items(result[key], key=key, unit=unit, use_cache=use_cache)
+                self.extend_items(result[key], key=key, unit=unit, use_cache=use_cache)
 
         item_count = sum(len(result[key][self.items_key]) for result in results)
         self.logger.debug(
@@ -305,7 +306,7 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
             unit_prefix = "current user's" if kind == RemoteObjectType.PLAYLIST else "current user's saved"
 
         initial = self.get(url, params=params, use_cache=use_cache, log_pad=71)
-        results = self._extend_items(initial, key=unit, unit=f"{unit_prefix} {unit}", use_cache=use_cache)
+        results = self.extend_items(initial, key=unit, unit=f"{unit_prefix} {unit}", use_cache=use_cache)
 
         self.logger.debug(f"{'DONE':<7}: {url:<43} | Retrieved {len(results):>6} {unit}")
 

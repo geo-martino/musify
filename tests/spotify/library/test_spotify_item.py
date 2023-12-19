@@ -13,6 +13,92 @@ from tests.spotify.api.mock import SpotifyMock
 from tests.spotify.library.utils import assert_id_attributes
 
 
+class TestSpotifyArtist(ItemTester):
+
+    @staticmethod
+    @pytest.fixture
+    def item(response_random) -> Item:
+        return SpotifyArtist(response_random)
+
+    @pytest.fixture
+    def response_random(self) -> dict[str, Any]:
+        """Yield a randomly generated response from the Spotify API for an artist item type"""
+        return SpotifyMock.generate_artist()
+
+    @pytest.fixture
+    def response_valid(self, spotify_mock: SpotifyMock) -> dict[str, Any]:
+        """Yield a valid enriched response from the Spotify API for an artist item type."""
+        return deepcopy(spotify_mock.artists[0])
+
+    def test_input_validation(self, spotify_mock: SpotifyMock):
+        with pytest.raises(RemoteObjectTypeError):
+            SpotifyArtist(spotify_mock.generate_track(artists=False, album=False))
+
+        url = spotify_mock.artists[0]["href"]
+        with pytest.raises(APIError):
+            SpotifyArtist.load(url)
+
+    def test_attributes(self, response_random: dict[str, Any]):
+        artist = SpotifyArtist(response_random)
+        original_response = deepcopy(response_random)
+
+        assert_id_attributes(item=artist, response=original_response)
+
+        assert artist.name == artist.artist
+        assert artist.artist == original_response["name"]
+        new_name = "new name"
+        artist._response["name"] = new_name
+        assert artist.artist == new_name
+
+        assert artist.genres == original_response["genres"]
+        new_genres = ["electronic", "dance"]
+        artist._response["genres"] = new_genres
+        assert artist.genres == new_genres
+
+        if not artist.has_image:
+            artist._response["images"] = [{"height": 200, "url": "old url"}]
+        images = {image["height"]: image["url"] for image in artist.response["images"]}
+        assert len(artist.image_links) == 1
+        assert artist.image_links["cover_front"] == next(url for height, url in images.items() if height == max(images))
+        new_image_link = "new url"
+        artist._response["images"].append({"height": max(images) * 2, "url": new_image_link})
+        assert artist.image_links["cover_front"] == new_image_link
+
+        assert artist.rating == original_response["popularity"]
+        new_rating = artist.rating + 20
+        artist._response["popularity"] = new_rating
+        assert artist.rating == new_rating
+
+        assert artist.followers == original_response["followers"]["total"]
+        new_followers = artist.followers + 20
+        artist._response["followers"]["total"] = new_followers
+        assert artist.followers == new_followers
+
+    def test_reload(self, response_valid, api: SpotifyAPI):
+        response_valid.pop("genres", None)
+        response_valid.pop("popularity", None)
+        response_valid.pop("followers", None)
+
+        artist = SpotifyArtist(response_valid)
+        assert not artist.genres
+        assert not artist.rating
+        assert not artist.followers
+
+        SpotifyArtist.api = api
+        artist.reload()
+        assert artist.genres
+        assert artist.rating
+        assert artist.followers
+
+    def test_load(self, response_valid, api: SpotifyAPI):
+        SpotifyArtist.api = api
+        artist = SpotifyArtist.load(response_valid["href"])
+
+        assert artist.name == response_valid["name"]
+        assert artist.id == response_valid["id"]
+        assert artist.url == response_valid["href"]
+
+
 class TestSpotifyTrack(ItemTester):
 
     @staticmethod
@@ -143,14 +229,6 @@ class TestSpotifyTrack(ItemTester):
         track._response["popularity"] = new_rating
         assert track.rating == new_rating
 
-    def test_load(self, response_valid: dict[str, Any], api: SpotifyAPI):
-        SpotifyTrack.api = api
-        track = SpotifyTrack.load(response_valid["href"])
-
-        assert track.name == response_valid["name"]
-        assert track.id == response_valid["id"]
-        assert track.url == response_valid["href"]
-
     def test_reload(self, response_valid: dict[str, Any], api: SpotifyAPI):
         response_valid["album"].pop("name", None)
         response_valid["album"].pop("genres", None)
@@ -170,88 +248,10 @@ class TestSpotifyTrack(ItemTester):
         assert track.key
         assert track.bpm
 
+    def test_load(self, response_valid: dict[str, Any], api: SpotifyAPI):
+        SpotifyTrack.api = api
+        track = SpotifyTrack.load(response_valid["href"])
 
-class TestSpotifyArtist(ItemTester):
-
-    @staticmethod
-    @pytest.fixture
-    def item(response_random) -> Item:
-        return SpotifyArtist(response_random)
-
-    @pytest.fixture
-    def response_random(self) -> dict[str, Any]:
-        """Yield a randomly generated response from the Spotify API for an artist item type"""
-        return SpotifyMock.generate_artist()
-
-    @pytest.fixture
-    def response_valid(self, spotify_mock: SpotifyMock) -> dict[str, Any]:
-        """Yield a valid enriched response from the Spotify API for an artist item type."""
-        return deepcopy(spotify_mock.artists[0])
-
-    def test_input_validation(self, spotify_mock: SpotifyMock):
-        with pytest.raises(RemoteObjectTypeError):
-            SpotifyArtist(spotify_mock.generate_track(artists=False, album=False))
-
-        url = spotify_mock.artists[0]["href"]
-        with pytest.raises(APIError):
-            SpotifyArtist.load(url)
-
-    def test_attributes(self, response_random: dict[str, Any]):
-        artist = SpotifyArtist(response_random)
-        original_response = deepcopy(response_random)
-
-        assert_id_attributes(item=artist, response=original_response)
-
-        assert artist.name == artist.artist
-        assert artist.artist == original_response["name"]
-        new_name = "new name"
-        artist._response["name"] = new_name
-        assert artist.artist == new_name
-
-        assert artist.genres == original_response["genres"]
-        new_genres = ["electronic", "dance"]
-        artist._response["genres"] = new_genres
-        assert artist.genres == new_genres
-
-        if not artist.has_image:
-            artist._response["images"] = [{"height": 200, "url": "old url"}]
-        images = {image["height"]: image["url"] for image in artist.response["images"]}
-        assert len(artist.image_links) == 1
-        assert artist.image_links["cover_front"] == next(url for height, url in images.items() if height == max(images))
-        new_image_link = "new url"
-        artist._response["images"].append({"height": max(images) * 2, "url": new_image_link})
-        assert artist.image_links["cover_front"] == new_image_link
-
-        assert artist.rating == original_response["popularity"]
-        new_rating = artist.rating + 20
-        artist._response["popularity"] = new_rating
-        assert artist.rating == new_rating
-
-        assert artist.followers == original_response["followers"]["total"]
-        new_followers = artist.followers + 20
-        artist._response["followers"]["total"] = new_followers
-        assert artist.followers == new_followers
-
-    def test_load(self, response_valid, api: SpotifyAPI):
-        SpotifyArtist.api = api
-        artist = SpotifyArtist.load(response_valid["href"])
-
-        assert artist.name == response_valid["name"]
-        assert artist.id == response_valid["id"]
-        assert artist.url == response_valid["href"]
-
-    def test_reload(self, response_valid, api: SpotifyAPI):
-        response_valid.pop("genres", None)
-        response_valid.pop("popularity", None)
-        response_valid.pop("followers", None)
-
-        artist = SpotifyArtist(response_valid)
-        assert not artist.genres
-        assert not artist.rating
-        assert not artist.followers
-
-        SpotifyArtist.api = api
-        artist.reload()
-        assert artist.genres
-        assert artist.rating
-        assert artist.followers
+        assert track.name == response_valid["name"]
+        assert track.id == response_valid["id"]
+        assert track.url == response_valid["href"]

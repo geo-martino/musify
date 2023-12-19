@@ -1,10 +1,12 @@
 from copy import deepcopy
 from random import randrange
 from typing import Any, Iterable
+from urllib.parse import parse_qs
 
 import pytest
 
 from syncify.api.exception import APIError
+from syncify.remote.enums import RemoteObjectType
 from syncify.remote.exception import RemoteObjectTypeError
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.library.collection import SpotifyAlbum
@@ -36,7 +38,9 @@ class TestSpotifyAlbum(SpotifyCollectionTester):
         Yield a valid enriched response with extended artists and albums responses
         from the Spotify API for a track item type.
         """
-        return deepcopy(spotify_mock.albums[0])
+        return deepcopy(next(
+            album for album in spotify_mock.albums if album["tracks"]["total"] > len(album["tracks"]["items"]) > 5
+        ))
 
     def test_input_validation(self, spotify_mock: SpotifyMock):
         with pytest.raises(RemoteObjectTypeError):
@@ -78,10 +82,10 @@ class TestSpotifyAlbum(SpotifyCollectionTester):
         album._response["total_tracks"] = new_track_total
         assert album.track_total == new_track_total
 
-        assert album.genres == original_response["genres"]
+        assert album.genres == [g.title() for g in original_response["genres"]]
         new_genres = ["electronic", "dance"]
         album._response["genres"] = new_genres
-        assert album.genres == new_genres
+        assert album.genres == [g.title() for g in new_genres]
 
         assert album.year == int(original_response["release_date"][:4])
         new_year = album.year + 20
@@ -113,20 +117,12 @@ class TestSpotifyAlbum(SpotifyCollectionTester):
         album._response["popularity"] = new_rating
         assert album.rating == new_rating
 
-    def test_load(self, response_valid, api: SpotifyAPI):
-        SpotifyAlbum.api = api
-        album = SpotifyAlbum.load(response_valid["href"])
-
-        assert album.name == response_valid["name"]
-        assert album.id == response_valid["id"]
-        assert album.url == response_valid["href"]
-
-    def test_reload(self, response_valid, api: SpotifyAPI):
+    def test_reload(self, response_valid: dict[str, Any], api: SpotifyAPI):
         response_valid.pop("genres", None)
         response_valid.pop("popularity", None)
 
-        was_compilation = response_valid["album_type"] == "compilation"
-        if was_compilation:
+        is_compilation = response_valid["album_type"] == "compilation"
+        if is_compilation:
             response_valid["album_type"] = "album"
         else:
             response_valid["album_type"] = "compilation"
@@ -134,10 +130,88 @@ class TestSpotifyAlbum(SpotifyCollectionTester):
         album = SpotifyAlbum(response_valid)
         assert not album.genres
         assert not album.rating
-        assert album.compilation != was_compilation
+        assert album.compilation != is_compilation
 
         SpotifyAlbum.api = api
-        album.reload()
+        album.reload(extend_artists=True)
+        print(album.response.keys())
         assert album.genres
         assert album.rating
-        assert album.compilation == was_compilation
+        assert album.compilation == is_compilation
+
+    def test_load_without_items(self, response_valid: dict[str, Any], api: SpotifyAPI, spotify_mock: SpotifyMock):
+        spotify_mock.reset_mock()  # test checks the number of requests made
+
+        SpotifyAlbum.api = api
+        album = SpotifyAlbum.load(response_valid["href"], extend_tracks=True)
+
+        assert album.name == response_valid["name"]
+        assert album.id == response_valid["id"]
+        assert album.url == response_valid["href"]
+
+        key = api.collection_item_map[RemoteObjectType.ALBUM].name.casefold() + "s"
+        requests = spotify_mock.get_requests(album.url)
+        requests += spotify_mock.get_requests(f"{album.url}/{key}")
+        requests += spotify_mock.get_requests(f"{api.api_url_base}/audio-features")
+
+        pages = (album.response[key]["total"] / album.response[key]["limit"])
+        # 1 call for album + (pages - 1) for tracks + (pages) for audio-features
+        assert len(requests) == 2 * (int(pages) + (pages % 1 > 0))
+
+        # input items given, but no key to search on still loads
+        album = SpotifyAlbum.load(response_valid, items=response_valid.pop(key))
+
+        assert album.name == response_valid["name"]
+        assert album.id == response_valid["id"]
+        assert album.url == response_valid["href"]
+
+    def test_load_with_items(
+            self, response_valid: dict[str, Any], api: SpotifyAPI, spotify_mock: SpotifyMock
+    ):
+        spotify_mock.reset_mock()  # test checks the number of requests made
+        key = api.collection_item_map[RemoteObjectType.ALBUM].name.casefold() + "s"
+
+        # produce a list of items for input and ensure all items have this album assigned
+        available_id_list = {item["id"] for item in response_valid[key]["items"]}
+        limit = len(available_id_list) // 2
+        items = []
+        response_without_items = {k: v for k, v in response_valid.items() if k != key}
+        for response in response_valid[key]["items"][:limit]:
+            response = deepcopy(response)
+            response["album"] = response_without_items
+            items.append(SpotifyTrack(response))
+
+        # limit the list of items in the response so that some are in the input items list and some are not
+        items_ids_limited = [item["id"] for item in items][:len(available_id_list) // 3]
+        response_items = [item for item in response_valid[key]["items"] if item["id"] not in items_ids_limited]
+        response_valid[key]["items"] = response_items
+
+        # ensure extension will happen and all initially available items are covered by the response and input items
+        assert len(response_valid[key]["items"]) < response_valid[key]["total"]
+        assert {item["id"] for item in response_valid[key]["items"] + items} == available_id_list
+
+        SpotifyAlbum.api = api
+        album = SpotifyAlbum.load(value=response_valid, items=items)
+        assert len(album.response[key]["items"]) == response_valid[key]["total"]
+        assert len(album.tracks) == response_valid[key]["total"]
+
+        # assert the input response has not been modified
+        assert len(response_valid[key]["items"]) == len(response_items)
+        assert len(items) == limit
+
+        # album URL was not called
+        assert not spotify_mock.get_requests(album.url)
+
+        # requests to extend album start from page 2 onward
+        requests = spotify_mock.get_requests(f"{album.url}/{key}")
+        pages = (album.response[key]["total"] / album.response[key]["limit"]) - 1
+        assert len(requests) == int(pages) + (pages % 1 > 0)
+
+        # ensure none of the items ids were requested
+        input_items_ids = {item["id"] for item in items}
+        for request in requests:
+            params = parse_qs(request.query)
+            if "ids" not in params:
+                continue
+
+            assert not input_items_ids.intersection(params["ids"][0].split(","))

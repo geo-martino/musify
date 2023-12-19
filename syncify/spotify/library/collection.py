@@ -1,12 +1,11 @@
 from abc import ABCMeta
-from collections.abc import Mapping, Iterable, MutableMapping
-from copy import copy
+from collections.abc import Iterable, MutableMapping, Mapping
+from copy import copy, deepcopy
 from typing import Any, Self
 
 from syncify.abstract.collection import ItemCollection
-from syncify.remote.enums import RemoteIDType, RemoteObjectType
+from syncify.remote.enums import RemoteObjectType
 from syncify.remote.library.collection import RemoteAlbum
-from syncify.remote.types import APIMethodInputType
 from syncify.spotify.library.base import SpotifyItem, SpotifyObjectWranglerMixin
 from syncify.spotify.library.item import SpotifyTrack, SpotifyArtist
 
@@ -21,21 +20,19 @@ class SpotifyCollection[T: SpotifyItem](SpotifyObjectWranglerMixin, ItemCollecti
         return isinstance(items, SpotifyItem)
 
     @classmethod
-    def _load_response(cls, value: APIMethodInputType, use_cache: bool = True) -> dict[str, Any]:
+    def _load_response(cls, value: str | MutableMapping[str, Any], use_cache: bool = True) -> MutableMapping[str, Any]:
         """
-        Call the API to get a new response for a given ``value``.
-        ``use_cache`` forces request to return a cached result if available.
+        Calls the API to get a new response for a given ``value`` if string given,
+        or validates the ``value`` as the correct :py:class:`RemoteObjectType` for this class and returns it if valid.
+        ``use_cache`` forces request to return a cached result from the API if available.
         """
-        kind = cls.__name__.casefold().replace("spotify", "")
-        item_type = RemoteObjectType.from_name(kind)[0]
-        key = cls.api.collection_item_map[item_type] + "s"
+        unit = cls.__name__.casefold().replace("spotify", "")
+        kind = RemoteObjectType.from_name(unit)[0]
 
-        try:  # attempt to get response from the given value alone
-            cls.validate_item_type(value, kind=item_type)
-            assert len(value[key][cls.api.items_key]) == value[key]["total"]
-            return value
-        except (ValueError, AssertionError, TypeError):  # reload response from the API
-            return cls.api.get_items(value, kind=item_type, use_cache=use_cache)[0]
+        if isinstance(value, MutableMapping) and cls.get_item_type(value) == kind:
+            return deepcopy(value)
+        else:  # reload response from the API
+            return cls.api.get_items(value, kind=kind, use_cache=use_cache)[0]
 
 
 class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollection):
@@ -71,7 +68,10 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollection):
 
     @property
     def genres(self):
-        return self.response.get("genres", [])
+        if "genres" in self.response:
+            return [g.title() for g in self.response["genres"]]
+        main_artist_genres = self.response["artists"][0].get("genres", [])
+        return [g.title() for g in main_artist_genres] if main_artist_genres else None
 
     @property
     def year(self):
@@ -115,51 +115,76 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollection):
 
     @classmethod
     def load(
-            cls, value: APIMethodInputType, use_cache: bool = True, items: Iterable[SpotifyTrack] = (), *_, **__
+            cls,
+            value: str | MutableMapping[str, Any],
+            use_cache: bool = True,
+            items: Iterable[SpotifyTrack] = (),
+            *args,
+            **kwargs
     ) -> Self:
         cls._check_for_api()
         obj = cls.__new__(cls)
+        key = cls.api.collection_item_map[RemoteObjectType.ALBUM].name.casefold() + "s"
+
+        if not items or (isinstance(value, Mapping) and (key not in value or cls.api.items_key not in value[key])):
+            # no items given, regenerate API response from the URL
+            obj._response = {"href": value}
+            obj.reload(*args, **kwargs, use_cache=use_cache)
+            return obj
+
+        # get response and extend if needed
         response = cls._load_response(value, use_cache=use_cache)
 
-        if not items:  # no items given, regenerate API response from the URL
-            id_ = cls.extract_ids(value)[0]
-            obj._response = {
-                "href": cls.convert(id_, RemoteObjectType.ALBUM, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
-            }
-            obj.reload(use_cache=use_cache)
-        else:  # attempt to find items for this album in the given items
-            uri_tracks: Mapping[str, SpotifyTrack] = {track.uri: track for track in items}
-            uri_get: list[str] = []
+        # attempt to find items for this album in the given items
+        uri_tracks_input: dict[str, SpotifyTrack] = {
+            track.uri: track for track in items
+            if track.has_uri and track.response.get("album", {}).get("id") == response["id"]
+        }
+        uri_get: list[str] = []
 
-            for i, track_raw in enumerate(response["tracks"]["items"]):
-                # loop through the skeleton response for this album
-                # find items that match from the given items
-                track: SpotifyTrack = uri_tracks.get(track_raw["track"]["uri"])
-                if track:  # replace the skeleton response with the response from the track
-                    track_raw.clear()
-                    track_raw |= track.response
-                elif not track_raw["is_local"]:  # add to get list
-                    uri_get.append(track_raw["uri"])
+        for track_response in response[key][cls.api.items_key]:
+            # loop through the skeleton response for this album
+            # find items that match from the given items
+            if track_response["uri"] in uri_tracks_input:
+                # replace the skeleton response with the response from the track
+                track = uri_tracks_input.pop(track_response["uri"])
+                track_response.clear()
+                track_response |= track.response
+            elif not track_response["is_local"]:  # add to get from API list
+                uri_get.append(track_response["uri"])
 
-            if len(uri_get) > 0:  # get remaining items
-                tracks_new = cls.api.get_tracks(uri_get, features=True, use_cache=use_cache)
-                uri_tracks: Mapping[str, Mapping[str, Any]] = {r["uri"]: r for r in tracks_new}
+        if len(uri_get) > 0:  # get remaining items from API
+            uri_tracks_get = {r["uri"]: r for r in cls.api.get_tracks(uri_get, features=True, use_cache=use_cache)}
 
-                for i, track_raw in enumerate(response["tracks"]["items"]):
-                    track: Mapping[str, Any] = uri_tracks.get(track_raw["track"]["uri"])
-                    if track:  # replace the skeleton response with the new response
-                        track_raw.clear()
-                        track_raw |= track
+            for track_response in response[key][cls.api.items_key]:
+                track_new: dict[str, Any] = uri_tracks_get.pop(track_response["uri"], None)
+                if track_new:  # replace the skeleton response with the new response
+                    track_response.clear()
+                    track_response |= track_new
 
-            obj.__init__(response)
+        if len(response[key][cls.api.items_key]) < response["total_tracks"]:
+            response[key][cls.api.items_key].extend([track.response for track in uri_tracks_input.values()])
+        response[key][cls.api.items_key].sort(key=lambda x: x["track_number"])
 
+        extend_response = cls.api.extend_items(
+            response[key], unit=RemoteObjectType.ALBUM.name.casefold() + "s", key=key, use_cache=use_cache
+        )
+        cls.api.get_tracks_extra(extend_response, features=True, use_cache=use_cache)
+
+        obj.__init__(response)
         return obj
 
-    def reload(self, use_cache: bool = True, *_, **__) -> None:
+    def reload(
+            self, extend_artists: bool = False, extend_tracks: bool = False, use_cache: bool = True, *_, **__
+    ) -> None:
         self._check_for_api()
 
         # reload with enriched data
-        response = self.api.get(self.url, use_cache=use_cache, log_pad=self._url_pad)
-        self.api.get_tracks(response["tracks"]["items"], features=True, use_cache=use_cache)
+        response = self.api.get_items(self.url, kind=RemoteObjectType.ALBUM, use_cache=use_cache)[0]
+        if extend_artists:
+            self.api.get_items(response["artists"], kind=RemoteObjectType.ARTIST, use_cache=use_cache)
+        if extend_tracks:
+            tracks = response["tracks"]
+            self.api.get_tracks_extra(tracks["items"], limit=tracks["limit"], features=True, use_cache=use_cache)
 
         self.__init__(response)

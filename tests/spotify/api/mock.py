@@ -61,6 +61,34 @@ class SpotifyMock(Mocker):
             ObjectType.ARTIST: self.user_artists,
         }
 
+    def get_requests(
+            self, url: str, params: dict[str, Any] | None = None, response: dict[str, Any] | None = None
+    ) -> list[Request]:
+        """Get a get request from the history from the given URL and params"""
+        requests = []
+
+        for request in self.request_history:
+            match_url = url.strip("/").endswith(request.path.strip("/"))
+
+            match_params = params is None
+            if not match_params and request.query:
+                for k, v in parse_qs(request.query).items():
+                    if k in params and str(params[k]) != v[0]:
+                        break
+                    match_params = True
+
+            match_response = response is None
+            if not match_response and request.body:
+                for k, v in request.json().items():
+                    if k in response and str(response[k]) != str(v):
+                        break
+                    match_response = True
+
+            if match_url and match_params and match_response:
+                requests.append(request)
+
+        return requests
+
     def __init__(self, **kwargs):
         super().__init__(case_sensitive=True, **kwargs)
 
@@ -69,21 +97,20 @@ class SpotifyMock(Mocker):
         # generate initial responses for generic item calls
         self.tracks = [self.generate_track() for _ in range(200)]
         self.playlists = [self.generate_playlist() for _ in range(randrange(self.range_start, self.range_stop))]
-        # ensure at least one playlist has enough items for playlist operations tests
-        self.playlists.append(self.generate_playlist(item_count=30))
         self.albums = [self.generate_album() for _ in range(randrange(self.range_start, self.range_stop))]
         self.artists = [self.generate_artist() for _ in range(randrange(self.range_start, self.range_stop))]
         self.users = [self.generate_user() for _ in range(randrange(self.range_start, self.range_stop))]
 
-        for playlist in self.playlists:  # ensure all assigned playlist owners are in the list of available users
-            playlist["owner"] = {k: v for k, v in choice(self.users).items() if k in playlist["owner"]}
+        # ensure at least one playlist and album has enough items for playlist operations tests
+        self.playlists.append(self.generate_playlist(item_count=30))
+        self.albums.append(self.generate_album(track_count=30))
 
         self.audio_features = {
             t["id"]: self.generate_audio_features(track_id=t["id"], duration_ms=t["duration_ms"]) for t in self.tracks
         }
         self.audio_analysis = {t["id"]: {"track": {"duration": t["duration_ms"] / 1000}} for t in self.tracks}
 
-        self.setup_limited_valid_responses()
+        self.setup_cross_referenced_valid_responses()
 
         # setup responses as needed for each item type
         playlists_map = {item["id"]: item for item in self.playlists}
@@ -136,45 +163,31 @@ class SpotifyMock(Mocker):
 
         self.setup_playlist_operations()
 
-    def get_requests(
-            self, url: str, params: dict[str, Any] | None = None, response: dict[str, Any] | None = None
-    ) -> list[Request]:
-        """Get a get request from the history from the given URL and params"""
-        requests = []
+    ###########################################################################
+    ## Setup
+    ###########################################################################
+    def setup_cross_referenced_valid_responses(self):
+        """Sets up cross-referenced valid responses for RemoteObject tests"""
+        for album in self.albums:
+            artists = deepcopy(sample(self.artists, k=len(album["artists"])))
+            for artist in artists:
+                for key in {"followers", "genres", "images", "popularity"}:
+                    artist.pop(key, None)
+            album["artists"] = artists
 
-        for request in self.request_history:
-            match_url = url.strip("/").endswith(request.path.strip("/"))
+            tracks = sample(self.tracks, k=len(album["tracks"]["items"]))
+            album_no_extra = {
+                k: v for k, v in album.items()
+                if k not in {"tracks", "copyrights", "external_ids", "genres", "label", "popularity"}
+            }
+            for track in tracks:
+                track["album"] = album_no_extra
+                track["artists"] = deepcopy(artists)
+            album["tracks"]["items"] = deepcopy(tracks)
 
-            match_params = params is None
-            if not match_params and request.query:
-                for k, v in parse_qs(request.query).items():
-                    if k in params and str(params[k]) != v[0]:
-                        break
-                    match_params = True
-
-            match_response = response is None
-            if not match_response and request.body:
-                for k, v in request.json().items():
-                    if k in response and str(response[k]) != str(v):
-                        break
-                    match_response = True
-
-            if match_url and match_params and match_response:
-                requests.append(request)
-
-        return requests
-
-    def setup_limited_valid_responses(self):
-        """Sets up limited number of cross-referenced valid responses for RemoteObject tests"""
-        self.tracks[0]["artists"] = deepcopy(self.artists[0:2])
-        for artist in self.tracks[0]["artists"]:
-            for key in {"followers", "genres", "images", "popularity"}:
-                artist.pop(key)
-
-        self.tracks[0]["album"] = deepcopy(self.albums[0])
-        self.tracks[0]["album"]["artists"] = deepcopy(self.tracks[0]["artists"])
-        for key in {"tracks", "copyrights", "external_ids", "genres", "label", "popularity"}:
-            self.tracks[0]["album"].pop(key)
+        for playlist in self.playlists:
+            # ensure all assigned playlist owners are in the list of available users
+            playlist["owner"] = {k: v for k, v in choice(self.users).items() if k in playlist["owner"]}
 
     def setup_search_response(self):
         """Setup requests mock for getting responses from the ``/search`` endpoint"""
@@ -288,6 +301,9 @@ class SpotifyMock(Mocker):
             self.delete(url=re.compile(rf"{playlist["href"]}/tracks"), json={"snapshot_id": random_str()})
             self.delete(url=re.compile(playlist["href"]), json={"snapshot_id": random_str()})
 
+    ###########################################################################
+    ## Formatters
+    ###########################################################################
     @staticmethod
     def format_next_url(url: str, offset: int = 0, limit: int = 20) -> str:
         """Format a `next` style URL for looping through API pages"""
@@ -331,6 +347,9 @@ class SpotifyMock(Mocker):
             kind.name.casefold(): response
         }
 
+    ###########################################################################
+    ## Generators
+    ###########################################################################
     @staticmethod
     def generate_external_ids() -> dict[str, Any]:
         """Return a randomly generated set of external IDs."""

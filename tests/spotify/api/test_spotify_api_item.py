@@ -185,7 +185,7 @@ class TestSpotifyAPIItems:
         assert test["total"] > test["limit"]
         assert test["total"] > len(test[api.items_key])
 
-        results = api._extend_items(items_block=test, unit=kind.name.casefold() + "s", key=key)
+        results = api.extend_items(items_block=test, unit=kind.name.casefold() + "s", key=key)
         requests = spotify_mock.get_requests(url=source["href"].split("?")[0])
 
         # assert extension to total
@@ -286,7 +286,7 @@ class TestSpotifyAPIItems:
         if key:
             for expect in expected:
                 # minus 1 for initial call to get the collection
-                pages = expect[key]["total"] / expect[key]["limit"] - 1
+                pages = (expect[key]["total"] / expect[key]["limit"]) - 1
                 extend_calls += int(pages) + (pages % 1 > 0)
 
         assert len(requests) == initial_calls + extend_calls
