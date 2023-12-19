@@ -6,7 +6,7 @@ from typing import Any, Self
 
 from syncify.abstract.enums import SyncifyEnum, FieldCombined
 from syncify.abstract.item import Item, Track
-from syncify.abstract.processor import DynamicProcessor, MusicBeeProcessor, dynamicprocessormethod
+from syncify.processors.base import DynamicProcessor, MusicBeeProcessor, dynamicprocessormethod
 from syncify.local import File
 from syncify.processors.exception import ItemLimiterError
 from syncify.processors.sort import ItemSorter

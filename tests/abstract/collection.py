@@ -8,7 +8,6 @@ from syncify.abstract.collection import ItemCollection, BasicCollection, Library
 from syncify.abstract.item import Item
 from syncify.abstract.misc import PrettyPrinter
 from syncify.exception import SyncifyTypeError
-from syncify.local.collection import LocalCollection
 from tests.abstract.misc import PrettyPrinterTester
 
 
@@ -62,27 +61,28 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
     def test_mutable_sequence_methods(collection: ItemCollection):
         assert len(collection.items) >= 3
 
-        index = 2
-        item = collection.items[index]
-        count_start = collection.items.count(item)
+        # get a unique item and its index
+        index, item = next(
+            (i, item) for i, item in enumerate(collection.items[1:], 1) if collection.items.count(item) == 1
+        )
         length_start = len(collection.items)
+
+        assert collection.count(item) == 1
+        assert collection.items == collection.copy()
 
         assert collection.index(item) == index
         with pytest.raises(ValueError):
-            collection.index(item, 0, 1)
-
-        assert collection.count(item) == count_start
-        assert collection.items == collection.copy()
+            collection.index(collection.items[2], 0, 1)
 
         collection.append(item)
         assert len(collection) == length_start + 1
-        assert collection.count(item) == count_start + 1
+        assert collection.count(item) == 2
         collection.append(item, allow_duplicates=False)
         assert len(collection) == length_start + 1
 
         collection.extend(collection)
         assert len(collection) == (length_start + 1) * 2
-        assert collection.count(item) == (count_start + 1) * 2
+        assert collection.count(item) == 4
         collection.extend(collection, allow_duplicates=False)
         assert len(collection) == (length_start + 1) * 2
 
@@ -94,7 +94,7 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
         collection.remove(item)
         assert collection.index(item) == index
         assert collection.pop(index) == item
-        assert collection.index(item) > index
+        assert collection.items[index] != item
         assert collection.pop() is not None
 
         collection.clear()
@@ -140,22 +140,6 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
 
         assert all(item in collection for item in collection.items)
         assert all(item not in collection.items for item in collection_merge_items)
-
-    @staticmethod
-    def test_getitem_dunder_method(collection: ItemCollection):
-        """:py:class:`ItemCollection` __getitem__ and __setitem__ tests"""
-        item = collection.items[2]
-
-        assert collection[1] == collection.items[1]
-        assert collection[2] == collection.items[2]
-        assert collection[:2] == collection.items[:2]
-
-        assert collection[item.name] == item
-
-        if collection.remote_wrangler is not None:
-            assert collection[item.uri] == item
-        if isinstance(collection, LocalCollection):  # also check getitem from path
-            assert collection[item.path] == item
 
     @staticmethod
     def test_setitem_dunder_method(collection: ItemCollection):

@@ -5,7 +5,7 @@ from random import randrange, sample
 
 import pytest
 
-from syncify.local.collection import LocalFolder, LocalAlbum, LocalArtist, LocalGenres
+from syncify.local.collection import LocalFolder, LocalAlbum, LocalArtist, LocalGenres, LocalCollection
 from syncify.local.exception import LocalCollectionError
 from syncify.local.track import LocalTrack
 from syncify.remote.library.base import RemoteItem
@@ -27,6 +27,20 @@ class LocalCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
     @pytest.fixture(scope="module")
     def collection_merge_invalid(spotify_mock: SpotifyMock) -> Iterable[RemoteItem]:
         return tuple(SpotifyTrack(response) for response in sample(spotify_mock.tracks, k=5))
+
+    @staticmethod
+    def test_getitem_dunder_method(collection: LocalCollection):
+        """:py:class:`ItemCollection` __getitem__ and __setitem__ tests"""
+        item = collection.items[2]
+
+        assert collection[1] == collection.items[1]
+        assert collection[2] == collection.items[2]
+        assert collection[:2] == collection.items[:2]
+
+        assert collection[item.name] == item
+        assert collection[item.path] == item
+        if collection.remote_wrangler is not None:
+            assert collection[item.uri] == item
 
 
 # noinspection PyTestUnpassedFixture

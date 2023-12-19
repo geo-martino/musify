@@ -104,6 +104,7 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollection):
         super().__init__(response=response)
 
         album_only = copy(response)
+        album_only.pop("tracks")
         for track in response["tracks"]["items"]:
             track["album"] = album_only
 

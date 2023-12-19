@@ -7,7 +7,7 @@ from typing import Any, Self
 
 from syncify.abstract.enums import Field
 from syncify.abstract.item import Item
-from syncify.abstract.processor import DynamicProcessor, MusicBeeProcessor, dynamicprocessormethod
+from syncify.processors.base import DynamicProcessor, MusicBeeProcessor, dynamicprocessormethod
 from syncify.fields import LocalTrackField
 from syncify.local.exception import FieldError
 from syncify.processors.exception import ItemComparerError

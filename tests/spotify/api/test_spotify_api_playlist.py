@@ -129,7 +129,7 @@ class TestSpotifyAPIPlaylists:
     def test_add_to_playlist_with_skip(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
         spotify_mock.reset_mock()  # test checks the number of requests made
 
-        playlist = spotify_mock.playlists[2]
+        playlist = next(playlist for playlist in spotify_mock.playlists if playlist["tracks"]["total"] > 10)
         initial = len(playlist["tracks"]["items"])
         total = playlist["tracks"]["total"]
         limit = total // 3
@@ -216,7 +216,7 @@ class TestSpotifyAPIPlaylists:
     def test_clear_from_playlist_all(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
         spotify_mock.reset_mock()  # test checks the number of requests made
 
-        playlist = spotify_mock.playlists[2]
+        playlist = next(playlist for playlist in spotify_mock.playlists if playlist["tracks"]["total"] > 10)
         total = playlist["tracks"]["total"]
         limit = total // 4
         assert total > limit  # ensure ranges are valid for test to work

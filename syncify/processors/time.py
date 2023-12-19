@@ -3,7 +3,7 @@ from typing import Any
 
 from dateutil.relativedelta import relativedelta
 
-from syncify.abstract.processor import DynamicProcessor, dynamicprocessormethod
+from syncify.processors.base import DynamicProcessor, dynamicprocessormethod
 
 
 class TimeMapper(DynamicProcessor):

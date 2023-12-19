@@ -7,7 +7,7 @@ from typing import Any
 from syncify.abstract.collection import Album, ItemCollection
 from syncify.abstract.enums import Field, FieldCombined, ALL_FIELDS
 from syncify.abstract.item import Track, BaseObject
-from syncify.abstract.processor import ItemProcessor
+from syncify.processors.base import ItemProcessor
 from syncify.utils import UnitIterable
 from syncify.utils.helpers import limit_value, to_collection
 from syncify.utils.logger import Logger

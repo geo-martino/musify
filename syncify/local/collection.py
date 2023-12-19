@@ -26,7 +26,7 @@ class LocalCollection[T: LocalItem](Logger, ItemCollection[T], metaclass=ABCMeta
     Generic class for storing a collection of local tracks.
 
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
+    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on items.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
     """
 
@@ -99,7 +99,8 @@ class LocalCollection[T: LocalItem](Logger, ItemCollection[T], metaclass=ABCMeta
         return {track.path for track in self.tracks}
 
     def __init__(self, remote_wrangler: RemoteDataWrangler = None):
-        super().__init__(remote_wrangler=remote_wrangler)
+        super().__init__()
+        self.remote_wrangler = remote_wrangler
 
     def save_tracks(self, **kwargs) -> dict[LocalTrack, SyncResultTrack]:
         """

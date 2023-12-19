@@ -176,6 +176,8 @@ class SpotifyMock(Mocker):
         for key in {"tracks", "copyrights", "external_ids", "genres", "label", "popularity"}:
             self.tracks[0]["album"].pop(key)
 
+        self.albums[1]["tracks"]["items"] = self.tracks[:-self.albums[1]["tracks"]["total"]]
+
     def setup_search_response(self):
         """Setup requests mock for getting responses from the ``/search`` endpoint"""
 

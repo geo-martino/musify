@@ -10,8 +10,6 @@ from syncify.abstract.enums import Field, FieldCombined, TagField
 from syncify.abstract.item import Item, Track, ObjectPrinterMixin
 from syncify.exception import SyncifyTypeError
 from syncify.processors.sort import ItemSorter, ShuffleMode, ShuffleBy
-from syncify.remote.enums import RemoteIDType
-from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitIterable, UnitSequence
 from syncify.utils.helpers import to_collection
 from syncify.utils.logger import Logger
@@ -23,8 +21,6 @@ class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], Hashable, 
     Generic class for storing a collection of items.
 
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on items.
-        If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
     """
 
     @property
@@ -32,10 +28,6 @@ class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], Hashable, 
     def items(self) -> list[T]:
         """The items in this collection"""
         raise NotImplementedError
-
-    def __init__(self, remote_wrangler: RemoteDataWrangler = None):
-        super().__init__()
-        self.remote_wrangler = remote_wrangler
 
     @staticmethod
     @abstractmethod
@@ -50,6 +42,12 @@ class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], Hashable, 
         """
         raise NotImplementedError
 
+    def count(self, __item: T) -> int:
+        """Return the number of occurrences of the given :py:class:`Item` in this collection"""
+        if not self._validate_item_type(__item):
+            raise SyncifyTypeError(type(__item).__name__)
+        return self.items.count(__item)
+
     def index(self, __item: T, __start: SupportsIndex = None, __stop: SupportsIndex = None) -> int:
         """
         Return first index of item from items in this collection.
@@ -59,12 +57,6 @@ class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], Hashable, 
         if not self._validate_item_type(__item):
             raise SyncifyTypeError(type(__item).__name__)
         return self.items.index(__item, __start if __start else 0, __stop if __stop else len(self.items))
-
-    def count(self, __item: T) -> int:
-        """Return the number of occurrences of the given :py:class:`Item` in this collection"""
-        if not self._validate_item_type(__item):
-            raise SyncifyTypeError(type(__item).__name__)
-        return self.items.count(__item)
 
     def copy(self) -> list[T]:
         """Return a shallow copy of the list of items in this collection"""
@@ -232,29 +224,14 @@ class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], Hashable, 
             self.remove(item)
         return self
 
+    @abstractmethod
     def __getitem__(self, __key: str | int | slice | Item) -> T | list[T] | list[T, None, None]:
         """
         Returns the item in this collection by matching on a given index/Item/URI.
         If an item is given, the URI is extracted from this item
         and the matching Item from this collection is returned.
         """
-        if isinstance(__key, int) or isinstance(__key, slice):  # simply index the list or items
-            return self.items[__key]
-        elif isinstance(__key, Item):  # take the URI
-            if not __key.has_uri or __key.uri is None:
-                raise KeyError(f"Given item does not have a URI associated: {__key.name}")
-            __key = __key.uri
-        elif self.remote_wrangler is None or not self.remote_wrangler.validate_id_type(__key, kind=RemoteIDType.URI):
-            # assume the string is a name
-            try:
-                return next(item for item in self.items if item.name == __key)
-            except StopIteration:
-                raise KeyError(f"No matching name found: '{__key}'")
-
-        try:  # string is a URI
-            return next(item for item in self.items if item.uri == __key)
-        except StopIteration:
-            raise KeyError(f"No matching URI found: '{__key}'")
+        raise NotImplementedError
 
     def __setitem__(self, __key: str | int | T, __value: T):
         """
@@ -285,8 +262,6 @@ class BasicCollection[T: Item](ItemCollection[T]):
 
     :param name: The name of this collection.
     :param items: The items in this collection
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on items.
-        If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
     """
     @staticmethod
     def _validate_item_type(items: Any | Iterable[Any]) -> bool:
@@ -303,10 +278,34 @@ class BasicCollection[T: Item](ItemCollection[T]):
     def items(self) -> list[T]:
         return self._items
 
-    def __init__(self, name: str, items: Collection[T], remote_wrangler: RemoteDataWrangler = None):
-        super().__init__(remote_wrangler=remote_wrangler)
+    def __init__(self, name: str, items: Collection[T]):
+        super().__init__()
         self._name = name
         self._items = to_collection(items, list)
+
+    def __getitem__(self, __key: str | int | slice | Item) -> T | list[T] | list[T, None, None]:
+        """
+        Returns the item in this collection by matching on a given index/Item/URI.
+        If an item is given, the URI is extracted from this item
+        and the matching Item from this collection is returned.
+        """
+        if isinstance(__key, int) or isinstance(__key, slice):  # simply index the list or items
+            return self.items[__key]
+        elif isinstance(__key, Item):  # take the URI
+            if not __key.has_uri or __key.uri is None:
+                raise KeyError(f"Given item does not have a URI associated: {__key.name}")
+            __key = __key.uri
+        else:
+            # assume the string is a name
+            try:
+                return next(item for item in self.items if item.name == __key)
+            except StopIteration:
+                raise KeyError(f"No matching name found: '{__key}'")
+
+        try:  # string is a URI
+            return next(item for item in self.items if item.uri == __key)
+        except StopIteration:
+            raise KeyError(f"No matching URI found: '{__key}'")
 
     def as_dict(self):
         return {"name": self.name, "items": self.items}
@@ -379,9 +378,6 @@ class Library[T: Track](Logger, ItemCollection[T], metaclass=ABCMeta):
     A library of items and playlists
 
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
-
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on items.
-        If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
     """
 
     @property
@@ -411,9 +407,6 @@ class Library[T: Track](Logger, ItemCollection[T], metaclass=ABCMeta):
     def playlists(self) -> dict[str, Playlist]:
         """The playlists in this library"""
         raise NotImplementedError
-
-    def __init__(self, remote_wrangler: RemoteDataWrangler = None):
-        super().__init__(remote_wrangler=remote_wrangler)
 
     def get_filtered_playlists(
             self,
