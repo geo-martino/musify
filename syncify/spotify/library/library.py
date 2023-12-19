@@ -5,14 +5,11 @@ from syncify.abstract.collection import Playlist, Library
 from syncify.remote.config import RemoteObjectClasses
 from syncify.remote.enums import RemoteObjectType
 from syncify.remote.library.library import RemoteLibrary
-from syncify.spotify.library.base import SpotifyItem
-from syncify.spotify.library.collection import SpotifyAlbum
-from syncify.spotify.library.collection import SpotifyPlaylist
-from syncify.spotify.library.item import SpotifyTrack
-from syncify.spotify.processors.wrangle import SpotifyDataWrangler
+from syncify.spotify.library.collection import SpotifyCollection, SpotifyPlaylist, SpotifyAlbum
+from syncify.spotify.library.item import SpotifyItem, SpotifyTrack
 
 
-class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyDataWrangler):
+class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack]):
     """
     Represents a Spotify library, providing various methods for manipulating
     tracks and playlists across an entire Spotify library collection.
@@ -31,7 +28,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyDataWrangler):
         )
 
     def _get_tracks_data(self, playlists_data: Collection[Mapping[str, Any]]) -> list[dict[str, Any]]:
-        self.logger.debug("Load Spotify tracks data: START")
+        self.logger.debug(f"Load {self.remote_source} tracks data: START")
         playlists_tracks_data = [pl["tracks"]["items"] for pl in playlists_data]
 
         tracks_data: list[dict[str, Any]] = []
@@ -42,21 +39,23 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyDataWrangler):
                 tracks_data.append(track)
 
         self.logger.info(
-            f"\33[1;95m  >\33[1;97m Getting Spotify data for {len(tracks_data)} unique tracks "
+            f"\33[1;95m  >\33[1;97m Getting {self.remote_source} data for {len(tracks_data)} unique tracks "
             f"across {len(playlists_data)} playlists \33[0m"
         )
         self.api.get_tracks(tracks_data, features=True, use_cache=self.use_cache)
 
         self.print_line()
-        self.logger.debug("Load Spotify tracks data: DONE\n")
+        self.logger.debug(f"Load {self.remote_source} tracks data: DONE\n")
         return tracks_data
 
     def enrich_tracks(self, albums: bool = False, artists: bool = False) -> None:
         if not albums and not artists:
             return
-        self.logger.debug("Enrich Spotify library: START")
+        self.logger.debug(f"Enrich {self.remote_source} library: START")
 
-        self.logger.info(f"\33[1;95m  >\33[1;97m Enriching metadata for {len(self.tracks)} Spotify tracks \33[0m")
+        self.logger.info(
+            f"\33[1;95m  >\33[1;97m Enriching metadata for {len(self.tracks)} {self.remote_source} tracks \33[0m"
+        )
 
         if albums:  # enrich track albums
             album_uris: set[str] = {track.response["album"]["uri"] for track in self.tracks}
@@ -81,13 +80,12 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyDataWrangler):
                 track._response["artists"] = [artists[artist["uri"]] for artist in track.response["artists"]]
 
         self.print_line()
-        self.logger.debug("Enrich Spotify library: DONE\n")
+        self.logger.debug(f"Enrich {self.remote_source} library: DONE\n")
 
     def _get_playlists_data(self) -> list[dict[str, Any]]:
-        self.logger.debug("Get Spotify playlists data: START")
-        playlists_data = self.api.get_user_items(
-            kind=RemoteObjectType.PLAYLIST, limit=self.limit, use_cache=self.use_cache
-        )
+        self.logger.debug(f"Get {self.remote_source} playlists data: START")
+
+        playlists_data = self.api.get_user_items(kind=RemoteObjectType.PLAYLIST, use_cache=self.use_cache)
         playlists_total = len(playlists_data)
         if self.include:  # filter on include playlist names
             include = {name.casefold() for name in self.include}
@@ -99,20 +97,20 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyDataWrangler):
 
         self.logger.debug(
             f"Filtered out {playlists_total - len(playlists_data)} playlists "
-            f"from {playlists_total} Spotify playlists"
+            f"from {playlists_total} {self.remote_source} playlists"
         )
 
         total_tracks = sum(pl["tracks"]["total"] for pl in playlists_data)
         total_pl = len(playlists_data)
         self.logger.info(
-            f"\33[1;95m  >\33[1;97m Getting {total_tracks} Spotify tracks from {total_pl} playlists \33[0m"
+            f"\33[1;95m  >\33[1;97m Getting {total_tracks} {self.remote_source} tracks from {total_pl} playlists \33[0m"
         )
 
         # make API calls
         self.api.get_items(playlists_data, kind=RemoteObjectType.PLAYLIST, use_cache=self.use_cache)
 
         self.print_line()
-        self.logger.debug("Get Spotify playlists data: DONE\n")
+        self.logger.debug(f"Get {self.remote_source} playlists data: DONE\n")
         return playlists_data
 
     def merge_playlists(

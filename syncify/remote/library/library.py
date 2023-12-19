@@ -7,15 +7,14 @@ from syncify.abstract.collection import Library, Playlist
 from syncify.abstract.item import Item
 from syncify.remote.api import RemoteAPI
 from syncify.remote.config import RemoteObjectClasses
-from syncify.remote.library.base import RemoteObject
-from syncify.remote.library.collection import SyncResultRemotePlaylist, RemotePlaylist
+from syncify.remote.library.collection import SyncResultRemotePlaylist, RemotePlaylist, RemoteCollection
 from syncify.remote.library.item import RemoteTrack
-from syncify.remote.processors.wrangle import RemoteDataWrangler
+from syncify.remote.library.object import RemoteObject
 from syncify.utils.logger import REPORT, STAT
 
 
 # noinspection PyShadowingNames
-class RemoteLibrary[T: RemoteTrack](Library[T], RemoteDataWrangler, metaclass=ABCMeta):
+class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=ABCMeta):
     """
     Represents a remote library, providing various methods for manipulating
     tracks and playlists across an entire remote library collection.
@@ -25,7 +24,6 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteDataWrangler, metaclass=AB
     :param exclude: An optional list of playlist names to exclude when loading playlists.
     :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
     """
-    limit = 50
 
     @property
     @abstractmethod
@@ -34,6 +32,11 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteDataWrangler, metaclass=AB
 
     @property
     def name(self):
+        """The username associated with this library"""
+        return self.api.user_name
+
+    @property
+    def id(self):
         """The user ID associated with this library"""
         return self.api.user_id
 
@@ -72,7 +75,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteDataWrangler, metaclass=AB
         if load:
             self.load()
 
-    def load(self, log: bool = True) -> None:
+    def load(self, log: bool = True, **__) -> None:
         """Loads all tracks and playlists in this library from scratch and log results."""
         self.logger.debug(f"Load {self.remote_source} library: START")
 

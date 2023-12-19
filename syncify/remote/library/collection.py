@@ -9,39 +9,13 @@ from syncify.abstract.item import Item
 from syncify.abstract.misc import Result
 from syncify.remote.enums import RemoteIDType
 from syncify.remote.exception import RemoteIDTypeError
-from syncify.remote.library.base import RemoteObject
-from syncify.remote.library.base import RemoteObjectWranglerMixin
 from syncify.remote.library.item import RemoteTrack
+from syncify.remote.library.object import RemoteObject
+from syncify.remote.processors.wrangle import RemoteDataWrangler
 
 
-class RemoteCollection[T: RemoteObject](RemoteObjectWranglerMixin, ItemCollection[T], metaclass=ABCMeta):
-    """Generic class for storing a collection of remote tracks."""
-
-    @classmethod
-    @abstractmethod
-    def load(
-            cls, value: str | Mapping[str, Any], use_cache: bool = True, items: Iterable[T] = (), *args, **kwargs
-    ) -> Self:
-        """
-        Generate a new object, calling all required endpoints to get a complete set of data for this item type.
-
-        The given ``value`` may be:
-            * A string representing a URL/URI/ID.
-            * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
-            * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
-            * A MutableSequence of remote API JSON responses for a collection with
-                a valid ID value under an ``id`` key.
-
-        When a list is given, only the first item is processed.
-
-        :param value: The value representing some remote artist. See description for allowed value types.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
-        :param items: Optionally, give a list of available items to build a response for this collection.
-            In doing so, the method will first try to find the API responses for the items of this collection
-            in the given list before calling the API for any items not found there.
-            This helps reduce the number of API calls made on initialisation.
-        """
-        raise NotImplementedError
+class RemoteCollection[T: RemoteObject](ItemCollection[T], RemoteDataWrangler, metaclass=ABCMeta):
+    """Generic class for storing a collection of remote objects."""
 
     def __getitem__(self, __key: str | int | slice | Item) -> T | list[T] | list[T, None, None]:
         """
@@ -82,6 +56,35 @@ class RemoteCollection[T: RemoteObject](RemoteObjectWranglerMixin, ItemCollectio
             raise KeyError(f"No matching {key_type.name} found: '{__key}'")
 
 
+class RemoteCollectionLoader[T: RemoteObject](RemoteObject, RemoteCollection[T], metaclass=ABCMeta):
+    """Generic class for storing a collection of remote objects that can be loaded from an API response."""
+    @classmethod
+    @abstractmethod
+    def load(
+            cls, value: str | Mapping[str, Any], use_cache: bool = True, items: Iterable[T] = (), *args, **kwargs
+    ) -> Self:
+        """
+        Generate a new object, calling all required endpoints to get a complete set of data for this item type.
+
+        The given ``value`` may be:
+            * A string representing a URL/URI/ID.
+            * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
+            * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
+            * A MutableSequence of remote API JSON responses for a collection with
+                a valid ID value under an ``id`` key.
+
+        When a list is given, only the first item is processed.
+
+        :param value: The value representing some remote artist. See description for allowed value types.
+        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param items: Optionally, give a list of available items to build a response for this collection.
+            In doing so, the method will first try to find the API responses for the items of this collection
+            in the given list before calling the API for any items not found there.
+            This helps reduce the number of API calls made on initialisation.
+        """
+        raise NotImplementedError
+
+
 @dataclass(frozen=True)
 class SyncResultRemotePlaylist(Result):
     """
@@ -102,7 +105,7 @@ class SyncResultRemotePlaylist(Result):
     final: int
 
 
-class RemotePlaylist[T: RemoteTrack](RemoteCollection[T], Playlist[T], metaclass=ABCMeta):
+class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], metaclass=ABCMeta):
     """Extracts key ``playlist`` data from a remote API JSON response."""
 
     @property
@@ -150,14 +153,13 @@ class RemotePlaylist[T: RemoteTrack](RemoteCollection[T], Playlist[T], metaclass
 
     def delete(self) -> None:
         """
-        Unfollow/delete the current playlist and clear all attributes from this object.
+        Unfollow/delete the current playlist and clear the stored response for this object.
         WARNING: This function will destructively modify your remote playlists.
         """
         self._check_for_api()
 
         self.api.delete_playlist(self.url)
-        for key in list(self.__dict__.keys()):
-            delattr(self, key)
+        self._response.clear()
 
     def sync(
             self,
@@ -228,6 +230,6 @@ class RemotePlaylist[T: RemoteTrack](RemoteCollection[T], Playlist[T], metaclass
         raise NotImplementedError
 
 
-class RemoteAlbum[T: RemoteTrack](RemoteCollection[T], Album[T], metaclass=ABCMeta):
+class RemoteAlbum[T: RemoteTrack](Album[T], RemoteCollectionLoader[T], metaclass=ABCMeta):
     """Extracts key ``album`` data from a remote API JSON response."""
     pass

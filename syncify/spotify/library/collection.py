@@ -4,22 +4,31 @@ from copy import copy, deepcopy
 from datetime import datetime
 from typing import Any, Self
 
-from syncify.abstract.collection import ItemCollection
 from syncify.remote.enums import RemoteObjectType
-from syncify.remote.library.collection import RemoteAlbum, RemotePlaylist
+from syncify.remote.library.collection import RemoteAlbum, RemotePlaylist, RemoteCollection, RemoteCollectionLoader
 from syncify.spotify.exception import SpotifyCollectionError
-from syncify.spotify.library.base import SpotifyItem, SpotifyObjectWranglerMixin
-from syncify.spotify.library.item import SpotifyTrack, SpotifyArtist
+from syncify.spotify.library.item import SpotifyItem, SpotifyTrack, SpotifyArtist
+from syncify.spotify.library.object import SpotifyObject
+from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 
 
-class SpotifyCollection[T: SpotifyItem](SpotifyObjectWranglerMixin, ItemCollection, metaclass=ABCMeta):
-    """Generic class for storing a collection of Spotify tracks."""
+class SpotifyCollection[T: SpotifyItem](RemoteCollection[T], SpotifyDataWrangler, metaclass=ABCMeta):
+    """Generic class for storing a collection of Spotify objects."""
 
     @staticmethod
     def _validate_item_type(items: Any | Iterable[Any]) -> bool:
         if isinstance(items, Iterable):
             return all(isinstance(item, SpotifyItem) for item in items)
         return isinstance(items, SpotifyItem)
+
+
+class SpotifyObjectLoaderMixin[T: SpotifyItem](RemoteCollectionLoader[T], SpotifyObject, metaclass=ABCMeta):
+    """Mixin for :py:class:`RemoteCollectionLoader` and :py:class:`SpotifyObject`"""
+    pass
+
+
+class SpotifyCollectionLoader[T: SpotifyItem](SpotifyObjectLoaderMixin[T], SpotifyCollection[T], metaclass=ABCMeta):
+    """Generic class for storing a collection of Spotify objects that can be loaded from an API response."""
 
     @classmethod
     def _load_response(cls, value: str | MutableMapping[str, Any], use_cache: bool = True) -> MutableMapping[str, Any]:
@@ -115,115 +124,7 @@ class SpotifyCollection[T: SpotifyItem](SpotifyObjectWranglerMixin, ItemCollecti
         return obj
 
 
-class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollection):
-    """
-    Extracts key ``album`` data from a Spotify API JSON response.
-
-    :param response: The Spotify API JSON response
-    """
-
-    @property
-    def name(self):
-        return self.response["name"]
-
-    @property
-    def tracks(self) -> list[SpotifyTrack]:
-        return self._tracks
-
-    @property
-    def artists(self) -> list[SpotifyArtist]:
-        return self._artists
-
-    @property
-    def artist(self):
-        return self.tag_sep.join(artist["name"] for artist in self.response["artists"])
-
-    @property
-    def album_artist(self):
-        return self.artist
-
-    @property
-    def track_total(self):
-        return self.response["total_tracks"]
-
-    @property
-    def genres(self):
-        if "genres" in self.response:
-            return [g.title() for g in self.response["genres"]]
-        main_artist_genres = self.response["artists"][0].get("genres", [])
-        return [g.title() for g in main_artist_genres] if main_artist_genres else None
-
-    @property
-    def year(self):
-        return int(self.response["release_date"][:4])
-
-    @property
-    def compilation(self):
-        return self.response["album_type"] == "compilation"
-
-    @property
-    def image_links(self):
-        images = {image["height"]: image["url"] for image in self.response["images"]}
-        return {"cover_front": url for height, url in images.items() if height == max(images)}
-
-    @property
-    def has_image(self):
-        return len(self.response["images"]) > 0
-
-    @property
-    def length(self):
-        lengths = {track.length for track in self.tracks}
-        return sum(lengths) if lengths else None
-
-    @property
-    def rating(self):
-        return self.response.get("popularity")
-
-    def __init__(self, response: MutableMapping[str, Any]):
-        super().__init__(response=response)
-
-        album_only = copy(response)
-        album_only.pop("tracks")
-        for track in response["tracks"]["items"]:
-            track["album"] = album_only
-
-        self._artists = list(map(SpotifyArtist, response["artists"]))
-        self._tracks = list(map(SpotifyTrack, response["tracks"]["items"]))
-
-        for track in self.tracks:
-            track.disc_total = self.disc_total
-
-    @classmethod
-    def load(
-            cls,
-            value: str | MutableMapping[str, Any],
-            items: Iterable[SpotifyTrack] = (),
-            extend_tracks: bool = False,
-            use_cache: bool = True,
-            *args,
-            **kwargs
-    ) -> Self:
-        return cls._load_track_collection(
-            value=value, use_cache=use_cache, items=items, extend_tracks=extend_tracks, *args, **kwargs
-        )
-
-    def reload(
-            self, extend_artists: bool = False, extend_tracks: bool = False, use_cache: bool = True, *_, **__
-    ) -> None:
-        self._check_for_api()
-
-        # reload with enriched data
-        response = self.api.get_items(self.url, kind=RemoteObjectType.ALBUM, use_cache=use_cache)[0]
-        if extend_artists:
-            self.api.get_items(response["artists"], kind=RemoteObjectType.ARTIST, use_cache=use_cache)
-        if extend_tracks:
-            tracks = response["tracks"]
-            self.api.get_tracks_extra(tracks["items"], limit=tracks["limit"], features=True, use_cache=use_cache)
-
-        self.__init__(response)
-
-
-class SpotifyPlaylist(SpotifyCollection, RemotePlaylist[SpotifyTrack]):
+class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[SpotifyTrack]):
     """
     Extracts key ``playlist`` data from a Spotify API JSON response.
 
@@ -346,3 +247,111 @@ class SpotifyPlaylist(SpotifyCollection, RemotePlaylist[SpotifyTrack]):
 
     def _get_track_uris_from_api_response(self) -> set[str]:
         return {track["track"]["uri"] for track in self.response["tracks"]["items"]}
+
+
+class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTrack]):
+    """
+    Extracts key ``album`` data from a Spotify API JSON response.
+
+    :param response: The Spotify API JSON response
+    """
+
+    @property
+    def name(self):
+        return self.response["name"]
+
+    @property
+    def tracks(self) -> list[SpotifyTrack]:
+        return self._tracks
+
+    @property
+    def artists(self) -> list[SpotifyArtist]:
+        return self._artists
+
+    @property
+    def artist(self):
+        return self.tag_sep.join(artist["name"] for artist in self.response["artists"])
+
+    @property
+    def album_artist(self):
+        return self.artist
+
+    @property
+    def track_total(self):
+        return self.response["total_tracks"]
+
+    @property
+    def genres(self):
+        if "genres" in self.response:
+            return [g.title() for g in self.response["genres"]]
+        main_artist_genres = self.response["artists"][0].get("genres", [])
+        return [g.title() for g in main_artist_genres] if main_artist_genres else None
+
+    @property
+    def year(self):
+        return int(self.response["release_date"][:4])
+
+    @property
+    def compilation(self):
+        return self.response["album_type"] == "compilation"
+
+    @property
+    def image_links(self):
+        images = {image["height"]: image["url"] for image in self.response["images"]}
+        return {"cover_front": url for height, url in images.items() if height == max(images)}
+
+    @property
+    def has_image(self):
+        return len(self.response["images"]) > 0
+
+    @property
+    def length(self):
+        lengths = {track.length for track in self.tracks}
+        return sum(lengths) if lengths else None
+
+    @property
+    def rating(self):
+        return self.response.get("popularity")
+
+    def __init__(self, response: MutableMapping[str, Any]):
+        super().__init__(response=response)
+
+        album_only = copy(response)
+        album_only.pop("tracks")
+        for track in response["tracks"]["items"]:
+            track["album"] = album_only
+
+        self._artists = list(map(SpotifyArtist, response["artists"]))
+        self._tracks = list(map(SpotifyTrack, response["tracks"]["items"]))
+
+        for track in self.tracks:
+            track.disc_total = self.disc_total
+
+    @classmethod
+    def load(
+            cls,
+            value: str | MutableMapping[str, Any],
+            items: Iterable[SpotifyTrack] = (),
+            extend_tracks: bool = False,
+            use_cache: bool = True,
+            *args,
+            **kwargs
+    ) -> Self:
+        return cls._load_track_collection(
+            value=value, use_cache=use_cache, items=items, extend_tracks=extend_tracks, *args, **kwargs
+        )
+
+    def reload(
+            self, extend_artists: bool = False, extend_tracks: bool = False, use_cache: bool = True, *_, **__
+    ) -> None:
+        self._check_for_api()
+
+        # reload with enriched data
+        response = self.api.get_items(self.url, kind=RemoteObjectType.ALBUM, use_cache=use_cache)[0]
+        if extend_artists:
+            self.api.get_items(response["artists"], kind=RemoteObjectType.ARTIST, use_cache=use_cache)
+        if extend_tracks:
+            tracks = response["tracks"]
+            self.api.get_tracks_extra(tracks["items"], limit=tracks["limit"], features=True, use_cache=use_cache)
+
+        self.__init__(response)

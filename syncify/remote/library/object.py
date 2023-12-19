@@ -2,20 +2,14 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import MutableMapping, Mapping
 from typing import Any, Self
 
-from syncify.abstract.item import BaseObject, Item
-from syncify.abstract.misc import PrettyPrinter
+from syncify.abstract.item import ObjectPrinterMixin
 from syncify.api.exception import APIError
 from syncify.remote.api import RemoteAPI
 from syncify.remote.base import Remote
-from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.remote.types import APIMethodInputType
 
 
-class RemoteObjectMixin(Remote, BaseObject, metaclass=ABCMeta):
-    pass
-
-
-class RemoteObject(RemoteObjectMixin, PrettyPrinter, metaclass=ABCMeta):
+class RemoteObject(ObjectPrinterMixin, Remote, metaclass=ABCMeta):
     """
     Generic base class for remote objects. Extracts key data from a remote API JSON response.
 
@@ -126,16 +120,3 @@ class RemoteObject(RemoteObjectMixin, PrettyPrinter, metaclass=ABCMeta):
             and not callable(getattr(self, k))
             and k not in self.__annotations__
         }
-
-
-class RemoteObjectWranglerMixin[T: RemoteObject](RemoteDataWrangler, RemoteObject, metaclass=ABCMeta):
-    pass
-
-
-class RemoteItem(RemoteObject, Item, metaclass=ABCMeta):
-    """Generic base class for remote items. Extracts key data from a remote API JSON response."""
-    pass
-
-
-class RemoteItemWranglerMixin[T: RemoteObject](RemoteDataWrangler, RemoteItem, metaclass=ABCMeta):
-    pass

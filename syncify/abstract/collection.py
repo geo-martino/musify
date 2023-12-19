@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from collections.abc import Collection, Mapping, Iterable, Container, MutableSequence, Hashable
+from collections.abc import Collection, Mapping, Iterable, Container, MutableSequence
 from copy import deepcopy
 from datetime import datetime
 from typing import Any, Self, SupportsIndex
@@ -16,7 +16,7 @@ from syncify.utils.logger import Logger
 
 
 # noinspection PyShadowingNames
-class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], Hashable, metaclass=ABCMeta):
+class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], metaclass=ABCMeta):
     """
     Generic class for storing a collection of items.
 

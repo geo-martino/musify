@@ -4,8 +4,8 @@ from collections.abc import Iterable
 import pytest
 
 from syncify.local.track import LocalTrack
-from syncify.remote.library.base import RemoteItem
 from syncify.remote.library.collection import RemoteCollection
+from syncify.remote.library.item import RemoteItem
 from tests.abstract.collection import ItemCollectionTester
 from tests.local.utils import random_tracks
 
@@ -25,12 +25,12 @@ class RemoteCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
     @staticmethod
     def test_getitem_dunder_method(collection: RemoteCollection):
         """:py:class:`ItemCollection` __getitem__ and __setitem__ tests"""
-        # TODO: expand to include all RemoteIDTypes
         item = collection.items[2]
 
         assert collection[1] == collection.items[1]
         assert collection[2] == collection.items[2]
         assert collection[:2] == collection.items[:2]
 
+        # TODO: expand to include all RemoteIDTypes
         assert collection[item.name] == item
         assert collection[item.uri] == item

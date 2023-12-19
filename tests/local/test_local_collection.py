@@ -8,7 +8,7 @@ import pytest
 from syncify.local.collection import LocalFolder, LocalAlbum, LocalArtist, LocalGenres, LocalCollection
 from syncify.local.exception import LocalCollectionError
 from syncify.local.track import LocalTrack
-from syncify.remote.library.base import RemoteItem
+from syncify.remote.library.item import RemoteItem
 from syncify.spotify.library.item import SpotifyTrack
 from tests.abstract.collection import ItemCollectionTester
 from tests.local.utils import random_tracks, random_track, path_track_resources, path_track_all

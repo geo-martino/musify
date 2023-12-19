@@ -134,7 +134,9 @@ class TestSpotifyAPIPlaylists:
     ## DELETE playlist operations
     ###########################################################################
     def test_delete_playlist(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
-        playlist = spotify_mock.user_playlists[0]
+        names = [playlist["name"] for playlist in spotify_mock.user_playlists]
+        playlist = next(playlist for playlist in spotify_mock.user_playlists if names.count(playlist["name"]) == 1)
+
         result = api.delete_playlist(random_id_type(id_=playlist["id"], wrangler=api, kind=ObjectType.PLAYLIST))
         assert result == playlist["href"] + "/followers"
 

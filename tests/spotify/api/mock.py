@@ -327,6 +327,7 @@ class SpotifyMock(Mocker):
             response["public"] = data["public"]
             response["collaborative"] = data["collaborative"]
             response["owner"] = self.user_playlists[0]["owner"]
+            self.get(url=response["href"], json=response)
             return response
 
         url = f"{URL_API}/users/{self.user_id}/playlists"
@@ -353,7 +354,7 @@ class SpotifyMock(Mocker):
     ) -> dict[str, Any]:
         """Format an items block response from a list of items and a URL base."""
         href = cls.format_next_url(url=url, offset=offset, limit=limit)
-        limit = max(limit, 1)  # limit must be above 1
+        limit = min(len(items), max(limit, 1), 50)  # limit must be between 1 and 50
 
         prev_offset = offset - limit
         prev_url = cls.format_next_url(url=url, offset=prev_offset, limit=limit) if prev_offset > 0 else None

@@ -3,13 +3,12 @@ from abc import ABCMeta
 from syncify.abstract.misc import PrettyPrinter
 from syncify.remote.enums import RemoteObjectType
 from syncify.remote.exception import RemoteObjectTypeError
-from syncify.remote.library.base import RemoteObject, RemoteItem
+from syncify.remote.library.object import RemoteObject
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.base import SpotifyRemote
-from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 
 
-class SpotifyObjectMixin(SpotifyRemote, RemoteObject, metaclass=ABCMeta):
+class SpotifyObjectMixin(RemoteObject, SpotifyRemote, metaclass=ABCMeta):
     pass
 
 
@@ -58,18 +57,3 @@ class SpotifyObject(SpotifyObjectMixin, PrettyPrinter, metaclass=ABCMeta):
         if self.response.get("type") != kind:
             kind = RemoteObjectType.from_name(kind)[0]
             raise RemoteObjectTypeError(f"Response type invalid", kind=kind, value=self.response.get("type"))
-
-
-class SpotifyObjectWranglerMixin(SpotifyDataWrangler, SpotifyObject, metaclass=ABCMeta):
-    """Mix-in for handling inheritance on SpotifyObject + SpotifyDataWrangler implementations"""
-    pass
-
-
-class SpotifyItem(SpotifyObject, RemoteItem, metaclass=ABCMeta):
-    """Generic base class for Spotify-stored items. Extracts key data from a Spotify API JSON response."""
-    pass
-
-
-class SpotifyItemWranglerMixin(SpotifyDataWrangler, SpotifyItem, metaclass=ABCMeta):
-    """Mix-in for handling inheritance on SpotifyItem + SpotifyDataWrangler implementations"""
-    pass

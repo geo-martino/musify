@@ -1,12 +1,23 @@
+from abc import ABCMeta
 from collections.abc import MutableMapping
 from typing import Any, Self
 
 from syncify.remote.enums import RemoteIDType, RemoteObjectType
-from syncify.remote.library.item import RemoteTrack, RemoteArtist
+from syncify.remote.library.item import RemoteTrack, RemoteArtist, RemoteItem
 from syncify.remote.types import APIMethodInputType
-from syncify.spotify.library.base import SpotifyItemWranglerMixin
+from syncify.spotify.library.object import SpotifyObject
+from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 from syncify.utils import UnitCollection
 from syncify.utils.helpers import to_collection
+
+
+class SpotifyItem(RemoteItem, SpotifyObject, metaclass=ABCMeta):
+    """Generic base class for Spotify-stored items. Extracts key data from a Spotify API JSON response."""
+    pass
+
+
+class SpotifyItemWranglerMixin(SpotifyItem, SpotifyDataWrangler, metaclass=ABCMeta):
+    pass
 
 
 class SpotifyArtist(SpotifyItemWranglerMixin, RemoteArtist):

@@ -7,13 +7,14 @@ from urllib.parse import parse_qs
 
 import pytest
 
+from syncify import PROGRAM_NAME
 from syncify.api.exception import APIError
 from syncify.remote.enums import RemoteObjectType
 from syncify.remote.exception import RemoteObjectTypeError
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.exception import SpotifyCollectionError
-from syncify.spotify.library.base import SpotifyItem
-from syncify.spotify.library.collection import SpotifyAlbum, SpotifyPlaylist, SpotifyCollection
+from syncify.spotify.library.collection import SpotifyAlbum, SpotifyPlaylist, SpotifyCollectionLoader
+from syncify.spotify.library.item import SpotifyItem
 from syncify.spotify.library.item import SpotifyTrack
 from tests.remote.library.test_remote_collection import RemoteCollectionTester
 from tests.spotify.api.mock import SpotifyMock
@@ -21,7 +22,7 @@ from tests.spotify.library.utils import assert_id_attributes
 from tests.spotify.utils import random_uri
 
 
-class SpotifyCollectionTester(RemoteCollectionTester, metaclass=ABCMeta):
+class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
@@ -30,7 +31,7 @@ class SpotifyCollectionTester(RemoteCollectionTester, metaclass=ABCMeta):
 
     @staticmethod
     def test_load_without_items(
-            collection: SpotifyCollection,
+            collection: SpotifyCollectionLoader,
             response_valid: dict[str, Any],
             api: SpotifyAPI,
             spotify_mock: SpotifyMock
@@ -66,7 +67,7 @@ class SpotifyCollectionTester(RemoteCollectionTester, metaclass=ABCMeta):
 
     @staticmethod
     def assert_load_with_tracks(
-            cls: type[SpotifyCollection],
+            cls: type[SpotifyCollectionLoader],
             items: list[SpotifyTrack],
             response: dict[str, Any],
             api: SpotifyAPI,
@@ -110,7 +111,7 @@ class SpotifyCollectionTester(RemoteCollectionTester, metaclass=ABCMeta):
             assert not input_ids.intersection(params["ids"][0].split(","))
 
 
-class TestSpotifyAlbum(SpotifyCollectionTester):
+class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
 
     @staticmethod
     @pytest.fixture
@@ -267,7 +268,7 @@ class TestSpotifyAlbum(SpotifyCollectionTester):
         )
 
 
-class TestSpotifyPlaylist(SpotifyCollectionTester):
+class TestSpotifyPlaylist(SpotifyCollectionLoaderTester):
 
     @staticmethod
     @pytest.fixture
@@ -416,3 +417,37 @@ class TestSpotifyPlaylist(SpotifyCollectionTester):
         self.assert_load_with_tracks(
             cls=SpotifyPlaylist, items=items, response=response_valid, api=api, spotify_mock=spotify_mock
         )
+
+    def test_create_playlist(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
+        SpotifyPlaylist.api = api
+
+        name = "new playlist"
+        pl = SpotifyPlaylist.create("new playlist", public=False, collaborative=True)
+
+        url = f"{api.api_url_base}/users/{spotify_mock.user_id}/playlists"
+        body = spotify_mock.get_requests(url=url, response={"name": name})[0].json()
+
+        assert body["name"] == name
+        assert PROGRAM_NAME in body["description"]
+        assert not body["public"]
+        assert body["collaborative"]
+
+        assert pl.name == name
+        assert PROGRAM_NAME in pl.description
+        assert not pl.public
+        assert pl.collaborative
+
+    def test_delete_playlist(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
+        SpotifyPlaylist.api = api
+
+        names = [playlist["name"] for playlist in spotify_mock.playlists]
+        response = deepcopy(next(pl for pl in spotify_mock.playlists if names.count(pl["name"]) == 1))
+        pl = SpotifyPlaylist(response)
+        url = pl.url
+
+        pl.delete()
+        assert spotify_mock.get_requests(url=url + "/followers")
+        assert not pl.response
+
+    def test_sync(self):
+        pass  # TODO
