@@ -24,7 +24,8 @@ class TestSpotifyAPIPlaylists:
     ## Basic functionality
     ###########################################################################
     def test_get_playlist_url(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
-        playlist = spotify_mock.user_playlists[5]
+        names = [playlist["name"] for playlist in spotify_mock.user_playlists]
+        playlist = next(playlist for playlist in spotify_mock.user_playlists if names.count(playlist["name"]) == 1)
 
         assert api.get_playlist_url(playlist=playlist) == playlist["href"]
         assert api.get_playlist_url(playlist=playlist["name"]) == playlist["href"]

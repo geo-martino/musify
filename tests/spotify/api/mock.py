@@ -67,11 +67,11 @@ class SpotifyMock(Mocker):
         self.setup_search_response()
 
         # generate initial responses for generic item calls
+        self.tracks = [self.generate_track() for _ in range(200)]
         self.playlists = [self.generate_playlist() for _ in range(randrange(self.range_start, self.range_stop))]
         # ensure at least one playlist has enough items for playlist operations tests
         self.playlists.append(self.generate_playlist(item_count=30))
         self.albums = [self.generate_album() for _ in range(randrange(self.range_start, self.range_stop))]
-        self.tracks = [self.generate_track() for _ in range(randrange(self.range_start, self.range_stop))]
         self.artists = [self.generate_artist() for _ in range(randrange(self.range_start, self.range_stop))]
         self.users = [self.generate_user() for _ in range(randrange(self.range_start, self.range_stop))]
 
@@ -176,8 +176,6 @@ class SpotifyMock(Mocker):
         for key in {"tracks", "copyrights", "external_ids", "genres", "label", "popularity"}:
             self.tracks[0]["album"].pop(key)
 
-        self.albums[1]["tracks"]["items"] = self.tracks[:-self.albums[1]["tracks"]["total"]]
-
     def setup_search_response(self):
         """Setup requests mock for getting responses from the ``/search`` endpoint"""
 
@@ -269,7 +267,12 @@ class SpotifyMock(Mocker):
             items_block = self.format_items_block(url=req.url, items=it, offset=offset, limit=limit, total=len(items))
 
             if url.endswith("me/following"):  # special case for following artists
-                items_block["cursors"] = {"after": items_block["next"], "before": items_block["previous"]}
+                items_block["cursors"] = {}
+                if items_block["next"]:
+                    items_block["cursors"]["after"] = items_block["next"]
+                if items_block["previous"]:
+                    items_block["cursors"]["before"] = items_block["previous"]
+
                 items_block.pop("next")
                 items_block.pop("previous")
                 items_block = {"artists": items_block}
@@ -438,8 +441,7 @@ class SpotifyMock(Mocker):
             }
         return response
 
-    @classmethod
-    def generate_track(cls, album: bool = True, artists: bool = True) -> dict[str, Any]:
+    def generate_track(self, album: bool = True, artists: bool = True) -> dict[str, Any]:
         """
         Return a randomly generated Spotify API response for a Track.
 
@@ -454,7 +456,7 @@ class SpotifyMock(Mocker):
             "disc_number": randrange(1, 4),
             "duration_ms": randrange(int(10e4), int(6*10e6)),  # 1 second to 10 minutes range
             "explicit": choice([True, False, None]),
-            "external_ids": cls.generate_external_ids(),
+            "external_ids": self.generate_external_ids(),
             "external_urls": {"spotify": f"{URL_EXT}/{kind}/{track_id}"},
             "href": f"{URL_API}/{kind}s/{track_id}",
             "id": track_id,
@@ -467,10 +469,9 @@ class SpotifyMock(Mocker):
             "is_local": False
         }
 
-        return cls.extend_track(response=response, album=album, artists=artists)
+        return self.extend_track(response=response, album=album, artists=artists)
 
-    @classmethod
-    def extend_track(cls, response: dict[str, Any], album: bool = False, artists: bool = False) -> dict[str, Any]:
+    def extend_track(self, response: dict[str, Any], album: bool = False, artists: bool = False) -> dict[str, Any]:
         """
         Extend a given randomly generated Spotify API ``response`` for a Track.
 
@@ -479,10 +480,10 @@ class SpotifyMock(Mocker):
         :param artists: Add randomly generated artists information to the response as per documentation.
         """
         if artists:
-            response["artists"] = [cls.generate_artist(properties=False) for _ in range(randrange(1, 4))]
+            response["artists"] = [self.generate_artist(properties=False) for _ in range(randrange(1, 4))]
 
         if album:
-            response["album"] = cls.generate_album(properties=False, artists=not artists)
+            response["album"] = self.generate_album(tracks=False, properties=False, artists=not artists)
             if artists:
                 response["album"]["artists"] = deepcopy(response["artists"])
 
@@ -522,9 +523,9 @@ class SpotifyMock(Mocker):
             "valence": random()
         }
 
-    @classmethod
     def generate_album(
-            cls, track_count: int = randrange(4, 50),
+            self,
+            track_count: int = randrange(4, 50),
             tracks: bool = True,
             artists: bool = True,
             properties: bool = True,
@@ -547,7 +548,7 @@ class SpotifyMock(Mocker):
             "external_urls": {"spotify": f"{URL_EXT}/{kind}s/{album_id}"},
             "href": f"{URL_API}/{kind}s/{album_id}",
             "id": album_id,
-            "images": cls.generate_images(),
+            "images": self.generate_images(),
             "name": random_str(20, 50),
             "release_date": random_date_str(),
             "release_date_precision": choice(("day", "month", "year")),
@@ -556,15 +557,16 @@ class SpotifyMock(Mocker):
         }
 
         if tracks:
-            tracks = cls.generate_album_tracks(response=response)
+            tracks = self.generate_album_tracks(response=response)
             url = response["href"] + "/tracks"
-            response["tracks"] = cls.format_items_block(url=url, items=tracks, limit=len(tracks), total=track_count)
+            response["tracks"] = self.format_items_block(url=url, items=tracks, limit=len(tracks), total=track_count)
 
-        response |= cls.generate_album_extras(artists=artists, properties=properties)
+        response |= self.generate_album_extras(artists=artists, properties=properties)
         return response
 
-    @classmethod
-    def generate_album_tracks(cls, response: dict[str, Any], count: int = 0) -> list[dict[str, Any]]:
+    def generate_album_tracks(
+            self, response: dict[str, Any], count: int = 0, use_stored: bool = True
+    ) -> list[dict[str, Any]]:
         """
         Randomly generate album tracks for a given randomly generated Spotify API Album ``response``.
 
@@ -572,6 +574,7 @@ class SpotifyMock(Mocker):
         :param count: The number of tracks to generate.
             If 0, attempt to get this number from the 'limit' key in the 'tracks' key of the response
             or use the 'total' value.
+        :param use_stored: When true, use the stored tracks instead of generating new ones.
         :return: A list of the randomly generated tracks.
         """
         total = response["total_tracks"]
@@ -584,9 +587,12 @@ class SpotifyMock(Mocker):
         if response.get("artists"):
             artists = response["artists"]
         else:
-            artists = [cls.generate_artist(properties=False) for _ in range(randrange(1, 4))]
+            artists = [self.generate_artist(properties=False) for _ in range(randrange(1, 4))]
 
-        items = [cls.generate_track(album=False, artists=False) for _ in range(count)]
+        if use_stored:
+            items = deepcopy(sample(self.tracks, k=count))
+        else:
+            items = [self.generate_track(album=False, artists=False) for _ in range(count)]
         [item.pop("popularity") for item in items]
         items = [item | {"artists": artists, "track_number": i} for i, item in enumerate(items, 1)]
 
@@ -617,9 +623,8 @@ class SpotifyMock(Mocker):
 
         return extras
 
-    @classmethod
     def generate_playlist(
-            cls,
+            self,
             item_count: int = randrange(0, 200),
             user_id: str | None = random_str(5, 30),
             api: SpotifyAPI | None = None,
@@ -635,7 +640,7 @@ class SpotifyMock(Mocker):
         kind = ObjectType.PLAYLIST.name.lower()
         url = f"{URL_API}/{kind}s/{playlist_id}"
 
-        owner = cls.generate_owner_from_api(api=api) if api else cls.generate_owner(user_id=user_id)
+        owner = self.generate_owner_from_api(api=api) if api else self.generate_owner(user_id=user_id)
         response = {
             "collaborative": choice([True, False]),
             "description": random_str(20, 100),
@@ -643,7 +648,7 @@ class SpotifyMock(Mocker):
             "followers": {"href": None, "total": randrange(0, int(8e10))},
             "href": url,
             "id": playlist_id,
-            "images": cls.generate_images(),
+            "images": self.generate_images(),
             "name": random_str(5, 50),
             "owner": owner,
             "primary_color": None,
@@ -654,14 +659,15 @@ class SpotifyMock(Mocker):
             "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{playlist_id}",
         }
 
-        tracks = cls.generate_playlist_tracks(response=response)
+        tracks = self.generate_playlist_tracks(response=response)
         url = response["tracks"]["href"]
-        response["tracks"] = cls.format_items_block(url=url, items=tracks, limit=len(tracks), total=item_count)
+        response["tracks"] = self.format_items_block(url=url, items=tracks, limit=len(tracks), total=item_count)
 
         return response
 
-    @classmethod
-    def generate_playlist_tracks(cls, response: dict[str, Any], count: int = 0) -> list[dict[str, Any]]:
+    def generate_playlist_tracks(
+            self, response: dict[str, Any], count: int = 0, use_stored: bool = True
+    ) -> list[dict[str, Any]]:
         """
         Randomly generate playlist tracks for a given randomly generated Spotify API Playlist ``response``.
 
@@ -669,6 +675,7 @@ class SpotifyMock(Mocker):
         :param count: The number of tracks to generate.
             If 0, attempt to get this number from the 'limit' key in the 'tracks' key of the response
             or use the 'total' value.
+        :param use_stored: When true, use the stored tracks instead of generating new ones.
         :return: A list of the randomly generated tracks.
         """
         total = response["tracks"]["total"]
@@ -683,9 +690,14 @@ class SpotifyMock(Mocker):
 
         items = []
         for _ in range(count):
-            track = cls.generate_track(album=True, artists=True) | {"episode": False, "track": True}
-            track = cls.format_user_item(response=track, kind=ObjectType.TRACK)
-            track |= {"added_by": choice((owner, cls.generate_owner())), "is_local": track["track"]["is_local"]}
+            if use_stored:
+                track = deepcopy(choice(self.tracks))
+            else:
+                track = self.generate_track(album=True, artists=True)
+            track |= {"episode": False, "track": True}
+
+            track = self.format_user_item(response=track, kind=ObjectType.TRACK)
+            track |= {"added_by": choice((owner, self.generate_owner())), "is_local": track["track"]["is_local"]}
             items.append(track)
 
         return items

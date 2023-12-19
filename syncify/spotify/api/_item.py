@@ -1,6 +1,6 @@
 import re
 from abc import ABCMeta
-from collections.abc import Sequence, Collection, Mapping, MutableMapping
+from collections.abc import Collection, Mapping, MutableMapping
 from itertools import batched
 from time import sleep
 from typing import Any
@@ -413,13 +413,10 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
         tracks = self.get_items(values=values, kind=RemoteObjectType.TRACK, limit=limit, use_cache=use_cache)
 
         # ensure that response are being assigned back to the original values if API response/s given
-        is_response_sequence = (
-                not isinstance(values, str)
-                and isinstance(values, Sequence)
-                and all(isinstance(v, Mapping) for v in values)
-        )
-        if isinstance(values, Mapping) or is_response_sequence:
+        if isinstance(values, Mapping):
             tracks = [values]
+        elif isinstance(values, Collection) and all(isinstance(v, Mapping) for v in values):
+            tracks = values
 
         self.get_tracks_extra(values=tracks, features=features, analysis=analysis, limit=limit, use_cache=use_cache)
         return tracks

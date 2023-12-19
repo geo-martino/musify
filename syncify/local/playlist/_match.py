@@ -5,8 +5,8 @@ from typing import Any, Self
 
 from syncify.abstract.enums import FieldCombined
 from syncify.abstract.misc import Result
-from syncify.processors.base import MusicBeeProcessor
 from syncify.local.track import LocalTrack
+from syncify.processors.base import MusicBeeProcessor
 from syncify.processors.compare import ItemComparer
 from syncify.processors.sort import ItemSorter
 from syncify.utils import UnitSequence, UnitCollection

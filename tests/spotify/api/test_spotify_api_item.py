@@ -148,7 +148,7 @@ class TestSpotifyAPIItems:
         source = spotify_mock.item_type_map[kind]
         source_map = {item["id"]: item for item in source}
         id_list = [item["id"] for item in source]
-        limit = len(source) // 3  # force pagination
+        limit = min(len(source) // 3, 50)  # force pagination
         assert len(source) > limit  # ensure ranges are valid for test to work
 
         results = api._get_items_batched(url=url, id_list=id_list, params=params, key=key, limit=limit)

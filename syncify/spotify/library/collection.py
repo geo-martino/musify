@@ -28,11 +28,10 @@ class SpotifyCollection[T: SpotifyItem](SpotifyObjectWranglerMixin, ItemCollecti
         """
         kind = cls.__name__.casefold().replace("spotify", "")
         item_type = RemoteObjectType.from_name(kind)[0]
-        key = cls.api.collection_item_map[item_type.name]
+        key = cls.api.collection_item_map[item_type] + "s"
 
         try:  # attempt to get response from the given value alone
             cls.validate_item_type(value, kind=item_type)
-            value: dict[str, Any]
             assert len(value[key][cls.api.items_key]) == value[key]["total"]
             return value
         except (ValueError, AssertionError, TypeError):  # reload response from the API

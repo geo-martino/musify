@@ -62,7 +62,7 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
     
         if len(values) == 0:
             raise RemoteObjectTypeError("No values given: collection is empty")
-    
+
         kinds = {cls._get_item_type(value=value, kind=kind) for value in values if value is not None}
         kinds.discard(None)
         if len(kinds) == 0:

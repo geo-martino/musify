@@ -19,6 +19,6 @@ class SpotifyCollectionTester(RemoteCollectionTester, metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
-    def collection_merge_items() -> Iterable[SpotifyItem]:
+    def collection_merge_items(*args, **kwargs) -> Iterable[SpotifyItem]:
         raise NotImplementedError
 

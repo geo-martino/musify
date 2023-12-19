@@ -21,9 +21,9 @@ class TestSpotifyTrack(ItemTester):
         return SpotifyTrack(response_random)
 
     @pytest.fixture
-    def response_random(self) -> dict[str, Any]:
+    def response_random(self, spotify_mock: SpotifyMock) -> dict[str, Any]:
         """Yield a randomly generated response from the Spotify API for a track item type"""
-        return SpotifyMock.generate_track()
+        return spotify_mock.generate_track()
 
     @pytest.fixture
     def response_valid(self, spotify_mock: SpotifyMock) -> dict[str, Any]:
@@ -35,7 +35,7 @@ class TestSpotifyTrack(ItemTester):
 
     def test_input_validation(self, spotify_mock: SpotifyMock):
         with pytest.raises(RemoteObjectTypeError):
-            SpotifyTrack(SpotifyMock.generate_artist(properties=False))
+            SpotifyTrack(spotify_mock.generate_artist(properties=False))
 
         url = spotify_mock.tracks[0]["href"]
         with pytest.raises(APIError):
@@ -190,7 +190,7 @@ class TestSpotifyArtist(ItemTester):
 
     def test_input_validation(self, spotify_mock: SpotifyMock):
         with pytest.raises(RemoteObjectTypeError):
-            SpotifyArtist(SpotifyMock.generate_track(artists=False, album=False))
+            SpotifyArtist(spotify_mock.generate_track(artists=False, album=False))
 
         url = spotify_mock.artists[0]["href"]
         with pytest.raises(APIError):

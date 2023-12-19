@@ -14,12 +14,12 @@ class RemoteCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
-    def collection_merge_items() -> Iterable[RemoteItem]:
+    def collection_merge_items(*args, **kwargs) -> Iterable[RemoteItem]:
         raise NotImplementedError
 
     @staticmethod
     @pytest.fixture(scope="module")
-    def collection_merge_invalid() -> Iterable[LocalTrack]:
+    def collection_merge_invalid(*args, **kwargs) -> Iterable[LocalTrack]:
         return random_tracks()
 
     @staticmethod

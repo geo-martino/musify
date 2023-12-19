@@ -4,9 +4,9 @@ from typing import Any, Iterable
 
 import pytest
 
-from syncify.spotify.api import SpotifyAPI
 from syncify.api.exception import APIError
 from syncify.remote.exception import RemoteObjectTypeError
+from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.library.collection import SpotifyAlbum
 from syncify.spotify.library.item import SpotifyTrack
 from tests.spotify.api.mock import SpotifyMock
@@ -22,13 +22,13 @@ class TestSpotifyAlbum(SpotifyCollectionTester):
 
     @staticmethod
     @pytest.fixture
-    def collection_merge_items() -> Iterable[SpotifyTrack]:
-        return [SpotifyTrack(SpotifyMock.generate_track()) for _ in range(randrange(5, 10))]
+    def collection_merge_items(spotify_mock: SpotifyMock) -> Iterable[SpotifyTrack]:
+        return [SpotifyTrack(spotify_mock.generate_track()) for _ in range(randrange(5, 10))]
 
     @pytest.fixture
-    def response_random(self) -> dict[str, Any]:
+    def response_random(self, spotify_mock: SpotifyMock) -> dict[str, Any]:
         """Yield a randomly generated response from the Spotify API for a track item type"""
-        return SpotifyMock.generate_album(track_count=10)
+        return spotify_mock.generate_album(track_count=10)
 
     @pytest.fixture
     def response_valid(self, spotify_mock: SpotifyMock) -> dict[str, Any]:
@@ -40,7 +40,7 @@ class TestSpotifyAlbum(SpotifyCollectionTester):
 
     def test_input_validation(self, spotify_mock: SpotifyMock):
         with pytest.raises(RemoteObjectTypeError):
-            SpotifyAlbum(SpotifyMock.generate_artist(properties=False))
+            SpotifyAlbum(spotify_mock.generate_artist(properties=False))
 
         url = spotify_mock.artists[0]["href"]
         with pytest.raises(APIError):
@@ -114,7 +114,6 @@ class TestSpotifyAlbum(SpotifyCollectionTester):
         assert album.rating == new_rating
 
     def test_load(self, response_valid, api: SpotifyAPI):
-        return  # TODO
         SpotifyAlbum.api = api
         album = SpotifyAlbum.load(response_valid["href"])
 
@@ -123,7 +122,6 @@ class TestSpotifyAlbum(SpotifyCollectionTester):
         assert album.url == response_valid["href"]
 
     def test_reload(self, response_valid, api: SpotifyAPI):
-        return  # TODO
         response_valid.pop("genres", None)
         response_valid.pop("popularity", None)
 
