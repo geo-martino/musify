@@ -137,12 +137,14 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert all(item not in collection.items for item in collection_merge_items)
 
     @staticmethod
+    @abstractmethod
+    def test_getitem_dunder_method(collection: ItemCollection, collection_merge_items: Iterable[Item]):
+        raise NotImplementedError
+
+    @staticmethod
     def test_setitem_dunder_method(collection: ItemCollection):
         item = next(i for i in collection.items[1:] if isinstance(i, type(collection[0])))
         assert collection.items.index(item) > 0
-
-        print(item == collection[0])
-        print(collection)
 
         collection[0] = item
         assert collection.items.index(item) == 0
@@ -165,14 +167,6 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
 
         collection.sort(reverse=True)
         assert collection == items
-
-    @staticmethod
-    def test_merge_items(collection: ItemCollection, collection_merge_items: Collection[Item]):
-        length = len(collection.items)
-        assert all(item not in collection.items for item in collection_merge_items)
-
-        collection.merge_items(collection_merge_items)
-        assert len(collection.items) == length
 
 
 class LibraryTester(ItemCollectionTester, metaclass=ABCMeta):
@@ -226,6 +220,6 @@ class LibraryTester(ItemCollectionTester, metaclass=ABCMeta):
             assert len(pl) == expected_counts[name]
 
     @staticmethod
+    @abstractmethod
     def test_merge_playlists(library: Library):
-        # TODO: write merge_playlists tests
-        pass
+        raise NotImplementedError

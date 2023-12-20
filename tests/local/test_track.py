@@ -4,6 +4,7 @@ from os.path import basename, dirname, splitext, getmtime
 
 import pytest
 
+from syncify.remote.enums import RemoteObjectType
 from syncify.abstract.item import Item
 from syncify.fields import LocalTrackField
 from syncify.local import open_image
@@ -165,6 +166,20 @@ class TestLocalTrack(ItemTester):
     @staticmethod
     @pytest.fixture
     def item(track: LocalTrack) -> Item:
+        return track
+
+    @staticmethod
+    @pytest.fixture
+    def item_unequal(track: LocalTrack) -> LocalTrack:
+        return next(load_track(path) for path in path_track_all if path != track.path)
+
+    @staticmethod
+    @pytest.fixture
+    def item_modified(track: LocalTrack) -> Item:
+        track = copy(track)
+        track.title = "new title"
+        track.artist = "new artist"
+        track.uri = random_uri(kind=RemoteObjectType.TRACK)
         return track
 
     @staticmethod
@@ -450,3 +465,56 @@ class TestLocalTrack(ItemTester):
         assert track.date_added is None
         assert track.last_played is None
         assert track.play_count is None
+
+    @staticmethod
+    def test_set_attributes(track: LocalTrack):
+        assert track.uri != "new_uri"
+        track["uri"] = "new_uri"
+        assert track.uri == "new_uri"
+
+        with pytest.raises(KeyError):
+            track["bad key"] = "value"
+
+        with pytest.raises(AttributeError):
+            track["name"] = "cannot set name"
+
+    @staticmethod
+    def test_merge(track: LocalTrack, item_modified: LocalTrack):
+        assert track.title != item_modified.title
+        assert track.artist != item_modified.artist
+        assert track.uri != item_modified.uri
+        assert track.album == item_modified.album
+        assert track.rating == item_modified.rating
+
+        track.merge(item_modified, tags={LocalTrackField.TITLE, LocalTrackField.URI})
+        assert track.title == item_modified.title
+        assert track.artist != item_modified.artist
+        assert track.uri == item_modified.uri
+        assert track.album == item_modified.album
+        assert track.rating == item_modified.rating
+
+    @staticmethod
+    def test_merge_dunder(track: LocalTrack, item_modified: LocalTrack):
+        assert track.title != item_modified.title
+        assert track.artist != item_modified.artist
+        assert track.uri != item_modified.uri
+        assert track.album == item_modified.album
+        assert track.rating == item_modified.rating
+
+        new_track = track | item_modified
+        assert track.title != item_modified.title
+        assert track.artist != item_modified.artist
+        assert track.uri != item_modified.uri
+
+        assert new_track.title == item_modified.title
+        assert new_track.artist == item_modified.artist
+        assert new_track.uri == item_modified.uri
+        assert new_track.album == item_modified.album
+        assert new_track.rating == item_modified.rating
+
+        track |= item_modified
+        assert track.title == item_modified.title
+        assert track.artist == item_modified.artist
+        assert track.uri == item_modified.uri
+        assert track.album == item_modified.album
+        assert track.rating == item_modified.rating

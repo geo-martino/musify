@@ -20,56 +20,34 @@ class ItemTester(PrettyPrinterTester, metaclass=ABCMeta):
         raise NotImplementedError
 
     @staticmethod
+    @abstractmethod
+    def item_unequal(*args, **kwargs) -> Item:
+        """Yields an :py:class:`Item` object that is does not equal the ``item`` being tested"""
+        raise NotImplementedError
+
+    @staticmethod
+    @abstractmethod
+    def item_modified(*args, **kwargs) -> Item:
+        """Yields an :py:class:`Item` object that is equal to the ``item`` being tested with some modified values"""
+        raise NotImplementedError
+
+    @staticmethod
     @pytest.fixture
     def obj(item: Item) -> PrettyPrinter:
         return item
 
     @staticmethod
-    def test_equality(item: Item):
+    def test_equality(item: Item, item_modified: Item, item_unequal: Item):
         assert hash(item) == hash(item)
         assert item == item
 
-        # TODO: add fixture for item_modified and make item_modified a different type for each ItemTester implementation
-        if isinstance(item, RemoteItem):
-            return
+        assert hash(item) == hash(item_modified)
+        assert item == item_modified
 
-        item_modified = deepcopy(item)
-        item_modified.file.filename = random_str()
-
-        assert hash(item) != hash(item_modified)
-        assert item != item_modified
+        assert hash(item) != hash(item_unequal)
+        assert item != item_unequal
 
     @staticmethod
     def test_get_attributes(item: Item):
         assert item["name"] == item.name
         assert item["uri"] == item.uri
-
-    @staticmethod
-    def test_set_attributes(item: Item):
-        # TODO: make this abstract, implement at module level for local and item level for remote
-        if isinstance(item, RemoteItem):
-            return
-
-        assert item.uri != "new_uri"
-        item["uri"] = "new_uri"
-        assert item.uri == "new_uri"
-
-        with pytest.raises(KeyError):
-            item["bad key"] = "value"
-
-        with pytest.raises(AttributeError):
-            item["name"] = "cannot set name"
-
-    @staticmethod
-    def test_merge_item(item: Item):
-        """:py:class:`Item` `merge` tests"""
-        # TODO: add fixture for item_modified and make item_modified a different type for each ItemTester implementation
-        if isinstance(item, RemoteItem):
-            return
-
-        item_modified = copy(item)
-        item_modified.uri = "new_uri"
-
-        assert item.uri != item_modified.uri
-        item.merge(item_modified)
-        assert item.uri == item_modified.uri

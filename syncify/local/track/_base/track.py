@@ -4,14 +4,17 @@ from abc import ABCMeta
 from collections.abc import Mapping, Iterable
 from glob import glob
 from os.path import join, exists, dirname
+from typing import Any, Self
 
 import mutagen
 
+from syncify.fields import LocalTrackField
 from syncify.abstract.item import Track, Item
 from syncify.local._file import File
 from syncify.local.track._base.reader import TagReader
 from syncify.local.track._base.writer import TagWriter
 from syncify.remote.processors.wrangle import RemoteDataWrangler
+from syncify.utils import UnitIterable
 
 
 class LocalTrack(TagWriter, metaclass=ABCMeta):
@@ -91,6 +94,14 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
 
         return mutagen.File(path)
 
+    def merge(self, track: Track, tags: UnitIterable[LocalTrackField] = LocalTrackField.ALL) -> None:
+        """Set the tags of this track equal to the given ``track``. Give a list of ``tags`` to limit which are set"""
+        tag_names = LocalTrackField.__tags__ if tags == LocalTrackField.ALL else set(LocalTrackField.to_tags(tags))
+
+        for tag in tag_names:  # merge on each tag
+            if hasattr(track, tag):
+                setattr(self, tag, track[tag])
+
     def extract_images_to_file(self, output_folder: str) -> int:
         """Extract and save all embedded images from file. Returns the number of images extracted."""
         images = self._read_images()
@@ -163,8 +174,33 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
             return obj
         return self.__class__(file=self.file, available=self._available_paths, remote_wrangler=self.remote_wrangler)
 
-    def __deepcopy__(self, _: as_dict = None):
+    def __deepcopy__(self, _: dict = None):
         """Deepcopy object by reloading from the disk"""
         # use path if file is a real file, use file object otherwise (when testing)
         file = self.file if not self.file.tags else self.path
         return self.__class__(file=file, available=self._available_paths, remote_wrangler=self.remote_wrangler)
+
+    def __setitem__(self, key: str, value: Any):
+        if not hasattr(self, key):
+            raise KeyError(f"Given key is not a valid attribute of this item: {key}")
+
+        attr = getattr(self, key)
+        if isinstance(attr, property) and attr.fset is None:
+            raise AttributeError(f"Cannot values on the given key, it is protected: {key}")
+
+        return setattr(self, key, value)
+
+    def __or__(self, other: Self) -> Self:
+        if not isinstance(other, self.__class__):
+            raise TypeError(f"Incorrect item given. Cannot merge with {other.__class__}")
+
+        self_copy = self.__deepcopy__()
+        self_copy.merge(other, tags=LocalTrackField.ALL)
+        return self_copy
+
+    def __ior__(self, other: Self):
+        if not isinstance(other, self.__class__):
+            raise TypeError(f"Incorrect item given. Cannot merge with {other.__class__}")
+
+        self.merge(other, tags=LocalTrackField.ALL)
+        return self

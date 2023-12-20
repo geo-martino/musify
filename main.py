@@ -445,7 +445,7 @@ class Syncify(Settings, Report):
         # add extra local tracks to remote library and merge remote items to local library
         self.remote_library.extend(self.local_library, allow_duplicates=False)
         self._remote_library.enrich_tracks(artists=True)
-        self.local_library.merge_items(self.remote_library, tags=tags)
+        self.local_library.merge_tracks(self.remote_library, tags=tags)
 
         # save tags to files
         self.logger.info(

@@ -1,10 +1,8 @@
 from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Hashable
-from typing import Self, Any
+from typing import Any
 
-from syncify.abstract.enums import TagField, FieldCombined
 from syncify.abstract.misc import PrettyPrinter
-from syncify.utils import UnitIterable
 
 
 class BaseObject(ABC):
@@ -62,14 +60,6 @@ class Item(ObjectPrinterMixin, Hashable, metaclass=ABCMeta):
         """Does this track have a valid associated URI. When None, answer is unknown."""
         raise NotImplementedError
 
-    def merge(self, item: Self, tags: UnitIterable[TagField] = FieldCombined.ALL) -> None:
-        """Set the tags of this item equal to the given ``item``. Give a list of ``tags`` to limit which are set"""
-        tag_names = TagField.__tags__ if tags == FieldCombined.ALL else set(TagField.to_tags(tags))
-
-        for tag in tag_names:  # merge on each tag
-            if hasattr(item, tag):
-                setattr(self, tag, item[tag])
-
     @abstractmethod
     def __hash__(self):
         raise NotImplementedError
@@ -86,16 +76,6 @@ class Item(ObjectPrinterMixin, Hashable, metaclass=ABCMeta):
     def __getitem__(self, key: str) -> Any:
         """Get the value of a given attribute key"""
         return getattr(self, key)
-
-    def __setitem__(self, key: str, value: Any):
-        if not hasattr(self, key):
-            raise KeyError(f"Given key is not a valid attribute of this item: {key}")
-
-        attr = getattr(self, key)
-        if isinstance(attr, property) and attr.fset is None:
-            raise AttributeError(f"Cannot values on the given key, it is protected: {key}")
-
-        return setattr(self, key, value)
 
 
 class Artist(Item, metaclass=ABCMeta):
@@ -263,4 +243,3 @@ class Track(Item, metaclass=ABCMeta):
     def rating(self) -> float | None:
         """The rating for this track"""
         raise NotImplementedError
-

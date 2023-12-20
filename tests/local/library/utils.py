@@ -41,3 +41,8 @@ class LocalLibraryTester(LibraryTester, LocalCollectionTester, metaclass=ABCMeta
             splitext(basename(path_playlist_xautopf_bp).casefold())[0]: path_playlist_xautopf_bp,
             splitext(basename(path_playlist_xautopf_ra).casefold())[0]: path_playlist_xautopf_ra,
         }
+
+    @staticmethod
+    def test_merge_playlists(library: LocalLibrary):
+        # TODO: write merge_playlists tests
+        pass

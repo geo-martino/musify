@@ -6,11 +6,11 @@ from copy import deepcopy
 from datetime import datetime
 from typing import Any, Self, SupportsIndex
 
-from syncify.abstract.enums import Field, FieldCombined, TagField
+from syncify.abstract.enums import Field
 from syncify.abstract.item import Item, Track, ObjectPrinterMixin
 from syncify.exception import SyncifyTypeError
 from syncify.processors.sort import ItemSorter, ShuffleMode, ShuffleBy
-from syncify.utils import UnitIterable, UnitSequence
+from syncify.utils import UnitSequence
 from syncify.utils.helpers import to_collection
 from syncify.utils.logger import Logger
 
@@ -141,42 +141,6 @@ class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], metaclass=
 
         if reverse:
             self.items.reverse()
-
-    def merge_items(self, items: Collection[T], tags: UnitIterable[TagField] = FieldCombined.ALL) -> None:
-        """
-        Merge this collection with another collection or list of items
-        by performing an inner join on a given set of tags
-
-        :param items: List of items or ItemCollection to merge with
-        :param tags: List of tags to merge on.
-        """
-        # noinspection PyTypeChecker
-        tag_names = set(TagField.__tags__) if tags == FieldCombined.ALL else set(TagField.to_tags(tags))
-
-        if isinstance(self, Library):  # log status message and use progress bar for libraries
-            self.logger.info(
-                f"\33[1;95m  >\33[1;97m "
-                f"Merging library of {len(self)} items with {len(items)} items on tags: "
-                f"{', '.join(tag_names)} \33[0m"
-            )
-            items = self.get_progress_bar(iterable=items, desc="Merging library", unit="tracks")
-
-        tags = to_collection(tags)
-        if FieldCombined.IMAGES in tags or FieldCombined.ALL in tags:
-            tag_names.add("image_links")
-            tag_names.add("has_image")
-
-        for item in items:  # perform the merge
-            item_in_collection = next((i for i in self.items if i == item), None)
-            if not item_in_collection:  # skip if the item does not exist in this collection
-                continue
-
-            for tag in tag_names:  # merge on each tag
-                if hasattr(item, tag):
-                    item_in_collection[tag] = item[tag]
-
-        if isinstance(self, Library):
-            self.print_line()
 
     def __eq__(self, __collection: ItemCollection | Iterable[T]):
         """Names equal and all items equal in order"""
@@ -452,7 +416,7 @@ class Library[T: Track](Logger, ItemCollection[T], metaclass=ABCMeta):
         return filtered
 
     @abstractmethod
-    def merge_playlists(self, playlists: Self | Collection[Playlist] | Mapping[Any, Playlist]) -> None:
+    def merge_playlists(self, playlists: Library | Collection[Playlist] | Mapping[Any, Playlist]) -> None:
         """Merge playlists from given list/map/library to this library"""
         # TODO: merge playlists adding/removing tracks as needed.
         #  Most likely will need to implement some method on playlist class too

@@ -1,5 +1,5 @@
 from abc import ABCMeta
-from collections.abc import Iterable
+from collections.abc import Iterable, Collection
 from copy import copy
 from random import randrange, sample
 
@@ -25,11 +25,11 @@ class LocalCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
 
     @staticmethod
     @pytest.fixture(scope="module")
-    def collection_merge_invalid(spotify_mock: SpotifyMock) -> Iterable[RemoteItem]:
+    def collection_merge_invalid(spotify_mock: SpotifyMock) -> Collection[SpotifyTrack]:
         return tuple(SpotifyTrack(response) for response in sample(spotify_mock.tracks, k=5))
 
     @staticmethod
-    def test_getitem_dunder_method(collection: LocalCollection):
+    def test_getitem_dunder_method(collection: LocalCollection, collection_merge_items: Iterable[LocalTrack]):
         """:py:class:`ItemCollection` __getitem__ and __setitem__ tests"""
         item = collection.items[2]
 
@@ -37,10 +37,33 @@ class LocalCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
         assert collection[2] == collection.items[2]
         assert collection[:2] == collection.items[:2]
 
+        assert collection[item] == item
         assert collection[item.name] == item
         assert collection[item.path] == item
+
         if collection.remote_wrangler is not None:
             assert collection[item.uri] == item
+        else:
+            with pytest.raises(KeyError):
+                assert collection[item.uri]
+
+        invalid_track = next(item for item in collection_merge_items)
+        with pytest.raises(KeyError):
+            assert collection[invalid_track]
+        with pytest.raises(KeyError):
+            assert collection[invalid_track.name]
+        with pytest.raises(KeyError):
+            assert collection[invalid_track.path]
+        with pytest.raises(KeyError):
+            assert collection[invalid_track.uri]
+
+    @staticmethod
+    def test_merge_tracks(collection: LocalCollection, collection_merge_items: Collection[SpotifyTrack]):
+        length = len(collection.items)
+        assert all(item not in collection.items for item in collection_merge_items)
+
+        collection.merge_tracks(collection_merge_items)
+        assert len(collection.items) == length
 
 
 # noinspection PyTestUnpassedFixture

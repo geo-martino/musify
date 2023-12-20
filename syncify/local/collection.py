@@ -6,22 +6,23 @@ from glob import glob
 from os.path import splitext, join, basename, exists, isdir
 from typing import Any
 
-from syncify.abstract.collection import ItemCollection, Folder, Album, Artist, Genre
-from syncify.abstract.item import Item
+from syncify.abstract.collection import ItemCollection, Library, Folder, Album, Artist, Genre
+from syncify.abstract.enums import FieldCombined, TagField
+from syncify.abstract.item import Item, Track
 from syncify.local._base import LocalItem
 from syncify.local.exception import LocalCollectionError
 from syncify.local.track import LocalTrack, SyncResultTrack, load_track, TRACK_FILETYPES
 from syncify.remote.enums import RemoteIDType
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitCollection
-from syncify.utils.helpers import get_most_common_values, to_collection
+from syncify.utils.helpers import get_most_common_values, to_collection, UnitIterable
 from syncify.utils.logger import Logger, STAT
 
 __max_str = "z" * 50
 
 
 # noinspection PyShadowingNames
-class LocalCollection[T: LocalItem](Logger, ItemCollection[T], metaclass=ABCMeta):
+class LocalCollection[T: LocalTrack](Logger, ItemCollection[T], metaclass=ABCMeta):
     """
     Generic class for storing a collection of local tracks.
 
@@ -109,7 +110,7 @@ class LocalCollection[T: LocalItem](Logger, ItemCollection[T], metaclass=ABCMeta
         :return: A map of the :py:class:`LocalTrack` saved to its result as a :py:class:`SyncResultTrack` object
         """
         bar = self.get_progress_bar(iterable=self.tracks, desc="Updating tracks", unit="tracks")
-        results: dict[LocalTrack, SyncResultTrack] = {track: track.save(**kwargs) for track in bar}
+        results = {track: track.save(**kwargs) for track in bar if isinstance(track, LocalTrack)}
         results_filtered = {track: result for track, result in results.items() if result.updated}
 
         return results_filtered
@@ -131,6 +132,42 @@ class LocalCollection[T: LocalItem](Logger, ItemCollection[T], metaclass=ABCMeta
                 f"\33[94m{', '.join(tag.name for tag in result.updated.keys())} \33[0m"
             )
         self.print_line(STAT)
+
+    def merge_tracks(self, tracks: Collection[Track], tags: UnitIterable[TagField] = FieldCombined.ALL) -> None:
+        """
+        Merge this collection with another collection or list of items
+        by performing an inner join on a given set of tags
+
+        :param tracks: List of items or ItemCollection to merge with
+        :param tags: List of tags to merge on.
+        """
+        # noinspection PyTypeChecker
+        tag_names = set(TagField.__tags__) if tags == FieldCombined.ALL else set(TagField.to_tags(tags))
+
+        if isinstance(self, Library):  # log status message and use progress bar for libraries
+            self.logger.info(
+                f"\33[1;95m  >\33[1;97m "
+                f"Merging library of {len(self)} items with {len(tracks)} items on tags: "
+                f"{', '.join(tag_names)} \33[0m"
+            )
+            tracks = self.get_progress_bar(iterable=tracks, desc="Merging library", unit="tracks")
+
+        tags = to_collection(tags)
+        if FieldCombined.IMAGES in tags or FieldCombined.ALL in tags:
+            tag_names.add("image_links")
+            tag_names.add("has_image")
+
+        for track in tracks:  # perform the merge
+            track_in_collection = next((t for t in self.tracks if t == track), None)
+            if not track_in_collection:  # skip if the item does not exist in this collection
+                continue
+
+            for tag in tag_names:  # merge on each tag
+                if hasattr(track, tag):
+                    track_in_collection[tag] = track[tag]
+
+        if isinstance(self, Library):
+            self.print_line()
 
     def __getitem__(self, __key: str | int | slice | Item) -> T | list[T] | list[T, None, None]:
         """
