@@ -100,19 +100,19 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
             # just return the tracks given if matcher has no settings applied
             self.tracks: list[LocalTrack] = [t for t in tracks]
         else:  # run matcher
-            self.tracks: list[LocalTrack] = matcher.match(tracks=tracks, reference=reference)
+            self.tracks: list[LocalTrack] = matcher(tracks=tracks, reference=reference)
 
     def _limit(self, ignore: Collection[str | LocalTrack]) -> None:
         """Wrapper for limiter"""
         if self.limiter is not None and self.tracks is not None:
             track_path_map = {track.path: track for track in self.tracks}
             ignore: set[LocalTrack] = {i if isinstance(i, LocalTrack) else track_path_map.get(i) for i in ignore}
-            self.limiter.limit(items=self.tracks, ignore=ignore)
+            self.limiter(items=self.tracks, ignore=ignore)
 
     def _sort(self) -> None:
         """Wrapper for sorter"""
         if self.sorter is not None and self.tracks is not None:
-            self.sorter.sort(items=self.tracks)
+            self.sorter(items=self.tracks)
 
     def _prepare_paths_for_output(self, paths: Collection[str]) -> list[str]:
         """

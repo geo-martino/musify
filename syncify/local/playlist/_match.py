@@ -198,6 +198,20 @@ class LocalMatcher(MusicBeeProcessor):
         if not check_existence or exists(path):
             return path
 
+    def __call__(
+            self, tracks: Collection[LocalTrack], reference: LocalTrack | None = None, combine: bool = True
+    ) -> list[LocalTrack] | MatchResult:
+        """
+        Return a new list of tracks from input tracks that match the given conditions.
+
+        :param tracks: List of tracks to search through for matches.
+        :param reference: Optional reference track to use when comparer has no expected value.
+        :param combine: If True, return one list of all tracks. If False, return tuple of 3 lists.
+        :return: If ``combine`` is True, list of tracks that match the conditions.
+            If ``combine`` is False, return :py:class:`MatchResult`
+        """
+        return self.match(tracks=tracks, reference=reference, combine=combine)
+
     def match(
             self, tracks: Collection[LocalTrack], reference: LocalTrack | None = None, combine: bool = True
     ) -> list[LocalTrack] | MatchResult:
@@ -270,7 +284,7 @@ class LocalMatcher(MusicBeeProcessor):
             tracks_original = tracks_original.copy()
             # get the last played track as reference in case comparer is looking for the playing tracks as reference
             ItemSorter.sort_by_field(tracks_original, field=FieldCombined.LAST_PLAYED, reverse=True)
-            matches: MatchResult = self.match(tracks_original, reference=tracks_original[0], combine=False)
+            matches: MatchResult = self(tracks_original, reference=tracks_original[0], combine=False)
             compared_path_map: Mapping[str, LocalTrack] = {track.path.casefold(): track for track in matches.compare}
 
             # get new include/exclude paths based on the leftovers after matching on comparers

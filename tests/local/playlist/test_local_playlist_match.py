@@ -153,9 +153,10 @@ class TestLocalMatcher(PrettyPrinterTester):
 
         assert matcher.include_paths == [track.path.casefold() for track in tracks_include_reduced]
         assert matcher.exclude_paths == [track.path.casefold() for track in tracks_exclude]
-        assert matcher.match(tracks=tracks) == tracks_include_reduced
+        assert matcher(tracks=tracks) == tracks_include_reduced
 
         match_result = matcher.match(tracks=tracks, combine=False)
+        assert match_result == matcher(tracks=tracks, combine=False)
         assert match_result.include == tracks_include_reduced
         assert match_result.exclude == tracks_exclude
         assert len(match_result.compare) == 0

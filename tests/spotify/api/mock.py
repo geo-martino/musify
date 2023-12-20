@@ -143,7 +143,7 @@ class SpotifyMock(Mocker):
 
             tracks = sample(self.tracks, k=len(album["tracks"]["items"]))
             album_no_extra = {
-                k: v for k, v in album.items()
+                k: deepcopy(v) for k, v in album.items()
                 if k not in {"tracks", "copyrights", "external_ids", "genres", "label", "popularity"}
             }
             for track in tracks:

@@ -228,7 +228,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
 
             results = self._get_results(item, kind=RemoteObjectType.TRACK, algorithm=algorithm)
             tracks = list(map(self._remote_types.track, results))
-            result = self.match(
+            result = self(
                 item,
                 results=tracks,
                 match_on=algorithm.match_fields,
@@ -248,7 +248,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
 
         # order and prioritise results that are closer to the item count of the input collection
         albums.sort(key=lambda x: abs(x.track_total - len(collection)))
-        result = self.match(
+        result = self(
             collection,
             results=albums,
             match_on=algorithm.match_fields,
@@ -260,7 +260,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
             return
 
         for item in collection:
-            item_result = self.match(
+            item_result = self(
                 item, results=result.items, match_on=[FieldCombined.TITLE], min_score=algorithm.min_score, max_score=0.8
             )
             if item_result:

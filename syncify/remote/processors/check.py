@@ -365,7 +365,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
             if not added:
                 break
 
-            result = self.match(item, results=added, match_on=[FieldCombined.TITLE])
+            result = self(item, results=added, match_on=[FieldCombined.TITLE])
             if not result:
                 continue
 
