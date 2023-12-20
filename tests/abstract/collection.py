@@ -141,6 +141,9 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
         item = next(i for i in collection.items[1:] if isinstance(i, type(collection[0])))
         assert collection.items.index(item) > 0
 
+        print(item == collection[0])
+        print(collection)
+
         collection[0] = item
         assert collection.items.index(item) == 0
         with pytest.raises(IndexError):  # does not set items outside of max length range

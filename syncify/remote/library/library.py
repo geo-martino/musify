@@ -25,6 +25,8 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
     :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
     """
 
+    __slots__ = ("_api", "_tracks", "_playlists", "include", "exclude", "use_cache", "", "", )
+
     @property
     @abstractmethod
     def _remote_types(self) -> RemoteObjectClasses:

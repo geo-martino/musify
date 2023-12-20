@@ -65,6 +65,8 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
         Types of the values in this list are automatically converted to the type of the item field's value.
     """
 
+    __slots__ = ("_expected", "_converted", "field")
+
     @property
     def condition(self) -> str:
         """String representation of the current condition name of this object"""

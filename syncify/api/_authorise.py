@@ -62,6 +62,22 @@ class APIAuthoriser(Logger):
     :param header_extra: Extra data to add to the final headers for future successful requests.
     """
 
+    __slots__ = (
+        "name",
+        "auth_args",
+        "user_args",
+        "refresh_args",
+        "test_args",
+        "test_condition",
+        "test_expiry",
+        "token",
+        "token_file_path",
+        "token_key_path",
+        "header_key",
+        "header_prefix",
+        "header_extra",
+    )
+
     _user_auth_socket_address = "localhost"
     _user_auth_socket_port = 8080
 

@@ -79,6 +79,8 @@ class XAutoPF(LocalPlaylist):
         For more info on this, see :py:class:`LocalTrack`.
     """
 
+    __slots__ = ("_description", "xml",)
+
     valid_extensions = frozenset({".xautopf"})
 
     @property

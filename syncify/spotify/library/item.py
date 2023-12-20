@@ -78,6 +78,8 @@ class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
     :param response: The Spotify API JSON response.
     """
 
+    __slots__ = ("_artists", "_disc_total", "_comments")
+
     _song_keys = ("C", "C#/Db", "D", "D#/Eb", "E", "F", "F#/Gb", "G", "G#/Ab", "A", "A#/Bb", "B")
 
     @property

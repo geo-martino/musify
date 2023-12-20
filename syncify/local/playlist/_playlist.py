@@ -32,6 +32,8 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
         For more info on this, see :py:class:`LocalTrack`.
     """
 
+    __slots__ = ("_path", "_tracks", "_tracks_original", "matcher", "limiter", "sorter", "available_track_paths")
+
     @property
     def name(self) -> str:
         """The name of this playlist, always the same as the filename."""

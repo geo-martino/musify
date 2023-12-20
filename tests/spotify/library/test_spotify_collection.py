@@ -135,7 +135,9 @@ class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
         from the Spotify API for a track item type.
         """
         return deepcopy(next(
-            album for album in spotify_mock.albums if album["tracks"]["total"] > len(album["tracks"]["items"]) > 5
+            album for album in spotify_mock.albums
+            if album["tracks"]["total"] > len(album["tracks"]["items"]) > 5
+            and album["genres"]
         ))
 
     def test_input_validation(self, response_random: dict[str, Any], spotify_mock: SpotifyMock):

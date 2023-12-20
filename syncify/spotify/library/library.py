@@ -20,7 +20,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
         if isinstance(items, Iterable):
             return all(isinstance(item, SpotifyTrack) for item in items)
         return isinstance(items, SpotifyTrack)
-    
+
     @property
     def _remote_types(self) -> RemoteObjectClasses:
         return RemoteObjectClasses(

@@ -266,7 +266,7 @@ class TestAPIAuthoriser:
 
     def test_auth_new_token_and_no_refresh(self, token: dict[str, Any], token_file_path: str, requests_mock: Mocker):
         authoriser = APIAuthoriser(
-            name="test", 
+            name="test",
             auth_args={"url": "http://localhost/auth"},
             token_key_path=["1", "2", "code"]
         )

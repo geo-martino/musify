@@ -91,6 +91,8 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
         Skip karaoke results otherwise.
     """
 
+    __slots__ = "api"
+
     @property
     @abstractmethod
     def _remote_types(self) -> RemoteObjectClasses:

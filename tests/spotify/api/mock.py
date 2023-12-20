@@ -92,49 +92,18 @@ class SpotifyMock(Mocker):
     def __init__(self, **kwargs):
         super().__init__(case_sensitive=True, **kwargs)
 
-        self.setup_search_response()
-
         # generate initial responses for generic item calls
         self.tracks = [self.generate_track() for _ in range(200)]
         self.playlists = [self.generate_playlist() for _ in range(randrange(self.range_start, self.range_stop))]
         self.albums = [self.generate_album() for _ in range(randrange(self.range_start, self.range_stop))]
         self.artists = [self.generate_artist() for _ in range(randrange(self.range_start, self.range_stop))]
         self.users = [self.generate_user() for _ in range(randrange(self.range_start, self.range_stop))]
-
-        # ensure at least one of each collection has enough items for later tests that require a large number of items
-        self.playlists.append(self.generate_playlist(item_count=100))
-        self.albums.append(self.generate_album(track_count=100))
-
         self.audio_features = {
             t["id"]: self.generate_audio_features(track_id=t["id"], duration_ms=t["duration_ms"]) for t in self.tracks
         }
         self.audio_analysis = {t["id"]: {"track": {"duration": t["duration_ms"] / 1000}} for t in self.tracks}
 
         self.setup_cross_referenced_valid_responses()
-
-        # setup responses as needed for each item type
-        playlists_map = {item["id"]: item for item in self.playlists}
-        self.setup_items_response(kind=ObjectType.PLAYLIST, id_map=playlists_map, batchable=False)
-        for id_, item in playlists_map.items():
-            self.setup_items_block_response_from_generator(
-                kind=ObjectType.PLAYLIST, id_=id_, item=item, generator=self.generate_playlist_tracks
-            )
-
-        albums_map = {item["id"]: item for item in self.albums}
-        self.setup_items_response(kind=ObjectType.ALBUM, id_map=albums_map)
-        for id_, item in albums_map.items():
-            self.setup_items_block_response_from_generator(
-                kind=ObjectType.ALBUM, id_=id_, item=item, generator=self.generate_album_tracks
-            )
-
-        self.setup_items_response(kind=ObjectType.TRACK, id_map={item["id"]: item for item in self.tracks})
-        self.setup_items_response(kind="audio-features", id_map=self.audio_features)
-        self.setup_items_response(kind="audio-analysis", id_map=self.audio_analysis, batchable=False)
-
-        self.setup_items_response(kind=ObjectType.ARTIST, id_map={item["id"]: item for item in self.artists})
-        self.setup_items_response(
-            kind=ObjectType.USER, id_map={item["id"]: item for item in self.users}, batchable=False
-        )
 
         # randomly choose currently authenticated user and setup mock
         self.user = choice(self.users)
@@ -152,22 +121,19 @@ class SpotifyMock(Mocker):
             playlist["owner"] = {k: v for k, v in self.user.items() if k in playlist["owner"]}
             playlist["tracks"] = {"href": playlist["tracks"]["href"], "total": playlist["tracks"]["total"]}
 
-        # setup responses as needed for each item type
-        self.setup_items_block_response_from_list(url=f"{URL_API}/me/playlists", items=self.user_playlists)
-        self.setup_items_block_response_from_list(
-            url=f"{URL_API}/users/{self.user_id}/playlists", items=self.user_playlists
-        )
-        self.setup_items_block_response_from_list(url=f"{URL_API}/me/tracks", items=self.user_tracks)
-        self.setup_items_block_response_from_list(url=f"{URL_API}/me/albums", items=self.user_albums)
-        self.setup_items_block_response_from_list(url=f"{URL_API}/me/following", items=self.user_artists)
-
-        self.setup_playlist_operations()
+        self.setup_all_responses()
 
     ###########################################################################
     ## Setup
     ###########################################################################
     def setup_cross_referenced_valid_responses(self):
         """Sets up cross-referenced valid responses for RemoteObject tests"""
+        # some tests need items of certain size and properties
+        self.playlists.append(self.generate_playlist(item_count=100))
+        album = self.generate_album(track_count=100)
+        album["genres"] = random_genres(5)
+        self.albums.append(album)
+
         for album in self.albums:
             artists = deepcopy(sample(self.artists, k=len(album["artists"])))
             for artist in artists:
@@ -204,6 +170,45 @@ class SpotifyMock(Mocker):
         for playlist in self.playlists:
             # ensure all assigned playlist owners are in the list of available users
             playlist["owner"] = {k: v for k, v in choice(self.users).items() if k in playlist["owner"]}
+
+    def setup_all_responses(self):
+        """Driver to setup requests_mock responses for all endpoints"""
+        self.setup_search_response()
+
+        # setup responses as needed for each item type
+        playlists_map = {item["id"]: item for item in self.playlists}
+        self.setup_items_response(kind=ObjectType.PLAYLIST, id_map=playlists_map, batchable=False)
+        for id_, item in playlists_map.items():
+            self.setup_items_block_response_from_generator(
+                kind=ObjectType.PLAYLIST, id_=id_, item=item, generator=self.generate_playlist_tracks
+            )
+
+        albums_map = {item["id"]: item for item in self.albums}
+        self.setup_items_response(kind=ObjectType.ALBUM, id_map=albums_map)
+        for id_, item in albums_map.items():
+            self.setup_items_block_response_from_generator(
+                kind=ObjectType.ALBUM, id_=id_, item=item, generator=self.generate_album_tracks
+            )
+
+        self.setup_items_response(kind=ObjectType.TRACK, id_map={item["id"]: item for item in self.tracks})
+        self.setup_items_response(kind="audio-features", id_map=self.audio_features)
+        self.setup_items_response(kind="audio-analysis", id_map=self.audio_analysis, batchable=False)
+
+        self.setup_items_response(kind=ObjectType.ARTIST, id_map={item["id"]: item for item in self.artists})
+        self.setup_items_response(
+            kind=ObjectType.USER, id_map={item["id"]: item for item in self.users}, batchable=False
+        )
+
+        # setup responses as needed for each item type
+        self.setup_items_block_response_from_list(url=f"{URL_API}/me/playlists", items=self.user_playlists)
+        self.setup_items_block_response_from_list(
+            url=f"{URL_API}/users/{self.user_id}/playlists", items=self.user_playlists
+        )
+        self.setup_items_block_response_from_list(url=f"{URL_API}/me/tracks", items=self.user_tracks)
+        self.setup_items_block_response_from_list(url=f"{URL_API}/me/albums", items=self.user_albums)
+        self.setup_items_block_response_from_list(url=f"{URL_API}/me/following", items=self.user_artists)
+
+        self.setup_playlist_operations()
 
     def setup_search_response(self):
         """Setup requests mock for getting responses from the ``/search`` endpoint"""

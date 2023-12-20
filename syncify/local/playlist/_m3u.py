@@ -59,6 +59,8 @@ class M3U(LocalPlaylist):
         For more info on this, see :py:class:`LocalTrack`.
     """
 
+    __slots__ = "_description"
+
     valid_extensions = frozenset({".m3u"})
 
     @property

@@ -18,6 +18,8 @@ class RemoteObject(ObjectPrinterMixin, Remote, metaclass=ABCMeta):
     :param response: The remote API JSON response
     """
 
+    __slots__ = "_response"
+
     _url_pad = 71
     api: RemoteAPI
 

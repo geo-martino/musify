@@ -10,9 +10,12 @@ from syncify.utils import UnitIterable
 class BaseObject(ABC):
     """
     Generic base class for all local/remote item/collections.
-    
+
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
+
+    __slots__ = "_clean_tags"
+
     tag_sep: str = "; "
 
     @property
@@ -37,7 +40,7 @@ class ObjectPrinterMixin(BaseObject, PrettyPrinter, metaclass=ABCMeta):
 class Item(ObjectPrinterMixin, Hashable, metaclass=ABCMeta):
     """
     Generic class for storing an item.
-    
+
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
 
@@ -98,7 +101,7 @@ class Item(ObjectPrinterMixin, Hashable, metaclass=ABCMeta):
 class Artist(Item, metaclass=ABCMeta):
     """
     Metadata/tags associated with an artist.
-    
+
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
 

@@ -1,5 +1,4 @@
 import os
-from typing import Any
 
 from syncify import PROGRAM_NAME
 from syncify.spotify import URL_API, URL_AUTH
@@ -86,8 +85,6 @@ class SpotifyAPI(SpotifyDataWrangler, SpotifyAPICore, SpotifyAPIItems, SpotifyAP
     Collection of endpoints for the Spotify API.
     See :py:class:`RequestHandler` and :py:class:`APIAuthoriser`
     for more info on which params to pass to authorise and execute requests.
-
-    :param handler_kwargs: The authorisation kwargs to be passed to :py:class:`RequestHandler`.
     """
 
     @property
@@ -107,10 +104,6 @@ class SpotifyAPI(SpotifyDataWrangler, SpotifyAPICore, SpotifyAPIItems, SpotifyAP
         if not self._user_data:
             self._user_data = self.get_self()
         return self._user_data["display_name"]
-
-    def __init__(self, **handler_kwargs):
-        super().__init__(**handler_kwargs)
-        self._user_data: dict[str, Any] = {}
 
 
 if __name__ == "__main__":

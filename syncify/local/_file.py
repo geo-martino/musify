@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from collections.abc import Hashable
 from datetime import datetime
 from http.client import HTTPResponse
 from io import BytesIO
@@ -13,7 +14,7 @@ from PIL import Image, UnidentifiedImageError
 from syncify.local.exception import InvalidFileType, ImageLoadError
 
 
-class File(metaclass=ABCMeta):
+class File(Hashable, metaclass=ABCMeta):
     """Generic class for representing a file on a system."""
 
     valid_extensions: frozenset[str]
@@ -77,6 +78,10 @@ class File(metaclass=ABCMeta):
         :param dry_run: Run function, but do not modify file at all.
         """
         raise NotImplementedError
+
+    def __hash__(self):
+        """Uniqueness of a file is its path"""
+        return hash(self.path)
 
 
 def open_image(source: str | bytes | Path | Request) -> Image.Image:

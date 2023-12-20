@@ -17,6 +17,8 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
     :param handler_kwargs: The authorisation kwargs to be passed to :py:class:`APIAuthoriser`.
     """
 
+    __slots__ = "_user_data"
+
     @property
     @abstractmethod
     def api_url_base(self) -> str:

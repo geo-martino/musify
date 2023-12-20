@@ -59,7 +59,7 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
         """
         if isinstance(values, str) or isinstance(values, Mapping):
             return cls._get_item_type(value=values, kind=kind)
-    
+
         if len(values) == 0:
             raise RemoteObjectTypeError("No values given: collection is empty")
 
@@ -79,7 +79,7 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
         Determine the remote object type of the given ``value`` and return its type. Value may be:
             * A string representing a URL/URI/ID.
             * A remote API JSON response for a collection with a valid item type value under a ``type`` key.
-    
+
         :param value: The value representing some remote object. See description for allowed value types.
         :param kind: The :py:class:`RemoteObjectType` if the value is found to be an ID.
         :return: The :py:class:`RemoteObjectType`. If the given value is determined to be an ID, returns None.

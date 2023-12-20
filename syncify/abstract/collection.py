@@ -137,7 +137,7 @@ class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], metaclass=
         else:
             ItemSorter(
                 fields=fields, shuffle_mode=shuffle_mode, shuffle_by=shuffle_by, shuffle_weight=shuffle_weight
-            ).sort(self.items)
+            )(self.items)
 
         if reverse:
             self.items.reverse()
@@ -146,9 +146,9 @@ class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], metaclass=
         """
         Merge this collection with another collection or list of items
         by performing an inner join on a given set of tags
-        
+
         :param items: List of items or ItemCollection to merge with
-        :param tags: List of tags to merge on. 
+        :param tags: List of tags to merge on.
         """
         # noinspection PyTypeChecker
         tag_names = set(TagField.__tags__) if tags == FieldCombined.ALL else set(TagField.to_tags(tags))
@@ -230,10 +230,7 @@ class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], metaclass=
         raise NotImplementedError
 
     def __setitem__(self, __key: str | int | T, __value: T):
-        """
-        Set attributes of the :py:class:`Item` matching ``__key``
-        in this collection to the attributes of ``__value``
-        """
+        """Replace the item at a given ``__key`` with the given ``__value``."""
         try:
             item = self[__key]
         except KeyError:
@@ -242,8 +239,7 @@ class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], metaclass=
         if type(__value) is not type(item):  # only merge attributes if matching types
             raise ValueError("Trying to set on mismatched item types")
 
-        for __key, __value in __value.__dict__.items():  # merge attributes
-            setattr(item, __key, deepcopy(__value))
+        self.items[self.index(item)] = __value
 
     def __delitem__(self, __key: str | int | T):
         self.remove(__key)
@@ -259,6 +255,9 @@ class BasicCollection[T: Item](ItemCollection[T]):
     :param name: The name of this collection.
     :param items: The items in this collection
     """
+
+    __slots__ = ("_name", "_items")
+
     @staticmethod
     def _validate_item_type(items: Any | Iterable[Any]) -> bool:
         if isinstance(items, Iterable):

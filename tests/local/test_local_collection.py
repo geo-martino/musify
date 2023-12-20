@@ -80,7 +80,7 @@ class TestLocalFolder(LocalCollectionTester):
                 track.genres = ["metal", "jazz"]
 
         return tracks
-    
+
     @pytest.fixture(scope="class")
     def tracks_filtered(self, tracks: list[LocalTrack]) -> list[LocalTrack]:
         """Yield a list of tracks that match the conditions for this :py:class:`LocalCollection`"""
@@ -105,7 +105,7 @@ class TestLocalFolder(LocalCollectionTester):
         assert folder.last_added == sorted(tracks_filtered, key=lambda t: t.date_added, reverse=True)[0].date_added
         assert folder.last_played == sorted(tracks_filtered, key=lambda t: t.last_played, reverse=True)[0].last_played
         assert folder.play_count == sum(track.play_count for track in tracks_filtered if track.play_count)
-    
+
     @staticmethod
     def test_empty_load():
         # load folder when no tracks given and only folder path given
@@ -152,7 +152,7 @@ class TestLocalAlbum(LocalCollectionTester):
                 track.genres = None
 
         return tracks
-    
+
     @pytest.fixture(scope="class")
     def tracks_filtered(self, tracks: list[LocalTrack]) -> list[LocalTrack]:
         """Yield a list of tracks that match the conditions for this :py:class:`LocalCollection`"""
@@ -218,7 +218,7 @@ class TestLocalArtist(LocalCollectionTester):
                 track.genres = None
 
         return tracks
-    
+
     @pytest.fixture(scope="class")
     def tracks_filtered(self, tracks: list[LocalTrack]) -> list[LocalTrack]:
         """Yield a list of tracks that match the conditions for this :py:class:`LocalCollection`"""
@@ -289,7 +289,7 @@ class TestLocalGenres(LocalCollectionTester):
                 track.album = "album name"
 
         return tracks
-    
+
     @pytest.fixture(scope="class")
     def tracks_filtered(self, tracks: list[LocalTrack]) -> list[LocalTrack]:
         """Yield a list of tracks that match the conditions for this :py:class:`LocalCollection`"""

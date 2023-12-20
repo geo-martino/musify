@@ -107,7 +107,7 @@ class MP3(LocalTrack):
         return tag_id is not None
 
     def _write_genres(self, dry_run: bool = True) -> bool:
-        values = ";".join(self.genres if self.genres is not None else [])
+        values = ";".join(self.genres or [])
         return self._write_tag(next(iter(self.tag_map.genres), None), values, dry_run)
 
     def _write_images(self, dry_run: bool = True) -> bool:

@@ -46,6 +46,8 @@ class LocalMatcher(MusicBeeProcessor):
         when sanitising the given paths and reject any that don't.
     """
 
+    __slots__ = ("comparers", "match_all", "include_paths", "exclude_paths", "library_folder", "original_folder",)
+
     @classmethod
     def from_xml(
             cls,

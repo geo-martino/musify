@@ -8,7 +8,8 @@ from os.path import join, exists, dirname
 import mutagen
 
 from syncify.abstract.item import Track, Item
-from syncify.local import File
+from syncify.local._file import File
+from syncify.local.track._base.reader import TagReader
 from syncify.local.track._base.writer import TagWriter
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 
@@ -30,6 +31,8 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
         The tag that is used for reading and writing is set by the ``uri_tag`` class attribute.
         If no ``remote_wrangler`` is given, no URI processing will occur.
     """
+
+    __slots__ = ("_file", "_available_paths", "_available_paths_lower")
 
     @property
     def file(self):
@@ -136,10 +139,8 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
 
         return attributes | attributes_other
 
-    def __hash__(self):
-        """Uniqueness of a file is its path"""
-        print("DINGDONG", hash(self.path))
-        return hash(self.path)
+    def __hash__(self):  # TODO: why doesn't this get inherited correctly from File
+        return super().__hash__()
 
     def __eq__(self, item):
         """URI attributes equal if at least one item has a URI, paths equal otherwise"""
@@ -153,11 +154,14 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
         """Copy object by reloading from the file object in memory"""
         if not self.file.tags:  # file is not a real file, used in testing
             obj = self.__class__.__new__(self.__class__)
-            for k, v in self.__dict__.items():
-                setattr(obj, k, v)
+            for key in TagReader.__slots__:
+                setattr(obj, key, getattr(self, key))
+            for key in TagWriter.__slots__:
+                setattr(obj, key, getattr(self, key))
+            for key in self.__slots__:
+                setattr(obj, key, getattr(self, key))
             return obj
-        else:
-            return self.__class__(file=self.file, available=self._available_paths, remote_wrangler=self.remote_wrangler)
+        return self.__class__(file=self.file, available=self._available_paths, remote_wrangler=self.remote_wrangler)
 
     def __deepcopy__(self, _: as_dict = None):
         """Deepcopy object by reloading from the disk"""

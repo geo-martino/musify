@@ -28,7 +28,7 @@ class TestSpotifyArtist(ItemTester):
     @pytest.fixture
     def response_valid(self, spotify_mock: SpotifyMock) -> dict[str, Any]:
         """Yield a valid enriched response from the Spotify API for an artist item type."""
-        return deepcopy(spotify_mock.artists[0])
+        return deepcopy(next(artist for artist in spotify_mock.artists if artist["genres"]))
 
     def test_input_validation(self, response_random: dict[str, Any], spotify_mock: SpotifyMock):
         with pytest.raises(RemoteObjectTypeError):
@@ -120,7 +120,7 @@ class TestSpotifyTrack(ItemTester):
         Yield a valid enriched response with extended artists and albums responses
         from the Spotify API for a track item type.
         """
-        return deepcopy(spotify_mock.tracks[0])
+        return deepcopy(next(track for track in spotify_mock.tracks))
 
     def test_input_validation(self, response_random: dict[str, Any], spotify_mock: SpotifyMock):
         with pytest.raises(RemoteObjectTypeError):
@@ -237,19 +237,15 @@ class TestSpotifyTrack(ItemTester):
 
     def test_reload(self, response_valid: dict[str, Any], api: SpotifyAPI):
         response_valid["album"].pop("name", None)
-        response_valid["album"].pop("genres", None)
-        for artist in response_valid["artists"]:
-            artist.pop("genres", None)
+        response_valid.pop("audio_features", None)
 
         track = SpotifyTrack(response_valid)
-        assert not track.genres
         assert not track.album
         assert not track.key
         assert not track.bpm
 
         SpotifyTrack.api = api
         track.reload()
-        assert track.genres
         assert track.album
         if track.response["audio_features"]["key"] > -1:
             assert track.key

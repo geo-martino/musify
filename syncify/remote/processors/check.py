@@ -51,6 +51,19 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         Skip karaoke results otherwise.
     """
 
+    __slots__ = (
+        "api",
+        "playlist_name_urls",
+        "playlist_name_collection",
+        "skip",
+        "quit",
+        "remaining",
+        "switched",
+        "final_switched",
+        "final_unavailable",
+        "final_unchanged",
+    )
+
     _default_name = "check"
 
     @property

@@ -29,6 +29,9 @@ class RequestHandler(APIAuthoriser, Logger):
     :param cache_expiry: The expiry time to apply to cached responses after which responses are invalidated.
     :param auth_kwargs: The authorisation kwargs to be passed to :py:class:`APIAuthoriser`.
     """
+
+    __slots__ = "session"
+
     backoff_start = 0.5
     backoff_factor = 2
     backoff_count = 10

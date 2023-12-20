@@ -17,7 +17,7 @@ from syncify.utils.helpers import to_collection
 class SyncResultTrack(Result):
     """
     Stores the results of a sync with local track
-    
+
     :ivar saved: Were changes to the file on the disk made.
     :ivar updated: Map of the tag updated and the index of the condition it satisfied to be updated.
     """
@@ -208,7 +208,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
             conditionals = {file.has_image is False, replace}
             if any(conditionals) and self.image_links and self._write_images(dry_run):
                 updated |= {LocalTrackField.IMAGES: [i for i, c in enumerate(conditionals) if c][0]}
-        
+
         save = not dry_run and len(updated) > 0
         if save:
             try:
@@ -217,22 +217,22 @@ class TagWriter(TagReader, metaclass=ABCMeta):
                 raise ex
 
         return SyncResultTrack(saved=save, updated=updated)
-                    
+
     @abstractmethod
     def _write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
         """
         Generic method for updating a tag value in the file.
-        
+
         :param tag_id: ID of the tag for this file type.
         :param tag_value: New value to assign.
         :param dry_run: Run function, but do not modify file at all.
         :return: True if the file was updated or would have been when dry_run is True, False otherwise.
         """
-    
+
     def _write_title(self, dry_run: bool = True) -> bool:
         """
         Write track title tags to file
-        
+
         :param dry_run: Run function, but do not modify file at all.
         :return: True if the file was updated or would have been when dry_run is True, False otherwise.
         """
@@ -241,7 +241,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
     def _write_artist(self, dry_run: bool = True) -> bool:
         """
         Write artist tags to file
-        
+
         :param dry_run: Run function, but do not modify file at all.
         :return: True if the file was updated or would have been when dry_run is True, False otherwise.
         """
@@ -250,7 +250,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
     def _write_album(self, dry_run: bool = True) -> bool:
         """
         Write album tags to file
-        
+
         :param dry_run: Run function, but do not modify file at all.
         :return: True if the file was updated or would have been when dry_run is True, False otherwise.
         """
@@ -259,7 +259,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
     def _write_album_artist(self, dry_run: bool = True) -> bool:
         """
         Write album artist tags to file
-        
+
         :param dry_run: Run function, but do not modify file at all.
         :return: True if the file was updated or would have been when dry_run is True, False otherwise.
         """
@@ -268,13 +268,13 @@ class TagWriter(TagReader, metaclass=ABCMeta):
     def _write_track(self, dry_run: bool = True) -> bool:
         """
         Write track number tags to file
-        
+
         :param dry_run: Run function, but do not modify file at all.
         :return: True if the file was updated or would have been when dry_run is True, False otherwise.
         """
         tag_id_number = next(iter(self.tag_map.track_number), None)
         tag_id_total = next(iter(self.tag_map.track_total), None)
-        
+
         if tag_id_number != tag_id_total and self.track_total is not None:
             number_updated = self._write_tag(tag_id_number, str(self.track_number).zfill(2), dry_run)
             total_updated = self._write_tag(tag_id_total, str(self.track_total).zfill(2), dry_run)
@@ -289,7 +289,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
     def _write_genres(self, dry_run: bool = True) -> bool:
         """
         Write genre tags to file
-        
+
         :param dry_run: Run function, but do not modify file at all.
         :return: True if the file was updated or would have been when dry_run is True, False otherwise.
         """
@@ -298,7 +298,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
     def _write_year(self, dry_run: bool = True) -> bool:
         """
         Write year tags to file
-        
+
         :param dry_run: Run function, but do not modify file at all.
         :return: True if the file was updated or would have been when dry_run is True, False otherwise.
         """
@@ -307,7 +307,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
     def _write_bpm(self, dry_run: bool = True) -> bool:
         """
         Write BPM tags to file
-        
+
         :param dry_run: Run function, but do not modify file at all.
         :return: True if the file was updated or would have been when dry_run is True, False otherwise.
         """
@@ -316,7 +316,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
     def _write_key(self, dry_run: bool = True) -> bool:
         """
         Write key tags to file
-        
+
         :param dry_run: Run function, but do not modify file at all.
         :return: True if the file was updated or would have been when dry_run is True, False otherwise.
         """
@@ -325,7 +325,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
     def _write_disc(self, dry_run: bool = True) -> bool:
         """
         Write disc number tags to file
-        
+
         :param dry_run: Run function, but do not modify file at all.
         :return: True if the file was updated or would have been when dry_run is True, False otherwise.
         """
@@ -347,7 +347,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
     def _write_compilation(self, dry_run: bool = True) -> bool:
         """
         Write compilation tags to file
-        
+
         :param dry_run: Run function, but do not modify file at all.
         :return: True if the file was updated or would have been when dry_run is True, False otherwise.
         """
@@ -356,7 +356,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
     def _write_comments(self, dry_run: bool = True) -> bool:
         """
         Write comment tags to file
-        
+
         :param dry_run: Run function, but do not modify file at all.
         :return: True if the file was updated or would have been when dry_run is True, False otherwise.
         """
@@ -365,7 +365,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
     def _write_uri(self, dry_run: bool = True) -> bool:
         """
         Write URI tags to file
-        
+
         :param dry_run: Run function, but do not modify file at all.
         :return: True if the file was updated or would have been when dry_run is True, False otherwise.
         """

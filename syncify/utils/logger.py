@@ -65,6 +65,8 @@ def format_full_func_name(record: logging.LogRecord, width: int = module_width) 
 class LogStdOutFilter(logging.Filter):
     """Filter for logging to stdout."""
 
+    __slots__ = "levels"
+
     def __init__(self, levels: Container[int] = ()):
         """
         :param levels: Accepted log levels to return i.e. 'info', 'debug'
@@ -121,6 +123,9 @@ class SyncifyLogger(logging.Logger):
 
 class Logger:
     """Base logger class. Classes can inherit this class to gain logging functionality."""
+
+    # __slots__ = ("logger", "log_filename", "log_path")
+
     log_folder: str = None
     dt_format: str = "%Y-%m-%d_%H.%M.%S"
 
@@ -135,10 +140,10 @@ class Logger:
         if self.log_folder is None:
             self.set_dev()
 
+        self.logger: SyncifyLogger | None = None
         self.log_filename = ".".join((self.__class__.__module__, self.__class__.__qualname__))
         self.log_path = join(self.log_folder, f"{self.log_filename}.log")
 
-        self.logger: SyncifyLogger | None = None
         self._set_logger()
 
     @classmethod

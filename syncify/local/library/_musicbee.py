@@ -47,6 +47,8 @@ class MusicBee(LocalLibrary, File):
         For more info on this, see :py:class:`LocalTrack`.
     """
 
+    __slots__ = ("_path", "_xml_parser", "xml")
+
     valid_extensions = frozenset({".xml"})
     xml_library_filename = "iTunes Music Library.xml"
     xml_path_keys = {"Location", "Music Folder"}
@@ -322,6 +324,8 @@ class XMLLibraryParser:
     :param path: Path to the XML file.
     :param path_keys: A list of keys in the XML file that need to be processed as system paths.
     """
+
+    __slots__ = ("path", "path_keys", "iterparse")
 
     timestamp_format = "%Y-%m-%dT%H:%M:%SZ"
     doctype = ('<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" '

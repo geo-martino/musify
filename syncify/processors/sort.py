@@ -57,6 +57,8 @@ class ItemSorter(MusicBeeProcessor):
         This value will automatically be limited to within the accepted range 0 and 1.
     """
 
+    __slots__ = ("sort_fields", "shuffle_mode", "shuffle_by", "shuffle_weight")
+
     # define custom sort codes
     _custom_sort: dict[int, Mapping[Field, bool]] = {
         6: {

@@ -39,10 +39,32 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         For more info on this, see :py:class:`LocalTrack`.
     """
 
+    __slots__ = (
+        "_tracks",
+        "_track_paths",
+        "_playlists",
+        "_playlist_paths",
+        "_library_folder",
+        "_playlist_folder",
+        "other_folders",
+        "include",
+        "exclude",
+    )
+
+    @property
+    def name(self) -> str:
+        """The basename of the library folder"""
+        return self.__class__.__name__.replace("Library", "")
+
     @property
     def tracks(self) -> list[LocalTrack]:
         """The tracks in this collection"""
         return self._tracks
+
+    @property
+    def playlists(self) -> dict[str, LocalPlaylist]:
+        """The playlists in this library mapped as ``{name: playlist}``"""
+        return self._playlists
 
     @property
     def library_folder(self) -> str:
@@ -106,16 +128,6 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             )
 
         self.logger.debug(f"Set playlist folder: {self.playlist_folder} | {len(self._playlist_paths)} playlists found")
-
-    @property
-    def name(self) -> str:
-        """The basename of the library folder"""
-        return self.__class__.__name__.replace("Library", "")
-
-    @property
-    def playlists(self) -> dict[str, LocalPlaylist]:
-        """The playlists in this library mapped as ``{name: playlist}``"""
-        return self._playlists
 
     @property
     def folders(self) -> list[LocalFolder]:
@@ -291,7 +303,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     def save_playlists(self, dry_run: bool = True) -> dict[str, Result]:
         """
         For each Playlist in this Library, saves its associate tracks and its settings (if applicable) to file.
-        
+
         :param dry_run: Run function, but do not modify file at all.
         :return: A map of the playlist name to the results of its sync as a :py:class:`Result` object.
         """

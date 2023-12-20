@@ -19,7 +19,7 @@ def test_does_not_load_invalid_track():
     # raises error on unrecognised file type
     with pytest.raises(InvalidFileType):
         load_track(path_txt)
-        
+
 
 def test_loaded_attributes_flac(track_flac: FLAC):
     assert track_flac.tag_sep == "; "

@@ -17,10 +17,10 @@ from syncify.utils.logger import Logger
 class CleanTagConfig:
     """
     Config for processing string-type tag values before matching with :py:class:`ItemMatcher`
-    
+
     :ivar name: The name of the tag to clean.
     :ivar _remove: A set of string values to remove from this tag.
-    :ivar _split: A set of string values for which the cleaner will 
+    :ivar _split: A set of string values for which the cleaner will
         slice the tag on and remove anything that comes after.
     :ivar _preprocess: A function to apply before the _remove and _split values are applied.
     """
@@ -32,12 +32,12 @@ class CleanTagConfig:
     @property
     def remove(self) -> set[str]:
         """Get all redundant words to be removed for this tag"""
-        return self._remove if self._remove else set()
+        return self._remove or set()
 
     @property
     def split(self) -> set[str]:
         """Get all split words for which the cleaner will only take words before this word"""
-        return self._split if self._split else set()
+        return self._split or set()
 
     def preprocess(self, value: str) -> str:
         """Apply the preprocess function to value if given, return value unprocessed if not"""
@@ -60,25 +60,27 @@ class ItemMatcher(ItemProcessor, Logger):
     :ivar karaoke_tags: A set of words to search for in tag values that identify the item as being a karaoke item.
     :ivar year_range: A difference in years of this value gives a score of 0 for the :py:meth:`match_year` algorithm.
         See the :py:meth:`match_year` method for more information.
-    :ivar clean_tags_remove_all: Apply these remove settings to all tags 
-        when processing tags as per :py:meth:`clean_tags` method. 
+    :ivar clean_tags_remove_all: Apply these remove settings to all tags
+        when processing tags as per :py:meth:`clean_tags` method.
         See also :py:class:`CleanTagConfig` for more info on this configuration.
-    :ivar clean_tags_split_all: Apply these split settings to all tags 
-        when processing tags as per :py:meth:`clean_tags` method. 
+    :ivar clean_tags_split_all: Apply these split settings to all tags
+        when processing tags as per :py:meth:`clean_tags` method.
         See also :py:class:`CleanTagConfig` for more info on this configuration.
     :ivar clean_tags_config: A list of configurations in the form of :py:class:`CleanTagConfig`
         to apply for each tag type. See also :py:class:`CleanTagConfig` for more info.
     :ivar reduce_name_score_on: A set of words to check for when applying name score reduction logic.
-        If a word from this list is present in the name of the result to score against 
-        but not in the source :py:class:`Item`, reduce the score for the name match by 
-        the ``_reduce_name_score_factor``. 
+        If a word from this list is present in the name of the result to score against
+        but not in the source :py:class:`Item`, reduce the score for the name match by
+        the ``_reduce_name_score_factor``.
         This set is always combined with the ``karaoke_tags``.
-    :ivar reduce_name_score_factor: The factor to reduce a name score on when a word from 
+    :ivar reduce_name_score_factor: The factor to reduce a name score on when a word from
         ``_reduce_name_score_on`` is found in the result but not in the source :py:class:`Item`.
-    
+
     :param allow_karaoke: When True, items determined to be karaoke are allowed when matching added items.
         Skip karaoke results otherwise. Karaoke items are identified using the ``karaoke_tags`` attribute.
     """
+
+    __slots__ = "allow_karaoke"
 
     karaoke_tags = {"karaoke", "backing", "instrumental"}
     year_range = 10
@@ -258,7 +260,7 @@ class ItemMatcher(ItemProcessor, Logger):
     def match_year[T: (Track, Album)](self, source: T, result: T) -> float:
         """
         Match on year and return a score between 0-1. Score=0 when either value is None.
-        Matches within ``year_range`` years on a 0-1 scale where 1 is the exact same year 
+        Matches within ``year_range`` years on a 0-1 scale where 1 is the exact same year
         and 0 is a difference in year greater that ``year_range``.
         User may modify this max range via the ``year_range`` class attribute.
         """

@@ -114,6 +114,8 @@ class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[Spot
     :param response: The Spotify API JSON response
     """
 
+    __slots__ = "_tracks"
+
     @staticmethod
     def _validate_item_type(items: Any | Iterable[Any]) -> bool:
         if isinstance(items, Iterable):
@@ -206,7 +208,6 @@ class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[Spot
 
     def __init__(self, response: MutableMapping[str, Any]):
         super().__init__(response=response)
-
         self._tracks = [SpotifyTrack(track["track"]) for track in response["tracks"]["items"]]
 
     def reload(self, extend_tracks: bool = False, use_cache: bool = True, *_, **__) -> None:
@@ -230,6 +231,8 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTra
 
     :param response: The Spotify API JSON response
     """
+
+    __slots__ = ("_tracks", "_artists")
 
     @staticmethod
     def _validate_item_type(items: Any | Iterable[Any]) -> bool:

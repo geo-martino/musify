@@ -47,6 +47,8 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
         processing.
     """
 
+    __slots__ = ("limit_max", "kind", "allowance")
+
     @property
     def limit_sort(self) -> str | None:
         """String representation of the sorting method to use before limiting"""
@@ -115,12 +117,12 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
 
         if self.kind == LimitType.ITEMS:  # limit on items
             items.extend(items_limit[:self.limit_max])
-        elif self.kind == LimitType.ALBUMS:  # limit on albums            
+        elif self.kind == LimitType.ALBUMS:  # limit on albums
             seen_albums = []
             for item in items_limit:
                 if not isinstance(item, Track):
                     ItemLimiterError("In order to limit on Album, all items must be of type 'Track'")
-                
+
                 if len(seen_albums) < self.limit_max and item.album not in seen_albums:
                     # album limit not yet reached
                     seen_albums.append(item.album)

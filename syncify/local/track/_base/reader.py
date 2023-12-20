@@ -20,7 +20,7 @@ from syncify.utils.helpers import to_collection
 class TagReader(LocalItem, Track, metaclass=ABCMeta):
     """
     Contains methods for extracting tags from a loaded file
-    
+
     :ivar uri_tag: The tag field to use as the URI tag in the file's metadata.
     :ivar num_sep: Some number values come as a combined string i.e. track number/track total
         Define the separator to use when representing both values as a combined string.
@@ -31,6 +31,32 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
         The tag that is used for reading and writing is set by the ``uri_tag`` class attribute.
         If no ``remote_wrangler`` is given, no URI processing will occur.
     """
+
+    __slots__ = (
+        "remote_wrangler",
+        "_title",
+        "_artist",
+        "_album",
+        "_album_artist",
+        "_track_number",
+        "_track_total",
+        "_genres",
+        "_year",
+        "_bpm",
+        "_key",
+        "_disc_number",
+        "_disc_total",
+        "_compilation",
+        "_comments",
+        "_uri",
+        "_has_uri",
+        "_image_links",
+        "_has_image",
+        "_rating",
+        "_date_added",
+        "_last_played",
+        "_play_count",
+    )
 
     uri_tag: LocalTrackField = LocalTrackField.COMMENTS
     num_sep: str = "/"
@@ -49,7 +75,7 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
 
     @property
     def name(self):
-        return self.title if self.title else str(hash(self))
+        return self.title or str(hash(self))
 
     @property
     def title(self):
