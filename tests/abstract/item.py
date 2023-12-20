@@ -1,13 +1,10 @@
 from abc import ABCMeta, abstractmethod
-from copy import copy, deepcopy
 
 import pytest
 
 from syncify.abstract.item import Item
 from syncify.abstract.misc import PrettyPrinter
-from syncify.remote.library.item import RemoteItem
 from tests.abstract.misc import PrettyPrinterTester
-from tests.utils import random_str
 
 
 class ItemTester(PrettyPrinterTester, metaclass=ABCMeta):

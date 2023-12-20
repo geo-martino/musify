@@ -8,7 +8,6 @@ from syncify.remote.library.collection import RemoteCollection
 from syncify.remote.library.item import RemoteItem
 from tests.abstract.collection import ItemCollectionTester
 from tests.local.utils import random_tracks
-from tests.utils import random_str
 
 
 class RemoteCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
