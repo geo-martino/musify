@@ -29,7 +29,7 @@ class TestItemComparer(PrettyPrinterTester):
 
                 track.album = f"album {i}"
                 track.file.info.length = i * 60
-                track._path = random_file_path
+                track.file.filename = random_file_path
                 track.rating = i
 
                 if i != 1 and i != 5:
@@ -43,13 +43,13 @@ class TestItemComparer(PrettyPrinterTester):
     @staticmethod
     def test_init():
         limiter = ItemLimiter(sorted_by="HighestRating")
-        assert limiter._processor == limiter._highest_rating
+        assert limiter._processor_method == limiter._highest_rating
 
         limiter = ItemLimiter(sorted_by="__ least_ recently_  added __ ")
-        assert limiter._processor == limiter._least_recently_added
+        assert limiter._processor_method == limiter._least_recently_added
 
         limiter = ItemLimiter(sorted_by="__most recently played__")
-        assert limiter._processor == limiter._most_recently_played
+        assert limiter._processor_method == limiter._most_recently_played
 
     @staticmethod
     def test_limit_below_threshold(tracks: list[LocalTrack]):
@@ -72,14 +72,14 @@ class TestItemComparer(PrettyPrinterTester):
     @staticmethod
     def test_limit_on_items_2(tracks: list[LocalTrack]):
         limiter = ItemLimiter(limit=10, sorted_by="HighestRating")
-        limiter.limit(tracks)
+        limiter(tracks)
         assert len(tracks) == 10
         assert set(track.album for track in tracks) == {"album 5"}
 
     @staticmethod
     def test_limit_on_items_3(tracks: list[LocalTrack]):
         limiter = ItemLimiter(limit=20, sorted_by="most often played")
-        limiter.limit(tracks)
+        limiter(tracks)
         assert len(tracks) == 20
         assert set(track.album for track in tracks) == {"album 1", "album 3"}
 

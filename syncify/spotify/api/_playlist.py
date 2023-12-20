@@ -20,7 +20,7 @@ class SpotifyAPIPlaylists(RemoteAPI, metaclass=ABCMeta):
         """
         Determine the type of the given ``playlist`` and return its API URL.
         If type cannot be determined, attempt to find the playlist in the
-        list of the currently authenticated user's playlists.
+        list of the currently authorised user's playlists.
 
         :param playlist: One of the following to identify the playlist URL:
             - playlist URL/URI/ID,

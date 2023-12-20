@@ -164,22 +164,22 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
     def sync(
             self,
             items: Iterable[Item] = (),
-            clear: Literal["all", "extra"] | None = None,
+            kind: Literal["new", "refresh", "sync"] = "new",
             reload: bool = True,
             dry_run: bool = False,
     ) -> SyncResultRemotePlaylist:
         """
-        Synchronise this playlist object with the remote playlist it is associated with. Clear options:
+        Synchronise this playlist object with the remote playlist it is associated with. Sync options:
 
-        * None: Do not clear any items from the remote playlist and only add any tracks
+        * 'new': Do not clear any items from the remote playlist and only add any tracks
             from this playlist object not currently in the remote playlist.
-        * 'all': Clear all items from the remote playlist first, then add all items from this playlist object.
-        * 'extra': Clear all items not currently in this object's items list, then add all tracks
+        * 'refresh': Clear all items from the remote playlist first, then add all items from this playlist object.
+        * 'sync': Clear all items not currently in this object's items list, then add all tracks
             from this playlist object not currently in the remote playlist.
 
         :param items: Provide an item collection or list of items to synchronise to the remote playlist.
             Use the currently loaded ``tracks`` in this object if not given.
-        :param clear: Clear option for the remote playlist. See description.
+        :param kind: Sync option for the remote playlist. See description.
         :param reload: When True, once synchronisation is complete, reload this RemotePlaylist object
             to reflect the changes on the remote playlist if enabled. Skip if False.
         :param dry_run: Run function, but do not modify the remote playlists at all.
@@ -187,7 +187,7 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
         """
         self._check_for_api()
 
-        uris_obj = {track.uri for track in (items if items else self.tracks) if track.uri}
+        uris_obj = {track.uri for track in (items or self.tracks) if track.uri}
         uris_remote = set(self._get_track_uris_from_api_response())
 
         uris_add = [uri for uri in uris_obj if uri not in uris_remote]
@@ -195,19 +195,19 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
         removed = 0
 
         # process the remote playlist. when dry_run, mock the results
-        if clear == "all":  # remove all items from the remote playlist
+        if kind == "refresh":  # remove all items from the remote playlist
             removed = self.api.clear_from_playlist(self.url) if not dry_run else len(uris_remote)
             uris_add = uris_obj
             uris_unchanged = set()
-        elif clear == "extra":  # remove items not present in the current list from the remote playlist
+        elif kind == "sync":  # remove items not present in the current list from the remote playlist
             uris_clear = {uri for uri in uris_remote if uri not in uris_obj}
             removed = self.api.clear_from_playlist(self.url, items=uris_clear) if not dry_run else len(uris_clear)
             uris_unchanged = {uri for uri in uris_remote if uri in uris_obj}
 
         if not dry_run:
-            added = self.api.add_to_playlist(self.url, items=uris_add, skip_dupes=clear != "all")
+            added = self.api.add_to_playlist(self.url, items=uris_add, skip_dupes=kind != "refresh")
         else:
-            added = len(uris_add) if clear != "all" else len(set(uris_add) - uris_remote)
+            added = len(uris_add) if kind != "refresh" else len(set(uris_add) - uris_remote)
 
         if not dry_run and reload:  # reload the current playlist object from remote
             self.reload(use_cache=False)

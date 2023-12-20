@@ -161,35 +161,37 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
     def sync(
             self,
             playlists: Library | Mapping[str, Playlist] | Collection[Playlist] | None = None,
-            clear: Literal["all", "extra"] | None = None,
+            kind: Literal["new", "refresh", "sync"] = "new",
             reload: bool = True,
             dry_run: bool = True
     ) -> dict[str, SyncResultRemotePlaylist]:
         """
         Synchronise this playlist object with the remote playlist it is associated with. Clear options:
 
-        * None: Do not clear any items from the remote playlist and only add any tracks
+        * 'new': Do not clear any items from the remote playlist and only add any tracks
             from this playlist object not currently in the remote playlist.
-        * 'all': Clear all items from the remote playlist first, then add all items from this playlist object.
-        * 'extra': Clear all items not currently in this object's items list, then add all tracks
+        * 'refresh': Clear all items from the remote playlist first, then add all items from this playlist object.
+        * 'sync': Clear all items not currently in this object's items list, then add all tracks
             from this playlist object not currently in the remote playlist.
 
         :param playlists: Provide a library, map of playlist name to playlist or collection of playlists
             to synchronise to the remote library.
             Use the currently loaded ``playlists`` in this object if not given.
-        :param clear: Clear option for the remote playlist. See description.
+        :param kind: Sync option for the remote playlist. See description.
         :param reload: When True, once synchronisation is complete, reload this RemotePlaylist object
             to reflect the changes on the remote playlist if enabled. Skip if False.
         :param dry_run: Run function, but do not modify the remote playlists at all.
         :return: Map of playlist name to the results of the sync as a :py:class:`SyncResultRemotePlaylist` object.
         """
-        self.logger.debug(f"Update {self.remote_source}: START")
+        self.logger.debug(f"Sync {self.remote_source} playlists: START")
 
-        count = len(playlists if playlists else self.playlists)
-        clearing = f", clearing {clear} tracks" if clear else ""
-        reloading = f" and reloading {PROGRAM_NAME}" if reload else ""
+        count = len(playlists or self.playlists)
+        log_kind = "adding new items only"
+        if kind != "new":
+            log_kind = f"clearing {'all' if kind == 'refresh' else 'extra'} items from remote playlist first"
         self.logger.info(
-            f"\33[1;95m ->\33[1;97m Synchronising {count} {self.remote_source} playlists{clearing}{reloading} \33[0m"
+            f"\33[1;95m ->\33[1;97m Synchronising {count} {self.remote_source} playlists, {log_kind}"
+            f"{f' and reloading {PROGRAM_NAME}' if reload else ''} \33[0m"
         )
 
         if not playlists:  # use the playlists as stored in this library object
@@ -208,10 +210,10 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
             remote_playlist = self.playlists.get(name)
             if not remote_playlist:  # new playlist given, create it on remote first
                 remote_playlist = self._remote_types.playlist.create(name=name)
-            results[name] = remote_playlist.sync(items=playlist, clear=clear, reload=reload, dry_run=dry_run)
+            results[name] = remote_playlist.sync(items=playlist, kind=kind, reload=reload, dry_run=dry_run)
 
         self.print_line()
-        self.logger.debug(f"Update {self.remote_source}: DONE\n")
+        self.logger.debug(f"Sync {self.remote_source} playlists: DONE\n")
         return results
 
     def log_sync(self, results: Mapping[str, SyncResultRemotePlaylist]) -> None:

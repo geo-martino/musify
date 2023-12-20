@@ -62,16 +62,16 @@ class M3U(LocalPlaylist):
     valid_extensions = frozenset({".m3u"})
 
     @property
-    def image_links(self):
-        return {}
-
-    @property
     def description(self):
         return self._description
 
     @description.setter
     def description(self, value: str | None):
         self._description = value
+
+    @property
+    def image_links(self):
+        return {}
 
     def __init__(
             self,
@@ -108,7 +108,7 @@ class M3U(LocalPlaylist):
     def load(self, tracks: Collection[LocalTrack] = ()) -> list[LocalTrack]:
         if not self.matcher.include_paths:
             # use the given tracks if no valid matcher present
-            self.tracks = tracks if tracks else []
+            self.tracks = tracks or []
         elif tracks:  # match paths from given tracks using the matcher
             self._match(tracks)
         else:  # use the paths in the matcher to load tracks from scratch

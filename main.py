@@ -154,7 +154,7 @@ class Syncify(Settings, Report):
         """Save a JSON file to a given folder, or this run's folder if not given"""
         if not filename.casefold().endswith(".json"):
             filename += ".json"
-        folder = folder if folder else self.output_folder
+        folder = folder or self.output_folder
         path = join(folder, filename)
 
         with open(path, "w") as f:
@@ -164,7 +164,7 @@ class Syncify(Settings, Report):
         """Load a stored JSON file from a given folder, or this run's folder if not given"""
         if not filename.casefold().endswith(".json"):
             filename += ".json"
-        folder = folder if folder else self.output_folder
+        folder = folder or self.output_folder
         path = join(folder, filename)
 
         with open(path, "r") as f:
@@ -341,7 +341,7 @@ class Syncify(Settings, Report):
         self.local_library.restore_tracks(backup["tracks"], tags=LocalTrackField.from_name(*restore_tags))
         results = self.local_library.save_tracks(tags=tags, replace=True, dry_run=self.dry_run)
 
-        self.local_library.log_save_tracks(results)
+        self.local_library.log_sync_result(results)
         self.logger.debug("Restore local: DONE\n")
 
     def _restore_spotify(self, folder: str) -> None:
@@ -356,7 +356,7 @@ class Syncify(Settings, Report):
 
         # restore and sync
         self.remote_library.restore_playlists(backup["playlists"])
-        results = self.remote_library.sync(clear="all", reload=False, dry_run=False)
+        results = self.remote_library.sync(kind="refresh", reload=False, dry_run=False)
         self.remote_library.log_sync(results)
 
         self.logger.debug(f"Restore {self.remote_source}: DONE\n")
@@ -395,7 +395,7 @@ class Syncify(Settings, Report):
 
             if results:
                 self.print_line(STAT)
-            self.local_library.log_save_tracks(results)
+            self.local_library.log_sync_result(results)
             self.logger.info(f"\33[92m    Done | Set tags for {len(results)} tracks \33[0m")
 
         self.print_line()
@@ -426,7 +426,7 @@ class Syncify(Settings, Report):
 
         if results:
             self.print_line(STAT)
-        self.local_library.log_save_tracks(results)
+        self.local_library.log_sync_result(results)
         self.logger.info(f"\33[92m    Done | Set tags for {len(results)} tracks \33[0m")
         self.print_line()
         self.logger.debug("Search and match: DONE\n")
@@ -456,7 +456,7 @@ class Syncify(Settings, Report):
 
         if results:
             self.print_line(STAT)
-        self.local_library.log_save_tracks(results)
+        self.local_library.log_sync_result(results)
         self.logger.info(f"\33[92m    Done | Set tags for {len(results)} tracks \33[0m")
         self.print_line()
         self.logger.debug("Update tags: DONE\n")
@@ -485,7 +485,7 @@ class Syncify(Settings, Report):
 
         if results:
             self.print_line(STAT)
-        self.local_library.log_save_tracks(results)
+        self.local_library.log_sync_result(results)
         self.logger.info(f"\33[92m    Done | Set tags for {len(results)} tracks \33[0m")
         self.print_line()
         self.logger.debug("Update compilations: Done\n")
@@ -505,9 +505,9 @@ class Syncify(Settings, Report):
         playlists = self.local_library.get_filtered_playlists(include=include, exclude=exclude, **filter_tags)
 
         # sync to remote
-        clear = cfg_playlists.get("sync", {}).get("clear")
+        clear = cfg_playlists.get("sync", {}).get("kind")
         reload = cfg_playlists.get("sync", {}).get("reload")
-        results = self.remote_library.sync(playlists, clear=clear, reload=reload, dry_run=self.dry_run)
+        results = self.remote_library.sync(playlists, kind=clear, reload=reload, dry_run=self.dry_run)
         self.remote_library.log_sync(results)
 
         self.logger.debug(f"Update {self.remote_source}: DONE\n")

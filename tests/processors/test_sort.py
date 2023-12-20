@@ -91,7 +91,7 @@ class TestItemSorter(PrettyPrinterTester):
     def test_multi_sort(tracks: list[LocalTrack]):
         tracks_sorted = sorted(tracks, key=lambda t: (t.album, t.disc_number, t.track_number))
         sorter = ItemSorter(fields=[TrackField.ALBUM, TrackField.DISC, TrackField.TRACK], shuffle_mode=ShuffleMode.NONE)
-        sorter.sort(tracks)
+        sorter(tracks)
         assert tracks == tracks_sorted
 
         # complex multi-sort, includes reverse options
@@ -106,5 +106,5 @@ class TestItemSorter(PrettyPrinterTester):
 
         fields = {TrackField.ALBUM: True, TrackField.DISC: False, TrackField.TRACK: True}
         sorter = ItemSorter(fields=fields, shuffle_mode=ShuffleMode.NONE)
-        sorter.sort(tracks)
+        sorter(tracks)
         assert tracks == tracks_sorted

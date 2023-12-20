@@ -92,7 +92,7 @@ class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
     def artist(self):
         artists = self.response.get("artists", {})
         artist = self.tag_sep.join(artist["name"] for artist in artists)
-        return artist if artist else None
+        return artist or None
 
     @property
     def artists(self) -> list[SpotifyArtist]:
@@ -106,7 +106,7 @@ class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
     def album_artist(self):
         album = self.response.get("album", {})
         album_artist = self.tag_sep.join(artist["name"] for artist in album.get("artists", []))
-        return album_artist if album_artist else None
+        return album_artist or None
 
     @property
     def track_number(self) -> int:

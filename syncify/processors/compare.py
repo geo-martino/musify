@@ -110,6 +110,9 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
 
         self._set_processor_name(condition)
 
+    def __call__[T: Item](self, item: T, reference: UnitSequence[T] | None = None) -> bool:
+        return self.compare(item=item, reference=reference)
+
     def compare[T: Item](self, item: T, reference: UnitSequence[T] | None = None) -> bool:
         """
         Compare a ``item`` to a ``reference`` or,
@@ -141,7 +144,7 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
             elif not isinstance(actual, datetime) and isinstance(expected[0], datetime):
                 expected = [exp.date() for exp in expected]
 
-        return self._process(actual, expected)
+        return super().__call__(actual, expected)
 
     def _convert_expected(self, value: Any) -> None:
         """Driver for converting expected values to the same type as given value"""

@@ -18,7 +18,12 @@ class TimeMapper(DynamicProcessor):
         self._set_processor_name(func)
 
     def __call__(self, value: Any):
-        return self._process(value)
+        """Run the mapping function"""
+        return self.map(value)
+
+    def map(self, value: Any):
+        """Run the mapping function"""
+        return super().__call__(value)
 
     @dynamicprocessormethod
     def hours(self, value: Any) -> timedelta:

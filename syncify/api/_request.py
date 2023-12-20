@@ -49,11 +49,6 @@ class RequestHandler(APIAuthoriser, Logger):
         """
         return sum(self.backoff_start * self.backoff_factor ** i for i in range(self.backoff_count + 1))
 
-    @property
-    def cached_session(self) -> bool:
-        """True if stored session is a :py:class:`CachedSession`"""
-        return isinstance(self.session, CachedSession)
-
     def __init__(
             self, cache_path: str | None = _DEFAULT_CACHE_PATH, cache_expiry=timedelta(weeks=4), **auth_kwargs
     ):
@@ -65,8 +60,8 @@ class RequestHandler(APIAuthoriser, Logger):
         else:
             self.session = Session()
 
-    def auth(self, force_load: bool = False, force_new: bool = False) -> dict[str, str]:
-        headers = super().auth(force_load=force_load, force_new=force_new)
+    def authorise(self, force_load: bool = False, force_new: bool = False) -> dict[str, str]:
+        headers = super().authorise(force_load=force_load, force_new=force_new)
         self.session.headers = headers
         return headers
 
@@ -122,15 +117,14 @@ class RequestHandler(APIAuthoriser, Logger):
             log.append(f"Args: ({', '.join(args)})")
         if len(kwargs) > 0:
             log.extend(f"{k.title()}: {v}" for k, v in kwargs.items())
-        # noinspection PyUnresolvedReferences
-        if use_cache and self.cached_session and method.upper() in self.session.settings.allowable_methods:
-            log.append("Cached")
+        if use_cache and isinstance(self.session, CachedSession):
+            if method.upper() in self.session.settings.allowable_methods:
+                log.append("Cached")
 
         self.logger.debug(" | ".join(log))
         try:
-            if not self.cached_session:
+            if not isinstance(self.session, CachedSession):
                 return self.session.request(method=method.upper(), url=url, *args, **kwargs)
-            # noinspection PyArgumentList
             return self.session.request(method=method.upper(), force_refresh=not use_cache, url=url, *args, **kwargs)
         except ConnectionError as ex:
             self.logger.warning(str(ex))

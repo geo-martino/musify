@@ -88,7 +88,7 @@ class LocalMatcher(MusicBeeProcessor):
                 comparers = None
 
         return cls(
-            comparers=comparers if comparers else (),
+            comparers=comparers or (),
             match_all=match_all,
             include_paths=include,
             exclude_paths=exclude,

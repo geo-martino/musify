@@ -37,12 +37,12 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
             spotify_mock: SpotifyMock
     ):
         spotify_mock.reset_mock()  # test checks the number of requests made
+        collection.__class__.api = api
 
         unit = collection.__class__.__name__.casefold().replace("spotify", "")
         kind = RemoteObjectType.from_name(unit)[0]
-        key = api.collection_item_map[kind].name.casefold() + "s"
+        key = collection.api.collection_item_map[kind].name.casefold() + "s"
 
-        collection.__class__.api = api
         test = collection.__class__.load(response_valid["href"], extend_tracks=True)
 
         assert test.name == response_valid["name"]
@@ -51,7 +51,7 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
 
         requests = spotify_mock.get_requests(test.url)
         requests += spotify_mock.get_requests(f"{test.url}/{key}")
-        requests += spotify_mock.get_requests(f"{api.api_url_base}/audio-features")
+        requests += spotify_mock.get_requests(f"{collection.api.api_url_base}/audio-features")
 
         # 1 call for initial collection + (extend_pages - 1) for tracks + (extend_pages) for audio-features
         extend_pages = (test.response[key]["total"] / test.response[key]["limit"])
@@ -70,15 +70,13 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
             cls: type[SpotifyCollectionLoader],
             items: list[SpotifyTrack],
             response: dict[str, Any],
-            api: SpotifyAPI,
             spotify_mock: SpotifyMock,
     ):
         """Run test with assertions on load method with given ``items``"""
         unit = cls.__name__.casefold().replace("spotify", "")
         kind = RemoteObjectType.from_name(unit)[0]
-        key = api.collection_item_map[kind].name.casefold() + "s"
+        key = cls.api.collection_item_map[kind].name.casefold() + "s"
 
-        cls.api = api
         test = cls.load(value=response, items=items, extend_tracks=True)
         assert len(test.response[key]["items"]) == response[key]["total"]
         assert len(test.items) == response[key]["total"]
@@ -87,7 +85,7 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
         # requests to extend album start from page 2 onward
         requests = spotify_mock.get_requests(test.url)
         requests += spotify_mock.get_requests(f"{test.url}/{key}")
-        requests += spotify_mock.get_requests(f"{api.api_url_base}/audio-features")
+        requests += spotify_mock.get_requests(f"{cls.api.api_url_base}/audio-features")
 
         # 0 calls for initial collection + (extend_pages - 1) for tracks + (extend_pages) for audio-features
         # + (get_pages) for audio-features get on response items not in input items
@@ -263,9 +261,8 @@ class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
         ids = {item["id"] for item in response_valid[key]["items"]} | {item.id for item in items}
         assert ids == available_id_list
 
-        self.assert_load_with_tracks(
-            cls=SpotifyAlbum, items=items, response=response_valid, api=api, spotify_mock=spotify_mock
-        )
+        SpotifyAlbum.api = api
+        self.assert_load_with_tracks(cls=SpotifyAlbum, items=items, response=response_valid, spotify_mock=spotify_mock)
 
 
 class TestSpotifyPlaylist(SpotifyCollectionLoaderTester):
@@ -301,12 +298,17 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester):
         with pytest.raises(RemoteObjectTypeError):
             SpotifyPlaylist(spotify_mock.generate_album(track_count=0))
 
-        url = spotify_mock.playlists[0]["href"]
         SpotifyPlaylist.api = None
         with pytest.raises(APIError):
-            SpotifyPlaylist.load(url)
+            SpotifyPlaylist.load(spotify_mock.playlists[0]["href"])
         with pytest.raises(APIError):
-            SpotifyPlaylist(response_random).reload()
+            SpotifyPlaylist.create("new playlist")
+
+        pl = SpotifyPlaylist(response_random)
+        with pytest.raises(APIError):
+            pl.reload()
+        with pytest.raises(APIError):
+            pl.delete()
 
     def test_attributes(self, response_random: dict[str, Any]):
         pl = SpotifyPlaylist(response_random)
@@ -414,8 +416,9 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester):
         ids = {item["track"]["id"] for item in response_valid[key]["items"]} | {item.id for item in items}
         assert ids == available_ids
 
+        SpotifyPlaylist.api = api
         self.assert_load_with_tracks(
-            cls=SpotifyPlaylist, items=items, response=response_valid, api=api, spotify_mock=spotify_mock
+            cls=SpotifyPlaylist, items=items, response=response_valid, spotify_mock=spotify_mock
         )
 
     def test_create_playlist(self, api: SpotifyAPI, spotify_mock: SpotifyMock):

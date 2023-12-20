@@ -2,18 +2,22 @@ import re
 from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable
 from datetime import datetime
-from typing import Any, Self
+from typing import Any
 
+import mutagen
 from PIL import Image
 
-from syncify.local.track._base.processor import TagProcessor
+from syncify.abstract.enums import TagMap
+from syncify.abstract.item import Track
+from syncify.fields import LocalTrackField
+from syncify.local import LocalItem
 from syncify.remote.enums import RemoteIDType
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitIterable
 from syncify.utils.helpers import to_collection
 
 
-class TagReader(TagProcessor, metaclass=ABCMeta):
+class TagReader(LocalItem, Track, metaclass=ABCMeta):
     """
     Contains methods for extracting tags from a loaded file
     
@@ -27,6 +31,21 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
         The tag that is used for reading and writing is set by the ``uri_tag`` class attribute.
         If no ``remote_wrangler`` is given, no URI processing will occur.
     """
+
+    uri_tag: LocalTrackField = LocalTrackField.COMMENTS
+    num_sep: str = "/"
+
+    @property
+    @abstractmethod
+    def tag_map(self) -> TagMap:
+        """Map of human-friendly tag name to ID3 tag ids for a given file type"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def file(self) -> mutagen.FileType:
+        """The mutagen file object representing the loaded file."""
+        raise NotImplementedError
 
     @property
     def name(self):
@@ -198,6 +217,10 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
         self._rating = value
 
     @property
+    def path(self):
+        return self.file.filename
+
+    @property
     def kind(self):
         """The kind of audio file of this track"""
         return self.__class__.__name__
@@ -226,7 +249,8 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
         return self.file.info.sample_rate / 1000
 
     @property
-    def date_added(self):
+    def date_added(self) -> datetime | None:
+        """The timestamp for when this track was added to the associated collection"""
         return self._date_added
 
     @date_added.setter
@@ -234,7 +258,8 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
         self._date_added = value
 
     @property
-    def last_played(self):
+    def last_played(self) -> datetime | None:
+        """The timestamp when this track was last played"""
         return self._last_played
 
     @last_played.setter
@@ -242,7 +267,8 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
         self._last_played = value
 
     @property
-    def play_count(self):
+    def play_count(self) -> int | None:
+        """The total number of times this track has been played"""
         return self._play_count
 
     @play_count.setter
@@ -278,12 +304,7 @@ class TagReader(TagProcessor, metaclass=ABCMeta):
         self._last_played = None
         self._play_count = None
 
-    def load_metadata(self) -> Self:
-        """General method for extracting metadata from loaded file"""
-        self._read_metadata()
-        return self
-
-    def _read_metadata(self) -> None:
+    def load_metadata(self) -> None:
         """Driver for extracting metadata from a loaded file"""
 
         self.title = self._read_title()

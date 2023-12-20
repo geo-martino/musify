@@ -141,6 +141,6 @@ if __name__ == "__main__":
     _format_map(API_AUTH_USER, format_map=format_map)
 
     api = SpotifyAPI(**API_AUTH_USER, cache_path=None)
-    api.auth(force_new=False)
+    api.authorise(force_new=False)
 
     print(api.get_self())

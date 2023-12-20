@@ -183,16 +183,8 @@ class TestLocalTrack(ItemTester):
         assert track_reload.path == track.path
 
     def test_load_track_class(self, track: LocalTrack):
-        track_file = track.file
-
-        track._file = track.get_file()
-        track_reload_1 = track.file
-
-        track.load()
-        track_reload_2 = track.file
-
-        # has actually reloaded the file in each reload
-        assert id(track_file) != id(track_reload_1) != id(track_reload_2)
+        # has actually reloaded the file
+        assert id(track.file) != id(track.load())
 
         # raises error on unrecognised file type
         with pytest.raises(InvalidFileType):

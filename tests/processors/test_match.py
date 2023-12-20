@@ -170,7 +170,7 @@ class TestItemMatcher(PrettyPrinterTester):
         assert matcher.match_year(track1, track2) == 0
 
     @staticmethod
-    def test_match_score(matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):
+    def test_match_all(matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):
         sep = track1.tag_sep
 
         track1.title = "a longer title"
@@ -185,14 +185,16 @@ class TestItemMatcher(PrettyPrinterTester):
         track2.year = 2010
 
         # track2 score is below min_score
-        assert matcher.score_match(track1, [track2], min_score=0.2, max_score=0.8) is None
+        assert matcher.match(track1, [track2], min_score=0.2, max_score=0.8) is None
+        assert matcher(track1, [track2], min_score=0.2, max_score=0.8) is None
 
         # track3 score is above min_score
         track3 = random_track()
         track3.title = "this is a different title"
         track3.artist = f"artist{sep}nope{sep}other"
         track3.year = 2015
-        assert matcher.score_match(track1, [track2, track3], min_score=0.2, max_score=0.8) == track3
+        assert matcher.match(track1, [track2, track3], min_score=0.2, max_score=0.8) == track3
+        assert matcher(track1, [track2, track3], min_score=0.2, max_score=0.8) == track3
 
         # track4 score is above max_score causing an early stop
         track4 = random_track()
@@ -201,4 +203,5 @@ class TestItemMatcher(PrettyPrinterTester):
         track4.album = "album"
         track4.file.info.length = 100
         track4.year = 2015
-        assert matcher.score_match(track1, [track2, track4, track3], min_score=0.2, max_score=0.8) == track4
+        assert matcher.match(track1, [track2, track4, track3], min_score=0.2, max_score=0.8) == track4
+        assert matcher(track1, [track2, track4, track3], min_score=0.2, max_score=0.8) == track4

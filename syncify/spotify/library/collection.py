@@ -15,12 +15,6 @@ from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 class SpotifyCollection[T: SpotifyItem](RemoteCollection[T], SpotifyDataWrangler, metaclass=ABCMeta):
     """Generic class for storing a collection of Spotify objects."""
 
-    @staticmethod
-    def _validate_item_type(items: Any | Iterable[Any]) -> bool:
-        if isinstance(items, Iterable):
-            return all(isinstance(item, SpotifyItem) for item in items)
-        return isinstance(items, SpotifyItem)
-
 
 class SpotifyObjectLoaderMixin[T: SpotifyItem](RemoteCollectionLoader[T], SpotifyObject, metaclass=ABCMeta):
     """Mixin for :py:class:`RemoteCollectionLoader` and :py:class:`SpotifyObject`"""
@@ -31,22 +25,7 @@ class SpotifyCollectionLoader[T: SpotifyItem](SpotifyObjectLoaderMixin[T], Spoti
     """Generic class for storing a collection of Spotify objects that can be loaded from an API response."""
 
     @classmethod
-    def _load_response(cls, value: str | MutableMapping[str, Any], use_cache: bool = True) -> MutableMapping[str, Any]:
-        """
-        Calls the API to get a new response for a given ``value`` if string given,
-        or validates the ``value`` as the correct :py:class:`RemoteObjectType` for this class and returns it if valid.
-        ``use_cache`` forces request to return a cached result from the API if available.
-        """
-        unit = cls.__name__.casefold().replace("spotify", "")
-        kind = RemoteObjectType.from_name(unit)[0]
-
-        if isinstance(value, MutableMapping) and cls.get_item_type(value) == kind:
-            return deepcopy(value)
-        else:  # reload response from the API
-            return cls.api.get_items(value, kind=kind, use_cache=use_cache)[0]
-
-    @classmethod
-    def _load_track_collection(
+    def load(
             cls,
             value: str | MutableMapping[str, Any],
             items: Iterable[SpotifyTrack] = (),
@@ -71,7 +50,11 @@ class SpotifyCollectionLoader[T: SpotifyItem](SpotifyObjectLoaderMixin[T], Spoti
             obj.reload(*args, **kwargs, extend_tracks=extend_tracks, use_cache=use_cache)
             return obj
 
-        response = cls._load_response(value, use_cache=use_cache)
+        # get response
+        if isinstance(value, MutableMapping) and cls.get_item_type(value) == kind:
+            response = deepcopy(value)
+        else:  # reload response from the API
+            response = cls.api.get_items(value, kind=kind, use_cache=use_cache)[0]
 
         # attempt to find items for this track collection in the given items
         if kind == RemoteObjectType.ALBUM:
@@ -130,6 +113,12 @@ class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[Spot
 
     :param response: The Spotify API JSON response
     """
+
+    @staticmethod
+    def _validate_item_type(items: Any | Iterable[Any]) -> bool:
+        if isinstance(items, Iterable):
+            return all(isinstance(item, SpotifyTrack) for item in items)
+        return isinstance(items, SpotifyTrack)
 
     @property
     def name(self):
@@ -220,20 +209,6 @@ class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[Spot
 
         self._tracks = [SpotifyTrack(track["track"]) for track in response["tracks"]["items"]]
 
-    @classmethod
-    def load(
-            cls,
-            value: str | MutableMapping[str, Any],
-            items: Iterable[SpotifyTrack] = (),
-            extend_tracks: bool = False,
-            use_cache: bool = True,
-            *args,
-            **kwargs
-    ) -> Self:
-        return cls._load_track_collection(
-            value=value, use_cache=use_cache, items=items, extend_tracks=extend_tracks, *args, **kwargs
-        )
-
     def reload(self, extend_tracks: bool = False, use_cache: bool = True, *_, **__) -> None:
         self._check_for_api()
 
@@ -255,6 +230,12 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTra
 
     :param response: The Spotify API JSON response
     """
+
+    @staticmethod
+    def _validate_item_type(items: Any | Iterable[Any]) -> bool:
+        if isinstance(items, Iterable):
+            return all(isinstance(item, SpotifyTrack) for item in items)
+        return isinstance(items, SpotifyTrack)
 
     @property
     def name(self):
@@ -326,20 +307,6 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTra
 
         for track in self.tracks:
             track.disc_total = self.disc_total
-
-    @classmethod
-    def load(
-            cls,
-            value: str | MutableMapping[str, Any],
-            items: Iterable[SpotifyTrack] = (),
-            extend_tracks: bool = False,
-            use_cache: bool = True,
-            *args,
-            **kwargs
-    ) -> Self:
-        return cls._load_track_collection(
-            value=value, use_cache=use_cache, items=items, extend_tracks=extend_tracks, *args, **kwargs
-        )
 
     def reload(
             self, extend_artists: bool = False, extend_tracks: bool = False, use_cache: bool = True, *_, **__

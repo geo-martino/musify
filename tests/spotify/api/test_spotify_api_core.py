@@ -9,6 +9,7 @@ from tests.spotify.api.mock import SpotifyMock, idfn
 from tests.utils import random_str
 
 
+# TODO: add pretty_print_uris function test
 class TestSpotifyAPICore:
     """Tester for core endpoints of :py:class:`SpotifyAPI`"""
 

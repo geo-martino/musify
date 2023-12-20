@@ -61,6 +61,10 @@ class RemoteObject(ObjectPrinterMixin, Remote, metaclass=ABCMeta):
         self._response = response
         self._check_type()
 
+    def __hash__(self):
+        """Uniqueness of a remote object is its URI"""
+        return hash(self.uri)
+
     @abstractmethod
     def _check_type(self) -> None:
         """

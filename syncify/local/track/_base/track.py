@@ -4,7 +4,6 @@ from abc import ABCMeta
 from collections.abc import Mapping, Iterable
 from glob import glob
 from os.path import join, exists, dirname
-from typing import Self
 
 import mutagen
 
@@ -36,10 +35,6 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
     def file(self):
         return self._file
 
-    @property
-    def path(self):
-        return self._path
-
     @classmethod
     def get_filepaths(cls, library_folder: str) -> set[str]:
         """Get all files in a given library that match this Track object's valid filetypes."""
@@ -66,35 +61,32 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
         # all available paths mapped as lower case to actual
         self._available_paths_lower: Mapping[str, str] = {path.casefold(): path for path in self._available_paths}
 
-        if isinstance(file, str):
-            self._path = file
-            self._file: mutagen.FileType = self.get_file()
-        else:
-            self._path = file.filename
-            self._file: mutagen.FileType = file
-
+        self._file: mutagen.FileType = self.load(file) if isinstance(file, str) else file
         self.load_metadata()
 
-    def load(self) -> Self:
-        """General method for loading file and its metadata"""
-        self._file = self.get_file()
-        self.load_metadata()
-        return self
+    def load(self, path: str | None = None) -> mutagen.FileType:
+        """
+        Load local file using mutagen from the given path or the path stored in the object's ``file``.
+        Re-formats to case-sensitive system path if applicable.
 
-    def get_file(self) -> mutagen.FileType:
-        # extract file extension and confirm file type is listed in accepted file types list
-        self._validate_type(self.path)
+        :param path: The path to the file. If not given, use the stored ``file`` path.
+        :return: Mutagen file object or None if load error.
+        :raise FileNotFoundError: If the file cannot be found.
+        :raise InvalidFileType: If the file type is not supported.
+        """
+        path = path or self.path
+        self._validate_type(path)
 
-        if self._available_paths and self._path not in self._available_paths:
+        if self._available_paths and path not in self._available_paths:
             # attempt to correct case-insensitive path to case-sensitive
-            path = self._available_paths_lower.get(self._path.casefold())
-            if path is not None and exists(path):
-                self._path = path
+            path_sys = self._available_paths_lower.get(path.casefold())
+            if path_sys is not None and exists(path_sys):
+                path = path_sys
 
-        if not exists(self._path):
-            raise FileNotFoundError(f"File not found | {self._path}")
+        if not path or not exists(path):
+            raise FileNotFoundError(f"File not found | {path}")
 
-        return mutagen.File(self._path)
+        return mutagen.File(path)
 
     def extract_images_to_file(self, output_folder: str) -> int:
         """Extract and save all embedded images from file. Returns the number of images extracted."""
@@ -145,8 +137,9 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
         return attributes | attributes_other
 
     def __hash__(self):
-        """Uniqueness of an item is its URI + path"""
-        return hash((self.uri, self.path))
+        """Uniqueness of a file is its path"""
+        print("DINGDONG", hash(self.path))
+        return hash(self.path)
 
     def __eq__(self, item):
         """URI attributes equal if at least one item has a URI, paths equal otherwise"""

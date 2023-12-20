@@ -216,10 +216,6 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
     def load_tracks(self) -> list[LocalTrack]:
         """Returns a list of loaded tracks from all the valid paths in this library"""
-        return self._load_tracks()
-
-    def _load_tracks(self) -> list[LocalTrack]:
-        """Returns a list of loaded tracks from all the valid paths in this library"""
         self.logger.debug(f"Load {self.name} tracks: START")
         self.logger.info(
             f"\33[1;95m  >\33[1;97m "

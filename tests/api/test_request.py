@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 from requests import Response
-from requests_cache import OriginalResponse, CachedResponse
+from requests_cache import OriginalResponse, CachedResponse, CachedSession
 from requests_mock import Mocker
 # noinspection PyProtectedMember
 from requests_mock.request import _RequestObjectProxy as Request
@@ -38,19 +38,19 @@ class TestRequestHandler:
     @staticmethod
     def test_init(token: dict[str, Any], tmp_path: str):
         request_handler = RequestHandler(name="test", token=token, cache_path=None)
-        assert not request_handler.cached_session
+        assert not isinstance(request_handler.session, CachedSession)
 
         cache_path = join(tmp_path, "test")
         cache_expiry = timedelta(days=6)
         request_handler = RequestHandler(
             name="test", token=token, cache_expiry=cache_expiry, cache_path=cache_path
         )
-        assert request_handler.cached_session
+        assert isinstance(request_handler.session, CachedSession)
         assert request_handler.token == token
         assert request_handler.session.cache.cache_name == cache_path
         assert request_handler.session.expire_after == cache_expiry
 
-        request_handler.auth()
+        request_handler.authorise()
         assert request_handler.session.headers == request_handler.headers
 
     @staticmethod

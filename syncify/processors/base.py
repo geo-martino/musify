@@ -106,13 +106,13 @@ class DynamicProcessor(Processor, metaclass=ABCMeta):
         self._processor_name = name
 
     @property
-    def _processor(self) -> Callable:
+    def _processor_method(self) -> Callable:
         """The callable method of the dynamic processor"""
         return getattr(self, self._processor_name)
 
-    def _process(self, *args, **kwargs) -> Any:
+    def __call__(self, *args, **kwargs) -> Any:
         """Run the dynamic processor"""
-        return self._processor(*args, **kwargs)
+        return self._processor_method(*args, **kwargs)
 
 
 class ItemProcessor(Processor, metaclass=ABCMeta):

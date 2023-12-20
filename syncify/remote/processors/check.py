@@ -104,19 +104,19 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         """Format help text with a given mapping of options. Add an option header to include before options."""
         max_width = self.get_max_width(options)
 
-        help_text = header if header else []
+        help_text = header or []
         help_text.append("\n\t\33[96mEnter one of the following: \33[0m\n\t")
         help_text.extend(
-            f"{self.align_and_truncate(k, max_width=max_width)}{': ' + v if v else ''}" for k, v in options.items()
+            f"{self.align_and_truncate(k, max_width=max_width)}{': ' + v or ''}" for k, v in options.items()
         )
 
         return "\n\t".join(help_text) + '\n'
 
     def _delete_temp_playlists(self) -> None:
         """Delete all temporary playlists stored and clear stored playlists and collections"""
-        if not self.api.test():  # check if token has expired
+        if not self.api.test_token():  # check if token has expired
             self.logger.info_extra("\33[93mAPI token has expired, re-authorising... \33[0m")
-            self.api.auth()
+            self.api.authorise()
 
         self.logger.info_extra(f"\33[93mDeleting {len(self.playlist_name_urls)} temporary playlists... \33[0m")
         for url in self.playlist_name_urls.values():  # delete playlists
@@ -262,8 +262,8 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
                     print(formatted_item_data)
                 print()
             elif self.validate_id_type(current_input):  # print URL/URI/ID result
-                if not self.api.test():
-                    self.api.auth()
+                if not self.api.test_token():
+                    self.api.authorise()
                 self.api.pretty_print_uris(current_input)
 
             else:
@@ -277,9 +277,9 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         skip_hold = self.quit or self.skip
         self.skip = False
         for name, collection in self.playlist_name_collection.items():
-            if not self.api.test():  # check if token has expired
+            if not self.api.test_token():  # check if token has expired
                 self.logger.info_extra("\33[93mAPI token has expired, re-authorising... \33[0m")
-                self.api.auth()
+                self.api.authorise()
 
             name: str = collection.name if isinstance(collection, ItemCollection) else self._default_name
             items: list[Item] = collection.items if isinstance(collection, ItemCollection) else collection
@@ -352,7 +352,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
             if not added:
                 break
 
-            result = self.score_match(item, results=added, match_on=[FieldCombined.TITLE])
+            result = self.match(item, results=added, match_on=[FieldCombined.TITLE])
             if not result:
                 continue
 

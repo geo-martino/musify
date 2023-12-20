@@ -35,6 +35,55 @@ class TagWriter(TagReader, metaclass=ABCMeta):
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
 
+    def delete_tags(self, tags: UnitIterable[LocalTrackField] = (), dry_run: bool = True) -> SyncResultTrack:
+        """
+        Remove tags from file.
+
+        :param tags: Tags to remove.
+        :param dry_run: Run function, but do not modify file at all.
+        :return: List of tags that have been removed.
+        """
+        if tags is None or (isinstance(tags, Collection) and len(tags) == 0):
+            return SyncResultTrack(saved=False, updated={})
+
+        tag_names = set(LocalTrackField.to_tags(tags))
+        removed = set()
+        for tag_name in tag_names:
+            if self.delete_tag(tag_name, dry_run):
+                removed.update(LocalTrackField.from_name(tag_name))
+
+        if LocalTrackField.IMAGES in removed:
+            self.has_image = False
+
+        save = not dry_run and len(removed) > 0
+        if save:
+            self.file.save()
+
+        removed = sorted(removed, key=lambda x: LocalTrackField.all().index(x))
+        return SyncResultTrack(saved=save, updated={u: 0 for u in removed})
+
+    def delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:
+        """
+        Remove a tag by its tag name.
+
+        :param tag_name: Tag ID to remove.
+        :param dry_run: Run function, but do not modify file at all.
+        :return: True if tag has been remove, False otherwise.
+        """
+        removed = False
+
+        tag_ids = self.tag_map[tag_name]
+        if tag_ids is None or len(tag_ids) is None:
+            return removed
+
+        for tag_id in tag_ids:
+            if tag_id in self.file and self.file[tag_id]:
+                if not dry_run:
+                    del self.file[tag_id]
+                removed = True
+
+        return removed
+
     def save(
             self, tags: UnitIterable[LocalTrackField] = LocalTrackField.ALL, replace: bool = False, dry_run: bool = True
     ) -> SyncResultTrack:
@@ -46,7 +95,8 @@ class TagWriter(TagReader, metaclass=ABCMeta):
         :param dry_run: Run function, but do not modify file at all.
         :return: List of tags that have been updated.
         """
-        self.get_file()
+        # noinspection PyAttributeOutsideInit
+        self._file = self.load()
         file = copy(self)
         updated: dict[LocalTrackField, int] = {}
 
@@ -67,7 +117,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
             }
             if any(conditionals) and self._write_title(dry_run):
                 updated |= {LocalTrackField.TITLE: [i for i, c in enumerate(conditionals) if c][0]}
-                    
+
         if LocalTrackField.ARTIST in tags:
             conditionals = {
                 file.artist is None and self.artist is not None,
@@ -334,53 +384,3 @@ class TagWriter(TagReader, metaclass=ABCMeta):
         :param dry_run: Run function, but do not modify file at all.
         :return: True if the file was updated or would have been when dry_run is True, False otherwise.
         """
-
-    def delete_tags(self, tags: UnitIterable[LocalTrackField] = (), dry_run: bool = True) -> SyncResultTrack:
-        """
-        Remove tags from file.
-
-        :param tags: Tags to remove.
-        :param dry_run: Run function, but do not modify file at all.
-        :return: List of tags that have been removed.
-        """
-        if tags is None or (isinstance(tags, Collection) and len(tags) == 0):
-            return SyncResultTrack(saved=False, updated={})
-
-        tag_names = set(LocalTrackField.to_tags(tags))
-        removed = set()
-        for tag_name in tag_names:
-            if self.delete_tag(tag_name, dry_run):
-                removed.update(LocalTrackField.from_name(tag_name))
-
-        if LocalTrackField.IMAGES in removed:
-            self.has_image = False
-
-        save = not dry_run and len(removed) > 0
-        if save:
-            self.file.save()
-
-        removed = sorted(removed, key=lambda x: LocalTrackField.all().index(x))
-        return SyncResultTrack(saved=save, updated={u: 0 for u in removed})
-
-    def delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:
-        """
-        Remove a tag by its tag name.
-
-        :param tag_name: Tag ID to remove.
-        :param dry_run: Run function, but do not modify file at all.
-        :return: True if tag has been remove, False otherwise.
-        """
-        removed = False
-
-        tag_ids = self.tag_map[tag_name]
-        if tag_ids is None or len(tag_ids) is None:
-            return removed
-
-        for tag_id in tag_ids:
-            if tag_id in self.file and self.file[tag_id]:
-                if not dry_run:
-                    del self.file[tag_id]
-                removed = True
-
-        return removed
-    

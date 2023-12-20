@@ -7,7 +7,7 @@ from syncify.abstract.misc import PrettyPrinter
 from syncify.utils import UnitIterable
 
 
-class BaseObject(ABC, Hashable):
+class BaseObject(ABC):
     """
     Generic base class for all local/remote item/collections.
     
@@ -29,16 +29,12 @@ class BaseObject(ABC, Hashable):
     def __init__(self):
         self._clean_tags: dict[str, Any] = {}
 
-    def __hash__(self):
-        """Uniqueness of an item is its URI + name"""
-        return hash(self.name)
-
 
 class ObjectPrinterMixin(BaseObject, PrettyPrinter, metaclass=ABCMeta):
     pass
 
 
-class Item(ObjectPrinterMixin, metaclass=ABCMeta):
+class Item(ObjectPrinterMixin, Hashable, metaclass=ABCMeta):
     """
     Generic class for storing an item.
     
@@ -71,9 +67,9 @@ class Item(ObjectPrinterMixin, metaclass=ABCMeta):
             if hasattr(item, tag):
                 setattr(self, tag, item[tag])
 
+    @abstractmethod
     def __hash__(self):
-        """Uniqueness of an item is its URI + name"""
-        return hash((self.uri, self.name))
+        raise NotImplementedError
 
     def __eq__(self, item):
         """URI attributes equal if at least one item has a URI, names equal otherwise"""

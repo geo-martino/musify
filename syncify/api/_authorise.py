@@ -34,8 +34,8 @@ class APIAuthoriser(Logger):
                     "json": {},
                 }
     :param user_args: Parameters to be passed to the requests.post() function
-        for requesting user authenticated access to API services.
-        The code response from this request is then added to the authentication request args
+        for requesting user authorised access to API services.
+        The code response from this request is then added to the authorisation request args
         to grant user authorisation to the API.
         See ``auth_args`` for possible example values.
     :param refresh_args: Parameters to be passed to the requests.post() function
@@ -57,8 +57,8 @@ class APIAuthoriser(Logger):
     :param token: Define a custom input token for initialisation.
     :param token_file_path: Path to use for loading and saving a token.
     :param token_key_path: Keys to the token in auth response. Looks for key 'access_token' by default.
-    :param header_key: Header key to apply to headers for authenticated calls to the API.
-    :param header_prefix: Prefix to add to the header value for authenticated calls to the API.
+    :param header_key: Header key to apply to headers for authorised calls to the API.
+    :param header_prefix: Prefix to add to the header value for authorised calls to the API.
     :param header_extra: Extra data to add to the final headers for future successful requests.
     """
 
@@ -131,8 +131,8 @@ class APIAuthoriser(Logger):
 
         # information for the final headers
         self.header_key: str = header_key
-        self.header_prefix: str = header_prefix if header_prefix else ""
-        self.header_extra: dict[str, str] = header_extra if header_extra else {}
+        self.header_prefix: str = header_prefix or ""
+        self.header_extra: dict[str, str] = header_extra or {}
 
     def load_token(self) -> dict[str, Any] | None:
         """Load stored token from given path"""
@@ -153,9 +153,9 @@ class APIAuthoriser(Logger):
         with open(self.token_file_path, "w") as file:
             json.dump(self.token, file, indent=2)
 
-    def auth(self, force_load: bool = False, force_new: bool = False) -> dict[str, str]:
+    def authorise(self, force_load: bool = False, force_new: bool = False) -> dict[str, str]:
         """
-        Main method for authentication, tests/refreshes/reauthorises as needed
+        Main method for authorisation, tests/refreshes/reauthorises as needed
 
         :param force_load: Reloads the token even if it's already been loaded into the object.
             Ignored when force_new is True.
@@ -173,11 +173,11 @@ class APIAuthoriser(Logger):
         if self.auth_args and self.token is None:
             log = "Saved access token not found" if self.token is None else "New token generation forced"
             self.logger.debug(f"{log}. Generating new token...")
-            self._authenticate_user()
+            self._authorise_user()
             self.token = self._request_token(**self.auth_args)
 
         # test current token
-        valid = self.test()
+        valid = self.test_token()
         refreshed = False
 
         # if invalid, first attempt to re-authorise via refresh_token
@@ -190,7 +190,7 @@ class APIAuthoriser(Logger):
 
             self.token = self._request_token(**self.refresh_args)
 
-            valid = self.test()
+            valid = self.test_token()
             refreshed = True
 
         if not valid and self.auth_args:  # generate new token
@@ -200,9 +200,9 @@ class APIAuthoriser(Logger):
                 log = "Access token is not valid and and no refresh data found"
             self.logger.debug(f"{log}. Generating new token...")
 
-            self._authenticate_user()
+            self._authorise_user()
             self.token = self._request_token(**self.auth_args)
-            valid = self.test()
+            valid = self.test_token()
 
         if not self.token:
             raise APIError("Token not generated")
@@ -214,42 +214,15 @@ class APIAuthoriser(Logger):
 
         return self.headers
 
-    def _request_token(self, **requests_args) -> dict[str, Any]:
-        """
-        Authenticates/refreshes basic API access and returns token.
-
-        :param user: Authenticate as the user first to user to generate a user access authenticated token.
-        :param data: requests.post() ``data`` parameter to send as a request for authorisation.
-        :param requests_args: Other requests.post() parameters to send as a request for authorisation.
-        """
-        auth_response = requests.post(**requests_args).json()
-
-        # add granted and expiry times to token
-        auth_response["granted_at"] = datetime.now().timestamp()
-        if "expires_in" in auth_response:
-            expires_at = auth_response["granted_at"] + float(auth_response["expires_in"])
-            auth_response["expires_at"] = expires_at
-
-        # request sometimes returns new refresh token, append previous one if not
-        if "refresh_token" not in auth_response:
-            if self.token is not None and "refresh_token" in self.token:
-                auth_response["refresh_token"] = self.token["refresh_token"]
-
-        self.logger.debug(f"New token successfully generated: {self.token_safe}")
-        return auth_response
-
-    def _authenticate_user(self) -> None:
-        if self.user_args and self.auth_args and not self.auth_args.get("data", {}).get("code"):
-            if "data" not in self.auth_args:
-                self.auth_args["data"] = {}
-            self.auth_args["data"]["code"] = self._auth_user()
-
-    def _auth_user(self) -> str:
+    def _authorise_user(self) -> None:
         """
         Get user authentication code by authorising through user's browser.
 
         :return: The authentication code
         """
+        if not self.user_args or (self.auth_args and self.auth_args.get("data", {}).get("code")):
+            return
+
         self.logger.info_extra("Authorising user privilege access...")
 
         # set up socket to listen for the redirect from
@@ -284,9 +257,37 @@ class APIAuthoriser(Logger):
 
         # format out the access code from the returned response
         path_raw = next(line for line in request.recv(8196).decode("utf-8").split('\n') if line.startswith("GET"))
-        return parse_qs(urlparse(path_raw).query)["code"][0]
+        code = parse_qs(urlparse(path_raw).query)["code"][0]
 
-    def test(self) -> bool:
+        if "data" not in self.auth_args:
+            self.auth_args["data"] = {}
+        self.auth_args["data"]["code"] = code
+
+    def _request_token(self, **requests_args) -> dict[str, Any]:
+        """
+        Authenticates/refreshes basic API access and returns token.
+
+        :param user: Authenticate as the user first to user to generate a user access authenticated token.
+        :param data: requests.post() ``data`` parameter to send as a request for authorisation.
+        :param requests_args: Other requests.post() parameters to send as a request for authorisation.
+        """
+        auth_response = requests.post(**requests_args).json()
+
+        # add granted and expiry times to token
+        auth_response["granted_at"] = datetime.now().timestamp()
+        if "expires_in" in auth_response:
+            expires_at = auth_response["granted_at"] + float(auth_response["expires_in"])
+            auth_response["expires_at"] = expires_at
+
+        # request sometimes returns new refresh token, append previous one if not
+        if "refresh_token" not in auth_response:
+            if self.token is not None and "refresh_token" in self.token:
+                auth_response["refresh_token"] = self.token["refresh_token"]
+
+        self.logger.debug(f"New token successfully generated: {self.token_safe}")
+        return auth_response
+
+    def test_token(self) -> bool:
         """Test validity of token and given headers. Returns True if all tests pass, False otherwise"""
         if not self.token:
             return False

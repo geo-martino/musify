@@ -275,7 +275,7 @@ class ItemMatcher(ItemProcessor, Logger):
     ###########################################################################
     ## Algorithms
     ###########################################################################
-    def score_match[T: (Track, Album)](
+    def __call__[T: (Track, Album)](
             self,
             source: T,
             results: Iterable[T],
@@ -285,6 +285,29 @@ class ItemMatcher(ItemProcessor, Logger):
     ) -> T | None:
         """
         Perform score match algorithm for a given item and its results.
+
+        :param source: Source item to compare against and find a match for.
+        :param results: Results for comparisons.
+        :param min_score: Only return the result as a match if the score is above this value.
+            Value will be limited to between 0.01 and 1.0.
+        :param max_score: Stop matching once this score has been reached.
+            Value will be limited to between 0.01 and 1.0.
+        :param match_on: List of tags to match on. Currently only the following fields are supported:
+            title, artist, album, year, length.
+        :return: T. The item that matched best if found, None if no item matched conditions.
+        """
+        return self.match(source=source, results=results, min_score=min_score, max_score=max_score, match_on=match_on)
+
+    def match[T: (Track, Album)](
+            self,
+            source: T,
+            results: Iterable[T],
+            min_score: float = 0.1,
+            max_score: float = 0.8,
+            match_on: UnitIterable[Field] = ALL_FIELDS
+    ) -> T | None:
+        """
+        Perform match algorithm for a given item and its results.
 
         :param source: Source item to compare against and find a match for.
         :param results: Results for comparisons.

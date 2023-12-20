@@ -107,7 +107,8 @@ class MusicBee(LocalLibrary, File):
 
     def load_tracks(self) -> list[LocalTrack]:
         # need to remove the library folder to make it os agnostic
-        tracks_paths = {track.path.replace(self.library_folder, "").casefold(): track for track in self._load_tracks()}
+        tracks = super().load_tracks()
+        tracks_paths = {track.path.replace(self.library_folder, "").casefold(): track for track in tracks}
         self.logger.debug(f"Enrich {self.name} tracks: START")
 
         errors = []
@@ -209,7 +210,7 @@ class MusicBee(LocalLibrary, File):
                 "You must provide either a persistent ID to validate or a value to generate a persistent ID from."
             )
 
-        id_ = id_ if id_ else hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
+        id_ = id_ or hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
         if len(id_) > 16:
             raise MusicBeeIDError(f"Persistent ID is >16-characters in length (length={len(id_)}): {id_}")
         return id_.upper()

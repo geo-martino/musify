@@ -56,7 +56,7 @@ class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], metaclass=
         """
         if not self._validate_item_type(__item):
             raise SyncifyTypeError(type(__item).__name__)
-        return self.items.index(__item, __start if __start else 0, __stop if __stop else len(self.items))
+        return self.items.index(__item, __start or 0, __stop or len(self.items))
 
     def copy(self) -> list[T]:
         """Return a shallow copy of the list of items in this collection"""
@@ -177,10 +177,6 @@ class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], metaclass=
 
         if isinstance(self, Library):
             self.print_line()
-
-    def __hash__(self):
-        """Uniqueness of collection is a combination of its name and the items it holds"""
-        return hash((self.name, len(self.items), (item for item in self.items)))
 
     def __eq__(self, __collection: ItemCollection | Iterable[T]):
         """Names equal and all items equal in order"""

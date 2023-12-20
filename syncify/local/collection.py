@@ -114,7 +114,7 @@ class LocalCollection[T: LocalItem](Logger, ItemCollection[T], metaclass=ABCMeta
 
         return results_filtered
 
-    def log_save_tracks(self, results: Mapping[LocalTrack, SyncResultTrack]) -> None:
+    def log_sync_result(self, results: Mapping[LocalTrack, SyncResultTrack]) -> None:
         """Log stats from the results of a ``save_tracks`` operation"""
         if not results:
             return

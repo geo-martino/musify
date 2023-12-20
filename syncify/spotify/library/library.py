@@ -6,7 +6,7 @@ from syncify.remote.config import RemoteObjectClasses
 from syncify.remote.enums import RemoteObjectType
 from syncify.remote.library.library import RemoteLibrary
 from syncify.spotify.library.collection import SpotifyCollection, SpotifyPlaylist, SpotifyAlbum
-from syncify.spotify.library.item import SpotifyItem, SpotifyTrack
+from syncify.spotify.library.item import SpotifyTrack
 
 
 class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack]):
@@ -18,8 +18,8 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
     @staticmethod
     def _validate_item_type(items: Any | Iterable[Any]) -> bool:
         if isinstance(items, Iterable):
-            return all(isinstance(item, SpotifyItem) for item in items)
-        return isinstance(items, SpotifyItem)
+            return all(isinstance(item, SpotifyTrack) for item in items)
+        return isinstance(items, SpotifyTrack)
     
     @property
     def _remote_types(self) -> RemoteObjectClasses:

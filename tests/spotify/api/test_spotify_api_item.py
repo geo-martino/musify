@@ -82,7 +82,7 @@ class TestSpotifyAPIItems:
             with pytest.raises(RemoteObjectTypeError):
                 api.get_user_items(kind=kind)
 
-        # may only get valid user item types that are not playlists from the currently authenticated user
+        # may only get valid user item types that are not playlists from the currently authorised user
         for kind in api.user_item_types - {ObjectType.PLAYLIST}:
             with pytest.raises(RemoteObjectTypeError):
                 api.get_user_items(user=random_str(), kind=kind)
@@ -388,7 +388,7 @@ class TestSpotifyAPIItems:
         if limit is not None:  # ensure ranges are valid for test to work
             assert len(source) > limit
 
-        results = api.get_items(values=test, kind=kind, limit=limit if limit else 50, extend=extend)
+        results = api.get_items(values=test, kind=kind, limit=limit or 50, extend=extend)
         self.assert_results(expected=source_map, results=results, kind=kind, key=key)
 
         # appropriate number of requests made

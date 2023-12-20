@@ -82,16 +82,16 @@ class XAutoPF(LocalPlaylist):
     valid_extensions = frozenset({".xautopf"})
 
     @property
-    def image_links(self):
-        return {}
-
-    @property
     def description(self):
         return self._description
 
     @description.setter
     def description(self, value: str | None):
         self._description = value
+
+    @property
+    def image_links(self):
+        return {}
 
     def __init__(
             self,

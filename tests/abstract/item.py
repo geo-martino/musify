@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from copy import copy
+from copy import copy, deepcopy
 
 import pytest
 
@@ -7,7 +7,7 @@ from syncify.abstract.item import Item
 from syncify.abstract.misc import PrettyPrinter
 from syncify.remote.library.item import RemoteItem
 from tests.abstract.misc import PrettyPrinterTester
-from tests.spotify.utils import random_uri
+from tests.utils import random_str
 
 
 class ItemTester(PrettyPrinterTester, metaclass=ABCMeta):
@@ -33,11 +33,11 @@ class ItemTester(PrettyPrinterTester, metaclass=ABCMeta):
         if isinstance(item, RemoteItem):
             return
 
-        item_modified = copy(item)
-        item_modified.uri = random_uri()
+        item_modified = deepcopy(item)
+        item_modified.file.filename = random_str()
 
         assert hash(item) != hash(item_modified)
-        assert item == item_modified  # still matches on path
+        assert item != item_modified
 
     @staticmethod
     def test_get_attributes(item: Item):

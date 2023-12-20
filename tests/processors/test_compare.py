@@ -37,7 +37,7 @@ class TestItemComparer(PrettyPrinterTester):
         assert comparer._expected is None
         assert not comparer._converted
         assert comparer.condition == "contains"
-        assert comparer._processor == comparer._contains
+        assert comparer._processor_method == comparer._contains
 
     @staticmethod
     def test_init_2():
@@ -46,7 +46,7 @@ class TestItemComparer(PrettyPrinterTester):
         assert not comparer._converted
         assert comparer._expected is None
         assert comparer.condition == "greater_than"
-        assert comparer._processor == comparer._is_after
+        assert comparer._processor_method == comparer._is_after
 
     @staticmethod
     def test_init_3():
@@ -55,7 +55,7 @@ class TestItemComparer(PrettyPrinterTester):
         assert not comparer._converted
         assert comparer._expected == [".mp3", ".flac"]
         assert comparer.condition == "is"
-        assert comparer._processor == comparer._is
+        assert comparer._processor_method == comparer._is
 
     @staticmethod
     def test_compare_with_reference():
@@ -72,6 +72,7 @@ class TestItemComparer(PrettyPrinterTester):
         track_1.album = "album 124 is a great album"
         track_2.album = "album"
         assert comparer.compare(item=track_1, reference=track_2)
+        assert comparer(item=track_1, reference=track_2)
         assert comparer._expected is None
         assert not comparer._converted
 
@@ -82,10 +83,11 @@ class TestItemComparer(PrettyPrinterTester):
     def test_compare_str(track: MP3):
         comparer = ItemComparer(field=LocalTrackField.EXT, condition=" is  _", expected=[".mp3", ".flac"])
         assert comparer._expected == [".mp3", ".flac"]
-        assert comparer._processor == comparer._is
+        assert comparer._processor_method == comparer._is
 
         assert track.ext == ".mp3"
         assert comparer.compare(track)
+        assert comparer(track)
         assert comparer._expected == [".mp3", ".flac"]
         assert not comparer.compare(random_track(FLAC))
         assert not comparer.compare(random_track(M4A))
@@ -95,7 +97,7 @@ class TestItemComparer(PrettyPrinterTester):
         comparer = ItemComparer(field=TrackField.TRACK, condition="is in", expected=["1", 2, "3"])
         assert comparer._expected == ["1", 2, "3"]
         assert not comparer._converted
-        assert comparer._processor == comparer._is_in
+        assert comparer._processor_method == comparer._is_in
 
         track.track_number = 3
         assert comparer.compare(track)
@@ -112,7 +114,7 @@ class TestItemComparer(PrettyPrinterTester):
         comparer = ItemComparer(field=TrackField.RATING, condition="greater than", expected="1:30,618")
         assert comparer._expected == ["1:30,618"]
         assert not comparer._converted
-        assert comparer._processor == comparer._is_after
+        assert comparer._processor_method == comparer._is_after
 
         track.rating = 120
         assert comparer.compare(track)
@@ -128,7 +130,7 @@ class TestItemComparer(PrettyPrinterTester):
         comparer = ItemComparer(field=TrackField.BPM, condition="in_range", expected=["81.96", 100.23])
         assert comparer._expected == ["81.96", 100.23]
         assert not comparer._converted
-        assert comparer._processor == comparer._in_range
+        assert comparer._processor_method == comparer._in_range
 
         track.bpm = 90.0
         assert comparer.compare(track)
@@ -148,7 +150,7 @@ class TestItemComparer(PrettyPrinterTester):
         )
         assert comparer._expected == [datetime(2023, 4, 21, 19, 20)]
         assert not comparer._converted
-        assert comparer._processor == comparer._is
+        assert comparer._processor_method == comparer._is
 
         track.date_added = datetime(2023, 4, 21, 11, 30, 49, 203)
         assert comparer.compare(track)
@@ -160,7 +162,7 @@ class TestItemComparer(PrettyPrinterTester):
         comparer = ItemComparer(field=LocalTrackField.DATE_ADDED, condition="is_not", expected="20/01/01")
         assert comparer._expected == ["20/01/01"]
         assert not comparer._converted
-        assert comparer._processor == comparer._is_not
+        assert comparer._processor_method == comparer._is_not
 
         assert comparer.compare(track)
         assert comparer._expected == [date(2001, 1, 20)]
@@ -169,7 +171,7 @@ class TestItemComparer(PrettyPrinterTester):
         comparer = ItemComparer(field=LocalTrackField.DATE_ADDED, condition="is_not", expected="13/8/2004")
         assert comparer._expected == ["13/8/2004"]
         assert not comparer._converted
-        assert comparer._processor == comparer._is_not
+        assert comparer._processor_method == comparer._is_not
 
         assert comparer.compare(track)
         assert comparer._expected == [date(2004, 8, 13)]
@@ -180,7 +182,7 @@ class TestItemComparer(PrettyPrinterTester):
         comparer = ItemComparer(field=LocalTrackField.DATE_ADDED, condition="is_in_the_last", expected="8h")
         assert comparer._expected == ["8h"]
         assert not comparer._converted
-        assert comparer._processor == comparer._is_after
+        assert comparer._processor_method == comparer._is_after
 
         track.date_added = datetime.now() - timedelta(hours=4)
         assert comparer.compare(track)

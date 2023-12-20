@@ -108,9 +108,6 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
 
         assert len(collection) == len(collection.items)
 
-        assert hash(collection) == hash(collection)
-        assert hash(collection) == hash(collection_original)
-        assert hash(collection) != hash(collection_basic)
         assert collection == collection
         assert collection == collection_original
         assert collection != collection_basic
@@ -121,12 +118,10 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
 
         collection += collection_original
         assert len(collection) == len(collection_original) * 2 == len(collection.items)
-        assert hash(collection) != hash(collection_original)
         assert collection != collection_original
 
         collection -= collection_original
         assert len(collection) == len(collection_original) == len(collection.items)
-        assert hash(collection) == hash(collection_original)
         assert collection == collection_original
 
     @staticmethod

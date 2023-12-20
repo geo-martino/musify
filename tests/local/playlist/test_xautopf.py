@@ -62,17 +62,17 @@ class TestXAutoPF(LocalCollectionTester):
         assert pl.matcher.comparers[0].expected == ["an album"]
         assert not pl.matcher.comparers[0]._converted
         assert pl.matcher.comparers[0].condition == "contains"
-        assert pl.matcher.comparers[0]._processor == pl.matcher.comparers[0]._contains
+        assert pl.matcher.comparers[0]._processor_method == pl.matcher.comparers[0]._contains
         assert pl.matcher.comparers[1].field == LocalTrackField.ARTIST
         assert pl.matcher.comparers[1].expected is None
         assert not pl.matcher.comparers[1]._converted
         assert pl.matcher.comparers[1].condition == "is_null"
-        assert pl.matcher.comparers[1]._processor == pl.matcher.comparers[1]._is_null
+        assert pl.matcher.comparers[1]._processor_method == pl.matcher.comparers[1]._is_null
         assert pl.matcher.comparers[2].field == LocalTrackField.TRACK_NUMBER
         assert pl.matcher.comparers[2].expected == [30]
         assert pl.matcher.comparers[2]._converted
         assert pl.matcher.comparers[2].condition == "less_than"
-        assert pl.matcher.comparers[2]._processor == pl.matcher.comparers[2]._is_before
+        assert pl.matcher.comparers[2]._processor_method == pl.matcher.comparers[2]._is_before
 
         # matcher
         assert pl.matcher.match_all
@@ -154,7 +154,7 @@ class TestXAutoPF(LocalCollectionTester):
         assert pl.limiter.limit_max == 20
         assert pl.limiter.kind == LimitType.ITEMS
         assert pl.limiter.allowance == 1.25
-        assert pl.limiter._processor == pl.limiter._most_recently_added
+        assert pl.limiter._processor_method == pl.limiter._most_recently_added
 
         # sorter
         assert pl.sorter.sort_fields == {LocalTrackField.DATE_ADDED: True}

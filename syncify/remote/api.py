@@ -26,13 +26,13 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
     @property
     @abstractmethod
     def user_id(self) -> str | None:
-        """ID of the currently authenticated user"""
+        """ID of the currently authorised user"""
         raise NotImplementedError
 
     @property
     @abstractmethod
     def user_name(self) -> str | None:
-        """Name of the currently authenticated user"""
+        """Name of the currently authorised user"""
         raise NotImplementedError
 
     def __init__(self, **handler_kwargs):

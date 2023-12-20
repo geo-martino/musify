@@ -69,10 +69,8 @@ def random_track[T: LocalTrack](cls: type[T] | None = None) -> T:
     track._image_links = {}
     track.has_image = False
 
-    ext = choice(tuple(track.valid_extensions))
-    path = join(path_track_resources, random_str(20, 50), f"{str(track.track_number).zfill(2)} - {track.title}" + ext)
-    track._path = path
-    track.file.filename = path
+    filename_ext = f"{str(track.track_number).zfill(2)} - {track.title}" + choice(tuple(track.valid_extensions))
+    track.file.filename = join(path_track_resources, random_str(20, 50), filename_ext)
 
     track.date_added = datetime.now() - relativedelta(days=randrange(8, 20), hours=randrange(1, 24))
     track.last_played = datetime.now() - relativedelta(days=randrange(1, 6), hours=randrange(1, 24))
