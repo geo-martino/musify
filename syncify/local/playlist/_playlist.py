@@ -148,6 +148,9 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
         """
         raise NotImplementedError
 
+    def merge(self, playlist: Playlist) -> None:
+        raise NotImplementedError
+
     def as_dict(self):
         return {
             "name": self.name,

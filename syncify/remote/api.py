@@ -45,6 +45,10 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
     ###########################################################################
     ## Misc helpers
     ###########################################################################
+    def load_user_data(self) -> None:
+        """Load and store user data in this API object for the currently authorised user"""
+        self._user_data = self.get_self()
+
     @staticmethod
     def _merge_results_to_input(
             original: APIMethodInputType, results: list[dict[str, Any]], ordered: bool = True

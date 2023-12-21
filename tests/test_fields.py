@@ -14,14 +14,12 @@ class TestTrackField(TagFieldTester):
     def cls(self) -> type[TrackField]:
         return TrackField
 
-    @staticmethod
     @pytest.fixture(scope="class")
-    def reference_cls():
+    def reference_cls(self):
         return Track
 
-    @staticmethod
     @pytest.fixture(scope="class")
-    def reference_ignore():
+    def reference_ignore(self):
         return {TrackField.IMAGES}
 
     def test_map(self):
@@ -35,14 +33,12 @@ class TestLocalTrackField(TagFieldTester):
     def cls(self) -> type[LocalTrackField]:
         return LocalTrackField
 
-    @staticmethod
     @pytest.fixture(scope="class")
-    def reference_cls():
+    def reference_cls(self):
         return LocalTrack
 
-    @staticmethod
     @pytest.fixture(scope="class")
-    def reference_ignore():
+    def reference_ignore(self):
         return {LocalTrackField.IMAGES}
 
     def test_map(self):
@@ -56,14 +52,12 @@ class TestArtistItemField(TagFieldTester):
     def cls(self) -> type[ArtistItemField]:
         return ArtistItemField
 
-    @staticmethod
     @pytest.fixture(scope="class")
-    def reference_cls():
+    def reference_cls(self):
         return ArtistItem
 
-    @staticmethod
     @pytest.fixture(scope="class")
-    def reference_ignore():
+    def reference_ignore(self):
         return {ArtistItemField.IMAGES}
 
 
@@ -73,14 +67,12 @@ class TestPlaylistField(FieldTester):
     def cls(self) -> type[PlaylistField]:
         return PlaylistField
 
-    @staticmethod
     @pytest.fixture(scope="class")
-    def reference_cls():
+    def reference_cls(self):
         return Playlist
 
-    @staticmethod
     @pytest.fixture(scope="class")
-    def reference_ignore():
+    def reference_ignore(self):
         return {PlaylistField.IMAGES}
 
 
@@ -90,14 +82,12 @@ class TestFolderField(FieldTester):
     def cls(self) -> type[FolderField]:
         return FolderField
 
-    @staticmethod
     @pytest.fixture(scope="class")
-    def reference_cls():
+    def reference_cls(self):
         return Folder
 
-    @staticmethod
     @pytest.fixture(scope="class")
-    def reference_ignore():
+    def reference_ignore(self):
         return {FolderField.IMAGES}
 
 
@@ -107,14 +97,12 @@ class TestAlbumField(FieldTester):
     def cls(self) -> type[AlbumField]:
         return AlbumField
 
-    @staticmethod
     @pytest.fixture(scope="class")
-    def reference_cls():
+    def reference_cls(self):
         return Album
 
-    @staticmethod
     @pytest.fixture(scope="class")
-    def reference_ignore():
+    def reference_ignore(self):
         return {AlbumField.IMAGES}
 
 
@@ -124,12 +112,10 @@ class TestArtistField(FieldTester):
     def cls(self) -> type[ArtistField]:
         return ArtistField
 
-    @staticmethod
     @pytest.fixture(scope="class")
-    def reference_cls():
+    def reference_cls(self):
         return Artist
 
-    @staticmethod
     @pytest.fixture(scope="class")
-    def reference_ignore():
+    def reference_ignore(self):
         return {ArtistField.IMAGES}

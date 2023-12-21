@@ -42,7 +42,6 @@ class SpotifyAPIPlaylists(RemoteAPI, metaclass=ABCMeta):
                 return self.convert(
                     playlist["uri"], kind=RemoteObjectType.PLAYLIST, type_in=RemoteIDType.URI, type_out=RemoteIDType.URL
                 )
-
         try:
             return self.convert(playlist, kind=RemoteObjectType.PLAYLIST, type_out=RemoteIDType.URL)
         except RemoteIDTypeError:
@@ -112,8 +111,8 @@ class SpotifyAPIPlaylists(RemoteAPI, metaclass=ABCMeta):
         if skip_dupes:  # skip tracks currently in playlist
             pl_current = self.get_items(url, kind=RemoteObjectType.PLAYLIST, use_cache=False)[0]
             tracks = pl_current[self.playlist_items_key][self.items_key]
-            uris_current = [track["track"]["uri"] for track in tracks]
-            uri_list = [uri for uri in uri_list if uri not in uris_current]
+            uri_current = [track["track"]["uri"] for track in tracks]
+            uri_list = [uri for uri in uri_list if uri not in uri_current]
 
         for uris in batched(uri_list, limit):  # add tracks in batches
             params = {"uris": ','.join(uris)}

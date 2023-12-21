@@ -62,13 +62,21 @@ class SpotifyMock(Mocker):
         }
 
     def get_requests(
-            self, url: str, params: dict[str, Any] | None = None, response: dict[str, Any] | None = None
+            self,
+            url: str,
+            method: str | None = None,
+            params: dict[str, Any] | None = None,
+            response: dict[str, Any] | None = None
     ) -> list[Request]:
         """Get a get request from the history from the given URL and params"""
         requests = []
-
         for request in self.request_history:
             match_url = url.strip("/").endswith(request.path.strip("/"))
+
+            match_method = method is None
+            if not match_method:
+                # noinspection PyProtectedMember
+                match_method = request._request.method.upper() == method.upper()
 
             match_params = params is None
             if not match_params and request.query:
@@ -84,7 +92,7 @@ class SpotifyMock(Mocker):
                         break
                     match_response = True
 
-            if match_url and match_params and match_response:
+            if match_url and match_method and match_params and match_response:
                 requests.append(request)
 
         return requests
@@ -171,6 +179,12 @@ class SpotifyMock(Mocker):
             # ensure all assigned playlist owners are in the list of available users
             playlist["owner"] = {k: v for k, v in choice(self.users).items() if k in playlist["owner"]}
 
+            # ensure all playlists have the same list of tracks in order of the stored tracks
+            # ensures that playlist/{id}/tracks endpoint calls always returns the same list of tracks
+            for item, track in zip(playlist["tracks"]["items"], self.tracks):
+                item["track"].clear()
+                item["track"] |= deepcopy(track)
+
     def setup_all_responses(self):
         """Driver to setup requests_mock responses for all endpoints"""
         self.setup_search_response()
@@ -179,8 +193,8 @@ class SpotifyMock(Mocker):
         playlists_map = {item["id"]: item for item in self.playlists}
         self.setup_items_response(kind=ObjectType.PLAYLIST, id_map=playlists_map, batchable=False)
         for id_, item in playlists_map.items():
-            self.setup_items_block_response_from_generator(
-                kind=ObjectType.PLAYLIST, id_=id_, item=item, generator=self.generate_playlist_tracks
+            self.setup_items_block_response_from_list(
+                url=item["href"] + "/tracks", items=self.user_tracks, total=item["tracks"]["total"]
             )
 
         albums_map = {item["id"]: item for item in self.albums}
@@ -285,7 +299,9 @@ class SpotifyMock(Mocker):
         items_key = SpotifyAPI.collection_item_map[kind].name.casefold() + "s"
         self.get(url=re.compile(rf"{url}/{id_}/{items_key}"), json=response_getter)
 
-    def setup_items_block_response_from_list(self, url: str, items: list[dict[str, Any]]) -> None:
+    def setup_items_block_response_from_list(
+            self, url: str, items: list[dict[str, Any]], total: int | None = None
+    ) -> None:
         """
         Setup requests mock for dynamically generating responses for a user's saved items from the given ``generator``.
         Not providing a ``user_id`` will set up mocks for /me/{``kind``}?... endpoints.
@@ -297,8 +313,10 @@ class SpotifyMock(Mocker):
             limit = int(req_params["limit"][0])
             offset = int(req_params.get("offset", [0])[0])
 
-            it = deepcopy(items[offset:min(offset + limit, len(items))])
-            items_block = self.format_items_block(url=req.url, items=it, offset=offset, limit=limit, total=len(items))
+            it = deepcopy(items[offset:min(offset + limit, total or len(items))])
+            items_block = self.format_items_block(
+                url=req.url, items=it, offset=offset, limit=limit, total=total or len(items)
+            )
 
             if url.endswith("me/following"):  # special case for following artists
                 items_block["cursors"] = {}
@@ -326,12 +344,17 @@ class SpotifyMock(Mocker):
             """Process body and generate playlist response data"""
             data = req.json()
 
-            response = self.generate_playlist(user_id=self.user_id, item_count=0)
+            playlist_ids = {pl["id"] for pl in self.playlists}
+            response = {"id": next(id_ for id_ in playlist_ids)}
+            while response["id"] in playlist_ids:
+                response = self.generate_playlist(user_id=self.user_id, item_count=0)
+
             response["name"] = data["name"]
             response["description"] = data["description"]
             response["public"] = data["public"]
             response["collaborative"] = data["collaborative"]
             response["owner"] = self.user_playlists[0]["owner"]
+
             self.get(url=response["href"], json=response)
             return response
 
@@ -359,10 +382,10 @@ class SpotifyMock(Mocker):
     ) -> dict[str, Any]:
         """Format an items block response from a list of items and a URL base."""
         href = cls.format_next_url(url=url, offset=offset, limit=limit)
-        limit = min(len(items), max(limit, 1), 50)  # limit must be between 1 and 50
+        limit = min(max(limit, 1), 50)  # limit must be between 1 and 50
 
         prev_offset = offset - limit
-        prev_url = cls.format_next_url(url=url, offset=prev_offset, limit=limit) if prev_offset > 0 else None
+        prev_url = cls.format_next_url(url=url, offset=prev_offset, limit=limit) if prev_offset >= 0 else None
         next_offset = offset + limit
         next_url = cls.format_next_url(url=url, offset=next_offset, limit=limit) if next_offset < total else None
 
@@ -415,9 +438,12 @@ class SpotifyMock(Mocker):
         return images
 
     @staticmethod
-    def generate_owner(user_id: str = random_id(), user_name: str = random_str(5, 30)) -> dict[str, Any]:
+    def generate_owner(user_id: str | None = None, user_name: str | None = None) -> dict[str, Any]:
         """Return a randomly generated Spotify API response for an owner"""
         kind = ObjectType.USER.name.lower()
+        user_id = user_id or random_str()
+        user_name = user_name or random_str(5, 30)
+
         return {
             "display_name": user_name,
             "external_urls": {"spotify": f"{URL_EXT}/{kind}/{user_id}"},
@@ -435,9 +461,8 @@ class SpotifyMock(Mocker):
     @classmethod
     def generate_user(cls) -> dict[str, Any]:
         """Return a randomly generated Spotify API response for a User."""
-
-        user_id = random_id()
         kind = ObjectType.USER.name.lower()
+        user_id = random_id()
 
         response = {
             "country": choice(COUNTRY_CODES),
@@ -466,8 +491,8 @@ class SpotifyMock(Mocker):
 
         :param properties: Add extra randomly generated information to the response as per documentation.
         """
-        artist_id = random_id()
         kind = ObjectType.ARTIST.name.lower()
+        artist_id = random_id()
 
         response = {
             "external_urls": {"spotify": f"{URL_EXT}/{kind}/{artist_id}"},
@@ -504,8 +529,8 @@ class SpotifyMock(Mocker):
         :param album: Add randomly generated album information to the response as per documentation.
         :param artists: Add randomly generated artists information to the response as per documentation.
         """
-        track_id = random_id()
         kind = ObjectType.TRACK.name.lower()
+        track_id = random_id()
 
         response = {
             "available_markets": sample(COUNTRY_CODES, k=randrange(1, 5)),
@@ -546,9 +571,7 @@ class SpotifyMock(Mocker):
         return response
 
     @staticmethod
-    def generate_audio_features(
-            track_id: str = random_id(), duration_ms: int = randrange(int(10e4), int(6*10e6)),
-    ) -> dict[str, Any]:
+    def generate_audio_features(track_id: str | None = None, duration_ms: int | None = None) -> dict[str, Any]:
         """
         Return a randomly generated Spotify API response for an Album's tracks.
 
@@ -556,6 +579,8 @@ class SpotifyMock(Mocker):
         :param duration_ms: The duration of the track in ms to use in the response. Will randomly generate if not given.
         """
         kind = ObjectType.TRACK.name.lower()
+        track_id = track_id or random_id()
+        duration_ms = duration_ms or randrange(int(10e4), int(6*10e6))
 
         # noinspection SpellCheckingInspection
         return {
@@ -580,11 +605,7 @@ class SpotifyMock(Mocker):
         }
 
     def generate_album(
-            self,
-            track_count: int = randrange(4, 50),
-            tracks: bool = True,
-            artists: bool = True,
-            properties: bool = True,
+            self, track_count: int | None = None, tracks: bool = True, artists: bool = True, properties: bool = True,
     ) -> dict[str, Any]:
         """
         Return a randomly generated Spotify API response for an Album.
@@ -594,8 +615,9 @@ class SpotifyMock(Mocker):
         :param artists: Add randomly generated artists information to the response as per documentation.
         :param properties: Add extra randomly generated properties information to the response as per documentation.
         """
-        album_id = random_id()
         kind = ObjectType.ALBUM.name.lower()
+        album_id = random_id()
+        track_count = track_count if track_count is not None else randrange(4, 50)
 
         response = {
             "album_type": choice((kind, "single", "compilation")),
@@ -635,9 +657,9 @@ class SpotifyMock(Mocker):
         """
         total = response["total_tracks"]
 
-        # force pagination testing when range > 1
         if not count:
-            limit = response.get("tracks", {}).get("limit", total // randrange(1, 4))
+            # force pagination testing when range > 1
+            limit = max(min(response.get("tracks", {}).get("limit", total // randrange(1, 4)), 50), 1)
             count = limit if limit < total else total
 
         if response.get("artists"):
@@ -680,10 +702,7 @@ class SpotifyMock(Mocker):
         return extras
 
     def generate_playlist(
-            self,
-            item_count: int = randrange(0, 200),
-            user_id: str | None = random_str(5, 30),
-            api: SpotifyAPI | None = None,
+            self, item_count: int | None = None, user_id: str | None = None, api: SpotifyAPI | None = None,
     ) -> dict[str, Any]:
         """
         Return a randomly generated Spotify API response for a Playlist.
@@ -692,9 +711,12 @@ class SpotifyMock(Mocker):
         :param user_id: An optional ``user_id`` to use as the owner of the playlist.
         :param api: An optional, authenticated :py:class:`SpotifyAPI` object to extract user information from.
         """
-        playlist_id = random_id()
         kind = ObjectType.PLAYLIST.name.lower()
+        playlist_id = random_id()
         url = f"{URL_API}/{kind}s/{playlist_id}"
+
+        item_count = item_count if item_count is not None else randrange(0, 200)
+        user_id = user_id or random_str(5, 30)
 
         owner = self.generate_owner_from_api(api=api) if api else self.generate_owner(user_id=user_id)
         public = choice([True, False])
@@ -740,7 +762,7 @@ class SpotifyMock(Mocker):
 
         if not count:
             # force pagination testing when range > 1
-            limit = min(50, response["tracks"].get("limit", total // randrange(1, 4)))
+            limit = max(min(response["tracks"].get("limit", total // randrange(1, 4)), 50), 1)
             count = limit if limit < total else total
 
         owner = deepcopy(response["owner"])

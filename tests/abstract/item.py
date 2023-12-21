@@ -10,27 +10,23 @@ from tests.abstract.misc import PrettyPrinterTester
 class ItemTester(PrettyPrinterTester, metaclass=ABCMeta):
     """Run generic tests for :py:class:`Item` implementations"""
 
-    @staticmethod
     @abstractmethod
-    def item(*args, **kwargs) -> Item:
+    def item(self, *args, **kwargs) -> Item:
         """Yields an :py:class:`Item` object to be tested as pytest.fixture"""
         raise NotImplementedError
 
-    @staticmethod
     @abstractmethod
-    def item_unequal(*args, **kwargs) -> Item:
+    def item_unequal(self, *args, **kwargs) -> Item:
         """Yields an :py:class:`Item` object that is does not equal the ``item`` being tested"""
         raise NotImplementedError
 
-    @staticmethod
     @abstractmethod
-    def item_modified(*args, **kwargs) -> Item:
+    def item_modified(self, *args, **kwargs) -> Item:
         """Yields an :py:class:`Item` object that is equal to the ``item`` being tested with some modified values"""
         raise NotImplementedError
 
-    @staticmethod
     @pytest.fixture
-    def obj(item: Item) -> PrettyPrinter:
+    def obj(self, item: Item) -> PrettyPrinter:
         return item
 
     @staticmethod
@@ -45,6 +41,6 @@ class ItemTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert item != item_unequal
 
     @staticmethod
-    def test_get_attributes(item: Item):
+    def test_getitem_dunder_method(item: Item):
         assert item["name"] == item.name
         assert item["uri"] == item.uri

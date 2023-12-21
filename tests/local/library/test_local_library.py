@@ -14,25 +14,22 @@ from tests.local.utils import path_track_resources, path_track_all, random_track
 
 class TestLocalLibrary(LocalLibraryTester):
 
-    @staticmethod
     @pytest.fixture
-    def library() -> LocalLibrary:
+    def library(self) -> LocalLibrary:
         library = LocalLibrary(library_folder=path_track_resources, playlist_folder=path_playlist_resources)
         # needed to ensure __setitem__ check passes
         library.items.append(random_track(cls=library[0].__class__))
         return library
 
-    @staticmethod
     @pytest.fixture
-    def collection_merge_items() -> Iterable[LocalTrack]:
+    def collection_merge_items(self) -> Iterable[LocalTrack]:
         return random_tracks(randrange(5, 10))
 
     @pytest.fixture(scope="class")
     def blank_library(self) -> LocalLibrary:
         return LocalLibrary(load=False)
 
-    @staticmethod
-    def test_init_include():
+    def test_init_include(self):
         library_include = LocalLibrary(
             library_folder=path_track_resources,
             playlist_folder=path_playlist_resources,
@@ -47,8 +44,7 @@ class TestLocalLibrary(LocalLibraryTester):
             splitext(basename(path_playlist_xautopf_bp).casefold())[0]: path_playlist_xautopf_bp,
         }
 
-    @staticmethod
-    def test_init_exclude():
+    def test_init_exclude(self):
         library_exclude = LocalLibrary(
             library_folder=path_track_resources,
             playlist_folder=path_playlist_resources,
@@ -61,8 +57,7 @@ class TestLocalLibrary(LocalLibraryTester):
             splitext(basename(path_playlist_xautopf_ra).casefold())[0]: path_playlist_xautopf_ra,
         }
 
-    @staticmethod
-    def test_init_relative_paths():
+    def test_init_relative_paths(self):
         library_relative_paths = LocalLibrary(
             library_folder=dirname(path_playlist_resources),
             playlist_folder=basename(path_playlist_resources),
@@ -76,8 +71,7 @@ class TestLocalLibrary(LocalLibraryTester):
             splitext(basename(path_playlist_xautopf_ra).casefold())[0]: path_playlist_xautopf_ra,
         }
 
-    @staticmethod
-    def test_load():
+    def test_load(self):
         library = LocalLibrary(
             library_folder=path_track_resources,
             playlist_folder=path_playlist_resources,

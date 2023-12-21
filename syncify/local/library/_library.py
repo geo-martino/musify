@@ -331,7 +331,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             self.logger.warning(f"\33[97m{message}: \33[0m\n\t- {"\n\t- ".join(errors)} ")
             self.print_line()
 
-    def merge_playlists(self, playlists: Library | Collection[Playlist] | Mapping[Any, Playlist]):
+    def merge_playlists(self, playlists: Library | Collection[Playlist] | Mapping[Any, Playlist]) -> None:
         raise NotImplementedError
 
     def restore_tracks(

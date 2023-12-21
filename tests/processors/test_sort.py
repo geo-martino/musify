@@ -16,14 +16,12 @@ from tests.local.utils import random_tracks
 
 class TestItemSorter(PrettyPrinterTester):
 
-    @staticmethod
     @pytest.fixture
-    def obj() -> ItemSorter:
+    def obj(self) -> ItemSorter:
         return ItemSorter(fields=[TrackField.ALBUM, TrackField.DISC, TrackField.TRACK], shuffle_mode=ShuffleMode.NONE)
 
-    @staticmethod
     @pytest.fixture(scope="class")
-    def tracks() -> list[LocalTrack]:
+    def tracks(self) -> list[LocalTrack]:
         """Generate a list of random tracks with dynamically configured properties for sort tests"""
         tracks = random_tracks(30)
         for i, track in enumerate(tracks, 1):
@@ -35,8 +33,7 @@ class TestItemSorter(PrettyPrinterTester):
 
         return tracks
 
-    @staticmethod
-    def test_sort_by_field_basic(tracks: list[LocalTrack]):
+    def test_sort_by_field_basic(self, tracks: list[LocalTrack]):
         # no shuffle and reverse
         tracks_original = tracks.copy()
         ItemSorter.sort_by_field(tracks)
@@ -44,24 +41,21 @@ class TestItemSorter(PrettyPrinterTester):
         ItemSorter.sort_by_field(tracks, reverse=True)
         assert tracks == list(reversed(tracks_original))
 
-    @staticmethod
-    def test_sort_by_track_number(tracks: list[LocalTrack]):
+    def test_sort_by_track_number(self, tracks: list[LocalTrack]):
         tracks_sorted = sorted(tracks, key=lambda t: t.track_number)
         ItemSorter.sort_by_field(tracks, field=TrackField.TRACK)
         assert tracks == tracks_sorted
         ItemSorter.sort_by_field(tracks, field=TrackField.TRACK, reverse=True)
         assert tracks == list(reversed(tracks_sorted))
 
-    @staticmethod
-    def test_sort_by_date_added(tracks: list[LocalTrack]):
+    def test_sort_by_date_added(self, tracks: list[LocalTrack]):
         tracks_sorted = sorted(tracks, key=lambda t: t.date_added)
         ItemSorter.sort_by_field(tracks, field=LocalTrackField.DATE_ADDED)
         assert tracks == tracks_sorted
         ItemSorter.sort_by_field(tracks, field=LocalTrackField.DATE_ADDED, reverse=True)
         assert tracks == list(reversed(tracks_sorted))
 
-    @staticmethod
-    def test_sort_by_title_with_ignore_words(tracks: list[LocalTrack]):
+    def test_sort_by_title_with_ignore_words(self, tracks: list[LocalTrack]):
         # sort on str, ignoring defined words like 'The' and 'A'
         tracks_sorted = sorted(tracks, key=lambda t: strip_ignore_words(t.title))
         ItemSorter.sort_by_field(tracks, field=TrackField.TITLE)
@@ -69,16 +63,14 @@ class TestItemSorter(PrettyPrinterTester):
         ItemSorter.sort_by_field(tracks, field=TrackField.TITLE, reverse=True)
         assert tracks == list(reversed(tracks_sorted))
 
-    @staticmethod
-    def test_group_by_field(tracks: list[LocalTrack]):
+    def test_group_by_field(self, tracks: list[LocalTrack]):
         assert ItemSorter.group_by_field(tracks) == {None: tracks}
 
         groups = ItemSorter.group_by_field(tracks, TrackField.KEY)
         assert sorted(groups) == sorted(set(track.key for track in tracks))
         assert sum(len(t) for t in groups.values()) == len(tracks)
 
-    @staticmethod
-    def test_random_shuffle(tracks: list[LocalTrack]):
+    def test_random_shuffle(self, tracks: list[LocalTrack]):
         tracks_original = tracks.copy()
         ItemSorter().sort(tracks)
         assert tracks == tracks_original
@@ -87,8 +79,7 @@ class TestItemSorter(PrettyPrinterTester):
         ItemSorter(fields=TrackField.TITLE, shuffle_mode=ShuffleMode.RANDOM).sort(tracks)
         assert tracks != sorted(tracks, key=lambda t: strip_ignore_words(t.title))
 
-    @staticmethod
-    def test_multi_sort(tracks: list[LocalTrack]):
+    def test_multi_sort(self, tracks: list[LocalTrack]):
         tracks_sorted = sorted(tracks, key=lambda t: (t.album, t.disc_number, t.track_number))
         sorter = ItemSorter(fields=[TrackField.ALBUM, TrackField.DISC, TrackField.TRACK], shuffle_mode=ShuffleMode.NONE)
         sorter(tracks)

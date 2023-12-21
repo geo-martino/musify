@@ -11,26 +11,23 @@ from syncify.local.playlist import XAutoPF
 from syncify.local.track import LocalTrack
 from syncify.processors.limit import LimitType
 from syncify.processors.sort import ShuffleMode, ShuffleBy
-from tests.local.playlist.utils import path_playlist_xautopf_ra, path_playlist_xautopf_bp
-from tests.local.test_local_collection import LocalCollectionTester
+from tests.local.playlist.utils import LocalPlaylistTester, path_playlist_xautopf_ra, path_playlist_xautopf_bp
 from tests.local.utils import random_tracks, path_track_flac, path_track_wma, path_track_mp3, random_track
 from tests.utils import path_txt, path_resources
 
 
 # noinspection PyTestUnpassedFixture
-class TestXAutoPF(LocalCollectionTester):
+class TestXAutoPF(LocalPlaylistTester):
 
-    @staticmethod
     @pytest.fixture
-    def collection() -> XAutoPF:
+    def playlist(self) -> XAutoPF:
         # needed to ensure __setitem__ check passes
         tracks = random_tracks(randrange(5, 15))
         tracks.append(random_track(cls=tracks[0].__class__))
         playlist = XAutoPF(path=path_playlist_xautopf_ra, tracks=tracks, check_existence=False)
         return playlist
 
-    @staticmethod
-    def test_init_fails():
+    def test_init_fails(self):
         tracks = random_tracks(20)
 
         # raises error on non-existent file, remove this once supported
@@ -42,8 +39,7 @@ class TestXAutoPF(LocalCollectionTester):
         with pytest.raises(InvalidFileType):
             XAutoPF(path=path_txt, tracks=tracks)
 
-    @staticmethod
-    def test_load_playlist_1_settings():
+    def test_load_playlist_1_settings(self):
         pl = XAutoPF(
             path=path_playlist_xautopf_bp,
             tracks=random_tracks(20),  # just need to put something here, doesn't matter what for this test
@@ -94,8 +90,7 @@ class TestXAutoPF(LocalCollectionTester):
         assert pl.sorter.shuffle_by == ShuffleBy.ALBUM
         assert pl.sorter.shuffle_weight == 0.5
 
-    @staticmethod
-    def test_load_playlist_1_tracks(tracks: list[LocalTrack]):
+    def test_load_playlist_1_tracks(self, tracks: list[LocalTrack]):
         # prepare tracks to search through
         tracks_actual = tracks
         tracks = random_tracks(30)
@@ -127,8 +122,7 @@ class TestXAutoPF(LocalCollectionTester):
         tracks_expected = tracks_actual[:2] + [track for track in tracks if 20 < track.track_number < 30]
         assert pl.tracks == sorted(tracks_expected, key=lambda t: t.track_number)
 
-    @staticmethod
-    def test_load_playlist_2_settings():
+    def test_load_playlist_2_settings(self):
         pl = XAutoPF(
             path=path_playlist_xautopf_ra,
             tracks=random_tracks(20),  # just need to put something here, doesn't matter what for this test
@@ -162,8 +156,7 @@ class TestXAutoPF(LocalCollectionTester):
         assert pl.sorter.shuffle_by == ShuffleBy.TRACK
         assert pl.sorter.shuffle_weight == 0
 
-    @staticmethod
-    def test_load_playlist_2_tracks():
+    def test_load_playlist_2_tracks(self):
         # prepare tracks to search through
         tracks = random_tracks(50)
         for i, track in enumerate(tracks):
@@ -181,9 +174,8 @@ class TestXAutoPF(LocalCollectionTester):
         tracks_expected = sorted(tracks, key=lambda t: t.date_added, reverse=True)[:limit]
         assert pl.tracks == sorted(tracks_expected, key=lambda t: t.date_added, reverse=True)
 
-    @staticmethod
     @pytest.mark.parametrize("path", [path_playlist_xautopf_bp], indirect=["path"])
-    def test_save_playlist(tracks: list[LocalTrack], path: str, tmp_path: str):
+    def test_save_playlist(self, tracks: list[LocalTrack], path: str, tmp_path: str):
         # prepare tracks to search through
         tracks_actual = [track for track in tracks if track.path in [path_track_flac, path_track_wma]]
         tracks = random_tracks(30)

@@ -8,8 +8,8 @@ from typing import Any, Self
 
 import mutagen
 
-from syncify.fields import LocalTrackField
 from syncify.abstract.item import Track, Item
+from syncify.fields import TrackField
 from syncify.local._file import File
 from syncify.local.track._base.reader import TagReader
 from syncify.local.track._base.writer import TagWriter
@@ -94,9 +94,9 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
 
         return mutagen.File(path)
 
-    def merge(self, track: Track, tags: UnitIterable[LocalTrackField] = LocalTrackField.ALL) -> None:
+    def merge(self, track: Track, tags: UnitIterable[TrackField] = TrackField.ALL) -> None:
         """Set the tags of this track equal to the given ``track``. Give a list of ``tags`` to limit which are set"""
-        tag_names = LocalTrackField.__tags__ if tags == LocalTrackField.ALL else set(LocalTrackField.to_tags(tags))
+        tag_names = TrackField.__tags__ if tags == TrackField.ALL else set(TrackField.to_tags(tags))
 
         for tag in tag_names:  # merge on each tag
             if hasattr(track, tag):
@@ -190,17 +190,21 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
 
         return setattr(self, key, value)
 
-    def __or__(self, other: Self) -> Self:
-        if not isinstance(other, self.__class__):
-            raise TypeError(f"Incorrect item given. Cannot merge with {other.__class__}")
+    def __or__(self, other: Track) -> Self:
+        if not isinstance(other, Track):
+            raise TypeError(
+                f"Incorrect item given. Cannot merge with {other.__class__.__name__} as it is not a Track"
+            )
 
         self_copy = self.__deepcopy__()
-        self_copy.merge(other, tags=LocalTrackField.ALL)
+        self_copy.merge(other, tags=TrackField.ALL)
         return self_copy
 
-    def __ior__(self, other: Self):
-        if not isinstance(other, self.__class__):
-            raise TypeError(f"Incorrect item given. Cannot merge with {other.__class__}")
+    def __ior__(self, other: Track):
+        if not isinstance(other, Track):
+            raise TypeError(
+                f"Incorrect item given. Cannot merge with {other.__class__.__name__} as it is not a Track"
+            )
 
-        self.merge(other, tags=LocalTrackField.ALL)
+        self.merge(other, tags=TrackField.ALL)
         return self

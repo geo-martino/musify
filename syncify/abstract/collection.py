@@ -330,6 +330,30 @@ class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
         """:py:class:`datetime` object representing when the playlist was last modified"""
         raise NotImplementedError
 
+    @abstractmethod
+    def merge(self, playlist: Playlist) -> None:
+        """
+        Merge tracks in this playlist with another playlist synchronising tracks between the two.
+        Only modifies this playlist.
+        """
+        # TODO: merge playlists adding/removing tracks as needed.
+        raise NotImplementedError
+
+    # noinspection PyTypeChecker
+    def __or__(self, other: Playlist) -> Self:
+        if not isinstance(other, self.__class__):
+            raise TypeError(
+                f"Incorrect item given. Cannot merge with {other.__class__.__name__} as it is not a Playlist"
+            )
+        raise NotImplementedError
+
+    def __ior__(self, other: Playlist):
+        if not isinstance(other, self.__class__):
+            raise TypeError(
+                f"Incorrect item given. Cannot merge with {other.__class__.__name__} as it is not a Playlist"
+            )
+        raise NotImplementedError
+
 
 # noinspection PyShadowingNames
 class Library[T: Track](Logger, ItemCollection[T], metaclass=ABCMeta):

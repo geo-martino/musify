@@ -6,24 +6,23 @@ import pytest
 from syncify.local.track import LocalTrack
 from syncify.remote.library.collection import RemoteCollection
 from syncify.remote.library.item import RemoteItem
-from tests.abstract.collection import ItemCollectionTester
+from tests.abstract.collection import ItemCollectionTester, PlaylistTester, LibraryTester
 from tests.local.utils import random_tracks
 
 
 class RemoteCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
 
-    @staticmethod
     @abstractmethod
-    def collection_merge_items(*args, **kwargs) -> Iterable[RemoteItem]:
+    def collection_merge_items(self, *args, **kwargs) -> Iterable[RemoteItem]:
         raise NotImplementedError
 
-    @staticmethod
     @pytest.fixture(scope="module")
-    def collection_merge_invalid(*args, **kwargs) -> Iterable[LocalTrack]:
+    def collection_merge_invalid(self, *args, **kwargs) -> Iterable[LocalTrack]:
         return random_tracks()
 
-    @staticmethod
-    def test_getitem_dunder_method(collection: RemoteCollection, collection_merge_items: Iterable[RemoteItem]):
+    def test_collection_getitem_dunder_method(
+            self, collection: RemoteCollection, collection_merge_items: Iterable[RemoteItem]
+    ):
         """:py:class:`ItemCollection` __getitem__ and __setitem__ tests"""
         item = collection.items[2]
 
@@ -55,3 +54,13 @@ class RemoteCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
         with pytest.raises(KeyError):
             assert collection[item.remote_source]
 
+
+class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, metaclass=ABCMeta):
+    pass
+
+
+class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMeta):
+
+    @abstractmethod
+    def test_extend(self):
+        raise NotImplementedError

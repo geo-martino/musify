@@ -7,8 +7,9 @@ from typing import Self, Literal, Any
 from syncify.abstract.collection import ItemCollection, Album, Playlist
 from syncify.abstract.item import Item
 from syncify.abstract.misc import Result
+from syncify.api.exception import APIError
 from syncify.remote.enums import RemoteIDType
-from syncify.remote.exception import RemoteIDTypeError
+from syncify.remote.exception import RemoteIDTypeError, RemoteError
 from syncify.remote.library.item import RemoteTrack
 from syncify.remote.library.object import RemoteObject
 from syncify.remote.processors.wrangle import RemoteDataWrangler
@@ -58,6 +59,13 @@ class RemoteCollection[T: RemoteObject](ItemCollection[T], RemoteDataWrangler, m
 
 class RemoteCollectionLoader[T: RemoteObject](RemoteObject, RemoteCollection[T], metaclass=ABCMeta):
     """Generic class for storing a collection of remote objects that can be loaded from an API response."""
+
+    @property
+    @abstractmethod
+    def _total(self) -> int:
+        """The total expected items for this collection"""
+        raise NotImplementedError
+
     @classmethod
     @abstractmethod
     def load(
@@ -83,6 +91,17 @@ class RemoteCollectionLoader[T: RemoteObject](RemoteObject, RemoteCollection[T],
             This helps reduce the number of API calls made on initialisation.
         """
         raise NotImplementedError
+
+    def _check_total(self) -> None:
+        """
+        Checks the total tracks processed for this collection equal to the collection total, raise exception if not
+        """
+        if self._total != len(self.items):
+            raise RemoteError(
+                "The total items available in the response does not equal the total item count for this collection. "
+                "Make sure the given collection response contains the right number of item responses: "
+                f"{self._total} != {len(self.items)}"
+            )
 
 
 @dataclass(frozen=True)
@@ -132,6 +151,19 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
         """A map of ``{URI: date}`` for each item for when that item was added to the playlist"""
         raise NotImplementedError
 
+    @property
+    def _total(self):
+        return self.track_total
+
+    @property
+    def writeable(self) -> bool:
+        """Is this playlist writeable i.e. can this program modify it"""
+        try:
+            self._check_for_api()
+        except APIError:
+            return False
+        return self.api.user_id == self.owner_id
+
     @classmethod
     def create(cls, name: str, public: bool = True, collaborative: bool = False) -> Self:
         """
@@ -166,10 +198,10 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
             items: Iterable[Item] = (),
             kind: Literal["new", "refresh", "sync"] = "new",
             reload: bool = True,
-            dry_run: bool = False,
+            dry_run: bool = True,
     ) -> SyncResultRemotePlaylist:
         """
-        Synchronise this playlist object with the remote playlist it is associated with. Sync options:
+        Synchronise this playlist object's items with the remote playlist it is associated with. Sync options:
 
         * 'new': Do not clear any items from the remote playlist and only add any tracks
             from this playlist object not currently in the remote playlist.
@@ -185,51 +217,57 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
         :param dry_run: Run function, but do not modify the remote playlists at all.
         :return: The results of the sync as a :py:class:`SyncResultRemotePlaylist` object.
         """
-        self._check_for_api()
+        if not self.writeable:
+            raise RemoteError(f"Cannot write to this playlist: {self.name}")
 
-        uris_obj = {track.uri for track in (items or self.tracks) if track.uri}
-        uris_remote = set(self._get_track_uris_from_api_response())
+        uri_initial = [track.uri for track in (items or self.tracks) if track.uri]
+        uri_remote = self._get_track_uris_from_api_response()
 
-        uris_add = [uri for uri in uris_obj if uri not in uris_remote]
-        uris_unchanged = uris_remote
+        # default settings when only synchronising for new items
+        uri_add = [uri for uri in uri_initial if uri not in uri_remote]
+        uri_unchanged = uri_remote
         removed = 0
 
         # process the remote playlist. when dry_run, mock the results
         if kind == "refresh":  # remove all items from the remote playlist
-            removed = self.api.clear_from_playlist(self.url) if not dry_run else len(uris_remote)
-            uris_add = uris_obj
-            uris_unchanged = set()
+            removed = self.api.clear_from_playlist(self.url) if not dry_run else len(uri_remote)
+            uri_add = uri_initial
+            uri_unchanged = []
         elif kind == "sync":  # remove items not present in the current list from the remote playlist
-            uris_clear = {uri for uri in uris_remote if uri not in uris_obj}
-            removed = self.api.clear_from_playlist(self.url, items=uris_clear) if not dry_run else len(uris_clear)
-            uris_unchanged = {uri for uri in uris_remote if uri in uris_obj}
+            uri_clear = [uri for uri in uri_remote if uri not in uri_initial]
+            removed = self.api.clear_from_playlist(self.url, items=uri_clear) if not dry_run else len(uri_clear)
+            uri_unchanged = [uri for uri in uri_remote if uri in uri_initial]
 
+        added = len(uri_add)
         if not dry_run:
-            added = self.api.add_to_playlist(self.url, items=uris_add, skip_dupes=kind != "refresh")
-        else:
-            added = len(uris_add) if kind != "refresh" else len(set(uris_add) - uris_remote)
-
-        if not dry_run and reload:  # reload the current playlist object from remote
-            self.reload(use_cache=False)
+            added = self.api.add_to_playlist(self.url, items=uri_add, skip_dupes=kind != "refresh")
+            if reload:  # reload the current playlist object from remote
+                self.reload(use_cache=False)
 
         return SyncResultRemotePlaylist(
-            start=len(uris_remote),
+            start=len(uri_remote),
             added=added,
             removed=removed,
-            unchanged=len(set(uris_remote).intersection(uris_unchanged)),
-            difference=len(self.tracks) - len(uris_remote),
-            final=len(self.tracks)
+            unchanged=len(uri_unchanged),
+            difference=len(self.tracks) - len(uri_remote) if not dry_run and reload else added - removed,
+            final=len(self.tracks) if not dry_run and reload else len(uri_remote) + added - removed
         )
 
     @abstractmethod
-    def _get_track_uris_from_api_response(self) -> set[str]:
+    def _get_track_uris_from_api_response(self) -> list[str]:
         """
         Returns a list of URIs from the API response stored for this playlist
         Implementation of this method is needed for the :py:func:`sync` function.
         """
         raise NotImplementedError
 
+    def merge(self, playlist: Playlist) -> None:
+        raise NotImplementedError
+
 
 class RemoteAlbum[T: RemoteTrack](Album[T], RemoteCollectionLoader[T], metaclass=ABCMeta):
     """Extracts key ``album`` data from a remote API JSON response."""
-    pass
+
+    @property
+    def _total(self):
+        return self.track_total

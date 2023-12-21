@@ -9,13 +9,11 @@ from tests.abstract.misc import PrettyPrinterTester
 
 class TestTimeMapper(PrettyPrinterTester):
 
-    @staticmethod
     @pytest.fixture
-    def obj() -> TimeMapper:
+    def obj(self) -> TimeMapper:
         return TimeMapper("hours")
 
-    @staticmethod
-    def test_time_mapper():
+    def test_time_mapper(self):
         assert TimeMapper("hours")("12") == timedelta(hours=12)
         assert TimeMapper("h")("12") == timedelta(hours=12)
         assert TimeMapper("h").map("12") == timedelta(hours=12)

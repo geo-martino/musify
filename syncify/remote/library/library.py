@@ -25,7 +25,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
     :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
     """
 
-    __slots__ = ("_api", "_tracks", "_playlists", "include", "exclude", "use_cache", "", "", )
+    __slots__ = ("_api", "_tracks", "_playlists", "include", "exclude", "use_cache")
 
     @property
     @abstractmethod
@@ -56,14 +56,9 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         return self._api
 
     def __init__(
-            self,
-            api: RemoteAPI,
-            include: Iterable[str] | None = None,
-            exclude: Iterable[str] | None = None,
-            use_cache: bool = True,
-            load: bool = True,
+            self, api: RemoteAPI, include: Iterable[str] = (), exclude: Iterable[str] = (), use_cache: bool = True,
     ):
-        super().__init__(remote_wrangler=self)
+        super().__init__()
 
         self._api = api
         self.include = include
@@ -74,12 +69,10 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         self._tracks: list[RemoteTrack] = []
         self._playlists: dict[str, RemotePlaylist] = {}
 
-        if load:
-            self.load()
-
     def load(self, log: bool = True, **__) -> None:
         """Loads all tracks and playlists in this library from scratch and log results."""
         self.logger.debug(f"Load {self.remote_source} library: START")
+        self.api.load_user_data()
 
         self.logger.info(f"\33[1;95m ->\33[1;97m Loading {self.remote_source} library \33[0m")
         self.print_line()
@@ -127,7 +120,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
 
         width = self.get_max_width(self.playlists)
         self.logger.report(
-            f"\33[1;96m{self.remote_source + ' ITEMS':<{width}}\33[1;0m |"
+            f"\33[1;96m{self.remote_source.upper() + ' ITEMS':<{width}}\33[1;0m |"
             f"\33[92m{in_playlists:>7} in playlists \33[0m|"
             f"\33[1;94m{len(self.tracks):>6} total \33[0m"
         )

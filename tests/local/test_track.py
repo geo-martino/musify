@@ -4,12 +4,12 @@ from os.path import basename, dirname, splitext, getmtime
 
 import pytest
 
-from syncify.remote.enums import RemoteObjectType
 from syncify.abstract.item import Item
 from syncify.fields import LocalTrackField
 from syncify.local import open_image
 from syncify.local.exception import InvalidFileType
 from syncify.local.track import LocalTrack, load_track, FLAC, M4A, MP3, WMA
+from syncify.remote.enums import RemoteObjectType
 from tests.abstract.item import ItemTester
 from tests.local.utils import path_track_all, path_track_img, path_track_resources
 from tests.spotify.utils import random_uri
@@ -163,27 +163,23 @@ def test_loaded_attributes_wma(track_wma: WMA):
 class TestLocalTrack(ItemTester):
     """Run generic tests for :py:class:`LocalTrack` implementations"""
 
-    @staticmethod
     @pytest.fixture
-    def item(track: LocalTrack) -> Item:
+    def item(self, track: LocalTrack) -> Item:
         return track
 
-    @staticmethod
     @pytest.fixture
-    def item_unequal(track: LocalTrack) -> LocalTrack:
+    def item_unequal(self, track: LocalTrack) -> LocalTrack:
         return next(load_track(path) for path in path_track_all if path != track.path)
 
-    @staticmethod
     @pytest.fixture
-    def item_modified(track: LocalTrack) -> Item:
+    def item_modified(self, track: LocalTrack) -> Item:
         track = copy(track)
         track.title = "new title"
         track.artist = "new artist"
         track.uri = random_uri(kind=RemoteObjectType.TRACK)
         return track
 
-    @staticmethod
-    def test_does_not_load_other_supported_track_types(track: LocalTrack):
+    def test_does_not_load_other_supported_track_types(self, track: LocalTrack):
         paths = [
             path for path in path_track_all
             if not all(path.casefold().endswith(ext) for ext in track.valid_extensions)
@@ -230,8 +226,7 @@ class TestLocalTrack(ItemTester):
 
         assert track.__class__(file=track.path.upper(), available=paths).path == track.path
 
-    @staticmethod
-    def test_clear_tags_dry_run(track: LocalTrack):
+    def test_clear_tags_dry_run(self, track: LocalTrack):
         track_update = track
         track_original = copy(track)
 
@@ -260,8 +255,7 @@ class TestLocalTrack(ItemTester):
         assert track_update_dry.has_uri == track_original.has_uri
         assert track_update_dry.has_image == track_original.has_image
 
-    @staticmethod
-    def test_clear_tags(track: LocalTrack):
+    def test_clear_tags(self, track: LocalTrack):
         track_update = track
         track_original = copy(track)
 
@@ -449,8 +443,7 @@ class TestLocalTrack(ItemTester):
         assert track_update_replace.has_image
         assert image_update_replace.size == open_image(path_track_img).size
 
-    @staticmethod
-    def test_loaded_attributes_common(track: LocalTrack):
+    def test_loaded_attributes_common(self, track: LocalTrack):
         assert track.image_links == {}
         assert track.has_image
 
@@ -466,8 +459,7 @@ class TestLocalTrack(ItemTester):
         assert track.last_played is None
         assert track.play_count is None
 
-    @staticmethod
-    def test_set_attributes(track: LocalTrack):
+    def test_setitem_dunder_method(self, track: LocalTrack):
         assert track.uri != "new_uri"
         track["uri"] = "new_uri"
         assert track.uri == "new_uri"
@@ -478,8 +470,7 @@ class TestLocalTrack(ItemTester):
         with pytest.raises(AttributeError):
             track["name"] = "cannot set name"
 
-    @staticmethod
-    def test_merge(track: LocalTrack, item_modified: LocalTrack):
+    def test_merge(self, track: LocalTrack, item_modified: LocalTrack):
         assert track.title != item_modified.title
         assert track.artist != item_modified.artist
         assert track.uri != item_modified.uri
@@ -493,8 +484,7 @@ class TestLocalTrack(ItemTester):
         assert track.album == item_modified.album
         assert track.rating == item_modified.rating
 
-    @staticmethod
-    def test_merge_dunder(track: LocalTrack, item_modified: LocalTrack):
+    def test_merge_dunder_methods(self, track: LocalTrack, item_modified: LocalTrack):
         assert track.title != item_modified.title
         assert track.artist != item_modified.artist
         assert track.uri != item_modified.uri

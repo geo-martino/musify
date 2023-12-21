@@ -8,14 +8,12 @@ from tests.local.utils import random_track
 
 class TestItemMatcher(PrettyPrinterTester):
 
-    @staticmethod
     @pytest.fixture
-    def obj(matcher: ItemMatcher) -> ItemMatcher:
+    def obj(self, matcher: ItemMatcher) -> ItemMatcher:
         return matcher
 
-    @staticmethod
     @pytest.fixture(scope="class")
-    def matcher() -> ItemMatcher:
+    def matcher(self) -> ItemMatcher:
         """Return an :py:class:`ItemMatcher` object with expected config for subsequent tests."""
         ItemMatcher.karaoke_tags = {"karaoke", "backing", "instrumental"}
         ItemMatcher.year_range = 10
@@ -33,20 +31,17 @@ class TestItemMatcher(PrettyPrinterTester):
 
         return ItemMatcher(allow_karaoke=False)
 
-    @staticmethod
     @pytest.fixture
-    def track1() -> LocalTrack:
+    def track1(self) -> LocalTrack:
         """Generate a random :py:class:`LocalTrack` for matching"""
         return random_track()
 
-    @staticmethod
     @pytest.fixture
-    def track2() -> LocalTrack:
+    def track2(self) -> LocalTrack:
         """Generate a random :py:class:`LocalTrack` for matching"""
         return random_track()
 
-    @staticmethod
-    def test_clean_tags(matcher: ItemMatcher, track1: LocalTrack):
+    def test_clean_tags(self, matcher: ItemMatcher, track1: LocalTrack):
         # noinspection SpellCheckingInspection
         track1.uri = "spotify:track:ASDFGHJKLQWERTYUIOPZX"
 
@@ -59,8 +54,7 @@ class TestItemMatcher(PrettyPrinterTester):
         assert track1.clean_tags["artist"] == "artist 1 artist two"
         assert track1.clean_tags["album"] == "best"
 
-    @staticmethod
-    def test_match_not_karaoke(matcher: ItemMatcher, track1: LocalTrack):
+    def test_match_not_karaoke(self, matcher: ItemMatcher, track1: LocalTrack):
         track1.title = "title"
         track1.artist = "artist"
         track1.album = "album"
@@ -74,8 +68,7 @@ class TestItemMatcher(PrettyPrinterTester):
         track1.album = "album instrumental"
         assert matcher.match_not_karaoke(track1, track1) == 0
 
-    @staticmethod
-    def test_match_name(matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):
+    def test_match_name(self, matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):
         # no names in at least one item always returns 0
         track1.clean_tags["name"] = None
         track2.clean_tags["name"] = None
@@ -102,8 +95,7 @@ class TestItemMatcher(PrettyPrinterTester):
         track2.clean_tags["name"] = track2.title
         assert round(matcher.match_name(track1, track2), 2) == 0.67
 
-    @staticmethod
-    def test_match_artist(matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):
+    def test_match_artist(self, matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):
         sep = track1.tag_sep
 
         # no artists in at least one item always returns 0
@@ -122,8 +114,7 @@ class TestItemMatcher(PrettyPrinterTester):
         track2.clean_tags["artist"] = f"artist{sep}singer{sep}other"
         assert matcher.match_artist(track1, track2) == 0.375
 
-    @staticmethod
-    def test_match_album(matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):
+    def test_match_album(self, matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):
         # no albums in at least one item always returns 0
         track1.clean_tags["album"] = None
         track2.clean_tags["album"] = "album"
@@ -139,8 +130,7 @@ class TestItemMatcher(PrettyPrinterTester):
         track2.clean_tags["album"] = "this is a brand new really cool album"
         assert matcher.match_album(track1, track2) == 1
 
-    @staticmethod
-    def test_match_length(matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):
+    def test_match_length(self, matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):
         # no lengths for at least one item always returns 0
         track1.clean_tags["length"] = 110.20
         track2.clean_tags["length"] = None
@@ -150,8 +140,7 @@ class TestItemMatcher(PrettyPrinterTester):
         track2.clean_tags["length"] = 90
         assert matcher.match_length(track1, track2) == 0.9
 
-    @staticmethod
-    def test_match_year(matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):
+    def test_match_year(self, matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):
         # no year for at least one item always returns 0
         track1.clean_tags["year"] = 2023
         track2.clean_tags["year"] = None
@@ -169,8 +158,7 @@ class TestItemMatcher(PrettyPrinterTester):
         track2.clean_tags["year"] = 2005
         assert matcher.match_year(track1, track2) == 0
 
-    @staticmethod
-    def test_match_all(matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):
+    def test_match_all(self, matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):
         sep = track1.tag_sep
 
         track1.title = "a longer title"

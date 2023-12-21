@@ -4,10 +4,11 @@ from copy import deepcopy
 
 import pytest
 
-from syncify.abstract.collection import ItemCollection, BasicCollection, Library
+from syncify.abstract.collection import ItemCollection, BasicCollection, Library, Playlist
 from syncify.abstract.item import Item
 from syncify.abstract.misc import PrettyPrinter
 from syncify.exception import SyncifyTypeError
+from syncify.remote.library.library import RemoteLibrary
 from tests.abstract.misc import PrettyPrinterTester
 
 
@@ -19,31 +20,27 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
     to merge with the collection.
     """
 
-    @staticmethod
     @abstractmethod
-    def collection(*args, **kwargs) -> ItemCollection:
+    def collection(self, *args, **kwargs) -> ItemCollection:
         """Yields an :py:class:`ItemCollection` object to be tested as pytest.fixture"""
         raise NotImplementedError
 
-    @staticmethod
     @abstractmethod
-    def collection_merge_items(*args, **kwargs) -> Iterable[Item]:
+    def collection_merge_items(self, *args, **kwargs) -> Iterable[Item]:
         """Yields an Iterable of :py:class:`Item` for use in :py:class:`ItemCollection` tests as pytest.fixture"""
         raise NotImplementedError
 
-    @staticmethod
     @abstractmethod
-    def collection_merge_invalid(*args, **kwargs) -> Iterable[Item]:
+    def collection_merge_invalid(self, *args, **kwargs) -> Iterable[Item]:
         """Yields an Iterable of :py:class:`Item` for use in :py:class:`ItemCollection` tests as pytest.fixture"""
         raise NotImplementedError
 
-    @staticmethod
     @pytest.fixture
-    def obj(collection: ItemCollection) -> PrettyPrinter:
+    def obj(self, collection: ItemCollection) -> PrettyPrinter:
         return collection
 
     @staticmethod
-    def test_input_validation(collection: ItemCollection, collection_merge_invalid: Iterable[Item]):
+    def test_collection_input_validation(collection: ItemCollection, collection_merge_invalid: Iterable[Item]):
         with pytest.raises(SyncifyTypeError):
             collection.index(next(c for c in collection_merge_invalid))
         with pytest.raises(SyncifyTypeError):
@@ -51,14 +48,16 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
         with pytest.raises(SyncifyTypeError):
             collection.append(next(c for c in collection_merge_invalid))
         with pytest.raises(SyncifyTypeError):
-            collection.extend(collection_merge_invalid)
-        with pytest.raises(SyncifyTypeError):
             collection.insert(0, next(c for c in collection_merge_invalid))
-        with pytest.raises(SyncifyTypeError):
-            collection += collection_merge_invalid
+
+        if not isinstance(collection, RemoteLibrary):  # overriden by remote libraries
+            with pytest.raises(SyncifyTypeError):
+                collection.extend(collection_merge_invalid)
+            with pytest.raises(SyncifyTypeError):
+                collection += collection_merge_invalid
 
     @staticmethod
-    def test_mutable_sequence_methods(collection: ItemCollection):
+    def test_collection_mutable_sequence_methods(collection: ItemCollection):
         assert len(collection.items) >= 3
 
         # get a unique item and its index
@@ -80,11 +79,15 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
         collection.append(item, allow_duplicates=False)
         assert len(collection) == length_start + 1
 
-        collection.extend(collection)
-        assert len(collection) == (length_start + 1) * 2
-        assert collection.count(item) == 4
-        collection.extend(collection, allow_duplicates=False)
-        assert len(collection) == (length_start + 1) * 2
+        if not isinstance(collection, RemoteLibrary):  # overriden by remote libraries
+            collection.extend(collection)
+            assert len(collection) == (length_start + 1) * 2
+            assert collection.count(item) == 4
+            collection.extend(collection, allow_duplicates=False)
+            assert len(collection) == (length_start + 1) * 2
+        else:
+            collection.items.extend(collection.items)
+            assert len(collection) == (length_start + 1) * 2
 
         collection.insert(index - 1, item)
         assert collection.index(item) == index - 1
@@ -101,7 +104,7 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert len(collection) == 0
 
     @staticmethod
-    def test_basic_dunder_methods(collection: ItemCollection):
+    def test_collection_basic_dunder_methods(collection: ItemCollection):
         """:py:class:`ItemCollection` basic dunder operation tests"""
         collection_original = deepcopy(collection)
         collection_basic = BasicCollection(name="this is a basic collection", items=collection.items)
@@ -116,16 +119,23 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert collection + collection == collection.items + collection.items
         assert collection - collection == []
 
-        collection += collection_original
-        assert len(collection) == len(collection_original) * 2 == len(collection.items)
-        assert collection != collection_original
+        if not isinstance(collection, RemoteLibrary):
+            collection += collection_original
+            assert len(collection) == len(collection_original) * 2 == len(collection.items)
+            assert collection != collection_original
+        else:
+            collection.items.extend(collection.items)
+            assert len(collection) == len(collection_original) * 2
+            assert collection != collection_original
 
         collection -= collection_original
         assert len(collection) == len(collection_original) == len(collection.items)
         assert collection == collection_original
 
     @staticmethod
-    def test_iterator_and_container_dunder_methods(collection: ItemCollection, collection_merge_items: Iterable[Item]):
+    def test_collection_iterator_and_container_dunder_methods(
+            collection: ItemCollection, collection_merge_items: Iterable[Item]
+    ):
         """:py:class:`ItemCollection` dunder iterator and contains tests"""
         assert all(isinstance(item, Item) for item in collection.items)
         assert len([item for item in collection]) == len(collection.items)
@@ -136,14 +146,20 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert all(item in collection for item in collection.items)
         assert all(item not in collection.items for item in collection_merge_items)
 
-    @staticmethod
     @abstractmethod
-    def test_getitem_dunder_method(collection: ItemCollection, collection_merge_items: Iterable[Item]):
+    def test_collection_getitem_dunder_method(self, collection: ItemCollection, collection_merge_items: Iterable[Item]):
         raise NotImplementedError
 
     @staticmethod
-    def test_setitem_dunder_method(collection: ItemCollection):
-        item = next(i for i in collection.items[1:] if isinstance(i, type(collection[0])))
+    def test_collection_setitem_dunder_method(collection: ItemCollection):
+        # TODO: figure out why xautopf tests keep failing here
+        try:
+            item = next(i for i in collection.items[1:] if isinstance(i, type(collection[0])))
+        except StopIteration as e:
+            print(collection)
+            for item in collection:
+                print(item)
+            raise e
         assert collection.items.index(item) > 0
 
         collection[0] = item
@@ -152,14 +168,14 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
             collection[len(collection.items) + 5] = item
 
     @staticmethod
-    def test_delitem_dunder_method(collection: ItemCollection):
+    def test_collection_delitem_dunder_method(collection: ItemCollection):
         item = next(i for i in collection.items if collection.items.count(i) == 1)
 
         del collection[item]
         assert item not in collection
 
     @staticmethod
-    def test_sort(collection: ItemCollection):
+    def test_collection_sort(collection: ItemCollection):
         items = collection.items.copy()
 
         collection.reverse()
@@ -167,6 +183,26 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
 
         collection.sort(reverse=True)
         assert collection == items
+
+
+class PlaylistTester(ItemCollectionTester, metaclass=ABCMeta):
+
+    @abstractmethod
+    def playlist(self, *args, **kwargs) -> Playlist:
+        """Yields an :py:class:`Playlist` object to be tested as pytest.fixture"""
+        raise NotImplementedError
+
+    @pytest.fixture
+    def collection(self, playlist: Playlist) -> ItemCollection:
+        return playlist
+
+    def test_merge(self, playlist: Playlist):
+        # TODO: write merge tests
+        pass
+
+    def test_merge_dunder_methods(self, playlist: Playlist):
+        # TODO: write merge tests
+        pass
 
 
 class LibraryTester(ItemCollectionTester, metaclass=ABCMeta):
@@ -219,7 +255,6 @@ class LibraryTester(ItemCollectionTester, metaclass=ABCMeta):
                 continue
             assert len(pl) == expected_counts[name]
 
-    @staticmethod
     @abstractmethod
-    def test_merge_playlists(library: Library):
+    def test_merge_playlists(self, library: Library):
         raise NotImplementedError

@@ -4,6 +4,7 @@ from collections.abc import Collection, Mapping, MutableMapping
 from itertools import batched
 from time import sleep
 from typing import Any
+from urllib.parse import parse_qs, urlparse
 
 from syncify.api.exception import APIError
 from syncify.remote.api import RemoteAPI, APIMethodInputType
@@ -138,8 +139,8 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
 
         Updates the value of the ``items`` key in-place by extending the value of the ``items`` key with new results.
 
-        :param items_block: A remote API JSON response for an items type endpoint which includes a required
-            ``next`` key plus optional keys ``total``, ``limit``, ``items`` etc.
+        :param items_block: A remote API JSON response for an items type endpoint which includes required keys:
+            ``total`` and either ``next`` or ``href``, plus optional keys ``previous``, ``limit``, ``items`` etc.
         :param key: The child unit to use when selecting nested data for certain responses e.g. user's followed artists
             and for logging.
         :param unit: The parent unit to use for logging.
@@ -157,31 +158,38 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
         bar = self.get_progress_bar(total=total, desc=f"Getting {unit}", unit=key, initial=initial)
 
         # this usually happens on the items block of a current user's playlist
-        if "limit" not in items_block:
-            items_block["limit"] = 50
         if "next" not in items_block:
             items_block["next"] = items_block["href"]
+        if "previous" not in items_block:
+            items_block["previous"] = None
+        if "limit" not in items_block:
+            items_block["limit"] = int(parse_qs(urlparse(items_block["next"]).query).get("limit", [50])[0])
 
         if "cursors" in items_block:  # happens on some item types e.g. user's followed artists
             items_block["next"] = items_block["cursors"].get("after")
             items_block["previous"] = items_block["cursors"].get("before")
+            items_block.pop("cursors")
 
-        response = items_block
-        while response.get("next"):  # loop through each page
-            log_count = min(bar.n + response["limit"], response["total"])
-            log = [f"{log_count:>6}/{response["total"]:<6} {unit}"]
+        while items_block.get("next"):  # loop through each page
+            log_count = min(bar.n + items_block["limit"], items_block["total"])
+            log = [f"{log_count:>6}/{items_block["total"]:<6} {unit}"]
 
-            response = self.get(response["next"], use_cache=use_cache, log_pad=95, log_extra=log)
+            response = self.get(items_block["next"], use_cache=use_cache, log_pad=95, log_extra=log)
             if key.rstrip("s") + "s" in response:
                 response = response[key.rstrip("s") + "s"]
-            items_block[self.items_key].extend(response[self.items_key])
 
             sleep(0.1)
             bar.update(len(response[self.items_key]))
 
+            items_block["href"] = response["href"]
+            items_block[self.items_key].extend(response[self.items_key])
             if "cursors" in response:  # happens on some item types e.g. user's followed artists
-                response["next"] = response["cursors"].get("after")
-                response["previous"] = response["cursors"].get("before")
+                items_block["next"] = response["cursors"].get("after")
+                items_block["previous"] = response["cursors"].get("before")
+                response.pop("cursors")
+            else:
+                items_block["next"] = response["next"]
+                items_block["previous"] = response["previous"]
 
         if bar is not None:
             bar.close()

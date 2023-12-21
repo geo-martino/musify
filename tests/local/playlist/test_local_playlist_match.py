@@ -15,9 +15,8 @@ class TestLocalMatcher(PrettyPrinterTester):
 
     library_folder = "/path/to/library"
 
-    @staticmethod
     @pytest.fixture(scope="class")
-    def comparers() -> list[ItemComparer]:
+    def comparers(self) -> list[ItemComparer]:
         """Yields a list :py:class:`ItemComparer` objects to be used as pytest.fixture"""
         return [
             ItemComparer(field=LocalTrackField.ALBUM, condition="is", expected="album name"),
@@ -34,8 +33,7 @@ class TestLocalMatcher(PrettyPrinterTester):
             check_existence=False
         )
 
-    @staticmethod
-    def test_init_replaces_parent_folder(comparers: list[ItemComparer]):
+    def test_init_replaces_parent_folder(self, comparers: list[ItemComparer]):
         library_folder = "/Path/to/LIBRARY/on/linux"
         other_folders = ["../", "D:\\paTh\\on\\Windows"]
         exclude_paths = [f"{other_folders[1]}\\exclude\\{random_str()}.MP3" for _ in range(20)]
@@ -59,8 +57,7 @@ class TestLocalMatcher(PrettyPrinterTester):
             path.replace(other_folders[1], library_folder).replace("\\", "/").casefold() for path in exclude_paths
         ]
 
-    @staticmethod
-    def test_init_include_and_exclude(comparers: list[ItemComparer]):
+    def test_init_include_and_exclude(self, comparers: list[ItemComparer]):
         # removes paths from the include list that are present in both include and exclude lists
         library_folder = "/Path/to/LIBRARY/on/linux"
         other_folders = ["../", "D:\\paTh\\on\\Windows"]
@@ -95,25 +92,22 @@ class TestLocalMatcher(PrettyPrinterTester):
         """The key to sort on when making assertions in tests"""
         return track.path
 
-    @staticmethod
     @pytest.fixture(scope="class")
-    def tracks() -> list[LocalTrack]:
+    def tracks(self) -> list[LocalTrack]:
         """Yield a list of random LocalTracks to use for testing the :py:class:`LocalMatcher`"""
         tracks = random_tracks(30)
         return tracks
 
-    @staticmethod
     @pytest.fixture(scope="class")
-    def tracks_album(tracks: list[LocalTrack]) -> list[LocalTrack]:
+    def tracks_album(self, tracks: list[LocalTrack]) -> list[LocalTrack]:
         """Sample the list of tracks to test and set the same album name for all these tracks"""
         tracks_album = sample(tracks, 15)
         for track in tracks_album:
             track.album = "album name"
         return tracks_album
 
-    @staticmethod
     @pytest.fixture(scope="class")
-    def tracks_artist(tracks_album: list[LocalTrack]) -> list[LocalTrack]:
+    def tracks_artist(self, tracks_album: list[LocalTrack]) -> list[LocalTrack]:
         """Sample the list of tracks to test and set the same artist name for all these tracks"""
         tracks_artist = sample(tracks_album, 9)
         for track in tracks_artist:
@@ -140,9 +134,8 @@ class TestLocalMatcher(PrettyPrinterTester):
             track._path = exclude_paths[i]
         return tracks_exclude
 
-    @staticmethod
     def test_match_on_paths_only(
-            tracks: list[LocalTrack], tracks_include: list[LocalTrack], tracks_exclude: list[LocalTrack],
+            self, tracks: list[LocalTrack], tracks_include: list[LocalTrack], tracks_exclude: list[LocalTrack],
     ):
         matcher = LocalMatcher(
             include_paths=[track.path for track in tracks_include],

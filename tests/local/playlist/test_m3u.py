@@ -8,44 +8,38 @@ import pytest
 from syncify.local.exception import InvalidFileType
 from syncify.local.playlist import M3U
 from syncify.local.track import LocalTrack
-from tests.local.playlist.utils import path_playlist_m3u, path_resources
-from tests.local.test_local_collection import LocalCollectionTester
+from tests.local.playlist.utils import LocalPlaylistTester, path_playlist_m3u, path_resources
 from tests.local.utils import random_track, random_tracks, path_track_all
 from tests.utils import path_txt
 
 
-class TestM3U(LocalCollectionTester):
+class TestM3U(LocalPlaylistTester):
 
-    @staticmethod
     @pytest.fixture
-    def collection(tmp_path: str) -> M3U:
+    def playlist(self, tmp_path: str) -> M3U:
         # needed to ensure __setitem__ check passes
         tracks = random_tracks(randrange(5, 20))
         tracks.append(random_track(cls=tracks[0].__class__))
         playlist = M3U(path=join(tmp_path, "does_not_exist.m3u"), tracks=tracks, check_existence=False)
         return playlist
 
-    @staticmethod
     @pytest.fixture(scope="class")
-    def tracks_actual(tracks: list[LocalTrack]) -> list[LocalTrack]:
+    def tracks_actual(self, tracks: list[LocalTrack]) -> list[LocalTrack]:
         """Yield list of all real LocalTracks present in the test playlist"""
         with open(path_playlist_m3u, "r") as f:
             ext = [splitext(line.strip())[1] for line in f]
         return sorted([track for track in tracks if track.ext in ext], key=lambda x: ext.index(x.ext))
 
-    @staticmethod
     @pytest.fixture(scope="class")
-    def tracks_limited(tracks: list[LocalTrack], tracks_actual: list[LocalTrack]) -> list[LocalTrack]:
+    def tracks_limited(self, tracks: list[LocalTrack], tracks_actual: list[LocalTrack]) -> list[LocalTrack]:
         """Yield list of real LocalTracks where some are present in the test playlist and some are not"""
         return tracks_actual[:-1] + [track for track in tracks if track not in tracks_actual]
 
-    @staticmethod
-    def test_does_not_load_unsupported_files():
+    def test_does_not_load_unsupported_files(self):
         with pytest.raises(InvalidFileType):
             M3U(path=path_txt)
 
-    @staticmethod
-    def test_load_fake_file_with_no_tracks(tracks: list[LocalTrack], tmp_path: str):
+    def test_load_fake_file_with_no_tracks(self, tracks: list[LocalTrack], tmp_path: str):
         path_fake = join(tmp_path, "does_not_exist.m3u")
 
         pl = M3U(path=path_fake)
@@ -57,8 +51,7 @@ class TestM3U(LocalCollectionTester):
         pl.load(tracks)
         assert pl.tracks == tracks
 
-    @staticmethod
-    def test_load_fake_file_with_fake_tracks(tracks: list[LocalTrack], tmp_path: str):
+    def test_load_fake_file_with_fake_tracks(self, tracks: list[LocalTrack], tmp_path: str):
         path_fake = join(tmp_path, "does_not_exist.m3u")
         tracks_random = random_tracks(30)
 
@@ -69,8 +62,7 @@ class TestM3U(LocalCollectionTester):
         pl.load(tracks)
         assert pl.tracks == tracks
 
-    @staticmethod
-    def test_load_file_with_no_tracks(tracks_actual: list[LocalTrack], tracks_limited: list[LocalTrack]):
+    def test_load_file_with_no_tracks(self, tracks_actual: list[LocalTrack], tracks_limited: list[LocalTrack]):
         pl = M3U(
             path=path_playlist_m3u,
             library_folder=path_resources,
@@ -88,8 +80,7 @@ class TestM3U(LocalCollectionTester):
         pl.load()
         assert pl.tracks == tracks_actual
 
-    @staticmethod
-    def test_load_file_with_tracks(tracks_actual: list[LocalTrack], tracks_limited: list[LocalTrack]):
+    def test_load_file_with_tracks(self, tracks_actual: list[LocalTrack], tracks_limited: list[LocalTrack]):
         pl = M3U(
             path=path_playlist_m3u,
             tracks=tracks_limited,
@@ -108,8 +99,7 @@ class TestM3U(LocalCollectionTester):
         pl.load()
         assert pl.tracks == tracks_actual
 
-    @staticmethod
-    def test_save_file_dry_run(tmp_path: str):
+    def test_save_file_dry_run(self, tmp_path: str):
         path_new = join(tmp_path, "new_playlist.m3u")
 
         # creates a new M3U file
@@ -134,8 +124,7 @@ class TestM3U(LocalCollectionTester):
         assert pl.date_modified is None
         assert pl.date_created is None
 
-    @staticmethod
-    def test_save_new_file(tmp_path: str):
+    def test_save_new_file(self, tmp_path: str):
         path_new = join(tmp_path, "new_playlist.m3u")
         tracks_random = random_tracks(30)
 
@@ -180,9 +169,8 @@ class TestM3U(LocalCollectionTester):
             paths = [line.strip() for line in f]
         assert paths == [track.path for track in pl.tracks]
 
-    @staticmethod
     @pytest.mark.parametrize("path", [path_playlist_m3u], indirect=["path"])
-    def test_save_existing_file(tracks_actual: list[LocalTrack], path: str, tmp_path: str):
+    def test_save_existing_file(self, tracks_actual: list[LocalTrack], path: str, tmp_path: str):
         pl = M3U(
             path=path,
             library_folder=path_resources,

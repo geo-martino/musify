@@ -17,18 +17,17 @@ from tests.utils import random_str
 
 class LocalCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
 
-    @staticmethod
     @pytest.fixture
-    def collection_merge_items() -> Iterable[LocalTrack]:
+    def collection_merge_items(self) -> Iterable[LocalTrack]:
         return random_tracks(randrange(5, 10))
 
-    @staticmethod
     @pytest.fixture(scope="module")
-    def collection_merge_invalid(spotify_mock: SpotifyMock) -> Collection[SpotifyTrack]:
+    def collection_merge_invalid(self, spotify_mock: SpotifyMock) -> Collection[SpotifyTrack]:
         return tuple(SpotifyTrack(response) for response in sample(spotify_mock.tracks, k=5))
 
-    @staticmethod
-    def test_getitem_dunder_method(collection: LocalCollection, collection_merge_items: Iterable[LocalTrack]):
+    def test_collection_getitem_dunder_method(
+            self, collection: LocalCollection, collection_merge_items: Iterable[LocalTrack]
+    ):
         """:py:class:`ItemCollection` __getitem__ and __setitem__ tests"""
         item = collection.items[2]
 
@@ -70,9 +69,8 @@ class TestLocalFolder(LocalCollectionTester):
 
     name = "folder name"
 
-    @staticmethod
     @pytest.fixture
-    def collection(folder: LocalFolder) -> LocalFolder:
+    def collection(self, folder: LocalFolder) -> LocalFolder:
         # needed to ensure __setitem__ check passes
         folder.tracks.append(random_track(cls=folder.tracks[0].__class__))
         return folder
@@ -108,8 +106,7 @@ class TestLocalFolder(LocalCollectionTester):
         """Yield a list of tracks that match the conditions for this :py:class:`LocalCollection`"""
         return [track for track in tracks if track.folder == self.name]
 
-    @staticmethod
-    def test_init_fails(tracks: list[LocalTrack]):
+    def test_init_fails(self, tracks: list[LocalTrack]):
         with pytest.raises(LocalCollectionError):
             LocalFolder(tracks=tracks)
 
@@ -128,8 +125,7 @@ class TestLocalFolder(LocalCollectionTester):
         assert folder.last_played == sorted(tracks_filtered, key=lambda t: t.last_played, reverse=True)[0].last_played
         assert folder.play_count == sum(track.play_count for track in tracks_filtered if track.play_count)
 
-    @staticmethod
-    def test_empty_load():
+    def test_empty_load(self):
         # load folder when no tracks given and only folder path given
         collection = LocalFolder(name=path_track_resources)
         assert {track.path for track in collection} == path_track_all
@@ -140,9 +136,8 @@ class TestLocalAlbum(LocalCollectionTester):
 
     name = "album name"
 
-    @staticmethod
     @pytest.fixture
-    def collection(album: LocalAlbum) -> LocalAlbum:
+    def collection(self, album: LocalAlbum) -> LocalAlbum:
         # needed to ensure __setitem__ check passes
         album.tracks.append(random_track(cls=album.tracks[0].__class__))
         return album
@@ -180,8 +175,7 @@ class TestLocalAlbum(LocalCollectionTester):
         """Yield a list of tracks that match the conditions for this :py:class:`LocalCollection`"""
         return [track for track in tracks if track.album == self.name]
 
-    @staticmethod
-    def test_init_fails(tracks: list[LocalTrack]):
+    def test_init_fails(self, tracks: list[LocalTrack]):
         with pytest.raises(LocalCollectionError):
             LocalAlbum(tracks=tracks)
 
@@ -211,9 +205,8 @@ class TestLocalArtist(LocalCollectionTester):
 
     name = "artist name"
 
-    @staticmethod
     @pytest.fixture
-    def collection(artist: LocalArtist) -> LocalArtist:
+    def collection(self, artist: LocalArtist) -> LocalArtist:
         # needed to ensure __setitem__ check passes
         artist.tracks.append(random_track(cls=artist.tracks[0].__class__))
         return artist
@@ -246,8 +239,7 @@ class TestLocalArtist(LocalCollectionTester):
         """Yield a list of tracks that match the conditions for this :py:class:`LocalCollection`"""
         return [track for track in tracks if track.artist == self.name]
 
-    @staticmethod
-    def test_init_fails(tracks: list[LocalTrack]):
+    def test_init_fails(self, tracks: list[LocalTrack]):
         with pytest.raises(LocalCollectionError):
             LocalArtist(tracks=tracks)
 
@@ -277,9 +269,8 @@ class TestLocalGenres(LocalCollectionTester):
 
     name = "rock"
 
-    @staticmethod
     @pytest.fixture
-    def collection(genre: LocalGenres) -> LocalGenres:
+    def collection(self, genre: LocalGenres) -> LocalGenres:
         # needed to ensure __setitem__ check passes
         genre.tracks.append(random_track(cls=genre.tracks[0].__class__))
         return genre
@@ -317,8 +308,7 @@ class TestLocalGenres(LocalCollectionTester):
         """Yield a list of tracks that match the conditions for this :py:class:`LocalCollection`"""
         return [track for track in tracks if self.name in track.genres]
 
-    @staticmethod
-    def test_init_fails(tracks: list[LocalTrack]):
+    def test_init_fails(self, tracks: list[LocalTrack]):
         with pytest.raises(LocalCollectionError):
             LocalGenres(tracks=tracks)
 

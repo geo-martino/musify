@@ -209,6 +209,7 @@ class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[Spot
     def __init__(self, response: MutableMapping[str, Any]):
         super().__init__(response=response)
         self._tracks = [SpotifyTrack(track["track"]) for track in response["tracks"]["items"]]
+        self._check_total()
 
     def reload(self, extend_tracks: bool = False, use_cache: bool = True, *_, **__) -> None:
         self._check_for_api()
@@ -221,8 +222,8 @@ class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[Spot
 
         self.__init__(response)
 
-    def _get_track_uris_from_api_response(self) -> set[str]:
-        return {track["track"]["uri"] for track in self.response["tracks"]["items"]}
+    def _get_track_uris_from_api_response(self) -> list[str]:
+        return [track["track"]["uri"] for track in self.response["tracks"]["items"]]
 
 
 class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTrack]):
@@ -307,6 +308,7 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTra
 
         self._artists = list(map(SpotifyArtist, response["artists"]))
         self._tracks = list(map(SpotifyTrack, response["tracks"]["items"]))
+        self._check_total()
 
         for track in self.tracks:
             track.disc_total = self.disc_total

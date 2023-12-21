@@ -18,15 +18,13 @@ from syncify.api.exception import APIError
 
 class TestRequestHandler:
 
-    @staticmethod
     @pytest.fixture
-    def request_handler(token: dict[str, Any], tmp_path: str) -> RequestHandler:
+    def request_handler(self, token: dict[str, Any], tmp_path: str) -> RequestHandler:
         """Yield a simple :py:class:`RequestHandler` object"""
         return RequestHandler(name="test", token=token, cache_path=join(tmp_path, "api_cache"))
 
-    @staticmethod
     @pytest.fixture
-    def token() -> dict[str, Any]:
+    def token(self) -> dict[str, Any]:
         """Yield a basic token example"""
         return {
             "access_token": "fake access token",
@@ -35,8 +33,7 @@ class TestRequestHandler:
         }
 
     # noinspection PyTestUnpassedFixture
-    @staticmethod
-    def test_init(token: dict[str, Any], tmp_path: str):
+    def test_init(self, token: dict[str, Any], tmp_path: str):
         request_handler = RequestHandler(name="test", token=token, cache_path=None)
         assert not isinstance(request_handler.session, CachedSession)
 
@@ -53,8 +50,7 @@ class TestRequestHandler:
         request_handler.authorise()
         assert request_handler.session.headers == request_handler.headers
 
-    @staticmethod
-    def test_check_response_codes(request_handler: RequestHandler):
+    def test_check_response_codes(self, request_handler: RequestHandler):
         response = Response()
 
         # error message not found, no fail
@@ -71,8 +67,7 @@ class TestRequestHandler:
         with pytest.raises(APIError):
             request_handler._handle_unexpected_response(response=response)
 
-    @staticmethod
-    def test_check_for_wait_time(request_handler: RequestHandler):
+    def test_check_for_wait_time(self, request_handler: RequestHandler):
         response = Response()
 
         # no header
@@ -93,8 +88,7 @@ class TestRequestHandler:
         with pytest.raises(APIError):
             request_handler._handle_wait_time(response=response)
 
-    @staticmethod
-    def test_response_as_json(request_handler: RequestHandler):
+    def test_response_as_json(self, request_handler: RequestHandler):
         response = Response()
         response._content = "simple text should not be returned".encode()
         assert request_handler._response_as_json(response) == {}
@@ -103,8 +97,7 @@ class TestRequestHandler:
         response._content = json.dumps(expected).encode()
         assert request_handler._response_as_json(response) == expected
 
-    @staticmethod
-    def test_cache_usage(request_handler: RequestHandler, requests_mock: Mocker):
+    def test_cache_usage(self, request_handler: RequestHandler, requests_mock: Mocker):
         url = "http://localhost/test"
         expected_json = {"key": "value"}
         requests_mock.get(url, json=expected_json)
@@ -124,8 +117,7 @@ class TestRequestHandler:
         assert response.json() == expected_json
         assert requests_mock.call_count == 2
 
-    @staticmethod
-    def test_request(request_handler: RequestHandler, requests_mock: Mocker):
+    def test_request(self, request_handler: RequestHandler, requests_mock: Mocker):
         url = "http://localhost/test"
         expected_json = {"key": "value"}
 
@@ -153,8 +145,7 @@ class TestRequestHandler:
         with pytest.raises(APIError):
             request_handler.delete(method="GET", url=url, use_cache=False)
 
-    @staticmethod
-    def test_backoff(request_handler: RequestHandler, requests_mock: Mocker):
+    def test_backoff(self, request_handler: RequestHandler, requests_mock: Mocker):
         url = "http://localhost/test"
         expected_json = {"key": "value"}
         backoff_limit = 3

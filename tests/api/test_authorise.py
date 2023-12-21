@@ -19,15 +19,13 @@ class TestAPIAuthoriser:
 
     refresh_test_keys = ("granted_at", "expires_at", "refresh_token")
 
-    @staticmethod
     @pytest.fixture
-    def authoriser() -> APIAuthoriser:
+    def authoriser(self) -> APIAuthoriser:
         """Yield an authorised :py:class:`SpotifyAPI` object"""
         return APIAuthoriser(name="test")
 
-    @staticmethod
     @pytest.fixture
-    def token() -> dict[str, Any]:
+    def token(self) -> dict[str, Any]:
         """Yield a basic token example"""
         return {
             "access_token": "fake access token",
@@ -35,9 +33,8 @@ class TestAPIAuthoriser:
             "scope": "test-read"
         }
 
-    @staticmethod
     @pytest.fixture(params=[join(path_api_resources, "token.json")])
-    def token_file_path(path: str) -> str:
+    def token_file_path(self, path: str) -> str:
         """Yield the temporary path for the token JSON file"""
         return path
 
@@ -65,8 +62,7 @@ class TestAPIAuthoriser:
         assert authoriser.token == token
         assert authoriser.token_safe != token
 
-    @staticmethod
-    def test_load_token(authoriser: APIAuthoriser, token_file_path: str):
+    def test_load_token(self, authoriser: APIAuthoriser, token_file_path: str):
         # just check it doesn't fail when no path given
         authoriser.token = None
         authoriser.token_file_path = None
@@ -78,8 +74,7 @@ class TestAPIAuthoriser:
         assert token["token_type"] == "Bearer"
         assert token["scope"] == "test-read"
 
-    @staticmethod
-    def test_save_token(authoriser: APIAuthoriser, token: dict[str, Any], tmp_path: str):
+    def test_save_token(self, authoriser: APIAuthoriser, token: dict[str, Any], tmp_path: str):
         # just check it doesn't fail when no path given
         authoriser.token = None
         authoriser.token_file_path = None
@@ -97,8 +92,7 @@ class TestAPIAuthoriser:
 
         assert token == token_saved
 
-    @staticmethod
-    def test_user_auth(authoriser: APIAuthoriser, mocker: MockerFixture, requests_mock: Mocker):
+    def test_user_auth(self, authoriser: APIAuthoriser, mocker: MockerFixture, requests_mock: Mocker):
         user_url = f"http://{APIAuthoriser._user_auth_socket_address}:{APIAuthoriser._user_auth_socket_port + 1}"
         authoriser.auth_args = {"url": ""}
         authoriser.user_args = {"url": user_url}

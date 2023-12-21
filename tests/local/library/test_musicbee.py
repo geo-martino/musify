@@ -22,9 +22,8 @@ library_filepath = join(path_library_resources, library_filename)
 
 class TestMusicBee(LocalLibraryTester):
 
-    @staticmethod
     @pytest.fixture
-    def library() -> LocalLibrary:
+    def library(self) -> LocalLibrary:
         MusicBee.xml_library_filename = library_filename
         library = MusicBee(
             library_folder=path_resources,
@@ -41,9 +40,8 @@ class TestMusicBee(LocalLibraryTester):
         assert library._path == library_filepath
         return library
 
-    @staticmethod
     @pytest.mark.parametrize("path", [library_filepath], indirect=["path"])
-    def test_parser(path: str):
+    def test_parser(self, path: str):
         parser = XMLLibraryParser(path=path, path_keys=MusicBee.xml_path_keys)
 
         xml = parser.parse()
@@ -69,8 +67,7 @@ class TestMusicBee(LocalLibraryTester):
         assert len(xml_new["Tracks"]) == len(xml["Tracks"])
         assert len(xml_new["Playlists"]) == len(xml["Playlists"])
 
-    @staticmethod
-    def test_init_fails():
+    def test_init_fails(self):
         with pytest.raises(FileNotFoundError, match="MusicBee"):
             MusicBee(load=False)
 
@@ -85,8 +82,7 @@ class TestMusicBee(LocalLibraryTester):
         with pytest.raises(FileNotFoundError, match=f".*{library_path_error.replace('\\', '\\\\')}"):
             MusicBee(musicbee_folder=path_playlist_resources, load=False)
 
-    @staticmethod
-    def test_init_no_playlists():
+    def test_init_no_playlists(self):
         library_no_playlists = MusicBee(
             library_folder=path_resources,
             musicbee_folder=basename(path_library_resources),
@@ -98,8 +94,7 @@ class TestMusicBee(LocalLibraryTester):
         assert all(path in library_no_playlists._track_paths for path in path_track_all)
         assert library_no_playlists.playlist_folder is None
 
-    @staticmethod
-    def test_init_include():
+    def test_init_include(self):
         library_include = MusicBee(
             library_folder=path_resources,
             musicbee_folder=basename(path_library_resources),
@@ -113,8 +108,7 @@ class TestMusicBee(LocalLibraryTester):
             splitext(basename(path_playlist_xautopf_bp).casefold())[0]: path_playlist_xautopf_bp,
         }
 
-    @staticmethod
-    def test_init_exclude():
+    def test_init_exclude(self):
         library_exclude = MusicBee(
             library_folder=path_resources,
             musicbee_folder=basename(path_library_resources),
@@ -128,8 +122,7 @@ class TestMusicBee(LocalLibraryTester):
             splitext(basename(path_playlist_xautopf_ra).casefold())[0]: path_playlist_xautopf_ra,
         }
 
-    @staticmethod
-    def test_load():
+    def test_load(self):
         MusicBee.xml_library_filename = library_filename
         library = MusicBee(
             library_folder=path_resources,
@@ -168,9 +161,8 @@ class TestMusicBee(LocalLibraryTester):
         assert track_wma.last_played == datetime(2023, 5, 30, 22, 57, 24)
         assert track_wma.play_count == 200
 
-    @staticmethod
     @pytest.mark.parametrize("path", [library_filepath], ["path"])
-    def test_save(path: str, remote_wrangler: RemoteDataWrangler):
+    def test_save(self, path: str, remote_wrangler: RemoteDataWrangler):
         MusicBee.xml_library_filename = library_filename
 
         library = MusicBee(

@@ -4,7 +4,7 @@ from urllib.parse import parse_qs
 import pytest
 
 from syncify import PROGRAM_NAME
-from syncify.remote.enums import RemoteObjectType as ObjectType
+from syncify.remote.enums import RemoteObjectType as ObjectType, RemoteIDType
 from syncify.remote.exception import RemoteObjectTypeError, RemoteIDTypeError
 from syncify.spotify.api import SpotifyAPI
 from tests.remote.utils import random_id_type, random_id_types, ALL_ITEM_TYPES
@@ -24,7 +24,10 @@ class TestSpotifyAPIPlaylists:
     ###########################################################################
     def test_get_playlist_url(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
         names = [playlist["name"] for playlist in spotify_mock.user_playlists]
-        playlist = next(playlist for playlist in spotify_mock.user_playlists if names.count(playlist["name"]) == 1)
+        playlist = next(
+            playlist for playlist in spotify_mock.user_playlists
+            if names.count(playlist["name"]) == 1 and len(playlist["name"]) != RemoteIDType.ID.value
+        )
 
         assert api.get_playlist_url(playlist=playlist) == playlist["href"]
         assert api.get_playlist_url(playlist=playlist["name"]) == playlist["href"]
@@ -35,8 +38,7 @@ class TestSpotifyAPIPlaylists:
     ###########################################################################
     ## POST playlist operations
     ###########################################################################
-    @staticmethod
-    def test_create_playlist(api: SpotifyAPI, spotify_mock: SpotifyMock):
+    def test_create_playlist(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
         name = "test playlist"
         url = f"{api.api_url_base}/users/{spotify_mock.user_id}/playlists"
         result = api.create_playlist(name=name, public=False, collaborative=True)

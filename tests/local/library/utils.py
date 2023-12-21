@@ -16,7 +16,6 @@ class LocalLibraryTester(LibraryTester, LocalCollectionTester, metaclass=ABCMeta
 
     dict_json_equal = False
 
-    @staticmethod
     @abstractmethod
     def blank_library(self) -> LocalLibrary:
         """A blank :py:class:`LocalLibrary` implementation to be tested."""
@@ -42,7 +41,6 @@ class LocalLibraryTester(LibraryTester, LocalCollectionTester, metaclass=ABCMeta
             splitext(basename(path_playlist_xautopf_ra).casefold())[0]: path_playlist_xautopf_ra,
         }
 
-    @staticmethod
-    def test_merge_playlists(library: LocalLibrary):
+    def test_merge_playlists(self, library: LocalLibrary):
         # TODO: write merge_playlists tests
         pass

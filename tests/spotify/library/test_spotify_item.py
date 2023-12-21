@@ -14,19 +14,16 @@ from tests.spotify.library.utils import assert_id_attributes
 
 class TestSpotifyArtist(ItemTester):
 
-    @staticmethod
     @pytest.fixture
-    def item(response_random: dict[str, Any]) -> SpotifyArtist:
+    def item(self, response_random: dict[str, Any]) -> SpotifyArtist:
         return SpotifyArtist(response_random)
 
-    @staticmethod
     @pytest.fixture
-    def item_unequal(response_valid: dict[str, Any]) -> SpotifyArtist:
+    def item_unequal(self, response_valid: dict[str, Any]) -> SpotifyArtist:
         return SpotifyArtist(response_valid)
 
-    @staticmethod
     @pytest.fixture
-    def item_modified(response_random: dict[str, Any]) -> SpotifyArtist:
+    def item_modified(self, response_random: dict[str, Any]) -> SpotifyArtist:
         artist = SpotifyArtist(response_random)
         artist._response["name"] = "new name"
         artist._response["genres"] = ["electronic", "dance"]
@@ -117,19 +114,16 @@ class TestSpotifyArtist(ItemTester):
 
 class TestSpotifyTrack(ItemTester):
 
-    @staticmethod
     @pytest.fixture
-    def item(response_random: dict[str, Any]) -> SpotifyTrack:
+    def item(self, response_random: dict[str, Any]) -> SpotifyTrack:
         return SpotifyTrack(response_random)
 
-    @staticmethod
     @pytest.fixture
-    def item_unequal(response_valid: dict[str, Any]) -> SpotifyTrack:
+    def item_unequal(self, response_valid: dict[str, Any]) -> SpotifyTrack:
         return SpotifyTrack(response_valid)
 
-    @staticmethod
     @pytest.fixture
-    def item_modified(response_random: dict[str, Any]) -> SpotifyTrack:
+    def item_modified(self, response_random: dict[str, Any]) -> SpotifyTrack:
         track = SpotifyTrack(response_random)
         track._response["name"] = "new name"
         track._response["artists"] = [{"name": artist} for artist in ["artist 1", "artist 2"]]

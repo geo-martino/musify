@@ -578,6 +578,7 @@ if __name__ == "__main__":
 # TODO: look into the requests_cache, it grows way too big sometimes?
 # TODO: implement terminal parser for function-specific kwargs?
 # TODO: implement release structure on GitHub
+# TODO: Logger to store all open progress bars?
 
 
 ## SELECTED FOR DEVELOPMENT

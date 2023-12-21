@@ -13,8 +13,7 @@ from tests.utils import random_str
 class TestSpotifyAPICore:
     """Tester for core endpoints of :py:class:`SpotifyAPI`"""
 
-    @staticmethod
-    def test_get_self(api: SpotifyAPI, spotify_mock: SpotifyMock):
+    def test_get_self(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
         assert api._user_data == {}
         assert api.get_self(update_user_data=False) == spotify_mock.user
         assert api._user_data == {}
@@ -22,13 +21,18 @@ class TestSpotifyAPICore:
         assert api.get_self(update_user_data=True) == spotify_mock.user
         assert api._user_data == spotify_mock.user
 
-    @staticmethod
     @pytest.mark.parametrize("method_name,kwargs,floor,ceil", [
         ("query", {"query": "valid query", "kind": ObjectType.TRACK}, 1, 50),
         ("get_user_items", {"kind": ObjectType.PLAYLIST}, 1, 50)
     ], ids=idfn)
     def test_limit_param_limited(
-            method_name: str, kwargs: dict[str, Any], floor: int, ceil: int, api: SpotifyAPI, spotify_mock: SpotifyMock
+            self, 
+            method_name: str, 
+            kwargs: dict[str, Any],
+            floor: int, 
+            ceil: int, 
+            api: SpotifyAPI, 
+            spotify_mock: SpotifyMock
     ):
         # too small
         getattr(api, method_name)(limit=floor - 20, **kwargs)
@@ -52,20 +56,19 @@ class TestSpotifyAPICore:
     ###########################################################################
     ## /search endpoint functionality
     ###########################################################################
-    @staticmethod
-    def test_query_input_validation(api: SpotifyAPI, spotify_mock: SpotifyMock):
+    def test_query_input_validation(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
         assert api.query(query=None, kind=ObjectType.EPISODE) == []
         assert api.query(query="", kind=ObjectType.SHOW) == []
         # long queries that would cause the API to give an error should fail safely
         assert api.query(query=random_str(151, 200), kind=ObjectType.CHAPTER) == []
-
-    @staticmethod
+    
     @pytest.mark.parametrize("kind,query,limit", [
         (ObjectType.PLAYLIST, "super cool playlist", 5),
         (ObjectType.TRACK, "track title", 10),
         (ObjectType.ALBUM, "album title", 20),
     ], ids=idfn)
     def test_query(
+            self,
             kind: ObjectType,
             query: str,
             limit: int,

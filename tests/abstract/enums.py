@@ -33,15 +33,13 @@ class FieldTester(EnumTester, metaclass=ABCMeta):
         """The :py:class:`Field` class to test"""
         raise NotImplementedError
 
-    @staticmethod
     @abstractmethod
-    def reference_cls() -> type[BaseObject]:
+    def reference_cls(self) -> type[BaseObject]:
         """The associated class to validate field names against."""
         raise NotImplementedError
 
-    @staticmethod
     @abstractmethod
-    def reference_ignore() -> type[BaseObject]:
+    def reference_ignore(self) -> type[BaseObject]:
         """The associated class to validate field names against."""
         raise NotImplementedError
 

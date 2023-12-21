@@ -9,9 +9,8 @@ class PrettyPrinterTester(ABC):
     """Run generic tests for :py:class:`PrettyPrinter` implementations"""
     dict_json_equal: bool = True
 
-    @staticmethod
     @abstractmethod
-    def obj(*args, **kwargs) -> PrettyPrinter:
+    def obj(self, *args, **kwargs) -> PrettyPrinter:
         """Yields a :py:class:`PrettyPrinter` object to be tested as pytest.fixture"""
         raise NotImplementedError
 
