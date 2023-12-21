@@ -206,7 +206,8 @@ class TestSpotifyAPIItems:
         self.assert_item_types(results=test[api.items_key], kind=kind, key=key)
 
         # appropriate number of requests made (minus 1 for initial input)
-        assert len(requests) == total // limit + ((total / limit) % 1 > 0) - 1
+
+        assert len(requests) == spotify_mock.calculate_pages(limit=limit, total=total) - 1
 
     ###########################################################################
     ## Get user items
@@ -247,7 +248,7 @@ class TestSpotifyAPIItems:
 
         # appropriate number of requests made
         requests = [req for req in spotify_mock.get_requests(url=url)]
-        assert len(requests) == total // limit + ((total / limit) % 1 > 0)
+        assert len(requests) == spotify_mock.calculate_pages(limit=limit, total=total)
 
         for result in results:  # check results are as expected
             if kind not in {ObjectType.PLAYLIST, ObjectType.ARTIST}:
@@ -288,6 +289,7 @@ class TestSpotifyAPIItems:
     def assert_calls(
             expected: Collection[dict[str, Any]],
             requests: list[Request],
+            spotify_mock: SpotifyMock,
             key: str | None = None,
             limit: int | None = None,
     ):
@@ -295,10 +297,8 @@ class TestSpotifyAPIItems:
         initial_calls = len(list(batched(expected, limit))) if limit else len(expected)
         extend_calls = 0
         if key:
-            for expect in expected:
-                # minus 1 for initial call to get the collection
-                pages = (expect[key]["total"] / expect[key]["limit"]) - 1
-                extend_calls += int(pages) + (pages % 1 > 0)
+            # minus 1 for initial call to get the collection
+            extend_calls += sum(spotify_mock.calculate_pages_from_response(expect) - 1 for expect in expected)
 
         assert len(requests) == initial_calls + extend_calls
 
@@ -362,7 +362,7 @@ class TestSpotifyAPIItems:
         requests = spotify_mock.get_requests(url=url)
         if key:
             requests += spotify_mock.get_requests(url=f"{url}/{key}")
-        self.assert_calls(expected=[source], requests=requests, key=key, limit=None)
+        self.assert_calls(expected=[source], requests=requests, key=key, limit=None, spotify_mock=spotify_mock)
 
         # test input map is updated when API response is given
         test = {k: v for k, v in source.items() if k not in update_keys}
@@ -419,7 +419,7 @@ class TestSpotifyAPIItems:
                 requests += spotify_mock.get_requests(url=f"{url}/{item["id"]}")
             if key:
                 requests += spotify_mock.get_requests(url=f"{url}/{item["id"]}/{key}")
-        self.assert_calls(expected=source, requests=requests, key=key, limit=limit)
+        self.assert_calls(expected=source, requests=requests, key=key, limit=limit, spotify_mock=spotify_mock)
 
         # test input maps are updated when API responses are given
         test = {id_: {k: v for k, v in item.items() if k not in update_keys} for id_, item in source_map.items()}

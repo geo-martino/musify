@@ -63,10 +63,6 @@ class RemoteObject(ObjectPrinterMixin, Remote, metaclass=ABCMeta):
         self._response = response
         self._check_type()
 
-    def __hash__(self):
-        """Uniqueness of a remote object is its URI"""
-        return hash(self.uri)
-
     @abstractmethod
     def _check_type(self) -> None:
         """
@@ -126,3 +122,7 @@ class RemoteObject(ObjectPrinterMixin, Remote, metaclass=ABCMeta):
             and not callable(getattr(self, k))
             and k not in self.__annotations__
         }
+
+    def __hash__(self):
+        """Uniqueness of a remote object is its URI"""
+        return hash(self.uri)

@@ -2,7 +2,7 @@ from abc import ABCMeta
 
 from syncify.abstract.misc import PrettyPrinter
 from syncify.remote.enums import RemoteObjectType
-from syncify.remote.exception import RemoteObjectTypeError
+from syncify.remote.exception import RemoteObjectTypeError, RemoteError
 from syncify.remote.library.object import RemoteObject
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.base import SpotifyRemote
@@ -53,6 +53,11 @@ class SpotifyObject(SpotifyObjectMixin, PrettyPrinter, metaclass=ABCMeta):
 
         :raise RemoteObjectTypeError: When the response type is not compatible with this object.
         """
+        required_keys = {"id", "uri", "href", "external_urls"}
+        for key in required_keys:
+            if key not in self.response:
+                raise RemoteError(f"Response does not contain all required keys: {required_keys}")
+
         kind = self.__class__.__name__.casefold().replace("spotify", "")
         if self.response.get("type") != kind:
             kind = RemoteObjectType.from_name(kind)[0]

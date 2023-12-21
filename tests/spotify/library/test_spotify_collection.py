@@ -52,10 +52,8 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
         requests += spotify_mock.get_requests(f"{test.url}/{key}")
         requests += spotify_mock.get_requests(f"{collection.api.api_url_base}/audio-features")
 
-        # 1 call for initial collection + (extend_pages - 1) for tracks + (extend_pages) for audio-features
-        extend_pages = (test.response[key]["total"] / test.response[key]["limit"])
-        extend_pages = int(extend_pages) + (extend_pages % 1 > 0)  # round up
-        assert len(requests) == 2 * extend_pages
+        # 1 call for initial collection + (pages - 1) for tracks + (pages) for audio-features
+        assert len(requests) == 2 * spotify_mock.calculate_pages_from_response(test.response)
 
         # input items given, but no key to search on still loads
         test = collection.__class__.load(response_valid, items=response_valid.pop(key), extend_tracks=True)
@@ -92,10 +90,8 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
             input_ids = {item["track"]["id"] for item in response["tracks"]["items"]} - {item.id for item in items}
         else:
             input_ids = {item["id"] for item in response["tracks"]["items"]} - {item.id for item in items}
-        get_pages = (len(input_ids) / test.response[key]["limit"])
-        get_pages = int(get_pages) + (get_pages % 1 > 0)  # round up
-        extend_pages = (test.response[key]["total"] / test.response[key]["limit"])
-        extend_pages = (int(extend_pages) + (extend_pages % 1 > 0))  # round up
+        get_pages = spotify_mock.calculate_pages(limit=test.response[key]["limit"], total=len(input_ids))
+        extend_pages = spotify_mock.calculate_pages_from_response(test.response)
         assert len(requests) == 2 * extend_pages - 1 + get_pages
 
         # ensure none of the items ids were requested
@@ -331,26 +327,36 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
         assert spotify_mock.get_requests(url=url + "/followers")
         assert not pl.response
 
+    ###########################################################################
+    ## Sync tests set up
+    ###########################################################################
+
+    @pytest.fixture
+    def sync_mock(self, spotify_mock: SpotifyMock) -> SpotifyMock:
+        return spotify_mock
+
+    @pytest.fixture
+    def sync_playlist(self, response_valid: dict[str, Any]) -> SpotifyPlaylist:
+        return SpotifyPlaylist(response_valid)
+
+    @staticmethod
     @pytest.fixture
     def sync_items(
-            self,
-            response_valid: dict[str, Any],
-            response_random: dict[str, Any],
-            api: SpotifyAPI,
-            spotify_mock: SpotifyMock
+            response_valid: dict[str, Any], response_random: dict[str, Any], api: SpotifyAPI, sync_mock: SpotifyMock,
     ) -> list[SpotifyTrack]:
-        """Set up API on :py:class:`SpotifyPlaylist` and return new items to sync to the playlist for sync tests"""
-        spotify_mock.reset_mock()  # all sync tests check the number of requests made
+        api.load_user_data()
+        sync_mock.reset_mock()  # all sync tests check the number of requests made
         SpotifyPlaylist.api = api
 
         uri_valid = [track["track"]["uri"] for track in response_valid["tracks"]["items"]]
-        return [SpotifyTrack(track["track"]) for track in response_random["tracks"]["items"]
-                if track["track"]["uri"] not in uri_valid]
+        return [
+            SpotifyTrack(track["track"]) for track in response_random["tracks"]["items"]
+            if track["track"]["uri"] not in uri_valid
+        ]
 
     @staticmethod
-    def get_sync_uris(url: str, spotify_mock: SpotifyMock) -> tuple[list[str], list[str]]:
-        """Return tuple of lists of URIs added and URIs cleared when applying sync operations"""
-        requests = spotify_mock.get_requests(url=f"{url}/tracks")
+    def get_sync_uris(url: str, sync_mock: SpotifyMock) -> tuple[list[str], list[str]]:
+        requests = sync_mock.get_requests(url=f"{url}/tracks")
 
         uri_add = []
         uri_clear = []
@@ -362,134 +368,6 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
                 uri_clear += [t["uri"] for t in req.json()["tracks"]]
 
         return uri_add, uri_clear
-
-    @staticmethod
-    def assert_playlist_loaded(pl: SpotifyPlaylist, spotify_mock: SpotifyMock, count: int = 1) -> None:
-        """Assert the playlist was loaded the ``count`` times"""
-        pages = (pl.response["tracks"]["total"] / pl.response["tracks"]["limit"])
-        pages = int(pages) + (pages % 1 > 0)  # round up
-
-        requests = spotify_mock.get_requests(url=pl.url, method="GET")
-        requests += spotify_mock.get_requests(url=pl.url + "/tracks", method="GET")
-
-        assert len(requests) == pages * count
-
-    def test_sync_dry_run(
-            self, sync_items: list[SpotifyTrack], response_valid: dict[str, Any], spotify_mock: SpotifyMock
-    ):
-        pl = SpotifyPlaylist(response_valid)
-
-        result_refresh_no_items = pl.sync(kind="refresh", reload=False)
-        assert result_refresh_no_items.start == len(pl)
-        assert result_refresh_no_items.added == result_refresh_no_items.start
-        assert result_refresh_no_items.removed == result_refresh_no_items.start
-        assert result_refresh_no_items.unchanged == 0
-        assert result_refresh_no_items.difference == 0
-        assert result_refresh_no_items.final == result_refresh_no_items.start
-        assert len(spotify_mock.request_history) == 0
-
-        sync_items_extended = sync_items + pl[:10]
-        result_refresh_with_items = pl.sync(items=sync_items_extended, kind="refresh", reload=True)
-        assert result_refresh_with_items.start == len(pl)
-        assert result_refresh_with_items.added == len(sync_items_extended)
-        assert result_refresh_with_items.removed == result_refresh_with_items.start
-        assert result_refresh_with_items.unchanged == 0
-        assert result_refresh_with_items.difference == result_refresh_with_items.added - result_refresh_with_items.start
-        assert result_refresh_with_items.final == result_refresh_with_items.added
-        assert len(spotify_mock.request_history) == 0  # reload does not happen on dry_run
-
-        result_new = pl.sync(items=sync_items_extended, kind="new", reload=False)
-        assert result_new.start == len(pl)
-        assert result_new.added == len(sync_items)
-        assert result_new.removed == 0
-        assert result_new.unchanged == result_new.start
-        assert result_new.difference == result_new.added
-        assert result_new.final == result_new.start + result_new.difference
-        assert len(spotify_mock.request_history) == 0
-
-        sync_uri = {track.uri for track in sync_items_extended}
-        result_sync = pl.sync(items=sync_items_extended, kind="sync", reload=False)
-        assert result_sync.start == len(pl)
-        assert result_sync.added == len(sync_items)
-        assert result_sync.removed == len([track.uri for track in pl if track.uri not in sync_uri])
-        assert result_sync.unchanged == len([track.uri for track in pl if track.uri in sync_uri])
-        assert result_sync.difference == len(sync_items) - result_sync.removed
-        assert result_sync.final == result_sync.start + result_sync.difference
-        assert len(spotify_mock.request_history) == 0
-
-    def test_sync_reload(
-            self, sync_items: list[SpotifyTrack], response_valid: dict[str, Any], spotify_mock: SpotifyMock
-    ):
-        pl = SpotifyPlaylist(response_valid)
-        start = len(pl)
-        pl.tracks.clear()
-        assert len(pl) == 0
-
-        pl.sync(kind="sync", items=sync_items, reload=True, dry_run=False)
-        # playlist will reload from mock so, for this test, it will just get back its original items
-        assert len(pl) == start
-        # 1 for skip dupes on add to playlist, 1 for reload
-        self.assert_playlist_loaded(pl=pl, spotify_mock=spotify_mock, count=2)
-
-    def test_sync_new(
-            self, sync_items: list[SpotifyTrack], response_valid: dict[str, Any], spotify_mock: SpotifyMock
-    ):
-        pl = SpotifyPlaylist(response_valid)
-        result = pl.sync(kind="new", items=sync_items + pl.tracks[:5], reload=False, dry_run=False)
-
-        assert result.start == len(pl)
-        assert result.added == len(sync_items)
-        assert result.removed == 0
-        assert result.unchanged == result.start
-        assert result.difference == result.added
-        assert result.final == result.start + result.difference
-
-        uri_add, uri_clear = self.get_sync_uris(url=pl.url, spotify_mock=spotify_mock)
-        assert uri_add == [track.uri for track in sync_items]
-        assert uri_clear == []
-        # 1 for skip dupes check on add to playlist
-        self.assert_playlist_loaded(pl=pl, spotify_mock=spotify_mock, count=1)
-
-    def test_sync_refresh(
-            self, sync_items: list[SpotifyTrack], response_valid: dict[str, Any], spotify_mock: SpotifyMock
-    ):
-        pl = SpotifyPlaylist(response_valid)
-        start = len(pl)
-        result = pl.sync(items=sync_items, kind="refresh", reload=True, dry_run=False)
-
-        assert result.start == start
-        assert result.added == len(sync_items)
-        assert result.removed == result.start
-        assert result.unchanged == 0
-        # assert result.difference == 0  # useless when mocking + reload
-        # assert result.final == start  # useless when mocking + reload
-
-        uri_add, uri_clear = self.get_sync_uris(url=pl.url, spotify_mock=spotify_mock)
-        assert uri_add == [track.uri for track in sync_items]
-        assert uri_clear == [track.uri for track in pl]
-
-        # 1 load current tracks on remote when clearing, 1 for reload
-        self.assert_playlist_loaded(pl=pl, spotify_mock=spotify_mock, count=2)
-
-    def test_sync(
-            self, sync_items: list[SpotifyTrack], response_valid: dict[str, Any], spotify_mock: SpotifyMock
-    ):
-        pl = SpotifyPlaylist(response_valid)
-        sync_items_extended = sync_items + pl[:10]
-        result = pl.sync(kind="sync", items=sync_items_extended, reload=False, dry_run=False)
-
-        sync_uri = {track.uri for track in sync_items_extended}
-        assert result.start == len(pl)
-        assert result.added == len(sync_items)
-        assert result.removed == len([track.uri for track in pl if track.uri not in sync_uri])
-        assert result.unchanged == len([track.uri for track in pl if track.uri in sync_uri])
-        assert result.difference == len(sync_items) - result.removed
-        assert result.final == result.start + result.difference
-
-        uri_add, uri_clear = self.get_sync_uris(url=pl.url, spotify_mock=spotify_mock)
-        assert uri_add == [track.uri for track in sync_items]
-        assert uri_clear == [track.uri for track in pl if track.uri not in sync_uri]
-        self.assert_playlist_loaded(pl=pl, spotify_mock=spotify_mock, count=1)  # 1 load when clearing
 
 
 class TestSpotifyAlbum(SpotifyCollectionLoaderTester):

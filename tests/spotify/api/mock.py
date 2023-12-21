@@ -1,5 +1,5 @@
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from copy import deepcopy
 from datetime import datetime
 from random import choice, randrange, sample, random
@@ -7,7 +7,6 @@ from typing import Any
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse, quote
 
 from pycountry import countries
-from requests_mock.mocker import Mocker
 # noinspection PyProtectedMember
 from requests_mock.request import _RequestObjectProxy as Request
 # noinspection PyProtectedMember
@@ -17,6 +16,7 @@ from syncify.abstract.enums import SyncifyEnum
 from syncify.remote.enums import RemoteObjectType as ObjectType
 from syncify.spotify import URL_API, URL_EXT, SPOTIFY_SOURCE_NAME
 from syncify.spotify.api import SpotifyAPI
+from tests.remote.utils import RemoteMock
 from tests.spotify.utils import random_id
 from tests.utils import random_str, random_date_str, random_dt, random_genres
 
@@ -34,15 +34,14 @@ COUNTRY_CODES: list[str] = tuple(country.alpha_2 for country in countries)
 IMAGE_SIZES: tuple[int, ...] = tuple([64, 160, 300, 320, 500, 640, 800, 1000])
 
 
-class SpotifyMock(Mocker):
+class SpotifyMock(RemoteMock):
     """Generates responses and sets up Spotify API requests mock"""
 
     range_start = 25
     range_stop = 50
 
     @property
-    def item_type_map(self) -> dict[ObjectType, list[dict[str, Any]]]:
-        """Map of :py:class:`ObjectType` to the mocked items mapped as {``id``: <item>}"""
+    def item_type_map(self):
         return {
             ObjectType.PLAYLIST: self.playlists,
             ObjectType.ALBUM: self.albums,
@@ -52,8 +51,7 @@ class SpotifyMock(Mocker):
         }
 
     @property
-    def item_type_map_user(self) -> dict[ObjectType, list[dict[str, Any]]]:
-        """Map of :py:class:`ObjectType` to the mocked user items mapped as {``id``: <item>}"""
+    def item_type_map_user(self):
         return {
             ObjectType.PLAYLIST: self.user_playlists,
             ObjectType.ALBUM: self.user_albums,
@@ -61,44 +59,14 @@ class SpotifyMock(Mocker):
             ObjectType.ARTIST: self.user_artists,
         }
 
-    def get_requests(
-            self,
-            url: str,
-            method: str | None = None,
-            params: dict[str, Any] | None = None,
-            response: dict[str, Any] | None = None
-    ) -> list[Request]:
-        """Get a get request from the history from the given URL and params"""
-        requests = []
-        for request in self.request_history:
-            match_url = url.strip("/").endswith(request.path.strip("/"))
+    def calculate_pages_from_response(self, response: Mapping[str, Any]) -> int:
+        kind = ObjectType.from_name(response["type"])[0]
+        key = SpotifyAPI.collection_item_map[kind].name.casefold() + "s"
 
-            match_method = method is None
-            if not match_method:
-                # noinspection PyProtectedMember
-                match_method = request._request.method.upper() == method.upper()
-
-            match_params = params is None
-            if not match_params and request.query:
-                for k, v in parse_qs(request.query).items():
-                    if k in params and str(params[k]) != v[0]:
-                        break
-                    match_params = True
-
-            match_response = response is None
-            if not match_response and request.body:
-                for k, v in request.json().items():
-                    if k in response and str(response[k]) != str(v):
-                        break
-                    match_response = True
-
-            if match_url and match_method and match_params and match_response:
-                requests.append(request)
-
-        return requests
+        return self.calculate_pages(limit=response[key]["limit"], total=response[key]["total"])
 
     def __init__(self, **kwargs):
-        super().__init__(case_sensitive=True, **kwargs)
+        super().__init__(case_sensitive=True, **{k: v for k, v in kwargs.items() if k != "case_sensitive"})
 
         # generate initial responses for generic item calls
         self.tracks = [self.generate_track() for _ in range(200)]

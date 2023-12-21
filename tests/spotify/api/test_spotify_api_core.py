@@ -31,7 +31,7 @@ class TestSpotifyAPICore:
             kwargs: dict[str, Any],
             floor: int, 
             ceil: int, 
-            api: SpotifyAPI, 
+            api: SpotifyAPI,
             spotify_mock: SpotifyMock
     ):
         # too small

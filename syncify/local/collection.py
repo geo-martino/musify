@@ -169,6 +169,20 @@ class LocalCollection[T: LocalTrack](Logger, ItemCollection[T], metaclass=ABCMet
         if isinstance(self, Library):
             self.print_line()
 
+    def as_dict(self):
+        return {
+            "name": self.name,
+            "artists": self.artists,
+            "track_total": self.track_total,
+            "genres": self.genres,
+            "length": self.length,
+            "tracks": self.tracks,
+            "last_added": self.last_added,
+            "last_modified": self.last_modified,
+            "last_played": self.last_played,
+            "remote_source": self.remote_wrangler.remote_source if self.remote_wrangler else None,
+        }
+
     def __getitem__(self, __key: str | int | slice | Item) -> T | list[T] | list[T, None, None]:
         """
         Returns the item in this collection by matching on a given path/index/URI.
@@ -201,20 +215,6 @@ class LocalCollection[T: LocalTrack](Logger, ItemCollection[T], metaclass=ABCMet
             return next(item for item in self.items if item.uri == __key)
         except StopIteration:
             raise KeyError(f"No matching item found for URI: '{__key}'")
-
-    def as_dict(self):
-        return {
-            "name": self.name,
-            "artists": self.artists,
-            "track_total": self.track_total,
-            "genres": self.genres,
-            "length": self.length,
-            "tracks": self.tracks,
-            "last_added": self.last_added,
-            "last_modified": self.last_modified,
-            "last_played": self.last_played,
-            "remote_source": self.remote_wrangler.remote_source if self.remote_wrangler else None,
-        }
 
 
 # noinspection PyShadowingNames
