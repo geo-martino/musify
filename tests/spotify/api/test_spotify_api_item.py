@@ -240,7 +240,7 @@ class TestSpotifyAPIItems:
         source = spotify_mock.item_type_map_user[kind]
         source_map = {item["id"] if "id" in item else item[kind.name.casefold()]["id"]: item for item in source}
         total = len(source)
-        limit = total // 3  # force pagination
+        limit = min(total // 3, 50)  # force pagination
         assert total > limit  # ensure ranges are valid for test to work
 
         results = api.get_user_items(user=test, kind=kind, limit=limit)

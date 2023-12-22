@@ -1,7 +1,5 @@
 from copy import deepcopy
-from random import randrange, sample
-from typing import Any
-from collections.abc import Iterable
+from random import sample
 from urllib.parse import parse_qs
 
 import pytest
@@ -9,7 +7,7 @@ import pytest
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.library.item import SpotifyTrack
 from syncify.spotify.library.library import SpotifyLibrary
-from tests.remote.library.test_remote_collection import RemoteLibraryTester
+from tests.remote.library.test_remote_library import RemoteLibraryTester
 from tests.spotify.api.mock import SpotifyMock
 
 
@@ -18,14 +16,29 @@ class TestSpotifyLibrary(RemoteLibraryTester):
     dict_json_equal = False
 
     @pytest.fixture
-    def collection_merge_items(self, spotify_mock: SpotifyMock) -> Iterable[SpotifyTrack]:
-        return [SpotifyTrack(spotify_mock.generate_track()) for _ in range(randrange(5, 10))]
+    def collection_merge_items(self, spotify_mock: SpotifyMock) -> list[SpotifyTrack]:
+        tracks = [SpotifyTrack(track) for track in spotify_mock.tracks[200:210]]
+        assert len(tracks) > 4
+        return tracks
 
     @pytest.fixture(scope="class")
-    def _library(self, api: SpotifyAPI, spotify_mock: SpotifyMock) -> SpotifyLibrary:
-        include = [pl["name"] for pl in sample(spotify_mock.user_playlists, k=10)]
-        library = SpotifyLibrary(api=api, include=include, use_cache=False)
+    def remote_api(self, api: SpotifyAPI) -> SpotifyAPI:
+        return api
+
+    @pytest.fixture(scope="class")
+    def remote_mock(self, spotify_mock: SpotifyMock) -> SpotifyMock:
+        return spotify_mock
+
+    @pytest.fixture(scope="class")
+    def _library(self, remote_api: SpotifyAPI, remote_mock: SpotifyMock) -> SpotifyLibrary:
+        include = [pl["name"] for pl in sample(remote_mock.user_playlists, k=10)]
+        library = SpotifyLibrary(api=remote_api, include=include, use_cache=False)
+        library._remote_types.playlist.api = library.api
         library.load()
+
+        for pl in library.playlists.values():  # ensure all loaded playlists are owned by the authorised user
+            pl._response["owner"] = {k: v for k, v in remote_mock.user.items() if k in pl.response["owner"]}
+
         return library
 
     @pytest.fixture
@@ -69,10 +82,20 @@ class TestSpotifyLibrary(RemoteLibraryTester):
 
         assert len(library._get_tracks_data(pl_responses)) == expected
 
-    def test_load(self):
-        pass
+    def test_load(self, api: SpotifyAPI):
+        library = SpotifyLibrary(api=api, use_cache=False)
+        pl_data = library._get_playlists_data()
+        track_data = library._get_tracks_data(pl_data)
 
-    def test_enrich(self, library: SpotifyLibrary, spotify_mock: SpotifyMock):
+        library.load()
+
+        assert len(library.tracks) == len(track_data)
+        assert len(library.playlists) == len(pl_data)
+        for pl in library.playlists.values():
+            assert len(pl.tracks) == pl.track_total
+
+    # noinspection PyMethodOverriding
+    def test_enrich_tracks(self, library, spotify_mock: SpotifyMock):
         spotify_mock.reset_mock()  # test checks the number of requests made
 
         def validate_album_not_enriched(t: SpotifyTrack) -> None:
@@ -110,6 +133,7 @@ class TestSpotifyLibrary(RemoteLibraryTester):
 
             assert len(spotify_mock.get_requests(url=track.response["album"]["href"] + "/tracks")) == 0
 
+        # check requests
         assert len(spotify_mock.get_requests(url=library.api.api_url_base + "/artists")) == 0
         req_albums = spotify_mock.get_requests(url=library.api.api_url_base + "/albums")
         req_album_ids = {id_ for req in req_albums for id_ in parse_qs(req.query)["ids"][0].split(",")}
@@ -134,19 +158,11 @@ class TestSpotifyLibrary(RemoteLibraryTester):
                 assert "images" in artist
                 assert "popularity" in artist
 
+        # check requests
         assert len(spotify_mock.get_requests(url=library.api.api_url_base + "/albums")) == 0
         req_artists = spotify_mock.get_requests(url=library.api.api_url_base + "/artists")
         req_artist_ids = {id_ for req in req_artists for id_ in parse_qs(req.query)["ids"][0].split(",")}
         assert req_artist_ids == artist_ids
-
-    def test_sync(self):
-        pass
-
-    def test_extend(self):
-        pass
-
-    def test_restore(self):
-        pass
 
     def test_merge_playlists(self, library: SpotifyLibrary):
         pass

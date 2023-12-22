@@ -128,7 +128,8 @@ if __name__ == "__main__":
             "user-follow-read",
             "playlist-modify-public",
             "playlist-modify-private",
-            "playlist-read-collaborative"
+            "playlist-read-collaborative",
+            "playlist-read-private"
         ]),
     }
     _format_map(API_AUTH_USER, format_map=format_map)

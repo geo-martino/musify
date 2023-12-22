@@ -69,7 +69,8 @@ class SpotifyMock(RemoteMock):
         super().__init__(case_sensitive=True, **{k: v for k, v in kwargs.items() if k != "case_sensitive"})
 
         # generate initial responses for generic item calls
-        self.tracks = [self.generate_track() for _ in range(200)]
+        # track count needs to be at least 10 more than total possible track count on playlists
+        self.tracks = [self.generate_track() for _ in range(220)]
         self.playlists = [self.generate_playlist() for _ in range(randrange(self.range_start, self.range_stop))]
         self.albums = [self.generate_album() for _ in range(randrange(self.range_start, self.range_stop))]
         self.artists = [self.generate_artist() for _ in range(randrange(self.range_start, self.range_stop))]
@@ -304,8 +305,8 @@ class SpotifyMock(RemoteMock):
     def setup_playlist_operations(self) -> None:
         """Generate playlist and setup ``requests_mock`` for playlist operations tests"""
         for playlist in self.user_playlists:
-            self.post(url=re.compile(rf"{playlist["href"]}/tracks"), json={"snapshot_id": random_str()})
-            self.delete(url=re.compile(rf"{playlist["href"]}/tracks"), json={"snapshot_id": random_str()})
+            self.post(url=re.compile(playlist["href"] + "/tracks"), json={"snapshot_id": random_str()})
+            self.delete(url=re.compile(playlist["href"] + "/tracks"), json={"snapshot_id": random_str()})
             self.delete(url=re.compile(playlist["href"]), json={"snapshot_id": random_str()})
 
         def create_response_getter(req: Request, _: Context) -> dict[str, Any]:
@@ -324,6 +325,8 @@ class SpotifyMock(RemoteMock):
             response["owner"] = self.user_playlists[0]["owner"]
 
             self.get(url=response["href"], json=response)
+            self.post(url=re.compile(response["href"] + "/tracks"), json={"snapshot_id": random_str()})
+            self.delete(url=re.compile(response["href"] + "/tracks"), json={"snapshot_id": random_str()})
             return response
 
         url = f"{URL_API}/users/{self.user_id}/playlists"

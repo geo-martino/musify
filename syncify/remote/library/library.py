@@ -2,9 +2,8 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, Mapping, Iterable
 from typing import Any, Literal
 
-from syncify import PROGRAM_NAME
 from syncify.abstract.collection import Library, Playlist
-from syncify.abstract.item import Item
+from syncify.abstract.item import Item, Track
 from syncify.remote.api import RemoteAPI
 from syncify.remote.config import RemoteObjectClasses
 from syncify.remote.library.collection import SyncResultRemotePlaylist, RemotePlaylist, RemoteCollection
@@ -145,17 +144,64 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         )
         self.print_line(REPORT)
 
-    def enrich_tracks(self, albums: bool = False, artists: bool = False) -> None:
+    def enrich_tracks(self, *args, **kwargs) -> None:
         """
         Call API to enrich elements of track objects improving metadata coverage.
         This is an optionally implementable method. Defaults to doing nothing.
         """
         self.logger.debug("Enrich tracks not implemented for this library, skipping...")
-        return
+
+    def backup_playlists(self) -> dict[str, list[str]]:
+        """
+        Produce a backup map of <playlist name>: [<URIs] for all playlists in this library
+        which can be saved to JSON for backup purposes.
+        """
+        return {name: [track.uri for track in pl] for name, pl in self.playlists.items()}
+
+    def restore_playlists(
+            self,
+            playlists: Library | Collection[Playlist] | Mapping[str, Iterable[Track]] | Mapping[str, Iterable[str]]
+    ) -> None:
+        """
+        Restore playlists from a backup to loaded playlist objects.
+
+        This function does not sync the updated playlists with the remote library.
+
+        This function does create new playlists on the remote library for playlists
+        given that do not exist in this Library.
+
+        :param playlists: Values that represent the playlists to restore from.
+        """
+        # TODO: expand this function to support all RemoteItem types + update input type
+        if isinstance(playlists, Library):  # get URIs from playlists in library
+            playlists = {name: [track.uri for track in pl] for name, pl in playlists.playlists.items()}
+        elif isinstance(playlists, Mapping) and all(isinstance(v, Item) for vals in playlists.values() for v in vals):
+            # get URIs from playlists in map values
+            playlists = {name: [item.uri for item in pl] for name, pl in playlists.items()}
+        elif not isinstance(playlists, Mapping) and isinstance(playlists, Collection):
+            # get URIs from playlists in collection
+            playlists = {pl.name: [track.uri for track in pl] for pl in playlists}
+        playlists: Mapping[str, Iterable[str]]
+
+        uri_tracks = {track.uri: track for track in self.tracks}
+        uri_get = [uri for uri_list in playlists.values() for uri in uri_list if uri not in uri_tracks]
+
+        if uri_get:
+            tracks_data = self.api.get_tracks(uri_get, features=True, use_cache=self.use_cache)
+            tracks = list(map(self._remote_types.track, tracks_data))
+            uri_tracks |= {track.uri: track for track in tracks}
+
+        for name, uri_list in playlists.items():
+            playlist = self.playlists.get(name)
+            if not playlist:  # new playlist given, create it on remote first
+                playlist = self._remote_types.playlist.create(name=name)
+
+            playlist._tracks = [uri_tracks.get(uri) for uri in uri_list]
+            self.playlists[name] = playlist
 
     def sync(
             self,
-            playlists: Library | Mapping[str, Playlist] | Collection[Playlist] | None = None,
+            playlists: Library | Mapping[str, Iterable[Item]] | Collection[Playlist] | None = None,
             kind: Literal["new", "refresh", "sync"] = "new",
             reload: bool = True,
             dry_run: bool = True
@@ -180,32 +226,31 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         """
         self.logger.debug(f"Sync {self.remote_source} playlists: START")
 
-        count = len(playlists or self.playlists)
+        if not playlists:  # use the playlists as stored in this library object
+            playlists = self.playlists
+        elif isinstance(playlists, Library):  # get map of playlists from the given library
+            playlists = playlists.playlists
+        elif isinstance(playlists, Collection) and all(isinstance(pl, Playlist) for pl in playlists):
+            # reformat list to map
+            playlists = {pl.name: pl for pl in playlists}
+        playlists: Mapping[str, Iterable[Item]]
+
         log_kind = "adding new items only"
         if kind != "new":
             log_kind = f"clearing {'all' if kind == 'refresh' else 'extra'} items from remote playlist first"
         self.logger.info(
-            f"\33[1;95m ->\33[1;97m Synchronising {count} {self.remote_source} playlists, {log_kind}"
-            f"{f' and reloading {PROGRAM_NAME}' if reload else ''} \33[0m"
+            f"\33[1;95m ->\33[1;97m Synchronising {len(playlists)} {self.remote_source} playlists: {log_kind}"
+            f"{f' and reloading stored playlists' if reload else ''} \33[0m"
         )
-
-        if not playlists:  # use the playlists as stored in this library object
-            playlists = self.playlists
-        elif isinstance(playlists, Collection):  # reformat list to map
-            playlists = {pl.name: pl for pl in playlists}
-        elif isinstance(playlists, Library):  # get map of playlists from the given library
-            playlists = playlists.playlists
-        playlists: Mapping[str, Playlist]
 
         bar = self.get_progress_bar(
             iterable=playlists.items(), desc=f"Synchronising {self.remote_source}", unit="playlists"
         )
         results = {}
-        for name, playlist in bar:  # synchronise playlists
-            remote_playlist = self.playlists.get(name)
-            if not remote_playlist:  # new playlist given, create it on remote first
-                remote_playlist = self._remote_types.playlist.create(name=name)
-            results[name] = remote_playlist.sync(items=playlist, kind=kind, reload=reload, dry_run=dry_run)
+        for name, pl in bar:  # synchronise playlists
+            if name not in self.playlists:  # new playlist given, create it on remote first
+                self.playlists[name] = self._remote_types.playlist.create(name=name)
+            results[name] = self.playlists[name].sync(items=pl, kind=kind, reload=reload, dry_run=dry_run)
 
         self.print_line()
         self.logger.debug(f"Sync {self.remote_source} playlists: DONE\n")
@@ -258,33 +303,11 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         )
 
         load_tracks = self.api.get_tracks(load_uris, features=True, use_cache=self.use_cache)
-        self.tracks.extend(self._remote_types.track(response) for response in load_tracks)
+        self.items.extend(self._remote_types.track(response) for response in load_tracks)
 
         self.print_line()
         self.log_tracks()
         self.logger.debug(f"Extend {self.remote_source} tracks data: DONE\n")
-
-    def restore_playlists(self, backup: Mapping[str, Iterable[str]]) -> None:
-        """
-        Restore playlists from a backup to loaded playlist objects.
-        This does not sync the updated playlists with the remote library.
-
-        :param backup: Map of playlist name to a list of URIs to restore for this playlist.
-        """
-        uri_tracks = {track.uri: track for track in self.tracks}
-
-        uris = [uri for uri_list in backup.values() for uri in uri_list if uri not in uri_tracks]
-        if uris:
-            tracks_data = self.api.get_tracks(uris, features=True, use_cache=self.use_cache)
-            tracks = list(map(self._remote_types.track, tracks_data))
-            uri_tracks |= {track.uri: track for track in tracks}
-
-        for name, uris in backup.items():
-            tracks = [uri_tracks.get(uri) for uri in uris]
-            playlist = self._remote_types.playlist.create(name) \
-                if name not in self.playlists else self.playlists[name]
-            playlist._tracks = tracks
-            self.playlists[name] = playlist
 
     def as_dict(self):
         return {

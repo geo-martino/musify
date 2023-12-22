@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Hashable
 from typing import Any
@@ -64,13 +66,13 @@ class Item(ObjectPrinterMixin, Hashable, metaclass=ABCMeta):
     def __hash__(self):
         raise NotImplementedError
 
-    def __eq__(self, item):
+    def __eq__(self, item: Item):
         """URI attributes equal if at least one item has a URI, names equal otherwise"""
         if self.has_uri or item.has_uri:
             return self.has_uri == item.has_uri and self.uri == item.uri
         return self.name == item.name
 
-    def __ne__(self, item):
+    def __ne__(self, item: Item):
         return not self.__eq__(item)
 
     def __getitem__(self, key: str) -> Any:

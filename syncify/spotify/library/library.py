@@ -1,11 +1,11 @@
 from collections.abc import Collection, Mapping, Iterable
 from typing import Any
 
-from spotify.api import SpotifyAPI
 from syncify.abstract.collection import Playlist, Library
 from syncify.remote.config import RemoteObjectClasses
 from syncify.remote.enums import RemoteObjectType
 from syncify.remote.library.library import RemoteLibrary
+from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.library.collection import SpotifyCollection, SpotifyPlaylist, SpotifyAlbum
 from syncify.spotify.library.item import SpotifyTrack
 
@@ -28,13 +28,14 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
             track=SpotifyTrack, album=SpotifyAlbum, playlist=SpotifyPlaylist
         )
 
+    # noinspection PyTypeChecker
     @property
     def playlists(self) -> dict[str, SpotifyPlaylist]:
         return self._playlists
 
+    # noinspection PyTypeChecker
     @property
     def api(self) -> SpotifyAPI:
-        """Authorised API object for making authenticated calls to a user's library"""
         return self._api
 
     def _get_playlists_data(self) -> list[dict[str, Any]]:

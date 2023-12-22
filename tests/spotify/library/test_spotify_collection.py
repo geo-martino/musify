@@ -1,9 +1,9 @@
 from abc import ABCMeta, abstractmethod
+from collections.abc import Iterable
 from copy import deepcopy
 from datetime import datetime
 from random import randrange
 from typing import Any
-from collections.abc import Iterable
 from urllib.parse import parse_qs
 
 import pytest
@@ -108,14 +108,18 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
 class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
 
     @pytest.fixture
+    def collection_merge_items(self, spotify_mock: SpotifyMock) -> Iterable[SpotifyTrack]:
+        return [SpotifyTrack(spotify_mock.generate_track()) for _ in range(randrange(5, 10))]
+
+    @pytest.fixture
+    def remote_mock(self, spotify_mock: SpotifyMock) -> SpotifyMock:
+        return spotify_mock
+
+    @pytest.fixture
     def playlist(self, response_valid: dict[str, Any]) -> SpotifyPlaylist:
         pl = SpotifyPlaylist(response_valid)
         pl._tracks = [item for item in pl.items if pl.items.count(item) == 1]
         return pl
-
-    @pytest.fixture
-    def collection_merge_items(self, spotify_mock: SpotifyMock) -> Iterable[SpotifyTrack]:
-        return [SpotifyTrack(spotify_mock.generate_track()) for _ in range(randrange(5, 10))]
 
     @pytest.fixture
     def response_random(self, spotify_mock: SpotifyMock) -> dict[str, Any]:
@@ -333,20 +337,16 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
     ###########################################################################
 
     @pytest.fixture
-    def sync_mock(self, spotify_mock: SpotifyMock) -> SpotifyMock:
-        return spotify_mock
-
-    @pytest.fixture
     def sync_playlist(self, response_valid: dict[str, Any]) -> SpotifyPlaylist:
         return SpotifyPlaylist(response_valid)
 
     @staticmethod
     @pytest.fixture
     def sync_items(
-            response_valid: dict[str, Any], response_random: dict[str, Any], api: SpotifyAPI, sync_mock: SpotifyMock,
+            response_valid: dict[str, Any], response_random: dict[str, Any], api: SpotifyAPI, remote_mock: SpotifyMock,
     ) -> list[SpotifyTrack]:
         api.load_user_data()
-        sync_mock.reset_mock()  # all sync tests check the number of requests made
+        remote_mock.reset_mock()  # all sync tests check the number of requests made
         SpotifyPlaylist.api = api
 
         uri_valid = [track["track"]["uri"] for track in response_valid["tracks"]["items"]]
@@ -356,8 +356,8 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
         ]
 
     @staticmethod
-    def get_sync_uris(url: str, sync_mock: SpotifyMock) -> tuple[list[str], list[str]]:
-        requests = sync_mock.get_requests(url=f"{url}/tracks")
+    def get_sync_uris(url: str, remote_mock: SpotifyMock) -> tuple[list[str], list[str]]:
+        requests = remote_mock.get_requests(url=f"{url}/tracks")
 
         uri_add = []
         uri_clear = []

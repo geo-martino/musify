@@ -57,9 +57,6 @@ class RemoteMock(Mocker):
         """Map of :py:class:`RemoteObjectType` to the mocked user items mapped as {``id``: <item>}"""
         raise NotImplementedError
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     @staticmethod
     def calculate_pages(limit: int, total: int) -> int:
         """
@@ -79,7 +76,7 @@ class RemoteMock(Mocker):
 
     def get_requests(
             self,
-            url: str,
+            url: str | None = None,
             method: str | None = None,
             params: dict[str, Any] | None = None,
             response: dict[str, Any] | None = None
@@ -87,7 +84,9 @@ class RemoteMock(Mocker):
         """Get a get request from the history from the given URL and params"""
         requests = []
         for request in self.request_history:
-            match_url = url.strip("/").endswith(request.path.strip("/"))
+            match_url = url is None
+            if not match_url:
+                match_url = url.strip("/").endswith(request.path.strip("/"))
 
             match_method = method is None
             if not match_method:

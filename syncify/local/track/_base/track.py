@@ -153,7 +153,7 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
     def __hash__(self):  # TODO: why doesn't this get inherited correctly from File
         return super().__hash__()
 
-    def __eq__(self, item):
+    def __eq__(self, item: Item):
         """URI attributes equal if at least one item has a URI, paths equal otherwise"""
         if hasattr(item, "path"):
             return self.path == item.path
