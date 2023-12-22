@@ -43,7 +43,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         return self.api.user_id
 
     @property
-    def tracks(self) -> list[RemoteTrack]:
+    def tracks(self) -> list[T]:
         return self._tracks
 
     @property
@@ -66,7 +66,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         self.use_cache = use_cache
         RemoteObject.api = api
 
-        self._tracks: list[RemoteTrack] = []
+        self._tracks: list[T] = []
         self._playlists: dict[str, RemotePlaylist] = {}
 
     def load(self, log: bool = True, **__) -> None:

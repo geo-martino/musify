@@ -1,6 +1,7 @@
 from collections.abc import Collection, Mapping, Iterable
 from typing import Any
 
+from spotify.api import SpotifyAPI
 from syncify.abstract.collection import Playlist, Library
 from syncify.remote.config import RemoteObjectClasses
 from syncify.remote.enums import RemoteObjectType
@@ -26,6 +27,15 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
         return RemoteObjectClasses(
             track=SpotifyTrack, album=SpotifyAlbum, playlist=SpotifyPlaylist
         )
+
+    @property
+    def playlists(self) -> dict[str, SpotifyPlaylist]:
+        return self._playlists
+
+    @property
+    def api(self) -> SpotifyAPI:
+        """Authorised API object for making authenticated calls to a user's library"""
+        return self._api
 
     def _get_playlists_data(self) -> list[dict[str, Any]]:
         self.logger.debug(f"Get {self.remote_source} playlists data: START")
@@ -91,8 +101,10 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
         if albums:  # enrich track albums
             album_uris: set[str] = {track.response["album"]["uri"] for track in self.tracks}
             album_responses = self.api.get_items(
-                album_uris, kind=RemoteObjectType.ALBUM, limit=20, use_cache=self.use_cache
+                album_uris, kind=RemoteObjectType.ALBUM, limit=20, extend=False, use_cache=self.use_cache
             )
+            for album in album_responses:
+                album.pop("tracks")
 
             albums = {response["uri"]: response for response in album_responses}
             for track in self.tracks:
@@ -102,7 +114,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
         if artists:  # enrich track artists
             artist_uris: set[str] = {artist["uri"] for track in self.tracks for artist in track.response["artists"]}
             artist_responses = self.api.get_items(
-                artist_uris, kind=RemoteObjectType.ARTIST, limit=20, use_cache=self.use_cache
+                artist_uris, kind=RemoteObjectType.ARTIST, limit=20, extend=False, use_cache=self.use_cache
             )
 
             artists = {response["uri"]: response for response in artist_responses}
