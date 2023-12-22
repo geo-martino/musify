@@ -2,7 +2,8 @@ from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 from datetime import datetime
 from random import randrange
-from typing import Any, Iterable
+from typing import Any
+from collections.abc import Iterable
 from urllib.parse import parse_qs
 
 import pytest

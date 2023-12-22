@@ -103,6 +103,25 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
 
         self.logger.debug(f"Load {self.remote_source} library: DONE\n")
 
+    def _get_playlists_data(self) -> list[dict[str, Any]]:
+        """
+        Get API responses for all playlists and all their tracks
+
+        :return: A list of API responses for all playlists
+            with all API responses for tracks information contained therein.
+        """
+        raise NotImplementedError
+
+    def log_playlists(self) -> None:
+        """Log stats on currently loaded playlists"""
+        max_width = self.get_max_width(self.playlists)
+
+        self.logger.report(f"\33[1;96mLoaded the following {self.remote_source} playlists: \33[0m")
+        for name, playlist in self.playlists.items():
+            name = self.align_and_truncate(playlist.name, max_width=max_width)
+            self.logger.report(f"\33[97m{name} \33[0m| \33[92m{len(playlist):>6} total tracks \33[0m")
+        self.print_line(REPORT)
+
     @abstractmethod
     def _get_tracks_data(self, playlists_data: Collection[Mapping[str, Any]]) -> list[dict[str, Any]]:
         """
@@ -133,25 +152,6 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         """
         self.logger.debug("Enrich tracks not implemented for this library, skipping...")
         return
-
-    def _get_playlists_data(self) -> list[dict[str, Any]]:
-        """
-        Get API responses for all playlists and all their tracks
-
-        :return: A list of API responses for all playlists
-            with all API responses for tracks information contained therein.
-        """
-        raise NotImplementedError
-
-    def log_playlists(self) -> None:
-        """Log stats on currently loaded playlists"""
-        max_width = self.get_max_width(self.playlists)
-
-        self.logger.report(f"\33[1;96mLoaded the following {self.remote_source} playlists: \33[0m")
-        for name, playlist in self.playlists.items():
-            name = self.align_and_truncate(playlist.name, max_width=max_width)
-            self.logger.report(f"\33[97m{name} \33[0m| \33[92m{len(playlist):>6} total tracks \33[0m")
-        self.print_line(REPORT)
 
     def sync(
             self,

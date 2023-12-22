@@ -27,6 +27,37 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
             track=SpotifyTrack, album=SpotifyAlbum, playlist=SpotifyPlaylist
         )
 
+    def _get_playlists_data(self) -> list[dict[str, Any]]:
+        self.logger.debug(f"Get {self.remote_source} playlists data: START")
+
+        playlists_data = self.api.get_user_items(kind=RemoteObjectType.PLAYLIST, use_cache=self.use_cache)
+        playlists_total = len(playlists_data)
+        if self.include:  # filter on include playlist names
+            include = {name.casefold() for name in self.include}
+            playlists_data = [pl for pl in playlists_data if pl["name"].casefold() in include]
+
+        if self.exclude:  # filter out exclude playlist names
+            exclude = {name.casefold() for name in self.exclude}
+            playlists_data = [pl for pl in playlists_data if pl["name"].casefold() not in exclude]
+
+        self.logger.debug(
+            f"Filtered out {playlists_total - len(playlists_data)} playlists "
+            f"from {playlists_total} {self.remote_source} playlists"
+        )
+
+        total_tracks = sum(pl["tracks"]["total"] for pl in playlists_data)
+        total_pl = len(playlists_data)
+        self.logger.info(
+            f"\33[1;95m  >\33[1;97m Getting {total_tracks} {self.remote_source} tracks from {total_pl} playlists \33[0m"
+        )
+
+        # make API calls
+        self.api.get_items(playlists_data, kind=RemoteObjectType.PLAYLIST, use_cache=self.use_cache)
+
+        self.print_line()
+        self.logger.debug(f"Get {self.remote_source} playlists data: DONE\n")
+        return playlists_data
+
     def _get_tracks_data(self, playlists_data: Collection[Mapping[str, Any]]) -> list[dict[str, Any]]:
         self.logger.debug(f"Load {self.remote_source} tracks data: START")
         playlists_tracks_data = [pl["tracks"]["items"] for pl in playlists_data]
@@ -81,37 +112,6 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
 
         self.print_line()
         self.logger.debug(f"Enrich {self.remote_source} library: DONE\n")
-
-    def _get_playlists_data(self) -> list[dict[str, Any]]:
-        self.logger.debug(f"Get {self.remote_source} playlists data: START")
-
-        playlists_data = self.api.get_user_items(kind=RemoteObjectType.PLAYLIST, use_cache=self.use_cache)
-        playlists_total = len(playlists_data)
-        if self.include:  # filter on include playlist names
-            include = {name.casefold() for name in self.include}
-            playlists_data = [pl for pl in playlists_data if pl["name"].casefold() in include]
-
-        if self.exclude:  # filter out exclude playlist names
-            exclude = {name.casefold() for name in self.exclude}
-            playlists_data = [pl for pl in playlists_data if pl["name"].casefold() not in exclude]
-
-        self.logger.debug(
-            f"Filtered out {playlists_total - len(playlists_data)} playlists "
-            f"from {playlists_total} {self.remote_source} playlists"
-        )
-
-        total_tracks = sum(pl["tracks"]["total"] for pl in playlists_data)
-        total_pl = len(playlists_data)
-        self.logger.info(
-            f"\33[1;95m  >\33[1;97m Getting {total_tracks} {self.remote_source} tracks from {total_pl} playlists \33[0m"
-        )
-
-        # make API calls
-        self.api.get_items(playlists_data, kind=RemoteObjectType.PLAYLIST, use_cache=self.use_cache)
-
-        self.print_line()
-        self.logger.debug(f"Get {self.remote_source} playlists data: DONE\n")
-        return playlists_data
 
     def merge_playlists(self, playlists: Library | Collection[Playlist] | Mapping[Any, Playlist]) -> None:
         raise NotImplementedError
