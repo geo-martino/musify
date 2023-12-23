@@ -194,6 +194,7 @@ class RemoteItemSearcherTester(ABC):
     def search_album(search_albums: list[LocalAlbum]):
         """Process and prepare a single album for searching"""
         collection = next(album for album in search_albums if len(album) > 2)
+        assert not collection.compilation  # this forces an album search
 
         skip = 0
         for skip, item in enumerate(collection[:len(collection) // 2], 1):

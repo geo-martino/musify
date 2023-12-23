@@ -58,46 +58,43 @@ class SearchSettings:
     search_fields_3: Iterable[TagField] = ()
 
 
-ITEMS_SETTINGS = SearchSettings(
-    search_fields_1=[Tag.NAME, Tag.ARTIST],
-    search_fields_2=[Tag.NAME, Tag.ALBUM],
-    search_fields_3=[Tag.NAME],
-    match_fields={Tag.TITLE, Tag.ARTIST, Tag.ALBUM, Tag.LENGTH},
-    result_count=10,
-    allow_karaoke=False,
-    min_score=0.1,
-    max_score=0.8
-)
-ALBUM_SETTINGS = SearchSettings(
-    search_fields_1=[Tag.NAME, Tag.ARTIST],
-    search_fields_2=[Tag.NAME],
-    match_fields={Tag.ARTIST, Tag.ALBUM, Tag.LENGTH},
-    result_count=5,
-    allow_karaoke=False,
-    min_score=0.1,
-    max_score=0.7
-)
-
-
 class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
     """
     Searches for remote matches for a list of item collections.
 
     :param api: An API object for calling the remote query endpoint.
-    :param allow_karaoke: When True, items determined to be karaoke are allowed when matching added items.
-        Skip karaoke results otherwise.
     :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
     """
 
     __slots__ = "api"
+
+    settings_items = SearchSettings(
+        search_fields_1=[Tag.NAME, Tag.ARTIST],
+        search_fields_2=[Tag.NAME, Tag.ALBUM],
+        search_fields_3=[Tag.NAME],
+        match_fields={Tag.TITLE, Tag.ARTIST, Tag.ALBUM, Tag.LENGTH},
+        result_count=10,
+        allow_karaoke=False,
+        min_score=0.1,
+        max_score=0.8
+    )
+    settings_albums = SearchSettings(
+        search_fields_1=[Tag.NAME, Tag.ARTIST],
+        search_fields_2=[Tag.NAME],
+        match_fields={Tag.ARTIST, Tag.ALBUM, Tag.LENGTH},
+        result_count=5,
+        allow_karaoke=False,
+        min_score=0.1,
+        max_score=0.7
+    )
 
     @property
     @abstractmethod
     def _remote_types(self) -> RemoteObjectClasses:
         raise NotImplementedError
 
-    def __init__(self, api: RemoteAPI, allow_karaoke: bool = False, use_cache: bool = False):
-        super().__init__(allow_karaoke=allow_karaoke)
+    def __init__(self, api: RemoteAPI, use_cache: bool = False):
+        super().__init__()
         self.api = api
         self.use_cache = use_cache
 
@@ -237,16 +234,17 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
                     f"Currently only able to search for Track items, not {item.__class__.__name__}"
                 )
 
-            results = self._get_results(item, kind=RemoteObjectType.TRACK, settings=ITEMS_SETTINGS)
+            results = self._get_results(item, kind=RemoteObjectType.TRACK, settings=self.settings_items)
             if not results:
                 continue
 
             result = self.match(
                 item,
                 results=map(self._remote_types.track, results),
-                match_on=ITEMS_SETTINGS.match_fields,
-                min_score=ITEMS_SETTINGS.min_score,
-                max_score=ITEMS_SETTINGS.max_score
+                match_on=self.settings_items.match_fields,
+                min_score=self.settings_items.min_score,
+                max_score=self.settings_items.max_score,
+                allow_karaoke=self.settings_items.allow_karaoke,
             )
 
             if result and result.has_uri:
@@ -257,7 +255,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
         if all(item.has_uri for item in collection):
             return
 
-        results = self._get_results(collection, kind=RemoteObjectType.ALBUM, settings=ALBUM_SETTINGS)
+        results = self._get_results(collection, kind=RemoteObjectType.ALBUM, settings=self.settings_albums)
 
         # convert to RemoteAlbum objects and extend items on each response
         albums = list(map(self._remote_types.album, results))
@@ -271,9 +269,10 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
         result = self.match(
             collection,
             results=albums,
-            match_on=ALBUM_SETTINGS.match_fields,
-            min_score=ALBUM_SETTINGS.min_score,
-            max_score=ALBUM_SETTINGS.max_score
+            match_on=self.settings_albums.match_fields,
+            min_score=self.settings_albums.min_score,
+            max_score=self.settings_albums.max_score,
+            allow_karaoke=self.settings_albums.allow_karaoke,
         )
 
         if not result:
@@ -285,8 +284,9 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
                 item,
                 results=result.items,
                 match_on=[Tag.TITLE],
-                min_score=ITEMS_SETTINGS.min_score,
-                max_score=ITEMS_SETTINGS.max_score
+                min_score=self.settings_items.min_score,
+                max_score=self.settings_items.max_score,
+                allow_karaoke=self.settings_items.allow_karaoke,
             )
             if item_result:
                 item.uri = item_result.uri

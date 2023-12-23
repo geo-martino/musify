@@ -30,7 +30,7 @@ class TestItemMatcher(PrettyPrinterTester):
         ItemMatcher.reduce_name_score_on = {"live", "demo", "acoustic"}
         ItemMatcher.reduce_name_score_factor = 0.5
 
-        return ItemMatcher(allow_karaoke=False)
+        return ItemMatcher()
 
     @pytest.fixture
     def track1(self) -> LocalTrack:
@@ -195,4 +195,4 @@ class TestItemMatcher(PrettyPrinterTester):
         assert matcher.match(track1, [track2, track4, track3], min_score=0.2, max_score=0.8) == track4
         assert matcher(track1, [track2, track4, track3], min_score=0.2, max_score=0.8) == track4
 
-    # TODO: add test for _get_scores on ItemCollection
+    # TODO: add test for _get_scores on ItemCollection and allow_karaoke

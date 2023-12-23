@@ -75,12 +75,7 @@ class ItemMatcher(ItemProcessor, Logger):
         This set is always combined with the ``karaoke_tags``.
     :ivar reduce_name_score_factor: The factor to reduce a name score on when a word from
         ``_reduce_name_score_on`` is found in the result but not in the source :py:class:`Item`.
-
-    :param allow_karaoke: When True, items determined to be karaoke are allowed when matching added items.
-        Skip karaoke results otherwise. Karaoke items are identified using the ``karaoke_tags`` attribute.
     """
-
-    __slots__ = "allow_karaoke"
 
     karaoke_tags = {"karaoke", "backing", "instrumental"}
     year_range = 10
@@ -126,10 +121,6 @@ class ItemMatcher(ItemProcessor, Logger):
         if extra:
             log.extend(extra)
         self._log_padded(log, pad='<')
-
-    def __init__(self, allow_karaoke: bool = False):
-        super().__init__()
-        self.allow_karaoke = allow_karaoke
 
     def clean_tags(self, source: BaseObject) -> None:
         """
@@ -307,7 +298,8 @@ class ItemMatcher(ItemProcessor, Logger):
             results: Iterable[T],
             min_score: float = 0.1,
             max_score: float = 0.8,
-            match_on: UnitIterable[TagField] = ALL_TAG_FIELDS
+            match_on: UnitIterable[TagField] = ALL_TAG_FIELDS,
+            allow_karaoke: bool = False,
     ) -> T | None:
         """
         Perform match algorithm for a given item and its results.
@@ -320,6 +312,8 @@ class ItemMatcher(ItemProcessor, Logger):
             Value will be limited to between 0.01 and 1.0.
         :param match_on: List of tags to match on. Currently only the following fields are supported:
             title, artist, album, year, length.
+        :param allow_karaoke: When True, items determined to be karaoke are allowed when matching added items.
+            Skip karaoke results otherwise. Karaoke items are identified using the ``karaoke_tags`` attribute.
         :return: T. The item that matched best if found, None if no item matched conditions.
         """
         if not source.clean_tags:
@@ -333,7 +327,9 @@ class ItemMatcher(ItemProcessor, Logger):
             else:
                 match_on_filtered.add(field)
 
-        score, result = self._score(source=source, results=results, max_score=max_score, match_on=match_on_filtered)
+        score, result = self._score(
+            source=source, results=results, max_score=max_score, match_on=match_on_filtered, allow_karaoke=allow_karaoke
+        )
 
         min_score = limit_value(min_score, floor=0.01, ceil=1.0)
         if score > min_score:
@@ -348,7 +344,12 @@ class ItemMatcher(ItemProcessor, Logger):
             self._log_test(source=source, result=result, test=score, extra=[f"NO MATCH: {score}<{min_score}"])
 
     def _score[T: (Track, Album)](
-            self, source: T, results: Iterable[T], max_score: float = 0.8, match_on: set[TagField] = ALL_TAG_FIELDS
+            self,
+            source: T,
+            results: Iterable[T],
+            max_score: float = 0.8,
+            match_on: set[TagField] = ALL_TAG_FIELDS,
+            allow_karaoke: bool = False,
     ) -> tuple[float, T | None]:
         """
         Gets the score and result from a cleaned source and a given list of results.
@@ -359,6 +360,8 @@ class ItemMatcher(ItemProcessor, Logger):
             Value will be limited to between 0.01 and 1.0.
         :param match_on: List of tags to match on. Currently only the following fields are supported:
             title, artist, album, year, length.
+        :param allow_karaoke: When True, items determined to be karaoke are allowed when matching added items.
+            Skip karaoke results otherwise. Karaoke items are identified using the ``karaoke_tags`` attribute.
         :return: Tuple of (the score between 0-1, the item that had the best score)
         """
         if not results:
@@ -372,7 +375,9 @@ class ItemMatcher(ItemProcessor, Logger):
 
         for current_result in results:
             self.clean_tags(current_result)
-            scores = self._get_scores(source=source, result=current_result, match_on=match_on)
+            scores = self._get_scores(
+                source=source, result=current_result, match_on=match_on, allow_karaoke=allow_karaoke
+            )
             if not scores:
                 continue
 
@@ -389,7 +394,7 @@ class ItemMatcher(ItemProcessor, Logger):
         return best_score, best_result
 
     def _get_scores[T: (Track, Album)](
-            self, source: T, result: T, match_on: set[TagField] = ALL_TAG_FIELDS
+            self, source: T, result: T, match_on: set[TagField] = ALL_TAG_FIELDS, allow_karaoke: bool = False
     ) -> dict[TagField, float]:
         """
         Gets the scores from a cleaned source and result to match on.
@@ -400,9 +405,11 @@ class ItemMatcher(ItemProcessor, Logger):
         :param result: Result item to compare against with assigned ``clean_tags``.
         :param match_on: List of tags to match on. Currently only the following fields are supported:
             title, artist, album, year, length.
+        :param allow_karaoke: When True, items determined to be karaoke are allowed when matching added items.
+            Skip karaoke results otherwise. Karaoke items are identified using the ``karaoke_tags`` attribute.
         :return: Map of score type name to score.
         """
-        if not self.allow_karaoke and self.match_not_karaoke(source, result) < 1:
+        if not allow_karaoke and self.match_not_karaoke(source, result) < 1:
             return {}
 
         scores_current: dict[TagField, float] = {}
@@ -441,7 +448,6 @@ class ItemMatcher(ItemProcessor, Logger):
                 "split_all": self.clean_tags_split_all,
                 "config": self.clean_tags_config,
             },
-            "allow_karaoke": self.allow_karaoke,
             "karaoke_tags": self.karaoke_tags,
             "year_range": self.year_range,
         }
@@ -453,7 +459,6 @@ class ItemMatcher(ItemProcessor, Logger):
                 "split_all": [value for value in self.clean_tags_split_all],
                 "config": [config.json() for config in self.clean_tags_config],
             },
-            "allow_karaoke": self.allow_karaoke,
             "karaoke_tags": [value for value in self.karaoke_tags],
             "year_range": self.year_range,
         }

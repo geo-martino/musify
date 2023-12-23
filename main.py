@@ -21,7 +21,6 @@ from syncify.local.collection import LocalFolder
 from syncify.local.library import LocalLibrary, MusicBee
 from syncify.remote.api import RemoteAPI
 from syncify.remote.library.library import RemoteLibrary
-from syncify.remote.processors.search import ITEMS_SETTINGS
 from syncify.report import Report
 from syncify.settings import Settings
 from syncify.utils.helpers import get_user_input
@@ -385,8 +384,7 @@ class Syncify(Settings, Report):
 
         folders = self._get_limited_folders()
 
-        allow_karaoke = ITEMS_SETTINGS.allow_karaoke
-        checker = self.remote_config.checker(api=self.api, allow_karaoke=allow_karaoke)
+        checker = self.remote_config.checker(api=self.api)
         check_results = checker.check(folders, interval=self.cfg_run.get("interval", 10))
 
         if check_results:
@@ -414,12 +412,8 @@ class Syncify(Settings, Report):
             self.print_line()
             return
 
-        allow_karaoke = ITEMS_SETTINGS.allow_karaoke
-        searcher = self.remote_config.searcher(api=self.api, allow_karaoke=allow_karaoke)
-        searcher.search(albums)
-
-        checker = self.remote_config.checker(api=self.api, allow_karaoke=allow_karaoke)
-        checker.check(albums, interval=self.cfg_run.get("interval", 10))
+        self.remote_config.searcher(api=self.api).search(albums)
+        self.remote_config.checker(api=self.api).check(albums, interval=self.cfg_run.get("interval", 10))
 
         self.logger.info(f"\33[1;95m ->\33[1;97m Updating tags for {len(self.local_library)} tracks: uri \33[0m")
         results = self.local_library.save_tracks(tags=LocalTrackField.URI, replace=True, dry_run=self.dry_run)
