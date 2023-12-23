@@ -3,8 +3,8 @@ from collections.abc import Mapping, Sequence, Iterable, Collection
 from dataclasses import dataclass, field
 from typing import Any
 
-from syncify.abstract.collection import ItemCollection, Album
-from syncify.abstract.enums import Field, FieldCombined
+from syncify.abstract.collection import ItemCollection
+from syncify.abstract.enums import TagField, TagFieldCombined as Tag
 from syncify.abstract.item import Item, Track, BaseObject
 from syncify.abstract.misc import Result
 from syncify.processors.match import ItemMatcher
@@ -29,7 +29,7 @@ class ItemSearchResult(Result):
 
 
 @dataclass(frozen=True)
-class Algorithm:
+class SearchSettings:
     """
     Key settings related to a search algorithm.
 
@@ -46,40 +46,37 @@ class Algorithm:
     :ivar min_score: The maximum score for an item to be considered a perfect match.
         After this score is reached by an item, any other items are disregarded as potential matches.
     """
-    search_fields_1: Iterable[str]
-    match_fields: set[Field]
+    search_fields_1: Sequence[TagField]
+    match_fields: TagField | Iterable[TagField]
     result_count: int
     allow_karaoke: bool = False
 
     min_score: float = 0.1
     max_score: float = 0.8
 
-    search_fields_2: Iterable[str] = ()
-    search_fields_3: Iterable[str] = ()
+    search_fields_2: Iterable[TagField] = ()
+    search_fields_3: Iterable[TagField] = ()
 
 
-@dataclass
-class AlgorithmSettings:
-    """Stores algorithm settings for the search operation"""
-    ITEMS: Algorithm = Algorithm(
-        search_fields_1=["name", "artist"],
-        search_fields_2=["name", "album"],
-        search_fields_3=["name"],
-        match_fields={FieldCombined.TITLE, FieldCombined.ARTIST, FieldCombined.ALBUM, FieldCombined.LENGTH},
-        result_count=10,
-        allow_karaoke=False,
-        min_score=0.1,
-        max_score=0.
-    )
-    ALBUM: Algorithm = Algorithm(
-        search_fields_1=["name", "artist"],
-        search_fields_2=["name"],
-        match_fields={FieldCombined.ARTIST, FieldCombined.ALBUM, FieldCombined.LENGTH},
-        result_count=5,
-        allow_karaoke=False,
-        min_score=0.1,
-        max_score=0.7
-    )
+ITEMS_SETTINGS = SearchSettings(
+    search_fields_1=[Tag.NAME, Tag.ARTIST],
+    search_fields_2=[Tag.NAME, Tag.ALBUM],
+    search_fields_3=[Tag.NAME],
+    match_fields={Tag.TITLE, Tag.ARTIST, Tag.ALBUM, Tag.LENGTH},
+    result_count=10,
+    allow_karaoke=False,
+    min_score=0.1,
+    max_score=0.8
+)
+ALBUM_SETTINGS = SearchSettings(
+    search_fields_1=[Tag.NAME, Tag.ARTIST],
+    search_fields_2=[Tag.NAME],
+    match_fields={Tag.ARTIST, Tag.ALBUM, Tag.LENGTH},
+    result_count=5,
+    allow_karaoke=False,
+    min_score=0.1,
+    max_score=0.7
+)
 
 
 class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
@@ -89,6 +86,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
     :param api: An API object for calling the remote query endpoint.
     :param allow_karaoke: When True, items determined to be karaoke are allowed when matching added items.
         Skip karaoke results otherwise.
+    :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
     """
 
     __slots__ = "api"
@@ -98,35 +96,35 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
     def _remote_types(self) -> RemoteObjectClasses:
         raise NotImplementedError
 
-    def __init__(self, api: RemoteAPI, allow_karaoke: bool = False):
+    def __init__(self, api: RemoteAPI, allow_karaoke: bool = False, use_cache: bool = False):
         super().__init__(allow_karaoke=allow_karaoke)
         self.api = api
+        self.use_cache = use_cache
 
     def _get_results(
-            self, item: BaseObject, kind: RemoteObjectType, algorithm: Algorithm
+            self, item: BaseObject, kind: RemoteObjectType, settings: SearchSettings
     ) -> list[dict[str, Any]] | None:
         """Query the API to get results for the current item based on algorithm settings"""
         self.clean_tags(item)
 
-        def execute_query(keys: Iterable[str]) -> tuple[list[dict[str, Any]], str]:
+        def execute_query(keys: Iterable[TagField]) -> tuple[list[dict[str, Any]], str]:
             """Generate and execute the query against the API for the given item's cleaned ``keys``"""
-            attributes = set(item.clean_tags.get(key) for key in keys)
-            q = " ".join(attr for attr in attributes if attr)
-            return self.api.query(q, kind=kind, limit=algorithm.result_count), q
+            attributes = [item.clean_tags.get(key) for key in keys]
+            q = " ".join(str(attr) for attr in attributes if attr)
+            return self.api.query(q, kind=kind, limit=settings.result_count), q
 
-        results, query = execute_query(algorithm.search_fields_1)
-        if not results and algorithm.search_fields_2:
-            results, query = execute_query(algorithm.search_fields_2)
-        if not results and algorithm.search_fields_3:
-            results, query = execute_query(algorithm.search_fields_3)
+        results, query = execute_query(settings.search_fields_1)
+        if not results and settings.search_fields_2:
+            results, query = execute_query(settings.search_fields_2)
+        if not results and settings.search_fields_3:
+            results, query = execute_query(settings.search_fields_3)
 
-        if not results:
-            self._log_padded([item.name, f"Query: {query}", "Match failed: No results."], pad="<")
-        else:
+        if results:
             self._log_padded([item.name, f"Query: {query}", f"{len(results)} results"])
             return results
+        self._log_padded([item.name, f"Query: {query}", "Match failed: No results."], pad="<")
 
-    def _log_results(self, results: Mapping[ItemCollection, ItemSearchResult]) -> None:
+    def _log_results(self, results: Mapping[str, ItemSearchResult]) -> None:
         """Logs the final results of the ItemSearcher"""
         if not results:
             return
@@ -138,7 +136,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
         total_skipped = 0
         total_all = 0
 
-        for collection, result in results.items():
+        for name, result in results.items():
             matched = len(result.matched)
             unmatched = len(result.unmatched)
             skipped = len(result.skipped)
@@ -154,7 +152,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
             colour3 = "\33[92m" if skipped == 0 else "\33[93m"
 
             self.logger.report(
-                f"\33[1m{self.align_and_truncate(collection.name, max_width=max_width)} \33[0m|"
+                f"\33[1m{self.align_and_truncate(name, max_width=max_width)} \33[0m|"
                 f"{colour1}{matched:>6} matched \33[0m| "
                 f"{colour2}{unmatched:>6} unmatched \33[0m| "
                 f"{colour3}{skipped:>6} skipped \33[0m| "
@@ -170,98 +168,125 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
         )
         self.print_line(REPORT)
 
-    def search(self, collections: Collection[ItemCollection]) -> dict[ItemCollection, ItemSearchResult]:
+    # noinspection PyMethodOverriding
+    def __call__(self, collections: Collection[ItemCollection]) -> dict[str, ItemSearchResult]:
         """
         Searches for remote matches for the given list of item collections.
 
-        :return: Map of the collection to its :py:class:`ItemSearchResult` object.
+        :return: Map of the collection's name to its :py:class:`ItemSearchResult` object.
         """
-        self.logger.debug("Searching items: START")
+        return self.search(collections=collections)
+
+    def search(self, collections: Collection[ItemCollection]) -> dict[str, ItemSearchResult]:
+        """
+        Searches for remote matches for the given list of item collections.
+
+        :return: Map of the collection's name to its :py:class:`ItemSearchResult` object.
+        """
+        self.logger.debug("Searching: START")
         if not [item for c in collections for item in c.items if item.has_uri is None]:
             self.logger.debug("\33[93mNo items to search. \33[0m")
             return {}
 
+        kinds = {coll.__class__.__name__ for coll in collections}
+        kind = kinds.pop() if len(kinds) == 1 else "collection"
         self.logger.info(
             f"\33[1;95m ->\33[1;97m "
-            f"Searching for matches on {self.remote_source} for {len(collections)} collections\33[0m"
+            f"Searching for matches on {self.remote_source} for {len(collections)} {kind}s\33[0m"
         )
 
-        search_results: dict[ItemCollection, ItemSearchResult] = {}
-        for collection in self.get_progress_bar(iterable=collections, desc="Searching", unit="collections"):
-            if not [item for item in collection.items if item.has_uri is None]:
-                self._log_padded([collection.name, "Skipping search, no tracks to search"], pad='<')
-            skipped = tuple(item for item in collection if item.has_uri is not None)
-
-            if getattr(collection, "compilation", True) is not False:
-                self._log_padded([collection.name, "Searching with item algorithm"], pad='>')
-                self._search_items(collection=collection)
-            else:
-                self._log_padded([collection.name, "Searching with album algorithm"], pad='>')
-                self._search_album(collection=collection)
-                missing = [item for item in collection.items if item.has_uri is None]
-                if missing:
-                    self._log_padded(
-                        [collection.name, f"Searching for {len(missing)} unmatched items in this collection"]
-                    )
-                    self._search_items(collection=collection)
-
-            search_results[collection] = ItemSearchResult(
-                matched=tuple(item for item in collection if item.has_uri),
-                unmatched=tuple(item for item in collection if item.has_uri is None),
-                skipped=skipped
-            )
+        bar = self.get_progress_bar(iterable=collections, desc="Searching", unit=f"{kind}s")
+        search_results = {coll.name: self._search_collection(collection=coll) for coll in bar}
 
         self.print_line()
         self._log_results(search_results)
-        self.logger.debug("Searching items: DONE\n")
+        self.logger.debug("Searching: DONE\n")
         return search_results
 
-    def _search_items(self, collection: ItemCollection) -> None:
+    def _search_collection(self, collection: ItemCollection) -> ItemSearchResult:
+        kind = collection.__class__.__name__
+
+        skipped = tuple(item for item in collection if item.has_uri is not None)
+        if len(skipped) == len(collection):
+            self._log_padded([collection.name, "Skipping search, no tracks to search"], pad='<')
+
+        if getattr(collection, "compilation", True) is False:
+            self._log_padded([collection.name, "Searching with album algorithm"], pad='>')
+            self._search_album(collection=collection)
+
+            missing = [item for item in collection.items if item.has_uri is None]
+            if missing:
+                self._log_padded([collection.name, f"Searching for {len(missing)} unmatched items in this {kind}"])
+                self._search_items(collection=collection)
+        else:
+            self._log_padded([collection.name, "Searching with item algorithm"], pad='>')
+            self._search_items(collection=collection)
+
+        return ItemSearchResult(
+            matched=tuple(item for item in collection if item.has_uri and item not in skipped),
+            unmatched=tuple(item for item in collection if item.has_uri is None and item not in skipped),
+            skipped=skipped
+        )
+
+    def _search_items(self, collection: Iterable[Item]) -> None:
         """Search for matches on individual items in an item collection that have ``None`` on ``has_uri`` attribute"""
-        algorithm = AlgorithmSettings.ITEMS
-        for item in [item for item in collection.items if item.has_uri is None]:
+        for item in filter(lambda i: i.has_uri is None, collection):
             if not isinstance(item, Track):
                 # TODO: expand search logic to include all item types (low priority)
                 raise NotImplementedError(
                     f"Currently only able to search for Track items, not {item.__class__.__name__}"
                 )
 
-            results = self._get_results(item, kind=RemoteObjectType.TRACK, algorithm=algorithm)
-            tracks = list(map(self._remote_types.track, results))
-            result = self(
+            results = self._get_results(item, kind=RemoteObjectType.TRACK, settings=ITEMS_SETTINGS)
+            if not results:
+                continue
+
+            result = self.match(
                 item,
-                results=tracks,
-                match_on=algorithm.match_fields,
-                min_score=algorithm.min_score,
-                max_score=algorithm.max_score
+                results=map(self._remote_types.track, results),
+                match_on=ITEMS_SETTINGS.match_fields,
+                min_score=ITEMS_SETTINGS.min_score,
+                max_score=ITEMS_SETTINGS.max_score
             )
 
             if result and result.has_uri:
                 item.uri = result.uri
 
-    def _search_album(self, collection: Album) -> None:
+    def _search_album(self, collection: ItemCollection) -> None:
         """Search for matches on an entire album"""
-        algorithm = AlgorithmSettings.ALBUM
-        results = self._get_results(collection, kind=RemoteObjectType.ALBUM, algorithm=algorithm)
-        albums = [self._remote_types.album(r) for r in results]
-        [album.reload() for album in albums]
+        if all(item.has_uri for item in collection):
+            return
 
-        # order and prioritise results that are closer to the item count of the input collection
+        results = self._get_results(collection, kind=RemoteObjectType.ALBUM, settings=ALBUM_SETTINGS)
+
+        # convert to RemoteAlbum objects and extend items on each response
+        albums = list(map(self._remote_types.album, results))
+        key = self.api.collection_item_map[RemoteObjectType.ALBUM].name.casefold() + "s"
+        for album in albums:
+            self.api.extend_items(album.response, unit="albums", key=key, use_cache=self.use_cache)
+
+        # order to prioritise results that are closer to the item count of the input collection
         albums.sort(key=lambda x: abs(x.track_total - len(collection)))
-        result = self(
+        # noinspection PyTypeChecker
+        result = self.match(
             collection,
             results=albums,
-            match_on=algorithm.match_fields,
-            min_score=algorithm.min_score,
-            max_score=algorithm.max_score
+            match_on=ALBUM_SETTINGS.match_fields,
+            min_score=ALBUM_SETTINGS.min_score,
+            max_score=ALBUM_SETTINGS.max_score
         )
 
         if not result:
             return
 
-        for item in collection:
-            item_result = self(
-                item, results=result.items, match_on=[FieldCombined.TITLE], min_score=algorithm.min_score, max_score=0.8
+        for item in filter(lambda i: i.has_uri is None, collection):
+            # match items back onto the result to discern which URI matches which
+            item_result = self.match(
+                item,
+                results=result.items,
+                match_on=[Tag.TITLE],
+                min_score=ITEMS_SETTINGS.min_score,
+                max_score=ITEMS_SETTINGS.max_score
             )
             if item_result:
                 item.uri = item_result.uri

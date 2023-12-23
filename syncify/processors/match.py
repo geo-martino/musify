@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from syncify.abstract.collection import Album, ItemCollection
-from syncify.abstract.enums import Field, FieldCombined, ALL_FIELDS
+from syncify.abstract.enums import TagField, TagFieldCombined as Tag, ALL_TAG_FIELDS
 from syncify.abstract.item import Track, BaseObject
 from syncify.processors.base import ItemProcessor
 from syncify.utils import UnitIterable
@@ -18,13 +18,13 @@ class CleanTagConfig:
     """
     Config for processing string-type tag values before matching with :py:class:`ItemMatcher`
 
-    :ivar name: The name of the tag to clean.
+    :ivar tag: The name of the tag to clean.
     :ivar _remove: A set of string values to remove from this tag.
     :ivar _split: A set of string values for which the cleaner will
         slice the tag on and remove anything that comes after.
     :ivar _preprocess: A function to apply before the _remove and _split values are applied.
     """
-    name: str
+    tag: TagField
     _remove: set[str] | None = None
     _split: set[str] | None = None
     _preprocess: Callable[[str], str] = None
@@ -46,7 +46,7 @@ class CleanTagConfig:
     def json(self) -> dict[str, Any]:
         """Return a dictionary representation of the key attributes of this object that is safe to output to JSON"""
         return {
-            "name": self.name,
+            "tag": self.tag.name.casefold(),
             "remove": [value for value in self.remove],
             "split": [value for value in self.split],
             "preprocess": self._preprocess is not None,
@@ -89,9 +89,9 @@ class ItemMatcher(ItemProcessor, Logger):
     clean_tags_remove_all = {"the", "a", "&", "and"}
     clean_tags_split_all = set()
     clean_tags_config = (
-        CleanTagConfig(name="title", _remove={"part"}, _split={"featuring", "feat.", "ft.", "/"}),
-        CleanTagConfig(name="artist", _split={"featuring", "feat.", "ft.", "vs"}),
-        CleanTagConfig(name="album", _remove={"ep"}, _preprocess=lambda x: x.split('-')[0])
+        CleanTagConfig(tag=Tag.TITLE, _remove={"part"}, _split={"featuring", "feat.", "ft.", "/"}),
+        CleanTagConfig(tag=Tag.ARTIST, _split={"featuring", "feat.", "ft.", "vs"}),
+        CleanTagConfig(tag=Tag.ALBUM, _remove={"ep"}, _preprocess=lambda x: x.split('-')[0])
     )
 
     # config for name score reduction
@@ -153,23 +153,24 @@ class ItemMatcher(ItemProcessor, Logger):
             return re.sub(r"[^\w']+", ' ', val).strip()
 
         source.clean_tags.clear()
-        source.clean_tags["name"] = ""
+        source.clean_tags[Tag.NAME] = ""
         name = source.name
 
         # process string tags according to config
         for config in self.clean_tags_config:
-            value = getattr(source, config.name, None)
+            tag_name = config.tag.to_tag().pop()
+            value = getattr(source, tag_name, None)
             if not value:
-                source.clean_tags[config.name] = ""
+                source.clean_tags[config.tag] = ""
                 continue
 
             value_cleaned = process(value, conf=config)
-            source.clean_tags[config.name] = value_cleaned
+            source.clean_tags[config.tag] = value_cleaned
             if name == value:
-                source.clean_tags["name"] = value_cleaned
+                source.clean_tags[Tag.NAME] = value_cleaned
 
-        source.clean_tags["length"] = getattr(source, "length", None)
-        source.clean_tags["year"] = getattr(source, "year", None)
+        source.clean_tags[Tag.LENGTH] = getattr(source, Tag.LENGTH.name.casefold(), None)
+        source.clean_tags[Tag.YEAR] = getattr(source, Tag.YEAR.name.casefold(), None)
 
     ###########################################################################
     ## Conditions
@@ -194,8 +195,8 @@ class ItemMatcher(ItemProcessor, Logger):
     def match_name[T: (Track, Album)](self, source: T, result: T) -> float:
         """Match on names and return a score between 0-1. Score=0 when either value is None."""
         score = 0
-        source_val = source.clean_tags["name"]
-        result_val = result.clean_tags["name"]
+        source_val = source.clean_tags[Tag.NAME]
+        result_val = result.clean_tags[Tag.NAME]
 
         if source_val and result_val:
             score = sum(word in result_val for word in source_val.split()) / len(source_val.split())
@@ -217,8 +218,8 @@ class ItemMatcher(ItemProcessor, Logger):
         match on artist 3 is scaled by 1/3 etc.
         """
         score = 0
-        source_val = source.clean_tags["artist"]
-        result_val = result.clean_tags["artist"]
+        source_val = source.clean_tags[Tag.ARTIST]
+        result_val = result.clean_tags[Tag.ARTIST]
 
         if not source_val or not result_val:
             self._log_test(source=source, result=result, test=score, extra=[f"{source_val} -> {result_val}"])
@@ -235,8 +236,8 @@ class ItemMatcher(ItemProcessor, Logger):
     def match_album[T: (Track, Album)](self, source: T, result: T) -> float:
         """Match on album and return a score between 0-1. Score=0 when either value is None."""
         score = 0
-        source_val = source.clean_tags["album"]
-        result_val = result.clean_tags["album"]
+        source_val = source.clean_tags[Tag.ALBUM]
+        result_val = result.clean_tags[Tag.ALBUM]
 
         if source_val and result_val:
             score = sum(word in result_val for word in source_val.split()) / len(source_val.split())
@@ -247,8 +248,8 @@ class ItemMatcher(ItemProcessor, Logger):
     def match_length[T: (Track, Album)](self, source: T, result: T) -> float:
         """Match on length and return a score between 0-1. Score=0 when either value is None."""
         score = 0
-        source_val = source.clean_tags["length"]
-        result_val = result.clean_tags["length"]
+        source_val = source.clean_tags[Tag.LENGTH]
+        result_val = result.clean_tags[Tag.LENGTH]
 
         if source_val and result_val:
             score = max((source_val - abs(source_val - result_val)), 0) / source_val
@@ -265,8 +266,8 @@ class ItemMatcher(ItemProcessor, Logger):
         User may modify this max range via the ``year_range`` class attribute.
         """
         score = 0
-        source_val = source.clean_tags["year"]
-        result_val = result.clean_tags["year"]
+        source_val = source.clean_tags[Tag.YEAR]
+        result_val = result.clean_tags[Tag.YEAR]
 
         if source_val and result_val:
             score = max((self.year_range - abs(source_val - result_val)), 0) / self.year_range
@@ -275,7 +276,7 @@ class ItemMatcher(ItemProcessor, Logger):
         return score
 
     ###########################################################################
-    ## Algorithms
+    ## Score match
     ###########################################################################
     def __call__[T: (Track, Album)](
             self,
@@ -283,7 +284,7 @@ class ItemMatcher(ItemProcessor, Logger):
             results: Iterable[T],
             min_score: float = 0.1,
             max_score: float = 0.8,
-            match_on: UnitIterable[Field] = ALL_FIELDS
+            match_on: UnitIterable[TagField] = ALL_TAG_FIELDS
     ) -> T | None:
         """
         Perform score match algorithm for a given item and its results.
@@ -306,7 +307,7 @@ class ItemMatcher(ItemProcessor, Logger):
             results: Iterable[T],
             min_score: float = 0.1,
             max_score: float = 0.8,
-            match_on: UnitIterable[Field] = ALL_FIELDS
+            match_on: UnitIterable[TagField] = ALL_TAG_FIELDS
     ) -> T | None:
         """
         Perform match algorithm for a given item and its results.
@@ -327,7 +328,7 @@ class ItemMatcher(ItemProcessor, Logger):
         # process and limit match options
         match_on_filtered = set()
         for field in to_collection(match_on, set):
-            if field == FieldCombined.ALL:
+            if field == Tag.ALL:
                 match_on_filtered.update(field.all())
             else:
                 match_on_filtered.add(field)
@@ -347,7 +348,7 @@ class ItemMatcher(ItemProcessor, Logger):
             self._log_test(source=source, result=result, test=score, extra=[f"NO MATCH: {score}<{min_score}"])
 
     def _score[T: (Track, Album)](
-            self, source: T, results: Iterable[T], max_score: float = 0.8, match_on: set[Field] = ALL_FIELDS
+            self, source: T, results: Iterable[T], max_score: float = 0.8, match_on: set[TagField] = ALL_TAG_FIELDS
     ) -> tuple[float, T | None]:
         """
         Gets the score and result from a cleaned source and a given list of results.
@@ -388,8 +389,8 @@ class ItemMatcher(ItemProcessor, Logger):
         return best_score, best_result
 
     def _get_scores[T: (Track, Album)](
-            self, source: T, result: T, match_on: set[Field] = ALL_FIELDS
-    ) -> dict[str, float]:
+            self, source: T, result: T, match_on: set[TagField] = ALL_TAG_FIELDS
+    ) -> dict[TagField, float]:
         """
         Gets the scores from a cleaned source and result to match on.
         When an ItemCollection is given to match on, scores are also calculated for each of the items in the collection.
@@ -404,23 +405,18 @@ class ItemMatcher(ItemProcessor, Logger):
         if not self.allow_karaoke and self.match_not_karaoke(source, result) < 1:
             return {}
 
-        scores_current: dict[str, float] = {}
+        scores_current: dict[TagField, float] = {}
 
-        if FieldCombined.TITLE in match_on:
-            key = FieldCombined.TITLE.name.lower()
-            scores_current[key] = self.match_name(source=source, result=result)
-        if FieldCombined.ARTIST in match_on:
-            key = FieldCombined.ARTIST.name.lower()
-            scores_current[key] = self.match_artist(source=source, result=result)
-        if FieldCombined.ALBUM in match_on:
-            key = FieldCombined.ALBUM.name.lower()
-            scores_current[key] = self.match_album(source=source, result=result)
-        if FieldCombined.LENGTH in match_on:
-            key = FieldCombined.LENGTH.name.lower()
-            scores_current[key] = self.match_length(source=source, result=result)
-        if FieldCombined.YEAR in match_on:
-            key = FieldCombined.YEAR.name.lower()
-            scores_current[key] = self.match_year(source=source, result=result)
+        if Tag.TITLE in match_on:
+            scores_current[Tag.TITLE] = self.match_name(source=source, result=result)
+        if Tag.ARTIST in match_on:
+            scores_current[Tag.ARTIST] = self.match_artist(source=source, result=result)
+        if Tag.ALBUM in match_on:
+            scores_current[Tag.ALBUM] = self.match_album(source=source, result=result)
+        if Tag.LENGTH in match_on:
+            scores_current[Tag.LENGTH] = self.match_length(source=source, result=result)
+        if Tag.YEAR in match_on:
+            scores_current[Tag.YEAR] = self.match_year(source=source, result=result)
 
         if isinstance(source, ItemCollection) and isinstance(result, ItemCollection):
             # skip this if not a collection of items
@@ -430,11 +426,11 @@ class ItemMatcher(ItemProcessor, Logger):
                 return scores_current
 
             # also score all the items individually in the collection
-            scores_current["items"] = 0
+            scores_current[Tag.ALL] = 0
             for item in source.items:
                 self.clean_tags(item)
                 score, _ = self._score(source=item, results=result.items, match_on=match_on)
-                scores_current["items"] += score / len(source.items)
+                scores_current[Tag.ALL] += score / len(source.items)
 
         return scores_current
 

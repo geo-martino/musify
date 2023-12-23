@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod
-from collections.abc import MutableMapping, Mapping
 from typing import Any, Self
 
 from syncify.abstract.item import ObjectPrinterMixin
@@ -53,14 +52,9 @@ class RemoteObject(ObjectPrinterMixin, Remote, metaclass=ABCMeta):
         """The external URL of this item/collection."""
         raise NotImplementedError
 
-    @property
-    def response(self) -> Mapping[str, Any]:
-        """The stored API response for this item/collection."""
-        return self._response
-
-    def __init__(self, response: MutableMapping[str, Any]):
+    def __init__(self, response: dict[str, Any]):
         super().__init__()
-        self._response = response
+        self.response = response
         self._check_type()
 
     @abstractmethod

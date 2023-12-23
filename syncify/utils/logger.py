@@ -136,6 +136,7 @@ class Logger:
     detailed: bool = False
 
     def __init__(self):
+        super().__init__()
         if self.log_folder is None:
             self.set_dev()
 

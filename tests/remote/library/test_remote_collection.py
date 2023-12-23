@@ -63,7 +63,7 @@ class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, metaclass=ABC
     def remote_mock(self, *args, **kwargs) -> RemoteMock:
         """Yields a requests_mock setup to return valid responses for the current remote source as a pytest.fixture"""
         raise NotImplementedError
-    
+
     ###########################################################################
     ## Sync tests
     ###########################################################################
@@ -75,7 +75,7 @@ class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, metaclass=ABC
         as a pytest.fixture
         """
         raise NotImplementedError
-    
+
     @abstractmethod
     def sync_items(self, *args, **kwargs) -> list[RemoteTrack]:
         """
@@ -83,13 +83,13 @@ class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, metaclass=ABC
         as a pytest.fixture.
         """
         raise NotImplementedError
-    
+
     @staticmethod
     @abstractmethod
     def get_sync_uris(url: str, remote_mock: RemoteMock) -> tuple[list[str], list[str]]:
         """Return tuple of lists of URIs added and URIs cleared when applying sync operations"""
         raise NotImplementedError
-    
+
     @staticmethod
     def assert_playlist_loaded(sync_playlist: RemotePlaylist, remote_mock: RemoteMock, count: int = 1) -> None:
         """Assert the given playlist was fully reloaded through GET requests ``count`` number of times"""
@@ -97,7 +97,7 @@ class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, metaclass=ABC
 
         requests = remote_mock.get_requests(url=sync_playlist.url, method="GET")
         requests += remote_mock.get_requests(url=sync_playlist.url + "/tracks", method="GET")
-        
+
         assert len(requests) == pages * count
 
     @staticmethod

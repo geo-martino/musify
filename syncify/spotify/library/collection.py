@@ -46,7 +46,7 @@ class SpotifyCollectionLoader[T: SpotifyItem](SpotifyObjectLoaderMixin[T], Spoti
             if kind == RemoteObjectType.PLAYLIST:
                 value = cls.api.get_playlist_url(value)
 
-            obj._response = {"href": value}
+            obj.response = {"href": value}
             obj.reload(*args, **kwargs, extend_tracks=extend_tracks, use_cache=use_cache)
             return obj
 
@@ -128,7 +128,7 @@ class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[Spot
 
     @name.setter
     def name(self, value: str):
-        self._response["name"] = value
+        self.response["name"] = value
 
     @property
     def description(self):
@@ -136,7 +136,7 @@ class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[Spot
 
     @description.setter
     def description(self, value: str | None):
-        self._response["description"] = value
+        self.response["description"] = value
 
     @property
     def public(self):
@@ -145,7 +145,7 @@ class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[Spot
 
     @public.setter
     def public(self, value: bool):
-        self._response["public"] = value
+        self.response["public"] = value
         if value and self.collaborative:
             self.collaborative = False
 
@@ -158,7 +158,7 @@ class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[Spot
     def collaborative(self, value: bool):
         if value and self.public:
             raise SpotifyCollectionError("You can only set collaborative to true on non-public playlists.")
-        self._response["collaborative"] = value
+        self.response["collaborative"] = value
 
     @property
     def followers(self):
@@ -206,7 +206,7 @@ class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[Spot
             for track in self.response["tracks"]["items"]
         }
 
-    def __init__(self, response: MutableMapping[str, Any]):
+    def __init__(self, response: dict[str, Any]):
         super().__init__(response=response)
         self._tracks = [SpotifyTrack(track["track"]) for track in response["tracks"]["items"]]
         self._check_total()
@@ -298,7 +298,7 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTra
     def rating(self):
         return self.response.get("popularity")
 
-    def __init__(self, response: MutableMapping[str, Any]):
+    def __init__(self, response: dict[str, Any]):
         super().__init__(response=response)
 
         album_only = copy(response)
@@ -314,7 +314,7 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTra
             track.disc_total = self.disc_total
 
     def reload(
-            self, extend_artists: bool = False, extend_tracks: bool = False, use_cache: bool = True, *_, **__
+            self, extend_artists: bool = True, extend_tracks: bool = True, use_cache: bool = True, *_, **__
     ) -> None:
         self._check_for_api()
 

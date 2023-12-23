@@ -37,7 +37,7 @@ class TestSpotifyLibrary(RemoteLibraryTester):
         library.load()
 
         for pl in library.playlists.values():  # ensure all loaded playlists are owned by the authorised user
-            pl._response["owner"] = {k: v for k, v in remote_mock.user.items() if k in pl.response["owner"]}
+            pl.response["owner"] = {k: v for k, v in remote_mock.user.items() if k in pl.response["owner"]}
 
         return library
 

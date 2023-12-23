@@ -1,5 +1,4 @@
 from abc import ABCMeta
-from collections.abc import MutableMapping
 from typing import Any, Self
 
 from syncify.remote.enums import RemoteIDType, RemoteObjectType
@@ -60,7 +59,7 @@ class SpotifyArtist(SpotifyItemWranglerMixin, RemoteArtist):
 
         # set a mock response with URL to load from
         id_ = cls.extract_ids(value)[0]
-        obj._response = {
+        obj.response = {
             "href": cls.convert(id_, kind=RemoteObjectType.ARTIST, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
         }
         obj.reload(use_cache=use_cache)
@@ -209,7 +208,7 @@ class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
     def rating(self):
         return self.response.get("popularity")
 
-    def __init__(self, response: MutableMapping[str, Any]):
+    def __init__(self, response: dict[str, Any]):
         super().__init__(response=response)
 
         self._disc_total = None
@@ -224,7 +223,7 @@ class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
 
         # set a mock response with URL to load from
         id_ = cls.extract_ids(value)[0]
-        obj._response = {
+        obj.response = {
             "href": cls.convert(id_, kind=RemoteObjectType.TRACK, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
         }
         obj.reload(use_cache=use_cache)

@@ -26,11 +26,11 @@ class TestSpotifyAPICore:
         ("get_user_items", {"kind": ObjectType.PLAYLIST}, 1, 50)
     ], ids=idfn)
     def test_limit_param_limited(
-            self, 
-            method_name: str, 
+            self,
+            method_name: str,
             kwargs: dict[str, Any],
-            floor: int, 
-            ceil: int, 
+            floor: int,
+            ceil: int,
             api: SpotifyAPI,
             spotify_mock: SpotifyMock
     ):
@@ -61,7 +61,7 @@ class TestSpotifyAPICore:
         assert api.query(query="", kind=ObjectType.SHOW) == []
         # long queries that would cause the API to give an error should fail safely
         assert api.query(query=random_str(151, 200), kind=ObjectType.CHAPTER) == []
-    
+
     @pytest.mark.parametrize("kind,query,limit", [
         (ObjectType.PLAYLIST, "super cool playlist", 5),
         (ObjectType.TRACK, "track title", 10),

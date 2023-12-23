@@ -24,6 +24,8 @@ class TestXAutoPF(LocalPlaylistTester):
         # needed to ensure __setitem__ check passes
         tracks = random_tracks(randrange(5, 15))
         tracks.append(random_track(cls=tracks[0].__class__))
+        for track in tracks:
+            print(track)
         playlist = XAutoPF(path=path_playlist_xautopf_ra, tracks=tracks, check_existence=False)
         return playlist
 

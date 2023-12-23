@@ -16,15 +16,6 @@ from syncify.utils.helpers import limit_value
 class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
 
     items_key = "items"
-    collection_item_map = {
-        RemoteObjectType.PLAYLIST: RemoteObjectType.TRACK,
-        RemoteObjectType.ALBUM: RemoteObjectType.TRACK,
-        RemoteObjectType.AUDIOBOOK: RemoteObjectType.CHAPTER,
-        RemoteObjectType.SHOW: RemoteObjectType.EPISODE,
-    }
-    user_item_types = (
-            set(collection_item_map) | {RemoteObjectType.TRACK, RemoteObjectType.ARTIST, RemoteObjectType.EPISODE}
-    )
 
     def _get_unit(self, key: str | None = None, unit: str | None = None) -> str:
         """Determine the unit type to use in the progress bar"""
@@ -130,7 +121,11 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
         return results
 
     def extend_items(
-            self, items_block: MutableMapping[str, Any], key: str, unit: str, use_cache: bool = True,
+            self,
+            items_block: MutableMapping[str, Any],
+            key: str | None = None,
+            unit: str | None = None,
+            use_cache: bool = True,
     ) -> list[dict[str, Any]]:
         """
         Extend the items for a given ``items_block`` API response.
@@ -141,21 +136,22 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
 
         :param items_block: A remote API JSON response for an items type endpoint which includes required keys:
             ``total`` and either ``next`` or ``href``, plus optional keys ``previous``, ``limit``, ``items`` etc.
-        :param key: The child unit to use when selecting nested data for certain responses e.g. user's followed artists
-            and for logging.
+        :param key: The child unit to use when selecting nested data for certain responses
+            (e.g. user's followed artists) and for logging.
         :param unit: The parent unit to use for logging.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: API JSON responses for each item
         """
-        if key.rstrip("s") + "s" in items_block:
+        if key and key.rstrip("s") + "s" in items_block:
             items_block = items_block[key.rstrip("s") + "s"]
         if self.items_key not in items_block:
             items_block[self.items_key] = []
+        unit = unit or 'items'
 
         # enable progress bar for longer calls
         total = items_block["total"]
         initial = len(items_block[self.items_key])
-        bar = self.get_progress_bar(total=total, desc=f"Getting {unit}", unit=key, initial=initial)
+        bar = self.get_progress_bar(total=total, desc=f"Extending {unit}", unit=key, initial=initial)
 
         # this usually happens on the items block of a current user's playlist
         if "next" not in items_block:
@@ -175,7 +171,7 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
             log = [f"{log_count:>6}/{items_block["total"]:<6} {unit}"]
 
             response = self.get(items_block["next"], use_cache=use_cache, log_pad=95, log_extra=log)
-            if key.rstrip("s") + "s" in response:
+            if key and key.rstrip("s") + "s" in response:
                 response = response[key.rstrip("s") + "s"]
 
             sleep(0.1)

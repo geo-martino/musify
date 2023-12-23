@@ -83,6 +83,7 @@ class FieldCombined(Field):
     # that a mapping with a MusicBee field is not present for that enum
 
     ALL = 0
+    NAME = 1000
 
     # tags/core properties
     TITLE = 65
@@ -137,9 +138,6 @@ class FieldCombined(Field):
     FOLLOWERS = 946  # no MusicBee mapping
 
 
-ALL_FIELDS = frozenset(FieldCombined.all())
-
-
 @dataclass(frozen=True)
 class TagMap:
     """Map of human-friendly tag name to ID3 tag ids for a given file type"""
@@ -192,3 +190,69 @@ class TagField(Field):
         if isinstance(tags, cls):
             return tags.to_tag()
         return {t for tag in tags for t in tag.to_tag()}
+
+
+class TagFieldCombined(TagField):
+    """
+    Contains all possible TagField enums in this program.
+
+    This is used to ensure all TagField enum implementations have the same values for their enum names.
+    """
+    ALL = FieldCombined.ALL.value
+    NAME = FieldCombined.NAME.value
+
+    # tags/core properties
+    TITLE = FieldCombined.TITLE.value
+    ARTIST = FieldCombined.ARTIST.value
+    ALBUM = FieldCombined.ALBUM.value
+    ALBUM_ARTIST = FieldCombined.ALBUM_ARTIST.value
+    TRACK_NUMBER = FieldCombined.TRACK_NUMBER.value
+    TRACK_TOTAL = FieldCombined.TRACK_TOTAL.value
+    GENRES = FieldCombined.GENRES.value
+    YEAR = FieldCombined.YEAR.value
+    BPM = FieldCombined.BPM.value
+    KEY = FieldCombined.KEY.value
+    DISC_NUMBER = FieldCombined.DISC_NUMBER.value
+    DISC_TOTAL = FieldCombined.DISC_TOTAL.value
+    COMPILATION = FieldCombined.COMPILATION.value
+    COMMENTS = FieldCombined.COMMENTS.value
+    IMAGES = FieldCombined.IMAGES.value
+    LENGTH = FieldCombined.LENGTH.value
+    RATING = FieldCombined.RATING.value
+    COMPOSER = FieldCombined.COMPOSER.value
+    CONDUCTOR = FieldCombined.CONDUCTOR.value
+    PUBLISHER = FieldCombined.PUBLISHER.value
+
+    # file properties
+    PATH = FieldCombined.PATH.value
+    FOLDER = FieldCombined.FOLDER.value
+    FILENAME = FieldCombined.FILENAME.value
+    EXT = FieldCombined.EXT.value
+    SIZE = FieldCombined.SIZE.value
+    KIND = FieldCombined.KIND.value
+    CHANNELS = FieldCombined.CHANNELS.value
+    BIT_RATE = FieldCombined.BIT_RATE.value
+    BIT_DEPTH = FieldCombined.BIT_DEPTH.value
+    SAMPLE_RATE = FieldCombined.SAMPLE_RATE.value
+
+    # date properties
+    DATE_CREATED = FieldCombined.DATE_CREATED.value
+    DATE_MODIFIED = FieldCombined.DATE_MODIFIED.value
+    DATE_ADDED = FieldCombined.DATE_ADDED.value
+    LAST_PLAYED = FieldCombined.LAST_PLAYED.value
+
+    # miscellaneous properties
+    PLAY_COUNT = FieldCombined.PLAY_COUNT.value
+    DESCRIPTION = FieldCombined.DESCRIPTION.value
+
+    # remote properties
+    URI = FieldCombined.URI.value
+    USER_ID = FieldCombined.USER_ID.value
+    USER_NAME = FieldCombined.USER_NAME.value
+    OWNER_ID = FieldCombined.OWNER_ID.value
+    OWNER_NAME = FieldCombined.OWNER_NAME.value
+    FOLLOWERS = FieldCombined.FOLLOWERS.value
+
+
+ALL_FIELDS = frozenset(FieldCombined.all())
+ALL_TAG_FIELDS = frozenset(TagFieldCombined.all())

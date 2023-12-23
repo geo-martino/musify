@@ -132,7 +132,7 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
     @pytest.fixture(scope="class")
     def _response_valid(self, api: SpotifyAPI, spotify_mock: SpotifyMock) -> dict[str, Any]:
         response = deepcopy(next(pl for pl in spotify_mock.user_playlists if pl["tracks"]["total"] > 50))
-        api.extend_items(items_block=response, key="tracks", unit="tracks")
+        api.extend_items(items_block=response, key="tracks")
 
         spotify_mock.reset_mock()
         return response
@@ -190,20 +190,20 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
         assert pl.name == original_response["name"]
         new_name = "new name"
         pl.name = new_name
-        assert pl._response["name"] == new_name
+        assert pl.response["name"] == new_name
 
         assert pl.description == original_response["description"]
         new_description = "new description"
         pl.description = new_description
-        assert pl._response["description"] == new_description
+        assert pl.response["description"] == new_description
 
         assert pl.public is original_response["public"]
         pl.public = not original_response["public"]
-        assert pl._response["public"] is not original_response["public"]
+        assert pl.response["public"] is not original_response["public"]
 
         pl.public = False
         pl.collaborative = True
-        assert pl._response["collaborative"]
+        assert pl.response["collaborative"]
         pl.public = True
         assert not pl.collaborative
         with pytest.raises(SpotifyCollectionError):
@@ -214,29 +214,29 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
 
         assert pl.followers == original_response["followers"]["total"]
         new_followers = pl.followers + 20
-        pl._response["followers"]["total"] = new_followers
+        pl.response["followers"]["total"] = new_followers
         assert pl.followers == new_followers
 
         assert pl.owner_name == original_response["owner"]["display_name"]
         new_owner_name = "new owner name"
-        pl._response["owner"]["display_name"] = new_owner_name
+        pl.response["owner"]["display_name"] = new_owner_name
         assert pl.owner_name == new_owner_name
 
         assert pl.owner_id == original_response["owner"]["id"]
         new_owner_id = "new owner id"
-        pl._response["owner"]["id"] = new_owner_id
+        pl.response["owner"]["id"] = new_owner_id
         assert pl.owner_id == new_owner_id
 
         assert len(pl.tracks) == len(pl.response["tracks"]["items"]) == len(pl._tracks)
         assert pl.track_total == pl.response["tracks"]["total"]
 
         if not pl.has_image:
-            pl._response["images"] = [{"height": 200, "url": "old url"}]
+            pl.response["images"] = [{"height": 200, "url": "old url"}]
         images = {image["height"]: image["url"] for image in pl.response["images"]}
         assert len(pl.image_links) == 1
         assert pl.image_links["cover_front"] == next(url for height, url in images.items() if height == max(images))
         new_image_link = "new url"
-        pl._response["images"].append({"height": max(images) * 2, "url": new_image_link})
+        pl.response["images"].append({"height": max(images) * 2, "url": new_image_link})
         assert pl.image_links["cover_front"] == new_image_link
 
         original_uris = [track["track"]["uri"] for track in original_response["tracks"]["items"]]
@@ -247,7 +247,7 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
         assert pl.date_modified == max(pl.date_added.values())
         new_min_dt = datetime.strptime("2000-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ")
         new_max_dt = datetime.now().replace(tzinfo=None).replace(microsecond=0)
-        pl._response["tracks"]["items"].extend([
+        pl.response["tracks"]["items"].extend([
             {"added_at": new_min_dt.strftime("%Y-%m-%dT%H:%M:%SZ"), "track": {"uri": random_uri()}},
             {"added_at": new_max_dt.strftime("%Y-%m-%dT%H:%M:%SZ"), "track": {"uri": random_uri()}},
         ])
@@ -324,7 +324,7 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
 
         names = [pl["name"] for pl in spotify_mock.playlists]
         response = deepcopy(next(pl for pl in spotify_mock.playlists if names.count(pl["name"]) == 1))
-        api.extend_items(items_block=response, key="tracks", unit="tracks")
+        api.extend_items(items_block=response, key="tracks")
         pl = SpotifyPlaylist(response)
         url = pl.url
 
@@ -399,7 +399,7 @@ class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
             if album["tracks"]["total"] > len(album["tracks"]["items"]) > 5
             and album["genres"]
         ))
-        api.extend_items(items_block=response, key="tracks", unit="tracks")
+        api.extend_items(items_block=response, key="tracks")
 
         spotify_mock.reset_mock()
         return response
@@ -439,7 +439,7 @@ class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
         assert album.name == album.album
         assert album.album == original_response["name"]
         new_name = "new name"
-        album._response["name"] = new_name
+        album.response["name"] = new_name
         assert album.album == new_name
 
         assert len(album.tracks) == len(original_response["tracks"]["items"])
@@ -453,48 +453,48 @@ class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
         assert album.album_artist == album.artist
         assert len(album.artists) == len(original_artists)
         new_artists = ["artist 1", "artist 2"]
-        album._response["artists"] = [{"name": artist} for artist in new_artists]
+        album.response["artists"] = [{"name": artist} for artist in new_artists]
         assert album.artist == album.tag_sep.join(new_artists)
         assert album.album_artist == album.artist
 
         assert album.track_total == original_response["total_tracks"]
         new_track_total = album.track_total + 20
-        album._response["total_tracks"] = new_track_total
+        album.response["total_tracks"] = new_track_total
         assert album.track_total == new_track_total
 
         assert album.genres == [g.title() for g in original_response["genres"]]
         new_genres = ["electronic", "dance"]
-        album._response["genres"] = new_genres
+        album.response["genres"] = new_genres
         assert album.genres == [g.title() for g in new_genres]
 
         assert album.year == int(original_response["release_date"][:4])
         new_year = album.year + 20
-        album._response["release_date"] = f"{new_year}-12-01"
+        album.response["release_date"] = f"{new_year}-12-01"
         assert album.year == new_year
 
-        album._response["album_type"] = "compilation"
+        album.response["album_type"] = "compilation"
         assert album.compilation
-        album._response["album_type"] = "album"
+        album.response["album_type"] = "album"
         assert not album.compilation
 
         if not album.has_image:
-            album._response["images"] = [{"height": 200, "url": "old url"}]
+            album.response["images"] = [{"height": 200, "url": "old url"}]
         images = {image["height"]: image["url"] for image in album.response["images"]}
         assert len(album.image_links) == 1
         assert album.image_links["cover_front"] == next(url for height, url in images.items() if height == max(images))
         new_image_link = "new url"
-        album._response["images"].append({"height": max(images) * 2, "url": new_image_link})
+        album.response["images"].append({"height": max(images) * 2, "url": new_image_link})
         assert album.image_links["cover_front"] == new_image_link
 
         original_duration = int(sum(track["duration_ms"] for track in original_response["tracks"]["items"]) / 1000)
         assert int(album.length) == original_duration
         for track in album.tracks:
-            track._response["duration_ms"] += 2000
+            track.response["duration_ms"] += 2000
         assert int(album.length) == original_duration + (2 * len(album.tracks))
 
         assert album.rating == original_response["popularity"]
         new_rating = album.rating + 20
-        album._response["popularity"] = new_rating
+        album.response["popularity"] = new_rating
         assert album.rating == new_rating
 
     def test_reload(self, response_valid: dict[str, Any], api: SpotifyAPI):
@@ -513,7 +513,7 @@ class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
         assert album.compilation != is_compilation
 
         SpotifyAlbum.api = api
-        album.reload(extend_artists=True)
+        album.reload(extend_artists=True, extend_tracks=False)
         assert album.genres
         assert album.rating is not None
         assert album.compilation == is_compilation

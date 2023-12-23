@@ -13,7 +13,7 @@ import yaml
 
 from syncify import PROGRAM_NAME
 from syncify.local.exception import InvalidFileType
-from syncify.remote.processors.search import AlgorithmSettings
+from syncify.remote.processors.search import SearchSettings
 from syncify.spotify.api import API_AUTH_BASIC, API_AUTH_USER
 from syncify.utils.helpers import to_collection
 from syncify.utils.logger import Logger
@@ -153,7 +153,7 @@ class Settings(metaclass=ABCMeta):
 
         :raise LookupError: When the given algorithm name cannot be found in the AlgorithmSettings object.
         """
-        settings = list(AlgorithmSettings.__annotations__.keys())
+        settings = list(SearchSettings.__annotations__.keys())
 
         for cfg in [self.cfg_general] + list(self.cfg_functions.values()):
             search = cfg.get("spotify", {}).get("search", {})
@@ -165,7 +165,7 @@ class Settings(metaclass=ABCMeta):
                     f"'{algorithm}' search algorithm is invalid, use one of the following algorithms: "
                     ', '.join(settings)
                 )
-            search["algorithm"] = getattr(AlgorithmSettings, algorithm.strip().upper())
+            search["algorithm"] = getattr(SearchSettings, algorithm.strip().upper())
 
     ###########################################################################
     ## Wrangle Spotify settings

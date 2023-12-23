@@ -209,7 +209,7 @@ class SpotifyMock(RemoteMock):
             for kind in kinds:
                 values = self.item_type_map[ObjectType.from_name(kind)[0]]
                 available = len(values)
-                results[kind + "s"] = sample(values, k=min(available, limit - count))
+                results[kind + "s"] = values[offset: min(available, offset + limit - count)]
                 total += available
 
             return {
@@ -638,7 +638,7 @@ class SpotifyMock(RemoteMock):
         else:
             artists = [self.generate_artist(properties=False) for _ in range(randrange(1, 4))]
 
-        if use_stored:
+        if use_stored and self.tracks:
             items = deepcopy(sample(self.tracks, k=count))
         else:
             items = [self.generate_track(album=False, artists=False) for _ in range(count)]
@@ -741,7 +741,7 @@ class SpotifyMock(RemoteMock):
 
         items = []
         for _ in range(count):
-            if use_stored:
+            if use_stored and self.tracks:
                 track = deepcopy(choice(self.tracks))
             else:
                 track = self.generate_track(album=True, artists=True)

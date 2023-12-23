@@ -110,7 +110,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
             albums = {response["uri"]: response for response in album_responses}
             for track in self.tracks:
                 # noinspection PyProtectedMember
-                track._response["album"] = albums[track.response["album"]["uri"]]
+                track.response["album"] = albums[track.response["album"]["uri"]]
 
         if artists:  # enrich track artists
             artist_uris: set[str] = {artist["uri"] for track in self.tracks for artist in track.response["artists"]}
@@ -121,7 +121,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
             artists = {response["uri"]: response for response in artist_responses}
             for track in self.tracks:
                 # noinspection PyProtectedMember
-                track._response["artists"] = [artists[artist["uri"]] for artist in track.response["artists"]]
+                track.response["artists"] = [artists[artist["uri"]] for artist in track.response["artists"]]
 
         self.print_line()
         self.logger.debug(f"Enrich {self.remote_source} library: DONE\n")

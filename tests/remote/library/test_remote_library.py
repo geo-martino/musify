@@ -5,6 +5,7 @@ from typing import Any
 
 from syncify.abstract.collection import Playlist
 from syncify.abstract.item import Item
+from syncify.remote.api import RemoteAPI
 from syncify.remote.library.item import RemoteTrack
 from syncify.remote.library.library import RemoteLibrary
 from tests.abstract.collection import LibraryTester
@@ -16,7 +17,7 @@ from tests.remote.utils import RemoteMock
 class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMeta):
 
     @abstractmethod
-    def remote_api(self, *args, **kwargs) -> RemoteMock:
+    def remote_api(self, *args, **kwargs) -> RemoteAPI:
         """Yields a valid :py:class:`RemoteAPI` for the current remote source as a pytest.fixture"""
         raise NotImplementedError
 

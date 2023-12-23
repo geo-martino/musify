@@ -16,11 +16,11 @@ def random_str(start: int = 1, stop: int = 20) -> str:
     return "".join(choice(string.ascii_letters) for _ in range(range_))
 
 
-def random_file(tmp_path: str, size: int = randrange(6000, 10000000)) -> str:
+def random_file(tmp_path: str, size: int | None = None) -> str:
     """Generates a random file of a given ``size`` in bytes in the test cache folder and returns its path."""
     path = join(tmp_path, random_str(10, 20) + ".txt")
     with open(path, 'w') as f:
-        for i in range(0, size):
+        for i in range(0, size or randrange(6000, 10000000)):
             f.write(choice(string.ascii_letters))
     return path
 
@@ -81,6 +81,6 @@ GENRES: tuple[str, ...] = tuple(genre.lower() for genre in (
 ))
 
 
-def random_genres(size: int = randrange(0, len(GENRES))) -> list[str]:
+def random_genres(size: int | None = None) -> list[str]:
     """Return a list of random genres."""
-    return sample(GENRES, size)
+    return sample(GENRES, min(size, len(GENRES)) if size else randrange(0, len(GENRES)))

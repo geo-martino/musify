@@ -75,11 +75,11 @@ def random_track[T: LocalTrack](cls: type[T] | None = None) -> T:
     track.date_added = datetime.now() - relativedelta(days=randrange(8, 20), hours=randrange(1, 24))
     track.last_played = datetime.now() - relativedelta(days=randrange(1, 6), hours=randrange(1, 24))
     track.play_count = randrange(200)
-    track.rating = randrange(0, 100, 20)
+    track.rating = randrange(0, 100)
 
     return track
 
 
-def random_tracks[T: LocalTrack](number: int = randrange(2, 20), cls: type[T] | None = None) -> list[T]:
+def random_tracks[T: LocalTrack](number: int | None = None, cls: type[T] | None = None) -> list[T]:
     """Generates a ``number`` of random tracks of the given class."""
-    return [random_track(cls=cls) for _ in range(number)]
+    return [random_track(cls=cls) for _ in range(number or randrange(2, 20))]

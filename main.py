@@ -21,7 +21,7 @@ from syncify.local.collection import LocalFolder
 from syncify.local.library import LocalLibrary, MusicBee
 from syncify.remote.api import RemoteAPI
 from syncify.remote.library.library import RemoteLibrary
-from syncify.remote.processors.search import AlgorithmSettings
+from syncify.remote.processors.search import ITEMS_SETTINGS
 from syncify.report import Report
 from syncify.settings import Settings
 from syncify.utils.helpers import get_user_input
@@ -385,7 +385,7 @@ class Syncify(Settings, Report):
 
         folders = self._get_limited_folders()
 
-        allow_karaoke = AlgorithmSettings.ITEMS.allow_karaoke
+        allow_karaoke = ITEMS_SETTINGS.allow_karaoke
         checker = self.remote_config.checker(api=self.api, allow_karaoke=allow_karaoke)
         check_results = checker.check(folders, interval=self.cfg_run.get("interval", 10))
 
@@ -414,7 +414,7 @@ class Syncify(Settings, Report):
             self.print_line()
             return
 
-        allow_karaoke = AlgorithmSettings.ITEMS.allow_karaoke
+        allow_karaoke = ITEMS_SETTINGS.allow_karaoke
         searcher = self.remote_config.searcher(api=self.api, allow_karaoke=allow_karaoke)
         searcher.search(albums)
 

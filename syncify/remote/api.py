@@ -19,6 +19,16 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
 
     __slots__ = "_user_data"
 
+    collection_item_map = {
+        RemoteObjectType.PLAYLIST: RemoteObjectType.TRACK,
+        RemoteObjectType.ALBUM: RemoteObjectType.TRACK,
+        RemoteObjectType.AUDIOBOOK: RemoteObjectType.CHAPTER,
+        RemoteObjectType.SHOW: RemoteObjectType.EPISODE,
+    }
+    user_item_types = (
+            set(collection_item_map) | {RemoteObjectType.TRACK, RemoteObjectType.ARTIST, RemoteObjectType.EPISODE}
+    )
+
     @property
     @abstractmethod
     def api_url_base(self) -> str:
@@ -290,6 +300,29 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
         """
         Wrapper for :py:meth:`get_items` which only returns Track type responses.
         See :py:meth:`get_items` for more info.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def extend_items(
+            self,
+            items_block: MutableMapping[str, Any],
+            key: str | None = None,
+            unit: str | None = None,
+            use_cache: bool = True,
+    ) -> list[dict[str, Any]]:
+        """
+        Extend the items for a given ``items_block`` API response.
+        The function requests each page of the collection returning a list of all items
+        found across all pages for this URL.
+
+        Updates the value of the ``items`` key in-place by extending the value of the ``items`` key with new results.
+
+        :param items_block: A remote API JSON response for an items type endpoint.
+        :param key: The child unit to use when selecting nested data for certain responses and for logging.
+        :param unit: The parent unit to use for logging.
+        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :return: API JSON responses for each item
         """
         raise NotImplementedError
 

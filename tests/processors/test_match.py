@@ -1,5 +1,6 @@
 import pytest
 
+from syncify.abstract.enums import TagFieldCombined as Tag
 from syncify.local.track import LocalTrack
 from syncify.processors.match import ItemMatcher, CleanTagConfig
 from tests.abstract.misc import PrettyPrinterTester
@@ -21,9 +22,9 @@ class TestItemMatcher(PrettyPrinterTester):
         ItemMatcher.clean_tags_remove_all = {"the", "a", "&", "and"}
         ItemMatcher.clean_tags_split_all = set()
         ItemMatcher.clean_tags_config = (
-            CleanTagConfig(name="title", _remove={"part"}, _split={"featuring", "feat.", "ft.", "/"}),
-            CleanTagConfig(name="artist", _split={"featuring", "feat.", "ft.", "vs"}),
-            CleanTagConfig(name="album", _remove={"ep"}, _preprocess=lambda x: x.split('-')[0])
+            CleanTagConfig(tag=Tag.TITLE, _remove={"part"}, _split={"featuring", "feat.", "ft.", "/"}),
+            CleanTagConfig(tag=Tag.ARTIST, _split={"featuring", "feat.", "ft.", "vs"}),
+            CleanTagConfig(tag=Tag.ALBUM, _remove={"ep"}, _preprocess=lambda x: x.split('-')[0])
         )
 
         ItemMatcher.reduce_name_score_on = {"live", "demo", "acoustic"}
@@ -50,9 +51,9 @@ class TestItemMatcher(PrettyPrinterTester):
         track1.album = "The Best EP - the new one"
 
         matcher.clean_tags(track1)
-        assert track1.clean_tags["title"] == "song 2"
-        assert track1.clean_tags["artist"] == "artist 1 artist two"
-        assert track1.clean_tags["album"] == "best"
+        assert track1.clean_tags[Tag.TITLE] == "song 2"
+        assert track1.clean_tags[Tag.ARTIST] == "artist 1 artist two"
+        assert track1.clean_tags[Tag.ALBUM] == "best"
 
     def test_match_not_karaoke(self, matcher: ItemMatcher, track1: LocalTrack):
         track1.title = "title"
@@ -70,92 +71,92 @@ class TestItemMatcher(PrettyPrinterTester):
 
     def test_match_name(self, matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):
         # no names in at least one item always returns 0
-        track1.clean_tags["name"] = None
-        track2.clean_tags["name"] = None
+        track1.clean_tags[Tag.NAME] = None
+        track2.clean_tags[Tag.NAME] = None
         assert matcher.match_name(track1, track2) == 0
 
         # 1/1 word match
         track1.title = "title"
-        track1.clean_tags["name"] = track1.title
+        track1.clean_tags[Tag.NAME] = track1.title
         track2.title = "other title"
-        track2.clean_tags["name"] = track2.title
+        track2.clean_tags[Tag.NAME] = track2.title
         assert matcher.match_name(track1, track2) == 1
 
         # 0/4 words match
         track1.title = "title of a track"
-        track1.clean_tags["name"] = track1.title
+        track1.clean_tags[Tag.NAME] = track1.title
         track2.title = "song"
-        track2.clean_tags["name"] = track2.title
+        track2.clean_tags[Tag.NAME] = track2.title
         assert matcher.match_name(track1, track2) == 0
 
         # 2/3 words match
         track1.title = "a longer title"
-        track1.clean_tags["name"] = track1.title
+        track1.clean_tags[Tag.NAME] = track1.title
         track2.title = "this is a different title"
-        track2.clean_tags["name"] = track2.title
+        track2.clean_tags[Tag.NAME] = track2.title
         assert round(matcher.match_name(track1, track2), 2) == 0.67
 
     def test_match_artist(self, matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):
         sep = track1.tag_sep
 
         # no artists in at least one item always returns 0
-        track1.clean_tags["artist"] = "artist"
-        track2.clean_tags["artist"] = None
+        track1.clean_tags[Tag.ARTIST] = "artist"
+        track2.clean_tags[Tag.ARTIST] = None
         assert matcher.match_artist(track1, track2) == 0
 
         # 1/4 words match
-        track1.clean_tags["artist"] = f"band{sep}a singer{sep}artist"
-        track2.clean_tags["artist"] = f"artist{sep}nope{sep}other"
+        track1.clean_tags[Tag.ARTIST] = f"band{sep}a singer{sep}artist"
+        track2.clean_tags[Tag.ARTIST] = f"artist{sep}nope{sep}other"
         assert matcher.match_artist(track1, track2) == 0.25
 
         # 2/4 words match, but now weighted
         # match 'artist' = 0.25 + match 'singer' = 0.125
-        track1.clean_tags["artist"] = f"band{sep}a singer{sep}artist"
-        track2.clean_tags["artist"] = f"artist{sep}singer{sep}other"
+        track1.clean_tags[Tag.ARTIST] = f"band{sep}a singer{sep}artist"
+        track2.clean_tags[Tag.ARTIST] = f"artist{sep}singer{sep}other"
         assert matcher.match_artist(track1, track2) == 0.375
 
     def test_match_album(self, matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):
         # no albums in at least one item always returns 0
-        track1.clean_tags["album"] = None
-        track2.clean_tags["album"] = "album"
+        track1.clean_tags[Tag.ALBUM] = None
+        track2.clean_tags[Tag.ALBUM] = "album"
         assert matcher.match_album(track1, track2) == 0
 
         # 1/2 words match
-        track1.clean_tags["album"] = "album name"
-        track2.clean_tags["album"] = "name"
+        track1.clean_tags[Tag.ALBUM] = "album name"
+        track2.clean_tags[Tag.ALBUM] = "name"
         assert matcher.match_album(track1, track2) == 0.5
 
         # 3/3 words match
-        track1.clean_tags["album"] = "brand new album"
-        track2.clean_tags["album"] = "this is a brand new really cool album"
+        track1.clean_tags[Tag.ALBUM] = "brand new album"
+        track2.clean_tags[Tag.ALBUM] = "this is a brand new really cool album"
         assert matcher.match_album(track1, track2) == 1
 
     def test_match_length(self, matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):
         # no lengths for at least one item always returns 0
-        track1.clean_tags["length"] = 110.20
-        track2.clean_tags["length"] = None
+        track1.clean_tags[Tag.LENGTH] = 110.20
+        track2.clean_tags[Tag.LENGTH] = None
         assert matcher.match_length(track1, track2) == 0
 
-        track1.clean_tags["length"] = 100
-        track2.clean_tags["length"] = 90
+        track1.clean_tags[Tag.LENGTH] = 100
+        track2.clean_tags[Tag.LENGTH] = 90
         assert matcher.match_length(track1, track2) == 0.9
 
     def test_match_year(self, matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):
         # no year for at least one item always returns 0
-        track1.clean_tags["year"] = 2023
-        track2.clean_tags["year"] = None
+        track1.clean_tags[Tag.YEAR] = 2023
+        track2.clean_tags[Tag.YEAR] = None
         assert matcher.match_year(track1, track2) == 0
 
-        track1.clean_tags["year"] = 2020
-        track2.clean_tags["year"] = 2015
+        track1.clean_tags[Tag.YEAR] = 2020
+        track2.clean_tags[Tag.YEAR] = 2015
         assert matcher.match_year(track1, track2) == 0.5
 
-        track1.clean_tags["year"] = 2020
-        track2.clean_tags["year"] = 2010
+        track1.clean_tags[Tag.YEAR] = 2020
+        track2.clean_tags[Tag.YEAR] = 2010
         assert matcher.match_year(track1, track2) == 0
 
-        track1.clean_tags["year"] = 2020
-        track2.clean_tags["year"] = 2005
+        track1.clean_tags[Tag.YEAR] = 2020
+        track2.clean_tags[Tag.YEAR] = 2005
         assert matcher.match_year(track1, track2) == 0
 
     def test_match_all(self, matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):
@@ -193,3 +194,5 @@ class TestItemMatcher(PrettyPrinterTester):
         track4.year = 2015
         assert matcher.match(track1, [track2, track4, track3], min_score=0.2, max_score=0.8) == track4
         assert matcher(track1, [track2, track4, track3], min_score=0.2, max_score=0.8) == track4
+
+    # TODO: add test for _get_scores on ItemCollection

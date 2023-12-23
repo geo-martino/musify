@@ -4,6 +4,7 @@ from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Hashable
 from typing import Any
 
+from syncify.abstract.enums import TagField
 from syncify.abstract.misc import PrettyPrinter
 
 
@@ -25,12 +26,12 @@ class BaseObject(ABC):
         raise NotImplementedError
 
     @property
-    def clean_tags(self) -> dict[str, Any]:
+    def clean_tags(self) -> dict[TagField, Any]:
         """A map of tags that have been cleaned to use when matching/searching"""
         return self._clean_tags
 
     def __init__(self):
-        self._clean_tags: dict[str, Any] = {}
+        self._clean_tags: dict[TagField, Any] = {}
 
 
 class ObjectPrinterMixin(BaseObject, PrettyPrinter, metaclass=ABCMeta):

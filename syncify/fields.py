@@ -1,6 +1,6 @@
 from typing import Self
 
-from syncify.abstract.enums import Field, FieldCombined, TagField
+from syncify.abstract.enums import Field, FieldCombined, TagField, TagFieldCombined
 
 
 class TrackFieldMixin(TagField):
@@ -28,91 +28,91 @@ class TrackFieldMixin(TagField):
 
 class TrackField(TrackFieldMixin):
     """Represent all currently supported fields for objects of type :py:class:`Track`"""
-    ALL = FieldCombined.ALL.value
+    ALL = TagFieldCombined.ALL.value
 
-    TITLE = FieldCombined.TITLE.value
-    ARTIST = FieldCombined.ARTIST.value
-    ALBUM = FieldCombined.ALBUM.value
-    ALBUM_ARTIST = FieldCombined.ALBUM_ARTIST.value
-    TRACK = FieldCombined.TRACK_NUMBER.value + 500
-    TRACK_NUMBER = FieldCombined.TRACK_NUMBER.value
-    TRACK_TOTAL = FieldCombined.TRACK_TOTAL.value
-    GENRES = FieldCombined.GENRES.value
-    YEAR = FieldCombined.YEAR.value
-    BPM = FieldCombined.BPM.value
-    KEY = FieldCombined.KEY.value
-    DISC = FieldCombined.DISC_NUMBER.value + 500
-    DISC_NUMBER = FieldCombined.DISC_NUMBER.value
-    DISC_TOTAL = FieldCombined.DISC_TOTAL.value
-    COMPILATION = FieldCombined.COMPILATION.value
-    COMMENTS = FieldCombined.COMMENTS.value
-    IMAGES = FieldCombined.IMAGES.value
-    LENGTH = FieldCombined.LENGTH.value
-    RATING = FieldCombined.RATING.value
+    TITLE = TagFieldCombined.TITLE.value
+    ARTIST = TagFieldCombined.ARTIST.value
+    ALBUM = TagFieldCombined.ALBUM.value
+    ALBUM_ARTIST = TagFieldCombined.ALBUM_ARTIST.value
+    TRACK = TagFieldCombined.TRACK_NUMBER.value + 500
+    TRACK_NUMBER = TagFieldCombined.TRACK_NUMBER.value
+    TRACK_TOTAL = TagFieldCombined.TRACK_TOTAL.value
+    GENRES = TagFieldCombined.GENRES.value
+    YEAR = TagFieldCombined.YEAR.value
+    BPM = TagFieldCombined.BPM.value
+    KEY = TagFieldCombined.KEY.value
+    DISC = TagFieldCombined.DISC_NUMBER.value + 500
+    DISC_NUMBER = TagFieldCombined.DISC_NUMBER.value
+    DISC_TOTAL = TagFieldCombined.DISC_TOTAL.value
+    COMPILATION = TagFieldCombined.COMPILATION.value
+    COMMENTS = TagFieldCombined.COMMENTS.value
+    IMAGES = TagFieldCombined.IMAGES.value
+    LENGTH = TagFieldCombined.LENGTH.value
+    RATING = TagFieldCombined.RATING.value
 
     # remote properties
-    URI = FieldCombined.URI.value
+    URI = TagFieldCombined.URI.value
 
 
 class LocalTrackField(TrackFieldMixin):
     """Represent all currently supported fields for objects of type :py:class:`LocalTrack`"""
-    ALL = FieldCombined.ALL.value
+    ALL = TagFieldCombined.ALL.value
 
-    TITLE = FieldCombined.TITLE.value
-    ARTIST = FieldCombined.ARTIST.value
-    ALBUM = FieldCombined.ALBUM.value
-    ALBUM_ARTIST = FieldCombined.ALBUM_ARTIST.value
-    TRACK = FieldCombined.TRACK_NUMBER.value + 500
-    TRACK_NUMBER = FieldCombined.TRACK_NUMBER.value
-    TRACK_TOTAL = FieldCombined.TRACK_TOTAL.value
-    GENRES = FieldCombined.GENRES.value
-    YEAR = FieldCombined.YEAR.value
-    BPM = FieldCombined.BPM.value
-    KEY = FieldCombined.KEY.value
-    DISC = FieldCombined.DISC_NUMBER.value + 500
-    DISC_NUMBER = FieldCombined.DISC_NUMBER.value
-    DISC_TOTAL = FieldCombined.DISC_TOTAL.value
-    COMPILATION = FieldCombined.COMPILATION.value
-    COMMENTS = FieldCombined.COMMENTS.value
-    IMAGES = FieldCombined.IMAGES.value
-    LENGTH = FieldCombined.LENGTH.value
-    RATING = FieldCombined.RATING.value
+    TITLE = TagFieldCombined.TITLE.value
+    ARTIST = TagFieldCombined.ARTIST.value
+    ALBUM = TagFieldCombined.ALBUM.value
+    ALBUM_ARTIST = TagFieldCombined.ALBUM_ARTIST.value
+    TRACK = TagFieldCombined.TRACK_NUMBER.value + 500
+    TRACK_NUMBER = TagFieldCombined.TRACK_NUMBER.value
+    TRACK_TOTAL = TagFieldCombined.TRACK_TOTAL.value
+    GENRES = TagFieldCombined.GENRES.value
+    YEAR = TagFieldCombined.YEAR.value
+    BPM = TagFieldCombined.BPM.value
+    KEY = TagFieldCombined.KEY.value
+    DISC = TagFieldCombined.DISC_NUMBER.value + 500
+    DISC_NUMBER = TagFieldCombined.DISC_NUMBER.value
+    DISC_TOTAL = TagFieldCombined.DISC_TOTAL.value
+    COMPILATION = TagFieldCombined.COMPILATION.value
+    COMMENTS = TagFieldCombined.COMMENTS.value
+    IMAGES = TagFieldCombined.IMAGES.value
+    LENGTH = TagFieldCombined.LENGTH.value
+    RATING = TagFieldCombined.RATING.value
 
     # file properties
-    PATH = FieldCombined.PATH.value
-    FOLDER = FieldCombined.FOLDER.value
-    FILENAME = FieldCombined.FILENAME.value
-    EXT = FieldCombined.EXT.value
-    SIZE = FieldCombined.SIZE.value
-    KIND = FieldCombined.KIND.value
-    CHANNELS = FieldCombined.CHANNELS.value
-    BIT_RATE = FieldCombined.BIT_RATE.value
-    BIT_DEPTH = FieldCombined.BIT_DEPTH.value
-    SAMPLE_RATE = FieldCombined.SAMPLE_RATE.value
+    PATH = TagFieldCombined.PATH.value
+    FOLDER = TagFieldCombined.FOLDER.value
+    FILENAME = TagFieldCombined.FILENAME.value
+    EXT = TagFieldCombined.EXT.value
+    SIZE = TagFieldCombined.SIZE.value
+    KIND = TagFieldCombined.KIND.value
+    CHANNELS = TagFieldCombined.CHANNELS.value
+    BIT_RATE = TagFieldCombined.BIT_RATE.value
+    BIT_DEPTH = TagFieldCombined.BIT_DEPTH.value
+    SAMPLE_RATE = TagFieldCombined.SAMPLE_RATE.value
 
     # date properties
-    DATE_MODIFIED = FieldCombined.DATE_MODIFIED.value
-    DATE_ADDED = FieldCombined.DATE_ADDED.value
-    LAST_PLAYED = FieldCombined.LAST_PLAYED.value
+    DATE_MODIFIED = TagFieldCombined.DATE_MODIFIED.value
+    DATE_ADDED = TagFieldCombined.DATE_ADDED.value
+    LAST_PLAYED = TagFieldCombined.LAST_PLAYED.value
 
     # miscellaneous properties
-    PLAY_COUNT = FieldCombined.PLAY_COUNT.value
+    PLAY_COUNT = TagFieldCombined.PLAY_COUNT.value
 
     # remote properties
-    URI = FieldCombined.URI.value
+    URI = TagFieldCombined.URI.value
 
 
 class ArtistItemField(TagField):
-    ALL = FieldCombined.ALL.value
+    ALL = TagFieldCombined.ALL.value
 
     # tags/core properties
-    ARTIST = FieldCombined.ARTIST.value
-    GENRES = FieldCombined.GENRES.value
-    IMAGES = FieldCombined.IMAGES.value
-    RATING = FieldCombined.RATING.value
+    ARTIST = TagFieldCombined.ARTIST.value
+    GENRES = TagFieldCombined.GENRES.value
+    IMAGES = TagFieldCombined.IMAGES.value
+    RATING = TagFieldCombined.RATING.value
 
     # remote properties
-    URI = FieldCombined.URI.value
+    URI = TagFieldCombined.URI.value
 
 
 class PlaylistField(Field):

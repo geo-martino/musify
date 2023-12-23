@@ -17,11 +17,11 @@ ALL_ID_TYPES = RemoteIDType.all()
 ALL_ITEM_TYPES = RemoteObjectType.all()
 
 
-def random_id_type(wrangler: RemoteDataWrangler, kind: RemoteObjectType, id_: str = random_id()) -> str:
+def random_id_type(wrangler: RemoteDataWrangler, kind: RemoteObjectType, id_: str | None = None) -> str:
     """Convert the given ``id_`` to a random ID type"""
     type_in = RemoteIDType.ID
     type_out = choice(ALL_ID_TYPES)
-    return wrangler.convert(id_, kind=kind, type_in=type_in, type_out=type_out)
+    return wrangler.convert(id_ or random_id(), kind=kind, type_in=type_in, type_out=type_out)
 
 
 def random_id_types(

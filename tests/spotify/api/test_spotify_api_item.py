@@ -196,7 +196,7 @@ class TestSpotifyAPIItems:
         assert test["total"] > test["limit"]
         assert test["total"] > len(test[api.items_key])
 
-        results = api.extend_items(items_block=test, unit=kind.name.casefold() + "s", key=key)
+        results = api.extend_items(items_block=test, key=key)
         requests = spotify_mock.get_requests(url=source["href"].split("?")[0])
 
         # assert extension to total
@@ -404,7 +404,7 @@ class TestSpotifyAPIItems:
         test = random_id_types(id_list=source_map, wrangler=api, kind=kind)
 
         # force pagination
-        limit = len(source) // 3 if kind not in {ObjectType.PLAYLIST, ObjectType.USER} else None
+        limit = min(len(source) // 3, 50) if kind not in {ObjectType.PLAYLIST, ObjectType.USER} else None
         if limit is not None:  # ensure ranges are valid for test to work
             assert len(source) > limit
 
@@ -481,7 +481,7 @@ class TestSpotifyAPIItems:
         source_analysis = {item["id"]: spotify_mock.audio_analysis[item["id"]] for item in source}
         test = random_id_types(id_list=source_map, wrangler=api, kind=ObjectType.TRACK)
 
-        limit = len(source) // 3  # force pagination
+        limit = min(len(source) // 3, 50)  # force pagination
         assert len(source) > limit  # ensure ranges are valid for test to work
 
         results = api.get_tracks_extra(values=test, features=True, analysis=True, limit=limit)
