@@ -10,7 +10,7 @@ from syncify.remote.library.item import RemoteTrack
 from syncify.remote.library.library import RemoteLibrary
 from tests.abstract.collection import LibraryTester
 from tests.local.utils import random_tracks
-from tests.remote.library.test_remote_collection import RemoteCollectionTester
+from tests.remote.library.collection import RemoteCollectionTester
 from tests.remote.utils import RemoteMock
 
 

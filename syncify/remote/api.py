@@ -153,11 +153,11 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
             for item in original:
                 item[key] = result_mapped[item[id_key]]
 
-    def format_item_data(
+    def print_item(
             self, i: int, name: str, uri: str, length: float = 0, total: int = 1, max_width: int = 50
-    ) -> str:
+    ) -> None:
         """
-        Pretty format item data for displaying to the user
+        Pretty print item data for displaying to the user.
 
         :param i: The position of this item in the collection.
         :param name: The name of the item.
@@ -165,9 +165,8 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
         :param length: The duration of the item in seconds.
         :param total: The total number of items in the collection
         :param max_width: The maximum width to print names as. Any name lengths longer than this will be truncated.
-        :return: The formatted string.
         """
-        return (
+        print(
             f"\t\33[92m{str(i).zfill(len(str(total)))} \33[0m- "
             f"\33[97m{self.align_and_truncate(name, max_width=max_width)} \33[0m| "
             f"\33[91m{str(int(length // 60)).zfill(2)}:{str(round(length % 60)).zfill(2)} \33[0m| "
@@ -176,16 +175,26 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
         )
 
     @abstractmethod
-    def pretty_print_uris(
-            self, value: str | None = None, kind: RemoteIDType | None = None, use_cache: bool = True
+    def print_collection(
+            self,
+            value: str | Mapping[str, Any] | None = None,
+            kind: RemoteIDType | None = None,
+            limit: int = 20,
+            use_cache: bool = True
     ) -> None:
         """
-        Diagnostic function. Print tracks from a given link in ``<track> - <title> | <URI> - <URL>`` format
-        for a given URL/URI/ID.
+        Diagnostic function.
+        Print tracks from a given link in ``<track> - <title> | <URI> - <URL>`` format for a given URL/URI/ID.
 
-        :param value: URL/URI/ID to print information for.
+        ``value`` may be:
+            * A string representing a URL/URI/ID.
+            * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
+
+        :param value: The value representing some remote collection. See description for allowed value types.
         :param kind: When an ID is provided, give the kind of ID this is here.
             If None and ID is given, user will be prompted to give the kind anyway.
+        :param limit: The number of results to call per request and,
+            therefore, the number of items in each printed block.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         """
         raise NotImplementedError
@@ -244,16 +253,16 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
             use_cache: bool = True,
     ) -> list[dict[str, Any]]:
         """
-        ``GET`` - Get information for given list of ``values``. Items may be:
+        ``GET`` - Get information for given list of ``values``.
+
+        ``values`` may be:
             * A string representing a URL/URI/ID.
             * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
-            * A remote API JSON response for a collection including some items under an ``items`` key,
-                a valid ID value under an ``id`` key,
-                and a valid item type value under a ``type`` key if ``kind`` is None.
-            * A MutableSequence of remote API JSON responses for a collection including:
+            * A remote API JSON response for a collection including:
                 - some items under an ``items`` key,
                 - a valid ID value under an ``id`` key,
                 - a valid item type value under a ``type`` key if ``kind`` is None.
+            * A MutableSequence of remote API JSON responses for a collection including the same structure as above.
 
         If a JSON response is given, this replaces the ``items`` with the new results.
 

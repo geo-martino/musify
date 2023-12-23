@@ -1,11 +1,11 @@
 from abc import ABCMeta, abstractmethod
+from collections.abc import Mapping
 from typing import Any, Self
 
 from syncify.abstract.item import ObjectPrinterMixin
 from syncify.api.exception import APIError
 from syncify.remote.api import RemoteAPI
 from syncify.remote.base import Remote
-from syncify.remote.types import APIMethodInputType
 
 
 class RemoteObject(ObjectPrinterMixin, Remote, metaclass=ABCMeta):
@@ -78,21 +78,16 @@ class RemoteObject(ObjectPrinterMixin, Remote, metaclass=ABCMeta):
 
     @classmethod
     @abstractmethod
-    def load(cls, value: APIMethodInputType, use_cache: bool = True, *args, **kwargs) -> Self:
+    def load(cls, value: str | Mapping[str, Any], use_cache: bool = True, *args, **kwargs) -> Self:
         """
         Generate a new object of this class,
         calling all required endpoints to get a complete set of data for this item type.
 
-        The given ``value`` may be:
+        ``value`` may be:
             * A string representing a URL/URI/ID.
-            * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
             * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
-            * A MutableSequence of remote API JSON responses for a collection with
-                a valid ID value under an ``id`` key.
 
-        When a list is given, only the first item is processed.
-
-        :param value: The value representing some remote artist. See description for allowed value types.
+        :param value: The value representing some remote object. See description for allowed value types.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         """
         raise NotImplementedError
@@ -108,7 +103,7 @@ class RemoteObject(ObjectPrinterMixin, Remote, metaclass=ABCMeta):
         raise NotImplementedError
 
     def as_dict(self):
-        ignore = {"response", "name", "remote_source", "unavailable_uri_dummy", "tag_sep", "clean_tags"}
+        ignore = {"api", "response", "name", "remote_source", "unavailable_uri_dummy", "tag_sep", "clean_tags"}
         return {
             k: getattr(self, k) for k in self.__dir__()
             if not k.startswith("_")

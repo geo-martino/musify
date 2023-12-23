@@ -17,7 +17,7 @@ from syncify.spotify.exception import SpotifyCollectionError
 from syncify.spotify.library.collection import SpotifyAlbum, SpotifyPlaylist, SpotifyCollectionLoader
 from syncify.spotify.library.item import SpotifyItem
 from syncify.spotify.library.item import SpotifyTrack
-from tests.remote.library.test_remote_collection import RemoteCollectionTester, RemotePlaylistTester
+from tests.remote.library.collection import RemoteCollectionTester, RemotePlaylistTester
 from tests.spotify.api.mock import SpotifyMock
 from tests.spotify.library.utils import assert_id_attributes
 from tests.spotify.utils import random_uri
@@ -277,7 +277,7 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
 
         # ensure extension can be made by reducing available items and adding next page URL
         response_valid[key]["items"] = response_valid[key]["items"][:response_valid[key]["limit"]]
-        response_valid[key]["next"] = spotify_mock.format_next_url(
+        response_valid[key]["next"] = SpotifyAPI.format_next_url(
             url=response_valid[key]["href"], offset=response_valid[key]["limit"], limit=response_valid[key]["limit"]
         )
 
@@ -524,7 +524,7 @@ class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
 
         # ensure extension can be made by reducing available items and adding next page URL
         response_valid[key]["items"] = response_valid[key]["items"][:response_valid[key]["limit"]]
-        response_valid[key]["next"] = spotify_mock.format_next_url(
+        response_valid[key]["next"] = SpotifyAPI.format_next_url(
             url=response_valid[key]["href"], offset=response_valid[key]["limit"], limit=response_valid[key]["limit"]
         )
 

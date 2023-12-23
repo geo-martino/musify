@@ -15,7 +15,7 @@ from syncify.utils.helpers import limit_value
 
 class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
 
-    items_key = "items"
+    items_key: str
 
     def _get_unit(self, key: str | None = None, unit: str | None = None) -> str:
         """Determine the unit type to use in the progress bar"""
@@ -204,16 +204,16 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
             use_cache: bool = True,
     ) -> list[dict[str, Any]]:
         """
-        ``GET: /{kind}s`` - Get information for given list of ``values``. Items may be:
+        ``GET: /{kind}s`` - Get information for given list of ``values``.
+
+        ``values`` may be:
             * A string representing a URL/URI/ID.
             * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
-            * A remote API JSON response for a collection including some items under an ``items`` key,
-                a valid ID value under an ``id`` key,
-                and a valid item type value under a ``type`` key if ``kind`` is None.
-            * A MutableSequence of remote API JSON responses for a collection including:
+            * A remote API JSON response for a collection including:
                 - some items under an ``items`` key,
                 - a valid ID value under an ``id`` key,
                 - a valid item type value under a ``type`` key if ``kind`` is None.
+            * A MutableSequence of remote API JSON responses for a collection including the same structure as above.
 
         If a JSON response is given, this replaces the ``items`` with the new results.
 
@@ -326,14 +326,14 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
     ) -> dict[str, list[dict[str, Any]]]:
         """
         ``GET: /audio-features`` and/or ``GET: /audio-analysis`` - Get audio features/analysis for list of items.
-        Items may be:
-            * A string representing a URL/URI/ID.
-            * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
-            * A remote API JSON response for a collection including some items under an ``items`` key
-                and a valid ID value under an ``id`` key.
-            * A MutableSequence of remote API JSON responses for a collection including:
-                - some items under an ``items`` key
+
+        ``values`` may be:
+            * A string representing a URL/URI/ID of type 'track'.
+            * A MutableSequence of strings representing URLs/URIs/IDs of the type 'track'.
+            * A remote API JSON response for a track including:
+                - some items under an ``items`` key,
                 - a valid ID value under an ``id`` key.
+            * A MutableSequence of remote API JSON responses for a set of tracks including the same structure as above.
 
         If a JSON response is given, this updates ``items`` by adding the results
         under the ``audio_features`` and ``audio_analysis`` keys as appropriate.
@@ -393,15 +393,15 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
         ``GET: /{kind}s`` + GET: /audio-features`` and/or ``GET: /audio-analysis``
 
         Get audio features/analysis for list of tracks.
-        Mostly just a wrapper for ``get_items`` and ``get_tracks`` functions.
-        Values may be:
-            * A string representing a URL/URI/ID.
-            * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
-            * A remote API JSON response for a collection including some items under an ``items`` key
-                and a valid ID value under an ``id`` key.
-            * A MutableSequence of remote API JSON responses for a collection including :
-                - some items under an ``items`` key
+        Mostly just a wrapper for ``get_items`` and ``get_tracks_extra`` functions.
+
+        ``values`` may be:
+            * A string representing a URL/URI/ID of type 'track'.
+            * A MutableSequence of strings representing URLs/URIs/IDs of the type 'track'.
+            * A remote API JSON response for a track including:
+                - some items under an ``items`` key,
                 - a valid ID value under an ``id`` key.
+            * A MutableSequence of remote API JSON responses for a set of tracks including the same structure as above.
 
         If a JSON response is given, this updates ``items`` by adding the results
         under the ``audio_features`` and ``audio_analysis`` keys as appropriate.

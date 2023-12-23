@@ -7,7 +7,7 @@ import pytest
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.library.item import SpotifyTrack
 from syncify.spotify.library.library import SpotifyLibrary
-from tests.remote.library.test_remote_library import RemoteLibraryTester
+from tests.remote.library.library import RemoteLibraryTester
 from tests.spotify.api.mock import SpotifyMock
 
 

@@ -217,7 +217,7 @@ class Syncify(Settings, Report):
 
     def print_data(self) -> None:
         """Pretty print data from user's input"""
-        self.api.pretty_print_uris(use_cache=self.use_cache)
+        self.api.print_collection(use_cache=self.use_cache)
 
     def clean_env(self) -> None:
         """Clears files older than a number of days and only keeps max # of runs"""

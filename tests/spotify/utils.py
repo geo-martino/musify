@@ -29,7 +29,7 @@ def random_uris(kind: RemoteObjectType = RemoteObjectType.TRACK, start: int = 1,
 
 def random_api_url(kind: RemoteObjectType = RemoteObjectType.TRACK) -> str:
     """Generates a valid looking random Spotify API URL of item :py:class:`RemoteObjectType` ``kind``"""
-    return f"{URL_API}/{kind.name.lower()}/{random_id()}"
+    return f"{URL_API}/{kind.name.lower()}s/{random_id()}"
 
 
 def random_api_urls(kind: RemoteObjectType = RemoteObjectType.TRACK, start: int = 1, stop: int = 50) -> list[str]:

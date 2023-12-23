@@ -9,17 +9,8 @@ from tests.spotify.api.mock import SpotifyMock, idfn
 from tests.utils import random_str
 
 
-# TODO: add pretty_print_uris function test
 class TestSpotifyAPICore:
     """Tester for core endpoints of :py:class:`SpotifyAPI`"""
-
-    def test_get_self(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
-        assert api._user_data == {}
-        assert api.get_self(update_user_data=False) == spotify_mock.user
-        assert api._user_data == {}
-
-        assert api.get_self(update_user_data=True) == spotify_mock.user
-        assert api._user_data == spotify_mock.user
 
     @pytest.mark.parametrize("method_name,kwargs,floor,ceil", [
         ("query", {"query": "valid query", "kind": ObjectType.TRACK}, 1, 50),
@@ -54,8 +45,16 @@ class TestSpotifyAPICore:
         assert int(params["limit"][0]) == ceil
 
     ###########################################################################
-    ## /search endpoint functionality
+    ## /me + /search endpoints
     ###########################################################################
+    def test_get_self(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
+        assert api._user_data == {}
+        assert api.get_self(update_user_data=False) == spotify_mock.user
+        assert api._user_data == {}
+
+        assert api.get_self(update_user_data=True) == spotify_mock.user
+        assert api._user_data == spotify_mock.user
+
     def test_query_input_validation(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
         assert api.query(query=None, kind=ObjectType.EPISODE) == []
         assert api.query(query="", kind=ObjectType.SHOW) == []
@@ -87,3 +86,26 @@ class TestSpotifyAPICore:
         assert params["q"][0] == query
         assert int(params["limit"][0]) == limit
         assert params["type"][0] == kind.name.casefold()
+
+    ###########################################################################
+    ## Utilities
+    ###########################################################################
+    # TODO: expand mock to allow testing for all extendable RemoteObjectTypes
+    @pytest.mark.parametrize("kind", [
+        ObjectType.PLAYLIST, ObjectType.ALBUM,  # ObjectType.SHOW, ObjectType.AUDIOBOOK,
+    ], ids=idfn)
+    def test_pretty_print_uris(
+            self, kind: ObjectType, api: SpotifyAPI, spotify_mock: SpotifyMock, capfd: pytest.CaptureFixture
+    ):
+        spotify_mock.reset_mock()  # test checks the number of requests made
+
+        key = api.collection_item_map.get(kind, kind).name.casefold() + "s"
+        source = next(item for item in spotify_mock.item_type_map[kind] if item[key]["total"] > 50)
+
+        api.print_collection(value=source)
+
+        stdout = capfd.readouterr()[0]
+        print(stdout)
+        assert len(stdout.strip().split("\n\n")) == len(spotify_mock.request_history)  # printed in blocks
+        # lines printed = total tracks + 1 extra for title
+        assert len([line for line in stdout.strip().split("\n") if line]) == source[key]["total"] + 1

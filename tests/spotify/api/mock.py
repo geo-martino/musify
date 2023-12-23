@@ -4,7 +4,7 @@ from copy import deepcopy
 from datetime import datetime
 from random import choice, randrange, sample, random
 from typing import Any
-from urllib.parse import urlparse, parse_qs, urlencode, urlunparse, quote
+from urllib.parse import parse_qs
 
 from pycountry import countries
 # noinspection PyProtectedMember
@@ -336,29 +336,17 @@ class SpotifyMock(RemoteMock):
     ## Formatters
     ###########################################################################
     @staticmethod
-    def format_next_url(url: str, offset: int = 0, limit: int = 20) -> str:
-        """Format a `next` style URL for looping through API pages"""
-        url_parsed = urlparse(url)
-        params: dict[str, Any] = parse_qs(url_parsed.query)
-        params["offset"] = offset
-        params["limit"] = limit
-
-        url_parts = list(url_parsed[:])
-        url_parts[4] = urlencode(params, quote_via=quote)
-        return str(urlunparse(url_parts))
-
-    @classmethod
     def format_items_block(
-            cls, url: str, items: list[dict[str, Any]], offset: int = 0, limit: int = 20, total: int = 50
+            url: str, items: list[dict[str, Any]], offset: int = 0, limit: int = 20, total: int = 50
     ) -> dict[str, Any]:
         """Format an items block response from a list of items and a URL base."""
-        href = cls.format_next_url(url=url, offset=offset, limit=limit)
+        href = SpotifyAPI.format_next_url(url=url, offset=offset, limit=limit)
         limit = min(max(limit, 1), 50)  # limit must be between 1 and 50
 
         prev_offset = offset - limit
-        prev_url = cls.format_next_url(url=url, offset=prev_offset, limit=limit) if prev_offset >= 0 else None
+        prev_url = SpotifyAPI.format_next_url(url=url, offset=prev_offset, limit=limit) if prev_offset >= 0 else None
         next_offset = offset + limit
-        next_url = cls.format_next_url(url=url, offset=next_offset, limit=limit) if next_offset < total else None
+        next_url = SpotifyAPI.format_next_url(url=url, offset=next_offset, limit=limit) if next_offset < total else None
 
         return {
             "href": href,

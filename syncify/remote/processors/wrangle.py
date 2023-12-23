@@ -42,12 +42,13 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
     @classmethod
     def get_item_type(cls, values: APIMethodInputType, kind: RemoteObjectType | None = None) -> RemoteObjectType:
         """
-        Determine the remote object type of ``values``. Values may be:
-            * A string representing a URL/URI.
+        Determine the remote object type of ``values``.
+
+        ``values`` may be:
+            * A string representing a URL/URI/ID.
             * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
-            * A remote API JSON response for a collection with a valid item type value under a ``type`` key.
-            * A MutableSequence of remote API JSON responses for a collection with
-                a valid type value under a ``type`` key.
+            * A remote API JSON response for a collection including a valid item type value under a ``type`` key.
+            * A MutableSequence of remote API JSON responses for a collection including the same structure as above.
 
         :param values: The values representing some remote objects. See description for allowed value types.
             These items must all be of the same type of item to pass i.e. all tracks OR all artists etc.
@@ -76,11 +77,13 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
     @abstractmethod
     def _get_item_type(value: str | Mapping[str, Any], kind: RemoteObjectType) -> RemoteObjectType | None:
         """
-        Determine the remote object type of the given ``value`` and return its type. Value may be:
-            * A string representing a URL/URI/ID.
-            * A remote API JSON response for a collection with a valid item type value under a ``type`` key.
+        Determine the remote object type of the given ``value`` and return its type.
 
-        :param value: The value representing some remote object. See description for allowed value types.
+        ``value`` may be:
+            * A string representing a URL/URI/ID.
+            * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
+
+        :param value: The value representing some remote collection. See description for allowed value types.
         :param kind: The :py:class:`RemoteObjectType` if the value is found to be an ID.
         :return: The :py:class:`RemoteObjectType`. If the given value is determined to be an ID, returns None.
         :raise RemoteObjectTypeError: Raised when the function cannot determine the item type
@@ -93,12 +96,13 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
     @classmethod
     def validate_item_type(cls, values: APIMethodInputType, kind: RemoteObjectType) -> None:
         """
-        Check that the given ``values`` is a type of item given by ``kind `` or a simple ID. Values may be:
+        Check that the given ``values`` is a type of item given by ``kind `` or a simple ID.
+
+        ``values`` may be:
             * A string representing a URL/URI/ID.
             * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
-            * A remote API JSON response for a collection with a valid item type value under a ``type`` key.
-            * A MutableSequence of remote API JSON responses for a collection with
-                a valid type value under a ``type`` key.
+            * A remote API JSON response for a collection including a valid item type value under a ``type`` key.
+            * A MutableSequence of remote API JSON responses for a collection including the same structure as above.
 
         :param values: The values representing some remote objects. See description for allowed value types.
             These items must all be of the same type of item to pass i.e. all tracks OR all artists etc.
@@ -138,12 +142,15 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
     @abstractmethod
     def extract_ids(cls, values: APIMethodInputType, kind: RemoteObjectType | None = None) -> list[str]:
         """
-        Extract a list of IDs from input ``values``. Items may be:
+        Extract a list of IDs from input ``values``.
+
+        ``values`` may be:
             * A string representing a URL/URI/ID.
             * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
-            * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
-            * A MutableSequence of remote API JSON responses for a collection with
-                a valid ID value under an ``id`` key.
+            * A remote API JSON response for a collection including:
+                - a valid ID value under an ``id`` key,
+                - a valid item type value under a ``type`` key if ``kind`` is None.
+            * A MutableSequence of remote API JSON responses for a collection including the same structure as above.
 
         :param values: The values representing some remote objects. See description for allowed value types.
             These items may be of mixed item types e.g. some tracks AND some artists.

@@ -76,16 +76,11 @@ class RemoteCollectionLoader[T: RemoteObject](RemoteObject, RemoteCollection[T],
         """
         Generate a new object, calling all required endpoints to get a complete set of data for this item type.
 
-        The given ``value`` may be:
+        ``value`` may be:
             * A string representing a URL/URI/ID.
-            * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
             * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
-            * A MutableSequence of remote API JSON responses for a collection with
-                a valid ID value under an ``id`` key.
 
-        When a list is given, only the first item is processed.
-
-        :param value: The value representing some remote artist. See description for allowed value types.
+        :param value: The value representing some remote collection. See description for allowed value types.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :param items: Optionally, give a list of available items to build a response for this collection.
             In doing so, the method will first try to find the API responses for the items of this collection

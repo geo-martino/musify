@@ -1,5 +1,7 @@
 from abc import ABCMeta
+from collections.abc import MutableMapping
 from typing import Any
+from urllib.parse import parse_qs, urlparse, urlencode, quote, urlunparse
 
 from syncify.remote.api import RemoteAPI
 from syncify.remote.enums import RemoteIDType, RemoteObjectType
@@ -8,54 +10,79 @@ from syncify.utils.helpers import limit_value
 
 class SpotifyAPICore(RemoteAPI, metaclass=ABCMeta):
 
-    def pretty_print_uris(
-            self, value: str | None = None, kind: RemoteIDType | None = None, use_cache: bool = True
+    items_key: str
+
+    @staticmethod
+    def format_next_url(url: str, offset: int = 0, limit: int = 20) -> str:
+        """Format a `next` style URL for looping through API pages"""
+        url_parsed = urlparse(url)
+        params: dict[str, Any] = parse_qs(url_parsed.query)
+        params["offset"] = offset
+        params["limit"] = limit
+
+        url_parts = list(url_parsed[:])
+        url_parts[4] = urlencode(params, quote_via=quote)
+        return str(urlunparse(url_parts))
+
+    def print_collection(
+            self,
+            value: str | MutableMapping[str, Any] | None = None,
+            kind: RemoteIDType | None = None,
+            limit: int = 20,
+            use_cache: bool = True
     ) -> None:
         """
-        Diagnostic function. Print tracks from a given link in ``<track> - <title> | <URI> - <URL>`` format
-        for a given URL/URI/ID.
+        Diagnostic function.
+        Print items from a given collection in ``<track> - <title> | <URI> - <URL>`` format for a given URL/URI/ID.
 
-        :param value: URL/URI/ID to print information for.
+        ``value`` may be:
+            * A string representing a URL/URI/ID.
+            * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
+
+        :param value: The value representing some remote collection. See description for allowed value types.
         :param kind: When an ID is provided, give the kind of ID this is here.
             If None and ID is given, user will be prompted to give the kind anyway.
+        :param limit: The number of results to call per request and,
+            therefore, the number of items in each printed block.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         """
         if not value:  # get user to paste in URL/URI
             value = input("\33[1mEnter URL/URI/ID: \33[0m")
         if not kind:
             kind = self.get_item_type(value)
+        key = self.collection_item_map[kind].name.casefold()
 
         while kind is None:  # get user to input ID type
             kind = RemoteObjectType.from_name(input("\33[1mEnter ID type: \33[0m"))[0]
 
-        url = self.convert(value, kind=kind, type_out=RemoteIDType.URL)
-        name = self.get(url, log_pad=43)["name"]
+        id_ = self.extract_ids(values=value, kind=kind)[0]
+        url = self.convert(id_, kind=kind, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
+        limit = limit_value(limit, floor=1, ceil=50)
 
-        response = {"next": f"{url}/tracks"}
+        name = self.get(url, params={"limit": limit}, log_pad=43)["name"]
+        response = self.get(f"{url}/{key}s", params={"limit": limit}, log_pad=43)
+
         i = 0
-        while response["next"]:  # loop through each page, printing data in blocks of 20
-            url = response["next"]
-            response = self.get(url, params={"limit": 20}, use_cache=use_cache)
-
-            if response["offset"] == 0:  # first page, show header
-                url_open = self.convert(url, type_in=RemoteIDType.URL_EXT, type_out=RemoteIDType.URL_EXT)
+        while response.get("next") or i < response["total"]:  # loop through each page, printing data in blocks of 20
+            if response.get("offset", 0) == 0:  # first page, show header
+                url_ext = self.convert(id_, kind=kind, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL_EXT)
                 print(
                     f"\n\t\33[96mShowing tracks for {kind.name.casefold()}\33[0m: "
-                    f"\33[94m{name} \33[97m- {url_open} \33[0m\n"
+                    f"\33[94m{name} \33[97m- {url_ext} \33[0m\n"
                 )
-                pass
 
-            if "error" in response:  # fail
-                self.logger.warning(f"{"ERROR":<7}: {url:<43}")
-                return
+            if "cursors" in response:  # happens on some item types e.g. user's followed artists
+                response["next"] = response["cursors"].get("after")
+                response["previous"] = response["cursors"].get("before")
+                response.pop("cursors")
 
-            tracks = [item["track"] if kind == RemoteObjectType.PLAYLIST else item for item in response["items"]]
+            tracks = [item[key] if key in item else item for item in response[self.items_key]]
             for i, track in enumerate(tracks, i + 1):  # print each item in this page
-                formatted_item_data = self.format_item_data(
-                    i=i, name=track["name"], uri=track["uri"],
-                    length=track["duration_ms"] / 1000, total=response["total"]
-                )
-                print(formatted_item_data)
+                length = track["duration_ms"] / 1000
+                self.print_item(i=i, name=track["name"], uri=track["uri"], length=length, total=response["total"])
+
+            if response["next"]:
+                response = self.get(response["next"], params={"limit": limit}, use_cache=use_cache)
             print()
 
     ###########################################################################

@@ -87,6 +87,8 @@ class SpotifyAPI(SpotifyDataWrangler, SpotifyAPICore, SpotifyAPIItems, SpotifyAP
     for more info on which params to pass to authorise and execute requests.
     """
 
+    items_key = "items"
+
     @property
     def api_url_base(self) -> str:
         return URL_API

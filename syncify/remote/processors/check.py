@@ -269,15 +269,14 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
                 print(f"\n\t\33[96mShowing items originally added to \33[94m{name}\33[0m:\n")
                 for i, item in enumerate(items, 1):
                     length = getattr(item, "length", 0)
-                    formatted_item_data = self.api.format_item_data(
+                    self.api.print_item(
                         i=i, name=item.name, uri=item.uri, length=length, total=len(items), max_width=max_width
                     )
-                    print(formatted_item_data)
                 print()
             elif self.validate_id_type(current_input):  # print URL/URI/ID result
                 if not self.api.test_token():
                     self.api.authorise()
-                self.api.pretty_print_uris(current_input)
+                self.api.print_collection(current_input)
 
             else:
                 self.logger.warning("Input not recognised.")
