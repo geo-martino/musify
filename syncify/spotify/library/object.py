@@ -58,7 +58,7 @@ class SpotifyObject(SpotifyObjectMixin, PrettyPrinter, metaclass=ABCMeta):
             if key not in self.response:
                 raise RemoteError(f"Response does not contain all required keys: {required_keys}")
 
-        kind = self.__class__.__name__.casefold().replace("spotify", "")
+        kind = self.__class__.__name__.removeprefix("Spotify").lower()
         if self.response.get("type") != kind:
             kind = RemoteObjectType.from_name(kind)[0]
             raise RemoteObjectTypeError(f"Response type invalid", kind=kind, value=self.response.get("type"))

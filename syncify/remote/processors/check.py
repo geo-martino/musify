@@ -88,25 +88,6 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         self.final_unavailable: list[Track] = []
         self.final_unchanged: list[Track] = []
 
-    def _make_temp_playlist(self, name: str, collection: ItemCollection) -> None:
-        """Create a temporary playlist, store its URL for later unfollowing, and add all given URIs."""
-        # noinspection PyBroadException
-        try:
-            uris = [item.uri for item in collection if item.has_uri]
-            if not uris:
-                return
-
-            url = self.api.create_playlist(name, public=False)
-            self.playlist_name_urls[name] = url
-            self.playlist_name_collection[name] = collection
-
-            self.api.add_to_playlist(url, items=uris, skip_dupes=False)
-        except Exception:  # some kind of logic error, log it, delete playlists, and quit
-            self.logger.error(traceback.format_exc())
-            self.quit = True
-        except BaseException:  # user has tried to exit the program, delete playlists, and quit
-            self.quit = True
-
     def _get_user_input(self, text: str | None = None) -> str:
         """Print dialog with optional text and get the user's input."""
         inp = get_user_input(text)
@@ -125,7 +106,26 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
 
         return "\n\t".join(help_text) + '\n'
 
-    def _delete_temp_playlists(self) -> None:
+    def _create_playlist(self, collection: ItemCollection) -> None:
+        """Create a temporary playlist, store its URL for later unfollowing, and add all given URIs."""
+        # noinspection PyBroadException
+        try:
+            uris = [item.uri for item in collection if item.has_uri]
+            if not uris:
+                return
+
+            url = self.api.create_playlist(collection.name, public=False)
+            self.playlist_name_urls[collection.name] = url
+            self.playlist_name_collection[collection.name] = collection
+
+            self.api.add_to_playlist(url, items=uris, skip_dupes=False)
+        except Exception:  # some kind of logic error, log it, delete playlists, and quit
+            self.logger.error(traceback.format_exc())
+            self.quit = True
+        except BaseException:  # user has tried to exit the program, delete playlists, and quit
+            self.quit = True
+
+    def _delete_playlists(self) -> None:
         """Delete all temporary playlists stored and clear stored playlists and collections"""
         if not self.api.test_token():  # check if token has expired
             self.logger.info_extra("\33[93mAPI token has expired, re-authorising... \33[0m")
@@ -172,9 +172,9 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         self.quit = False
 
         for i, collection in enumerate(bar):
-            self._make_temp_playlist(name=collection.name, collection=collection)
+            self._create_playlist(collection=collection)
             if self.quit:  # quit check
-                self._delete_temp_playlists()
+                self._delete_playlists()
                 break
 
             # skip loop if pause amount has not been reached and not finished making all playlists i.e. not last loop
@@ -188,7 +188,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
             except (KeyboardInterrupt, ConnectionError):
                 self.quit = True
 
-            self._delete_temp_playlists()
+            self._delete_playlists()
             if self.quit or self.skip:  # quit check
                 if i + 1 != len(collections):
                     bar.leave = False

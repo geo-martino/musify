@@ -252,7 +252,7 @@ class LocalCollectionFiltered[T: LocalItem](LocalCollection[T]):
             raise LocalCollectionError("No tracks were given")
 
         # get the tag key dynamically from the name of this class
-        self._tag_key = self._pascal_to_snake(self.__class__.__name__.replace("Local", ""))
+        self._tag_key = self._pascal_to_snake(self.__class__.__name__.removeprefix("Local"))
 
         if name is None:  # attempt to determine the name of this collection from the given tracks
             names: list[UnitCollection[str]] = [track[self._tag_key] for track in tracks if track[self._tag_key]]

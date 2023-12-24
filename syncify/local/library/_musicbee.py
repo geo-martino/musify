@@ -110,7 +110,7 @@ class MusicBee(LocalLibrary, File):
     def load_tracks(self) -> list[LocalTrack]:
         # need to remove the library folder to make it os agnostic
         tracks = super().load_tracks()
-        tracks_paths = {track.path.replace(self.library_folder, "").casefold(): track for track in tracks}
+        tracks_paths = {track.path.removeprefix(self.library_folder).casefold(): track for track in tracks}
         self.logger.debug(f"Enrich {self.name} tracks: START")
 
         errors = []
@@ -120,7 +120,7 @@ class MusicBee(LocalLibrary, File):
                 continue
 
             # need to remove the XML music folder to make it os agnostic
-            track = tracks_paths.get(track_xml["Location"].replace(self.xml["Music Folder"], "").casefold())
+            track = tracks_paths.get(track_xml["Location"].removeprefix(self.xml["Music Folder"]).casefold())
             if track is None:
                 errors.append(track_xml["Location"])
                 continue
@@ -142,7 +142,7 @@ class MusicBee(LocalLibrary, File):
         :param dry_run: Run function, but do not modify file at all.
         :return: Map representation of the saved XML file.
         """
-        tracks_paths = {track.path.replace(self.library_folder, "").casefold(): track for track in self.tracks}
+        tracks_paths = {track.path.removeprefix(self.library_folder).casefold(): track for track in self.tracks}
         track_id_map: dict[LocalTrack, tuple[int, str]] = {}
 
         errors = []
@@ -150,7 +150,7 @@ class MusicBee(LocalLibrary, File):
             if track_xml["Track Type"] != "File":
                 continue
 
-            track = tracks_paths.get(track_xml["Location"].replace(self.xml["Music Folder"], "").casefold())
+            track = tracks_paths.get(track_xml["Location"].removeprefix(self.xml["Music Folder"]).casefold())
             if not track:
                 errors.append(track_xml["Location"])
                 continue
@@ -357,7 +357,7 @@ class XMLLibraryParser:
     @staticmethod
     def from_xml_path(path: str) -> str:
         """Clean the file paths as found in the MusicBee XML library file to a standard system path"""
-        return normpath(urllib.parse.unquote(path.replace("file://localhost/", "")))
+        return normpath(urllib.parse.unquote(path.removeprefix("file://localhost/")))
 
     def _iter_elements(self) -> Generator[etree.Element, [], []]:
         for event, element in self.iterparse:

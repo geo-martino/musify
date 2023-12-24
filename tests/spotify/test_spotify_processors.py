@@ -7,13 +7,12 @@ from syncify.local.track import LocalTrack
 from syncify.processors.match import CleanTagConfig
 from syncify.remote.enums import RemoteIDType as IDType, RemoteObjectType as ObjectType
 from syncify.remote.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
-from syncify.remote.processors.check import RemoteItemChecker
 from syncify.remote.processors.search import SearchSettings
 from syncify.spotify import URL_API, URL_EXT
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.library.collection import SpotifyAlbum
 from syncify.spotify.library.item import SpotifyTrack
-from syncify.spotify.processors.processors import SpotifyItemSearcher
+from syncify.spotify.processors.processors import SpotifyItemSearcher, SpotifyItemChecker
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 from tests.local.utils import random_track
 from tests.remote.processors.check import RemoteItemCheckerTester
@@ -321,6 +320,9 @@ class TestSpotifyItemSearcher(SpotifyProcessorTester, RemoteItemSearcherTester):
 class TestSpotifyItemChecker(SpotifyProcessorTester, RemoteItemCheckerTester):
 
     @pytest.fixture(scope="class")
-    def checker(self, remote_api: SpotifyAPI) -> RemoteItemChecker:
-        return RemoteItemChecker(api=remote_api)
+    def checker(self, remote_api: SpotifyAPI) -> SpotifyItemChecker:
+        return SpotifyItemChecker(api=remote_api)
 
+    @pytest.fixture(scope="class")
+    def playlist_urls(self, remote_mock: SpotifyMock) -> list[str]:
+        return [pl["href"] for pl in remote_mock.user_playlists]

@@ -48,7 +48,7 @@ class TestSpotifyAPIPlaylists:
         assert PROGRAM_NAME in body["description"]
         assert not body["public"]
         assert body["collaborative"]
-        assert result.replace(f"{api.api_url_base}/playlists/", "").strip("/")
+        assert result.removeprefix(f"{api.api_url_base}/playlists/").strip("/")
 
     def test_add_to_playlist_input_validation_and_skips(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
         url = f"{api.api_url_base}/playlists/{random_id()}"

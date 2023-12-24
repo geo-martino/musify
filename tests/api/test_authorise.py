@@ -12,7 +12,7 @@ from requests_mock import Mocker
 
 from syncify.api import APIAuthoriser
 from syncify.api.exception import APIError
-from tests.api.utils import path_api_resources
+from tests.api.utils import path_token
 
 
 class TestAPIAuthoriser:
@@ -33,7 +33,7 @@ class TestAPIAuthoriser:
             "scope": "test-read"
         }
 
-    @pytest.fixture(params=[join(path_api_resources, "token.json")])
+    @pytest.fixture(params=[path_token])
     def token_file_path(self, path: str) -> str:
         """Yield the temporary path for the token JSON file"""
         return path

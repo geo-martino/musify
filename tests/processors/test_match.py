@@ -195,4 +195,36 @@ class TestItemMatcher(PrettyPrinterTester):
         assert matcher.match(track1, [track2, track4, track3], min_score=0.2, max_score=0.8) == track4
         assert matcher(track1, [track2, track4, track3], min_score=0.2, max_score=0.8) == track4
 
-    # TODO: add test for _get_scores on ItemCollection and allow_karaoke
+    def test_allows_karaoke(self, matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):
+        sep = track1.tag_sep
+        track3 = random_track()
+
+        track1.title = "a longer title"
+        track2.title = "this is track2 title"
+        track3.title = "this is track3 title"
+
+        track1.artist = f"band{sep}a singer{sep}artist"
+        track2.artist = "nope"
+        track3.artist = f"artist{sep}nope{sep}other"
+
+        track1.album = "album"
+        track2.album = "name"
+        track3.album = "valid album"
+
+        track1.file.info.length = 100
+        track2.file.info.length = 10
+        track3.file.info.length = 100
+
+        track1.year = 2020
+        track2.year = 2010
+        track3.year = 2020
+
+        # track3 score is above min_score
+        assert matcher.match(track1, [track2, track3], min_score=0.5, max_score=1) == track3
+
+        # ...but is now karaoke
+        track3.album = "karaoke"
+        assert matcher.match(track1, [track2, track3], min_score=0.5, max_score=1) is None
+
+        # ...and now karaoke is allowed
+        assert matcher(track1, [track2, track3], min_score=0.5, max_score=1, allow_karaoke=True) == track3

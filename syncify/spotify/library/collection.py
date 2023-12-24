@@ -35,7 +35,7 @@ class SpotifyCollectionLoader[T: SpotifyItem](SpotifyObjectLoaderMixin[T], Spoti
             **kwargs
     ) -> Self:
         cls._check_for_api()
-        unit = cls.__name__.casefold().replace("spotify", "")
+        unit = cls.__name__.removeprefix("Spotify").lower()
         kind = RemoteObjectType.from_name(unit)[0]
         key = cls.api.collection_item_map[kind].name.casefold() + "s"
 

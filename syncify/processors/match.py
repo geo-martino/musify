@@ -275,7 +275,8 @@ class ItemMatcher(ItemProcessor, Logger):
             results: Iterable[T],
             min_score: float = 0.1,
             max_score: float = 0.8,
-            match_on: UnitIterable[TagField] = ALL_TAG_FIELDS
+            match_on: UnitIterable[TagField] = ALL_TAG_FIELDS,
+            allow_karaoke: bool = False,
     ) -> T | None:
         """
         Perform score match algorithm for a given item and its results.
@@ -288,9 +289,18 @@ class ItemMatcher(ItemProcessor, Logger):
             Value will be limited to between 0.01 and 1.0.
         :param match_on: List of tags to match on. Currently only the following fields are supported:
             title, artist, album, year, length.
+        :param allow_karaoke: When True, items determined to be karaoke are allowed when matching added items.
+            Skip karaoke results otherwise. Karaoke items are identified using the ``karaoke_tags`` attribute.
         :return: T. The item that matched best if found, None if no item matched conditions.
         """
-        return self.match(source=source, results=results, min_score=min_score, max_score=max_score, match_on=match_on)
+        return self.match(
+            source=source,
+            results=results,
+            min_score=min_score,
+            max_score=max_score,
+            match_on=match_on,
+            allow_karaoke=allow_karaoke
+        )
 
     def match[T: (Track, Album)](
             self,

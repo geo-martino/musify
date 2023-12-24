@@ -111,7 +111,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             for filetype in PLAYLIST_FILETYPES:
                 paths = glob(join(self._playlist_folder, "**", f"*{filetype}"), recursive=True)
                 entry = {
-                    splitext(basename(path.replace(self._playlist_folder, "").casefold()))[0]: path
+                    splitext(basename(path.removeprefix(self._playlist_folder).casefold()))[0]: path
                     for path in paths
                 }
                 playlists |= entry

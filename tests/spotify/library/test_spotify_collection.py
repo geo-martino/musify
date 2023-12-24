@@ -39,7 +39,7 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
         spotify_mock.reset_mock()  # test checks the number of requests made
         collection.__class__.api = api
 
-        unit = collection.__class__.__name__.casefold().replace("spotify", "")
+        unit = collection.__class__.__name__.removeprefix("Spotify")
         kind = RemoteObjectType.from_name(unit)[0]
         key = collection.api.collection_item_map[kind].name.casefold() + "s"
 
@@ -71,7 +71,7 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
             spotify_mock: SpotifyMock,
     ):
         """Run test with assertions on load method with given ``items``"""
-        unit = cls.__name__.casefold().replace("spotify", "")
+        unit = cls.__name__.removeprefix("Spotify")
         kind = RemoteObjectType.from_name(unit)[0]
         key = cls.api.collection_item_map[kind].name.casefold() + "s"
 
