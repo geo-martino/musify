@@ -133,7 +133,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
 
         self.logger.info_extra(f"\33[93mDeleting {len(self.playlist_name_urls)} temporary playlists... \33[0m")
         for url in self.playlist_name_urls.values():  # delete playlists
-            self.api.delete_playlist(url.removesuffix("tracks"))
+            self.api.delete_playlist(url)
 
         self.playlist_name_urls.clear()
         self.playlist_name_collection.clear()

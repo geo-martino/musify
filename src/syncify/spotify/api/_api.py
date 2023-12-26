@@ -115,7 +115,7 @@ if __name__ == "__main__":
 
     # noinspection PyUnresolvedReferences
     from syncify.remote.enums import RemoteObjectType as ObjectType
-    from syncify.settings import _format_map
+    from settings import _format_map
 
     client_id = os.getenv("CLIENT_ID")
     client_secret = os.getenv("CLIENT_SECRET")

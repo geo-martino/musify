@@ -74,10 +74,10 @@ class SpotifyAPIPlaylists(RemoteAPI, metaclass=ABCMeta):
             "public": public,
             "collaborative": collaborative,
         }
-        playlist = self.post(url, json=body, log_pad=71)["href"]
+        pl_url = self.post(url, json=body, log_pad=71)["href"]
 
-        self.logger.debug(f"{'DONE':<7}: {url:<71} | Created playlist: '{name}' -> {playlist}")
-        return playlist
+        self.logger.debug(f"{'DONE':<7}: {url:<71} | Created playlist: '{name}' -> {pl_url}")
+        return pl_url
 
     def add_to_playlist(
             self, playlist: str | Mapping[str, Any], items: Collection[str], limit: int = 100, skip_dupes: bool = True

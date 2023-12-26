@@ -14,18 +14,18 @@ from typing import Any
 from dateutil.relativedelta import relativedelta
 
 from syncify import PROGRAM_NAME
-from syncify.config import RemoteClasses, REMOTE_CONFIG
-from syncify.exception import SyncifyError
-from syncify.fields import LocalTrackField
-from syncify.local.collection import LocalFolder
-from syncify.local.library import LocalLibrary, MusicBee
-from syncify.remote.api import RemoteAPI
-from syncify.remote.library.library import RemoteLibrary
-from syncify.report import Report
-from syncify.settings import Settings
-from syncify.utils.helpers import get_user_input
-from syncify.utils.logger import STAT
-from syncify.utils.printers import print_logo, print_line, print_time
+from config import RemoteClasses, REMOTE_CONFIG
+from exception import SyncifyError
+from fields import LocalTrackField
+from local.collection import LocalFolder
+from local.library import LocalLibrary, MusicBee
+from remote.api import RemoteAPI
+from remote.library.library import RemoteLibrary
+from report import Report
+from settings import Settings
+from utils.helpers import get_user_input
+from utils.logger import STAT
+from utils.printers import print_logo, print_line, print_time
 
 
 class Syncify(Settings, Report):
@@ -594,3 +594,4 @@ if __name__ == "__main__":
 # TODO: fix - XAutoPF ItemCollection tests sometimes fail on __setitem__ test
 # TODO: write tests, write tests, write tests
 # TODO: update the readme (dynamic readme?)
+# TODO: rewrite logger to use yaml config

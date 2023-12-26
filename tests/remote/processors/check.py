@@ -95,11 +95,30 @@ class RemoteItemCheckerTester(ABC):
 
     @staticmethod
     def test_finalise(checker: RemoteItemChecker):
-        pass
+        checker.skip = False
+        checker.remaining.extend(random_tracks(3))
+        checker.switched.extend(random_tracks(2))
+
+        checker.final_switched = switched = random_tracks(1)
+        checker.final_unavailable = unavailable = random_tracks(2)
+        checker.final_unchanged = unchanged = random_tracks(3)
+
+        result = checker._finalise()
+
+        assert checker.skip
+        assert not checker.remaining
+        assert not checker.switched
+        assert not checker.final_switched
+        assert not checker.final_unavailable
+        assert not checker.final_unchanged
+
+        assert result.switched == switched
+        assert result.unavailable == unavailable
+        assert result.unchanged == unchanged
 
     @staticmethod
     def test_check_pause(checker: RemoteItemChecker):
-        pass
+        pass  # TODO
 
     @staticmethod
     def test_match_to_remote(checker: RemoteItemChecker):
@@ -107,8 +126,8 @@ class RemoteItemCheckerTester(ABC):
 
     @staticmethod
     def test_match_to_input(checker: RemoteItemChecker):
-        pass
+        pass  # TODO
 
     @staticmethod
     def test_check(checker: RemoteItemChecker):
-        pass
+        pass  # TODO

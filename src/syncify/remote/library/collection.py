@@ -238,7 +238,7 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
         added = len(uri_add)
         if not dry_run:
             added = self.api.add_to_playlist(self.url, items=uri_add, skip_dupes=kind != "refresh")
-            if reload:  # reload the current playlist object from remote
+            if reload:  # reload the current playlist object from syncify.remote
                 self.reload(use_cache=False)
 
         return SyncResultRemotePlaylist(

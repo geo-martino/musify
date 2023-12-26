@@ -237,7 +237,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
 
         log_kind = "adding new items only"
         if kind != "new":
-            log_kind = f"clearing {'all' if kind == 'refresh' else 'extra'} items from remote playlist first"
+            log_kind = f"clearing {'all' if kind == 'refresh' else 'extra'} items from syncify.remote playlist first"
         self.logger.info(
             f"\33[1;95m ->\33[1;97m Synchronising {len(playlists)} {self.remote_source} playlists: {log_kind}"
             f"{f' and reloading stored playlists' if reload else ''} \33[0m"

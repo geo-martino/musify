@@ -1,0 +1,51 @@
+[build-system]
+requires = [
+    "hatchling~=1.21",
+    "mutagen~=1.47",
+    "pyyaml~=6.0",
+    "requests~=2.31",
+    "requests-cache~=1.1",
+    "Pillow~=10.1",
+    "python-dateutil~=2.8.2",
+    "xmltodict~=0.13",
+    "lxml~=4.9",
+    "tqdm~=4.66",
+    "pyfiglet~=1.0",
+    "pytest~=7.4",
+    "pytest-lazy-fixture~=0.6",
+    "pytest-mock~=3.12",
+    "pycountry~=23.12",
+    "requests-mock~=1.11",
+]
+build-backend = "hatchling.build"
+
+[project]
+dynamic = ["version"]
+name = "syncify"
+authors = [
+  { name="George Marino", email="gm.engineer+syncify@pm.me" },
+]
+description = "Synchronise your music library to local or remote libraries"
+readme = "README.md"
+license-files = { paths = ["LICENSE"] }
+requires-python = ">=3.12"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: European Union Public Licence 1.2 (EUPL 1.2)",
+    "Operating System :: OS Independent",
+    "Development Status :: 2 - Pre-Alpha",
+    "Natural Language :: English",
+    "Intended Audience :: End Users/Desktop",
+]
+
+[project.urls]
+"Source code" = "https://github.com/geo-martino/syncify"
+Issues = "https://github.com/geo-martino/syncify/issues"
+
+[tool.hatch.version]
+path = "src/syncify/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/syncify",
+]
