@@ -11,11 +11,6 @@ requires = [
     "lxml~=4.9",
     "tqdm~=4.66",
     "pyfiglet~=1.0",
-    "pytest~=7.4",
-    "pytest-lazy-fixture~=0.6",
-    "pytest-mock~=3.12",
-    "pycountry~=23.12",
-    "requests-mock~=1.11",
 ]
 build-backend = "hatchling.build"
 
@@ -36,6 +31,15 @@ classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Natural Language :: English",
     "Intended Audience :: End Users/Desktop",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest~=7.4",
+    "pytest-lazy-fixture~=0.6",
+    "pytest-mock~=3.12",
+    "pycountry~=23.12",
+    "requests-mock~=1.11",
 ]
 
 [project.urls]
