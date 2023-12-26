@@ -1,17 +1,5 @@
 [build-system]
-requires = [
-    "hatchling~=1.21",
-    "mutagen~=1.47",
-    "pyyaml~=6.0",
-    "requests~=2.31",
-    "requests-cache~=1.1",
-    "Pillow~=10.1",
-    "python-dateutil~=2.8.2",
-    "xmltodict~=0.13",
-    "lxml~=4.9",
-    "tqdm~=4.66",
-    "pyfiglet~=1.0",
-]
+requires = ["hatchling~=1.21"]
 build-backend = "hatchling.build"
 
 [project]
@@ -31,6 +19,18 @@ classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Natural Language :: English",
     "Intended Audience :: End Users/Desktop",
+]
+dependencies = [
+    "mutagen~=1.47",
+    "pyyaml~=6.0",
+    "requests~=2.31",
+    "requests-cache~=1.1",
+    "Pillow~=10.1",
+    "python-dateutil~=2.8.2",
+    "xmltodict~=0.13",
+    "lxml~=4.9",
+    "tqdm~=4.66",
+    "pyfiglet~=1.0",
 ]
 
 [project.optional-dependencies]
