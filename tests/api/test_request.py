@@ -7,9 +7,9 @@ import pytest
 from requests import Response
 from requests_cache import OriginalResponse, CachedResponse, CachedSession
 from requests_mock import Mocker
-# noinspection PyProtectedMember
+# noinspection PyProtectedMember,PyUnresolvedReferences
 from requests_mock.request import _RequestObjectProxy as Request
-# noinspection PyProtectedMember
+# noinspection PyProtectedMember,PyUnresolvedReferences
 from requests_mock.response import _Context as Context
 
 from syncify.api import RequestHandler

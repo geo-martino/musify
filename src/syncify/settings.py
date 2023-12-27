@@ -3,7 +3,6 @@ import os
 import sys
 from abc import ABCMeta, abstractmethod
 from ast import literal_eval
-from collections.abc import Mapping, MutableMapping, Collection
 from copy import deepcopy
 from datetime import datetime
 from os.path import dirname, exists, join, splitext, isabs
@@ -15,43 +14,8 @@ from syncify import PROGRAM_NAME
 from syncify.local.exception import InvalidFileType
 from syncify.remote.processors.search import SearchSettings
 from syncify.spotify.api import API_AUTH_BASIC, API_AUTH_USER
-from syncify.utils.helpers import to_collection
-from syncify.utils.logger import Logger
-
-
-def _update_map[T: MutableMapping](source: T, new: Mapping, extend: bool = True, overwrite: bool = False) -> T:
-    """
-    Recursively update a given ``source`` map in place with a ``new`` map.
-
-    :param source: The source map.
-    :param new: The new map with values to update for the source map.
-    :param extend: When a value is a list and a list is already present in the source map, extend the list when True.
-        When False, only replace the list if overwrite is True.
-    :param overwrite: When True, overwrite any value in the source list destructively.
-    :return: The updated dict.
-    """
-    def is_collection(value: Any) -> bool:
-        """Return True if ``value`` is of type ``Collection`` and not a string or map"""
-        return isinstance(value, Collection) and not isinstance(value, str) and not isinstance(value, Mapping)
-
-    for k, v in new.items():
-        if isinstance(v, Mapping) and isinstance(source.get(k, {}), Mapping):
-            source[k] = _update_map(source.get(k, {}), v)
-        elif extend and is_collection(v) and is_collection(source.get(k, [])):
-            source[k] = to_collection(v, list) + to_collection(source.get(k, []), list)
-        elif overwrite or source.get(k) is None:
-            source[k] = v
-    return source
-
-
-def _format_map[T](value: T, format_map: Mapping[str, Any]) -> T:
-    """Apply a ``format_map`` to a given ``value``. If ``value`` is a map, apply the ``format_map`` recursively"""
-    if isinstance(value, MutableMapping):
-        for k, v in value.items():
-            value[k] = _format_map(v, format_map)
-    elif isinstance(value, str):
-        value = value.format_map(format_map)
-    return value
+from syncify.utils.helpers import to_collection, safe_format_map, update_map
+from syncify.utils.logger import SyncifyLogger, CurrentTimeRotatingFileHandler
 
 
 class Settings(metaclass=ABCMeta):
@@ -113,19 +77,10 @@ class Settings(metaclass=ABCMeta):
     ###########################################################################
     ## Wrangle general settings
     ###########################################################################
-    def set_logger(self) -> None:
-        """Set the logger according to the loaded settings"""
-        log_folder = self._append_module_folder(self.cfg_logging.get("path", "_logs"))
-        Logger.set_log_folder(log_folder, run_dt=self.run_dt)
-
-        Logger.verbosity = self.cfg_logging.get("verbosity", 0)
-        Logger.compact = self.cfg_logging.get("compact", False)
-        Logger.detailed = self.cfg_logging.get("detailed", False)
-
     def set_output(self) -> None:
         """Set the output according to the loaded settings"""
         parent_folder = self._append_module_folder(self.cfg_output.get("path", "_data"))
-        self.output_folder = join(parent_folder, self.run_dt.strftime(Logger.dt_format))
+        self.output_folder = join(parent_folder, self.run_dt.strftime(CurrentTimeRotatingFileHandler.dt_format))
         os.makedirs(self.output_folder, exist_ok=True)
 
     ###########################################################################
@@ -189,7 +144,7 @@ class Settings(metaclass=ABCMeta):
                 "scopes": " ".join(settings.pop("scopes", [])),
             }
 
-            _format_map(template, format_map=format_map)
+            safe_format_map(template, format_map=format_map)
             settings["settings"] = template
 
     ###########################################################################
@@ -201,12 +156,12 @@ class Settings(metaclass=ABCMeta):
             return
 
         for cfg in self.cfg_functions.values():
-            _update_map(cfg, self.cfg_general, extend=True)
+            update_map(cfg, self.cfg_general, extend=True)
 
     def set(self) -> None:
         """Run all setting functions"""
         self.set_output()
-        self.set_logger()
+        SyncifyLogger.compact = self.cfg_logging.get("compact", False)
         self.set_platform_paths()
         # self.set_search_algorithm()
         self.set_api_settings()

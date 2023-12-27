@@ -123,7 +123,7 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
         original_folder = self.matcher.original_folder
 
         if len(paths) > 0 and library_folder is not None and original_folder is not None:
-            pattern = re.compile(library_folder.replace("\\", "\\\\"), re.IGNORECASE)
+            pattern = re.compile(library_folder.replace("\\", "\\\\"), re.I)
             paths = [pattern.sub(original_folder, p) for p in paths]
 
         return paths

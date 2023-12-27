@@ -11,7 +11,7 @@ class TimeMapper(DynamicProcessor):
 
     @classmethod
     def _processor_method_fmt(cls, name: str) -> str:
-        return name.casefold().strip()[0]
+        return name.casefold().strip()[0] if not name.startswith("min") else name
 
     def __init__(self, func: str):
         super().__init__()
@@ -24,6 +24,16 @@ class TimeMapper(DynamicProcessor):
     def map(self, value: Any):
         """Run the mapping function"""
         return super().__call__(value)
+
+    @dynamicprocessormethod
+    def seconds(self, value: Any) -> timedelta:
+        """Map given ``value`` in seconds to :py:class:`timedelta`"""
+        return timedelta(seconds=int(value))
+
+    @dynamicprocessormethod("min")
+    def minutes(self, value: Any) -> timedelta:
+        """Map given ``value`` in minutes to :py:class:`timedelta`"""
+        return timedelta(minutes=int(value))
 
     @dynamicprocessormethod
     def hours(self, value: Any) -> timedelta:

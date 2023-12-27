@@ -5,7 +5,7 @@ from typing import Any
 from urllib.parse import parse_qs
 
 from requests_mock import Mocker
-# noinspection PyProtectedMember
+# noinspection PyProtectedMember,PyUnresolvedReferences
 from requests_mock.request import _RequestObjectProxy as Request
 
 from syncify.remote.enums import RemoteIDType, RemoteObjectType

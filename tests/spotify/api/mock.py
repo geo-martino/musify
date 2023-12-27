@@ -7,9 +7,9 @@ from typing import Any
 from urllib.parse import parse_qs
 
 from pycountry import countries
-# noinspection PyProtectedMember
+# noinspection PyProtectedMember,PyUnresolvedReferences
 from requests_mock.request import _RequestObjectProxy as Request
-# noinspection PyProtectedMember
+# noinspection PyProtectedMember,PyUnresolvedReferences
 from requests_mock.response import _Context as Context
 
 from syncify.abstract.enums import SyncifyEnum

@@ -15,7 +15,7 @@ from syncify.remote.config import RemoteObjectClasses
 from syncify.remote.enums import RemoteObjectType, RemoteIDType
 from syncify.remote.processors.search import RemoteItemSearcher
 from syncify.remote.processors.wrangle import RemoteDataWrangler
-from syncify.utils.helpers import get_user_input
+from syncify.utils.helpers import get_user_input, get_max_width, align_and_truncate
 from syncify.utils.logger import REPORT
 
 
@@ -94,14 +94,15 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         self.logger.debug(f"User input: {inp}")
         return inp.strip()
 
-    def _format_help_text(self, options: Mapping[str, str], header: MutableSequence[str] | None = None) -> str:
+    @staticmethod
+    def _format_help_text(options: Mapping[str, str], header: MutableSequence[str] | None = None) -> str:
         """Format help text with a given mapping of options. Add an option header to include before options."""
-        max_width = self.get_max_width(options)
+        max_width = get_max_width(options)
 
         help_text = header or []
         help_text.append("\n\t\33[96mEnter one of the following: \33[0m\n\t")
         help_text.extend(
-            f"{self.align_and_truncate(k, max_width=max_width)}{': ' + v or ''}" for k, v in options.items()
+            f"{align_and_truncate(k, max_width=max_width)}{': ' + v or ''}" for k, v in options.items()
         )
 
         return "\n\t".join(help_text) + '\n'
@@ -166,7 +167,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
             f"for the current user: {self.api.user_name} \33[0m"
         )
 
-        bar = self.get_progress_bar(iterable=collections, desc="Creating temp playlists", unit="playlists")
+        bar = self.logger.get_progress_bar(iterable=collections, desc="Creating temp playlists", unit="playlists")
         interval_total = (len(collections) // interval) + (len(collections) % interval > 0)
         self.skip = False
         self.quit = False
@@ -200,14 +201,14 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
 
     def _finalise(self) -> ItemCheckResult:
         """Log results and prepare the :py:class:`ItemCheckResult` object"""
-        self.print_line()
+        self.logger.print()
         self.logger.report(
             f"\33[1;96mCHECK TOTALS \33[0m| "
             f"\33[94m{len(self.final_switched):>5} switched  \33[0m| "
             f"\33[91m{len(self.final_unavailable):>5} unavailable \33[0m| "
             f"\33[93m{len(self.final_unchanged):>5} unchanged \33[0m"
         )
-        self.print_line(REPORT)
+        self.logger.print(REPORT)
 
         result = ItemCheckResult(
             switched=self.final_switched, unavailable=self.final_unavailable, unchanged=self.final_unchanged
@@ -264,7 +265,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
             elif pl_names:  # print originally added items
                 name = pl_names[0]
                 items = [item for item in self.playlist_name_collection[name] if item.has_uri]
-                max_width = self.get_max_width(items)
+                max_width = get_max_width(items)
 
                 print(f"\n\t\33[96mShowing items originally added to \33[94m{name}\33[0m:\n")
                 for i, item in enumerate(items, 1):
@@ -403,14 +404,14 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         help_text += "OR enter a custom URI/URL/ID for this item\n"
 
         self._log_padded([name, f"Getting user input for {len(self.remaining)} items"])
-        max_width = self.get_max_width({item.name for item in self.remaining})
+        max_width = get_max_width({item.name for item in self.remaining})
 
         print("\n" + help_text)
         for item in self.remaining.copy():
             while item in self.remaining:  # while item not matched or skipped
                 self._log_padded([name, f"{len(self.remaining):>6} remaining items"])
                 if 'a' not in current_input:
-                    current_input = self._get_user_input(self.align_and_truncate(item.name, max_width=max_width))
+                    current_input = self._get_user_input(align_and_truncate(item.name, max_width=max_width))
 
                 if current_input.casefold().replace('a', '') == 'u':  # mark item as unavailable
                     self._log_padded([name, "Marking as unavailable"], pad="<")

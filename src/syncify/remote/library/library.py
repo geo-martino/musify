@@ -9,6 +9,7 @@ from syncify.remote.config import RemoteObjectClasses
 from syncify.remote.library.collection import SyncResultRemotePlaylist, RemotePlaylist, RemoteCollection
 from syncify.remote.library.item import RemoteTrack
 from syncify.remote.library.object import RemoteObject
+from syncify.utils.helpers import align_and_truncate, get_max_width
 from syncify.utils.logger import REPORT, STAT
 
 
@@ -74,7 +75,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         self.api.load_user_data()
 
         self.logger.info(f"\33[1;95m ->\33[1;97m Loading {self.remote_source} library \33[0m")
-        self.print_line()
+        self.logger.print()
 
         # get raw API responses
         playlists_data = self._get_playlists_data()
@@ -84,8 +85,10 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
             f"\33[1;95m  >\33[1;97m Processing {self.remote_source} library of "
             f"{len(tracks_data)} tracks and {len(playlists_data)} playlists \33[0m"
         )
-        track_bar = self.get_progress_bar(iterable=tracks_data, desc="Processing tracks", unit="tracks")
-        playlists_bar = self.get_progress_bar(iterable=playlists_data, desc="Processing playlists", unit="playlists")
+        track_bar = self.logger.get_progress_bar(iterable=tracks_data, desc="Processing tracks", unit="tracks")
+        playlists_bar = self.logger.get_progress_bar(
+            iterable=playlists_data, desc="Processing playlists", unit="playlists"
+        )
 
         # process to remote objects
         self._tracks = list(map(self._remote_types.track, track_bar))
@@ -95,7 +98,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         ]
         self._playlists = {pl.name: pl for pl in sorted(playlists, key=lambda pl: pl.name.casefold())}
 
-        self.print_line()
+        self.logger.print()
         if log:
             self.log_playlists()
             self.log_tracks()
@@ -113,13 +116,13 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
 
     def log_playlists(self) -> None:
         """Log stats on currently loaded playlists"""
-        max_width = self.get_max_width(self.playlists)
+        max_width = get_max_width(self.playlists)
 
         self.logger.report(f"\33[1;96mLoaded the following {self.remote_source} playlists: \33[0m")
         for name, playlist in self.playlists.items():
-            name = self.align_and_truncate(playlist.name, max_width=max_width)
+            name = align_and_truncate(playlist.name, max_width=max_width)
             self.logger.report(f"\33[97m{name} \33[0m| \33[92m{len(playlist):>6} total tracks \33[0m")
-        self.print_line(REPORT)
+        self.logger.print(REPORT)
 
     @abstractmethod
     def _get_tracks_data(self, playlists_data: Collection[Mapping[str, Any]]) -> list[dict[str, Any]]:
@@ -136,13 +139,13 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         playlist_tracks = [track.uri for tracks in self.playlists.values() for track in tracks]
         in_playlists = len([track for track in self.tracks if track.uri in playlist_tracks])
 
-        width = self.get_max_width(self.playlists)
+        width = get_max_width(self.playlists)
         self.logger.report(
             f"\33[1;96m{self.remote_source.upper() + ' ITEMS':<{width}}\33[1;0m |"
             f"\33[92m{in_playlists:>7} in playlists \33[0m|"
             f"\33[1;94m{len(self.tracks):>6} total \33[0m"
         )
-        self.print_line(REPORT)
+        self.logger.print(REPORT)
 
     def enrich_tracks(self, *args, **kwargs) -> None:
         """
@@ -243,7 +246,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
             f"{f' and reloading stored playlists' if reload else ''} \33[0m"
         )
 
-        bar = self.get_progress_bar(
+        bar = self.logger.get_progress_bar(
             iterable=playlists.items(), desc=f"Synchronising {self.remote_source}", unit="playlists"
         )
         results = {}
@@ -252,7 +255,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
                 self.playlists[name] = self._remote_types.playlist.create(name=name)
             results[name] = self.playlists[name].sync(items=pl, kind=kind, reload=reload, dry_run=dry_run)
 
-        self.print_line()
+        self.logger.print()
         self.logger.debug(f"Sync {self.remote_source} playlists: DONE\n")
         return results
 
@@ -261,12 +264,12 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         if not results:
             return
 
-        max_width = self.get_max_width(self.playlists)
+        max_width = get_max_width(self.playlists)
 
         self.logger.stat(f"\33[1;96mSync {self.remote_source} playlists' stats: \33[0m")
         for name, result in results.items():
             self.logger.stat(
-                f"\33[97m{self.align_and_truncate(name, max_width=max_width)} \33[0m|"
+                f"\33[97m{align_and_truncate(name, max_width=max_width)} \33[0m|"
                 f"\33[96m{result.start:>6} initial \33[0m|"
                 f"\33[92m{result.added:>6} added \33[0m|"
                 f"\33[91m{result.removed:>6} removed \33[0m|"
@@ -274,7 +277,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
                 f"\33[94m{result.difference:>6} difference \33[0m|"
                 f"\33[1;97m{result.final:>6} final \33[0m"
             )
-        self.print_line(STAT)
+        self.logger.print(STAT)
 
     def extend(self, __items: Iterable[Item], allow_duplicates: bool = True) -> None:
         self.logger.debug(f"Extend {self.remote_source} tracks data: START")
@@ -293,7 +296,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
             elif item.has_uri:
                 load_uris.append(item.uri)
 
-        self.print_line()
+        self.logger.print()
         if not load_uris:
             return
 
@@ -305,7 +308,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         load_tracks = self.api.get_tracks(load_uris, features=True, use_cache=self.use_cache)
         self.items.extend(self._remote_types.track(response) for response in load_tracks)
 
-        self.print_line()
+        self.logger.print()
         self.log_tracks()
         self.logger.debug(f"Extend {self.remote_source} tracks data: DONE\n")
 

@@ -2,8 +2,38 @@ import os
 import shutil
 from os.path import join, basename, dirname
 
+import logging.config
+from typing import Any
+
+import yaml
+
 import pytest
 from _pytest.fixtures import SubRequest
+
+
+# noinspection PyUnusedLocal
+@pytest.hookimpl
+def pytest_configure(config: pytest.Config):
+    """Loads logging config"""
+    config_file = join(dirname(dirname(__file__)), "logging.yml")
+    with open(config_file, "r") as f:
+        config = yaml.full_load(f.read())
+
+    for formatter in config["formatters"].values():  # ensure ANSI colour codes in format are recognised
+        formatter["format"] = formatter["format"].replace(r"\33", "\33")
+
+    def remove_file_handler(c: dict[str, Any]) -> None:
+        """Remove all config for file handlers"""
+        for k, v in c.items():
+            if k == "handlers" and isinstance(v, list) and "file" in v:
+                v.pop(v.index("file"))
+            elif k == "handlers" and isinstance(v, dict) and "file" in v:
+                v.pop("file")
+            elif isinstance(v, dict):
+                remove_file_handler(v)
+
+    remove_file_handler(config)
+    logging.config.dictConfig(config)
 
 
 @pytest.fixture

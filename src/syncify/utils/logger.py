@@ -1,101 +1,50 @@
 import inspect
 import logging
+import logging.config
+import logging.handlers
 import os
 import re
 import sys
-from collections.abc import Collection, Container
 from datetime import datetime
-from os.path import join, dirname, exists, splitext, split
-from typing import Any
+from glob import glob
+from os.path import join, dirname, splitext, split, basename, isfile, sep
 
 from tqdm.auto import tqdm as tqdm_auto
 from tqdm.std import tqdm as tqdm_std
 
 from syncify import PROGRAM_NAME
-from syncify.utils.helpers import limit_value
+from syncify.processors.time import TimeMapper
 
-module_width = 40
-
+###########################################################################
+## Setup default Logger with extended levels
+###########################################################################
 INFO_EXTRA = logging.INFO - 1
-REPORT = logging.INFO - 3
-STAT = logging.DEBUG + 3
-
 logging.addLevelName(INFO_EXTRA, "INFO_EXTRA")
+logging.INFO_EXTRA = INFO_EXTRA
+
+REPORT = logging.INFO - 3
 logging.addLevelName(REPORT, "REPORT")
+logging.REPORT = REPORT
+
+STAT = logging.DEBUG + 3
 logging.addLevelName(STAT, "STAT")
-
-
-def format_full_func_name(record: logging.LogRecord, width: int = module_width) -> None:
-    """
-    Set fully qualified path name to function including class name to the given record.
-    Optionally, provide a max ``width`` to attempt to truncate the path name to
-    by taking only the first letter of each part of the path until the length is equal to ``width``.
-    """
-    path = record.funcName.split(".")[-1]
-    stack = inspect.stack()
-    f_locals = stack[8][0].f_locals
-
-    if "self" in f_locals:  # is a valid and initialised object
-        path = splitext(inspect.getfile(f_locals["self"].__class__))[0]
-
-        # get relative path to 'syncify' sources root
-        folder = ""
-        path_split = []
-        while folder != PROGRAM_NAME.casefold():
-            path, folder = split(path)
-            path_split.append(folder)
-
-        # produce fully qualified path
-        path_split = list(reversed(path_split[:-1]))
-        path_split.extend([f_locals["self"].__class__.__name__, record.funcName.split(".")[-1]])
-        path = ".".join(path_split)
-
-    # truncate long paths by taking first letters of each part until short enough
-    path_split = path.split(".")
-    for i, part in enumerate(path_split):
-        if len(path) <= width:
-            break
-
-        path_split[i] = part[0]
-        path = ".".join(path_split)
-
-    record.funcName = path
-
-
-class LogStdOutFilter(logging.Filter):
-    """Filter for logging to stdout."""
-
-    __slots__ = "levels"
-
-    def __init__(self, levels: Container[int] = ()):
-        """
-        :param levels: Accepted log levels to return i.e. 'info', 'debug'
-            If None, set to current log level.
-        """
-        super().__init__()
-        self.levels: Container[int] = levels
-
-    # noinspection PyMissingOrEmptyDocstring
-    def filter(self, record: logging.LogRecord) -> logging.LogRecord | None:
-        if record.levelno not in self.levels:
-            return
-        format_full_func_name(record)
-        return record
-
-
-class LogFileFilter(logging.Filter):
-    """Filter for logging to a file."""
-
-    # noinspection PyMissingOrEmptyDocstring
-    def filter(self, record: logging.LogRecord) -> logging.LogRecord:
-        # record.msg = re.sub(r"\n$", "", record.msg)
-        record.msg = re.sub("\33.*?m", "", record.msg)
-        format_full_func_name(record)
-        return record
+logging.STAT = STAT
 
 
 class SyncifyLogger(logging.Logger):
     """The logger for all logging operations in Syncify."""
+
+    compact: bool = False
+
+    def __init__(self, name: str, level: int | str = logging.NOTSET):
+        super().__init__(name=name, level=level)
+
+        self._console_handlers = []
+        for handler in self.handlers:
+            if not isinstance(handler, logging.StreamHandler):
+                continue
+            if handler.stream == sys.stdout:
+                self._console_handlers.append(handler)
 
     def info_extra(self, msg, *args, **kwargs) -> None:
         """Log 'msg % args' with severity 'INFO_EXTRA'."""
@@ -112,178 +61,14 @@ class SyncifyLogger(logging.Logger):
         if self.isEnabledFor(STAT):
             self._log(STAT, msg, args, **kwargs)
 
-    def __copy__(self):
-        """Do not copy logger"""
-        return self
-
-    def __deepcopy__(self, _: dict = None):
-        """Do not copy logger"""
-        return self
-
-
-class Logger:
-    """Base logger class. Classes can inherit this class to gain logging functionality."""
-
-    # __slots__ = ("logger", "log_filename", "log_path")
-
-    log_folder: str = None
-    dt_format: str = "%Y-%m-%d_%H.%M.%S"
-
-    is_dev: bool = False
-
-    verbosity: int = 0
-    compact: bool = False
-    detailed: bool = False
-
-    def __init__(self):
-        super().__init__()
-        if self.log_folder is None:
-            self.set_dev()
-
-        self.logger: SyncifyLogger | None = None
-        self.log_filename = ".".join((self.__class__.__module__, self.__class__.__qualname__))
-        self.log_path = join(self.log_folder, f"{self.log_filename}.log")
-
-        self._set_logger()
-
-    @classmethod
-    def set_log_folder(
-            cls,
-            folder: str = join(dirname(dirname(__file__)), "_logs"),
-            run_dt: datetime = datetime.now()
-    ):
-        """Set the path of the log folder. Defaults to a folder in the source code's root"""
-        cls.log_folder = join(folder, run_dt.strftime(cls.dt_format))
-
-    @classmethod
-    def set_dev(cls) -> None:
-        """Set defaults for running in dev mode"""
-        cls.set_log_folder("_logs/_dev")
-        cls.verbosity = 5
-        cls.is_dev = True
-
-    def _handle_exception(self, exc_type, exc_value, exc_traceback) -> None:
-        """Custom exception handler. Handles exceptions through logger."""
-        if issubclass(exc_type, KeyboardInterrupt):
-            sys.__excepthook__(exc_type, exc_value, exc_traceback)
-            return
-
-        self.logger.critical(
-            "CRITICAL ERROR: Uncaught Exception", exc_info=(exc_type, exc_value, exc_traceback)
-        )
-
-    def _set_logger(self) -> None:
-        """Set logger object formatted for stdout and file handlers."""
-        # set log file path
-        if not self.is_dev and not exists(self.log_folder):  # if log folder doesn't exist
-            os.makedirs(self.log_folder)  # create log folder
-
-        # get logger and clear default handlers
-        self.logger = SyncifyLogger(self.log_filename)
-        self.logger.setLevel(logging.DEBUG)
-        for h in self.logger.handlers:
-            self.logger.removeHandler(h)
-
-        # set handlers
-        self._set_stdout_handler()
-        if not self.is_dev:
-            self._set_file_handler()
-
-        # return exceptions to logger
-        sys.excepthook = self._handle_exception
-
-    # noinspection SpellCheckingInspection
-    def _set_stdout_handler(self) -> None:
-        """Sets the stdout handler for the logger"""
-        # logging formats
-        stdout_pretty = (
-            "\33[91m{asctime}.{msecs:0<3.0f}\33[0m | "
-            "[\33[92m{levelname:>8}\33[0m] "
-            f"\33[1;96m{{funcName:<{module_width}.{module_width}}}\33[0m "
-            "[\33[95m{lineno:>4}\33[0m] | "
-            "{message}"
-        )
-        stdout_format = logging.Formatter(
-            fmt=stdout_pretty if self.detailed or self.verbosity >= 4 else "{message}",
-            datefmt="%Y-%m-%d %H:%M:%S", style="{"
-        )
-
-        levels: list[int] = [logging.INFO, logging.ERROR, logging.CRITICAL]
-        level_base = logging.DEBUG
-        if self.verbosity == 0:
-            log_filter = LogStdOutFilter(levels=levels)
-            level_base = logging.INFO
-        elif self.verbosity == 1:
-            log_filter = LogStdOutFilter(levels=levels + [INFO_EXTRA, REPORT])
-            level_base = REPORT
-        elif self.verbosity == 2:
-            log_filter = LogStdOutFilter(levels=levels + [INFO_EXTRA, REPORT, STAT])
-            level_base = STAT
-        elif self.verbosity == 3:
-            log_filter = LogStdOutFilter(levels=levels + [INFO_EXTRA, REPORT, STAT, logging.WARNING, logging.DEBUG])
-            level_base = STAT
-        else:
-            log_filter = LogFileFilter()
-
-        # handler for stdout
-        stdout_h = logging.StreamHandler(stream=sys.stdout)
-        stdout_h.set_name("stdout")
-        stdout_h.setLevel(level_base)
-        stdout_h.setFormatter(stdout_format)
-        stdout_h.addFilter(log_filter)
-        self.logger.addHandler(stdout_h)
-
-    # noinspection SpellCheckingInspection
-    def _set_file_handler(self) -> None:
-        """Sets the file handler for the logger."""
-        file_format = logging.Formatter(
-            fmt="{asctime}.{msecs:0<3.0f} | "
-                "[{levelname:>8}] "
-                f"{{funcName:<{module_width}.{module_width}}} "
-                "[{lineno:>4}] | "
-                "{message}",
-            datefmt="%Y-%m-%d %H:%M:%S", style="{"
-        )
-
-        file_h = logging.FileHandler(self.log_path, 'w', encoding="utf-8")
-        file_h.set_name("file")
-        file_h.setLevel(logging.DEBUG)
-        file_h.setFormatter(file_format)
-        file_h.addFilter(LogFileFilter())
-        self.logger.addHandler(file_h)
-
-    def _get_handler(self, name: str) -> logging.Handler | None:
-        """Get the logging handler that matches the given ``name``"""
-        handlers = self.logger.handlers[:]
-        for handler in handlers:
-            if handler.name == name:
-                return handler
-
-    def close_handlers(self) -> None:
-        """Close all handlers and end logging"""
-        handlers = self.logger.handlers[:]
-        for handler in handlers:
-            self.logger.removeHandler(handler)
-            handler.close()
-
-    @staticmethod
-    def get_max_width(items: Collection[Any], min_width: int = 15, max_width: int = 50) -> int:
-        """Get max width of given list of items for column-aligned logging"""
-        if len(items) == 0:
-            return 0
-        max_len = len(max(map(str, items), key=len))
-        return limit_value(value=max_len + 1, floor=min_width, ceil=max_width)
-
-    @staticmethod
-    def align_and_truncate(value: Any, max_width: int = 0, right_align: bool = False) -> str:
-        """Align string with space padding. Truncate any string longer than max width with ..."""
-        if max_width == 0:
-            return value
-        truncated = str(value)[:(max_width - 3)] + "..." if not right_align else "..." + str(value)[-(max_width - 3):]
-        return f"{value if len(str(value)) < max_width else truncated:<{max_width}}"
+    def print(self, level: int = logging.CRITICAL + 1) -> None:
+        """Print a new line only when DEBUG < ``logger level`` <= ``level`` for all console handlers"""
+        if not self.compact and all(logging.DEBUG < h.level <= level for h in self._console_handlers):
+            print()
 
     def get_progress_bar(self, **kwargs) -> tqdm_std:
         """Wrapper for tqdm progress bar. For kwargs, see :py:class:`tqdm_std`"""
+
         # noinspection SpellCheckingInspection
         preset_keys = ("leave", "disable", "file", "ncols", "colour", "smoothing", "position")
         try:
@@ -292,7 +77,8 @@ class Logger:
             cols = 120
 
         return tqdm_auto(
-            leave=kwargs.get("leave", self.verbosity >= 3 and self._get_handler("stdout").level != logging.DEBUG),
+            # and self.verbosity >= 3
+            leave=kwargs.get("leave", all(h.level != logging.DEBUG for h in self._console_handlers)),
             disable=kwargs.get("disable", False),
             file=sys.stdout,
             ncols=cols,
@@ -302,8 +88,175 @@ class Logger:
             **{k: v for k, v in kwargs.items() if k not in preset_keys}
         )
 
-    def print_line(self, level: int = logging.CRITICAL + 1) -> None:
-        """Print a new line only when : DEBUG < ``logger level`` <= ``level``"""
-        handler = self._get_handler("stdout")
-        if not self.compact and logging.DEBUG < handler.level <= level:
-            print()
+    def __copy__(self):
+        """Do not copy logger"""
+        return self
+
+    def __deepcopy__(self, _: dict = None):
+        """Do not copy logger"""
+        return self
+
+
+logging.setLoggerClass(SyncifyLogger)
+
+
+###########################################################################
+## Logging formatters/filters
+###########################################################################
+def format_full_func_name(record: logging.LogRecord, width: int = 40) -> None:
+    """
+    Set fully qualified path name to function including class name to the given record.
+    Optionally, provide a max ``width`` to attempt to truncate the path name to
+    by taking only the first letter of each part of the path until the length is equal to ``width``.
+    """
+    path = record.funcName.split(".")[-1]
+    frame_info = inspect.stack()[8]
+    f_locals = frame_info.frame.f_locals
+
+    if record.pathname == __file__:
+        # custom logging method has been called, reformat call info to actual call method
+        record.pathname = frame_info.filename
+        record.lineno = frame_info.lineno
+        record.funcName = frame_info.function
+        record.filename = basename(record.pathname)
+        record.module = record.name.split(".")[-1]
+
+    if "self" in f_locals:  # is a valid and initialised object
+        path = splitext(inspect.getfile(f_locals["self"].__class__))[0]
+
+        # get relative path to sources root
+        folder = ""
+        path_split = []
+        while folder != PROGRAM_NAME.casefold():
+            path, folder = split(path)
+            path_split.append(folder)
+
+        # produce fully qualified path
+        path_split = list(reversed(path_split[:-1]))
+        path_split.extend([f_locals["self"].__class__.__name__, record.funcName.split(".")[-1]])
+        path = ".".join(path_split)
+
+    # truncate long paths by taking first letters of each part until short enough
+    # noinspection PyTestUnpassedFixture
+    path_split = path.split(".")
+    for i, part in enumerate(path_split):
+        if len(path) <= width:
+            break
+        if not part:
+            continue
+
+        # take all upper case characters if they exist in part, else, if all lower case, take first letter
+        path_split[i] = re.sub("[a-z_]+", "", part) if re.match("[A-Z]", part) else part[0]
+        path = ".".join(path_split)
+
+    record.funcName = path
+
+
+class LogConsoleFilter(logging.Filter):
+    """Filter for logging to stdout."""
+
+    def __init__(self, name: str = "", module_width: int = 40):
+        super().__init__(name)
+        self.module_width = module_width
+
+    # noinspection PyMissingOrEmptyDocstring
+    def filter(self, record: logging.LogRecord) -> logging.LogRecord | None:
+        format_full_func_name(record, width=self.module_width)
+        return record
+
+
+class LogFileFilter(logging.Filter):
+    """Filter for logging to a file."""
+
+    def __init__(self, name: str = "", module_width: int = 40):
+        super().__init__(name)
+        self.module_width = module_width
+
+    # noinspection PyMissingOrEmptyDocstring
+    def filter(self, record: logging.LogRecord) -> logging.LogRecord:
+        record.msg = re.sub("\33.*?m", "", record.msg)
+        format_full_func_name(record, width=self.module_width)
+        return record
+
+
+###########################################################################
+## Logging handlers
+###########################################################################
+class CurrentTimeRotatingFileHandler(logging.handlers.BaseRotatingHandler):
+    """
+
+    :param filename: The full path to the log file.
+        Optionally, include a '{dt}' part in the path to format in the current datetime.
+        When None, defaults to '{dt}.log'
+    :param encoding: When not None, it is used to open the file with that encoding.
+    :param when: The timespan for 'interval' which is used together to calculate the timedelta.
+        Accepts same values as :py:class:`TimeMapper`.
+    :param interval: The multiplier for ``when``.
+        When combined with ``when``, gives the negative timedelta relative to now
+        which is the maximum datetime to keep logs for.
+    :param count: The maximum number of files to keep.
+    :param delay: When True, the file opening is deferred until the first call to emit().
+    :param errors: Used to determine how encoding errors are handled.
+    """
+    dt_format: str = "%Y-%m-%d_%H.%M.%S"
+
+    def __init__(
+            self,
+            filename: str | None = None,
+            encoding: str | None = None,
+            when: str = "h",
+            interval: int = 1,
+            count: int = 0,
+            delay: bool = False,
+            errors: str | None = None
+    ):
+        self.dt = datetime.now()
+
+        dt_str = self.dt.strftime(self.dt_format)
+        if not filename:
+            filename = "{dt}.log"
+        filename = filename.replace("\\", sep) if sep == "/" else filename.replace("/", sep)
+        self.filename = filename.format(dt=dt_str) if r"{dt}" in filename else filename
+
+        self.delta = TimeMapper(when.lower())(interval)
+        self.count = count
+
+        self.removed: list[datetime] = []  # datetime on the files that were removed
+        self.rotator(unformatted=filename, formatted=self.filename)
+
+        super().__init__(filename=self.filename, mode="w", encoding=encoding, delay=delay, errors=errors)
+
+    # noinspection PyPep8Naming
+    @staticmethod
+    def shouldRollover(*_, **__) -> bool:
+        """Always returns False. Rotation happens on __init__ and only needs to happen once."""
+        return False
+
+    def rotator(self, unformatted: str, formatted: str):
+        """
+        Rotates the files in the folder on the given ``unformatted`` path.
+        Removes files older than ``self.delta`` and the oldest files when number of files >= count
+        until number of files <= count. ``formatted`` path is excluded from processing.
+        """
+        log_folder = dirname(formatted)
+        if not log_folder:
+            return
+
+        # get current files present and prefix+suffix to remove when processing
+        paths = tuple(f for f in glob(join(log_folder, "*")) if isfile(f) and f != formatted)
+        prefix = unformatted.split("{")[0] if "{" in unformatted and "}" in unformatted else ""
+        suffix = unformatted.split("}")[1] if "{" in unformatted and "}" in unformatted else ""
+
+        remaining = len(paths)
+        for path in sorted(paths):
+            dt_part = path.removeprefix(prefix).removesuffix(suffix)
+            try:
+                file_dt = datetime.strptime(dt_part, self.dt_format)
+            except ValueError:
+                continue
+
+            # too many or too old, remove and decrement remaining count
+            if remaining >= self.count or file_dt < self.dt - self.delta:
+                self.removed.append(file_dt)
+                os.remove(path)
+                remaining -= 1

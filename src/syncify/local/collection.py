@@ -1,3 +1,4 @@
+import logging
 import sys
 from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Collection, Iterable, Container
@@ -15,14 +16,14 @@ from syncify.local.track import LocalTrack, SyncResultTrack, load_track, TRACK_F
 from syncify.remote.enums import RemoteIDType
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitCollection
-from syncify.utils.helpers import get_most_common_values, to_collection, UnitIterable
-from syncify.utils.logger import Logger, STAT
+from syncify.utils.helpers import get_most_common_values, to_collection, UnitIterable, align_and_truncate, get_max_width
+from syncify.utils.logger import SyncifyLogger, STAT
 
 __max_str = "z" * 50
 
 
 # noinspection PyShadowingNames
-class LocalCollection[T: LocalTrack](Logger, ItemCollection[T], metaclass=ABCMeta):
+class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
     """
     Generic class for storing a collection of local tracks.
 
@@ -30,6 +31,8 @@ class LocalCollection[T: LocalTrack](Logger, ItemCollection[T], metaclass=ABCMet
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on items.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
     """
+
+    __slots__ = ("logger", "remote_wrangler")
 
     @staticmethod
     def _validate_item_type(items: Any | Iterable[Any]) -> bool:
@@ -101,6 +104,9 @@ class LocalCollection[T: LocalTrack](Logger, ItemCollection[T], metaclass=ABCMet
 
     def __init__(self, remote_wrangler: RemoteDataWrangler = None):
         super().__init__()
+
+        # noinspection PyTypeChecker
+        self.logger: SyncifyLogger = logging.getLogger(__name__)
         self.remote_wrangler = remote_wrangler
 
     def save_tracks(self, **kwargs) -> dict[LocalTrack, SyncResultTrack]:
@@ -109,7 +115,7 @@ class LocalCollection[T: LocalTrack](Logger, ItemCollection[T], metaclass=ABCMet
 
         :return: A map of the :py:class:`LocalTrack` saved to its result as a :py:class:`SyncResultTrack` object
         """
-        bar = self.get_progress_bar(iterable=self.tracks, desc="Updating tracks", unit="tracks")
+        bar = self.logger.get_progress_bar(iterable=self.tracks, desc="Updating tracks", unit="tracks")
         results = {track: track.save(**kwargs) for track in bar if isinstance(track, LocalTrack)}
         results_filtered = {track: result for track, result in results.items() if result.updated}
 
@@ -120,18 +126,18 @@ class LocalCollection[T: LocalTrack](Logger, ItemCollection[T], metaclass=ABCMet
         if not results:
             return
 
-        max_width = self.get_max_width([track.path for track in results], max_width=80)
+        max_width = get_max_width([track.path for track in results], max_width=80)
 
         self.logger.stat("\33[1;96mSaved tags to the following tracks: \33[0m")
         for track, result in results.items():
-            name = self.align_and_truncate(track.path, max_width=max_width, right_align=True)
+            name = align_and_truncate(track.path, max_width=max_width, right_align=True)
 
             self.logger.stat(
                 f"\33[97m{name} \33[0m| " +
                 ("\33[92mSAVED \33[0m| " if result.saved else "\33[91mNOT SAVED \33[0m| ") +
                 f"\33[94m{', '.join(tag.name for tag in result.updated.keys())} \33[0m"
             )
-        self.print_line(STAT)
+        self.logger.print(STAT)
 
     def merge_tracks(self, tracks: Collection[Track], tags: UnitIterable[TagField] = FieldCombined.ALL) -> None:
         """
@@ -150,7 +156,7 @@ class LocalCollection[T: LocalTrack](Logger, ItemCollection[T], metaclass=ABCMet
                 f"Merging library of {len(self)} items with {len(tracks)} items on tags: "
                 f"{', '.join(tag_names)} \33[0m"
             )
-            tracks = self.get_progress_bar(iterable=tracks, desc="Merging library", unit="tracks")
+            tracks = self.logger.get_progress_bar(iterable=tracks, desc="Merging library", unit="tracks")
 
         tags = to_collection(tags)
         if FieldCombined.IMAGES in tags or FieldCombined.ALL in tags:
@@ -167,7 +173,7 @@ class LocalCollection[T: LocalTrack](Logger, ItemCollection[T], metaclass=ABCMet
                     track_in_collection[tag] = track[tag]
 
         if isinstance(self, Library):
-            self.print_line()
+            self.logger.print()
 
     def as_dict(self):
         return {

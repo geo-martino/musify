@@ -2,6 +2,8 @@ import pytest
 
 from syncify.utils.helpers import to_collection, strip_ignore_words, flatten_nested, limit_value, get_most_common_values
 
+# TODO:  add new helpers' tests
+
 
 # noinspection PyTypeChecker
 def test_to_collection():

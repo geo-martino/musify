@@ -101,7 +101,7 @@ class PrettyPrinter(ABC):
         for attr_key, attr_val in attributes.items():
             attr_key = attr_key.title().replace('_', ' ')
             for word in self._upper_key_words:
-                pattern = re.compile(rf"(^{word}$|^{word} | {word}$| {word})", flags=re.IGNORECASE)
+                pattern = re.compile(rf"(^{word}$|^{word} | {word}$| {word})", flags=re.I)
                 attr_key = re.sub(pattern, lambda m: m.group(1).upper(), attr_key)
             attr_val_repr = f"{attr_key: <{max_key_width}} = {repr(attr_val)}"
 

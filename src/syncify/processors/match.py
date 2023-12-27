@@ -1,4 +1,5 @@
 import inspect
+import logging
 import re
 from collections.abc import Iterable, Callable, MutableSequence
 from dataclasses import dataclass
@@ -7,10 +8,10 @@ from typing import Any
 from syncify.abstract.collection import Album, ItemCollection
 from syncify.abstract.enums import TagField, TagFieldCombined as Tag, ALL_TAG_FIELDS
 from syncify.abstract.item import Track, BaseObject
+from syncify.utils.logger import SyncifyLogger
 from syncify.processors.base import ItemProcessor
 from syncify.utils import UnitIterable
 from syncify.utils.helpers import limit_value, to_collection
-from syncify.utils.logger import Logger
 
 
 @dataclass
@@ -53,7 +54,7 @@ class CleanTagConfig:
         }
 
 
-class ItemMatcher(ItemProcessor, Logger):
+class ItemMatcher(ItemProcessor):
     """
     Matches source items/collections to given result(s).
 
@@ -77,6 +78,8 @@ class ItemMatcher(ItemProcessor, Logger):
         ``_reduce_name_score_on`` is found in the result but not in the source :py:class:`Item`.
     """
 
+    __slots__ = "logger"
+
     karaoke_tags = {"karaoke", "backing", "instrumental"}
     year_range = 10
 
@@ -92,6 +95,12 @@ class ItemMatcher(ItemProcessor, Logger):
     # config for name score reduction
     reduce_name_score_on = {"live", "demo", "acoustic"}
     reduce_name_score_factor = 0.5
+
+    def __init__(self):
+        super().__init__()
+
+        # noinspection PyTypeChecker
+        self.logger: SyncifyLogger = logging.getLogger(__name__)
 
     def _log_padded(self, log: MutableSequence[str], pad: str = ' ') -> None:
         """Wrapper for logging lists in a correctly aligned format"""

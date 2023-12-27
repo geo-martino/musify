@@ -12,6 +12,7 @@ from syncify.remote.api import RemoteAPI
 from syncify.remote.base import Remote
 from syncify.remote.config import RemoteObjectClasses
 from syncify.remote.enums import RemoteObjectType
+from syncify.utils.helpers import align_and_truncate, get_max_width
 from syncify.utils.logger import REPORT
 
 
@@ -126,7 +127,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
         if not results:
             return
 
-        max_width = self.get_max_width(results)
+        max_width = get_max_width(results)
 
         total_matched = 0
         total_unmatched = 0
@@ -149,7 +150,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
             colour3 = "\33[92m" if skipped == 0 else "\33[93m"
 
             self.logger.report(
-                f"\33[1m{self.align_and_truncate(name, max_width=max_width)} \33[0m|"
+                f"\33[1m{align_and_truncate(name, max_width=max_width)} \33[0m|"
                 f"{colour1}{matched:>6} matched \33[0m| "
                 f"{colour2}{unmatched:>6} unmatched \33[0m| "
                 f"{colour3}{skipped:>6} skipped \33[0m| "
@@ -163,7 +164,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
             f"\33[93m{total_skipped:>6} skipped \33[0m| "
             f"\33[97m{total_all:>6} total \33[0m"
         )
-        self.print_line(REPORT)
+        self.logger.print(REPORT)
 
     # noinspection PyMethodOverriding
     def __call__(self, collections: Collection[ItemCollection]) -> dict[str, ItemSearchResult]:
@@ -192,10 +193,10 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
             f"Searching for matches on {self.remote_source} for {len(collections)} {kind}s\33[0m"
         )
 
-        bar = self.get_progress_bar(iterable=collections, desc="Searching", unit=f"{kind}s")
+        bar = self.logger.get_progress_bar(iterable=collections, desc="Searching", unit=f"{kind}s")
         search_results = {coll.name: self._search_collection(collection=coll) for coll in bar}
 
-        self.print_line()
+        self.logger.print()
         self._log_results(search_results)
         self.logger.debug("Searching: DONE\n")
         return search_results

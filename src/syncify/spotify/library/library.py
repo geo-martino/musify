@@ -65,7 +65,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
         # make API calls
         self.api.get_items(playlists_data, kind=RemoteObjectType.PLAYLIST, use_cache=self.use_cache)
 
-        self.print_line()
+        self.logger.print()
         self.logger.debug(f"Get {self.remote_source} playlists data: DONE\n")
         return playlists_data
 
@@ -86,7 +86,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
         )
         self.api.get_tracks(tracks_data, features=True, use_cache=self.use_cache)
 
-        self.print_line()
+        self.logger.print()
         self.logger.debug(f"Load {self.remote_source} tracks data: DONE\n")
         return tracks_data
 
@@ -123,7 +123,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
                 # noinspection PyProtectedMember
                 track.response["artists"] = [artists[artist["uri"]] for artist in track.response["artists"]]
 
-        self.print_line()
+        self.logger.print()
         self.logger.debug(f"Enrich {self.remote_source} library: DONE\n")
 
     def merge_playlists(self, playlists: Library | Collection[Playlist] | Mapping[Any, Playlist]) -> None:

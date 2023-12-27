@@ -61,7 +61,7 @@ class File(Hashable, metaclass=ABCMeta):
         if ext not in self.valid_extensions:
             raise InvalidFileType(
                 ext,
-                f"Not an accepted {self.__class__.__qualname__} file extension. "
+                f"Not an accepted {self.__class__.__name__} file extension. "
                 f"Use only: {', '.join(self.valid_extensions)}"
             )
 

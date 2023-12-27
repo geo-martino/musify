@@ -14,6 +14,7 @@ from syncify.local.track import TRACK_CLASSES, LocalTrack, load_track
 from syncify.processors.sort import ItemSorter
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitCollection, UnitIterable
+from syncify.utils.helpers import align_and_truncate, get_max_width
 from syncify.utils.logger import REPORT
 
 
@@ -182,7 +183,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         super().__init__(remote_wrangler=remote_wrangler)
         log_name = basename(library_folder) if library_folder else self.name
         self.logger.info(f"\33[1;95m ->\33[1;97m Loading {log_name} library \33[0m")
-        self.print_line()
+        self.logger.print()
 
         self.include = [name.strip().casefold() for name in include]
         self.exclude = [name.strip().casefold() for name in exclude]
@@ -212,7 +213,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             f"\33[1;95m ->\33[1;97m Loading {self.name} library of "
             f"{len(self._track_paths)} tracks and {len(self._playlist_paths)} playlists \33[0m"
         )
-        self.print_line()
+        self.logger.print()
 
         if tracks:
             self._tracks = self.load_tracks()
@@ -236,21 +237,21 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
         tracks: list[LocalTrack] = []
         errors: list[str] = []
-        for path in self.get_progress_bar(iterable=self._track_paths, desc="Loading tracks", unit="tracks"):
+        for path in self.logger.get_progress_bar(iterable=self._track_paths, desc="Loading tracks", unit="tracks"):
             try:
                 tracks.append(load_track(path=path, available=self._track_paths, remote_wrangler=self.remote_wrangler))
             except SyncifyError:
                 errors.append(path)
                 continue
 
-        self.print_line()
+        self.logger.print()
         self._log_errors(errors)
         self.logger.debug(f"Load {self.name} tracks: DONE\n")
         return tracks
 
     def log_tracks(self) -> None:
         """Log stats on currently loaded tracks"""
-        width = self.get_max_width(self._playlist_paths)
+        width = get_max_width(self._playlist_paths)
         self.logger.report(
             f"\33[1;96m{'LIBRARY URIS':<{width}}\33[1;0m |"
             f"\33[92m{sum([track.has_uri is True for track in self.tracks]):>6} available \33[0m|"
@@ -258,7 +259,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             f"\33[93m{sum([track.has_uri is False for track in self.tracks]):>6} unavailable \33[0m|"
             f"\33[1;94m{len(self.tracks):>6} total \33[0m"
         )
-        self.print_line(REPORT)
+        self.logger.print(REPORT)
 
     def load_playlists(self, names: Collection[str] | None = None) -> list[LocalPlaylist]:
         """
@@ -277,7 +278,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
         playlists: list[LocalPlaylist] = []
         errors: list[str] = []
-        for name in self.get_progress_bar(iterable=names, desc="Loading playlists", unit="playlists"):
+        for name in self.logger.get_progress_bar(iterable=names, desc="Loading playlists", unit="playlists"):
             path = self._playlist_paths.get(name.strip().casefold())
             if path is None:
                 raise LocalCollectionError(
@@ -295,7 +296,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
             playlists.append(pl)
 
-        self.print_line()
+        self.logger.print()
         self._log_errors(errors)
         self.logger.debug(f"Load {self.name} playlist data: DONE\n")
         return playlists
@@ -311,25 +312,25 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
     def log_playlists(self) -> None:
         """Log stats on currently loaded playlists"""
-        max_width = self.get_max_width(self.playlists)
+        max_width = get_max_width(self.playlists)
 
         self.logger.report(f"\33[1;96mFound the following {self.name} playlists: \33[0m")
         for name, playlist in self.playlists.items():
             self.logger.report(
-                f"\33[97m{self.align_and_truncate(name, max_width=max_width)} \33[0m|"
+                f"\33[97m{align_and_truncate(name, max_width=max_width)} \33[0m|"
                 f"\33[92m{len([t for t in playlist if t.has_uri]):>6} available \33[0m|"
                 f"\33[91m{len([t for t in playlist if t.has_uri is None]):>6} missing \33[0m|"
                 f"\33[93m{len([t for t in playlist if t.has_uri is False]):>6} unavailable \33[0m|"
                 f"\33[1;94m{len(playlist):>6} total \33[0m"
             )
-        self.print_line(REPORT)
+        self.logger.print(REPORT)
 
     def _log_errors(self, errors: Iterable[str], message: str = "Could not load") -> None:
         """Log paths which had some error while loading"""
         errors = tuple(f"\33[91m{e}\33[0m" for e in errors)
         if len(errors) > 0:
             self.logger.warning(f"\33[97m{message}: \33[0m\n\t- {"\n\t- ".join(errors)} ")
-            self.print_line()
+            self.logger.print()
 
     def merge_playlists(self, playlists: Library | Collection[Playlist] | Mapping[Any, Playlist]) -> None:
         raise NotImplementedError

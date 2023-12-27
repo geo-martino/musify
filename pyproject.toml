@@ -50,6 +50,9 @@ Issues = "https://github.com/geo-martino/syncify/issues"
 path = "src/syncify/__init__.py"
 
 [tool.hatch.build.targets.sdist]
-include = [
-  "src/syncify",
-]
+include = ["src/syncify"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+addopts = "-color=yes"

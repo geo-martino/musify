@@ -14,21 +14,21 @@ from typing import Any
 from dateutil.relativedelta import relativedelta
 
 from syncify import PROGRAM_NAME
-from config import RemoteClasses, REMOTE_CONFIG
-from exception import SyncifyError
-from fields import LocalTrackField
-from local.collection import LocalFolder
-from local.library import LocalLibrary, MusicBee
-from remote.api import RemoteAPI
-from remote.library.library import RemoteLibrary
-from report import Report
-from settings import Settings
-from utils.helpers import get_user_input
-from utils.logger import STAT
-from utils.printers import print_logo, print_line, print_time
+from syncify.config import RemoteClasses, REMOTE_CONFIG
+from syncify.exception import SyncifyError
+from syncify.fields import LocalTrackField
+from syncify.local.collection import LocalFolder
+from syncify.local.library import LocalLibrary, MusicBee
+from syncify.utils.logger import SyncifyLogger, STAT, CurrentTimeRotatingFileHandler
+from syncify.remote.api import RemoteAPI
+from syncify.remote.library.library import RemoteLibrary
+from syncify.report import report_library_differences, report_missing_tags
+from syncify.settings import Settings
+from syncify.utils.helpers import get_user_input
+from syncify.utils.printers import print_logo, print_line, print_time
 
 
-class Syncify(Settings, Report):
+class Syncify(Settings):
     """
     Core functionality and meta-functions for the program
 
@@ -64,7 +64,7 @@ class Syncify(Settings, Report):
             self.logger.info(f"\33[1;95m ->\33[1;97m Authorising API access \33[0m")
             self._api = self.remote_config.api(**self.cfg_run[self.remote_source]["api"]["settings"])
             self.remote_config.object.api = self._api
-            self.print_line()
+            self.logger.print()
         return self._api
 
     @property
@@ -129,6 +129,9 @@ class Syncify(Settings, Report):
 
     def __init__(self, config_path: str = "config.yml"):
         self._start_time = perf_counter()  # for measuring total runtime
+
+        # noinspection PyTypeChecker
+        self.logger: SyncifyLogger = logging.getLogger(__name__)
         super().__init__(config_path=config_path)
 
         self.run: Callable[[], Any] | None = None
@@ -156,8 +159,8 @@ class Syncify(Settings, Report):
         folder = folder or self.output_folder
         path = join(folder, filename)
 
-        with open(path, "w") as f:
-            json.dump(data, f, indent=2)
+        with open(path, "w") as file:
+            json.dump(data, file, indent=2)
 
     def _load_json(self, filename: str, folder: str | None = None) -> dict[str, Any]:
         """Load a stored JSON file from a given folder, or this run's folder if not given"""
@@ -166,8 +169,8 @@ class Syncify(Settings, Report):
         folder = folder or self.output_folder
         path = join(folder, filename)
 
-        with open(path, "r") as f:
-            data = json.load(f)
+        with open(path, "r") as file:
+            data = json.load(file)
 
         return data
 
@@ -199,7 +202,7 @@ class Syncify(Settings, Report):
         """Pause the program with a message and wait for user input to continue"""
         message = self.cfg_run.get("message", "Pausing, hit return to continue...").strip()
         input(f"\33[93m{message}\33[0m ")
-        self.print_line()
+        self.logger.print()
 
     def reload(self) -> None:
         """Reload libraries if they are initialised"""
@@ -248,7 +251,7 @@ class Syncify(Settings, Report):
                 folder = basename(path)
                 if not re.match(r"\d{4}-\d{2}-\d{2}_\d{2}\.\d{2}\.\d{2}.*", folder):
                     continue
-                folder_dt = dt.strptime(folder[:19], self.dt_format)
+                folder_dt = dt.strptime(folder[:19], CurrentTimeRotatingFileHandler.dt_format)
                 dt_diff = folder_dt < dt.now() - relativedelta(days=days)
 
                 # empty folder or too many or too old or date set to be removed already
@@ -265,7 +268,7 @@ class Syncify(Settings, Report):
             shutil.rmtree(p)
 
         self.logger.info(f"\33[1;95m ->\33[1;92m Removed {len(remove)} folders\33[0m")
-        self.print_line()
+        self.logger.print()
         self.logger.debug(f"Clean {PROGRAM_NAME} files: DONE\n")
 
     ###########################################################################
@@ -333,7 +336,7 @@ class Syncify(Settings, Report):
             f"\33[1;95m ->\33[1;97m Restoring local track tags from backup: "
             f"{basename(folder)} | Tags: {', '.join(restore_tags)}\33[0m"
         )
-        self.print_line()
+        self.logger.print()
         backup = self._load_json(self.local_library_backup_name, folder)
 
         # restore and save
@@ -350,7 +353,7 @@ class Syncify(Settings, Report):
         self.logger.info(
             f"\33[1;95m ->\33[1;97m Restoring {self.remote_source} playlists from backup: {basename(folder)} \33[0m"
         )
-        self.print_line()
+        self.logger.print()
         backup = self._load_json(self.spotify_library_backup_name, folder)
 
         # restore and sync
@@ -373,9 +376,9 @@ class Syncify(Settings, Report):
         self.logger.debug("Generate reports: START")
         cfg = self.cfg_run.get("reports", {})
         if cfg.get("library_differences").get("enabled", True):
-            self.report_library_differences(self.local_library, self.remote_library)
+            report_library_differences(self.local_library, self.remote_library)
         if cfg.get("missing_tags").get("enabled", True):
-            self.report_missing_tags(self.local_library.folders)
+            report_missing_tags(self.local_library.folders)
         self.logger.debug("Generate reports: DONE\n")
 
     def check(self) -> None:
@@ -392,11 +395,11 @@ class Syncify(Settings, Report):
             results = self.local_library.save_tracks(tags=LocalTrackField.URI, replace=True, dry_run=self.dry_run)
 
             if results:
-                self.print_line(STAT)
+                self.logger.print(STAT)
             self.local_library.log_sync_result(results)
             self.logger.info(f"\33[92m    Done | Set tags for {len(results)} tracks \33[0m")
 
-        self.print_line()
+        self.logger.print()
         self.logger.debug("Check and update URIs: DONE\n")
 
     def search(self) -> None:
@@ -409,7 +412,7 @@ class Syncify(Settings, Report):
 
         if len(albums) == 0:
             self.logger.info("\33[1;95m ->\33[0;90m All items matched or unavailable. Skipping search.\33[0m")
-            self.print_line()
+            self.logger.print()
             return
 
         self.remote_config.searcher(api=self.api).search(albums)
@@ -419,10 +422,10 @@ class Syncify(Settings, Report):
         results = self.local_library.save_tracks(tags=LocalTrackField.URI, replace=True, dry_run=self.dry_run)
 
         if results:
-            self.print_line(STAT)
+            self.logger.print(STAT)
         self.local_library.log_sync_result(results)
         self.logger.info(f"\33[92m    Done | Set tags for {len(results)} tracks \33[0m")
-        self.print_line()
+        self.logger.print()
         self.logger.debug("Search and match: DONE\n")
 
     ###########################################################################
@@ -449,10 +452,10 @@ class Syncify(Settings, Report):
         results = self.local_library.save_tracks(tags=tags, replace=replace, dry_run=self.dry_run)
 
         if results:
-            self.print_line(STAT)
+            self.logger.print(STAT)
         self.local_library.log_sync_result(results)
         self.logger.info(f"\33[92m    Done | Set tags for {len(results)} tracks \33[0m")
-        self.print_line()
+        self.logger.print()
         self.logger.debug("Update tags: DONE\n")
 
     def process_compilations(self) -> None:
@@ -473,15 +476,15 @@ class Syncify(Settings, Report):
         )
 
         results = {}
-        for folder in self.get_progress_bar(iterable=folders, desc="Setting tags", unit="folders"):  # set tags
+        for folder in self.logger.get_progress_bar(iterable=folders, desc="Setting tags", unit="folders"):  # set tags
             folder.set_compilation_tags()
             results |= folder.save_tracks(tags=tags, replace=replace, dry_run=self.dry_run)
 
         if results:
-            self.print_line(STAT)
+            self.logger.print(STAT)
         self.local_library.log_sync_result(results)
         self.logger.info(f"\33[92m    Done | Set tags for {len(results)} tracks \33[0m")
-        self.print_line()
+        self.logger.print()
         self.logger.debug("Update compilations: Done\n")
 
     def sync_spotify(self) -> None:
@@ -509,9 +512,38 @@ class Syncify(Settings, Report):
 
 if __name__ == "__main__":
     print_logo()
+    
+    import logging.config
+    import yaml
+    
+    config_file = join(dirname(dirname(__file__)), "logging.yml")
+    with open(config_file, "r") as f:
+        config = yaml.full_load(f.read())
+
+    for formatter in config["formatters"].values():  # ensure ANSI colour codes in format are recognised
+        formatter["format"] = formatter["format"].replace(r"\33", "\33")
+
+    logging.config.dictConfig(config)
+    # noinspection PyTypeChecker
+    file_handler: CurrentTimeRotatingFileHandler | None = logging.getHandlerByName("file")
+
+    
+    def _handle_exception(self, exc_type, exc_value, exc_traceback) -> None:
+        """Custom exception handler. Handles exceptions through logger."""
+        if issubclass(exc_type, KeyboardInterrupt):
+            sys.__excepthook__(exc_type, exc_value, exc_traceback)
+            return
+
+        self.logger.critical(
+            "CRITICAL ERROR: Uncaught Exception", exc_info=(exc_type, exc_value, exc_traceback)
+        )
+
+    sys.excepthook = _handle_exception
+
     main = Syncify()
     main.parse_from_prompt()
-    main.logger.info(f"\33[90mLogs: {main.log_path} \33[0m")
+    if file_handler:
+        main.logger.info(f"\33[90mLogs: {file_handler.filename} \33[0m")
     main.logger.info(f"\33[90mOutput: {main.output_folder} \33[0m")
 
     if main.dry_run:
@@ -545,7 +577,8 @@ if __name__ == "__main__":
             failed = True
             break
 
-    main.close_handlers()
+    main.logger.debug(f"Time taken: {main.time_taken}")
+    logging.shutdown()
     print_logo()
     print_time(main.time_taken)
 
@@ -572,7 +605,6 @@ if __name__ == "__main__":
 # TODO: look into the requests_cache, it grows way too big sometimes?
 # TODO: implement terminal parser for function-specific kwargs?
 # TODO: implement release structure on GitHub
-# TODO: Logger to store all open progress bars?
 
 
 ## SELECTED FOR DEVELOPMENT
@@ -590,8 +622,7 @@ if __name__ == "__main__":
 
 
 ## NEEDED FOR v0.3
-# TODO: review scope of functions/attributes/properties e.g. logger methods on Logger implementations
+# TODO: review scope of functions/attributes/properties
 # TODO: fix - XAutoPF ItemCollection tests sometimes fail on __setitem__ test
 # TODO: write tests, write tests, write tests
 # TODO: update the readme (dynamic readme?)
-# TODO: rewrite logger to use yaml config

@@ -6,7 +6,7 @@ from typing import Any
 from urllib.parse import parse_qs
 
 import pytest
-# noinspection PyProtectedMember
+# noinspection PyProtectedMember,PyUnresolvedReferences
 from requests_mock.request import _RequestObjectProxy as Request
 
 from syncify.remote.enums import RemoteObjectType as ObjectType, RemoteIDType as IDType

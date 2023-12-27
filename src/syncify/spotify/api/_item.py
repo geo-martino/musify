@@ -55,7 +55,7 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
 
         # prepare iterator
         if len(id_list) >= 50:  # show progress bar for batches which may take a long time
-            id_list = self.get_progress_bar(iterable=id_list, desc=f"Getting {unit}", unit=unit)
+            id_list = self.logger.get_progress_bar(iterable=id_list, desc=f"Getting {unit}", unit=unit)
 
         results: list[dict[str, Any]] = []
         log = [f"{unit.title()}:{len(id_list):>5}"]
@@ -103,7 +103,7 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
         id_chunks = list(batched(id_list, limit_value(limit, floor=1, ceil=50)))
         bar = range(len(id_chunks))
         if len(id_chunks) >= 10:  # show progress bar for batches which may take a long time
-            bar = self.get_progress_bar(iterable=bar, desc=f"Getting {unit}", unit="pages")
+            bar = self.logger.get_progress_bar(iterable=bar, desc=f"Getting {unit}", unit="pages")
 
         results: list[dict[str, Any]] = []
         params = params if params is not None else {}
@@ -151,7 +151,7 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
         # enable progress bar for longer calls
         total = items_block["total"]
         initial = len(items_block[self.items_key])
-        bar = self.get_progress_bar(total=total, desc=f"Extending {unit}", unit=key, initial=initial)
+        bar = self.logger.get_progress_bar(total=total, desc=f"Extending {unit}", unit=key, initial=initial)
 
         # this usually happens on the items block of a current user's playlist
         if "next" not in items_block:
@@ -251,7 +251,7 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
         bar = results
         key = self.collection_item_map.get(kind, kind).name.casefold() + "s"
         if len(id_list) > 5:  # show progress bar for collection batches which may take a long time
-            bar = self.get_progress_bar(iterable=results, desc=f"Extending {unit}", unit=key)
+            bar = self.logger.get_progress_bar(iterable=results, desc=f"Extending {unit}", unit=key)
 
         for result in bar:
             if result[key]["next"]:

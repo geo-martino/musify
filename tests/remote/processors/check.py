@@ -1,19 +1,13 @@
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterable
-from copy import copy
 from random import randrange
-from urllib.parse import parse_qs
 
 import pytest
-from pytest_mock import MockerFixture
 
-from syncify.abstract.collection import BasicCollection, Album, ItemCollection
-from syncify.abstract.item import Item
+from syncify.abstract.collection import BasicCollection
 from syncify.remote.api import RemoteAPI
-from syncify.remote.enums import RemoteObjectType
 from syncify.remote.processors.check import RemoteItemChecker
 from tests.api.utils import path_token
-from tests.local.utils import random_track, random_tracks
+from tests.local.utils import random_tracks
 from tests.remote.utils import RemoteMock
 from tests.spotify.utils import random_uri
 from tests.utils import random_str

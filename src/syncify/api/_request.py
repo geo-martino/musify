@@ -13,12 +13,11 @@ from requests_cache import CachedSession
 
 from syncify.api._authorise import APIAuthoriser
 from syncify.api.exception import APIError
-from syncify.utils.logger import Logger
 
 _DEFAULT_CACHE_PATH = join(dirname(dirname(dirname(__file__))), ".api_cache")
 
 
-class RequestHandler(APIAuthoriser, Logger):
+class RequestHandler(APIAuthoriser):
     """
     Generic API request handler using cached responses for GET requests only.
     Caches GET responses for a maximum of 4 weeks by default.
@@ -30,7 +29,7 @@ class RequestHandler(APIAuthoriser, Logger):
     :param auth_kwargs: The authorisation kwargs to be passed to :py:class:`APIAuthoriser`.
     """
 
-    __slots__ = "session"
+    # __slots__ = "session"
 
     backoff_start = 0.5
     backoff_factor = 2

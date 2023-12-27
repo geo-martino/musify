@@ -6,6 +6,7 @@ from syncify.api import RequestHandler
 from syncify.remote.enums import RemoteIDType, RemoteObjectType
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.remote.types import APIMethodInputType
+from syncify.utils.helpers import align_and_truncate
 
 
 class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
@@ -168,7 +169,7 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
         """
         print(
             f"\t\33[92m{str(i).zfill(len(str(total)))} \33[0m- "
-            f"\33[97m{self.align_and_truncate(name, max_width=max_width)} \33[0m| "
+            f"\33[97m{align_and_truncate(name, max_width=max_width)} \33[0m| "
             f"\33[91m{str(int(length // 60)).zfill(2)}:{str(round(length % 60)).zfill(2)} \33[0m| "
             f"\33[93m{uri} \33[0m- "
             f"{self.convert(uri, type_in=RemoteIDType.URI, type_out=RemoteIDType.URL_EXT)}"

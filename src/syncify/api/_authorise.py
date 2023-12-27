@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import socket
 from collections.abc import Callable, Mapping, Sequence, MutableMapping
@@ -11,10 +12,10 @@ import requests
 
 from syncify import PROGRAM_NAME
 from syncify.api.exception import APIError
-from syncify.utils.logger import Logger
+from syncify.utils.logger import SyncifyLogger
 
 
-class APIAuthoriser(Logger):
+class APIAuthoriser:
     """
     Authorises and validates an API token for given input parameters.
     Functions for returning formatted headers for future, authorised requests.
@@ -63,6 +64,7 @@ class APIAuthoriser(Logger):
     """
 
     __slots__ = (
+        "logger",
         "name",
         "auth_args",
         "user_args",
@@ -127,7 +129,8 @@ class APIAuthoriser(Logger):
         header_prefix: str | None = "Bearer ",
         header_extra: Mapping[str, str] | None = None,
     ):
-        super().__init__()
+        # noinspection PyTypeChecker
+        self.logger: SyncifyLogger = logging.getLogger(__name__)
         self.name = name
 
         # maps of requests parameters to be passed to `requests` functions

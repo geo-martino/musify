@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, Mapping, Iterable, Container, MutableSequence
 from copy import deepcopy
@@ -9,10 +10,10 @@ from typing import Any, Self, SupportsIndex
 from syncify.abstract.enums import Field
 from syncify.abstract.item import Item, Track, ObjectPrinterMixin
 from syncify.exception import SyncifyTypeError
+from syncify.utils.logger import SyncifyLogger
 from syncify.processors.sort import ItemSorter, ShuffleMode, ShuffleBy
 from syncify.utils import UnitSequence
-from syncify.utils.helpers import to_collection
-from syncify.utils.logger import Logger
+from syncify.utils.helpers import to_collection, align_and_truncate, get_max_width
 
 
 # noinspection PyShadowingNames
@@ -356,7 +357,7 @@ class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
 
 
 # noinspection PyShadowingNames
-class Library[T: Track](Logger, ItemCollection[T], metaclass=ABCMeta):
+class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
     """
     A library of items and playlists
 
@@ -390,6 +391,12 @@ class Library[T: Track](Logger, ItemCollection[T], metaclass=ABCMeta):
     def playlists(self) -> dict[str, Playlist]:
         """The playlists in this library"""
         raise NotImplementedError
+    
+    def __init__(self):
+        super().__init__()
+
+        # noinspection PyTypeChecker
+        self.logger: SyncifyLogger = logging.getLogger(__name__)
 
     def get_filtered_playlists(
             self,
@@ -412,8 +419,10 @@ class Library[T: Track](Logger, ItemCollection[T], metaclass=ABCMeta):
             f"\33[1;95m ->\33[1;97m Filtering playlists and tracks from {len(self.playlists)} playlists\n"
             f"\33[0;90m    Filter out tags: {filter_tags} \33[0m"
         )
-        max_width = self.get_max_width(self.playlists)
-        bar = self.get_progress_bar(iterable=self.playlists.items(), desc="Filtering playlists", unit="playlists")
+        max_width = get_max_width(self.playlists)
+        bar = self.logger.get_progress_bar(
+            iterable=self.playlists.items(), desc="Filtering playlists", unit="playlists"
+        )
 
         filtered: dict[str, Playlist] = {}
         for name, playlist in bar:
@@ -432,11 +441,11 @@ class Library[T: Track](Logger, ItemCollection[T], metaclass=ABCMeta):
                         break
 
             self.logger.debug(
-                f"{self.align_and_truncate(name, max_width=max_width)} | "
+                f"{align_and_truncate(name, max_width=max_width)} | "
                 f"Filtered out {len(playlist) - len(filtered[name]):>3} items"
             )
 
-        self.print_line()
+        self.logger.print()
         return filtered
 
     @abstractmethod

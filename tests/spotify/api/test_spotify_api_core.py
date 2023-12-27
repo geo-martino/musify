@@ -4,6 +4,7 @@ from urllib.parse import parse_qs
 import pytest
 
 from syncify.remote.enums import RemoteObjectType as ObjectType
+from syncify.spotify import URL_EXT
 from syncify.spotify.api import SpotifyAPI
 from tests.spotify.api.mock import SpotifyMock, idfn
 from tests.utils import random_str
@@ -103,9 +104,12 @@ class TestSpotifyAPICore:
         source = next(item for item in spotify_mock.item_type_map[kind] if item[key]["total"] > 50)
 
         api.print_collection(value=source)
-
         stdout = capfd.readouterr()[0]
-        print(stdout)
-        assert len(stdout.strip().split("\n\n")) == len(spotify_mock.request_history)  # printed in blocks
+
+        # printed in blocks
+        blocks = [block for block in stdout.strip().split("\n\n") if URL_EXT in block]
+        assert len(blocks) == len(spotify_mock.request_history)
+
         # lines printed = total tracks + 1 extra for title
-        assert len([line for line in stdout.strip().split("\n") if line]) == source[key]["total"] + 1
+        lines = [line for line in stdout.strip().split("\n") if URL_EXT in line]
+        assert len(lines) == source[key]["total"] + 1

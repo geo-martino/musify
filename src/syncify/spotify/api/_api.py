@@ -115,7 +115,7 @@ if __name__ == "__main__":
 
     # noinspection PyUnresolvedReferences
     from syncify.remote.enums import RemoteObjectType as ObjectType
-    from settings import _format_map
+    from syncify.utils.helpers import safe_format_map
 
     client_id = os.getenv("CLIENT_ID")
     client_secret = os.getenv("CLIENT_SECRET")
@@ -134,7 +134,7 @@ if __name__ == "__main__":
             "playlist-read-private"
         ]),
     }
-    _format_map(API_AUTH_USER, format_map=format_map)
+    safe_format_map(API_AUTH_USER, format_map=format_map)
 
     api = SpotifyAPI(**API_AUTH_USER, cache_path=None)
     api.authorise(force_new=False)
