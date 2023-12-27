@@ -616,9 +616,6 @@ if __name__ == "__main__":
 #  This may now be fixed by extending functionality of playlists to include
 #   available track paths on load
 # TODO: implement merge_playlists functions and, by extension, implement android library sync
-# TODO: improve separation of concerns for main and settings
-#  settings object should contain all settings as properties to be accessed by main
-#  main should never need to access the yaml dict config directly
 
 
 ## NEEDED FOR v0.3
@@ -626,3 +623,6 @@ if __name__ == "__main__":
 # TODO: fix - XAutoPF ItemCollection tests sometimes fail on __setitem__ test
 # TODO: write tests, write tests, write tests
 # TODO: update the readme (dynamic readme?)
+# TODO: improve separation of concerns for main and settings
+#  settings object should contain all settings as properties to be accessed by main
+#  main should never need to access the yaml dict config directly

@@ -60,19 +60,15 @@ def safe_format_map[T](value: T, format_map: Mapping[str, Any]) -> T:
         for k, v in value.items():
             value[k] = safe_format_map(v, format_map)
     elif isinstance(value, str) and '{' in value and '}' in value:
-        try:
-            value = value.format_map(format_map)
-        except ValueError:
-            for k, v in format_map.items():
-                value = re.sub(r"\{" + k + "}", str(v), value)
+        value = value.format_map(format_map)
     return value
 
 
-def get_max_width(items: Collection[Any], min_width: int = 15, max_width: int = 50) -> int:
-    """Get max width of given list of items for column-aligned logging"""
-    if len(items) == 0:
+def get_max_width(values: Collection[Any], min_width: int = 15, max_width: int = 50) -> int:
+    """Get max width of given list of ``values`` for column-aligned logging"""
+    if len(values) == 0:
         return 0
-    max_len = len(max(map(str, items), key=len))
+    max_len = len(max(map(str, values), key=len))
     return limit_value(value=max_len + 1, floor=min_width, ceil=max_width)
 
 
@@ -90,11 +86,6 @@ def align_and_truncate(value: Any, max_width: int = 0, right_align: bool = False
 def limit_value(value: Number, floor: Number = 1, ceil: Number = 50) -> Number:
     """Limit a given ``value`` to always be between some ``floor`` and ``ceil``"""
     return max(min(value, ceil), floor)
-
-
-def get_most_common_values(values: Iterable[Any]) -> list[Any]:
-    """Get an ordered list of the most common values for a given collection of ``values``"""
-    return [x[0] for x in Counter(values).most_common()]
 
 
 ###########################################################################
@@ -138,7 +129,7 @@ def flatten_nested[T: Any](nested: MutableMapping, previous: MutableSequence[T] 
     return previous
 
 
-def update_map[T: MutableMapping](source: T, new: Mapping, extend: bool = True, overwrite: bool = False) -> T:
+def merge_maps[T: MutableMapping](source: T, new: Mapping, extend: bool = True, overwrite: bool = False) -> T:
     """
     Recursively update a given ``source`` map in place with a ``new`` map.
 
@@ -155,9 +146,9 @@ def update_map[T: MutableMapping](source: T, new: Mapping, extend: bool = True, 
 
     for k, v in new.items():
         if isinstance(v, Mapping) and isinstance(source.get(k, {}), Mapping):
-            source[k] = update_map(source.get(k, {}), v)
+            source[k] = merge_maps(source.get(k, {}), v, extend=extend, overwrite=overwrite)
         elif extend and is_collection(v) and is_collection(source.get(k, [])):
-            source[k] = to_collection(v, list) + to_collection(source.get(k, []), list)
+            source[k] = to_collection(source.get(k, []), list) + to_collection(v, list)
         elif overwrite or source.get(k) is None:
             source[k] = v
     return source
@@ -166,6 +157,11 @@ def update_map[T: MutableMapping](source: T, new: Mapping, extend: bool = True, 
 ###########################################################################
 ## Misc
 ###########################################################################
+def get_most_common_values(values: Iterable[Any]) -> list[Any]:
+    """Get an ordered list of the most common values for a given collection of ``values``"""
+    return [x[0] for x in Counter(values).most_common()]
+
+
 def get_user_input(text: str | None = None) -> str:
     """Print formatted dialog with optional text and get the user's input."""
     return input(f"\33[93m{text}\33[0m | ").strip()

@@ -46,6 +46,18 @@ class SyncifyLogger(logging.Logger):
             if handler.stream == sys.stdout:
                 self._console_handlers.append(handler)
 
+    def addHandler(self, hdlr: logging.Handler):
+        """Add the specified handler to this logger."""
+        if isinstance(hdlr, logging.StreamHandler) and hdlr.stream == sys.stdout:
+            self._console_handlers.append(hdlr)
+        super().addHandler(hdlr)
+
+    def removeHandler(self, hdlr: logging.Handler):
+        """Remove the specified handler from this logger."""
+        if isinstance(hdlr, logging.StreamHandler) and hdlr.stream == sys.stdout:
+            self._console_handlers.remove(hdlr)
+        super().removeHandler(hdlr)
+
     def info_extra(self, msg, *args, **kwargs) -> None:
         """Log 'msg % args' with severity 'INFO_EXTRA'."""
         if self.isEnabledFor(INFO_EXTRA):
@@ -68,7 +80,6 @@ class SyncifyLogger(logging.Logger):
 
     def get_progress_bar(self, **kwargs) -> tqdm_std:
         """Wrapper for tqdm progress bar. For kwargs, see :py:class:`tqdm_std`"""
-
         # noinspection SpellCheckingInspection
         preset_keys = ("leave", "disable", "file", "ncols", "colour", "smoothing", "position")
         try:
@@ -78,11 +89,11 @@ class SyncifyLogger(logging.Logger):
 
         return tqdm_auto(
             # and self.verbosity >= 3
-            leave=kwargs.get("leave", all(h.level != logging.DEBUG for h in self._console_handlers)),
+            leave=kwargs.get("leave", all(h.level > logging.DEBUG for h in self._console_handlers)),
             disable=kwargs.get("disable", False),
             file=sys.stdout,
             ncols=cols,
-            colour=kwargs.get("colour", "green"),
+            colour=kwargs.get("colour", "blue"),
             smoothing=0.1,
             position=None,
             **{k: v for k, v in kwargs.items() if k not in preset_keys}
@@ -109,19 +120,19 @@ def format_full_func_name(record: logging.LogRecord, width: int = 40) -> None:
     Optionally, provide a max ``width`` to attempt to truncate the path name to
     by taking only the first letter of each part of the path until the length is equal to ``width``.
     """
-    path = record.funcName.split(".")[-1]
-    frame_info = inspect.stack()[8]
-    f_locals = frame_info.frame.f_locals
+    path_split = record.pathname.split(sep)
+    last_call = inspect.stack()[8]
+    f_locals = last_call.frame.f_locals
 
     if record.pathname == __file__:
         # custom logging method has been called, reformat call info to actual call method
-        record.pathname = frame_info.filename
-        record.lineno = frame_info.lineno
-        record.funcName = frame_info.function
+        record.pathname = last_call.filename
+        record.lineno = last_call.lineno
+        record.funcName = last_call.function
         record.filename = basename(record.pathname)
         record.module = record.name.split(".")[-1]
 
-    if "self" in f_locals:  # is a valid and initialised object
+    if "self" in f_locals:  # is a valid and initialised object, extract the class name
         path = splitext(inspect.getfile(f_locals["self"].__class__))[0]
 
         # get relative path to sources root
@@ -134,11 +145,10 @@ def format_full_func_name(record: logging.LogRecord, width: int = 40) -> None:
         # produce fully qualified path
         path_split = list(reversed(path_split[:-1]))
         path_split.extend([f_locals["self"].__class__.__name__, record.funcName.split(".")[-1]])
-        path = ".".join(path_split)
 
     # truncate long paths by taking first letters of each part until short enough
     # noinspection PyTestUnpassedFixture
-    path_split = path.split(".")
+    path = ".".join(path_split)
     for i, part in enumerate(path_split):
         if len(path) <= width:
             break
@@ -153,7 +163,7 @@ def format_full_func_name(record: logging.LogRecord, width: int = 40) -> None:
 
 
 class LogConsoleFilter(logging.Filter):
-    """Filter for logging to stdout."""
+    """Filter for logging to the console."""
 
     def __init__(self, name: str = "", module_width: int = 40):
         super().__init__(name)
@@ -186,8 +196,8 @@ class CurrentTimeRotatingFileHandler(logging.handlers.BaseRotatingHandler):
     """
 
     :param filename: The full path to the log file.
-        Optionally, include a '{dt}' part in the path to format in the current datetime.
-        When None, defaults to '{dt}.log'
+        Optionally, include a '{}' part in the path to format in the current datetime.
+        When None, defaults to '{}.log'
     :param encoding: When not None, it is used to open the file with that encoding.
     :param when: The timespan for 'interval' which is used together to calculate the timedelta.
         Accepts same values as :py:class:`TimeMapper`.
@@ -204,9 +214,9 @@ class CurrentTimeRotatingFileHandler(logging.handlers.BaseRotatingHandler):
             self,
             filename: str | None = None,
             encoding: str | None = None,
-            when: str = "h",
-            interval: int = 1,
-            count: int = 0,
+            when: str | None = None,
+            interval: int | None = None,
+            count: int | None = None,
             delay: bool = False,
             errors: str | None = None
     ):
@@ -214,11 +224,11 @@ class CurrentTimeRotatingFileHandler(logging.handlers.BaseRotatingHandler):
 
         dt_str = self.dt.strftime(self.dt_format)
         if not filename:
-            filename = "{dt}.log"
+            filename = "{}.log"
         filename = filename.replace("\\", sep) if sep == "/" else filename.replace("/", sep)
-        self.filename = filename.format(dt=dt_str) if r"{dt}" in filename else filename
+        self.filename = filename.format(dt_str) if "{}" in filename else filename
 
-        self.delta = TimeMapper(when.lower())(interval)
+        self.delta = TimeMapper(when.lower())(interval) if when and interval else None
         self.count = count
 
         self.removed: list[datetime] = []  # datetime on the files that were removed
@@ -249,14 +259,13 @@ class CurrentTimeRotatingFileHandler(logging.handlers.BaseRotatingHandler):
 
         remaining = len(paths)
         for path in sorted(paths):
-            dt_part = path.removeprefix(prefix).removesuffix(suffix)
-            try:
-                file_dt = datetime.strptime(dt_part, self.dt_format)
-            except ValueError:
-                continue
+            too_many = self.count is not None and remaining >= self.count
 
-            # too many or too old, remove and decrement remaining count
-            if remaining >= self.count or file_dt < self.dt - self.delta:
-                self.removed.append(file_dt)
+            dt_part = path.removeprefix(prefix).removesuffix(suffix)
+            dt_file = datetime.strptime(dt_part, self.dt_format)
+            too_old = self.delta is not None and dt_file < self.dt - self.delta
+
+            if too_many or too_old:
+                self.removed.append(dt_file)
                 os.remove(path)
                 remaining -= 1

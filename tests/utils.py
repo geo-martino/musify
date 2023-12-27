@@ -20,7 +20,7 @@ def random_file(tmp_path: str, size: int | None = None) -> str:
     """Generates a random file of a given ``size`` in bytes in the test cache folder and returns its path."""
     path = join(tmp_path, random_str(10, 20) + ".txt")
     with open(path, 'w') as f:
-        for i in range(0, size or randrange(6000, 10000000)):
+        for _ in range(0, size or randrange(int(6*10e3), int(10e6))):
             f.write(choice(string.ascii_letters))
     return path
 

@@ -1,13 +1,11 @@
+import logging.config
 import os
 import shutil
 from os.path import join, basename, dirname
-
-import logging.config
 from typing import Any
 
-import yaml
-
 import pytest
+import yaml
 from _pytest.fixtures import SubRequest
 
 

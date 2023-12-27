@@ -130,7 +130,7 @@ class SpotifyAPIPlaylists(RemoteAPI, metaclass=ABCMeta):
         ``DELETE: /playlists/{playlist_id}/followers`` - Unfollow a given playlist.
         WARNING: This function will destructively modify your remote playlists.
 
-        :param playlist. Playlist URL/URI/ID to unfollow OR the name of the playlist in the current user's playlists.
+        :param playlist: Playlist URL/URI/ID to unfollow OR the name of the playlist in the current user's playlists.
         :return: API URL for playlist.
         """
         url = f"{self.get_playlist_url(playlist, use_cache=False)}/followers"

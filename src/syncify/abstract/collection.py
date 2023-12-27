@@ -10,10 +10,10 @@ from typing import Any, Self, SupportsIndex
 from syncify.abstract.enums import Field
 from syncify.abstract.item import Item, Track, ObjectPrinterMixin
 from syncify.exception import SyncifyTypeError
-from syncify.utils.logger import SyncifyLogger
 from syncify.processors.sort import ItemSorter, ShuffleMode, ShuffleBy
 from syncify.utils import UnitSequence
 from syncify.utils.helpers import to_collection, align_and_truncate, get_max_width
+from syncify.utils.logger import SyncifyLogger
 
 
 # noinspection PyShadowingNames

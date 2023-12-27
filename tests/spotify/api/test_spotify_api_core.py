@@ -104,7 +104,7 @@ class TestSpotifyAPICore:
         source = next(item for item in spotify_mock.item_type_map[kind] if item[key]["total"] > 50)
 
         api.print_collection(value=source)
-        stdout = capfd.readouterr()[0]
+        stdout = capfd.readouterr().out
 
         # printed in blocks
         blocks = [block for block in stdout.strip().split("\n\n") if URL_EXT in block]

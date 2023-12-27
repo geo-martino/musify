@@ -14,7 +14,7 @@ from syncify import PROGRAM_NAME
 from syncify.local.exception import InvalidFileType
 from syncify.remote.processors.search import SearchSettings
 from syncify.spotify.api import API_AUTH_BASIC, API_AUTH_USER
-from syncify.utils.helpers import to_collection, safe_format_map, update_map
+from syncify.utils.helpers import to_collection, safe_format_map, merge_maps
 from syncify.utils.logger import SyncifyLogger, CurrentTimeRotatingFileHandler
 
 
@@ -156,7 +156,7 @@ class Settings(metaclass=ABCMeta):
             return
 
         for cfg in self.cfg_functions.values():
-            update_map(cfg, self.cfg_general, extend=True)
+            merge_maps(cfg, self.cfg_general, extend=True)
 
     def set(self) -> None:
         """Run all setting functions"""
