@@ -14,7 +14,7 @@
 **.secrets*
 **.log*
 **.bak*
-/*.yml*
+config.yml
 
 # caches
 **cache*
