@@ -7,7 +7,7 @@ from syncify.remote.enums import RemoteObjectType as ObjectType
 from syncify.spotify import URL_EXT
 from syncify.spotify.api import SpotifyAPI
 from tests.spotify.api.mock import SpotifyMock, idfn
-from tests.utils import random_str
+from tests.utils import random_str, get_stdout
 
 
 class TestSpotifyAPICore:
@@ -104,7 +104,7 @@ class TestSpotifyAPICore:
         source = next(item for item in spotify_mock.item_type_map[kind] if item[key]["total"] > 50)
 
         api.print_collection(value=source)
-        stdout = capfd.readouterr().out
+        stdout = get_stdout(capfd)
 
         # printed in blocks
         blocks = [block for block in stdout.strip().split("\n\n") if URL_EXT in block]

@@ -75,7 +75,7 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
 
     @property
     def name(self):
-        return self.title or str(hash(self))
+        return self.title or self.filename
 
     @property
     def title(self):

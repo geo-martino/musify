@@ -387,8 +387,8 @@ class Syncify(Settings):
 
         folders = self._get_limited_folders()
 
-        checker = self.remote_config.checker(api=self.api)
-        check_results = checker.check(folders, interval=self.cfg_run.get("interval", 10))
+        checker = self.remote_config.checker(api=self.api, interval=self.cfg_run.get("interval", 10))
+        check_results = checker.check(folders)
 
         if check_results:
             self.logger.info(f"\33[1;95m ->\33[1;97m Updating tags for {len(self.local_library)} tracks: uri \33[0m")
@@ -416,7 +416,7 @@ class Syncify(Settings):
             return
 
         self.remote_config.searcher(api=self.api).search(albums)
-        self.remote_config.checker(api=self.api).check(albums, interval=self.cfg_run.get("interval", 10))
+        self.remote_config.checker(api=self.api, interval=self.cfg_run.get("interval", 10)).check(albums)
 
         self.logger.info(f"\33[1;95m ->\33[1;97m Updating tags for {len(self.local_library)} tracks: uri \33[0m")
         results = self.local_library.save_tracks(tags=LocalTrackField.URI, replace=True, dry_run=self.dry_run)

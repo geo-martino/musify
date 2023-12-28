@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod, ABCMeta
 from collections.abc import Container
 
 from syncify.abstract.enums import SyncifyEnum, Field, FieldCombined, TagField, ALL_FIELDS
-from syncify.abstract.item import BaseObject
+from syncify.abstract.item import NamedObject
 
 
 class EnumTester(ABC):
@@ -34,12 +34,12 @@ class FieldTester(EnumTester, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def reference_cls(self) -> type[BaseObject]:
+    def reference_cls(self) -> type[NamedObject]:
         """The associated class to validate field names against."""
         raise NotImplementedError
 
     @abstractmethod
-    def reference_ignore(self) -> type[BaseObject]:
+    def reference_ignore(self) -> type[NamedObject]:
         """The associated class to validate field names against."""
         raise NotImplementedError
 
@@ -62,7 +62,7 @@ class FieldTester(EnumTester, metaclass=ABCMeta):
             assert len(enum_combined) == 1
             assert enum.value == enum_combined[0]
 
-    def test_all_fields_are_valid(self, reference_cls: type[BaseObject], reference_ignore: Container[Field]):
+    def test_all_fields_are_valid(self, reference_cls: type[NamedObject], reference_ignore: Container[Field]):
         names = [e.name.lower() for enum in self.cls.all() if enum not in reference_ignore for e in self.cls.map(enum)]
 
         for name in names:

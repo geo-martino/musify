@@ -1,13 +1,21 @@
+import re
 import string
 from datetime import datetime
 from os.path import join, dirname
 from random import choice, randrange, sample
+
+import pytest
 
 path_root = dirname(dirname(__file__))
 path_tests = dirname(__file__)
 path_resources = join(dirname(__file__), "__resources")
 
 path_txt = join(path_resources, "test.txt")
+
+
+def get_stdout(capfd: pytest.CaptureFixture) -> str:
+    """Utility function which returns stdout from ``capfd`` with ANSI colour codes removed"""
+    return re.sub("\33.*?m", "", capfd.readouterr().out)
 
 
 def random_str(start: int = 1, stop: int = 20) -> str:

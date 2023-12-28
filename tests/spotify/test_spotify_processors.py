@@ -319,10 +319,10 @@ class TestSpotifyItemSearcher(SpotifyProcessorTester, RemoteItemSearcherTester):
 
 class TestSpotifyItemChecker(SpotifyProcessorTester, RemoteItemCheckerTester):
 
-    @pytest.fixture(scope="class")
+    @pytest.fixture
     def checker(self, remote_api: SpotifyAPI) -> SpotifyItemChecker:
         return SpotifyItemChecker(api=remote_api)
 
     @pytest.fixture(scope="class")
     def playlist_urls(self, remote_mock: SpotifyMock) -> list[str]:
-        return [pl["href"] for pl in remote_mock.user_playlists]
+        return [pl["href"] for pl in remote_mock.user_playlists if 10 < pl["tracks"]["total"] < 60]

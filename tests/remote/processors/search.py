@@ -90,7 +90,7 @@ class RemoteItemSearcherTester(ABC):
         expected = [str(item.clean_tags.get(key)) for key in settings.search_fields_1]
         found = False
         for k, v in parse_qs(requests[0].query).items():
-            print(expected, v[0], v[0].split())
+            # print(expected, v[0], v[0].split())
             if expected == v[0].split():
                 found = True
                 break
@@ -111,7 +111,7 @@ class RemoteItemSearcherTester(ABC):
         expected = [str(item.clean_tags.get(key)) for key in settings.search_fields_3]
         found = False
         for k, v in parse_qs(requests[0].query).items():
-            print(expected, v[0], v[0].split())
+            # print(expected, v[0], v[0].split())
             if expected == v[0].split():
                 found = True
                 break
@@ -131,17 +131,17 @@ class RemoteItemSearcherTester(ABC):
     ):
         """Run search on given ``collection`` type against the ``search_function`` and assert the results"""
         for item in collection:
-            print("1", item.has_uri, item.uri)
+            # print("1", item.has_uri, item.uri)
             assert item.has_uri is None
             assert item.uri is None
 
         search_function(collection)
         for item in search_items:
-            print("2", item.has_uri, item.uri)
+            # print("2", item.has_uri, item.uri)
             assert item.has_uri
             assert item.uri is not None
         for item in unmatchable_items:
-            print("3", item.has_uri, item.uri)
+            # print("3", item.has_uri, item.uri)
             assert item.has_uri is None
             assert item.uri is None
 
@@ -149,16 +149,16 @@ class RemoteItemSearcherTester(ABC):
         assert len({item.uri for item in collection}) > 1  # currently more than 1 unique URI in collection
         uri = next(item for item in collection).uri
         for item in search_items:
-            print("4", item.has_uri, item.uri)
+            # print("4", item.has_uri, item.uri)
             item.uri = uri
 
         search_function(collection)
         for item in search_items:
-            print("5", item.has_uri, item.uri)
+            # print("5", item.has_uri, item.uri)
             assert item.has_uri
             assert item.uri == uri
         for item in unmatchable_items:
-            print("6", item.has_uri, item.uri)
+            # print("6", item.has_uri, item.uri)
             assert item.has_uri is None
             assert item.uri is None
 

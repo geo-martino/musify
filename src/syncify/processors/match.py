@@ -7,7 +7,7 @@ from typing import Any
 
 from syncify.abstract.collection import Album, ItemCollection
 from syncify.abstract.enums import TagField, TagFieldCombined as Tag, ALL_TAG_FIELDS
-from syncify.abstract.item import Track, BaseObject
+from syncify.abstract.item import Track, NamedObject
 from syncify.processors.base import ItemProcessor
 from syncify.utils import UnitIterable
 from syncify.utils.helpers import limit_value, to_collection
@@ -107,7 +107,7 @@ class ItemMatcher(ItemProcessor):
         log[0] = pad * 3 + ' ' + (log[0] if log[0] else "unknown")
         self.logger.debug(" | ".join(log))
 
-    def _log_algorithm(self, source: BaseObject, extra: Iterable[str] = ()) -> None:
+    def _log_algorithm(self, source: NamedObject, extra: Iterable[str] = ()) -> None:
         """Wrapper for initially logging an algorithm in a correctly aligned format"""
         algorithm = inspect.stack()[1][0].f_code.co_name.upper().lstrip("_").replace("_", " ")
         log = [source.name, algorithm]
@@ -115,7 +115,9 @@ class ItemMatcher(ItemProcessor):
             log.extend(extra)
         self._log_padded(log, pad='>')
 
-    def _log_test[T: (Track, Album)](self, source: BaseObject, result: T, test: Any, extra: Iterable[str] = ()) -> None:
+    def _log_test[T: (Track, Album)](
+            self, source: NamedObject, result: T, test: Any, extra: Iterable[str] = ()
+    ) -> None:
         """Wrapper for initially logging a test result in a correctly aligned format"""
         algorithm = inspect.stack()[1][0].f_code.co_name.replace("match", "").upper().lstrip("_").replace("_", " ")
         log_result = f"> Testing URI: {result.uri}" if hasattr(result, "uri") else "> Test failed"
@@ -124,14 +126,14 @@ class ItemMatcher(ItemProcessor):
             log.extend(extra)
         self._log_padded(log)
 
-    def _log_match[T: (Track, Album)](self, source: BaseObject, result: T, extra: Iterable[str] = ()) -> None:
+    def _log_match[T: (Track, Album)](self, source: NamedObject, result: T, extra: Iterable[str] = ()) -> None:
         """Wrapper for initially logging a match in a correctly aligned format"""
         log = [source.name, f"< Matched URI: {result.uri}"]
         if extra:
             log.extend(extra)
         self._log_padded(log, pad='<')
 
-    def clean_tags(self, source: BaseObject) -> None:
+    def clean_tags(self, source: NamedObject) -> None:
         """
         Clean tags on the input item and assign to its ``clean_tags`` attribute. Used for better matching/searching.
         Clean by removing words, and only taking phrases before a certain word e.g. 'featuring', 'part'.
@@ -225,8 +227,8 @@ class ItemMatcher(ItemProcessor):
             self._log_test(source=source, result=result, test=score, extra=[f"{source_val} -> {result_val}"])
             return score
 
-        artists_source = source_val.replace(BaseObject.tag_sep, " ")
-        artists_result = result_val.split(BaseObject.tag_sep)
+        artists_source = source_val.replace(NamedObject.tag_sep, " ")
+        artists_result = result_val.split(NamedObject.tag_sep)
 
         for i, artist in enumerate(artists_result, 1):
             score += (sum(word in artists_source for word in artist.split()) / len(artists_source.split())) * (1 / i)

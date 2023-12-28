@@ -1,3 +1,4 @@
+import re
 from abc import abstractmethod
 from collections.abc import Iterable, Mapping
 from random import choice, randrange
@@ -63,8 +64,7 @@ class RemoteMock(Mocker):
         Calculates the numbers of a pages that need to be called from a given ``total`` and ``limit`` per page
         to get all items related to this response.
         """
-        pages = total / limit
-        return int(pages) + (pages % 1 > 0)  # round up
+        return total // limit + (total % limit > 0)  # round up
 
     @abstractmethod
     def calculate_pages_from_response(self, response: Mapping[str, Any]) -> int:
@@ -76,7 +76,7 @@ class RemoteMock(Mocker):
 
     def get_requests(
             self,
-            url: str | None = None,
+            url: str | re.Pattern[str] | None = None,
             method: str | None = None,
             params: dict[str, Any] | None = None,
             response: dict[str, Any] | None = None
@@ -86,7 +86,10 @@ class RemoteMock(Mocker):
         for request in self.request_history:
             match_url = url is None
             if not match_url:
-                match_url = url.strip("/").endswith(request.path.strip("/"))
+                if isinstance(url, str):
+                    match_url = url.strip("/").endswith(request.path.strip("/"))
+                elif isinstance(url, re.Pattern):
+                    match_url = bool(url.search(request.url))
 
             match_method = method is None
             if not match_method:

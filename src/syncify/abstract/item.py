@@ -8,7 +8,7 @@ from syncify.abstract.enums import TagField
 from syncify.abstract.misc import PrettyPrinter
 
 
-class BaseObject(ABC):
+class NamedObject(ABC):
     """
     Generic base class for all local/remote item/collections.
 
@@ -34,7 +34,7 @@ class BaseObject(ABC):
         self._clean_tags: dict[TagField, Any] = {}
 
 
-class ObjectPrinterMixin(BaseObject, PrettyPrinter, metaclass=ABCMeta):
+class ObjectPrinterMixin(NamedObject, PrettyPrinter, metaclass=ABCMeta):
     pass
 
 
