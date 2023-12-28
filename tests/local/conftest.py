@@ -5,15 +5,12 @@ from syncify.local.track import LocalTrack, FLAC, MP3, M4A, WMA
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 from tests.local.utils import path_track_flac, path_track_mp3, path_track_m4a, path_track_wma, path_track_all
-from tests.spotify.conftest import spotify_mock
-
-__all__ = ['spotify_mock']
 
 
-@pytest.fixture
-def remote_wrangler() -> SpotifyDataWrangler:
+@pytest.fixture(scope="module")
+def remote_wrangler(spotify_wrangler: SpotifyDataWrangler) -> RemoteDataWrangler:
     """Yields a :py:class:`SpotifyDataWrangler` to use in tests"""
-    yield SpotifyDataWrangler()
+    yield spotify_wrangler
 
 
 @pytest.fixture(params=[path_track_flac])

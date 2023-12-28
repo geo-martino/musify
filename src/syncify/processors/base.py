@@ -21,7 +21,6 @@ class dynamicprocessormethod:
     """
     def __new__(cls, *args, **kwargs):
         func: Optional[Callable] = next((a for a in args if callable(a)), None)
-
         self = partial(cls, *args) if func is None else super().__new__(cls)
         return update_wrapper(self, func)
 

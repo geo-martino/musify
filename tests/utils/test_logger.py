@@ -117,23 +117,25 @@ def test_logger_set():
 ###########################################################################
 def test_format_func_name():
     record = logging.LogRecord(
-        name="test",
+        name="this.is.a.short",
         level=logging.INFO,
-        pathname=os.path.sep.join(["this", "is", "a", "short", "path"]),
+        pathname=__name__,
         lineno=10,
         msg=None,
         args=None,
         exc_info=None,
-        func="func",
+        func="path",
     )
     format_full_func_name(record=record, width=20)
     assert record.funcName == "this.is.a.short.path"
 
-    record.pathname = os.path.sep.join(["this", "is", "quite", "a", "long", "path"])
+    record.name = "this.is.quite.a.long"
+    record.funcName = "path"
     format_full_func_name(record=record, width=20)
     assert record.funcName == "t.i.q.a.long.path"
 
-    record.pathname = os.path.sep.join(["this", "path", "has", "a", "ClassName", "in_it"])
+    record.name = "this.path.has.a.ClassName"
+    record.funcName = "in_it"
     format_full_func_name(record=record, width=20)
     assert record.funcName == "t.p.h.a.CN.in_it"
 

@@ -2,6 +2,7 @@ import inspect
 import os
 from abc import ABCMeta
 from collections.abc import Mapping, Iterable
+from copy import deepcopy
 from glob import glob
 from os.path import join, exists, dirname
 from typing import Any, Self
@@ -100,7 +101,7 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
 
         for tag in tag_names:  # merge on each tag
             if hasattr(track, tag):
-                setattr(self, tag, track[tag])
+                setattr(self, tag, deepcopy(track[tag]))
 
     def extract_images_to_file(self, output_folder: str) -> int:
         """Extract and save all embedded images from file. Returns the number of images extracted."""
@@ -154,11 +155,11 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
         return super().__hash__()
 
     def __eq__(self, item: Item):
-        """URI attributes equal if at least one item has a URI, paths equal otherwise"""
+        """Paths equal if both are LocalItems, URI attributes equal if both have a URI, names equal otherwise"""
         if hasattr(item, "path"):
             return self.path == item.path
-        elif self.has_uri or item.has_uri:
-            return self.has_uri == item.has_uri and self.uri == item.uri
+        elif self.has_uri and item.has_uri:
+            return self.uri == item.uri
         return self.name == item.name
 
     def __copy__(self):
@@ -166,8 +167,6 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
         if not self.file.tags:  # file is not a real file, used in testing
             obj = self.__class__.__new__(self.__class__)
             for key in TagReader.__slots__:
-                setattr(obj, key, getattr(self, key))
-            for key in TagWriter.__slots__:
                 setattr(obj, key, getattr(self, key))
             for key in self.__slots__:
                 setattr(obj, key, getattr(self, key))

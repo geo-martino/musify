@@ -9,7 +9,6 @@ from pytest_mock import MockerFixture
 
 from syncify.abstract.collection import BasicCollection
 from syncify.local.track import LocalTrack
-from syncify.remote.api import RemoteAPI
 from syncify.remote.enums import RemoteObjectType
 from syncify.remote.library.collection import RemotePlaylist
 from syncify.remote.processors.check import RemoteItemChecker
@@ -24,23 +23,13 @@ class RemoteItemCheckerTester(ABC):
     """Run generic tests for :py:class:`RemoteItemSearcher` implementations."""
 
     @abstractmethod
-    def remote_api(self, *args, **kwargs) -> RemoteAPI:
-        """Yields a valid :py:class:`RemoteAPI` for the current remote source as a pytest.fixture"""
-        raise NotImplementedError
-
-    @abstractmethod
-    def remote_mock(self, *args, **kwargs) -> RemoteMock:
-        """Yields a requests_mock setup to return valid responses for the current remote source as a pytest.fixture"""
-        raise NotImplementedError
-
-    @abstractmethod
     def checker(self, *args, **kwargs) -> RemoteItemChecker:
         """Yields a valid :py:class:`RemoteItemChecker` for the current remote source as a pytest.fixture"""
         raise NotImplementedError
 
     @abstractmethod
     def playlist_urls(self, *args, **kwargs) -> list[str]:
-        """Yields a list of URLs that will return valid responses from the remote_mock as a pytest.fixture"""
+        """Yields a list of URLs that will return valid responses from the api_mock as a pytest.fixture"""
         raise NotImplementedError
 
     @pytest.fixture
@@ -52,7 +41,7 @@ class RemoteItemCheckerTester(ABC):
     @staticmethod
     @pytest.fixture
     def setup_playlist_collection(
-            checker: RemoteItemChecker, playlist_urls: list[str], remote_mock: RemoteMock
+            checker: RemoteItemChecker, playlist_urls: list[str], api_mock: RemoteMock
     ) -> tuple[RemotePlaylist, BasicCollection]:
         """Setups up checker, playlist, and collection for testing match_to_remote functionality"""
         url = choice(playlist_urls)
@@ -63,7 +52,7 @@ class RemoteItemCheckerTester(ABC):
         checker.playlist_name_urls = {collection.name: url}
         checker.playlist_name_collection = {collection.name: collection}
 
-        remote_mock.reset_mock()
+        api_mock.reset_mock()
         return pl, collection
     
     @staticmethod
@@ -83,7 +72,7 @@ class RemoteItemCheckerTester(ABC):
     ## Utilities
     ###########################################################################
     @staticmethod
-    def test_make_temp_playlist(checker: RemoteItemChecker, remote_mock: RemoteMock):
+    def test_make_temp_playlist(checker: RemoteItemChecker, api_mock: RemoteMock):
         # force auth test to fail and reload from token
         checker.api.token = None
         checker.api.token_file_path = path_token
@@ -96,7 +85,7 @@ class RemoteItemCheckerTester(ABC):
         checker._create_playlist(collection=collection)
         assert not checker.playlist_name_urls
         assert not checker.playlist_name_collection
-        assert not remote_mock.request_history
+        assert not api_mock.request_history
 
         for item in collection:
             item.uri = random_uri()
@@ -105,14 +94,14 @@ class RemoteItemCheckerTester(ABC):
         assert checker.api.token is not None
         assert collection.name in checker.playlist_name_urls
         assert checker.playlist_name_collection[collection.name] == collection
-        assert len(remote_mock.request_history) >= 2
+        assert len(api_mock.request_history) >= 2
 
     @staticmethod
     def test_delete_temp_playlists(
             checker: RemoteItemChecker,
             collections: list[BasicCollection],
             playlist_urls: list[str],
-            remote_mock: RemoteMock
+            api_mock: RemoteMock
     ):
         # force auth test to fail and reload from token
         checker.api.token = None
@@ -125,7 +114,7 @@ class RemoteItemCheckerTester(ABC):
         assert checker.api.token is not None
         assert not checker.playlist_name_urls
         assert not checker.playlist_name_collection
-        assert len(remote_mock.get_requests(method="DELETE")) == min(len(playlist_urls), len(collections))
+        assert len(api_mock.get_requests(method="DELETE")) == min(len(playlist_urls), len(collections))
 
     @staticmethod
     def test_finalise(checker: RemoteItemChecker):
@@ -158,10 +147,10 @@ class RemoteItemCheckerTester(ABC):
             checker: RemoteItemChecker,
             setup_playlist_collection: tuple[RemotePlaylist, BasicCollection],
             mocker: MockerFixture,
-            remote_mock: RemoteMock,
+            api_mock: RemoteMock,
             capfd: pytest.CaptureFixture,
     ):
-        remote_mock.reset_mock()  # test checks the number of requests made
+        api_mock.reset_mock()  # test checks the number of requests made
 
         pl, collection = setup_playlist_collection
         self.setup_input(["h", collection.name, pl.uri], mocker=mocker)
@@ -173,8 +162,8 @@ class RemoteItemCheckerTester(ABC):
         assert f"Showing items originally added to {collection.name}" in stdout  # <Name of playlist> entered
         assert f"Showing tracks for playlist: {pl.name}" in stdout  # <URL/URI> entered
 
-        pl_pages = remote_mock.calculate_pages(limit=20, total=len(pl))
-        assert len(remote_mock.get_requests(url=re.compile(pl.url + ".*"), method="GET")) == pl_pages + 1
+        pl_pages = api_mock.calculate_pages(limit=20, total=len(pl))
+        assert len(api_mock.get_requests(url=re.compile(pl.url + ".*"), method="GET")) == pl_pages + 1
 
         assert not checker.skip
         assert not checker.quit
@@ -183,10 +172,10 @@ class RemoteItemCheckerTester(ABC):
             self,
             checker: RemoteItemChecker,
             mocker: MockerFixture,
-            remote_mock: RemoteMock,
+            api_mock: RemoteMock,
             capfd: pytest.CaptureFixture,
     ):
-        remote_mock.reset_mock()  # test checks the number of requests made
+        api_mock.reset_mock()  # test checks the number of requests made
 
         self.setup_input([random_str(), "u", "s"], mocker=mocker)
         checker._pause(page=1, total=1)
@@ -197,7 +186,7 @@ class RemoteItemCheckerTester(ABC):
         assert f"Showing items originally added to" not in stdout
         assert f"Showing tracks for playlist" not in stdout
 
-        assert not remote_mock.request_history
+        assert not api_mock.request_history
 
         assert checker.skip
         assert not checker.quit
@@ -206,10 +195,10 @@ class RemoteItemCheckerTester(ABC):
             self,
             checker: RemoteItemChecker,
             mocker: MockerFixture,
-            remote_mock: RemoteMock,
+            api_mock: RemoteMock,
             capfd: pytest.CaptureFixture,
     ):
-        remote_mock.reset_mock()  # test checks the number of requests made
+        api_mock.reset_mock()  # test checks the number of requests made
         
         self.setup_input("q", mocker=mocker)
         checker._pause(page=1, total=1)
@@ -219,7 +208,7 @@ class RemoteItemCheckerTester(ABC):
         assert "Input not recognised" not in stdout
         assert f"Showing items originally added to" not in stdout
         assert f"Showing tracks for playlist" not in stdout
-        assert not remote_mock.request_history
+        assert not api_mock.request_history
 
         assert not checker.skip
         assert checker.quit
@@ -390,7 +379,7 @@ class RemoteItemCheckerTester(ABC):
     def test_match_to_remote_no_changes(
             checker: RemoteItemChecker,
             setup_playlist_collection: tuple[RemotePlaylist, BasicCollection],
-            remote_mock: RemoteMock
+            api_mock: RemoteMock
     ):
         pl, collection = setup_playlist_collection
 
@@ -399,8 +388,8 @@ class RemoteItemCheckerTester(ABC):
         assert not checker.switched
         assert not checker.remaining
 
-        pl_pages = remote_mock.calculate_pages_from_response(pl.response)
-        assert len(remote_mock.get_requests(url=re.compile(pl.url + ".*"), method="GET")) == pl_pages
+        pl_pages = api_mock.calculate_pages_from_response(pl.response)
+        assert len(api_mock.get_requests(url=re.compile(pl.url + ".*"), method="GET")) == pl_pages
 
     @staticmethod
     def test_match_to_remote_removed(
@@ -482,7 +471,7 @@ class RemoteItemCheckerTester(ABC):
             remaining: list[LocalTrack],
             mocker: MockerFixture,
             capfd: pytest.CaptureFixture,
-            remote_mock: RemoteMock,
+            api_mock: RemoteMock,
     ):
         pl, collection = setup_playlist_collection
 
@@ -517,8 +506,8 @@ class RemoteItemCheckerTester(ABC):
             assert not item.has_uri
 
         # called 2x: 1 initial, 1 after user inputs 'r'
-        pl_pages = remote_mock.calculate_pages_from_response(pl.response)
-        assert len(remote_mock.get_requests(url=re.compile(pl.url + ".*"), method="GET")) == 2 * pl_pages
+        pl_pages = api_mock.calculate_pages_from_response(pl.response)
+        assert len(api_mock.get_requests(url=re.compile(pl.url + ".*"), method="GET")) == 2 * pl_pages
 
         assert checker.final_switched == collection[:5] + remaining[:len(uri_list)]
         assert checker.final_unavailable == remaining[len(uri_list):len(uri_list)+3]
@@ -533,7 +522,7 @@ class RemoteItemCheckerTester(ABC):
             collections: list[BasicCollection],
             playlist_urls: list[str],
             mocker: MockerFixture,
-            remote_mock: RemoteMock,
+            api_mock: RemoteMock,
     ):
         def add_collection(collection: BasicCollection):
             """Just simply add the collection and associated URL to the ItemChecker without calling API"""
@@ -572,5 +561,5 @@ class RemoteItemCheckerTester(ABC):
         # deleted only the playlists in the first batch
         requests = []
         for url in (playlist_name_urls[collection.name] for collection in batch):
-            requests.append(remote_mock.get_requests(url=url, method="DELETE"))
+            requests.append(api_mock.get_requests(url=url, method="DELETE"))
         assert len(requests) == len(batch)

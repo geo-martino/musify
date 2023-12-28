@@ -5,21 +5,19 @@ from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 from tests.spotify.api.mock import SpotifyMock
 
 
-@pytest.fixture(scope="session")
-def spotify_wrangler():
+@pytest.fixture(scope="module")
+def wrangler(spotify_wrangler: SpotifyDataWrangler):
     """Yields a :py:class:`SpotifyDataWrangler` for testing Spotify data wrangling"""
-    return SpotifyDataWrangler()
+    return spotify_wrangler
 
 
 @pytest.fixture(scope="module")
-def api() -> SpotifyAPI:
+def api(spotify_api: SpotifyAPI) -> SpotifyAPI:
     """Yield an authorised :py:class:`SpotifyAPI` object"""
-    token = {"access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"}
-    return SpotifyAPI(name="test", token=token, cache_path=None)
+    return spotify_api
 
 
-@pytest.fixture(scope="session")
-def spotify_mock(request) -> SpotifyMock:
+@pytest.fixture(scope="module")
+def api_mock(spotify_mock: SpotifyMock) -> SpotifyMock:
     """Yield an authorised :py:class:`SpotifyMock` object"""
-    with SpotifyMock() as m:
-        yield m
+    return spotify_mock

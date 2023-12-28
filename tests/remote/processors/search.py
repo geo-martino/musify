@@ -10,7 +10,6 @@ from syncify.abstract.enums import TagFieldCombined as Tag
 from syncify.abstract.item import Item
 from syncify.local.collection import LocalAlbum
 from syncify.local.track import LocalTrack
-from syncify.remote.api import RemoteAPI
 from syncify.remote.enums import RemoteObjectType
 from syncify.remote.processors.search import RemoteItemSearcher, SearchSettings
 from tests.local.utils import random_track, random_tracks
@@ -19,16 +18,6 @@ from tests.remote.utils import RemoteMock
 
 class RemoteItemSearcherTester(ABC):
     """Run generic tests for :py:class:`RemoteItemSearcher` implementations."""
-
-    @abstractmethod
-    def remote_api(self, *args, **kwargs) -> RemoteAPI:
-        """Yields a valid :py:class:`RemoteAPI` for the current remote source as a pytest.fixture"""
-        raise NotImplementedError
-
-    @abstractmethod
-    def remote_mock(self, *args, **kwargs) -> RemoteMock:
-        """Yields a requests_mock setup to return valid responses for the current remote source as a pytest.fixture"""
-        raise NotImplementedError
 
     @abstractmethod
     def searcher(self, *args, **kwargs) -> RemoteItemSearcher:
@@ -71,8 +60,8 @@ class RemoteItemSearcherTester(ABC):
         return unmatchable_items
 
     @staticmethod
-    def test_get_results(searcher: RemoteItemSearcher, remote_mock: RemoteMock):
-        remote_mock.reset_mock()  # test checks the number of requests made
+    def test_get_results(searcher: RemoteItemSearcher, api_mock: RemoteMock):
+        api_mock.reset_mock()  # test checks the number of requests made
 
         settings = SearchSettings(
             search_fields_1=[Tag.NAME, Tag.ARTIST],
@@ -83,7 +72,7 @@ class RemoteItemSearcherTester(ABC):
         )
         item = random_track()
         results = searcher._get_results(item=item, kind=RemoteObjectType.TRACK, settings=settings)
-        requests = remote_mock.get_requests(method="GET")
+        requests = api_mock.get_requests(method="GET")
         assert len(results) == settings.result_count
         assert len(requests) == 1
 
@@ -101,10 +90,10 @@ class RemoteItemSearcherTester(ABC):
         # make these tags too long to query forcing them to return on results
         item.artist = 'b' * 200
         item.album = 'c' * 200
-        remote_mock.reset_mock()
+        api_mock.reset_mock()
 
         results = searcher._get_results(item=item, kind=RemoteObjectType.TRACK, settings=settings)
-        requests = remote_mock.get_requests(method="GET")
+        requests = api_mock.get_requests(method="GET")
         assert len(results) == settings.result_count
         assert len(requests) == 1
 
@@ -277,7 +266,7 @@ class RemoteItemSearcherTester(ABC):
             search_items: list[LocalTrack],
             search_album: LocalAlbum,
             unmatchable_items: list[LocalTrack],
-            remote_mock: RemoteMock,
+            api_mock: RemoteMock,
     ):
         search_collection = BasicCollection(name="test", items=search_items + unmatchable_items)
         skip_album = len([item for item in search_album if item.has_uri is not None])
@@ -297,7 +286,7 @@ class RemoteItemSearcherTester(ABC):
         assert len(result.skipped) == skip_album
 
         # check nothing happens on matched collections
-        remote_mock.reset_mock()
+        api_mock.reset_mock()
         search_matched = BasicCollection(name="test", items=search_items)
         assert len(searcher.search([search_matched, search_album])) == 0
-        assert len(remote_mock.request_history) == 0
+        assert len(api_mock.request_history) == 0

@@ -48,8 +48,6 @@ class M3U(LocalPlaylist):
     :param other_folders: Absolute paths of other possible library paths.
         Use to replace path stems from other libraries for the paths in loaded playlists.
         Useful when managing similar libraries on multiple platforms.
-    :param check_existence: If True, when processing paths,
-        check for the existence of the file paths on the file system and reject any that don't.
     :param available_track_paths: A list of available track paths that are known to exist
         and are valid for the track types supported by this program.
         Useful for case-insensitive path loading and correcting paths to case-sensitive.
@@ -57,6 +55,8 @@ class M3U(LocalPlaylist):
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
         The wrangler is also used when loading tracks to allow them to process URI tags.
         For more info on this, see :py:class:`LocalTrack`.
+    :param check_existence: If True, when processing paths,
+        check for the existence of the file paths on the file system and reject any that don't.
     """
 
     __slots__ = "_description"
@@ -81,9 +81,9 @@ class M3U(LocalPlaylist):
             tracks: Collection[LocalTrack] = (),
             library_folder: str | None = None,
             other_folders: UnitCollection[str] = (),
-            check_existence: bool = True,
             available_track_paths: Iterable[str] = (),
             remote_wrangler: RemoteDataWrangler = None,
+            check_existence: bool = True,
     ):
         self._validate_type(path)
 

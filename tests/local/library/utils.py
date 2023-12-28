@@ -24,7 +24,6 @@ class LocalLibraryTester(LibraryTester, LocalCollectionTester, metaclass=ABCMeta
     @staticmethod
     def test_blank_library(blank_library: LocalLibrary) -> None:
         """General tests to run for every implementation of :py:class:`LocalLibrary`"""
-
         assert blank_library.library_folder is None
         assert len(blank_library._track_paths) == 0
         blank_library.library_folder = path_track_resources

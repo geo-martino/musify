@@ -8,7 +8,6 @@ from time import sleep
 from typing import Any
 
 from requests import Response, Session
-from requests.exceptions import ConnectionError
 from requests_cache import CachedSession
 
 from syncify.api._authorise import APIAuthoriser

@@ -175,10 +175,7 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
         cls._check_for_api()
 
         url = cls.api.create_playlist(name=name, public=public, collaborative=collaborative)
-
-        obj = cls.__new__(cls)
-        obj.__init__(cls.api.get(url))
-        return obj
+        return cls(cls.api.get(url))
 
     def delete(self) -> None:
         """

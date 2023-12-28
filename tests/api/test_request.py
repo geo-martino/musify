@@ -118,14 +118,18 @@ class TestRequestHandler:
         assert requests_mock.call_count == 2
 
     def test_request(self, request_handler: RequestHandler, requests_mock: Mocker):
+        def raise_error(*_, **__):
+            """Just raise a ConnectionError"""
+            raise ConnectionError
+
+        # handles connection errors safely
+        url = "http://localhost/text_response"
+        requests_mock.get(url, text=raise_error)
+        assert request_handler._request(method="GET", url=url) is None
+
         url = "http://localhost/test"
         expected_json = {"key": "value"}
 
-        # no mock request set
-        requests_mock.stop()
-        assert request_handler._request(method="GET", url=url) is None
-
-        requests_mock.start()
         requests_mock.get(url, json=expected_json)
         assert request_handler.request(method="GET", url=url, use_cache=False) == expected_json
 

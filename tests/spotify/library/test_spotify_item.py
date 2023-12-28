@@ -36,18 +36,17 @@ class TestSpotifyArtist(ItemTester):
         return SpotifyMock.generate_artist()
 
     @pytest.fixture
-    def response_valid(self, spotify_mock: SpotifyMock) -> dict[str, Any]:
+    def response_valid(self, api_mock: SpotifyMock) -> dict[str, Any]:
         """Yield a valid enriched response from the Spotify API for an artist item type."""
-        return deepcopy(next(artist for artist in spotify_mock.artists if artist["genres"]))
+        return deepcopy(next(artist for artist in api_mock.artists if artist["genres"]))
 
-    def test_input_validation(self, response_random: dict[str, Any], spotify_mock: SpotifyMock):
+    def test_input_validation(self, response_random: dict[str, Any], api_mock: SpotifyMock):
         with pytest.raises(RemoteObjectTypeError):
-            SpotifyArtist(spotify_mock.generate_track(artists=False, album=False))
+            SpotifyArtist(api_mock.generate_track(artists=False, album=False))
 
-        url = spotify_mock.artists[0]["href"]
-        assert "api" not in dir(SpotifyArtist)
+        SpotifyArtist.api = None
         with pytest.raises(APIError):
-            SpotifyArtist.load(url)
+            SpotifyArtist.load(api_mock.artists[0]["href"])
         with pytest.raises(APIError):
             SpotifyArtist(response_random).reload()
 
@@ -132,26 +131,25 @@ class TestSpotifyTrack(ItemTester):
         return track
 
     @pytest.fixture
-    def response_random(self, spotify_mock: SpotifyMock) -> dict[str, Any]:
+    def response_random(self, api_mock: SpotifyMock) -> dict[str, Any]:
         """Yield a randomly generated response from the Spotify API for a track item type"""
-        return spotify_mock.generate_track()
+        return api_mock.generate_track()
 
     @pytest.fixture
-    def response_valid(self, spotify_mock: SpotifyMock) -> dict[str, Any]:
+    def response_valid(self, api_mock: SpotifyMock) -> dict[str, Any]:
         """
         Yield a valid enriched response with extended artists and albums responses
         from the Spotify API for a track item type.
         """
-        return deepcopy(next(track for track in spotify_mock.tracks))
+        return deepcopy(next(track for track in api_mock.tracks))
 
-    def test_input_validation(self, response_random: dict[str, Any], spotify_mock: SpotifyMock):
+    def test_input_validation(self, response_random: dict[str, Any], api_mock: SpotifyMock):
         with pytest.raises(RemoteObjectTypeError):
-            SpotifyTrack(spotify_mock.generate_artist(properties=False))
+            SpotifyTrack(api_mock.generate_artist(properties=False))
 
-        url = spotify_mock.tracks[0]["href"]
-        assert "api" not in dir(SpotifyTrack)
+        SpotifyTrack.api = None
         with pytest.raises(APIError):
-            SpotifyTrack.load(url)
+            SpotifyTrack.load(api_mock.tracks[0]["href"])
         with pytest.raises(APIError):
             SpotifyTrack(response_random).reload()
 

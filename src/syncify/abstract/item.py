@@ -68,9 +68,9 @@ class Item(ObjectPrinterMixin, Hashable, metaclass=ABCMeta):
         raise NotImplementedError
 
     def __eq__(self, item: Item):
-        """URI attributes equal if at least one item has a URI, names equal otherwise"""
-        if self.has_uri or item.has_uri:
-            return self.has_uri == item.has_uri and self.uri == item.uri
+        """URI attributes equal if both have a URI, names equal otherwise"""
+        if self.has_uri and item.has_uri:
+            return self.uri == item.uri
         return self.name == item.name
 
     def __ne__(self, item: Item):

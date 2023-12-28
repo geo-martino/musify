@@ -114,4 +114,3 @@ class RemoteMock(Mocker):
                 requests.append(request)
 
         return requests
-

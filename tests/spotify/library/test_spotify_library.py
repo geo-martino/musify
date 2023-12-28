@@ -16,28 +16,20 @@ class TestSpotifyLibrary(RemoteLibraryTester):
     dict_json_equal = False
 
     @pytest.fixture
-    def collection_merge_items(self, spotify_mock: SpotifyMock) -> list[SpotifyTrack]:
-        tracks = [SpotifyTrack(track) for track in spotify_mock.tracks[200:210]]
+    def collection_merge_items(self, api_mock: SpotifyMock) -> list[SpotifyTrack]:
+        tracks = [SpotifyTrack(track) for track in api_mock.tracks[200:210]]
         assert len(tracks) > 4
         return tracks
 
     @pytest.fixture(scope="class")
-    def remote_api(self, api: SpotifyAPI) -> SpotifyAPI:
-        return api
-
-    @pytest.fixture(scope="class")
-    def remote_mock(self, spotify_mock: SpotifyMock) -> SpotifyMock:
-        return spotify_mock
-
-    @pytest.fixture(scope="class")
-    def _library(self, remote_api: SpotifyAPI, remote_mock: SpotifyMock) -> SpotifyLibrary:
-        include = [pl["name"] for pl in sample(remote_mock.user_playlists, k=10)]
-        library = SpotifyLibrary(api=remote_api, include=include, use_cache=False)
+    def _library(self, api: SpotifyAPI, api_mock: SpotifyMock) -> SpotifyLibrary:
+        include = [pl["name"] for pl in sample(api_mock.user_playlists, k=10)]
+        library = SpotifyLibrary(api=api, include=include, use_cache=False)
         library._remote_types.playlist.api = library.api
         library.load()
 
         for pl in library.playlists.values():  # ensure all loaded playlists are owned by the authorised user
-            pl.response["owner"] = {k: v for k, v in remote_mock.user.items() if k in pl.response["owner"]}
+            pl.response["owner"] = {k: v for k, v in api_mock.user.items() if k in pl.response["owner"]}
 
         return library
 
@@ -45,18 +37,18 @@ class TestSpotifyLibrary(RemoteLibraryTester):
     def library(self, _library: SpotifyLibrary) -> SpotifyLibrary:
         return deepcopy(_library)
 
-    def test_load_playlists_responses(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
+    def test_load_playlists_responses(self, api: SpotifyAPI, api_mock: SpotifyMock):
         # load all when no include or exclude settings defined
         library = SpotifyLibrary(api=api, use_cache=False)
 
         pl_responses = library._get_playlists_data()
-        assert len(pl_responses) == len(spotify_mock.user_playlists)
+        assert len(pl_responses) == len(api_mock.user_playlists)
         for pl_response in pl_responses:
             assert len(pl_response["tracks"]["items"]) == pl_response["tracks"]["total"]
 
         # filter on include and exclude
-        include = [pl["name"] for pl in spotify_mock.user_playlists[:20]]
-        exclude = [pl["name"] for pl in spotify_mock.user_playlists[:10]]
+        include = [pl["name"] for pl in api_mock.user_playlists[:20]]
+        exclude = [pl["name"] for pl in api_mock.user_playlists[:10]]
         library = SpotifyLibrary(api=api, include=include, exclude=exclude, use_cache=False)
 
         pl_responses = library._get_playlists_data()
@@ -64,20 +56,20 @@ class TestSpotifyLibrary(RemoteLibraryTester):
         for pl_response in pl_responses:
             assert len(pl_response["tracks"]["items"]) == pl_response["tracks"]["total"]
 
-    def test_load_track_responses(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
+    def test_load_track_responses(self, api: SpotifyAPI, api_mock: SpotifyMock):
         # make sure only to include playlists that do not include all available tracks
         include = [
-            pl["name"] for pl in spotify_mock.user_playlists if pl["tracks"]["total"] < len(spotify_mock.user_playlists)
+            pl["name"] for pl in api_mock.user_playlists if pl["tracks"]["total"] < len(api_mock.user_playlists)
         ][:20]
 
         library = SpotifyLibrary(api=api, include=include, use_cache=False)
         pl_responses = library._get_playlists_data()
         for pl_response in pl_responses:
-            assert len(pl_response["tracks"]["items"]) < len(spotify_mock.user_tracks)
+            assert len(pl_response["tracks"]["items"]) < len(api_mock.user_tracks)
 
         # only load tracks in playlists
         in_playlists = [track["track"]["uri"] for pl in pl_responses for track in pl["tracks"]["items"]]
-        expected = len([t for t in spotify_mock.user_tracks if t["track"]["uri"] in in_playlists])
+        expected = len([t for t in api_mock.user_tracks if t["track"]["uri"] in in_playlists])
         assert expected > 0  # for the test to be valid
 
         assert len(library._get_tracks_data(pl_responses)) == expected
@@ -95,8 +87,8 @@ class TestSpotifyLibrary(RemoteLibraryTester):
             assert len(pl.tracks) == pl.track_total
 
     # noinspection PyMethodOverriding
-    def test_enrich_tracks(self, library, spotify_mock: SpotifyMock):
-        spotify_mock.reset_mock()  # test checks the number of requests made
+    def test_enrich_tracks(self, library, api_mock: SpotifyMock):
+        api_mock.reset_mock()  # test checks the number of requests made
 
         def validate_album_not_enriched(t: SpotifyTrack) -> None:
             """Check album does not contain expected enriched fields"""
@@ -131,15 +123,15 @@ class TestSpotifyLibrary(RemoteLibraryTester):
 
             validate_artists_not_enriched(track)
 
-            assert len(spotify_mock.get_requests(url=track.response["album"]["href"] + "/tracks")) == 0
+            assert len(api_mock.get_requests(url=track.response["album"]["href"] + "/tracks")) == 0
 
         # check requests
-        assert len(spotify_mock.get_requests(url=library.api.api_url_base + "/artists")) == 0
-        req_albums = spotify_mock.get_requests(url=library.api.api_url_base + "/albums")
+        assert len(api_mock.get_requests(url=library.api.api_url_base + "/artists")) == 0
+        req_albums = api_mock.get_requests(url=library.api.api_url_base + "/albums")
         req_album_ids = {id_ for req in req_albums for id_ in parse_qs(req.query)["ids"][0].split(",")}
         assert req_album_ids == album_ids
 
-        spotify_mock.reset_mock()
+        api_mock.reset_mock()
 
         # enriches artists without replacing previous enrichment
         library.enrich_tracks(albums=False, artists=True)
@@ -150,7 +142,7 @@ class TestSpotifyLibrary(RemoteLibraryTester):
             assert "popularity" in track.response["album"]
             assert "tracks" not in track.response["album"]
 
-            assert len(spotify_mock.get_requests(url=track.response["album"]["href"] + "/tracks")) == 0
+            assert len(api_mock.get_requests(url=track.response["album"]["href"] + "/tracks")) == 0
 
             assert [a.name for a in track.artists] == track_artists_map[track.uri]
             for artist in track.response["artists"]:
@@ -159,8 +151,8 @@ class TestSpotifyLibrary(RemoteLibraryTester):
                 assert "popularity" in artist
 
         # check requests
-        assert len(spotify_mock.get_requests(url=library.api.api_url_base + "/albums")) == 0
-        req_artists = spotify_mock.get_requests(url=library.api.api_url_base + "/artists")
+        assert len(api_mock.get_requests(url=library.api.api_url_base + "/albums")) == 0
+        req_artists = api_mock.get_requests(url=library.api.api_url_base + "/artists")
         req_artist_ids = {id_ for req in req_artists for id_ in parse_qs(req.query)["ids"][0].split(",")}
         assert req_artist_ids == artist_ids
 

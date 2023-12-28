@@ -40,7 +40,6 @@ class MusicBee(LocalLibrary, File):
         Useful when managing similar libraries on multiple platforms.
     :param include: An optional list of playlist names to include when loading playlists.
     :param exclude: An optional list of playlist names to exclude when loading playlists.
-    :param load: When True, load the library on intialisation.
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
         The wrangler is also used when loading tracks to allow them to process URI tags.
@@ -65,7 +64,6 @@ class MusicBee(LocalLibrary, File):
             other_folders: UnitCollection[str] = (),
             include: Iterable[str] = (),
             exclude: Iterable[str] = (),
-            load: bool = True,
             remote_wrangler: RemoteDataWrangler = None,
     ):
         if library_folder is None and musicbee_folder is None:
@@ -103,7 +101,6 @@ class MusicBee(LocalLibrary, File):
             other_folders=other_folders,
             include=include,
             exclude=exclude,
-            load=load,
             remote_wrangler=remote_wrangler,
         )
 

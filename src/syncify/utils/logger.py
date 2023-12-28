@@ -120,9 +120,7 @@ def format_full_func_name(record: logging.LogRecord, width: int = 40) -> None:
     Optionally, provide a max ``width`` to attempt to truncate the path name to
     by taking only the first letter of each part of the path until the length is equal to ``width``.
     """
-    path_split = record.pathname.split(sep)
     last_call = inspect.stack()[8]
-    f_locals = last_call.frame.f_locals
 
     if record.pathname == __file__:
         # custom logging method has been called, reformat call info to actual call method
@@ -132,19 +130,23 @@ def format_full_func_name(record: logging.LogRecord, width: int = 40) -> None:
         record.filename = basename(record.pathname)
         record.module = record.name.split(".")[-1]
 
-    if "self" in f_locals:  # is a valid and initialised object, extract the class name
-        path = splitext(inspect.getfile(f_locals["self"].__class__))[0]
+    f_locals = last_call.frame.f_locals
+    if "self" not in f_locals:
+        path_split = record.name.split(".") + [record.funcName]
+    else:
+        # is a valid and initialised object, extract the class name and determine path to call function from stack
+        cls = f_locals["self"].__class__
+        path = join(splitext(inspect.getfile(cls))[0], cls.__name__, record.funcName.split(".")[-1])
 
-        # get relative path to sources root
         folder = ""
         path_split = []
-        while folder != PROGRAM_NAME.casefold():
+        while folder.casefold() != PROGRAM_NAME.casefold():  # get relative path to sources root
             path, folder = split(path)
             path_split.append(folder)
+        path_split.append(PROGRAM_NAME.casefold())
 
         # produce fully qualified path
         path_split = list(reversed(path_split[:-1]))
-        path_split.extend([f_locals["self"].__class__.__name__, record.funcName.split(".")[-1]])
 
     # truncate long paths by taking first letters of each part until short enough
     # noinspection PyTestUnpassedFixture

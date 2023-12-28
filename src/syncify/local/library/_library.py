@@ -33,7 +33,6 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         Useful when managing similar libraries on multiple platforms.
     :param include: An optional list of playlist names to include when loading playlists.
     :param exclude: An optional list of playlist names to exclude when loading playlists.
-    :param load: When True, load the library on intialisation.
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
         The wrangler is also used when loading tracks to allow them to process URI tags.
@@ -177,7 +176,6 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             other_folders: UnitCollection[str] = (),
             include: Iterable[str] = (),
             exclude: Iterable[str] = (),
-            load: bool = True,
             remote_wrangler: RemoteDataWrangler = None,
     ):
         super().__init__(remote_wrangler=remote_wrangler)
@@ -202,9 +200,6 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
         self._tracks: list[LocalTrack] = []
         self._playlists: dict[str, LocalPlaylist] = {}
-
-        if load:
-            self.load()
 
     def load(self, tracks: bool = True, playlists: bool = True, log: bool = True) -> None:
         """Loads all tracks and playlists in this library from scratch and log results."""

@@ -17,6 +17,8 @@ class TestLocalLibrary(LocalLibraryTester):
     @pytest.fixture
     def library(self) -> LocalLibrary:
         library = LocalLibrary(library_folder=path_track_resources, playlist_folder=path_playlist_resources)
+        library.load()
+
         # needed to ensure __setitem__ check passes
         library.items.append(random_track(cls=library[0].__class__))
         return library
@@ -27,14 +29,13 @@ class TestLocalLibrary(LocalLibraryTester):
 
     @pytest.fixture(scope="class")
     def blank_library(self) -> LocalLibrary:
-        return LocalLibrary(load=False)
+        return LocalLibrary()
 
     def test_init_include(self):
         library_include = LocalLibrary(
             library_folder=path_track_resources,
             playlist_folder=path_playlist_resources,
             include=[splitext(basename(path_playlist_m3u))[0], splitext(basename(path_playlist_xautopf_bp))[0]],
-            load=False,
         )
         assert library_include.library_folder == path_track_resources
         assert library_include._track_paths == path_track_all
@@ -49,7 +50,6 @@ class TestLocalLibrary(LocalLibraryTester):
             library_folder=path_track_resources,
             playlist_folder=path_playlist_resources,
             exclude=[splitext(basename(path_playlist_xautopf_bp))[0]],
-            load=False,
         )
         assert library_exclude.playlist_folder == path_playlist_resources
         assert library_exclude._playlist_paths == {
@@ -61,7 +61,6 @@ class TestLocalLibrary(LocalLibraryTester):
         library_relative_paths = LocalLibrary(
             library_folder=dirname(path_playlist_resources),
             playlist_folder=basename(path_playlist_resources),
-            load=False,
         )
         assert len(library_relative_paths._track_paths) == 6
         assert library_relative_paths.playlist_folder == path_playlist_resources
@@ -76,6 +75,7 @@ class TestLocalLibrary(LocalLibraryTester):
             library_folder=path_track_resources,
             playlist_folder=path_playlist_resources,
         )
+        library.load()
         tracks = {track.path for track in library.tracks}
         playlists = {name: pl.path for name, pl in library.playlists.items()}
 

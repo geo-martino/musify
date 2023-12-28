@@ -22,7 +22,7 @@ from syncify.local.library import LocalLibrary, MusicBee
 from syncify.utils.logger import SyncifyLogger, STAT, CurrentTimeRotatingFileHandler
 from syncify.remote.api import RemoteAPI
 from syncify.remote.library.library import RemoteLibrary
-from syncify.report import report_library_differences, report_missing_tags
+from syncify.report import report_playlist_differences, report_missing_tags
 from syncify.settings import Settings
 from syncify.utils.helpers import get_user_input
 from syncify.utils.printers import print_logo, print_line, print_time
@@ -376,7 +376,7 @@ class Syncify(Settings):
         self.logger.debug("Generate reports: START")
         cfg = self.cfg_run.get("reports", {})
         if cfg.get("library_differences").get("enabled", True):
-            report_library_differences(self.local_library, self.remote_library)
+            report_playlist_differences(self.local_library, self.remote_library)
         if cfg.get("missing_tags").get("enabled", True):
             report_missing_tags(self.local_library.folders)
         self.logger.debug("Generate reports: DONE\n")
@@ -626,3 +626,5 @@ if __name__ == "__main__":
 # TODO: improve separation of concerns for main and settings
 #  settings object should contain all settings as properties to be accessed by main
 #  main should never need to access the yaml dict config directly
+# TODO: why are GitHub workflow test operations hanging
+# TODO: __lt__ and __gt__ on NamedObject for sorting

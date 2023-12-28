@@ -39,13 +39,12 @@ class SpotifyCollectionLoader[T: SpotifyItem](SpotifyObjectLoaderMixin[T], Spoti
         kind = RemoteObjectType.from_name(unit)[0]
         key = cls.api.collection_item_map[kind].name.casefold() + "s"
 
-        obj = cls.__new__(cls)
-
         # no items given, regenerate API response from the URL
         if not items or (isinstance(value, Mapping) and (key not in value or cls.api.items_key not in value[key])):
             if kind == RemoteObjectType.PLAYLIST:
                 value = cls.api.get_playlist_url(value)
 
+            obj = cls.__new__(cls)
             obj.response = {"href": value}
             obj.reload(*args, **kwargs, extend_tracks=extend_tracks, use_cache=use_cache)
             return obj
@@ -103,8 +102,7 @@ class SpotifyCollectionLoader[T: SpotifyItem](SpotifyObjectLoaderMixin[T], Spoti
                 extend_response = [item["track"] for item in extend_response]
             cls.api.get_tracks_extra(extend_response, limit=response[key]["limit"], features=True, use_cache=use_cache)
 
-        obj.__init__(response)
-        return obj
+        return cls(response)
 
 
 class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[SpotifyTrack]):

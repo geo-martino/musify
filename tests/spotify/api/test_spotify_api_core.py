@@ -24,39 +24,39 @@ class TestSpotifyAPICore:
             floor: int,
             ceil: int,
             api: SpotifyAPI,
-            spotify_mock: SpotifyMock
+            api_mock: SpotifyMock
     ):
         # too small
         getattr(api, method_name)(limit=floor - 20, **kwargs)
-        params = parse_qs(spotify_mock.last_request.query)
+        params = parse_qs(api_mock.last_request.query)
         assert "limit" in params
         assert int(params["limit"][0]) == floor
 
         # good value
         limit = floor + (ceil // 2)
         getattr(api, method_name)(limit=limit, **kwargs)
-        params = parse_qs(spotify_mock.last_request.query)
+        params = parse_qs(api_mock.last_request.query)
         assert "limit" in params
         assert int(params["limit"][0]) == limit
 
         # too big
         getattr(api, method_name)(limit=ceil + 100, **kwargs)
-        params = parse_qs(spotify_mock.last_request.query)
+        params = parse_qs(api_mock.last_request.query)
         assert "limit" in params
         assert int(params["limit"][0]) == ceil
 
     ###########################################################################
     ## /me + /search endpoints
     ###########################################################################
-    def test_get_self(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
-        assert api._user_data == {}
-        assert api.get_self(update_user_data=False) == spotify_mock.user
+    def test_get_self(self, api: SpotifyAPI, api_mock: SpotifyMock):
+        api._user_data = {}
+        assert api.get_self(update_user_data=False) == api_mock.user
         assert api._user_data == {}
 
-        assert api.get_self(update_user_data=True) == spotify_mock.user
-        assert api._user_data == spotify_mock.user
+        assert api.get_self(update_user_data=True) == api_mock.user
+        assert api._user_data == api_mock.user
 
-    def test_query_input_validation(self, api: SpotifyAPI, spotify_mock: SpotifyMock):
+    def test_query_input_validation(self, api: SpotifyAPI, api_mock: SpotifyMock):
         assert api.query(query=None, kind=ObjectType.EPISODE) == []
         assert api.query(query="", kind=ObjectType.SHOW) == []
         # long queries that would cause the API to give an error should fail safely
@@ -73,15 +73,15 @@ class TestSpotifyAPICore:
             query: str,
             limit: int,
             api: SpotifyAPI,
-            spotify_mock: SpotifyMock,
+            api_mock: SpotifyMock,
     ):
         results = api.query(query=query, kind=kind, limit=limit)
 
-        assert len(results) == min(len(spotify_mock.item_type_map[kind]), limit)
+        assert len(results) == min(len(api_mock.item_type_map[kind]), limit)
         for result in results:
             assert result["type"] == kind.name.casefold()
 
-        request = spotify_mock.get_requests(url=f"{api.api_url_base}/search", params={"q": query})[0]
+        request = api_mock.get_requests(url=f"{api.api_url_base}/search", params={"q": query})[0]
         params = parse_qs(request.query)
 
         assert params["q"][0] == query
@@ -96,19 +96,19 @@ class TestSpotifyAPICore:
         ObjectType.PLAYLIST, ObjectType.ALBUM,  # ObjectType.SHOW, ObjectType.AUDIOBOOK,
     ], ids=idfn)
     def test_pretty_print_uris(
-            self, kind: ObjectType, api: SpotifyAPI, spotify_mock: SpotifyMock, capfd: pytest.CaptureFixture
+            self, kind: ObjectType, api: SpotifyAPI, api_mock: SpotifyMock, capfd: pytest.CaptureFixture
     ):
-        spotify_mock.reset_mock()  # test checks the number of requests made
+        api_mock.reset_mock()  # test checks the number of requests made
 
         key = api.collection_item_map.get(kind, kind).name.casefold() + "s"
-        source = next(item for item in spotify_mock.item_type_map[kind] if item[key]["total"] > 50)
+        source = next(item for item in api_mock.item_type_map[kind] if item[key]["total"] > 50)
 
         api.print_collection(value=source)
         stdout = get_stdout(capfd)
 
         # printed in blocks
         blocks = [block for block in stdout.strip().split("\n\n") if URL_EXT in block]
-        assert len(blocks) == len(spotify_mock.request_history)
+        assert len(blocks) == len(api_mock.request_history)
 
         # lines printed = total tracks + 1 extra for title
         lines = [line for line in stdout.strip().split("\n") if URL_EXT in line]
