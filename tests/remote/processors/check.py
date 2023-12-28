@@ -54,7 +54,7 @@ class RemoteItemCheckerTester(ABC):
 
         api_mock.reset_mock()
         return pl, collection
-    
+
     @staticmethod
     def setup_input(values: Sequence[str], mocker: MockerFixture) -> None:
         """``builtins.input`` calls will return the ``values`` in order, finishing on ''"""
@@ -199,7 +199,7 @@ class RemoteItemCheckerTester(ABC):
             capfd: pytest.CaptureFixture,
     ):
         api_mock.reset_mock()  # test checks the number of requests made
-        
+
         self.setup_input("q", mocker=mocker)
         checker._pause(page=1, total=1)
 

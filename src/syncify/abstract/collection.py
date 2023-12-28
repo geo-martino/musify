@@ -391,7 +391,7 @@ class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
     def playlists(self) -> dict[str, Playlist]:
         """The playlists in this library"""
         raise NotImplementedError
-    
+
     def __init__(self):
         super().__init__()
 

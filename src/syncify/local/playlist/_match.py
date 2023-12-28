@@ -55,7 +55,7 @@ class LocalMatcher(MusicBeeProcessor):
             library_folder: str | None = None,
             other_folders: UnitCollection[str] = (),
             check_existence: bool = True,
-            **kwargs
+            **__
     ) -> Self:
         """
         Initialise object from XML playlist.
@@ -80,14 +80,14 @@ class LocalMatcher(MusicBeeProcessor):
         exclude_str: str = source.get("Exceptions")
         exclude = set(exclude_str.split("|")) if isinstance(exclude_str, str) else ()
 
-        comparers: list[ItemComparer] | None = ItemComparer.from_xml(xml=xml)
+        comparers: Sequence[ItemComparer] = ItemComparer.from_xml(xml=xml)
 
         if len(comparers) == 1:
             # when user has not set an explicit comparer, there will still be an 'allow all' comparer
             # check for this 'allow all' comparer and remove if present to speed up comparisons
             c = comparers[0]
             if "contains" in c.condition.casefold() and len(c.expected) == 1 and not c.expected[0]:
-                comparers = None
+                comparers = ()
 
         return cls(
             comparers=comparers or (),
@@ -263,7 +263,7 @@ class LocalMatcher(MusicBeeProcessor):
             tracks: list[LocalTrack],
             tracks_original: list[LocalTrack],
             path_mapper: Callable[[Collection[str]], Collection[str]] = lambda x: x,
-            **kwargs
+            **__
     ) -> Mapping[str, Any]:
         """
         Export this object's settings to a map ready for export to an XML playlist file.

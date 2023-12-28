@@ -19,7 +19,7 @@ class RemoteCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
         raise NotImplementedError
 
     @pytest.fixture(scope="module")
-    def collection_merge_invalid(self, *args, **kwargs) -> Iterable[LocalTrack]:
+    def collection_merge_invalid(self, *_, **__) -> Iterable[LocalTrack]:
         return random_tracks()
 
     def test_collection_getitem_dunder_method(

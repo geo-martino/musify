@@ -135,7 +135,7 @@ class ItemSorter(MusicBeeProcessor):
         return grouped
 
     @classmethod
-    def from_xml(cls, xml: Mapping[str, Any], **kwargs) -> Self:
+    def from_xml(cls, xml: Mapping[str, Any], **__) -> Self:
         fields: Sequence[Field] | Mapping[Field | bool]
         source = xml["SmartPlaylist"]["Source"]
 

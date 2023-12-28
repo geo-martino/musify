@@ -19,7 +19,7 @@ class dynamicprocessormethod:
     This assigns the method a processor method which can be dynamically called by the processor class.
     Optionally, provide a list of alternative names from which this processor method can also be called.
     """
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args, **__):
         func: Optional[Callable] = next((a for a in args if callable(a)), None)
         self = partial(cls, *args) if func is None else super().__new__(cls)
         return update_wrapper(self, func)
@@ -62,7 +62,7 @@ class DynamicProcessor(Processor, metaclass=ABCMeta):
         """String representation of the current processor name of this object"""
         return frozenset(self._processor_method_fmt(name) for name in self.__processormethods__)
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *_, **__):
         processor_methods = list(cls.__processormethods__)
 
         for method in cls.__dict__.copy().values():

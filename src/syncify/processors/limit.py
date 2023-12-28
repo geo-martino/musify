@@ -55,7 +55,7 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
         return self._processor_name.lstrip("_")
 
     @classmethod
-    def from_xml(cls, xml: Mapping[str, Any], **kwargs) -> Self | None:
+    def from_xml(cls, xml: Mapping[str, Any], **__) -> Self | None:
         conditions: Mapping[str, str] = xml["SmartPlaylist"]["Source"]["Limit"]
         if conditions["@Enabled"] != "True":
             return

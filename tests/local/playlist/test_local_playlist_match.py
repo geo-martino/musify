@@ -1,14 +1,17 @@
+from os.path import join
 from random import sample
 
 import pytest
+import xmltodict
 
 from syncify.fields import LocalTrackField
 from syncify.local.playlist import LocalMatcher
 from syncify.local.track import LocalTrack
 from syncify.processors.compare import ItemComparer
 from tests.abstract.misc import PrettyPrinterTester
-from tests.local.utils import random_tracks
-from tests.utils import random_str
+from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra, path_playlist_resources
+from tests.local.utils import random_tracks, path_track_wma, path_track_flac, path_track_mp3
+from tests.utils import random_str, path_resources
 
 
 class TestLocalMatcher(PrettyPrinterTester):
@@ -86,6 +89,38 @@ class TestLocalMatcher(PrettyPrinterTester):
         matcher = LocalMatcher(include_paths=include_paths, exclude_paths=exclude_paths, check_existence=True)
         assert matcher.include_paths == []
         assert matcher.exclude_paths == []
+
+    def test_from_xml_1(self):
+        with open(path_playlist_xautopf_bp, "r", encoding="utf-8") as f:
+            xml = xmltodict.parse(f.read())
+        matcher = LocalMatcher.from_xml(
+            xml=xml, library_folder=path_resources, other_folders="../", check_existence=False
+        )
+
+        assert len(matcher.comparers) == 3  # ItemComparer settings are tested in class-specific tests
+        assert matcher.match_all
+        assert matcher.library_folder == path_resources.rstrip("\\/")
+        assert matcher.original_folder == ".."
+        assert set(matcher.include_paths) == {path_track_wma.casefold(), path_track_flac.casefold()}
+        assert set(matcher.exclude_paths) == {
+            join(path_playlist_resources,  "exclude_me_2.mp3").casefold(),
+            path_track_mp3.casefold(),
+            join(path_playlist_resources, "exclude_me.flac").casefold(),
+        }
+
+    def test_from_xml_2(self):
+        with open(path_playlist_xautopf_ra, "r", encoding="utf-8") as f:
+            xml = xmltodict.parse(f.read())
+        matcher = LocalMatcher.from_xml(
+            xml=xml, library_folder=path_resources, other_folders="../", check_existence=False
+        )
+
+        assert len(matcher.comparers) == 0
+        assert not matcher.match_all
+        assert matcher.library_folder == path_resources.rstrip("\\/")
+        assert matcher.original_folder is None
+        assert len(matcher.include_paths) == 0
+        assert len(matcher.exclude_paths) == 0
 
     @staticmethod
     def sort_key(track: LocalTrack) -> str:

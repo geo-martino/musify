@@ -9,10 +9,8 @@ from syncify.fields import LocalTrackField
 from syncify.local.exception import InvalidFileType
 from syncify.local.playlist import XAutoPF
 from syncify.local.track import LocalTrack
-from syncify.processors.limit import LimitType
-from syncify.processors.sort import ShuffleMode, ShuffleBy
 from tests.local.playlist.utils import LocalPlaylistTester, path_playlist_xautopf_ra, path_playlist_xautopf_bp
-from tests.local.utils import random_tracks, path_track_flac, path_track_wma, path_track_mp3, random_track
+from tests.local.utils import random_tracks, path_track_flac, path_track_wma, random_track
 from tests.utils import path_txt, path_resources
 
 
@@ -55,42 +53,16 @@ class TestXAutoPF(LocalPlaylistTester):
         assert pl.path == path_playlist_xautopf_bp
         assert pl.ext == splitext(basename(path_playlist_xautopf_bp))[1]
 
-        # comparers
-        assert pl.matcher.comparers[0].field == LocalTrackField.ALBUM
-        assert pl.matcher.comparers[0].expected == ["an album"]
-        assert not pl.matcher.comparers[0]._converted
-        assert pl.matcher.comparers[0].condition == "contains"
-        assert pl.matcher.comparers[0]._processor_method == pl.matcher.comparers[0]._contains
-        assert pl.matcher.comparers[1].field == LocalTrackField.ARTIST
-        assert pl.matcher.comparers[1].expected is None
-        assert not pl.matcher.comparers[1]._converted
-        assert pl.matcher.comparers[1].condition == "is_null"
-        assert pl.matcher.comparers[1]._processor_method == pl.matcher.comparers[1]._is_null
+        # processor settings are tested in class-specific tests
+        assert pl.matcher
+        assert len(pl.matcher.comparers) == 3
+        assert not pl.limiter
+        assert pl.sorter
+
+        # check the comparers have now converted expected values after load
         assert pl.matcher.comparers[2].field == LocalTrackField.TRACK_NUMBER
-        assert pl.matcher.comparers[2].expected == [30]
         assert pl.matcher.comparers[2]._converted
-        assert pl.matcher.comparers[2].condition == "less_than"
-        assert pl.matcher.comparers[2]._processor_method == pl.matcher.comparers[2]._is_before
-
-        # matcher
-        assert pl.matcher.match_all
-        assert pl.matcher.library_folder == path_resources.rstrip("\\/")
-        assert pl.matcher.original_folder == ".."
-        assert set(pl.matcher.include_paths) == {path_track_wma.casefold(), path_track_flac.casefold()}
-        assert set(pl.matcher.exclude_paths) == {
-            join(path_resources, basename(dirname(__file__)), "exclude_me_2.mp3").casefold(),
-            path_track_mp3.casefold(),
-            join(path_resources, basename(dirname(__file__)), "exclude_me.flac").casefold(),
-        }
-
-        # limit
-        assert pl.limiter is None
-
-        # sorter
-        assert pl.sorter.sort_fields == {LocalTrackField.TRACK_NUMBER: False}
-        assert pl.sorter.shuffle_mode == ShuffleMode.NONE  # switch to ShuffleMode.RECENT_ADDED once implemented
-        assert pl.sorter.shuffle_by == ShuffleBy.ALBUM
-        assert pl.sorter.shuffle_weight == 0.5
+        assert pl.matcher.comparers[2].expected == [30]
 
     def test_load_playlist_1_tracks(self, tracks: list[LocalTrack]):
         # prepare tracks to search through
@@ -138,25 +110,11 @@ class TestXAutoPF(LocalPlaylistTester):
         assert pl.path == path_playlist_xautopf_ra
         assert pl.ext == splitext(basename(path_playlist_xautopf_ra))[1]
 
-        # matcher
-        assert len(pl.matcher.comparers) == 0
-        assert not pl.matcher.match_all
-        assert pl.matcher.library_folder == path_resources.rstrip("\\/")
-        assert pl.matcher.original_folder is None
-        assert len(pl.matcher.include_paths) == 0
-        assert len(pl.matcher.exclude_paths) == 0
-
-        # limit
-        assert pl.limiter.limit_max == 20
-        assert pl.limiter.kind == LimitType.ITEMS
-        assert pl.limiter.allowance == 1.25
-        assert pl.limiter._processor_method == pl.limiter._most_recently_added
-
-        # sorter
-        assert pl.sorter.sort_fields == {LocalTrackField.DATE_ADDED: True}
-        assert pl.sorter.shuffle_mode == ShuffleMode.NONE
-        assert pl.sorter.shuffle_by == ShuffleBy.TRACK
-        assert pl.sorter.shuffle_weight == 0
+        # processor settings are tested in class-specific tests
+        assert pl.matcher
+        assert not pl.matcher.comparers
+        assert pl.limiter
+        assert pl.sorter
 
     def test_load_playlist_2_tracks(self):
         # prepare tracks to search through

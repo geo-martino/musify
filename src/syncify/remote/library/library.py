@@ -147,7 +147,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         )
         self.logger.print(REPORT)
 
-    def enrich_tracks(self, *args, **kwargs) -> None:
+    def enrich_tracks(self, *_, **__) -> None:
         """
         Call API to enrich elements of track objects improving metadata coverage.
         This is an optionally implementable method. Defaults to doing nothing.

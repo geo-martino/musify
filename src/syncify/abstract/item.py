@@ -33,6 +33,12 @@ class NamedObject(ABC):
     def __init__(self):
         self._clean_tags: dict[TagField, Any] = {}
 
+    def __lt__(self, other: NamedObject):
+        return self.name < other.name
+
+    def __gt__(self, other: NamedObject):
+        return self.name > other.name
+
 
 class ObjectPrinterMixin(NamedObject, PrettyPrinter, metaclass=ABCMeta):
     pass

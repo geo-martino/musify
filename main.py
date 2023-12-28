@@ -512,10 +512,10 @@ class Syncify(Settings):
 
 if __name__ == "__main__":
     print_logo()
-    
+
     import logging.config
     import yaml
-    
+
     config_file = join(dirname(dirname(__file__)), "logging.yml")
     with open(config_file, "r") as f:
         config = yaml.full_load(f.read())
@@ -527,7 +527,7 @@ if __name__ == "__main__":
     # noinspection PyTypeChecker
     file_handler: CurrentTimeRotatingFileHandler | None = logging.getHandlerByName("file")
 
-    
+
     def _handle_exception(self, exc_type, exc_value, exc_traceback) -> None:
         """Custom exception handler. Handles exceptions through logger."""
         if issubclass(exc_type, KeyboardInterrupt):
@@ -595,7 +595,6 @@ if __name__ == "__main__":
 # TODO: expand search/match functionality to include all item types
 # TODO: new music playlist that adds songs from artists user follows that
 #  have been released within a given timeframe e.g. a day
-# TODO: implement XAutoPF full update functionality
 # TODO: expand docstrings everywhere
 
 
@@ -616,15 +615,14 @@ if __name__ == "__main__":
 #  This may now be fixed by extending functionality of playlists to include
 #   available track paths on load
 # TODO: implement merge_playlists functions and, by extension, implement android library sync
+# TODO: implement XAutoPF full update functionality
 
 
 ## NEEDED FOR v0.3
-# TODO: review scope of functions/attributes/properties
 # TODO: fix - XAutoPF ItemCollection tests sometimes fail on __setitem__ test
 # TODO: write tests, write tests, write tests
 # TODO: update the readme (dynamic readme?)
 # TODO: improve separation of concerns for main and settings
 #  settings object should contain all settings as properties to be accessed by main
 #  main should never need to access the yaml dict config directly
-# TODO: why are GitHub workflow test operations hanging
-# TODO: __lt__ and __gt__ on NamedObject for sorting
+# TODO: review scope of functions/attributes/properties
