@@ -108,9 +108,14 @@ class SpotifyMock(RemoteMock):
         self.shows = [self.generate_show() for _ in range(randrange(self.range_start, self.range_stop))]
         self.audiobooks = [self.generate_audiobook() for _ in range(randrange(self.range_start, self.range_stop))]
 
-        self.artist_albums = deepcopy(self.albums)
-        for album in self.artist_albums:
-            album["album_group"] = choice([choice(("album", "single", "compilation", "appears_on"))])
+        self.artist_albums = []
+        for album in self.albums:
+            album = {
+                k: deepcopy(v) for k, v in album.items()
+                if k not in {"tracks", "copyrights", "external_ids", "genres", "label", "popularity"}
+            }
+            album["album_group"] = choice(("album", "single", "compilation", "appears_on"))
+            self.artist_albums.append(album)
 
         # randomly choose currently authenticated user and setup mock
         self.user = choice(self.users)
@@ -158,6 +163,25 @@ class SpotifyMock(RemoteMock):
         count = max(10 - len([album for album in self.albums if 2 < album["tracks"]["total"] <= self.limit_lower]), 0)
         for _ in range(count):
             self.albums.append(self.generate_album(track_count=randrange(3, self.limit_lower)))
+
+        # one artist with many albums associated for artist albums test
+        artist = deepcopy(choice(self.artists))
+        artist = {k: v for k, v in artist.items() if k not in {"followers", "genres", "images", "popularity"}}
+        albums = [album for album in self.artist_albums if album["album_type"] in ("album", "single")]
+
+        if len(albums) < 15:
+            for _ in range(15 - len(albums)):
+                album = self.generate_album()
+                self.albums.append(album)
+                album = {
+                    k: deepcopy(v) for k, v in album.items()
+                    if k not in {"tracks", "copyrights", "external_ids", "genres", "label", "popularity"}
+                }
+                album["album_group"] = choice(("album", "single", "compilation", "appears_on"))
+                self.artist_albums.append(album)
+
+        for album in sample(albums, k=15):
+            album["artists"].append(artist)
 
     def setup_valid_references(self):
         """Sets up cross-referenced valid responses needed for RemoteObject tests"""
@@ -234,7 +258,7 @@ class SpotifyMock(RemoteMock):
                 self.setup_items_block_mock(url=url, items=items, total=collection[key]["total"])
 
         # artist's albums
-        for artist in self.artists:
+        for i, artist in enumerate(self.artists):
             id_ = artist["id"]
             items = [album for album in self.artist_albums if any(art["id"] == id_ for art in album["artists"])]
             url = f"{URL_API}/artists/{id_}/albums"
@@ -327,11 +351,20 @@ class SpotifyMock(RemoteMock):
         """Setup requests mock for returning preset responses from the given ``items`` in an 'items block' format."""
         def response_getter(req: Request, _: Context) -> dict[str, Any]:
             """Dynamically generate expected response for an items block from the given ``generator``"""
+            nonlocal total
+
             req_params = parse_qs(req.query)
             limit = int(req_params["limit"][0])
             offset = int(req_params.get("offset", [0])[0])
 
-            it = deepcopy(items[offset: offset + limit])
+            available = items
+            if re.match(r".*/artists/\w+/albums$", url) and "include_groups" in req_params:
+                # special case for artist's albums
+                types = req_params["include_groups"][0].split(",")
+                available = [i for i in items if i["album_type"] in types]
+                total = len(available)
+            it = deepcopy(available[offset: offset + limit])
+
             items_block = self.format_items_block(url=req.url, items=it, offset=offset, limit=limit, total=total)
 
             if url.endswith("me/following"):  # special case for following artists

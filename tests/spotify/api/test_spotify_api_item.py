@@ -9,6 +9,7 @@ import pytest
 # noinspection PyProtectedMember,PyUnresolvedReferences
 from requests_mock.request import _RequestObjectProxy as Request
 
+from syncify.api.exception import APIError
 from syncify.remote.enums import RemoteObjectType as ObjectType, RemoteIDType as IDType
 from syncify.remote.exception import RemoteObjectTypeError
 from syncify.spotify.api import SpotifyAPI
@@ -64,6 +65,8 @@ class TestSpotifyAPIItems:
     ## Input validation
     ###########################################################################
     def test_get_items_input_validation(self, api: SpotifyAPI):
+        assert api.get_items(values=[]) == []
+
         with pytest.raises(RemoteObjectTypeError):
             api.get_items(values=random_ids(), kind=None)
         with pytest.raises(RemoteObjectTypeError):
@@ -91,6 +94,16 @@ class TestSpotifyAPIItems:
         value = api.convert(random_id(), kind=ObjectType.ALBUM, type_in=IDType.ID, type_out=IDType.URL)
         with pytest.raises(RemoteObjectTypeError):
             api.get_tracks_extra(values=value, features=True)
+
+    def test_get_artist_albums_input_validation(self, api: SpotifyAPI):
+        assert api.get_artist_albums(values=[]) == {}
+
+        value = api.convert(random_id(), kind=ObjectType.ALBUM, type_in=IDType.ID, type_out=IDType.URL)
+        with pytest.raises(RemoteObjectTypeError):
+            api.get_artist_albums(values=value)
+
+        with pytest.raises(APIError):
+            api.get_artist_albums(values=random_id(), types=("unknown", "invalid"))
 
     ###########################################################################
     ## Multi-, Batched-, and Extend tests for each supported item type
@@ -187,7 +200,7 @@ class TestSpotifyAPIItems:
         test = api_mock.format_items_block(url=source["href"], items=items, limit=limit, total=total)
 
         # assert ranges are valid for test to work and test value generated correctly
-        assert len(source[api.items_key]) > limit
+        assert len(source[api.items_key]) >= limit
         assert 0 < len(items) <= limit
         assert source["total"] == test["total"]
         assert test["total"] > test["limit"]
@@ -207,7 +220,7 @@ class TestSpotifyAPIItems:
         assert len(requests) == api_mock.calculate_pages(limit=limit, total=total) - 1
 
     ###########################################################################
-    ## Get user items
+    ## ``get_user_items``
     ###########################################################################
     @pytest.mark.parametrize("kind,user", [
         (ObjectType.PLAYLIST, False),
@@ -260,7 +273,7 @@ class TestSpotifyAPIItems:
                 assert result == source_map[result["id"]]
 
     ###########################################################################
-    ## Get items - assertions
+    ## ``get_items`` - assertions
     ###########################################################################
     def assert_results(
             self,
@@ -330,7 +343,7 @@ class TestSpotifyAPIItems:
             assert result == actual
 
     ###########################################################################
-    ## Get user items - tests
+    ## ``get_items`` - tests
     ###########################################################################
     @pytest.mark.parametrize("kind,update_keys", [
         (ObjectType.PLAYLIST, {"description", "followers", "images", "public"}),
@@ -431,12 +444,12 @@ class TestSpotifyAPIItems:
         self.assert_update(expected=source, results=results, test=test, kind=kind, key=key)
 
     ###########################################################################
-    ## get_tracks_extra tests
+    ## ``get_tracks_extra`` tests
     ###########################################################################
     def test_get_tracks_extra_single(self, api: SpotifyAPI, api_mock: SpotifyMock):
         api_mock.reset_mock()  # test checks the number of requests made
 
-        source = choice(api_mock.tracks)
+        source = deepcopy(choice(api_mock.tracks))
         source_features = api_mock.audio_features[source["id"]]
         source_analysis = api_mock.audio_analysis[source["id"]]
         test = random_id_type(id_=source["id"], wrangler=api, kind=ObjectType.TRACK)
@@ -476,7 +489,7 @@ class TestSpotifyAPIItems:
 
         source = api_mock.tracks
         source = sample(source, api_mock.limit_lower) if len(source) > api_mock.limit_lower else source
-        source_map = {item["id"]: item for item in source}
+        source_map = {item["id"]: deepcopy(item) for item in source}
         source_features = {item["id"]: api_mock.audio_features[item["id"]] for item in source}
         source_analysis = {item["id"]: api_mock.audio_analysis[item["id"]] for item in source}
         test = random_id_types(id_list=source_map, wrangler=api, kind=ObjectType.TRACK)
@@ -494,8 +507,8 @@ class TestSpotifyAPIItems:
 
         # appropriate number of requests made
         requests = api_mock.get_requests(url=f"{api.api_url_base}/audio-features")
-        for item in source:
-            requests += api_mock.get_requests(url=f"{api.api_url_base}/audio-analysis/{item["id"]}")
+        for id_ in source_map:
+            requests += api_mock.get_requests(url=f"{api.api_url_base}/audio-analysis/{id_}")
         assert len(api_mock.request_history) == len(list(batched(test, limit))) + len(test)
 
         # test input maps are updated when API responses are given
@@ -533,3 +546,70 @@ class TestSpotifyAPIItems:
         assert {k: v for k, v in results[0].items() if k not in {"audio_features", "audio_analysis"}} == source
         assert "audio_features" in test
         assert "audio_analysis" in test
+
+    ###########################################################################
+    ## ``get_artist_albums`` tests
+    ###########################################################################
+    def test_get_artist_albums_single(self, api: SpotifyAPI, api_mock: SpotifyMock):
+        api_mock.reset_mock()  # test checks the number of requests made
+
+        types = ("album", "single")
+        expected_map = {
+            artist["id"]: [
+                album for album in api_mock.artist_albums
+                if any(art["id"] == artist["id"] for art in album["artists"])
+                and album["album_type"] in types
+            ]
+            for artist in api_mock.artists
+        }
+        id_, expected = next((id_, albums) for id_, albums in expected_map.items() if len(albums) >= 10)
+        source = deepcopy(next(artist for artist in api_mock.artists if artist["id"] == id_))
+        test = random_id_type(id_=id_, wrangler=api, kind=ObjectType.ARTIST)
+
+        # force pagination
+        limit = max(min(len(expected) // 3, api_mock.limit_max), 1)
+        assert len(expected) > limit  # ensure ranges are valid for test to work
+
+        # string given
+        results = api.get_artist_albums(values=test, types=types, limit=limit)
+        assert len(results) == 1
+        assert sorted(results[source["id"]], key=lambda x: x["id"]) == sorted(expected, key=lambda x: x["id"])
+
+        # appropriate number of requests made
+        url = f"{api.api_url_base}/artists/{source["id"]}/albums"
+        requests = api_mock.get_requests(url=url)
+        self.assert_calls(expected=expected, requests=requests, limit=limit, api_mock=api_mock)
+
+        # API response given
+        results = api.get_artist_albums(values=source, types=types, limit=limit)
+        assert len(results) == 1
+        assert sorted(results[source["id"]], key=lambda x: x["id"]) == sorted(expected, key=lambda x: x["id"])
+
+    def test_get_artist_albums_many(self, api: SpotifyAPI, api_mock: SpotifyMock):
+        api_mock.reset_mock()  # test checks the number of requests made
+
+        source = api_mock.artists
+        source = sample(source, api_mock.limit_lower) if len(source) > api_mock.limit_lower else source
+        source_map = {item["id"]: deepcopy(item) for item in source}
+        expected_map = {
+            id_: [album for album in api_mock.artist_albums if any(art["id"] == id_ for art in album["artists"])]
+            for id_ in source_map
+        }
+        test = random_id_types(id_list=source_map, wrangler=api, kind=ObjectType.ARTIST)
+        limit = 50
+
+        results = api.get_artist_albums(values=test, limit=limit)
+        assert len(results) == len(expected_map)
+
+        for id_, result in results.items():
+            assert result == expected_map[id_]
+
+            # appropriate number of requests made
+            url = f"{api.api_url_base}/artists/{id_}/albums"
+            requests = api_mock.get_requests(url=url)
+            self.assert_calls(expected=source, requests=requests, limit=limit, api_mock=api_mock)
+
+        results = api.get_artist_albums(values=source_map.values(), limit=limit)
+        assert len(results) == len(expected_map)
+        for id_, result in results.items():
+            assert result == expected_map[id_]

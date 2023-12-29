@@ -44,7 +44,7 @@ def local_library(
         path = join(tmp_path, name + ".m3u")
         tracks = [uri_tracks[track.uri] for track in pl]
         library.playlists[name] = M3U(path=path, tracks=tracks)
-        assert all(track in pl for track in library.playlists[name])
+        assert all(track in pl.tracks for track in library.playlists[name])
 
     return library
 

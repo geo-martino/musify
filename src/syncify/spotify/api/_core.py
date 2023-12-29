@@ -21,7 +21,7 @@ class SpotifyAPICore(RemoteAPI, metaclass=ABCMeta):
         params["limit"] = limit
 
         url_parts = list(url_parsed[:])
-        url_parts[4] = urlencode(params, quote_via=quote)
+        url_parts[4] = urlencode(params, doseq=True, quote_via=quote)
         return str(urlunparse(url_parts))
 
     def print_collection(

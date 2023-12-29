@@ -3,7 +3,7 @@ from abc import ABCMeta
 from collections.abc import Collection, Mapping, MutableMapping
 from itertools import batched
 from time import sleep
-from typing import Any, Literal
+from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from syncify.api.exception import APIError
@@ -424,7 +424,7 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
     def get_artist_albums(
             self,
             values: APIMethodInputType,
-            types: Collection[Literal["album", "single", "compilation", "appears_on"]] = (),
+            types: Collection[str] = (),
             limit: int = 50,
             use_cache: bool = True,
     ) -> dict[str, list[dict[str, Any]]]:
@@ -449,6 +449,9 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
         if not values:  # skip on empty
             self.logger.debug(f"{'SKIP':<7}: {self.api_url_base:<43} | No data given")
             return {}
+        valid_types = {"album", "single", "compilation", "appears_on"}
+        if types and not all(t in valid_types for t in types):
+            raise APIError(f"Given types not recognised, must be one or many of the following: {valid_types} ({types})")
         self.validate_item_type(values, kind=RemoteObjectType.ARTIST)
 
         id_list = self.extract_ids(values, kind=RemoteObjectType.ARTIST)
@@ -457,7 +460,7 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
 
         params = {"limit": limit_value(limit, floor=1, ceil=50)}
         if types:
-            params["include_groups"] = ",".join(types)
+            params["include_groups"] = ",".join(set(types))
 
         url = self.api_url_base + "/artists/{id}/albums"
         results: dict[str, list[dict[str, Any]]] = {}
