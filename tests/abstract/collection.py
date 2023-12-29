@@ -152,20 +152,23 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
 
     @staticmethod
     def test_collection_setitem_dunder_method(collection: ItemCollection):
-        # TODO: figure out why xautopf tests keep failing here
-        try:
-            item = next(i for i in collection.items[1:] if isinstance(i, type(collection[0])))
-        except StopIteration as e:
-            print(collection)
-            for item in collection:
-                print(item)
-            raise e
-        assert collection.items.index(item) > 0
+        classes = [item.__class__ for item in collection]
+        idx_1, item_1 = next((i, item) for i, item in enumerate(collection.items) if classes.count(item.__class__) > 1)
+        idx_2, item_2 = next(
+            (i, item) for i, item in enumerate(collection.items[idx_1+1:], idx_1+1)
+            if item.__class__ == item_1.__class__
+        )
 
-        collection[0] = item
-        assert collection.items.index(item) == 0
+        assert idx_1 < idx_2
+        assert item_1 != item_2
+        assert collection[idx_1] != collection[idx_2]
+        assert collection.items.index(item_1) == idx_1
+        assert collection.items.index(item_2) == idx_2
+
+        collection[idx_1] = item_2
+        assert collection.items.index(item_2) == idx_1
         with pytest.raises(IndexError):  # does not set items outside of max length range
-            collection[len(collection.items) + 5] = item
+            collection[len(collection.items) + 5] = item_1
 
     @staticmethod
     def test_collection_delitem_dunder_method(collection: ItemCollection):

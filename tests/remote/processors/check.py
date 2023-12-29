@@ -33,11 +33,11 @@ class RemoteItemCheckerTester(ABC):
         raise NotImplementedError
 
     @pytest.fixture
-    def collections(self) -> list[BasicCollection]:
+    def collections(self, playlist_urls: list[str]) -> list[BasicCollection]:
         """Yields a valid :py:class:`BasicCollection` of :py:class:`LocalTrack` as a pytest.fixture"""
-        return [BasicCollection(name=random_str(), items=random_tracks()) for _ in range(randrange(6, 20))]
+        count = randrange(6, len(playlist_urls))
+        return [BasicCollection(name=random_str(), items=random_tracks()) for _ in range(count)]
 
-    # noinspection PyProtectedMember
     @staticmethod
     @pytest.fixture
     def setup_playlist_collection(
@@ -45,8 +45,10 @@ class RemoteItemCheckerTester(ABC):
     ) -> tuple[RemotePlaylist, BasicCollection]:
         """Setups up checker, playlist, and collection for testing match_to_remote functionality"""
         url = choice(playlist_urls)
+        # noinspection PyProtectedMember
         pl = checker._remote_types.playlist(checker.api.get_items(url, extend=True, use_cache=False)[0])
         assert len(pl) > 10
+        assert len({item.uri for item in pl}) == len(pl)  # all unique tracks
 
         collection = BasicCollection(name="test", items=pl.tracks.copy())
         checker.playlist_name_urls = {collection.name: url}
@@ -73,6 +75,8 @@ class RemoteItemCheckerTester(ABC):
     ###########################################################################
     @staticmethod
     def test_make_temp_playlist(checker: RemoteItemChecker, api_mock: RemoteMock):
+        api_mock.reset_mock()  # test checks the number of requests made
+
         # force auth test to fail and reload from token
         checker.api.token = None
         checker.api.token_file_path = path_token
@@ -496,7 +500,8 @@ class RemoteItemCheckerTester(ABC):
         assert not checker.switched
         assert not checker.remaining
 
-        assert "do not run" not in get_stdout(capfd)  # skip triggered, 2nd collection should not be processed
+        stdout = get_stdout(capfd)
+        assert "do not run" not in stdout  # skip triggered, 2nd collection should not be processed
 
         for uri, item in zip(uri_list, remaining[:len(uri_list)]):  # uri_list
             assert item.uri == uri

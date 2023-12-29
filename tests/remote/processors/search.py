@@ -64,7 +64,7 @@ class RemoteItemSearcherTester(ABC):
         api_mock.reset_mock()  # test checks the number of requests made
 
         settings = SearchSettings(
-            search_fields_1=[Tag.NAME, Tag.ARTIST],
+            search_fields_1=[Tag.NAME, Tag.ARTIST],  # query mock always returns match on name
             search_fields_2=[Tag.NAME, Tag.ALBUM],
             search_fields_3=[Tag.NAME, Tag.YEAR],
             match_fields={Tag.TITLE},
@@ -79,7 +79,6 @@ class RemoteItemSearcherTester(ABC):
         expected = [str(item.clean_tags.get(key)) for key in settings.search_fields_1]
         found = False
         for k, v in parse_qs(requests[0].query).items():
-            # print(expected, v[0], v[0].split())
             if expected == v[0].split():
                 found = True
                 break
@@ -100,7 +99,6 @@ class RemoteItemSearcherTester(ABC):
         expected = [str(item.clean_tags.get(key)) for key in settings.search_fields_3]
         found = False
         for k, v in parse_qs(requests[0].query).items():
-            # print(expected, v[0], v[0].split())
             if expected == v[0].split():
                 found = True
                 break
@@ -120,17 +118,14 @@ class RemoteItemSearcherTester(ABC):
     ):
         """Run search on given ``collection`` type against the ``search_function`` and assert the results"""
         for item in collection:
-            # print("1", item.has_uri, item.uri)
             assert item.has_uri is None
             assert item.uri is None
 
         search_function(collection)
         for item in search_items:
-            # print("2", item.has_uri, item.uri)
             assert item.has_uri
             assert item.uri is not None
         for item in unmatchable_items:
-            # print("3", item.has_uri, item.uri)
             assert item.has_uri is None
             assert item.uri is None
 
@@ -138,16 +133,13 @@ class RemoteItemSearcherTester(ABC):
         assert len({item.uri for item in collection}) > 1  # currently more than 1 unique URI in collection
         uri = next(item for item in collection).uri
         for item in search_items:
-            # print("4", item.has_uri, item.uri)
             item.uri = uri
 
         search_function(collection)
         for item in search_items:
-            # print("5", item.has_uri, item.uri)
             assert item.has_uri
             assert item.uri == uri
         for item in unmatchable_items:
-            # print("6", item.has_uri, item.uri)
             assert item.has_uri is None
             assert item.uri is None
 
@@ -182,7 +174,7 @@ class RemoteItemSearcherTester(ABC):
     @pytest.fixture
     def search_album(search_albums: list[LocalAlbum]):
         """Process and prepare a single album for searching"""
-        collection = next(album for album in search_albums if len(album) > 2)
+        collection = next(album for album in search_albums if 2 < len(album) == len(set(album.tracks)))
         assert not collection.compilation  # this forces an album search
 
         skip = 0
@@ -246,6 +238,7 @@ class RemoteItemSearcherTester(ABC):
 
         result = searcher._search_collection(search_album)
         assert len(result.matched) + len(result.unmatched) + len(result.skipped) == len(search_album)
+        print(len(result.matched), matchable, skip)
         assert len(result.matched) == matchable - skip
         assert len(result.unmatched) == len(unmatchable_items)
         assert len(result.skipped) == skip

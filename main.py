@@ -619,10 +619,10 @@ if __name__ == "__main__":
 
 
 ## NEEDED FOR v0.3
-# TODO: fix - XAutoPF ItemCollection tests sometimes fail on __setitem__ test
 # TODO: write tests, write tests, write tests
 # TODO: update the readme (dynamic readme?)
 # TODO: improve separation of concerns for main and settings
 #  settings object should contain all settings as properties to be accessed by main
 #  main should never need to access the yaml dict config directly
 # TODO: review scope of functions/attributes/properties
+# TODO: api on RemoteObjects should be instance attribute, not class attribute

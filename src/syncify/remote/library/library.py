@@ -13,7 +13,6 @@ from syncify.utils.helpers import align_and_truncate, get_max_width
 from syncify.utils.logger import REPORT, STAT
 
 
-# noinspection PyShadowingNames
 class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=ABCMeta):
     """
     Represents a remote library, providing various methods for manipulating

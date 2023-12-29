@@ -146,12 +146,13 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
             items_block = items_block[key.rstrip("s") + "s"]
         if self.items_key not in items_block:
             items_block[self.items_key] = []
-        unit = unit or 'items'
 
         # enable progress bar for longer calls
         total = items_block["total"]
         initial = len(items_block[self.items_key])
-        bar = self.logger.get_progress_bar(total=total, desc=f"Extending {unit}", unit=key, initial=initial)
+        bar = self.logger.get_progress_bar(
+            total=total, desc=f"Extending {unit or self.items_key}", unit=key or self.items_key, initial=initial
+        )
 
         # this usually happens on the items block of a current user's playlist
         if "next" not in items_block:
@@ -168,7 +169,7 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
 
         while items_block.get("next"):  # loop through each page
             log_count = min(bar.n + items_block["limit"], items_block["total"])
-            log = [f"{log_count:>6}/{items_block["total"]:<6} {unit}"]
+            log = [f"{log_count:>6}/{items_block["total"]:<6} {key or self.items_key}"]
 
             response = self.get(items_block["next"], use_cache=use_cache, log_pad=95, log_extra=log)
             if key and key.rstrip("s") + "s" in response:
@@ -254,7 +255,7 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
             bar = self.logger.get_progress_bar(iterable=results, desc=f"Extending {unit}", unit=key)
 
         for result in bar:
-            if result[key]["next"]:
+            if result[key].get("next") or ("next" not in result[key] and result[key].get("href")):
                 self.extend_items(result[key], key=key, unit=unit, use_cache=use_cache)
 
         item_count = sum(len(result[key][self.items_key]) for result in results)

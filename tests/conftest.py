@@ -67,14 +67,14 @@ def spotify_wrangler():
 
 
 @pytest.fixture(scope="session")
-def spotify_api() -> SpotifyAPI:
+def spotify_api(spotify_mock: SpotifyMock) -> SpotifyAPI:
     """Yield an authorised :py:class:`SpotifyAPI` object"""
     token = {"access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"}
     return SpotifyAPI(name="test", token=token, cache_path=None)
 
 
 @pytest.fixture(scope="session")
-def spotify_mock(request) -> SpotifyMock:
+def spotify_mock() -> SpotifyMock:
     """Yield an authorised :py:class:`SpotifyMock` object"""
     with SpotifyMock() as m:
         yield m

@@ -50,7 +50,7 @@ class TestSpotifyAPIItems:
         id_list = [track["id"] for track in api_mock.tracks]
         valid_limit = 30
 
-        api._get_items_batched(url=url, id_list=sample(id_list, k=10), key=key, limit=-30)
+        api._get_items_batched(url=url, id_list=sample(id_list, k=api_mock.limit_lower), key=key, limit=-30)
         api._get_items_batched(url=url, id_list=id_list, key=key, limit=200)
         api._get_items_batched(url=url, id_list=id_list, key=key, limit=valid_limit)
 
@@ -58,7 +58,7 @@ class TestSpotifyAPIItems:
             request_params = parse_qs(request.query)
             count = len(request_params["ids"][0].split(","))
             assert count >= 1
-            assert count <= 50
+            assert count <= api_mock.limit_max
 
     ###########################################################################
     ## Input validation
@@ -127,7 +127,7 @@ class TestSpotifyAPIItems:
         params = {"key": "value"}
 
         source = api_mock.item_type_map[kind]
-        source = sample(source, k=10) if len(source) > 10 else source
+        source = sample(source, k=api_mock.limit_lower) if len(source) > api_mock.limit_lower else source
         source_map = {item["id"]: item for item in source}
         id_list = [item["id"] for item in source]
 
@@ -159,7 +159,7 @@ class TestSpotifyAPIItems:
         source = api_mock.item_type_map[kind]
         source_map = {item["id"]: item for item in source}
         id_list = [item["id"] for item in source]
-        limit = min(len(source) // 3, 50)  # force pagination
+        limit = min(len(source) // 3, api_mock.limit_max)  # force pagination
         assert len(source) > limit  # ensure ranges are valid for test to work
 
         results = api._get_items_batched(url=url, id_list=id_list, params=params, key=key, limit=limit)
@@ -182,16 +182,16 @@ class TestSpotifyAPIItems:
         api_mock.reset_mock()  # test checks the number of requests made
 
         key = api.collection_item_map.get(kind, kind).name.casefold() + "s"
-        source = next(item[key] for item in api_mock.item_type_map[kind] if item[key]["total"] > 3)
+        source = deepcopy(next(item[key] for item in api_mock.item_type_map[kind] if item[key]["total"] >= 4))
         total = source["total"]
-        limit = min(source["total"] // 3, len(source[api.items_key]) // 3, 50)  # force pagination
+        limit = max(min(total // 3, len(source[api.items_key]) // 3, api_mock.limit_max), 1)  # force pagination
         items = source[api.items_key][:limit]
 
-        test = api_mock.format_items_block(url=source["href"], items=items, limit=limit, total=source["total"])
+        test = api_mock.format_items_block(url=source["href"], items=items, limit=limit, total=total)
 
         # assert ranges are valid for test to work and test value generated correctly
         assert len(source[api.items_key]) > limit
-        assert len(items) <= limit
+        assert 0 < len(items) <= limit
         assert source["total"] == test["total"]
         assert test["total"] > test["limit"]
         assert test["total"] > len(test[api.items_key])
@@ -219,9 +219,9 @@ class TestSpotifyAPIItems:
         (ObjectType.TRACK, False),
         (ObjectType.ALBUM, False),
         (ObjectType.ARTIST, False),
-        # (ObjectType.AUDIOBOOK, False),
         # (ObjectType.SHOW, False),
         # (ObjectType.EPISODE, False),
+        # (ObjectType.AUDIOBOOK, False),
     ], ids=idfn)
     def test_get_user_items(
             self, kind: ObjectType, user: bool, api: SpotifyAPI, api_mock: SpotifyMock
@@ -237,10 +237,15 @@ class TestSpotifyAPIItems:
         else:
             url = f"{api.api_url_base}/me/{kind.name.casefold()}s"
 
-        source = api_mock.item_type_map_user[kind]
+        source = deepcopy(api_mock.item_type_map_user[kind])
+        if kind == ObjectType.PLAYLIST:  # ensure items block is reduced for playlist responses as expected
+            for pl in source:
+                pl["tracks"] = {"href": pl["tracks"]["href"], "total": pl["tracks"]["total"]}
+
         source_map = {item["id"] if "id" in item else item[kind.name.casefold()]["id"]: item for item in source}
+
         total = len(source)
-        limit = min(total // 3, 50)  # force pagination
+        limit = max(min(total // 3, api_mock.limit_max), 1)  # force pagination
         assert total > limit  # ensure ranges are valid for test to work
 
         results = api.get_user_items(user=test, kind=kind, limit=limit)
@@ -351,7 +356,7 @@ class TestSpotifyAPIItems:
         extend = kind in api.collection_item_map
         key = api.collection_item_map[kind].name.casefold() + "s" if extend else None
 
-        source = choice(api_mock.item_type_map[kind])
+        source = deepcopy(choice(api_mock.item_type_map[kind]))
         test = random_id_type(id_=source["id"], wrangler=api, kind=kind)
 
         results = api.get_items(values=test, kind=kind, extend=extend)
@@ -399,16 +404,17 @@ class TestSpotifyAPIItems:
         key = api.collection_item_map[kind].name.casefold() + "s" if extend else None
 
         source = api_mock.item_type_map[kind]
-        source = sample(source, 10) if len(source) > 10 else source
-        source_map = {item["id"]: item for item in source}
+        source = sample(source, api_mock.limit_lower) if len(source) > api_mock.limit_lower else source
+        source_map = {item["id"]: deepcopy(item) for item in source}
         test = random_id_types(id_list=source_map, wrangler=api, kind=kind)
 
         # force pagination
-        limit = min(len(source) // 3, 50) if kind not in {ObjectType.PLAYLIST, ObjectType.USER} else None
+        limit = max(min(len(source) // 3, api_mock.limit_max), 1)
+        limit = limit if kind not in {ObjectType.PLAYLIST, ObjectType.USER} else None
         if limit is not None:  # ensure ranges are valid for test to work
             assert len(source) > limit
 
-        results = api.get_items(values=test, kind=kind, limit=limit or 50, extend=extend)
+        results = api.get_items(values=test, kind=kind, limit=limit or api_mock.limit_max, extend=extend)
         self.assert_results(expected=source_map, results=results, kind=kind, key=key)
 
         # appropriate number of requests made
@@ -475,13 +481,13 @@ class TestSpotifyAPIItems:
         api_mock.reset_mock()  # test checks the number of requests made
 
         source = api_mock.tracks
-        source = sample(source, 10) if len(source) > 10 else source
+        source = sample(source, api_mock.limit_lower) if len(source) > api_mock.limit_lower else source
         source_map = {item["id"]: item for item in source}
         source_features = {item["id"]: api_mock.audio_features[item["id"]] for item in source}
         source_analysis = {item["id"]: api_mock.audio_analysis[item["id"]] for item in source}
         test = random_id_types(id_list=source_map, wrangler=api, kind=ObjectType.TRACK)
 
-        limit = min(len(source) // 3, 50)  # force pagination
+        limit = max(min(len(source) // 3, api_mock.limit_max), 1)  # force pagination
         assert len(source) > limit  # ensure ranges are valid for test to work
 
         results = api.get_tracks_extra(values=test, features=True, analysis=True, limit=limit)

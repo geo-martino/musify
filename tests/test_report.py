@@ -22,7 +22,11 @@ def spotify_library(spotify_api: SpotifyAPI, spotify_mock: SpotifyMock) -> Spoti
     """Yields a :py:class:`SpotifyLibrary` of remote tracks and playlists"""
     library = SpotifyLibrary(api=spotify_api)
     SpotifyPlaylist.check_total = False
-    library._playlists = {pl.name: pl for pl in map(SpotifyPlaylist, spotify_mock.playlists[:20]) if len(pl) > 20}
+
+    library._playlists = {pl.name: pl for pl in map(SpotifyPlaylist, spotify_mock.playlists[:20]) if len(pl) > 30}
+    for pl in library.playlists.values():  # ensure only unique tracks in each playlist
+        pl._tracks = set(pl.tracks)
+
     library._tracks = [track for pl in library.playlists.values() for track in pl]
     return library
 
@@ -34,6 +38,7 @@ def local_library(
     """Yields a :py:class:`LocalLibrary` of local tracks and playlists"""
     library = LocalLibrary(remote_wrangler=spotify_wrangler)
     library._tracks = [random_track() | track for track in spotify_library.tracks]
+
     uri_tracks = {track.uri: track for track in library.tracks}
     for name, pl in spotify_library.playlists.items():
         path = join(tmp_path, name + ".m3u")
@@ -54,30 +59,32 @@ def test_report_playlist_differences(local_library: LocalLibrary, spotify_librar
     unavailable_total = 0
 
     playlists = list(local_library.playlists.values())
-    for pl in playlists:
+    for pl_source in playlists:
         # ensure source and reference playlists currently match and all items have URIs
-        assert pl == spotify_library.playlists[pl.name]
-        assert all(track.has_uri for track in pl)
-        assert all(track.has_uri for track in spotify_library.playlists[pl.name])
+        pl_reference = spotify_library.playlists[pl_source.name]
+        assert pl_source == pl_reference
+        assert all(track.has_uri for track in pl_source)
+        assert all(track.has_uri for track in pl_reference)
 
-        extra = randrange(0, len(pl) // 3)
-        missing = randrange(0, len(pl) // 3)
-        unavailable = randrange(0, len(pl) // 3)
+        extra = randrange(0, len(pl_source) // 3)
+        missing = randrange(0, len(pl_source) // 3)
+        unavailable = randrange(0, len(pl_source) // 3)
 
         extra_total += extra
         missing_total += missing
         unavailable_total += unavailable
 
-        pl.tracks = [copy(track) for track in pl[extra:]]
-        for track in pl[:unavailable]:
+        pl_source.tracks = [copy(track) for track in pl_source[extra:]]
+
+        for track in pl_source[:unavailable]:
             track.uri = local_library.remote_wrangler.unavailable_uri_dummy
 
         added = 0
         while added < missing:
             track = random_track()
             track.uri = random_uri()
-            if track not in spotify_library.playlists[pl.name]:
-                pl.append(track)
+            if track not in spotify_library.playlists[pl_source.name]:
+                pl_source.append(track)
                 added += 1
 
     report = report_playlist_differences(source=local_library, reference=spotify_library)

@@ -398,7 +398,6 @@ class TestLocalTrack(ItemTester):
     @staticmethod
     def get_update_image_test_track(track: LocalTrack) -> tuple[LocalTrack, LocalTrack]:
         """Load track and modify its tags for update tags tests"""
-        # noinspection PyProtectedMember
         track._image_links = {"cover_front": path_track_img}
         return track, copy(track)
 
@@ -412,7 +411,6 @@ class TestLocalTrack(ItemTester):
         assert not result.saved
 
         track_update_dry = deepcopy(track_update)
-        # noinspection PyProtectedMember
         image_update_dry = track_update_dry._read_images()[0]
         assert track_update_dry.has_image == track_original.has_image
         assert image_update_dry.size == image_original.size

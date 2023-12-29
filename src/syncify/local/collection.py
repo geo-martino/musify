@@ -22,7 +22,6 @@ from syncify.utils.logger import SyncifyLogger, STAT
 __max_str = "z" * 50
 
 
-# noinspection PyShadowingNames
 class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
     """
     Generic class for storing a collection of local tracks.
@@ -223,7 +222,6 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
             raise KeyError(f"No matching item found for URI: '{__key}'")
 
 
-# noinspection PyShadowingNames
 class LocalCollectionFiltered[T: LocalItem](LocalCollection[T]):
     """
     Generic class for storing and filtering on a collection of local tracks

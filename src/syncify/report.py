@@ -34,14 +34,14 @@ def report_playlist_differences(
 
     logger.info("\33[1;95m ->\33[1;97m Reporting on differences between libraries \33[0m")
     logger.print()
-    for name, source_pl in source.items():
-        reference_pl = reference.get(name, [])
+    for name, pl_source in source.items():
+        pl_reference = reference.get(name, [])
 
         # get differences
-        source_no_uri = tuple(item for item in source_pl if not item.has_uri)
-        source_extra = tuple(item for item in source_pl if item not in reference_pl)
-        reference_no_uri = tuple(item for item in reference_pl if not item.has_uri)
-        reference_extra = tuple(item for item in reference_pl if item not in source_pl)
+        source_no_uri = tuple(item for item in pl_source if not item.has_uri)
+        source_extra = tuple(item for item in pl_source if item not in pl_reference)
+        reference_no_uri = tuple(item for item in pl_reference if not item.has_uri)
+        reference_extra = tuple(item for item in pl_reference if item not in pl_source)
 
         extra[name] = reference_extra
         missing[name] = source_extra
@@ -52,7 +52,7 @@ def report_playlist_differences(
             f"\33[92m{len(reference_extra):>6} extra \33[0m|"
             f"\33[91m{len(source_extra):>6} missing \33[0m|"
             f"\33[93m{len(source_no_uri) + len(reference_no_uri):>6} unavailable \33[0m|"
-            f"\33[94m{len(source_pl):>6} in source \33[0m"
+            f"\33[94m{len(pl_source):>6} in source \33[0m"
         )
 
     report: dict[str, dict[str, tuple[Item, ...]]] = {

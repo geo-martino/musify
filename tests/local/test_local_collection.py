@@ -64,7 +64,6 @@ class LocalCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
         assert len(collection.items) == length
 
 
-# noinspection PyTestUnpassedFixture
 class TestLocalFolder(LocalCollectionTester):
 
     name = "folder name"
@@ -125,13 +124,13 @@ class TestLocalFolder(LocalCollectionTester):
         assert folder.last_played == sorted(tracks_filtered, key=lambda t: t.last_played, reverse=True)[0].last_played
         assert folder.play_count == sum(track.play_count for track in tracks_filtered if track.play_count)
 
+    # noinspection PyTestUnpassedFixture
     def test_empty_load(self):
         # load folder when no tracks given and only folder path given
         collection = LocalFolder(name=path_track_resources)
         assert {track.path for track in collection} == path_track_all
 
 
-# noinspection PyTestUnpassedFixture
 class TestLocalAlbum(LocalCollectionTester):
 
     name = "album name"
@@ -200,7 +199,6 @@ class TestLocalAlbum(LocalCollectionTester):
         assert album.play_count == sum(track.play_count for track in tracks_filtered if track.play_count)
 
 
-# noinspection PyTestUnpassedFixture
 class TestLocalArtist(LocalCollectionTester):
 
     name = "artist name"
@@ -264,7 +262,6 @@ class TestLocalArtist(LocalCollectionTester):
         assert artist.play_count == sum(track.play_count for track in tracks_filtered if track.play_count)
 
 
-# noinspection PyTestUnpassedFixture
 class TestLocalGenres(LocalCollectionTester):
 
     name = "rock"

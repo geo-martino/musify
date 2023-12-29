@@ -230,7 +230,7 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
         SpotifyItemSearcher.reduce_name_score_factor = 0.5
 
         SpotifyItemSearcher.settings_items = SearchSettings(
-            search_fields_1=[Tag.TITLE],
+            search_fields_1=[Tag.TITLE],  # query mock always returns match on name
             match_fields={Tag.TITLE},
             result_count=10,
             allow_karaoke=True,
@@ -238,7 +238,7 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
             max_score=0.5
         )
         SpotifyItemSearcher.settings_albums = SearchSettings(
-            search_fields_1=[Tag.ALBUM],
+            search_fields_1=[Tag.ALBUM],  # query mock always returns match on name
             match_fields={Tag.ALBUM},
             result_count=5,
             allow_karaoke=True,
@@ -250,10 +250,10 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
 
     @pytest.fixture
     def search_items(
-            self, searcher: SpotifyItemSearcher, spotify_mock: SpotifyMock, wrangler: SpotifyDataWrangler
+            self, searcher: SpotifyItemSearcher, api_mock: SpotifyMock, wrangler: SpotifyDataWrangler
     ) -> list[LocalTrack]:
         items = []
-        for remote_track in map(SpotifyTrack, spotify_mock.tracks[:searcher.settings_items.result_count]):
+        for remote_track in map(SpotifyTrack, api_mock.tracks[:searcher.settings_items.result_count]):
             local_track = random_track()
             local_track.uri = None
             local_track.remote_wrangler = wrangler
@@ -273,14 +273,18 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
             self,
             searcher: SpotifyItemSearcher,
             api: SpotifyAPI,
-            spotify_mock: SpotifyMock,
+            api_mock: SpotifyMock,
             wrangler: SpotifyDataWrangler
     ) -> list[LocalAlbum]:
         SpotifyAlbum.api = api
         SpotifyAlbum.check_total = False
 
+        limit = searcher.settings_items.result_count
+        responses = [album for album in api_mock.albums if 2 < album["tracks"]["total"] <= api_mock.limit_lower][:limit]
+        assert len(responses) > 4
+
         albums = []
-        for album in map(SpotifyAlbum, spotify_mock.albums[:searcher.settings_items.result_count]):
+        for album in map(SpotifyAlbum, responses):
             tracks = []
             for remote_track in album:
                 local_track = random_track()
@@ -309,4 +313,7 @@ class TestSpotifyItemChecker(RemoteItemCheckerTester):
 
     @pytest.fixture(scope="class")
     def playlist_urls(self, api_mock: SpotifyMock) -> list[str]:
-        return [pl["href"] for pl in api_mock.user_playlists if 10 < pl["tracks"]["total"] < 60]
+        return [
+            pl["href"] for pl in api_mock.user_playlists
+            if api_mock.limit_lower < pl["tracks"]["total"] <= 60
+        ]

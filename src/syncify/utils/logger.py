@@ -149,7 +149,6 @@ def format_full_func_name(record: logging.LogRecord, width: int = 40) -> None:
         path_split = list(reversed(path_split[:-1]))
 
     # truncate long paths by taking first letters of each part until short enough
-    # noinspection PyTestUnpassedFixture
     path = ".".join(path_split)
     for i, part in enumerate(path_split):
         if len(path) <= width:

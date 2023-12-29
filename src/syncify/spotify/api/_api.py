@@ -79,7 +79,6 @@ API_AUTH_USER = {
 }
 
 
-# noinspection PyShadowingNames
 class SpotifyAPI(SpotifyDataWrangler, SpotifyAPICore, SpotifyAPIItems, SpotifyAPIPlaylists):
     """
     Collection of endpoints for the Spotify API.

@@ -17,19 +17,17 @@ class TestSpotifyLibrary(RemoteLibraryTester):
 
     @pytest.fixture
     def collection_merge_items(self, api_mock: SpotifyMock) -> list[SpotifyTrack]:
-        tracks = [SpotifyTrack(track) for track in api_mock.tracks[200:210]]
+        tracks = [SpotifyTrack(track) for track in api_mock.tracks[api_mock.range_max: api_mock.range_max + 10]]
         assert len(tracks) > 4
         return tracks
 
     @pytest.fixture(scope="class")
     def _library(self, api: SpotifyAPI, api_mock: SpotifyMock) -> SpotifyLibrary:
         include = [pl["name"] for pl in sample(api_mock.user_playlists, k=10)]
+
         library = SpotifyLibrary(api=api, include=include, use_cache=False)
         library._remote_types.playlist.api = library.api
         library.load()
-
-        for pl in library.playlists.values():  # ensure all loaded playlists are owned by the authorised user
-            pl.response["owner"] = {k: v for k, v in api_mock.user.items() if k in pl.response["owner"]}
 
         return library
 
@@ -58,9 +56,7 @@ class TestSpotifyLibrary(RemoteLibraryTester):
 
     def test_load_track_responses(self, api: SpotifyAPI, api_mock: SpotifyMock):
         # make sure only to include playlists that do not include all available tracks
-        include = [
-            pl["name"] for pl in api_mock.user_playlists if pl["tracks"]["total"] < len(api_mock.user_playlists)
-        ][:20]
+        include = [pl["name"] for pl in api_mock.user_playlists[:20]]
 
         library = SpotifyLibrary(api=api, include=include, use_cache=False)
         pl_responses = library._get_playlists_data()

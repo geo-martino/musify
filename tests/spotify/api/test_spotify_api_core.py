@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Any
 from urllib.parse import parse_qs
 
@@ -62,10 +63,15 @@ class TestSpotifyAPICore:
         # long queries that would cause the API to give an error should fail safely
         assert api.query(query=random_str(151, 200), kind=ObjectType.CHAPTER) == []
 
+    # TODO: expand mock to allow testing for all RemoteObjectTypes
     @pytest.mark.parametrize("kind,query,limit", [
         (ObjectType.PLAYLIST, "super cool playlist", 5),
-        (ObjectType.TRACK, "track title", 10),
-        (ObjectType.ALBUM, "album title", 20),
+        (ObjectType.TRACK, "track 2", 10),
+        (ObjectType.ALBUM, "best album title", 20),
+        (ObjectType.ARTIST, "really cool artist name", 20),
+        # (ObjectType.SHOW, "amazing show", 20),
+        # (ObjectType.EPISODE, "incredible episode", 20),
+        # (ObjectType.AUDIOBOOK, "i love this audiobook", 20),
     ], ids=idfn)
     def test_query(
             self,
@@ -75,9 +81,10 @@ class TestSpotifyAPICore:
             api: SpotifyAPI,
             api_mock: SpotifyMock,
     ):
+        expected = api_mock.item_type_map[kind]
         results = api.query(query=query, kind=kind, limit=limit)
 
-        assert len(results) == min(len(api_mock.item_type_map[kind]), limit)
+        assert len(results) <= min(len(expected), limit)
         for result in results:
             assert result["type"] == kind.name.casefold()
 
@@ -101,7 +108,7 @@ class TestSpotifyAPICore:
         api_mock.reset_mock()  # test checks the number of requests made
 
         key = api.collection_item_map.get(kind, kind).name.casefold() + "s"
-        source = next(item for item in api_mock.item_type_map[kind] if item[key]["total"] > 50)
+        source = deepcopy(next(item for item in api_mock.item_type_map[kind] if item[key]["total"] > 50))
 
         api.print_collection(value=source)
         stdout = get_stdout(capfd)

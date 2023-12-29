@@ -12,7 +12,7 @@ def wrangler(spotify_wrangler: SpotifyDataWrangler):
 
 
 @pytest.fixture(scope="module")
-def api(spotify_api: SpotifyAPI) -> SpotifyAPI:
+def api(spotify_api: SpotifyAPI, api_mock: SpotifyMock) -> SpotifyAPI:
     """Yield an authorised :py:class:`SpotifyAPI` object"""
     return spotify_api
 

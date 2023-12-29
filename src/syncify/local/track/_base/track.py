@@ -199,7 +199,7 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
         self_copy.merge(other, tags=TrackField.ALL)
         return self_copy
 
-    def __ior__(self, other: Track):
+    def __ior__(self, other: Track) -> Self:
         if not isinstance(other, Track):
             raise TypeError(
                 f"Incorrect item given. Cannot merge with {other.__class__.__name__} as it is not a Track"

@@ -16,7 +16,6 @@ from syncify.utils.helpers import to_collection, align_and_truncate, get_max_wid
 from syncify.utils.logger import SyncifyLogger
 
 
-# noinspection PyShadowingNames
 class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], metaclass=ABCMeta):
     """
     Generic class for storing a collection of items.
@@ -210,7 +209,6 @@ class ItemCollection[T: Item](ObjectPrinterMixin, MutableSequence[T], metaclass=
         self.remove(__key)
 
 
-# noinspection PyShadowingNames
 class BasicCollection[T: Item](ItemCollection[T]):
     """
     A basic implementation of ItemCollection for storing ``items`` with a given ``name``.
@@ -348,7 +346,8 @@ class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
             )
         raise NotImplementedError
 
-    def __ior__(self, other: Playlist):
+    # noinspection PyTypeChecker
+    def __ior__(self, other: Playlist) -> Self:
         if not isinstance(other, self.__class__):
             raise TypeError(
                 f"Incorrect item given. Cannot merge with {other.__class__.__name__} as it is not a Playlist"
