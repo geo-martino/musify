@@ -6,10 +6,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Self, Literal, Any
 
-from syncify.abstract.object import Track, Album, Playlist, Artist
 from syncify.abstract import Item
 from syncify.abstract.collection import ItemCollection
 from syncify.abstract.misc import Result
+from syncify.abstract.object import Track, Album, Playlist, Artist
 from syncify.api.exception import APIError
 from syncify.remote.enums import RemoteIDType
 from syncify.remote.exception import RemoteIDTypeError, RemoteError
@@ -312,7 +312,7 @@ class RemoteArtist[T: RemoteTrack](Artist[T], RemoteCollectionLoader[T], metacla
         raise NotImplementedError
 
     @property
-    def track_total(self) -> int:
+    def track_total(self):
         return sum(album.track_total for album in self.albums)
 
     @property
@@ -327,6 +327,6 @@ class RemoteArtist[T: RemoteTrack](Artist[T], RemoteCollectionLoader[T], metacla
         return len(self.image_links) > 0
 
     @property
-    def length(self) -> float | None:
+    def length(self):
         if self.albums and any(album.length for album in self.albums):
             return sum(album.length if album.length else 0 for album in self.albums)

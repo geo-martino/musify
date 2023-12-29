@@ -7,10 +7,10 @@ from glob import glob
 from os.path import splitext, join, basename, exists, isdir
 from typing import Any
 
-from syncify.abstract.object import Track, Library, Folder, Album, Artist, Genre
-from syncify.abstract.enums import FieldCombined, TagField
 from syncify.abstract import Item
 from syncify.abstract.collection import ItemCollection
+from syncify.abstract.enums import FieldCombined, TagField
+from syncify.abstract.object import Track, Library, Folder, Album, Artist, Genre
 from syncify.local._base import LocalItem
 from syncify.local.exception import LocalCollectionError
 from syncify.local.track import LocalTrack, SyncResultTrack, load_track, TRACK_FILETYPES
@@ -479,7 +479,7 @@ class LocalArtist(LocalCollectionFiltered[LocalTrack], Artist[LocalTrack]):
         return get_most_common_values(track.album for track in self.tracks if track.album)
 
     @property
-    def rating(self) -> float | None:
+    def rating(self):
         """Average rating of all tracks by this artist"""
         ratings = tuple(track.rating for track in self.tracks if track.rating is not None)
         return sum(ratings) / len(ratings) if ratings else None

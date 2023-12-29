@@ -6,11 +6,11 @@ from dataclasses import dataclass, field
 from itertools import batched
 
 from syncify import PROGRAM_NAME
-from syncify.abstract.object import Track
-from syncify.abstract.enums import FieldCombined
 from syncify.abstract import Item
 from syncify.abstract.collection import ItemCollection
+from syncify.abstract.enums import FieldCombined
 from syncify.abstract.misc import Result
+from syncify.abstract.object import Track
 from syncify.processors.match import ItemMatcher
 from syncify.remote.api import RemoteAPI
 from syncify.remote.config import RemoteObjectClasses

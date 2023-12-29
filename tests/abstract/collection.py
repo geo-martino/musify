@@ -4,10 +4,10 @@ from copy import deepcopy
 
 import pytest
 
-from syncify.abstract.object import BasicCollection, Library, Playlist
 from syncify.abstract import Item
 from syncify.abstract.collection import ItemCollection
 from syncify.abstract.misc import PrettyPrinter
+from syncify.abstract.object import BasicCollection, Library, Playlist
 from syncify.exception import SyncifyTypeError
 from syncify.remote.library.library import RemoteLibrary
 from tests.abstract.misc import PrettyPrinterTester
@@ -59,7 +59,6 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
 
     @staticmethod
     def test_collection_mutable_sequence_methods(collection: ItemCollection):
-        print(collection)
         assert len(collection.items) >= 3
 
         # get a unique item and its index

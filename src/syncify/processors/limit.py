@@ -4,8 +4,8 @@ from operator import mul
 from random import shuffle
 from typing import Any, Self
 
-from syncify.abstract.enums import SyncifyEnum, FieldCombined
 from syncify.abstract import Item
+from syncify.abstract.enums import SyncifyEnum, FieldCombined
 from syncify.abstract.object import Track
 from syncify.local import File
 from syncify.processors.base import DynamicProcessor, MusicBeeProcessor, dynamicprocessormethod

@@ -581,7 +581,7 @@ class Artist[T: Track](ItemCollection[T], metaclass=ABCMeta):
     @property
     @abstractmethod
     def artists(self) -> list[str]:
-        """List of other artists ordered by frequency of appearance on the tracks by this artist"""
+        """List of other artists ordered by frequency of appearance on the albums by this artist"""
         raise NotImplementedError
 
     @property
@@ -598,7 +598,7 @@ class Artist[T: Track](ItemCollection[T], metaclass=ABCMeta):
     @property
     @abstractmethod
     def genres(self) -> list[str]:
-        """List of genres ordered by frequency of appearance on the tracks by this artist"""
+        """List of genres for this artist"""
         raise NotImplementedError
 
     @property

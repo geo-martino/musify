@@ -5,10 +5,10 @@ from urllib.parse import parse_qs
 
 import pytest
 
-from syncify.abstract.object import BasicCollection, Album
-from syncify.abstract.enums import TagFieldCombined as Tag
 from syncify.abstract import Item
 from syncify.abstract.collection import ItemCollection
+from syncify.abstract.enums import TagFieldCombined as Tag
+from syncify.abstract.object import BasicCollection, Album
 from syncify.local.collection import LocalAlbum
 from syncify.local.track import LocalTrack
 from syncify.remote.enums import RemoteObjectType
@@ -239,7 +239,6 @@ class RemoteItemSearcherTester(ABC):
 
         result = searcher._search_collection(search_album)
         assert len(result.matched) + len(result.unmatched) + len(result.skipped) == len(search_album)
-        print(len(result.matched), matchable, skip)
         assert len(result.matched) == matchable - skip
         assert len(result.unmatched) == len(unmatchable_items)
         assert len(result.skipped) == skip

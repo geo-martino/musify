@@ -1,10 +1,10 @@
 import logging
 from collections.abc import Iterable
 
-from syncify.abstract.object import Library, Playlist
-from syncify.abstract.enums import TagField, FieldCombined
 from syncify.abstract import Item
 from syncify.abstract.collection import ItemCollection
+from syncify.abstract.enums import TagField, FieldCombined
+from syncify.abstract.object import Library, Playlist
 from syncify.local.library import LocalLibrary
 from syncify.utils.helpers import align_and_truncate, get_max_width, UnitIterable, to_collection
 from syncify.utils.logger import SyncifyLogger, REPORT

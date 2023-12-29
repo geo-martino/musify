@@ -519,6 +519,7 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
 
     @property
     def items(self) -> list[SpotifyAlbum]:
+        """The albums this artist is featured on"""
         return self._albums
 
     @property
@@ -527,7 +528,11 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
 
     @property
     def albums(self) -> list[SpotifyAlbum]:
-        return self._albums
+        album_frequencies = [
+            (album, sum(artist.name == self.name for track in album for artist in track.artists))
+            for album in self._albums
+        ]
+        return [album for album, _ in sorted(album_frequencies, key=lambda x: x[1])]
 
     @property
     def genres(self):
@@ -551,6 +556,8 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
         super().__init__(response=response)
         self._albums = list(map(SpotifyAlbum, response["albums"]["items"])) if "albums" in response else []
 
+    # TODO: this currently overrides parent loader because parent loader is too 'tracks' specific
+    #  see if this can be modified to take advantage of the item filtering logic in the parent loader
     @classmethod
     def load(
             cls,
@@ -579,9 +586,9 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
 
         response = self.api.get(url=self.url, use_cache=use_cache, log_pad=self._url_pad)
         if extend_albums:
-            self.api.get_artist_albums(response["artists"], use_cache=use_cache)
+            self.api.get_artist_albums(response, use_cache=use_cache)
         if extend_albums and extend_tracks:
             for album in response["albums"]["items"]:
-                self.api.extend_items(album, key="tracks", unit="albums",  use_cache=use_cache)
+                self.api.extend_items(album["tracks"], key="tracks", unit="albums",  use_cache=use_cache)
 
         self.__init__(response)

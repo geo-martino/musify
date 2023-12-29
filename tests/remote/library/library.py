@@ -3,10 +3,10 @@ from collections.abc import Collection, Mapping
 from copy import copy, deepcopy
 from typing import Any
 
-from syncify.abstract.object import Playlist
 from syncify.abstract import Item
-from syncify.remote.library.object import RemoteTrack
+from syncify.abstract.object import Playlist
 from syncify.remote.library.library import RemoteLibrary
+from syncify.remote.library.object import RemoteTrack
 from tests.abstract.collection import LibraryTester
 from tests.local.utils import random_tracks
 from tests.remote.library.collection import RemoteCollectionTester

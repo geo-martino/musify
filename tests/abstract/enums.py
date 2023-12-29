@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod, ABCMeta
 from collections.abc import Container
 
-from syncify.abstract.enums import SyncifyEnum, Field, FieldCombined, TagField, ALL_FIELDS
 from syncify.abstract import NamedObject
+from syncify.abstract.enums import SyncifyEnum, Field, FieldCombined, TagField, ALL_FIELDS
 
 
 class EnumTester(ABC):

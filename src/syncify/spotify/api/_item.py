@@ -151,13 +151,6 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         if self.items_key not in items_block:
             items_block[self.items_key] = []
 
-        # enable progress bar for longer calls
-        total = items_block["total"]
-        initial = len(items_block[self.items_key])
-        bar = self.logger.get_progress_bar(
-            total=total, desc=f"Extending {unit or self.items_key}", unit=key or self.items_key, initial=initial
-        )
-
         # this usually happens on the items block of a current user's playlist
         if "next" not in items_block:
             items_block["next"] = items_block["href"]
@@ -165,6 +158,13 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             items_block["previous"] = None
         if "limit" not in items_block:
             items_block["limit"] = int(parse_qs(urlparse(items_block["next"]).query).get("limit", [50])[0])
+
+        # enable progress bar for longer calls
+        total = items_block["total"]
+        initial = len(items_block[self.items_key])
+        bar = self.logger.get_progress_bar(
+            total=total, desc=f"Extending {unit or self.items_key}", unit=key or self.items_key, initial=initial
+        )
 
         while items_block.get("next"):  # loop through each page
             log_count = min(bar.n + items_block["limit"], items_block["total"])

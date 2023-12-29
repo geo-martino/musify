@@ -300,7 +300,7 @@ class TestSpotifyAPIItems:
             kind: ObjectType,
             key: str | None = None,
     ) -> None:
-        """Check results have expected values"""
+        """Check get_items results have expected values"""
         if key is None:
             assert len(results) == len(expected)
 
@@ -325,7 +325,7 @@ class TestSpotifyAPIItems:
             kind: ObjectType,
             key: str | None = None,
     ):
-        """Assert the originally input ``test`` API response values were updated by the operation"""
+        """Assert the originally input ``test`` API response values were updated by the get_items operation"""
         assert len(results) == len(expected)
         for result, actual, expect in zip(results, test.values(), expected):
             if not key:
@@ -553,6 +553,7 @@ class TestSpotifyAPIItems:
     ###########################################################################
     @staticmethod
     def assert_artist_albums_enriched(albums: list[dict[str, Any]]) -> None:
+        """Check that all albums have been enriched with a skeleton items block"""
         for album in albums:
             assert "tracks" in album
             assert album["tracks"]["total"] == album["total_tracks"]
@@ -568,6 +569,7 @@ class TestSpotifyAPIItems:
             limit: int,
             update: bool,
     ):
+        """Assert the results of the get_artist_albums operation"""
         assert len(results) == len(expected)
 
         for id_, result in results.items():

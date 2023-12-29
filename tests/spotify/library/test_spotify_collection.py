@@ -15,9 +15,9 @@ from syncify.remote.exception import RemoteObjectTypeError, RemoteError
 from syncify.spotify import URL_API
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.exception import SpotifyCollectionError
-from syncify.spotify.library.object import SpotifyTrack, SpotifyCollectionLoader
+from syncify.spotify.library import SpotifyItem
 from syncify.spotify.library.object import SpotifyAlbum, SpotifyPlaylist, SpotifyArtist
-from syncify.spotify.library._base import SpotifyItem
+from syncify.spotify.library.object import SpotifyTrack, SpotifyCollectionLoader
 from tests.remote.library.collection import RemoteCollectionTester, RemotePlaylistTester
 from tests.spotify.api.mock import SpotifyMock
 from tests.spotify.library.utils import assert_id_attributes
@@ -573,19 +573,39 @@ class TestSpotifyArtist(RemoteCollectionTester):
     def response_random(self, api_mock: SpotifyMock) -> dict[str, Any]:
         """Yield a randomly generated response from the Spotify API for an artist item type"""
         artist = api_mock.generate_artist()
-        href = SpotifyAPI.format_next_url(url=f"{URL_API}/artists/{artist["id"]}/albums")
-
         albums = [api_mock.generate_album(tracks=False, artists=False) for _ in range(randrange(5, 10))]
         for album in albums:
             album["artists"] = [deepcopy(artist)]
             album["total_tracks"] = 0
 
-        return artist | {"albums": {"href": href, "total": len(albums), "items": albums}}
+        items_block = api_mock.format_items_block(
+            url=f"{URL_API}/artists/{artist["id"]}/albums", items=albums, total=len(albums)
+        )
+        return artist | {"albums": items_block}
 
     @pytest.fixture
     def response_valid(self, api_mock: SpotifyMock) -> dict[str, Any]:
         """Yield a valid enriched response from the Spotify API for an artist item type."""
-        return deepcopy(next(artist for artist in api_mock.artists if artist["genres"]))
+        artist_album_map = {
+            artist["id"]: [
+                album for album in api_mock.artist_albums if any(art["id"] == artist["id"] for art in album["artists"])
+            ]
+            for artist in api_mock.artists
+        }
+        id_, albums = next((id_, albums) for id_, albums in artist_album_map.items() if len(albums) >= 10)
+        artist = deepcopy(next(artist for artist in api_mock.artists if artist["id"] == id_))
+
+        for album in albums:
+            tracks = [deepcopy(track) for track in api_mock.tracks if track["album"]["id"] == album["id"]]
+            [track.pop("popularity", None) for track in tracks]
+            tracks = [track | {"track_number": i} for i, track in enumerate(tracks, 1)]
+
+            album["tracks"] = api_mock.format_items_block(url=album["href"], items=tracks, total=len(tracks))
+
+        items_block = api_mock.format_items_block(
+            url=f"{URL_API}/artists/{artist["id"]}/albums", items=albums, total=len(albums)
+        )
+        return artist | {"albums": items_block}
 
     def test_input_validation(self, response_random: dict[str, Any], api_mock: SpotifyMock):
         with pytest.raises(RemoteObjectTypeError):
@@ -602,7 +622,6 @@ class TestSpotifyArtist(RemoteCollectionTester):
         original_response = deepcopy(response_random)
 
         assert_id_attributes(item=artist, response=original_response)
-
         assert len(artist.albums) == len(original_response["albums"]["items"])
         assert len(artist.artists) == len({art.name for album in artist.albums for art in album.artists})
         assert len(artist.tracks) == artist.track_total == sum(len(album) for album in artist.albums)
@@ -638,27 +657,55 @@ class TestSpotifyArtist(RemoteCollectionTester):
         assert artist.followers == new_followers
 
     def test_reload(self, response_valid: dict[str, Any], api: SpotifyAPI):
-        # TODO: expand me
-        response_valid.pop("genres", None)
+        genres = response_valid.pop("genres", None)
         response_valid.pop("popularity", None)
         response_valid.pop("followers", None)
+
+        albums = response_valid.pop("albums")["items"]
+        album_ids = {album["id"] for album in albums}
+        artist_names = {artist["name"] for album in albums for artist in album["artists"]}
 
         artist = SpotifyArtist(response_valid)
         assert not artist.genres
         assert artist.rating is None
         assert artist.followers is None
+        assert not artist.albums
+        assert not artist.artists
+        assert not artist.tracks
 
         SpotifyArtist.api = api
-        artist.reload()
-        assert artist.genres
+        artist.reload(extend_albums=False, extend_tracks=True)
+        if genres:
+            assert artist.genres
         assert artist.rating is not None
         assert artist.followers is not None
+        assert not artist.albums
+        assert not artist.artists
+        assert not artist.tracks
+
+        SpotifyAlbum.check_total = False
+        artist.reload(extend_albums=True, extend_tracks=False)
+        assert {album.id for album in artist._albums} == album_ids
+        assert len(artist.artists) == len(artist_names)
+        assert set(artist.artists) == artist_names
+        assert not artist.tracks
+
+        SpotifyAlbum.check_total = True
+        artist.reload(extend_albums=True, extend_tracks=True)
+        assert artist.tracks
 
     def test_load(self, response_valid: dict[str, Any], api: SpotifyAPI):
-        # TODO: expand me
         SpotifyArtist.api = api
         artist = SpotifyArtist.load(response_valid["href"])
 
         assert artist.name == response_valid["name"]
         assert artist.id == response_valid["id"]
         assert artist.url == response_valid["href"]
+        assert not artist.albums
+        assert not artist.artists
+        assert not artist.tracks
+
+        artist = SpotifyArtist.load(response_valid["href"], extend_albums=True, extend_tracks=True)
+        assert artist.albums
+        assert artist.artists
+        assert artist.tracks
