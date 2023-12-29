@@ -14,8 +14,6 @@ from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_x
 from tests.local.utils import random_tracks
 
 
-# TODO: add test for to_xml
-
 class TestItemSorter(PrettyPrinterTester):
 
     @pytest.fixture
@@ -34,26 +32,6 @@ class TestItemSorter(PrettyPrinterTester):
             track.date_added = track.date_added.replace(second=i)
 
         return tracks
-
-    def test_from_xml_1(self):
-        with open(path_playlist_xautopf_bp, "r", encoding="utf-8") as f:
-            xml = xmltodict.parse(f.read())
-        sorter = ItemSorter.from_xml(xml=xml)
-
-        assert sorter.sort_fields == {LocalTrackField.TRACK_NUMBER: False}
-        assert sorter.shuffle_mode == ShuffleMode.NONE  # switch to ShuffleMode.RECENT_ADDED once implemented
-        assert sorter.shuffle_by == ShuffleBy.ALBUM
-        assert sorter.shuffle_weight == 0.5
-
-    def test_from_xml_2(self):
-        with open(path_playlist_xautopf_ra, "r", encoding="utf-8") as f:
-            xml = xmltodict.parse(f.read())
-        sorter = ItemSorter.from_xml(xml=xml)
-
-        assert sorter.sort_fields == {LocalTrackField.DATE_ADDED: True}
-        assert sorter.shuffle_mode == ShuffleMode.NONE
-        assert sorter.shuffle_by == ShuffleBy.TRACK
-        assert sorter.shuffle_weight == 0
 
     def test_sort_by_field_basic(self, tracks: list[LocalTrack]):
         # no shuffle and reverse
@@ -121,3 +99,30 @@ class TestItemSorter(PrettyPrinterTester):
         sorter = ItemSorter(fields=fields, shuffle_mode=ShuffleMode.NONE)
         sorter(tracks)
         assert tracks == tracks_sorted
+
+    ###########################################################################
+    ## XML I/O
+    ###########################################################################
+    def test_from_xml_1(self):
+        with open(path_playlist_xautopf_bp, "r", encoding="utf-8") as f:
+            xml = xmltodict.parse(f.read())
+        sorter = ItemSorter.from_xml(xml=xml)
+
+        assert sorter.sort_fields == {LocalTrackField.TRACK_NUMBER: False}
+        assert sorter.shuffle_mode == ShuffleMode.NONE  # switch to ShuffleMode.RECENT_ADDED once implemented
+        assert sorter.shuffle_by == ShuffleBy.ALBUM
+        assert sorter.shuffle_weight == 0.5
+
+    def test_from_xml_2(self):
+        with open(path_playlist_xautopf_ra, "r", encoding="utf-8") as f:
+            xml = xmltodict.parse(f.read())
+        sorter = ItemSorter.from_xml(xml=xml)
+
+        assert sorter.sort_fields == {LocalTrackField.DATE_ADDED: True}
+        assert sorter.shuffle_mode == ShuffleMode.NONE
+        assert sorter.shuffle_by == ShuffleBy.TRACK
+        assert sorter.shuffle_weight == 0
+
+    def test_to_xml(self):
+        # TODO: add test for to_xml
+        pass

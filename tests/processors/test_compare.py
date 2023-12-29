@@ -12,8 +12,6 @@ from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_x
 from tests.local.utils import random_track
 
 
-# TODO: add test for to_xml
-
 class TestItemComparer(PrettyPrinterTester):
 
     @pytest.fixture
@@ -52,45 +50,6 @@ class TestItemComparer(PrettyPrinterTester):
         assert comparer._expected == [".mp3", ".flac"]
         assert comparer.condition == "is"
         assert comparer._processor_method == comparer._is
-
-    def test_from_xml_1(self):
-        with open(path_playlist_xautopf_bp, "r", encoding="utf-8") as f:
-            xml = xmltodict.parse(f.read())
-
-        comparers = ItemComparer.from_xml(xml=xml)
-        assert len(comparers) == 3
-
-        assert comparers[0].field == LocalTrackField.ALBUM
-        assert not comparers[0]._converted
-        assert comparers[0].expected == ["an album"]
-        assert comparers[0].condition == "contains"
-        assert comparers[0]._processor_method == comparers[0]._contains
-
-        assert comparers[1].field == LocalTrackField.ARTIST
-        assert not comparers[1]._converted
-        assert comparers[1].expected is None
-        assert comparers[1].condition == "is_null"
-        assert comparers[1]._processor_method == comparers[1]._is_null
-
-        assert comparers[2].field == LocalTrackField.TRACK_NUMBER
-        assert not comparers[2]._converted
-        assert comparers[2].expected == ["30"]
-        assert comparers[2].condition == "less_than"
-        assert comparers[2]._processor_method == comparers[2]._is_before
-
-    def test_from_xml_2(self):
-        with open(path_playlist_xautopf_ra, "r", encoding="utf-8") as f:
-            xml = xmltodict.parse(f.read())
-
-        comparers = ItemComparer.from_xml(xml=xml)
-        assert len(comparers) == 1
-        comparer = comparers[0]
-
-        assert comparer.field == LocalTrackField.ALBUM
-        assert not comparer._converted
-        assert comparer.expected == [""]
-        assert comparer.condition == "contains"
-        assert comparer._processor_method == comparer._contains
 
     def test_compare_with_reference(self):
         track_1 = random_track()
@@ -218,3 +177,49 @@ class TestItemComparer(PrettyPrinterTester):
         test_truncated = datetime.now().replace(second=0, microsecond=0) - timedelta(hours=8)
         assert exp_truncated == test_truncated
         assert comparer._converted
+
+    ###########################################################################
+    ## XML I/O
+    ###########################################################################
+    def test_from_xml_1(self):
+        with open(path_playlist_xautopf_bp, "r", encoding="utf-8") as f:
+            xml = xmltodict.parse(f.read())
+
+        comparers = ItemComparer.from_xml(xml=xml)
+        assert len(comparers) == 3
+
+        assert comparers[0].field == LocalTrackField.ALBUM
+        assert not comparers[0]._converted
+        assert comparers[0].expected == ["an album"]
+        assert comparers[0].condition == "contains"
+        assert comparers[0]._processor_method == comparers[0]._contains
+
+        assert comparers[1].field == LocalTrackField.ARTIST
+        assert not comparers[1]._converted
+        assert comparers[1].expected is None
+        assert comparers[1].condition == "is_null"
+        assert comparers[1]._processor_method == comparers[1]._is_null
+
+        assert comparers[2].field == LocalTrackField.TRACK_NUMBER
+        assert not comparers[2]._converted
+        assert comparers[2].expected == ["30"]
+        assert comparers[2].condition == "less_than"
+        assert comparers[2]._processor_method == comparers[2]._is_before
+
+    def test_from_xml_2(self):
+        with open(path_playlist_xautopf_ra, "r", encoding="utf-8") as f:
+            xml = xmltodict.parse(f.read())
+
+        comparers = ItemComparer.from_xml(xml=xml)
+        assert len(comparers) == 1
+        comparer = comparers[0]
+
+        assert comparer.field == LocalTrackField.ALBUM
+        assert not comparer._converted
+        assert comparer.expected == [""]
+        assert comparer.condition == "contains"
+        assert comparer._processor_method == comparer._contains
+
+    def test_to_xml(self):
+        # TODO: add test for to_xml
+        pass

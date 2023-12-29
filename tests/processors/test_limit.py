@@ -11,8 +11,6 @@ from tests.local.utils import random_tracks
 from tests.utils import random_file
 
 
-# TODO: add test for to_xml
-
 class TestItemComparer(PrettyPrinterTester):
 
     @pytest.fixture
@@ -49,21 +47,6 @@ class TestItemComparer(PrettyPrinterTester):
 
         limiter = ItemLimiter(sorted_by="__most recently played__")
         assert limiter._processor_method == limiter._most_recently_played
-
-    def test_from_xml_1(self):
-        with open(path_playlist_xautopf_bp, "r", encoding="utf-8") as f:
-            xml = xmltodict.parse(f.read())
-        assert ItemLimiter.from_xml(xml=xml) is None
-
-    def test_from_xml_2(self):
-        with open(path_playlist_xautopf_ra, "r", encoding="utf-8") as f:
-            xml = xmltodict.parse(f.read())
-        limiter = ItemLimiter.from_xml(xml=xml)
-
-        assert limiter.limit_max == 20
-        assert limiter.kind == LimitType.ITEMS
-        assert limiter.allowance == 1.25
-        assert limiter._processor_method == limiter._most_recently_added
 
     def test_limit_below_threshold(self, tracks: list[LocalTrack]):
         assert len(tracks) == 50
@@ -135,3 +118,25 @@ class TestItemComparer(PrettyPrinterTester):
         limiter = ItemLimiter(limit=30, on=LimitType.KILOBYTES, allowance=2)
         limiter.limit(tracks)
         assert len(tracks) == 21
+
+    ###########################################################################
+    ## XML I/O
+    ###########################################################################
+    def test_from_xml_1(self):
+        with open(path_playlist_xautopf_bp, "r", encoding="utf-8") as f:
+            xml = xmltodict.parse(f.read())
+        assert ItemLimiter.from_xml(xml=xml) is None
+
+    def test_from_xml_2(self):
+        with open(path_playlist_xautopf_ra, "r", encoding="utf-8") as f:
+            xml = xmltodict.parse(f.read())
+        limiter = ItemLimiter.from_xml(xml=xml)
+
+        assert limiter.limit_max == 20
+        assert limiter.kind == LimitType.ITEMS
+        assert limiter.allowance == 1.25
+        assert limiter._processor_method == limiter._most_recently_added
+
+    def test_to_xml(self):
+        # TODO: add test for to_xml
+        pass

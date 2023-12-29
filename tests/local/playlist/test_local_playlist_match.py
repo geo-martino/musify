@@ -90,38 +90,6 @@ class TestLocalMatcher(PrettyPrinterTester):
         assert matcher.include_paths == []
         assert matcher.exclude_paths == []
 
-    def test_from_xml_1(self):
-        with open(path_playlist_xautopf_bp, "r", encoding="utf-8") as f:
-            xml = xmltodict.parse(f.read())
-        matcher = LocalMatcher.from_xml(
-            xml=xml, library_folder=path_resources, other_folders="../", check_existence=False
-        )
-
-        assert len(matcher.comparers) == 3  # ItemComparer settings are tested in class-specific tests
-        assert matcher.match_all
-        assert matcher.library_folder == path_resources.rstrip("\\/")
-        assert matcher.original_folder == ".."
-        assert set(matcher.include_paths) == {path_track_wma.casefold(), path_track_flac.casefold()}
-        assert set(matcher.exclude_paths) == {
-            join(path_playlist_resources,  "exclude_me_2.mp3").casefold(),
-            path_track_mp3.casefold(),
-            join(path_playlist_resources, "exclude_me.flac").casefold(),
-        }
-
-    def test_from_xml_2(self):
-        with open(path_playlist_xautopf_ra, "r", encoding="utf-8") as f:
-            xml = xmltodict.parse(f.read())
-        matcher = LocalMatcher.from_xml(
-            xml=xml, library_folder=path_resources, other_folders="../", check_existence=False
-        )
-
-        assert len(matcher.comparers) == 0
-        assert not matcher.match_all
-        assert matcher.library_folder == path_resources.rstrip("\\/")
-        assert matcher.original_folder is None
-        assert len(matcher.include_paths) == 0
-        assert len(matcher.exclude_paths) == 0
-
     @staticmethod
     def sort_key(track: LocalTrack) -> str:
         """The key to sort on when making assertions in tests"""
@@ -241,3 +209,42 @@ class TestLocalMatcher(PrettyPrinterTester):
         assert match_result.include == tracks_include_reduced
         assert match_result.exclude == tracks_exclude
         assert sorted(match_result.compare, key=self.sort_key) == sorted(tracks_artist, key=self.sort_key)
+
+    ###########################################################################
+    ## XML I/O
+    ###########################################################################
+    def test_from_xml_1(self):
+        with open(path_playlist_xautopf_bp, "r", encoding="utf-8") as f:
+            xml = xmltodict.parse(f.read())
+        matcher = LocalMatcher.from_xml(
+            xml=xml, library_folder=path_resources, other_folders="../", check_existence=False
+        )
+
+        assert len(matcher.comparers) == 3  # ItemComparer settings are tested in class-specific tests
+        assert matcher.match_all
+        assert matcher.library_folder == path_resources.rstrip("\\/")
+        assert matcher.original_folder == ".."
+        assert set(matcher.include_paths) == {path_track_wma.casefold(), path_track_flac.casefold()}
+        assert set(matcher.exclude_paths) == {
+            join(path_playlist_resources,  "exclude_me_2.mp3").casefold(),
+            path_track_mp3.casefold(),
+            join(path_playlist_resources, "exclude_me.flac").casefold(),
+        }
+
+    def test_from_xml_2(self):
+        with open(path_playlist_xautopf_ra, "r", encoding="utf-8") as f:
+            xml = xmltodict.parse(f.read())
+        matcher = LocalMatcher.from_xml(
+            xml=xml, library_folder=path_resources, other_folders="../", check_existence=False
+        )
+
+        assert len(matcher.comparers) == 0
+        assert not matcher.match_all
+        assert matcher.library_folder == path_resources.rstrip("\\/")
+        assert matcher.original_folder is None
+        assert len(matcher.include_paths) == 0
+        assert len(matcher.exclude_paths) == 0
+
+    def test_to_xml(self):
+        # TODO: add test for to_xml
+        pass

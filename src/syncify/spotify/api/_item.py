@@ -3,7 +3,7 @@ from abc import ABCMeta
 from collections.abc import Collection, Mapping, MutableMapping
 from itertools import batched
 from time import sleep
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import parse_qs, urlparse
 
 from syncify.api.exception import APIError
@@ -120,6 +120,9 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
 
         return results
 
+    ###########################################################################
+    ## GET endpoints
+    ###########################################################################
     def extend_items(
             self,
             items_block: MutableMapping[str, Any],
@@ -162,11 +165,6 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
         if "limit" not in items_block:
             items_block["limit"] = int(parse_qs(urlparse(items_block["next"]).query).get("limit", [50])[0])
 
-        if "cursors" in items_block:  # happens on some item types e.g. user's followed artists
-            items_block["next"] = items_block["cursors"].get("after")
-            items_block["previous"] = items_block["cursors"].get("before")
-            items_block.pop("cursors")
-
         while items_block.get("next"):  # loop through each page
             log_count = min(bar.n + items_block["limit"], items_block["total"])
             log = [f"{log_count:>6}/{items_block["total"]:<6} {key or self.items_key}"]
@@ -178,24 +176,16 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
             sleep(0.1)
             bar.update(len(response[self.items_key]))
 
-            items_block["href"] = response["href"]
             items_block[self.items_key].extend(response[self.items_key])
-            if "cursors" in response:  # happens on some item types e.g. user's followed artists
-                items_block["next"] = response["cursors"].get("after")
-                items_block["previous"] = response["cursors"].get("before")
-                response.pop("cursors")
-            else:
-                items_block["next"] = response["next"]
-                items_block["previous"] = response["previous"]
+            items_block["href"] = response["href"]
+            items_block["next"] = response["next"]
+            items_block["previous"] = response["previous"]
 
         if bar is not None:
             bar.close()
 
         return items_block[self.items_key]
 
-    ###########################################################################
-    ## GET endpoints
-    ###########################################################################
     def get_items(
             self,
             values: APIMethodInputType,
@@ -205,7 +195,7 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
             use_cache: bool = True,
     ) -> list[dict[str, Any]]:
         """
-        ``GET: /{kind}s`` - Get information for given list of ``values``.
+        ``GET: /{kind}s`` - Get information for given ``values``.
 
         ``values`` may be:
             * A string representing a URL/URI/ID.
@@ -216,12 +206,14 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
                 - a valid item type value under a ``type`` key if ``kind`` is None.
             * A MutableSequence of remote API JSON responses for a collection including the same structure as above.
 
-        If a JSON response is given, this replaces the ``items`` with the new results.
+        If JSON response/s given, this update each response given by merging with the new response
+        and replacing the ``items`` with the new results.
 
         :param values: The values representing some remote objects. See description for allowed value types.
             These items must all be of the same type of item i.e. all tracks OR all artists etc.
         :param kind: Item type if given string is ID.
         :param limit: When requests can be batched, size of batches to request.
+            This value will be limited to be between ``1`` and ``50``.
         :param extend: When True and the given ``kind`` is a collection of items,
             extend the response to include all items in this collection.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
@@ -230,6 +222,9 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
             of the input ``values``. Or when it does not recognise the type of the input ``values`` parameter.
         """
         # input validation
+        if not values:  # skip on empty
+            self.logger.debug(f"{'SKIP':<7}: {self.api_url_base:<43} | No data given")
+            return []
         if kind is None:  # determine the item type
             kind = self.get_item_type(values)
         else:
@@ -259,9 +254,7 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
                 self.extend_items(result[key], key=key, unit=unit, use_cache=use_cache)
 
         item_count = sum(len(result[key][self.items_key]) for result in results)
-        self.logger.debug(
-            f"{'DONE':<7}: {url:<71} | Retrieved {item_count:>6} {key} across {len(results):>5} {unit}"
-        )
+        self.logger.debug(f"{'DONE':<7}: {url:<71} | Retrieved {item_count:>6} {key} across {len(results):>5} {unit}")
         self._merge_results_to_input(original=values, results=results, ordered=True)
 
         return results
@@ -326,7 +319,7 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
             use_cache: bool = True,
     ) -> dict[str, list[dict[str, Any]]]:
         """
-        ``GET: /audio-features`` and/or ``GET: /audio-analysis`` - Get audio features/analysis for list of items.
+        ``GET: /audio-features`` and/or ``GET: /audio-analysis`` - Get audio features/analysis for given track/s.
 
         ``values`` may be:
             * A string representing a URL/URI/ID of type 'track'.
@@ -336,17 +329,18 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
                 - a valid ID value under an ``id`` key.
             * A MutableSequence of remote API JSON responses for a set of tracks including the same structure as above.
 
-        If a JSON response is given, this updates ``items`` by adding the results
+        If JSON response/s given, this updates each response given by adding the results
         under the ``audio_features`` and ``audio_analysis`` keys as appropriate.
 
-        :param values: The values representing some remote tracks. See description for allowed value types.
+        :param values: The values representing some remote track/s. See description for allowed value types.
         :param features: When True, get audio features.
         :param analysis: When True, get audio analysis.
         :param limit: Size of batches to request when getting audio features.
+            This value will be limited to be between ``1`` and ``50``.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: API JSON responses for each item.
-        :raise RemoteObjectTypeError: Raised when the item types of the input ``values``
-            are not all tracks or IDs.
+            Mapped to ``audio_features`` and ``audio_analysis`` keys as appropriate.
+        :raise RemoteObjectTypeError: Raised when the item types of the input ``values`` are not all tracks or IDs.
         """
         # input validation
         if not features and not analysis:  # skip on all False
@@ -393,7 +387,7 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
         """
         ``GET: /{kind}s`` + GET: /audio-features`` and/or ``GET: /audio-analysis``
 
-        Get audio features/analysis for list of tracks.
+        Get track/s info and any audio features/analysis.
         Mostly just a wrapper for ``get_items`` and ``get_tracks_extra`` functions.
 
         ``values`` may be:
@@ -404,17 +398,17 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
                 - a valid ID value under an ``id`` key.
             * A MutableSequence of remote API JSON responses for a set of tracks including the same structure as above.
 
-        If a JSON response is given, this updates ``items`` by adding the results
+        If JSON response/s given, this updates each response given by adding the results
         under the ``audio_features`` and ``audio_analysis`` keys as appropriate.
 
-        :param values: The values representing some remote tracks. See description for allowed value types.
+        :param values: The values representing some remote track/s. See description for allowed value types.
         :param features: When True, get audio features.
         :param analysis: When True, get audio analysis.
         :param limit: Size of batches to request when getting audio features.
+            This value will be limited to be between ``1`` and ``50``.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: API JSON responses for each item, or the original response if the input ``values`` are API responses.
-        :raise RemoteObjectTypeError: Raised when the item types of the input ``tracks``
-            are not all tracks or IDs.
+        :raise RemoteObjectTypeError: Raised when the item types of the input ``values`` are not all tracks or IDs.
         """
         tracks = self.get_items(values=values, kind=RemoteObjectType.TRACK, limit=limit, use_cache=use_cache)
 
@@ -426,3 +420,52 @@ class SpotifyAPIItems(RemoteAPI, metaclass=ABCMeta):
 
         self.get_tracks_extra(values=tracks, features=features, analysis=analysis, limit=limit, use_cache=use_cache)
         return tracks
+
+    def get_artist_albums(
+            self,
+            values: APIMethodInputType,
+            types: Collection[Literal["album", "single", "compilation", "appears_on"]] = (),
+            limit: int = 50,
+            use_cache: bool = True,
+    ) -> dict[str, list[dict[str, Any]]]:
+        """
+        ``GET: /artists/{id}/albums`` - Get all albums associated with the given artist/s.
+
+        ``values`` may be:
+            * A string representing a URL/URI/ID of type 'artist'.
+            * A MutableSequence of strings representing URLs/URIs/IDs of the type 'artist'.
+            * A remote API JSON response for an artist including a valid ID value under an ``id`` key.
+            * A MutableSequence of remote API JSON responses for a set of artists including the same structure as above.
+
+        :param values: The values representing some remote artist/s. See description for allowed value types.
+        :param types: The types of albums to return.
+        :param limit: Size of batches to request.
+            This value will be limited to be between ``1`` and ``50``.
+        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :return: A map of the Artist ID to a list of the API JSON responses for each album.
+        :raise RemoteObjectTypeError: Raised when the item types of the input ``values`` are not all artists or IDs.
+        """
+        # input validation
+        if not values:  # skip on empty
+            self.logger.debug(f"{'SKIP':<7}: {self.api_url_base:<43} | No data given")
+            return {}
+        self.validate_item_type(values, kind=RemoteObjectType.ARTIST)
+
+        id_list = self.extract_ids(values, kind=RemoteObjectType.ARTIST)
+        if len(id_list) > 5:  # show progress bar for collection batches which may take a long time
+            id_list = self.logger.get_progress_bar(iterable=id_list, desc=f"Getting artist albums", unit="artist")
+
+        params = {"limit": limit_value(limit, floor=1, ceil=50)}
+        if types:
+            params["include_groups"] = ",".join(types)
+
+        url = self.api_url_base + "/artists/{id}/albums"
+        results: dict[str, list[dict[str, Any]]] = {}
+        for id_ in id_list:
+            initial = self.get(url=url.format(id=id_), params=params, use_cache=use_cache)
+            results[id_] = self.extend_items(initial, key="albums", unit="artist albums", use_cache=use_cache)
+
+        item_count = sum(len(result) for result in results.values())
+        self.logger.debug(f"{'DONE':<7}: {url:<71} | Retrieved {item_count:>6} albums across {len(results):>5} artists")
+
+        return results

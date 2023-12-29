@@ -71,11 +71,6 @@ class SpotifyAPICore(RemoteAPI, metaclass=ABCMeta):
                     f"\33[94m{name} \33[97m- {url_ext} \33[0m\n"
                 )
 
-            if "cursors" in response:  # happens on some item types e.g. user's followed artists
-                response["next"] = response["cursors"].get("after")
-                response["previous"] = response["cursors"].get("before")
-                response.pop("cursors")
-
             tracks = [item[key] if key in item else item for item in response[self.items_key]]
             for i, track in enumerate(tracks, i + 1):  # print each item in this page
                 length = track["duration_ms"] / 1000

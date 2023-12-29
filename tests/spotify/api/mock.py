@@ -108,6 +108,10 @@ class SpotifyMock(RemoteMock):
         self.shows = [self.generate_show() for _ in range(randrange(self.range_start, self.range_stop))]
         self.audiobooks = [self.generate_audiobook() for _ in range(randrange(self.range_start, self.range_stop))]
 
+        self.artist_albums = deepcopy(self.albums)
+        for album in self.artist_albums:
+            album["album_group"] = choice([choice(("album", "single", "compilation", "appears_on"))])
+
         # randomly choose currently authenticated user and setup mock
         self.user = choice(self.users)
         self.user_id = self.user["id"]
@@ -137,9 +141,14 @@ class SpotifyMock(RemoteMock):
     ###########################################################################
     def setup_specific_conditions(self):
         """Some tests need items of certain size and properties. Set these up here."""
-        self.playlists.append(self.generate_playlist(item_count=100))
         self.shows.append(self.generate_show(episode_count=100))
         self.audiobooks.append(self.generate_audiobook(chapter_count=100))
+        self.playlists.append(self.generate_playlist(item_count=100))
+
+        # ensure a certain minimum number of small user playlists
+        count = max(10 - len([pl for pl in self.user_playlists if self.limit_lower < pl["tracks"]["total"] <= 60]), 0)
+        for _ in range(count):
+            self.user_playlists.append(self.generate_playlist(item_count=randrange(self.limit_lower + 1, 60)))
 
         album = self.generate_album(track_count=100)
         album["genres"] = random_genres(5)
@@ -149,11 +158,6 @@ class SpotifyMock(RemoteMock):
         count = max(10 - len([album for album in self.albums if 2 < album["tracks"]["total"] <= self.limit_lower]), 0)
         for _ in range(count):
             self.albums.append(self.generate_album(track_count=randrange(3, self.limit_lower)))
-
-        # ensure a certain minimum number of small user playlists
-        count = max(10 - len([pl for pl in self.user_playlists if self.limit_lower < pl["tracks"]["total"] <= 60]), 0)
-        for _ in range(count):
-            self.user_playlists.append(self.generate_playlist(item_count=randrange(self.limit_lower + 1, 60)))
 
     def setup_valid_references(self):
         """Sets up cross-referenced valid responses needed for RemoteObject tests"""
@@ -229,6 +233,13 @@ class SpotifyMock(RemoteMock):
                 url = f"{collection["href"]}/{key}"
                 self.setup_items_block_mock(url=url, items=items, total=collection[key]["total"])
 
+        # artist's albums
+        for artist in self.artists:
+            id_ = artist["id"]
+            items = [album for album in self.artist_albums if any(art["id"] == id_ for art in album["artists"])]
+            url = f"{URL_API}/artists/{id_}/albums"
+            self.setup_items_block_mock(url=url, items=items)
+
         # when getting a user's playlists, individual tracks are not returned
         user_playlists_reduced = deepcopy(self.user_playlists)
         for playlist in user_playlists_reduced:
@@ -276,7 +287,7 @@ class SpotifyMock(RemoteMock):
                 available = len(values) - len(matches)
                 if len(matches) < limit and available:
                     offset_min = offset + len(matches)
-                    offset_max = min(available, offset + limit - count) - len(matches)
+                    offset_max = min(available, offset + limit) - len(matches) - count
                     results[kind + "s"] += values[offset_min:offset_max]
 
                 shuffle(results[kind + "s"])
@@ -320,24 +331,21 @@ class SpotifyMock(RemoteMock):
             limit = int(req_params["limit"][0])
             offset = int(req_params.get("offset", [0])[0])
 
-            it = deepcopy(items[offset:min(offset + limit, total or len(items))])
-            items_block = self.format_items_block(
-                url=req.url, items=it, offset=offset, limit=limit, total=total or len(items)
-            )
+            it = deepcopy(items[offset: offset + limit])
+            items_block = self.format_items_block(url=req.url, items=it, offset=offset, limit=limit, total=total)
 
             if url.endswith("me/following"):  # special case for following artists
                 items_block["cursors"] = {}
-                if items_block["next"]:
-                    items_block["cursors"]["after"] = items_block["next"]
-                if items_block["previous"]:
-                    items_block["cursors"]["before"] = items_block["previous"]
+                if offset < total:
+                    items_block["cursors"]["after"] = it[-1]["id"]
+                if (offset - limit) > 0:
+                    items_block["cursors"]["before"] = items[offset - limit]["id"]
 
-                items_block.pop("next")
-                items_block.pop("previous")
                 items_block = {"artists": items_block}
 
             return items_block
 
+        total = total or len(items)
         self.get(url=re.compile(url + r"\?"), json=response_getter)
 
     def setup_playlist_operations_mock(self) -> None:
@@ -542,6 +550,100 @@ class SpotifyMock(RemoteMock):
         }
 
     ###########################################################################
+    ## Generators - ARTIST
+    ###########################################################################
+    @classmethod
+    def generate_artist(cls, properties: bool = True) -> dict[str, Any]:
+        """
+        Return a randomly generated Spotify API response for an Artist.
+
+        :param properties: Add extra randomly generated information to the response as per documentation.
+        """
+        kind = ObjectType.ARTIST.name.lower()
+        artist_id = random_id()
+
+        response = {
+            "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{artist_id}"},
+            "href": f"{URL_API}/{kind}s/{artist_id}",
+            "id": artist_id,
+            "name": random_str(5, 30),
+            "type": kind,
+            "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{artist_id}"
+        }
+
+        return cls.extend_artist(response=response, properties=properties)
+
+    @classmethod
+    def extend_artist(cls, response: dict[str, Any], properties: bool = True) -> dict[str, Any]:
+        """
+        Extend a given randomly generated Spotify API ``response`` for an Artist.
+
+        :param response: The response to extend.
+        :param properties: Add extra randomly generated information to the response as per documentation.
+        """
+        if properties:
+            response |= {
+                "followers": {"href": None, "total": randrange(0, int(8e10))},
+                "genres": random_genres(),
+                "images": cls.generate_images(),
+                "popularity": randrange(0, 100)
+            }
+        return response
+
+    ###########################################################################
+    ## Generators - USER
+    ###########################################################################
+    @classmethod
+    def generate_user(cls) -> dict[str, Any]:
+        """Return a randomly generated Spotify API response for a User."""
+        kind = ObjectType.USER.name.lower()
+        user_id = random_id()
+
+        response = {
+            "country": choice(COUNTRY_CODES),
+            "display_name": random_str(5, 30),
+            "email": random_str(15, 50),
+            "explicit_content": {
+                "filter_enabled": choice([True, False]),
+                "filter_locked": choice([True, False])
+            },
+            "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{user_id}"},
+            "followers": {"href": None, "total": randrange(0, int(8e10))},
+            "href": f"{URL_API}/{kind}s/{user_id}",
+            "id": user_id,
+            "images": cls.generate_images(),
+            "product": choice(["premium", "free", "open"]),
+            "type": kind,
+            "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{user_id}"
+        }
+
+        return response
+
+    @staticmethod
+    def generate_owner(
+            user: Mapping[str, Any] | None = None, user_id: str | None = None, user_name: str | None = None
+    ) -> dict[str, Any]:
+        """Return a randomly generated Spotify API response for an owner"""
+        kind = ObjectType.USER.name.lower()
+        user_id = user_id or random_str()
+        user_name = user_name or random_str(5, 30)
+        ext_urls = user["external_urls"] if user else {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{user_id}"}
+
+        return {
+            "display_name": user["display_name"] if user else user_name,
+            "external_urls": ext_urls,
+            "href": user["href"] if user else f"{URL_API}/{kind}s/{user_id}",
+            "id": user["id"] if user else user_id,
+            "type": user["type"] if user else kind,
+            "uri": user["uri"] if user else f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{user_id}",
+        }
+
+    @classmethod
+    def generate_owner_from_api(cls, api: SpotifyAPI | None = None) -> dict[str, Any]:
+        """Return an owner block from the properties of the given :py:class:`SpotifyAPI` object"""
+        return cls.generate_owner(user_id=api.user_id, user_name=api.user_name)
+
+    ###########################################################################
     ## Generators - PLAYLIST
     ###########################################################################
     def generate_playlist(
@@ -732,100 +834,6 @@ class SpotifyMock(RemoteMock):
             item["artists"] = deepcopy(artists)
 
         return items
-
-    ###########################################################################
-    ## Generators - ARTIST
-    ###########################################################################
-    @classmethod
-    def generate_artist(cls, properties: bool = True) -> dict[str, Any]:
-        """
-        Return a randomly generated Spotify API response for an Artist.
-
-        :param properties: Add extra randomly generated information to the response as per documentation.
-        """
-        kind = ObjectType.ARTIST.name.lower()
-        artist_id = random_id()
-
-        response = {
-            "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{artist_id}"},
-            "href": f"{URL_API}/{kind}s/{artist_id}",
-            "id": artist_id,
-            "name": random_str(5, 30),
-            "type": kind,
-            "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{artist_id}"
-        }
-
-        return cls.extend_artist(response=response, properties=properties)
-
-    @classmethod
-    def extend_artist(cls, response: dict[str, Any], properties: bool = True) -> dict[str, Any]:
-        """
-        Extend a given randomly generated Spotify API ``response`` for an Artist.
-
-        :param response: The response to extend.
-        :param properties: Add extra randomly generated information to the response as per documentation.
-        """
-        if properties:
-            response |= {
-                "followers": {"href": None, "total": randrange(0, int(8e10))},
-                "genres": random_genres(),
-                "images": cls.generate_images(),
-                "popularity": randrange(0, 100)
-            }
-        return response
-
-    ###########################################################################
-    ## Generators - USER
-    ###########################################################################
-    @classmethod
-    def generate_user(cls) -> dict[str, Any]:
-        """Return a randomly generated Spotify API response for a User."""
-        kind = ObjectType.USER.name.lower()
-        user_id = random_id()
-
-        response = {
-            "country": choice(COUNTRY_CODES),
-            "display_name": random_str(5, 30),
-            "email": random_str(15, 50),
-            "explicit_content": {
-                "filter_enabled": choice([True, False]),
-                "filter_locked": choice([True, False])
-            },
-            "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{user_id}"},
-            "followers": {"href": None, "total": randrange(0, int(8e10))},
-            "href": f"{URL_API}/{kind}s/{user_id}",
-            "id": user_id,
-            "images": cls.generate_images(),
-            "product": choice(["premium", "free", "open"]),
-            "type": kind,
-            "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{user_id}"
-        }
-
-        return response
-
-    @staticmethod
-    def generate_owner(
-            user: Mapping[str, Any] | None = None, user_id: str | None = None, user_name: str | None = None
-    ) -> dict[str, Any]:
-        """Return a randomly generated Spotify API response for an owner"""
-        kind = ObjectType.USER.name.lower()
-        user_id = user_id or random_str()
-        user_name = user_name or random_str(5, 30)
-        ext_urls = user["external_urls"] if user else {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{user_id}"}
-
-        return {
-            "display_name": user["display_name"] if user else user_name,
-            "external_urls": ext_urls,
-            "href": user["href"] if user else f"{URL_API}/{kind}s/{user_id}",
-            "id": user["id"] if user else user_id,
-            "type": user["type"] if user else kind,
-            "uri": user["uri"] if user else f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{user_id}",
-        }
-
-    @classmethod
-    def generate_owner_from_api(cls, api: SpotifyAPI | None = None) -> dict[str, Any]:
-        """Return an owner block from the properties of the given :py:class:`SpotifyAPI` object"""
-        return cls.generate_owner(user_id=api.user_id, user_name=api.user_name)
 
     ###########################################################################
     ## Generators - SHOW + EPISODE

@@ -102,6 +102,9 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
 
         return objs
 
+    def to_xml(self, **kwargs) -> Mapping[str, Any]:
+        raise NotImplementedError
+
     def __init__(self, field: Field, condition: str, expected: UnitSequence[Any] | None = None):
         super().__init__()
         self._expected: list[Any] | None = None
@@ -300,9 +303,6 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
         if value is not None and expected[0] is not None:
             return False
         return bool(re.search(str(expected[0]), str(value), flags=re.I))
-
-    def to_xml(self, **kwargs) -> Mapping[str, Any]:
-        raise NotImplementedError
 
     def as_dict(self):
         return {"field": self.field.name, "condition": self.condition, "expected": self.expected}

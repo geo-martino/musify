@@ -245,6 +245,29 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
     ## Item - GET endpoints
     ###########################################################################
     @abstractmethod
+    def extend_items(
+            self,
+            items_block: MutableMapping[str, Any],
+            key: str | None = None,
+            unit: str | None = None,
+            use_cache: bool = True,
+    ) -> list[dict[str, Any]]:
+        """
+        Extend the items for a given ``items_block`` API response.
+        The function requests each page of the collection returning a list of all items
+        found across all pages for this URL.
+
+        Updates the value of the ``items`` key in-place by extending the value of the ``items`` key with new results.
+
+        :param items_block: A remote API JSON response for an items type endpoint.
+        :param key: The child unit to use when selecting nested data for certain responses and for logging.
+        :param unit: The parent unit to use for logging.
+        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :return: API JSON responses for each item
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def get_items(
             self,
             values: APIMethodInputType,
@@ -254,23 +277,21 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
             use_cache: bool = True,
     ) -> list[dict[str, Any]]:
         """
-        ``GET`` - Get information for given list of ``values``.
+        ``GET: /{kind}s`` - Get information for given ``values``.
 
         ``values`` may be:
             * A string representing a URL/URI/ID.
             * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
-            * A remote API JSON response for a collection including:
-                - some items under an ``items`` key,
-                - a valid ID value under an ``id`` key,
-                - a valid item type value under a ``type`` key if ``kind`` is None.
-            * A MutableSequence of remote API JSON responses for a collection including the same structure as above.
+            * A remote API JSON response for a collection.
+            * A MutableSequence of remote API JSON responses for a collection.
 
-        If a JSON response is given, this replaces the ``items`` with the new results.
+        If JSON response/s given, this update each response given by merging with the new response.
 
         :param values: The values representing some remote objects. See description for allowed value types.
             These items must all be of the same type of item i.e. all tracks OR all artists etc.
         :param kind: Item type if given string is ID.
-        :param limit: Size of batches to request.
+        :param limit: When requests can be batched, size of batches to request.
+            This value will be limited to be between ``1`` and ``50``.
         :param extend: When True and the given ``kind`` is a collection of items,
             extend the response to include all items in this collection.
        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
@@ -298,8 +319,7 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: API JSON responses for each collection.
         :raise RemoteIDTypeError: Raised when the input ``user`` does not represent a user URL/URI/ID.
-        :raise RemoteObjectTypeError: Raised a user is given and the ``kind`` is not ``PLAYLIST``.
-            Or when the given ``kind`` is not a valid collection.
+        :raise RemoteObjectTypeError: When the given ``kind`` is not a valid user item/collection.
         """
         raise NotImplementedError
 
@@ -310,29 +330,6 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
         """
         Wrapper for :py:meth:`get_items` which only returns Track type responses.
         See :py:meth:`get_items` for more info.
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def extend_items(
-            self,
-            items_block: MutableMapping[str, Any],
-            key: str | None = None,
-            unit: str | None = None,
-            use_cache: bool = True,
-    ) -> list[dict[str, Any]]:
-        """
-        Extend the items for a given ``items_block`` API response.
-        The function requests each page of the collection returning a list of all items
-        found across all pages for this URL.
-
-        Updates the value of the ``items`` key in-place by extending the value of the ``items`` key with new results.
-
-        :param items_block: A remote API JSON response for an items type endpoint.
-        :param key: The child unit to use when selecting nested data for certain responses and for logging.
-        :param unit: The parent unit to use for logging.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
-        :return: API JSON responses for each item
         """
         raise NotImplementedError
 
