@@ -63,15 +63,14 @@ class TestSpotifyAPICore:
         # long queries that would cause the API to give an error should fail safely
         assert api.query(query=random_str(151, 200), kind=ObjectType.CHAPTER) == []
 
-    # TODO: expand mock to allow testing for all RemoteObjectTypes
     @pytest.mark.parametrize("kind,query,limit", [
         (ObjectType.PLAYLIST, "super cool playlist", 5),
         (ObjectType.TRACK, "track 2", 10),
         (ObjectType.ALBUM, "best album title", 20),
-        (ObjectType.ARTIST, "really cool artist name", 20),
-        # (ObjectType.SHOW, "amazing show", 20),
-        # (ObjectType.EPISODE, "incredible episode", 20),
-        # (ObjectType.AUDIOBOOK, "i love this audiobook", 20),
+        (ObjectType.ARTIST, "really cool artist name", 12),
+        (ObjectType.SHOW, "amazing show", 17),
+        (ObjectType.EPISODE, "incredible episode", 25),
+        (ObjectType.AUDIOBOOK, "i love this audiobook", 6),
     ], ids=idfn)
     def test_query(
             self,
@@ -98,9 +97,8 @@ class TestSpotifyAPICore:
     ###########################################################################
     ## Utilities
     ###########################################################################
-    # TODO: expand mock to allow testing for all extendable RemoteObjectTypes
     @pytest.mark.parametrize("kind", [
-        ObjectType.PLAYLIST, ObjectType.ALBUM,  # ObjectType.SHOW, ObjectType.AUDIOBOOK,
+        ObjectType.PLAYLIST, ObjectType.ALBUM,  ObjectType.SHOW, ObjectType.AUDIOBOOK,
     ], ids=idfn)
     def test_pretty_print_uris(
             self, kind: ObjectType, api: SpotifyAPI, api_mock: SpotifyMock, capfd: pytest.CaptureFixture

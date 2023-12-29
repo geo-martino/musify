@@ -39,9 +39,9 @@ def random_dt(start: datetime = datetime(1970, 1, 3), stop: datetime = datetime.
     return datetime.fromtimestamp(timestamp)
 
 
-def random_date_str() -> str:
+def random_date_str(start: datetime = datetime(1970, 1, 3), stop: datetime = datetime.now()) -> str:
     """Generates a random date string in the form YYYY-MM-DD."""
-    return random_dt().strftime("%Y-%m-%d")
+    return random_dt(start=start, stop=stop).strftime("%Y-%m-%d")
 
 
 # noinspection SpellCheckingInspection

@@ -108,17 +108,16 @@ class TestSpotifyAPIItems:
                 assert k in request_params
                 assert request_params[k][0] == params[k]
 
-    # TODO: expand mock to allow testing for all RemoteObjectTypes
     @pytest.mark.parametrize("kind", [
         ObjectType.PLAYLIST,
         ObjectType.TRACK,
         ObjectType.ALBUM,
         ObjectType.ARTIST,
         ObjectType.USER,
-        # ObjectType.SHOW,
-        # ObjectType.EPISODE,
-        # ObjectType.AUDIOBOOK,
-        # ObjectType.CHAPTER,
+        ObjectType.SHOW,
+        ObjectType.EPISODE,
+        ObjectType.AUDIOBOOK,
+        ObjectType.CHAPTER,
     ], ids=idfn)
     def test_get_item_multi(self, kind: ObjectType, api: SpotifyAPI, api_mock: SpotifyMock):
         api_mock.reset_mock()  # test checks the number of requests made
@@ -139,15 +138,14 @@ class TestSpotifyAPIItems:
         # appropriate number of requests were made for multi requests
         assert sum(len(api_mock.get_requests(url=f"{url}/{id_}")) for id_ in id_list) == len(source)
 
-    # TODO: expand mock to allow testing for all RemoteObjectTypes
     @pytest.mark.parametrize("kind", [
         ObjectType.TRACK,
         ObjectType.ALBUM,
         ObjectType.ARTIST,
-        # ObjectType.SHOW,
-        # ObjectType.EPISODE,
-        # ObjectType.AUDIOBOOK,
-        # ObjectType.CHAPTER,
+        ObjectType.SHOW,
+        ObjectType.EPISODE,
+        ObjectType.AUDIOBOOK,
+        ObjectType.CHAPTER,
     ], ids=idfn)
     def test_get_item_batched(self, kind: ObjectType, api: SpotifyAPI, api_mock: SpotifyMock):
         api_mock.reset_mock()  # test checks the number of requests made
@@ -174,9 +172,8 @@ class TestSpotifyAPIItems:
         assert len(requests) == len(id_params)
         self.assert_params(requests=requests, params=id_params)
 
-    # TODO: expand mock to allow testing for all extendable RemoteObjectTypes
     @pytest.mark.parametrize("kind", [
-        ObjectType.PLAYLIST, ObjectType.ALBUM,  # ObjectType.SHOW, ObjectType.AUDIOBOOK,
+        ObjectType.PLAYLIST, ObjectType.ALBUM,  ObjectType.SHOW, ObjectType.AUDIOBOOK,
     ], ids=idfn)
     def test_extend_items(self, kind: ObjectType, api: SpotifyAPI, api_mock: SpotifyMock):
         api_mock.reset_mock()  # test checks the number of requests made
@@ -212,16 +209,15 @@ class TestSpotifyAPIItems:
     ###########################################################################
     ## Get user items
     ###########################################################################
-    # TODO: expand mock to allow testing for all RemoteObjectTypes
     @pytest.mark.parametrize("kind,user", [
         (ObjectType.PLAYLIST, False),
         (ObjectType.PLAYLIST, True),
         (ObjectType.TRACK, False),
         (ObjectType.ALBUM, False),
         (ObjectType.ARTIST, False),
-        # (ObjectType.SHOW, False),
-        # (ObjectType.EPISODE, False),
-        # (ObjectType.AUDIOBOOK, False),
+        (ObjectType.SHOW, False),
+        (ObjectType.EPISODE, False),
+        (ObjectType.AUDIOBOOK, False),
     ], ids=idfn)
     def test_get_user_items(
             self, kind: ObjectType, user: bool, api: SpotifyAPI, api_mock: SpotifyMock
@@ -336,17 +332,16 @@ class TestSpotifyAPIItems:
     ###########################################################################
     ## Get user items - tests
     ###########################################################################
-    # TODO: expand mock to allow testing for all RemoteObjectTypes
     @pytest.mark.parametrize("kind,update_keys", [
         (ObjectType.PLAYLIST, {"description", "followers", "images", "public"}),
         (ObjectType.TRACK, {"artists", "album"}),
-        (ObjectType.ALBUM, {"artists", "tracks", "copyrights", "external_ids", "genres", "label", "popularity"}),
+        (ObjectType.ALBUM, {"artists", "copyrights", "external_ids", "genres", "label", "popularity", "tracks"}),
         (ObjectType.ARTIST, {"followers", "genres", "images", "popularity"}),
         (ObjectType.USER, {"display_name", "followers", "images", "product"}),
-        # (ObjectType.SHOW, {}),
-        # (ObjectType.EPISODE, {}),
-        # (ObjectType.AUDIOBOOK, {}),
-        # (ObjectType.CHAPTER, {}),
+        (ObjectType.SHOW, {"copyrights", "images", "languages", "episodes"}),
+        (ObjectType.EPISODE, {"language", "images", "languages", "show"}),
+        (ObjectType.AUDIOBOOK, {"copyrights", "edition", "languages", "images", "chapters"}),
+        (ObjectType.CHAPTER, {"languages", "images", "chapters"}),
     ], ids=idfn)
     def test_get_items_single(
             self, kind: ObjectType, update_keys: set[str], api: SpotifyAPI, api_mock: SpotifyMock
@@ -383,17 +378,16 @@ class TestSpotifyAPIItems:
         api.get_items(values=source["href"])
         api.get_items(values=source["external_urls"]["spotify"])
 
-    # TODO: expand mock to allow testing for all RemoteObjectTypes
     @pytest.mark.parametrize("kind,update_keys", [
         (ObjectType.PLAYLIST, {"description", "followers", "images", "public"}),
         (ObjectType.TRACK, {"artists", "album"}),
-        (ObjectType.ALBUM, {"artists", "tracks", "copyrights", "external_ids", "genres", "label", "popularity"}),
+        (ObjectType.ALBUM, {"artists", "copyrights", "external_ids", "genres", "label", "popularity", "tracks"}),
         (ObjectType.ARTIST, {"followers", "genres", "images", "popularity"}),
         (ObjectType.USER, {"display_name", "followers", "images", "product"}),
-        # (ObjectType.SHOW, {}),
-        # (ObjectType.EPISODE, {}),
-        # (ObjectType.AUDIOBOOK, {}),
-        # (ObjectType.CHAPTER, {}),
+        (ObjectType.SHOW, {"copyrights", "images", "languages", "episodes"}),
+        (ObjectType.EPISODE, {"language", "images", "languages", "show"}),
+        (ObjectType.AUDIOBOOK, {"copyrights", "edition", "languages", "images", "chapters"}),
+        (ObjectType.CHAPTER, {"languages", "images", "chapters"}),
     ], ids=idfn)
     def test_get_items_many(
             self, kind: ObjectType, update_keys: set[str], api: SpotifyAPI, api_mock: SpotifyMock

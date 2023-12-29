@@ -1,13 +1,13 @@
 import logging
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Callable
 from copy import deepcopy
 from datetime import datetime
 from random import choice, randrange, sample, random, shuffle
 from typing import Any
 from urllib.parse import parse_qs
 
-from pycountry import countries
+from pycountry import countries, languages
 # noinspection PyProtectedMember,PyUnresolvedReferences
 from requests_mock.request import _RequestObjectProxy as Request
 # noinspection PyProtectedMember,PyUnresolvedReferences
@@ -34,6 +34,10 @@ def idfn(value: Any) -> str | None:
 
 # noinspection PyUnresolvedReferences
 COUNTRY_CODES: tuple[str, ...] = tuple(country.alpha_2 for country in countries)
+# noinspection PyUnresolvedReferences
+LANGUAGE_NAMES: tuple[str, ...] = tuple(lang.name for lang in languages)
+# noinspection PyUnresolvedReferences
+LANGUAGE_CODES: tuple[str, ...] = tuple(lang.alpha_3.lower()[:2] + "-" + choice(COUNTRY_CODES) for lang in languages)
 IMAGE_SIZES: tuple[int, ...] = tuple([64, 160, 300, 320, 500, 640, 800, 1000])
 
 
@@ -56,6 +60,10 @@ class SpotifyMock(RemoteMock):
             ObjectType.TRACK: self.tracks,
             ObjectType.ARTIST: self.artists,
             ObjectType.USER: self.users,
+            ObjectType.SHOW: self.shows,
+            ObjectType.EPISODE: self.episodes,
+            ObjectType.AUDIOBOOK: self.audiobooks,
+            ObjectType.CHAPTER: self.chapters,
         }
 
     @property
@@ -65,6 +73,9 @@ class SpotifyMock(RemoteMock):
             ObjectType.ALBUM: self.user_albums,
             ObjectType.TRACK: self.user_tracks,
             ObjectType.ARTIST: self.user_artists,
+            ObjectType.SHOW: self.user_shows,
+            ObjectType.EPISODE: self.user_episodes,
+            ObjectType.AUDIOBOOK: self.user_audiobooks,
         }
 
     def calculate_pages_from_response(self, response: Mapping[str, Any]) -> int:
@@ -86,26 +97,36 @@ class SpotifyMock(RemoteMock):
 
         self.artists = [self.generate_artist() for _ in range(randrange(self.range_start, self.range_stop))]
         self.users = [self.generate_user() for _ in range(randrange(self.range_start, self.range_stop))]
+        self.episodes = [self.generate_episode() for _ in range(self.range_max + 20)]
+        self.chapters = [self.generate_chapter() for _ in range(self.range_max + 20)]
 
         self.playlists = [
             self.generate_playlist(owner=choice(self.users))
             for _ in range(randrange(self.range_start, self.range_stop))
         ]
         self.albums = [self.generate_album() for _ in range(randrange(self.range_start, self.range_stop))]
+        self.shows = [self.generate_show() for _ in range(randrange(self.range_start, self.range_stop))]
+        self.audiobooks = [self.generate_audiobook() for _ in range(randrange(self.range_start, self.range_stop))]
 
         # randomly choose currently authenticated user and setup mock
         self.user = choice(self.users)
         self.user_id = self.user["id"]
 
+        self.user_tracks = [
+            self.format_user_item(deepcopy(item), ObjectType.TRACK) for item in self.tracks[:self.range_max]
+        ]
+        self.user_artists = deepcopy(self.artists)
+        self.user_episodes = [
+            self.format_user_item(deepcopy(item), ObjectType.EPISODE) for item in self.episodes[:self.range_max]
+        ]
+
         # generate responses for saved user's item calls and id_map for reference by tests
         self.user_playlists = [
             self.generate_playlist(owner=self.user) for _ in range(randrange(self.range_start, self.range_stop))
         ]
-        self.user_tracks = [
-            self.format_user_item(deepcopy(item), ObjectType.TRACK) for item in self.tracks[:self.range_max]
-        ]
         self.user_albums = [self.format_user_item(deepcopy(item), ObjectType.ALBUM) for item in self.albums]
-        self.user_artists = deepcopy(self.artists)
+        self.user_shows = [self.format_user_item(deepcopy(item), ObjectType.SHOW) for item in self.shows]
+        self.user_audiobooks = [self.format_user_item(deepcopy(item), ObjectType.AUDIOBOOK) for item in self.audiobooks]
 
         self.setup_specific_conditions()
         self.setup_valid_references()
@@ -117,6 +138,9 @@ class SpotifyMock(RemoteMock):
     def setup_specific_conditions(self):
         """Some tests need items of certain size and properties. Set these up here."""
         self.playlists.append(self.generate_playlist(item_count=100))
+        self.shows.append(self.generate_show(episode_count=100))
+        self.audiobooks.append(self.generate_audiobook(chapter_count=100))
+
         album = self.generate_album(track_count=100)
         album["genres"] = random_genres(5)
         self.albums.append(album)
@@ -172,6 +196,7 @@ class SpotifyMock(RemoteMock):
         self.setup_search_mock()
         self.get(url=f"{URL_API}/me", json=self.user)
 
+        # setup responses as needed for each item type
         self.setup_items_mock(kind=ObjectType.TRACK, id_map={item["id"]: item for item in self.tracks})
         self.setup_items_mock(kind="audio-features", id_map=self.audio_features)
         self.setup_items_mock(kind="audio-analysis", id_map=self.audio_analysis, batchable=False)
@@ -179,39 +204,46 @@ class SpotifyMock(RemoteMock):
         self.setup_items_mock(kind=ObjectType.ARTIST, id_map={item["id"]: item for item in self.artists})
         users_map = {item["id"]: item for item in self.users}
         self.setup_items_mock(kind=ObjectType.USER, id_map=users_map, batchable=False)
+        self.setup_items_mock(kind=ObjectType.EPISODE, id_map={item["id"]: item for item in self.episodes})
+        self.setup_items_mock(kind=ObjectType.CHAPTER, id_map={item["id"]: item for item in self.chapters})
 
-        # setup responses as needed for each item type
-        playlists_map = {item["id"]: item for item in self.playlists + self.user_playlists}
-        self.setup_items_mock(kind=ObjectType.PLAYLIST, id_map=playlists_map, batchable=False)
-        for id_, collection in playlists_map.items():
-            count = collection["tracks"]["total"] - len(collection["tracks"]["items"])
-            items = collection["tracks"]["items"].copy()
-            items += self.generate_playlist_tracks(response=collection, count=count)
-            self.setup_items_block_mock(
-                url=collection["href"] + "/tracks", items=items, total=collection["tracks"]["total"]
-            )
+        # setup responses as needed for each collection type with following config:
+        # (RemoteObjectType, initial API responses to set up, item generator, item key, batchable)
+        config: tuple[tuple[
+            ObjectType, list[dict[str, Any]], Callable[[dict[str, Any], int], list[dict[str, Any]]], str, bool
+        ], ...] = (
+            (ObjectType.PLAYLIST, self.playlists + self.user_playlists, self.generate_playlist_tracks, "tracks", False),
+            (ObjectType.ALBUM, self.albums, self.generate_album_tracks, "tracks", True),
+            (ObjectType.SHOW, self.shows, self.generate_show_episodes, "episodes", True),
+            (ObjectType.AUDIOBOOK, self.audiobooks, self.generate_audiobook_chapters, "chapters", True),
+        )
 
-        albums_map = {item["id"]: item for item in self.albums}
-        self.setup_items_mock(kind=ObjectType.ALBUM, id_map=albums_map)
-        for id_, collection in albums_map.items():
-            count = collection["tracks"]["total"] - len(collection["tracks"]["items"])
-            items = collection["tracks"]["items"].copy()
-            items += self.generate_album_tracks(response=collection, count=count)
-            self.setup_items_block_mock(
-                url=collection["href"] + "/tracks", items=items, total=collection["tracks"]["total"]
-            )
+        for kind, source, generator, key, batchable in config:
+            source_map = {item["id"]: item for item in source}
+            self.setup_items_mock(kind=kind, id_map=source_map, batchable=batchable)
+            for id_, collection in source_map.items():
+                count = collection[key]["total"] - len(collection[key]["items"])
+                items = collection[key]["items"].copy()
+                items += generator(collection, count)
+
+                url = f"{collection["href"]}/{key}"
+                self.setup_items_block_mock(url=url, items=items, total=collection[key]["total"])
 
         # when getting a user's playlists, individual tracks are not returned
         user_playlists_reduced = deepcopy(self.user_playlists)
         for playlist in user_playlists_reduced:
             playlist["tracks"] = {"href": playlist["tracks"]["href"], "total": playlist["tracks"]["total"]}
 
-        # setup responses as needed for each item type
+        # setup responses as needed for each 'user's saved' type
         self.setup_items_block_mock(url=f"{URL_API}/me/tracks", items=self.user_tracks)
         self.setup_items_block_mock(url=f"{URL_API}/me/following", items=self.user_artists)
+        self.setup_items_block_mock(url=f"{URL_API}/me/episodes", items=self.user_episodes)
+
         self.setup_items_block_mock(url=f"{URL_API}/me/playlists", items=user_playlists_reduced)
         self.setup_items_block_mock(url=f"{URL_API}/users/{self.user_id}/playlists", items=user_playlists_reduced)
         self.setup_items_block_mock(url=f"{URL_API}/me/albums", items=self.user_albums)
+        self.setup_items_block_mock(url=f"{URL_API}/me/shows", items=self.user_shows)
+        self.setup_items_block_mock(url=f"{URL_API}/me/audiobooks", items=self.user_audiobooks)
 
         self.setup_playlist_operations_mock()
 
@@ -446,10 +478,10 @@ class SpotifyMock(RemoteMock):
         response = {
             "available_markets": sample(COUNTRY_CODES, k=randrange(1, 5)),
             "disc_number": randrange(1, 4),
-            "duration_ms": randrange(int(10e4), int(6*10e6)),  # 1 second to 10 minutes range
+            "duration_ms": randrange(int(10e4), int(6*10e5)),  # 1 second to 10 minutes range
             "explicit": choice([True, False, None]),
             "external_ids": self.generate_external_ids(),
-            "external_urls": {"spotify": f"{URL_EXT}/{kind}/{track_id}"},
+            "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{track_id}"},
             "href": f"{URL_API}/{kind}s/{track_id}",
             "id": track_id,
             "name": random_str(10, 30),
@@ -546,7 +578,7 @@ class SpotifyMock(RemoteMock):
         response = {
             "collaborative": choice([True, False]) if not public else False,
             "description": random_str(20, 100),
-            "external_urls": {"spotify": f"{URL_EXT}/{kind}/{playlist_id}"},
+            "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{playlist_id}"},
             "followers": {"href": None, "total": randrange(0, int(8e10))},
             "href": url,
             "id": playlist_id,
@@ -577,7 +609,7 @@ class SpotifyMock(RemoteMock):
         :param count: The number of tracks to generate.
             If 0, attempt to get this number from the 'limit' key in the 'tracks' key of the response
             or use the 'total' value minus the current number of tracks.
-        :param use_stored: When true, use the stored tracks instead of generating new ones.
+        :param use_stored: When True, use the stored tracks instead of generating new ones.
         :return: A list of the randomly generated tracks.
         """
         total = response["tracks"]["total"]
@@ -588,7 +620,7 @@ class SpotifyMock(RemoteMock):
         owner.pop("display_name", None)
 
         if use_stored and self.tracks:
-            # ensure only unique items added
+            # ensure only unique items added; unique collections are needed for certain tests
             taken = {item["track"]["uri"] for item in response.get("tracks", {}).get("items", [])}
             available = [item for item in self.tracks[:self.range_max] if item["uri"] not in taken]
             items = deepcopy(sample(available, k=count))
@@ -625,7 +657,7 @@ class SpotifyMock(RemoteMock):
             "album_type": choice((kind, "single", "compilation")),
             "total_tracks": track_count,
             "available_markets": sample(COUNTRY_CODES, k=randrange(1, 5)),
-            "external_urls": {"spotify": f"{URL_EXT}/{kind}s/{album_id}"},
+            "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{album_id}"},
             "href": f"{URL_API}/{kind}s/{album_id}",
             "id": album_id,
             "images": self.generate_images(),
@@ -667,7 +699,7 @@ class SpotifyMock(RemoteMock):
         :param count: The number of tracks to generate.
             If 0, attempt to get this number from the 'limit' key in the 'tracks' key of the response
             or use the 'total' value minus the current number of tracks.
-        :param use_stored: When true, use the stored tracks instead of generating new ones.
+        :param use_stored: When True, use the stored tracks instead of generating new ones.
         :return: A list of the randomly generated tracks.
         """
         current = len(response.get("tracks", {}).get("items", []))
@@ -681,13 +713,14 @@ class SpotifyMock(RemoteMock):
             artists = [self.generate_artist(properties=False) for _ in range(randrange(1, 4))]
 
         if use_stored and self.tracks:
-            # ensure only unique items added
+            # ensure only unique items added; unique collections are needed for certain tests
             taken = {item["uri"] for item in response.get("tracks", {}).get("items", [])}
             available = [item for item in self.tracks[:self.range_max] if item["uri"] not in taken]
             items = deepcopy(sample(available, k=count))
         else:
             items = [self.generate_track(album=False, artists=False) for _ in range(count)]
-        [item.pop("popularity") for item in items]
+
+        [item.pop("popularity", None) for item in items]
         items = [item | {"artists": artists, "track_number": i} for i, item in enumerate(items, current + 1)]
 
         album_reduced = {
@@ -714,7 +747,7 @@ class SpotifyMock(RemoteMock):
         artist_id = random_id()
 
         response = {
-            "external_urls": {"spotify": f"{URL_EXT}/{kind}/{artist_id}"},
+            "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{artist_id}"},
             "href": f"{URL_API}/{kind}s/{artist_id}",
             "id": artist_id,
             "name": random_str(5, 30),
@@ -758,7 +791,7 @@ class SpotifyMock(RemoteMock):
                 "filter_enabled": choice([True, False]),
                 "filter_locked": choice([True, False])
             },
-            "external_urls": {"spotify": f"{URL_EXT}/{kind}/{user_id}"},
+            "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{user_id}"},
             "followers": {"href": None, "total": randrange(0, int(8e10))},
             "href": f"{URL_API}/{kind}s/{user_id}",
             "id": user_id,
@@ -778,10 +811,11 @@ class SpotifyMock(RemoteMock):
         kind = ObjectType.USER.name.lower()
         user_id = user_id or random_str()
         user_name = user_name or random_str(5, 30)
+        ext_urls = user["external_urls"] if user else {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{user_id}"}
 
         return {
             "display_name": user["display_name"] if user else user_name,
-            "external_urls": user["external_urls"] if user else {"spotify": f"{URL_EXT}/{kind}/{user_id}"},
+            "external_urls": ext_urls,
             "href": user["href"] if user else f"{URL_API}/{kind}s/{user_id}",
             "id": user["id"] if user else user_id,
             "type": user["type"] if user else kind,
@@ -794,17 +828,254 @@ class SpotifyMock(RemoteMock):
         return cls.generate_owner(user_id=api.user_id, user_name=api.user_name)
 
     ###########################################################################
-    ## Generators - SHOW
+    ## Generators - SHOW + EPISODE
     ###########################################################################
+    def generate_show(self, episode_count: int | None = None, episodes: bool = True) -> dict[str, Any]:
+        """
+        Return a randomly generated Spotify API response for a Show.
+
+        :param episode_count: The total number of episodes this show should have.
+        :param episodes: Add randomly generated episode information to the response as per documentation.
+        """
+        kind = ObjectType.SHOW.name.lower()
+        show_id = random_id()
+        episode_count = episode_count if episode_count is not None else randrange(1, self.range_max)
+
+        response = {
+            "available_markets": sample(COUNTRY_CODES, k=randrange(1, 5)),
+            "copyrights": [
+                {"text": random_str(50, 100), "type": i} for i in ["C", "P"][:randrange(1, 2)]
+            ],
+            "description": random_str(200, 500),
+            "html_description": random_str(100, 200),
+            "explicit": choice([True, False, None]),
+            "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{show_id}"},
+            "href": f"{URL_API}/{kind}s/{show_id}",
+            "id": show_id,
+            "images": self.generate_images(),
+            "is_externally_hosted": choice([True, False, None]),
+            "languages": sample(LANGUAGE_CODES, k=randrange(1, 5)),
+            "media_type": random_str(),
+            "name": random_str(5, 20),
+            "publisher": random_str(10, 30),
+            "type": "show",
+            "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{show_id}",
+            "total_episodes": episode_count,
+        }
+
+        if episodes:
+            episodes = self.generate_show_episodes(response=response)
+            url = response["href"] + "/episodes"
+            episodes = self.format_items_block(url=url, items=episodes, limit=len(episodes), total=episode_count)
+            response["episodes"] = episodes
+
+        return response
+
+    def generate_episode(self, show: dict[str, Any] | bool = False) -> dict[str, Any]:
+        """
+        Return a randomly generated Spotify API response for an Episode.
+
+        :param show: When value is a dict representing an API response for a show,
+            add this show to the episode's response.
+            When True, generate a new show response and add this to the generated episode response.
+            When False, show data will not be added to the generated episode response.
+        """
+        kind = ObjectType.EPISODE.name.lower()
+        episode_id = random_id()
+        duration_ms = randrange(int(10e4), int(3.6*10e6))  # 1 second to 1 hour range
+
+        response = {
+            "audio_preview_url": f"https://podz-content.spotifycdn.com/audio/clips/{episode_id}/{random_str()}.mp3",
+            "description": random_str(200, 500),
+            "html_description": random_str(100, 200),
+            "duration_ms": duration_ms,
+            "explicit": choice([True, False, None]),
+            "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{episode_id}"},
+            "href": f"{URL_API}/{kind}s/{episode_id}",
+            "id": episode_id,
+            "images": self.generate_images(),
+            "is_externally_hosted": choice([True, False]),
+            "is_playable": choice([True, False]),
+            "language": choice(LANGUAGE_CODES),
+            "languages": sample(LANGUAGE_CODES, k=randrange(1, 5)),
+            "name": random_str(10, 30),
+            "release_date": random_date_str(start=datetime(2008, 10, 7)),
+            "release_date_precision": choice(("day", "month", "year")),
+            "resume_point": {
+                "fully_played": choice([True, False]),
+                "resume_position_ms": randrange(0, duration_ms),
+            },
+            "type": "episode",
+            "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{episode_id}",
+        }
+
+        if isinstance(show, dict):
+            show.pop("episodes", None)
+            response["show"] = show
+        elif show:
+            response["show"] = self.generate_show(episodes=False)
+
+        if response.get("show"):
+            response["languages"] = response["show"]["languages"]
+
+        return response
+
+    def generate_show_episodes(
+            self, response: dict[str, Any], count: int = 0, use_stored: bool = True
+    ) -> list[dict[str, Any]]:
+        """
+        Randomly generate show episodes for a given randomly generated Spotify API Show ``response``.
+
+        :param response: The Show response.
+        :param count: The number of episodes to generate.
+            If 0, attempt to get this number from the 'limit' key in the 'tracks' key of the response
+            or use the 'total' value minus the current number of episodes.
+        :param use_stored: When True, use the stored episodes instead of generating new ones.
+        :return: A list of the episodes.
+        """
+        total = response["total_episodes"]
+        if not count:
+            count = self._get_count(response=response, key="episodes", total=total)
+
+        if use_stored and self.episodes:
+            # ensure only unique items added; unique collections are needed for certain tests
+            taken = {item["uri"] for item in response.get("episodes", {}).get("items", [])}
+            available = [item for item in self.episodes[:self.range_max] if item["uri"] not in taken]
+            items = deepcopy(sample(available, k=count))
+        else:
+            items = [self.generate_episode(show=False) for _ in range(count)]
+
+        show_reduced = {k: v for k, v in response.items() if k != "episodes"}
+        for item in items:
+            item["show"] = show_reduced
+
+        return items
 
     ###########################################################################
-    ## Generators - EPISODE
+    ## Generators - AUDIOBOOK + CHAPTERS
     ###########################################################################
+    def generate_audiobook(self, chapter_count: int | None = None, chapters: bool = True) -> dict[str, Any]:
+        """
+        Return a randomly generated Spotify API response for an Audiobook.
 
-    ###########################################################################
-    ## Generators - AUDIOBOOK
-    ###########################################################################
+        :param chapter_count: The total number of chapters this audiobook should have.
+        :param chapters: Add randomly generated chapter information to the response as per documentation.
+        """
+        kind = ObjectType.AUDIOBOOK.name.lower()
+        audiobook_id = random_id()
+        chapter_count = chapter_count if chapter_count is not None else randrange(1, self.range_max // 4)
 
-    ###########################################################################
-    ## Generators - CHAPTER
-    ###########################################################################
+        response = {
+            "authors": [{"name": random_str()} for _ in range(randrange(1, 5))],
+            "available_markets": sample(COUNTRY_CODES, k=randrange(1, 5)),
+            "copyrights": [
+                {"text": random_str(50, 100), "type": i} for i in ["C", "P"][:randrange(1, 2)]
+            ],
+            "description": random_str(200, 500),
+            "html_description": random_str(100, 200),
+            "edition": random_str(5, 20),
+            "explicit": choice([True, False, None]),
+            "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{audiobook_id}"},
+            "href": f"{URL_API}/{kind}s/{audiobook_id}",
+            "id": audiobook_id,
+            "images": self.generate_images(),
+            "languages": sample(LANGUAGE_NAMES, k=randrange(1, 5)),
+            "media_type": random_str(5, 20),
+            "name": random_str(5, 20),
+            "narrators": [{"name": random_str()} for _ in range(randrange(1, 10))],
+            "publisher": random_str(10, 30),
+            "type": "audiobook",
+            "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{audiobook_id}",
+            "total_chapters": chapter_count,
+        }
+
+        if chapters:
+            chapters = self.generate_audiobook_chapters(response=response)
+            url = response["href"] + "/chapters"
+            chapters = self.format_items_block(url=url, items=chapters, limit=len(chapters), total=chapter_count)
+            response["chapters"] = chapters
+
+        return response
+
+    def generate_chapter(self, audiobook: dict[str, Any] | bool = False) -> dict[str, Any]:
+        """
+        Return a randomly generated Spotify API response for an Episode.
+
+        :param audiobook: When value is a dict representing an API response for an audiobook,
+            add this audiobook to the chapter's response.
+            When True, generate a new audiobook response and add this to the generated chapter response.
+            When False, audiobook data will not be added to the generated chapter response.
+        """
+        kind = ObjectType.CHAPTER.name.lower()
+        chapter_id = random_id()
+        duration_ms = randrange(int(10e4), int(6 * 10e5))  # 1 second to 10 minutes range
+
+        response = {
+            "audio_preview_url": f"https://p.scdn.co/mp3-preview/{chapter_id}",
+            "available_markets": sample(COUNTRY_CODES, k=randrange(1, 5)),
+            "chapter_number": randrange(0, 20),
+            "description": random_str(200, 500),
+            "html_description": random_str(100, 200),
+            "duration_ms": duration_ms,
+            "explicit": choice([True, False, None]),
+            "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{chapter_id}"},
+            "href": f"{URL_API}/{kind}s/{chapter_id}",
+            "id": chapter_id,
+            "images": self.generate_images(),
+            "is_playable": choice([True, False]),
+            "languages": sample(LANGUAGE_CODES, k=randrange(1, 5)),
+            "name": random_str(5, 20),
+            "release_date": random_date_str(start=datetime(2008, 10, 7)),
+            "release_date_precision": choice(("day", "month", "year")),
+            "resume_point": {
+                "fully_played": choice([True, False]),
+                "resume_position_ms": randrange(0, duration_ms),
+            },
+            "type": "chapter",
+            "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{chapter_id}",
+        }
+
+        if isinstance(audiobook, dict):
+            audiobook.pop("chapter", None)
+            response["audiobook"] = audiobook
+        elif audiobook:
+            response["audiobook"] = self.generate_audiobook(chapters=False)
+
+        if response.get("audiobook"):
+            response["chapter_number"] = randrange(0, response["audiobook"]["total_chapters"])
+            response["languages"] = response["audiobook"]["languages"]
+
+        return response
+
+    def generate_audiobook_chapters(
+            self, response: dict[str, Any], count: int = 0, use_stored: bool = True
+    ) -> list[dict[str, Any]]:
+        """
+        Randomly generate show episodes for a given randomly generated Spotify API Chapter ``response``.
+
+        :param response: The Chapter response.
+        :param count: The number of chapters to generate.
+            If 0, attempt to get this number from the 'limit' key in the 'tracks' key of the response
+            or use the 'total' value minus the current number of chapters.
+        :param use_stored: When True, use the stored chapters instead of generating new ones.
+        :return: A list of the chapters.
+        """
+        current = len(response.get("chapters", {}).get("items", []))
+        total = response["total_chapters"]
+        if not count:
+            count = self._get_count(response=response, key="chapters", total=total)
+
+        if use_stored and self.chapters:
+            # ensure only unique items added; unique collections are needed for certain tests
+            taken = {item["uri"] for item in response.get("chapters", {}).get("items", [])}
+            available = [item for item in self.chapters[:self.range_max] if item["uri"] not in taken]
+            items = deepcopy(sample(available, k=count))
+        else:
+            items = [self.generate_chapter(audiobook=False) for _ in range(count)]
+
+        audiobook_reduced = {k: v for k, v in response.items() if k != "chapters"}
+        for i, item in enumerate(items, current + 1):
+            item["chapter_number"] = i
+            item["audiobook"] = audiobook_reduced
+
+        return items
