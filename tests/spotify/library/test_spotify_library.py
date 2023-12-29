@@ -5,7 +5,7 @@ from urllib.parse import parse_qs
 import pytest
 
 from syncify.spotify.api import SpotifyAPI
-from syncify.spotify.library.item import SpotifyTrack
+from syncify.spotify.library.object import SpotifyTrack
 from syncify.spotify.library.library import SpotifyLibrary
 from tests.remote.library.library import RemoteLibraryTester
 from tests.spotify.api.mock import SpotifyMock

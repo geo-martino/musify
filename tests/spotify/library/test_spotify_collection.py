@@ -12,11 +12,12 @@ from syncify import PROGRAM_NAME
 from syncify.api.exception import APIError
 from syncify.remote.enums import RemoteObjectType
 from syncify.remote.exception import RemoteObjectTypeError, RemoteError
+from syncify.spotify import URL_API
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.exception import SpotifyCollectionError
-from syncify.spotify.library.collection import SpotifyAlbum, SpotifyPlaylist, SpotifyCollectionLoader
-from syncify.spotify.library.item import SpotifyItem
-from syncify.spotify.library.item import SpotifyTrack
+from syncify.spotify.library.object import SpotifyTrack, SpotifyCollectionLoader
+from syncify.spotify.library.object import SpotifyAlbum, SpotifyPlaylist, SpotifyArtist
+from syncify.spotify.library._base import SpotifyItem
 from tests.remote.library.collection import RemoteCollectionTester, RemotePlaylistTester
 from tests.spotify.api.mock import SpotifyMock
 from tests.spotify.library.utils import assert_id_attributes
@@ -187,6 +188,9 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
 
         assert_id_attributes(item=pl, response=original_response)
 
+        assert len(pl.tracks) == len(pl.response["tracks"]["items"]) == len(pl._tracks)
+        assert pl.track_total == pl.response["tracks"]["total"]
+
         assert pl.name == original_response["name"]
         new_name = "new name"
         pl.name = new_name
@@ -226,9 +230,6 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
         new_owner_id = "new owner id"
         pl.response["owner"]["id"] = new_owner_id
         assert pl.owner_id == new_owner_id
-
-        assert len(pl.tracks) == len(pl.response["tracks"]["items"]) == len(pl._tracks)
-        assert pl.track_total == pl.response["tracks"]["total"]
 
         if not pl.has_image:
             pl.response["images"] = [{"height": 200, "url": "old url"}]
@@ -436,17 +437,17 @@ class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
 
         assert_id_attributes(item=album, response=original_response)
 
-        assert album.name == album.album
-        assert album.album == original_response["name"]
-        new_name = "new name"
-        album.response["name"] = new_name
-        assert album.album == new_name
-
         assert len(album.tracks) == len(original_response["tracks"]["items"])
         for track in album.response["tracks"]["items"]:
             assert "tracks" not in track["album"]
         for track in album.tracks:
             assert track.disc_total == album.disc_total
+
+        assert album.name == album.album
+        assert album.album == original_response["name"]
+        new_name = "new name"
+        album.response["name"] = new_name
+        assert album.album == new_name
 
         original_artists = [artist["name"] for artist in original_response["artists"]]
         assert album.artist == album.tag_sep.join(original_artists)
@@ -550,3 +551,114 @@ class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
 
         SpotifyAlbum.api = api
         self.assert_load_with_tracks(cls=SpotifyAlbum, items=items, response=response_valid, api_mock=api_mock)
+
+
+class TestSpotifyArtist(RemoteCollectionTester):
+
+    @pytest.fixture
+    def collection(self, response_random: dict[str, Any]) -> SpotifyArtist:
+        artist = SpotifyArtist(response_random)
+        artist._albums = [item for item in artist.items if artist.items.count(item) == 1]
+        return artist
+
+    @pytest.fixture
+    def collection_merge_items(self, api_mock: SpotifyMock) -> Iterable[SpotifyAlbum]:
+        albums = [api_mock.generate_album() for _ in range(randrange(5, 10))]
+        for album in albums:
+            album["total_tracks"] = len(album["tracks"]["items"])
+
+        return list(map(SpotifyAlbum, albums))
+
+    @pytest.fixture
+    def response_random(self, api_mock: SpotifyMock) -> dict[str, Any]:
+        """Yield a randomly generated response from the Spotify API for an artist item type"""
+        artist = api_mock.generate_artist()
+        href = SpotifyAPI.format_next_url(url=f"{URL_API}/artists/{artist["id"]}/albums")
+
+        albums = [api_mock.generate_album(tracks=False, artists=False) for _ in range(randrange(5, 10))]
+        for album in albums:
+            album["artists"] = [deepcopy(artist)]
+            album["total_tracks"] = 0
+
+        return artist | {"albums": {"href": href, "total": len(albums), "items": albums}}
+
+    @pytest.fixture
+    def response_valid(self, api_mock: SpotifyMock) -> dict[str, Any]:
+        """Yield a valid enriched response from the Spotify API for an artist item type."""
+        return deepcopy(next(artist for artist in api_mock.artists if artist["genres"]))
+
+    def test_input_validation(self, response_random: dict[str, Any], api_mock: SpotifyMock):
+        with pytest.raises(RemoteObjectTypeError):
+            SpotifyArtist(api_mock.generate_track(artists=False, album=False))
+
+        SpotifyArtist.api = None
+        with pytest.raises(APIError):
+            SpotifyArtist.load(api_mock.albums[0]["href"])
+        with pytest.raises(APIError):
+            SpotifyArtist(response_random).reload()
+
+    def test_attributes(self, response_random: dict[str, Any]):
+        artist = SpotifyArtist(response_random)
+        original_response = deepcopy(response_random)
+
+        assert_id_attributes(item=artist, response=original_response)
+
+        assert len(artist.albums) == len(original_response["albums"]["items"])
+        assert len(artist.artists) == len({art.name for album in artist.albums for art in album.artists})
+        assert len(artist.tracks) == artist.track_total == sum(len(album) for album in artist.albums)
+
+        assert artist.name == artist.artist
+        assert artist.artist == original_response["name"]
+        new_name = "new name"
+        artist.response["name"] = new_name
+        assert artist.artist == new_name
+
+        assert artist.genres == original_response["genres"]
+        new_genres = ["electronic", "dance"]
+        artist.response["genres"] = new_genres
+        assert artist.genres == new_genres
+
+        if not artist.has_image:
+            artist.response["images"] = [{"height": 200, "url": "old url"}]
+        images = {image["height"]: image["url"] for image in artist.response["images"]}
+        assert len(artist.image_links) == 1
+        assert artist.image_links["cover_front"] == next(url for height, url in images.items() if height == max(images))
+        new_image_link = "new url"
+        artist.response["images"].append({"height": max(images) * 2, "url": new_image_link})
+        assert artist.image_links["cover_front"] == new_image_link
+
+        assert artist.rating == original_response["popularity"]
+        new_rating = artist.rating + 20
+        artist.response["popularity"] = new_rating
+        assert artist.rating == new_rating
+
+        assert artist.followers == original_response["followers"]["total"]
+        new_followers = artist.followers + 20
+        artist.response["followers"]["total"] = new_followers
+        assert artist.followers == new_followers
+
+    def test_reload(self, response_valid: dict[str, Any], api: SpotifyAPI):
+        # TODO: expand me
+        response_valid.pop("genres", None)
+        response_valid.pop("popularity", None)
+        response_valid.pop("followers", None)
+
+        artist = SpotifyArtist(response_valid)
+        assert not artist.genres
+        assert artist.rating is None
+        assert artist.followers is None
+
+        SpotifyArtist.api = api
+        artist.reload()
+        assert artist.genres
+        assert artist.rating is not None
+        assert artist.followers is not None
+
+    def test_load(self, response_valid: dict[str, Any], api: SpotifyAPI):
+        # TODO: expand me
+        SpotifyArtist.api = api
+        artist = SpotifyArtist.load(response_valid["href"])
+
+        assert artist.name == response_valid["name"]
+        assert artist.id == response_valid["id"]
+        assert artist.url == response_valid["href"]

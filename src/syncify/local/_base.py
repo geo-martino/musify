@@ -1,6 +1,6 @@
 from abc import ABCMeta
 
-from syncify.abstract.item import Item
+from syncify.abstract import Item
 from syncify.local._file import File
 
 

@@ -169,16 +169,17 @@ class SpotifyMock(RemoteMock):
         artist = {k: v for k, v in artist.items() if k not in {"followers", "genres", "images", "popularity"}}
         albums = [album for album in self.artist_albums if album["album_type"] in ("album", "single")]
 
-        if len(albums) < 15:
-            for _ in range(15 - len(albums)):
-                album = self.generate_album()
-                self.albums.append(album)
-                album = {
-                    k: deepcopy(v) for k, v in album.items()
-                    if k not in {"tracks", "copyrights", "external_ids", "genres", "label", "popularity"}
-                }
-                album["album_group"] = choice(("album", "single", "compilation", "appears_on"))
-                self.artist_albums.append(album)
+        for _ in range(self.range_start - len(albums)):
+            album = self.generate_album()
+            self.albums.append(album)
+
+            album = {
+                k: deepcopy(v) for k, v in album.items()
+                if k not in {"tracks", "copyrights", "external_ids", "genres", "label", "popularity"}
+            }
+            album["album_group"] = choice(("album", "single", "compilation", "appears_on"))
+            albums.append(album)
+            self.artist_albums.append(album)
 
         for album in sample(albums, k=15):
             album["artists"].append(artist)

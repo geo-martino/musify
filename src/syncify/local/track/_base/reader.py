@@ -8,7 +8,7 @@ import mutagen
 from PIL import Image
 
 from syncify.abstract.enums import TagMap
-from syncify.abstract.item import Track
+from syncify.abstract.object import Track
 from syncify.fields import LocalTrackField
 from syncify.local import LocalItem
 from syncify.remote.enums import RemoteIDType

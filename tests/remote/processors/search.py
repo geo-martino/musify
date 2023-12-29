@@ -5,9 +5,10 @@ from urllib.parse import parse_qs
 
 import pytest
 
-from syncify.abstract.collection import BasicCollection, Album, ItemCollection
+from syncify.abstract.object import BasicCollection, Album
 from syncify.abstract.enums import TagFieldCombined as Tag
-from syncify.abstract.item import Item
+from syncify.abstract import Item
+from syncify.abstract.collection import ItemCollection
 from syncify.local.collection import LocalAlbum
 from syncify.local.track import LocalTrack
 from syncify.remote.enums import RemoteObjectType

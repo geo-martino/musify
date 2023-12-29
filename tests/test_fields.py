@@ -1,9 +1,8 @@
 import pytest
 
-from syncify.abstract.collection import Playlist, Folder, Artist, Album
-from syncify.abstract.item import Track, Artist as ArtistItem
+from syncify.abstract.object import Track, Playlist, Folder, Artist, Album
 from syncify.fields import FolderField, PlaylistField, AlbumField, ArtistField
-from syncify.fields import TrackField, LocalTrackField, ArtistItemField
+from syncify.fields import TrackField, LocalTrackField
 from syncify.local.track import LocalTrack
 from tests.abstract.enums import FieldTester, TagFieldTester
 
@@ -44,21 +43,6 @@ class TestLocalTrackField(TagFieldTester):
     def test_map(self):
         assert self.cls.TRACK.to_tag() == {"track_number", "track_total"}
         assert self.cls.DISC.to_tag() == {"disc_number", "disc_total"}
-
-
-class TestArtistItemField(TagFieldTester):
-
-    @property
-    def cls(self) -> type[ArtistItemField]:
-        return ArtistItemField
-
-    @pytest.fixture(scope="class")
-    def reference_cls(self):
-        return ArtistItem
-
-    @pytest.fixture(scope="class")
-    def reference_ignore(self):
-        return {ArtistItemField.IMAGES}
 
 
 class TestPlaylistField(FieldTester):

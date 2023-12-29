@@ -7,10 +7,10 @@ from random import randrange, choice
 import pytest
 from pytest_mock import MockerFixture
 
-from syncify.abstract.collection import BasicCollection
+from syncify.abstract.object import BasicCollection
 from syncify.local.track import LocalTrack
 from syncify.remote.enums import RemoteObjectType
-from syncify.remote.library.collection import RemotePlaylist
+from syncify.remote.library.object import RemotePlaylist
 from syncify.remote.processors.check import RemoteItemChecker
 from tests.api.utils import path_token
 from tests.local.utils import random_tracks, random_track

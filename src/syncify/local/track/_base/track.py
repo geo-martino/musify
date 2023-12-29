@@ -9,7 +9,8 @@ from typing import Any, Self
 
 import mutagen
 
-from syncify.abstract.item import Track, Item
+from syncify.abstract import Item
+from syncify.abstract.object import Track
 from syncify.fields import TrackField
 from syncify.local._file import File
 from syncify.local.track._base.reader import TagReader

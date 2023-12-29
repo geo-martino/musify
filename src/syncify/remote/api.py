@@ -62,7 +62,7 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
 
     @staticmethod
     def _merge_results_to_input(
-            original: APIMethodInputType, results: list[dict[str, Any]], ordered: bool = True
+            original: APIMethodInputType, results: list[dict[str, Any]], ordered: bool = True, clear: bool = True,
     ) -> None:
         """
         If API response type given on input, update with new results.
@@ -73,6 +73,7 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
         :param ordered: When True, function assumes the order of items in ``original`` and ``results`` is the same.
             When False, the function will attempt to match each input value to each result by matching on
             the ``id`` key of each dictionary.
+        :param ordered: When True, clear the original value before merging, completely replacing all original data.
         """
         id_key = "id"
 
@@ -80,8 +81,10 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
             if not len(results) == 1:
                 return
 
-            original.clear()
+            if clear:
+                original.clear()
             original |= results[0]
+            return
         elif not isinstance(original, Collection):
             return
 
@@ -93,7 +96,8 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
 
         if ordered:
             for item, res in zip(original, results):
-                item.clear()
+                if clear:
+                    item.clear()
                 item |= res
             return
 
@@ -102,57 +106,11 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
         if not valid_keys_values or not valid_keys_results:
             return
 
-        result_mapped = {r[id_key]: r for r in results if r}
+        result_mapped = {result[id_key]: result for result in results if result}
         for item in original:
-            item.clear()
+            if clear:
+                item.clear()
             item |= result_mapped[item[id_key]]
-
-    @staticmethod
-    def _extend_input_with_results(
-            original: APIMethodInputType, results: dict[str, list[dict[str, Any]]], ordered: bool = True
-    ) -> None:
-        """
-        If API response type given on input, update with new results.
-        Assumes on a one-to-one relationship between ``original`` and the values of the ``results`` dict.
-
-        :param original: The original values given to the function.
-        :param results: The new results from the API in the form {<key to update on ``original``>: [``results``]}.
-        :param ordered: When True, function assumes the order of items in ``original``
-            and values of ``results`` is the same.
-            When False, the function will attempt to match each input value to each result by matching on
-            the ``id`` key of each dictionary.
-        """
-        id_key = "id"
-
-        if isinstance(original, MutableMapping):
-            for key, result in results.items():
-                original[key] = result[0]
-            return
-
-        elif not isinstance(original, Collection):
-            return
-
-        # process as lists
-        valid_input_types = all(isinstance(item, MutableMapping) for item in original)
-        valid_lengths = all(len(original) == len(result) for result in results.values())
-        if not valid_input_types or not valid_lengths:
-            return
-
-        if ordered:
-            for key, result in results.items():
-                for item, res in zip(original, result):
-                    item[key] = res
-            return
-
-        valid_keys_values = all(id_key in item for item in original)
-        valid_keys_results = all(id_key in item for result in results.values() for item in result)
-        if not valid_keys_values or not valid_keys_results:
-            return
-
-        for key, result in results.items():
-            result_mapped = {r[id_key]: r for r in result if r}
-            for item in original:
-                item[key] = result_mapped[item[id_key]]
 
     def print_item(
             self, i: int, name: str, uri: str, length: float = 0, total: int = 1, max_width: int = 50

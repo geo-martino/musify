@@ -102,19 +102,6 @@ class LocalTrackField(TrackFieldMixin):
     URI = TagFieldCombined.URI.value
 
 
-class ArtistItemField(TagField):
-    ALL = TagFieldCombined.ALL.value
-
-    # tags/core properties
-    ARTIST = TagFieldCombined.ARTIST.value
-    GENRES = TagFieldCombined.GENRES.value
-    IMAGES = TagFieldCombined.IMAGES.value
-    RATING = TagFieldCombined.RATING.value
-
-    # remote properties
-    URI = TagFieldCombined.URI.value
-
-
 class PlaylistField(Field):
     ALL = FieldCombined.ALL.value
 

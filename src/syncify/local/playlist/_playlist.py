@@ -4,7 +4,7 @@ from collections.abc import Collection, Iterable
 from datetime import datetime
 from os.path import dirname, join, getmtime, getctime, exists
 
-from syncify.abstract.collection import Playlist
+from syncify.abstract.object import Playlist
 from syncify.abstract.misc import Result
 from syncify.local import File
 from syncify.local.collection import LocalCollection

@@ -10,8 +10,7 @@ from syncify.remote.exception import RemoteError, RemoteIDTypeError, RemoteObjec
 from syncify.remote.processors.search import SearchSettings
 from syncify.spotify import URL_API, URL_EXT
 from syncify.spotify.api import SpotifyAPI
-from syncify.spotify.library.collection import SpotifyAlbum
-from syncify.spotify.library.item import SpotifyTrack
+from syncify.spotify.library.object import SpotifyTrack, SpotifyAlbum
 from syncify.spotify.processors.processors import SpotifyItemSearcher, SpotifyItemChecker
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 from tests.local.utils import random_track

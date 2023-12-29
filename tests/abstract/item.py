@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 
 import pytest
 
-from syncify.abstract.item import Item
+from syncify.abstract import Item
 from syncify.abstract.misc import PrettyPrinter
 from tests.abstract.misc import PrettyPrinterTester
 

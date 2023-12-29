@@ -3,9 +3,10 @@ from collections.abc import Mapping, Sequence, Iterable, Collection
 from dataclasses import dataclass, field
 from typing import Any
 
-from syncify.abstract.collection import ItemCollection
+from syncify.abstract.object import Track
 from syncify.abstract.enums import TagField, TagFieldCombined as Tag
-from syncify.abstract.item import Item, Track, NamedObject
+from syncify.abstract import Item, NamedObject
+from syncify.abstract.collection import ItemCollection
 from syncify.abstract.misc import Result
 from syncify.processors.match import ItemMatcher
 from syncify.remote.api import RemoteAPI

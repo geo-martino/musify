@@ -9,7 +9,7 @@ from syncify.local.library import LocalLibrary
 from syncify.local.playlist import M3U
 from syncify.report import report_playlist_differences, report_missing_tags
 from syncify.spotify.api import SpotifyAPI
-from syncify.spotify.library.collection import SpotifyPlaylist
+from syncify.spotify.library.object import SpotifyPlaylist
 from syncify.spotify.library.library import SpotifyLibrary
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 from tests.local.utils import random_track
@@ -44,7 +44,7 @@ def local_library(
         path = join(tmp_path, name + ".m3u")
         tracks = [uri_tracks[track.uri] for track in pl]
         library.playlists[name] = M3U(path=path, tracks=tracks)
-        assert all(track in pl.tracks for track in library.playlists[name])
+        assert all(track in pl for track in library.playlists[name])
 
     return library
 

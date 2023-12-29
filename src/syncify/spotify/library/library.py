@@ -1,13 +1,12 @@
 from collections.abc import Collection, Mapping, Iterable
 from typing import Any
 
-from syncify.abstract.collection import Playlist, Library
+from syncify.abstract.object import Playlist, Library
 from syncify.remote.config import RemoteObjectClasses
 from syncify.remote.enums import RemoteObjectType
 from syncify.remote.library.library import RemoteLibrary
 from syncify.spotify.api import SpotifyAPI
-from syncify.spotify.library.collection import SpotifyCollection, SpotifyPlaylist, SpotifyAlbum
-from syncify.spotify.library.item import SpotifyTrack
+from syncify.spotify.library.object import SpotifyTrack, SpotifyCollection, SpotifyPlaylist, SpotifyAlbum
 
 
 class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack]):

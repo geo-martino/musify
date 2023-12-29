@@ -1,8 +1,7 @@
 from syncify.remote.config import RemoteObjectClasses
 from syncify.remote.processors.check import RemoteItemChecker
 from syncify.remote.processors.search import RemoteItemSearcher
-from syncify.spotify.library.collection import SpotifyAlbum, SpotifyPlaylist
-from syncify.spotify.library.item import SpotifyTrack
+from syncify.spotify.library.object import SpotifyTrack, SpotifyAlbum, SpotifyPlaylist
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 
 SPOTIFY_OBJECT_TYPES = RemoteObjectClasses(

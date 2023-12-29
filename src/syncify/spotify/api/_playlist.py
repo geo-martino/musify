@@ -4,16 +4,15 @@ from itertools import batched
 from typing import Any
 
 from syncify import PROGRAM_NAME, PROGRAM_URL
-from syncify.remote.api import RemoteAPI
 from syncify.remote.enums import RemoteIDType, RemoteObjectType
 from syncify.remote.exception import RemoteIDTypeError
+from syncify.spotify.api._base import SpotifyAPIBase
 from syncify.utils.helpers import limit_value
 
 
-class SpotifyAPIPlaylists(RemoteAPI, metaclass=ABCMeta):
+class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
     """API endpoints for processing collections i.e. playlists, albums, shows, and audiobooks"""
 
-    items_key: str
     playlist_items_key = "tracks"
 
     def get_playlist_url(self, playlist: str | Mapping[str, Any], use_cache: bool = True) -> str:

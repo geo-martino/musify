@@ -7,9 +7,10 @@ from glob import glob
 from os.path import splitext, join, basename, exists, isdir
 from typing import Any
 
-from syncify.abstract.collection import ItemCollection, Library, Folder, Album, Artist, Genre
+from syncify.abstract.object import Track, Library, Folder, Album, Artist, Genre
 from syncify.abstract.enums import FieldCombined, TagField
-from syncify.abstract.item import Item, Track
+from syncify.abstract import Item
+from syncify.abstract.collection import ItemCollection
 from syncify.local._base import LocalItem
 from syncify.local.exception import LocalCollectionError
 from syncify.local.track import LocalTrack, SyncResultTrack, load_track, TRACK_FILETYPES
@@ -199,7 +200,7 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
         elif isinstance(__key, LocalTrack):  # take the path
             __key = __key.path
         elif isinstance(__key, Item):  # take the URI
-            if not __key.has_uri or __key.uri is None:
+            if not __key.has_uri:
                 raise KeyError(f"Given item does not have a URI associated: {__key.name}")
             __key = __key.uri
 

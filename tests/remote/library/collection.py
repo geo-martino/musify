@@ -5,8 +5,8 @@ from typing import Any
 import pytest
 
 from syncify.local.track import LocalTrack
-from syncify.remote.library.collection import RemoteCollection, RemotePlaylist
-from syncify.remote.library.item import RemoteItem, RemoteTrack
+from syncify.remote.library import RemoteItem
+from syncify.remote.library.object import RemoteTrack, RemoteCollection, RemotePlaylist
 from tests.abstract.collection import ItemCollectionTester, PlaylistTester
 from tests.local.utils import random_tracks
 from tests.remote.utils import RemoteMock

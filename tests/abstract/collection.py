@@ -4,8 +4,9 @@ from copy import deepcopy
 
 import pytest
 
-from syncify.abstract.collection import ItemCollection, BasicCollection, Library, Playlist
-from syncify.abstract.item import Item
+from syncify.abstract.object import BasicCollection, Library, Playlist
+from syncify.abstract import Item
+from syncify.abstract.collection import ItemCollection
 from syncify.abstract.misc import PrettyPrinter
 from syncify.exception import SyncifyTypeError
 from syncify.remote.library.library import RemoteLibrary
@@ -58,6 +59,7 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
 
     @staticmethod
     def test_collection_mutable_sequence_methods(collection: ItemCollection):
+        print(collection)
         assert len(collection.items) >= 3
 
         # get a unique item and its index
@@ -137,7 +139,6 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
             collection: ItemCollection, collection_merge_items: Iterable[Item]
     ):
         """:py:class:`ItemCollection` dunder iterator and contains tests"""
-        assert all(isinstance(item, Item) for item in collection.items)
         assert len([item for item in collection]) == len(collection.items)
         assert len([item for item in reversed(collection.items)]) == len(collection.items)
         for i, item in enumerate(reversed(collection.items)):

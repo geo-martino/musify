@@ -3,7 +3,7 @@ from glob import glob
 from os.path import splitext, join, exists, basename
 from typing import Any
 
-from syncify.abstract.collection import Playlist, Library
+from syncify.abstract.object import Playlist, Library
 from syncify.abstract.misc import Result
 from syncify.exception import SyncifyError
 from syncify.fields import LocalTrackField

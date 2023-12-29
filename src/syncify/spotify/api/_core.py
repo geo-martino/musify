@@ -1,28 +1,13 @@
 from abc import ABCMeta
 from collections.abc import MutableMapping
 from typing import Any
-from urllib.parse import parse_qs, urlparse, urlencode, quote, urlunparse
 
-from syncify.remote.api import RemoteAPI
 from syncify.remote.enums import RemoteIDType, RemoteObjectType
+from syncify.spotify.api._base import SpotifyAPIBase
 from syncify.utils.helpers import limit_value
 
 
-class SpotifyAPICore(RemoteAPI, metaclass=ABCMeta):
-
-    items_key: str
-
-    @staticmethod
-    def format_next_url(url: str, offset: int = 0, limit: int = 20) -> str:
-        """Format a `next` style URL for looping through API pages"""
-        url_parsed = urlparse(url)
-        params: dict[str, Any] = parse_qs(url_parsed.query)
-        params["offset"] = offset
-        params["limit"] = limit
-
-        url_parts = list(url_parsed[:])
-        url_parts[4] = urlencode(params, doseq=True, quote_via=quote)
-        return str(urlunparse(url_parts))
+class SpotifyAPICore(SpotifyAPIBase, metaclass=ABCMeta):
 
     def print_collection(
             self,

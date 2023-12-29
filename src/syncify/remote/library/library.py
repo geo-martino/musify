@@ -2,13 +2,12 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, Mapping, Iterable
 from typing import Any, Literal
 
-from syncify.abstract.collection import Library, Playlist
-from syncify.abstract.item import Item, Track
+from syncify.abstract.object import Track, Library, Playlist
+from syncify.abstract import Item
 from syncify.remote.api import RemoteAPI
 from syncify.remote.config import RemoteObjectClasses
-from syncify.remote.library.collection import SyncResultRemotePlaylist, RemotePlaylist, RemoteCollection
-from syncify.remote.library.item import RemoteTrack
-from syncify.remote.library.object import RemoteObject
+from syncify.remote.library.object import RemoteTrack, RemoteCollection, RemotePlaylist, SyncResultRemotePlaylist
+from syncify.remote.library import RemoteObject
 from syncify.utils.helpers import align_and_truncate, get_max_width
 from syncify.utils.logger import REPORT, STAT
 

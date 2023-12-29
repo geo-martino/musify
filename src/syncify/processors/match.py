@@ -5,9 +5,10 @@ from collections.abc import Iterable, Callable, MutableSequence
 from dataclasses import dataclass
 from typing import Any
 
-from syncify.abstract.collection import Album, ItemCollection
+from syncify.abstract.object import Track, Album
 from syncify.abstract.enums import TagField, TagFieldCombined as Tag, ALL_TAG_FIELDS
-from syncify.abstract.item import Track, NamedObject
+from syncify.abstract import NamedObject
+from syncify.abstract.collection import ItemCollection
 from syncify.processors.base import ItemProcessor
 from syncify.utils import UnitIterable
 from syncify.utils.helpers import limit_value, to_collection

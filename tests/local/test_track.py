@@ -4,7 +4,7 @@ from os.path import basename, dirname, splitext, getmtime
 
 import pytest
 
-from syncify.abstract.item import Item
+from syncify.abstract import Item
 from syncify.fields import LocalTrackField
 from syncify.local import open_image
 from syncify.local.exception import InvalidFileType
