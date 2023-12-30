@@ -71,7 +71,8 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def _remote_types(self) -> RemoteObjectClasses:
+    def _object_cls(self) -> RemoteObjectClasses:
+        """Stores the key object classes for a remote source."""
         raise NotImplementedError
 
     def __init__(self, api: RemoteAPI, interval: int = 10, allow_karaoke: bool = _ALLOW_KARAOKE_DEFAULT):
@@ -340,7 +341,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         source_valid = [item for item in source if item.has_uri]
 
         remote_response = self.api.get_items(self.playlist_name_urls[name], extend=True, use_cache=False)[0]
-        remote = self._remote_types.playlist(remote_response).tracks
+        remote = self._object_cls.playlist(response=remote_response, api=self.api).tracks
         remote_valid = [item for item in remote if item.has_uri]
 
         added = [item for item in remote_valid if item not in source]

@@ -26,7 +26,6 @@ class TestSpotifyLibrary(RemoteLibraryTester):
         include = [pl["name"] for pl in sample(api_mock.user_playlists, k=10)]
 
         library = SpotifyLibrary(api=api, include=include, use_cache=False)
-        library._remote_types.playlist.api = library.api
         library.load()
 
         return library

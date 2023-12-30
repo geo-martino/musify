@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Sequence, Iterable, Collection
 from dataclasses import dataclass, field
+from functools import partial
 from typing import Any
 
 from syncify.abstract import Item, NamedObject
@@ -92,7 +93,8 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def _remote_types(self) -> RemoteObjectClasses:
+    def _object_cls(self) -> RemoteObjectClasses:
+        """Stores the key object classes for a remote source."""
         raise NotImplementedError
 
     def __init__(self, api: RemoteAPI, use_cache: bool = False):
@@ -242,7 +244,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
 
             result = self.match(
                 item,
-                results=map(self._remote_types.track, results),
+                results=map(partial(self._object_cls.track, api=self.api), results),
                 match_on=self.settings_items.match_fields,
                 min_score=self.settings_items.min_score,
                 max_score=self.settings_items.max_score,
@@ -260,7 +262,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
         results = self._get_results(collection, kind=RemoteObjectType.ALBUM, settings=self.settings_albums)
 
         # convert to RemoteAlbum objects and extend items on each response
-        albums = list(map(self._remote_types.album, results))
+        albums = list(map(partial(self._object_cls.album, api=self.api), results))
         key = self.api.collection_item_map[RemoteObjectType.ALBUM].name.casefold() + "s"
         for album in albums:
             self.api.extend_items(album.response, unit="albums", key=key, use_cache=self.use_cache)

@@ -9,6 +9,7 @@ from typing import Any, Self
 from syncify.remote.enums import RemoteObjectType, RemoteIDType
 from syncify.remote.library.object import RemoteCollection, RemoteCollectionLoader, RemoteTrack
 from syncify.remote.library.object import RemotePlaylist, RemoteAlbum, RemoteArtist
+from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.exception import SpotifyCollectionError
 from syncify.spotify.library import SpotifyObject, SpotifyItem
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
@@ -158,8 +159,8 @@ class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
     def rating(self):
         return self.response.get("popularity")
 
-    def __init__(self, response: dict[str, Any]):
-        super().__init__(response=response)
+    def __init__(self, response: dict[str, Any], api: SpotifyAPI | None = None):
+        super().__init__(response=response, api=api)
 
         self._disc_total = None
         self._comments = None
@@ -167,9 +168,9 @@ class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
         self._artists = list(map(SpotifyArtist, response.get("artists", {})))
 
     @classmethod
-    def load(cls, value: str | dict[str, Any], use_cache: bool = True, *_, **__) -> Self:
-        cls._check_for_api()
+    def load(cls, value: str | dict[str, Any], api: SpotifyAPI, use_cache: bool = True, *_, **__) -> Self:
         obj = cls.__new__(cls)
+        obj.api = api
 
         # set a mock response with URL to load from
         id_ = cls.extract_ids(value)[0]
@@ -188,7 +189,7 @@ class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
         self.api.get_items(response["artists"], kind=RemoteObjectType.ARTIST, use_cache=use_cache)
         self.api.get_tracks_extra(response, features=True, use_cache=use_cache)
 
-        self.__init__(response)
+        self.__init__(response=response, api=self.api)
 
 
 class SpotifyCollection[T: SpotifyItem](RemoteCollection[T], SpotifyDataWrangler, metaclass=ABCMeta):
@@ -207,23 +208,24 @@ class SpotifyCollectionLoader[T: SpotifyItem](SpotifyObjectLoaderMixin[T], Spoti
     def load(
             cls,
             value: str | MutableMapping[str, Any],
+            api: SpotifyAPI,
             items: Iterable[SpotifyTrack] = (),
             extend_tracks: bool = False,
             use_cache: bool = True,
             *args,
             **kwargs
     ) -> Self:
-        cls._check_for_api()
         unit = cls.__name__.removeprefix("Spotify").lower()
         kind = RemoteObjectType.from_name(unit)[0]
-        key = cls.api.collection_item_map[kind].name.casefold() + "s"
+        key = api.collection_item_map[kind].name.casefold() + "s"
 
         # no items given, regenerate API response from the URL
-        if not items or (isinstance(value, Mapping) and (key not in value or cls.api.items_key not in value[key])):
+        if not items or (isinstance(value, Mapping) and (key not in value or api.items_key not in value[key])):
             if kind == RemoteObjectType.PLAYLIST:
-                value = cls.api.get_playlist_url(value)
+                value = api.get_playlist_url(value)
 
             obj = cls.__new__(cls)
+            obj.api = api
             obj.response = {"href": value}
             obj.reload(*args, **kwargs, extend_tracks=extend_tracks, use_cache=use_cache)
             return obj
@@ -244,7 +246,7 @@ class SpotifyCollectionLoader[T: SpotifyItem](SpotifyObjectLoaderMixin[T], Spoti
         uri_get: list[str] = []
 
         # loop through the skeleton response for this album, find items that match from the given items
-        for track_response in response[key][cls.api.items_key]:
+        for track_response in response[key][api.items_key]:
             if kind == RemoteObjectType.PLAYLIST:
                 track_response = track_response["track"]
 
@@ -257,9 +259,9 @@ class SpotifyCollectionLoader[T: SpotifyItem](SpotifyObjectLoaderMixin[T], Spoti
                 uri_get.append(track_response["uri"])
 
         if len(uri_get) > 0:  # get remaining items from API
-            uri_tracks_get = {r["uri"]: r for r in cls.api.get_tracks(uri_get, features=True, use_cache=use_cache)}
+            uri_tracks_get = {r["uri"]: r for r in api.get_tracks(uri_get, features=True, use_cache=use_cache)}
 
-            for track_response in response[key][cls.api.items_key]:
+            for track_response in response[key][api.items_key]:
                 if kind == RemoteObjectType.PLAYLIST:
                     track_response = track_response["track"]
 
@@ -269,19 +271,19 @@ class SpotifyCollectionLoader[T: SpotifyItem](SpotifyObjectLoaderMixin[T], Spoti
                     track_response |= track_new
 
         if kind == RemoteObjectType.ALBUM:
-            if len(response[key][cls.api.items_key]) < response["total_tracks"]:
-                response[key][cls.api.items_key].extend([track.response for track in uri_tracks_input.values()])
-            response[key][cls.api.items_key].sort(key=lambda x: x["track_number"])
+            if len(response[key][api.items_key]) < response["total_tracks"]:
+                response[key][api.items_key].extend([track.response for track in uri_tracks_input.values()])
+            response[key][api.items_key].sort(key=lambda x: x["track_number"])
 
-        extend_response = cls.api.extend_items(
+        extend_response = api.extend_items(
             response[key], unit=kind.name.casefold() + "s", key=key, use_cache=use_cache
         )
         if extend_tracks:
             if kind == RemoteObjectType.PLAYLIST:
                 extend_response = [item["track"] for item in extend_response]
-            cls.api.get_tracks_extra(extend_response, limit=response[key]["limit"], features=True, use_cache=use_cache)
+            api.get_tracks_extra(extend_response, limit=response[key]["limit"], features=True, use_cache=use_cache)
 
-        return cls(response)
+        return cls(response=response, api=api)
 
 
 class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[SpotifyTrack]):
@@ -383,8 +385,8 @@ class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[Spot
             for track in self.response["tracks"]["items"]
         }
 
-    def __init__(self, response: dict[str, Any]):
-        super().__init__(response=response)
+    def __init__(self, response: dict[str, Any], api: SpotifyAPI | None = None):
+        super().__init__(response=response, api=api)
         self._tracks = [SpotifyTrack(track["track"]) for track in response["tracks"]["items"]]
         self._check_total()
 
@@ -396,7 +398,7 @@ class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[Spot
             tracks = [track["track"] for track in response["tracks"]["items"]]
             self.api.get_tracks_extra(tracks, limit=response["tracks"]["limit"], features=True, use_cache=use_cache)
 
-        self.__init__(response)
+        self.__init__(response=response, api=self.api)
 
     def _get_track_uris_from_api_response(self) -> list[str]:
         return [track["track"]["uri"] for track in self.response["tracks"]["items"]]
@@ -474,8 +476,8 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTra
     def rating(self):
         return self.response.get("popularity")
 
-    def __init__(self, response: dict[str, Any]):
-        super().__init__(response=response)
+    def __init__(self, response: dict[str, Any], api: SpotifyAPI | None = None):
+        super().__init__(response=response, api=api)
 
         album_only = copy(response)
         album_only.pop("tracks", None)
@@ -501,7 +503,7 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTra
             tracks = response["tracks"]
             self.api.get_tracks_extra(tracks["items"], limit=tracks["limit"], features=True, use_cache=use_cache)
 
-        self.__init__(response)
+        self.__init__(response=response, api=self.api)
 
 
 class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyAlbum]):
@@ -552,8 +554,8 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
         """The total number of followers for this artist"""
         return self.response.get("followers", {}).get("total")
 
-    def __init__(self, response: dict[str, Any]):
-        super().__init__(response=response)
+    def __init__(self, response: dict[str, Any], api: SpotifyAPI | None = None):
+        super().__init__(response=response, api=api)
         self._albums = list(map(SpotifyAlbum, response["albums"]["items"])) if "albums" in response else []
 
     # TODO: this currently overrides parent loader because parent loader is too 'tracks' specific
@@ -562,14 +564,15 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
     def load(
             cls,
             value: str | dict[str, Any],
+            api: SpotifyAPI,
             extend_albums: bool = False,
             extend_tracks: bool = False,
             use_cache: bool = True,
             *_,
             **__
     ) -> Self:
-        cls._check_for_api()
         obj = cls.__new__(cls)
+        obj.api = api
 
         # set a mock response with URL to load from
         id_ = cls.extract_ids(value)[0]
@@ -591,4 +594,4 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
             for album in response["albums"]["items"]:
                 self.api.extend_items(album["tracks"], key="tracks", unit="albums",  use_cache=use_cache)
 
-        self.__init__(response)
+        self.__init__(response=response, api=self.api)

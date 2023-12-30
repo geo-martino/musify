@@ -1,12 +1,12 @@
 from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, Mapping, Iterable
+from functools import partial
 from typing import Any, Literal
 
 from syncify.abstract import Item
 from syncify.abstract.object import Track, Library, Playlist
 from syncify.remote.api import RemoteAPI
 from syncify.remote.config import RemoteObjectClasses
-from syncify.remote.library import RemoteObject
 from syncify.remote.library.object import RemoteTrack, RemoteCollection, RemotePlaylist, SyncResultRemotePlaylist
 from syncify.utils.helpers import align_and_truncate, get_max_width
 from syncify.utils.logger import REPORT, STAT
@@ -27,7 +27,8 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
 
     @property
     @abstractmethod
-    def _remote_types(self) -> RemoteObjectClasses:
+    def _object_cls(self) -> RemoteObjectClasses:
+        """Stores the key object classes for a remote source."""
         raise NotImplementedError
 
     @property
@@ -62,7 +63,6 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         self.include = include
         self.exclude = exclude
         self.use_cache = use_cache
-        RemoteObject.api = api
 
         self._tracks: list[T] = []
         self._playlists: dict[str, RemotePlaylist] = {}
@@ -89,9 +89,9 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         )
 
         # process to remote objects
-        self._tracks = list(map(self._remote_types.track, track_bar))
+        self._tracks = list(map(partial(self._object_cls.track, api=self.api), track_bar))
         playlists = [
-            self._remote_types.playlist.load(pl, items=self.tracks, use_cache=self.use_cache)
+            self._object_cls.playlist.load(pl, api=self.api, items=self.tracks, use_cache=self.use_cache)
             for pl in playlists_bar
         ]
         self._playlists = {pl.name: pl for pl in sorted(playlists, key=lambda pl: pl.name.casefold())}
@@ -189,13 +189,13 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
 
         if uri_get:
             tracks_data = self.api.get_tracks(uri_get, features=True, use_cache=self.use_cache)
-            tracks = list(map(self._remote_types.track, tracks_data))
+            tracks = list(map(partial(self._object_cls.track, api=self.api), tracks_data))
             uri_tracks |= {track.uri: track for track in tracks}
 
         for name, uri_list in playlists.items():
             playlist = self.playlists.get(name)
             if not playlist:  # new playlist given, create it on remote first
-                playlist = self._remote_types.playlist.create(name=name)
+                playlist = self._object_cls.playlist.create(name=name, api=self.api)
 
             playlist._tracks = [uri_tracks.get(uri) for uri in uri_list]
             self.playlists[name] = playlist
@@ -250,7 +250,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         results = {}
         for name, pl in bar:  # synchronise playlists
             if name not in self.playlists:  # new playlist given, create it on remote first
-                self.playlists[name] = self._remote_types.playlist.create(name=name)
+                self.playlists[name] = self._object_cls.playlist.create(name=name, api=self.api)
             results[name] = self.playlists[name].sync(items=pl, kind=kind, reload=reload, dry_run=dry_run)
 
         self.logger.print()
@@ -289,7 +289,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         for item in __items:
             if not allow_duplicates and item in self.items:
                 continue
-            elif isinstance(item, self._remote_types.track):
+            elif isinstance(item, self._object_cls.track):
                 self.items.append(item)
             elif item.has_uri:
                 load_uris.append(item.uri)
@@ -304,7 +304,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         )
 
         load_tracks = self.api.get_tracks(load_uris, features=True, use_cache=self.use_cache)
-        self.items.extend(self._remote_types.track(response) for response in load_tracks)
+        self.items.extend(self._object_cls.track(response=response, api=self.api) for response in load_tracks)
 
         self.logger.print()
         self.log_tracks()

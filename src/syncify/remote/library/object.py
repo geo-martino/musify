@@ -11,6 +11,7 @@ from syncify.abstract.collection import ItemCollection
 from syncify.abstract.misc import Result
 from syncify.abstract.object import Track, Album, Playlist, Artist
 from syncify.api.exception import APIError
+from syncify.remote.api import RemoteAPI
 from syncify.remote.enums import RemoteIDType
 from syncify.remote.exception import RemoteIDTypeError, RemoteError
 from syncify.remote.library import RemoteObject, RemoteItem
@@ -88,7 +89,13 @@ class RemoteCollectionLoader[T: RemoteObject](RemoteObject, RemoteCollection[T],
     @classmethod
     @abstractmethod
     def load(
-            cls, value: str | Mapping[str, Any], use_cache: bool = True, items: Iterable[T] = (), *args, **kwargs
+            cls,
+            value: str | Mapping[str, Any],
+            api: RemoteAPI,
+            use_cache: bool = True,
+            items: Iterable[T] = (),
+            *args,
+            **kwargs
     ) -> Self:
         """
         Generate a new object, calling all required endpoints to get a complete set of data for this item type.
@@ -98,6 +105,7 @@ class RemoteCollectionLoader[T: RemoteObject](RemoteObject, RemoteCollection[T],
             * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
 
         :param value: The value representing some remote collection. See description for allowed value types.
+        :param api: An authorised API object to load the object from.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :param items: Optionally, give a list of available items to build a response for this collection.
             In doing so, the method will first try to find the API responses for the items of this collection
@@ -179,20 +187,19 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
         return self.api.user_id == self.owner_id
 
     @classmethod
-    def create(cls, name: str, public: bool = True, collaborative: bool = False) -> Self:
+    def create(cls, api: RemoteAPI, name: str, public: bool = True, collaborative: bool = False) -> Self:
         """
         Create an empty playlist for the current user with the given name
         and initialise and return a new RemotePlaylist object from this new playlist.
 
+        :param api: An API object with authorised access to a remote User to create playlists for.
         :param name: Name of playlist to create.
         :param public: Set playlist availability as `public` if True and `private` if False.
         :param collaborative: Set playlist to collaborative i.e. other users may edit the playlist.
         :return: :py:class:`RemotePlaylist` object for the generated playlist.
         """
-        cls._check_for_api()
-
-        url = cls.api.create_playlist(name=name, public=public, collaborative=collaborative)
-        return cls(cls.api.get(url))
+        url = api.create_playlist(name=name, public=public, collaborative=collaborative)
+        return cls(response=api.get(url), api=api)
 
     def delete(self) -> None:
         """

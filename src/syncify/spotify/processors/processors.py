@@ -1,24 +1,17 @@
 from syncify.remote.config import RemoteObjectClasses
 from syncify.remote.processors.check import RemoteItemChecker
 from syncify.remote.processors.search import RemoteItemSearcher
-from syncify.spotify.library.object import SpotifyTrack, SpotifyAlbum, SpotifyPlaylist
+from syncify.spotify.config import SPOTIFY_OBJECT_CLASSES
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 
-SPOTIFY_OBJECT_TYPES = RemoteObjectClasses(
-    track=SpotifyTrack, album=SpotifyAlbum, playlist=SpotifyPlaylist
-)
 
-
-class SpotifyProcessor:
-    """Generic base class for Spotify processors."""
+class SpotifyItemChecker(SpotifyDataWrangler, RemoteItemChecker):
     @property
-    def _remote_types(self) -> RemoteObjectClasses:
-        return SPOTIFY_OBJECT_TYPES
+    def _object_cls(self) -> RemoteObjectClasses:
+        return SPOTIFY_OBJECT_CLASSES
 
 
-class SpotifyItemChecker(SpotifyProcessor, SpotifyDataWrangler, RemoteItemChecker):
-    pass
-
-
-class SpotifyItemSearcher(SpotifyProcessor, SpotifyDataWrangler, RemoteItemSearcher):
-    pass
+class SpotifyItemSearcher(SpotifyDataWrangler, RemoteItemSearcher):
+    @property
+    def _object_cls(self) -> RemoteObjectClasses:
+        return SPOTIFY_OBJECT_CLASSES

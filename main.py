@@ -63,7 +63,6 @@ class Syncify(Settings):
         if self._api is None:
             self.logger.info(f"\33[1;95m ->\33[1;97m Authorising API access \33[0m")
             self._api = self.remote_config.api(**self.cfg_run[self.remote_source]["api"]["settings"])
-            self.remote_config.object.api = self._api
             self.logger.print()
         return self._api
 
@@ -589,7 +588,7 @@ if __name__ == "__main__":
 # TODO: Automatically add songs added to each remote playlist to '2get'?
 #  Then somehow update local library playlists after...
 #  Maybe add a final step that syncs remote back to library if
-#  uris for extra songs in remote playlists found in library
+#  URIs for extra songs in remote playlists found in library
 # TODO: track audio recognition when searching using Shazam like service?
 #  Maybe https://audd.io/ ?
 # TODO: expand search/match functionality to include all item types
@@ -625,4 +624,3 @@ if __name__ == "__main__":
 #  settings object should contain all settings as properties to be accessed by main
 #  main should never need to access the yaml dict config directly
 # TODO: review scope of functions/attributes/properties
-# TODO: api on RemoteObjects should be instance attribute, not class attribute

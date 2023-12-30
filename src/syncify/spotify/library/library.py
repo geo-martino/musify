@@ -6,7 +6,8 @@ from syncify.remote.config import RemoteObjectClasses
 from syncify.remote.enums import RemoteObjectType
 from syncify.remote.library.library import RemoteLibrary
 from syncify.spotify.api import SpotifyAPI
-from syncify.spotify.library.object import SpotifyTrack, SpotifyCollection, SpotifyPlaylist, SpotifyAlbum
+from syncify.spotify.config import SPOTIFY_OBJECT_CLASSES
+from syncify.spotify.library.object import SpotifyTrack, SpotifyCollection, SpotifyPlaylist
 
 
 class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack]):
@@ -22,10 +23,8 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
         return isinstance(items, SpotifyTrack)
 
     @property
-    def _remote_types(self) -> RemoteObjectClasses:
-        return RemoteObjectClasses(
-            track=SpotifyTrack, album=SpotifyAlbum, playlist=SpotifyPlaylist
-        )
+    def _object_cls(self) -> RemoteObjectClasses:
+        return SPOTIFY_OBJECT_CLASSES
 
     # noinspection PyTypeChecker
     @property

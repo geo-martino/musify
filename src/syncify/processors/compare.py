@@ -5,8 +5,8 @@ from functools import reduce
 from operator import mul
 from typing import Any, Self
 
-from syncify.abstract.enums import Field
 from syncify.abstract import Item
+from syncify.abstract.enums import Field
 from syncify.fields import LocalTrackField
 from syncify.local.exception import FieldError
 from syncify.processors.base import DynamicProcessor, MusicBeeProcessor, dynamicprocessormethod

@@ -1,4 +1,5 @@
 from abc import ABCMeta
+from typing import Any
 
 from syncify.abstract.misc import PrettyPrinter
 from syncify.remote.enums import RemoteObjectType
@@ -13,14 +14,9 @@ class SpotifyObjectMixin(RemoteObject, SpotifyRemote, metaclass=ABCMeta):
 
 
 class SpotifyObject(SpotifyObjectMixin, PrettyPrinter, metaclass=ABCMeta):
-    """
-    Generic base class for Spotify-stored objects. Extracts key data from a Spotify API JSON response.
-
-    :ivar api: The instantiated and authorised :py:class:`SpotifyAPI` object for this source type.
-    """
+    """Generic base class for Spotify-stored objects. Extracts key data from a Spotify API JSON response."""
 
     _url_pad = 71
-    api: SpotifyAPI
 
     @property
     def id(self) -> str:
@@ -46,6 +42,11 @@ class SpotifyObject(SpotifyObjectMixin, PrettyPrinter, metaclass=ABCMeta):
     def url_ext(self) -> str | None:
         """The external URL of this item/collection."""
         return self.response["external_urls"].get("spotify")
+
+    def __init__(self, response: dict[str, Any], api: SpotifyAPI | None = None):
+        super().__init__(response=response, api=api)
+        # noinspection PyTypeChecker
+        self.api: SpotifyAPI = self.api
 
     def _check_type(self) -> None:
         """

@@ -21,11 +21,12 @@ from tests.spotify.utils import random_uri
 def spotify_library(spotify_api: SpotifyAPI, spotify_mock: SpotifyMock) -> SpotifyLibrary:
     """Yields a :py:class:`SpotifyLibrary` of remote tracks and playlists"""
     library = SpotifyLibrary(api=spotify_api)
-    SpotifyPlaylist.check_total = False
 
+    SpotifyPlaylist.check_total = False
     library._playlists = {pl.name: pl for pl in map(SpotifyPlaylist, spotify_mock.playlists[:20]) if len(pl) > 30}
     for pl in library.playlists.values():  # ensure only unique tracks in each playlist
         pl._tracks = set(pl.tracks)
+    SpotifyPlaylist.check_total = True
 
     library._tracks = [track for pl in library.playlists.values() for track in pl]
     return library

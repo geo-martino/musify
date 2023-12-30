@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 
 from syncify.local.track import LocalTrack
+from syncify.remote.api import RemoteAPI
 from syncify.remote.library import RemoteItem
 from syncify.remote.library.object import RemoteTrack, RemoteCollection, RemotePlaylist
 from tests.abstract.collection import ItemCollectionTester, PlaylistTester
@@ -64,7 +65,7 @@ class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, metaclass=ABC
     ###########################################################################
 
     @abstractmethod
-    def sync_playlist(self, response_valid: dict[str, Any]) -> RemotePlaylist:
+    def sync_playlist(self, response_valid: dict[str, Any], api: RemoteAPI) -> RemotePlaylist:
         """
         Yield a valid playlist that will produce idempotent results when reloaded from a :py:class:`RemoteMock`
         as a pytest.fixture

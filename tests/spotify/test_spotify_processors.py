@@ -1,3 +1,5 @@
+from functools import partial
+
 import pytest
 
 from syncify.abstract.enums import TagFieldCombined as Tag
@@ -275,7 +277,6 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
             api_mock: SpotifyMock,
             wrangler: SpotifyDataWrangler
     ) -> list[LocalAlbum]:
-        SpotifyAlbum.api = api
         SpotifyAlbum.check_total = False
 
         limit = searcher.settings_items.result_count
@@ -283,7 +284,7 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
         assert len(responses) > 4
 
         albums = []
-        for album in map(SpotifyAlbum, responses):
+        for album in map(partial(SpotifyAlbum, api=api), responses):
             tracks = []
             for remote_track in album:
                 local_track = random_track()
@@ -301,6 +302,7 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
 
             albums.append(LocalAlbum(tracks=tracks, name=album.name))
 
+        SpotifyAlbum.check_total = True
         return albums
 
 

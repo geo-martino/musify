@@ -47,10 +47,6 @@ class TestSpotifyTrack(ItemTester):
     def test_input_validation(self, response_random: dict[str, Any], api_mock: SpotifyMock):
         with pytest.raises(RemoteObjectTypeError):
             SpotifyTrack(api_mock.generate_artist(properties=False))
-
-        SpotifyTrack.api = None
-        with pytest.raises(APIError):
-            SpotifyTrack.load(api_mock.tracks[0]["href"])
         with pytest.raises(APIError):
             SpotifyTrack(response_random).reload()
 
@@ -165,7 +161,7 @@ class TestSpotifyTrack(ItemTester):
         assert not track.key
         assert not track.bpm
 
-        SpotifyTrack.api = api
+        track.api = api
         track.reload()
         assert track.album
         if track.response["audio_features"]["key"] > -1:
@@ -175,8 +171,7 @@ class TestSpotifyTrack(ItemTester):
         assert track.bpm
 
     def test_load(self, response_valid: dict[str, Any], api: SpotifyAPI):
-        SpotifyTrack.api = api
-        track = SpotifyTrack.load(response_valid["href"])
+        track = SpotifyTrack.load(response_valid["href"], api=api)
 
         assert track.name == response_valid["name"]
         assert track.id == response_valid["id"]

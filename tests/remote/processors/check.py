@@ -46,7 +46,7 @@ class RemoteItemCheckerTester(ABC):
         """Setups up checker, playlist, and collection for testing match_to_remote functionality"""
         url = choice(playlist_urls)
         # noinspection PyProtectedMember
-        pl = checker._remote_types.playlist(checker.api.get_items(url, extend=True, use_cache=False)[0])
+        pl = checker._object_cls.playlist(checker.api.get_items(url, extend=True, use_cache=False)[0])
         assert len(pl) > 10
         assert len({item.uri for item in pl}) == len(pl)  # all unique tracks
 

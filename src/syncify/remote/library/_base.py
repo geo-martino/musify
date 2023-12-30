@@ -11,15 +11,13 @@ class RemoteObject(NamedObjectPrinter, Remote, metaclass=ABCMeta):
     """
     Generic base class for remote objects. Extracts key data from a remote API JSON response.
 
-    :ivar api: The instantiated and authorised API object for this source type.
-
     :param response: The remote API JSON response
+    :param api: The instantiated and authorised API object for this source type.
     """
 
-    __slots__ = "_response"
+    __slots__ = ("response", "api")
 
     _url_pad = 71
-    api: RemoteAPI
 
     @property
     @abstractmethod
@@ -51,9 +49,10 @@ class RemoteObject(NamedObjectPrinter, Remote, metaclass=ABCMeta):
         """The external URL of this item/collection."""
         raise NotImplementedError
 
-    def __init__(self, response: dict[str, Any]):
+    def __init__(self, response: dict[str, Any], api: RemoteAPI | None = None):
         super().__init__()
         self.response = response
+        self.api = api
         self._check_type()
 
     @abstractmethod
@@ -65,19 +64,18 @@ class RemoteObject(NamedObjectPrinter, Remote, metaclass=ABCMeta):
         """
         raise NotImplementedError
 
-    @classmethod
-    def _check_for_api(cls) -> None:
+    def _check_for_api(self) -> None:
         """
-        Checks the API has been set on the class, raises an exception if not.
+        Checks the API has been set on the instance, raises an exception if not.
 
-        :raise APIError: When the API has not been set for this class.
+        :raise APIError: When the API has not been set for this instance.
         """
-        if not hasattr(cls, "api") or cls.api is None:
-            raise APIError("API is not set. Assign an API to this class first.")
+        if self.api is None:
+            raise APIError("API is not set. Assign an API to this instance first.")
 
     @classmethod
     @abstractmethod
-    def load(cls, value: str | dict[str, Any], use_cache: bool = True, *args, **kwargs) -> Self:
+    def load(cls, value: str | dict[str, Any], api: RemoteAPI, use_cache: bool = True, *args, **kwargs) -> Self:
         """
         Generate a new object of this class,
         calling all required endpoints to get a complete set of data for this item type.
@@ -87,6 +85,7 @@ class RemoteObject(NamedObjectPrinter, Remote, metaclass=ABCMeta):
             * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
 
         :param value: The value representing some remote object. See description for allowed value types.
+        :param api: An authorised API object to load the object from.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         """
         raise NotImplementedError
