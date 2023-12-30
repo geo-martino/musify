@@ -625,4 +625,3 @@ if __name__ == "__main__":
 #  settings object should contain all settings as properties to be accessed by main
 #  main should never need to access the yaml dict config directly
 # TODO: review scope of functions/attributes/properties
-# TODO: PrettyPrinter prints too narrowly on deeply nested printers e.g. Config

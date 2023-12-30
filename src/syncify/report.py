@@ -3,7 +3,7 @@ from collections.abc import Iterable
 
 from syncify.abstract import Item
 from syncify.abstract.collection import ItemCollection
-from syncify.abstract.enums import TagField, FieldCombined
+from syncify.abstract.enums import TagField, Fields
 from syncify.abstract.object import Library, Playlist
 from syncify.local.library import LocalLibrary
 from syncify.utils.helpers import align_and_truncate, get_max_width, UnitIterable, to_collection
@@ -76,7 +76,7 @@ def report_playlist_differences(
 
 def report_missing_tags(
         collections: LocalLibrary | Iterable[ItemCollection],
-        tags: UnitIterable[TagField] = FieldCombined.ALL,
+        tags: UnitIterable[TagField] = Fields.ALL,
         match_all: bool = False
 ) -> dict[str, dict[Item, tuple[str, ...]]]:
     """
@@ -92,9 +92,9 @@ def report_missing_tags(
     logger.debug("Report missing tags: START")
 
     tags = to_collection(tags, set)
-    tag_order = [field.name.lower() for field in FieldCombined.all()]
+    tag_order = [field.name.lower() for field in Fields.all()]
     # noinspection PyTypeChecker
-    tag_names = set(TagField.__tags__) if FieldCombined.ALL in tags else TagField.to_tags(tags)
+    tag_names = set(TagField.__tags__) if Fields.ALL in tags else TagField.to_tags(tags)
     tag_names = list(sorted(tag_names, key=lambda x: tag_order.index(x)))
 
     if isinstance(collections, LocalLibrary):
@@ -107,10 +107,10 @@ def report_missing_tags(
         f"    \33[90m{', '.join(tag_names)}\33[0m"
     )
 
-    if FieldCombined.URI in tags or FieldCombined.ALL in tags:
-        tag_names[tag_names.index(FieldCombined.URI.name.lower())] = "has_uri"
-    if FieldCombined.IMAGES in tags or FieldCombined.ALL in tags:
-        tag_names[tag_names.index(FieldCombined.IMAGES.name.lower())] = "has_image"
+    if Fields.URI in tags or Fields.ALL in tags:
+        tag_names[tag_names.index(Fields.URI.name.lower())] = "has_uri"
+    if Fields.IMAGES in tags or Fields.ALL in tags:
+        tag_names[tag_names.index(Fields.IMAGES.name.lower())] = "has_image"
 
     missing: dict[str, dict[Item, tuple[str, ...]]] = {}
     for collection in collections:
@@ -118,9 +118,9 @@ def report_missing_tags(
         for item in collection.items:
             missing_tags: list[str] = [tag for tag in tag_names if item[tag] is None]
             if "has_uri" in missing_tags:
-                missing_tags[missing_tags.index("has_uri")] = FieldCombined.URI.name.lower()
+                missing_tags[missing_tags.index("has_uri")] = Fields.URI.name.lower()
             if "has_image" in missing_tags:
-                missing_tags[missing_tags.index("has_image")] = FieldCombined.IMAGES.name.lower()
+                missing_tags[missing_tags.index("has_image")] = Fields.IMAGES.name.lower()
             if all(tag in missing_tags for tag in tag_names) if match_all else missing_tags:
                 missing_collection[item] = tuple(missing_tags)
 

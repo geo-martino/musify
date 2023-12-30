@@ -8,7 +8,7 @@ from itertools import batched
 from syncify import PROGRAM_NAME
 from syncify.abstract import Item
 from syncify.abstract.collection import ItemCollection
-from syncify.abstract.enums import FieldCombined
+from syncify.abstract.enums import Fields
 from syncify.abstract.misc import Result
 from syncify.abstract.object import Track
 from syncify.processors.match import ItemMatcher
@@ -57,6 +57,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
 
     __slots__ = (
         "interval",
+        "allow_karaoke",
         "api",
         "playlist_name_urls",
         "playlist_name_collection",
@@ -116,7 +117,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
 
     def _check_api(self):
         """Check if the API token has expired and refresh as necessary"""
-        if not self.api.test_token():  # check if token has expired
+        if not self.api.handler.test_token():  # check if token has expired
             self.logger.info_extra("\33[93mAPI token has expired, re-authorising... \33[0m")
             self.api.authorise()
 
@@ -371,7 +372,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
             if not added:
                 break
 
-            result = self.match(item, results=added, match_on=[FieldCombined.TITLE], allow_karaoke=self.allow_karaoke)
+            result = self.match(item, results=added, match_on=[Fields.TITLE], allow_karaoke=self.allow_karaoke)
             if not result:
                 continue
 

@@ -37,13 +37,13 @@ class ConfigError(SyncifyError):
         suffix = []
         key = "->".join(key) if isinstance(key, Iterable) else key
         if key and "{key}" in message:
-            message.format_map(SafeDict(key=key))
+            message = message.format_map(SafeDict(key=key))
         elif key:
             suffix.append(f"key='{key}'")
 
         value = ", ".join(value) if isinstance(value, Iterable) else value
         if value and "{value}" in message:
-            message.format_map(SafeDict(value=value))
+            message = message.format_map(SafeDict(value=value))
         elif value:
             suffix.append(f"value='{value}'")
 

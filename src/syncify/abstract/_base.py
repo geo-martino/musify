@@ -15,7 +15,7 @@ class NamedObject(ABC):
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
 
-    __slots__ = "_clean_tags"
+    __slots__ = ("_clean_tags",)
 
     tag_sep: str = "; "
 

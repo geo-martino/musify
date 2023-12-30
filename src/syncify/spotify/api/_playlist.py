@@ -73,7 +73,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             "public": public,
             "collaborative": collaborative,
         }
-        pl_url = self.post(url, json=body, log_pad=71)["href"]
+        pl_url = self.handler.post(url, json=body, log_pad=71)["href"]
 
         self.logger.debug(f"{'DONE':<7}: {url:<71} | Created playlist: '{name}' -> {pl_url}")
         return pl_url
@@ -116,7 +116,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
         for uris in batched(uri_list, limit):  # add tracks in batches
             params = {"uris": ','.join(uris)}
             log = [f"Adding {len(uris):>6} items"]
-            self.post(url, params=params, log_pad=71, log_extra=log)
+            self.handler.post(url, params=params, log_pad=71, log_extra=log)
 
         self.logger.debug(f"{'DONE':<7}: {url:<71} | Added {len(uri_list):>6} items to playlist: {url}")
         return len(uri_list)
@@ -133,7 +133,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
         :return: API URL for playlist.
         """
         url = f"{self.get_playlist_url(playlist, use_cache=False)}/followers"
-        self.delete(url, log_pad=43)
+        self.handler.delete(url, log_pad=43)
         return url
 
     def clear_from_playlist(
@@ -175,7 +175,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
         for uris in batched(uri_list, limit):  # clear in batches
             body = {"tracks": [{"uri": uri} for uri in uris]}
             log = [f"Clearing {len(uri_list):>3} tracks"]
-            self.delete(url, json=body, log_pad=71, log_extra=log)
+            self.handler.delete(url, json=body, log_pad=71, log_extra=log)
 
         self.logger.debug(f"{'DONE':<7}: {url:<71} | Cleared {len(uri_list):>3} tracks")
         return len(uri_list)

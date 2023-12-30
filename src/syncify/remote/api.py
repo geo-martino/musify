@@ -1,3 +1,4 @@
+import logging
 from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, MutableMapping, Mapping
 from typing import Any
@@ -7,9 +8,10 @@ from syncify.remote.enums import RemoteIDType, RemoteObjectType
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.remote.types import APIMethodInputType
 from syncify.utils.helpers import align_and_truncate
+from syncify.utils.logger import SyncifyLogger
 
 
-class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
+class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
     """
     Collection of endpoints for a remote API.
     See :py:class:`RequestHandler` and :py:class:`APIAuthoriser`
@@ -18,7 +20,7 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
     :param handler_kwargs: The authorisation kwargs to be passed to :py:class:`APIAuthoriser`.
     """
 
-    __slots__ = "_user_data"
+    __slots__ = ("logger", "handler", "_user_data")
 
     collection_item_map = {
         RemoteObjectType.PLAYLIST: RemoteObjectType.TRACK,
@@ -49,9 +51,24 @@ class RemoteAPI(RequestHandler, RemoteDataWrangler, metaclass=ABCMeta):
         raise NotImplementedError
 
     def __init__(self, **handler_kwargs):
+        # noinspection PyTypeChecker
+        self.logger: SyncifyLogger = logging.getLogger(__name__)
+
         handler_kwargs = {k: v for k, v in handler_kwargs.items() if k != "name"}
-        super().__init__(name=self.remote_source, **handler_kwargs)
+        self.handler = RequestHandler(name=self.remote_source, **handler_kwargs)
         self._user_data: dict[str, Any] = {}
+
+    def authorise(self, force_load: bool = False, force_new: bool = False) -> dict[str, str]:
+        """
+        Main method for authorisation, tests/refreshes/reauthorises as needed
+
+        :param force_load: Reloads the token even if it's already been loaded into the object.
+            Ignored when force_new is True.
+        :param force_new: Ignore saved/loaded token and generate new token.
+        :return: Headers for request authorisation.
+        :raise APIError: If the token cannot be validated.
+        """
+        return self.handler.authorise(force_load=force_load, force_new=force_new)
 
     ###########################################################################
     ## Misc helpers

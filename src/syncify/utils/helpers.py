@@ -110,6 +110,19 @@ def to_collection[T: (list, set, tuple)](data: Any, cls: type[T] = tuple) -> T |
     raise TypeError(f"Unable to convert data to {cls.__name__} (data={data})")
 
 
+# TODO: test me
+def unique_list(value: Iterable[Any]) -> list[Any]:
+    """
+    Returns a copy of the given ``value`` that contains only unique elements.
+    Useful for producing unique lists whilst preserving order.
+    """
+    unique = []
+    for item in value:
+        if item not in unique:
+            unique.append(item)
+    return unique
+
+
 ###########################################################################
 ## Mapping
 ###########################################################################

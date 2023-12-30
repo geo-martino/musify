@@ -6,7 +6,7 @@ from typing import Any
 
 from syncify.abstract import Item, NamedObject
 from syncify.abstract.collection import ItemCollection
-from syncify.abstract.enums import TagField, TagFieldCombined as Tag
+from syncify.abstract.enums import TagField, TagFields as Tag
 from syncify.abstract.misc import Result
 from syncify.abstract.object import Track
 from syncify.processors.match import ItemMatcher
@@ -69,7 +69,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
     :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
     """
 
-    __slots__ = "api"
+    __slots__ = ("api", "use_cache")
 
     settings_items = SearchSettings(
         search_fields_1=[Tag.NAME, Tag.ARTIST],

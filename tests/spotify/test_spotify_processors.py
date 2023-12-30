@@ -2,7 +2,7 @@ from functools import partial
 
 import pytest
 
-from syncify.abstract.enums import TagFieldCombined as Tag
+from syncify.abstract.enums import TagFields as Tag
 from syncify.exception import SyncifyEnumError
 from syncify.local.collection import LocalAlbum
 from syncify.local.track import LocalTrack

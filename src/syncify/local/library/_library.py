@@ -40,15 +40,15 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     """
 
     __slots__ = (
-        "_tracks",
-        "_track_paths",
-        "_playlists",
-        "_playlist_paths",
         "_library_folder",
         "_playlist_folder",
         "other_folders",
         "include",
         "exclude",
+        "_playlist_paths",
+        "_playlists",
+        "_track_paths",
+        "_tracks",
     )
 
     @property
@@ -106,28 +106,28 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
         self._playlist_folder: str = value.rstrip("\\/")
         self._playlist_paths = None
-        if value is not None:
-            playlists = {}
-            for filetype in PLAYLIST_FILETYPES:
-                paths = glob(join(self._playlist_folder, "**", f"*{filetype}"), recursive=True)
-                entry = {
-                    splitext(basename(path.removeprefix(self._playlist_folder).casefold()))[0]: path
-                    for path in paths
-                }
-                playlists |= entry
 
-            playlists_total = len(playlists)
-            self._playlist_paths = {
-                name: path for name, path in sorted(playlists.items(), key=lambda x: x[0])
-                if (not self.include or name in self.include) and (not self.exclude or name not in self.exclude)
+        playlists = {}
+        for filetype in PLAYLIST_FILETYPES:
+            paths = glob(join(self._playlist_folder, "**", f"*{filetype}"), recursive=True)
+            entry = {
+                splitext(basename(path.removeprefix(self._playlist_folder).casefold()))[0]: path
+                for path in paths
             }
+            playlists |= entry
 
-            self.logger.debug(
-                f"Filtered out {playlists_total - len(self._playlist_paths)} playlists "
-                f"from {playlists_total} {self.name} playlists"
-            )
+        playlists_total = len(playlists)
+        self._playlist_paths = {
+            name: path for name, path in sorted(playlists.items(), key=lambda x: x[0])
+            if (not self.include or name in self.include) and (not self.exclude or name not in self.exclude)
+        }
 
-        self.logger.debug(f"Set playlist folder: {self.playlist_folder} | {len(self._playlist_paths)} playlists found")
+        log = (
+            f"Filtered out {playlists_total - len(self._playlist_paths)} playlists "
+            f"from {playlists_total} {self.name} playlists"
+        ) if self.include or self.exclude else f"{len(self._playlist_paths)} playlists found"
+
+        self.logger.debug(f"Set playlist folder: {self.playlist_folder} | {log}")
 
     @property
     def folders(self) -> list[LocalFolder]:
@@ -180,7 +180,8 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     ):
         super().__init__(remote_wrangler=remote_wrangler)
         log_name = basename(library_folder) if library_folder else self.name
-        self.logger.info(f"\33[1;95m ->\33[1;97m Loading {log_name} library \33[0m")
+        self.logger.debug(f"Setup {self.name} library: START")
+        self.logger.info(f"\33[1;95m ->\33[1;97m Setting up {log_name} library \33[0m")
         self.logger.print()
 
         self.include = [name.strip().casefold() for name in include]
@@ -200,6 +201,8 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
         self._tracks: list[LocalTrack] = []
         self._playlists: dict[str, LocalPlaylist] = {}
+
+        self.logger.debug(f"Setup {self.name} library: DONE")
 
     def load(self, tracks: bool = True, playlists: bool = True, log: bool = True) -> None:
         """Loads all tracks and playlists in this library from scratch and log results."""

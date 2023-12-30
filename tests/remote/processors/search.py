@@ -7,7 +7,7 @@ import pytest
 
 from syncify.abstract import Item
 from syncify.abstract.collection import ItemCollection
-from syncify.abstract.enums import TagFieldCombined as Tag
+from syncify.abstract.enums import TagFields as Tag
 from syncify.abstract.object import BasicCollection, Album
 from syncify.local.collection import LocalAlbum
 from syncify.local.track import LocalTrack

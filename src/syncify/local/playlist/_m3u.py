@@ -59,7 +59,7 @@ class M3U(LocalPlaylist):
         check for the existence of the file paths on the file system and reject any that don't.
     """
 
-    __slots__ = "_description"
+    __slots__ = ("_description",)
 
     valid_extensions = frozenset({".m3u"})
 

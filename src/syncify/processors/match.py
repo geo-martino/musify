@@ -7,7 +7,8 @@ from typing import Any
 
 from syncify.abstract import NamedObject
 from syncify.abstract.collection import ItemCollection
-from syncify.abstract.enums import TagField, TagFieldCombined as Tag, ALL_TAG_FIELDS
+from syncify.abstract.enums import TagField, TagFields as Tag, ALL_TAG_FIELDS
+from syncify.abstract.misc import PrettyPrinter
 from syncify.abstract.object import Track, Album
 from syncify.processors.base import ItemProcessor
 from syncify.utils import UnitIterable
@@ -16,7 +17,7 @@ from syncify.utils.logger import SyncifyLogger
 
 
 @dataclass
-class CleanTagConfig:
+class CleanTagConfig(PrettyPrinter):
     """
     Config for processing string-type tag values before matching with :py:class:`ItemMatcher`
 
@@ -45,8 +46,7 @@ class CleanTagConfig:
         """Apply the preprocess function to value if given, return value unprocessed if not"""
         return self._preprocess(value) if self._preprocess else value
 
-    def json(self) -> dict[str, Any]:
-        """Return a dictionary representation of the key attributes of this object that is safe to output to JSON"""
+    def as_dict(self) -> dict[str, Any]:
         return {
             "tag": self.tag.name.casefold(),
             "remove": [value for value in self.remove],
@@ -79,7 +79,7 @@ class ItemMatcher(ItemProcessor):
         ``_reduce_name_score_on`` is found in the result but not in the source :py:class:`Item`.
     """
 
-    __slots__ = "logger"
+    __slots__ = ("logger",)
 
     karaoke_tags = {"karaoke", "backing", "instrumental"}
     year_range = 10
@@ -471,16 +471,5 @@ class ItemMatcher(ItemProcessor):
                 "config": self.clean_tags_config,
             },
             "karaoke_tags": self.karaoke_tags,
-            "year_range": self.year_range,
-        }
-
-    def json(self) -> dict[str, Any]:
-        return {
-            "clean_tags": {
-                "remove_all": [value for value in self.clean_tags_remove_all],
-                "split_all": [value for value in self.clean_tags_split_all],
-                "config": [config.json() for config in self.clean_tags_config],
-            },
-            "karaoke_tags": [value for value in self.karaoke_tags],
             "year_range": self.year_range,
         }

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod, ABCMeta
 from collections.abc import Container
 
 from syncify.abstract import NamedObject
-from syncify.abstract.enums import SyncifyEnum, Field, FieldCombined, TagField, ALL_FIELDS
+from syncify.abstract.enums import SyncifyEnum, Fields, TagField, ALL_FIELDS, Field
 
 
 class EnumTester(ABC):
@@ -27,12 +27,6 @@ class EnumTester(ABC):
 class FieldTester(EnumTester, metaclass=ABCMeta):
     """Run generic tests for :py:class:`Field` enum implementations"""
 
-    @property
-    @abstractmethod
-    def cls(self) -> type[Field]:
-        """The :py:class:`Field` class to test"""
-        raise NotImplementedError
-
     @abstractmethod
     def reference_cls(self) -> type[NamedObject]:
         """The associated class to validate field names against."""
@@ -46,6 +40,7 @@ class FieldTester(EnumTester, metaclass=ABCMeta):
     def test_gets_enum_from_name_and_value(self):
         all_enums = self.cls.all()
         for enum in all_enums:
+            print(self.cls.map(enum), self.cls.from_name(enum.name))
             assert self.cls.map(enum) == self.cls.from_name(enum.name)
             assert self.cls.map(enum) == self.cls.from_value(enum.value)
 
@@ -58,7 +53,7 @@ class FieldTester(EnumTester, metaclass=ABCMeta):
         for enum in self.cls.all():
             if enum.name not in all_field_names:  # not a combined field enum
                 continue
-            enum_combined = FieldCombined.from_name(enum.name)
+            enum_combined = Fields.from_name(enum.name)
             assert len(enum_combined) == 1
             assert enum.value == enum_combined[0]
 

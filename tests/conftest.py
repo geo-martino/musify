@@ -8,6 +8,7 @@ import pytest
 import yaml
 from _pytest.fixtures import SubRequest
 
+from syncify.api import RequestHandler
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 from tests.spotify.api.mock import SpotifyMock
@@ -71,7 +72,9 @@ def spotify_wrangler():
 def spotify_api(spotify_mock: SpotifyMock) -> SpotifyAPI:
     """Yield an authorised :py:class:`SpotifyAPI` object"""
     token = {"access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"}
-    return SpotifyAPI(name="test", token=token, cache_path=None)
+    api = SpotifyAPI(cache_path=None)
+    api.handler = RequestHandler(name=api.remote_source, token=token, cache_path=None)
+    return api
 
 
 @pytest.fixture(scope="session")

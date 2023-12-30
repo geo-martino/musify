@@ -4,26 +4,35 @@ from typing import Self
 
 from syncify.exception import SyncifyEnumError
 from syncify.utils import UnitIterable
+from syncify.utils.helpers import unique_list
 
 
 class SyncifyEnum(IntEnum):
     """Generic class for storing IntEnums."""
 
     @classmethod
+    def map(cls, enum: Self) -> list[Self]:
+        """
+        "Optional mapper to apply to the enum found during :py:meth:`all`, :py:meth:`from_name`,
+        and :py:meth:`from_value` calls
+        """
+        return [enum]
+
+    @classmethod
     def all(cls) -> list[Self]:
         """Get all enums for this enum."""
-        return [e for e in cls if e.name != "ALL"]
+        return unique_list(e for enum in cls if enum.name != "ALL" for e in cls.map(enum))
 
     @classmethod
     def from_name(cls, *names: str, fail_on_many: bool = True) -> list[Self]:
         """
-        Returns the enums that match the given names
+        Returns all enums that match the given enum names
 
         :param fail_on_many: If more than one enum is found, raise an exception.
         :raise EnumNotFoundError: If a corresponding enum cannot be found.
         """
         names_upper = [name.strip().upper() for name in names]
-        enums = [enum for enum in cls if enum.name in names_upper]
+        enums = unique_list(e for enum in cls if enum.name in names_upper for e in cls.map(enum))
 
         if len(enums) == 0:
             raise SyncifyEnumError(names)
@@ -35,12 +44,12 @@ class SyncifyEnum(IntEnum):
     @classmethod
     def from_value(cls, *values: int, fail_on_many: bool = True) -> list[Self]:
         """
-        Returns all enums that match the given enum name
+        Returns all enums that match the given enum values
 
         :param fail_on_many: If more than one enum is found, raise an exception.
         :raise EnumNotFoundError: If a corresponding enum cannot be found.
         """
-        enums = [enum for enum in cls if enum.value in values]
+        enums = unique_list(e for enum in cls if enum.value in values for e in cls.map(enum))
         if len(enums) == 0:
             raise SyncifyEnumError(values)
         elif len(enums) > 1 and fail_on_many:
@@ -52,27 +61,25 @@ class Field(SyncifyEnum):
     """Base class for field names of an item."""
 
     @classmethod
-    def map(cls, enum: Self) -> list[Self]:
-        """Optional mapper to apply to the enum found during :py:meth:`from_name` and :py:meth:`from_value` calls"""
-        return [enum]
-
-    @classmethod
     def from_name(cls, *names: str) -> list[Self]:
-        names_upper = [name.strip().upper() for name in names]
-        enums = [e for enum in cls if enum.name in names_upper for e in cls.map(enum)]
-        if len(enums) == 0:
-            raise SyncifyEnumError(names)
-        return enums
+        """
+        Returns all enums that match the given enum names
+
+        :raise EnumNotFoundError: If a corresponding enum cannot be found.
+        """
+        return super().from_name(*names, fail_on_many=False)
 
     @classmethod
     def from_value(cls, *values: int) -> list[Self]:
-        enums = [e for enum in cls if enum.value in values for e in cls.map(enum)]
-        if len(enums) == 0:
-            raise SyncifyEnumError(values)
-        return enums
+        """
+        Returns all enums that match the given enum values
+
+        :raise EnumNotFoundError: If a corresponding enum cannot be found.
+        """
+        return super().from_value(*values, fail_on_many=False)
 
 
-class FieldCombined(Field):
+class Fields(Field):
     """
     Contains all possible Field enums in this program.
 
@@ -175,7 +182,7 @@ class TagField(Field):
         Applies mapper to enums before returning as per :py:meth:`map`.
         This will only return tag names if they are found in :py:class:`TagMap`.
         """
-        if self == FieldCombined.ALL:
+        if self == Fields.ALL:
             return {tag.name.lower() for tag in self.all() if tag.name.lower() in self.__tags__}
         return {tag.name.lower() for tag in self.map(self) if tag.name.lower() in self.__tags__}
 
@@ -192,67 +199,67 @@ class TagField(Field):
         return {t for tag in tags for t in tag.to_tag()}
 
 
-class TagFieldCombined(TagField):
+class TagFields(TagField):
     """
     Contains all possible TagField enums in this program.
 
     This is used to ensure all TagField enum implementations have the same values for their enum names.
     """
-    ALL = FieldCombined.ALL.value
-    NAME = FieldCombined.NAME.value
+    ALL = Fields.ALL.value
+    NAME = Fields.NAME.value
 
     # tags/core properties
-    TITLE = FieldCombined.TITLE.value
-    ARTIST = FieldCombined.ARTIST.value
-    ALBUM = FieldCombined.ALBUM.value
-    ALBUM_ARTIST = FieldCombined.ALBUM_ARTIST.value
-    TRACK_NUMBER = FieldCombined.TRACK_NUMBER.value
-    TRACK_TOTAL = FieldCombined.TRACK_TOTAL.value
-    GENRES = FieldCombined.GENRES.value
-    YEAR = FieldCombined.YEAR.value
-    BPM = FieldCombined.BPM.value
-    KEY = FieldCombined.KEY.value
-    DISC_NUMBER = FieldCombined.DISC_NUMBER.value
-    DISC_TOTAL = FieldCombined.DISC_TOTAL.value
-    COMPILATION = FieldCombined.COMPILATION.value
-    COMMENTS = FieldCombined.COMMENTS.value
-    IMAGES = FieldCombined.IMAGES.value
-    LENGTH = FieldCombined.LENGTH.value
-    RATING = FieldCombined.RATING.value
-    COMPOSER = FieldCombined.COMPOSER.value
-    CONDUCTOR = FieldCombined.CONDUCTOR.value
-    PUBLISHER = FieldCombined.PUBLISHER.value
+    TITLE = Fields.TITLE.value
+    ARTIST = Fields.ARTIST.value
+    ALBUM = Fields.ALBUM.value
+    ALBUM_ARTIST = Fields.ALBUM_ARTIST.value
+    TRACK_NUMBER = Fields.TRACK_NUMBER.value
+    TRACK_TOTAL = Fields.TRACK_TOTAL.value
+    GENRES = Fields.GENRES.value
+    YEAR = Fields.YEAR.value
+    BPM = Fields.BPM.value
+    KEY = Fields.KEY.value
+    DISC_NUMBER = Fields.DISC_NUMBER.value
+    DISC_TOTAL = Fields.DISC_TOTAL.value
+    COMPILATION = Fields.COMPILATION.value
+    COMMENTS = Fields.COMMENTS.value
+    IMAGES = Fields.IMAGES.value
+    LENGTH = Fields.LENGTH.value
+    RATING = Fields.RATING.value
+    COMPOSER = Fields.COMPOSER.value
+    CONDUCTOR = Fields.CONDUCTOR.value
+    PUBLISHER = Fields.PUBLISHER.value
 
     # file properties
-    PATH = FieldCombined.PATH.value
-    FOLDER = FieldCombined.FOLDER.value
-    FILENAME = FieldCombined.FILENAME.value
-    EXT = FieldCombined.EXT.value
-    SIZE = FieldCombined.SIZE.value
-    KIND = FieldCombined.KIND.value
-    CHANNELS = FieldCombined.CHANNELS.value
-    BIT_RATE = FieldCombined.BIT_RATE.value
-    BIT_DEPTH = FieldCombined.BIT_DEPTH.value
-    SAMPLE_RATE = FieldCombined.SAMPLE_RATE.value
+    PATH = Fields.PATH.value
+    FOLDER = Fields.FOLDER.value
+    FILENAME = Fields.FILENAME.value
+    EXT = Fields.EXT.value
+    SIZE = Fields.SIZE.value
+    KIND = Fields.KIND.value
+    CHANNELS = Fields.CHANNELS.value
+    BIT_RATE = Fields.BIT_RATE.value
+    BIT_DEPTH = Fields.BIT_DEPTH.value
+    SAMPLE_RATE = Fields.SAMPLE_RATE.value
 
     # date properties
-    DATE_CREATED = FieldCombined.DATE_CREATED.value
-    DATE_MODIFIED = FieldCombined.DATE_MODIFIED.value
-    DATE_ADDED = FieldCombined.DATE_ADDED.value
-    LAST_PLAYED = FieldCombined.LAST_PLAYED.value
+    DATE_CREATED = Fields.DATE_CREATED.value
+    DATE_MODIFIED = Fields.DATE_MODIFIED.value
+    DATE_ADDED = Fields.DATE_ADDED.value
+    LAST_PLAYED = Fields.LAST_PLAYED.value
 
     # miscellaneous properties
-    PLAY_COUNT = FieldCombined.PLAY_COUNT.value
-    DESCRIPTION = FieldCombined.DESCRIPTION.value
+    PLAY_COUNT = Fields.PLAY_COUNT.value
+    DESCRIPTION = Fields.DESCRIPTION.value
 
     # remote properties
-    URI = FieldCombined.URI.value
-    USER_ID = FieldCombined.USER_ID.value
-    USER_NAME = FieldCombined.USER_NAME.value
-    OWNER_ID = FieldCombined.OWNER_ID.value
-    OWNER_NAME = FieldCombined.OWNER_NAME.value
-    FOLLOWERS = FieldCombined.FOLLOWERS.value
+    URI = Fields.URI.value
+    USER_ID = Fields.USER_ID.value
+    USER_NAME = Fields.USER_NAME.value
+    OWNER_ID = Fields.OWNER_ID.value
+    OWNER_NAME = Fields.OWNER_NAME.value
+    FOLLOWERS = Fields.FOLLOWERS.value
 
 
-ALL_FIELDS = frozenset(FieldCombined.all())
-ALL_TAG_FIELDS = frozenset(TagFieldCombined.all())
+ALL_FIELDS = frozenset(Fields.all())
+ALL_TAG_FIELDS = frozenset(TagFields.all())

@@ -59,7 +59,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         results: list[dict[str, Any]] = []
         log = [f"{unit.title()}:{len(id_list):>5}"]
         for id_ in id_list:
-            response = self.get(f"{url}/{id_}", params=params, use_cache=use_cache, log_pad=43, log_extra=log)
+            response = self.handler.get(f"{url}/{id_}", params=params, use_cache=use_cache, log_pad=43, log_extra=log)
             if "id" not in response:
                 response["id"] = id_
             if key and key not in response:
@@ -113,7 +113,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             params_chunk = params | {"ids": ",".join(id_chunk)}
             log = [f"{unit.title() + ':':<11} {len(results) + len(id_chunk):>6}/{len(id_list):<6}"]
 
-            response = self.get(url, params=params_chunk, use_cache=use_cache, log_pad=43, log_extra=log)
+            response = self.handler.get(url, params=params_chunk, use_cache=use_cache, log_pad=43, log_extra=log)
             if key and key not in response:
                 raise APIError(f"Given key '{key}' not found in response keys: {list(response.keys())}")
 
@@ -170,7 +170,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             log_count = min(bar.n + items_block["limit"], items_block["total"])
             log = [f"{log_count:>6}/{items_block["total"]:<6} {key or self.items_key}"]
 
-            response = self.get(items_block["next"], use_cache=use_cache, log_pad=95, log_extra=log)
+            response = self.handler.get(items_block["next"], use_cache=use_cache, log_pad=95, log_extra=log)
             if key and key.rstrip("s") + "s" in response:
                 response = response[key.rstrip("s") + "s"]
 
@@ -305,7 +305,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             url = f"{self.api_url_base}/me/{kind.name.casefold()}s"
             unit_prefix = "current user's" if kind == RemoteObjectType.PLAYLIST else "current user's saved"
 
-        initial = self.get(url, params=params, use_cache=use_cache, log_pad=71)
+        initial = self.handler.get(url, params=params, use_cache=use_cache, log_pad=71)
         results = self.extend_items(initial, key=unit, unit=f"{unit_prefix} {unit}", use_cache=use_cache)
 
         self.logger.debug(f"{'DONE':<7}: {url:<43} | Retrieved {len(results):>6} {unit}")
@@ -365,7 +365,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         if len(id_list) == 1:
             id_ = id_list[0]
             for (url, key, _) in config.values():
-                results[key] = [self.get(f"{url}/{id_}", use_cache=use_cache, log_pad=43) | {"id": id_}]
+                results[key] = [self.handler.get(f"{url}/{id_}", use_cache=use_cache, log_pad=43) | {"id": id_}]
         else:
             for unit, (url, key, batch) in config.items():
                 method = self._get_items_batched if batch else self._get_items_multi
@@ -488,7 +488,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         url = self.api_url_base + "/artists/{id}/albums"
         results: dict[str, dict[str, Any]] = {}
         for id_ in id_list:
-            results[id_] = self.get(url=url.format(id=id_), params=params, use_cache=use_cache)
+            results[id_] = self.handler.get(url=url.format(id=id_), params=params, use_cache=use_cache)
             self.extend_items(results[id_], key="albums", unit="artist albums", use_cache=use_cache)
             for album in results[id_]["items"]:  # add skeleton items block to album responses
                 album["tracks"] = {

@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from os.path import exists
 from typing import Any, Self
 
-from syncify.abstract.enums import FieldCombined
+from syncify.abstract.enums import Fields
 from syncify.abstract.misc import Result
 from syncify.local.track import LocalTrack
 from syncify.processors.base import MusicBeeProcessor
@@ -283,7 +283,7 @@ class LocalMatcher(MusicBeeProcessor):
             # copy the list of tracks as the sorter will modify the list order
             tracks_original = tracks_original.copy()
             # get the last played track as reference in case comparer is looking for the playing tracks as reference
-            ItemSorter.sort_by_field(tracks_original, field=FieldCombined.LAST_PLAYED, reverse=True)
+            ItemSorter.sort_by_field(tracks_original, field=Fields.LAST_PLAYED, reverse=True)
             matches: MatchResult = self(tracks_original, reference=tracks_original[0], combine=False)
             compared_path_map: Mapping[str, LocalTrack] = {track.path.casefold(): track for track in matches.compare}
 

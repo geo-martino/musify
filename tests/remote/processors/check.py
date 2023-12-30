@@ -78,8 +78,8 @@ class RemoteItemCheckerTester(ABC):
         api_mock.reset_mock()  # test checks the number of requests made
 
         # force auth test to fail and reload from token
-        checker.api.token = None
-        checker.api.token_file_path = path_token
+        checker.api.handler.token = None
+        checker.api.handler.token_file_path = path_token
 
         collection = BasicCollection(name=random_str(), items=random_tracks())
         for item in collection:
@@ -95,7 +95,7 @@ class RemoteItemCheckerTester(ABC):
             item.uri = random_uri()
 
         checker._create_playlist(collection=collection)
-        assert checker.api.token is not None
+        assert checker.api.handler.token is not None
         assert collection.name in checker.playlist_name_urls
         assert checker.playlist_name_collection[collection.name] == collection
         assert len(api_mock.request_history) >= 2
@@ -108,14 +108,14 @@ class RemoteItemCheckerTester(ABC):
             api_mock: RemoteMock
     ):
         # force auth test to fail and reload from token
-        checker.api.token = None
-        checker.api.token_file_path = path_token
+        checker.api.handler.token = None
+        checker.api.handler.token_file_path = path_token
 
         checker.playlist_name_urls = {collection.name: url for collection, url in zip(collections, playlist_urls)}
         checker.playlist_name_collection = {collection.name: collection for collection in collections}
 
         checker._delete_playlists()
-        assert checker.api.token is not None
+        assert checker.api.handler.token is not None
         assert not checker.playlist_name_urls
         assert not checker.playlist_name_collection
         assert len(api_mock.get_requests(method="DELETE")) == min(len(playlist_urls), len(collections))

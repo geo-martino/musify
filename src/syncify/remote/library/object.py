@@ -202,7 +202,7 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
         :return: :py:class:`RemotePlaylist` object for the generated playlist.
         """
         url = api.create_playlist(name=name, public=public, collaborative=collaborative)
-        return cls(response=api.get(url), api=api)
+        return cls(response=api.handler.get(url), api=api)
 
     def delete(self) -> None:
         """

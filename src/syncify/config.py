@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import base64
 import os
 import sys
 from abc import ABC, abstractmethod
-from collections.abc import Mapping, Generator
-from copy import deepcopy
+from collections.abc import Mapping, Generator, Collection
 from dataclasses import dataclass
 from datetime import datetime
 from os.path import isabs, join, dirname, splitext, exists
@@ -28,12 +26,12 @@ from syncify.remote.processors.check import RemoteItemChecker, ALLOW_KARAOKE_DEF
 from syncify.remote.processors.search import RemoteItemSearcher
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.spotify import SPOTIFY_SOURCE_NAME
-from syncify.spotify.api import SpotifyAPI, SPOTIFY_API_AUTH_USER, SPOTIFY_API_AUTH_BASIC
+from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.library import SpotifyObject
 from syncify.spotify.library.library import SpotifyLibrary
 from syncify.spotify.processors.processors import SpotifyItemChecker, SpotifyItemSearcher
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
-from syncify.utils.helpers import to_collection, safe_format_map
+from syncify.utils.helpers import to_collection
 from syncify.utils.logger import LOGGING_DT_FORMAT
 
 
@@ -80,26 +78,27 @@ class Config(PrettyPrinter):
     - `OPTIONAL`: This value does not need to be set and ``None`` will be set when this is the case.
         The configuration will not fail if this value is not given.
 
-    Sub-configs have ``override`` parameter that can be set using ``override`` key in initial config block.
-    When override is True and ``config`` given, override loaded config from the file with
-    values in ``config`` only using loaded values when values are not present in given ``config``.
-    When override is False, loaded config takes priority and given ``config`` values are only used
-    when values are not present in the file.
+    Sub-configs have an ``override`` parameter that can be set using the ``override`` key in initial config block.
+    When override is True and ``config`` given, override loaded config from the file with values in ``config``
+    only using loaded values when values are not present in given ``config``.
+    When override is False and ``config`` given, loaded config takes priority
+    and given ``config`` values are only used when values are not present in the file.
 
-    :param name: Name of this config.
-        Used as the parent key to use to pull the required configuration from the config file.
     :param path: Path of the config file to use.
+    :param key: The key to pull config from within the file.
+        Used as the parent key to use to pull the required configuration from the config file.
+        If not given, use the root values in the config file.
     :param config: When given, use values from this config. Priority is set by ``force_new``.
         The following values are always overriden and ignore any ``override`` setting:
         - ``start_time`` i.e. the time at which the config was instantiated.
         - ``module_folder``
     """
 
-    def __init__(self, name: str = "general", path: str = "config.yml", config: Self | None = None):
+    def __init__(self, path: str = "config.yml", key: str | None = None, config: Self | None = None):
         self.start_time = config.start_time if config else datetime.now()
         self._package_root = config.package_root if config else dirname(dirname(dirname(__file__)))
         self.config_path = self._make_path_absolute(path)
-        self._cfg = self._load_config(name)
+        self._cfg = self._load_config(key)
         override = self._cfg.get("override", False)
 
         self._output_folder: str | None = config.output_folder if config and override else None
@@ -120,12 +119,20 @@ class Config(PrettyPrinter):
         self.remote: dict[str, ConfigRemote] = {}
         for name, settings in self._cfg.get("remote", {}).items():
             remote_config = config.remote.get(name) if config else None
-            library = ConfigRemote(file=settings, config=remote_config, override=override)
+
+            kind = settings["kind"]
+            match kind:  # remap certain source kinds to expected values
+                case "spotify":
+                    kind = SPOTIFY_SOURCE_NAME
+
+            library = ConfigRemote(name=kind, file=settings, config=remote_config, override=override)
+            # noinspection PyProtectedMember
+            assert library.api._api is None  # ensure api has not already been instantiated
 
             if not exists(library.api.token_path) and not isabs(library.api.token_path):
-                # noinspection PyProtectedMember
-                assert library.api._api is None  # ensure api has not already been instantiated
                 library.api._token_path = join(dirname(self.output_folder), library.api.token_path)
+            if not exists(library.api.cache_path) and not isabs(library.api.cache_path):
+                library.api._cache_path = join(dirname(self.output_folder), library.api.cache_path)
 
             self.remote[name] = library
 
@@ -140,10 +147,11 @@ class Config(PrettyPrinter):
             path = join(self._package_root, path)
         return path
 
-    def _load_config(self, name: str) -> dict[Any, Any]:
+    def _load_config(self, key: str | None = None) -> dict[Any, Any]:
         """
         Load the config file
 
+        :param key: The key to pull config from within the file.
         :return: The config file.
         :raise InvalidFileType: When the given config file is not of the correct type.
         """
@@ -154,17 +162,17 @@ class Config(PrettyPrinter):
 
         with open(self.config_path, 'r') as file:
             config = yaml.full_load(file)
-        if name not in config:
-            raise ConfigError("Unrecognised config name: {key} | Available: {value}", key=name, value=config)
+        if key and key not in config:
+            raise ConfigError("Unrecognised config name: {key} | Available: {value}", key=key, value=config)
 
-        return config[name]
+        return config[key] if key else config
 
     ###########################################################################
     ## General
     ###########################################################################
     @property
     def output_folder(self) -> str:
-        """`DEFAULT` | The output folder for saving diagnostic data"""
+        """`DEFAULT = '<package_root>/_data'` | The output folder for saving diagnostic data"""
         if self._output_folder is not None:
             return self._output_folder
 
@@ -175,7 +183,7 @@ class Config(PrettyPrinter):
 
     @property
     def dry_run(self) -> bool:
-        """`DEFAULT` | Whether this run is a dry run i.e. don't write out where possible"""
+        """`DEFAULT = True` | Whether this run is a dry run i.e. don't write out where possible"""
         if self._dry_run is not None:
             return self._dry_run
 
@@ -211,59 +219,6 @@ class ConfigLibrary(PrettyPrinter, ABC):
         return {"library": self.library}
 
 
-class ConfigPlaylists(PrettyPrinter):
-    """
-    Set the settings for the playlists from a config file and terminal arguments.
-    See :py:class:`Config` for more documentation regarding initialisation and operation.
-
-    :param file: The loaded config from the config file.
-    """
-
-    def __init__(self, file: dict[Any, Any], config: Self | None = None, override: bool = False):
-        self._cfg = file.get("playlists", {})
-
-        self._include: tuple[str] | None = config.include if config and override else None
-        self._exclude: tuple[str] | None = config.exclude if config and override else None
-        self._filter: dict[str, tuple[str]] | None = config.filter if config and override else None
-
-    @property
-    def include(self) -> tuple[str]:
-        """`OPTIONAL` | The playlists to include when loading the remote library."""
-        if self._include is not None:
-            return self._include
-        self._include = to_collection(self._cfg.get("include"), tuple) or ()
-        return self._include
-
-    @property
-    def exclude(self) -> tuple[str]:
-        """`OPTIONAL` | The playlists to exclude when loading the remote library."""
-        if self._exclude is not None:
-            return self._exclude
-        self._exclude = to_collection(self._cfg.get("exclude"), tuple) or ()
-        return self._exclude
-
-    @property
-    def filter(self) -> dict[str, tuple[str]]:
-        """`OPTIONAL` | Tags and values of items to filter out of every playlist when loading"""
-        if self._filter is not None:
-            return self._filter
-
-        self._filter = {}
-        for tag, values in self._cfg.get("filter", {}).items():
-            if tag not in TagField.__tags__ or not values:
-                continue
-            self._filter[tag] = to_collection(values, tuple)
-
-        return self._filter
-
-    def as_dict(self) -> dict[str, Any]:
-        return {
-            "include": self.include,
-            "exclude": self.exclude,
-            "filter": self.filter,
-        }
-
-
 class ConfigFilter(PrettyPrinter):
     """
     Set the settings for granular filtering from a config file and terminal arguments.
@@ -273,7 +228,7 @@ class ConfigFilter(PrettyPrinter):
     """
 
     def __init__(self, file: dict[Any, Any], config: Self | None = None, override: bool = False):
-        self._cfg = file.get("filter", {})
+        self._cfg = file.get("filter", file)
 
         self.include = config.include if config and override else None
         if not self.include:
@@ -304,18 +259,51 @@ class ConfigFilter(PrettyPrinter):
         """
 
         def __init__(self, name: str, file: dict[Any, Any], config: Self | None = None, override: bool = False):
-            self._cfg = file.get(name, {})
+            self._cfg: dict | list = file.get(name, {})
 
+            self.available: Collection[str] | None = None
+
+            self._values: tuple[str] | None = config.values if config and override else None
             self._prefix: str | None = config.prefix if config and override else None
             self._start: str | None = config.start if config and override else None
             self._stop: str | None = config.stop if config and override else None
+
+        @property
+        def values(self) -> tuple[str] | None:
+            """
+            `DEFAULT = ()` | The filtered values.
+            Filters ``available`` values based on ``prefix``, ``start``, and ``stop`` as applicable.
+            ``available`` values are taken from the config if the config is a list of strings.
+            """
+            if self._values is not None:
+                return self._values
+
+            is_str_collection = isinstance(self._cfg, Collection) and all(isinstance(v, str) for v in self._cfg)
+            if self.available:
+                values = self.available
+            elif not isinstance(self._cfg, Mapping) and is_str_collection:
+                values = self._cfg
+            elif isinstance(self._cfg, Mapping) and self._cfg.get("values"):
+                values = self._cfg["values"]
+            else:
+                values = ()
+
+            if self.prefix:
+                values = [value for value in self.available if value.startswith(self.prefix)]
+            if self.start:
+                values = [value for value in self.available if value >= self.start]
+            if self.stop:
+                values = [value for value in self.available if value <= self.stop]
+
+            self._values = to_collection(values, tuple)
+            return self._values
 
         @property
         def prefix(self) -> str | None:
             """`OPTIONAL` | The prefix of the items to match on."""
             if self._prefix is not None:
                 return self._prefix
-            self._prefix = self._cfg.get("prefix")
+            self._prefix = self._cfg.get("prefix") if isinstance(self._cfg, Mapping) else None
             return self._prefix
 
         @property
@@ -323,7 +311,7 @@ class ConfigFilter(PrettyPrinter):
             """`OPTIONAL` | The exact name for the first item to match on."""
             if self._start is not None:
                 return self._start
-            self._start = self._cfg.get("start")
+            self._start = self._cfg.get("start") if isinstance(self._cfg, Mapping) else None
             return self._start
 
         @property
@@ -332,15 +320,54 @@ class ConfigFilter(PrettyPrinter):
             if self._stop is not None:
                 return self._stop
 
-            self._stop = self._cfg.get("stop")
+            self._stop = self._cfg.get("stop") if isinstance(self._cfg, Mapping) else None
             return self._stop
+
+        def __iter__(self):
+            return (value for value in self.values)
+
+        def __len__(self):
+            return len(self.values)
 
         def as_dict(self) -> dict[str, Any]:
             return {
+                "values": self.values,
+                "available": self.available,
                 "prefix": self.prefix,
                 "start": self.start,
                 "stop": self.stop,
             }
+
+
+class ConfigPlaylists(ConfigFilter):
+    """
+    Set the settings for the playlists from a config file and terminal arguments.
+    See :py:class:`Config` for more documentation regarding initialisation and operation.
+
+    :param file: The loaded config from the config file.
+    """
+
+    def __init__(self, file: dict[Any, Any], config: Self | None = None, override: bool = False):
+        super().__init__(file=file.get("playlists", {}), config=config, override=override)
+
+        self._filter: dict[str, tuple[str]] | None = config.filter if config and override else None
+
+    @property
+    def filter(self) -> dict[str, tuple[str]]:
+        """`DEFAULT = {}` | Tags and values of items to filter out of every playlist when loading"""
+        if self._filter is not None:
+            return self._filter
+
+        self._filter = {}
+        for tag, values in self._cfg.get("filter", {}).items():
+            if tag not in TagField.__tags__ or not values:
+                continue
+            self._filter[tag] = to_collection(values, tuple)
+
+        return self._filter
+
+    def as_dict(self) -> dict[str, Any]:
+        return super().as_dict() | {"filter": self.filter}
 
 
 class ConfigReports(PrettyPrinter):
@@ -526,7 +553,7 @@ class ConfigLocal(ConfigLibrary):
 
     @property
     def other_folders(self) -> tuple[str]:
-        """`OPTIONAL` | The paths of other folder to use for replacement when processing local libraries"""
+        """`DEFAULT = ()` | The paths of other folder to use for replacement when processing local libraries"""
         if self._other_folders is not None:
             return self._other_folders
         self._other_folders = to_collection(self._cfg_paths.get("other"), tuple) or ()
@@ -556,7 +583,7 @@ class ConfigLocal(ConfigLibrary):
 
         @property
         def tags(self) -> tuple[LocalTrackField, ...]:
-            """`OPTIONAL` | The tags to be updated."""
+            """`DEFAULT = (<all LocalTrackFields>)` | The tags to be updated."""
             if self._tags is not None:
                 return self._tags
             self._tags = _get_local_track_tags(self._cfg.get("tags"))
@@ -624,20 +651,23 @@ class ConfigRemote(ConfigLibrary):
     :param file: The loaded config from the config file.
     """
 
-    def __init__(self, file: dict[Any, Any], config: Self | None = None, override: bool = False):
+    def __init__(self, name: str, file: dict[Any, Any], config: Self | None = None, override: bool = False):
         self._cfg = file
 
-        self.api = config.api if config and override else None
-        if not self.api:
-            if self._cfg["kind"] == "spotify" or self._cfg["kind"] == SPOTIFY_SOURCE_NAME:
-                self.name = SPOTIFY_SOURCE_NAME
-                config_api = config.api if config and isinstance(config.api, self.ConfigSpotify) else None
-                self.api = self.ConfigSpotify(file=self._cfg, config=config_api, override=override)
-            else:
-                raise ConfigError(
-                    "No configuration found for this remote source type '{key}'. Available: {value}",
-                    key=self._cfg["kind"], value=file,
-                )
+        api_config_map = {
+            SPOTIFY_SOURCE_NAME: self.ConfigSpotify
+        }
+
+        self.name = name
+        if self.name not in api_config_map:
+            raise ConfigError(
+                "No configuration found for this remote source type '{key}'. Available: {value}. "
+                f"Valid source types: {", ".join(api_config_map)}",
+                key=self._cfg["kind"], value=file,
+            )
+
+        config_api = config.api if config and isinstance(config.api, api_config_map[self.name]) else None
+        self.api = api_config_map[self.name](file=self._cfg, config=config_api, override=override)
 
         valid_library = config and isinstance(config.library, REMOTE_CONFIG[self.name].library)
         self._library = config.library if override and valid_library else None
@@ -703,6 +733,7 @@ class ConfigRemote(ConfigLibrary):
             "wrangler": bool(self.wrangler.remote_source),  # just check it loaded
             "checker": self.checker,
             "searcher": self.searcher,
+            "playlists": self.playlists.as_dict(),
         } | super().as_dict()
 
     class ConfigPlaylists(ConfigPlaylists):
@@ -741,7 +772,7 @@ class ConfigRemote(ConfigLibrary):
 
             @property
             def kind(self) -> str:
-                """`OPTIONAL` | Sync option for the remote playlist."""
+                """`DEFAULT = 'new'` | Sync option for the remote playlist."""
                 if self._kind is not None:
                     return self._kind
 
@@ -755,7 +786,7 @@ class ConfigRemote(ConfigLibrary):
 
             @property
             def reload(self) -> bool:
-                """`OPTIONAL` | Reload playlists after synchronisation."""
+                """`DEFAULT = True` | Reload playlists after synchronisation."""
                 if self._reload is not None:
                     return self._reload
                 self._reload = self._cfg.get("reload", True)
@@ -780,6 +811,7 @@ class ConfigRemote(ConfigLibrary):
 
             self._api: RemoteAPI | None = config.api if config and override else None
             self._token_path: str | None = config.token_path if config and override else None
+            self._cache_path: str | None = config.cache_path if config and override else None
             self._use_cache: bool | None = config.use_cache if config and override else None
 
         @property
@@ -790,16 +822,24 @@ class ConfigRemote(ConfigLibrary):
 
         @property
         def token_path(self) -> str:
-            """`DEFAULT` | The client secret to use when authorising access to the API."""
+            """`DEFAULT = 'token.json'` | The client secret to use when authorising access to the API."""
             if self._token_path is not None:
                 return self._token_path
             self._token_path = self._cfg.get("token_path", "token.json")
             return self._token_path
 
         @property
+        def cache_path(self) -> str:
+            """`DEFAULT = '.api_cache'` | The path of the cache to use when using cached requests for the API"""
+            if self._cache_path is not None:
+                return self._cache_path
+            self._cache_path = self._cfg.get("cache_path", '.api_cache')
+            return self._cache_path
+
+        @property
         def use_cache(self) -> bool:
             """
-            `DEFAULT` | When True, use requests cache where possible when making API calls.
+            `DEFAULT = True` | When True, use requests cache where possible when making API calls.
             When False, always make calls to the API, refreshing any cached data in the process.
             """
             if self._use_cache is not None:
@@ -841,7 +881,7 @@ class ConfigRemote(ConfigLibrary):
 
         @property
         def scopes(self) -> tuple[str]:
-            """`DEFAULT` | The scopes to use when authorising access to the API."""
+            """`DEFAULT = ()` | The scopes to use when authorising access to the API."""
             if self._scopes is not None:
                 return self._scopes
             self._scopes = to_collection(self._cfg.get("scopes"), tuple) or ()
@@ -849,7 +889,9 @@ class ConfigRemote(ConfigLibrary):
 
         @property
         def user_auth(self) -> bool:
-            """`DEFAULT` | When True, authorise user access to the API. When False, only authorise basic access."""
+            """
+            `DEFAULT = False` | When True, authorise user access to the API. When False, only authorise basic access.
+            """
             if self._user_auth is not None:
                 return self._user_auth
             self._user_auth = self._cfg.get("user_auth", False)
@@ -861,17 +903,13 @@ class ConfigRemote(ConfigLibrary):
                 # noinspection PyTypeChecker
                 return self._api
 
-            args = deepcopy(SPOTIFY_API_AUTH_USER if self.user_auth else SPOTIFY_API_AUTH_BASIC)
-            format_map = {
-                "client_id": self.client_id,
-                "client_secret": self.client_secret,
-                "client_base64": base64.b64encode(f"{self.client_id}:{self.client_secret}".encode()).decode(),
-                "token_file_path": self.token_path,
-                "scopes": " ".join(self.scopes),
-            }
-            safe_format_map(args, format_map=format_map)
-
-            self._api = SpotifyAPI(**args, cache_path=None)
+            self._api = SpotifyAPI(
+                client_id=self.client_id,
+                client_secret=self.client_secret,
+                scopes=self.scopes,
+                token_file_path=self.token_path,
+                cache_path=self.cache_path,
+            )
             return self._api
 
         def as_dict(self) -> dict[str, Any]:
@@ -885,11 +923,10 @@ class ConfigRemote(ConfigLibrary):
 
 if __name__ == "__main__":
     import logging.config
-    import json
 
     from syncify.utils.logger import SyncifyLogger
 
-    conf = Config()
+    conf = Config(key="general")
 
     # noinspection PyProtectedMember
     config_file = join(conf._package_root, "logging.yml")
@@ -903,5 +940,6 @@ if __name__ == "__main__":
     logging.config.dictConfig(log_config)
 
     conf.remote["spotify"].api.api.authorise()
+    print(conf.local["main"])
     print(conf)
-    print(json.dumps(conf.json(), indent=2))
+    # print(json.dumps(conf.json(), indent=2))

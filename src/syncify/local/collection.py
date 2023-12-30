@@ -9,7 +9,7 @@ from typing import Any
 
 from syncify.abstract import Item
 from syncify.abstract.collection import ItemCollection
-from syncify.abstract.enums import FieldCombined, TagField
+from syncify.abstract.enums import Fields, TagField
 from syncify.abstract.object import Track, Library, Folder, Album, Artist, Genre
 from syncify.local._base import LocalItem
 from syncify.local.exception import LocalCollectionError
@@ -139,7 +139,7 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
             )
         self.logger.print(STAT)
 
-    def merge_tracks(self, tracks: Collection[Track], tags: UnitIterable[TagField] = FieldCombined.ALL) -> None:
+    def merge_tracks(self, tracks: Collection[Track], tags: UnitIterable[TagField] = Fields.ALL) -> None:
         """
         Merge this collection with another collection or list of items
         by performing an inner join on a given set of tags
@@ -148,7 +148,7 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
         :param tags: List of tags to merge on.
         """
         # noinspection PyTypeChecker
-        tag_names = set(TagField.__tags__) if tags == FieldCombined.ALL else set(TagField.to_tags(tags))
+        tag_names = set(TagField.__tags__) if tags == Fields.ALL else set(TagField.to_tags(tags))
 
         if isinstance(self, Library):  # log status message and use progress bar for libraries
             self.logger.info(
@@ -159,7 +159,7 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
             tracks = self.logger.get_progress_bar(iterable=tracks, desc="Merging library", unit="tracks")
 
         tags = to_collection(tags)
-        if FieldCombined.IMAGES in tags or FieldCombined.ALL in tags:
+        if Fields.IMAGES in tags or Fields.ALL in tags:
             tag_names.add("image_links")
             tag_names.add("has_image")
 

@@ -103,6 +103,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
         tags: list[LocalTrackField] = to_collection(tags, list)
         if LocalTrackField.ALL in tags:
             tags = LocalTrackField.all()
+        print(tags)
 
         # all chunks below follow the same basic structure
         # - check if any of the conditionals for this tag type are met
@@ -142,7 +143,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
             if any(conditionals) and self._write_album_artist(dry_run):
                 updated |= {LocalTrackField.ALBUM_ARTIST: [i for i, c in enumerate(conditionals) if c][0]}
 
-        if LocalTrackField.TRACK in tags:
+        if any(f in tags for f in {LocalTrackField.TRACK, LocalTrackField.TRACK_NUMBER, LocalTrackField.TRACK_TOTAL}):
             conditionals = {
                 file.track_number is None and file.track_total is None and
                 (self.track_number is not None or self.track_total is not None),
@@ -177,7 +178,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
             if any(conditionals) and self._write_key(dry_run):
                 updated |= {LocalTrackField.KEY: [i for i, c in enumerate(conditionals) if c][0]}
 
-        if LocalTrackField.DISC in tags:
+        if any(f in tags for f in {LocalTrackField.DISC, LocalTrackField.DISC_NUMBER, LocalTrackField.DISC_TOTAL}):
             conditionals = {
                 file.disc_number is None and file.disc_total is None and
                 (self.disc_number is not None or self.disc_total is not None),

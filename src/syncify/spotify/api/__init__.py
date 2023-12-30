@@ -1,1 +1,1 @@
-from ._api import SPOTIFY_API_AUTH_BASIC, SPOTIFY_API_AUTH_USER, SpotifyAPI
+from ._api import SpotifyAPI

@@ -5,7 +5,7 @@ from random import shuffle
 from typing import Any, Self
 
 from syncify.abstract import Item
-from syncify.abstract.enums import SyncifyEnum, Field, FieldCombined
+from syncify.abstract.enums import SyncifyEnum, Field, Fields
 from syncify.local.exception import FieldError
 from syncify.processors.base import MusicBeeProcessor
 from syncify.utils import UnitSequence, UnitIterable
@@ -20,8 +20,8 @@ def _get_field_from_code(field_code: int) -> Field | None:
     """
     if field_code == 0:
         return
-    elif field_code in {x.value for x in FieldCombined.all()}:
-        return FieldCombined.from_value(field_code)[0]
+    elif field_code in {x.value for x in Fields.all()}:
+        return Fields.from_value(field_code)[0]
     raise FieldError(f"Field code not recognised", field=field_code)
 
 
@@ -62,10 +62,10 @@ class ItemSorter(MusicBeeProcessor):
     # define custom sort codes
     _custom_sort: dict[int, Mapping[Field, bool]] = {
         6: {
-            FieldCombined.ALBUM: False,
-            FieldCombined.DISC_NUMBER: False,
-            FieldCombined.TRACK_NUMBER: False,
-            FieldCombined.FILENAME: False
+            Fields.ALBUM: False,
+            Fields.DISC_NUMBER: False,
+            Fields.TRACK_NUMBER: False,
+            Fields.FILENAME: False
         }
     }
     # TODO: implement field_code 78 - manual order according to MusicBee library file.

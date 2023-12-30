@@ -3,7 +3,6 @@ from collections.abc import Mapping, Iterable
 from datetime import datetime as dt
 from datetime import timedelta
 from http import HTTPStatus
-from os.path import dirname, join
 from time import sleep
 from typing import Any
 
@@ -12,8 +11,6 @@ from requests_cache import CachedSession
 
 from syncify.api._authorise import APIAuthoriser
 from syncify.api.exception import APIError
-
-_DEFAULT_CACHE_PATH = join(dirname(dirname(dirname(__file__))), ".api_cache")
 
 
 class RequestHandler(APIAuthoriser):
@@ -28,7 +25,7 @@ class RequestHandler(APIAuthoriser):
     :param auth_kwargs: The authorisation kwargs to be passed to :py:class:`APIAuthoriser`.
     """
 
-    # __slots__ = "session"
+    __slots__ = ("session", "__dict__")
 
     backoff_start = 0.5
     backoff_factor = 2
@@ -50,9 +47,7 @@ class RequestHandler(APIAuthoriser):
         """
         return sum(self.backoff_start * self.backoff_factor ** i for i in range(self.backoff_count + 1))
 
-    def __init__(
-            self, cache_path: str | None = _DEFAULT_CACHE_PATH, cache_expiry=timedelta(weeks=4), **auth_kwargs
-    ):
+    def __init__(self, cache_path: str | None = ".api_cache", cache_expiry=timedelta(weeks=4), **auth_kwargs):
         super().__init__(**auth_kwargs)
 
         self.session: CachedSession | Session

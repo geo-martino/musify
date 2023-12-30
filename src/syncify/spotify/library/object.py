@@ -184,7 +184,7 @@ class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
         self._check_for_api()
 
         # reload with enriched data
-        response = self.api.get(self.url, use_cache=use_cache, log_pad=self._url_pad)
+        response = self.api.handler.get(self.url, use_cache=use_cache, log_pad=self._url_pad)
         self.api.get_items(response["album"], kind=RemoteObjectType.ALBUM, extend=False, use_cache=use_cache)
         self.api.get_items(response["artists"], kind=RemoteObjectType.ARTIST, use_cache=use_cache)
         self.api.get_tracks_extra(response, features=True, use_cache=use_cache)
@@ -293,7 +293,7 @@ class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[Spot
     :param response: The Spotify API JSON response
     """
 
-    __slots__ = "_tracks"
+    __slots__ = ("_tracks",)
 
     @staticmethod
     def _validate_item_type(items: Any | Iterable[Any]) -> bool:
@@ -509,6 +509,8 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTra
 class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyAlbum]):
     """Extracts key ``artist`` data from a Spotify API JSON response."""
 
+    __slots__ = ("_albums",)
+
     @staticmethod
     def _validate_item_type(items: Any | Iterable[Any]) -> bool:
         if isinstance(items, Iterable):
@@ -587,7 +589,7 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
     ) -> None:
         self._check_for_api()
 
-        response = self.api.get(url=self.url, use_cache=use_cache, log_pad=self._url_pad)
+        response = self.api.handler.get(url=self.url, use_cache=use_cache, log_pad=self._url_pad)
         if extend_albums:
             self.api.get_artist_albums(response, use_cache=use_cache)
         if extend_albums and extend_tracks:

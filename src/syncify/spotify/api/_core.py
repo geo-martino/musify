@@ -44,8 +44,8 @@ class SpotifyAPICore(SpotifyAPIBase, metaclass=ABCMeta):
         url = self.convert(id_, kind=kind, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
         limit = limit_value(limit, floor=1, ceil=50)
 
-        name = self.get(url, params={"limit": limit}, log_pad=43)["name"]
-        response = self.get(f"{url}/{key}s", params={"limit": limit}, log_pad=43)
+        name = self.handler.get(url, params={"limit": limit}, log_pad=43)["name"]
+        response = self.handler.get(f"{url}/{key}s", params={"limit": limit}, log_pad=43)
 
         i = 0
         while response.get("next") or i < response["total"]:  # loop through each page, printing data in blocks of 20
@@ -62,7 +62,7 @@ class SpotifyAPICore(SpotifyAPIBase, metaclass=ABCMeta):
                 self.print_item(i=i, name=track["name"], uri=track["uri"], length=length, total=response["total"])
 
             if response["next"]:
-                response = self.get(response["next"], params={"limit": limit}, use_cache=use_cache)
+                response = self.handler.get(response["next"], params={"limit": limit}, use_cache=use_cache)
             print()
 
     ###########################################################################
@@ -74,7 +74,7 @@ class SpotifyAPICore(SpotifyAPIBase, metaclass=ABCMeta):
 
         :param update_user_data: When True, update the ``_user_data`` stored in this API object.
         """
-        r = self.get(url=f"{self.api_url_base}/me", use_cache=True, log_pad=71)
+        r = self.handler.get(url=f"{self.api_url_base}/me", use_cache=True, log_pad=71)
         if update_user_data:
             self._user_data = r
         return r
@@ -96,7 +96,7 @@ class SpotifyAPICore(SpotifyAPIBase, metaclass=ABCMeta):
 
         url = f"{self.api_url_base}/search"
         params = {'q': query, "type": kind.name.casefold(), "limit": limit_value(limit, floor=1, ceil=50)}
-        r = self.get(url, params=params, use_cache=use_cache)
+        r = self.handler.get(url, params=params, use_cache=use_cache)
 
         if "error" in r:
             self.logger.error(f"{'ERROR':<7}: {url:<43} | Query: {query} | {r['error']}")
