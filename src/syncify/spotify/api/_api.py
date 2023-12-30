@@ -8,7 +8,7 @@ from syncify.spotify.api._playlist import SpotifyAPIPlaylists
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 
 # non-user authenticated access
-API_AUTH_BASIC = {
+SPOTIFY_API_AUTH_BASIC = {
     "auth_args": {
         "url": f"{URL_AUTH}/api/token",
         "data": {
@@ -35,7 +35,7 @@ API_AUTH_BASIC = {
 }
 
 # user authenticated access with scopes
-API_AUTH_USER = {
+SPOTIFY_API_AUTH_USER = {
     "auth_args": {
         "url": f"{URL_AUTH}/api/token",
         "data": {
@@ -133,9 +133,9 @@ if __name__ == "__main__":
             "playlist-read-private"
         ]),
     }
-    safe_format_map(API_AUTH_USER, format_map=format_map)
+    safe_format_map(SPOTIFY_API_AUTH_USER, format_map=format_map)
 
-    api = SpotifyAPI(**API_AUTH_USER, cache_path=None)
+    api = SpotifyAPI(**SPOTIFY_API_AUTH_USER, cache_path=None)
     api.authorise(force_new=False)
 
     print(api.get_self())

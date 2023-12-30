@@ -88,8 +88,8 @@ class M3U(LocalPlaylist):
         self._validate_type(path)
 
         if exists(path):  # load from file
-            with open(path, "r", encoding="utf-8") as f:
-                paths = [line.strip() for line in f]
+            with open(path, "r", encoding="utf-8") as file:
+                paths = [line.strip() for line in file]
         else:  # generating a new M3U
             paths = [track.path for track in tracks]
 
@@ -133,13 +133,13 @@ class M3U(LocalPlaylist):
         os.makedirs(dirname(self.path), exist_ok=True)
 
         if not dry_run:
-            with open(self.path, "w", encoding="utf-8") as f:
+            with open(self.path, "w", encoding="utf-8") as file:
                 # reassign any original folder found by the matcher and output
                 paths = self._prepare_paths_for_output(tuple(track.path for track in self.tracks))
-                f.writelines(path.strip() + '\n' for path in paths)
+                file.writelines(path.strip() + '\n' for path in paths)
 
-            with open(self.path, "r", encoding="utf-8") as f:  # get list of paths that were saved for logging
-                final_paths = {line.rstrip().casefold() for line in f if line.rstrip()}
+            with open(self.path, "r", encoding="utf-8") as file:  # get list of paths that were saved for logging
+                final_paths = {line.rstrip().casefold() for line in file if line.rstrip()}
         else:  # use current list of tracks as a proxy of paths that were saved for logging
             final_paths = {track.path.casefold() for track in self._tracks}
 

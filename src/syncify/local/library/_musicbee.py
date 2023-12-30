@@ -506,5 +506,5 @@ class XMLLibraryParser:
         output = output.replace("'", '"')
 
         if not dry_run:
-            with open(self.path, "w", encoding="utf-8") as f:
-                f.write(output.rstrip('\n') + '\n')
+            with open(self.path, "w", encoding="utf-8") as file:
+                file.write(output.rstrip('\n') + '\n')

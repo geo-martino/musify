@@ -146,6 +146,9 @@ class SyncResultRemotePlaylist(Result):
     final: int
 
 
+PLAYLIST_SYNC_KINDS = Literal["new", "refresh", "sync"]
+
+
 class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], metaclass=ABCMeta):
     """Extracts key ``playlist`` data from a remote API JSON response."""
 
@@ -214,7 +217,7 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
     def sync(
             self,
             items: Iterable[Item] = (),
-            kind: Literal["new", "refresh", "sync"] = "new",
+            kind: PLAYLIST_SYNC_KINDS = "new",
             reload: bool = True,
             dry_run: bool = True,
     ) -> SyncResultRemotePlaylist:

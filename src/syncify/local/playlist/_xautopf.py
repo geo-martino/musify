@@ -113,8 +113,8 @@ class XAutoPF(LocalPlaylist):
                 "This program is not yet able to create this playlist type from scratch."
             )
 
-        with open(path, "r", encoding="utf-8") as f:
-            self.xml: dict[str, Any] = xmltodict.parse(f.read())
+        with open(path, "r", encoding="utf-8") as file:
+            self.xml: dict[str, Any] = xmltodict.parse(file.read())
 
         self._description = self.xml["SmartPlaylist"]["Source"]["Description"]
 
@@ -217,6 +217,6 @@ class XAutoPF(LocalPlaylist):
 
     def _save_xml(self) -> None:
         """Save XML representation of the playlist"""
-        with open(self.path, 'w', encoding="utf-8") as f:
+        with open(self.path, 'w', encoding="utf-8") as file:
             xml_str = xmltodict.unparse(self.xml, pretty=True, short_empty_elements=True)
-            f.write(xml_str.replace("/>", " />").replace('\t', '  '))
+            file.write(xml_str.replace("/>", " />").replace('\t', '  '))

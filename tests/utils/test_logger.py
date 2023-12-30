@@ -10,7 +10,7 @@ from random import choice
 
 import pytest
 
-from syncify.utils.logger import SyncifyLogger, INFO_EXTRA, REPORT, STAT
+from syncify.utils.logger import SyncifyLogger, INFO_EXTRA, REPORT, STAT, LOGGING_DT_FORMAT
 from syncify.utils.logger import format_full_func_name, LogFileFilter, CurrentTimeRotatingFileHandler
 
 
@@ -169,7 +169,7 @@ def test_file_filter():
 def test_current_time_file_handler_namer():
     # no filename given
     handler = CurrentTimeRotatingFileHandler(delay=True)
-    assert handler.filename == handler.dt.strftime(handler.dt_format) + ".log"
+    assert handler.filename == handler.dt.strftime(LOGGING_DT_FORMAT) + ".log"
 
     # no format part given
     handler = CurrentTimeRotatingFileHandler(filename="test.log", delay=True)
@@ -181,9 +181,9 @@ def test_current_time_file_handler_namer():
     base_str = sep.join(base_parts)
 
     handler = CurrentTimeRotatingFileHandler(filename=base_str, delay=True)
-    assert handler.filename == os.path.sep.join(base_parts).format(handler.dt.strftime(handler.dt_format))
+    assert handler.filename == os.path.sep.join(base_parts).format(handler.dt.strftime(LOGGING_DT_FORMAT))
 
-    base_parts[1] = base_parts[1].format(handler.dt.strftime(handler.dt_format))
+    base_parts[1] = base_parts[1].format(handler.dt.strftime(LOGGING_DT_FORMAT))
     assert sep not in handler.filename
     assert handler.filename.split(os.path.sep) == base_parts
 
@@ -192,11 +192,10 @@ def test_current_time_file_handler_namer():
 def log_paths(tmp_path: str) -> list[str]:
     """Generate a set of log files and return their paths"""
     dt_now = datetime.now()
-    dt_format = CurrentTimeRotatingFileHandler.dt_format
 
     paths = []
     for i in range(1, 50, 2):
-        dt_str = (dt_now - timedelta(hours=i)).strftime(dt_format)
+        dt_str = (dt_now - timedelta(hours=i)).strftime(LOGGING_DT_FORMAT)
         path = join(tmp_path, dt_str + ".log")
         paths.append(path)
 
@@ -213,7 +212,7 @@ def test_current_time_file_handler_rotator_time(log_paths: list[str], tmp_path: 
     for dt in handler.removed:
         assert dt < handler.dt - timedelta(hours=10)
     for path in glob(join(tmp_path, "*")):
-        dt = datetime.strptime(splitext(basename(path))[0], handler.dt_format)
+        dt = datetime.strptime(splitext(basename(path))[0], LOGGING_DT_FORMAT)
         assert dt >= handler.dt - timedelta(hours=10)
 
 
@@ -226,7 +225,7 @@ def test_current_time_file_handler_rotator_combined(log_paths: list[str], tmp_pa
     handler = CurrentTimeRotatingFileHandler(filename=join(tmp_path, "{}.log"), when="h", interval=10, count=3)
 
     for path in glob(join(tmp_path, "*")):
-        dt = datetime.strptime(splitext(basename(path))[0], handler.dt_format)
+        dt = datetime.strptime(splitext(basename(path))[0], LOGGING_DT_FORMAT)
         assert dt >= handler.dt - timedelta(hours=10)
 
     assert len(glob(join(tmp_path, "*"))) <= 3

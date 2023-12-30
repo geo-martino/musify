@@ -19,9 +19,10 @@ def pytest_configure(config: pytest.Config):
     """Loads logging config"""
     config_file = join(dirname(dirname(__file__)), "logging.yml")
     with open(config_file, "r") as f:
-        config = yaml.full_load(f.read())
+        log_config = yaml.full_load(f)
+    log_config.pop("compact", False)
 
-    for formatter in config["formatters"].values():  # ensure ANSI colour codes in format are recognised
+    for formatter in log_config["formatters"].values():  # ensure ANSI colour codes in format are recognised
         formatter["format"] = formatter["format"].replace(r"\33", "\33")
 
     def remove_file_handler(c: dict[str, Any]) -> None:
@@ -34,8 +35,8 @@ def pytest_configure(config: pytest.Config):
             elif isinstance(v, dict):
                 remove_file_handler(v)
 
-    remove_file_handler(config)
-    logging.config.dictConfig(config)
+    remove_file_handler(log_config)
+    logging.config.dictConfig(log_config)
 
 
 @pytest.fixture

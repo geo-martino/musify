@@ -20,7 +20,7 @@ from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils.helpers import get_user_input, get_max_width, align_and_truncate
 from syncify.utils.logger import REPORT
 
-_ALLOW_KARAOKE_DEFAULT = RemoteItemSearcher.settings_items.allow_karaoke
+ALLOW_KARAOKE_DEFAULT = RemoteItemSearcher.settings_items.allow_karaoke
 
 
 @dataclass(frozen=True)
@@ -75,7 +75,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         """Stores the key object classes for a remote source."""
         raise NotImplementedError
 
-    def __init__(self, api: RemoteAPI, interval: int = 10, allow_karaoke: bool = _ALLOW_KARAOKE_DEFAULT):
+    def __init__(self, api: RemoteAPI, interval: int = 10, allow_karaoke: bool = ALLOW_KARAOKE_DEFAULT):
         super().__init__()
 
         self.interval = interval

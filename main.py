@@ -517,12 +517,13 @@ if __name__ == "__main__":
 
     config_file = join(dirname(dirname(__file__)), "logging.yml")
     with open(config_file, "r") as f:
-        config = yaml.full_load(f.read())
+        log_config = yaml.full_load(f)
+    SyncifyLogger.compact = log_config.pop("compact", False)
 
-    for formatter in config["formatters"].values():  # ensure ANSI colour codes in format are recognised
+    for formatter in log_config["formatters"].values():  # ensure ANSI colour codes in format are recognised
         formatter["format"] = formatter["format"].replace(r"\33", "\33")
 
-    logging.config.dictConfig(config)
+    logging.config.dictConfig(log_config)
     # noinspection PyTypeChecker
     file_handler: CurrentTimeRotatingFileHandler | None = logging.getHandlerByName("file")
 
@@ -624,3 +625,4 @@ if __name__ == "__main__":
 #  settings object should contain all settings as properties to be accessed by main
 #  main should never need to access the yaml dict config directly
 # TODO: review scope of functions/attributes/properties
+# TODO: PrettyPrinter prints too narrowly on deeply nested printers e.g. Config

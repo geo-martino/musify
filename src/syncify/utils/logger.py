@@ -15,6 +15,8 @@ from tqdm.std import tqdm as tqdm_std
 from syncify import PROGRAM_NAME
 from syncify.processors.time import TimeMapper
 
+LOGGING_DT_FORMAT = "%Y-%m-%d_%H.%M.%S"
+
 ###########################################################################
 ## Setup default Logger with extended levels
 ###########################################################################
@@ -209,8 +211,6 @@ class CurrentTimeRotatingFileHandler(logging.handlers.BaseRotatingHandler):
     :param delay: When True, the file opening is deferred until the first call to emit().
     :param errors: Used to determine how encoding errors are handled.
     """
-    dt_format: str = "%Y-%m-%d_%H.%M.%S"
-
     def __init__(
             self,
             filename: str | None = None,
@@ -223,7 +223,7 @@ class CurrentTimeRotatingFileHandler(logging.handlers.BaseRotatingHandler):
     ):
         self.dt = datetime.now()
 
-        dt_str = self.dt.strftime(self.dt_format)
+        dt_str = self.dt.strftime(LOGGING_DT_FORMAT)
         if not filename:
             filename = "{}.log"
         filename = filename.replace("\\", sep) if sep == "/" else filename.replace("/", sep)
@@ -263,7 +263,7 @@ class CurrentTimeRotatingFileHandler(logging.handlers.BaseRotatingHandler):
             too_many = self.count is not None and remaining >= self.count
 
             dt_part = path.removeprefix(prefix).removesuffix(suffix)
-            dt_file = datetime.strptime(dt_part, self.dt_format)
+            dt_file = datetime.strptime(dt_part, LOGGING_DT_FORMAT)
             too_old = self.delta is not None and dt_file < self.dt - self.delta
 
             if too_many or too_old:
