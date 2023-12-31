@@ -57,8 +57,11 @@ SPOTIFY_API_AUTH_ARGS = {
 class SpotifyAPI(SpotifyAPICore, SpotifyAPIItems, SpotifyAPIPlaylists, SpotifyDataWrangler):
     """
     Collection of endpoints for the Spotify API.
-    See :py:class:`RequestHandler` and :py:class:`APIAuthoriser`
-    for more info on which params to pass to authorise and execute requests.
+    See :py:class:`RequestHandler` for more info on optional params to pass as ``**kwargs``.
+
+    :param client_id: The client ID to use when authorising requests.
+    :param client_secret: The client secret to use when authorising requests.
+    :param scopes: The scopes to request access to.
     """
 
     items_key = "items"

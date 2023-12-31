@@ -4,10 +4,11 @@ import logging.config
 import logging.handlers
 import os
 import re
+import shutil
 import sys
 from datetime import datetime
 from glob import glob
-from os.path import join, dirname, splitext, split, basename, isfile, sep
+from os.path import join, dirname, splitext, split, basename, isfile, sep, isdir
 
 from tqdm.auto import tqdm as tqdm_auto
 from tqdm.std import tqdm as tqdm_std
@@ -42,11 +43,25 @@ class SyncifyLogger(logging.Logger):
         super().__init__(name=name, level=level)
 
         self._console_handlers = []
-        for handler in self.handlers:
+        for name in logging.getHandlerNames():
+            handler = logging.getHandlerByName(name)
             if not isinstance(handler, logging.StreamHandler):
                 continue
             if handler.stream == sys.stdout:
                 self._console_handlers.append(handler)
+
+        self._bars: list[tqdm_std] = []
+
+    # TODO: add test for this
+    @property
+    def file_paths(self) -> list[str]:
+        """Get a list of the paths of all file handlers for this logger"""
+        paths = []
+        for name in logging.getHandlerNames():
+            handler = logging.getHandlerByName(name)
+            if isinstance(handler, logging.FileHandler):
+                paths.append(handler.baseFilename)
+        return paths
 
     def addHandler(self, hdlr: logging.Handler):
         """Add the specified handler to this logger."""
@@ -89,17 +104,22 @@ class SyncifyLogger(logging.Logger):
         except OSError:
             cols = 120
 
-        return tqdm_auto(
-            # and self.verbosity >= 3
-            leave=kwargs.get("leave", all(h.level > logging.DEBUG for h in self._console_handlers)),
+        # determine to level of bar to generate
+        self._bars = [bar for bar in self._bars if bar.n < bar.total]
+        position = len(self._bars)
+
+        bar = tqdm_auto(
+            leave=kwargs.get("leave", all(h.level > logging.DEBUG for h in self._console_handlers) and position == 0),
             disable=kwargs.get("disable", False),
             file=sys.stdout,
             ncols=cols,
             colour=kwargs.get("colour", "blue"),
             smoothing=0.1,
-            position=None,
+            position=position,
             **{k: v for k, v in kwargs.items() if k not in preset_keys}
         )
+        self._bars.append(bar)
+        return bar
 
     def __copy__(self):
         """Do not copy logger"""
@@ -249,12 +269,12 @@ class CurrentTimeRotatingFileHandler(logging.handlers.BaseRotatingHandler):
         Removes files older than ``self.delta`` and the oldest files when number of files >= count
         until number of files <= count. ``formatted`` path is excluded from processing.
         """
-        log_folder = dirname(formatted)
-        if not log_folder:
+        folder = dirname(formatted)
+        if not folder:
             return
 
         # get current files present and prefix+suffix to remove when processing
-        paths = tuple(f for f in glob(join(log_folder, "*")) if isfile(f) and f != formatted)
+        paths = tuple(f for f in glob(join(folder, "*")) if f != formatted)
         prefix = unformatted.split("{")[0] if "{" in unformatted and "}" in unformatted else ""
         suffix = unformatted.split("}")[1] if "{" in unformatted and "}" in unformatted else ""
 
@@ -263,10 +283,18 @@ class CurrentTimeRotatingFileHandler(logging.handlers.BaseRotatingHandler):
             too_many = self.count is not None and remaining >= self.count
 
             dt_part = path.removeprefix(prefix).removesuffix(suffix)
-            dt_file = datetime.strptime(dt_part, LOGGING_DT_FORMAT)
-            too_old = self.delta is not None and dt_file < self.dt - self.delta
+            try:
+                dt_file = datetime.strptime(dt_part, LOGGING_DT_FORMAT)
+                too_old = self.delta is not None and dt_file < self.dt - self.delta
+            except ValueError:
+                dt_file = None
+                too_old = False
 
-            if too_many or too_old:
-                self.removed.append(dt_file)
-                os.remove(path)
+            is_empty = isdir(path) and not glob(join(path, "*"))
+
+            if too_many or too_old or is_empty:
+                os.remove(path) if isfile(path) else shutil.rmtree(path)
                 remaining -= 1
+
+                if dt_file and dt_file not in self.removed:
+                    self.removed.append(dt_file)

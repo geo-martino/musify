@@ -3,10 +3,11 @@ from typing import Any
 
 from dateutil.relativedelta import relativedelta
 
+from syncify.abstract.misc import PrettyPrinter
 from syncify.processors.base import DynamicProcessor, dynamicprocessormethod
 
 
-class TimeMapper(DynamicProcessor):
+class TimeMapper(DynamicProcessor, PrettyPrinter):
     """Map of time character representation to it unit conversion from seconds"""
 
     @classmethod
@@ -18,7 +19,6 @@ class TimeMapper(DynamicProcessor):
         self._set_processor_name(func)
 
     def __call__(self, value: Any):
-        """Run the mapping function"""
         return self.map(value)
 
     def map(self, value: Any):

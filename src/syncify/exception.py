@@ -35,13 +35,14 @@ class ConfigError(SyncifyError):
     """
     def __init__(self, message: str = "Could not process config", key: Any | None = None, value: Any | None = None):
         suffix = []
-        key = "->".join(key) if isinstance(key, Iterable) else key
+
+        key = "->".join(key) if isinstance(key, Iterable) and not isinstance(key, str) else key
         if key and "{key}" in message:
             message = message.format_map(SafeDict(key=key))
         elif key:
             suffix.append(f"key='{key}'")
 
-        value = ", ".join(value) if isinstance(value, Iterable) else value
+        value = ", ".join(value) if isinstance(value, Iterable) and not isinstance(value, str) else value
         if value and "{value}" in message:
             message = message.format_map(SafeDict(value=value))
         elif value:

@@ -1,6 +1,6 @@
 import os
 import random
-from collections.abc import Sequence
+from collections.abc import Sequence, Collection
 
 import pyfiglet
 
@@ -14,8 +14,9 @@ LOGO_FONTS = (
 LOGO_COLOURS = (91, 93, 92, 94, 96, 95)
 
 
-def print_logo(fonts: Sequence[str] = LOGO_FONTS, colours: list[int] = LOGO_COLOURS) -> None:
+def print_logo(fonts: Sequence[str] = LOGO_FONTS, colours: Collection[int] = LOGO_COLOURS) -> None:
     """Pretty print the Syncify logo in the centre of the terminal"""
+    colours = list(colours)
     if bool(random.getrandbits(1)):
         colours.reverse()
 

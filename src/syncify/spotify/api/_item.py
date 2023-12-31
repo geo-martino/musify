@@ -130,6 +130,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             key: str | None = None,
             unit: str | None = None,
             use_cache: bool = True,
+            leave_bar: bool = True,
     ) -> list[dict[str, Any]]:
         """
         Extend the items for a given ``items_block`` API response.
@@ -144,6 +145,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             (e.g. user's followed artists) and for logging.
         :param unit: The parent unit to use for logging.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param leave_bar: When a progress bar is displayed,
+            toggle whether this bar should continue to be displayed after the operation is finished.
         :return: API JSON responses for each item
         """
         if key and key.rstrip("s") + "s" in items_block:
@@ -159,11 +162,13 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         if "limit" not in items_block:
             items_block["limit"] = int(parse_qs(urlparse(items_block["next"]).query).get("limit", [50])[0])
 
-        # enable progress bar for longer calls
-        total = items_block["total"]
-        initial = len(items_block[self.items_key])
+        unit = unit or self.items_key
         bar = self.logger.get_progress_bar(
-            total=total, desc=f"Extending {unit or self.items_key}", unit=key or self.items_key, initial=initial
+            total=items_block["total"],
+            desc=f"Extending {unit}".rstrip("s") if unit[0].islower() else unit,
+            initial=len(items_block[self.items_key]),
+            unit=key or self.items_key,
+            leave=leave_bar
         )
 
         while items_block.get("next"):  # loop through each page
@@ -252,7 +257,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
 
         for result in bar:
             if result[key].get("next") or ("next" not in result[key] and result[key].get("href")):
-                self.extend_items(result[key], key=key, unit=unit, use_cache=use_cache)
+                self.extend_items(result[key], key=key, unit=unit, use_cache=use_cache, leave_bar=False)
 
         self._merge_results_to_input(original=values, results=results, ordered=True)
 
@@ -306,7 +311,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             unit_prefix = "current user's" if kind == RemoteObjectType.PLAYLIST else "current user's saved"
 
         initial = self.handler.get(url, params=params, use_cache=use_cache, log_pad=71)
-        results = self.extend_items(initial, key=unit, unit=f"{unit_prefix} {unit}", use_cache=use_cache)
+        results = self.extend_items(initial, key=unit, unit=f"Getting {unit_prefix} {unit}", use_cache=use_cache)
 
         self.logger.debug(f"{'DONE':<7}: {url:<43} | Retrieved {len(results):>6} {unit}")
 
@@ -489,7 +494,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         results: dict[str, dict[str, Any]] = {}
         for id_ in id_list:
             results[id_] = self.handler.get(url=url.format(id=id_), params=params, use_cache=use_cache)
-            self.extend_items(results[id_], key="albums", unit="artist albums", use_cache=use_cache)
+            self.extend_items(results[id_], key="albums", unit="artist albums", use_cache=use_cache, leave_bar=False)
             for album in results[id_]["items"]:  # add skeleton items block to album responses
                 album["tracks"] = {
                     "href": self.format_next_url(url=album["href"].split("?")[0] + "/tracks", offset=0, limit=50),

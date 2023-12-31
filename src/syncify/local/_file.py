@@ -104,7 +104,6 @@ def open_image(source: str | bytes | Path | Request) -> Image.Image:
 
     except (URLError, FileNotFoundError, UnidentifiedImageError):
         pass
-
     raise ImageLoadError(f"{source} | Failed to open image")
 
 

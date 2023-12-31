@@ -40,6 +40,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         expected = {name: [track.uri for track in pl] for name, pl in library.playlists.items()}
         assert library.backup_playlists() == expected
 
+    # TODO: add test for dry_run
     @staticmethod
     def assert_restore(library: RemoteLibrary, backup: Any):
         """Run test and assertions on restore_playlists functionality for given input backup data type"""
@@ -59,7 +60,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         name_new = next(name for name in backup_check if name not in library.playlists)
 
         library_test = deepcopy(library)
-        library_test.restore_playlists(playlists=backup)
+        library_test.restore_playlists(playlists=backup, dry_run=False)
         assert len(library_test.playlists[name_actual]) == len(backup_check[name_actual])
         assert len(library_test.playlists[name_actual]) != len(library.playlists[name_actual])
 
@@ -94,7 +95,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
 
         # Library
         backup_library = deepcopy(library)
-        backup_library.restore_playlists(playlists=backup_uri)
+        backup_library.restore_playlists(playlists=backup_uri, dry_run=False)
         self.assert_restore(library=library, backup=backup_library)
 
         # Collection[Playlist]
@@ -161,7 +162,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
 
         # Library
         playlists_library = deepcopy(library)
-        playlists_library.restore_playlists(playlists=playlists_tracks)
+        playlists_library.restore_playlists(playlists=playlists_tracks, dry_run=False)
         for name in list(playlists_library.playlists.keys()):
             if name not in playlists_tracks:
                 playlists_library.playlists.pop(name)

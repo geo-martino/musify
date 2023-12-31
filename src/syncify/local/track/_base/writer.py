@@ -103,7 +103,6 @@ class TagWriter(TagReader, metaclass=ABCMeta):
         tags: list[LocalTrackField] = to_collection(tags, list)
         if LocalTrackField.ALL in tags:
             tags = LocalTrackField.all()
-        print(tags)
 
         # all chunks below follow the same basic structure
         # - check if any of the conditionals for this tag type are met
@@ -153,7 +152,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
                 updated |= {LocalTrackField.TRACK: [i for i, c in enumerate(conditionals) if c][0]}
 
         if LocalTrackField.GENRES in tags:
-            conditionals = {file.genres is None and self.genres, replace and self.genres != file.genres}
+            conditionals = {file.genres is None and bool(self.genres), replace and self.genres != file.genres}
             if any(conditionals) and self._write_genres(dry_run):
                 updated |= {LocalTrackField.GENRES: [i for i, c in enumerate(conditionals) if c][0]}
 
@@ -196,7 +195,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
                 updated |= {LocalTrackField.COMPILATION: [i for i, c in enumerate(conditionals) if c][0]}
 
         if LocalTrackField.COMMENTS in tags:
-            conditionals = {file.comments is None and self.comments, replace and self.comments != file.comments}
+            conditionals = {file.comments is None and bool(self.comments), replace and self.comments != file.comments}
             if any(conditionals) and self._write_comments(dry_run):
                 updated |= {LocalTrackField.COMMENTS: [i for i, c in enumerate(conditionals) if c][0]}
 

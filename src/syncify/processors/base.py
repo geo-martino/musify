@@ -7,7 +7,7 @@ from syncify.abstract.misc import PrettyPrinter
 from syncify.processors.exception import ProcessorLookupError
 
 
-class Processor(PrettyPrinter, metaclass=ABCMeta):
+class Processor:
     """Generic base class for processors"""
 
 
@@ -90,7 +90,7 @@ class DynamicProcessor(Processor, metaclass=ABCMeta):
         """A custom formatter to apply to the dynamic processor name"""
         return name
 
-    def _set_processor_name(self, value: str, fail_on_empty: bool = True):
+    def _set_processor_name(self, value: str | None, fail_on_empty: bool = True):
         """Verifies and sets the condition name"""
         if value is None:
             if not fail_on_empty:
@@ -114,7 +114,7 @@ class DynamicProcessor(Processor, metaclass=ABCMeta):
         return self._processor_method(*args, **kwargs)
 
 
-class ItemProcessor(Processor, metaclass=ABCMeta):
+class ItemProcessor(Processor, PrettyPrinter, metaclass=ABCMeta):
     """Base object for processing tracks in a playlist"""
 
 

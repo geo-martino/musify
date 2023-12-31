@@ -212,6 +212,7 @@ class SpotifyCollectionLoader[T: SpotifyItem](SpotifyObjectLoaderMixin[T], Spoti
             items: Iterable[SpotifyTrack] = (),
             extend_tracks: bool = False,
             use_cache: bool = True,
+            leave_bar: bool = True,
             *args,
             **kwargs
     ) -> Self:
@@ -276,7 +277,11 @@ class SpotifyCollectionLoader[T: SpotifyItem](SpotifyObjectLoaderMixin[T], Spoti
             response[key][api.items_key].sort(key=lambda x: x["track_number"])
 
         extend_response = api.extend_items(
-            response[key], unit=kind.name.casefold() + "s", key=key, use_cache=use_cache
+            response[key],
+            unit=kind.name.casefold() + "s",
+            key=key.rstrip("s"),
+            use_cache=use_cache,
+            leave_bar=leave_bar
         )
         if extend_tracks:
             if kind == RemoteObjectType.PLAYLIST:

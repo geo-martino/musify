@@ -63,7 +63,6 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
         # make API calls
         self.api.get_items(playlists_data, kind=RemoteObjectType.PLAYLIST, use_cache=self.use_cache)
 
-        self.logger.print()
         self.logger.debug(f"Get {self.remote_source} playlists data: DONE\n")
         return playlists_data
 
@@ -84,7 +83,6 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
         )
         self.api.get_tracks(tracks_data, features=True, use_cache=self.use_cache)
 
-        self.logger.print()
         self.logger.debug(f"Load {self.remote_source} tracks data: DONE\n")
         return tracks_data
 

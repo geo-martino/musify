@@ -290,21 +290,6 @@ class ItemMatcher(ItemProcessor):
             match_on: UnitIterable[TagField] = ALL_TAG_FIELDS,
             allow_karaoke: bool = False,
     ) -> T | None:
-        """
-        Perform score match algorithm for a given item and its results.
-
-        :param source: Source item to compare against and find a match for.
-        :param results: Results for comparisons.
-        :param min_score: Only return the result as a match if the score is above this value.
-            Value will be limited to between 0.01 and 1.0.
-        :param max_score: Stop matching once this score has been reached.
-            Value will be limited to between 0.01 and 1.0.
-        :param match_on: List of tags to match on. Currently only the following fields are supported:
-            title, artist, album, year, length.
-        :param allow_karaoke: When True, items determined to be karaoke are allowed when matching added items.
-            Skip karaoke results otherwise. Karaoke items are identified using the ``karaoke_tags`` attribute.
-        :return: T. The item that matched best if found, None if no item matched conditions.
-        """
         return self.match(
             source=source,
             results=results,

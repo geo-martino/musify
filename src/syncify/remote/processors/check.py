@@ -3,7 +3,6 @@ from abc import ABCMeta, abstractmethod
 from collections import Counter
 from collections.abc import Mapping, Sequence, MutableSequence, Collection
 from dataclasses import dataclass, field
-from itertools import batched
 
 from syncify import PROGRAM_NAME
 from syncify.abstract import Item
@@ -146,6 +145,10 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         self.playlist_name_urls.clear()
         self.playlist_name_collection.clear()
 
+    # noinspection PyMethodOverriding
+    def __call__(self, collections: Collection[ItemCollection]) -> ItemCheckResult | None:
+        return self.check(collections=collections)
+
     def check(self, collections: Collection[ItemCollection]) -> ItemCheckResult | None:
         """
         Run the following operations to check a list of ItemCollections on the remote application.
@@ -173,29 +176,33 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
             f"for the current user: {self.api.user_name} \33[0m"
         )
 
-        collections_iter = batched(collections, self.interval)
-        bar = self.logger.get_progress_bar(iterable=collections_iter, desc="Creating temp playlists", unit="playlists")
-        total = (len(collections) // self.interval) + (len(collections) % self.interval > 0)
+        total = len(collections)
+        pages_total = (total // self.interval) + (total % self.interval > 0)
+        bar = self.logger.get_progress_bar(iterable=range(total), desc="Creating temp playlists", unit="playlists")
+
         self.skip = False
         self.quit = False
 
-        for page, collections in enumerate(bar):
+        collections_iter = (collection for collection in collections)
+        for page in range(1, pages_total + 1):
             # noinspection PyBroadException
             try:
-                for collection in collections:
+                for count, collection in enumerate(collections_iter, 1):
                     self._create_playlist(collection=collection)
+                    bar.update(1)
+                    if count >= self.interval:
+                        break
 
-                self._pause(page=page, total=total)
+                self._pause(page=page, total=pages_total)
                 if not self.quit:  # still run if skip is True
                     self._check_uri()
-            except Exception:  # some kind of logic error
-                self.logger.error(traceback.format_exc())
-                self.quit = True
             except KeyboardInterrupt:
-                self.logger.error("User triggered exit")
+                self.logger.error("User triggered exit with KeyboardInterrupt")
                 self.quit = True
-            except SystemExit:
-                self.quit = True
+            except BaseException as ex:  # delete playlists first before raising error
+                self.logger.error(traceback.format_exc())
+                self._delete_playlists()
+                raise ex
 
             self._delete_playlists()
             if self.quit or self.skip:  # quit check
@@ -240,7 +247,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         :param page: The current page number i.e. the current number of pauses that have happened so far.
         :param total: The total number of pages (pauses) that will occur in this run.
         """
-        header = [f"\t\33[1;94mTemporary playlists created. You may now check the songs in each playlist. \33[0m"]
+        header = [f"\n\t\33[1;94mTemporary playlists created. You may now check the songs in each playlist. \33[0m"]
         options = {
             "<Name of playlist>":
                 "Print position, item name, URI, and URL from given link of items as originally added to temp playlist",
@@ -255,11 +262,10 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
 
         current_input = "START"
         help_text = self._format_help_text(options=options, header=header)
-        progress_text = f"{(page // self.interval) + 1}/{total}"
 
         print("\n" + help_text)
         while current_input != '':  # while user has not hit return only
-            current_input = self._get_user_input(f"Enter ({progress_text})")
+            current_input = self._get_user_input(f"Enter ({page}/{total})")
             pl_names = [name for name in self.playlist_name_collection if current_input.casefold() in name.casefold()]
 
             if current_input == "":  # user entered no option, break loop and return

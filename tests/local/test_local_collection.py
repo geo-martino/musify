@@ -15,6 +15,7 @@ from tests.spotify.api.mock import SpotifyMock
 from tests.utils import random_str
 
 
+# TODO: add test for saving tracks from other collections
 class LocalCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
 
     @pytest.fixture

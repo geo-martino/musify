@@ -73,7 +73,6 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         self.api.load_user_data()
 
         self.logger.info(f"\33[1;95m ->\33[1;97m Loading {self.remote_source} library \33[0m")
-        self.logger.print()
 
         # get raw API responses
         playlists_data = self._get_playlists_data()
@@ -83,24 +82,26 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
             f"\33[1;95m  >\33[1;97m Processing {self.remote_source} library of "
             f"{len(tracks_data)} tracks and {len(playlists_data)} playlists \33[0m"
         )
+
         track_bar = self.logger.get_progress_bar(iterable=tracks_data, desc="Processing tracks", unit="tracks")
+        self._tracks = list(map(partial(self._object_cls.track, api=self.api), track_bar))
+
         playlists_bar = self.logger.get_progress_bar(
             iterable=playlists_data, desc="Processing playlists", unit="playlists"
         )
-
-        # process to remote objects
-        self._tracks = list(map(partial(self._object_cls.track, api=self.api), track_bar))
+        loader = self._object_cls.playlist
         playlists = [
-            self._object_cls.playlist.load(pl, api=self.api, items=self.tracks, use_cache=self.use_cache)
+            loader.load(pl, api=self.api, items=self.tracks, use_cache=self.use_cache, leave_bar=False)
             for pl in playlists_bar
         ]
         self._playlists = {pl.name: pl for pl in sorted(playlists, key=lambda pl: pl.name.casefold())}
 
-        self.logger.print()
         if log:
+            self.logger.print(REPORT)
             self.log_playlists()
             self.log_tracks()
 
+        self.logger.print()
         self.logger.debug(f"Load {self.remote_source} library: DONE\n")
 
     def _get_playlists_data(self) -> list[dict[str, Any]]:
@@ -161,17 +162,20 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
 
     def restore_playlists(
             self,
-            playlists: Library | Collection[Playlist] | Mapping[str, Iterable[Track]] | Mapping[str, Iterable[str]]
+            playlists: Library | Collection[Playlist] | Mapping[str, Iterable[Track]] | Mapping[str, Iterable[str]],
+            dry_run: bool = True,
     ) -> None:
         """
         Restore playlists from a backup to loaded playlist objects.
 
         This function does not sync the updated playlists with the remote library.
 
-        This function does create new playlists on the remote library for playlists
+        When ``dry_run`` is False, this function does create new playlists on the remote library for playlists
         given that do not exist in this Library.
 
         :param playlists: Values that represent the playlists to restore from.
+        :param dry_run: When True, do not create playlists
+            and just skip any playlists that are not already currently loaded.
         """
         # TODO: expand this function to support all RemoteItem types + update input type
         if isinstance(playlists, Library):  # get URIs from playlists in library
@@ -188,12 +192,14 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         uri_get = [uri for uri_list in playlists.values() for uri in uri_list if uri not in uri_tracks]
 
         if uri_get:
-            tracks_data = self.api.get_tracks(uri_get, features=True, use_cache=self.use_cache)
+            tracks_data = self.api.get_tracks(uri_get, features=False, use_cache=self.use_cache)
             tracks = list(map(partial(self._object_cls.track, api=self.api), tracks_data))
             uri_tracks |= {track.uri: track for track in tracks}
 
         for name, uri_list in playlists.items():
             playlist = self.playlists.get(name)
+            if not playlist and dry_run:  # skip on dry run
+                continue
             if not playlist:  # new playlist given, create it on remote first
                 playlist = self._object_cls.playlist.create(name=name, api=self.api)
 
@@ -238,7 +244,8 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
 
         log_kind = "adding new items only"
         if kind != "new":
-            log_kind = f"clearing {'all' if kind == 'refresh' else 'extra'} items from syncify.remote playlist first"
+            log_kind = 'all' if kind == 'refresh' else 'extra'
+            log_kind = f"clearing {log_kind} items from {self.remote_source} playlist first"
         self.logger.info(
             f"\33[1;95m ->\33[1;97m Synchronising {len(playlists)} {self.remote_source} playlists: {log_kind}"
             f"{f' and reloading stored playlists' if reload else ''} \33[0m"
@@ -294,7 +301,6 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
             elif item.has_uri:
                 load_uris.append(item.uri)
 
-        self.logger.print()
         if not load_uris:
             return
 

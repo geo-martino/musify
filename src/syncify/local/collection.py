@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import sys
 from abc import ABCMeta, abstractmethod
@@ -11,6 +13,7 @@ from syncify.abstract import Item
 from syncify.abstract.collection import ItemCollection
 from syncify.abstract.enums import Fields, TagField
 from syncify.abstract.object import Track, Library, Folder, Album, Artist, Genre
+from syncify.fields import LocalTrackField
 from syncify.local._base import LocalItem
 from syncify.local.exception import LocalCollectionError
 from syncify.local.track import LocalTrack, SyncResultTrack, load_track, TRACK_FILETYPES
@@ -109,17 +112,26 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
         self.logger: SyncifyLogger = logging.getLogger(__name__)
         self.remote_wrangler = remote_wrangler
 
-    def save_tracks(self, **kwargs) -> dict[LocalTrack, SyncResultTrack]:
+    def save_tracks(
+            self,
+            source: Iterable[LocalCollection] | None = None,
+            tags: UnitIterable[LocalTrackField] = LocalTrackField.ALL,
+            replace: bool = False,
+            dry_run: bool = True
+    ) -> dict[LocalTrack, SyncResultTrack]:
         """
         Saves the tags of all tracks in this collection. Use arguments from :py:func:`LocalTrack.save`
 
+        :param source: Optionally, provide the collections containing the tracks which you wish to save.
+        :param tags: Tags to be updated.
+        :param replace: Destructively replace tags in each file.
+        :param dry_run: Run function, but do not modify file at all.
         :return: A map of the :py:class:`LocalTrack` saved to its result as a :py:class:`SyncResultTrack` object
         """
-        bar = self.logger.get_progress_bar(iterable=self.tracks, desc="Updating tracks", unit="tracks")
-        results = {track: track.save(**kwargs) for track in bar if isinstance(track, LocalTrack)}
-        results_filtered = {track: result for track, result in results.items() if result.updated}
-
-        return results_filtered
+        tracks = self.tracks if not source else tuple(track for collection in source for track in collection)
+        bar = self.logger.get_progress_bar(iterable=tracks, desc="Updating tracks", unit="tracks")
+        results = {track: track.save(tags=tags, replace=replace, dry_run=dry_run) for track in bar}
+        return {track: result for track, result in results.items() if result.updated}
 
     def log_sync_result(self, results: Mapping[LocalTrack, SyncResultTrack]) -> None:
         """Log stats from the results of a ``save_tracks`` operation"""
@@ -161,7 +173,6 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
         tags = to_collection(tags)
         if Fields.IMAGES in tags or Fields.ALL in tags:
             tag_names.add("image_links")
-            tag_names.add("has_image")
 
         for track in tracks:  # perform the merge
             track_in_collection = next((t for t in self.tracks if t == track), None)
@@ -170,6 +181,11 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
 
             for tag in tag_names:  # merge on each tag
                 if hasattr(track, tag):
+                    if tag == "image_links":
+                        track_in_collection[tag].clear()
+                        track_in_collection[tag].update(track[tag])
+                        continue
+
                     track_in_collection[tag] = track[tag]
 
         if isinstance(self, Library):

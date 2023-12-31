@@ -331,7 +331,7 @@ class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
             self,
             include: Container[str] | None = None,
             exclude: Container[str] | None = None,
-            **filter_tags: dict[str, tuple[str]]
+            **filter_tags: dict[str, tuple[str, ...]]
     ) -> dict[str, Playlist]:
         """
         Returns a filtered set of playlists in this library.

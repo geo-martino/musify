@@ -179,7 +179,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             remote_wrangler: RemoteDataWrangler = None,
     ):
         super().__init__(remote_wrangler=remote_wrangler)
-        log_name = basename(library_folder) if library_folder else self.name
+        log_name = basename(library_folder) if library_folder and self.__class__ == LocalLibrary else self.name
         self.logger.debug(f"Setup {self.name} library: START")
         self.logger.info(f"\33[1;95m ->\33[1;97m Setting up {log_name} library \33[0m")
         self.logger.print()
@@ -202,27 +202,29 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         self._tracks: list[LocalTrack] = []
         self._playlists: dict[str, LocalPlaylist] = {}
 
-        self.logger.debug(f"Setup {self.name} library: DONE")
+        self.errors: list[str] = []
+        self.logger.debug(f"Setup {self.name} library: DONE\n")
 
     def load(self, tracks: bool = True, playlists: bool = True, log: bool = True) -> None:
         """Loads all tracks and playlists in this library from scratch and log results."""
         self.logger.debug(f"Load {self.name} library: START")
-        self.logger.info(
-            f"\33[1;95m ->\33[1;97m Loading {self.name} library of "
-            f"{len(self._track_paths)} tracks and {len(self._playlist_paths)} playlists \33[0m"
-        )
-        self.logger.print()
+        log_types = [f"{len(self._track_paths)} tracks" * tracks, f"{len(self._playlist_paths)} playlists" * playlists]
+        log_types = " and ".join(log_type for log_type in log_types if log_type)
+        self.logger.info(f"\33[1;95m ->\33[1;97m Loading {self.name} library of {log_types} \33[0m")
 
         if tracks:
             self._tracks = self.load_tracks()
             if log:
+                self.logger.print(REPORT)
                 self.log_tracks()
 
         if playlists:
             self._playlists = {pl.name: pl for pl in sorted(self.load_playlists(), key=lambda pl: pl.name.casefold())}
             if log:
+                self.logger.print(REPORT)
                 self.log_playlists()
 
+        self.logger.print()
         self.logger.debug(f"Load {self.name} library: DONE\n")
 
     def load_tracks(self) -> list[LocalTrack]:
@@ -234,16 +236,14 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         )
 
         tracks: list[LocalTrack] = []
-        errors: list[str] = []
         for path in self.logger.get_progress_bar(iterable=self._track_paths, desc="Loading tracks", unit="tracks"):
             try:
                 tracks.append(load_track(path=path, available=self._track_paths, remote_wrangler=self.remote_wrangler))
             except SyncifyError:
-                errors.append(path)
+                self.errors.append(path)
                 continue
 
-        self.logger.print()
-        self._log_errors(errors)
+        self._log_errors()
         self.logger.debug(f"Load {self.name} tracks: DONE\n")
         return tracks
 
@@ -275,7 +275,6 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         self.logger.info(f"\33[1;95m  >\33[1;97m Loading playlist data for {len(names)} playlists \33[0m")
 
         playlists: list[LocalPlaylist] = []
-        errors: list[str] = []
         for name in self.logger.get_progress_bar(iterable=names, desc="Loading playlists", unit="playlists"):
             path = self._playlist_paths.get(name.strip().casefold())
             if path is None:
@@ -294,8 +293,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
             playlists.append(pl)
 
-        self.logger.print()
-        self._log_errors(errors)
+        # self._log_errors()
         self.logger.debug(f"Load {self.name} playlist data: DONE\n")
         return playlists
 
@@ -323,12 +321,13 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             )
         self.logger.print(REPORT)
 
-    def _log_errors(self, errors: Iterable[str], message: str = "Could not load") -> None:
+    def _log_errors(self, message: str = "Could not load") -> None:
         """Log paths which had some error while loading"""
-        errors = tuple(f"\33[91m{e}\33[0m" for e in errors)
+        errors = tuple(f"\33[91m{e}\33[0m" for e in self.errors)
         if len(errors) > 0:
             self.logger.warning(f"\33[97m{message}: \33[0m\n\t- {"\n\t- ".join(errors)} ")
             self.logger.print()
+        self.errors.clear()
 
     def merge_playlists(self, playlists: Library | Collection[Playlist] | Mapping[Any, Playlist]) -> None:
         raise NotImplementedError

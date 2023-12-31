@@ -185,7 +185,6 @@ class ItemSorter(MusicBeeProcessor):
         self.shuffle_weight = limit_value(shuffle_weight, floor=0, ceil=1)
 
     def __call__(self, items: MutableSequence[Item]) -> None:
-        """Sorts a list of ``items`` in-place."""
         return self.sort(items=items)
 
     def sort(self, items: MutableSequence[Item]) -> None:

@@ -27,7 +27,7 @@ filters:
 handlers:
   console:
     class: logging.StreamHandler
-    level: DEBUG
+    level: REPORT
     formatter: extended_colour
     filters: ["console"]
     stream: ext://sys.stdout
@@ -37,7 +37,7 @@ handlers:
     level: DEBUG
     formatter: extended
     filters: ["file"]
-    filename: 'D:/Coding/syncify/_logs/{dt}.log'
+    filename: 'D:/Coding/syncify/_logs/{}.log'
     encoding: "utf-8"
     when: "m"
     interval: 2

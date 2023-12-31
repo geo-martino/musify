@@ -90,12 +90,26 @@ def test_get_progress_bar(logger: SyncifyLogger):
         position=3,
     )
 
-    assert bar.leave
+    assert not bar.leave
     assert not bar.disable
     assert bar.ncols == 120
     assert bar.colour == "blue"
     assert bar.smoothing == 0.1
-    assert bar.pos == 0
+    assert bar.pos == -1
+
+    logger._bars.clear()
+    bar = logger.get_progress_bar(
+        iterable=range(0, 50),
+        initial=10,
+        disable=False,
+        file=sys.stderr,
+        ncols=500,
+        colour="blue",
+        smoothing=0.5,
+        position=3,
+    )
+
+    assert bar.leave
 
 
 def test_copy(logger: SyncifyLogger):
@@ -206,6 +220,7 @@ def log_paths(tmp_path: str) -> list[str]:
     return paths
 
 
+# TODO: expand to include clearing empty directories
 def test_current_time_file_handler_rotator_time(log_paths: list[str], tmp_path: str):
     handler = CurrentTimeRotatingFileHandler(filename=join(tmp_path, "{}.log"), when="h", interval=10)
 

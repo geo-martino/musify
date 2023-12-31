@@ -52,6 +52,7 @@ class RequestHandler(APIAuthoriser):
 
         self.session: CachedSession | Session
         if cache_path:
+            self.logger.debug(f"Setting up requests cache: {cache_path}")
             self.session = CachedSession(cache_path, expire_after=cache_expiry, allowable_methods=["GET"])
         else:
             self.session = Session()

@@ -110,16 +110,14 @@ class MusicBee(LocalLibrary, File):
         tracks_paths = {track.path.removeprefix(self.library_folder).casefold(): track for track in tracks}
         self.logger.debug(f"Enrich {self.name} tracks: START")
 
-        errors = []
-
         for track_xml in self.xml["Tracks"].values():
             if track_xml["Track Type"] != "File":
                 continue
 
             # need to remove the XML music folder to make it os agnostic
-            track = tracks_paths.get(track_xml["Location"].removeprefix(self.xml["Music Folder"]).casefold())
+            track = tracks_paths.get(track_xml["Location"].removeprefix(self.library_folder).casefold())
             if track is None:
-                errors.append(track_xml["Location"])
+                self.errors.append(track_xml["Location"])
                 continue
 
             track.rating = int(track_xml.get("Rating")) if track_xml.get("Rating") is not None else None
@@ -127,8 +125,7 @@ class MusicBee(LocalLibrary, File):
             track.last_played = track_xml.get("Play Date UTC")
             track.play_count = track_xml.get("Play Count", 0)
 
-        error_message = "Could not find a loaded track for these paths from the MusicBee library file"
-        self._log_errors(errors=errors, message=error_message)
+        self._log_errors("Could not find a loaded track for these paths from the MusicBee library file")
         self.logger.debug(f"Enrich {self.name} tracks: DONE\n")
         return list(tracks_paths.values())
 
@@ -142,20 +139,18 @@ class MusicBee(LocalLibrary, File):
         tracks_paths = {track.path.removeprefix(self.library_folder).casefold(): track for track in self.tracks}
         track_id_map: dict[LocalTrack, tuple[int, str]] = {}
 
-        errors = []
         for track_xml in self.xml["Tracks"].values():
             if track_xml["Track Type"] != "File":
                 continue
 
             track = tracks_paths.get(track_xml["Location"].removeprefix(self.xml["Music Folder"]).casefold())
             if not track:
-                errors.append(track_xml["Location"])
+                self.errors.append(track_xml["Location"])
                 continue
 
             track_id_map[track] = (track_xml["Track ID"], track_xml["Persistent ID"])
 
-        error_message = "Could not find a loaded track for these paths from the MusicBee library file"
-        self._log_errors(errors=errors, message=error_message)
+        self._log_errors("Could not find a loaded track for these paths from the MusicBee library file")
 
         tracks: dict[str, Any] = {}
         max_track_id = max(id_ for id_, _ in track_id_map.values()) if track_id_map else 0

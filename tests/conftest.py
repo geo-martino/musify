@@ -19,8 +19,8 @@ from tests.spotify.api.mock import SpotifyMock
 def pytest_configure(config: pytest.Config):
     """Loads logging config"""
     config_file = join(dirname(dirname(__file__)), "logging.yml")
-    with open(config_file, "r") as f:
-        log_config = yaml.full_load(f)
+    with open(config_file, "r") as file:
+        log_config = yaml.full_load(file)
     log_config.pop("compact", False)
 
     for formatter in log_config["formatters"].values():  # ensure ANSI colour codes in format are recognised

@@ -109,7 +109,7 @@ class LocalMatcher(MusicBeeProcessor):
             other_folders: UnitCollection[str] = (),
             check_existence: bool = True,
     ):
-        self.comparers: tuple[ItemComparer] = to_collection(comparers)
+        self.comparers: tuple[ItemComparer, ...] = to_collection(comparers)
         self.match_all = match_all
 
         self.include_paths: Collection[str] = include_paths
@@ -201,15 +201,6 @@ class LocalMatcher(MusicBeeProcessor):
     def __call__(
             self, tracks: Collection[LocalTrack], reference: LocalTrack | None = None, combine: bool = True
     ) -> list[LocalTrack] | MatchResult:
-        """
-        Return a new list of tracks from input tracks that match the given conditions.
-
-        :param tracks: List of tracks to search through for matches.
-        :param reference: Optional reference track to use when comparer has no expected value.
-        :param combine: If True, return one list of all tracks. If False, return tuple of 3 lists.
-        :return: If ``combine`` is True, list of tracks that match the conditions.
-            If ``combine`` is False, return :py:class:`MatchResult`
-        """
         return self.match(tracks=tracks, reference=reference, combine=combine)
 
     def match(

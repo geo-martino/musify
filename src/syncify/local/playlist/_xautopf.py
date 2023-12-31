@@ -142,6 +142,8 @@ class XAutoPF(LocalPlaylist):
         self._limit(ignore=self.matcher.include_paths)
         self._sort()
 
+        if not self.tracks:
+            self.tracks = []
         self._tracks_original = self.tracks.copy()
         return tracks
 

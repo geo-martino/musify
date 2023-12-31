@@ -86,12 +86,6 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
         self._set_processor_name(sorted_by, fail_on_empty=False)
 
     def __call__[T: Item](self, items: list[T], ignore: Collection[T] = ()) -> None:
-        """
-        Limit ``items`` in-place based on set conditions.
-
-        :param items: The list of items to limit.
-        :param ignore: list of items to ignore when limiting. i.e. keep them in the list regardless.
-        """
         return self.limit(items=items, ignore=ignore)
 
     def limit[T: Item](self, items: list[T], ignore: Collection[T] = ()) -> None:

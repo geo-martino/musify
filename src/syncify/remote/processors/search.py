@@ -171,11 +171,6 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
 
     # noinspection PyMethodOverriding
     def __call__(self, collections: Collection[ItemCollection]) -> dict[str, ItemSearchResult]:
-        """
-        Searches for remote matches for the given list of item collections.
-
-        :return: Map of the collection's name to its :py:class:`ItemSearchResult` object.
-        """
         return self.search(collections=collections)
 
     def search(self, collections: Collection[ItemCollection]) -> dict[str, ItemSearchResult]:

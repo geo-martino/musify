@@ -85,7 +85,8 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
 
     @classmethod
     def from_xml(cls, xml: Mapping[str, Any], **__) -> list[Self]:
-        conditions: tuple[Mapping[str, str]] = to_collection(xml["SmartPlaylist"]["Source"]["Conditions"]["Condition"])
+        conditions = xml["SmartPlaylist"]["Source"]["Conditions"]["Condition"]
+        conditions: tuple[Mapping[str, str], ...] = to_collection(conditions)
 
         objs = []
         for condition in conditions:

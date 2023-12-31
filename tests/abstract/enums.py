@@ -40,7 +40,6 @@ class FieldTester(EnumTester, metaclass=ABCMeta):
     def test_gets_enum_from_name_and_value(self):
         all_enums = self.cls.all()
         for enum in all_enums:
-            print(self.cls.map(enum), self.cls.from_name(enum.name))
             assert self.cls.map(enum) == self.cls.from_name(enum.name)
             assert self.cls.map(enum) == self.cls.from_value(enum.value)
 
