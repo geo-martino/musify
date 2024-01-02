@@ -48,10 +48,10 @@ def random_track[T: LocalTrack](cls: type[T] | None = None) -> T:
     track._file = MutagenMock()
     track.file.info.length = randint(30, 600)
 
-    track.title = random_str(20, 50)
-    track.artist = random_str(20, 50)
-    track.album = random_str(20, 50)
-    track.album_artist = random_str(20, 50)
+    track.title = random_str(30, 50)
+    track.artist = random_str(30, 50)
+    track.album = random_str(30, 50)
+    track.album_artist = random_str(30, 50)
     track.track_number = randrange(1, 20)
     track.track_total = randint(track.track_number, 20)
     track.genres = [random_str(20, 50) for _ in range(randrange(7))]
@@ -70,7 +70,7 @@ def random_track[T: LocalTrack](cls: type[T] | None = None) -> T:
     track.has_image = False
 
     filename_ext = f"{str(track.track_number).zfill(2)} - {track.title}" + choice(tuple(track.valid_extensions))
-    track.file.filename = join(path_track_resources, random_str(20, 50), filename_ext)
+    track.file.filename = join(path_track_resources, random_str(30, 50), filename_ext)
 
     track.date_added = datetime.now() - relativedelta(days=randrange(8, 20), hours=randrange(1, 24))
     track.last_played = datetime.now() - relativedelta(days=randrange(1, 6), hours=randrange(1, 24))

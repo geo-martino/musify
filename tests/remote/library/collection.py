@@ -55,7 +55,7 @@ class RemoteCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
             assert collection[invalid_item.url_ext]
 
         with pytest.raises(KeyError):
-            assert collection[item.remote_source]
+            assert collection[item.source]
 
 
 class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, metaclass=ABCMeta):

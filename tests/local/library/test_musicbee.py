@@ -3,7 +3,7 @@ from os.path import basename, splitext, join, dirname, relpath, getmtime
 
 import pytest
 
-from syncify.local.exception import MusicBeeError
+from syncify.local.exception import MusicBeeError, FileDoesNotExistError
 from syncify.local.library import LocalLibrary, MusicBee
 # noinspection PyProtectedMember
 from syncify.local.library._musicbee import XMLLibraryParser
@@ -70,18 +70,18 @@ class TestMusicBee(LocalLibraryTester):
         assert len(xml_new["Playlists"]) == len(xml["Playlists"])
 
     def test_init_fails(self):
-        with pytest.raises(FileNotFoundError, match="MusicBee"):
+        with pytest.raises(FileDoesNotExistError, match="MusicBee"):
             MusicBee()
 
         with pytest.raises(MusicBeeError):
             MusicBee(musicbee_folder=None)
 
         library_path_error = join(path_library_resources, "MusicBee")
-        with pytest.raises(FileNotFoundError, match=f".*{library_path_error.replace('\\', '\\\\')}"):
+        with pytest.raises(FileDoesNotExistError, match=f".*{library_path_error.replace('\\', '\\\\')}"):
             MusicBee(library_folder=path_library_resources)
 
         library_path_error = join(path_playlist_resources, MusicBee.xml_library_filename)
-        with pytest.raises(FileNotFoundError, match=f".*{library_path_error.replace('\\', '\\\\')}"):
+        with pytest.raises(FileDoesNotExistError, match=f".*{library_path_error.replace('\\', '\\\\')}"):
             MusicBee(musicbee_folder=path_playlist_resources)
 
     def test_init_no_playlists(self):

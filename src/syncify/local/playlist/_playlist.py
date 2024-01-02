@@ -162,5 +162,5 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
             "date_created": self.date_created,
             "date_modified": self.date_modified,
             "last_played": self.last_played,
-            "remote_source": self.remote_wrangler.remote_source if self.remote_wrangler else None,
+            "remote_source": self.remote_wrangler.source if self.remote_wrangler else None,
         }

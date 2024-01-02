@@ -7,7 +7,7 @@ import pytest
 from syncify.abstract import Item
 from syncify.fields import LocalTrackField
 from syncify.local import open_image
-from syncify.local.exception import InvalidFileType
+from syncify.local.exception import InvalidFileType, FileDoesNotExistError
 from syncify.local.track import LocalTrack, load_track, FLAC, M4A, MP3, WMA
 from syncify.remote.enums import RemoteObjectType
 from tests.abstract.item import ItemTester
@@ -160,6 +160,7 @@ def test_loaded_attributes_wma(track_wma: WMA):
     assert track_wma.sample_rate == 44.1
 
 
+# TODO: write test for when all tags saved just to check conditionals pass in appropriate conditions
 class TestLocalTrack(ItemTester):
     """Run generic tests for :py:class:`LocalTrack` implementations"""
 
@@ -202,7 +203,7 @@ class TestLocalTrack(ItemTester):
             track.__class__(file=path_txt, available=path_track_all)
 
         # raises error on files that do not exist
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileDoesNotExistError):
             track.__class__(file=f"does_not_exist.{set(track.valid_extensions).pop()}", available=path_track_all)
 
     def test_copy_track(self, track: LocalTrack):

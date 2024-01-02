@@ -13,6 +13,7 @@ from syncify.abstract import Item
 from syncify.abstract.object import Track
 from syncify.fields import TrackField
 from syncify.local._file import File
+from syncify.local.exception import FileDoesNotExistError
 from syncify.local.track._base.reader import TagReader
 from syncify.local.track._base.writer import TagWriter
 from syncify.remote.processors.wrangle import RemoteDataWrangler
@@ -79,7 +80,7 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
 
         :param path: The path to the file. If not given, use the stored ``file`` path.
         :return: Mutagen file object or None if load error.
-        :raise FileNotFoundError: If the file cannot be found.
+        :raise FileDoesNotExistError: If the file cannot be found.
         :raise InvalidFileType: If the file type is not supported.
         """
         path = path or self.path
@@ -92,7 +93,7 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
                 path = path_sys
 
         if not path or not exists(path):
-            raise FileNotFoundError(f"File not found | {path}")
+            raise FileDoesNotExistError(f"File not found | {path}")
 
         return mutagen.File(path)
 
@@ -140,7 +141,7 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
             k: getattr(self, k) for k in Track.__dict__.keys() if not k.startswith("_") and k not in exclude
         }
         attributes_uri = {k: getattr(self, k) for k in Item.__dict__.keys() if "uri" in k}
-        attributes_uri["remote_source"] = self.remote_wrangler.remote_source if self.remote_wrangler else None
+        attributes_uri["remote_source"] = self.remote_wrangler.source if self.remote_wrangler else None
         attributes_file = {
             k: getattr(self, k) for k in File.__dict__.keys() if not k.startswith("_") and k not in exclude
         }

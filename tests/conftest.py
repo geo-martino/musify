@@ -73,7 +73,7 @@ def spotify_api(spotify_mock: SpotifyMock) -> SpotifyAPI:
     """Yield an authorised :py:class:`SpotifyAPI` object"""
     token = {"access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"}
     api = SpotifyAPI(cache_path=None)
-    api.handler = RequestHandler(name=api.remote_source, token=token, cache_path=None)
+    api.handler = RequestHandler(name=api.source, token=token, cache_path=None)
     return api
 
 

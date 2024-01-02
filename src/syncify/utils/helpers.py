@@ -110,7 +110,6 @@ def to_collection[T: (list, set, tuple)](data: Any, cls: type[T] = tuple) -> T |
     raise TypeError(f"Unable to convert data to {cls.__name__} (data={data})")
 
 
-# TODO: test me
 def unique_list(value: Iterable[Any]) -> list[Any]:
     """
     Returns a copy of the given ``value`` that contains only unique elements.

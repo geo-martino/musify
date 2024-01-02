@@ -30,8 +30,8 @@ class TestLocalMatcher(PrettyPrinterTester):
     def obj(self, comparers: list[ItemComparer]) -> LocalMatcher:
         return LocalMatcher(
             comparers=comparers,
-            include_paths=[f"{self.library_folder}/include/{random_str()}.MP3" for _ in range(20)],
-            exclude_paths=[f"{self.library_folder}/exclude/{random_str()}.MP3" for _ in range(20)],
+            include_paths=[f"{self.library_folder}/include/{random_str(30, 50)}.MP3" for _ in range(20)],
+            exclude_paths=[f"{self.library_folder}/exclude/{random_str(30, 50)}.MP3" for _ in range(20)],
             library_folder=self.library_folder,
             check_existence=False
         )
@@ -39,8 +39,8 @@ class TestLocalMatcher(PrettyPrinterTester):
     def test_init_replaces_parent_folder(self, comparers: list[ItemComparer]):
         library_folder = "/Path/to/LIBRARY/on/linux"
         other_folders = ["../", "D:\\paTh\\on\\Windows"]
-        exclude_paths = [f"{other_folders[1]}\\exclude\\{random_str()}.MP3" for _ in range(20)]
-        include_paths = [f"{other_folders[1]}\\include\\{random_str()}.MP3" for _ in range(20)]
+        exclude_paths = [f"{other_folders[1]}\\exclude\\{random_str(30, 50)}.MP3" for _ in range(20)]
+        include_paths = [f"{other_folders[1]}\\include\\{random_str(30, 50)}.MP3" for _ in range(20)]
 
         matcher = LocalMatcher(
             comparers=comparers,
@@ -64,8 +64,8 @@ class TestLocalMatcher(PrettyPrinterTester):
         # removes paths from the include list that are present in both include and exclude lists
         library_folder = "/Path/to/LIBRARY/on/linux"
         other_folders = ["../", "D:\\paTh\\on\\Windows"]
-        exclude_paths = set(f"{other_folders[0]}/folder/{random_str()}.MP3" for _ in range(20))
-        include_paths = set(f"{other_folders[0]}/folder/{random_str()}.MP3" for _ in range(20)) - exclude_paths
+        exclude_paths = set(f"{other_folders[0]}/folder/{random_str(30, 50)}.MP3" for _ in range(20))
+        include_paths = set(f"{other_folders[0]}/folder/{random_str(30, 50)}.MP3" for _ in range(20)) - exclude_paths
 
         matcher = LocalMatcher(
             comparers=comparers,
@@ -120,7 +120,7 @@ class TestLocalMatcher(PrettyPrinterTester):
     @pytest.fixture(scope="class")
     def tracks_include(self, tracks: list[LocalTrack], tracks_album: list[LocalTrack]) -> list[LocalTrack]:
         """Sample the list of tracks to test and set the path to be included for all these tracks"""
-        include_paths = [f"{self.library_folder}/include/{random_str()}.MP3" for _ in range(20)]
+        include_paths = [f"{self.library_folder}/include/{random_str(30, 50)}.MP3" for _ in range(20)]
         tracks_include = sample([track for track in tracks if track not in tracks_album], 7)
 
         for i, track in enumerate(tracks_include):
@@ -130,7 +130,7 @@ class TestLocalMatcher(PrettyPrinterTester):
     @pytest.fixture(scope="class")
     def tracks_exclude(self, tracks_artist: list[LocalTrack], tracks_include: list[LocalTrack]) -> list[LocalTrack]:
         """Sample the list of tracks to test and set the path to be excluded for all these tracks"""
-        exclude_paths = [f"{self.library_folder}/exclude/{random_str()}.MP3" for _ in range(20)]
+        exclude_paths = [f"{self.library_folder}/exclude/{random_str(30, 50)}.MP3" for _ in range(20)]
         tracks_exclude = sample(tracks_artist, 3) + sample(tracks_include, 2)
 
         for i, track in enumerate(tracks_exclude):

@@ -20,7 +20,7 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
     :param handler_kwargs: The authorisation kwargs to be passed to :py:class:`APIAuthoriser`.
     """
 
-    __slots__ = ("logger", "handler", "_user_data")
+    __slots__ = ("logger", "handler", "user_data")
 
     collection_item_map = {
         RemoteObjectType.PLAYLIST: RemoteObjectType.TRACK,
@@ -55,8 +55,8 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
         self.logger: SyncifyLogger = logging.getLogger(__name__)
 
         handler_kwargs = {k: v for k, v in handler_kwargs.items() if k != "name"}
-        self.handler = RequestHandler(name=self.remote_source, **handler_kwargs)
-        self._user_data: dict[str, Any] = {}
+        self.handler = RequestHandler(name=self.source, **handler_kwargs)
+        self.user_data: dict[str, Any] = {}
 
     def authorise(self, force_load: bool = False, force_new: bool = False) -> dict[str, str]:
         """
@@ -75,7 +75,7 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
     ###########################################################################
     def load_user_data(self) -> None:
         """Load and store user data in this API object for the currently authorised user"""
-        self._user_data = self.get_self()
+        self.user_data = self.get_self()
 
     @staticmethod
     def _merge_results_to_input(

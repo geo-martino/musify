@@ -3,7 +3,7 @@ from collections.abc import Iterable
 
 from syncify.abstract import Item
 from syncify.abstract.collection import ItemCollection
-from syncify.abstract.enums import TagField, Fields
+from syncify.abstract.enums import TagField, Fields, ALL_FIELDS, TagFields
 from syncify.abstract.object import Library, Playlist
 from syncify.local.library import LocalLibrary
 from syncify.utils.helpers import align_and_truncate, get_max_width, UnitIterable, to_collection
@@ -76,7 +76,7 @@ def report_playlist_differences(
 
 def report_missing_tags(
         collections: LocalLibrary | Iterable[ItemCollection],
-        tags: UnitIterable[TagField] = Fields.ALL,
+        tags: UnitIterable[TagField] = TagFields.ALL,
         match_all: bool = False
 ) -> dict[str, dict[Item, tuple[str, ...]]]:
     """
@@ -92,7 +92,7 @@ def report_missing_tags(
     logger.debug("Report missing tags: START")
 
     tags = to_collection(tags, set)
-    tag_order = [field.name.lower() for field in Fields.all()]
+    tag_order = [field.name.lower() for field in ALL_FIELDS]
     # noinspection PyTypeChecker
     tag_names = set(TagField.__tags__) if Fields.ALL in tags else TagField.to_tags(tags)
     tag_names = list(sorted(tag_names, key=lambda x: tag_order.index(x)))

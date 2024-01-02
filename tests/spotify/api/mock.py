@@ -6,6 +6,7 @@ from datetime import datetime
 from random import choice, randrange, sample, random, shuffle
 from typing import Any
 from urllib.parse import parse_qs
+from uuid import uuid4
 
 from pycountry import countries, languages
 # noinspection PyProtectedMember,PyUnresolvedReferences
@@ -385,9 +386,9 @@ class SpotifyMock(RemoteMock):
     def setup_playlist_operations_mock(self) -> None:
         """Generate playlist and setup ``requests_mock`` for playlist operations tests"""
         for playlist in self.user_playlists:
-            self.post(url=re.compile(playlist["href"] + "/tracks"), json={"snapshot_id": random_str()})
-            self.delete(url=re.compile(playlist["href"] + "/tracks"), json={"snapshot_id": random_str()})
-            self.delete(url=re.compile(playlist["href"]), json={"snapshot_id": random_str()})
+            self.post(url=re.compile(playlist["href"] + "/tracks"), json={"snapshot_id": str(uuid4())})
+            self.delete(url=re.compile(playlist["href"] + "/tracks"), json={"snapshot_id": str(uuid4())})
+            self.delete(url=re.compile(playlist["href"]), json={"snapshot_id": str(uuid4())})
 
         def create_response_getter(req: Request, _: Context) -> dict[str, Any]:
             """Process body and generate playlist response data"""
@@ -405,8 +406,8 @@ class SpotifyMock(RemoteMock):
             response["owner"] = self.user_playlists[0]["owner"]
 
             self.get(url=response["href"], json=response)
-            self.post(url=re.compile(response["href"] + "/tracks"), json={"snapshot_id": random_str()})
-            self.delete(url=re.compile(response["href"] + "/tracks"), json={"snapshot_id": random_str()})
+            self.post(url=re.compile(response["href"] + "/tracks"), json={"snapshot_id": str(uuid4())})
+            self.delete(url=re.compile(response["href"] + "/tracks"), json={"snapshot_id": str(uuid4())})
             return response
 
         url = f"{URL_API}/users/{self.user_id}/playlists"
@@ -526,7 +527,7 @@ class SpotifyMock(RemoteMock):
             "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{track_id}"},
             "href": f"{URL_API}/{kind}s/{track_id}",
             "id": track_id,
-            "name": random_str(10, 30),
+            "name": random_str(30, 50),
             "popularity": randrange(0, 100),
             "preview_url": None,
             "track_number": randrange(1, 30),
@@ -631,7 +632,7 @@ class SpotifyMock(RemoteMock):
     def generate_user(cls) -> dict[str, Any]:
         """Return a randomly generated Spotify API response for a User."""
         kind = ObjectType.USER.name.lower()
-        user_id = random_id()
+        user_id = random_str(30, 50)
 
         response = {
             "country": choice(COUNTRY_CODES),
@@ -659,7 +660,7 @@ class SpotifyMock(RemoteMock):
     ) -> dict[str, Any]:
         """Return a randomly generated Spotify API response for an owner"""
         kind = ObjectType.USER.name.lower()
-        user_id = user_id or random_str()
+        user_id = user_id or str(uuid4())
         user_name = user_name or random_str(5, 30)
         ext_urls = user["external_urls"] if user else {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{user_id}"}
 
@@ -719,7 +720,7 @@ class SpotifyMock(RemoteMock):
             "href": url,
             "id": playlist_id,
             "images": self.generate_images(),
-            "name": random_str(5, 50),
+            "name": random_str(30, 50),
             "owner": owner,
             "primary_color": None,
             "public": public,
@@ -797,7 +798,7 @@ class SpotifyMock(RemoteMock):
             "href": f"{URL_API}/{kind}s/{album_id}",
             "id": album_id,
             "images": self.generate_images(),
-            "name": random_str(20, 50),
+            "name": random_str(30, 50),
             "release_date": random_date_str(),
             "release_date_precision": choice(("day", "month", "year")),
             "type": kind,
@@ -897,8 +898,8 @@ class SpotifyMock(RemoteMock):
             "images": self.generate_images(),
             "is_externally_hosted": choice([True, False, None]),
             "languages": sample(LANGUAGE_CODES, k=randrange(1, 5)),
-            "media_type": random_str(),
-            "name": random_str(5, 20),
+            "media_type": random_str(10, 20),
+            "name": random_str(30, 50),
             "publisher": random_str(10, 30),
             "type": "show",
             "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{show_id}",
@@ -927,7 +928,7 @@ class SpotifyMock(RemoteMock):
         duration_ms = randrange(int(10e4), int(3.6*10e6))  # 1 second to 1 hour range
 
         response = {
-            "audio_preview_url": f"https://podz-content.spotifycdn.com/audio/clips/{episode_id}/{random_str()}.mp3",
+            "audio_preview_url": f"https://podz-content.spotifycdn.com/audio/clips/{episode_id}/{uuid4()}.mp3",
             "description": random_str(200, 500),
             "html_description": random_str(100, 200),
             "duration_ms": duration_ms,
@@ -940,7 +941,7 @@ class SpotifyMock(RemoteMock):
             "is_playable": choice([True, False]),
             "language": choice(LANGUAGE_CODES),
             "languages": sample(LANGUAGE_CODES, k=randrange(1, 5)),
-            "name": random_str(10, 30),
+            "name": random_str(30, 50),
             "release_date": random_date_str(start=datetime(2008, 10, 7)),
             "release_date_precision": choice(("day", "month", "year")),
             "resume_point": {
@@ -1008,7 +1009,7 @@ class SpotifyMock(RemoteMock):
         chapter_count = chapter_count if chapter_count is not None else randrange(1, self.range_max // 4)
 
         response = {
-            "authors": [{"name": random_str()} for _ in range(randrange(1, 5))],
+            "authors": [{"name": random_str(30, 50)} for _ in range(randrange(1, 5))],
             "available_markets": sample(COUNTRY_CODES, k=randrange(1, 5)),
             "copyrights": [
                 {"text": random_str(50, 100), "type": i} for i in ["C", "P"][:randrange(1, 2)]
@@ -1023,8 +1024,8 @@ class SpotifyMock(RemoteMock):
             "images": self.generate_images(),
             "languages": sample(LANGUAGE_NAMES, k=randrange(1, 5)),
             "media_type": random_str(5, 20),
-            "name": random_str(5, 20),
-            "narrators": [{"name": random_str()} for _ in range(randrange(1, 10))],
+            "name": random_str(30, 50),
+            "narrators": [{"name": random_str(30, 50)} for _ in range(randrange(1, 10))],
             "publisher": random_str(10, 30),
             "type": "audiobook",
             "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{audiobook_id}",
@@ -1066,7 +1067,7 @@ class SpotifyMock(RemoteMock):
             "images": self.generate_images(),
             "is_playable": choice([True, False]),
             "languages": sample(LANGUAGE_CODES, k=randrange(1, 5)),
-            "name": random_str(5, 20),
+            "name": random_str(30, 50),
             "release_date": random_date_str(start=datetime(2008, 10, 7)),
             "release_date_precision": choice(("day", "month", "year")),
             "resume_point": {

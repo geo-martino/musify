@@ -6,6 +6,6 @@ class Remote(ABC):
 
     @property
     @abstractmethod
-    def remote_source(self) -> str:
-        """Name for the remote source"""
+    def source(self) -> str:
+        """The type of remote library loaded (i.e. the data source)"""
         raise NotImplementedError

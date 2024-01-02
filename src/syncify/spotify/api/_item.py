@@ -130,7 +130,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             key: str | None = None,
             unit: str | None = None,
             use_cache: bool = True,
-            leave_bar: bool = True,
+            leave_bar: bool | None = None,
     ) -> list[dict[str, Any]]:
         """
         Extend the items for a given ``items_block`` API response.
@@ -147,6 +147,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :param leave_bar: When a progress bar is displayed,
             toggle whether this bar should continue to be displayed after the operation is finished.
+            When None, allow the logger to decide this setting.
         :return: API JSON responses for each item
         """
         if key and key.rstrip("s") + "s" in items_block:
@@ -164,9 +165,9 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
 
         unit = unit or self.items_key
         bar = self.logger.get_progress_bar(
+            initial=len(items_block[self.items_key]),
             total=items_block["total"],
             desc=f"Extending {unit}".rstrip("s") if unit[0].islower() else unit,
-            initial=len(items_block[self.items_key]),
             unit=key or self.items_key,
             leave=leave_bar
         )

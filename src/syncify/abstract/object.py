@@ -272,7 +272,8 @@ class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
     def __or__(self, other: Playlist) -> Self:
         if not isinstance(other, self.__class__):
             raise TypeError(
-                f"Incorrect item given. Cannot merge with {other.__class__.__name__} as it is not a Playlist"
+                f"Incorrect item given. Cannot merge with {other.__class__.__name__} "
+                f"as it is not a {self.__class__.__name__}"
             )
         raise NotImplementedError
 
@@ -280,7 +281,8 @@ class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
     def __ior__(self, other: Playlist) -> Self:
         if not isinstance(other, self.__class__):
             raise TypeError(
-                f"Incorrect item given. Cannot merge with {other.__class__.__name__} as it is not a Playlist"
+                f"Incorrect item given. Cannot merge with {other.__class__.__name__} "
+                f"as it is not a {self.__class__.__name__}"
             )
         raise NotImplementedError
 

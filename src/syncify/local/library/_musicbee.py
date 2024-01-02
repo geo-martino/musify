@@ -10,7 +10,7 @@ from lxml import etree
 from lxml.etree import iterparse
 
 from syncify.local import File
-from syncify.local.exception import MusicBeeIDError, XMLReaderError, MusicBeeError
+from syncify.local.exception import MusicBeeIDError, XMLReaderError, MusicBeeError, FileDoesNotExistError
 from syncify.local.library._library import LocalLibrary
 from syncify.local.playlist import LocalPlaylist
 from syncify.local.track import LocalTrack
@@ -72,11 +72,11 @@ class MusicBee(LocalLibrary, File):
         # try to resolve the musicbee folder if relative path to library_folder given
         if musicbee_folder and not exists(musicbee_folder):
             if not library_folder:
-                raise FileNotFoundError(f"Cannot find MusicBee library at given path: {musicbee_folder}")
+                raise FileDoesNotExistError(f"Cannot find MusicBee library at given path: {musicbee_folder}")
 
             in_library = join(library_folder.rstrip("\\/"), musicbee_folder.lstrip("\\/"))
             if not exists(in_library):
-                raise FileNotFoundError(
+                raise FileDoesNotExistError(
                     f"Cannot find MusicBee library at given path: {musicbee_folder} OR {in_library}"
                 )
             musicbee_folder = in_library
@@ -90,7 +90,7 @@ class MusicBee(LocalLibrary, File):
 
         self._path: str = join(musicbee_folder, self.xml_library_filename)
         if not exists(self._path):
-            raise FileNotFoundError(f"Cannot find MusicBee library at given path: {self._path}")
+            raise FileDoesNotExistError(f"Cannot find MusicBee library at given path: {self._path}")
 
         self._xml_parser = XMLLibraryParser(self._path, path_keys=self.xml_path_keys)
         self.xml: dict[str, Any] = self._xml_parser.parse()

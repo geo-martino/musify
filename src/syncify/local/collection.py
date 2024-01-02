@@ -114,7 +114,6 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
 
     def save_tracks(
             self,
-            source: Iterable[LocalCollection] | None = None,
             tags: UnitIterable[LocalTrackField] = LocalTrackField.ALL,
             replace: bool = False,
             dry_run: bool = True
@@ -122,14 +121,12 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
         """
         Saves the tags of all tracks in this collection. Use arguments from :py:func:`LocalTrack.save`
 
-        :param source: Optionally, provide the collections containing the tracks which you wish to save.
         :param tags: Tags to be updated.
         :param replace: Destructively replace tags in each file.
         :param dry_run: Run function, but do not modify file at all.
         :return: A map of the :py:class:`LocalTrack` saved to its result as a :py:class:`SyncResultTrack` object
         """
-        tracks = self.tracks if not source else tuple(track for collection in source for track in collection)
-        bar = self.logger.get_progress_bar(iterable=tracks, desc="Updating tracks", unit="tracks")
+        bar = self.logger.get_progress_bar(iterable=self.tracks, desc="Updating tracks", unit="tracks")
         results = {track: track.save(tags=tags, replace=replace, dry_run=dry_run) for track in bar}
         return {track: result for track, result in results.items() if result.updated}
 
@@ -181,7 +178,7 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
 
             for tag in tag_names:  # merge on each tag
                 if hasattr(track, tag):
-                    if tag == "image_links":
+                    if tag == "image_links":  # TODO: find a better way to do this
                         track_in_collection[tag].clear()
                         track_in_collection[tag].update(track[tag])
                         continue
@@ -202,7 +199,7 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
             "last_added": self.last_added,
             "last_modified": self.last_modified,
             "last_played": self.last_played,
-            "remote_source": self.remote_wrangler.remote_source if self.remote_wrangler else None,
+            "remote_source": self.remote_wrangler.source if self.remote_wrangler else None,
         }
 
     def __getitem__(self, __key: str | int | slice | Item) -> T | list[T] | list[T, None, None]:
@@ -394,7 +391,7 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
             "last_added": self.last_added,
             "last_modified": self.last_modified,
             "last_played": self.last_played,
-            "remote_source": self.remote_wrangler.remote_source if self.remote_wrangler else None,
+            "remote_source": self.remote_wrangler.source if self.remote_wrangler else None,
         }
 
 
@@ -470,7 +467,7 @@ class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):
             "last_added": self.last_added,
             "last_modified": self.last_modified,
             "last_played": self.last_played,
-            "remote_source": self.remote_wrangler.remote_source if self.remote_wrangler else None,
+            "remote_source": self.remote_wrangler.source if self.remote_wrangler else None,
         }
 
 
@@ -522,7 +519,7 @@ class LocalArtist(LocalCollectionFiltered[LocalTrack], Artist[LocalTrack]):
             "last_added": self.last_added,
             "last_modified": self.last_modified,
             "last_played": self.last_played,
-            "remote_source": self.remote_wrangler.remote_source if self.remote_wrangler else None,
+            "remote_source": self.remote_wrangler.source if self.remote_wrangler else None,
         }
 
 
@@ -568,5 +565,5 @@ class LocalGenres(LocalCollectionFiltered[LocalTrack], Genre[LocalTrack]):
             "last_added": self.last_added,
             "last_modified": self.last_modified,
             "last_played": self.last_played,
-            "remote_source": self.remote_wrangler.remote_source if self.remote_wrangler else None,
+            "remote_source": self.remote_wrangler.source if self.remote_wrangler else None,
         }

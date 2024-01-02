@@ -6,5 +6,5 @@ class SpotifyRemote(Remote):
     """Base class for any object concerning Spotify functionality"""
 
     @property
-    def remote_source(self) -> str:
+    def source(self) -> str:
         return SPOTIFY_SOURCE_NAME

@@ -14,6 +14,7 @@ from syncify.utils.logger import SyncifyLogger, INFO_EXTRA, REPORT, STAT, LOGGIN
 from syncify.utils.logger import format_full_func_name, LogFileFilter, CurrentTimeRotatingFileHandler
 
 
+# TODO: add console handlers getter and file_paths tests
 ###########################################################################
 ## SyncifyLogger tests
 ###########################################################################
@@ -99,8 +100,7 @@ def test_get_progress_bar(logger: SyncifyLogger):
 
     logger._bars.clear()
     bar = logger.get_progress_bar(
-        iterable=range(0, 50),
-        initial=10,
+        total=50,
         disable=False,
         file=sys.stderr,
         ncols=500,

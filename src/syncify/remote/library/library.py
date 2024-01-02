@@ -67,19 +67,19 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         self._tracks: list[T] = []
         self._playlists: dict[str, RemotePlaylist] = {}
 
-    def load(self, log: bool = True, **__) -> None:
+    def load(self) -> None:
         """Loads all tracks and playlists in this library from scratch and log results."""
-        self.logger.debug(f"Load {self.remote_source} library: START")
+        self.logger.debug(f"Load {self.source} library: START")
         self.api.load_user_data()
 
-        self.logger.info(f"\33[1;95m ->\33[1;97m Loading {self.remote_source} library \33[0m")
+        self.logger.info(f"\33[1;95m ->\33[1;97m Loading {self.source} library \33[0m")
 
         # get raw API responses
         playlists_data = self._get_playlists_data()
         tracks_data = self._get_tracks_data(playlists_data=playlists_data)
 
         self.logger.info(
-            f"\33[1;95m  >\33[1;97m Processing {self.remote_source} library of "
+            f"\33[1;95m  >\33[1;97m Processing {self.source} library of "
             f"{len(tracks_data)} tracks and {len(playlists_data)} playlists \33[0m"
         )
 
@@ -96,13 +96,12 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         ]
         self._playlists = {pl.name: pl for pl in sorted(playlists, key=lambda pl: pl.name.casefold())}
 
-        if log:
-            self.logger.print(REPORT)
-            self.log_playlists()
-            self.log_tracks()
+        self.logger.print(REPORT)
+        self.log_playlists()
+        self.log_tracks()
 
         self.logger.print()
-        self.logger.debug(f"Load {self.remote_source} library: DONE\n")
+        self.logger.debug(f"Load {self.source} library: DONE\n")
 
     def _get_playlists_data(self) -> list[dict[str, Any]]:
         """
@@ -117,7 +116,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         """Log stats on currently loaded playlists"""
         max_width = get_max_width(self.playlists)
 
-        self.logger.report(f"\33[1;96mLoaded the following {self.remote_source} playlists: \33[0m")
+        self.logger.report(f"\33[1;96mLoaded the following {self.source} playlists: \33[0m")
         for name, playlist in self.playlists.items():
             name = align_and_truncate(playlist.name, max_width=max_width)
             self.logger.report(f"\33[97m{name} \33[0m| \33[92m{len(playlist):>6} total tracks \33[0m")
@@ -140,7 +139,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
 
         width = get_max_width(self.playlists)
         self.logger.report(
-            f"\33[1;96m{self.remote_source.upper() + ' ITEMS':<{width}}\33[1;0m |"
+            f"\33[1;96m{self.source.upper() + ' ITEMS':<{width}}\33[1;0m |"
             f"\33[92m{in_playlists:>7} in playlists \33[0m|"
             f"\33[1;94m{len(self.tracks):>6} total \33[0m"
         )
@@ -231,7 +230,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         :param dry_run: Run function, but do not modify the remote playlists at all.
         :return: Map of playlist name to the results of the sync as a :py:class:`SyncResultRemotePlaylist` object.
         """
-        self.logger.debug(f"Sync {self.remote_source} playlists: START")
+        self.logger.debug(f"Sync {self.source} playlists: START")
 
         if not playlists:  # use the playlists as stored in this library object
             playlists = self.playlists
@@ -245,14 +244,14 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         log_kind = "adding new items only"
         if kind != "new":
             log_kind = 'all' if kind == 'refresh' else 'extra'
-            log_kind = f"clearing {log_kind} items from {self.remote_source} playlist first"
+            log_kind = f"clearing {log_kind} items from {self.source} playlist first"
         self.logger.info(
-            f"\33[1;95m ->\33[1;97m Synchronising {len(playlists)} {self.remote_source} playlists: {log_kind}"
+            f"\33[1;95m ->\33[1;97m Synchronising {len(playlists)} {self.source} playlists: {log_kind}"
             f"{f' and reloading stored playlists' if reload else ''} \33[0m"
         )
 
         bar = self.logger.get_progress_bar(
-            iterable=playlists.items(), desc=f"Synchronising {self.remote_source}", unit="playlists"
+            iterable=playlists.items(), desc=f"Synchronising {self.source}", unit="playlists"
         )
         results = {}
         for name, pl in bar:  # synchronise playlists
@@ -261,7 +260,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
             results[name] = self.playlists[name].sync(items=pl, kind=kind, reload=reload, dry_run=dry_run)
 
         self.logger.print()
-        self.logger.debug(f"Sync {self.remote_source} playlists: DONE\n")
+        self.logger.debug(f"Sync {self.source} playlists: DONE\n")
         return results
 
     def log_sync(self, results: Mapping[str, SyncResultRemotePlaylist]) -> None:
@@ -271,7 +270,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
 
         max_width = get_max_width(self.playlists)
 
-        self.logger.stat(f"\33[1;96mSync {self.remote_source} playlists' stats: \33[0m")
+        self.logger.stat(f"\33[1;96mSync {self.source} playlists' stats: \33[0m")
         for name, result in results.items():
             self.logger.stat(
                 f"\33[97m{align_and_truncate(name, max_width=max_width)} \33[0m|"
@@ -285,7 +284,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         self.logger.print(STAT)
 
     def extend(self, __items: Iterable[Item], allow_duplicates: bool = True) -> None:
-        self.logger.debug(f"Extend {self.remote_source} tracks data: START")
+        self.logger.debug(f"Extend {self.source} tracks data: START")
         if not allow_duplicates:
             self.logger.info(
                 f"\33[1;95m ->\33[1;97m Extending library: "
@@ -293,7 +292,8 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
             )
 
         load_uris = []
-        for item in __items:
+        bar = self.logger.get_progress_bar(iterable=__items, desc=f"Checking items", unit="items")
+        for item in bar:
             if not allow_duplicates and item in self.items:
                 continue
             elif isinstance(item, self._object_cls.track):
@@ -305,7 +305,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
             return
 
         self.logger.info(
-            f"\33[1;95m  >\33[1;97m Extending {self.remote_source} library "
+            f"\33[1;95m  >\33[1;97m Extending {self.source} library "
             f"with {len(load_uris)} additional tracks \33[0m"
         )
 
@@ -314,20 +314,20 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
 
         self.logger.print()
         self.log_tracks()
-        self.logger.debug(f"Extend {self.remote_source} tracks data: DONE\n")
+        self.logger.debug(f"Extend {self.source} tracks data: DONE\n")
 
     def as_dict(self):
         return {
-            "user_name": self.api.user_name,
-            "user_id": self.api.user_id,
+            "user_name": self.api.user_name if self.api.user_data else None,
+            "user_id": self.api.user_id if self.api.user_data else None,
             "track_count": len(self.tracks),
             "playlist_counts": {name: len(pl) for name, pl in self.playlists.items()},
         }
 
     def json(self):
         return {
-            "user_name": self.api.user_name,
-            "user_id": self.api.user_id,
+            "user_name": self.api.user_name if self.api.user_data else None,
+            "user_id": self.api.user_id if self.api.user_data else None,
             "tracks": dict(sorted(((track.uri, track.json()) for track in self.tracks), key=lambda x: x[0])),
             "playlists": {name: [tr.uri for tr in pl] for name, pl in self.playlists.items()},
         }

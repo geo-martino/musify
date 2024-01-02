@@ -50,12 +50,12 @@ class TestSpotifyAPICore:
     ## /me + /search endpoints
     ###########################################################################
     def test_get_self(self, api: SpotifyAPI, api_mock: SpotifyMock):
-        api._user_data = {}
+        api.user_data = {}
         assert api.get_self(update_user_data=False) == api_mock.user
-        assert api._user_data == {}
+        assert api.user_data == {}
 
         assert api.get_self(update_user_data=True) == api_mock.user
-        assert api._user_data == api_mock.user
+        assert api.user_data == api_mock.user
 
     def test_query_input_validation(self, api: SpotifyAPI, api_mock: SpotifyMock):
         assert api.query(query=None, kind=ObjectType.EPISODE) == []

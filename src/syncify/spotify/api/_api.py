@@ -73,16 +73,16 @@ class SpotifyAPI(SpotifyAPICore, SpotifyAPIItems, SpotifyAPIPlaylists, SpotifyDa
     @property
     def user_id(self) -> str | None:
         """ID of the currently authenticated user"""
-        if not self._user_data:
-            self._user_data = self.get_self()
-        return self._user_data["id"]
+        if not self.user_data:
+            self.user_data = self.get_self()
+        return self.user_data["id"]
 
     @property
     def user_name(self) -> str | None:
         """Name of the currently authenticated user"""
-        if not self._user_data:
-            self._user_data = self.get_self()
-        return self._user_data["display_name"]
+        if not self.user_data:
+            self.user_data = self.get_self()
+        return self.user_data["display_name"]
 
     def __init__(
             self,

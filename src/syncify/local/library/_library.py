@@ -51,10 +51,17 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         "_tracks",
     )
 
+    @classmethod
     @property
-    def name(self) -> str:
-        """The basename of the library folder"""
-        return self.__class__.__name__.replace("Library", "")
+    def name(cls) -> str:
+        """The type of library loaded"""
+        return cls.source
+
+    @classmethod
+    @property
+    def source(cls) -> str:
+        """The type of local library loaded"""
+        return cls.__name__.replace("Library", "")
 
     @property
     def tracks(self) -> list[LocalTrack]:
@@ -176,7 +183,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             other_folders: UnitCollection[str] = (),
             include: Iterable[str] = (),
             exclude: Iterable[str] = (),
-            remote_wrangler: RemoteDataWrangler = None,
+            remote_wrangler: RemoteDataWrangler | None = None,
     ):
         super().__init__(remote_wrangler=remote_wrangler)
         log_name = basename(library_folder) if library_folder and self.__class__ == LocalLibrary else self.name
@@ -205,7 +212,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         self.errors: list[str] = []
         self.logger.debug(f"Setup {self.name} library: DONE\n")
 
-    def load(self, tracks: bool = True, playlists: bool = True, log: bool = True) -> None:
+    def load(self, tracks: bool = True, playlists: bool = True) -> None:
         """Loads all tracks and playlists in this library from scratch and log results."""
         self.logger.debug(f"Load {self.name} library: START")
         log_types = [f"{len(self._track_paths)} tracks" * tracks, f"{len(self._playlist_paths)} playlists" * playlists]
@@ -214,15 +221,13 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
         if tracks:
             self._tracks = self.load_tracks()
-            if log:
-                self.logger.print(REPORT)
-                self.log_tracks()
+            self.logger.print(REPORT)
+            self.log_tracks()
 
         if playlists:
             self._playlists = {pl.name: pl for pl in sorted(self.load_playlists(), key=lambda pl: pl.name.casefold())}
-            if log:
-                self.logger.print(REPORT)
-                self.log_playlists()
+            self.logger.print(REPORT)
+            self.log_playlists()
 
         self.logger.print()
         self.logger.debug(f"Load {self.name} library: DONE\n")
@@ -236,7 +241,10 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         )
 
         tracks: list[LocalTrack] = []
-        for path in self.logger.get_progress_bar(iterable=self._track_paths, desc="Loading tracks", unit="tracks"):
+        bar: Iterable[str] = self.logger.get_progress_bar(
+            iterable=self._track_paths, desc="Loading tracks", unit="tracks"
+        )
+        for path in bar:
             try:
                 tracks.append(load_track(path=path, available=self._track_paths, remote_wrangler=self.remote_wrangler))
             except SyncifyError:
@@ -275,7 +283,8 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         self.logger.info(f"\33[1;95m  >\33[1;97m Loading playlist data for {len(names)} playlists \33[0m")
 
         playlists: list[LocalPlaylist] = []
-        for name in self.logger.get_progress_bar(iterable=names, desc="Loading playlists", unit="playlists"):
+        bar: Iterable[str] = self.logger.get_progress_bar(iterable=names, desc="Loading playlists", unit="playlists")
+        for name in bar:
             path = self._playlist_paths.get(name.strip().casefold())
             if path is None:
                 raise LocalCollectionError(
@@ -364,7 +373,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             "other_folders": self.other_folders,
             "track_count": len(self.tracks),
             "playlist_counts": {name: len(pl) for name, pl in self._playlists.items()},
-            "remote_source": self.remote_wrangler.remote_source if self.remote_wrangler else None,
+            "remote_source": self.remote_wrangler.source if self.remote_wrangler else None,
         }
 
     def json(self):

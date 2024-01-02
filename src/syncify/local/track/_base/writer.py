@@ -102,7 +102,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
 
         tags: list[LocalTrackField] = to_collection(tags, list)
         if LocalTrackField.ALL in tags:
-            tags = LocalTrackField.all()
+            tags = LocalTrackField.all(only_tags=True)
 
         # all chunks below follow the same basic structure
         # - check if any of the conditionals for this tag type are met

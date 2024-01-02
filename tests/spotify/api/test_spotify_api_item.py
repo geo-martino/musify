@@ -10,7 +10,7 @@ import pytest
 from requests_mock.request import _RequestObjectProxy as Request
 
 from syncify.api.exception import APIError
-from syncify.remote.enums import RemoteObjectType as ObjectType, RemoteIDType as IDType
+from syncify.remote.enums import RemoteObjectType as ObjectType, RemoteIDType as IDType, RemoteIDType
 from syncify.remote.exception import RemoteObjectTypeError
 from syncify.spotify.api import SpotifyAPI
 from tests.remote.utils import random_id_type, random_id_types, ALL_ITEM_TYPES
@@ -103,7 +103,7 @@ class TestSpotifyAPIItems:
         # may only get valid user item types that are not playlists from the currently authorised user
         for kind in api.user_item_types - {ObjectType.PLAYLIST}:
             with pytest.raises(RemoteObjectTypeError):
-                api.get_user_items(user=random_str(), kind=kind)
+                api.get_user_items(user=random_str(1, RemoteIDType.ID.value - 1), kind=kind)
 
     def test_get_tracks_extra_input_validation(self, api: SpotifyAPI):
         assert api.get_tracks_extra(values=random_ids(), features=False, analysis=False) == {}

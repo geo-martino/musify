@@ -19,6 +19,7 @@ from tests.spotify.utils import random_uri, random_uris
 from tests.utils import random_str, get_stdout
 
 
+# TODO: test for all collections processed
 class RemoteItemCheckerTester(ABC):
     """Run generic tests for :py:class:`RemoteItemSearcher` implementations."""
 
@@ -36,7 +37,7 @@ class RemoteItemCheckerTester(ABC):
     def collections(self, playlist_urls: list[str]) -> list[BasicCollection]:
         """Yields a valid :py:class:`BasicCollection` of :py:class:`LocalTrack` as a pytest.fixture"""
         count = randrange(6, len(playlist_urls))
-        return [BasicCollection(name=random_str(), items=random_tracks()) for _ in range(count)]
+        return [BasicCollection(name=random_str(30, 50), items=random_tracks()) for _ in range(count)]
 
     @staticmethod
     @pytest.fixture
@@ -81,7 +82,7 @@ class RemoteItemCheckerTester(ABC):
         checker.api.handler.token = None
         checker.api.handler.token_file_path = path_token
 
-        collection = BasicCollection(name=random_str(), items=random_tracks())
+        collection = BasicCollection(name=random_str(30, 50), items=random_tracks())
         for item in collection:
             item.uri = None
 
@@ -181,7 +182,7 @@ class RemoteItemCheckerTester(ABC):
     ):
         api_mock.reset_mock()  # test checks the number of requests made
 
-        self.setup_input([random_str(), "u", "s"], mocker=mocker)
+        self.setup_input([random_str(10, 20), "u", "s"], mocker=mocker)
         checker._pause(page=1, total=1)
 
         stdout = get_stdout(capfd)
@@ -243,7 +244,7 @@ class RemoteItemCheckerTester(ABC):
             capfd: pytest.CaptureFixture,
     ):
         # anything after 'ua' will be ignored
-        values = ["u", "p", "h", "n", "", "zzzz", "n", "h", "u", "p", "ua", random_str(), "s", "q"]
+        values = ["u", "p", "h", "n", "", "zzzz", "n", "h", "u", "p", "ua", random_str(10, 20), "s", "q"]
         self.setup_input(values, mocker=mocker)
         checker._match_to_input(name="test")
 

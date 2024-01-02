@@ -172,13 +172,13 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
 
         self.logger.debug("Checking items: START")
         self.logger.info(
-            f"\33[1;95m ->\33[1;97m Checking items by creating temporary {self.remote_source} playlists "
+            f"\33[1;95m ->\33[1;97m Checking items by creating temporary {self.source} playlists "
             f"for the current user: {self.api.user_name} \33[0m"
         )
 
         total = len(collections)
         pages_total = (total // self.interval) + (total % self.interval > 0)
-        bar = self.logger.get_progress_bar(iterable=range(total), desc="Creating temp playlists", unit="playlists")
+        bar = self.logger.get_progress_bar(total=total, desc="Creating temp playlists", unit="playlists")
 
         self.skip = False
         self.quit = False
@@ -251,7 +251,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         options = {
             "<Name of playlist>":
                 "Print position, item name, URI, and URL from given link of items as originally added to temp playlist",
-            f"<{self.remote_source} URL/URI>":
+            f"<{self.source} URL/URI>":
                 "Print position, item name, URI, and URL from given link (useful to check current status of playlist)",
             "<Return/Enter>":
                 "Once you have checked all playlist's items, continue on and check for any switches by the user",
@@ -341,7 +341,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
 
         self.logger.info(
             "\33[1;95m ->\33[1;97m Checking for changes to items in "
-            f"{self.remote_source} playlist: \33[94m{name}\33[0m..."
+            f"{self.source} playlist: \33[94m{name}\33[0m..."
         )
 
         source = self.playlist_name_collection[name]
@@ -403,7 +403,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
 
         header = [f"\t\33[1;94m{name}:\33[91m The following items were removed and/or matches were not found. \33[0m"]
         options = {
-            "u": f"Mark item as 'Unavailable on {self.remote_source}'",
+            "u": f"Mark item as 'Unavailable on {self.source}'",
             "n": f"Leave item with no URI. ({PROGRAM_NAME} will still attempt to find this item at the next run)",
             "a": "Add in addition to 'u' or 'n' options to apply this setting to all items in this playlist",
             "r": "Recheck playlist for all items in the album",

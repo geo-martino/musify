@@ -2,7 +2,8 @@ from copy import deepcopy
 
 import pytest
 
-from syncify.utils.helpers import limit_value, to_collection, flatten_nested, merge_maps, get_most_common_values
+from syncify.utils.helpers import flatten_nested, merge_maps, get_most_common_values
+from syncify.utils.helpers import limit_value, to_collection
 from syncify.utils.helpers import strip_ignore_words, safe_format_map, get_max_width, align_and_truncate
 
 
@@ -120,6 +121,11 @@ def test_to_collection():
         to_collection(1, str)
         to_collection([1, 2, 3], bool)
         to_collection({1, 2, 3, 4}, float)
+
+
+def test_unique_list():
+    # TODO: test me
+    pass
 
 
 ###########################################################################

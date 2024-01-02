@@ -3,6 +3,7 @@ import string
 from datetime import datetime
 from os.path import join, dirname
 from random import choice, randrange, sample
+from uuid import uuid4
 
 import pytest
 
@@ -18,7 +19,7 @@ def get_stdout(capfd: pytest.CaptureFixture) -> str:
     return re.sub("\33.*?m", "", capfd.readouterr().out)
 
 
-def random_str(start: int = 1, stop: int = 20) -> str:
+def random_str(start: int = 30, stop: int = 50) -> str:
     """Generates a random string of upper and lower case characters with a random length between the values given."""
     range_ = randrange(start=start, stop=stop) if start < stop else start
     return "".join(choice(string.ascii_letters) for _ in range(range_))
@@ -26,7 +27,7 @@ def random_str(start: int = 1, stop: int = 20) -> str:
 
 def random_file(tmp_path: str, size: int | None = None) -> str:
     """Generates a random file of a given ``size`` in bytes in the test cache folder and returns its path."""
-    path = join(tmp_path, random_str(10, 20) + ".txt")
+    path = join(tmp_path, str(uuid4()) + ".txt")
     with open(path, 'w') as f:
         for _ in range(0, size or randrange(int(6*10e3), int(10e6))):
             f.write(choice(string.ascii_letters))

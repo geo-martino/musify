@@ -36,7 +36,7 @@ def random_id_types(
     if id_list:
         pass
     elif kind == RemoteObjectType.USER:
-        id_list = [random_str() for _ in range(randrange(start=start, stop=stop))]
+        id_list = [random_str(1, RemoteIDType.ID.value - 1) for _ in range(randrange(start=start, stop=stop))]
     else:
         id_list = random_ids(start=start, stop=stop)
 

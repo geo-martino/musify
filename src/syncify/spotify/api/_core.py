@@ -76,7 +76,7 @@ class SpotifyAPICore(SpotifyAPIBase, metaclass=ABCMeta):
         """
         r = self.handler.get(url=f"{self.api_url_base}/me", use_cache=True, log_pad=71)
         if update_user_data:
-            self._user_data = r
+            self.user_data = r
         return r
 
     def query(

@@ -188,7 +188,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
         kind = kinds.pop() if len(kinds) == 1 else "collection"
         self.logger.info(
             f"\33[1;95m ->\33[1;97m "
-            f"Searching for matches on {self.remote_source} for {len(collections)} {kind}s\33[0m"
+            f"Searching for matches on {self.source} for {len(collections)} {kind}s\33[0m"
         )
 
         bar = self.logger.get_progress_bar(iterable=collections, desc="Searching", unit=f"{kind}s")

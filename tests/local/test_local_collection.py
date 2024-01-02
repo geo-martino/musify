@@ -89,7 +89,7 @@ class TestLocalFolder(LocalCollectionTester):
         tracks = random_tracks(10)
 
         for i, track in enumerate(tracks[:7]):
-            track.file.filename = f"/test/{self.name}/{random_str(15, 20)}{track.ext}"
+            track.file.filename = f"/test/{self.name}/{random_str(30, 50)}{track.ext}"
             track.compilation = i > 2
 
             if i % 2 == 0:

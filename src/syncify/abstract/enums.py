@@ -175,6 +175,18 @@ class TagField(Field):
 
     __tags__: frozenset[str] = frozenset(list(TagMap.__annotations__.keys()) + ["uri"])
 
+    @classmethod
+    def all(cls, only_tags: bool = False) -> list[Self]:
+        """
+        Get all enums for this enum.
+        When ``only_tags`` is True, returns only those enums that represent a tag for this TagField type.
+        """
+        enums = super().all()
+        if not only_tags:
+            return enums
+
+        return list(sorted(cls.from_name(*cls.to_tags(enums)), key=lambda x: enums.index(x)))
+
     def to_tag(self) -> set[str]:
         """
         Returns all human-friendly tag names for the current enum value.
@@ -183,7 +195,7 @@ class TagField(Field):
         This will only return tag names if they are found in :py:class:`TagMap`.
         """
         if self == Fields.ALL:
-            return {tag.name.lower() for tag in self.all() if tag.name.lower() in self.__tags__}
+            return {tag.name.lower() for tag in super().all() if tag.name.lower() in self.__tags__}
         return {tag.name.lower() for tag in self.map(self) if tag.name.lower() in self.__tags__}
 
     @classmethod

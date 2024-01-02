@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import inspect
 import json
 import logging.config
 import os
 import sys
-from abc import ABC, abstractmethod
-from collections.abc import Mapping, Generator, Collection
+from abc import ABCMeta, abstractmethod
+from collections.abc import Mapping, Generator, Collection, Callable
+from copy import copy
 from dataclasses import dataclass
 from datetime import datetime
 from os.path import isabs, join, dirname, splitext, exists
@@ -13,21 +15,25 @@ from typing import Any, Self, get_args, Iterable
 
 import yaml
 
+from syncify import PACKAGE_ROOT, MODULE_ROOT
 from syncify.abstract import NamedObject
 from syncify.abstract.enums import TagField
 from syncify.abstract.misc import PrettyPrinter
 from syncify.abstract.object import Library
-from syncify.exception import ConfigError
+from syncify.api import APIAuthoriser, RequestHandler
+from syncify.exception import ConfigError, SyncifyError
 from syncify.fields import LocalTrackField
-from syncify.local.exception import InvalidFileType
+from syncify.local.collection import LocalCollection
+from syncify.local.exception import InvalidFileType, FileDoesNotExistError
 from syncify.local.library import MusicBee, LocalLibrary
 from syncify.remote.api import RemoteAPI
 from syncify.remote.library import RemoteObject
 from syncify.remote.library.library import RemoteLibrary
-from syncify.remote.library.object import PLAYLIST_SYNC_KINDS
-from syncify.remote.processors.check import RemoteItemChecker, ALLOW_KARAOKE_DEFAULT
+from syncify.remote.library.object import PLAYLIST_SYNC_KINDS, RemotePlaylist
+from syncify.remote.processors.check import RemoteItemChecker
 from syncify.remote.processors.search import RemoteItemSearcher
 from syncify.remote.processors.wrangle import RemoteDataWrangler
+from syncify.report import report_missing_tags
 from syncify.spotify import SPOTIFY_SOURCE_NAME
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.library import SpotifyObject
@@ -38,241 +44,116 @@ from syncify.utils.helpers import to_collection
 from syncify.utils.logger import LOGGING_DT_FORMAT, SyncifyLogger
 
 
-@dataclass
-class RemoteClasses:
-    """Stores the key classes for a remote source"""
-    name: str
-    api: type[RemoteAPI]
-    wrangler: type[RemoteDataWrangler]
-    object: type[RemoteObject]
-    library: type[RemoteLibrary]
-    checker: type[RemoteItemChecker]
-    searcher: type[RemoteItemSearcher]
-
-
-# map of the names of all supported remote sources and their associated implementations
-REMOTE_CONFIG: Mapping[str, RemoteClasses] = {
-    SPOTIFY_SOURCE_NAME: RemoteClasses(
-        name=SPOTIFY_SOURCE_NAME,
-        api=SpotifyAPI,
-        wrangler=SpotifyDataWrangler,
-        object=SpotifyObject,
-        library=SpotifyLibrary,
-        checker=SpotifyItemChecker,
-        searcher=SpotifyItemSearcher,
-    )
-}
-
-
 def _get_local_track_tags(tags: Any) -> tuple[LocalTrackField, ...]:
     values = to_collection(tags, tuple)
-    tags = LocalTrackField.to_tags(LocalTrackField.from_name(*values) if values else LocalTrackField.all())
-    order = [field for field in LocalTrackField.all()]
+    if not values:
+        return tuple(LocalTrackField.all(only_tags=True))
+
+    tags = LocalTrackField.to_tags(LocalTrackField.from_name(*values))
+    order = LocalTrackField.all()
     return tuple(sorted(LocalTrackField.from_name(*tags), key=lambda x: order.index(x)))
 
 
-class Config(PrettyPrinter):
-    """
-    Set up config and provide framework for initialising various objects
-    needed for the main functionality of the program from a given config file at ``path``.
+def _get_default_args(func: Callable):
+    signature = inspect.signature(func)
+    return {
+        k: v.default
+        for k, v in signature.parameters.items()
+        if v.default is not inspect.Parameter.empty
+    }
 
-    The following options are in place for configuration values:
 
-    - `DEFAULT`: When a value is not found, a default value will be used.
-    - `REQUIRED`: The configuration will fail if this value is not given. Only applies when the key is called.
-    - `OPTIONAL`: This value does not need to be set and ``None`` will be set when this is the case.
-        The configuration will not fail if this value is not given.
+class BaseConfig(PrettyPrinter, metaclass=ABCMeta):
+    """Base config section representing a config block from the file"""
 
-    Sub-configs have an ``override`` parameter that can be set using the ``override`` key in initial config block.
-    When override is True and ``config`` given, override loaded config from the file with values in ``config``
-    only using loaded values when values are not present in given ``config``.
-    When override is False and ``config`` given, loaded config takes priority
-    and given ``config`` values are only used when values are not present in the file.
-    By default, always keep the current settings.
+    def __init__(self, settings: dict[Any, Any], key: Any | None = None):
+        self._file: dict[Any, Any] = settings.get(key, {}) if key else settings
 
-    :param path: Path of the config file to use. If relative path given, appends package root path.
-    """
-
-    def __init__(self, path: str = "config.yml"):
-        self.run_dt = datetime.now()
-        self._package_root = dirname(dirname(dirname(__file__)))
-        self.config_path = self._make_path_absolute(path)
-        
-        self._cfg: dict[Any, Any] = {}
-        
-        # general operation settings
-        self._output_folder: str | None = None
-        self._dry_run: bool | None = None
-        self._pause_message: str | None = None
-        
-        # core settings
-        self.local: dict[str, ConfigLocal] = {}
-        self.remote: dict[str, ConfigRemote] = {}
-
-        # specific operation settings
-        self.filter: ConfigFilter | None = None
-        self.reports: ConfigReports | None = None
-    
-    def load(self, key: str | None = None, fail_on_missing: bool = True):
+    def override(self, other: Self | None) -> None:
         """
-        Load old config from the config file at the given ``key`` respecting ``override`` rules.
-
-        :param key: The key to pull config from within the file.
-            Used as the parent key to use to pull the required configuration from the config file.
-            If not given, use the root values in the config file.
-        :param fail_on_missing: Raise exception if the given key cannot be found.
+        Override the currently stored config values with the config from a given ``other`` configured config object
         """
-        new = self.__class__.__new__(self.__class__)
-        cfg = self._load_config(key, fail_on_missing=fail_on_missing)
-        new._cfg = cfg
-        keep = not cfg.get("override", False)  # default = keep the current settings
+        if other is None:
+            return
 
-        self._output_folder: str | None = self.output_folder if keep else None
-        self._dry_run: bool | None = self.dry_run if keep else None
-        self._pause_message = self.pause_message if keep else None
+        for k, v_self in self.__dict__.items():
+            if not k.startswith("_") or k.startswith("__") or k.lstrip("_") not in self.__dict__:
+                continue
 
-        for name, settings in cfg.get("local", {}).items():
-            match settings["kind"]:
-                case "musicbee":
-                    library = ConfigMusicBee(file=settings, old=self.local.get(name), keep=keep)
-                case _:
-                    library = ConfigLocal(file=settings, old=self.local.get(name), keep=keep)
+            v_other = getattr(other, k.lstrip("_"))
 
-            self.local[name] = library
+            if isinstance(v_self, BaseConfig) and isinstance(v_other, v_self.__class__):
+                v_self.override(v_other)  # override value of self when values are matching types of config objects
 
-        for name, settings in cfg.get("remote", {}).items():
-            kind = settings["kind"]
-            match kind:  # remap certain source kinds to expected values
-                case "spotify":
-                    kind = SPOTIFY_SOURCE_NAME
+            elif isinstance(v_self, dict) and isinstance(v_other, dict):
+                for k_sub, v_self_sub in v_self.items():
+                    v_other_sub = v_other.get(k_sub)
+                    if isinstance(v_self_sub, BaseConfig) and isinstance(v_other_sub, v_self_sub.__class__):
+                        # override any matching types of config objects
+                        v_self_sub.override(v_other_sub)
+                    else:    # just replace the current value
+                        v_self[k_sub] = v_other_sub
 
-            library = ConfigRemote(name=kind, file=settings, old=self.remote.get(name), keep=keep)
-            # noinspection PyProtectedMember
-            assert library.api._api is None  # ensure api has not already been instantiated
+                for k_sub, v_other_sub in v_other.items():  # add missing keys from self found in other
+                    if k_sub not in v_self:
+                        v_self[k_sub] = v_other_sub
 
-            if not exists(library.api.token_path) and not isabs(library.api.token_path):
-                library.api._token_path = join(dirname(self.output_folder), library.api.token_path)
-            if not exists(library.api.cache_path) and not isabs(library.api.cache_path):
-                library.api._cache_path = join(dirname(self.output_folder), library.api.cache_path)
+            elif v_other is not None:  # if value from other exists, replace self value
+                setattr(self, k, v_other)
 
-            self.remote[name] = library
-
-        self.filter = ConfigFilter(file=cfg, old=self.filter, keep=keep)
-        self.reports = ConfigReports(file=cfg, old=self.reports, keep=keep)
-
-        self._cfg = cfg
-
-    def _make_path_absolute(self, path: str) -> str:
-        """Append the package root to any relative path to make it an absolute path. Do nothing if path is absolute."""
-        if not isabs(path):
-            path = join(self._package_root, path)
-        return path
-
-    def _load_config(self, key: str | None = None, fail_on_missing: bool = True) -> dict[Any, Any]:
+    def enrich(self, other: Self | None) -> None:
         """
-        Load the config file
-
-        :param key: The key to pull config from within the file.
-        :param fail_on_missing: Raise exception if the given key cannot be found.
-        :return: The config file.
-        :raise InvalidFileType: When the given config file is not of the correct type.
-        :raise ConfigError: When the given key cannot be found and ``fail_on_missing`` is True.
+        Enrich missing config for the currently stored config values with the config
+        from a given ``other`` configured config object
         """
-        if splitext(self.config_path)[1].casefold() not in [".yml", ".yaml"]:
-            raise InvalidFileType(f"Unrecognised file type: {self.config_path}")
-        elif not exists(self.config_path):
-            raise FileNotFoundError(f"Config file not found: {self.config_path}")
+        if other is None:
+            return
 
-        with open(self.config_path, 'r') as file:
-            config = yaml.full_load(file)
-        if fail_on_missing and key and key not in config:
-            raise ConfigError("Unrecognised config name: {key} | Available: {value}", key=key, value=config)
+        for k, v_self in self.__dict__.items():
+            if not k.startswith("_") or k.startswith("__") or k.lstrip("_") not in self.__dict__:
+                continue
 
-        return config.get(key, config)
+            v_other = getattr(other, k.lstrip("_"))
 
-    def load_log_config(self, path: str = "logging.yml") -> None:
-        """
-        Load logging config from the JSON or YAML file at the given ``path``.
-        If relative path given, appends package root path.
-        """
-        if not isabs(path):
-            path = join(self._package_root, path)
+            if isinstance(v_self, BaseConfig) and isinstance(v_other, v_self.__class__):
+                v_self.enrich(v_other)  # enrich value of self when values are matching types of config objects
 
-        ext = splitext(path)[1].casefold()
-        allowed = {".yml", ".yaml", ".json"}
-        if ext not in allowed:
-            raise ConfigError(
-                "Unrecognised log config file type: {key}. Valid: {value}", key=ext, value=allowed
-            )
+            elif isinstance(v_self, dict) and isinstance(v_other, dict):
+                for k_sub, v_self_sub in v_self.items():  # enrich any matching types of config objects
+                    v_other_sub = v_other.get(k_sub)
+                    if isinstance(v_self_sub, BaseConfig) and isinstance(v_other_sub, v_self_sub.__class__):
+                        v_self_sub.enrich(v_other_sub)
 
-        with open(path, "r") as file:
-            if ext in {".yml", ".yaml"}:
-                log_config = yaml.full_load(file)
-            elif ext in {".json"}:
-                log_config = json.load(file)
+                for k_sub, v_other_sub in v_other.items():  # add missing keys from self found in other
+                    if k_sub not in v_self:
+                        v_self[k_sub] = v_other_sub
 
-        SyncifyLogger.compact = log_config.pop("compact", False)
-
-        for formatter in log_config["formatters"].values():  # ensure ANSI colour codes in format are recognised
-            formatter["format"] = formatter["format"].replace(r"\33", "\33")
-
-        logging.config.dictConfig(log_config)
-
-    ###########################################################################
-    ## General
-    ###########################################################################
-    @property
-    def output_folder(self) -> str:
-        """`DEFAULT = '<package_root>/_data'` | The output folder for saving diagnostic data"""
-        if self._output_folder is not None:
-            return self._output_folder
-
-        parent_folder = self._make_path_absolute(self._cfg.get("output", "_data"))
-        self._output_folder = join(parent_folder, self.run_dt.strftime(LOGGING_DT_FORMAT))
-        os.makedirs(self._output_folder, exist_ok=True)
-        return self._output_folder
-
-    @property
-    def dry_run(self) -> bool:
-        """`DEFAULT = True` | Whether this run is a dry run i.e. don't write out where possible"""
-        if self._dry_run is not None:
-            return self._dry_run
-
-        self._dry_run = self._cfg.get("dry_run", True)
-        return self._dry_run
-
-    @property
-    def pause_message(self) -> str:
-        """`DEFAULT = 'Pausing, hit return to continue...'` | The message to display when running the pause operation"""
-        if self._pause_message is not None:
-            return self._pause_message
-
-        default = "Pausing, hit return to continue..."
-        self._pause_message = self._cfg["message"].strip() if "message" in self._cfg else default
-        return self._pause_message
-
-    def as_dict(self) -> dict[str, Any]:
-        return {
-            "run_time": self.run_dt,
-            "config_path": self.config_path,
-            "output_folder": self.output_folder,
-            "dry_run": self.dry_run,
-            "local": {name: config for name, config in self.local.items()},
-            "remote": {name: config for name, config in self.remote.items()},
-            "filter": self.filter,
-            "pause_message": self.pause_message,
-            "reports": self.reports,
-        }
+            elif v_self is None:  # if not value in self, set from other value
+                setattr(self, k, v_other)
 
 
 ###########################################################################
 ## Shared
 ###########################################################################
-class ConfigLibrary(PrettyPrinter, ABC):
-    """Set the settings for a library from a config file and terminal arguments."""
+class ConfigLibrary(BaseConfig):
+    """Set the settings for a library from a config file."""
 
-    def __init__(self):
+    def __init__(self, settings: dict[Any, Any], key: Any | None = None):
+        super().__init__(settings=settings, key=key)
+        
         self.library_loaded: bool = False  # marks whether initial loading of the library has happened
+        self.playlists: ConfigPlaylists | None = None
+
+    @property
+    def kind(self) -> str:
+        """The config identifier that gives the type of library being configured"""
+        return self._file["type"]
+
+    @property
+    @abstractmethod
+    def source(self) -> str:
+        """The name of the source currently being used for this library"""
+        raise NotImplementedError
 
     @property
     @abstractmethod
@@ -281,26 +162,26 @@ class ConfigLibrary(PrettyPrinter, ABC):
         raise NotImplementedError
 
     def as_dict(self) -> dict[str, Any]:
-        return {"library": self.library}
+        try:
+            library = self.library
+        except SyncifyError:
+            library = None
+        return {"library": library, "playlists": self.playlists}
 
 
-class ConfigFilter(PrettyPrinter):
+class ConfigFilter(BaseConfig):
     """
-    Set the settings for granular filtering from a config file and terminal arguments.
-    See :py:class:`Config` for more documentation regarding initialisation and operation.
+    Set the settings for granular filtering from a config file.
+    See :py:class:`Config` for more documentation regarding operation.
 
-    :param file: The loaded config from the config file.
+    :param settings: The loaded config from the config file.
     """
 
-    def __init__(self, file: dict[Any, Any], old: Self | None = None, keep: bool = False):
-        self._cfg = file.get("filter", file)
+    def __init__(self, settings: dict[Any, Any]):
+        super().__init__(settings=settings, key="filter")
 
-        self.include = self.ConfigFilterOptions(
-            name="include", file=self._cfg, old=old.include if old is not None else None, keep=keep, include=True,
-        )
-        self.exclude = self.ConfigFilterOptions(
-            name="exclude", file=self._cfg, old=old.exclude if old is not None else None, keep=keep, include=False,
-        )
+        self.include = self.ConfigFilterOptions(settings=self._file, key="include", include=True)
+        self.exclude = self.ConfigFilterOptions(settings=self._file, key="exclude", include=False)
 
     def process[T: str | NamedObject](self, values: Iterable[T]) -> tuple[T, ...]:
         """Filter down ``values`` that match this filter's settings from"""
@@ -312,38 +193,28 @@ class ConfigFilter(PrettyPrinter):
             "exclude": self.exclude,
         }
 
-    class ConfigFilterOptions(PrettyPrinter):
+    class ConfigFilterOptions(BaseConfig):
         """
-        Set the settings for filter options from a config file and terminal arguments.
-        See :py:class:`Config` for more documentation regarding initialisation and operation.
-
-        :param name: The key to load filter options for.
+        Set the settings for filter options from a config file.
+        See :py:class:`Config` for more documentation regarding operation.
+        
+        :param settings: The loaded config from the config file.
+        :param key: The key to load filter options for.
             Used as the parent key to use to pull the required configuration from the config file.
-        :param file: The loaded config from the config file.
+        :param include: When True, :py:method:`process` method includes items that match filter settings.
+            When False, method excludes those that match filter settings. 
         """
 
-        def __init__(
-                self, name: str, file: dict[Any, Any], old: Self | None = None, keep: bool = False, include: bool = True
-        ):
-            self._cfg: dict | list = file.get(name, {})
-
+        def __init__(self, settings: dict[Any, Any], key: str, include: bool = True):
+            super().__init__(settings=settings, key=key)
+            self._file: dict[Any, Any] | list[Any] = self._file
             self.include: bool = include
-
-            self.available: Collection[str] | None = old.available if old is not None and keep else None
-            self._values: tuple[str, ...] | None = old.values if old is not None and keep else None
-            self._prefix: str | None = old.prefix if old is not None and keep else None
-            self._start: str | None = old.start if old is not None and keep else None
-            self._stop: str | None = old.stop if old is not None and keep else None
-
-            # TODO: this needs to be replicated everywhere for overrides to work correctly
-            if old is not None and not self.values:
-                self._values = old.values
-            if old is not None and not self.prefix:
-                self._prefix = old.prefix
-            if old is not None and not self.start:
-                self._start = old.start
-            if old is not None and not self.stop:
-                self._stop = old.stop
+            
+            self.available: Collection[str] | None = None
+            self._values: tuple[str, ...] | None = None
+            self._prefix: str | None = None
+            self._start: str | None = None
+            self._stop: str | None = None
 
         def process[T: str | NamedObject](self, values: Iterable[T]) -> tuple[T, ...]:
             """Returns all strings from ``values`` that match this filter's settings"""
@@ -381,13 +252,13 @@ class ConfigFilter(PrettyPrinter):
             if self._values is not None:
                 return self._values
 
-            is_str_collection = isinstance(self._cfg, Collection) and all(isinstance(v, str) for v in self._cfg)
+            is_str_collection = isinstance(self._file, Collection) and all(isinstance(v, str) for v in self._file)
             if self.available:
                 values = self.available
-            elif not isinstance(self._cfg, Mapping) and is_str_collection:
-                values = self._cfg
-            elif isinstance(self._cfg, Mapping) and self._cfg.get("values"):
-                values = self._cfg["values"]
+            elif not isinstance(self._file, Mapping) and is_str_collection:
+                values = self._file
+            elif isinstance(self._file, Mapping) and self._file.get("values"):
+                values = self._file["values"]
             else:
                 values = ()
 
@@ -399,7 +270,7 @@ class ConfigFilter(PrettyPrinter):
             """`OPTIONAL` | The prefix of the items to match on."""
             if self._prefix is not None:
                 return self._prefix
-            self._prefix = self._cfg.get("prefix") if isinstance(self._cfg, Mapping) else None
+            self._prefix = self._file.get("prefix") if isinstance(self._file, Mapping) else None
             return self._prefix
 
         @property
@@ -407,7 +278,7 @@ class ConfigFilter(PrettyPrinter):
             """`OPTIONAL` | The exact name for the first item to match on."""
             if self._start is not None:
                 return self._start
-            self._start = self._cfg.get("start") if isinstance(self._cfg, Mapping) else None
+            self._start = self._file.get("start") if isinstance(self._file, Mapping) else None
             return self._start
 
         @property
@@ -416,7 +287,7 @@ class ConfigFilter(PrettyPrinter):
             if self._stop is not None:
                 return self._stop
 
-            self._stop = self._cfg.get("stop") if isinstance(self._cfg, Mapping) else None
+            self._stop = self._file.get("stop") if isinstance(self._file, Mapping) else None
             return self._stop
 
         def __iter__(self):
@@ -438,16 +309,16 @@ class ConfigFilter(PrettyPrinter):
 
 class ConfigPlaylists(ConfigFilter):
     """
-    Set the settings for the playlists from a config file and terminal arguments.
-    See :py:class:`Config` for more documentation regarding initialisation and operation.
+    Set the settings for the playlists from a config file.
+    See :py:class:`Config` for more documentation regarding operation.
 
-    :param file: The loaded config from the config file.
+    :param settings: The loaded config from the config file.
     """
 
-    def __init__(self, file: dict[Any, Any], old: Self | None = None, keep: bool = False):
-        super().__init__(file=file.get("playlists", {}), old=old, keep=keep)
+    def __init__(self, settings: dict[Any, Any]):
+        super().__init__(settings=settings.get("playlists", {}))
 
-        self._filter: dict[str, tuple[str, ...]] | None = old.filter if old is not None and keep else None
+        self._filter: dict[str, tuple[str, ...]] | None = None
 
     @property
     def filter(self) -> dict[str, tuple[str, ...]]:
@@ -456,7 +327,7 @@ class ConfigPlaylists(ConfigFilter):
             return self._filter
 
         self._filter = {}
-        for tag, values in self._cfg.get("filter", {}).items():
+        for tag, values in self._file.get("filter", {}).items():
             if tag not in TagField.__tags__ or not values:
                 continue
             self._filter[tag] = to_collection(values, tuple)
@@ -467,76 +338,72 @@ class ConfigPlaylists(ConfigFilter):
         return super().as_dict() | {"filter": self.filter}
 
 
-class ConfigReportBase(PrettyPrinter):
+class ConfigReportBase(BaseConfig):
     """
     Base class for settings reports settings.
 
-    :param file: The loaded config from the config file.
+    :param settings: The loaded config from the config file.
     """
-    def __init__(self, name: str, file: dict[Any, Any]):
-        self._cfg = file.get(name, {})
-        self.name = name
-        self.enabled = self._cfg.get("enabled", True)
+    def __init__(self, settings: dict[Any, Any], key: str):
+        super().__init__(settings=settings, key=key)
+        self.name = key
+        self.enabled = self._file.get("enabled", True)
 
     def as_dict(self) -> dict[str, Any]:
         return {"enabled": self.enabled}
 
 
-class ConfigReports(PrettyPrinter, Iterable[ConfigReportBase]):
+class ConfigReports(BaseConfig, Iterable[ConfigReportBase]):
     """
-    Set the settings for all reports from a config file and terminal arguments.
-    See :py:class:`Config` for more documentation regarding initialisation and operation.
+    Set the settings for all reports from a config file.
+    See :py:class:`Config` for more documentation regarding operation.
 
-    :param file: The loaded config from the config file.
+    :param settings: The loaded config from the config file.
     """
-    def __init__(self, file: dict[Any, Any], old: Self | None = None, keep: bool = False):
-        self._cfg = file.get("reports", {})
+    def __init__(self, settings: dict[Any, Any]):
+        super().__init__(settings=settings, key="reports")
 
-        self.library_differences = ConfigLibraryDifferences(
-            file=self._cfg, _=old.library_differences if old is not None else None, __=keep
-        )
-        self.missing_tags = ConfigMissingTags(
-            file=self._cfg, old=old.missing_tags if old is not None else None, keep=keep
-        )
-
-        self.all: tuple[ConfigReportBase, ...] = (self.library_differences, self.missing_tags)
+        self.library_differences = ConfigLibraryDifferences(settings=self._file)
+        self.missing_tags = ConfigMissingTags(settings=self._file)
 
     def __iter__(self) -> Generator[[ConfigReportBase], None, None]:
-        return (report for report in self.all)
+        return (value for value in self.__dict__.values() if isinstance(value, ConfigReportBase))
 
     def as_dict(self) -> dict[str, Any]:
-        return {report.name: report for report in self.all}
+        return {report.name: report for report in self}
 
 
 class ConfigLibraryDifferences(ConfigReportBase):
     """
-    Set the settings for the library differences report from a config file and terminal arguments.
+    Set the settings for the library differences report from a config file.
 
-    :param file: The loaded config from the config file.
+    :param settings: The loaded config from the config file.
     """
-    def __init__(self, file: dict[Any, Any], _: Self | None = None, __: bool = False):
-        super().__init__(name="library_differences", file=file)
+    def __init__(self, settings: dict[Any, Any], _: Self | None = None, __: bool = False):
+        super().__init__(settings=settings, key="library_differences")
 
 
 class ConfigMissingTags(ConfigReportBase):
     """
-    Set the settings for the missing tags report from a config file and terminal arguments.
+    Set the settings for the missing tags report from a config file.
 
-    :param file: The loaded config from the config file.
+    :param settings: The loaded config from the config file.
     """
 
-    def __init__(self, file: dict[Any, Any], old: Self | None = None, keep: bool = False):
-        super().__init__(name="missing_tags", file=file)
+    def __init__(self, settings: dict[Any, Any]):
+        super().__init__(settings=settings, key="missing_tags")
 
-        self._tags: tuple[LocalTrackField, ...] | None = old.tags if old is not None and keep else None
-        self._match_all: bool | None = old.match_all if old is not None and keep else None
+        self._tags: tuple[LocalTrackField, ...] | None = None
+        self._match_all: bool | None = None
 
     @property
     def tags(self) -> tuple[LocalTrackField, ...]:
         """`DEFAULT = (<all LocalTrackFields>)` | The tags to be updated."""
         if self._tags is not None:
             return self._tags
-        self._tags = _get_local_track_tags(self._cfg.get("tags"))
+
+        default = to_collection(_get_default_args(report_missing_tags)["tags"])
+        self._tags = _get_local_track_tags(self._file["tags"]) if "tags" in self._file else default
         return self._tags
 
     @property
@@ -546,12 +413,15 @@ class ConfigMissingTags(ConfigReportBase):
         """
         if self._match_all is not None:
             return self._match_all
-        self._match_all = self._cfg.get("match_all", True)
+
+        defaults = _get_default_args(report_missing_tags)
+        self._match_all = self._file.get("match_all", defaults["match_all"])
         return self._match_all
 
     def as_dict(self) -> dict[str, Any]:
+        order = [field.name.lower() for field in LocalTrackField.all(only_tags=True)]
         return super().as_dict() | {
-            "tags": [t for tag in self.tags for t in tag.to_tag()],
+            "tags": list(sorted([t for tag in self.tags for t in tag.to_tag()], key=lambda x: order.index(x))),
             "match_all": self.match_all,
         }
 
@@ -561,10 +431,10 @@ class ConfigMissingTags(ConfigReportBase):
 ###########################################################################
 class ConfigLocal(ConfigLibrary):
     """
-    Set the settings for the local functionality of the program from a config file and terminal arguments.
-    See :py:class:`Config` for more documentation regarding initialisation and operation.
+    Set the settings for the local functionality of the program from a config file.
+    See :py:class:`Config` for more documentation regarding operation.
 
-    :param file: The loaded config from the config file.
+    :param settings: The loaded config from the config file.
     """
 
     @property
@@ -572,18 +442,23 @@ class ConfigLocal(ConfigLibrary):
         platform_map = {"win32": "win", "linux": "lin", "darwin": "mac"}
         return platform_map[sys.platform]
 
-    def __init__(self, file: dict[Any, Any], old: Self | None = None, keep: bool = False):
-        super().__init__()
-        self._cfg = file
+    def __init__(self, settings: dict[Any, Any]):
+        super().__init__(settings=settings)
+        self._defaults = _get_default_args(LocalLibrary)
 
-        self._library_folder: str | None = old.library_folder if old is not None and keep else None
-        self._playlist_folder: str | None = old.playlist_folder if old is not None and keep else None
-        self._other_folders: tuple[str, ...] | None = old.other_folders if old is not None and keep else None
+        self._library_folder: str | None = None
+        self._playlist_folder: str | None = None
+        self._other_folders: tuple[str, ...] | None = None
 
-        self._library = old.library if old and keep else None
+        self._library: LocalLibrary | None = None
+        self._remote_wrangler: RemoteDataWrangler | None = self._defaults["remote_wrangler"]
 
-        self.playlists = ConfigPlaylists(file=self._cfg, old=old.playlists if old is not None else None, keep=keep)
-        self.update = self.ConfigUpdateTags(file=self._cfg, old=old.update if old is not None else None, keep=keep)
+        self.playlists = ConfigPlaylists(settings=self._file)
+        self.update = self.ConfigUpdateTags(settings=self._file)
+
+    @property
+    def source(self):
+        return LocalLibrary.source
 
     @property
     def library(self) -> LocalLibrary:
@@ -596,12 +471,27 @@ class ConfigLocal(ConfigLibrary):
             other_folders=self.other_folders,
             include=self.playlists.include,
             exclude=self.playlists.exclude,
+            remote_wrangler=self.remote_wrangler
         )
         return self._library
 
     @property
-    def _cfg_paths(self) -> dict[Any, Any]:
-        return self._cfg.get("paths", {})
+    def remote_wrangler(self) -> RemoteDataWrangler:
+        """The remote wrangler to apply when initialising a library"""
+        return self._remote_wrangler
+
+    @remote_wrangler.setter
+    def remote_wrangler(self, value: RemoteDataWrangler):
+        if self._library is not None:
+            raise ConfigError("Cannot set the remote wrangler after the library has been initialised")
+        self._remote_wrangler = value
+
+    ###########################################################################
+    ## Paths
+    ###########################################################################
+    @property
+    def _paths(self) -> dict[Any, Any]:
+        return self._file.get("paths", {})
 
     @property
     def library_folder(self) -> str:
@@ -609,30 +499,30 @@ class ConfigLocal(ConfigLibrary):
         if self._library_folder is not None:
             return self._library_folder
 
-        if isinstance(self._cfg_paths.get("library"), str):
-            self._library_folder = self._cfg_paths["library"]
+        if isinstance(self._paths.get("library"), str):
+            self._library_folder = self._paths["library"]
             return self._library_folder
-        elif not isinstance(self._cfg_paths.get("library"), dict):
-            raise ConfigError("Config not found", key=["local", "paths", "library"], value=self._cfg_paths)
+        elif not isinstance(self._paths.get("library"), dict):
+            raise ConfigError("Config not found", key=["local", "paths", "library"], value=self._paths)
 
         # assume platform sub-keys
-        value = self._cfg_paths["library"].get(self._platform_key)
+        value = self._paths["library"].get(self._platform_key)
         if not value:
             raise ConfigError(
                 "Library folder for the current platform not given",
                 key=["local", "paths", "library", self._platform_key],
-                value=self._cfg_paths["library"]
+                value=self._paths["library"]
             )
 
         self._library_folder = value
         return self._library_folder
 
     @property
-    def playlist_folder(self) -> str | None:
-        """`OPTIONAL` | The path of the playlist folder."""
+    def playlist_folder(self) -> str:
+        """`DEFAULT = 'Playlists'` | The path of the playlist folder."""
         if self._playlist_folder is not None:
             return self._playlist_folder
-        self._playlist_folder = self._cfg_paths.get("playlists")
+        self._playlist_folder = self._paths.get("playlists", self._defaults["playlist_folder"])
         return self._playlist_folder
 
     @property
@@ -640,59 +530,74 @@ class ConfigLocal(ConfigLibrary):
         """`DEFAULT = ()` | The paths of other folder to use for replacement when processing local libraries"""
         if self._other_folders is not None:
             return self._other_folders
-        self._other_folders = to_collection(self._cfg_paths.get("other"), tuple) or ()
+        self._other_folders = to_collection(self._paths.get("other"), tuple) or self._defaults["other_folders"]
         return self._other_folders
 
     def as_dict(self) -> dict[str, Any]:
+        try:
+            library_folder = self.library_folder
+        except ConfigError:
+            library_folder = None
+
         return {
-            "library_folder": self.library_folder,
+            "library_folder": library_folder,
             "playlist_folder": self.playlist_folder,
             "other_folders": self.other_folders,
-            "playlists": self.playlists,
             "update": self.update,
         } | super().as_dict()
 
-    class ConfigUpdateTags(PrettyPrinter):
+    class ConfigUpdateTags(BaseConfig):
         """
-        Set the settings for the playlists from a config file and terminal arguments.
-        See :py:class:`Config` for more documentation regarding initialisation and operation.
+        Set the settings for the playlists from a config file.
+        See :py:class:`Config` for more documentation regarding operation.
 
-        :param file: The loaded config from the config file.
+        :param settings: The loaded config from the config file.
         """
 
-        def __init__(self, file: dict[Any, Any], old: Self | None = None, keep: bool = False):
-            self._cfg = file.get("update", {})
-            self._tags: tuple[LocalTrackField, ...] | None = old.tags if old is not None and keep else None
-            self._replace: bool | None = old.replace if old is not None and keep else None
+        def __init__(self, settings: dict[Any, Any]):
+            super().__init__(settings=settings, key="update")
+            self._defaults = _get_default_args(LocalCollection.save_tracks)
+
+            self._tags: tuple[LocalTrackField, ...] | None = None
+            self._replace: bool | None = None
 
         @property
         def tags(self) -> tuple[LocalTrackField, ...]:
             """`DEFAULT = (<all LocalTrackFields>)` | The tags to be updated."""
             if self._tags is not None:
                 return self._tags
-            self._tags = _get_local_track_tags(self._cfg.get("tags"))
+
+            default = to_collection(self._defaults["tags"])
+            self._tags = _get_local_track_tags(self._file["tags"]) if "tags" in self._file else default
             return self._tags
 
         @property
         def replace(self) -> bool:
-            """`OPTIONAL` | Destructively replace tags in each file."""
+            """`DEFAULT = False` | Destructively replace tags in each file."""
             if self._replace is not None:
                 return self._replace
-            self._replace = self._cfg.get("replace")
+
+            self._replace = self._file.get("replace", self._defaults["replace"])
             return self._replace
 
         def as_dict(self) -> dict[str, Any]:
+            order = [field.name.lower() for field in LocalTrackField.all(only_tags=True)]
             return {
-                "tags": [t for tag in self.tags for t in tag.to_tag()],
+                "tags": list(sorted([t for tag in self.tags for t in tag.to_tag()], key=lambda x: order.index(x))),
                 "replace": self.replace,
             }
 
 
 class ConfigMusicBee(ConfigLocal):
-    def __init__(self, file: dict[Any, Any], old: Self | None = None, keep: bool = False):
-        super().__init__(file=file, old=old, keep=keep)
+    def __init__(self, settings: dict[Any, Any]):
+        super().__init__(settings=settings)
+        self._defaults = _get_default_args(MusicBee)
 
-        self._musicbee_folder: str | None = old.musicbee_folder if old is not None and keep else None
+        self._musicbee_folder: str | None = None
+
+    @property
+    def source(self):
+        return MusicBee.source
 
     @property
     def library(self) -> LocalLibrary:
@@ -714,7 +619,7 @@ class ConfigMusicBee(ConfigLocal):
         """`OPTIONAL` | The path of the MusicBee library folder."""
         if self._musicbee_folder is not None:
             return self._musicbee_folder
-        self._musicbee_folder = self._cfg_paths.get("musicbee")
+        self._musicbee_folder = self._paths.get("musicbee", self._defaults["musicbee_folder"])
         return self._musicbee_folder
 
     def as_dict(self) -> dict[str, Any]:
@@ -726,48 +631,44 @@ class ConfigMusicBee(ConfigLocal):
 ###########################################################################
 class ConfigRemote(ConfigLibrary):
     """
-    Set the settings for the remote functionality of the program from a config file and terminal arguments.
-    See :py:class:`Config` for more documentation regarding initialisation and operation.
+    Set the settings for the remote functionality of the program from a config file.
+    See :py:class:`Config` for more documentation regarding operation.
 
-    :param file: The loaded config from the config file.
+    :param settings: The loaded config from the config file.
     """
 
-    def __init__(self, name: str, file: dict[Any, Any], old: Self | None = None, keep: bool = False):
-        super().__init__()
-        self._cfg = file
+    def __init__(self, settings: dict[Any, Any]):
+        super().__init__(settings=settings)
 
-        api_config_map = {
-            SPOTIFY_SOURCE_NAME: ConfigSpotify
-        }
-
-        self.name = name
-        if self.name not in api_config_map:
+        if self.kind not in REMOTE_CONFIG:
             raise ConfigError(
-                "No configuration found for this remote source type '{key}'. Available: {value}. "
-                f"Valid source types: {", ".join(api_config_map)}",
-                key=self._cfg["kind"], value=file,
+                "No remote configuration found for this remote source type '{key}'. Available: {value}. "
+                f"Valid source types: {", ".join(REMOTE_CONFIG)}",
+                key=self.kind, value=settings,
             )
 
-        replace_api = old and isinstance(old.api, api_config_map[self.name])
-        self.api: ConfigAPI = api_config_map[self.name](file=self._cfg, old=old.api if replace_api else None, keep=keep)
+        self.api: ConfigAPI = self._classes.api(settings=self._file)
+        self.playlists = self.ConfigPlaylists(settings=self._file)
 
-        self._library = old.library if old and keep else None
-
-        replace_wrangler = old and keep and isinstance(old.wrangler, REMOTE_CONFIG[self.name].wrangler)
-        self._wrangler = old.wrangler if replace_wrangler else None
-        replace_checker = old and keep and isinstance(old.checker, REMOTE_CONFIG[self.name].checker)
-        self._checker = old.checker if replace_checker else None
-        replace_searcher = old and keep and isinstance(old.searcher, REMOTE_CONFIG[self.name].searcher)
-        self._searcher = old.searcher if replace_searcher else None
-
-        self.playlists = self.ConfigPlaylists(file=self._cfg, old=old.playlists if old is not None else None, keep=keep)
+        self._library: RemoteLibrary | None = None
+        self._wrangler: RemoteDataWrangler | None = None
+        self._checker: RemoteItemChecker | None = None
+        self._searcher: RemoteItemSearcher | None = None
 
     @property
+    def _classes(self) -> RemoteClasses:
+        return REMOTE_CONFIG[self.kind]
+
+    @property
+    def source(self) -> str:
+        return self._classes.source
+    
+    @property
     def library(self) -> RemoteLibrary:
-        if self._library is not None and isinstance(self._library, REMOTE_CONFIG[self.name].library):
+        if self._library is not None and isinstance(self._library, self._classes.library):
             return self._library
 
-        self._library = REMOTE_CONFIG[self.name].library(
+        self._library = self._classes.library(
             api=self.api.api,
             include=self.playlists.include,
             exclude=self.playlists.exclude,
@@ -778,20 +679,21 @@ class ConfigRemote(ConfigLibrary):
     @property
     def wrangler(self) -> RemoteDataWrangler:
         """An initialised remote wrangler"""
-        if self._wrangler is not None and isinstance(self._wrangler, REMOTE_CONFIG[self.name].wrangler):
+        if self._wrangler is not None and isinstance(self._wrangler, self._classes.wrangler):
             return self._wrangler
-        self._wrangler = REMOTE_CONFIG[self.name].wrangler()
+        self._wrangler = self._classes.wrangler()
         return self._wrangler
 
     @property
     def checker(self) -> RemoteItemChecker:
         """An initialised remote wrangler"""
-        if self._checker is not None and isinstance(self._checker, REMOTE_CONFIG[self.name].checker):
+        if self._checker is not None and isinstance(self._checker, self._classes.checker):
             return self._checker
 
-        interval = self._cfg.get("interval", 10)
-        allow_karaoke = self._cfg.get("allow_karaoke", ALLOW_KARAOKE_DEFAULT)
-        self._checker = REMOTE_CONFIG[self.name].checker(
+        defaults = _get_default_args(self._classes.checker)
+        interval = self._file.get("interval", defaults["interval"])
+        allow_karaoke = self._file.get("allow_karaoke", defaults["allow_karaoke"])
+        self._checker = self._classes.checker(
             api=self.api.api, interval=interval, allow_karaoke=allow_karaoke
         )
         return self._checker
@@ -799,59 +701,67 @@ class ConfigRemote(ConfigLibrary):
     @property
     def searcher(self) -> RemoteItemSearcher:
         """An initialised remote wrangler"""
-        if self._searcher is not None and isinstance(self._checker, REMOTE_CONFIG[self.name].searcher):
+        if self._searcher is not None and isinstance(self._checker, self._classes.searcher):
             return self._searcher
 
-        self._searcher = REMOTE_CONFIG[self.name].searcher(api=self.api.api, use_cache=self.api.use_cache)
+        self._searcher = self._classes.searcher(api=self.api.api, use_cache=self.api.use_cache)
         return self._searcher
 
     def as_dict(self) -> dict[str, Any]:
-        return {
-            "api": self.api,
-            "wrangler": bool(self.wrangler.remote_source),  # just check it loaded
-            "checker": self.checker,
-            "searcher": self.searcher,
-            "playlists": self.playlists.as_dict(),
-        } | super().as_dict()
+        try:
+            return {
+                "api": self.api,
+                "wrangler": bool(self.wrangler.source),  # just check it loaded
+                "checker": self.checker,
+                "searcher": self.searcher,
+            } | super().as_dict()
+        except SyncifyError:
+            return {
+                "api": None,
+                "wrangler": bool(self.wrangler.source),  # just check it loaded
+                "checker": None,
+                "searcher": None,
+            } | super().as_dict()
 
     class ConfigPlaylists(ConfigPlaylists):
         """
-        Set the settings for processing remote playlists from a config file and terminal arguments.
-        See :py:class:`Config` for more documentation regarding initialisation and operation.
+        Set the settings for processing remote playlists from a config file.
+        See :py:class:`Config` for more documentation regarding operation.
 
-        :param file: The loaded config from the config file.
+        :param settings: The loaded config from the config file.
         """
 
-        def __init__(self, file: dict[Any, Any], old: Self | None = None, keep: bool = False):
-            super().__init__(file=file, old=old, keep=keep)
-
-            self.sync = self.ConfigPlaylistsSync(file=self._cfg, old=old.sync if old is not None else None, keep=keep)
+        def __init__(self, settings: dict[Any, Any]):
+            super().__init__(settings=settings)
+            
+            self.sync = self.ConfigPlaylistsSync(settings=self._file)
 
         def as_dict(self) -> dict[str, Any]:
             return super().as_dict() | {"sync": self.sync}
 
-        class ConfigPlaylistsSync(PrettyPrinter):
+        class ConfigPlaylistsSync(BaseConfig):
             """
-            Set the settings for synchronising remote playlists from a config file and terminal arguments.
-            See :py:class:`Config` for more documentation regarding initialisation and operation.
+            Set the settings for synchronising remote playlists from a config file.
+            See :py:class:`Config` for more documentation regarding operation.
 
-            :param file: The loaded config from the config file.
+            :param settings: The loaded config from the config file.
             """
 
-            def __init__(self, file: dict[Any, Any], old: Self | None = None, keep: bool = False):
-                self._cfg = file.get("sync", {})
+            def __init__(self, settings: dict[Any, Any]):
+                super().__init__(settings=settings, key="sync")
+                self._defaults = _get_default_args(RemotePlaylist.sync)
 
-                self._kind: str | None = old.kind if old is not None and keep else None
-                self._reload: bool | None = old.reload if old is not None and keep else None
+                self._kind: str | None = None
+                self._reload: bool | None = None
 
             @property
             def kind(self) -> str:
-                """`DEFAULT = 'old'` | Sync option for the remote playlist."""
+                """`DEFAULT = 'new'` | Sync option for the remote playlist."""
                 if self._kind is not None:
                     return self._kind
 
                 valid = get_args(PLAYLIST_SYNC_KINDS)
-                kind = self._cfg.get("kind", "old")
+                kind = self._file.get("kind", self._defaults["kind"])
                 if kind not in valid:
                     raise ConfigError("Invalid kind given: {key}. Allowed values: {value}", key=kind, value=valid)
 
@@ -863,7 +773,7 @@ class ConfigRemote(ConfigLibrary):
                 """`DEFAULT = True` | Reload playlists after synchronisation."""
                 if self._reload is not None:
                     return self._reload
-                self._reload = self._cfg.get("reload", True)
+                self._reload = self._file.get("reload", self._defaults["reload"])
                 return self._reload
 
             def as_dict(self) -> dict[str, Any]:
@@ -873,23 +783,23 @@ class ConfigRemote(ConfigLibrary):
                 }
 
 
-class ConfigAPI(PrettyPrinter, ABC):
+class ConfigAPI(BaseConfig, metaclass=ABCMeta):
     """
-    Set the settings for the remote API from a config file and terminal arguments.
-    See :py:class:`Config` for more documentation regarding initialisation and operation.
+    Set the settings for the remote API from a config file.
+    See :py:class:`Config` for more documentation regarding operation.
 
-    :param file: The loaded config from the config file.
+    :param settings: The loaded config from the config file.
     """
 
-    def __init__(self, file: dict[Any, Any], old: Self | None = None, keep: bool = False):
-        # marks whether initial authorisation of the API has happened
-        self.loaded: bool = old.loaded if old is not None and keep else False
-        self._cfg = file.get("api", {})
+    def __init__(self, settings: dict[Any, Any]):
+        super().__init__(settings=settings, key="api")
 
-        self._api: RemoteAPI | None = old.api if old is not None and keep else None
-        self._token_path: str | None = old.token_path if old is not None and keep else None
-        self._cache_path: str | None = old.cache_path if old is not None and keep else None
-        self._use_cache: bool | None = old.use_cache if old is not None and keep else None
+        self._api: RemoteAPI | None = None
+        self._token_path: str | None = None
+        self._cache_path: str | None = None
+        self._use_cache: bool | None = None
+        
+        self.loaded: bool = False  # marks whether initial authorisation of the API has happened
 
     @property
     @abstractmethod
@@ -899,10 +809,12 @@ class ConfigAPI(PrettyPrinter, ABC):
 
     @property
     def token_path(self) -> str:
-        """`DEFAULT = 'token.json'` | The client secret to use when authorising access to the API."""
+        """`OPTIONAL` | The client secret to use when authorising access to the API."""
         if self._token_path is not None:
             return self._token_path
-        self._token_path = self._cfg.get("token_path", "token.json")
+
+        defaults = _get_default_args(APIAuthoriser)
+        self._token_path = self._file.get("token_path", defaults["token_file_path"])
         return self._token_path
 
     @property
@@ -910,7 +822,9 @@ class ConfigAPI(PrettyPrinter, ABC):
         """`DEFAULT = '.api_cache'` | The path of the cache to use when using cached requests for the API"""
         if self._cache_path is not None:
             return self._cache_path
-        self._cache_path = self._cfg.get("cache_path", '.api_cache')
+
+        defaults = _get_default_args(RequestHandler)
+        self._cache_path = self._file.get("cache_path", defaults["cache_path"])
         return self._cache_path
 
     @property
@@ -921,7 +835,7 @@ class ConfigAPI(PrettyPrinter, ABC):
         """
         if self._use_cache is not None:
             return self._use_cache
-        self._use_cache = self._cfg.get("use_cache", True)
+        self._use_cache = self._file.get("use_cache", True)
         return self._use_cache
 
     def as_dict(self) -> dict[str, Any]:
@@ -933,20 +847,20 @@ class ConfigAPI(PrettyPrinter, ABC):
 
 class ConfigSpotify(ConfigAPI):
 
-    def __init__(self, file: dict[Any, Any], old: Self | None = None, keep: bool = False):
-        super().__init__(file=file, old=old, keep=keep)
+    def __init__(self, settings: dict[Any, Any]):
+        super().__init__(settings=settings)
+        self._defaults = _get_default_args(SpotifyAPI)
 
-        self._client_id: str | None = old.client_id if old is not None and keep else None
-        self._client_secret: str | None = old.client_secret if old is not None and keep else None
-        self._scopes: tuple[str, ...] | None = old.scopes if old is not None and keep else None
-        self._user_auth: bool | None = old.user_auth if old is not None and keep else None
+        self._client_id: str | None = None
+        self._client_secret: str | None = None
+        self._scopes: tuple[str, ...] | None = None
 
     @property
     def client_id(self) -> str | None:
         """`OPTIONAL` | The client ID to use when authorising access to the API."""
         if self._client_id is not None:
             return self._client_id
-        self._client_id = self._cfg.get("client_id")
+        self._client_id = self._file.get("client_id", self._defaults["client_id"])
         return self._client_id
 
     @property
@@ -954,7 +868,7 @@ class ConfigSpotify(ConfigAPI):
         """`OPTIONAL` | The client secret to use when authorising access to the API."""
         if self._client_secret is not None:
             return self._client_secret
-        self._client_secret = self._cfg.get("client_secret")
+        self._client_secret = self._file.get("client_secret", self._defaults["client_secret"])
         return self._client_secret
 
     @property
@@ -962,27 +876,18 @@ class ConfigSpotify(ConfigAPI):
         """`DEFAULT = ()` | The scopes to use when authorising access to the API."""
         if self._scopes is not None:
             return self._scopes
-        self._scopes = to_collection(self._cfg.get("scopes"), tuple) or ()
-        return self._scopes
 
-    @property
-    def user_auth(self) -> bool:
-        """
-        `DEFAULT = False` | When True, authorise user access to the API. When False, only authorise basic access.
-        """
-        if self._user_auth is not None:
-            return self._user_auth
-        self._user_auth = self._cfg.get("user_auth", False)
-        return self._user_auth
+        self._scopes = to_collection(self._file.get("scopes"), tuple) or self._defaults["scopes"]
+        return self._scopes
 
     @property
     def api(self) -> SpotifyAPI:
         if self._api is not None:
-            if not self.loaded:
-                self._api.authorise()
-                self.loaded = True
             # noinspection PyTypeChecker
             return self._api
+        
+        if not self.client_id or not self.client_secret:
+            raise ConfigError("Cannot create API object without client ID and client secret")
 
         self._api = SpotifyAPI(
             client_id=self.client_id,
@@ -998,7 +903,263 @@ class ConfigSpotify(ConfigAPI):
             "client_id": "<OBFUSCATED>" if self.client_id else None,
             "client_secret": "<OBFUSCATED>" if self.client_secret else None,
             "scopes": self.scopes,
-            "user_auth": self.user_auth,
+        }
+
+
+###########################################################################
+## Main config
+###########################################################################
+@dataclass
+class RemoteClasses:
+    """Stores the key classes for a remote source"""
+    source: str
+    api: type[ConfigAPI]
+    wrangler: type[RemoteDataWrangler]
+    object: type[RemoteObject]
+    library: type[RemoteLibrary]
+    checker: type[RemoteItemChecker]
+    searcher: type[RemoteItemSearcher]
+
+
+SPOTIFY_CLASSES = RemoteClasses(
+    source=SPOTIFY_SOURCE_NAME,
+    api=ConfigSpotify,
+    wrangler=SpotifyDataWrangler,
+    object=SpotifyObject,
+    library=SpotifyLibrary,
+    checker=SpotifyItemChecker,
+    searcher=SpotifyItemSearcher,
+)
+
+# map of the names of all supported library sources and their associated config
+REMOTE_CONFIG: Mapping[str, RemoteClasses] = {
+    SPOTIFY_SOURCE_NAME: SPOTIFY_CLASSES,
+    "spotify": SPOTIFY_CLASSES,
+}
+
+LOCAL_CONFIG: Mapping[str, type[ConfigLocal]] = {
+    "local": ConfigLocal,
+    "musicbee": ConfigMusicBee,
+}
+
+
+class Config(BaseConfig):
+    """
+    Set up config and provide framework for initialising various objects
+    needed for the main functionality of the program from a given config file at ``path``.
+
+    The following options are in place for configuration values:
+
+    - `DEFAULT`: When a value is not found, a default value will be used.
+    - `REQUIRED`: The configuration will fail if this value is not given. Only applies when the key is called.
+    - `OPTIONAL`: This value does not need to be set and ``None`` will be set when this is the case.
+        The configuration will not fail if this value is not given.
+
+    Sub-configs have an ``override`` parameter that can be set using the ``override`` key in initial config block.
+    When override is True and ``config`` given, override loaded config from the file with values in ``config``
+    only using loaded values when values are not present in given ``config``.
+    When override is False and ``config`` given, loaded config takes priority
+    and given ``config`` values are only used when values are not present in the file.
+    By default, always keep the current settings.
+
+    :param path: Path of the config file to use. If relative path given, appends package root path.
+    """
+
+    def __init__(self, path: str = "config.yml"):
+        super().__init__({})
+        self.dt = datetime.now()
+        self._root_path: str = PACKAGE_ROOT
+        self.path = self._make_path_absolute(path)
+        self.loaded: bool = False  # marked as True after the first load, prevents excessive overriding
+
+        # general operation settings
+        self._output_folder: str | None = None
+        self._dry_run: bool | None = None
+        self._reload: dict[str, tuple[str, ...]] | None = None
+        self._pause: str | None = None
+
+        self.libraries: dict[str, ConfigLibrary] = {}
+        self.filter: ConfigFilter | None = None
+        self.reports: ConfigReports | None = None
+
+    def load(self, key: str | None = None):
+        """
+        Load config from the config file at the given ``key`` respecting ``override`` rules.
+
+        :param key: The key to pull config from within the file.
+            Used as the parent key to use to pull the required configuration from the config file.
+            If not given, use the root values in the config file.
+        """
+        previous = copy(self) if self.loaded else None
+        try:
+            self._file = self._load_config(key)
+        except ConfigError as ex:
+            if previous:  # keep the same config
+                return
+            raise ex
+
+        for name, settings in self._file.get("libraries", {}).items():
+            if settings["type"] not in LOCAL_CONFIG:
+                library = ConfigRemote(settings=settings)
+                # noinspection PyProtectedMember
+                assert library.api._api is None  # ensure api has not already been instantiated
+
+                if not exists(library.api.token_path) and not isabs(library.api.token_path):
+                    library.api._token_path = join(dirname(self.output_folder), library.api.token_path)
+                if not exists(library.api.cache_path) and not isabs(library.api.cache_path):
+                    library.api._cache_path = join(dirname(self.output_folder), library.api.cache_path)
+            else:
+                library = LOCAL_CONFIG[settings["type"]](settings=settings)
+
+            self.libraries[name] = library
+
+        self.filter = ConfigFilter(settings=self._file)
+        self.reports = ConfigReports(settings=self._file)
+
+        if previous:  # override or enrich as needed
+            self.enrich(previous) if self._file.get("override", True) else self.override(previous)
+
+        self.loaded = True
+        return
+
+    def _make_path_absolute(self, path: str) -> str:
+        """Append the root path to any relative path to make it an absolute path. Do nothing if path is absolute."""
+        if not isabs(path):
+            path = join(self._root_path, path)
+        return path
+
+    def _load_config(self, key: str | None = None) -> dict[Any, Any]:
+        """
+        Load the config file
+
+        :param key: The key to pull config from within the file.
+        :return: The config file.
+        :raise InvalidFileType: When the given config file is not of the correct type.
+        :raise FileDoesNotExistError: When the given path to the config file does not exist
+        :raise ConfigError: When the given key cannot be found.
+        """
+        if splitext(self.path)[1].casefold() not in [".yml", ".yaml"]:
+            raise InvalidFileType(f"Unrecognised file type: {self.path}")
+        elif not exists(self.path):
+            raise FileDoesNotExistError(f"Config file not found: {self.path}")
+
+        with open(self.path, 'r') as file:
+            config = yaml.full_load(file)
+        if key and key not in config:
+            raise ConfigError("Unrecognised config name: {key} | Available: {value}", key=key, value=config)
+
+        return config.get(key, config)
+
+    def load_log_config(self, path: str = "logging.yml", name: str | None = None, *names: str) -> None:
+        """
+        Load logging config from the JSON or YAML file at the given ``path`` using logging.config.dictConfig.
+        If relative path given, appends package root path.
+
+        :param path: The path to the logger config
+        :param name: If the given name is a valid logger name in the config,
+            assign this logger's config to the module root logger.
+        :param names: When given, also apply the config from ``name`` to loggers with these ``names``.
+        """
+        path = self._make_path_absolute(path)
+        ext = splitext(path)[1].casefold()
+
+        allowed = {".yml", ".yaml", ".json"}
+        if ext not in allowed:
+            raise ConfigError(
+                "Unrecognised log config file type: {key}. Valid: {value}", key=ext, value=allowed
+            )
+
+        with open(path, "r") as file:
+            if ext in {".yml", ".yaml"}:
+                log_config = yaml.full_load(file)
+            elif ext in {".json"}:
+                log_config = json.load(file)
+
+        SyncifyLogger.compact = log_config.pop("compact", False)
+
+        for formatter in log_config["formatters"].values():  # ensure ANSI colour codes in format are recognised
+            formatter["format"] = formatter["format"].replace(r"\33", "\33")
+
+        if name and name in log_config.get("loggers", {}):
+            log_config["loggers"][MODULE_ROOT] = log_config["loggers"][name]
+            for n in names:
+                log_config["loggers"][n] = log_config["loggers"][name]
+
+        logging.config.dictConfig(log_config)
+
+        if name and name in log_config.get("loggers", {}):
+            logging.getLogger(MODULE_ROOT).debug(f"Logging config set to: {name}")
+
+    ###########################################################################
+    ## General
+    ###########################################################################
+    @property
+    def output_folder(self) -> str:
+        """`DEFAULT = '<package_root>/_data'` | The output folder for saving diagnostic data"""
+        if self._output_folder is not None:
+            return self._output_folder
+
+        parent_folder = self._make_path_absolute(self._file.get("output", "_data"))
+        self._output_folder = join(parent_folder, self.dt.strftime(LOGGING_DT_FORMAT))
+        os.makedirs(self._output_folder, exist_ok=True)
+        return self._output_folder
+
+    @property
+    def dry_run(self) -> bool:
+        """`DEFAULT = True` | Whether this run is a dry run i.e. don't write out where possible"""
+        if self._dry_run is not None:
+            return self._dry_run
+
+        self._dry_run = self._file.get("dry_run", True)
+        return self._dry_run
+
+    @property
+    def reload(self) -> dict[str, tuple[str, ...]]:
+        """
+        `DEFAULT = <map of all libraries to empty tuples>` |
+        The keys of libraries as found in either 'local' or 'remote' maps to reload
+        mapped to the types of data to reload for each library.
+        """
+        if self._reload is not None:
+            return self._reload
+
+        self._reload = {}
+        if "reload" not in self._file:  # reload nothing
+            return {}
+        if self._file["reload"] is None:  # no settings given, reload all data for all libraries
+            # empty tuple should be interpreted as reload all
+            self._reload = {name: tuple() for name in self.libraries}
+            return self._reload
+
+        for name in self._file["reload"]:  # reload only the data specified in the config
+            if isinstance(self._file["reload"], dict) and self._file["reload"][name] is not None:
+                self._reload[name] = to_collection(self._file["reload"][name])
+            else:
+                self._reload[name] = tuple()
+
+        return self._reload
+
+    @property
+    def pause(self) -> str | None:
+        """`OPTIONAL` | A message to display when pausing"""
+        if self._pause is not None or "pause" not in self._file:
+            return self._pause
+
+        default = "Pausing, hit return to continue..."
+        self._pause = (self._file.get("pause", default) or default).strip()
+        return self._pause
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "run_time": self.dt,
+            "path": self.path,
+            "output_folder": self.output_folder,
+            "dry_run": self.dry_run,
+            "reload": self.reload,
+            "pause_message": self.pause,
+            "libraries": {name: config for name, config in self.libraries.items()},
+            "filter": self.filter,
+            "reports": self.reports,
         }
 
 
@@ -1006,11 +1167,6 @@ if __name__ == "__main__":
     conf = Config()
     conf.load_log_config("logging.yml")
     conf.load("general")
-    print(conf.filter.include)
-    conf.load("check")
-    print(conf.filter.include)
-
-    conf.remote["spotify"].api.api.authorise()
 
     print(conf)
     print(json.dumps(conf.json(), indent=2))

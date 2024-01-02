@@ -6,12 +6,13 @@ import os
 import re
 import shutil
 import sys
+from collections.abc import Iterable
 from datetime import datetime
 from glob import glob
 from os.path import join, dirname, splitext, split, basename, isfile, sep, isdir
+from typing import Any
 
-from tqdm.auto import tqdm as tqdm_auto
-from tqdm.std import tqdm as tqdm_std
+from tqdm.auto import tqdm
 
 from syncify import PROGRAM_NAME
 from syncify.processors.time import TimeMapper
@@ -39,41 +40,28 @@ class SyncifyLogger(logging.Logger):
 
     compact: bool = False
 
-    def __init__(self, name: str, level: int | str = logging.NOTSET):
-        super().__init__(name=name, level=level)
-
-        self._console_handlers = []
-        for name in logging.getHandlerNames():
-            handler = logging.getHandlerByName(name)
-            if not isinstance(handler, logging.StreamHandler):
-                continue
-            if handler.stream == sys.stdout:
-                self._console_handlers.append(handler)
-
-        self._bars: list[tqdm_std] = []
-
-    # TODO: add test for this
     @property
     def file_paths(self) -> list[str]:
         """Get a list of the paths of all file handlers for this logger"""
         paths = []
-        for name in logging.getHandlerNames():
-            handler = logging.getHandlerByName(name)
+        for handler in self.handlers:
             if isinstance(handler, logging.FileHandler):
                 paths.append(handler.baseFilename)
         return paths
 
-    def addHandler(self, hdlr: logging.Handler):
-        """Add the specified handler to this logger."""
-        if isinstance(hdlr, logging.StreamHandler) and hdlr.stream == sys.stdout:
-            self._console_handlers.append(hdlr)
-        super().addHandler(hdlr)
+    @property
+    def stdout_handlers(self) -> list[logging.StreamHandler]:
+        """Get a list of all :py:class:`logging.StreamHandler` handlers that log to stdout"""
+        console_handlers = []
+        for handler in self.handlers:
+            if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stdout:
+                console_handlers.append(handler)
+        return console_handlers
 
-    def removeHandler(self, hdlr: logging.Handler):
-        """Remove the specified handler from this logger."""
-        if isinstance(hdlr, logging.StreamHandler) and hdlr.stream == sys.stdout:
-            self._console_handlers.remove(hdlr)
-        super().removeHandler(hdlr)
+    def __init__(self, name: str, level: int | str = logging.NOTSET):
+        super().__init__(name=name, level=level)
+
+        self._bars: list[tqdm] = []
 
     def info_extra(self, msg, *args, **kwargs) -> None:
         """Log 'msg % args' with severity 'INFO_EXTRA'."""
@@ -92,24 +80,37 @@ class SyncifyLogger(logging.Logger):
 
     def print(self, level: int = logging.CRITICAL + 1) -> None:
         """Print a new line only when DEBUG < ``logger level`` <= ``level`` for all console handlers"""
-        if not self.compact and all(logging.DEBUG < h.level <= level for h in self._console_handlers):
+        if not self.compact and all(logging.DEBUG < h.level <= level for h in self.stdout_handlers):
             print()
 
-    def get_progress_bar(self, **kwargs) -> tqdm_std:
+    def get_progress_bar[T: Any](
+            self,
+            iterable: Iterable[T] | None = None,
+            total: T | None = None,
+            **kwargs
+    ) -> tqdm | Iterable[T]:
         """Wrapper for tqdm progress bar. For kwargs, see :py:class:`tqdm_std`"""
         # noinspection SpellCheckingInspection
         preset_keys = ("leave", "disable", "file", "ncols", "colour", "smoothing", "position")
+
         try:
             cols = os.get_terminal_size().columns
         except OSError:
             cols = 120
 
         # determine to level of bar to generate
-        self._bars = [bar for bar in self._bars if bar.n < bar.total]
+        for bar in self._bars.copy():
+            if bar.n >= bar.total:
+                self._bars.remove(bar)
         position = len(self._bars)
 
-        bar = tqdm_auto(
-            leave=kwargs.get("leave", all(h.level > logging.DEBUG for h in self._console_handlers) and position == 0),
+        leave_default = all(h.level > logging.DEBUG for h in self.stdout_handlers) and position == 0
+        leave = kwargs["leave"] if kwargs.get("leave") is not None else leave_default
+
+        bar = tqdm(
+            iterable=iterable,
+            total=total,
+            leave=leave,
             disable=kwargs.get("disable", False),
             file=sys.stdout,
             ncols=cols,

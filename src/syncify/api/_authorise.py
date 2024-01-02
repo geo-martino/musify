@@ -193,7 +193,7 @@ class APIAuthoriser:
             log = "Saved access token not found" if self.token is None else "New token generation forced"
             self.logger.debug(f"{log}. Generating new token...")
             self._authorise_user()
-            self.token = self._request_token(**self.auth_args)
+            self._request_token(**self.auth_args)
 
         # test current token
         valid = self.test_token()
@@ -206,8 +206,7 @@ class APIAuthoriser:
             if "data" not in self.refresh_args:
                 self.refresh_args["data"] = {}
             self.refresh_args["data"]["refresh_token"] = self.token["refresh_token"]
-
-            self.token = self._request_token(**self.refresh_args)
+            self._request_token(**self.refresh_args)
 
             valid = self.test_token()
             refreshed = True
@@ -220,7 +219,7 @@ class APIAuthoriser:
             self.logger.debug(f"{log}. Generating new token...")
 
             self._authorise_user()
-            self.token = self._request_token(**self.auth_args)
+            self._request_token(**self.auth_args)
             valid = self.test_token()
 
         if not self.token:
@@ -303,6 +302,7 @@ class APIAuthoriser:
             if self.token is not None and "refresh_token" in self.token:
                 auth_response["refresh_token"] = self.token["refresh_token"]
 
+        self.token = auth_response
         self.logger.debug(f"New token successfully generated: {self.token_safe}")
         return auth_response
 
