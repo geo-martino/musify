@@ -7,7 +7,7 @@ from syncify.abstract.enums import Fields
 from syncify.abstract.misc import Result
 from syncify.local.track import LocalTrack
 from syncify.processors.base import MusicBeeProcessor
-from syncify.processors.compare import ItemComparer
+from syncify.processors.compare import Comparer
 from syncify.processors.sort import ItemSorter
 from syncify.utils import UnitSequence, UnitCollection
 from syncify.utils.helpers import to_collection
@@ -80,7 +80,7 @@ class LocalMatcher(MusicBeeProcessor):
         exclude_str: str = source.get("Exceptions")
         exclude = set(exclude_str.split("|")) if isinstance(exclude_str, str) else ()
 
-        comparers: Sequence[ItemComparer] = ItemComparer.from_xml(xml=xml)
+        comparers: Sequence[Comparer] = Comparer.from_xml(xml=xml)
 
         if len(comparers) == 1:
             # when user has not set an explicit comparer, there will still be an 'allow all' comparer
@@ -101,7 +101,7 @@ class LocalMatcher(MusicBeeProcessor):
 
     def __init__(
             self,
-            comparers: UnitSequence[ItemComparer] = (),
+            comparers: UnitSequence[Comparer] = (),
             match_all: bool = True,
             include_paths: Collection[str] = (),
             exclude_paths: Collection[str] = (),
@@ -109,7 +109,7 @@ class LocalMatcher(MusicBeeProcessor):
             other_folders: UnitCollection[str] = (),
             check_existence: bool = True,
     ):
-        self.comparers: tuple[ItemComparer, ...] = to_collection(comparers)
+        self.comparers: tuple[Comparer, ...] = to_collection(comparers)
         self.match_all = match_all
 
         self.include_paths: Collection[str] = include_paths

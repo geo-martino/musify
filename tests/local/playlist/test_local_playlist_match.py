@@ -7,7 +7,7 @@ import xmltodict
 from syncify.fields import LocalTrackField
 from syncify.local.playlist import LocalMatcher
 from syncify.local.track import LocalTrack
-from syncify.processors.compare import ItemComparer
+from syncify.processors.compare import Comparer
 from tests.abstract.misc import PrettyPrinterTester
 from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra, path_playlist_resources
 from tests.local.utils import random_tracks, path_track_wma, path_track_flac, path_track_mp3
@@ -19,15 +19,15 @@ class TestLocalMatcher(PrettyPrinterTester):
     library_folder = "/path/to/library"
 
     @pytest.fixture(scope="class")
-    def comparers(self) -> list[ItemComparer]:
+    def comparers(self) -> list[Comparer]:
         """Yields a list :py:class:`ItemComparer` objects to be used as pytest.fixture"""
         return [
-            ItemComparer(field=LocalTrackField.ALBUM, condition="is", expected="album name"),
-            ItemComparer(field=LocalTrackField.ARTIST, condition="starts with", expected="artist")
+            Comparer(condition="is", expected="album name", field=LocalTrackField.ALBUM),
+            Comparer(condition="starts with", expected="artist", field=LocalTrackField.ARTIST)
         ]
 
     @pytest.fixture
-    def obj(self, comparers: list[ItemComparer]) -> LocalMatcher:
+    def obj(self, comparers: list[Comparer]) -> LocalMatcher:
         return LocalMatcher(
             comparers=comparers,
             include_paths=[f"{self.library_folder}/include/{random_str(30, 50)}.MP3" for _ in range(20)],
@@ -36,7 +36,7 @@ class TestLocalMatcher(PrettyPrinterTester):
             check_existence=False
         )
 
-    def test_init_replaces_parent_folder(self, comparers: list[ItemComparer]):
+    def test_init_replaces_parent_folder(self, comparers: list[Comparer]):
         library_folder = "/Path/to/LIBRARY/on/linux"
         other_folders = ["../", "D:\\paTh\\on\\Windows"]
         exclude_paths = [f"{other_folders[1]}\\exclude\\{random_str(30, 50)}.MP3" for _ in range(20)]
@@ -60,7 +60,7 @@ class TestLocalMatcher(PrettyPrinterTester):
             path.replace(other_folders[1], library_folder).replace("\\", "/").casefold() for path in exclude_paths
         ]
 
-    def test_init_include_and_exclude(self, comparers: list[ItemComparer]):
+    def test_init_include_and_exclude(self, comparers: list[Comparer]):
         # removes paths from the include list that are present in both include and exclude lists
         library_folder = "/Path/to/LIBRARY/on/linux"
         other_folders = ["../", "D:\\paTh\\on\\Windows"]
@@ -159,7 +159,7 @@ class TestLocalMatcher(PrettyPrinterTester):
 
     def test_match_on_paths_and_any_comparers(
             self,
-            comparers: list[ItemComparer],
+            comparers: list[Comparer],
             tracks: list[LocalTrack],
             tracks_album: list[LocalTrack],
             tracks_include: list[LocalTrack],
@@ -185,7 +185,7 @@ class TestLocalMatcher(PrettyPrinterTester):
 
     def test_match_on_paths_and_all_comparers(
             self,
-            comparers: list[ItemComparer],
+            comparers: list[Comparer],
             tracks: list[LocalTrack],
             tracks_album: list[LocalTrack],
             tracks_artist: list[LocalTrack],

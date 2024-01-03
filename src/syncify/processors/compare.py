@@ -55,14 +55,14 @@ field_name_map = {
 }
 
 
-class ItemComparer(MusicBeeProcessor, DynamicProcessor):
+class Comparer(MusicBeeProcessor, DynamicProcessor):
     """
-    Compares an item with another item or a given set of expected values to find a match.
+    Compares an item or object with another item, object or a given set of expected values to find a match.
 
-    :param field: The field to match on.
     :param condition: The condition to match on e.g. Is, LessThan, InRange, Contains.
     :param expected: Optional list of expected values to match on.
         Types of the values in this list are automatically converted to the type of the item field's value.
+    :param field: The field to match on.
     """
 
     __slots__ = ("_expected", "_converted", "field")
@@ -99,27 +99,27 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
             if len(expected) == 0 or expected[0] == "[playing track]":
                 expected = None
 
-            objs.append(cls(field=field, condition=condition["@Comparison"], expected=expected))
+            objs.append(cls(condition=condition["@Comparison"], expected=expected, field=field))
 
         return objs
 
     def to_xml(self, **kwargs) -> Mapping[str, Any]:
         raise NotImplementedError
 
-    def __init__(self, field: Field, condition: str, expected: UnitSequence[Any] | None = None):
+    def __init__(self, condition: str, expected: UnitSequence[Any] | None = None, field: Field | None = None):
         super().__init__()
         self._expected: list[Any] | None = None
         self._converted = False
 
-        self.field: Field = field.map(field)[0]
-        self.expected: list[Any] | None = expected
+        self.field: Field | None = field.map(field)[0] if field else None
+        self.expected: list[Any] | None = to_collection(expected, list)
 
         self._set_processor_name(condition)
 
-    def __call__[T: Item](self, item: T, reference: UnitSequence[T] | None = None) -> bool:
+    def __call__[T: Any](self, item: T, reference: UnitSequence[T] | None = None) -> bool:
         return self.compare(item=item, reference=reference)
 
-    def compare[T: Item](self, item: T, reference: UnitSequence[T] | None = None) -> bool:
+    def compare[T: Any](self, item: T, reference: T | None = None) -> bool:
         """
         Compare a ``item`` to a ``reference`` or,
         if no ``reference`` is given, to this object's list of ``expected`` values
@@ -133,8 +133,12 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
         if reference is None and not self.expected:
             raise ItemComparerError("No comparative item given and no expected values set")
 
-        tag_name = self.field.name.lower()
-        actual = item[tag_name]
+        tag_name = None
+        if self.field and isinstance(item, Item):
+            tag_name = self.field.name.lower()
+            actual = item[tag_name]
+        else:
+            actual = item
 
         if reference is None:
             # convert the expected values to the same type as the actual value if not yet converted
@@ -306,4 +310,8 @@ class ItemComparer(MusicBeeProcessor, DynamicProcessor):
         return bool(re.search(str(expected[0]), str(value), flags=re.I))
 
     def as_dict(self):
-        return {"field": self.field.name, "condition": self.condition, "expected": self.expected}
+        return {
+            "condition": self.condition,
+            "expected": self.expected,
+            "field": self.field.name if self.field else None
+        }

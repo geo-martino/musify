@@ -223,6 +223,7 @@ class LibraryTester(ItemCollectionTester, metaclass=ABCMeta):
     def collection(self, library: Library) -> ItemCollection:
         return library
 
+    # TODO: expand these tests to include test for using Filter as include/exclude
     @staticmethod
     def test_get_filtered_playlists_basic(library: Library):
         include = [name for name in library.playlists][:1]

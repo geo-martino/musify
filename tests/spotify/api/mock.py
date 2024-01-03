@@ -118,6 +118,9 @@ class SpotifyMock(RemoteMock):
             album["album_group"] = choice(("album", "single", "compilation", "appears_on"))
             self.artist_albums.append(album)
 
+        self.setup_specific_conditions()
+        self.setup_valid_references()
+
         # randomly choose currently authenticated user and setup mock
         self.user = choice(self.users)
         self.user_id = self.user["id"]
@@ -138,23 +141,17 @@ class SpotifyMock(RemoteMock):
         self.user_shows = [self.format_user_item(deepcopy(item), ObjectType.SHOW) for item in self.shows]
         self.user_audiobooks = [self.format_user_item(deepcopy(item), ObjectType.AUDIOBOOK) for item in self.audiobooks]
 
-        self.setup_specific_conditions()
-        self.setup_valid_references()
+        self.setup_specific_conditions_user()
         self.setup_requests_mock()
 
     ###########################################################################
     ## Setup
     ###########################################################################
     def setup_specific_conditions(self):
-        """Some tests need items of certain size and properties. Set these up here."""
+        """Some tests need items of certain size and properties. Set these up for non-user items here."""
         self.shows.append(self.generate_show(episode_count=100))
         self.audiobooks.append(self.generate_audiobook(chapter_count=100))
         self.playlists.append(self.generate_playlist(item_count=100))
-
-        # ensure a certain minimum number of small user playlists
-        count = max(10 - len([pl for pl in self.user_playlists if self.limit_lower < pl["tracks"]["total"] <= 60]), 0)
-        for _ in range(count):
-            self.user_playlists.append(self.generate_playlist(item_count=randrange(self.limit_lower + 1, 60)))
 
         album = self.generate_album(track_count=100)
         album["genres"] = random_genres(5)
@@ -185,6 +182,13 @@ class SpotifyMock(RemoteMock):
         for album in sample(albums, k=15):
             album["artists"].append(artist)
 
+    def setup_specific_conditions_user(self):
+        """Some tests need items of certain size and properties. Set these up for user items here."""
+        # ensure a certain minimum number of small user playlists
+        count = max(10 - len([pl for pl in self.user_playlists if self.limit_lower < pl["tracks"]["total"] <= 60]), 0)
+        for _ in range(count):
+            self.user_playlists.append(self.generate_playlist(item_count=randrange(self.limit_lower + 1, 60)))
+
     def setup_valid_references(self):
         """Sets up cross-referenced valid responses needed for RemoteObject tests"""
         # ensure album artists and tracks relate to actual callable items
@@ -207,7 +211,7 @@ class SpotifyMock(RemoteMock):
         # ensure that track albums and artists relate to actual callable items
         artist_ids = {artist["id"] for artist in self.artists}
         album_ids = {album["id"] for album in self.albums}
-        for track in self.tracks[:self.range_max]:
+        for track in self.tracks:
             if track["album"]["id"] not in album_ids:
                 track["album"] = {
                     k: v for k, v in choice(self.albums).items()
@@ -338,8 +342,12 @@ class SpotifyMock(RemoteMock):
             """Dynamically generate expected batched response from a request with an 'ids' param"""
             req_params = parse_qs(req.query)
             req_kind = req.path.split("/")[-1].replace("-", "_")
-
             id_list = req_params["ids"][0].split(",")
+            print(id_list)
+            print(list(id_map.keys()))
+            print(set(id_list) - set(id_map.keys()))
+            print(set(id_list).intersection(set(id_map.keys())))
+            print(len(id_map), len(id_list))
             return {req_kind: [deepcopy(id_map[i]) for i in id_list]}
 
         url = f"{URL_API}/{kind.name.casefold()}s" if isinstance(kind, ObjectType) else f"{URL_API}/{kind}"

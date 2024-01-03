@@ -9,7 +9,7 @@ from typing import Any, Self
 
 from syncify.abstract._base import Item
 from syncify.abstract.collection import ItemCollection
-from syncify.utils.helpers import to_collection, align_and_truncate, get_max_width
+from syncify.utils.helpers import to_collection, align_and_truncate, get_max_width, Filter
 from syncify.utils.logger import SyncifyLogger
 
 
@@ -331,16 +331,16 @@ class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
 
     def get_filtered_playlists(
             self,
-            include: Container[str] | None = None,
-            exclude: Container[str] | None = None,
+            include: Container[str] | Filter[str] | None = None,
+            exclude: Container[str] | Filter[str] | None = None,
             **filter_tags: dict[str, tuple[str, ...]]
     ) -> dict[str, Playlist]:
         """
         Returns a filtered set of playlists in this library.
         The playlists returned are deep copies of the playlists in the library.
 
-        :param include: An optional list of playlist names to include.
-        :param exclude: An optional list of playlist names to exclude.
+        :param include: An optional list or :py:class:`Filter` of playlist names to include.
+        :param exclude: An optional list or :py:class:`Filter` of playlist names to exclude.
         :param filter_tags: Provide optional kwargs of the tags and values of items to filter out of every playlist.
             Parse a tag name as a parameter, any item matching the values given for this tag will be filtered out.
             NOTE: Only `string` value types are currently supported.
@@ -354,6 +354,11 @@ class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
         bar = self.logger.get_progress_bar(
             iterable=self.playlists.items(), desc="Filtering playlists", unit="playlists"
         )
+
+        if isinstance(include, Filter):
+            include.values = self.playlists.keys()
+        if isinstance(exclude, Filter):
+            exclude.values = self.playlists.keys()
 
         filtered: dict[str, Playlist] = {}
         for name, playlist in bar:

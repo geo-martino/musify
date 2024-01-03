@@ -38,6 +38,7 @@ class TestMusicBee(LocalLibraryTester):
 
     @pytest.fixture(scope="class")
     def blank_library(self) -> LocalLibrary:
+        MusicBee.xml_library_filename = library_filename
         library = MusicBee(musicbee_folder=path_library_resources)
         assert library._path == library_filepath
         return library

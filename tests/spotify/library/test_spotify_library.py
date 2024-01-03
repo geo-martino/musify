@@ -83,8 +83,6 @@ class TestSpotifyLibrary(RemoteLibraryTester):
 
     # noinspection PyMethodOverriding
     def test_enrich_tracks(self, library, api_mock: SpotifyMock):
-        api_mock.reset_mock()  # test checks the number of requests made
-
         def validate_album_not_enriched(t: SpotifyTrack) -> None:
             """Check album does not contain expected enriched fields"""
             assert "external_ids" not in t.response["album"]
@@ -97,6 +95,8 @@ class TestSpotifyLibrary(RemoteLibraryTester):
                 assert "followers" not in art
                 assert "images" not in art
                 assert "popularity" not in art
+
+        api_mock.reset_mock()  # test checks the number of requests made
 
         # ensure tracks are not enriched already
         artist_ids = {artist["id"] for track in library.tracks for artist in track.response["artists"]}

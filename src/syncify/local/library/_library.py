@@ -14,7 +14,7 @@ from syncify.local.track import TRACK_CLASSES, LocalTrack, load_track
 from syncify.processors.sort import ItemSorter
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitCollection, UnitIterable
-from syncify.utils.helpers import align_and_truncate, get_max_width
+from syncify.utils.helpers import align_and_truncate, get_max_width, Filter
 from syncify.utils.logger import REPORT
 
 
@@ -31,8 +31,8 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     :param other_folders: Absolute paths of other possible library paths.
         Use to replace path stems from other libraries for the paths in loaded playlists.
         Useful when managing similar libraries on multiple platforms.
-    :param include: An optional list of playlist names to include when loading playlists.
-    :param exclude: An optional list of playlist names to exclude when loading playlists.
+    :param include: An optional list or :py:class:`Filter` of playlist names to include when loading playlists.
+    :param exclude: An optional list or :py:class:`Filter` of playlist names to exclude when loading playlists.
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
         The wrangler is also used when loading tracks to allow them to process URI tags.
@@ -118,21 +118,29 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         for filetype in PLAYLIST_FILETYPES:
             paths = glob(join(self._playlist_folder, "**", f"*{filetype}"), recursive=True)
             entry = {
-                splitext(basename(path.removeprefix(self._playlist_folder).casefold()))[0]: path
+                splitext(basename(path.removeprefix(self._playlist_folder)))[0]: path
                 for path in paths
             }
             playlists |= entry
 
+        if isinstance(self.include, Filter):
+            self.include.values = playlists.keys()
+        if isinstance(self.exclude, Filter):
+            self.exclude.values = playlists.keys()
+
+        include = [name.strip().casefold() for name in self.include]
+        exclude = [name.strip().casefold() for name in self.exclude]
+
         playlists_total = len(playlists)
         self._playlist_paths = {
-            name: path for name, path in sorted(playlists.items(), key=lambda x: x[0])
-            if (not self.include or name in self.include) and (not self.exclude or name not in self.exclude)
+            name.casefold(): path for name, path in sorted(playlists.items(), key=lambda x: x[0])
+            if (not include or name.casefold() in include) and (not exclude or name.casefold() not in exclude)
         }
 
         log = (
             f"Filtered out {playlists_total - len(self._playlist_paths)} playlists "
             f"from {playlists_total} {self.name} playlists"
-        ) if self.include or self.exclude else f"{len(self._playlist_paths)} playlists found"
+        ) if include or exclude else f"{len(self._playlist_paths)} playlists found"
 
         self.logger.debug(f"Set playlist folder: {self.playlist_folder} | {log}")
 
@@ -181,8 +189,8 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             library_folder: str | None = None,
             playlist_folder: str | None = None,
             other_folders: UnitCollection[str] = (),
-            include: Iterable[str] = (),
-            exclude: Iterable[str] = (),
+            include: Iterable[str] | Filter[str] = (),
+            exclude: Iterable[str] | Filter[str] = (),
             remote_wrangler: RemoteDataWrangler | None = None,
     ):
         super().__init__(remote_wrangler=remote_wrangler)
@@ -191,8 +199,8 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         self.logger.info(f"\33[1;95m ->\33[1;97m Setting up {log_name} library \33[0m")
         self.logger.print()
 
-        self.include = [name.strip().casefold() for name in include]
-        self.exclude = [name.strip().casefold() for name in exclude]
+        self.include = include
+        self.exclude = exclude
 
         self._library_folder: str | None = None
         # name of track object to set of paths valid for that track object

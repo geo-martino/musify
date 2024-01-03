@@ -1,4 +1,5 @@
 import re
+from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Iterable, Collection, Sequence, MutableSequence, Mapping, MutableMapping
 from typing import Any, TypeVar
@@ -177,3 +178,24 @@ def get_most_common_values(values: Iterable[Any]) -> list[Any]:
 def get_user_input(text: str | None = None) -> str:
     """Print formatted dialog with optional text and get the user's input."""
     return input(f"\33[93m{text}\33[0m | ").strip()
+
+
+class Filter[T](ABC, Collection[T]):
+    """Base class for filtering down values based on some settings"""
+
+    def __init__(self, *_, **__):
+        self.values: Collection[T] | None = None
+
+    @abstractmethod
+    def process(self, values: Iterable[T]) -> Collection[T]:
+        """Filter down given ``values`` or stored ``available`` values that match this filter's settings"""
+        raise NotImplementedError
+
+    def __iter__(self):
+        return (v for v in self.process(self.values)) if self.values else ()
+
+    def __len__(self):
+        return len(self.process(self.values)) if self.values else 0
+
+    def __contains__(self, item: T):
+        return item in self.process(self.values) if self.values else False

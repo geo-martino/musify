@@ -12,6 +12,7 @@ from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_x
 from tests.local.utils import path_track_resources, path_track_all, random_tracks, random_track
 
 
+# TODO: expand these tests to include test for using Filter as include/exclude
 class TestLocalLibrary(LocalLibraryTester):
 
     @pytest.fixture
