@@ -1,6 +1,5 @@
 import re
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
 from itertools import batched
 from random import randrange, choice
 
@@ -19,7 +18,6 @@ from tests.spotify.utils import random_uri, random_uris
 from tests.utils import random_str, get_stdout
 
 
-# TODO: test for all collections processed
 class RemoteItemCheckerTester(ABC):
     """Run generic tests for :py:class:`RemoteItemSearcher` implementations."""
 
@@ -59,15 +57,11 @@ class RemoteItemCheckerTester(ABC):
         return pl, collection
 
     @staticmethod
-    def setup_input(values: Sequence[str], mocker: MockerFixture) -> None:
+    def setup_input(values: list[str], mocker: MockerFixture) -> None:
         """``builtins.input`` calls will return the ``values`` in order, finishing on ''"""
-        i = 0
-
         def input_return(*_, **__) -> str:
             """An order of return values for user input that will test various stages of the pause"""
-            nonlocal i
-            i += 1
-            return values[i-1] if i <= len(values) else ""
+            return values.pop(0) if values else ""
 
         mocker.patch('builtins.input', new=input_return)
 
@@ -160,6 +154,7 @@ class RemoteItemCheckerTester(ABC):
         pl, collection = setup_playlist_collection
         self.setup_input(["h", collection.name, pl.uri], mocker=mocker)
         checker._pause(page=1, total=1)
+        capfd.close()
 
         stdout = get_stdout(capfd)  # remove colour codes
         assert stdout.count("Enter one of the following") == 2  # help text printed initially and reprinted on request
@@ -181,11 +176,12 @@ class RemoteItemCheckerTester(ABC):
             capfd: pytest.CaptureFixture,
     ):
         api_mock.reset_mock()  # test checks the number of requests made
-
         self.setup_input([random_str(10, 20), "u", "s"], mocker=mocker)
         checker._pause(page=1, total=1)
+        capfd.close()
 
         stdout = get_stdout(capfd)
+        print(stdout.count("Input not recognised"))
         assert stdout.count("Enter one of the following") == 1
         assert stdout.count("Input not recognised") == 2
         assert f"Showing items originally added to" not in stdout
@@ -205,8 +201,9 @@ class RemoteItemCheckerTester(ABC):
     ):
         api_mock.reset_mock()  # test checks the number of requests made
 
-        self.setup_input("q", mocker=mocker)
+        self.setup_input(["q"], mocker=mocker)
         checker._pause(page=1, total=1)
+        capfd.close()
 
         stdout = get_stdout(capfd)
         assert stdout.count("Enter one of the following") == 1
@@ -245,10 +242,15 @@ class RemoteItemCheckerTester(ABC):
     ):
         # anything after 'ua' will be ignored
         values = ["u", "p", "h", "n", "", "zzzz", "n", "h", "u", "p", "ua", random_str(10, 20), "s", "q"]
+        expected = values[-3:]
         self.setup_input(values, mocker=mocker)
         checker._match_to_input(name="test")
+        capfd.close()
+
+        assert values == expected
 
         stdout = get_stdout(capfd)
+        print(stdout.count("Input not recognised"))
         assert stdout.count("Enter one of the following") == 3
         assert stdout.count("Input not recognised") == 1
         assert not checker.skip
@@ -293,6 +295,7 @@ class RemoteItemCheckerTester(ABC):
         # noinspection SpellCheckingInspection
         self.setup_input(["p", "p", "p", *uri_list, "naaaaaaa", "r"], mocker=mocker)
         checker._match_to_input(name="test")
+        capfd.close()
 
         stdout = get_stdout(capfd)
         assert stdout.count("Enter one of the following") == 1
@@ -321,6 +324,7 @@ class RemoteItemCheckerTester(ABC):
         # anything after 'r' will be ignored
         self.setup_input(["u", "u", "u", "r", "q"], mocker=mocker)
         checker._match_to_input(name="test")
+        capfd.close()
 
         stdout = get_stdout(capfd)
         assert stdout.count("Enter one of the following") == 1
@@ -343,6 +347,7 @@ class RemoteItemCheckerTester(ABC):
         # anything after 's' will be ignored
         self.setup_input(["s", "q"], mocker=mocker)
         checker._match_to_input(name="test")
+        capfd.close()
 
         stdout = get_stdout(capfd)
         assert stdout.count("Enter one of the following") == 1
@@ -365,6 +370,7 @@ class RemoteItemCheckerTester(ABC):
         # anything after 'q' will be ignored
         self.setup_input(["q", "s"], mocker=mocker)
         checker._match_to_input(name="test")
+        capfd.close()
 
         stdout = get_stdout(capfd)
         assert stdout.count("Enter one of the following") == 1
@@ -496,6 +502,7 @@ class RemoteItemCheckerTester(ABC):
         checker.playlist_name_collection["do not run"] = collection
 
         checker._check_uri()
+        capfd.close()
         assert not checker.quit
         assert not checker.skip  # skip triggered by input, but should still hold initial value
         assert not checker.switched
@@ -545,6 +552,7 @@ class RemoteItemCheckerTester(ABC):
         # initially skip at pause, then mark all items in all processed collections in the first batch as unavailable
         self.setup_input(["s", *["ua" for _ in batch]], mocker=mocker)
 
+        api_mock.reset_mock()
         result = checker.check(collections)
 
         # resets after each run

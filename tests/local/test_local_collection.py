@@ -5,6 +5,7 @@ from random import randrange, sample
 
 import pytest
 
+from syncify.exception import SyncifyKeyError
 from syncify.local.collection import LocalFolder, LocalAlbum, LocalArtist, LocalGenres, LocalCollection
 from syncify.local.exception import LocalCollectionError
 from syncify.local.track import LocalTrack
@@ -15,7 +16,6 @@ from tests.spotify.api.mock import SpotifyMock
 from tests.utils import random_str
 
 
-# TODO: add test for saving tracks from other collections
 class LocalCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
 
     @pytest.fixture
@@ -43,17 +43,17 @@ class LocalCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
         if collection.remote_wrangler is not None:
             assert collection[item.uri] == item
         else:
-            with pytest.raises(KeyError):
+            with pytest.raises(SyncifyKeyError):
                 assert collection[item.uri]
 
         invalid_track = next(item for item in collection_merge_items)
-        with pytest.raises(KeyError):
+        with pytest.raises(SyncifyKeyError):
             assert collection[invalid_track]
-        with pytest.raises(KeyError):
+        with pytest.raises(SyncifyKeyError):
             assert collection[invalid_track.name]
-        with pytest.raises(KeyError):
+        with pytest.raises(SyncifyKeyError):
             assert collection[invalid_track.path]
-        with pytest.raises(KeyError):
+        with pytest.raises(SyncifyKeyError):
             assert collection[invalid_track.uri]
 
     @staticmethod

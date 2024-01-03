@@ -18,7 +18,7 @@ import yaml
 from syncify import PACKAGE_ROOT, MODULE_ROOT
 from syncify.abstract import NamedObject
 from syncify.abstract.enums import TagField
-from syncify.abstract.misc import PrettyPrinter
+from syncify.abstract.misc import PrettyPrinter, Filter
 from syncify.abstract.object import Library
 from syncify.api import APIAuthoriser, RequestHandler
 from syncify.exception import ConfigError, SyncifyError
@@ -41,7 +41,7 @@ from syncify.spotify.library import SpotifyObject
 from syncify.spotify.library.library import SpotifyLibrary
 from syncify.spotify.processors.processors import SpotifyItemChecker, SpotifyItemSearcher
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
-from syncify.utils.helpers import to_collection, Filter
+from syncify.utils.helpers import to_collection
 from syncify.utils.logger import LOGGING_DT_FORMAT, SyncifyLogger
 
 
@@ -68,7 +68,7 @@ class BaseConfig(PrettyPrinter, metaclass=ABCMeta):
     """Base config section representing a config block from the file"""
 
     __override__: tuple[str] = ()
-    __keep__: tuple[str] = ()
+    __reset__: tuple[str] = ()
 
     def __init__(self, settings: dict[Any, Any], key: Any | None = None):
         super().__init__()
@@ -91,6 +91,9 @@ class BaseConfig(PrettyPrinter, metaclass=ABCMeta):
                         continue
                 except SyncifyError:
                     continue
+            elif k in self.__reset__:
+                setattr(self, k, None)
+                continue
 
             try:
                 v_self = getattr(self, k.lstrip("_"))
@@ -100,7 +103,7 @@ class BaseConfig(PrettyPrinter, metaclass=ABCMeta):
             force = False
             try:
                 force = not override and k in self.__override__ and getattr(other, k) is not None
-                v_other = getattr(other, k.lstrip("_")) if k not in self.__keep__ else None
+                v_other = getattr(other, k.lstrip("_"))
             except SyncifyError:
                 v_other = None
 
@@ -121,7 +124,6 @@ class BaseConfig(PrettyPrinter, metaclass=ABCMeta):
                     if k_sub not in v_self:
                         v_self[k_sub] = v_other_sub
             else:
-                print(k, override, v_self, v_other)
                 if override and v_other is not None:  # if value from other exists, replace self value
                     if isinstance(v_other, tuple) and len(v_other) == 0:
                         continue
@@ -129,219 +131,14 @@ class BaseConfig(PrettyPrinter, metaclass=ABCMeta):
                 elif v_self is None or force or (isinstance(v_self, tuple) and len(v_self) == 0):
                     setattr(self, k, v_other)
 
+        if isinstance(self, ConfigLibrary) and isinstance(other, ConfigLibrary):
+            # noinspection PyAttributeOutsideInit
+            self.library_loaded = other.library_loaded
+
 
 ###########################################################################
-## Shared
+## Reports
 ###########################################################################
-class ConfigLibrary(BaseConfig):
-    """
-    Set the settings for a library from a config file.
-    See :py:class:`Config` for more documentation regarding operation.
-
-    :param settings: The loaded config from the config file.
-    :param key: The key to load filter options for.
-        Used as the parent key to use to pull the required configuration from the config file.
-    """
-
-    __override__ = ("_library",)
-
-    def __init__(self, settings: dict[Any, Any], key: Any | None = None):
-        super().__init__(settings=settings, key=key)
-
-        self._library: Library | None = None
-        self.playlists: ConfigPlaylists | None = None
-
-        self.library_loaded: bool = False  # marks whether initial loading of the library has happened
-
-    @property
-    def kind(self) -> str:
-        """The config identifier that gives the type of library being configured"""
-        return self._file["type"]
-
-    @property
-    @abstractmethod
-    def source(self) -> str:
-        """The name of the source currently being used for this library"""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def library(self) -> Library:
-        """An initialised library"""
-        raise NotImplementedError
-
-    def as_dict(self) -> dict[str, Any]:
-        try:
-            library = self.library
-        except SyncifyError:
-            library = None
-        return {"library": library, "playlists": self.playlists}
-
-    def __deepcopy__(self, _: dict = None):
-        obj = self.__class__.__new__(self.__class__)
-        obj.__dict__ = {k: deepcopy(v) if not isinstance(v, Library) else v for k, v in self.__dict__.items()}
-        return obj
-
-
-class ConfigFilter(BaseConfig, Filter[str]):
-    """
-    Set the settings for granular filtering from a config file.
-    See :py:class:`Config` for more documentation regarding operation.
-
-    :param settings: The loaded config from the config file.
-    """
-
-    def __init__(self, settings: dict[Any, Any]):
-        super().__init__(settings=settings.get("filter", settings))
-
-        self.include = self.ConfigMatch(settings=self._file, key="include", include=True)
-        self.exclude = self.ConfigMatch(settings=self._file, key="exclude", include=False)
-
-    @property
-    def ready(self) -> bool:
-        """Does this filter have valid settings and can process values"""
-        return self.include.ready and self.exclude.ready
-
-    def process[T: str | NamedObject](self, values: Iterable[T] | None = None) -> tuple[T, ...]:
-        """Filter down ``values`` that match this filter's settings from"""
-        return self.exclude.process(self.include.process(values if values else self.values))
-
-    def as_dict(self) -> dict[str, Any]:
-        return {
-            "values": to_collection(self.values),
-            "include": self.include,
-            "exclude": self.exclude,
-        }
-
-    class ConfigMatch(BaseConfig, Filter[str]):
-        """
-        Set the settings for filter options from a config file.
-        See :py:class:`Config` for more documentation regarding operation.
-        
-        :param settings: The loaded config from the config file.
-        :param key: The key to load filter options for.
-            Used as the parent key to use to pull the required configuration from the config file.
-        :param include: When True, include all values that match the filter settings when processing.
-            When False, exclude all values that match the filter settings when processing.
-        """
-
-        def __init__(self, settings: dict[Any, Any], key: Any | None = None, include: bool = True):
-            super().__init__(settings=settings, key=key)
-            self._file: dict[Any, Any] | list[Any] = self._file
-            self.include = include
-
-            self._values: Collection[str, ...] | None = None
-
-            self.comparers: list[Comparer] = []
-            self._match_all: bool | None = None
-            if isinstance(self._file, Mapping):
-                self.comparers = [
-                    Comparer(condition=condition, expected=expected)
-                    for condition, expected in self._file.items() if condition != "match_all"
-                ]
-
-        def merge(self, other: Self | None, override: bool = False) -> None:
-            if self.ready and not override:
-                return
-
-            if override:
-                self._values = other.values
-                self.comparers = other.comparers
-            else:
-                self._values = other.values if not self._values else self._values
-                if not self._values:
-                    self.comparers = other.comparers if not self.comparers else self.comparers
-                    self._match_all = other.match_all
-                else:
-                    self.comparers.clear()
-                    self._match_all = None
-
-        def process[T: str | NamedObject](self, values: Iterable[T] | None = None) -> tuple[T, ...]:
-            """Returns all strings from ``values`` that match this filter's settings"""
-            if values and self.values:  # only keep values in self.values
-                if self.include:
-                    return tuple(value for value in values if value in self.values)
-                else:
-                    return tuple(value for value in values if value not in self.values)
-            if not values and self.values:
-                values = self.values
-            if values and not self.comparers:
-                return to_collection(values, tuple)
-
-            values = tuple(value.name if isinstance(value, NamedObject) else value for value in values)
-            if self.match_all:
-                for comparer in self.comparers:
-                    if self.include:
-                        values = tuple(value for value in values if comparer(value))
-                    else:
-                        values = tuple(value for value in values if not comparer(value))
-            else:
-                matches = []
-                for comparer in self.comparers:
-                    if self.include:
-                        matches.extend(value for value in values if comparer(value) and value not in matches)
-                    else:
-                        matches.extend(value for value in values if not comparer(value) and value not in matches)
-                values = tuple(matches)
-            return values
-
-        @property
-        def ready(self) -> bool:
-            """Does this filter have valid settings and can process values"""
-            return bool(self.values) or bool(self.comparers)
-
-        @property
-        def values(self) -> Collection[str, ...] | None:
-            """
-            `DEFAULT = ()` | The filtered values.
-            Filters ``available`` values based on ``prefix``, ``start``, and ``stop`` as applicable.
-            ``available`` values are taken from the config if the config is a list of strings.
-            """
-            if self._values is not None:
-                return self._values
-
-            is_str_collection = isinstance(self._file, Collection) and all(isinstance(v, str) for v in self._file)
-            if not isinstance(self._file, Mapping) and is_str_collection:
-                self._values = to_collection(self._file)
-            return self._values
-
-        @values.setter
-        def values(self, values: Collection[str]):
-            self._values = values
-
-        @property
-        def match_all(self) -> bool:
-            """
-            `DEFAULT = False` | When True, a value has to match all conditions
-            to be considered a match by the filter when processing.
-            """
-            if self._match_all is not None:
-                return self._match_all
-
-            self._match_all = self._file.get("match_all", False) if isinstance(self._file, Mapping) else False
-            return self._match_all
-
-        def as_dict(self) -> dict[str, Any]:
-            return {
-                "include": self.include,
-                "values": to_collection(self.values),
-                "match_all": self.match_all,
-                "comparers": self.comparers,
-            }
-
-
-class ConfigPlaylists(ConfigFilter):
-    """
-    Set the settings for the playlists from a config file.
-    See :py:class:`Config` for more documentation regarding operation.
-
-    :param settings: The loaded config from the config file.
-    """
-
-    def __init__(self, settings: dict[Any, Any]):
-        super().__init__(settings=settings.get("playlists", {}))
-
-
 class ConfigReportBase(BaseConfig):
     """
     Base class for settings reports settings.
@@ -353,6 +150,7 @@ class ConfigReportBase(BaseConfig):
         super().__init__(settings=settings, key=key)
         self.name = key
         self.enabled = self._file.get("enabled", True)
+        self.filter = ConfigFilter(settings=self._file)
 
     def as_dict(self) -> dict[str, Any]:
         return {"enabled": self.enabled}
@@ -439,6 +237,212 @@ class ConfigMissingTags(ConfigReportBase):
             "tags": list(sorted([t for tag in self.tags for t in tag.to_tag()], key=lambda x: order.index(x))),
             "match_all": self.match_all,
         }
+
+
+###########################################################################
+## Shared
+###########################################################################
+class ConfigLibrary(BaseConfig):
+    """
+    Set the settings for a library from a config file.
+    See :py:class:`Config` for more documentation regarding operation.
+
+    :param settings: The loaded config from the config file.
+    :param key: The key to load filter options for.
+        Used as the parent key to use to pull the required configuration from the config file.
+    """
+
+    __override__ = ("_library",)
+
+    def __init__(self, settings: dict[Any, Any], key: Any | None = None):
+        super().__init__(settings=settings, key=key)
+
+        self._library: Library | None = None
+        self.playlists: ConfigPlaylists | None = None
+
+        self.library_loaded: bool = False  # marks whether initial loading of the library has happened
+
+    @property
+    def kind(self) -> str:
+        """The config identifier that gives the type of library being configured"""
+        return self._file["type"]
+
+    @property
+    @abstractmethod
+    def source(self) -> str:
+        """The name of the source currently being used for this library"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def library(self) -> Library:
+        """An initialised library"""
+        raise NotImplementedError
+
+    def as_dict(self) -> dict[str, Any]:
+        try:
+            library = self.library
+        except SyncifyError:
+            library = None
+        return {"library": library, "playlists": self.playlists}
+
+    def __deepcopy__(self, _: dict = None):
+        obj = self.__class__.__new__(self.__class__)
+        obj.__dict__ = {k: deepcopy(v) if not isinstance(v, Library) else v for k, v in self.__dict__.items()}
+        return obj
+
+
+class ConfigFilter(BaseConfig, Filter[str]):
+    """
+    Set the settings for granular filtering from a config file.
+    See :py:class:`Config` for more documentation regarding operation.
+
+    :param settings: The loaded config from the config file.
+    """
+
+    def __init__(self, settings: dict[Any, Any]):
+        super().__init__(settings=settings.get("filter", settings))
+
+        self.include = self.ConfigMatch(settings=self._file, key="include")
+        self.exclude = self.ConfigMatch(settings=self._file, key="exclude")
+
+    @property
+    def ready(self) -> bool:
+        """Does this filter have valid settings and can process values"""
+        return self.include.ready and self.exclude.ready
+
+    def process[T: str | NamedObject](self, values: Iterable[T] | None = None) -> tuple[T, ...]:
+        """Filter down ``values`` that match this filter's settings from"""
+        values = self.include.process(values if values else self.values) if self.include.ready else values
+        exclude = self.exclude.process(values) if self.exclude.ready else ()
+        return tuple(v for v in values if v not in exclude)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "values": to_collection(self.values),
+            "include": self.include,
+            "exclude": self.exclude,
+        }
+
+    class ConfigMatch(BaseConfig, Filter[str]):
+        """
+        Set the settings for filter options from a config file.
+        See :py:class:`Config` for more documentation regarding operation.
+
+        :param settings: The loaded config from the config file.
+        :param key: The key to load filter options for.
+            Used as the parent key to use to pull the required configuration from the config file.
+        :param include: When True, include all values that match the filter settings when processing.
+            When False, exclude all values that match the filter settings when processing.
+        """
+
+        def __init__(self, settings: dict[Any, Any], key: Any | None = None):
+            super().__init__(settings=settings, key=key)
+            self._file: dict[Any, Any] | list[Any] = self._file
+
+            self._values: list[str] | None = None
+
+            self.comparers: list[Comparer] = []
+            self._match_all: bool | None = None
+            if isinstance(self._file, Mapping):
+                self.comparers = [
+                    Comparer(condition=condition, expected=expected)
+                    for condition, expected in self._file.items() if condition != "match_all"
+                ]
+
+        def merge(self, other: Self | None, override: bool = False) -> None:
+            if self.ready and not override:
+                return
+
+            if override:
+                self._values = other.values
+                self.comparers = other.comparers
+            else:
+                self._values = other.values if not self._values else self._values
+                if not self._values:
+                    self.comparers = other.comparers if not self.comparers else self.comparers
+                    self._match_all = other.match_all
+                else:
+                    self.comparers.clear()
+                    self._match_all = None
+
+        def process[T: str | NamedObject](self, values: Iterable[T] | None = None) -> tuple[T, ...]:
+            """Returns all strings from ``values`` that match this filter's settings"""
+            def name(v: T) -> str:
+                """Get the name from a NamedObject"""
+                return v.name if isinstance(v, NamedObject) else v
+
+            if values and self.values:  # only keep values in self.values
+                return tuple(value for value in values if name(value) in self.values)
+            if not values and self.values:
+                values = self.values
+            if values and not self.comparers:
+                return to_collection(values, tuple)
+
+            if self.match_all:
+                for comparer in self.comparers:
+                    values = tuple(value for value in values if comparer(name(value)))
+            else:
+                matches = []
+                for comparer in self.comparers:
+                    matches.extend(value for value in values if comparer(name(value)) and value not in matches)
+                values = tuple(matches)
+            return values
+
+        @property
+        def ready(self) -> bool:
+            """Does this filter have valid settings and can process values"""
+            return bool(self.values) or bool(self.comparers)
+
+        @property
+        def values(self) -> list[str] | None:
+            """
+            `DEFAULT = ()` | The filtered values.
+            Filters ``available`` values based on ``prefix``, ``start``, and ``stop`` as applicable.
+            ``available`` values are taken from the config if the config is a list of strings.
+            """
+            if self._values is not None:
+                return self._values
+
+            is_str_collection = isinstance(self._file, Collection) and all(isinstance(v, str) for v in self._file)
+            if not isinstance(self._file, Mapping) and is_str_collection:
+                self._values = to_collection(self._file, list)
+            return self._values
+
+        @values.setter
+        def values(self, values: Collection[str]):
+            self._values = values
+
+        @property
+        def match_all(self) -> bool:
+            """
+            `DEFAULT = False` | When True, a value has to match all conditions
+            to be considered a match by the filter when processing.
+            """
+            if self._match_all is not None:
+                return self._match_all
+
+            self._match_all = self._file.get("match_all", False) if isinstance(self._file, Mapping) else False
+            return self._match_all
+
+        def as_dict(self) -> dict[str, Any]:
+            return {
+                "values": to_collection(self.values),
+                "match_all": self.match_all,
+                "comparers": self.comparers,
+            }
+
+
+class ConfigPlaylists(ConfigFilter):
+    """
+    Set the settings for the playlists from a config file.
+    See :py:class:`Config` for more documentation regarding operation.
+
+    :param settings: The loaded config from the config file.
+    """
+
+    def __init__(self, settings: dict[Any, Any]):
+        super().__init__(settings=settings.get("playlists", {}))
 
 
 ###########################################################################
@@ -630,6 +634,7 @@ class ConfigMusicBee(ConfigLocal):
             other_folders=self.other_folders,
             include=self.playlists.include,
             exclude=self.playlists.exclude,
+            remote_wrangler=self.remote_wrangler,
         )
         return self._library
 
@@ -1017,7 +1022,7 @@ class Config(BaseConfig):
     """
 
     __override__ = "libraries"
-    __keep__ = ("_reload", "_pause")
+    __reset__ = ("_reload", "_pause")
 
     def __init__(self, path: str = "config.yml"):
         super().__init__({})
@@ -1027,8 +1032,8 @@ class Config(BaseConfig):
         self.loaded: bool = False  # marked as True after the first load, prevents excessive overriding
 
         # general operation settings
+        self.dry_run: bool | None = None
         self._output_folder: str | None = None
-        self._dry_run: bool | None = None
         self._reload: dict[str, tuple[str, ...]] | None = None
         self._pause: str | None = None
 
@@ -1075,6 +1080,7 @@ class Config(BaseConfig):
 
         if previous:  # override or enrich as needed
             override = self._file.get("override", True)
+
             if self.filter.ready:
                 previous.filter = None
             self.merge(previous, override=not override)
@@ -1163,15 +1169,6 @@ class Config(BaseConfig):
         self._output_folder = join(parent_folder, self.dt.strftime(LOGGING_DT_FORMAT))
         os.makedirs(self._output_folder, exist_ok=True)
         return self._output_folder
-
-    @property
-    def dry_run(self) -> bool:
-        """`DEFAULT = True` | Whether this run is a dry run i.e. don't write out where possible"""
-        if self._dry_run is not None:
-            return self._dry_run
-
-        self._dry_run = self._file.get("dry_run", True)
-        return self._dry_run
 
     @property
     def reload(self) -> dict[str, tuple[str, ...]]:

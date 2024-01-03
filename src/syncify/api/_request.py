@@ -212,3 +212,12 @@ class RequestHandler(APIAuthoriser):
         """Sends a PATCH request."""
         kwargs.pop("method", None)
         return self.request("patch", url=url, **kwargs)
+
+    def __copy__(self):
+        """Do not copy handler"""
+        return self
+
+    def __deepcopy__(self, _: dict = None):
+        """Do not copy handler"""
+        return self
+

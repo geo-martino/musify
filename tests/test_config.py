@@ -1,4 +1,3 @@
-# TODO: write tests
 import logging
 from copy import deepcopy
 from os.path import join, dirname
@@ -93,7 +92,6 @@ class TestConfig(PrettyPrinterTester):
 
     def test_empty_core(self, config_empty: Config, tmp_path: str):
         assert config_empty.output_folder.startswith(join(tmp_path, "_data"))
-        assert config_empty.dry_run
         assert config_empty.reload == {}
         assert config_empty.pause is None
 
@@ -192,7 +190,6 @@ class TestConfig(PrettyPrinterTester):
 
     def test_load_core(self, config_valid: Config, tmp_path: str):
         assert config_valid.output_folder.startswith(join(tmp_path, "test_folder"))
-        assert not config_valid.dry_run
         assert config_valid.reload == {"main": ("tracks", "playlists"), "spotify": tuple()}
         assert config_valid.pause == "this is a test message"
 
@@ -287,7 +284,7 @@ class TestConfig(PrettyPrinterTester):
 
         values = ["include me", "exclude me", "don't include me"]
         assert config.include.process(values) == ("include me",)
-        assert config.exclude.process(values) == ("include me", "don't include me")
+        assert config.exclude.process(values) == ("exclude me",)
         assert config.process(values) == ("include me",)
 
     def test_load_reports(self, config_valid: Config):
@@ -344,7 +341,6 @@ class TestConfig(PrettyPrinterTester):
         new = config_valid
 
         assert new.output_folder == old.output_folder  # never overwritten
-        assert new.dry_run
         assert new.reload == {"spotify": ("extend",)}
         assert new.pause is None
 
@@ -376,8 +372,8 @@ class TestConfig(PrettyPrinterTester):
         # overriden values
         assert new.library_folder == "/new/path/to/library"
         assert new.playlist_folder == "/new/path/to/playlists"
-        assert new.playlists.include.values == ("new playlist to include", "include me now too")
-        assert new.playlists.exclude.values == ("and don't include me",)
+        assert new.playlists.include.values == ["new playlist to include", "include me now too"]
+        assert new.playlists.exclude.values == ["and don't include me"]
 
         assert new.update.tags == (LocalTrackField.GENRES,)
         assert new.update.replace
@@ -398,6 +394,7 @@ class TestConfig(PrettyPrinterTester):
             raise TypeError("Config if not a RemoteLibrary config")
         old_library = old.library
         old_api = old.api.api
+        old.library_loaded = True
 
         config_valid.load("remote_override")
         new = config_valid.libraries[name]
@@ -410,7 +407,7 @@ class TestConfig(PrettyPrinterTester):
         assert new.checker.interval == 100
         assert not new.checker.allow_karaoke
 
-        assert new.playlists.exclude.values == ("terrible playlist",)
+        assert new.playlists.exclude.values == ["terrible playlist"]
         assert new.playlists.sync.kind == "refresh"
         assert new.playlists.sync.reload
         assert new.playlists.sync.filter == {
@@ -437,7 +434,7 @@ class TestConfig(PrettyPrinterTester):
             assert new.api.client_secret == "<CLIENT_SECRET>"
             assert new.api.scopes == ("user-library-read", "user-follow-read")
 
-        assert not new.library_loaded and not old.library_loaded
+        assert new.library_loaded and old.library_loaded
 
     ###########################################################################
     ## Merge tests - no override
@@ -448,7 +445,6 @@ class TestConfig(PrettyPrinterTester):
         new = config_valid
 
         assert new.output_folder == old.output_folder  # never overwritten
-        assert not new.dry_run
         assert new.reload == {"spotify": ("extend",)}
         assert new.pause is None
 
@@ -485,8 +481,8 @@ class TestConfig(PrettyPrinterTester):
         assert new.kind == old.kind == name
 
         # overriden values
-        assert new.playlists.include.values == ("new playlist to include", "include me now too")
-        assert new.playlists.exclude.values == ("and don't include me",)
+        assert new.playlists.include.values == ["new playlist to include", "include me now too"]
+        assert new.playlists.exclude.values == ["and don't include me"]
 
         # kept values
         assert new.library_folder == old.library_folder
@@ -516,7 +512,7 @@ class TestConfig(PrettyPrinterTester):
             raise TypeError("Config if not a RemoteLibrary config")
 
         # new values
-        assert new.playlists.exclude.values == ("terrible playlist",)
+        assert new.playlists.exclude.values == ["terrible playlist"]
 
         # kept values
         assert new.api.use_cache == old.api.use_cache

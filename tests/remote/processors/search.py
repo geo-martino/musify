@@ -183,6 +183,7 @@ class RemoteItemSearcherTester(ABC):
             item.uri = item.remote_wrangler.unavailable_uri_dummy
             assert item.has_uri is False
         assert skip > 0  # check test input is valid
+        print("SKIP", skip)
 
         return collection
 
@@ -239,7 +240,16 @@ class RemoteItemSearcherTester(ABC):
 
         result = searcher._search_collection(search_album)
         assert len(result.matched) + len(result.unmatched) + len(result.skipped) == len(search_album)
-        assert len(result.matched) == matchable - skip  # TODO: find out why this occasionally fails
+        print(
+            len(result.matched),
+            len(result.unmatched),
+            len(result.skipped),
+            len(unmatchable_items),
+            len(search_album),
+            len(search_items),
+            skip
+        )
+        assert len(result.matched) == matchable - skip  # TODO: figure out why this occasionally fails
         assert len(result.unmatched) == len(unmatchable_items)
         assert len(result.skipped) == skip
 

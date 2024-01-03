@@ -9,9 +9,6 @@ from syncify.local.library import LocalLibrary
 from syncify.utils.helpers import align_and_truncate, get_max_width, UnitIterable, to_collection
 from syncify.utils.logger import SyncifyLogger, REPORT
 
-# noinspection PyTypeChecker
-logger: SyncifyLogger = logging.getLogger(__name__)
-
 
 def report_playlist_differences(
         source: Library | Iterable[Playlist], reference: Library | Iterable[Playlist]
@@ -24,7 +21,10 @@ def report_playlist_differences(
         containing the playlists to compare to the source's playlists.
     :return: Report on extra, missing, and unavailable tracks for the reference library.
     """
+    # noinspection PyTypeChecker
+    logger: SyncifyLogger = logging.getLogger(__name__)
     logger.debug("Report library differences: START")
+
     extra: dict[str, tuple[Item, ...]] = {}
     missing: dict[str, tuple[Item, ...]] = {}
     unavailable: dict[str, tuple[Item, ...]] = {}
@@ -89,13 +89,15 @@ def report_missing_tags(
         When False, item counts as missing tags when missing only one of the given tags.
     :return: Report on collections by name which have items with missing tags.
     """
+    # noinspection PyTypeChecker
+    logger: SyncifyLogger = logging.getLogger(__name__)
     logger.debug("Report missing tags: START")
 
     tags = to_collection(tags, set)
     tag_order = [field.name.lower() for field in ALL_FIELDS]
     # noinspection PyTypeChecker
     tag_names = set(TagField.__tags__) if Fields.ALL in tags else TagField.to_tags(tags)
-    tag_names = list(sorted(tag_names, key=lambda x: tag_order.index(x)))
+    tag_names: list[str] = list(sorted(tag_names, key=lambda x: tag_order.index(x)))
 
     if isinstance(collections, LocalLibrary):
         collections = collections.albums

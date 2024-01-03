@@ -11,6 +11,7 @@ import mutagen
 
 from syncify.abstract import Item
 from syncify.abstract.object import Track
+from syncify.exception import SyncifyKeyError, SyncifyAttributeError, SyncifyTypeError
 from syncify.fields import TrackField
 from syncify.local._file import File
 from syncify.local.exception import FileDoesNotExistError
@@ -183,17 +184,17 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
 
     def __setitem__(self, key: str, value: Any):
         if not hasattr(self, key):
-            raise KeyError(f"Given key is not a valid attribute of this item: {key}")
+            raise SyncifyKeyError(f"Given key is not a valid attribute of this item: {key}")
 
         attr = getattr(self, key)
         if isinstance(attr, property) and attr.fset is None:
-            raise AttributeError(f"Cannot values on the given key, it is protected: {key}")
+            raise SyncifyAttributeError(f"Cannot set values on the given key, it is protected: {key}")
 
         return setattr(self, key, value)
 
     def __or__(self, other: Track) -> Self:
         if not isinstance(other, Track):
-            raise TypeError(
+            raise SyncifyTypeError(
                 f"Incorrect item given. Cannot merge with {other.__class__.__name__} as it is not a Track"
             )
 
@@ -203,7 +204,7 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
 
     def __ior__(self, other: Track) -> Self:
         if not isinstance(other, Track):
-            raise TypeError(
+            raise SyncifyTypeError(
                 f"Incorrect item given. Cannot merge with {other.__class__.__name__} as it is not a Track"
             )
 

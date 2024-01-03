@@ -1,6 +1,7 @@
 from collections.abc import Collection, Mapping, Iterable
 from typing import Any
 
+from syncify.abstract.misc import Filter
 from syncify.abstract.object import Playlist, Library
 from syncify.remote.config import RemoteObjectClasses
 from syncify.remote.enums import RemoteObjectType
@@ -8,7 +9,6 @@ from syncify.remote.library.library import RemoteLibrary
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.config import SPOTIFY_OBJECT_CLASSES
 from syncify.spotify.library.object import SpotifyTrack, SpotifyCollection, SpotifyPlaylist
-from syncify.utils.helpers import Filter
 
 
 class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack]):
@@ -42,17 +42,19 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
 
         playlists_data = self.api.get_user_items(kind=RemoteObjectType.PLAYLIST, use_cache=self.use_cache)
         playlists_total = len(playlists_data)
-
-        if isinstance(self.include, Filter):
-            self.include.values = [pl["name"] for pl in playlists_data]
-        if isinstance(self.exclude, Filter):
-            self.exclude.values = [pl["name"] for pl in playlists_data]
+        names = {pl["name"] for pl in playlists_data}
 
         if self.include:  # filter on include playlist names
-            include = {name.casefold() for name in self.include}
+            if isinstance(self.include, Filter):
+                include = {name.casefold() for name in self.include.process(names)}
+            else:
+                include = {name.casefold() for name in self.include}
             playlists_data = [pl for pl in playlists_data if pl["name"].casefold() in include]
         if self.exclude:  # filter out exclude playlist names
-            exclude = {name.casefold() for name in self.exclude}
+            if isinstance(self.exclude, Filter):
+                exclude = {name.casefold() for name in names.difference(self.exclude.process(names))}
+            else:
+                exclude = {name.casefold() for name in self.exclude}
             playlists_data = [pl for pl in playlists_data if pl["name"].casefold() not in exclude]
 
         self.logger.debug(

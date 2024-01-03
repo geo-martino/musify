@@ -1,7 +1,6 @@
 #file: noinspection SpellCheckingInspection
 valid:
   bad key: this is an invalid key and should be ignored
-  dry_run: False
   output: test_folder
 
   reload:
@@ -69,7 +68,7 @@ valid:
             - terrible playlist
             - other
         exclude:
-          match_all: True
+          match_all: False
           is: terrible playlist
           contains: other
     spotify:
@@ -104,7 +103,6 @@ valid:
 core_override:  &core_merge
   override: True
 
-  dry_run: True
   output: new_folder
 
   reload:
@@ -119,7 +117,7 @@ core_override:  &core_merge
         - terrible playlist
         - other
     exclude:
-      match_all: True
+      match_all: False
       is: terrible playlist
       contains: other
 

@@ -9,7 +9,9 @@ from typing import Any, Self
 
 from syncify.abstract._base import Item
 from syncify.abstract.collection import ItemCollection
-from syncify.utils.helpers import to_collection, align_and_truncate, get_max_width, Filter
+from syncify.abstract.misc import Filter
+from syncify.exception import SyncifyKeyError, SyncifyTypeError
+from syncify.utils.helpers import to_collection, align_and_truncate, get_max_width
 from syncify.utils.logger import SyncifyLogger
 
 
@@ -181,19 +183,19 @@ class BasicCollection[T: Item](ItemCollection[T]):
             return self.items[__key]
         elif isinstance(__key, Item):  # take the URI
             if not __key.has_uri:
-                raise KeyError(f"Given item does not have a URI associated: {__key.name}")
+                raise SyncifyKeyError(f"Given item does not have a URI associated: {__key.name}")
             __key = __key.uri
         else:
             # assume the string is a name
             try:
                 return next(item for item in self.items if item.name == __key)
             except StopIteration:
-                raise KeyError(f"No matching name found: '{__key}'")
+                raise SyncifyKeyError(f"No matching name found: '{__key}'")
 
         try:  # string is a URI
             return next(item for item in self.items if item.uri == __key)
         except StopIteration:
-            raise KeyError(f"No matching URI found: '{__key}'")
+            raise SyncifyKeyError(f"No matching URI found: '{__key}'")
 
     def as_dict(self):
         return {"name": self.name, "items": self.items}
@@ -271,7 +273,7 @@ class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
     # noinspection PyTypeChecker
     def __or__(self, other: Playlist) -> Self:
         if not isinstance(other, self.__class__):
-            raise TypeError(
+            raise SyncifyTypeError(
                 f"Incorrect item given. Cannot merge with {other.__class__.__name__} "
                 f"as it is not a {self.__class__.__name__}"
             )
@@ -280,7 +282,7 @@ class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
     # noinspection PyTypeChecker
     def __ior__(self, other: Playlist) -> Self:
         if not isinstance(other, self.__class__):
-            raise TypeError(
+            raise SyncifyTypeError(
                 f"Incorrect item given. Cannot merge with {other.__class__.__name__} "
                 f"as it is not a {self.__class__.__name__}"
             )
@@ -356,9 +358,9 @@ class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
         )
 
         if isinstance(include, Filter):
-            include.values = self.playlists.keys()
+            include = set(include.process(self.playlists.keys()))
         if isinstance(exclude, Filter):
-            exclude.values = self.playlists.keys()
+            exclude = set(self.playlists).difference(exclude.process(self.playlists.keys()))
 
         filtered: dict[str, Playlist] = {}
         for name, playlist in bar:

@@ -308,7 +308,7 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
 
 class TestSpotifyItemChecker(RemoteItemCheckerTester):
 
-    @pytest.fixture
+    @pytest.fixture(scope="function")
     def checker(self, api: SpotifyAPI) -> SpotifyItemChecker:
         return SpotifyItemChecker(api=api)
 

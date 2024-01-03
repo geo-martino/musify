@@ -4,6 +4,7 @@ from typing import Any
 
 import pytest
 
+from syncify.exception import SyncifyKeyError
 from syncify.local.track import LocalTrack
 from syncify.remote.api import RemoteAPI
 from syncify.remote.library import RemoteItem
@@ -41,20 +42,20 @@ class RemoteCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
         assert collection[item.url_ext] == item
 
         invalid_item = next(item for item in collection_merge_items)
-        with pytest.raises(KeyError):
+        with pytest.raises(SyncifyKeyError):
             assert collection[invalid_item]
-        with pytest.raises(KeyError):
+        with pytest.raises(SyncifyKeyError):
             assert collection[invalid_item.name]
-        with pytest.raises(KeyError):
+        with pytest.raises(SyncifyKeyError):
             assert collection[invalid_item.uri]
-        with pytest.raises(KeyError):
+        with pytest.raises(SyncifyKeyError):
             assert collection[invalid_item.id]
-        with pytest.raises(KeyError):
+        with pytest.raises(SyncifyKeyError):
             assert collection[invalid_item.url]
-        with pytest.raises(KeyError):
+        with pytest.raises(SyncifyKeyError):
             assert collection[invalid_item.url_ext]
 
-        with pytest.raises(KeyError):
+        with pytest.raises(SyncifyKeyError):
             assert collection[item.source]
 
 

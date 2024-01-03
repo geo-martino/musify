@@ -1,8 +1,15 @@
 import json
 import re
 from abc import ABC, abstractmethod
+from typing import Iterable, Collection, Any
 
-from syncify.abstract.misc import PrettyPrinter
+from syncify.abstract.misc import PrettyPrinter, Filter
+
+
+class BasicFilter(Filter[Any]):
+
+    def process(self, values: Iterable[Any]) -> Collection[Any]:
+        return [v for v in values if v in self.values]
 
 
 class PrettyPrinterTester(ABC):

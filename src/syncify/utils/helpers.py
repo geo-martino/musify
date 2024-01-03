@@ -1,8 +1,9 @@
 import re
-from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Iterable, Collection, Sequence, MutableSequence, Mapping, MutableMapping
 from typing import Any, TypeVar
+
+from syncify.exception import SyncifyTypeError, SafeDict
 
 UT = TypeVar('UT')
 UnitIterable = UT | Iterable[UT]
@@ -41,12 +42,6 @@ def strip_ignore_words(value: str, words: Iterable[str] | None = frozenset(["The
             break
 
     return not special_start, new_value
-
-
-class SafeDict(dict):
-    """Extends dict to ignore missing keys when using format_map operations"""
-    def __missing__(self, key):
-        return "{" + key + "}"
 
 
 def safe_format_map[T](value: T, format_map: Mapping[str, Any]) -> T:
@@ -108,7 +103,7 @@ def to_collection[T: (list, set, tuple)](data: Any, cls: type[T] = tuple) -> T |
         return {data}
     elif cls is list:
         return [data]
-    raise TypeError(f"Unable to convert data to {cls.__name__} (data={data})")
+    raise SyncifyTypeError(f"Unable to convert data to {cls.__name__} (data={data})")
 
 
 def unique_list(value: Iterable[Any]) -> list[Any]:
@@ -178,24 +173,3 @@ def get_most_common_values(values: Iterable[Any]) -> list[Any]:
 def get_user_input(text: str | None = None) -> str:
     """Print formatted dialog with optional text and get the user's input."""
     return input(f"\33[93m{text}\33[0m | ").strip()
-
-
-class Filter[T](ABC, Collection[T]):
-    """Base class for filtering down values based on some settings"""
-
-    def __init__(self, *_, **__):
-        self.values: Collection[T] | None = None
-
-    @abstractmethod
-    def process(self, values: Iterable[T]) -> Collection[T]:
-        """Filter down given ``values`` or stored ``available`` values that match this filter's settings"""
-        raise NotImplementedError
-
-    def __iter__(self):
-        return (v for v in self.process(self.values)) if self.values else ()
-
-    def __len__(self):
-        return len(self.process(self.values)) if self.values else 0
-
-    def __contains__(self, item: T):
-        return item in self.process(self.values) if self.values else False

@@ -5,6 +5,7 @@ from os.path import basename, dirname, splitext, getmtime
 import pytest
 
 from syncify.abstract import Item
+from syncify.exception import SyncifyKeyError
 from syncify.fields import LocalTrackField
 from syncify.local import open_image
 from syncify.local.exception import InvalidFileType, FileDoesNotExistError
@@ -160,7 +161,6 @@ def test_loaded_attributes_wma(track_wma: WMA):
     assert track_wma.sample_rate == 44.1
 
 
-# TODO: write test for when all tags saved just to check conditionals pass in appropriate conditions
 class TestLocalTrack(ItemTester):
     """Run generic tests for :py:class:`LocalTrack` implementations"""
 
@@ -463,7 +463,7 @@ class TestLocalTrack(ItemTester):
         track["uri"] = "new_uri"
         assert track.uri == "new_uri"
 
-        with pytest.raises(KeyError):
+        with pytest.raises(SyncifyKeyError):
             track["bad key"] = "value"
 
         with pytest.raises(AttributeError):

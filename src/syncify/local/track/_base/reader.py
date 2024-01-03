@@ -479,6 +479,7 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
     @abstractmethod
     def _read_images(self) -> list[Image.Image] | None:
         """Extract image from file"""
+        raise NotImplementedError
 
     def _check_for_images(self) -> bool:
         """Check if file has embedded images"""

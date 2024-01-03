@@ -150,8 +150,9 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             When None, allow the logger to decide this setting.
         :return: API JSON responses for each item
         """
-        if key and key.rstrip("s") + "s" in items_block:
-            items_block = items_block[key.rstrip("s") + "s"]
+        key = key.rstrip("s") + "s" if key else key
+        if key and key in items_block:
+            items_block = items_block[key]
         if self.items_key not in items_block:
             items_block[self.items_key] = []
 
@@ -177,8 +178,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             log = [f"{log_count:>6}/{items_block["total"]:<6} {key or self.items_key}"]
 
             response = self.handler.get(items_block["next"], use_cache=use_cache, log_pad=95, log_extra=log)
-            if key and key.rstrip("s") + "s" in response:
-                response = response[key.rstrip("s") + "s"]
+            if key and key in response:
+                response = response[key]
 
             sleep(0.1)
             bar.update(len(response[self.items_key]))

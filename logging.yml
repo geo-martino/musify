@@ -57,7 +57,7 @@ handlers:
 loggers:
   prod:  &logger
     level: DEBUG
-    handlers: [console_info, file]
+    handlers: [console_report, file]
     propagate: no
 
   test:

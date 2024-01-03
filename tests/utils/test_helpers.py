@@ -2,8 +2,9 @@ from copy import deepcopy
 
 import pytest
 
+from syncify.exception import SyncifyTypeError
 from syncify.utils.helpers import flatten_nested, merge_maps, get_most_common_values
-from syncify.utils.helpers import limit_value, to_collection
+from syncify.utils.helpers import limit_value, to_collection, unique_list
 from syncify.utils.helpers import strip_ignore_words, safe_format_map, get_max_width, align_and_truncate
 
 
@@ -116,7 +117,7 @@ def test_to_collection():
     assert to_collection({1: "a", 2: "b", 3: "c"}, list) == [{1: "a", 2: "b", 3: "c"}]
 
     # fails on unrecognised type
-    with pytest.raises(TypeError):
+    with pytest.raises(SyncifyTypeError):
         to_collection("123", dict)
         to_collection(1, str)
         to_collection([1, 2, 3], bool)
@@ -124,8 +125,10 @@ def test_to_collection():
 
 
 def test_unique_list():
-    # TODO: test me
-    pass
+    test = [5, 5, 1, 2, 6, 2, 2, 3, 7, 3, 3, 2, 3, 7, 8, 3, 2, 6, 1, 2, 7, 8, 1, 5]
+    result = unique_list(test)
+    assert len(result) == len(set(test))
+    assert result == [5, 1, 2, 6, 3, 7, 8]
 
 
 ###########################################################################

@@ -11,8 +11,9 @@ from typing import Any
 
 from syncify.abstract import Item
 from syncify.abstract.collection import ItemCollection
-from syncify.abstract.enums import Fields, TagField
+from syncify.abstract.enums import Fields, TagField, TagFields
 from syncify.abstract.object import Track, Library, Folder, Album, Artist, Genre
+from syncify.exception import SyncifyKeyError
 from syncify.fields import LocalTrackField
 from syncify.local._base import LocalItem
 from syncify.local.exception import LocalCollectionError
@@ -158,6 +159,8 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
         """
         # noinspection PyTypeChecker
         tag_names = set(TagField.__tags__) if tags == Fields.ALL else set(TagField.to_tags(tags))
+        tag_order = [tag for field in TagFields.all(only_tags=True) for tag in field.to_tag()]
+        tag_names = sorted(tag_names, key=lambda x: tag_order.index(x))
 
         if isinstance(self, Library):  # log status message and use progress bar for libraries
             self.logger.info(
@@ -169,7 +172,7 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
 
         tags = to_collection(tags)
         if Fields.IMAGES in tags or Fields.ALL in tags:
-            tag_names.add("image_links")
+            tag_names.append("image_links")
 
         for track in tracks:  # perform the merge
             track_in_collection = next((t for t in self.tracks if t == track), None)
@@ -214,7 +217,7 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
             __key = __key.path
         elif isinstance(__key, Item):  # take the URI
             if not __key.has_uri:
-                raise KeyError(f"Given item does not have a URI associated: {__key.name}")
+                raise SyncifyKeyError(f"Given item does not have a URI associated to use as a key: {__key.name}")
             __key = __key.uri
 
         if self.remote_wrangler is None or not self.remote_wrangler.validate_id_type(__key, kind=RemoteIDType.URI):
@@ -223,17 +226,17 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
                 try:
                     return next(track for track in self.tracks if track.path == __key)
                 except StopIteration:
-                    raise KeyError(f"No matching item found for path: '{__key}'")
+                    raise SyncifyKeyError(f"No matching item found for path: '{__key}'")
 
             try:  # last try, assume given string is a name
                 return next(item for item in self.items if item.name == __key)
             except StopIteration:
-                raise KeyError(f"No matching item found for name: '{__key}'")
+                raise SyncifyKeyError(f"No matching item found for name: '{__key}'")
 
         try:  # string is a URI
             return next(item for item in self.items if item.uri == __key)
         except StopIteration:
-            raise KeyError(f"No matching item found for URI: '{__key}'")
+            raise SyncifyKeyError(f"No matching item found for URI: '{__key}'")
 
 
 class LocalCollectionFiltered[T: LocalItem](LocalCollection[T]):

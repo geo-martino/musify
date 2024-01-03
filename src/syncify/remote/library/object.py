@@ -11,6 +11,7 @@ from syncify.abstract.collection import ItemCollection
 from syncify.abstract.misc import Result
 from syncify.abstract.object import Track, Album, Playlist, Artist
 from syncify.api.exception import APIError
+from syncify.exception import SyncifyKeyError
 from syncify.remote.api import RemoteAPI
 from syncify.remote.enums import RemoteIDType
 from syncify.remote.exception import RemoteIDTypeError, RemoteError
@@ -43,7 +44,7 @@ class RemoteCollection[T: RemoteObject](ItemCollection[T], RemoteDataWrangler, m
             return self.items[__key]
         elif isinstance(__key, Item):  # take the URI
             if not __key.has_uri:
-                raise KeyError(f"Given item does not have a URI associated: {__key.name}")
+                raise SyncifyKeyError(f"Given item does not have a URI associated: {__key.name}")
             __key = __key.uri
             key_type = RemoteIDType.URI
         elif isinstance(__key, RemoteObject):
@@ -56,7 +57,7 @@ class RemoteCollection[T: RemoteObject](ItemCollection[T], RemoteDataWrangler, m
                 try:
                     key_type = self.get_id_type(__key)
                 except RemoteIDTypeError:
-                    raise KeyError(f"ID Type not recognised: '{__key}'")
+                    raise SyncifyKeyError(f"ID Type not recognised: '{__key}'")
 
         try:  # get the item based on the ID type
             if key_type == RemoteIDType.URI:
@@ -70,9 +71,9 @@ class RemoteCollection[T: RemoteObject](ItemCollection[T], RemoteDataWrangler, m
                 __key = self.convert(__key, type_in=RemoteIDType.URL_EXT, type_out=RemoteIDType.URI)
                 return next(item for item in self.items if item.uri == __key)
             else:
-                raise KeyError(f"ID Type not recognised: '{__key}'")
+                raise SyncifyKeyError(f"ID Type not recognised: '{__key}'")
         except StopIteration:
-            raise KeyError(f"No matching {key_type.name} found: '{__key}'")
+            raise SyncifyKeyError(f"No matching {key_type.name} found: '{__key}'")
 
 
 class RemoteCollectionLoader[T: RemoteObject](RemoteObject, RemoteCollection[T], metaclass=ABCMeta):

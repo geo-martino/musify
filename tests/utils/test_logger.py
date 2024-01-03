@@ -12,9 +12,9 @@ import pytest
 
 from syncify.utils.logger import SyncifyLogger, INFO_EXTRA, REPORT, STAT, LOGGING_DT_FORMAT
 from syncify.utils.logger import format_full_func_name, LogFileFilter, CurrentTimeRotatingFileHandler
+from tests.utils import random_str
 
 
-# TODO: add console handlers getter and file_paths tests
 ###########################################################################
 ## SyncifyLogger tests
 ###########################################################################
@@ -66,6 +66,12 @@ def test_print(logger: SyncifyLogger, capfd: pytest.CaptureFixture):
     assert capfd.readouterr().out == ''
 
 
+def test_file_paths(logger: SyncifyLogger):
+    logger.addHandler(logging.FileHandler(filename="test1.log", delay=True))
+    logger.addHandler(logging.FileHandler(filename="test2.log", delay=True))
+    assert [basename(path) for path in logger.file_paths] == ["test1.log", "test2.log"]
+
+
 def test_get_progress_bar(logger: SyncifyLogger):
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.DEBUG)  # forces leave to be False
@@ -78,6 +84,7 @@ def test_get_progress_bar(logger: SyncifyLogger):
     assert bar.total == 50
     assert not bar.leave
     assert bar.disable
+    assert bar in logger._bars
 
     handler.setLevel(logging.WARNING)
     bar = logger.get_progress_bar(
@@ -96,9 +103,16 @@ def test_get_progress_bar(logger: SyncifyLogger):
     assert bar.ncols == 120
     assert bar.colour == "blue"
     assert bar.smoothing == 0.1
-    assert bar.pos == -1
+    assert bar.pos == -3
 
-    logger._bars.clear()
+    # takes next available position
+    bar = logger.get_progress_bar(iterable=range(0, 50))
+    assert bar.pos == -4
+
+    for bar in logger._bars:
+        bar.n = bar.total
+        bar.close()
+
     bar = logger.get_progress_bar(
         total=50,
         disable=False,
@@ -106,10 +120,11 @@ def test_get_progress_bar(logger: SyncifyLogger):
         ncols=500,
         colour="blue",
         smoothing=0.5,
-        position=3,
     )
 
+    assert logger._bars == [bar]
     assert bar.leave
+    assert bar.pos == 0
 
 
 def test_copy(logger: SyncifyLogger):
@@ -220,7 +235,6 @@ def log_paths(tmp_path: str) -> list[str]:
     return paths
 
 
-# TODO: expand to include clearing empty directories
 def test_current_time_file_handler_rotator_time(log_paths: list[str], tmp_path: str):
     handler = CurrentTimeRotatingFileHandler(filename=join(tmp_path, "{}.log"), when="h", interval=10)
 
@@ -244,3 +258,27 @@ def test_current_time_file_handler_rotator_combined(log_paths: list[str], tmp_pa
         assert dt >= handler.dt - timedelta(hours=10)
 
     assert len(glob(join(tmp_path, "*"))) <= 3
+
+
+def test_current_time_file_handler_rotator_folders(tmp_path: str):
+    dt_now = datetime.now()
+
+    paths = []
+    for i in range(1, 50, 2):
+        dt_str = (dt_now - timedelta(hours=i)).strftime(LOGGING_DT_FORMAT)
+        path = join(tmp_path, dt_str)
+        paths.append(path)
+        os.makedirs(path)
+
+        if i > 10:  # all folders with dt >10hrs will be empty
+            continue
+
+        with open(join(path, random_str() + ".txt"), 'w') as f:
+            for _ in range(600):
+                f.write(choice(string.ascii_letters))
+
+    handler = CurrentTimeRotatingFileHandler(filename=join(tmp_path, "{}"), when="h", interval=20)
+
+    for path in glob(join(tmp_path, "*")):
+        dt = datetime.strptime(basename(path), LOGGING_DT_FORMAT)
+        assert dt >= handler.dt - timedelta(hours=10)  # deleted all empty folders >10hrs

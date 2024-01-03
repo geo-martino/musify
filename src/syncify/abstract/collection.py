@@ -6,7 +6,7 @@ from typing import Any, SupportsIndex, Self
 
 from syncify.abstract._base import Item, NamedObjectPrinter
 from syncify.abstract.enums import Field
-from syncify.exception import SyncifyTypeError
+from syncify.exception import SyncifyTypeError, SyncifyKeyError
 from syncify.processors.sort import ShuffleMode, ShuffleBy, ItemSorter
 from syncify.utils import UnitSequence
 
@@ -48,6 +48,7 @@ class ItemCollection[T: Item](NamedObjectPrinter, MutableSequence[T], metaclass=
         Return first index of item from items in this collection.
 
         :raise ValueError: If the value is not present.
+        :raise SyncifyTypeError: If given item does not match the item type of this collection.
         """
         if not self._validate_item_type(__item):
             raise SyncifyTypeError(type(__item).__name__)
@@ -193,10 +194,10 @@ class ItemCollection[T: Item](NamedObjectPrinter, MutableSequence[T], metaclass=
         try:
             item = self[__key]
         except KeyError:
-            raise KeyError(f"Given index is out of range: {__key}")
+            raise SyncifyKeyError(f"Given index is out of range: {__key}")
 
         if type(__value) is not type(item):  # only merge attributes if matching types
-            raise ValueError("Trying to set on mismatched item types")
+            raise SyncifyTypeError("Trying to set on mismatched item types")
 
         self.items[self.index(item)] = __value
 

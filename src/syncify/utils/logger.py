@@ -86,7 +86,7 @@ class SyncifyLogger(logging.Logger):
     def get_progress_bar[T: Any](
             self,
             iterable: Iterable[T] | None = None,
-            total: T | None = None,
+            total: T | int | None = None,
             **kwargs
     ) -> tqdm | Iterable[T]:
         """Wrapper for tqdm progress bar. For kwargs, see :py:class:`tqdm_std`"""
@@ -102,7 +102,7 @@ class SyncifyLogger(logging.Logger):
         for bar in self._bars.copy():
             if bar.n >= bar.total:
                 self._bars.remove(bar)
-        position = len(self._bars)
+        position = kwargs.get("position", abs(min(bar.pos for bar in self._bars)) + 1 if self._bars else 0)
 
         leave_default = all(h.level > logging.DEBUG for h in self.stdout_handlers) and position == 0
         leave = kwargs["leave"] if kwargs.get("leave") is not None else leave_default
@@ -155,7 +155,9 @@ def format_full_func_name(record: logging.LogRecord, width: int = 40) -> None:
 
     f_locals = last_call.frame.f_locals
     if "self" not in f_locals:
-        path_split = record.name.split(".") + [record.funcName]
+        path_split = record.name.split(".")
+        if record.funcName != "<module>":
+            path_split.append(record.funcName)
     else:
         # is a valid and initialised object, extract the class name and determine path to call function from stack
         cls = f_locals["self"].__class__

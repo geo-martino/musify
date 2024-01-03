@@ -3,7 +3,7 @@ from glob import glob
 from os.path import splitext, join, exists, basename
 from typing import Any
 
-from syncify.abstract.misc import Result
+from syncify.abstract.misc import Result, Filter
 from syncify.abstract.object import Playlist, Library
 from syncify.exception import SyncifyError
 from syncify.fields import LocalTrackField
@@ -14,7 +14,7 @@ from syncify.local.track import TRACK_CLASSES, LocalTrack, load_track
 from syncify.processors.sort import ItemSorter
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitCollection, UnitIterable
-from syncify.utils.helpers import align_and_truncate, get_max_width, Filter
+from syncify.utils.helpers import align_and_truncate, get_max_width
 from syncify.utils.logger import REPORT
 
 
@@ -51,12 +51,14 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         "_tracks",
     )
 
+    # noinspection PyTypeChecker,PyPropertyDefinition
     @classmethod
     @property
     def name(cls) -> str:
         """The type of library loaded"""
         return cls.source
 
+    # noinspection PyPropertyDefinition
     @classmethod
     @property
     def source(cls) -> str:
@@ -124,12 +126,13 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             playlists |= entry
 
         if isinstance(self.include, Filter):
-            self.include.values = playlists.keys()
+            include = {name.casefold() for name in self.include.process(playlists.keys())}
+        else:
+            include = {name.strip().casefold() for name in self.include}
         if isinstance(self.exclude, Filter):
-            self.exclude.values = playlists.keys()
-
-        include = [name.strip().casefold() for name in self.include]
-        exclude = [name.strip().casefold() for name in self.exclude]
+            exclude = {name.casefold() for name in self.exclude.process(playlists.keys())}
+        else:
+            exclude = {name.strip().casefold() for name in self.exclude}
 
         playlists_total = len(playlists)
         self._playlist_paths = {

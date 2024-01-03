@@ -342,12 +342,8 @@ class SpotifyMock(RemoteMock):
             """Dynamically generate expected batched response from a request with an 'ids' param"""
             req_params = parse_qs(req.query)
             req_kind = req.path.split("/")[-1].replace("-", "_")
+
             id_list = req_params["ids"][0].split(",")
-            print(id_list)
-            print(list(id_map.keys()))
-            print(set(id_list) - set(id_map.keys()))
-            print(set(id_list).intersection(set(id_map.keys())))
-            print(len(id_map), len(id_list))
             return {req_kind: [deepcopy(id_map[i]) for i in id_list]}
 
         url = f"{URL_API}/{kind.name.casefold()}s" if isinstance(kind, ObjectType) else f"{URL_API}/{kind}"

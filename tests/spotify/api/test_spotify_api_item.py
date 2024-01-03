@@ -49,6 +49,14 @@ class TestSpotifyAPIItems:
             # minus 1 for initial call to get the collection
             extend_calls += sum(api_mock.calculate_pages_from_response(expect) - 1 for expect in expected)
 
+        # TODO: figure out why test_get_items_many sometimes fails on PLAYLIST
+        print(len(requests), initial_calls, extend_calls)
+        if key:
+            for expect in expected:
+                kind = ObjectType.from_name(expect["type"])[0]
+                key = SpotifyAPI.collection_item_map[kind].name.casefold() + "s"
+
+                print(expect[key]["limit"], expect[key]["total"])
         assert len(requests) == initial_calls + extend_calls
 
     ###########################################################################

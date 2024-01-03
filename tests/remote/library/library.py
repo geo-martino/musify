@@ -40,7 +40,6 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         expected = {name: [track.uri for track in pl] for name, pl in library.playlists.items()}
         assert library.backup_playlists() == expected
 
-    # TODO: add test for dry_run
     @staticmethod
     def assert_restore(library: RemoteLibrary, backup: Any):
         """Run test and assertions on restore_playlists functionality for given input backup data type"""
@@ -78,8 +77,14 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         for track in collection_merge_items:
             assert track not in pl_actual
 
-        # Mapping[str, Iterable[str]]
+        # dry run
         new_uri_list = [track.uri for track in collection_merge_items]
+        backup_uri = {name_new: new_uri_list, "random new name": new_uri_list}
+        library_test = deepcopy(library)
+        library_test.restore_playlists(playlists=backup_uri, dry_run=True)
+        assert len(library_test.playlists) == len(library.playlists)  # no new playlists created/added
+
+        # Mapping[str, Iterable[str]]
         backup_uri = {
             name_actual: [track.uri for track in pl_actual[:5]] + new_uri_list,
             name_new: new_uri_list,

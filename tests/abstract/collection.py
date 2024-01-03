@@ -10,7 +10,7 @@ from syncify.abstract.misc import PrettyPrinter
 from syncify.abstract.object import BasicCollection, Library, Playlist
 from syncify.exception import SyncifyTypeError
 from syncify.remote.library.library import RemoteLibrary
-from tests.abstract.misc import PrettyPrinterTester
+from tests.abstract.misc import PrettyPrinterTester, BasicFilter
 
 
 class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
@@ -223,17 +223,16 @@ class LibraryTester(ItemCollectionTester, metaclass=ABCMeta):
     def collection(self, library: Library) -> ItemCollection:
         return library
 
-    # TODO: expand these tests to include test for using Filter as include/exclude
     @staticmethod
     def test_get_filtered_playlists_basic(library: Library):
         include = [name for name in library.playlists][:1]
         pl_include = library.get_filtered_playlists(include=include)
-        assert len(pl_include) == len(include)
+        assert len(pl_include) == len(include) < len(library.playlists)
         assert all(pl.name in include for pl in pl_include.values())
 
         exclude = [name for name in library.playlists][:1]
         pl_exclude = library.get_filtered_playlists(exclude=exclude)
-        assert len(pl_exclude) == len(library.playlists) - len(exclude)
+        assert len(pl_exclude) == len(library.playlists) - len(exclude) < len(library.playlists)
         assert all(pl.name not in exclude for pl in pl_exclude.values())
 
         # exclude should always take priority
@@ -258,6 +257,22 @@ class LibraryTester(ItemCollectionTester, metaclass=ABCMeta):
             if name not in expected_counts:
                 continue
             assert len(pl) == expected_counts[name]
+
+    @staticmethod
+    def test_get_filtered_playlists_with_filters(library: Library):
+        include = BasicFilter()
+        include.process = lambda x: list(x)[:1]
+
+        pl_include = library.get_filtered_playlists(include=include)
+        print(len(pl_include), len(library.playlists), len(include.process(library.playlists)), len(library.playlists))
+        assert len(pl_include) == len(include.process(library.playlists)) < len(library.playlists)
+
+        exclude = BasicFilter()
+        exclude.process = lambda x: list(x)[:1]
+
+        pl_exclude = library.get_filtered_playlists(exclude=exclude)
+        print(len(pl_exclude), len(library.playlists), len(exclude.process(library.playlists)), len(library.playlists))
+        assert len(pl_exclude) == len(exclude.process(library.playlists)) < len(library.playlists)
 
     @abstractmethod
     def test_merge_playlists(self, library: Library):

@@ -1,9 +1,11 @@
+import argparse
 import json
 import logging
 import os
+import re
 import sys
 import traceback
-from collections.abc import Mapping, Container
+from collections.abc import Mapping
 from os.path import basename, dirname, join, relpath, splitext
 from time import perf_counter
 from typing import Any, Callable
@@ -77,9 +79,9 @@ class Syncify(DynamicProcessor):
     def __call__(self, *args, **kwargs):
         main.logger.debug(f"Called processor '{self._processor_name}': START")
         if self.local_name in self.config.reload:
-            self.reload_local(self.config.reload[self.local_name])
+            self.reload_local(*self.config.reload[self.local_name])
         if self.remote_name in self.config.reload:
-            self.reload_remote(self.config.reload[self.remote_name])
+            self.reload_remote(*self.config.reload[self.remote_name])
 
         super().__call__(*args, **kwargs)
 
@@ -92,6 +94,7 @@ class Syncify(DynamicProcessor):
     def set_processor(self, name: str) -> Callable:
         """Set the processor to use from the given name"""
         self._set_processor_name(name)
+        self.config.load(func)
         return self._processor_method
 
     def _handle_exception(self, exc_type, exc_value, exc_traceback) -> None:
@@ -134,7 +137,7 @@ class Syncify(DynamicProcessor):
         """Pretty print data from API getting input from user"""
         self.api.print_collection(use_cache=self.remote.api.use_cache)
 
-    def reload_local(self, kinds: Container[str]) -> None:
+    def reload_local(self, *kinds: str) -> None:
         """Fully reload local library"""
         self.logger.debug("Reload local library: START")
 
@@ -144,7 +147,7 @@ class Syncify(DynamicProcessor):
 
         self.logger.debug("Reload local library: DONE")
 
-    def reload_remote(self, kinds: Container[str]) -> None:
+    def reload_remote(self, *kinds: str) -> None:
         """Fully reload remote library"""
         self.logger.debug("Reload remote library: START")
 
@@ -179,33 +182,41 @@ class Syncify(DynamicProcessor):
     ###########################################################################
     ## Backup/Restore
     ###########################################################################
-    def local_backup_name(self, kind: str | None = None) -> str:
+    def local_backup_name(self, key: str | None = None) -> str:
         """The identifier to use in filenames of the :py:class:`LocalLibrary`"""
         name = f"{self.local.library.__class__.__name__} - {self.local.library.name}"
-        if kind:
-            name = f"[{kind.upper()}] - {name}"
+        if key:
+            name = f"[{key.upper()}] - {name}"
         return name
 
-    def remote_backup_name(self, kind: str | None = None) -> str:
+    def remote_backup_name(self, key: str | None = None) -> str:
         """The identifier to use in filenames for backups of the :py:class:`RemoteLibrary`"""
         name = f"{self.remote.library.__class__.__name__} - {self.remote.library.name}"
-        if kind:
-            name = f"[{kind.upper()}] - {name}"
+        if key:
+            name = f"[{key.upper()}] - {name}"
         return name
 
     @dynamicprocessormethod
-    def backup(self, kind: str | None = None) -> None:
+    def backup(self, key: str | None = None) -> None:
         """Backup data for all tracks and playlists in all libraries"""
         self.logger.debug("Backup libraries: START")
-        self._save_json(self.local_backup_name(kind), self.local.library.json())
-        self._save_json(self.remote_backup_name(kind), self.remote.library.json())
+        if not key:
+            key = get_user_input("Enter a key for this backup. Hit return to backup without a key")
+
+        if not self.local.library_loaded:
+            self.reload_local()
+        if not self.remote.library_loaded:
+            self.reload_remote("tracks", "playlists")
+
+        self._save_json(self.local_backup_name(key), self.local.library.json())
+        self._save_json(self.remote_backup_name(key), self.remote.library.json())
         self.logger.debug("Backup libraries: DONE")
 
     @dynamicprocessormethod
-    def restore(self, kind: str | None = None) -> None:
+    def restore(self) -> None:
         """Restore library data from a backup, getting user input for the settings"""
         output_parent = dirname(self.config.output_folder)
-        backup_names = (self.local_backup_name(kind), self.remote_backup_name(kind))
+        backup_names = (self.local_backup_name(), self.remote_backup_name())
         
         available_backups: list[str] = []  # names of the folders which contain usable backups
         for path in os.walk(output_parent):
@@ -217,7 +228,7 @@ class Syncify(DynamicProcessor):
                 if folder in available_backups:
                     break
                 for name in backup_names:
-                    if splitext(file)[0] == name:
+                    if name in splitext(file)[0]:
                         available_backups.append(folder)
                         break
         
@@ -236,14 +247,26 @@ class Syncify(DynamicProcessor):
                 break
             print(f"\33[91mBackup '{restore_from}' not recognised, try again\33[0m")
         restore_from = join(output_parent, restore_from)
+        available_keys = [re.sub(r"^\[(\w+)].*", "\\1", file).casefold() for file in os.listdir(restore_from)]
+
+        self.logger.info(
+            "\33[97mAvailable backup keys: \n\t\33[97m- \33[94m{}\33[0m"
+            .format("\33[0m\n\t\33[97m-\33[0m \33[94m".join(available_keys))
+        )
+
+        while True:  # get valid user input
+            key = get_user_input("Select the backup type to use")
+            if key.casefold() in available_keys:  # input is valid
+                break
+            print(f"\33[91mBackup '{key}' not recognised, try again\33[0m")
 
         restored = []
         if get_user_input(f"Restore {self.local.source} library tracks? (enter 'y')").casefold() == 'y':
-            self._restore_local(restore_from, kind=kind)
+            self._restore_local(restore_from, key=key)
             restored.append(self.local.library.name)
             self.logger.print()
         if get_user_input(f"Restore {self.remote.source} library playlists? (enter 'y')").casefold() == 'y':
-            self._restore_spotify(restore_from, kind=kind)
+            self._restore_spotify(restore_from, key=key)
             restored.append(self.remote.source)
 
         if not restored:
@@ -251,7 +274,7 @@ class Syncify(DynamicProcessor):
             return
         self.logger.info(f"Successfully restored libraries: {", ".join(restored)}")
 
-    def _restore_local(self, folder: str, kind: str | None = None) -> None:
+    def _restore_local(self, folder: str, key: str | None = None) -> None:
         """Restore local library data from a backup, getting user input for the settings"""
         self.logger.debug("Restore local: START")
         self.logger.print()
@@ -271,13 +294,13 @@ class Syncify(DynamicProcessor):
 
         self.logger.print()
         if not self.local.library_loaded:  # not a full load so don't mark the library as loaded
-            self.local.library.load(tracks=True, playlists=False)
+            self.reload_local("tracks")
 
         self.logger.info(
             f"\33[1;95m ->\33[1;97m Restoring local track tags from backup: "
             f"{basename(folder)} | Tags: {', '.join(restore_tags)}\33[0m"
         )
-        backup = self._load_json(self.local_backup_name(kind), folder)
+        backup = self._load_json(self.local_backup_name(key), folder)
 
         # restore and save
         self.local.library.restore_tracks(backup["tracks"], tags=LocalTrackField.from_name(*restore_tags))
@@ -286,19 +309,18 @@ class Syncify(DynamicProcessor):
         self.local.library.log_sync_result(results)
         self.logger.debug("Restore local: DONE")
 
-    def _restore_spotify(self, folder: str, kind: str | None = None) -> None:
+    def _restore_spotify(self, folder: str, key: str | None = None) -> None:
         """Restore remote library data from a backup, getting user input for the settings"""
         self.logger.debug(f"Restore {self.remote.source}: START")
         self.logger.print()
 
         if not self.remote.library_loaded:
-            self.remote.library.load()
-            self.remote.library_loaded = True
+            self.reload_remote("tracks", "playlists")
 
         self.logger.info(
             f"\33[1;95m ->\33[1;97m Restoring {self.remote.source} playlists from backup: {basename(folder)} \33[0m"
         )
-        backup = self._load_json(self.remote_backup_name(kind), folder)
+        backup = self._load_json(self.remote_backup_name(key), folder)
 
         # restore and sync
         self.remote.library.restore_playlists(backup["playlists"])
@@ -325,19 +347,17 @@ class Syncify(DynamicProcessor):
                 continue
 
             if not self.local.library_loaded:
-                self.local.library.load()
-                self.local.library_loaded = True
+                self.reload_local()
 
             if isinstance(report, ConfigLibraryDifferences):
                 if not self.remote.library_loaded:
-                    self.remote.library.load()
-                    self.remote.library_loaded = True
+                    self.reload_remote("playlists")
 
-                source = self.config.filter.process(self.local.library.playlists.values())
+                source = report.filter.process(self.local.library.playlists.values())
                 reference = self.config.filter.process(self.remote.library.playlists.values())
                 report_playlist_differences(source=source, reference=reference)
             elif isinstance(report, ConfigMissingTags):
-                source = self.config.filter.process(self.local.library.albums)
+                source = report.filter.process(self.local.library.albums)
                 report_missing_tags(collections=source, tags=report.tags, match_all=report.match_all)
 
         self.logger.debug("Generate reports: DONE")
@@ -352,8 +372,7 @@ class Syncify(DynamicProcessor):
 
         self.logger.debug("Check and update URIs: START")
         if not self.local.library_loaded:
-            self.local.library.load()
-            self.local.library_loaded = True
+            self.reload_local()
 
         folders = self.config.filter.process(self.local.library.folders)
         if not self.remote.checker(folders):
@@ -406,13 +425,11 @@ class Syncify(DynamicProcessor):
     def pull_tags(self) -> None:
         """Run all methods for pulling tag data from remote and updating local track tags"""
         self.logger.debug("Update tags: START")
-        if not self.remote.library_loaded:
-            self.remote.library.load()
-            self.remote.library_loaded = True
+        # if not self.local.library_loaded:
+        #     self.reload_remote("tracks")
+        # if not self.remote.library_loaded:
+        #     self.reload_remote("tracks", "playlists", "extend", "artists")
 
-        # add extra local tracks to remote library and merge remote items to local library
-        self.remote.library.extend(self.local.library, allow_duplicates=False)
-        self.remote.library.enrich_tracks(artists=True)
         self.local.library.merge_tracks(self.remote.library, tags=self.local.update.tags)
 
         # save tags to files
@@ -438,8 +455,7 @@ class Syncify(DynamicProcessor):
         """Run all methods for setting and updating local track tags for compilation albums"""
         self.logger.debug("Update compilations: START")
         if not self.local.library_loaded:
-            self.local.library.load()
-            self.local.library_loaded = True
+            self.reload_local("tracks")
 
         folders = self.config.filter.process(self.local.library.folders)
         self.logger.info(
@@ -466,12 +482,12 @@ class Syncify(DynamicProcessor):
         """Run all main functions for synchronising remote playlists with a local library"""
         self.logger.debug(f"Update {self.remote.source}: START")
         if not self.local.library_loaded:  # not a full load so don't mark the library as loaded
-            self.local.library.load(tracks=False)
+            self.reload_local("playlists")
 
         playlists = self.local.library.get_filtered_playlists(
             include=self.remote.playlists.include,
             exclude=self.remote.playlists.exclude,
-            **self.remote.playlists.filter
+            **self.remote.playlists.sync.filter
         )
 
         results = self.remote.library.sync(
@@ -485,30 +501,88 @@ class Syncify(DynamicProcessor):
         self.logger.debug(f"Update {self.remote.source}: DONE")
 
 
+# noinspection PyProtectedMember
+def get_parser() -> argparse.ArgumentParser:
+    """Get the terminal input parser"""
+    parser = argparse.ArgumentParser(
+        description="Sync your local library to remote libraries and other useful functions.",
+        prog=PROGRAM_NAME,
+        usage="%(prog)s [options] [function]"
+    )
+    parser._positionals.title = "Functions"
+    parser._optionals.title = "Optional arguments"
+
+    # cli function aliases and expected args in order user should give them
+    parser.add_argument(
+        "functions", nargs="*", choices=list(Syncify.__new__(Syncify).__processormethods__),
+        help=f"{PROGRAM_NAME} function to run."
+    )
+
+    runtime = parser.add_argument_group("Runtime options")
+    runtime.add_argument(
+        "-c", "--config", type=str, required=False, nargs="?", dest="config_path",
+        default="config.yml",
+        help="The path to the config file to use"
+    )
+    runtime.add_argument(
+        "-k", "--config-key", type=str, required=False, nargs="?", dest="config_key",
+        default="general",
+        help="The key for the initial config."
+    )
+    runtime.add_argument(
+        "-lc", "--log-config", type=str, required=False, nargs="?", dest="log_config_path",
+        default="logging.yml",
+        help="The path to the logging config file to use"
+    )
+    runtime.add_argument(
+        "-ln", "--log-name", type=str, required=False, nargs="?", dest="log_name",
+        help="The logger settings to use for this run as can be found in logging config file"
+    )
+    runtime.add_argument(
+        "-x", "--execute", action="store_false", dest="dry_run",
+        help="Modify user's local and remote files and playlists. Otherwise, do not affect files."
+    )
+
+    libraries = parser.add_argument_group("Library options")
+    libraries.add_argument(
+        "-l", "--local", type=str, required=True, nargs="?", dest="local",
+        help="The name of the local library to use as can be found in the config file"
+    )
+    libraries.add_argument(
+        "-r", "--remote", type=str, required=True, nargs="?", dest="remote",
+        help="The name of the remote library to use as can be found in the config file"
+    )
+    libraries.add_argument(
+        "-bk", "--backup-key", type=str, required=False, nargs="?", dest="backup_key",
+        default=None,
+        help="The key to give to backups"
+    )
+
+    return parser
+
+
 if __name__ == "__main__":
+    print()
     print_logo()
+    named_args = get_parser().parse_known_args()[0]
 
-    log_env = "prod"
-    conf = Config()
-    conf.load_log_config("logging.yml", log_env, __name__)
-    conf.load("general")
+    conf = Config(named_args.config_path)
+    conf.load_log_config(named_args.log_config_path, named_args.log_name, __name__)
+    conf.load(named_args.config_key)
+    conf.dry_run = named_args.dry_run
 
-    local_name = "main"
-    remote_name = "spotify"
-    main = Syncify(config=conf, local=local_name, remote=remote_name)
-    functions = sys.argv[1:]
+    main = Syncify(config=conf, local=named_args.local, remote=named_args.remote)
 
+    # log header
     if main.logger.file_paths:
         main.logger.info(f"\33[90mLogs: {", ".join(main.logger.file_paths)} \33[0m")
     main.logger.info(f"\33[90mOutput: {conf.output_folder} \33[0m")
     main.logger.print()
+    if conf.dry_run:
+        print_line("DRY RUN ENABLED", " ")
 
     main.api.authorise()
-    for i, func in enumerate(functions, 1):
-        conf.load(func)
-        if conf.dry_run:
-            print_line("DRY RUN ENABLED", " ")
-
+    for i, func in enumerate(named_args.functions, 1):
         title = f"{PROGRAM_NAME}: {func}"
         if conf.dry_run:
             title += " (DRYRUN)"
@@ -518,18 +592,14 @@ if __name__ == "__main__":
         elif sys.platform == "linux" or sys.platform == "darwin":
             os.system(f"echo '\033]2;{title}\007'")
 
-        if not conf.dry_run:
-            exit()
-
         try:  # run the functions requested by the user
-            method = main.set_processor(func)
+            print_line(func)
+            # initialise the libraries
+            assert main.local.library is not None
+            assert main.remote.library is not None
 
-            if method == main.backup and i == len(functions):
-                print_line(f"final_{func}")
-                main.backup("FINAL")
-            else:
-                print_line(func)
-                main()
+            method = main.set_processor(func)
+            main.backup(named_args.backup_key) if method == main.backup else main()
         except (Exception, KeyboardInterrupt):
             main.logger.critical(traceback.format_exc())
             break
@@ -541,8 +611,6 @@ if __name__ == "__main__":
 
 
 ## BIGGER ONES
-# TODO: function to open search website tabs for all songs in 2get playlist
-#  on common music stores/torrent sites
 # TODO: Automatically add songs added to each remote playlist to '2get'?
 #  Then somehow update local library playlists after...
 #  Maybe add a final step that syncs remote back to library if
@@ -556,10 +624,20 @@ if __name__ == "__main__":
 ## SMALLER/GENERAL ONES
 # TODO: parallelize all the things
 # TODO: generally improve performance
-# TODO: implement release structure on GitHub
 
 
 ## SELECTED FOR DEVELOPMENT
+# TODO: implement release structure on GitHub
+# TODO: implement merge_playlists functions and, by extension, implement android library sync
+# TODO: implement XAutoPF full update functionality
+# TODO: function to open search website tabs for all songs in 2get playlist
+#  on common music stores/torrent sites
+
+
+## NEEDED FOR v0.3
+# TODO: update the readme (dynamic readme?)
+# TODO: new music playlist that adds songs from artists user follows that
+#  have been released within a given timeframe e.g. a day
 # TODO: test on linux/mac
 #  - concerned about local playlist saving
 #  - linux does not pick up 'include' paths when loading xautopf playlists
@@ -567,16 +645,3 @@ if __name__ == "__main__":
 #    from using lowercase path cleaning logic in TrackMatch
 #  This may now be fixed by extending functionality of playlists to include
 #   available track paths on load
-# TODO: implement merge_playlists functions and, by extension, implement android library sync
-# TODO: implement XAutoPF full update functionality
-
-
-## NEEDED FOR v0.3
-# TODO: write tests, write tests, write tests
-# TODO: update the readme (dynamic readme?)
-# TODO: review scope of functions/attributes/properties
-# TODO: add terminal argparse for __main__
-# TODO: replace built-in exceptions with SyncifyError based
-#  KeyError, ValueError, TypeError, AttributeError
-# TODO: new music playlist that adds songs from artists user follows that
-#  have been released within a given timeframe e.g. a day
