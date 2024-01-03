@@ -1,6 +1,6 @@
 import re
 import string
-from datetime import datetime
+import datetime
 from os.path import join, dirname
 from random import choice, randrange, sample
 from uuid import uuid4
@@ -34,13 +34,13 @@ def random_file(tmp_path: str, size: int | None = None) -> str:
     return path
 
 
-def random_dt(start: datetime = datetime(1970, 1, 3), stop: datetime = datetime.now()) -> datetime:
+def random_dt(start: datetime = datetime.date(1970, 1, 3), stop: datetime = datetime.datetime.now()) -> datetime:
     """Generates a random date string in the form YYYY-MM-DD."""
     timestamp = randrange(start=int(start.timestamp()), stop=int(stop.timestamp()))
-    return datetime.fromtimestamp(timestamp)
+    return datetime.datetime.fromtimestamp(timestamp)
 
 
-def random_date_str(start: datetime = datetime(1970, 1, 3), stop: datetime = datetime.now()) -> str:
+def random_date_str(start: datetime = datetime.date(1970, 1, 3), stop: datetime = datetime.datetime.now()) -> str:
     """Generates a random date string in the form YYYY-MM-DD."""
     return random_dt(start=start, stop=stop).strftime("%Y-%m-%d")
 

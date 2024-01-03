@@ -637,7 +637,10 @@ if __name__ == "__main__":
 ## NEEDED FOR v0.3
 # TODO: update the readme (dynamic readme?)
 # TODO: new music playlist that adds songs from artists user follows that
-#  have been released within a given timeframe e.g. a day
+#  have been released within a given timeframe
+#  - Expand out date RemoteAlbum stored data to day level using release date field
+#  - Function to get all followed artists and their tracks on RemoteLibrary
+#  - Function in main.py to filter RemoteTracks by date and add to playlist
 # TODO: test on linux/mac
 #  - concerned about local playlist saving
 #  - linux does not pick up 'include' paths when loading xautopf playlists
@@ -645,3 +648,4 @@ if __name__ == "__main__":
 #    from using lowercase path cleaning logic in TrackMatch
 #  This may now be fixed by extending functionality of playlists to include
 #   available track paths on load
+# TODO: fix /path/to issue in GH tests

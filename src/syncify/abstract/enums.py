@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+from collections.abc import Sequence
+from dataclasses import dataclass, field
 from enum import IntEnum
 from typing import Self
 
@@ -100,14 +101,17 @@ class Fields(Field):
     TRACK_NUMBER = 86
     TRACK_TOTAL = 87
     GENRES = 59
+    DATE = 900  # no MusicBee mapping
     YEAR = 35
+    MONTH = 901  # no MusicBee mapping
+    DAY = 902  # no MusicBee mapping
     BPM = 85
-    KEY = 901  # unknown MusicBee mapping
+    KEY = 903  # unknown MusicBee mapping
     DISC_NUMBER = 52
     DISC_TOTAL = 54
-    COMPILATION = 902  # unknown MusicBee mapping
+    COMPILATION = 904  # unknown MusicBee mapping
     COMMENTS = 44
-    IMAGES = 904  # no MusicBee mapping
+    IMAGES = 905  # no MusicBee mapping
     LENGTH = 16
     RATING = 75
     COMPOSER = 43
@@ -148,24 +152,28 @@ class Fields(Field):
 @dataclass(frozen=True)
 class TagMap:
     """Map of human-friendly tag name to ID3 tag ids for a given file type"""
+    # helpful for determining tags map: https://wiki.hydrogenaud.io/index.php?title=Tag_Mapping
 
-    title: list[str]
-    artist: list[str]
-    album: list[str]
-    album_artist: list[str]
-    track_number: list[str]
-    track_total: list[str]
-    genres: list[str]
-    year: list[str]
-    bpm: list[str]
-    key: list[str]
-    disc_number: list[str]
-    disc_total: list[str]
-    compilation: list[str]
-    comments: list[str]
-    images: list[str]
+    title: Sequence[str] = field(default=())
+    artist: Sequence[str] = field(default=())
+    album: Sequence[str] = field(default=())
+    album_artist: Sequence[str] = field(default=())
+    track_number: Sequence[str] = field(default=())
+    track_total: Sequence[str] = field(default=())
+    genres: Sequence[str] = field(default=())
+    date: Sequence[str] = field(default=())
+    year: Sequence[str] = field(default=())
+    month: Sequence[str] = field(default=())
+    day: Sequence[str] = field(default=())
+    bpm: Sequence[str] = field(default=())
+    key: Sequence[str] = field(default=())
+    disc_number: Sequence[str] = field(default=())
+    disc_total: Sequence[str] = field(default=())
+    compilation: Sequence[str] = field(default=())
+    comments: Sequence[str] = field(default=())
+    images: Sequence[str] = field(default=())
 
-    def __getitem__(self, key: str) -> list[str]:
+    def __getitem__(self, key: str) -> Sequence[str]:
         """Safely get the value of a given attribute key, returning an empty string if the key is not found"""
         return getattr(self, key, [])
 
@@ -228,7 +236,10 @@ class TagFields(TagField):
     TRACK_NUMBER = Fields.TRACK_NUMBER.value
     TRACK_TOTAL = Fields.TRACK_TOTAL.value
     GENRES = Fields.GENRES.value
+    DATE = Fields.DATE.value
     YEAR = Fields.YEAR.value
+    MONTH = Fields.MONTH.value
+    DAY = Fields.DAY.value
     BPM = Fields.BPM.value
     KEY = Fields.KEY.value
     DISC_NUMBER = Fields.DISC_NUMBER.value

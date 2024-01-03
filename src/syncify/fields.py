@@ -66,7 +66,10 @@ class LocalTrackField(TrackFieldMixin):
     TRACK_NUMBER = TagFields.TRACK_NUMBER.value
     TRACK_TOTAL = TagFields.TRACK_TOTAL.value
     GENRES = TagFields.GENRES.value
+    DATE = TagFields.DATE.value
     YEAR = TagFields.YEAR.value
+    MONTH = TagFields.MONTH.value
+    DAY = TagFields.DAY.value
     BPM = TagFields.BPM.value
     KEY = TagFields.KEY.value
     DISC = TagFields.DISC_NUMBER.value + 500
@@ -141,7 +144,10 @@ class AlbumField(Field):
     ALBUM_ARTIST = Fields.ALBUM_ARTIST.value
     TRACK_TOTAL = Fields.TRACK_TOTAL.value
     GENRES = Fields.GENRES.value
-    YEAR = Fields.YEAR.value
+    DATE = TagFields.DATE.value
+    YEAR = TagFields.YEAR.value
+    MONTH = TagFields.MONTH.value
+    DAY = TagFields.DAY.value
     DISC_TOTAL = Fields.DISC_TOTAL.value
     COMPILATION = Fields.COMPILATION.value
     IMAGES = Fields.IMAGES.value

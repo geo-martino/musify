@@ -2,7 +2,7 @@ import re
 from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Mapping, Collection, Iterable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, date
 from typing import Any
 
 from syncify.utils.helpers import to_collection
@@ -63,7 +63,7 @@ class PrettyPrinter(ABC):
                 for item in attr_val:
                     if isinstance(item, PrettyPrinter):
                         result[attr_key].append(item.json())
-                    elif isinstance(item, datetime):
+                    elif isinstance(item, (datetime, date)):
                         result[attr_key].append(str(item))
                     else:
                         result[attr_key].append(item)
@@ -71,7 +71,7 @@ class PrettyPrinter(ABC):
                 result[attr_key] = cls.__to_json(attr_val)
             elif isinstance(attr_val, PrettyPrinter):
                 result[attr_key] = attr_val.json()
-            elif isinstance(attr_val, datetime):
+            elif isinstance(attr_val, (datetime, date)):
                 result[attr_key] = str(attr_val)
             else:
                 result[attr_key] = attr_val
@@ -107,7 +107,7 @@ class PrettyPrinter(ABC):
 
             if isinstance(attr_val, PrettyPrinter):
                 attr_val_str = attr_val.__str__(indent=indent, increment=increment)
-            elif isinstance(attr_val, datetime):
+            elif isinstance(attr_val, (datetime, date)):
                 attr_val_str = str(attr_val)
             elif isinstance(attr_val, (list, tuple, set)) and len(attr_val) > 0:
                 pp_repr = "[{}]"

@@ -43,8 +43,8 @@ class M4A(LocalTrack):
         album_artist=["aART"],
         track_number=["trkn"],
         track_total=["trkn"],
-        genres=["----:com.apple.iTunes:genre", "©gen", "gnre"],
-        year=["©day"],
+        genres=["----:com.apple.iTunes:GENRE", "©gen", "gnre"],
+        date=["©day"],
         bpm=["tmpo"],
         key=["----:com.apple.iTunes:INITIALKEY"],
         disc_number=["disk"],
@@ -108,7 +108,10 @@ class M4A(LocalTrack):
 
     def _write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
         if tag_value is None:
-            return self.delete_tag(tag_id, dry_run=dry_run)
+            remove = not dry_run and tag_id in self.file and self.file[tag_id]
+            if remove:
+                del self.file[tag_id]
+            return remove
 
         if not dry_run and tag_id is not None:
             if tag_id.startswith("----:com.apple.iTunes"):
@@ -128,8 +131,15 @@ class M4A(LocalTrack):
         tag_value = (self.track_number, self.track_total)
         return self._write_tag(tag_id, tag_value, dry_run)
 
-    def _write_year(self, dry_run: bool = True) -> bool:
-        return self._write_tag(next(iter(self.tag_map.year), None), str(self.year), dry_run)
+    def _write_date(self, dry_run: bool = True) -> tuple[bool, bool, bool, bool]:
+        date_str = self.date.strftime(self.date_format) if self.date else None
+        date = self._write_tag(next(iter(self.tag_map.date), None), date_str, dry_run)
+
+        year = self._write_tag(next(iter(self.tag_map.year), None), str(self.year) if self.year else None, dry_run)
+        month = self._write_tag(next(iter(self.tag_map.month), None), str(self.month) if self.month else None, dry_run)
+        day = self._write_tag(next(iter(self.tag_map.day), None), str(self.day) if self.day else None, dry_run)
+
+        return date, year, month, day
 
     def _write_bpm(self, dry_run: bool = True) -> bool:
         return self._write_tag(next(iter(self.tag_map.bpm), None), int(self.bpm), dry_run)

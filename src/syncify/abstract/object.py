@@ -4,7 +4,7 @@ import logging
 from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, Mapping, Iterable, Container
 from copy import deepcopy
-from datetime import datetime
+import datetime
 from typing import Any, Self
 
 from syncify.abstract._base import Item
@@ -76,9 +76,27 @@ class Track(Item, metaclass=ABCMeta):
         raise NotImplementedError
 
     @property
+    def date(self) -> datetime.date | None:
+        """A :py:class:`date` object representing the release date of this track"""
+        if self.year and self.month and self.day:
+            return datetime.date(self.year, self.month, self.day)
+
+    @property
     @abstractmethod
     def year(self) -> int | None:
         """The year this track was released"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def month(self) -> int | None:
+        """The month this track was released"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def day(self) -> int | None:
+        """The day this track was released"""
         raise NotImplementedError
 
     @property
@@ -251,13 +269,13 @@ class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def date_created(self) -> datetime | None:
+    def date_created(self) -> datetime.datetime | None:
         """:py:class:`datetime` object representing when the playlist was created"""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def date_modified(self) -> datetime | None:
+    def date_modified(self) -> datetime.datetime | None:
         """:py:class:`datetime` object representing when the playlist was last modified"""
         raise NotImplementedError
 
@@ -517,9 +535,27 @@ class Album[T: Track](ItemCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
     @property
+    def date(self) -> datetime.date | None:
+        """A :py:class:`date` object representing the release date of this album"""
+        if self.year and self.month and self.day:
+            return datetime.date(self.year, self.month, self.day)
+
+    @property
     @abstractmethod
     def year(self) -> int | None:
         """The year this album was released"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def month(self) -> int | None:
+        """The month this album was released"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def day(self) -> int | None:
+        """The day this album was released"""
         raise NotImplementedError
 
     @property

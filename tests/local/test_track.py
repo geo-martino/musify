@@ -1,5 +1,5 @@
 from copy import copy, deepcopy
-from datetime import datetime
+from datetime import datetime, date
 from os.path import basename, dirname, splitext, getmtime
 
 import pytest
@@ -35,7 +35,10 @@ def test_loaded_attributes_flac(track_flac: FLAC):
     assert track_flac.track_number == 1
     assert track_flac.track_total == 4
     assert track_flac.genres == ["Pop", "Rock", "Jazz"]
+    assert track_flac.date == date(2020, 3, 25)
     assert track_flac.year == 2020
+    assert track_flac.month == 3
+    assert track_flac.day == 25
     assert track_flac.bpm == 120.12
     assert track_flac.key == 'A'
     assert track_flac.disc_number == 1
@@ -70,7 +73,10 @@ def test_loaded_attributes_mp3(track_mp3: MP3):
     assert track_mp3.track_number == 3
     assert track_mp3.track_total == 4
     assert track_mp3.genres == ["Pop Rock", "Musical"]
+    assert track_mp3.date == date(2024, 5, 1)
     assert track_mp3.year == 2024
+    assert track_mp3.month == 5
+    assert track_mp3.day == 1
     assert track_mp3.bpm == 200.56
     assert track_mp3.key == 'C'
     assert track_mp3.disc_number == 2
@@ -105,7 +111,10 @@ def test_loaded_attributes_m4a(track_m4a: M4A):
     assert track_m4a.track_number == 2
     assert track_m4a.track_total == 4
     assert track_m4a.genres == ["Dance", "Techno"]
+    assert track_m4a.date is None
     assert track_m4a.year == 2021
+    assert track_m4a.month == 12
+    assert track_m4a.day is None
     assert track_m4a.bpm == 120.0
     assert track_m4a.key == 'B'
     assert track_m4a.disc_number == 1
@@ -139,7 +148,10 @@ def test_loaded_attributes_wma(track_wma: WMA):
     assert track_wma.track_number == 4
     assert track_wma.track_total == 4
     assert track_wma.genres == ["Metal", "Rock"]
+    assert track_wma.date is None
     assert track_wma.year == 2023
+    assert track_wma.month is None
+    assert track_wma.day is None
     assert track_wma.bpm == 200.56
     assert track_wma.key == 'D'
     assert track_wma.disc_number == 3
@@ -227,6 +239,40 @@ class TestLocalTrack(ItemTester):
 
         assert track.__class__(file=track.path.upper(), available=paths).path == track.path
 
+    def assert_track_tags_equal(self, actual: LocalTrack, expected: LocalTrack, check_tag_exists: bool = False):
+        if not check_tag_exists or actual.tag_map.title:
+            assert actual.title == expected.title
+        if not check_tag_exists or actual.tag_map.artist:
+            assert actual.artist == expected.artist
+        if not check_tag_exists or actual.tag_map.album:
+            assert actual.album == expected.album
+        if not check_tag_exists or actual.tag_map.album_artist:
+            assert actual.album_artist == expected.album_artist
+        if not check_tag_exists or actual.tag_map.track_number:
+            assert actual.track_number == expected.track_number
+        if not check_tag_exists or actual.tag_map.track_total:
+            assert actual.track_total == expected.track_total
+        if not check_tag_exists or actual.tag_map.genres:
+            assert actual.genres == expected.genres
+        if not check_tag_exists or actual.tag_map.date:
+            assert actual.date == expected.date
+        if not check_tag_exists or actual.tag_map.year:
+            assert actual.year == expected.year
+        if not check_tag_exists or actual.tag_map.month:
+            assert actual.month == expected.month
+        if not check_tag_exists or actual.tag_map.day:
+            assert actual.day == expected.day
+        if not check_tag_exists or actual.tag_map.bpm:
+            assert actual.bpm == expected.bpm
+        if not check_tag_exists or actual.tag_map.key:
+            assert actual.key == expected.key
+        if not check_tag_exists or actual.tag_map.disc_number:
+            assert actual.disc_number == expected.disc_number
+        if not check_tag_exists or actual.tag_map.disc_total:
+            assert actual.disc_total == expected.disc_total
+        if not check_tag_exists or actual.tag_map.compilation:
+            assert actual.compilation == expected.compilation
+
     def test_clear_tags_dry_run(self, track: LocalTrack):
         track_update = track
         track_original = copy(track)
@@ -237,20 +283,8 @@ class TestLocalTrack(ItemTester):
 
         track_update_dry = load_track(track.path, remote_wrangler=track.remote_wrangler)
 
-        assert track_update_dry.title == track_original.title
-        assert track_update_dry.artist == track_original.artist
-        assert track_update_dry.album == track_original.album
-        assert track_update_dry.album_artist == track_original.album_artist
-        assert track_update_dry.track_number == track_original.track_number
-        assert track_update_dry.track_total == track_original.track_total
-        assert track_update_dry.genres == track_original.genres
-        assert track_update_dry.year == track_original.year
-        assert track_update_dry.bpm == track_original.bpm
-        assert track_update_dry.key == track_original.key
-        assert track_update_dry.disc_number == track_original.disc_number
-        assert track_update_dry.disc_total == track_original.disc_total
-        assert track_update_dry.compilation == track_original.compilation
-        assert track_update_dry.comments == track_original.comments
+        self.assert_track_tags_equal(track_update_dry, track_original)
+        assert track_update.comments == track_original.comments
 
         assert track_update_dry.uri == track_original.uri
         assert track_update_dry.has_uri == track_original.has_uri
@@ -272,7 +306,10 @@ class TestLocalTrack(ItemTester):
         assert track_update.track_number is None
         assert track_update.track_total is None
         assert track_update.genres is None
+        assert track_update.date is None
         assert track_update.year is None
+        assert track_update.month is None
+        assert track_update.day is None
         assert track_update.bpm is None
         assert track_update.key is None
         assert track_update.disc_number is None
@@ -298,6 +335,8 @@ class TestLocalTrack(ItemTester):
         track.track_total = 3
         track.genres = ["Big Band", "Swing"]
         track.year = 1956
+        track.month = 4
+        track.day = 16
         track.bpm = 98.0
         track.key = "F#"
         track.disc_number = 2
@@ -317,19 +356,7 @@ class TestLocalTrack(ItemTester):
 
         track_update_dry = deepcopy(track_update)
 
-        assert track_update_dry.title == track_original.title
-        assert track_update_dry.artist == track_original.artist
-        assert track_update_dry.album == track_original.album
-        assert track_update_dry.album_artist == track_original.album_artist
-        assert track_update_dry.track_number == track_original.track_number
-        assert track_update_dry.track_total == track_original.track_total
-        assert track_update_dry.genres == track_original.genres
-        assert track_update_dry.year == track_original.year
-        assert track_update_dry.bpm == track_original.bpm
-        assert track_update_dry.key == track_original.key
-        assert track_update_dry.disc_number == track_original.disc_number
-        assert track_update_dry.disc_total == track_original.disc_total
-        assert track_update_dry.compilation == track_original.compilation
+        self.assert_track_tags_equal(track_update_dry, track_original)
         assert track_update_dry.comments == track_original.comments
 
         assert track_update_dry.uri == track_original.uri
@@ -345,19 +372,7 @@ class TestLocalTrack(ItemTester):
 
         track_update = deepcopy(track_update)
 
-        assert track_update.title == track_original.title
-        assert track_update.artist == track_original.artist
-        assert track_update.album == track_original.album
-        assert track_update.album_artist == track_original.album_artist
-        assert track_update.track_number == track_original.track_number
-        assert track_update.track_total == track_original.track_total
-        assert track_update.genres == track_original.genres
-        assert track_update.year == track_original.year
-        assert track_update.bpm == track_original.bpm
-        assert track_update.key == track_original.key
-        assert track_update.disc_number == track_original.disc_number
-        assert track_update.disc_total == track_original.disc_total
-        assert track_update.compilation == track_original.compilation
+        self.assert_track_tags_equal(track_update, track_original)
         assert track_update.comments == [new_uri]
 
         if new_uri == track.remote_wrangler.unavailable_uri_dummy:
@@ -374,19 +389,7 @@ class TestLocalTrack(ItemTester):
         assert result.saved
         track_update_replace = deepcopy(track_update)
 
-        assert track_update_replace.title == track_update.title
-        assert track_update_replace.artist == track_update.artist
-        assert track_update_replace.album == track_update.album
-        assert track_update_replace.album_artist == track_update.album_artist
-        assert track_update_replace.track_number == track_update.track_number
-        assert track_update_replace.track_total == track_update.track_total
-        assert track_update_replace.genres == track_update.genres
-        assert track_update_replace.year == track_update.year
-        assert track_update_replace.bpm == track_update.bpm
-        assert track_update_replace.key == track_update.key
-        assert track_update_replace.disc_number == track_update.disc_number
-        assert track_update_replace.disc_total == track_update.disc_total
-        assert track_update_replace.compilation == track_update.compilation
+        self.assert_track_tags_equal(track_update_replace, track_update, check_tag_exists=True)
         assert track_update_replace.comments == [new_uri]
 
         if new_uri == track.remote_wrangler.unavailable_uri_dummy:

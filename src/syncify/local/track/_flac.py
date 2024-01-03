@@ -42,17 +42,17 @@ class FLAC(LocalTrack):
         artist=["artist"],
         album=["album"],
         album_artist=["albumartist"],
-        track_number=["tracknumber"],
+        track_number=["tracknumber", "track"],
         track_total=["tracktotal"],
         genres=["genre"],
-        year=["year", "date"],
+        date=["date"],
+        year=["year"],
         bpm=["bpm"],
         key=["initialkey"],
         disc_number=["discnumber"],
         disc_total=["disctotal"],
         compilation=["compilation"],
         comments=["comment", "description"],
-        images=[],
     )
 
     def __init__(
@@ -74,7 +74,10 @@ class FLAC(LocalTrack):
 
     def _write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
         if tag_value is None:
-            return self.delete_tag(tag_id, dry_run=dry_run)
+            remove = not dry_run and tag_id in self.file and self.file[tag_id]
+            if remove:
+                del self.file[tag_id]
+            return remove
 
         if not dry_run and tag_id is not None:
             if isinstance(tag_value, (list, set, tuple)):

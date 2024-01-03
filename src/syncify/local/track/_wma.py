@@ -44,13 +44,13 @@ class WMA(LocalTrack):
         track_number=["WM/TrackNumber"],
         track_total=["TotalTracks", "WM/TrackNumber"],
         genres=["WM/Genre"],
-        year=["WM/Year"],
+        year=["WM/Year", "WM/OriginalReleaseYear"],
         bpm=["WM/BeatsPerMinute"],
         key=["WM/InitialKey"],
         disc_number=["WM/PartOfSet"],
         disc_total=["WM/PartOfSet"],
         compilation=["COMPILATION"],
-        comments=["Description"],
+        comments=["Description", "WM/Comments"],
         images=["WM/Picture"],
     )
 
@@ -116,7 +116,10 @@ class WMA(LocalTrack):
 
     def _write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
         if tag_value is None:
-            return self.delete_tag(tag_id, dry_run=dry_run)
+            remove = not dry_run and tag_id in self.file and self.file[tag_id]
+            if remove:
+                del self.file[tag_id]
+            return remove
 
         if not dry_run and tag_id is not None:
             if isinstance(tag_value, (list, set, tuple)):

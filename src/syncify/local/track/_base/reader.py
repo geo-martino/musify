@@ -1,7 +1,7 @@
 import re
 from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable
-from datetime import datetime
+import datetime
 from typing import Any
 
 import mutagen
@@ -9,6 +9,7 @@ from PIL import Image
 
 from syncify.abstract.enums import TagMap
 from syncify.abstract.object import Track
+from syncify.exception import SyncifyValueError
 from syncify.fields import LocalTrackField
 from syncify.local import LocalItem
 from syncify.remote.enums import RemoteIDType
@@ -142,12 +143,45 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
         self._genres = value
 
     @property
+    def date(self):
+        if self.year and self.month and self.day:
+            return datetime.date(self.year, self.month, self.day)
+
+    @date.setter
+    def date(self, value: datetime.date | None):
+        self._year = value.year if value else None
+        self._month = value.month if value else None
+        self._day = value.day if value else None
+
+    @property
     def year(self):
         return self._year
 
     @year.setter
     def year(self, value: int | None):
+        if value and value < 1000:
+            raise SyncifyValueError(f"Year value is invalid: {value}")
         self._year = value
+
+    @property
+    def month(self):
+        return self._month
+
+    @month.setter
+    def month(self, value: int | None):
+        if value and (value < 1 or value > 12):
+            raise SyncifyValueError(f"Month value is invalid: {value}")
+        self._month = value
+
+    @property
+    def day(self):
+        return self._day
+
+    @day.setter
+    def day(self, value: int | None):
+        if value and (value < 1 or value > 31):
+            raise SyncifyValueError(f"Day value is invalid: {value}")
+        self._day = value
 
     @property
     def bpm(self):
@@ -275,21 +309,21 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
         return self.file.info.sample_rate / 1000
 
     @property
-    def date_added(self) -> datetime | None:
+    def date_added(self) -> datetime.datetime | None:
         """The timestamp for when this track was added to the associated collection"""
         return self._date_added
 
     @date_added.setter
-    def date_added(self, value: datetime | None):
+    def date_added(self, value: datetime.datetime | None):
         self._date_added = value
 
     @property
-    def last_played(self) -> datetime | None:
+    def last_played(self) -> datetime.datetime | None:
         """The timestamp when this track was last played"""
         return self._last_played
 
     @last_played.setter
-    def last_played(self, value: datetime | None):
+    def last_played(self, value: datetime.datetime | None):
         self._last_played = value
 
     @property
@@ -298,7 +332,7 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
         return self._play_count
 
     @play_count.setter
-    def play_count(self, value: datetime | None):
+    def play_count(self, value: int | None):
         self._play_count = value
 
     def __init__(self, remote_wrangler: RemoteDataWrangler = None):
@@ -313,6 +347,8 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
         self._track_total = None
         self._genres = None
         self._year = None
+        self._month = None
+        self._day = None
         self._bpm = None
         self._key = None
         self._disc_number = None
@@ -340,7 +376,7 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
         self.track_number = self._read_track_number()
         self.track_total = self._read_track_total()
         self.genres = self._read_genres()
-        self.year = self._read_year()
+        self.year, self.month, self.day = self._read_date() or (None, None, None)
         self.bpm = self._read_bpm()
         self.key = self._read_key()
         self.disc_number = self._read_disc_number()
@@ -407,17 +443,45 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
         values = self._read_tag(self.tag_map.genres)
         return list(map(str, values)) if values is not None else None
 
-    def _read_year(self) -> int | None:
+    def _read_date(self) -> tuple[int | None, int | None, int | None] | None:
         """Extract year tags from file"""
-        values = self._read_tag(self.tag_map.year)
-        if values is None:
-            return
+        values = self._read_tag(self.tag_map.date)
 
-        try:
-            year = int(re.sub(r"\D+", "", str(values[0]))[:4])
-            return year if year > 1000 else None
-        except (ValueError, TypeError):
-            return
+        if values is None:  # attempt to read each part individually
+            year = self._read_tag(self.tag_map.year)
+            year = int(re.match(r"(\d{4})", str(year[0])).group(1)) if year else None
+            month = self._read_tag(self.tag_map.month)
+            month = int(re.match(r"(\d{1,2})", str(month[0])).group(1)) if month else None
+            day = self._read_tag(self.tag_map.day)
+            day = int(re.match(r"(\d{1,2})", str(day[0])).group(1)) if day else None
+            return year, month, day
+        elif 0 < len(values) <= 3 and all(str(value).isdigit() for value in values):
+            values = ["/".join(values)]  # just join to string and allow later regex matches to determine format
+
+        # YYYY-MM-DD
+        match = re.match(r"(\d{4})\D+(\d{1,2})\D+(\d{1,2})", str(values[0]))
+        if match:
+            return int(match.group(1)), int(match.group(2)), int(match.group(3))
+
+        # DD-MM-YY
+        match = re.match(r"(\d{1,2})\D+(\d{1,2})\D+(\d{4})", str(values[0]))
+        if match:
+            return int(match.group(3)), int(match.group(2)), int(match.group(1))
+
+        # YYYY-MM
+        match = re.match(r"(\d{4})\D+(\d{1,2})", str(values[0]))
+        if match:
+            return int(match.group(1)), int(match.group(2)), None
+
+        # MM-YYYY
+        match = re.match(r"(\d{4})\D+(\d{1,2})", str(values[0]))
+        if match:
+            return int(match.group(2)), int(match.group(1)), None
+
+        # YYYY
+        match = re.match(r"(\d{4})", str(values[0]))
+        if match:
+            return int(match.group(1)), None, None
 
     def _read_bpm(self) -> float | None:
         """Extract BPM tags from file"""

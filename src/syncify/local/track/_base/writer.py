@@ -7,7 +7,7 @@ from typing import Any
 import mutagen
 
 from syncify.abstract.misc import Result
-from syncify.fields import LocalTrackField
+from syncify.fields import LocalTrackField as Tags
 from syncify.local.track._base.reader import TagReader
 from syncify.utils import UnitIterable
 from syncify.utils.helpers import to_collection
@@ -22,7 +22,7 @@ class SyncResultTrack(Result):
     :ivar updated: Map of the tag updated and the index of the condition it satisfied to be updated.
     """
     saved: bool
-    updated: Mapping[LocalTrackField, int]
+    updated: Mapping[Tags, int]
 
 
 class TagWriter(TagReader, metaclass=ABCMeta):
@@ -35,7 +35,9 @@ class TagWriter(TagReader, metaclass=ABCMeta):
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
 
-    def delete_tags(self, tags: UnitIterable[LocalTrackField] = (), dry_run: bool = True) -> SyncResultTrack:
+    date_format = "%Y-%m-%d"
+
+    def delete_tags(self, tags: UnitIterable[Tags] = (), dry_run: bool = True) -> SyncResultTrack:
         """
         Remove tags from file.
 
@@ -46,27 +48,27 @@ class TagWriter(TagReader, metaclass=ABCMeta):
         if tags is None or (isinstance(tags, Collection) and len(tags) == 0):
             return SyncResultTrack(saved=False, updated={})
 
-        tag_names = set(LocalTrackField.to_tags(tags))
+        tag_names = set(Tags.to_tags(tags))
         removed = set()
         for tag_name in tag_names:
             if self.delete_tag(tag_name, dry_run):
-                removed.update(LocalTrackField.from_name(tag_name))
+                removed.update(Tags.from_name(tag_name))
 
-        if LocalTrackField.IMAGES in removed:
+        if Tags.IMAGES in removed:
             self.has_image = False
 
         save = not dry_run and len(removed) > 0
         if save:
             self.file.save()
 
-        removed = sorted(removed, key=lambda x: LocalTrackField.all().index(x))
+        removed = sorted(removed, key=lambda x: Tags.all().index(x))
         return SyncResultTrack(saved=save, updated={u: 0 for u in removed})
 
     def delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:
         """
         Remove a tag by its tag name.
 
-        :param tag_name: Tag ID to remove.
+        :param tag_name: Tag name as found in :py:class:`TagMap` to remove.
         :param dry_run: Run function, but do not modify file at all.
         :return: True if tag has been remove, False otherwise.
         """
@@ -84,9 +86,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
 
         return removed
 
-    def save(
-            self, tags: UnitIterable[LocalTrackField] = LocalTrackField.ALL, replace: bool = False, dry_run: bool = True
-    ) -> SyncResultTrack:
+    def save(self, tags: UnitIterable[Tags] = Tags.ALL, replace: bool = False, dry_run: bool = True) -> SyncResultTrack:
         """
         Update file's tags from given dictionary of tags.
 
@@ -98,11 +98,11 @@ class TagWriter(TagReader, metaclass=ABCMeta):
         # noinspection PyAttributeOutsideInit
         self._file = self.load()
         file = copy(self)
-        updated: dict[LocalTrackField, int] = {}
+        updated: dict[Tags, int] = {}
 
-        tags: list[LocalTrackField] = to_collection(tags, list)
-        if LocalTrackField.ALL in tags:
-            tags = LocalTrackField.all(only_tags=True)
+        tags: list[Tags] = to_collection(tags, list)
+        if Tags.ALL in tags:
+            tags = Tags.all(only_tags=True)
 
         # all chunks below follow the same basic structure
         # - check if any of the conditionals for this tag type are met
@@ -110,58 +110,73 @@ class TagWriter(TagReader, metaclass=ABCMeta):
         # - if data has been written (or would have been if not a dry run),
         #   append the tag name to a list of updated tags
 
-        if LocalTrackField.TITLE in tags:
+        if Tags.TITLE in tags:
             conditionals = {
                 file.title is None and self.title is not None,
                 replace and self.title != file.title
             }
             if any(conditionals) and self._write_title(dry_run):
-                updated |= {LocalTrackField.TITLE: [i for i, c in enumerate(conditionals) if c][0]}
+                updated |= {Tags.TITLE: [i for i, c in enumerate(conditionals) if c][0]}
 
-        if LocalTrackField.ARTIST in tags:
+        if Tags.ARTIST in tags:
             conditionals = {
                 file.artist is None and self.artist is not None,
                 replace and self.artist != file.artist
             }
             if any(conditionals) and self._write_artist(dry_run):
-                updated |= {LocalTrackField.ARTIST: [i for i, c in enumerate(conditionals) if c][0]}
+                updated |= {Tags.ARTIST: [i for i, c in enumerate(conditionals) if c][0]}
 
-        if LocalTrackField.ALBUM in tags:
+        if Tags.ALBUM in tags:
             conditionals = {
                 file.album is None and self.album is not None,
                 replace and self.album != file.album
             }
             if any(conditionals) and self._write_album(dry_run):
-                updated |= {LocalTrackField.ALBUM: [i for i, c in enumerate(conditionals) if c][0]}
+                updated |= {Tags.ALBUM: [i for i, c in enumerate(conditionals) if c][0]}
 
-        if LocalTrackField.ALBUM_ARTIST in tags:
+        if Tags.ALBUM_ARTIST in tags:
             conditionals = {
                 file.album_artist is None and self.album_artist is not None,
                 replace and self.album_artist != file.album_artist
             }
             if any(conditionals) and self._write_album_artist(dry_run):
-                updated |= {LocalTrackField.ALBUM_ARTIST: [i for i, c in enumerate(conditionals) if c][0]}
+                updated |= {Tags.ALBUM_ARTIST: [i for i, c in enumerate(conditionals) if c][0]}
 
-        if any(f in tags for f in {LocalTrackField.TRACK, LocalTrackField.TRACK_NUMBER, LocalTrackField.TRACK_TOTAL}):
+        if any(f in tags for f in {Tags.TRACK, Tags.TRACK_NUMBER, Tags.TRACK_TOTAL}):
             conditionals = {
                 file.track_number is None and file.track_total is None and
                 (self.track_number is not None or self.track_total is not None),
                 replace and (self.track_number != file.track_number or self.track_total != file.track_total)
             }
             if any(conditionals) and self._write_track(dry_run):
-                updated |= {LocalTrackField.TRACK: [i for i, c in enumerate(conditionals) if c][0]}
+                updated |= {Tags.TRACK: [i for i, c in enumerate(conditionals) if c][0]}
 
-        if LocalTrackField.GENRES in tags:
+        if Tags.GENRES in tags:
             conditionals = {file.genres is None and bool(self.genres), replace and self.genres != file.genres}
             if any(conditionals) and self._write_genres(dry_run):
-                updated |= {LocalTrackField.GENRES: [i for i, c in enumerate(conditionals) if c][0]}
+                updated |= {Tags.GENRES: [i for i, c in enumerate(conditionals) if c][0]}
 
-        if LocalTrackField.YEAR in tags:
-            conditionals = {file.year is None and self.year is not None, replace and self.year != file.year}
-            if any(conditionals) and self._write_year(dry_run):
-                updated |= {LocalTrackField.YEAR: [i for i, c in enumerate(conditionals) if c][0]}
+        if any(f in tags for f in {Tags.DATE, Tags.YEAR, Tags.MONTH, Tags.DAY}):
+            # date is just a composite of year + month + day, can safely ignore this in the conditionals
+            values_exist = any({self.year is not None, self.month is not None, self.day is not None})
+            conditionals = {
+                file.year is None and file.month is None and file.day is None and values_exist,
+                replace and (self.year != file.year or self.month != file.month or self.day != file.day)
+            }
 
-        if LocalTrackField.BPM in tags:
+            if any(conditionals):
+                date, year, month, day = self._write_date(dry_run)
+                condition = [i for i, c in enumerate(conditionals) if c][0]
+                if date:
+                    updated |= {Tags.DATE: condition}
+                if year:
+                    updated |= {Tags.YEAR: condition}
+                if month:
+                    updated |= {Tags.MONTH: condition}
+                if day:
+                    updated |= {Tags.DAY: condition}
+
+        if Tags.BPM in tags:
             self_bpm = int(self["bpm"] if self["bpm"] is not None else 0)
             file_bpm = int(file["bpm"] if file["bpm"] is not None else 0)
             conditionals = {
@@ -170,44 +185,44 @@ class TagWriter(TagReader, metaclass=ABCMeta):
                 replace and self_bpm != file_bpm
             }
             if any(conditionals) and self._write_bpm(dry_run):
-                updated |= {LocalTrackField.BPM: [i for i, c in enumerate(conditionals) if c][0]}
+                updated |= {Tags.BPM: [i for i, c in enumerate(conditionals) if c][0]}
 
-        if LocalTrackField.KEY in tags:
+        if Tags.KEY in tags:
             conditionals = {file.key is None and self.key is not None, replace and self.key != file.key}
             if any(conditionals) and self._write_key(dry_run):
-                updated |= {LocalTrackField.KEY: [i for i, c in enumerate(conditionals) if c][0]}
+                updated |= {Tags.KEY: [i for i, c in enumerate(conditionals) if c][0]}
 
-        if any(f in tags for f in {LocalTrackField.DISC, LocalTrackField.DISC_NUMBER, LocalTrackField.DISC_TOTAL}):
+        if any(f in tags for f in {Tags.DISC, Tags.DISC_NUMBER, Tags.DISC_TOTAL}):
             conditionals = {
                 file.disc_number is None and file.disc_total is None and
                 (self.disc_number is not None or self.disc_total is not None),
                 replace and (self.disc_number != file.disc_number or self.disc_total != file.disc_total)
             }
             if any(conditionals) and self._write_disc(dry_run):
-                updated |= {LocalTrackField.DISC: [i for i, c in enumerate(conditionals) if c][0]}
+                updated |= {Tags.DISC: [i for i, c in enumerate(conditionals) if c][0]}
 
-        if LocalTrackField.COMPILATION in tags:
+        if Tags.COMPILATION in tags:
             conditionals = {
                 file.compilation is None and self.compilation is not None,
                 replace and self.compilation != file.compilation
             }
             if any(conditionals) and self._write_compilation(dry_run):
-                updated |= {LocalTrackField.COMPILATION: [i for i, c in enumerate(conditionals) if c][0]}
+                updated |= {Tags.COMPILATION: [i for i, c in enumerate(conditionals) if c][0]}
 
-        if LocalTrackField.COMMENTS in tags:
+        if Tags.COMMENTS in tags:
             conditionals = {file.comments is None and bool(self.comments), replace and self.comments != file.comments}
             if any(conditionals) and self._write_comments(dry_run):
-                updated |= {LocalTrackField.COMMENTS: [i for i, c in enumerate(conditionals) if c][0]}
+                updated |= {Tags.COMMENTS: [i for i, c in enumerate(conditionals) if c][0]}
 
-        if LocalTrackField.URI in tags:
+        if Tags.URI in tags:
             conditionals = {self.uri != file.uri or self.has_uri != file.has_uri}
             if any(conditionals) and self._write_uri(dry_run):
-                updated |= {LocalTrackField.URI: [i for i, c in enumerate(conditionals) if c][0]}
+                updated |= {Tags.URI: [i for i, c in enumerate(conditionals) if c][0]}
 
-        if LocalTrackField.IMAGES in tags:
+        if Tags.IMAGES in tags:
             conditionals = {file.has_image is False, replace}
             if any(conditionals) and self.image_links and self._write_images(dry_run):
-                updated |= {LocalTrackField.IMAGES: [i for i, c in enumerate(conditionals) if c][0]}
+                updated |= {Tags.IMAGES: [i for i, c in enumerate(conditionals) if c][0]}
 
         save = not dry_run and len(updated) > 0
         if save:
@@ -295,14 +310,21 @@ class TagWriter(TagReader, metaclass=ABCMeta):
         """
         return self._write_tag(next(iter(self.tag_map.genres), None), self.genres, dry_run)
 
-    def _write_year(self, dry_run: bool = True) -> bool:
+    def _write_date(self, dry_run: bool = True) -> tuple[bool, bool, bool, bool]:
         """
-        Write year tags to file
+        Write date (including year, month and day) tags to file
 
         :param dry_run: Run function, but do not modify file at all.
         :return: True if the file was updated or would have been when dry_run is True, False otherwise.
         """
-        return self._write_tag(next(iter(self.tag_map.year), None), self.year, dry_run)
+        date_str = self.date.strftime(self.date_format) if self.date else None
+        date = self._write_tag(next(iter(self.tag_map.date), None), date_str, dry_run)
+
+        year = self._write_tag(next(iter(self.tag_map.year), None), self.year, dry_run)
+        month = self._write_tag(next(iter(self.tag_map.month), None), self.month, dry_run)
+        day = self._write_tag(next(iter(self.tag_map.day), None), self.day, dry_run)
+
+        return date, year, month, day
 
     def _write_bpm(self, dry_run: bool = True) -> bool:
         """

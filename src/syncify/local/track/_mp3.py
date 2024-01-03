@@ -45,7 +45,8 @@ class MP3(LocalTrack):
         track_number=["TRCK"],
         track_total=["TRCK"],
         genres=["TCON"],
-        year=["TDRC", "TYER", "TDAT"],
+        date=["TDRC", "TDAT", "TDOR"],
+        year=["TYER", "TORY"],
         bpm=["TBPM"],
         key=["TKEY"],
         disc_number=["TPOS"],
@@ -82,7 +83,7 @@ class MP3(LocalTrack):
             elif isinstance(value, mutagen.id3.APIC):
                 values.append(value)
             else:
-                raise NotImplementedError(f"Unrecognised id3 type: ${value} (${type(value)}")
+                raise NotImplementedError(f"Unrecognised id3 type: {value} ({type(value)})")
 
         return values if len(values) > 0 else None
 
@@ -100,7 +101,10 @@ class MP3(LocalTrack):
 
     def _write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
         if tag_value is None:
-            return self.delete_tag(tag_id, dry_run=dry_run)
+            remove = not dry_run and tag_id in self.file and self.file[tag_id]
+            if remove:
+                del self.file[tag_id]
+            return remove
 
         if not dry_run and tag_id is not None:
             self._file[tag_id] = getattr(mutagen.id3, tag_id)(3, text=str(tag_value))

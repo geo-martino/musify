@@ -1,5 +1,5 @@
 import string
-from datetime import datetime
+from datetime import datetime, date
 from os.path import join
 from random import choice, randrange, randint
 
@@ -11,7 +11,7 @@ from syncify.local.track import TRACK_CLASSES, LocalTrack
 from syncify.local.track._base.writer import TagWriter
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 from tests.spotify.utils import random_uri
-from tests.utils import path_resources, random_str
+from tests.utils import path_resources, random_str, random_dt
 
 path_track_resources = join(path_resources, "track")
 path_track_flac = join(path_track_resources, "noise_flac.flac")
@@ -55,7 +55,7 @@ def random_track[T: LocalTrack](cls: type[T] | None = None) -> T:
     track.track_number = randrange(1, 20)
     track.track_total = randint(track.track_number, 20)
     track.genres = [random_str(20, 50) for _ in range(randrange(7))]
-    track.year = randrange(1950, datetime.now().year + 1)
+    track.date = random_dt(start=date(1900, 1, 1))
     track.bpm = randint(6000, 15000) / 100
     track.key = choice(string.ascii_uppercase[:7])
     track.disc_number = randrange(1, 8)

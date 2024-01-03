@@ -332,8 +332,6 @@ class ConfigFilter(BaseConfig, Filter[str]):
         :param settings: The loaded config from the config file.
         :param key: The key to load filter options for.
             Used as the parent key to use to pull the required configuration from the config file.
-        :param include: When True, include all values that match the filter settings when processing.
-            When False, exclude all values that match the filter settings when processing.
         """
 
         def __init__(self, settings: dict[Any, Any], key: Any | None = None):

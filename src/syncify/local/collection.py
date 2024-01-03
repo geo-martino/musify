@@ -328,7 +328,7 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
 
     @property
     def compilation(self):
-        """Collection is a compilation if over 50% of tracks are marked as compilation"""
+        """Folder is a compilation if over 50% of tracks are marked as compilation"""
         return (sum(track.compilation is True for track in self.tracks) / len(self.tracks)) > 0.5
 
     def __init__(
@@ -416,19 +416,44 @@ class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):
 
     @property
     def album_artist(self):
-        """The most common artist in this collection"""
+        """The most common artist on this album"""
         artists = get_most_common_values(artist for track in self.tracks if track.artist for artist in track.artists)
         return artists[0] if artists else None
 
     @property
+    def date(self):
+        """
+        A :py:class:`date` object representing the release date of this album.
+        Determined by the most common release date of all tracks on this album.
+        """
+        values = get_most_common_values(track.date for track in self.tracks if track.date)
+        return values[0] if values else None
+
+    @property
     def year(self):
-        """The most common year in this collection"""
-        years = get_most_common_values(track.year for track in self.tracks if track.year)
-        return years[0] if years else None
+        """The most common release year of all tracks on this album"""
+        values = get_most_common_values(track.year for track in self.tracks if track.year)
+        return values[0] if values else None
+
+    @property
+    def month(self):
+        """The most common release month of all tracks on this album"""
+        values = get_most_common_values(
+            (track.year, track.month) for track in self.tracks if track.year and track.month
+        )
+        return values[0][1] if values else None
+
+    @property
+    def day(self):
+        """The most common release day of all tracks on this album"""
+        values = get_most_common_values(
+            (track.year, track.month, track.day) for track in self.tracks if track.year and track.month and track.day
+        )
+        return values[0][2] if values else None
 
     @property
     def compilation(self):
-        """Collection is a compilation if over 50% of tracks are marked as compilation"""
+        """Album is a compilation if over 50% of tracks are marked as compilation"""
         return (sum(track.compilation is True for track in self.tracks) / len(self.tracks)) > 0.5
 
     @property
@@ -441,7 +466,7 @@ class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):
 
     @property
     def rating(self):
-        """Average rating of all tracks in this collection"""
+        """Average rating of all tracks on this album"""
         ratings = tuple(track.rating for track in self.tracks if track.rating is not None)
         return sum(ratings) / len(ratings) if ratings else None
 
