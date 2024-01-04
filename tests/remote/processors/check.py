@@ -68,13 +68,18 @@ class RemoteItemCheckerTester(ABC):
     ###########################################################################
     ## Utilities
     ###########################################################################
+    @pytest.fixture(params=[path_token])
+    def token_file_path(self, path: str) -> str:
+        """Yield the temporary path for the token JSON file"""
+        return path
+
     @staticmethod
-    def test_make_temp_playlist(checker: RemoteItemChecker, api_mock: RemoteMock):
+    def test_make_temp_playlist(checker: RemoteItemChecker, api_mock: RemoteMock, token_file_path: str):
         api_mock.reset_mock()  # test checks the number of requests made
 
         # force auth test to fail and reload from token
         checker.api.handler.token = None
-        checker.api.handler.token_file_path = path_token
+        checker.api.handler.token_file_path = token_file_path
 
         collection = BasicCollection(name=random_str(30, 50), items=random_tracks())
         for item in collection:
@@ -100,11 +105,12 @@ class RemoteItemCheckerTester(ABC):
             checker: RemoteItemChecker,
             collections: list[BasicCollection],
             playlist_urls: list[str],
-            api_mock: RemoteMock
+            api_mock: RemoteMock,
+            token_file_path: str
     ):
         # force auth test to fail and reload from token
         checker.api.handler.token = None
-        checker.api.handler.token_file_path = path_token
+        checker.api.handler.token_file_path = token_file_path
 
         checker.playlist_name_urls = {collection.name: url for collection, url in zip(collections, playlist_urls)}
         checker.playlist_name_collection = {collection.name: collection for collection in collections}

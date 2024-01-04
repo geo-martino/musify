@@ -258,9 +258,10 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
 
         # convert to RemoteAlbum objects and extend items on each response
         albums = list(map(partial(self._object_cls.album, api=self.api, skip_checks=True), results))
-        key = self.api.collection_item_map[RemoteObjectType.ALBUM].name.casefold() + "s"
-        for album in albums:
-            self.api.extend_items(album.response, unit="albums", key=key, use_cache=self.use_cache)
+        kind = RemoteObjectType.ALBUM
+        key = self.api.collection_item_map[kind]
+        for album in albums:  # extend album's tracks
+            self.api.extend_items(album.response, kind=kind, key=key, use_cache=self.use_cache)
 
         # order to prioritise results that are closer to the item count of the input collection
         albums.sort(key=lambda x: abs(x.track_total - len(collection)))

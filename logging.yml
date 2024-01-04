@@ -42,6 +42,13 @@ handlers:
     <<: *console
     level: INFO_EXTRA
 
+  console_simple:
+    class: logging.StreamHandler
+    level: STAT
+    formatter: simple
+    filters: ["console"]
+    stream: ext://sys.stdout
+
   file:
     class: syncify.utils.logger.CurrentTimeRotatingFileHandler
     level: DEBUG
@@ -56,7 +63,7 @@ handlers:
 
 loggers:
   prod:  &logger
-    handlers: [console_stat, file]
+    handlers: [console_simple, file]
     level: DEBUG
     propagate: no
 

@@ -34,8 +34,8 @@ class LocalCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
 
         assert collection[1] == collection.items[1]
         assert collection[:2] == collection.items[:2]
-
         assert collection[idx] == collection.items[idx] == item
+
         assert collection[item] == item
         assert collection[item.name] == item
         assert collection[item.path] == item

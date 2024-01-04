@@ -10,6 +10,7 @@ from random import choice
 
 import pytest
 
+from syncify import PACKAGE_ROOT
 from syncify.utils.logger import SyncifyLogger, INFO_EXTRA, REPORT, STAT, LOGGING_DT_FORMAT
 from syncify.utils.logger import format_full_func_name, LogFileFilter, CurrentTimeRotatingFileHandler
 from tests.utils import random_str
@@ -199,11 +200,11 @@ def test_file_filter():
 def test_current_time_file_handler_namer():
     # no filename given
     handler = CurrentTimeRotatingFileHandler(delay=True)
-    assert handler.filename == handler.dt.strftime(LOGGING_DT_FORMAT) + ".log"
+    assert handler.filename == join(PACKAGE_ROOT, handler.dt.strftime(LOGGING_DT_FORMAT) + ".log")
 
     # no format part given
     handler = CurrentTimeRotatingFileHandler(filename="test.log", delay=True)
-    assert handler.filename == "test.log"
+    assert handler.filename == join(PACKAGE_ROOT, "test.log")
 
     # filename with format part given and fixes separators
     sep = "\\" if os.path.sep == "/" else "/"
@@ -211,11 +212,11 @@ def test_current_time_file_handler_namer():
     base_str = sep.join(base_parts)
 
     handler = CurrentTimeRotatingFileHandler(filename=base_str, delay=True)
-    assert handler.filename == os.path.sep.join(base_parts).format(handler.dt.strftime(LOGGING_DT_FORMAT))
+    assert handler.filename == join(PACKAGE_ROOT, os.path.sep.join(base_parts).format(handler.dt.strftime(LOGGING_DT_FORMAT)))
 
     base_parts[1] = base_parts[1].format(handler.dt.strftime(LOGGING_DT_FORMAT))
     assert sep not in handler.filename
-    assert handler.filename.split(os.path.sep) == base_parts
+    assert handler.filename.split(os.path.sep) == PACKAGE_ROOT.split(os.path.sep) + base_parts
 
 
 @pytest.fixture

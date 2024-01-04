@@ -223,8 +223,8 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
     def extend_items(
             self,
             items_block: MutableMapping[str, Any],
-            key: str | None = None,
-            unit: str | None = None,
+            kind: RemoteObjectType | str | None = None,
+            key: RemoteObjectType | None = None,
             use_cache: bool = True,
     ) -> list[dict[str, Any]]:
         """
@@ -235,8 +235,8 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
         Updates the value of the ``items`` key in-place by extending the value of the ``items`` key with new results.
 
         :param items_block: A remote API JSON response for an items type endpoint.
-        :param key: The child unit to use when selecting nested data for certain responses and for logging.
-        :param unit: The parent unit to use for logging.
+        :param kind: The type of response being extended. Optional, used only for logging.
+        :param key: The type of response of the child objects.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: API JSON responses for each item
         """

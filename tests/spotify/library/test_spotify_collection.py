@@ -132,7 +132,7 @@ class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
             if album["tracks"]["total"] > len(album["tracks"]["items"]) > 5
             and album["genres"]
         ))
-        api.extend_items(items_block=response, key="tracks")
+        api.extend_items(items_block=response, key=RemoteObjectType.TRACK)
 
         api_mock.reset_mock()
         return response

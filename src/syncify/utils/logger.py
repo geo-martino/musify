@@ -9,12 +9,12 @@ import sys
 from collections.abc import Iterable
 from datetime import datetime
 from glob import glob
-from os.path import join, dirname, splitext, split, basename, isfile, sep, isdir
+from os.path import join, dirname, splitext, split, basename, isfile, sep, isdir, isabs
 from typing import Any
 
 from tqdm.auto import tqdm
 
-from syncify import PROGRAM_NAME
+from syncify import PROGRAM_NAME, PACKAGE_ROOT
 from syncify.processors.time import TimeMapper
 
 LOGGING_DT_FORMAT = "%Y-%m-%d_%H.%M.%S"
@@ -255,6 +255,8 @@ class CurrentTimeRotatingFileHandler(logging.handlers.BaseRotatingHandler):
             filename = "{}.log"
         filename = filename.replace("\\", sep) if sep == "/" else filename.replace("/", sep)
         self.filename = filename.format(dt_str) if "{}" in filename else filename
+        if not isabs(self.filename):
+            self.filename = join(PACKAGE_ROOT, self.filename)
 
         self.delta = TimeMapper(when.lower())(interval) if when and interval else None
         self.count = count

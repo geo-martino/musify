@@ -129,9 +129,11 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
         self.logger.debug(f"Enrich {self.source} artists: START")
         self.logger.info(f"\33[1;95m  >\33[1;97m Enriching {len(self.albums)} {self.source} albums \33[0m")
 
+        kind = RemoteObjectType.ALBUM
+        key = self.api.collection_item_map[kind]
         responses = [album.response for album in self.albums]
         for response in responses:
-            self.api.extend_items(response, unit="album", key="tracks", use_cache=self.use_cache)
+            self.api.extend_items(response, kind=kind, key=key, use_cache=self.use_cache)
 
         for album in self.albums:
             album.refresh(skip_checks=False)  # tracks are extended so checks should pass
@@ -157,14 +159,22 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
 
         responses = [artist.response for artist in self.artists]
         self.api.get_artist_albums(responses, types=types, use_cache=self.use_cache)
-        if tracks:
-            bar = self.logger.get_progress_bar(iterable=self.artists, desc="Extending artist albums", unit="artists")
-            for artist in bar:
-                for album in artist.response["albums"]["items"]:
-                    self.api.extend_items(album, unit="album", key="tracks", use_cache=self.use_cache)
 
         for artist in self.artists:
-            artist.refresh(skip_checks=not tracks)  # if tracks are extended for each album, checks should pass
+            artist.refresh(skip_checks=True)  # album tracks extended in next step if required
+
+        if tracks:
+            kind = RemoteObjectType.ALBUM
+            key = self.api.collection_item_map[kind]
+
+            responses_albums = [album.response for artist in self.artists for album in artist.albums]
+            bar = self.logger.get_progress_bar(iterable=responses_albums, desc="Getting album tracks", unit="albums")
+            for album in bar:
+                self.api.extend_items(album, kind=kind, key=key, use_cache=self.use_cache)
+
+            for artist in self.artists:
+                for album in artist.albums:
+                    album.refresh(skip_checks=False)
 
         self.logger.debug(f"Enrich {self.source} artists: DONE\n")
 

@@ -6,6 +6,8 @@ from time import sleep
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from urllib3.util import url
+
 from syncify.api.exception import APIError
 from syncify.remote.api import APIMethodInputType
 from syncify.remote.enums import RemoteObjectType, RemoteIDType
@@ -16,11 +18,13 @@ from syncify.utils.helpers import limit_value
 
 class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
 
-    def _get_unit(self, key: str | None = None, unit: str | None = None) -> str:
+    _bar_threshold = 5
+
+    def _get_unit(self, key: str | None = None, kind: str | None = None) -> str:
         """Determine the unit type to use in the progress bar"""
-        if unit is None:
-            unit = re.sub(r"[-_]+", " ", key) if key is not None else self.items_key
-        return unit.casefold().rstrip("s") + "s"
+        if kind is None:
+            kind = re.sub(r"[-_]+", " ", key) if key is not None else self.items_key
+        return kind.casefold().rstrip("s") + "s"
 
     ###########################################################################
     ## GET helpers: Generic methods for getting items
@@ -31,7 +35,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             id_list: Collection[str],
             params: Mapping[str, Any] | None = None,
             key: str | None = None,
-            unit: str | None = None,
+            kind: str | None = None,
             use_cache: bool = True,
             *_,
             **__,
@@ -43,22 +47,22 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         :param url: The base API URL endpoint for the required requests.
         :param id_list: List of IDs to append to the given URL.
         :param params: Extra parameters to add to each request.
+        :param kind: The unit to use for logging. If None, determine from ``key`` or default to ``items``.
         :param key: The key to reference from each response to get the list of required values.
-        :param unit: The unit to use for logging. If None, determine from ``key`` or default to ``items``.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: API JSON responses for each item at the given ``key``.
         :raise APIError: When the given ``key`` is not in the API response.
         """
         url = url.rstrip("/")
-        unit = self._get_unit(key=key, unit=unit)
+        kind = self._get_unit(key=key, kind=kind)
 
-        # prepare iterator
-        if len(id_list) >= 50:  # show progress bar for batches which may take a long time
-            id_list = self.logger.get_progress_bar(iterable=id_list, desc=f"Getting {unit}", unit=unit)
+        bar = self.logger.get_progress_bar(
+            iterable=id_list, desc=f"Getting {kind}", unit=kind, disable=len(id_list) < self._bar_threshold * 10
+        )
 
         results: list[dict[str, Any]] = []
-        log = [f"{unit.title()}:{len(id_list):>5}"]
-        for id_ in id_list:
+        log = [f"{kind.title()}:{len(id_list):>5}"]
+        for id_ in bar:
             response = self.handler.get(f"{url}/{id_}", params=params, use_cache=use_cache, log_pad=43, log_extra=log)
             if "id" not in response:
                 response["id"] = id_
@@ -75,7 +79,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             id_list: Collection[str],
             params: Mapping[str, Any] | None = None,
             key: str | None = None,
-            unit: str | None = None,
+            kind: str | None = None,
             limit: int = 50,
             use_cache: bool = True,
             *_,
@@ -90,28 +94,30 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         :param url: The base API URL endpoint for the required requests.
         :param id_list: List of IDs to append to the given URL.
         :param params: Extra parameters to add to each request.
+        :param kind: The unit to use for logging. If None, determine from ``key`` or default to ``items``.
         :param key: The key to reference from each response to get the list of required values.
-        :param unit: The unit to use for logging. If None, determine from ``key`` or default to ``items``.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :param limit: Size of each batch of IDs to get. This value will be limited to be between ``1`` and ``50``.
         :return: API JSON responses for each item at the given ``key``.
         :raise APIError: When the given ``key`` is not in the API response.
         """
         url = url.rstrip("/")
-        unit = self._get_unit(key=key, unit=unit)
+        kind = self._get_unit(key=key, kind=kind)
 
-        # prepare iterator
         id_chunks = list(batched(id_list, limit_value(limit, floor=1, ceil=50)))
-        bar = range(len(id_chunks))
-        if len(id_chunks) >= 10:  # show progress bar for batches which may take a long time
-            bar = self.logger.get_progress_bar(iterable=bar, desc=f"Getting {unit}", unit="pages")
+        bar = self.logger.get_progress_bar(
+            iterable=range(len(id_chunks)),
+            desc=f"Getting {kind}",
+            unit="pages",
+            disable=len(id_chunks) < self._bar_threshold
+        )
 
         results: list[dict[str, Any]] = []
         params = params if params is not None else {}
         for idx in bar:  # get responses in batches
             id_chunk = id_chunks[idx]
             params_chunk = params | {"ids": ",".join(id_chunk)}
-            log = [f"{unit.title() + ':':<11} {len(results) + len(id_chunk):>6}/{len(id_list):<6}"]
+            log = [f"{kind.title() + ':':<11} {len(results) + len(id_chunk):>6}/{len(id_list):<6}"]
 
             response = self.handler.get(url, params=params_chunk, use_cache=use_cache, log_pad=43, log_extra=log)
             if key and key not in response:
@@ -127,8 +133,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
     def extend_items(
             self,
             items_block: MutableMapping[str, Any],
-            key: str | None = None,
-            unit: str | None = None,
+            kind: RemoteObjectType | str | None = None,
+            key: RemoteObjectType | None = None,
             use_cache: bool = True,
             leave_bar: bool | None = None,
     ) -> list[dict[str, Any]]:
@@ -141,16 +147,16 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
 
         :param items_block: A remote API JSON response for an items type endpoint which includes required keys:
             ``total`` and either ``next`` or ``href``, plus optional keys ``previous``, ``limit``, ``items`` etc.
-        :param key: The child unit to use when selecting nested data for certain responses
-            (e.g. user's followed artists) and for logging.
-        :param unit: The parent unit to use for logging.
+        :param kind: The type of response being extended. Optional, used only for logging.
+        :param key: The type of response of the child objects. Used when selecting nested data for certain responses
+            (e.g. user's followed artists).
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :param leave_bar: When a progress bar is displayed,
             toggle whether this bar should continue to be displayed after the operation is finished.
             When None, allow the logger to decide this setting.
         :return: API JSON responses for each item
         """
-        key = key.rstrip("s") + "s" if key else key
+        key = key.name.casefold() + "s" if key else None
         if key and key in items_block:
             items_block = items_block[key]
         if self.items_key not in items_block:
@@ -164,13 +170,15 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         if "limit" not in items_block:
             items_block["limit"] = int(parse_qs(urlparse(items_block["next"]).query).get("limit", [50])[0])
 
-        unit = unit or self.items_key
+        kind = kind.name.casefold() + "s" if isinstance(kind, RemoteObjectType) else kind or self.items_key
+        pages = (items_block["total"] - len(items_block[self.items_key])) / items_block["limit"]
         bar = self.logger.get_progress_bar(
             initial=len(items_block[self.items_key]),
             total=items_block["total"],
-            desc=f"Extending {unit}".rstrip("s") if unit[0].islower() else unit,
+            desc=f"Extending {kind}".rstrip("s") if kind[0].islower() else kind,
             unit=key or self.items_key,
-            leave=leave_bar
+            leave=leave_bar,
+            disable=pages < self._bar_threshold,
         )
 
         while items_block.get("next"):  # loop through each page
@@ -186,8 +194,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
 
             items_block[self.items_key].extend(response[self.items_key])
             items_block["href"] = response["href"]
-            items_block["next"] = response["next"]
-            items_block["previous"] = response["previous"]
+            items_block["next"] = response.get("next")
+            items_block["previous"] = response.get("previous")
 
         if bar is not None:
             bar.close()
@@ -243,28 +251,31 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         id_list = self.extract_ids(values, kind=kind)
 
         if kind in {RemoteObjectType.USER, RemoteObjectType.PLAYLIST} or len(id_list) <= 1:
-            results = self._get_items_multi(url=url, id_list=id_list, unit=unit, use_cache=use_cache)
+            results = self._get_items_multi(url=url, id_list=id_list, kind=unit, use_cache=use_cache)
         else:
             results = self._get_items_batched(url=url, id_list=id_list, key=unit, use_cache=use_cache, limit=limit)
 
-        key = self.collection_item_map.get(kind, kind).name.casefold() + "s"
-        if len(results) == 0 or any(key not in result for result in results) or not extend:
+        key = self.collection_item_map.get(kind, kind)
+        key_name = key.name.casefold() + "s"
+        if len(results) == 0 or any(key_name not in result for result in results) or not extend:
             self._merge_results_to_input(original=values, results=results, ordered=True)
             self.logger.debug(f"{'DONE':<7}: {url:<43} | Retrieved {len(results):>6} {unit}")
             return results
 
-        bar = results
-        if len(id_list) > 5:  # show progress bar for collection batches which may take a long time
-            bar = self.logger.get_progress_bar(iterable=results, desc=f"Extending {unit}", unit=key)
+        bar = self.logger.get_progress_bar(
+            iterable=results, desc=f"Extending {unit}", unit=key_name, disable=len(id_list) < self._bar_threshold
+        )
 
         for result in bar:
-            if result[key].get("next") or ("next" not in result[key] and result[key].get("href")):
-                self.extend_items(result[key], key=key, unit=unit, use_cache=use_cache, leave_bar=False)
+            if result[key_name].get("next") or ("next" not in result[key_name] and result[key_name].get("href")):
+                self.extend_items(result[key_name], kind=kind, key=key, use_cache=use_cache, leave_bar=False)
 
         self._merge_results_to_input(original=values, results=results, ordered=True)
 
-        item_count = sum(len(result[key][self.items_key]) for result in results)
-        self.logger.debug(f"{'DONE':<7}: {url:<71} | Retrieved {item_count:>6} {key} across {len(results):>5} {unit}")
+        item_count = sum(len(result[key_name][self.items_key]) for result in results)
+        self.logger.debug(
+            f"{'DONE':<7}: {url:<71} | Retrieved {item_count:>6} {key_name} across {len(results):>5} {unit}"
+        )
 
         return results
 
@@ -298,24 +309,23 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
                 kind=kind
             )
 
-        unit = kind.name.casefold() + "s"
         params = {"limit": limit_value(limit, floor=1, ceil=50)}
-
         if user is not None:
             url = f"{self.convert(user, kind=RemoteObjectType.USER, type_out=RemoteIDType.URL)}/{kind.name.casefold()}s"
-            unit_prefix = "user"
+            desc_qualifier = "user's"
         elif kind == RemoteObjectType.ARTIST:
             url = f"{self.api_url_base}/me/following"
-            unit_prefix = "current user's followed"
+            desc_qualifier = "current user's followed"
             params["type"] = "artist"
         else:
             url = f"{self.api_url_base}/me/{kind.name.casefold()}s"
-            unit_prefix = "current user's" if kind == RemoteObjectType.PLAYLIST else "current user's saved"
+            desc_qualifier = "current user's" if kind == RemoteObjectType.PLAYLIST else "current user's saved"
 
+        desc = f"Getting {desc_qualifier} {kind.name.casefold()}s"
         initial = self.handler.get(url, params=params, use_cache=use_cache, log_pad=71)
-        results = self.extend_items(initial, key=unit, unit=f"Getting {unit_prefix} {unit}", use_cache=use_cache)
+        results = self.extend_items(initial, kind=desc, key=kind, use_cache=use_cache)
 
-        self.logger.debug(f"{'DONE':<7}: {url:<43} | Retrieved {len(results):>6} {unit}")
+        self.logger.debug(f"{'DONE':<7}: {url:<43} | Retrieved {len(results):>6} {kind.name.casefold()}s")
 
         return results
 
@@ -374,10 +384,10 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             for (url, key, _) in config.values():
                 results[key] = [self.handler.get(f"{url}/{id_}", use_cache=use_cache, log_pad=43) | {"id": id_}]
         else:
-            for unit, (url, key, batch) in config.items():
+            for kind, (url, key, batch) in config.items():
                 method = self._get_items_batched if batch else self._get_items_multi
                 results[key] = method(
-                    url=url, id_list=id_list, key=key if batch else None, unit=unit, limit=limit, use_cache=use_cache
+                    url=url, id_list=id_list, kind=kind, key=key if batch else None, limit=limit, use_cache=use_cache
                 )
 
         # re-map results and extend original input if required
@@ -485,18 +495,20 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         self.validate_item_type(values, kind=RemoteObjectType.ARTIST)
 
         id_list = self.extract_ids(values, kind=RemoteObjectType.ARTIST)
-        if len(id_list) > 5:  # show progress bar for collection batches which may take a long time
-            id_list = self.logger.get_progress_bar(iterable=id_list, desc=f"Getting artist albums", unit="artist")
+        bar = self.logger.get_progress_bar(
+            iterable=id_list, desc=f"Getting artist albums", unit="artist", disable=len(id_list) < self._bar_threshold
+        )
 
         params = {"limit": limit_value(limit, floor=1, ceil=50)}
         if types:
             params["include_groups"] = ",".join(set(types))
 
+        key = RemoteObjectType.ALBUM
         url = self.api_url_base + "/artists/{id}/albums"
         results: dict[str, dict[str, Any]] = {}
-        for id_ in id_list:
+        for id_ in bar:
             results[id_] = self.handler.get(url=url.format(id=id_), params=params, use_cache=use_cache)
-            self.extend_items(results[id_], key="albums", unit="artist albums", use_cache=use_cache, leave_bar=False)
+            self.extend_items(results[id_], kind="artist albums", key=key, use_cache=use_cache, leave_bar=False)
 
             for album in results[id_]["items"]:  # add skeleton items block to album responses
                 album["tracks"] = {

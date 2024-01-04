@@ -65,8 +65,8 @@ class TestSpotifyAPIItems:
     def test_get_unit(self, api: SpotifyAPI):
         assert api._get_unit() == api.items_key
         assert api._get_unit(key="track") == "tracks"
-        assert api._get_unit(unit="Audio Features") == "audio features"
-        assert api._get_unit(unit="Audio Features", key="tracks") == "audio features"
+        assert api._get_unit(kind="Audio Features") == "audio features"
+        assert api._get_unit(kind="Audio Features", key="tracks") == "audio features"
         assert api._get_unit(key="audio-features") == "audio features"
 
     def test_get_items_batches_limited(self, api: SpotifyAPI, api_mock: SpotifyMock):
@@ -232,7 +232,7 @@ class TestSpotifyAPIItems:
         assert test["total"] > test["limit"]
         assert test["total"] > len(test[api.items_key])
 
-        results = api.extend_items(items_block=test, key=key)
+        results = api.extend_items(items_block=test, key=api.collection_item_map.get(kind, kind))
         requests = api_mock.get_requests(url=source["href"].split("?")[0])
 
         # assert extension to total

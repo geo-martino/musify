@@ -79,7 +79,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
         return pl_url
 
     def add_to_playlist(
-            self, playlist: str | Mapping[str, Any], items: Collection[str], limit: int = 100, skip_dupes: bool = True
+            self, playlist: str | Mapping[str, Any], items: Collection[str], limit: int = 99, skip_dupes: bool = True
     ) -> int:
         """
         ``POST: /playlists/{playlist_id}/tracks`` - Add list of tracks to a given playlist.
@@ -89,7 +89,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
         :param items: List of URLs/URIs/IDs of the tracks to add.
-        :param limit: Size of each batch of IDs to add. This value will be limited to be between ``1`` and ``100``.
+        :param limit: Size of each batch of IDs to add. This value will be limited to be between ``1`` and ``99``.
         :param skip_dupes: Skip duplicates.
         :return: The number of tracks added to the playlist.
         :raise RemoteIDTypeError: Raised when the input ``playlist`` does not represent
@@ -98,7 +98,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             are not all tracks or IDs.
         """
         url = f"{self.get_playlist_url(playlist, use_cache=False)}/tracks"
-        limit = limit_value(limit, floor=1, ceil=100)
+        limit = limit_value(limit, floor=1, ceil=99)
 
         if len(items) == 0:
             self.logger.debug(f"{'SKIP':<7}: {url:<43} | No data given")

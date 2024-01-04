@@ -15,6 +15,7 @@ from syncify.exception import ConfigError, SyncifyError
 from syncify.fields import LocalTrackField
 from syncify.local.exception import FileDoesNotExistError
 from syncify.remote.processors.wrangle import RemoteDataWrangler
+from syncify.utils.helpers import correct_platform_separators
 from syncify.utils.logger import SyncifyLogger
 from tests.abstract.misc import PrettyPrinterTester
 from tests.utils import path_resources, path_txt
@@ -226,7 +227,7 @@ class TestConfig(PrettyPrinterTester):
             assert config.update.tags == (LocalTrackField.TITLE, LocalTrackField.ARTIST, LocalTrackField.ALBUM)
             assert not config.update.replace
 
-            assert config.library.library_folder == config.library_folder
+            assert config.library.library_folder == correct_platform_separators(config.library_folder)
             assert config.library.playlist_folder is None
             assert config.library.other_folders == config.other_folders
             assert config.library.include == config.playlists.include

@@ -312,8 +312,8 @@ class SpotifyCollectionLoader[T: SpotifyItem](SpotifyObjectLoaderMixin[T], Spoti
 
         extend_response = api.extend_items(
             response[key],
-            unit=kind.name.casefold() + "s",
-            key=key.rstrip("s"),
+            kind=kind,
+            key=api.collection_item_map[kind],
             use_cache=use_cache,
             leave_bar=leave_bar
         )
@@ -672,7 +672,9 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
         if extend_albums:
             self.api.get_artist_albums(response, use_cache=use_cache)
         if extend_albums and extend_tracks:
+            kind = RemoteObjectType.ALBUM
+            key = self.api.collection_item_map[kind]
             for album in response["albums"]["items"]:
-                self.api.extend_items(album["tracks"], key="tracks", unit="albums",  use_cache=use_cache)
+                self.api.extend_items(album["tracks"], kind=kind, key=key, use_cache=use_cache)
 
         self.__init__(response=response, api=self.api, skip_checks=extend_albums and not extend_tracks)

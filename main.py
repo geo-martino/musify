@@ -556,6 +556,8 @@ class Syncify(DynamicProcessor):
         if pl is None:
             pl = self.remote.playlist.create(api=self.remote.api.api, name=name)
 
+        use_cache_original = self.remote.library.use_cache
+        self.remote.library.use_cache = False
         if not self.remote.library_loaded or not self.remote.library.artists:
             self.remote.library.load_saved_artists()
             self.logger.print()
@@ -580,6 +582,7 @@ class Syncify(DynamicProcessor):
 
         pl.tracks.sort(key=lambda x: x.date, reverse=True)
         results = pl.sync(kind="refresh", reload=False, dry_run=False)
+        self.remote.library.use_cache = use_cache_original
 
         self.remote.library.log_sync({name: results})
         self.logger.info(f"\33[92mAdded {results.added} new tracks to playlist: '{name}' \33[0m")
