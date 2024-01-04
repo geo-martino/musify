@@ -165,9 +165,6 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
             playlists.append(pl)
 
         self._playlists = {pl.name: pl for pl in sorted(playlists, key=lambda x: x.name.casefold())}
-
-        self.logger.print(REPORT)
-        self.log_playlists()
         self.logger.debug(f"Load {self.source} playlists: DONE")
 
     def _filter_playlists(self, responses: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -287,7 +284,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
 
     def log_albums(self) -> None:
         """Log stats on currently loaded albums"""
-        width = get_max_width(self.artists)
+        width = get_max_width(self.playlists)
         self.logger.report(
             f"\33[1;96m{"USER'S " + self.source.upper() + " ALBUMS":<{width}}\33[1;0m |"
             f"\33[92m{sum(len(album.tracks) for album in self.albums):>7} album tracks \33[0m|"
@@ -333,7 +330,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
 
     def log_artists(self) -> None:
         """Log stats on currently loaded artists"""
-        width = get_max_width(self.artists)
+        width = get_max_width(self.playlists)
         self.logger.report(
             f"\33[1;96m{"USER'S " + self.source.upper() + " ARTISTS":<{width}}\33[1;0m |"
             f"\33[92m{sum(len(artist.tracks) for artist in self.artists):>7} artist tracks \33[0m|"

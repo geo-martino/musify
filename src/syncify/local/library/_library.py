@@ -226,7 +226,10 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     def load(self, tracks: bool = True, playlists: bool = True) -> None:
         """Loads all tracks and playlists in this library from scratch and log results."""
         self.logger.debug(f"Load {self.name} library: START")
-        log_types = [f"{len(self._track_paths)} tracks" * tracks, f"{len(self._playlist_paths)} playlists" * playlists]
+        log_types = [
+            f"{len(self._track_paths or [])} tracks" * tracks,
+            f"{len(self._playlist_paths or [])} playlists" * playlists
+        ]
         log_types = " and ".join(log_type for log_type in log_types if log_type)
         self.logger.info(f"\33[1;95m ->\33[1;97m Loading {self.name} library of {log_types} \33[0m")
 

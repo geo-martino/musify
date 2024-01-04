@@ -187,5 +187,5 @@ class TestMusicBee(LocalLibraryTester):
             for i, (line_in, line_out) in enumerate(zip(f_in, f_out)):
                 if any(f"<key>{key}</key>" in line_in for key in ignore_keys):
                     continue
-                print(i, line_out.rstrip())
+                # print(i, line_out.rstrip())
                 assert line_in == line_out

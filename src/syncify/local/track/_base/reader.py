@@ -523,7 +523,6 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
     def _read_compilation(self) -> bool | None:
         """Extract compilation tags from file"""
         values = self._read_tag(self.tag_map.compilation)
-        print(self.path, values)
         return bool(int(values[0])) if values is not None else None
 
     def _read_comments(self) -> list[str] | None:

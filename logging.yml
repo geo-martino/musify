@@ -47,7 +47,7 @@ handlers:
     level: DEBUG
     formatter: extended
     filters: ["file"]
-    filename: 'D:/Coding/syncify/_logs/{}.log'
+    filename: '_logs/{}.log'
     encoding: "utf-8"
     delay: True
     when: "m"

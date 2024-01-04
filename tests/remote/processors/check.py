@@ -150,10 +150,11 @@ class RemoteItemCheckerTester(ABC):
             capfd: pytest.CaptureFixture,
     ):
         api_mock.reset_mock()  # test checks the number of requests made
-
         pl, collection = setup_playlist_collection
         self.setup_input(["h", collection.name, pl.uri], mocker=mocker)
+
         checker._pause(page=1, total=1)
+        mocker.stopall()
         capfd.close()
 
         stdout = get_stdout(capfd)  # remove colour codes
@@ -177,7 +178,9 @@ class RemoteItemCheckerTester(ABC):
     ):
         api_mock.reset_mock()  # test checks the number of requests made
         self.setup_input([random_str(10, 20), "u", "s"], mocker=mocker)
+
         checker._pause(page=1, total=1)
+        mocker.stopall()
         capfd.close()
 
         stdout = get_stdout(capfd)
@@ -200,9 +203,10 @@ class RemoteItemCheckerTester(ABC):
             capfd: pytest.CaptureFixture,
     ):
         api_mock.reset_mock()  # test checks the number of requests made
-
         self.setup_input(["q"], mocker=mocker)
+
         checker._pause(page=1, total=1)
+        mocker.stopall()
         capfd.close()
 
         stdout = get_stdout(capfd)
@@ -244,7 +248,9 @@ class RemoteItemCheckerTester(ABC):
         values = ["u", "p", "h", "n", "", "zzzz", "n", "h", "u", "p", "ua", random_str(10, 20), "s", "q"]
         expected = values[-3:]  # stops after 'ua'
         self.setup_input(values, mocker=mocker)
+
         checker._match_to_input(name="test")
+        mocker.stopall()
         capfd.close()
 
         assert values == expected
@@ -294,7 +300,9 @@ class RemoteItemCheckerTester(ABC):
         uri_list = random_uris(kind=RemoteObjectType.TRACK, start=5, stop=5)
         # noinspection SpellCheckingInspection
         self.setup_input(["p", "p", "p", *uri_list, "naaaaaaa", "r"], mocker=mocker)
+
         checker._match_to_input(name="test")
+        mocker.stopall()
         capfd.close()
 
         stdout = get_stdout(capfd)
@@ -323,7 +331,9 @@ class RemoteItemCheckerTester(ABC):
     ):
         # anything after 'r' will be ignored
         self.setup_input(["u", "u", "u", "r", "q"], mocker=mocker)
+
         checker._match_to_input(name="test")
+        mocker.stopall()
         capfd.close()
 
         stdout = get_stdout(capfd)
@@ -346,7 +356,9 @@ class RemoteItemCheckerTester(ABC):
     ):
         # anything after 's' will be ignored
         self.setup_input(["s", "q"], mocker=mocker)
+
         checker._match_to_input(name="test")
+        mocker.stopall()
         capfd.close()
 
         stdout = get_stdout(capfd)
@@ -369,7 +381,9 @@ class RemoteItemCheckerTester(ABC):
     ):
         # anything after 'q' will be ignored
         self.setup_input(["q", "s"], mocker=mocker)
+
         checker._match_to_input(name="test")
+        mocker.stopall()
         capfd.close()
 
         stdout = get_stdout(capfd)
@@ -502,7 +516,9 @@ class RemoteItemCheckerTester(ABC):
         checker.playlist_name_collection["do not run"] = collection
 
         checker._check_uri()
+        mocker.stopall()
         capfd.close()
+
         assert not checker.quit
         assert not checker.skip  # skip triggered by input, but should still hold initial value
         assert not checker.switched
@@ -554,6 +570,7 @@ class RemoteItemCheckerTester(ABC):
 
         api_mock.reset_mock()
         result = checker.check(collections)
+        mocker.stopall()
 
         # resets after each run
         assert not checker.remaining

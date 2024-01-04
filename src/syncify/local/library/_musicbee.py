@@ -108,7 +108,7 @@ class MusicBee(LocalLibrary, File):
         # need to remove the library folder to make it os agnostic
         tracks = super().load_tracks()
         tracks_paths = {track.path.removeprefix(self.library_folder).casefold(): track for track in tracks}
-        print(tracks_paths.keys())
+
         self.logger.debug(f"Enrich {self.name} tracks: START")
 
         for track_xml in self.xml["Tracks"].values():
@@ -177,9 +177,6 @@ class MusicBee(LocalLibrary, File):
                 playlist, tracks=track_id_map, playlist_id=playlist_id, persistent_id=persistent_id
             )
             playlists.append(playlist)
-
-        for track in tracks.values():
-            print(track)
 
         xml = {
             "Major Version": self.xml.get("Major Version", "1"),
@@ -269,8 +266,6 @@ class MusicBee(LocalLibrary, File):
             "Track Type": "File",  # can also be 'URL' for streams
             "Location": track.path,
         }
-
-        print(data["Location"], data["Compilation"])
 
         return {k: v for k, v in data.items() if v is not None}
 
