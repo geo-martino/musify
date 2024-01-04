@@ -74,9 +74,9 @@ class M4A(LocalTrack):
                 continue
 
             if tag_id.startswith("----:com.apple.iTunes") and isinstance(value, (list, set, tuple)):
-                value = list(v.decode("utf-8") for v in value)
+                value = [v for val in value for v in val.decode("utf-8").split('\x00')]
             elif isinstance(value, bytes):
-                value = value.decode("utf-8")
+                value = value.decode("utf-8").split('\x00')
 
             values.extend(value) if isinstance(value, (list, set, tuple)) else values.append(value)
 

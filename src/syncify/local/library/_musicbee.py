@@ -108,6 +108,7 @@ class MusicBee(LocalLibrary, File):
         # need to remove the library folder to make it os agnostic
         tracks = super().load_tracks()
         tracks_paths = {track.path.removeprefix(self.library_folder).casefold(): track for track in tracks}
+        print(tracks_paths.keys())
         self.logger.debug(f"Enrich {self.name} tracks: START")
 
         for track_xml in self.xml["Tracks"].values():
@@ -116,6 +117,8 @@ class MusicBee(LocalLibrary, File):
 
             # need to remove the XML music folder to make it os agnostic
             track = tracks_paths.get(track_xml["Location"].removeprefix(self.library_folder).casefold())
+            if track is None:  # attempt to find a match by removing the xml library folder path
+                track = tracks_paths.get(track_xml["Location"].removeprefix(self.xml["Music Folder"]).casefold())
             if track is None:
                 self.errors.append(track_xml["Location"])
                 continue
@@ -144,6 +147,8 @@ class MusicBee(LocalLibrary, File):
                 continue
 
             track = tracks_paths.get(track_xml["Location"].removeprefix(self.xml["Music Folder"]).casefold())
+            if track is None:  # attempt to find a match by removing the xml library folder path
+                track = tracks_paths.get(track_xml["Location"].removeprefix(self.xml["Music Folder"]).casefold())
             if not track:
                 self.errors.append(track_xml["Location"])
                 continue
@@ -152,7 +157,7 @@ class MusicBee(LocalLibrary, File):
 
         self._log_errors("Could not find a loaded track for these paths from the MusicBee library file")
 
-        tracks: dict[str, Any] = {}
+        tracks: dict[int, dict[str, Any]] = {}
         max_track_id = max(id_ for id_, _ in track_id_map.values()) if track_id_map else 0
         for i, track in enumerate(self.tracks, max(1, max_track_id)):
             track_id, persistent_id = track_id_map.get(track, [i, None])
@@ -172,6 +177,9 @@ class MusicBee(LocalLibrary, File):
                 playlist, tracks=track_id_map, playlist_id=playlist_id, persistent_id=persistent_id
             )
             playlists.append(playlist)
+
+        for track in tracks.values():
+            print(track)
 
         xml = {
             "Major Version": self.xml.get("Major Version", "1"),
@@ -261,6 +269,8 @@ class MusicBee(LocalLibrary, File):
             "Track Type": "File",  # can also be 'URL' for streams
             "Location": track.path,
         }
+
+        print(data["Location"], data["Compilation"])
 
         return {k: v for k, v in data.items() if v is not None}
 

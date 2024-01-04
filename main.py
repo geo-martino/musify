@@ -749,4 +749,3 @@ if __name__ == "__main__":
 #    from using lowercase path cleaning logic in TrackMatch
 #  This may now be fixed by extending functionality of playlists to include
 #   available track paths on load
-# TODO: fix /path/to issue in GH tests

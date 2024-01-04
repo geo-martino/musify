@@ -79,7 +79,7 @@ class MP3(LocalTrack):
 
             # convert id3 object to python types, causes downstream if not
             if isinstance(value, mutagen.id3.TextFrame):
-                values.append(str(value))
+                values.extend(str(value).split('\x00'))
             elif isinstance(value, mutagen.id3.APIC):
                 values.append(value)
             else:
@@ -92,7 +92,6 @@ class MP3(LocalTrack):
         values = self._read_tag(self.tag_map.genres)
         if values is None:
             return
-
         return [genre for value in values for genre in value.split(";")]
 
     def _read_images(self) -> list[Image.Image] | None:

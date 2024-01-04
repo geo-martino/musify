@@ -76,19 +76,21 @@
 		<dict>
 			<key>Track ID</key><integer>3</integer>
 			<key>Persistent ID</key><string>397EF3EAF91D2354</string>
-			<key>Name</key><string>title 1</string>
-			<key>Artist</key><string>artist 1</string>
-			<key>Album</key><string>album artist 1</string>
+			<key>Name</key><string>excluded title 1</string>
+			<key>Artist</key><string>excluded artist 1</string>
+			<key>Album</key><string>excluded album artist 1</string>
 			<key>Album Artist</key><string>various</string>
 			<key>Track Number</key><integer>1</integer>
+			<key>Track Count</key><integer>4</integer>
 			<key>Genre1</key><string>Pop</string>
 			<key>Genre2</key><string>Rock</string>
 			<key>Genre3</key><string>Jazz</string>
 			<key>Year</key><integer>2020</integer>
 			<key>BPM</key><integer>120.12</integer>
 			<key>Disc Number</key><integer>1</integer>
+			<key>Disc Count</key><integer>3</integer>
 			<key>Compilation</key><true/>
-			<key>Comments</key><string>spotify:track:6fWoFduMpBem73DMLCOh1Z</string>
+			<key>Comments</key><string>spotify:track:6fWoFduMpBem73DMLCOhab</string>
 			<key>Total Time</key><integer>20000</integer>
 			<key>Rating</key><integer>70</integer>
 			<key>Size</key><integer>1818191</integer>
@@ -137,9 +139,9 @@
 		<dict>
 			<key>Track ID</key><integer>5</integer>
 			<key>Persistent ID</key><string>623B817C9962115E</string>
-			<key>Name</key><string>title 2</string>
-			<key>Artist</key><string>artist 2</string>
-			<key>Album</key><string>album artist 2</string>
+			<key>Name</key><string>excluded title 2</string>
+			<key>Artist</key><string>excluded artist 2</string>
+			<key>Album</key><string>excluded album artist 2</string>
 			<key>Album Artist</key><string>various</string>
 			<key>Track Number</key><integer>3</integer>
 			<key>Track Count</key><integer>4</integer>
@@ -149,8 +151,8 @@
 			<key>BPM</key><integer>200.56</integer>
 			<key>Disc Number</key><integer>2</integer>
 			<key>Disc Count</key><integer>3</integer>
-			<key>Compilation</key><false/>
-			<key>Comments</key><string>spotify:track:1TjVbzJUAuOvas1bL00TiH</string>
+			<key>Compilation</key><true/>
+			<key>Comments</key><string>spotify:track:1TjVbzJUAuOvas1bL00Tab</string>
 			<key>Total Time</key><integer>30000</integer>
 			<key>Rating</key><integer>100</integer>
 			<key>Size</key><integer>411038</integer>

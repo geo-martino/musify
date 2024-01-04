@@ -184,7 +184,8 @@ class TestMusicBee(LocalLibraryTester):
         # these keys fail on other systems, ignore them in line checks
         ignore_keys = ["Music Folder", "Date Modified", "Location"]
         with open(library_filepath, "r") as f_in, open(path, "r") as f_out:
-            for line_in, line_out in zip(f_in, f_out):
+            for i, (line_in, line_out) in enumerate(zip(f_in, f_out)):
                 if any(f"<key>{key}</key>" in line_in for key in ignore_keys):
                     continue
+                print(i, line_out.rstrip())
                 assert line_in == line_out

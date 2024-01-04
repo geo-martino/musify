@@ -266,9 +266,9 @@ class TestConfig(PrettyPrinterTester):
             "album": ("unliked album",),
         }
 
-        assert config.api.token_path == join(dirname(config_valid.output_folder), "token.json")
+        assert config.api.token_path == "/path/to/token.json"
         assert config.api.token_path == config.api.api.handler.token_file_path
-        assert config.api.cache_path == "/path/to/cache"
+        assert config.api.cache_path == join(dirname(config_valid.output_folder), "cache")
         assert isinstance(config.api.api.handler.session, CachedSession)
         assert not config.api.use_cache
 

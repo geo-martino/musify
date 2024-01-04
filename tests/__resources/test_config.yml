@@ -78,8 +78,8 @@ valid:
         bad key: this is an invalid key and should be ignored
         client_id: <CLIENT_ID>
         client_secret: <CLIENT_SECRET>
-        token_path: token.json
-        cache_path: /path/to/cache
+        token_path: /path/to/token.json
+        cache_path: cache
         scopes:
           - user-library-read
           - user-follow-read

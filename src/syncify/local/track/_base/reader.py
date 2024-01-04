@@ -398,7 +398,14 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
                 # skip null or empty/blank strings
                 continue
 
-            values.extend(value) if isinstance(value, (list, set, tuple)) else values.append(value)
+            if isinstance(value, (list, set, tuple)) and all(isinstance(val, str) for val in value):
+                values.extend(v for val in value for v in val.split('\x00'))
+            elif isinstance(value, (list, set, tuple)):
+                values.extend(value)
+            elif isinstance(value, str):
+                values.extend(value.split('\x00'))
+            else:
+                values.append(value)
 
         return values if len(values) > 0 else None
 
@@ -516,6 +523,7 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
     def _read_compilation(self) -> bool | None:
         """Extract compilation tags from file"""
         values = self._read_tag(self.tag_map.compilation)
+        print(self.path, values)
         return bool(int(values[0])) if values is not None else None
 
     def _read_comments(self) -> list[str] | None:

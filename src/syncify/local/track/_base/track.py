@@ -161,9 +161,7 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
         """Paths equal if both are LocalItems, URI attributes equal if both have a URI, names equal otherwise"""
         if hasattr(item, "path"):
             return self.path == item.path
-        elif self.has_uri and item.has_uri:
-            return self.uri == item.uri
-        return self.name == item.name
+        return super().__eq__(item)
 
     def __copy__(self):
         """Copy object by reloading from the file object in memory"""
