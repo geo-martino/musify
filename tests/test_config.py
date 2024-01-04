@@ -221,7 +221,7 @@ class TestConfig(PrettyPrinterTester):
                 assert config.library
 
         else:
-            assert config.other_folders == ("/different/folder", "/another/path", "/path/to/platform/library")
+            assert config.other_folders == ("/different/folder", "/another/path", "/path/to/library")
 
             assert config.update.tags == (LocalTrackField.TITLE, LocalTrackField.ARTIST, LocalTrackField.ALBUM)
             assert not config.update.replace
