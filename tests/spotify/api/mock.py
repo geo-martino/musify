@@ -2,7 +2,7 @@ import logging
 import re
 from collections.abc import Mapping, Callable
 from copy import deepcopy
-from datetime import datetime, date
+from datetime import datetime
 from random import choice, randrange, sample, random, shuffle
 from typing import Any
 from urllib.parse import parse_qs
@@ -803,7 +803,7 @@ class SpotifyMock(RemoteMock):
             "id": album_id,
             "images": self.generate_images(),
             "name": random_str(30, 50),
-            "release_date": random_date_str(start=date(1900, 1, 1)),
+            "release_date": random_date_str(),
             "release_date_precision": choice(("day", "month", "year")),
             "type": kind,
             "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{album_id}",

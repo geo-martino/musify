@@ -39,6 +39,7 @@ from syncify.spotify import SPOTIFY_SOURCE_NAME
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.library import SpotifyObject
 from syncify.spotify.library.library import SpotifyLibrary
+from syncify.spotify.library.object import SpotifyPlaylist
 from syncify.spotify.processors.processors import SpotifyItemChecker, SpotifyItemSearcher
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 from syncify.utils.helpers import to_collection
@@ -700,6 +701,11 @@ class ConfigRemote(ConfigLibrary):
         return self._library
 
     @property
+    def playlist(self) -> type[RemotePlaylist]:
+        """The :py:class:`RemotePlaylist` class for this remote library type"""
+        return self._classes.playlist
+
+    @property
     def wrangler(self) -> RemoteDataWrangler:
         """An initialised remote wrangler"""
         if self._wrangler is not None and isinstance(self._wrangler, self._classes.wrangler):
@@ -970,9 +976,10 @@ class RemoteClasses:
     api: type[ConfigAPI]
     wrangler: type[RemoteDataWrangler]
     object: type[RemoteObject]
-    library: type[RemoteLibrary]
     checker: type[RemoteItemChecker]
     searcher: type[RemoteItemSearcher]
+    library: type[RemoteLibrary]
+    playlist: type[RemotePlaylist]
 
 
 SPOTIFY_CLASSES = RemoteClasses(
@@ -980,9 +987,10 @@ SPOTIFY_CLASSES = RemoteClasses(
     api=ConfigSpotify,
     wrangler=SpotifyDataWrangler,
     object=SpotifyObject,
-    library=SpotifyLibrary,
     checker=SpotifyItemChecker,
     searcher=SpotifyItemSearcher,
+    library=SpotifyLibrary,
+    playlist=SpotifyPlaylist,
 )
 
 # map of the names of all supported library sources and their associated config

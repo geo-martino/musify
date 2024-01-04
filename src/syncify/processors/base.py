@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from collections.abc import Mapping, Callable, Iterable
+from collections.abc import Mapping, Callable
 from functools import partial, update_wrapper
 from typing import Any, Self, Optional
 
@@ -24,7 +24,7 @@ class dynamicprocessormethod:
         self = partial(cls, *args) if func is None else super().__new__(cls)
         return update_wrapper(self, func)
 
-    def __init__(self, *args: Optional[Callable] | Iterable[str]):
+    def __init__(self, *args: str | Callable):
         self.func = next((a for a in args if callable(a)), None)
         self.alternative_names = tuple(a for a in args if isinstance(a, str))
 
@@ -33,7 +33,10 @@ class dynamicprocessormethod:
         return self.__call__
 
     def __call__(self, *args, **kwargs):
-        return self.func(self.instance_, *args, **kwargs)
+        try:
+            return self.func(self.instance_, *args, **kwargs)
+        except AttributeError:
+            return self.func(*args, **kwargs)
 
 
 # noinspection SpellCheckingInspection

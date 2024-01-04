@@ -1,7 +1,7 @@
+import datetime
 import re
 from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable
-import datetime
 from typing import Any
 
 import mutagen
@@ -43,6 +43,8 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
         "_track_total",
         "_genres",
         "_year",
+        "_month",
+        "_day",
         "_bpm",
         "_key",
         "_disc_number",
@@ -144,8 +146,8 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
 
     @property
     def date(self):
-        if self.year and self.month and self.day:
-            return datetime.date(self.year, self.month, self.day)
+        if self._year and self._month and self._day:
+            return datetime.date(self._year, self._month, self._day)
 
     @date.setter
     def date(self, value: datetime.date | None):

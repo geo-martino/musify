@@ -6,6 +6,7 @@ import re
 import sys
 import traceback
 from collections.abc import Mapping
+from datetime import date, datetime, timedelta
 from os.path import basename, dirname, join, relpath, splitext
 from time import perf_counter
 from typing import Any, Callable
@@ -18,9 +19,11 @@ from syncify.local.collection import LocalCollection
 from syncify.local.track import LocalTrack, SyncResultTrack
 from syncify.processors.base import DynamicProcessor, dynamicprocessormethod
 from syncify.remote.api import RemoteAPI
+from syncify.remote.enums import RemoteObjectType
+from syncify.remote.library.object import RemoteAlbum
 from syncify.report import report_playlist_differences, report_missing_tags
 from syncify.utils.helpers import get_user_input, UnitIterable, to_collection
-from syncify.utils.logger import SyncifyLogger, STAT, CurrentTimeRotatingFileHandler
+from syncify.utils.logger import SyncifyLogger, STAT, CurrentTimeRotatingFileHandler, REPORT
 from syncify.utils.printers import print_logo, print_line, print_time
 
 
@@ -133,7 +136,7 @@ class Syncify(DynamicProcessor):
     ## Utilities
     ###########################################################################
     @dynamicprocessormethod
-    def print(self) -> None:
+    def print(self, *_, **__) -> None:
         """Pretty print data from API getting input from user"""
         self.api.print_collection(use_cache=self.remote.api.use_cache)
 
@@ -143,8 +146,8 @@ class Syncify(DynamicProcessor):
 
         load_all = not kinds
         self.local.library.load(tracks=load_all or "tracks" in kinds, playlists=load_all or "playlists" in kinds)
-        self.local.library_loaded = True
 
+        self.local.library_loaded = True
         self.logger.debug("Reload local library: DONE")
 
     def reload_remote(self, *kinds: str) -> None:
@@ -152,12 +155,38 @@ class Syncify(DynamicProcessor):
         self.logger.debug("Reload remote library: START")
 
         load_all = not kinds
-        self.remote.library.load()
+        if load_all:
+            self.remote.library.load()
+        else:
+            if "playlists" in kinds:
+                self.remote.library.load_playlists()
+            if "saved_tracks" in kinds:
+                self.remote.library.load_saved_tracks()
+            if "saved_albums" in kinds:
+                self.remote.library.load_saved_albums()
+            if "saved_artists" in kinds:
+                self.remote.library.load_saved_artists()
+
+            self.logger.print(REPORT)
+            self.remote.library.log_playlists()
+            self.remote.library.log_tracks()
+            self.remote.library.log_albums()
+            self.remote.library.log_artists()
+            self.logger.print()
+
         if load_all or "extend" in kinds:
             self.remote.library.extend(self.local.library, allow_duplicates=False)
-        self.remote.library.enrich_tracks(artists=load_all or "artists" in kinds, albums=load_all or "albums" in kinds)
-        self.remote.library_loaded = True
+        if load_all or "enrich" in kinds:
+            if load_all or "tracks" in kinds or "saved_tracks" in kinds:
+                self.remote.library.enrich_tracks(
+                    artists=load_all or "artists" in kinds, albums=load_all or "albums" in kinds
+                )
+            if load_all or "saved_albums" in kinds:
+                self.remote.library.enrich_saved_albums()
+            if load_all or "saved_artists" in kinds:
+                self.remote.library.enrich_saved_artists(tracks=load_all or "tracks" in kinds)
 
+        self.remote.library_loaded = True
         self.logger.debug("Reload remote library: DONE")
 
     def save_tracks(
@@ -197,7 +226,7 @@ class Syncify(DynamicProcessor):
         return name
 
     @dynamicprocessormethod
-    def backup(self, key: str | None = None) -> None:
+    def backup(self, key: str | None = None, *_, **__) -> None:
         """Backup data for all tracks and playlists in all libraries"""
         self.logger.debug("Backup libraries: START")
         if not key:
@@ -213,7 +242,7 @@ class Syncify(DynamicProcessor):
         self.logger.debug("Backup libraries: DONE")
 
     @dynamicprocessormethod
-    def restore(self) -> None:
+    def restore(self, *_, **__) -> None:
         """Restore library data from a backup, getting user input for the settings"""
         output_parent = dirname(self.config.output_folder)
         backup_names = (self.local_backup_name(), self.remote_backup_name())
@@ -330,7 +359,7 @@ class Syncify(DynamicProcessor):
         self.logger.debug(f"Restore {self.remote.source}: DONE")
 
     @dynamicprocessormethod
-    def extract(self) -> None:
+    def extract(self, *_, **__) -> None:
         """Extract and save images from local or remote items"""
         # TODO: add library-wide image extraction method
         raise NotImplementedError
@@ -339,7 +368,7 @@ class Syncify(DynamicProcessor):
     ## Report/Search functions
     ###########################################################################
     @dynamicprocessormethod
-    def report(self) -> None:
+    def report(self, *_, **__) -> None:
         """Produce various reports on loaded data"""
         self.logger.debug("Generate reports: START")
         for report in self.config.reports:
@@ -363,7 +392,7 @@ class Syncify(DynamicProcessor):
         self.logger.debug("Generate reports: DONE")
 
     @dynamicprocessormethod
-    def check(self) -> None:
+    def check(self, *_, **__) -> None:
         """Run check on entire library by album and update URI tags on file"""
         def finalise():
             """Finalise function operation"""
@@ -385,12 +414,12 @@ class Syncify(DynamicProcessor):
         if results:
             self.logger.print(STAT)
         self.local.library.log_sync_result(results)
-        self.logger.info(f"\33[92m    Done | Set tags for {len(results)} tracks \33[0m")
+        self.logger.info(f"\33[92mSet tags for {len(results)} tracks \33[0m")
 
         finalise()
 
     @dynamicprocessormethod
-    def search(self) -> None:
+    def search(self, *_, **__) -> None:
         """Run all methods for searching, checking, and saving URI associations for local files."""
         self.logger.debug("Search and match: START")
 
@@ -413,16 +442,16 @@ class Syncify(DynamicProcessor):
             self.logger.print(STAT)
         self.local.library.log_sync_result(results)
         log_prefix = "Would have set" if self.config.dry_run else "Set"
-        self.logger.info(f"\33[92m    Done | {log_prefix} tags for {len(results)} tracks \33[0m")
+        self.logger.info(f"\33[92m{log_prefix} tags for {len(results)} tracks \33[0m")
 
         self.logger.print()
         self.logger.debug("Search and match: DONE")
 
     ###########################################################################
-    ## Export from Syncify to sources
+    ## Miscellaneous library operations
     ###########################################################################
     @dynamicprocessormethod
-    def pull_tags(self) -> None:
+    def pull_tags(self, *_, **__) -> None:
         """Run all methods for pulling tag data from remote and updating local track tags"""
         self.logger.debug("Update tags: START")
         # if not self.local.library_loaded:
@@ -445,13 +474,13 @@ class Syncify(DynamicProcessor):
             self.logger.print(STAT)
         self.local.library.log_sync_result(results)
         log_prefix = "Would have set" if self.config.dry_run else "Set"
-        self.logger.info(f"\33[92m    Done | {log_prefix} tags for {len(results)} tracks \33[0m")
+        self.logger.info(f"\33[92m{log_prefix} tags for {len(results)} tracks \33[0m")
 
         self.logger.print()
         self.logger.debug("Update tags: DONE")
 
     @dynamicprocessormethod
-    def process_compilations(self) -> None:
+    def process_compilations(self, *_, **__) -> None:
         """Run all methods for setting and updating local track tags for compilation albums"""
         self.logger.debug("Update compilations: START")
         if not self.local.library_loaded:
@@ -472,15 +501,15 @@ class Syncify(DynamicProcessor):
             self.logger.print(STAT)
         self.local.library.log_sync_result(results)
         log_prefix = "Would have set" if self.config.dry_run else "Set"
-        self.logger.info(f"\33[92m    Done | {log_prefix} tags for {len(results)} tracks \33[0m")
+        self.logger.info(f"\33[92m{log_prefix} tags for {len(results)} tracks \33[0m")
 
         self.logger.print()
         self.logger.debug("Update compilations: Done\n")
 
     @dynamicprocessormethod
-    def sync_spotify(self) -> None:
+    def sync_remote(self, *_, **__) -> None:
         """Run all main functions for synchronising remote playlists with a local library"""
-        self.logger.debug(f"Update {self.remote.source}: START")
+        self.logger.debug(f"Sync {self.remote.source}: START")
         if not self.local.library_loaded:  # not a full load so don't mark the library as loaded
             self.reload_local("playlists")
 
@@ -498,7 +527,61 @@ class Syncify(DynamicProcessor):
         )
 
         self.remote.library.log_sync(results)
-        self.logger.debug(f"Update {self.remote.source}: DONE")
+        self.logger.debug(f"Sync {self.remote.source}: DONE")
+
+    @dynamicprocessormethod
+    def new_music(self, name: str, start: date | datetime, end: date | datetime = datetime.now(), *_, **__):
+        """Create a new music playlist for followed artists with music released between ``start`` and ``end``"""
+        self.logger.debug(f"New music playlist: START")
+
+        if isinstance(start, datetime):
+            start = start.date()
+        if isinstance(end, datetime):
+            end = end.date()
+
+        pl = self.remote.library.playlists.get(name)
+        if pl is None:
+            responses = self.remote.api.api.get_user_items(use_cache=False)
+            for response in responses:
+                pl_check = self.remote.playlist(response=response, api=self.remote.api.api, skip_checks=True)
+
+                if pl_check.name == name:
+                    self.remote.api.api.get_items(response, kind=RemoteObjectType.PLAYLIST, use_cache=False)
+                    pl_check.refresh(skip_checks=False)
+                    pl = pl_check
+                    break
+
+        if pl is None:
+            pl = self.remote.playlist.create(api=self.remote.api.api, name=name)
+
+        if not self.remote.library_loaded or not self.remote.library.artists:
+            self.remote.library.load_saved_artists()
+            self.logger.print()
+            self.remote.library.enrich_saved_artists(tracks=True, types=("album", "single"))
+
+            self.logger.print(REPORT)
+            self.remote.library.log_artists()
+            self.logger.print()
+
+        def match_date(alb: RemoteAlbum) -> bool:
+            """Match start and end dates to the release date of this given ``album``"""
+            return any({
+                alb.date and start <= alb.date <= end,
+                alb.month and start.year <= alb.year <= end.year and start.month <= alb.month <= end.month,
+                alb.year and start.year <= alb.year <= end.year,
+            })
+
+        for artist in self.remote.library.artists:
+            for album in artist.albums:
+                if match_date(album):
+                    pl.extend(album, allow_duplicates=False)
+
+        pl.tracks.sort(key=lambda x: x.date, reverse=True)
+        results = pl.sync(kind="refresh", reload=False, dry_run=False)
+
+        self.remote.library.log_sync({name: results})
+        self.logger.info(f"\33[92mAdded {results.added} new tracks to playlist: '{name}' \33[0m")
+        self.logger.debug(f"New music playlist: DONE")
 
 
 # noinspection PyProtectedMember
@@ -552,10 +635,27 @@ def get_parser() -> argparse.ArgumentParser:
         "-r", "--remote", type=str, required=True, nargs="?", dest="remote",
         help="The name of the remote library to use as can be found in the config file"
     )
-    libraries.add_argument(
+
+    functions = parser.add_argument_group("Function options")
+    functions.add_argument(
         "-bk", "--backup-key", type=str, required=False, nargs="?", dest="backup_key",
         default=None,
-        help="The key to give to backups"
+        help="When running backup operations, the key to give to backups"
+    )
+    functions.add_argument(
+        "-nmn", "--new-music-name", type=str, required=False, nargs="?", dest="new_music_name",
+        default="New Music",
+        help="When running new_music operations, the name to give to the new music playlist"
+    )
+    functions.add_argument(
+        "-nms", "--new-music-start", required=False, nargs="?", dest="new_music_start",
+        type=lambda x: datetime.strptime(x, "%Y-%m-%d"), default=datetime.now() - timedelta(weeks=4),
+        help="When running new_music operations, the earliest date to get new music for"
+    )
+    functions.add_argument(
+        "-nme", "--new-music-end", required=False, nargs="?", dest="new_music_end",
+        type=lambda x: datetime.strptime(x, "%Y-%m-%d"), default=datetime.now(),
+        help="When running new_music operations, the latest date to get new music for"
     )
 
     return parser
@@ -599,7 +699,12 @@ if __name__ == "__main__":
             assert main.remote.library is not None
 
             method = main.set_processor(func)
-            main.backup(named_args.backup_key) if method == main.backup else main()
+            main(
+                key=named_args.backup_key,
+                name=named_args.new_music_name,
+                start=named_args.new_music_start,
+                end=named_args.new_music_end,
+            )
         except (Exception, KeyboardInterrupt):
             main.logger.critical(traceback.format_exc())
             break
@@ -624,6 +729,7 @@ if __name__ == "__main__":
 ## SMALLER/GENERAL ONES
 # TODO: parallelize all the things
 # TODO: generally improve performance
+# TODO: revisit the config logic, it's a bit of a mess
 
 
 ## SELECTED FOR DEVELOPMENT
@@ -636,11 +742,6 @@ if __name__ == "__main__":
 
 ## NEEDED FOR v0.3
 # TODO: update the readme (dynamic readme?)
-# TODO: new music playlist that adds songs from artists user follows that
-#  have been released within a given timeframe
-#  - Expand out date RemoteAlbum stored data to day level using release date field
-#  - Function to get all followed artists and their tracks on RemoteLibrary
-#  - Function in main.py to filter RemoteTracks by date and add to playlist
 # TODO: test on linux/mac
 #  - concerned about local playlist saving
 #  - linux does not pick up 'include' paths when loading xautopf playlists

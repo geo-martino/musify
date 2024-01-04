@@ -10,6 +10,7 @@ from syncify.abstract.misc import PrettyPrinter
 from syncify.abstract.object import BasicCollection, Library, Playlist
 from syncify.exception import SyncifyTypeError
 from syncify.remote.library.library import RemoteLibrary
+from syncify.remote.library.object import RemoteCollectionLoader
 from tests.abstract.misc import PrettyPrinterTester, BasicFilter
 
 
@@ -120,13 +121,11 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert collection + collection == collection.items + collection.items
         assert collection - collection == []
 
-        if not isinstance(collection, RemoteLibrary):
-            collection += collection_original
-            assert len(collection) == len(collection_original) * 2 == len(collection.items)
-            assert collection != collection_original
+        collection.items.extend(collection.items)
+        assert len(collection) == len(collection_original) * 2 == len(collection.items)
+        if isinstance(collection, RemoteCollectionLoader):  # these match on URIs so always equal no matter what
+            assert collection == collection_original
         else:
-            collection.items.extend(collection.items)
-            assert len(collection) == len(collection_original) * 2
             assert collection != collection_original
 
         collection -= collection_original
@@ -216,7 +215,7 @@ class LibraryTester(ItemCollectionTester, metaclass=ABCMeta):
 
     @abstractmethod
     def library(self, *args, **kwargs) -> Library:
-        """Yields an :py:class:`Library` object to be tested as pytest.fixture"""
+        """Yields a loaded :py:class:`Library` object to be tested as pytest.fixture"""
         raise NotImplementedError
 
     @pytest.fixture

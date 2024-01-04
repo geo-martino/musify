@@ -76,6 +76,7 @@ def test_get_progress_bar(logger: SyncifyLogger):
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.DEBUG)  # forces leave to be False
     logger.addHandler(handler)
+    logger._bars.clear()
 
     bar = logger.get_progress_bar(iterable=range(0, 50), initial=10, disable=True, file=sys.stderr)
 

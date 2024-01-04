@@ -79,7 +79,10 @@ class RemoteCollection[T: RemoteObject](ItemCollection[T], RemoteDataWrangler, m
 class RemoteCollectionLoader[T: RemoteObject](RemoteObject, RemoteCollection[T], metaclass=ABCMeta):
     """Generic class for storing a collection of remote objects that can be loaded from an API response."""
 
-    check_total: bool = True
+    def __eq__(self, __collection: RemoteObject | ItemCollection | Iterable[T]):
+        if isinstance(__collection, RemoteObject):
+            return self.uri == __collection.uri
+        return super().__eq__(__collection)
 
     @property
     @abstractmethod
@@ -119,7 +122,7 @@ class RemoteCollectionLoader[T: RemoteObject](RemoteObject, RemoteCollection[T],
         """
         Checks the total tracks processed for this collection equal to the collection total, raise exception if not
         """
-        if self.check_total and self._total != len(self.items):
+        if self._total != len(self.items):
             raise RemoteError(
                 "The total items available in the response does not equal the total item count for this collection. "
                 "Make sure the given collection response contains the right number of item responses: "
@@ -302,8 +305,6 @@ class RemoteAlbum[T: RemoteTrack](Album[T], RemoteCollectionLoader[T], metaclass
 
 class RemoteArtist[T: RemoteTrack](Artist[T], RemoteCollectionLoader[T], metaclass=ABCMeta):
     """Extracts key ``artist`` data from a remote API JSON response."""
-
-    check_total = False
 
     @property
     def _total(self):

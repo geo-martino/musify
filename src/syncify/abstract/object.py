@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import datetime
 import logging
 from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, Mapping, Iterable, Container
 from copy import deepcopy
-import datetime
 from typing import Any, Self
 
 from syncify.abstract._base import Item
@@ -502,7 +502,7 @@ class Album[T: Track](ItemCollection[T], metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def tracks(self) -> list[Track]:
+    def tracks(self) -> list[T]:
         """The tracks on this album"""
         raise NotImplementedError
 
@@ -619,7 +619,7 @@ class Artist[T: Track](ItemCollection[T], metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def tracks(self) -> list[Track]:
+    def tracks(self) -> list[T]:
         """The tracks by this artist"""
         raise NotImplementedError
 
@@ -684,7 +684,7 @@ class Genre[T: Track](ItemCollection[T], metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def tracks(self):
+    def tracks(self) -> list[T]:
         """The tracks for this genre"""
         raise NotImplementedError
 

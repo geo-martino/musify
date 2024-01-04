@@ -468,7 +468,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         If JSON response/s given, this updates each response given by adding the results under the ``albums`` key.
 
         :param values: The values representing some remote artist/s. See description for allowed value types.
-        :param types: The types of albums to return.
+        :param types: The types of albums to return. Select from ``{"album", "single", "compilation", "appears_on"}``.
         :param limit: Size of batches to request.
             This value will be limited to be between ``1`` and ``50``.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
@@ -497,6 +497,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         for id_ in id_list:
             results[id_] = self.handler.get(url=url.format(id=id_), params=params, use_cache=use_cache)
             self.extend_items(results[id_], key="albums", unit="artist albums", use_cache=use_cache, leave_bar=False)
+
             for album in results[id_]["items"]:  # add skeleton items block to album responses
                 album["tracks"] = {
                     "href": self.format_next_url(url=album["href"].split("?")[0] + "/tracks", offset=0, limit=50),

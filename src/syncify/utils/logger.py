@@ -39,6 +39,7 @@ class SyncifyLogger(logging.Logger):
     """The logger for all logging operations in Syncify."""
 
     compact: bool = False
+    _bars: list[tqdm] = []
 
     @property
     def file_paths(self) -> list[str]:
@@ -60,8 +61,6 @@ class SyncifyLogger(logging.Logger):
 
     def __init__(self, name: str, level: int | str = logging.NOTSET):
         super().__init__(name=name, level=level)
-
-        self._bars: list[tqdm] = []
 
     def info_extra(self, msg, *args, **kwargs) -> None:
         """Log 'msg % args' with severity 'INFO_EXTRA'."""
@@ -98,12 +97,17 @@ class SyncifyLogger(logging.Logger):
         except OSError:
             cols = 120
 
-        # determine to level of bar to generate
-        for bar in self._bars.copy():
-            if bar.n >= bar.total:
+        # clear closed bars
+        # TODO: why does this need to run twice to actually clear all disabled bars
+        for bar in self._bars:
+            if bar.n >= bar.total or bar.disable:
                 self._bars.remove(bar)
-        position = kwargs.get("position", abs(min(bar.pos for bar in self._bars)) + 1 if self._bars else 0)
+        for bar in self._bars:
+            if bar.n >= bar.total or bar.disable:
+                self._bars.remove(bar)
 
+        # determine the level of bar to generate and whether to leave the bar based on current active count
+        position = kwargs.get("position", abs(min(bar.pos for bar in self._bars)) + 1 if self._bars else 0)
         leave_default = all(h.level > logging.DEBUG for h in self.stdout_handlers) and position == 0
         leave = kwargs["leave"] if kwargs.get("leave") is not None else leave_default
 

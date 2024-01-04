@@ -1,4 +1,5 @@
 from copy import copy
+from functools import partial
 from os.path import join
 from random import choice, randrange
 
@@ -22,11 +23,10 @@ def spotify_library(spotify_api: SpotifyAPI, spotify_mock: SpotifyMock) -> Spoti
     """Yields a :py:class:`SpotifyLibrary` of remote tracks and playlists"""
     library = SpotifyLibrary(api=spotify_api)
 
-    SpotifyPlaylist.check_total = False
-    library._playlists = {pl.name: pl for pl in map(SpotifyPlaylist, spotify_mock.playlists[:20]) if len(pl) > 30}
+    loader = partial(SpotifyPlaylist, api=spotify_api, skip_checks=True)
+    library._playlists = {pl.name: pl for pl in map(loader, spotify_mock.playlists[:20]) if len(pl) > 30}
     for pl in library.playlists.values():  # ensure only unique tracks in each playlist
         pl._tracks = set(pl.tracks)
-    SpotifyPlaylist.check_total = True
 
     library._tracks = [track for pl in library.playlists.values() for track in pl]
     return library

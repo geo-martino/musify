@@ -15,7 +15,7 @@ class RemoteObject(NamedObjectPrinter, Remote, metaclass=ABCMeta):
     :param api: The instantiated and authorised API object for this source type.
     """
 
-    __slots__ = ("response", "api")
+    __slots__ = ("_response", "api")
 
     _url_pad = 71
 
@@ -49,11 +49,25 @@ class RemoteObject(NamedObjectPrinter, Remote, metaclass=ABCMeta):
         """The external URL of this item/collection."""
         raise NotImplementedError
 
-    def __init__(self, response: dict[str, Any], api: RemoteAPI | None = None):
+    @property
+    def response(self) -> dict[str, Any]:
+        """The API response for this object"""
+        return self._response
+
+    def __init__(self, response: dict[str, Any], api: RemoteAPI | None = None, skip_checks: bool = False):
         super().__init__()
-        self.response = response
+        self._response = response
         self.api = api
         self._check_type()
+        self.refresh(skip_checks=skip_checks)
+
+    @abstractmethod
+    def refresh(self, skip_checks: bool = False) -> None:
+        """
+        Refresh this object by updating from the stored API response.
+        Useful for updating stored variables after making changes to the stored API response manually.
+        """
+        raise NotImplementedError
 
     @abstractmethod
     def _check_type(self) -> None:

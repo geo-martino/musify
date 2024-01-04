@@ -277,6 +277,16 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
+    def get_tracks(
+            self, values: APIMethodInputType, limit: int = 50, use_cache: bool = True, *args, **kwargs,
+    ) -> list[dict[str, Any]]:
+        """
+        Wrapper for :py:meth:`get_items` which only returns Track type responses.
+        See :py:meth:`get_items` for more info.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def get_user_items(
             self,
             user: str | None = None,
@@ -295,16 +305,6 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
         :return: API JSON responses for each collection.
         :raise RemoteIDTypeError: Raised when the input ``user`` does not represent a user URL/URI/ID.
         :raise RemoteObjectTypeError: When the given ``kind`` is not a valid user item/collection.
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_tracks(
-            self, values: APIMethodInputType, limit: int = 50, use_cache: bool = True, *args, **kwargs,
-    ) -> list[dict[str, Any]]:
-        """
-        Wrapper for :py:meth:`get_items` which only returns Track type responses.
-        See :py:meth:`get_items` for more info.
         """
         raise NotImplementedError
 

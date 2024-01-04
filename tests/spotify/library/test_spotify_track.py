@@ -1,4 +1,6 @@
 from copy import deepcopy
+from datetime import date
+from random import randrange
 from typing import Any
 
 import pytest
@@ -7,11 +9,12 @@ from syncify.api.exception import APIError
 from syncify.remote.exception import RemoteObjectTypeError
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.library.object import SpotifyTrack
-from tests.abstract.item import ItemTester
+from tests.abstract.base import ItemTester
 from tests.spotify.api.mock import SpotifyMock
 from tests.spotify.library.utils import assert_id_attributes
 
 
+# TODO: add refresh test
 class TestSpotifyTrack(ItemTester):
 
     @pytest.fixture
@@ -101,10 +104,27 @@ class TestSpotifyTrack(ItemTester):
         track.response["album"]["genres"] = new_genres_album
         assert track.genres == [g.title() for g in new_genres_album]
 
-        assert track.year == int(original_response["album"]["release_date"][:4])
+        date_split = [int(v) for v in original_response["album"]["release_date"].split("-")]
+        assert track.year == date_split[0]
+        if original_response["album"]["release_date_precision"] in {"month", "day"}:
+            assert track.month == date_split[1]
+        else:
+            assert track.month is None
+        if original_response["album"]["release_date_precision"] in {"day"}:
+            assert track.day == date_split[2]
+            assert track.date == date(*date_split)
+        else:
+            assert track.day is None
+            assert track.date is None
         new_year = track.year + 20
-        track.response["album"]["release_date"] = f"{new_year}-12-01"
+        new_month = randrange(1, 12)
+        new_day = randrange(1, 28)
+        track.response["album"]["release_date"] = f"{new_year}-{new_month}-{new_day}"
+        track.response["album"]["release_date_precision"] = "day"
+        assert track.date == date(new_year, new_month, new_day)
         assert track.year == new_year
+        assert track.month == new_month
+        assert track.day == new_day
 
         assert "audio_features" not in track.response
         assert not track.bpm

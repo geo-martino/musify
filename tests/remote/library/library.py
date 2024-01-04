@@ -9,7 +9,7 @@ from syncify.remote.library.library import RemoteLibrary
 from syncify.remote.library.object import RemoteTrack
 from tests.abstract.collection import LibraryTester
 from tests.local.utils import random_tracks
-from tests.remote.library.collection import RemoteCollectionTester
+from tests.remote.library.object import RemoteCollectionTester
 from tests.remote.utils import RemoteMock
 
 
@@ -23,17 +23,99 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         """
         raise NotImplementedError
 
+    @staticmethod
+    def test_load_playlists(library_unloaded: RemoteLibrary):
+        library_unloaded.load_playlists()
+
+        # only loaded playlists matching the filter
+        assert len(library_unloaded.playlists) == len(list(library_unloaded.include))
+
+        # all playlist tracks were added to the stored library tracks
+        unique_tracks_count = len(set(track for pl in library_unloaded.playlists.values() for track in pl))
+        assert len(library_unloaded.tracks) == unique_tracks_count
+
+        # does not add duplicates to the loaded lists
+        library_unloaded.load_playlists()
+        assert len(library_unloaded.playlists) == len(list(library_unloaded.include))
+        assert len(library_unloaded.tracks) == unique_tracks_count
+
     @abstractmethod
-    def test_load(self, *args, **kwargs):
+    def test_load_tracks(self, *_, **__):
+        raise NotImplementedError
+
+    @abstractmethod
+    def test_load_saved_albums(self, *_, **__):
+        raise NotImplementedError
+
+    @abstractmethod
+    def test_load_saved_artists(self, *_, **__):
         raise NotImplementedError
 
     @staticmethod
-    def test_enrich_tracks(library: RemoteLibrary):
+    def test_load(library_unloaded: RemoteLibrary):
+        assert not library_unloaded.playlists
+        assert not library_unloaded.tracks
+        assert not library_unloaded.albums
+        assert not library_unloaded.artists
+
+        library_unloaded.load()
+        assert library_unloaded.playlists
+        assert library_unloaded.tracks
+        assert library_unloaded.albums
+        assert library_unloaded.artists
+
+    def test_enrich_tracks(self, library: RemoteLibrary, *_, **__):
         """
         This function and related test can be implemented by child classes.
         Just check it doesn't fail for the base test class.
         """
         assert library.enrich_tracks() is None
+
+    def test_enrich_saved_artists(self, library: RemoteLibrary, *_, **__):
+        """
+        This function and related test can be implemented by child classes.
+        Just check it doesn't fail for the base test class.
+        """
+        assert library.enrich_saved_artists() is None
+
+    def test_enrich_saved_albums(self, library: RemoteLibrary, *_, **__):
+        """
+        This function and related test can be implemented by child classes.
+        Just check it doesn't fail for the base test class.
+        """
+        assert library.enrich_saved_albums() is None
+
+    @staticmethod
+    def test_extend(library: RemoteLibrary, collection_merge_items: list[RemoteTrack], api_mock: RemoteMock):
+        api_mock.reset_mock()  # test checks the number of requests made
+
+        # extend on already existing tracks with duplicates not allowed
+        library_tracks_start = copy(library.tracks)
+        tracks_existing = library.tracks[:10]
+        assert len(tracks_existing) > 0
+
+        library.extend(tracks_existing, allow_duplicates=False)
+        assert len(library) == len(library_tracks_start)  # no change
+        assert len(api_mock.request_history) == 0  # no requests made
+
+        library.extend(collection_merge_items + tracks_existing, allow_duplicates=False)
+        assert len(library) == len(library_tracks_start) + len(collection_merge_items)
+        assert len(api_mock.request_history) == 0  # no requests made
+
+        library.extend(tracks_existing, allow_duplicates=True)
+        assert len(library) == len(library_tracks_start) + len(collection_merge_items) + len(tracks_existing)
+        assert len(api_mock.request_history) == 0  # no requests made
+
+        library._tracks = copy(library_tracks_start)
+        local_tracks = random_tracks(len(collection_merge_items))
+        for remote, local in zip(collection_merge_items, local_tracks):
+            local.uri = remote.uri
+            assert remote not in library
+            assert local not in library
+
+        library.extend(local_tracks)
+        assert len(library) == len(library_tracks_start) + len(local_tracks)
+        assert len(api_mock.request_history) > 0  # new requests were made
 
     @staticmethod
     def test_backup(library: RemoteLibrary):
@@ -176,35 +258,3 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         # Collection[Playlist]
         playlists_coll = [playlists_library.playlists[name_actual], playlists_library.playlists[name_new]]
         self.assert_sync(library=library, playlists=playlists_coll, api_mock=api_mock)
-
-    @staticmethod
-    def test_extend(library: RemoteLibrary, collection_merge_items: list[RemoteTrack], api_mock: RemoteMock):
-        api_mock.reset_mock()  # test checks the number of requests made
-
-        # extend on already existing tracks with duplicates not allowed
-        library_tracks_start = copy(library.tracks)
-        tracks_existing = library.tracks[:10]
-        assert len(tracks_existing) > 0
-
-        library.extend(tracks_existing, allow_duplicates=False)
-        assert len(library) == len(library_tracks_start)  # no change
-        assert len(api_mock.request_history) == 0  # no requests made
-
-        library.extend(collection_merge_items + tracks_existing, allow_duplicates=False)
-        assert len(library) == len(library_tracks_start) + len(collection_merge_items)
-        assert len(api_mock.request_history) == 0  # no requests made
-
-        library.extend(tracks_existing, allow_duplicates=True)
-        assert len(library) == len(library_tracks_start) + len(collection_merge_items) + len(tracks_existing)
-        assert len(api_mock.request_history) == 0  # no requests made
-
-        library._tracks = copy(library_tracks_start)
-        local_tracks = random_tracks(len(collection_merge_items))
-        for remote, local in zip(collection_merge_items, local_tracks):
-            local.uri = remote.uri
-            assert remote not in library
-            assert local not in library
-
-        library.extend(local_tracks)
-        assert len(library) == len(library_tracks_start) + len(local_tracks)
-        assert len(api_mock.request_history) > 0  # new requests were made

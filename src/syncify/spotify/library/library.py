@@ -8,7 +8,7 @@ from syncify.remote.enums import RemoteObjectType
 from syncify.remote.library.library import RemoteLibrary
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.config import SPOTIFY_OBJECT_CLASSES
-from syncify.spotify.library.object import SpotifyTrack, SpotifyCollection, SpotifyPlaylist
+from syncify.spotify.library.object import SpotifyTrack, SpotifyCollection, SpotifyPlaylist, SpotifyAlbum, SpotifyArtist
 
 
 class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack]):
@@ -34,77 +34,71 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
 
     # noinspection PyTypeChecker
     @property
+    def albums(self) -> list[SpotifyAlbum]:
+        return self._albums
+
+    # noinspection PyTypeChecker
+    @property
+    def artists(self) -> list[SpotifyArtist]:
+        return self._artists
+
+    # noinspection PyTypeChecker
+    @property
     def api(self) -> SpotifyAPI:
         return self._api
 
-    def _get_playlists_data(self) -> list[dict[str, Any]]:
-        self.logger.debug(f"Get {self.source} playlists data: START")
-
-        playlists_data = self.api.get_user_items(kind=RemoteObjectType.PLAYLIST, use_cache=self.use_cache)
-        playlists_total = len(playlists_data)
-        names = {pl["name"] for pl in playlists_data}
+    def _filter_playlists(self, responses: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        total_pl = len(responses)
+        names = {pl["name"] for pl in responses}
 
         if self.include:  # filter on include playlist names
             if isinstance(self.include, Filter):
                 include = {name.casefold() for name in self.include.process(names)}
             else:
                 include = {name.casefold() for name in self.include}
-            playlists_data = [pl for pl in playlists_data if pl["name"].casefold() in include]
+            responses = [pl for pl in responses if pl["name"].casefold() in include]
         if self.exclude:  # filter out exclude playlist names
             if isinstance(self.exclude, Filter):
                 exclude = {name.casefold() for name in names.difference(self.exclude.process(names))}
             else:
                 exclude = {name.casefold() for name in self.exclude}
-            playlists_data = [pl for pl in playlists_data if pl["name"].casefold() not in exclude]
+            responses = [pl for pl in responses if pl["name"].casefold() not in exclude]
 
         self.logger.debug(
-            f"Filtered out {playlists_total - len(playlists_data)} playlists "
-            f"from {playlists_total} {self.source} playlists"
+            f"Filtered out {total_pl - len(responses)} playlists "
+            f"from {total_pl} {self.source} playlists"
         )
 
-        total_tracks = sum(pl["tracks"]["total"] for pl in playlists_data)
-        total_pl = len(playlists_data)
-        self.logger.info(
-            f"\33[1;95m  >\33[1;97m Getting {total_tracks} {self.source} tracks from {total_pl} playlists \33[0m"
-        )
+        return responses
 
-        # make API calls
-        self.api.get_items(playlists_data, kind=RemoteObjectType.PLAYLIST, use_cache=self.use_cache)
+    def _get_total_tracks(self, responses: list[dict[str, Any]]) -> int:
+        return sum(pl["tracks"]["total"] for pl in responses)
 
-        self.logger.debug(f"Get {self.source} playlists data: DONE\n")
-        return playlists_data
+    def enrich_tracks(
+            self, features: bool = False, analysis: bool = False, albums: bool = False, artists: bool = False
+    ) -> None:
+        """
+        Enriches the ``features``, ``analysis``, ``albums``, and/or ``artists`` data for currently loaded tracks.
 
-    def _get_tracks_data(self, playlists_data: Collection[Mapping[str, Any]]) -> list[dict[str, Any]]:
-        self.logger.debug(f"Load {self.source} tracks data: START")
-        playlists_tracks_data = [pl["tracks"]["items"] for pl in playlists_data]
-
-        tracks_data: dict[str, [dict[str, Any]]] = {}
-        for track in [item["track"] for pl in playlists_tracks_data for item in pl]:
-            if not track["is_local"] and track["uri"] not in tracks_data:
-                tracks_data[track["uri"]] = track
-
-        self.logger.info(
-            f"\33[1;95m  >\33[1;97m Getting {self.source} data for {len(tracks_data)} unique tracks "
-            f"across {len(playlists_data)} playlists \33[0m"
-        )
-        self.api.get_tracks_extra(tracks_data.values(), features=True, use_cache=self.use_cache)
-
-        self.logger.debug(f"Load {self.source} tracks data: DONE\n")
-        return list(tracks_data.values())
-
-    def enrich_tracks(self, albums: bool = False, artists: bool = False) -> None:
-        if not albums and not artists:
+        :param features: Load all audio features (e.g. BPM, tempo, key etc.)
+        :param analysis: Load all audio analyses (technical audio data).
+            WARNING: can be very slow as calls to this endpoint cannot be batched i.e. one call per track.
+        :param albums: Reload albums for all tracks, adding extra album data e.g. genres, popularity
+        :param artists: Reload artists for all tracks, adding extra artist data e.g. genres, popularity, followers
+        """
+        if not self.tracks or not any((features, analysis, albums, artists)):
             return
-        self.logger.debug(f"Enrich {self.source} library: START")
+        self.logger.debug(f"Enrich {self.source} tracks: START")
+        self.logger.info(f"\33[1;95m  >\33[1;97m Enriching {len(self.tracks)} {self.source} tracks \33[0m")
 
-        self.logger.info(
-            f"\33[1;95m  >\33[1;97m Enriching metadata for {len(self.tracks)} {self.source} tracks \33[0m"
-        )
+        responses = [track.response for track in self.tracks]
+        self.api.get_tracks_extra(responses, features=features, analysis=analysis, use_cache=self.use_cache)
 
-        if albums:  # enrich track albums
+        # enrich on list of URIs to avoid duplicate calls for same items
+        if albums:
             album_uris: set[str] = {track.response["album"]["uri"] for track in self.tracks}
             album_responses = self.api.get_items(
-                album_uris, kind=RemoteObjectType.ALBUM, limit=20, extend=False, use_cache=self.use_cache
+                album_uris, kind=RemoteObjectType.ALBUM, extend=False, use_cache=self.use_cache
             )
             for album in album_responses:
                 album.pop("tracks")
@@ -113,18 +107,66 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
             for track in self.tracks:
                 track.response["album"] = albums[track.response["album"]["uri"]]
 
-        if artists:  # enrich track artists
+        if artists:
             artist_uris: set[str] = {artist["uri"] for track in self.tracks for artist in track.response["artists"]}
             artist_responses = self.api.get_items(
-                artist_uris, kind=RemoteObjectType.ARTIST, limit=20, extend=False, use_cache=self.use_cache
+                artist_uris, kind=RemoteObjectType.ARTIST, extend=False, use_cache=self.use_cache
             )
 
             artists = {response["uri"]: response for response in artist_responses}
             for track in self.tracks:
                 track.response["artists"] = [artists[artist["uri"]] for artist in track.response["artists"]]
 
-        self.logger.print()
-        self.logger.debug(f"Enrich {self.source} library: DONE\n")
+        for track in self.tracks:
+            track.refresh(skip_checks=False)  # tracks are popped from albums so checks will skip by default
+
+        self.logger.debug(f"Enrich {self.source} tracks: DONE\n")
+
+    def enrich_saved_albums(self) -> None:
+        """Extends the tracks data for currently loaded albums, getting all available tracks data for each album"""
+        if not self.albums or all(len(album) == album.track_total for album in self.albums):
+            return
+        self.logger.debug(f"Enrich {self.source} artists: START")
+        self.logger.info(f"\33[1;95m  >\33[1;97m Enriching {len(self.albums)} {self.source} albums \33[0m")
+
+        responses = [album.response for album in self.albums]
+        for response in responses:
+            self.api.extend_items(response, unit="album", key="tracks", use_cache=self.use_cache)
+
+        for album in self.albums:
+            album.refresh(skip_checks=False)  # tracks are extended so checks should pass
+
+            for track in album.tracks:  # add tracks from this album to the user's saved tracks
+                if track not in self.tracks:
+                    self._tracks.append(track)
+
+        self.logger.debug(f"Enrich {self.source} artists: DONE\n")
+
+    def enrich_saved_artists(self, tracks: bool = False, types: Collection[str] = ()) -> None:
+        """
+        Gets all albums for current loaded following artists.
+
+        :param tracks: When True, also get all tracks for each album.
+        :param types: Provide a list of albums types to get to limit the types of albums loaded.
+        Select from ``{"album", "single", "compilation", "appears_on"}``.
+        """
+        if not self.artists:
+            return
+        self.logger.debug(f"Enrich {self.source} artists: START")
+        self.logger.info(f"\33[1;95m  >\33[1;97m Enriching {len(self.artists)} {self.source} artists \33[0m")
+
+        responses = [artist.response for artist in self.artists]
+        self.api.get_artist_albums(responses, types=types, use_cache=self.use_cache)
+        if tracks:
+            bar = self.logger.get_progress_bar(iterable=self.artists, desc="Extending artist albums", unit="artists")
+            for artist in bar:
+                for album in artist.response["albums"]["items"]:
+                    self.api.extend_items(album, unit="album", key="tracks", use_cache=self.use_cache)
+
+        for artist in self.artists:
+            artist.refresh(skip_checks=not tracks)  # if tracks are extended for each album, checks should pass
+
+        self.logger.debug(f"Enrich {self.source} artists: DONE\n")
 
     def merge_playlists(self, playlists: Library | Collection[Playlist] | Mapping[Any, Playlist]) -> None:
         raise NotImplementedError

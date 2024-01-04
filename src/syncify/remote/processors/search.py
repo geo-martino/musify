@@ -257,9 +257,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
         results = self._get_results(collection, kind=RemoteObjectType.ALBUM, settings=self.settings_albums)
 
         # convert to RemoteAlbum objects and extend items on each response
-        self._object_cls.album.check_total = False
-        albums = list(map(partial(self._object_cls.album, api=self.api), results))
-        self._object_cls.album.check_total = True
+        albums = list(map(partial(self._object_cls.album, api=self.api, skip_checks=True), results))
         key = self.api.collection_item_map[RemoteObjectType.ALBUM].name.casefold() + "s"
         for album in albums:
             self.api.extend_items(album.response, unit="albums", key=key, use_cache=self.use_cache)

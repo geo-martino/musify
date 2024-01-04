@@ -242,7 +242,7 @@ class RemoteItemCheckerTester(ABC):
     ):
         # anything after 'ua' will be ignored
         values = ["u", "p", "h", "n", "", "zzzz", "n", "h", "u", "p", "ua", random_str(10, 20), "s", "q"]
-        expected = values[-3:]
+        expected = values[-3:]  # stops after 'ua'
         self.setup_input(values, mocker=mocker)
         checker._match_to_input(name="test")
         capfd.close()

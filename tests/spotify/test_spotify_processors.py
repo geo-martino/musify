@@ -277,14 +277,13 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
             api_mock: SpotifyMock,
             wrangler: SpotifyDataWrangler
     ) -> list[LocalAlbum]:
-        SpotifyAlbum.check_total = False
 
         limit = searcher.settings_items.result_count
         responses = [album for album in api_mock.albums if 2 < album["tracks"]["total"] <= api_mock.limit_lower][:limit]
         assert len(responses) > 4
 
         albums = []
-        for album in map(partial(SpotifyAlbum, api=api), responses):
+        for album in map(partial(SpotifyAlbum, api=api, skip_checks=True), responses):
             tracks = []
             for remote_track in album:
                 local_track = random_track()
@@ -302,7 +301,6 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
 
             albums.append(LocalAlbum(tracks=tracks, name=album.name))
 
-        SpotifyAlbum.check_total = True
         return albums
 
 

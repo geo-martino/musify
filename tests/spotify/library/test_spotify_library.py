@@ -4,6 +4,7 @@ from urllib.parse import parse_qs
 
 import pytest
 
+from syncify.remote.enums import RemoteObjectType
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.library.library import SpotifyLibrary
 from syncify.spotify.library.object import SpotifyTrack
@@ -21,68 +22,74 @@ class TestSpotifyLibrary(RemoteLibraryTester):
         assert len(tracks) > 4
         return tracks
 
+    @pytest.fixture
+    def library_unloaded(self, api: SpotifyAPI, api_mock: SpotifyMock) -> SpotifyLibrary:
+        """Yields an unloaded Library object to be tested as pytest.fixture"""
+        include = [pl["name"] for pl in sample(api_mock.user_playlists, k=10)]
+        return SpotifyLibrary(api=api, include=include, use_cache=False)
+
     @pytest.fixture(scope="class")
     def _library(self, api: SpotifyAPI, api_mock: SpotifyMock) -> SpotifyLibrary:
         include = [pl["name"] for pl in sample(api_mock.user_playlists, k=10)]
-
         library = SpotifyLibrary(api=api, include=include, use_cache=False)
         library.load()
-
         return library
 
     @pytest.fixture
     def library(self, _library: SpotifyLibrary) -> SpotifyLibrary:
         return deepcopy(_library)
 
-    def test_load_playlists_responses(self, api: SpotifyAPI, api_mock: SpotifyMock):
-        # load all when no include or exclude settings defined
+    def test_filter_playlists(self, api: SpotifyAPI, api_mock: SpotifyMock):
+        # keep all when no include or exclude settings defined
         library = SpotifyLibrary(api=api, use_cache=False)
 
-        pl_responses = library._get_playlists_data()
-        assert len(pl_responses) == len(api_mock.user_playlists)
-        for pl_response in pl_responses:
-            assert len(pl_response["tracks"]["items"]) == pl_response["tracks"]["total"]
+        responses = api.get_user_items(kind=RemoteObjectType.PLAYLIST)
+        filtered = library._filter_playlists(responses)
+        assert len(filtered) == len(api_mock.user_playlists) == len(responses)
 
         # filter on include and exclude
-        include = [pl["name"] for pl in api_mock.user_playlists[:20]]
-        exclude = [pl["name"] for pl in api_mock.user_playlists[:10]]
-        library = SpotifyLibrary(api=api, include=include, exclude=exclude, use_cache=False)
-
-        pl_responses = library._get_playlists_data()
+        library.include = [pl["name"] for pl in api_mock.user_playlists[:20]]
+        library.exclude = [pl["name"] for pl in api_mock.user_playlists[:10]]
+        pl_responses = library._filter_playlists(responses)
         assert len(pl_responses) == 10
-        for pl_response in pl_responses:
-            assert len(pl_response["tracks"]["items"]) == pl_response["tracks"]["total"]
 
-    def test_load_track_responses(self, api: SpotifyAPI, api_mock: SpotifyMock):
-        # make sure only to include playlists that do not include all available tracks
-        include = [pl["name"] for pl in api_mock.user_playlists[:20]]
+    ###########################################################################
+    ## Load tests
+    ###########################################################################
+    def test_load_tracks(self, library_unloaded: SpotifyLibrary, api_mock: SpotifyMock):
+        library_unloaded.load_saved_tracks()
+        assert len(library_unloaded.tracks) == len(api_mock.user_tracks)
 
-        library = SpotifyLibrary(api=api, include=include, use_cache=False)
-        pl_responses = library._get_playlists_data()
-        for pl_response in pl_responses:
-            assert len(pl_response["tracks"]["items"]) < len(api_mock.user_tracks)
+        # does not add duplicates to the loaded list
+        library_unloaded.load_saved_tracks()
+        assert len(library_unloaded.tracks) == len(api_mock.user_tracks)
 
-        # only load tracks in playlists
-        in_playlists = [track["track"]["uri"] for pl in pl_responses for track in pl["tracks"]["items"]]
-        expected = len([t for t in api_mock.user_tracks if t["track"]["uri"] in in_playlists])
-        assert expected > 0  # for the test to be valid
+    def test_load_saved_albums(self, library_unloaded: SpotifyLibrary, api_mock: SpotifyMock):
+        library_unloaded.load_saved_albums()
+        assert len(library_unloaded.albums) == len(api_mock.user_albums)
 
-        assert len(library._get_tracks_data(pl_responses)) == expected
+        # does not add duplicates to the loaded list
+        library_unloaded.load_saved_albums()
+        assert len(library_unloaded.albums) == len(api_mock.user_albums)
 
-    def test_load(self, api: SpotifyAPI):
-        library = SpotifyLibrary(api=api, use_cache=False)
-        pl_data = library._get_playlists_data()
-        track_data = library._get_tracks_data(pl_data)
+    def test_load_saved_artists(self, library_unloaded: SpotifyLibrary, api_mock: SpotifyMock):
+        library_unloaded.load_saved_artists()
+        assert len(library_unloaded.artists) == len(api_mock.user_artists)
 
-        library.load()
+        # does not add duplicates to the loaded list
+        library_unloaded.load_saved_artists()
+        assert len(library_unloaded.artists) == len(api_mock.user_artists)
 
-        assert len(library.tracks) == len(track_data)
-        assert len(library.playlists) == len(pl_data)
-        for pl in library.playlists.values():
-            assert len(pl.tracks) == pl.track_total
-
+    ###########################################################################
+    ## Enrich tests
+    ###########################################################################
     # noinspection PyMethodOverriding
-    def test_enrich_tracks(self, library, api_mock: SpotifyMock):
+    def test_enrich_tracks(self, library: SpotifyLibrary, api_mock: SpotifyMock, **kwargs):
+        def validate_track_extras_not_enriched(t: SpotifyTrack) -> None:
+            """Check track does not contain audio features or analysis fields"""
+            assert "audio_features" not in t.response
+            assert "audio_analysis" not in t.response
+
         def validate_album_not_enriched(t: SpotifyTrack) -> None:
             """Check album does not contain expected enriched fields"""
             assert "external_ids" not in t.response["album"]
@@ -104,6 +111,7 @@ class TestSpotifyLibrary(RemoteLibraryTester):
         track_album_map = {track.uri: track.album for track in library.tracks}
         track_artists_map = {track.uri: [a.name for a in track.artists] for track in library.tracks}
         for track in library.tracks:
+            validate_track_extras_not_enriched(track)
             validate_album_not_enriched(track)
             validate_artists_not_enriched(track)
 
@@ -116,6 +124,7 @@ class TestSpotifyLibrary(RemoteLibraryTester):
             assert "popularity" in track.response["album"]
             assert "tracks" not in track.response["album"]
 
+            validate_track_extras_not_enriched(track)
             validate_artists_not_enriched(track)
 
             assert len(api_mock.get_requests(url=track.response["album"]["href"] + "/tracks")) == 0
@@ -145,11 +154,66 @@ class TestSpotifyLibrary(RemoteLibraryTester):
                 assert "images" in artist
                 assert "popularity" in artist
 
+            validate_track_extras_not_enriched(track)
+
         # check requests
         assert len(api_mock.get_requests(url=library.api.api_url_base + "/albums")) == 0
         req_artists = api_mock.get_requests(url=library.api.api_url_base + "/artists")
         req_artist_ids = {id_ for req in req_artists for id_ in parse_qs(req.query)["ids"][0].split(",")}
         assert req_artist_ids == artist_ids
+
+        # just check these fields were now added
+        library.enrich_tracks(features=True, analysis=True)
+        for track in library.tracks:
+            assert "audio_features" in track.response
+            assert "audio_analysis" in track.response
+
+    def test_enrich_saved_albums(self, library: SpotifyLibrary, **kwargs):
+        # ensure at least some albums are not enriched already
+        assert any(len(album.response["tracks"]["items"]) != album.track_total for album in library.albums)
+        assert any(len(album.tracks) != album.track_total for album in library.albums)
+
+        library.enrich_saved_albums()
+        for album in library.albums:
+            assert len(album.response["tracks"]["items"]) == album.track_total
+            assert len(album.tracks) == album.track_total
+
+    # noinspection PyMethodOverriding
+    def test_enrich_saved_artists(self, library: SpotifyLibrary, api_mock: SpotifyMock, **kwargs):
+        # ensure artists are not enriched already
+        for artist in library.artists:
+            assert "albums" not in artist.response
+            assert len(artist.albums) == 0
+
+        api_mock.reset_mock()
+
+        # gets albums but does not extend them
+        library.enrich_saved_artists(tracks=False)
+        assert any(len(artist.response["albums"]["items"]) > 0 for artist in library.artists)
+        for artist in library.artists:
+            assert "albums" in artist.response
+            assert len(artist.response["albums"]["items"]) == len(artist.albums)
+
+            for response in artist.response["albums"]["items"]:
+                assert len(response["tracks"].get("items", [])) == 0
+            for album in artist.albums:
+                assert len(album.tracks) == len(album.response["tracks"].get("items", [])) == 0
+
+        # only album URLs were called
+        req_urls = [req.url.split("?")[0] for req in api_mock.request_history]
+        assert req_urls == [artist.url + "/albums" for artist in library.artists]
+
+        api_mock.reset_mock()
+
+        library.enrich_saved_artists(tracks=True)
+        for artist in library.artists:
+            for response in artist.response["albums"]["items"]:
+                assert len(response["tracks"].get("items", [])) == response["total_tracks"] > 0
+            for album in artist.albums:
+                assert len(album.tracks) == len(album.response["tracks"].get("items", [])) == album.track_total > 0
+
+        req_urls = set(req.url.split("?")[0] for req in api_mock.request_history)
+        assert all(album.url + "/tracks" in req_urls for artist in library.artists for album in artist.albums)
 
     def test_merge_playlists(self, library: SpotifyLibrary):
         pass

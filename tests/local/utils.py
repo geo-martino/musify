@@ -1,5 +1,5 @@
 import string
-from datetime import datetime, date
+from datetime import datetime
 from os.path import join
 from random import choice, randrange, randint
 
@@ -55,7 +55,7 @@ def random_track[T: LocalTrack](cls: type[T] | None = None) -> T:
     track.track_number = randrange(1, 20)
     track.track_total = randint(track.track_number, 20)
     track.genres = [random_str(20, 50) for _ in range(randrange(7))]
-    track.date = random_dt(start=date(1900, 1, 1))
+    track.date = random_dt()
     track.bpm = randint(6000, 15000) / 100
     track.key = choice(string.ascii_uppercase[:7])
     track.disc_number = randrange(1, 8)

@@ -43,8 +43,8 @@ class SpotifyObject(SpotifyObjectMixin, PrettyPrinter, metaclass=ABCMeta):
         """The external URL of this item/collection."""
         return self.response["external_urls"].get("spotify")
 
-    def __init__(self, response: dict[str, Any], api: SpotifyAPI | None = None):
-        super().__init__(response=response, api=api)
+    def __init__(self, response: dict[str, Any], api: SpotifyAPI | None = None, skip_checks: bool = False):
+        super().__init__(response=response, api=api, skip_checks=skip_checks)
         # noinspection PyTypeChecker
         self.api: SpotifyAPI = self.api
 

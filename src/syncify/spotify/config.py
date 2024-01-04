@@ -1,8 +1,9 @@
 from syncify.remote.config import RemoteObjectClasses
-from syncify.spotify.library.object import SpotifyTrack, SpotifyAlbum, SpotifyPlaylist
+from syncify.spotify.library.object import SpotifyPlaylist, SpotifyTrack, SpotifyAlbum, SpotifyArtist
 
 SPOTIFY_OBJECT_CLASSES = RemoteObjectClasses(
+    playlist=SpotifyPlaylist,
     track=SpotifyTrack,
     album=SpotifyAlbum,
-    playlist=SpotifyPlaylist,
+    artist=SpotifyArtist,
 )

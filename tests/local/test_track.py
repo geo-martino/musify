@@ -5,13 +5,14 @@ from os.path import basename, dirname, splitext, getmtime
 import pytest
 
 from syncify.abstract import Item
+from syncify.abstract.object import Track
 from syncify.exception import SyncifyKeyError
 from syncify.fields import LocalTrackField
 from syncify.local import open_image
 from syncify.local.exception import InvalidFileType, FileDoesNotExistError
 from syncify.local.track import LocalTrack, load_track, FLAC, M4A, MP3, WMA
 from syncify.remote.enums import RemoteObjectType
-from tests.abstract.item import ItemTester
+from tests.abstract.base import ItemTester
 from tests.local.utils import path_track_all, path_track_img, path_track_resources
 from tests.spotify.utils import random_uri
 from tests.utils import path_txt
@@ -239,7 +240,12 @@ class TestLocalTrack(ItemTester):
 
         assert track.__class__(file=track.path.upper(), available=paths).path == track.path
 
-    def assert_track_tags_equal(self, actual: LocalTrack, expected: LocalTrack, check_tag_exists: bool = False):
+    @staticmethod
+    def assert_track_tags_equal(actual: LocalTrack, expected: LocalTrack, check_tag_exists: bool = False):
+        """
+        Assert the tags of the givens tracks equal.
+        ``check_tag_exists`` checks that a mapping for that tag exists before comparing, skipping any that don't
+        """
         if not check_tag_exists or actual.tag_map.title:
             assert actual.title == expected.title
         if not check_tag_exists or actual.tag_map.artist:
@@ -472,7 +478,7 @@ class TestLocalTrack(ItemTester):
         with pytest.raises(AttributeError):
             track["name"] = "cannot set name"
 
-    def test_merge(self, track: LocalTrack, item_modified: LocalTrack):
+    def test_merge(self, track: LocalTrack, item_modified: Track):
         assert track.title != item_modified.title
         assert track.artist != item_modified.artist
         assert track.uri != item_modified.uri
@@ -486,7 +492,7 @@ class TestLocalTrack(ItemTester):
         assert track.album == item_modified.album
         assert track.rating == item_modified.rating
 
-    def test_merge_dunder_methods(self, track: LocalTrack, item_modified: LocalTrack):
+    def test_merge_dunder_methods(self, track: LocalTrack, item_modified: Track):
         assert track.title != item_modified.title
         assert track.artist != item_modified.artist
         assert track.uri != item_modified.uri
