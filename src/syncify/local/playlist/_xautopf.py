@@ -119,7 +119,11 @@ class XAutoPF(LocalPlaylist):
         self._description = self.xml["SmartPlaylist"]["Source"]["Description"]
 
         matcher = LocalMatcher.from_xml(
-            xml=self.xml, library_folder=library_folder, other_folders=other_folders, check_existence=check_existence
+            xml=self.xml,
+            library_folder=library_folder,
+            other_folders=other_folders,
+            existing_paths=available_track_paths,
+            check_existence=check_existence
         )
         super().__init__(
             path=path,

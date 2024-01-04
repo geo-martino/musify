@@ -114,12 +114,12 @@ class MusicBee(LocalLibrary, File):
             return
 
         path = track_xml["Location"]
-        prefixes = (
+        prefixes = {
             self.library_folder,
             self.xml["Music Folder"],
             *{other.replace("\\", "/") for other in self.other_folders},
             *{other.replace("/", "\\") for other in self.other_folders}
-        )
+        }
 
         for prefix in prefixes:
             track = tracks.get(path.removeprefix(prefix).casefold(), tracks.get(path.removeprefix(prefix)))

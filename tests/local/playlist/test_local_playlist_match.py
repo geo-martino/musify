@@ -14,6 +14,7 @@ from tests.local.utils import random_tracks, path_track_wma, path_track_flac, pa
 from tests.utils import random_str, path_resources
 
 
+# TODO: add existing_paths logic test
 class TestLocalMatcher(PrettyPrinterTester):
 
     library_folder = "/path/to/library"

@@ -1,5 +1,4 @@
 import re
-import os
 from collections import Counter
 from collections.abc import Iterable, Collection, Sequence, MutableSequence, Mapping, MutableMapping
 from os.path import sep

@@ -513,10 +513,10 @@ class ConfigLocal(ConfigLibrary):
         if self._library_folder is not None:
             return self._library_folder
 
-        if isinstance(self._paths["library"], str):
+        if isinstance(self._paths.get("library"), str):
             self._library_folder = self._paths["library"]
             return self._library_folder
-        elif not isinstance(self._paths["library"], dict):
+        elif not isinstance(self._paths.get("library"), dict):
             raise ConfigError("Config not found", key=["local", "paths", "library"], value=self._paths)
 
         # assume platform sub-keys
@@ -546,9 +546,9 @@ class ConfigLocal(ConfigLibrary):
             return self._other_folders
 
         other_folders = to_collection(self._paths.get("other"), list) or []
-        if isinstance(self._paths["library"], Mapping):
+        if isinstance(self._paths.get("library"), Mapping):
             other_folders.extend(
-                path for key, path in self._paths["library"].items() if path and key != self._platform_key
+                {path for key, path in self._paths["library"].items() if path and key != self._platform_key}
             )
 
         self._other_folders = tuple(other_folders) or self._defaults["other_folders"]

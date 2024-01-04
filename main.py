@@ -683,21 +683,6 @@ if __name__ == "__main__":
     if conf.dry_run:
         print_line("DRY RUN ENABLED", " ")
 
-    main.local.library.load()
-    errors = {
-        "Chill": -1,
-        "Deep": -2,
-        "freshAFchnz": -1,
-        "It Comes From Hell": -12,
-        "Piano": -6,
-    }
-    for name in errors:
-        print(name)
-        for n, track in enumerate(main.local.library.playlists[name], 1):
-            print(n, track.path)
-        print("--------------------\n")
-    exit()
-
     main.api.authorise()
     for i, func in enumerate(named_args.functions, 1):
         title = f"{PROGRAM_NAME}: {func}"
@@ -750,19 +735,9 @@ if __name__ == "__main__":
 
 
 ## SELECTED FOR DEVELOPMENT
+# TODO: update the readme (dynamic readme?)
 # TODO: implement release structure on GitHub
 # TODO: implement merge_playlists functions and, by extension, implement android library sync
 # TODO: implement XAutoPF full update functionality
 # TODO: function to open search website tabs for all songs in 2get playlist
 #  on common music stores/torrent sites
-
-
-## NEEDED FOR v0.3
-# TODO: update the readme (dynamic readme?)
-# TODO: test on linux/mac
-#  - concerned about local playlist saving
-#  - linux does not pick up 'include' paths when loading xautopf playlists
-#    this is possibly due to case-sensitive paths not being found in linux
-#    from using lowercase path cleaning logic in TrackMatch
-#  This may now be fixed by extending functionality of playlists to include
-#   available track paths on load

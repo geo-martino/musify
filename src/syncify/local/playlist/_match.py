@@ -38,6 +38,8 @@ class LocalMatcher(MusicBeeProcessor):
         Ignored when comparers equal None.
     :param include_paths: List of paths for tracks to include regardless of comparer matches.
     :param exclude_paths: List of paths for tracks to exclude regardless of comparer matches.
+    :param existing_paths: List of existing paths on the file system.
+        Used when sanitising paths to perform case-sensitive path replacement.
     :param library_folder: Absolute path of the folder containing all tracks.
     :param other_folders: Absolute paths of other possible library paths.
         Use to replace path stems from other libraries for the paths in loaded playlists.
@@ -54,6 +56,7 @@ class LocalMatcher(MusicBeeProcessor):
             xml: Mapping[str, Any],
             library_folder: str | None = None,
             other_folders: UnitCollection[str] = (),
+            existing_paths: Iterable[str] = (),
             check_existence: bool = True,
             **__
     ) -> Self:
@@ -65,6 +68,8 @@ class LocalMatcher(MusicBeeProcessor):
         :param other_folders: Absolute paths of other possible library paths.
             Use to replace path stems from other libraries for the paths in loaded playlists.
             Useful when managing similar libraries on multiple platforms.
+        :param existing_paths: List of existing paths on the file system.
+            Used when sanitising paths to perform case-sensitive path replacement.
         :param check_existence: Check for the existence of the file paths on the file system
             when sanitising the given paths and reject any that don't.
         """
@@ -94,6 +99,7 @@ class LocalMatcher(MusicBeeProcessor):
             match_all=match_all,
             include_paths=include,
             exclude_paths=exclude,
+            existing_paths=existing_paths,
             library_folder=library_folder,
             other_folders=other_folders,
             check_existence=check_existence
@@ -105,6 +111,7 @@ class LocalMatcher(MusicBeeProcessor):
             match_all: bool = True,
             include_paths: Collection[str] = (),
             exclude_paths: Collection[str] = (),
+            existing_paths: Iterable[str] = (),
             library_folder: str | None = None,
             other_folders: UnitCollection[str] = (),
             check_existence: bool = True,
@@ -114,6 +121,7 @@ class LocalMatcher(MusicBeeProcessor):
 
         self.include_paths: Collection[str] = include_paths
         self.exclude_paths: Collection[str] = exclude_paths
+        self.existing_paths: Mapping[str, str] = {path.casefold(): path for path in existing_paths}
 
         self.library_folder = library_folder.rstrip("\\/") if library_folder is not None else library_folder
         self.original_folder: str | None = None
@@ -195,6 +203,8 @@ class LocalMatcher(MusicBeeProcessor):
                 else:
                     path = path.replace("/", "\\")
 
+            path = self.existing_paths.get(path.casefold(), path)
+
         if not check_existence or exists(path):
             return path
 
@@ -220,12 +230,8 @@ class LocalMatcher(MusicBeeProcessor):
 
         path_tracks: Mapping[str, LocalTrack] = {track.path.casefold(): track for track in tracks}
 
-        include: list[LocalTrack] = [
-            path_tracks[path.casefold()] for path in self.include_paths if path.casefold() in path_tracks
-        ]
-        exclude: list[LocalTrack] = [
-            path_tracks[path.casefold()] for path in self.exclude_paths if path.casefold() in path_tracks
-        ]
+        include: list[LocalTrack] = [path_tracks[path] for path in self.include_paths if path in path_tracks]
+        exclude: list[LocalTrack] = [path_tracks[path] for path in self.exclude_paths if path in path_tracks]
 
         if not self.comparers:  # skip comparer checks
             if not self.include_paths:

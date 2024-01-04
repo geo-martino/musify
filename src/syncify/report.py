@@ -29,7 +29,6 @@ def report_playlist_differences(
     missing: dict[str, tuple[Item, ...]] = {}
     unavailable: dict[str, tuple[Item, ...]] = {}
 
-    print(source)
     source = source.playlists if isinstance(source, Library) else {pl.name: pl for pl in source}
     reference = reference.playlists if isinstance(reference, Library) else {pl.name: pl for pl in reference}
     max_width = get_max_width(source.keys())
