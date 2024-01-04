@@ -220,8 +220,12 @@ class LocalMatcher(MusicBeeProcessor):
 
         path_tracks: Mapping[str, LocalTrack] = {track.path.casefold(): track for track in tracks}
 
-        include: list[LocalTrack] = [path_tracks[path] for path in self.include_paths if path in path_tracks]
-        exclude: list[LocalTrack] = [path_tracks[path] for path in self.exclude_paths if path in path_tracks]
+        include: list[LocalTrack] = [
+            path_tracks[path.casefold()] for path in self.include_paths if path.casefold() in path_tracks
+        ]
+        exclude: list[LocalTrack] = [
+            path_tracks[path.casefold()] for path in self.exclude_paths if path.casefold() in path_tracks
+        ]
 
         if not self.comparers:  # skip comparer checks
             if not self.include_paths:

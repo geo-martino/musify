@@ -108,6 +108,9 @@ class M3U(LocalPlaylist):
         self.load(tracks=tracks)
 
     def load(self, tracks: Collection[LocalTrack] = ()) -> list[LocalTrack]:
+        if self.name == "Chill":
+            print(self.matcher.include_paths)
+            exit()
         if not self.matcher.include_paths:
             # use the given tracks if no valid matcher present
             self.tracks = tracks or []

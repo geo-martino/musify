@@ -16,6 +16,7 @@ from syncify.local.playlist import LocalPlaylist
 from syncify.local.track import LocalTrack
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitCollection, Number
+from syncify.utils.helpers import correct_platform_separators
 
 
 class MusicBee(LocalLibrary, File):
@@ -69,6 +70,10 @@ class MusicBee(LocalLibrary, File):
         if library_folder is None and musicbee_folder is None:
             raise MusicBeeError("Must give either library_folder or musicbee_folder")
 
+        library_folder = correct_platform_separators(library_folder)
+        musicbee_folder = correct_platform_separators(musicbee_folder)
+        playlist_folder = correct_platform_separators(playlist_folder)
+
         # try to resolve the musicbee folder if relative path to library_folder given
         if musicbee_folder and not exists(musicbee_folder):
             if not library_folder:
@@ -104,6 +109,25 @@ class MusicBee(LocalLibrary, File):
             remote_wrangler=remote_wrangler,
         )
 
+    def _get_track_from_xml_path(self, track_xml: dict[str, Any], tracks: dict[str, LocalTrack]) -> LocalTrack | None:
+        if track_xml["Track Type"] != "File":
+            return
+
+        path = track_xml["Location"]
+        prefixes = (
+            self.library_folder,
+            self.xml["Music Folder"],
+            *{other.replace("\\", "/") for other in self.other_folders},
+            *{other.replace("/", "\\") for other in self.other_folders}
+        )
+
+        for prefix in prefixes:
+            track = tracks.get(path.removeprefix(prefix).casefold(), tracks.get(path.removeprefix(prefix)))
+            if track is not None:
+                return track
+
+        self.errors.append(path)
+
     def load_tracks(self) -> list[LocalTrack]:
         # need to remove the library folder to make it os agnostic
         tracks = super().load_tracks()
@@ -112,15 +136,8 @@ class MusicBee(LocalLibrary, File):
         self.logger.debug(f"Enrich {self.name} tracks: START")
 
         for track_xml in self.xml["Tracks"].values():
-            if track_xml["Track Type"] != "File":
-                continue
-
-            # need to remove the XML music folder to make it os agnostic
-            track = tracks_paths.get(track_xml["Location"].removeprefix(self.library_folder).casefold())
-            if track is None:  # attempt to find a match by removing the xml library folder path
-                track = tracks_paths.get(track_xml["Location"].removeprefix(self.xml["Music Folder"]).casefold())
+            track = self._get_track_from_xml_path(track_xml, tracks_paths)
             if track is None:
-                self.errors.append(track_xml["Location"])
                 continue
 
             track.rating = int(track_xml.get("Rating")) if track_xml.get("Rating") is not None else None
@@ -143,14 +160,8 @@ class MusicBee(LocalLibrary, File):
         track_id_map: dict[LocalTrack, tuple[int, str]] = {}
 
         for track_xml in self.xml["Tracks"].values():
-            if track_xml["Track Type"] != "File":
-                continue
-
-            track = tracks_paths.get(track_xml["Location"].removeprefix(self.xml["Music Folder"]).casefold())
-            if track is None:  # attempt to find a match by removing the xml library folder path
-                track = tracks_paths.get(track_xml["Location"].removeprefix(self.xml["Music Folder"]).casefold())
-            if not track:
-                self.errors.append(track_xml["Location"])
+            track = self._get_track_from_xml_path(track_xml, tracks_paths)
+            if track is None:
                 continue
 
             track_id_map[track] = (track_xml["Track ID"], track_xml["Persistent ID"])

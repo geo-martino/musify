@@ -378,9 +378,11 @@ class Syncify(DynamicProcessor):
             if not self.local.library_loaded:
                 self.reload_local()
 
-            if isinstance(report, ConfigLibraryDifferences):
+            if isinstance(report, ConfigLibraryDifferences) and self.local.library.playlists:
                 if not self.remote.library_loaded:
                     self.reload_remote("playlists")
+                if not self.remote.library.playlists:
+                    continue
 
                 source = report.filter.process(self.local.library.playlists.values())
                 reference = self.config.filter.process(self.remote.library.playlists.values())
@@ -680,6 +682,21 @@ if __name__ == "__main__":
     main.logger.print()
     if conf.dry_run:
         print_line("DRY RUN ENABLED", " ")
+
+    main.local.library.load()
+    errors = {
+        "Chill": -1,
+        "Deep": -2,
+        "freshAFchnz": -1,
+        "It Comes From Hell": -12,
+        "Piano": -6,
+    }
+    for name in errors:
+        print(name)
+        for n, track in enumerate(main.local.library.playlists[name], 1):
+            print(n, track.path)
+        print("--------------------\n")
+    exit()
 
     main.api.authorise()
     for i, func in enumerate(named_args.functions, 1):

@@ -14,7 +14,7 @@ from syncify.local.track import TRACK_CLASSES, LocalTrack, load_track
 from syncify.processors.sort import ItemSorter
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils import UnitCollection, UnitIterable
-from syncify.utils.helpers import align_and_truncate, get_max_width
+from syncify.utils.helpers import align_and_truncate, get_max_width, correct_platform_separators
 from syncify.utils.logger import REPORT
 
 
@@ -126,11 +126,11 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             playlists |= entry
 
         if isinstance(self.include, Filter):
-            include = {name.casefold() for name in self.include.process(playlists.keys())}
+            include = {name.casefold() for name in self.include.process(playlists.keys())} if self.include.ready else {}
         else:
             include = {name.strip().casefold() for name in self.include}
         if isinstance(self.exclude, Filter):
-            exclude = {name.casefold() for name in self.exclude.process(playlists.keys())}
+            exclude = {name.casefold() for name in self.exclude.process(playlists.keys())} if self.exclude.ready else {}
         else:
             exclude = {name.strip().casefold() for name in self.exclude}
 
@@ -197,6 +197,10 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             remote_wrangler: RemoteDataWrangler | None = None,
     ):
         super().__init__(remote_wrangler=remote_wrangler)
+
+        library_folder = correct_platform_separators(library_folder)
+        playlist_folder = correct_platform_separators(playlist_folder)
+
         log_name = basename(library_folder) if library_folder and self.__class__ == LocalLibrary else self.name
         self.logger.debug(f"Setup {self.name} library: START")
         self.logger.info(f"\33[1;95m ->\33[1;97m Setting up {log_name} library \33[0m")
@@ -271,7 +275,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
     def log_tracks(self) -> None:
         """Log stats on currently loaded tracks"""
-        width = get_max_width(self._playlist_paths)
+        width = get_max_width(self._playlist_paths) if self._playlist_paths else 20
         self.logger.report(
             f"\33[1;96m{'LIBRARY URIS':<{width}}\33[1;0m |"
             f"\33[92m{sum([track.has_uri is True for track in self.tracks]):>6} available \33[0m|"
@@ -290,6 +294,9 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         :return: The loaded playlists.
         :raise LocalCollectionError: If a given playlist name cannot be found.
         """
+        if not self._playlist_paths:
+            return []
+
         self.logger.debug(f"Load {self.name} playlist data: START")
         if names is None:
             names = self._playlist_paths.keys()

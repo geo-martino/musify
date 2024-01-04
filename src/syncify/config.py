@@ -301,16 +301,15 @@ class ConfigFilter(BaseConfig, Filter[str]):
     :param settings: The loaded config from the config file.
     """
 
+    @property
+    def ready(self):
+        return self.include.ready and self.exclude.ready
+
     def __init__(self, settings: dict[Any, Any]):
         super().__init__(settings=settings.get("filter", settings))
 
         self.include = self.ConfigMatch(settings=self._file, key="include")
         self.exclude = self.ConfigMatch(settings=self._file, key="exclude")
-
-    @property
-    def ready(self) -> bool:
-        """Does this filter have valid settings and can process values"""
-        return self.include.ready and self.exclude.ready
 
     def process[T: str | NamedObject](self, values: Iterable[T] | None = None) -> tuple[T, ...]:
         """Filter down ``values`` that match this filter's settings from"""
@@ -334,6 +333,10 @@ class ConfigFilter(BaseConfig, Filter[str]):
         :param key: The key to load filter options for.
             Used as the parent key to use to pull the required configuration from the config file.
         """
+
+        @property
+        def ready(self):
+            return bool(self.values) or bool(self.comparers)
 
         def __init__(self, settings: dict[Any, Any], key: Any | None = None):
             super().__init__(settings=settings, key=key)
@@ -387,11 +390,6 @@ class ConfigFilter(BaseConfig, Filter[str]):
                     matches.extend(value for value in values if comparer(name(value)) and value not in matches)
                 values = tuple(matches)
             return values
-
-        @property
-        def ready(self) -> bool:
-            """Does this filter have valid settings and can process values"""
-            return bool(self.values) or bool(self.comparers)
 
         @property
         def values(self) -> list[str] | None:
@@ -515,10 +513,10 @@ class ConfigLocal(ConfigLibrary):
         if self._library_folder is not None:
             return self._library_folder
 
-        if isinstance(self._paths.get("library"), str):
+        if isinstance(self._paths["library"], str):
             self._library_folder = self._paths["library"]
             return self._library_folder
-        elif not isinstance(self._paths.get("library"), dict):
+        elif not isinstance(self._paths["library"], dict):
             raise ConfigError("Config not found", key=["local", "paths", "library"], value=self._paths)
 
         # assume platform sub-keys
@@ -546,7 +544,14 @@ class ConfigLocal(ConfigLibrary):
         """`DEFAULT = ()` | The paths of other folder to use for replacement when processing local libraries"""
         if self._other_folders is not None:
             return self._other_folders
-        self._other_folders = to_collection(self._paths.get("other"), tuple) or self._defaults["other_folders"]
+
+        other_folders = to_collection(self._paths.get("other"), list) or []
+        if isinstance(self._paths["library"], Mapping):
+            other_folders.extend(
+                path for key, path in self._paths["library"].items() if path and key != self._platform_key
+            )
+
+        self._other_folders = tuple(other_folders) or self._defaults["other_folders"]
         return self._other_folders
 
     def as_dict(self) -> dict[str, Any]:

@@ -152,6 +152,12 @@ class PrettyPrinter(ABC):
 class Filter[T](ABC, Collection[T]):
     """Base class for filtering down values based on some settings"""
 
+    @property
+    @abstractmethod
+    def ready(self) -> bool:
+        """Does this filter have valid settings and can process values"""
+        raise NotImplementedError
+
     def __init__(self, *_, **__):
         self.values: Collection[T] | None = None
 

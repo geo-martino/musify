@@ -11,6 +11,10 @@ class BasicFilter(Filter[Any]):
     def process(self, values: Iterable[Any]) -> Collection[Any]:
         return [v for v in values if v in self.values]
 
+    @property
+    def ready(self):
+        return True
+
 
 class PrettyPrinterTester(ABC):
     """Run generic tests for :py:class:`PrettyPrinter` implementations"""

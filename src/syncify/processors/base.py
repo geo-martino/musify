@@ -27,16 +27,14 @@ class dynamicprocessormethod:
     def __init__(self, *args: str | Callable):
         self.func = next((a for a in args if callable(a)), None)
         self.alternative_names = tuple(a for a in args if isinstance(a, str))
+        self.instance_ = None
 
     def __get__(self, instance, owner):
         self.instance_ = instance
         return self.__call__
 
     def __call__(self, *args, **kwargs):
-        try:
-            return self.func(self.instance_, *args, **kwargs)
-        except AttributeError:
-            return self.func(*args, **kwargs)
+        return self.func(self.instance_, *args, **kwargs) if self.instance_ else self.func(*args, **kwargs)
 
 
 # noinspection SpellCheckingInspection
