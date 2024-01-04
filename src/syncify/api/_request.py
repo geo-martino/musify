@@ -118,11 +118,17 @@ class RequestHandler(APIAuthoriser):
             if method.upper() in self.session.settings.allowable_methods:
                 log.append("Cached")
 
+        headers = self.session.headers
+        if "headers" in kwargs:
+            headers = kwargs.pop("headers") | self.session.headers
+
         self.logger.debug(" | ".join(log))
         try:
             if not isinstance(self.session, CachedSession):
-                return self.session.request(method=method.upper(), url=url, *args, **kwargs)
-            return self.session.request(method=method.upper(), force_refresh=not use_cache, url=url, *args, **kwargs)
+                return self.session.request(method=method.upper(), url=url, headers=headers, *args, **kwargs)
+            return self.session.request(
+                method=method.upper(), force_refresh=not use_cache, url=url, headers=headers, *args, **kwargs
+            )
         except ConnectionError as ex:
             self.logger.warning(str(ex))
             return

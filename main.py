@@ -687,6 +687,15 @@ if __name__ == "__main__":
         print_line("DRY RUN ENABLED", " ")
 
     main.api.authorise()
+
+    lyrics = main.api.handler.get(
+        url="https://spclient.wg.spotify.com/color-lyrics/v2/track/0VjIjW4GlUZAMYd2vXMi3b",
+        params={"format": "json", "vocalRemoval": False},
+        headers={"app-platform": "WebPlayer"}
+    )
+    print(lyrics)
+    exit()
+
     for i, func in enumerate(named_args.functions, 1):
         title = f"{PROGRAM_NAME}: {func}"
         if conf.dry_run:
