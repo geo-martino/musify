@@ -30,12 +30,12 @@ class LocalCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
             self, collection: LocalCollection, collection_merge_items: Iterable[LocalTrack]
     ):
         """:py:class:`ItemCollection` __getitem__ and __setitem__ tests"""
-        item = next(item for item in collection.items if collection.items.count(item) == 1)
-        item = collection.items[2]
+        idx, item = next((i, item) for i, item in enumerate(collection.items) if collection.items.count(item) == 1)
 
         assert collection[1] == collection.items[1]
         assert collection[:2] == collection.items[:2]
 
+        assert collection[idx] == collection.items[idx] == item
         assert collection[item] == item
         assert collection[item.name] == item
         assert collection[item.path] == item
