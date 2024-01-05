@@ -2,7 +2,6 @@ import re
 from abc import ABCMeta
 from collections.abc import Collection, Mapping, MutableMapping
 from itertools import batched
-from time import sleep
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
@@ -187,17 +186,14 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             if key and key in response:
                 response = response[key]
 
-            sleep(0.1)
-            bar.update(len(response[self.items_key]))
-
             items_block[self.items_key].extend(response[self.items_key])
             items_block["href"] = response["href"]
             items_block["next"] = response.get("next")
             items_block["previous"] = response.get("previous")
 
-        if bar is not None:
-            bar.close()
+            bar.update(len(response[self.items_key]))
 
+        bar.close()
         return items_block[self.items_key]
 
     def get_items(

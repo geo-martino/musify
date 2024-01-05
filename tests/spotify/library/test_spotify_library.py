@@ -6,8 +6,8 @@ import pytest
 
 from syncify.remote.enums import RemoteObjectType
 from syncify.spotify.api import SpotifyAPI
-from syncify.spotify.library.library import SpotifyLibrary
-from syncify.spotify.library.object import SpotifyTrack
+from syncify.spotify.library import SpotifyLibrary
+from syncify.spotify.object import SpotifyTrack
 from tests.remote.library.library import RemoteLibraryTester
 from tests.spotify.api.mock import SpotifyMock
 

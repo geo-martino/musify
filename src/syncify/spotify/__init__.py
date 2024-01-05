@@ -1,4 +1,7 @@
-SPOTIFY_SOURCE_NAME = "Spotify"
+from ._base import SpotifyRemote
+
+# noinspection PyTypeChecker
+SPOTIFY_NAME: str = SpotifyRemote.source
 SPOTIFY_UNAVAILABLE_URI = "spotify:track:unavailable"
 
 # all remote URLs

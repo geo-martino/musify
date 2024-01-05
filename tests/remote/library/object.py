@@ -7,8 +7,8 @@ import pytest
 from syncify.exception import SyncifyKeyError
 from syncify.local.track import LocalTrack
 from syncify.remote.api import RemoteAPI
-from syncify.remote.library import RemoteItem
-from syncify.remote.library.object import RemoteTrack, RemoteCollection, RemotePlaylist
+from syncify.remote.base import RemoteItem
+from syncify.remote.object import RemoteTrack, RemoteCollection, RemotePlaylist
 from tests.abstract.collection import ItemCollectionTester, PlaylistTester
 from tests.local.utils import random_tracks
 from tests.remote.utils import RemoteMock

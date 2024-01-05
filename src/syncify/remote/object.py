@@ -15,7 +15,7 @@ from syncify.exception import SyncifyKeyError
 from syncify.remote.api import RemoteAPI
 from syncify.remote.enums import RemoteIDType
 from syncify.remote.exception import RemoteIDTypeError, RemoteError
-from syncify.remote.library import RemoteObject, RemoteItem
+from syncify.remote.base import RemoteObject, RemoteItem
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.utils.helpers import get_most_common_values
 

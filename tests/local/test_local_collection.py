@@ -9,7 +9,7 @@ from syncify.exception import SyncifyKeyError
 from syncify.local.collection import LocalFolder, LocalAlbum, LocalArtist, LocalGenres, LocalCollection
 from syncify.local.exception import LocalCollectionError
 from syncify.local.track import LocalTrack
-from syncify.spotify.library.object import SpotifyTrack
+from syncify.spotify.object import SpotifyTrack
 from tests.abstract.collection import ItemCollectionTester
 from tests.local.utils import random_tracks, random_track, path_track_resources, path_track_all
 from tests.spotify.api.mock import SpotifyMock

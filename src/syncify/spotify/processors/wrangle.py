@@ -7,8 +7,7 @@ from syncify.remote.enums import RemoteIDType, RemoteObjectType
 from syncify.remote.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.remote.types import APIMethodInputType
-from syncify.spotify import URL_API, URL_EXT, SPOTIFY_UNAVAILABLE_URI
-from syncify.spotify.base import SpotifyRemote
+from syncify.spotify import URL_API, URL_EXT, SPOTIFY_UNAVAILABLE_URI, SpotifyRemote
 
 
 class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):

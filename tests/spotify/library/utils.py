@@ -1,6 +1,6 @@
 from typing import Any
 
-from syncify.spotify.library import SpotifyObject
+from syncify.spotify.base import SpotifyObject
 
 
 def assert_id_attributes(item: SpotifyObject, response: dict[str, Any]):

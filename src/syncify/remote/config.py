@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from syncify.remote.library.object import RemoteTrack, RemoteAlbum, RemotePlaylist, RemoteArtist
+from syncify.remote.object import RemoteTrack, RemoteAlbum, RemotePlaylist, RemoteArtist
 
 
 @dataclass

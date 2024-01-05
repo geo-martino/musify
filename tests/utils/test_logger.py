@@ -212,7 +212,9 @@ def test_current_time_file_handler_namer():
     base_str = sep.join(base_parts)
 
     handler = CurrentTimeRotatingFileHandler(filename=base_str, delay=True)
-    assert handler.filename == join(PACKAGE_ROOT, os.path.sep.join(base_parts).format(handler.dt.strftime(LOGGING_DT_FORMAT)))
+    assert handler.filename == join(
+        PACKAGE_ROOT, os.path.sep.join(base_parts).format(handler.dt.strftime(LOGGING_DT_FORMAT))
+    )
 
     base_parts[1] = base_parts[1].format(handler.dt.strftime(LOGGING_DT_FORMAT))
     assert sep not in handler.filename

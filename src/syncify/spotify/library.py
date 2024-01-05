@@ -5,10 +5,10 @@ from syncify.abstract.misc import Filter
 from syncify.abstract.object import Playlist, Library
 from syncify.remote.config import RemoteObjectClasses
 from syncify.remote.enums import RemoteObjectType
-from syncify.remote.library.library import RemoteLibrary
+from syncify.remote.library import RemoteLibrary
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.config import SPOTIFY_OBJECT_CLASSES
-from syncify.spotify.library.object import SpotifyTrack, SpotifyCollection, SpotifyPlaylist, SpotifyAlbum, SpotifyArtist
+from syncify.spotify.object import SpotifyTrack, SpotifyCollection, SpotifyPlaylist, SpotifyAlbum, SpotifyArtist
 
 
 class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack]):

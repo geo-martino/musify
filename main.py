@@ -20,7 +20,7 @@ from syncify.local.track import LocalTrack, SyncResultTrack
 from syncify.processors.base import DynamicProcessor, dynamicprocessormethod
 from syncify.remote.api import RemoteAPI
 from syncify.remote.enums import RemoteObjectType
-from syncify.remote.library.object import RemoteAlbum
+from syncify.remote.object import RemoteAlbum
 from syncify.report import report_playlist_differences, report_missing_tags
 from syncify.utils.helpers import get_user_input, UnitIterable, to_collection
 from syncify.utils.logger import SyncifyLogger, STAT, CurrentTimeRotatingFileHandler, REPORT
@@ -760,8 +760,8 @@ if __name__ == "__main__":
 
 ## SELECTED FOR DEVELOPMENT
 # TODO: update the readme (dynamic readme?)
-# TODO: implement release structure on GitHub
-# TODO: implement merge_playlists functions and, by extension, implement android library sync
 # TODO: implement XAutoPF full update functionality
+# TODO: implement merge_playlists functions and, by extension, implement android library sync
+# TODO: release to pypi + implement CI/CD structure on GitHub
 # TODO: function to open search website tabs for all songs in 2get playlist
 #  on common music stores/torrent sites

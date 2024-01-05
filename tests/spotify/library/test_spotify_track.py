@@ -8,7 +8,7 @@ import pytest
 from syncify.api.exception import APIError
 from syncify.remote.exception import RemoteObjectTypeError
 from syncify.spotify.api import SpotifyAPI
-from syncify.spotify.library.object import SpotifyTrack
+from syncify.spotify.object import SpotifyTrack
 from tests.abstract.base import ItemTester
 from tests.spotify.api.mock import SpotifyMock
 from tests.spotify.library.utils import assert_id_attributes

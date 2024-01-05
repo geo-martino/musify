@@ -144,7 +144,7 @@ class TestConfig(PrettyPrinterTester):
         assert config.playlists.sync.reload
 
         assert config.api.token_path is None
-        assert config.api.cache_path == ".api_cache"
+        assert config.api.cache_path is None
         assert config.api.use_cache
 
         if isinstance(config.api, ConfigSpotify):

@@ -16,7 +16,7 @@ from requests_mock.response import _Context as Context
 
 from syncify.abstract.enums import SyncifyEnum
 from syncify.remote.enums import RemoteObjectType as ObjectType
-from syncify.spotify import URL_API, URL_EXT, SPOTIFY_SOURCE_NAME
+from syncify.spotify import URL_API, URL_EXT, SPOTIFY_NAME
 from syncify.spotify.api import SpotifyAPI
 from tests.remote.utils import RemoteMock
 from tests.spotify.utils import random_id
@@ -528,7 +528,7 @@ class SpotifyMock(RemoteMock):
             "duration_ms": randrange(int(10e4), int(6*10e5)),  # 1 second to 10 minutes range
             "explicit": choice([True, False, None]),
             "external_ids": self.generate_external_ids(),
-            "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{track_id}"},
+            "external_urls": {SPOTIFY_NAME.lower(): f"{URL_EXT}/{kind}/{track_id}"},
             "href": f"{URL_API}/{kind}s/{track_id}",
             "id": track_id,
             "name": random_str(30, 50),
@@ -536,7 +536,7 @@ class SpotifyMock(RemoteMock):
             "preview_url": None,
             "track_number": randrange(1, 30),
             "type": kind,
-            "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{track_id}",
+            "uri": f"{SPOTIFY_NAME.lower()}:{kind}:{track_id}",
             "is_local": False
         }
 
@@ -584,7 +584,7 @@ class SpotifyMock(RemoteMock):
             "time_signature": randrange(3, 7),
             "track_href": f"{URL_API}/{kind}s/{track_id}",
             "type": "audio_features",
-            "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{track_id}",
+            "uri": f"{SPOTIFY_NAME.lower()}:{kind}:{track_id}",
             "valence": random()
         }
 
@@ -602,12 +602,12 @@ class SpotifyMock(RemoteMock):
         artist_id = random_id()
 
         response = {
-            "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{artist_id}"},
+            "external_urls": {SPOTIFY_NAME.lower(): f"{URL_EXT}/{kind}/{artist_id}"},
             "href": f"{URL_API}/{kind}s/{artist_id}",
             "id": artist_id,
             "name": random_str(5, 30),
             "type": kind,
-            "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{artist_id}"
+            "uri": f"{SPOTIFY_NAME.lower()}:{kind}:{artist_id}"
         }
 
         return cls.extend_artist(response=response, properties=properties)
@@ -646,14 +646,14 @@ class SpotifyMock(RemoteMock):
                 "filter_enabled": choice([True, False]),
                 "filter_locked": choice([True, False])
             },
-            "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{user_id}"},
+            "external_urls": {SPOTIFY_NAME.lower(): f"{URL_EXT}/{kind}/{user_id}"},
             "followers": {"href": None, "total": randrange(0, int(8e10))},
             "href": f"{URL_API}/{kind}s/{user_id}",
             "id": user_id,
             "images": cls.generate_images(),
             "product": choice(["premium", "free", "open"]),
             "type": kind,
-            "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{user_id}"
+            "uri": f"{SPOTIFY_NAME.lower()}:{kind}:{user_id}"
         }
 
         return response
@@ -666,7 +666,7 @@ class SpotifyMock(RemoteMock):
         kind = ObjectType.USER.name.lower()
         user_id = user_id or str(uuid4())
         user_name = user_name or random_str(5, 30)
-        ext_urls = user["external_urls"] if user else {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{user_id}"}
+        ext_urls = user["external_urls"] if user else {SPOTIFY_NAME.lower(): f"{URL_EXT}/{kind}/{user_id}"}
 
         return {
             "display_name": user["display_name"] if user else user_name,
@@ -674,7 +674,7 @@ class SpotifyMock(RemoteMock):
             "href": user["href"] if user else f"{URL_API}/{kind}s/{user_id}",
             "id": user["id"] if user else user_id,
             "type": user["type"] if user else kind,
-            "uri": user["uri"] if user else f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{user_id}",
+            "uri": user["uri"] if user else f"{SPOTIFY_NAME.lower()}:{kind}:{user_id}",
         }
 
     @classmethod
@@ -719,7 +719,7 @@ class SpotifyMock(RemoteMock):
         response = {
             "collaborative": choice([True, False]) if not public else False,
             "description": random_str(20, 100),
-            "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{playlist_id}"},
+            "external_urls": {SPOTIFY_NAME.lower(): f"{URL_EXT}/{kind}/{playlist_id}"},
             "followers": {"href": None, "total": randrange(0, int(8e10))},
             "href": url,
             "id": playlist_id,
@@ -731,7 +731,7 @@ class SpotifyMock(RemoteMock):
             "snapshot_id": random_str(60, 60),
             "tracks": {"href": f"{url}/tracks", "total": item_count},
             "type": kind,
-            "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{playlist_id}",
+            "uri": f"{SPOTIFY_NAME.lower()}:{kind}:{playlist_id}",
         }
 
         tracks = self.generate_playlist_tracks(response=response)
@@ -798,7 +798,7 @@ class SpotifyMock(RemoteMock):
             "album_type": choice((kind, "single", "compilation")),
             "total_tracks": track_count,
             "available_markets": sample(COUNTRY_CODES, k=randrange(1, 5)),
-            "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{album_id}"},
+            "external_urls": {SPOTIFY_NAME.lower(): f"{URL_EXT}/{kind}/{album_id}"},
             "href": f"{URL_API}/{kind}s/{album_id}",
             "id": album_id,
             "images": self.generate_images(),
@@ -806,7 +806,7 @@ class SpotifyMock(RemoteMock):
             "release_date": random_date_str(),
             "release_date_precision": choice(("day", "month", "year")),
             "type": kind,
-            "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{album_id}",
+            "uri": f"{SPOTIFY_NAME.lower()}:{kind}:{album_id}",
         }
 
         if tracks:
@@ -896,7 +896,7 @@ class SpotifyMock(RemoteMock):
             "description": random_str(200, 500),
             "html_description": random_str(100, 200),
             "explicit": choice([True, False, None]),
-            "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{show_id}"},
+            "external_urls": {SPOTIFY_NAME.lower(): f"{URL_EXT}/{kind}/{show_id}"},
             "href": f"{URL_API}/{kind}s/{show_id}",
             "id": show_id,
             "images": self.generate_images(),
@@ -906,7 +906,7 @@ class SpotifyMock(RemoteMock):
             "name": random_str(30, 50),
             "publisher": random_str(10, 30),
             "type": "show",
-            "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{show_id}",
+            "uri": f"{SPOTIFY_NAME.lower()}:{kind}:{show_id}",
             "total_episodes": episode_count,
         }
 
@@ -937,7 +937,7 @@ class SpotifyMock(RemoteMock):
             "html_description": random_str(100, 200),
             "duration_ms": duration_ms,
             "explicit": choice([True, False, None]),
-            "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{episode_id}"},
+            "external_urls": {SPOTIFY_NAME.lower(): f"{URL_EXT}/{kind}/{episode_id}"},
             "href": f"{URL_API}/{kind}s/{episode_id}",
             "id": episode_id,
             "images": self.generate_images(),
@@ -953,7 +953,7 @@ class SpotifyMock(RemoteMock):
                 "resume_position_ms": randrange(0, duration_ms),
             },
             "type": "episode",
-            "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{episode_id}",
+            "uri": f"{SPOTIFY_NAME.lower()}:{kind}:{episode_id}",
         }
 
         if isinstance(show, dict):
@@ -1022,7 +1022,7 @@ class SpotifyMock(RemoteMock):
             "html_description": random_str(100, 200),
             "edition": random_str(5, 20),
             "explicit": choice([True, False, None]),
-            "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{audiobook_id}"},
+            "external_urls": {SPOTIFY_NAME.lower(): f"{URL_EXT}/{kind}/{audiobook_id}"},
             "href": f"{URL_API}/{kind}s/{audiobook_id}",
             "id": audiobook_id,
             "images": self.generate_images(),
@@ -1032,7 +1032,7 @@ class SpotifyMock(RemoteMock):
             "narrators": [{"name": random_str(30, 50)} for _ in range(randrange(1, 10))],
             "publisher": random_str(10, 30),
             "type": "audiobook",
-            "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{audiobook_id}",
+            "uri": f"{SPOTIFY_NAME.lower()}:{kind}:{audiobook_id}",
             "total_chapters": chapter_count,
         }
 
@@ -1065,7 +1065,7 @@ class SpotifyMock(RemoteMock):
             "html_description": random_str(100, 200),
             "duration_ms": duration_ms,
             "explicit": choice([True, False, None]),
-            "external_urls": {SPOTIFY_SOURCE_NAME.lower(): f"{URL_EXT}/{kind}/{chapter_id}"},
+            "external_urls": {SPOTIFY_NAME.lower(): f"{URL_EXT}/{kind}/{chapter_id}"},
             "href": f"{URL_API}/{kind}s/{chapter_id}",
             "id": chapter_id,
             "images": self.generate_images(),
@@ -1079,7 +1079,7 @@ class SpotifyMock(RemoteMock):
                 "resume_position_ms": randrange(0, duration_ms),
             },
             "type": "chapter",
-            "uri": f"{SPOTIFY_SOURCE_NAME.lower()}:{kind}:{chapter_id}",
+            "uri": f"{SPOTIFY_NAME.lower()}:{kind}:{chapter_id}",
         }
 
         if isinstance(audiobook, dict):

@@ -13,9 +13,9 @@ from syncify.remote.enums import RemoteObjectType
 from syncify.remote.exception import RemoteObjectTypeError, RemoteError
 from syncify.spotify import URL_API
 from syncify.spotify.api import SpotifyAPI
-from syncify.spotify.library import SpotifyItem
-from syncify.spotify.library.object import SpotifyAlbum, SpotifyArtist
-from syncify.spotify.library.object import SpotifyTrack, SpotifyCollectionLoader
+from syncify.spotify.base import SpotifyItem
+from syncify.spotify.object import SpotifyAlbum, SpotifyArtist
+from syncify.spotify.object import SpotifyTrack, SpotifyCollectionLoader
 from tests.remote.library.object import RemoteCollectionTester
 from tests.spotify.api.mock import SpotifyMock
 from tests.spotify.library.utils import assert_id_attributes

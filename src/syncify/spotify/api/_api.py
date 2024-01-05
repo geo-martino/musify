@@ -117,7 +117,6 @@ if __name__ == "__main__":
             "playlist-read-private"
         ],
         token_file_path="_data/token.json",
-        cache_path=None
     )
     api.authorise(force_new=False)
 

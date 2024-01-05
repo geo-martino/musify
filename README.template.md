@@ -107,10 +107,10 @@
 
 ## Currently Supported
 
-> - **Music Streaming Services**: `Spotify`
-> - **Audio filetypes**: `.flac` `.m4a` `.wma` `.mp3`
-> - **Local playlist filetypes**: `.xautopf` `.m3u`
-> - **Local Libraries**: `MusicBee`
+> - **Music Streaming Services**: {remote_sources}
+> - **Audio filetypes**: {track_filetypes}
+> - **Local playlist filetypes**: {playlist_filetypes}
+> - **Local Libraries**: {local_sources}
 
 
 ## Author notes, contributions, and reporting issues

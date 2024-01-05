@@ -1,7 +1,7 @@
 import logging
 from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, MutableMapping, Mapping
-from typing import Any
+from typing import Any, Self
 
 from syncify.api import RequestHandler
 from syncify.remote.enums import RemoteIDType, RemoteObjectType
@@ -58,17 +58,18 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
         self.handler = RequestHandler(name=self.source, **handler_kwargs)
         self.user_data: dict[str, Any] = {}
 
-    def authorise(self, force_load: bool = False, force_new: bool = False) -> dict[str, str]:
+    def authorise(self, force_load: bool = False, force_new: bool = False) -> Self:
         """
         Main method for authorisation, tests/refreshes/reauthorises as needed
 
         :param force_load: Reloads the token even if it's already been loaded into the object.
             Ignored when force_new is True.
         :param force_new: Ignore saved/loaded token and generate new token.
-        :return: Headers for request authorisation.
+        :return: Self.
         :raise APIError: If the token cannot be validated.
         """
-        return self.handler.authorise(force_load=force_load, force_new=force_new)
+        self.handler.authorise(force_load=force_load, force_new=force_new)
+        return self
 
     ###########################################################################
     ## Misc helpers

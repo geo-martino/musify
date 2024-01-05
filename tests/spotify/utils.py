@@ -1,7 +1,7 @@
 from random import randrange
 
 from syncify.remote.enums import RemoteObjectType, RemoteIDType
-from syncify.spotify import URL_API, URL_EXT, SPOTIFY_SOURCE_NAME
+from syncify.spotify import URL_API, URL_EXT, SPOTIFY_NAME
 from tests.utils import random_str
 
 
@@ -18,7 +18,7 @@ def random_ids(start: int = 1, stop: int = 50) -> list[str]:
 
 def random_uri(kind: RemoteObjectType = RemoteObjectType.TRACK) -> str:
     """Generates a valid looking random Spotify URI of item :py:class:`RemoteObjectType` ``kind``"""
-    return f"{SPOTIFY_SOURCE_NAME.lower()}:{kind.name.lower()}:{random_id()}"
+    return f"{SPOTIFY_NAME.lower()}:{kind.name.lower()}:{random_id()}"
 
 
 def random_uris(kind: RemoteObjectType = RemoteObjectType.TRACK, start: int = 1, stop: int = 50) -> list[str]:

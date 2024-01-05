@@ -340,7 +340,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         """Log stats on currently loaded playlists"""
         max_width = get_max_width(self.playlists)
 
-        self.logger.report(f"\33[1;96mFound the following {self.name} playlists: \33[0m")
+        self.logger.report(f"\33[1;96m{self.name.upper()} PLAYLISTS: \33[0m")
         for name, playlist in self.playlists.items():
             self.logger.report(
                 f"\33[97m{align_and_truncate(name, max_width=max_width)} \33[0m|"

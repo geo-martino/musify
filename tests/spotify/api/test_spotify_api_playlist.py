@@ -1,7 +1,6 @@
 from copy import deepcopy
 from random import randrange, sample
 from typing import Any
-from urllib.parse import parse_qs
 
 import pytest
 

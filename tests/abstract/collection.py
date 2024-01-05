@@ -9,8 +9,8 @@ from syncify.abstract.collection import ItemCollection
 from syncify.abstract.misc import PrettyPrinter
 from syncify.abstract.object import BasicCollection, Library, Playlist
 from syncify.exception import SyncifyTypeError
-from syncify.remote.library.library import RemoteLibrary
-from syncify.remote.library.object import RemoteCollectionLoader
+from syncify.remote.library import RemoteLibrary
+from syncify.remote.object import RemoteCollectionLoader
 from tests.abstract.misc import PrettyPrinterTester, BasicFilter
 
 

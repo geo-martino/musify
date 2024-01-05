@@ -7,11 +7,11 @@ from datetime import datetime
 from typing import Any, Self
 
 from syncify.remote.enums import RemoteObjectType, RemoteIDType
-from syncify.remote.library.object import RemoteCollection, RemoteCollectionLoader, RemoteTrack
-from syncify.remote.library.object import RemotePlaylist, RemoteAlbum, RemoteArtist
+from syncify.remote.object import RemoteCollection, RemoteCollectionLoader, RemoteTrack
+from syncify.remote.object import RemotePlaylist, RemoteAlbum, RemoteArtist
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.exception import SpotifyCollectionError
-from syncify.spotify.library import SpotifyObject, SpotifyItem
+from syncify.spotify.base import SpotifyObject, SpotifyItem
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 from syncify.utils import UnitCollection
 from syncify.utils.helpers import to_collection
@@ -202,7 +202,18 @@ class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
         ]
 
     @classmethod
-    def load(cls, value: str | dict[str, Any], api: SpotifyAPI, use_cache: bool = True, *_, **__) -> Self:
+    def load(
+            cls,
+            value: str | dict[str, Any],
+            api: SpotifyAPI,
+            features: bool = False,
+            analysis: bool = False,
+            extend_album: bool = False,
+            extend_artists: bool = False,
+            use_cache: bool = True,
+            *_,
+            **__
+    ) -> Self:
         obj = cls.__new__(cls)
         obj.api = api
 
@@ -211,17 +222,35 @@ class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
         obj._response = {
             "href": cls.convert(id_, kind=RemoteObjectType.TRACK, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
         }
-        obj.reload(use_cache=use_cache)
+        obj.reload(
+            features=features,
+            analysis=analysis,
+            extend_album=extend_album,
+            extend_artists=extend_artists,
+            use_cache=use_cache
+        )
         return obj
 
-    def reload(self, use_cache: bool = True, *_, **__) -> None:
+    def reload(
+            self,
+            features: bool = False,
+            analysis: bool = False,
+            extend_album: bool = False,
+            extend_artists: bool = False,
+            use_cache: bool = True,
+            *_,
+            **__
+    ) -> None:
         self._check_for_api()
 
         # reload with enriched data
         response = self.api.handler.get(self.url, use_cache=use_cache, log_pad=self._url_pad)
-        self.api.get_items(response["album"], kind=RemoteObjectType.ALBUM, extend=False, use_cache=use_cache)
-        self.api.get_items(response["artists"], kind=RemoteObjectType.ARTIST, use_cache=use_cache)
-        self.api.get_tracks_extra(response, features=True, use_cache=use_cache)
+        if extend_album:
+            self.api.get_items(response["album"], kind=RemoteObjectType.ALBUM, extend=False, use_cache=use_cache)
+        if extend_artists:
+            self.api.get_items(response["artists"], kind=RemoteObjectType.ARTIST, use_cache=use_cache)
+        if features or analysis:
+            self.api.get_tracks_extra(response, features=features, analysis=analysis, use_cache=use_cache)
 
         self.__init__(response=response, api=self.api)
 
@@ -670,9 +699,9 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
         self._check_for_api()
 
         response = self.api.handler.get(url=self.url, use_cache=use_cache, log_pad=self._url_pad)
-        if extend_albums:
+        if extend_albums or extend_tracks:
             self.api.get_artist_albums(response, use_cache=use_cache)
-        if extend_albums and extend_tracks:
+        if extend_tracks:
             kind = RemoteObjectType.ALBUM
             key = self.api.collection_item_map[kind]
             for album in response["albums"]["items"]:

@@ -28,18 +28,18 @@ from syncify.local.exception import InvalidFileType, FileDoesNotExistError
 from syncify.local.library import MusicBee, LocalLibrary
 from syncify.processors.compare import Comparer
 from syncify.remote.api import RemoteAPI
-from syncify.remote.library import RemoteObject
-from syncify.remote.library.library import RemoteLibrary
-from syncify.remote.library.object import PLAYLIST_SYNC_KINDS, RemotePlaylist
+from syncify.remote.base import RemoteObject
+from syncify.remote.library import RemoteLibrary
+from syncify.remote.object import PLAYLIST_SYNC_KINDS, RemotePlaylist
 from syncify.remote.processors.check import RemoteItemChecker
 from syncify.remote.processors.search import RemoteItemSearcher
 from syncify.remote.processors.wrangle import RemoteDataWrangler
 from syncify.report import report_missing_tags
-from syncify.spotify import SPOTIFY_SOURCE_NAME
+from syncify.spotify import SPOTIFY_NAME
 from syncify.spotify.api import SpotifyAPI
-from syncify.spotify.library import SpotifyObject
-from syncify.spotify.library.library import SpotifyLibrary
-from syncify.spotify.library.object import SpotifyPlaylist
+from syncify.spotify.base import SpotifyObject
+from syncify.spotify.library import SpotifyLibrary
+from syncify.spotify.object import SpotifyPlaylist
 from syncify.spotify.processors.processors import SpotifyItemChecker, SpotifyItemSearcher
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 from syncify.utils.helpers import to_collection
@@ -988,7 +988,7 @@ class RemoteClasses:
 
 
 SPOTIFY_CLASSES = RemoteClasses(
-    source=SPOTIFY_SOURCE_NAME,
+    source=SPOTIFY_NAME,
     api=ConfigSpotify,
     wrangler=SpotifyDataWrangler,
     object=SpotifyObject,
@@ -1000,7 +1000,7 @@ SPOTIFY_CLASSES = RemoteClasses(
 
 # map of the names of all supported library sources and their associated config
 REMOTE_CONFIG: Mapping[str, RemoteClasses] = {
-    SPOTIFY_SOURCE_NAME: SPOTIFY_CLASSES,
+    SPOTIFY_NAME: SPOTIFY_CLASSES,
     "spotify": SPOTIFY_CLASSES,
 }
 

@@ -8,7 +8,7 @@ from syncify.abstract.object import Track, Library, Playlist
 from syncify.remote.api import RemoteAPI
 from syncify.remote.config import RemoteObjectClasses
 from syncify.remote.enums import RemoteObjectType
-from syncify.remote.library.object import RemoteTrack, RemoteCollection, RemotePlaylist, SyncResultRemotePlaylist, \
+from syncify.remote.object import RemoteTrack, RemoteCollection, RemotePlaylist, SyncResultRemotePlaylist, \
     RemoteArtist, RemoteAlbum
 from syncify.utils.helpers import align_and_truncate, get_max_width
 from syncify.utils.logger import REPORT, STAT
@@ -129,6 +129,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         self.log_tracks()
         self.log_albums()
         self.log_artists()
+        self.logger.print(REPORT)
 
         self.logger.print()
         self.logger.debug(f"Load {self.source} library: DONE\n")
@@ -186,11 +187,10 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         """Log stats on currently loaded playlists"""
         max_width = get_max_width(self.playlists)
 
-        self.logger.report(f"\33[1;96mLoaded the following {self.source} playlists: \33[0m")
+        self.logger.report(f"\33[1;96m{self.source} PLAYLISTS: \33[0m")
         for name, playlist in self.playlists.items():
             name = align_and_truncate(playlist.name, max_width=max_width)
             self.logger.report(f"\33[97m{name} \33[0m| \33[92m{len(playlist):>6} total tracks \33[0m")
-        self.logger.print(REPORT)
 
     ###########################################################################
     ## Load - tracks
@@ -236,11 +236,10 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         width = get_max_width(self.playlists)
         self.logger.report(
             f"\33[1;96m{"USER'S " + self.source.upper() + " TRACKS":<{width}}\33[1;0m |"
-            f"\33[92m{in_playlists:>7} in playlists \33[0m|"
+            f"\33[92m{in_playlists:>7} in playlists  \33[0m|"
             f"\33[92m{in_albums:>7} in saved albums \33[0m|"
-            f"\33[1;94m{len(self.tracks):>6} total tracks \33[0m"
+            f"\33[1;94m{len(self.tracks):>7} total tracks \33[0m"
         )
-        self.logger.print(REPORT)
 
     ###########################################################################
     ## Load - albums
@@ -282,11 +281,10 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         width = get_max_width(self.playlists)
         self.logger.report(
             f"\33[1;96m{"USER'S " + self.source.upper() + " ALBUMS":<{width}}\33[1;0m |"
-            f"\33[92m{sum(len(album.tracks) for album in self.albums):>7} album tracks \33[0m|"
-            f"\33[92m{sum(len(album.artists) for album in self.albums):>7} album artists \33[0m|"
-            f"\33[1;94m{len(self.artists):>6} total albums \33[0m"
+            f"\33[92m{sum(len(album.tracks) for album in self.albums):>7} album tracks  \33[0m|"
+            f"\33[92m{sum(len(album.artists) for album in self.albums):>7} album artists   \33[0m|"
+            f"\33[1;94m{len(self.artists):>7} total albums \33[0m"
         )
-        self.logger.print(REPORT)
 
     ###########################################################################
     ## Load - artists
@@ -327,10 +325,9 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         self.logger.report(
             f"\33[1;96m{"USER'S " + self.source.upper() + " ARTISTS":<{width}}\33[1;0m |"
             f"\33[92m{sum(len(artist.tracks) for artist in self.artists):>7} artist tracks \33[0m|"
-            f"\33[92m{sum(len(artist.albums) for artist in self.artists):>7} artist albums \33[0m|"
-            f"\33[1;94m{len(self.artists):>6} total artists \33[0m"
+            f"\33[92m{sum(len(artist.albums) for artist in self.artists):>7} artist albums   \33[0m|"
+            f"\33[1;94m{len(self.artists):>7} total artists \33[0m"
         )
-        self.logger.print(REPORT)
 
     ###########################################################################
     ## Backup/Restore/Sync

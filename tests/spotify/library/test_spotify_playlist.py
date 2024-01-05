@@ -3,7 +3,6 @@ from copy import deepcopy
 from datetime import datetime
 from random import randrange
 from typing import Any
-from urllib.parse import parse_qs
 
 import pytest
 
@@ -13,8 +12,8 @@ from syncify.remote.enums import RemoteObjectType
 from syncify.remote.exception import RemoteObjectTypeError, RemoteError
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.exception import SpotifyCollectionError
-from syncify.spotify.library.object import SpotifyPlaylist
-from syncify.spotify.library.object import SpotifyTrack
+from syncify.spotify.object import SpotifyPlaylist
+from syncify.spotify.object import SpotifyTrack
 from tests.remote.library.object import RemotePlaylistTester
 from tests.spotify.api.mock import SpotifyMock
 from tests.spotify.library.test_spotify_collection import SpotifyCollectionLoaderTester
@@ -275,10 +274,13 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
         uri_add = []
         uri_clear = []
         for req in requests:
-            params = parse_qs(req.query)
-            if "uris" in params:
-                uri_add += params["uris"][0].split(",")
+            if not req.body:
+                continue
+
+            body = req.json()
+            if "uris" in body:
+                uri_add += body["uris"]
             elif req.body:
-                uri_clear += [t["uri"] for t in req.json()["tracks"]]
+                uri_clear += [t["uri"] for t in body["tracks"]]
 
         return uri_add, uri_clear

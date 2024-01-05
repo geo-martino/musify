@@ -11,7 +11,7 @@ from syncify.abstract.misc import Result
 from syncify.abstract.object import Track
 from syncify.processors.match import ItemMatcher
 from syncify.remote.api import RemoteAPI
-from syncify.remote.base import Remote
+from syncify.remote._base import Remote
 from syncify.remote.config import RemoteObjectClasses
 from syncify.remote.enums import RemoteObjectType
 from syncify.utils.helpers import align_and_truncate, get_max_width

@@ -47,7 +47,7 @@ class RequestHandler(APIAuthoriser):
         """
         return sum(self.backoff_start * self.backoff_factor ** i for i in range(self.backoff_count + 1))
 
-    def __init__(self, cache_path: str | None = ".api_cache", cache_expiry=timedelta(weeks=4), **auth_kwargs):
+    def __init__(self, cache_path: str | None = None, cache_expiry=timedelta(weeks=4), **auth_kwargs):
         super().__init__(**auth_kwargs)
 
         self.session: CachedSession | Session
