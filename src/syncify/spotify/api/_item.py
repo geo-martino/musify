@@ -168,7 +168,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             items_block["limit"] = int(parse_qs(urlparse(items_block["next"]).query).get("limit", [50])[0])
 
         kind = kind.name.casefold() + "s" if isinstance(kind, RemoteObjectType) else kind or self.items_key
-        pages = (items_block["total"] - len(items_block[self.items_key])) / items_block["limit"]
+        pages = (items_block["total"] - len(items_block[self.items_key])) / (items_block["limit"] or 1)
         bar = self.logger.get_progress_bar(
             initial=len(items_block[self.items_key]),
             total=items_block["total"],

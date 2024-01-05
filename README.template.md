@@ -18,6 +18,14 @@
 
 ## Quick Start Guides
 
+> [!TIP]
+> Set up logger to ensure you can see all info reported by the later operations.
+> Libraries log info about loaded objects to the custom `REPORT` level.
+> ```python
+> import logging
+> logging.basicConfig(format="%(message)s", level=logging.REPORT)
+> ```
+
 <a id="quick-start-spotify"></a>
 ### Spotify
 

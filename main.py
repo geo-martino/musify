@@ -759,7 +759,7 @@ if __name__ == "__main__":
 
 
 ## SELECTED FOR DEVELOPMENT
-# TODO: update the readme (dynamic readme?)
+# TODO: expand readme + check all python functions work
 # TODO: implement XAutoPF full update functionality
 # TODO: implement merge_playlists functions and, by extension, implement android library sync
 # TODO: release to pypi + implement CI/CD structure on GitHub
