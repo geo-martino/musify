@@ -18,6 +18,7 @@
       <excludeFolder url="file://$MODULE_DIR$/.venv/Lib/site-packages/requests_cache" />
       <excludeFolder url="file://$MODULE_DIR$/_logs" />
       <excludeFolder url="file://$MODULE_DIR$/.venv_lin" />
+      <excludeFolder url="file://$MODULE_DIR$/dist" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.12 (syncify)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

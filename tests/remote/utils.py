@@ -7,7 +7,7 @@ from urllib.parse import parse_qs
 
 from requests_mock import Mocker
 # noinspection PyProtectedMember,PyUnresolvedReferences
-from requests_mock.request import _RequestObjectProxy as Request
+from requests_mock.request import _RequestObjectProxy
 
 from syncify.remote.enums import RemoteIDType, RemoteObjectType
 from syncify.remote.processors.wrangle import RemoteDataWrangler
@@ -80,7 +80,7 @@ class RemoteMock(Mocker):
             method: str | None = None,
             params: dict[str, Any] | None = None,
             response: dict[str, Any] | None = None
-    ) -> list[Request]:
+    ) -> list[_RequestObjectProxy]:
         """Get a get request from the history from the given URL and params"""
         requests = []
         for request in self.request_history:

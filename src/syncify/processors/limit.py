@@ -70,6 +70,9 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
             allowance=1.25
         )
 
+    def to_xml(self, **kwargs) -> Mapping[str, Any]:
+        raise NotImplementedError
+
     def __init__(
             self,
             limit: int = 0,
@@ -192,9 +195,6 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
     @dynamicprocessormethod
     def _least_recently_added(self, items: list[Item]) -> None:
         ItemSorter.sort_by_field(items, Fields.DATE_ADDED)
-
-    def to_xml(self, **kwargs) -> Mapping[str, Any]:
-        raise NotImplementedError
 
     def as_dict(self):
         return {

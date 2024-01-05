@@ -153,9 +153,8 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         )
         self.api.get_items(responses, kind=RemoteObjectType.PLAYLIST, use_cache=self.use_cache)
 
-        bar = self.logger.get_progress_bar(iterable=responses, desc="Processing playlists", unit="playlists")
         playlists = []
-        for response in bar:
+        for response in self.logger.get_progress_bar(iterable=responses, desc="Processing playlists", unit="playlists"):
             pl = self._object_cls.playlist(response=response, api=self.api, skip_checks=False)
 
             for track in pl.tracks:  # add tracks from this playlist to the user's saved tracks
@@ -201,13 +200,11 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         Load all user's saved tracks from the API.
         Updates currently loaded tracks in-place or appends if not already loaded.
         """
-        self.logger.debug(f"Load {self.source} user's saved tracks: START")
+        self.logger.debug(f"Load user's saved {self.source} tracks: START")
         self.api.load_user_data()
 
         responses = self.api.get_user_items(kind=RemoteObjectType.TRACK, use_cache=self.use_cache)
-
-        bar = self.logger.get_progress_bar(iterable=responses, desc="Processing tracks", unit="tracks")
-        for response in bar:
+        for response in self.logger.get_progress_bar(iterable=responses, desc="Processing tracks", unit="tracks"):
             track = self._object_cls.track(response=response, api=self.api, skip_checks=True)
 
             if not track.has_uri:  # skip any invalid non-remote responses
@@ -220,7 +217,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
                 current._response = track.response
                 current.refresh()
 
-        self.logger.debug(f"Load {self.source} user's saved tracks: DONE")
+        self.logger.debug(f"Load user's saved {self.source} tracks: DONE")
 
     def enrich_tracks(self, *_, **__) -> None:
         """
@@ -253,13 +250,11 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         Load all user's saved albums from the API.
         Updates currently loaded albums in-place or appends if not already loaded.
         """
-        self.logger.debug(f"Load {self.source} user's saved albums: START")
+        self.logger.debug(f"Load user's saved {self.source} albums: START")
         self.api.load_user_data()
 
         responses = self.api.get_user_items(kind=RemoteObjectType.ALBUM, use_cache=self.use_cache)
-
-        bar = self.logger.get_progress_bar(iterable=responses, desc="Processing albums", unit="albums")
-        for response in bar:
+        for response in self.logger.get_progress_bar(iterable=responses, desc="Processing albums", unit="albums"):
             album = self._object_cls.album(response=response, api=self.api, skip_checks=True)
 
             current = next((item for item in self._albums if item == album), None)
@@ -273,7 +268,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
                 if track not in self.tracks:
                     self._tracks.append(track)
 
-        self.logger.debug(f"Load {self.source} user's saved albums: DONE")
+        self.logger.debug(f"Load user's saved {self.source} albums: DONE")
 
     def enrich_saved_albums(self, *_, **__) -> None:
         """
@@ -301,13 +296,11 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         Load all user's saved artists from the API.
         Updates currently loaded artists in-place or appends if not already loaded.
         """
-        self.logger.debug(f"Load {self.source} user's saved artists: START")
+        self.logger.debug(f"Load user's saved {self.source} artists: START")
         self.api.load_user_data()
 
         responses = self.api.get_user_items(kind=RemoteObjectType.ARTIST, use_cache=self.use_cache)
-
-        bar = self.logger.get_progress_bar(iterable=responses, desc="Processing artists", unit="artists")
-        for response in bar:
+        for response in self.logger.get_progress_bar(iterable=responses, desc="Processing artists", unit="artists"):
             artist = self._object_cls.artist(response=response, api=self.api, skip_checks=True)
 
             current = next((item for item in self._artists if item == artist), None)
@@ -319,7 +312,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
                 current._response = artist.response
                 current.refresh(skip_checks=True)
 
-        self.logger.debug(f"Load {self.source} user's saved artists: DONE")
+        self.logger.debug(f"Load user's saved {self.source} artists: DONE")
 
     def enrich_saved_artists(self, *_, **__) -> None:
         """

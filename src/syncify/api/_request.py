@@ -155,7 +155,7 @@ class RequestHandler(APIAuthoriser):
             message = f"{status.phrase} | {status.description}"
 
         if 400 <= response.status_code < 408:
-            raise APIError(message)
+            raise APIError(message, response=response)
 
         return error_message_found
 

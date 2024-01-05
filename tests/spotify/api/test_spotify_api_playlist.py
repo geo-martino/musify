@@ -91,8 +91,7 @@ class TestSpotifyAPIPlaylists:
         requests = api_mock.get_requests(url=playlist["href"] + "/tracks")
 
         for i, request in enumerate(requests, 1):
-            request_params = parse_qs(request.query)
-            count = len(request_params["uris"][0].split(","))
+            count = len(request.json()["uris"])
             assert count >= 1
             assert count <= 100
 
@@ -112,9 +111,12 @@ class TestSpotifyAPIPlaylists:
 
         uris = []
         for request in api_mock.get_requests(url=playlist["href"] + "/tracks"):
-            request_params = parse_qs(request.query)
-            if "uris" in request_params:
-                uris.extend(request_params["uris"][0].split(","))
+            if not request.body:
+                continue
+
+            request_body = request.json()
+            if "uris" in request_body:
+                uris.extend(request_body["uris"])
         assert len(uris) == len(id_list)
 
     def test_add_to_playlist_with_skip(self, playlist: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
@@ -137,9 +139,12 @@ class TestSpotifyAPIPlaylists:
 
         uris = []
         for request in api_mock.get_requests(url=playlist["href"] + "/tracks"):
-            request_params = parse_qs(request.query)
-            if "uris" in request_params:
-                uris.extend(request_params["uris"][0].split(","))
+            if not request.body:
+                continue
+
+            request_body = request.json()
+            if "uris" in request_body:
+                uris.extend(request_body["uris"])
         assert len(uris) == len(id_list_new)
 
     ###########################################################################

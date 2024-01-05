@@ -430,7 +430,8 @@ class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[Spot
 
     def refresh(self, skip_checks: bool = False) -> None:
         self._tracks = [
-            SpotifyTrack(track, api=self.api) for track in self._response.get("tracks", {}).get("items", [])
+            SpotifyTrack(track, api=self.api, skip_checks=skip_checks)
+            for track in self._response.get("tracks", {}).get("items", [])
         ]
         if not skip_checks:
             self._check_total()

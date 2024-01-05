@@ -167,6 +167,9 @@ class ItemSorter(MusicBeeProcessor):
 
         return cls(fields=fields, shuffle_mode=shuffle_mode, shuffle_by=shuffle_by, shuffle_weight=shuffle_weight)
 
+    def to_xml(self, **kwargs) -> Mapping[str, Any]:
+        raise NotImplementedError
+
     def __init__(
             self,
             fields: UnitSequence[Field | None] | Mapping[Field | None, bool] = (),
@@ -226,9 +229,6 @@ class ItemSorter(MusicBeeProcessor):
             items_grouped[key] = cls._sort_by_fields(cls.group_by_field(items, field=field), fields=fields)
 
         return items_grouped
-
-    def to_xml(self, **kwargs) -> Mapping[str, Any]:
-        raise NotImplementedError
 
     def as_dict(self):
         fields = None

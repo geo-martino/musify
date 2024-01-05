@@ -22,7 +22,6 @@ from tests.spotify.library.utils import assert_id_attributes
 from tests.spotify.utils import random_uri
 
 
-# TODO: add refresh test
 class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
 
     @pytest.fixture
@@ -164,6 +163,14 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
         assert len(pl.date_added) == len(set(original_uris)) + 2
         assert pl.date_created == new_min_dt
         assert pl.date_modified == new_max_dt
+
+    def test_refresh(self, response_valid: dict[str, Any]):
+        pl = SpotifyPlaylist(response_valid, skip_checks=True)
+        original_track_count = len(pl.tracks)
+        pl.response["tracks"]["items"] = pl.response["tracks"]["items"][:original_track_count // 2]
+
+        pl.refresh(skip_checks=True)
+        assert len(pl.tracks) == original_track_count // 2
 
     def test_reload(self, response_valid: dict[str, Any], api: SpotifyAPI):
         response_valid["description"] = None

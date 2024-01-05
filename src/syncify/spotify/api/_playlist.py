@@ -79,7 +79,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
         return pl_url
 
     def add_to_playlist(
-            self, playlist: str | Mapping[str, Any], items: Collection[str], limit: int = 99, skip_dupes: bool = True
+            self, playlist: str | Mapping[str, Any], items: Collection[str], limit: int = 100, skip_dupes: bool = True
     ) -> int:
         """
         ``POST: /playlists/{playlist_id}/tracks`` - Add list of tracks to a given playlist.
@@ -89,7 +89,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
         :param items: List of URLs/URIs/IDs of the tracks to add.
-        :param limit: Size of each batch of IDs to add. This value will be limited to be between ``1`` and ``99``.
+        :param limit: Size of each batch of IDs to add. This value will be limited to be between ``1`` and ``100``.
         :param skip_dupes: Skip duplicates.
         :return: The number of tracks added to the playlist.
         :raise RemoteIDTypeError: Raised when the input ``playlist`` does not represent
@@ -98,7 +98,6 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             are not all tracks or IDs.
         """
         url = f"{self.get_playlist_url(playlist, use_cache=False)}/tracks"
-        limit = limit_value(limit, floor=1, ceil=99)
 
         if len(items) == 0:
             self.logger.debug(f"{'SKIP':<7}: {url:<43} | No data given")
@@ -113,10 +112,10 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             uri_current = [track["track"]["uri"] for track in tracks]
             uri_list = [uri for uri in uri_list if uri not in uri_current]
 
+        limit = limit_value(limit, floor=1, ceil=100)
         for uris in batched(uri_list, limit):  # add tracks in batches
-            params = {"uris": ','.join(uris)}
             log = [f"Adding {len(uris):>6} items"]
-            self.handler.post(url, params=params, log_pad=71, log_extra=log)
+            self.handler.post(url, json={"uris": uris}, log_pad=71, log_extra=log)
 
         self.logger.debug(f"{'DONE':<7}: {url:<71} | Added {len(uri_list):>6} items to playlist: {url}")
         return len(uri_list)
@@ -157,21 +156,23 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             are not all tracks or IDs.
         """
         url = f"{self.get_playlist_url(playlist, use_cache=False)}/tracks"
-        limit = limit_value(limit, floor=1, ceil=100)
-
         if items is not None and len(items) == 0:
+            self.logger.debug(f"{'SKIP':<7}: {url:<43} | No data given")
             return 0
-        elif items is not None:  # clear only the items given
-            self.validate_item_type(items, kind=RemoteObjectType.TRACK)
-            uri_list = [self.convert(item, kind=RemoteObjectType.TRACK, type_out=RemoteIDType.URI) for item in items]
-        else:  # clear everything
+
+        if items is None:  # clear everything
             pl_current = self.get_items(url, kind=RemoteObjectType.PLAYLIST, extend=True, use_cache=False)[0]
             tracks = pl_current[self.playlist_items_key][self.items_key]
             uri_list = [track[self.playlist_items_key.rstrip("s")]["uri"] for track in tracks]
+        else:  # clear only the items given
+            self.validate_item_type(items, kind=RemoteObjectType.TRACK)
+            uri_list = [self.convert(item, kind=RemoteObjectType.TRACK, type_out=RemoteIDType.URI) for item in items]
 
         if not uri_list:  # skip when nothing to clear
+            self.logger.debug(f"{'SKIP':<7}: {url:<43} | No tracks to clear")
             return 0
 
+        limit = limit_value(limit, floor=1, ceil=100)
         for uris in batched(uri_list, limit):  # clear in batches
             body = {"tracks": [{"uri": uri} for uri in uris]}
             log = [f"Clearing {len(uri_list):>3} tracks"]

@@ -541,8 +541,51 @@ class Syncify(DynamicProcessor):
         if isinstance(end, datetime):
             end = end.date()
 
+        self.logger.info(
+            f"\33[1;95m ->\33[1;97m Creating '{name}' {self.remote.source} playlist "
+            f"for new tracks by followed artists released between {start} and {end} \33[0m"
+        )
+
+        # load saved artists and their albums with fresh data, ignoring use_cache settings
+        if not self.remote.library_loaded or not all(artist.albums for artist in self.remote.library.artists):
+            use_cache_original = self.remote.library.use_cache
+            self.remote.library.use_cache = False
+            self.remote.library.load_saved_artists()
+            self.remote.library.use_cache = use_cache_original
+
+            self.remote.library.enrich_saved_artists(types=("album", "single"))
+
+        def match_date(alb: RemoteAlbum) -> bool:
+            """Match start and end dates to the release date of this given ``album``"""
+            return any({
+                alb.date and start <= alb.date <= end,
+                alb.month and start.year <= alb.year <= end.year and start.month <= alb.month <= end.month,
+                alb.year and start.year <= alb.year <= end.year,
+            })
+
+        # filter albums and check if any albums need extending
+        albums = [album for artist in self.remote.library.artists for album in artist.albums if match_date(album)]
+        albums_need_extend = [album for album in albums if len(album.tracks) < album.track_total]
+        if albums_need_extend:
+            kind = RemoteObjectType.ALBUM
+            key = self.api.collection_item_map[kind]
+
+            bar = self.logger.get_progress_bar(iterable=albums_need_extend, desc="Getting album tracks", unit="albums")
+            for album in bar:
+                self.api.extend_items(album.response, kind=kind, key=key, use_cache=self.remote.api.use_cache)
+                album.refresh(skip_checks=False)
+
+        # log load results
+        if not self.remote.library_loaded or albums_need_extend:
+            self.logger.print(REPORT)
+            self.remote.library.log_artists()
+            self.logger.print()
+
+        tracks = [track for album in sorted(albums, key=lambda x: x.date, reverse=True) for track in album]
+        self.logger.info(f"\33[1;95m  >\33[1;97m Adding {len(tracks)} tracks to '{name}' \33[0m")
+
         pl = self.remote.library.playlists.get(name)
-        if pl is None:
+        if pl is None:  # playlist not loaded, attempt to find playlist on remote with fresh data
             responses = self.remote.api.api.get_user_items(use_cache=False)
             for response in responses:
                 pl_check = self.remote.playlist(response=response, api=self.remote.api.api, skip_checks=True)
@@ -553,37 +596,14 @@ class Syncify(DynamicProcessor):
                     pl = pl_check
                     break
 
-        if pl is None:
+        if pl is None:  # if playlist still not found, create it
             pl = self.remote.playlist.create(api=self.remote.api.api, name=name)
 
-        use_cache_original = self.remote.library.use_cache
-        self.remote.library.use_cache = False
-        if not self.remote.library_loaded or not self.remote.library.artists:
-            self.remote.library.load_saved_artists()
-            self.logger.print()
-            self.remote.library.enrich_saved_artists(tracks=True, types=("album", "single"))
-
-            self.logger.print(REPORT)
-            self.remote.library.log_artists()
-            self.logger.print()
-
-        def match_date(alb: RemoteAlbum) -> bool:
-            """Match start and end dates to the release date of this given ``album``"""
-            return any({
-                alb.date and start <= alb.date <= end,
-                alb.month and start.year <= alb.year <= end.year and start.month <= alb.month <= end.month,
-                alb.year and start.year <= alb.year <= end.year,
-            })
-
-        for artist in self.remote.library.artists:
-            for album in artist.albums:
-                if match_date(album):
-                    pl.extend(album, allow_duplicates=False)
-
-        pl.tracks.sort(key=lambda x: x.date, reverse=True)
+        # add tracks to remote playlist
+        pl.extend(tracks, allow_duplicates=False)
         results = pl.sync(kind="refresh", reload=False, dry_run=False)
-        self.remote.library.use_cache = use_cache_original
 
+        self.logger.print(STAT)
         self.remote.library.log_sync({name: results})
         self.logger.info(f"\33[92mAdded {results.added} new tracks to playlist: '{name}' \33[0m")
         self.logger.debug(f"New music playlist: DONE")
@@ -687,15 +707,6 @@ if __name__ == "__main__":
         print_line("DRY RUN ENABLED", " ")
 
     main.api.authorise()
-
-    lyrics = main.api.handler.get(
-        url="https://spclient.wg.spotify.com/color-lyrics/v2/track/0VjIjW4GlUZAMYd2vXMi3b",
-        params={"format": "json", "vocalRemoval": False},
-        headers={"app-platform": "WebPlayer"}
-    )
-    print(lyrics)
-    exit()
-
     for i, func in enumerate(named_args.functions, 1):
         title = f"{PROGRAM_NAME}: {func}"
         if conf.dry_run:
@@ -736,6 +747,7 @@ if __name__ == "__main__":
 #  URIs for extra songs in remote playlists found in library
 # TODO: track audio recognition when searching using Shazam like service?
 #  Maybe https://audd.io/ ?
+# TODO: add lyrics property to tracks? Possibly through a separate API
 # TODO: expand search/match functionality to include all item types
 # TODO: expand docstrings everywhere
 

@@ -21,7 +21,6 @@ from tests.spotify.api.mock import SpotifyMock
 from tests.spotify.library.utils import assert_id_attributes
 
 
-# TODO: add refresh tests
 class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
 
     @abstractmethod
@@ -242,6 +241,25 @@ class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
         album.response["popularity"] = new_rating
         assert album.rating == new_rating
 
+    def test_refresh(self, response_valid: dict[str, Any]):
+        album = SpotifyAlbum(response_valid)
+        original_track_count = len(album.tracks)
+        original_disc_total = album.disc_total
+
+        album.response["tracks"]["items"] = album.response["tracks"]["items"][:original_track_count // 2]
+        album.response["artists"] = [album.response["artists"][0]]
+        for track in album.response["tracks"]["items"]:
+            track["album"].pop("genres", None)
+            track["disc_number"] = original_disc_total + 5
+
+        album.refresh(skip_checks=True)
+
+        assert len(album.tracks) == original_track_count // 2
+        assert len(album.artists) == 1
+        for track in album.tracks:
+            assert "genres" in track.response["album"]
+            assert track.disc_total == original_disc_total + 5
+
     def test_reload(self, response_valid: dict[str, Any], api: SpotifyAPI):
         response_valid.pop("genres", None)
         response_valid.pop("popularity", None)
@@ -396,6 +414,14 @@ class TestSpotifyArtist(RemoteCollectionTester):
         new_followers = artist.followers + 20
         artist.response["followers"]["total"] = new_followers
         assert artist.followers == new_followers
+
+    def test_refresh(self, response_valid: dict[str, Any]):
+        artist = SpotifyArtist(response_valid, skip_checks=True)
+        original_album_count = len(artist.albums)
+        artist.response["albums"]["items"] = artist.response["albums"]["items"][:original_album_count // 2]
+
+        artist.refresh(skip_checks=True)
+        assert len(artist.albums) == original_album_count // 2
 
     def test_reload(self, response_valid: dict[str, Any], api: SpotifyAPI):
         genres = response_valid.pop("genres", None)

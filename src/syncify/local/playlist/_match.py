@@ -198,12 +198,10 @@ class LocalMatcher(MusicBeeProcessor):
 
             # sanitise path separators
             if self.library_folder is not None:
-                if "/" in self.library_folder:
-                    path = path.replace("\\", "/")
-                else:
-                    path = path.replace("/", "\\")
+                seps = ("\\", "/") if "/" in self.library_folder else ("/", "\\")
+                path = path.replace(*seps)
 
-            path = self.existing_paths.get(path.casefold(), path)
+        path = self.existing_paths.get(path.casefold(), path)
 
         if not check_existence or exists(path):
             return path

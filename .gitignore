@@ -20,6 +20,9 @@ config.yml
 # caches
 **cache*
 
+# build files
+dist/
+
 # large data & log folders
 _data/
 _logs/

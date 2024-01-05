@@ -14,7 +14,6 @@ from tests.spotify.api.mock import SpotifyMock
 from tests.spotify.library.utils import assert_id_attributes
 
 
-# TODO: add refresh test
 class TestSpotifyTrack(ItemTester):
 
     @pytest.fixture
@@ -171,6 +170,13 @@ class TestSpotifyTrack(ItemTester):
         new_rating = track.rating + 20
         track.response["popularity"] = new_rating
         assert track.rating == new_rating
+
+    def test_refresh(self, response_valid: dict[str, Any]):
+        track = SpotifyTrack(response_valid, skip_checks=True)
+        track.response["artists"] = [track.response["artists"][0]]
+
+        track.refresh(skip_checks=True)
+        assert len(track.artists) == 1
 
     def test_reload(self, response_valid: dict[str, Any], api: SpotifyAPI):
         response_valid["album"].pop("name", None)

@@ -6,8 +6,6 @@ from time import sleep
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from urllib3.util import url
-
 from syncify.api.exception import APIError
 from syncify.remote.api import APIMethodInputType
 from syncify.remote.enums import RemoteObjectType, RemoteIDType
@@ -182,7 +180,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         )
 
         while items_block.get("next"):  # loop through each page
-            log_count = min(bar.n + items_block["limit"], items_block["total"])
+            log_count = min(len(items_block[self.items_key]) + items_block["limit"], items_block["total"])
             log = [f"{log_count:>6}/{items_block["total"]:<6} {key or self.items_key}"]
 
             response = self.handler.get(items_block["next"], use_cache=use_cache, log_pad=95, log_extra=log)

@@ -10,11 +10,10 @@ from syncify.local.track import LocalTrack
 from syncify.processors.compare import Comparer
 from tests.abstract.misc import PrettyPrinterTester
 from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra, path_playlist_resources
-from tests.local.utils import random_tracks, path_track_wma, path_track_flac, path_track_mp3
+from tests.local.utils import random_tracks, path_track_wma, path_track_flac, path_track_mp3, path_track_resources
 from tests.utils import random_str, path_resources
 
 
-# TODO: add existing_paths logic test
 class TestLocalMatcher(PrettyPrinterTester):
 
     library_folder = "/path/to/library"
@@ -90,6 +89,18 @@ class TestLocalMatcher(PrettyPrinterTester):
         matcher = LocalMatcher(include_paths=include_paths, exclude_paths=exclude_paths, check_existence=True)
         assert matcher.include_paths == []
         assert matcher.exclude_paths == []
+
+    def test_init_replaces_with_existing_paths(self, comparers: list[Comparer]):
+        matcher = LocalMatcher(
+            comparers=comparers,
+            include_paths=(path_track_flac.upper(), path_track_mp3.upper()),
+            exclude_paths=[path_track_wma.upper(), "/does/not/exist"],
+            existing_paths=(path_track_flac, path_track_mp3, path_track_wma),
+            library_folder=path_track_resources,
+            check_existence=True
+        )
+        assert matcher.include_paths == [path_track_flac.casefold(), path_track_mp3.casefold()]
+        assert matcher.exclude_paths == [path_track_wma.casefold()]
 
     @staticmethod
     def sort_key(track: LocalTrack) -> str:
