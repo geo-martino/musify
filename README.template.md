@@ -76,10 +76,14 @@
     ```python
     from syncify.spotify.object import SpotifyTrack, SpotifyAlbum, SpotifyPlaylist, SpotifyArtist
     
-    track1 = SpotifyTrack.load("6fWoFduMpBem73DMLCOh1Z", api=api)  # load objects by ID
-    track2 = SpotifyTrack.load("spotify:track:4npv0xZO9fVLBmDS2XP9Bw", api=api)  # load objects by URI
-    track3 = SpotifyTrack.load("https://open.spotify.com/track/1TjVbzJUAuOvas1bL00TiH", api=api)  # load objects by open/external style URL
-    track4 = SpotifyTrack.load("https://api.spotify.com/v1/tracks/6pmSweeisgfxxsiLINILdJ", api=api)  # load objects by API style URI
+    # load objects by ID
+    track1 = SpotifyTrack.load("6fWoFduMpBem73DMLCOh1Z", api=api)
+    # load objects by URI
+    track2 = SpotifyTrack.load("spotify:track:4npv0xZO9fVLBmDS2XP9Bw", api=api)
+    # load objects by open/external style URL
+    track3 = SpotifyTrack.load("https://open.spotify.com/track/1TjVbzJUAuOvas1bL00TiH", api=api)
+    # load objects by API style URI
+    track4 = SpotifyTrack.load("https://api.spotify.com/v1/tracks/6pmSweeisgfxxsiLINILdJ", api=api)
     
     album = SpotifyAlbum.load("https://open.spotify.com/album/0rAWaAAMfzHzCbYESj4mfx", api=api, extend_tracks=True)
     playlist = SpotifyPlaylist.load("spotify:playlist:37i9dQZF1E4zg1xOOORiP1", api=api, extend_tracks=True)
