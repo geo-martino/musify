@@ -18,7 +18,8 @@
 
 ## Quick Start Guides
 
-### Spotify {#quick-start-spotify}
+<a id="quick-start-spotify"></a>
+### Spotify
 
 1. Get [Spotify for Developers](https://developer.spotify.com/dashboard/login) access. 
 2. Create an app and take note of the **client ID** and **client secret**.
@@ -98,19 +99,18 @@
     library.log_sync(results)
     ```
 
-
-[//]: # (### Local {#quick-start-local})
-
-[//]: # (TODO: complete me)
+<a id="quick-start-local"></a>
+### Local
+More documentation to come...
 
 
 
 ## Currently Supported
 
-> - **Music Streaming Services**: `Spotify`
-> - **Audio filetypes**: `.flac` `.m4a` `.wma` `.mp3`
-> - **Local playlist filetypes**: `.xautopf` `.m3u`
-> - **Local Libraries**: `MusicBee`
+- **Music Streaming Services**: `Spotify`
+- **Audio filetypes**: `.m4a` `.flac` `.mp3` `.wma`
+- **Local playlist filetypes**: `.xautopf` `.m3u`
+- **Local Libraries**: `MusicBee`
 
 
 ## Author notes, contributions, and reporting issues

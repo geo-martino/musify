@@ -18,7 +18,8 @@
 
 ## Quick Start Guides
 
-### Spotify {#quick-start-spotify}
+<a id="quick-start-spotify"></a>
+### Spotify
 
 1. Get [Spotify for Developers](https://developer.spotify.com/dashboard/login) access. 
 2. Create an app and take note of the **client ID** and **client secret**.
@@ -98,19 +99,18 @@
     library.log_sync(results)
     ```
 
-
-[//]: # (### Local {#quick-start-local})
-
-[//]: # (TODO: complete me)
+<a id="quick-start-local"></a>
+### Local
+More documentation to come...
 
 
 
 ## Currently Supported
 
-> - **Music Streaming Services**: {remote_sources}
-> - **Audio filetypes**: {track_filetypes}
-> - **Local playlist filetypes**: {playlist_filetypes}
-> - **Local Libraries**: {local_sources}
+- **Music Streaming Services**: {remote_sources}
+- **Audio filetypes**: {track_filetypes}
+- **Local playlist filetypes**: {playlist_filetypes}
+- **Local Libraries**: {local_sources}
 
 
 ## Author notes, contributions, and reporting issues
