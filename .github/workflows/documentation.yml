@@ -40,7 +40,7 @@ jobs:
       - name: Sphinx build
         run: |
           sphinx-apidoc -o ./docs ./src
-          sphinx-build ./docs ./.build        
+          sphinx-build ./docs ./.build
 
       - name: Jekyll build
         uses: actions/jekyll-build-pages@v1
