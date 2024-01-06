@@ -6,11 +6,17 @@ permissions:
   contents: write
 
 jobs:
-  docs:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v3
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v3
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
 
       - name: Install module
         run: |
@@ -19,13 +25,24 @@ jobs:
       - name: Sphinx build
         run: |
           sphinx-apidoc -o doc src
-          sphinx-build doc .build
+          sphinx-build doc .build        
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      - name: Jekyll build
+        uses: actions/jekyll-build-pages@v1
         with:
-          publish_branch: gh-pages
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .build/
-          force_orphan: true
+          source: ./.build
+          destination: ./_site
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

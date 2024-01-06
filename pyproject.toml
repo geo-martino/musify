@@ -46,6 +46,7 @@ dev = [
 ]
 docs = [
     "sphinx~=7.2",
+    "sphinx-jekyll-builder~=0.3",
     "sphinx_rtd_theme~=2.0",
     "myst_parser~=2.0",
 ]
