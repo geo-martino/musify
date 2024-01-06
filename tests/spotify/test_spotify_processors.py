@@ -2,22 +2,22 @@ from functools import partial
 
 import pytest
 
-from syncify.abstract.enums import TagFields as Tag
-from syncify.exception import SyncifyEnumError
+from syncify.shared.core.enums import TagFields as Tag
+from syncify.shared.exception import SyncifyEnumError
 from syncify.local.collection import LocalAlbum
 from syncify.local.track import LocalTrack
 from syncify.processors.match import CleanTagConfig
-from syncify.remote.enums import RemoteIDType as IDType, RemoteObjectType as ObjectType
-from syncify.remote.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
-from syncify.remote.processors.search import SearchSettings
+from syncify.shared.remote.enums import RemoteIDType as IDType, RemoteObjectType as ObjectType
+from syncify.shared.remote.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
+from syncify.shared.remote.processors.search import SearchSettings
 from syncify.spotify import URL_API, URL_EXT
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.object import SpotifyTrack, SpotifyAlbum
 from syncify.spotify.processors.processors import SpotifyItemSearcher, SpotifyItemChecker
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
-from tests.local.utils import random_track
-from tests.remote.processors.check import RemoteItemCheckerTester
-from tests.remote.processors.search import RemoteItemSearcherTester
+from tests.local.track.utils import random_track
+from tests.shared.remote.processors.check import RemoteItemCheckerTester
+from tests.shared.remote.processors.search import RemoteItemSearcherTester
 from tests.spotify.api.mock import SpotifyMock
 from tests.spotify.utils import random_id, random_ids, random_uri, random_api_url, random_ext_url
 from tests.utils import random_str

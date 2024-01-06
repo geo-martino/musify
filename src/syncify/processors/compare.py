@@ -5,15 +5,15 @@ from functools import reduce
 from operator import mul
 from typing import Any, Self
 
-from syncify.abstract import Item
-from syncify.abstract.enums import Field
-from syncify.fields import LocalTrackField
+from syncify.shared.core.base import Item
+from syncify.shared.core.enums import Field
+from syncify.local.track.fields import LocalTrackField
 from syncify.local.exception import FieldError
 from syncify.processors.base import DynamicProcessor, MusicBeeProcessor, dynamicprocessormethod
 from syncify.processors.exception import ItemComparerError
 from syncify.processors.time import TimeMapper
-from syncify.utils import UnitSequence
-from syncify.utils.helpers import to_collection
+from syncify.shared.types import UnitSequence
+from syncify.shared.utils import to_collection
 
 # Map of MusicBee field name to Field enum
 # noinspection SpellCheckingInspection

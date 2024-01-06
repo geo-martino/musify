@@ -6,34 +6,35 @@ import logging.config
 import os
 import sys
 from abc import ABCMeta, abstractmethod
-from collections.abc import Mapping, Collection, Callable
+from collections.abc import Mapping, Collection, Callable, Iterable
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime
 from os.path import isabs, join, dirname, splitext, exists
-from typing import Any, Self, get_args, Iterable
+from typing import Any, Self, get_args
 
 import yaml
 
 from syncify import PACKAGE_ROOT, MODULE_ROOT
-from syncify.abstract import NamedObject
-from syncify.abstract.enums import TagField
-from syncify.abstract.misc import PrettyPrinter, Filter
-from syncify.abstract.object import Library
-from syncify.api import APIAuthoriser, RequestHandler
-from syncify.exception import ConfigError, SyncifyError
-from syncify.fields import LocalTrackField
+from syncify.shared.core.base import NamedObject
+from syncify.shared.core.enums import TagField
+from syncify.shared.core.misc import PrettyPrinter, Filter
+from syncify.shared.core.object import Library
+from syncify.shared.api.authorise import APIAuthoriser
+from syncify.shared.api.request import RequestHandler
+from syncify.shared.exception import ConfigError, SyncifyError
+from syncify.local.track.fields import LocalTrackField
 from syncify.local.collection import LocalCollection
 from syncify.local.exception import InvalidFileType, FileDoesNotExistError
 from syncify.local.library import MusicBee, LocalLibrary
 from syncify.processors.compare import Comparer
-from syncify.remote.api import RemoteAPI
-from syncify.remote.base import RemoteObject
-from syncify.remote.library import RemoteLibrary
-from syncify.remote.object import PLAYLIST_SYNC_KINDS, RemotePlaylist
-from syncify.remote.processors.check import RemoteItemChecker
-from syncify.remote.processors.search import RemoteItemSearcher
-from syncify.remote.processors.wrangle import RemoteDataWrangler
+from syncify.shared.remote.api import RemoteAPI
+from syncify.shared.remote.base import RemoteObject
+from syncify.shared.remote.library import RemoteLibrary
+from syncify.shared.remote.object import PLAYLIST_SYNC_KINDS, RemotePlaylist
+from syncify.shared.remote.processors.check import RemoteItemChecker
+from syncify.shared.remote.processors.search import RemoteItemSearcher
+from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
 from syncify.report import report_missing_tags
 from syncify.spotify import SPOTIFY_NAME
 from syncify.spotify.api import SpotifyAPI
@@ -42,8 +43,8 @@ from syncify.spotify.library import SpotifyLibrary
 from syncify.spotify.object import SpotifyPlaylist
 from syncify.spotify.processors.processors import SpotifyItemChecker, SpotifyItemSearcher
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
-from syncify.utils.helpers import to_collection
-from syncify.utils.logger import LOGGING_DT_FORMAT, SyncifyLogger
+from syncify.shared.utils import to_collection
+from syncify.shared.logger import LOGGING_DT_FORMAT, SyncifyLogger
 
 
 def _get_local_track_tags(tags: Any) -> tuple[LocalTrackField, ...]:

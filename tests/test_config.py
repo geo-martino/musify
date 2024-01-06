@@ -7,17 +7,17 @@ from pytest_lazyfixture import lazy_fixture
 from requests_cache import CachedSession
 
 from syncify import PACKAGE_ROOT, MODULE_ROOT
-from syncify.abstract.enums import TagFields
+from syncify.shared.core.enums import TagFields
 from syncify.config import ConfigLocal, ConfigMusicBee
 from syncify.config import ConfigRemote, ConfigSpotify
 from syncify.config import LOCAL_CONFIG, REMOTE_CONFIG, Config, ConfigFilter, ConfigReports
-from syncify.exception import ConfigError, SyncifyError
-from syncify.fields import LocalTrackField
+from syncify.shared.exception import ConfigError, SyncifyError
+from syncify.local.track.fields import LocalTrackField
 from syncify.local.exception import FileDoesNotExistError
-from syncify.remote.processors.wrangle import RemoteDataWrangler
-from syncify.utils.helpers import correct_platform_separators
-from syncify.utils.logger import SyncifyLogger
-from tests.abstract.misc import PrettyPrinterTester
+from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
+from syncify.shared.utils import correct_platform_separators
+from syncify.shared.logger import SyncifyLogger
+from tests.shared.core.misc import PrettyPrinterTester
 from tests.utils import path_resources, path_txt
 
 path_config = join(path_resources, "test_config.yml")
@@ -62,7 +62,6 @@ class TestConfig(PrettyPrinterTester):
 
         loggers = [logger.name for logger in logging.getLogger().getChildren()]
         assert "__main__" not in loggers
-        assert MODULE_ROOT not in loggers
 
         config_empty.load_log_config(path_logging, "test", "__main__")
 

@@ -1,4 +1,4 @@
-from syncify.exception import SyncifyError
+from syncify.shared.exception import SyncifyError
 
 
 class ProcessorError(SyncifyError):

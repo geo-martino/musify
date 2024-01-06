@@ -16,10 +16,10 @@ formatters:
 
 filters:
   console:
-    (): "syncify.utils.logger.LogConsoleFilter"
+    (): "syncify.shared.logger.LogConsoleFilter"
     module_width: 40
   file:
-    (): "syncify.utils.logger.LogFileFilter"
+    (): "syncify.shared.logger.LogFileFilter"
     module_width: 40
 
 handlers:
@@ -50,7 +50,7 @@ handlers:
     stream: ext://sys.stdout
 
   file:
-    class: syncify.utils.logger.CurrentTimeRotatingFileHandler
+    class: syncify.shared.logger.CurrentTimeRotatingFileHandler
     level: DEBUG
     formatter: extended
     filters: ["file"]
@@ -69,7 +69,7 @@ loggers:
 
   test:
     <<: *logger
-    handlers: [console_stat]
+    handlers: [console_debug]
 
   dev:
     <<: *logger

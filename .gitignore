@@ -23,7 +23,7 @@ config.yml
 # build/dev/doc directories
 dist/
 .grip/
-_site/
+.docs/
 docs/modules.rst
 docs/syncify*.rst
 

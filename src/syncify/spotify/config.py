@@ -1,4 +1,4 @@
-from syncify.remote.config import RemoteObjectClasses
+from syncify.shared.remote.config import RemoteObjectClasses
 from syncify.spotify.object import SpotifyPlaylist, SpotifyTrack, SpotifyAlbum, SpotifyArtist
 
 SPOTIFY_OBJECT_CLASSES = RemoteObjectClasses(

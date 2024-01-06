@@ -9,20 +9,21 @@ from glob import glob
 from os.path import splitext, join, basename, exists, isdir
 from typing import Any
 
-from syncify.abstract import Item
-from syncify.abstract.collection import ItemCollection
-from syncify.abstract.enums import Fields, TagField, TagFields
-from syncify.abstract.object import Track, Library, Folder, Album, Artist, Genre
-from syncify.exception import SyncifyKeyError
-from syncify.fields import LocalTrackField
-from syncify.local._base import LocalItem
+from syncify.shared.core.base import Item
+from syncify.shared.core.collection import ItemCollection
+from syncify.shared.core.enums import Fields, TagField, TagFields
+from syncify.shared.core.object import Track, Library, Folder, Album, Artist, Genre
+from syncify.shared.exception import SyncifyKeyError
+from syncify.local.track.fields import LocalTrackField
+from syncify.local.base import LocalItem
 from syncify.local.exception import LocalCollectionError
 from syncify.local.track import LocalTrack, SyncResultTrack, load_track, TRACK_FILETYPES
-from syncify.remote.enums import RemoteIDType
-from syncify.remote.processors.wrangle import RemoteDataWrangler
-from syncify.utils import UnitCollection
-from syncify.utils.helpers import get_most_common_values, to_collection, UnitIterable, align_and_truncate, get_max_width
-from syncify.utils.logger import SyncifyLogger, STAT
+from syncify.shared.remote.enums import RemoteIDType
+from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
+from syncify.shared.types import UnitCollection
+from syncify.shared.utils import get_most_common_values, to_collection, align_and_truncate, get_max_width
+from syncify.shared.types import UnitIterable
+from syncify.shared.logger import SyncifyLogger, STAT
 
 __max_str = "z" * 50
 

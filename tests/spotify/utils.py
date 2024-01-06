@@ -1,8 +1,18 @@
-from random import randrange
+from collections.abc import Iterable
+from random import choice, randrange
+from typing import Any
 
-from syncify.remote.enums import RemoteObjectType, RemoteIDType
+# noinspection PyProtectedMember,PyUnresolvedReferences
+from requests_mock.request import _RequestObjectProxy
+
+from syncify.shared.remote.enums import RemoteIDType, RemoteObjectType
+from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
 from syncify.spotify import URL_API, URL_EXT, SPOTIFY_NAME
+from syncify.spotify.base import SpotifyObject
 from tests.utils import random_str
+
+ALL_ID_TYPES = RemoteIDType.all()
+ALL_ITEM_TYPES = RemoteObjectType.all()
 
 
 def random_id() -> str:
@@ -14,6 +24,31 @@ def random_ids(start: int = 1, stop: int = 50) -> list[str]:
     """Generates many valid looking random Spotify IDs"""
     range_ = randrange(start=start, stop=stop) if start < stop else start
     return [random_id() for _ in range(range_)]
+
+
+def random_id_type(wrangler: RemoteDataWrangler, kind: RemoteObjectType, id_: str | None = None) -> str:
+    """Convert the given ``id_`` to a random ID type"""
+    type_in = RemoteIDType.ID
+    type_out = choice(ALL_ID_TYPES)
+    return wrangler.convert(id_ or random_id(), kind=kind, type_in=type_in, type_out=type_out)
+
+
+def random_id_types(
+        wrangler: RemoteDataWrangler,
+        kind: RemoteObjectType,
+        id_list: Iterable[str] | None = None,
+        start: int = 1,
+        stop: int = 10
+) -> list[str]:
+    """Generate list of random ID types based on input item type"""
+    if id_list:
+        pass
+    elif kind == RemoteObjectType.USER:
+        id_list = [random_str(1, RemoteIDType.ID.value - 1) for _ in range(randrange(start=start, stop=stop))]
+    else:
+        id_list = random_ids(start=start, stop=stop)
+
+    return [random_id_type(id_=id_, wrangler=wrangler, kind=kind) for id_ in id_list]
 
 
 def random_uri(kind: RemoteObjectType = RemoteObjectType.TRACK) -> str:
@@ -47,3 +82,12 @@ def random_ext_urls(kind: RemoteObjectType = RemoteObjectType.TRACK, start: int 
     """Generates many valid looking random Spotify external URLs of item :py:class:`RemoteObjectType` ``kind``"""
     range_ = randrange(start=start, stop=stop) if start < stop else start
     return [random_ext_url(kind=kind) for _ in range(range_)]
+
+
+def assert_id_attributes(item: SpotifyObject, response: dict[str, Any]):
+    """Check a given :py:class:`SpotifyObject` has the expected attributes relating to its identification"""
+    assert item.has_uri
+    assert item.uri == response["uri"]
+    assert item.id == response["id"]
+    assert item.url == response["href"]
+    assert item.url_ext == response["external_urls"]["spotify"]

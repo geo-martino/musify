@@ -3,7 +3,7 @@ from typing import Any
 
 from dateutil.relativedelta import relativedelta
 
-from syncify.abstract.misc import PrettyPrinter
+from syncify.shared.core.misc import PrettyPrinter
 from syncify.processors.base import DynamicProcessor, dynamicprocessormethod
 
 

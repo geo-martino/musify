@@ -5,12 +5,13 @@ from typing import Any
 import pytest
 
 from syncify import PROGRAM_NAME
-from syncify.remote.enums import RemoteObjectType as ObjectType, RemoteIDType
-from syncify.remote.exception import RemoteObjectTypeError, RemoteIDTypeError
+from syncify.shared.remote.enums import RemoteObjectType as ObjectType, RemoteIDType
+from syncify.shared.remote.exception import RemoteObjectTypeError, RemoteIDTypeError
 from syncify.spotify.api import SpotifyAPI
-from tests.remote.utils import random_id_type, random_id_types, ALL_ITEM_TYPES
+from tests.shared.remote.utils import ALL_ITEM_TYPES
 from tests.spotify.api.mock import SpotifyMock
-from tests.spotify.utils import random_id, random_ids, random_uris, random_api_urls, random_ext_urls
+from tests.spotify.utils import random_ids, random_id, random_id_type, random_id_types
+from tests.spotify.utils import random_uris, random_api_urls, random_ext_urls
 
 
 class TestSpotifyAPIPlaylists:

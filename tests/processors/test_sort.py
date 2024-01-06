@@ -5,13 +5,14 @@ from random import choice, randrange
 import pytest
 import xmltodict
 
-from syncify.fields import TrackField, LocalTrackField
+from syncify.shared.fields import TrackField
+from syncify.local.track.fields import LocalTrackField
 from syncify.local.track import LocalTrack
 from syncify.processors.sort import ItemSorter, ShuffleMode, ShuffleBy
-from syncify.utils.helpers import strip_ignore_words
-from tests.abstract.misc import PrettyPrinterTester
+from syncify.shared.utils import strip_ignore_words
+from tests.shared.core.misc import PrettyPrinterTester
 from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
-from tests.local.utils import random_tracks
+from tests.local.track.utils import random_tracks
 
 
 class TestItemSorter(PrettyPrinterTester):

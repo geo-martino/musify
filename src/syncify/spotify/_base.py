@@ -1,4 +1,4 @@
-from syncify.remote import Remote
+from syncify.shared.remote import Remote
 
 
 class SpotifyRemote(Remote):

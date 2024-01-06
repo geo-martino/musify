@@ -7,15 +7,15 @@ from typing import Any
 import mutagen
 from PIL import Image
 
-from syncify.abstract.enums import TagMap
-from syncify.abstract.object import Track
-from syncify.exception import SyncifyValueError
-from syncify.fields import LocalTrackField
-from syncify.local import LocalItem
-from syncify.remote.enums import RemoteIDType
-from syncify.remote.processors.wrangle import RemoteDataWrangler
-from syncify.utils import UnitIterable
-from syncify.utils.helpers import to_collection
+from syncify.shared.core.enums import TagMap
+from syncify.shared.core.object import Track
+from syncify.shared.exception import SyncifyValueError
+from syncify.local.track.fields import LocalTrackField
+from syncify.local.base import LocalItem
+from syncify.shared.remote.enums import RemoteIDType
+from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
+from syncify.shared.types import UnitIterable
+from syncify.shared.utils import to_collection
 
 
 class TagReader(LocalItem, Track, metaclass=ABCMeta):

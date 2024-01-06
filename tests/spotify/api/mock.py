@@ -14,11 +14,11 @@ from requests_mock.request import _RequestObjectProxy as Request
 # noinspection PyProtectedMember,PyUnresolvedReferences
 from requests_mock.response import _Context as Context
 
-from syncify.abstract.enums import SyncifyEnum
-from syncify.remote.enums import RemoteObjectType as ObjectType
+from syncify.shared.core.enums import SyncifyEnum
+from syncify.shared.remote.enums import RemoteObjectType as ObjectType
 from syncify.spotify import URL_API, URL_EXT, SPOTIFY_NAME
 from syncify.spotify.api import SpotifyAPI
-from tests.remote.utils import RemoteMock
+from tests.shared.remote.utils import RemoteMock
 from tests.spotify.utils import random_id
 from tests.utils import random_str, random_date_str, random_dt, random_genres
 

@@ -1,4 +1,4 @@
-from ._library import LocalLibrary
-from ._musicbee import MusicBee
+from .library import LocalLibrary
+from .musicbee import MusicBee
 
 LIBRARY_CLASSES = frozenset({LocalLibrary, MusicBee})

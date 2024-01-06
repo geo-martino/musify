@@ -5,12 +5,14 @@ from random import randrange
 
 import pytest
 
-from syncify.fields import LocalTrackField
+from tests.local.track.utils import random_track, random_tracks
+from tests.local.playlist.testers import LocalPlaylistTester
+from syncify.local.track.fields import LocalTrackField
 from syncify.local.exception import InvalidFileType
 from syncify.local.playlist import XAutoPF
 from syncify.local.track import LocalTrack
-from tests.local.playlist.utils import LocalPlaylistTester, path_playlist_xautopf_ra, path_playlist_xautopf_bp
-from tests.local.utils import random_tracks, path_track_flac, path_track_wma, random_track
+from tests.local.playlist.utils import path_playlist_xautopf_ra, path_playlist_xautopf_bp
+from tests.local.utils import path_track_flac, path_track_wma
 from tests.utils import path_txt, path_resources
 
 

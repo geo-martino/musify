@@ -1,6 +1,6 @@
-from syncify.remote.config import RemoteObjectClasses
-from syncify.remote.processors.check import RemoteItemChecker
-from syncify.remote.processors.search import RemoteItemSearcher
+from syncify.shared.remote.config import RemoteObjectClasses
+from syncify.shared.remote.processors.check import RemoteItemChecker
+from syncify.shared.remote.processors.search import RemoteItemSearcher
 from syncify.spotify.config import SPOTIFY_OBJECT_CLASSES
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 

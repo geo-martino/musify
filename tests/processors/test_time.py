@@ -4,7 +4,7 @@ import pytest
 from dateutil.relativedelta import relativedelta
 
 from syncify.processors.time import TimeMapper
-from tests.abstract.misc import PrettyPrinterTester
+from tests.shared.core.misc import PrettyPrinterTester
 
 
 class TestTimeMapper(PrettyPrinterTester):

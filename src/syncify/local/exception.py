@@ -1,6 +1,6 @@
 from typing import Any
 
-from syncify.exception import SyncifyError
+from syncify.shared.exception import SyncifyError
 
 
 class LocalError(SyncifyError):

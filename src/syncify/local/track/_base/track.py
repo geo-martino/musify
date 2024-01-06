@@ -9,16 +9,16 @@ from typing import Any, Self
 
 import mutagen
 
-from syncify.abstract import Item
-from syncify.abstract.object import Track
-from syncify.exception import SyncifyKeyError, SyncifyAttributeError, SyncifyTypeError
-from syncify.fields import TrackField
-from syncify.local._file import File
+from syncify.shared.core.base import Item
+from syncify.shared.core.object import Track
+from syncify.shared.exception import SyncifyKeyError, SyncifyAttributeError, SyncifyTypeError
+from syncify.shared.fields import TrackField
+from syncify.local.file import File
 from syncify.local.exception import FileDoesNotExistError
 from syncify.local.track._base.reader import TagReader
 from syncify.local.track._base.writer import TagWriter
-from syncify.remote.processors.wrangle import RemoteDataWrangler
-from syncify.utils import UnitIterable
+from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
+from syncify.shared.types import UnitIterable
 
 
 class LocalTrack(TagWriter, metaclass=ABCMeta):

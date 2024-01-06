@@ -2,11 +2,11 @@ from collections.abc import Mapping, Collection
 from typing import Any
 from urllib.parse import urlparse
 
-from syncify.exception import SyncifyEnumError
-from syncify.remote.enums import RemoteIDType, RemoteObjectType
-from syncify.remote.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
-from syncify.remote.processors.wrangle import RemoteDataWrangler
-from syncify.remote.types import APIMethodInputType
+from syncify.shared.exception import SyncifyEnumError
+from syncify.shared.remote.enums import RemoteIDType, RemoteObjectType
+from syncify.shared.remote.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
+from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
+from syncify.shared.remote.api import APIMethodInputType
 from syncify.spotify import URL_API, URL_EXT, SPOTIFY_UNAVAILABLE_URI, SpotifyRemote
 
 

@@ -6,11 +6,11 @@ from typing import Any
 
 import mutagen
 
-from syncify.abstract.misc import Result
-from syncify.fields import LocalTrackField as Tags
+from syncify.shared.core.misc import Result
+from syncify.local.track.fields import LocalTrackField as Tags
 from syncify.local.track._base.reader import TagReader
-from syncify.utils import UnitIterable
-from syncify.utils.helpers import to_collection
+from syncify.shared.types import UnitIterable
+from syncify.shared.utils import to_collection
 
 
 @dataclass(frozen=True)

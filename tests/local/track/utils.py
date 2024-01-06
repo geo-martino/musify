@@ -1,0 +1,75 @@
+import string
+from datetime import datetime
+from os.path import join
+from random import choice, randrange, randint
+
+import mutagen
+from dateutil.relativedelta import relativedelta
+
+from syncify.local.track import TRACK_CLASSES, LocalTrack
+# noinspection PyProtectedMember
+from syncify.local.track._base.writer import TagWriter
+from tests.spotify.utils import random_uri
+from tests.utils import random_str, random_dt, random_genres
+from tests.local.utils import remote_wrangler, path_track_resources
+
+
+class MutagenMock(mutagen.FileType):
+    class MutagenInfoMock(mutagen.StreamInfo):
+        def __init__(self):
+            self.length = 0
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.mock = True
+        self.info = self.MutagenInfoMock()
+        self.pictures = []
+
+
+def random_track[T: LocalTrack](cls: type[T] | None = None) -> T:
+    """Generates a new, random track of the given class."""
+    if cls is None:
+        cls = choice(tuple(TRACK_CLASSES))
+    track = cls.__new__(cls)
+    TagWriter.__init__(track, remote_wrangler=remote_wrangler)
+    track._available_paths = set()
+    track._available_paths_lower = set()
+
+    track._file = MutagenMock()
+    track.file.info.length = randint(30, 600)
+
+    track.title = random_str(30, 50)
+    track.artist = random_str(30, 50)
+    track.album = random_str(30, 50)
+    track.album_artist = random_str(30, 50)
+    track.track_number = randrange(1, 20)
+    track.track_total = randint(track.track_number, 20)
+    track.genres = random_genres()
+    track.date = random_dt()
+    track.bpm = randint(6000, 15000) / 100
+    track.key = choice(string.ascii_uppercase[:7])
+    track.disc_number = randrange(1, 8)
+    track.disc_total = randint(track.disc_number, 20)
+    track.compilation = choice([True, False])
+    track.comments = [random_str(20, 50) for _ in range(randrange(3))]
+
+    has_uri = choice([True, False])
+    track.uri = random_uri() if has_uri else remote_wrangler.unavailable_uri_dummy
+
+    track._image_links = {}
+    track.has_image = False
+
+    filename_ext = f"{str(track.track_number).zfill(2)} - {track.title}" + choice(tuple(track.valid_extensions))
+    track.file.filename = join(path_track_resources, random_str(30, 50), filename_ext)
+
+    track.date_added = datetime.now() - relativedelta(days=randrange(8, 20), hours=randrange(1, 24))
+    track.last_played = datetime.now() - relativedelta(days=randrange(1, 6), hours=randrange(1, 24))
+    track.play_count = randrange(200)
+    track.rating = randrange(0, 100)
+
+    return track
+
+
+def random_tracks[T: LocalTrack](number: int | None = None, cls: type[T] | None = None) -> list[T]:
+    """Generates a ``number`` of random tracks of the given class."""
+    return [random_track(cls=cls) for _ in range(number or randrange(2, 20))]

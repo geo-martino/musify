@@ -5,26 +5,27 @@ import os
 import re
 import sys
 import traceback
-from collections.abc import Mapping
+from collections.abc import Mapping, Callable
 from datetime import date, datetime, timedelta
 from os.path import basename, dirname, join, relpath, splitext
 from time import perf_counter
-from typing import Any, Callable
+from typing import Any
 
 from syncify import PROGRAM_NAME
 from syncify.config import Config, ConfigLibraryDifferences, ConfigMissingTags, ConfigRemote, ConfigLocal
-from syncify.exception import ConfigError
-from syncify.fields import LocalTrackField
+from syncify.shared.exception import ConfigError
+from syncify.local.track.fields import LocalTrackField
 from syncify.local.collection import LocalCollection
 from syncify.local.track import LocalTrack, SyncResultTrack
 from syncify.processors.base import DynamicProcessor, dynamicprocessormethod
-from syncify.remote.api import RemoteAPI
-from syncify.remote.enums import RemoteObjectType
-from syncify.remote.object import RemoteAlbum
+from syncify.shared.remote.api import RemoteAPI
+from syncify.shared.remote.enums import RemoteObjectType
+from syncify.shared.remote.object import RemoteAlbum
 from syncify.report import report_playlist_differences, report_missing_tags
-from syncify.utils.helpers import get_user_input, UnitIterable, to_collection
-from syncify.utils.logger import SyncifyLogger, STAT, CurrentTimeRotatingFileHandler, REPORT
-from syncify.utils.printers import print_logo, print_line, print_time
+from syncify.shared.utils import get_user_input, to_collection
+from syncify.shared.types import UnitIterable
+from syncify.shared.logger import SyncifyLogger, STAT, CurrentTimeRotatingFileHandler, REPORT
+from syncify.printers import print_logo, print_line, print_time
 
 
 class Syncify(DynamicProcessor):

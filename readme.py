@@ -1,4 +1,4 @@
-from syncify.exception import SafeDict
+from syncify.shared.exception import SafeDict
 from syncify.local.track import TRACK_FILETYPES
 from syncify.local.playlist import PLAYLIST_FILETYPES
 from syncify.local.library import LIBRARY_CLASSES, LocalLibrary

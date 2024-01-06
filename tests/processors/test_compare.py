@@ -3,13 +3,14 @@ from datetime import datetime, date, timedelta
 import pytest
 import xmltodict
 
-from syncify.fields import TrackField, LocalTrackField
+from syncify.shared.fields import TrackField
+from syncify.local.track.fields import LocalTrackField
 from syncify.local.track import MP3, M4A, FLAC
 from syncify.processors.compare import Comparer
 from syncify.processors.exception import ItemComparerError, ProcessorLookupError
-from tests.abstract.misc import PrettyPrinterTester
+from tests.shared.core.misc import PrettyPrinterTester
 from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
-from tests.local.utils import random_track
+from tests.local.track.utils import random_track
 
 
 class TestItemComparer(PrettyPrinterTester):

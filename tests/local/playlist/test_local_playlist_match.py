@@ -4,13 +4,14 @@ from random import sample
 import pytest
 import xmltodict
 
-from syncify.fields import LocalTrackField
+from syncify.local.track.fields import LocalTrackField
 from syncify.local.playlist import LocalMatcher
 from syncify.local.track import LocalTrack
 from syncify.processors.compare import Comparer
-from tests.abstract.misc import PrettyPrinterTester
+from tests.shared.core.misc import PrettyPrinterTester
 from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra, path_playlist_resources
-from tests.local.utils import random_tracks, path_track_wma, path_track_flac, path_track_mp3, path_track_resources
+from tests.local.utils import path_track_wma, path_track_flac, path_track_mp3, path_track_resources
+from tests.local.track.utils import random_tracks
 from tests.utils import random_str, path_resources
 
 

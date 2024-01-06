@@ -4,12 +4,12 @@ from datetime import datetime
 from random import shuffle
 from typing import Any, Self
 
-from syncify.abstract import Item
-from syncify.abstract.enums import SyncifyEnum, Field, Fields
+from syncify.shared.core.base import Item
+from syncify.shared.core.enums import SyncifyEnum, Field, Fields
 from syncify.local.exception import FieldError
 from syncify.processors.base import MusicBeeProcessor
-from syncify.utils import UnitSequence, UnitIterable
-from syncify.utils.helpers import flatten_nested, strip_ignore_words, to_collection, limit_value
+from syncify.shared.types import UnitSequence, UnitIterable
+from syncify.shared.utils import flatten_nested, strip_ignore_words, to_collection, limit_value
 
 
 def _get_field_from_code(field_code: int) -> Field | None:

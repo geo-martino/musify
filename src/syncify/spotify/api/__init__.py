@@ -1,1 +1,1 @@
-from ._api import SpotifyAPI
+from .api import SpotifyAPI

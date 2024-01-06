@@ -20,6 +20,7 @@
       <excludeFolder url="file://$MODULE_DIR$/.venv_lin" />
       <excludeFolder url="file://$MODULE_DIR$/dist" />
       <excludeFolder url="file://$MODULE_DIR$/.grip" />
+      <excludeFolder url="file://$MODULE_DIR$/.docs" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.12 (syncify)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

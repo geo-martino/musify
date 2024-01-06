@@ -5,11 +5,13 @@ from time import sleep
 
 import pytest
 
+from tests.local.track.utils import random_track, random_tracks
+from tests.local.playlist.testers import LocalPlaylistTester
 from syncify.local.exception import InvalidFileType
 from syncify.local.playlist import M3U
 from syncify.local.track import LocalTrack
-from tests.local.playlist.utils import LocalPlaylistTester, path_playlist_m3u, path_resources
-from tests.local.utils import random_track, random_tracks, path_track_all
+from tests.local.playlist.utils import path_playlist_m3u, path_resources
+from tests.local.utils import path_track_all
 from tests.utils import path_txt
 
 

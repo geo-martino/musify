@@ -6,15 +6,15 @@ from copy import copy, deepcopy
 from datetime import datetime
 from typing import Any, Self
 
-from syncify.remote.enums import RemoteObjectType, RemoteIDType
-from syncify.remote.object import RemoteCollection, RemoteCollectionLoader, RemoteTrack
-from syncify.remote.object import RemotePlaylist, RemoteAlbum, RemoteArtist
+from syncify.shared.remote.enums import RemoteObjectType, RemoteIDType
+from syncify.shared.remote.object import RemoteCollection, RemoteCollectionLoader, RemoteTrack
+from syncify.shared.remote.object import RemotePlaylist, RemoteAlbum, RemoteArtist
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.exception import SpotifyCollectionError
 from syncify.spotify.base import SpotifyObject, SpotifyItem
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
-from syncify.utils import UnitCollection
-from syncify.utils.helpers import to_collection
+from syncify.shared.types import UnitCollection
+from syncify.shared.utils import to_collection
 
 
 class SpotifyItemWranglerMixin(SpotifyItem, SpotifyDataWrangler, metaclass=ABCMeta):

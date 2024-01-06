@@ -6,14 +6,15 @@ import pytest
 from syncify.local.exception import MusicBeeError, FileDoesNotExistError
 from syncify.local.library import LocalLibrary, MusicBee
 # noinspection PyProtectedMember
-from syncify.local.library._musicbee import XMLLibraryParser
+from syncify.local.library.musicbee import XMLLibraryParser
 from syncify.local.track import LocalTrack
-from syncify.remote.processors.wrangle import RemoteDataWrangler
-from tests.local.library.utils import LocalLibraryTester
+from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
+from tests.local.library.testers import LocalLibraryTester
 from tests.local.library.utils import path_library_resources
 from tests.local.playlist.utils import path_playlist_resources, path_playlist_m3u
 from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
-from tests.local.utils import random_track, path_track_all, path_track_mp3, path_track_flac, path_track_wma
+from tests.local.utils import path_track_all, path_track_mp3, path_track_flac, path_track_wma
+from tests.local.track.utils import random_track
 from tests.utils import path_resources
 
 library_filename = "musicbee_library.xml"
@@ -184,8 +185,7 @@ class TestMusicBee(LocalLibraryTester):
         # these keys fail on other systems, ignore them in line checks
         ignore_keys = ["Music Folder", "Date Modified", "Location"]
         with open(library_filepath, "r") as f_in, open(path, "r") as f_out:
-            for i, (line_in, line_out) in enumerate(zip(f_in, f_out)):
+            for line_in, line_out in zip(f_in, f_out):
                 if any(f"<key>{key}</key>" in line_in for key in ignore_keys):
                     continue
-                # print(i, line_out.rstrip())
                 assert line_in == line_out

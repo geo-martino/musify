@@ -1,4 +1,4 @@
-from syncify.remote.exception import RemoteError
+from syncify.shared.remote.exception import RemoteError
 
 
 class SpotifyError(RemoteError):

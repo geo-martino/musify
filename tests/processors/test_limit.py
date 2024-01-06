@@ -5,9 +5,9 @@ import xmltodict
 
 from syncify.local.track import LocalTrack
 from syncify.processors.limit import ItemLimiter, LimitType
-from tests.abstract.misc import PrettyPrinterTester
+from tests.shared.core.misc import PrettyPrinterTester
 from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
-from tests.local.utils import random_tracks
+from tests.local.track.utils import random_tracks
 from tests.utils import random_file
 
 
