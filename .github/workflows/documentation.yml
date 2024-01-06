@@ -12,17 +12,14 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
 
-      - name: Install dependencies
+      - name: Install module
         run: |
-          pip install sphinx sphinx_rtd_theme myst_parser
-
-      - name: Sphinx generate structure
-        run: |
-          sphinx-apidoc -o doc src
+          pip install -e '.[docs]'
 
       - name: Sphinx build
         run: |
-          sphinx-build doc _build
+          sphinx-apidoc -o doc src
+          sphinx-build doc .build
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
@@ -30,5 +27,5 @@ jobs:
         with:
           publish_branch: gh-pages
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: _build/
+          publish_dir: .build/
           force_orphan: true
