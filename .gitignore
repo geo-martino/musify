@@ -24,6 +24,8 @@ config.yml
 dist/
 .grip/
 _site/
+docs/modules.rst
+docs/syncify*.rst
 
 # large data & log folders
 _data/
