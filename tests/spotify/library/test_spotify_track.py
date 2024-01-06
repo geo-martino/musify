@@ -188,7 +188,7 @@ class TestSpotifyTrack(ItemTester):
         assert not track.bpm
 
         track.api = api
-        track.reload()
+        track.reload(features=True)
         assert track.album
         if track.response["audio_features"]["key"] > -1:
             assert track.key

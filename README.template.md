@@ -101,7 +101,7 @@
     print(track1, track2, track3, album, playlist, artist)
     ```
 5. Add some tracks to a playlist in your library, synchronise with Spotify, and log the results
-   (assuming you chose to load your entire library or your just your playlists in step 3).
+   (assuming you chose to either load your entire library or just your playlists in step 3).
     ```python   
     my_playlist = library.playlists["<YOUR PLAYLIST'S NAME>"]
     my_playlist.append(track1)

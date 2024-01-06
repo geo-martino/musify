@@ -20,8 +20,9 @@ config.yml
 # caches
 **cache*
 
-# build files
+# build/dev directories
 dist/
+.grip/
 
 # large data & log folders
 _data/

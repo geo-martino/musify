@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>syncify.utils package &#8212; Syncify 0.3 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=4f649999" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=039e1c02" />
+    <script src="_static/documentation_options.js?v=b489f392"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="syncify-utils-package">
+<h1>syncify.utils package<a class="headerlink" href="#syncify-utils-package" title="Link to this heading">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading">¶</a></h2>
+</section>
+<section id="module-syncify.utils.helpers">
+<span id="syncify-utils-helpers-module"></span><h2>syncify.utils.helpers module<a class="headerlink" href="#module-syncify.utils.helpers" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="syncify.utils.helpers.align_and_truncate">
+<span class="sig-prename descclassname"><span class="pre">syncify.utils.helpers.</span></span><span class="sig-name descname"><span class="pre">align_and_truncate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right_align</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#syncify.utils.helpers.align_and_truncate" title="Link to this definition">¶</a></dt>
+<dd><p>Align string with space padding. Truncate any string longer than max width with …</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="syncify.utils.helpers.correct_platform_separators">
+<span class="sig-prename descclassname"><span class="pre">syncify.utils.helpers.</span></span><span class="sig-name descname"><span class="pre">correct_platform_separators</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#syncify.utils.helpers.correct_platform_separators" title="Link to this definition">¶</a></dt>
+<dd><p>Correct separators in the given <code class="docutils literal notranslate"><span class="pre">path</span></code> to match those used by the current platform</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="syncify.utils.helpers.flatten_nested">
+<span class="sig-prename descclassname"><span class="pre">syncify.utils.helpers.</span></span><span class="sig-name descname"><span class="pre">flatten_nested</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nested</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MutableMapping</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">previous</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MutableSequence</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#syncify.utils.helpers.flatten_nested" title="Link to this definition">¶</a></dt>
+<dd><p>Flatten the final layers of the values of a nested map to a single list</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="syncify.utils.helpers.get_max_width">
+<span class="sig-prename descclassname"><span class="pre">syncify.utils.helpers.</span></span><span class="sig-name descname"><span class="pre">get_max_width</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Collection</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">15</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#syncify.utils.helpers.get_max_width" title="Link to this definition">¶</a></dt>
+<dd><p>Get max width of given list of <code class="docutils literal notranslate"><span class="pre">values</span></code> for column-aligned logging</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="syncify.utils.helpers.get_most_common_values">
+<span class="sig-prename descclassname"><span class="pre">syncify.utils.helpers.</span></span><span class="sig-name descname"><span class="pre">get_most_common_values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#syncify.utils.helpers.get_most_common_values" title="Link to this definition">¶</a></dt>
+<dd><p>Get an ordered list of the most common values for a given collection of <code class="docutils literal notranslate"><span class="pre">values</span></code></p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="syncify.utils.helpers.get_user_input">
+<span class="sig-prename descclassname"><span class="pre">syncify.utils.helpers.</span></span><span class="sig-name descname"><span class="pre">get_user_input</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#syncify.utils.helpers.get_user_input" title="Link to this definition">¶</a></dt>
+<dd><p>Print formatted dialog with optional text and get the user’s input.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="syncify.utils.helpers.limit_value">
+<span class="sig-prename descclassname"><span class="pre">syncify.utils.helpers.</span></span><span class="sig-name descname"><span class="pre">limit_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">floor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ceil</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span></span></span><a class="headerlink" href="#syncify.utils.helpers.limit_value" title="Link to this definition">¶</a></dt>
+<dd><p>Limit a given <code class="docutils literal notranslate"><span class="pre">value</span></code> to always be between some <code class="docutils literal notranslate"><span class="pre">floor</span></code> and <code class="docutils literal notranslate"><span class="pre">ceil</span></code></p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="syncify.utils.helpers.merge_maps">
+<span class="sig-prename descclassname"><span class="pre">syncify.utils.helpers.</span></span><span class="sig-name descname"><span class="pre">merge_maps</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">T</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Mapping</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extend</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overwrite</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">T</span></span></span><a class="headerlink" href="#syncify.utils.helpers.merge_maps" title="Link to this definition">¶</a></dt>
+<dd><p>Recursively update a given <code class="docutils literal notranslate"><span class="pre">source</span></code> map in place with a <code class="docutils literal notranslate"><span class="pre">new</span></code> map.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>source</strong> – The source map.</p></li>
+<li><p><strong>new</strong> – The new map with values to update for the source map.</p></li>
+<li><p><strong>extend</strong> – When a value is a list and a list is already present in the source map, extend the list when True.
+When False, only replace the list if overwrite is True.</p></li>
+<li><p><strong>overwrite</strong> – When True, overwrite any value in the source list destructively.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The updated dict.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="syncify.utils.helpers.safe_format_map">
+<span class="sig-prename descclassname"><span class="pre">syncify.utils.helpers.</span></span><span class="sig-name descname"><span class="pre">safe_format_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">T</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">format_map</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Mapping</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">T</span></span></span><a class="headerlink" href="#syncify.utils.helpers.safe_format_map" title="Link to this definition">¶</a></dt>
+<dd><p>Apply a <code class="docutils literal notranslate"><span class="pre">format_map</span></code> to a given <code class="docutils literal notranslate"><span class="pre">value</span></code> ignoring missing keys.
+If <code class="docutils literal notranslate"><span class="pre">value</span></code> is a map, apply the <code class="docutils literal notranslate"><span class="pre">format_map</span></code> recursively.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="syncify.utils.helpers.strip_ignore_words">
+<span class="sig-prename descclassname"><span class="pre">syncify.utils.helpers.</span></span><span class="sig-name descname"><span class="pre">strip_ignore_words</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">words</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">frozenset({'A',</span> <span class="pre">'The'})</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#syncify.utils.helpers.strip_ignore_words" title="Link to this definition">¶</a></dt>
+<dd><p>Remove ignorable words from the beginning of a string.
+Useful for sorting collections strings with ignorable start words and/or special characters.
+Only removes the first word it finds at the start of the string.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple of (True if the string starts with some special character, the formatted string)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="syncify.utils.helpers.to_collection">
+<span class="sig-prename descclassname"><span class="pre">syncify.utils.helpers.</span></span><span class="sig-name descname"><span class="pre">to_collection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data:</span> <span class="pre">~typing.Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cls:</span> <span class="pre">type[T]</span> <span class="pre">=</span> <span class="pre">&lt;class</span> <span class="pre">'tuple'&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">T</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#syncify.utils.helpers.to_collection" title="Link to this definition">¶</a></dt>
+<dd><p>Safely turn any object into a collection of a given type <code class="docutils literal notranslate"><span class="pre">T</span></code>.
+Strings are converted to collections of size 1 where the first element is the string.
+Returns None if value is None.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="syncify.utils.helpers.unique_list">
+<span class="sig-prename descclassname"><span class="pre">syncify.utils.helpers.</span></span><span class="sig-name descname"><span class="pre">unique_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#syncify.utils.helpers.unique_list" title="Link to this definition">¶</a></dt>
+<dd><p>Returns a copy of the given <code class="docutils literal notranslate"><span class="pre">value</span></code> that contains only unique elements.
+Useful for producing unique lists whilst preserving order.</p>
+</dd></dl>
+
+</section>
+<section id="module-syncify.utils.logger">
+<span id="syncify-utils-logger-module"></span><h2>syncify.utils.logger module<a class="headerlink" href="#module-syncify.utils.logger" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="syncify.utils.logger.CurrentTimeRotatingFileHandler">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">syncify.utils.logger.</span></span><span class="sig-name descname"><span class="pre">CurrentTimeRotatingFileHandler</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">encoding</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">when</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interval</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">count</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">errors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#syncify.utils.logger.CurrentTimeRotatingFileHandler" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseRotatingHandler</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong> – The full path to the log file.
+Optionally, include a ‘{}’ part in the path to format in the current datetime.
+When None, defaults to ‘{}.log’</p></li>
+<li><p><strong>encoding</strong> – When not None, it is used to open the file with that encoding.</p></li>
+<li><p><strong>when</strong> – The timespan for ‘interval’ which is used together to calculate the timedelta.
+Accepts same values as <code class="xref py py-class docutils literal notranslate"><span class="pre">TimeMapper</span></code>.</p></li>
+<li><p><strong>interval</strong> – The multiplier for <code class="docutils literal notranslate"><span class="pre">when</span></code>.
+When combined with <code class="docutils literal notranslate"><span class="pre">when</span></code>, gives the negative timedelta relative to now
+which is the maximum datetime to keep logs for.</p></li>
+<li><p><strong>count</strong> – The maximum number of files to keep.</p></li>
+<li><p><strong>delay</strong> – When True, the file opening is deferred until the first call to emit().</p></li>
+<li><p><strong>errors</strong> – Used to determine how encoding errors are handled.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="syncify.utils.logger.CurrentTimeRotatingFileHandler.rotator">
+<span class="sig-name descname"><span class="pre">rotator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">unformatted</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">formatted</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#syncify.utils.logger.CurrentTimeRotatingFileHandler.rotator" title="Link to this definition">¶</a></dt>
+<dd><p>Rotates the files in the folder on the given <code class="docutils literal notranslate"><span class="pre">unformatted</span></code> path.
+Removes files older than <code class="docutils literal notranslate"><span class="pre">self.delta</span></code> and the oldest files when number of files &gt;= count
+until number of files &lt;= count. <code class="docutils literal notranslate"><span class="pre">formatted</span></code> path is excluded from processing.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="syncify.utils.logger.CurrentTimeRotatingFileHandler.shouldRollover">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">shouldRollover</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">_</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">__</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#syncify.utils.logger.CurrentTimeRotatingFileHandler.shouldRollover" title="Link to this definition">¶</a></dt>
+<dd><p>Always returns False. Rotation happens on __init__ and only needs to happen once.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="syncify.utils.logger.LogConsoleFilter">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">syncify.utils.logger.</span></span><span class="sig-name descname"><span class="pre">LogConsoleFilter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module_width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">40</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#syncify.utils.logger.LogConsoleFilter" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Filter</span></code></p>
+<p>Filter for logging to the console.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="syncify.utils.logger.LogConsoleFilter.filter">
+<span class="sig-name descname"><span class="pre">filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">record</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">LogRecord</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">LogRecord</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#syncify.utils.logger.LogConsoleFilter.filter" title="Link to this definition">¶</a></dt>
+<dd><p>Determine if the specified record is to be logged.</p>
+<p>Returns True if the record should be logged, or False otherwise.
+If deemed appropriate, the record may be modified in-place.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="syncify.utils.logger.LogFileFilter">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">syncify.utils.logger.</span></span><span class="sig-name descname"><span class="pre">LogFileFilter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module_width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">40</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#syncify.utils.logger.LogFileFilter" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Filter</span></code></p>
+<p>Filter for logging to a file.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="syncify.utils.logger.LogFileFilter.filter">
+<span class="sig-name descname"><span class="pre">filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">record</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">LogRecord</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">LogRecord</span></span></span><a class="headerlink" href="#syncify.utils.logger.LogFileFilter.filter" title="Link to this definition">¶</a></dt>
+<dd><p>Determine if the specified record is to be logged.</p>
+<p>Returns True if the record should be logged, or False otherwise.
+If deemed appropriate, the record may be modified in-place.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="syncify.utils.logger.SyncifyLogger">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">syncify.utils.logger.</span></span><span class="sig-name descname"><span class="pre">SyncifyLogger</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#syncify.utils.logger.SyncifyLogger" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Logger</span></code></p>
+<p>The logger for all logging operations in Syncify.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="syncify.utils.logger.SyncifyLogger.compact">
+<span class="sig-name descname"><span class="pre">compact</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="headerlink" href="#syncify.utils.logger.SyncifyLogger.compact" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="syncify.utils.logger.SyncifyLogger.file_paths">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">file_paths</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#syncify.utils.logger.SyncifyLogger.file_paths" title="Link to this definition">¶</a></dt>
+<dd><p>Get a list of the paths of all file handlers for this logger</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="syncify.utils.logger.SyncifyLogger.get_progress_bar">
+<span class="sig-name descname"><span class="pre">get_progress_bar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">iterable</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Iterable</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">total</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">T</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tqdm_asyncio</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Iterable</span></span></span><a class="headerlink" href="#syncify.utils.logger.SyncifyLogger.get_progress_bar" title="Link to this definition">¶</a></dt>
+<dd><p>Wrapper for tqdm progress bar. For kwargs, see <code class="xref py py-class docutils literal notranslate"><span class="pre">tqdm_std</span></code></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="syncify.utils.logger.SyncifyLogger.info_extra">
+<span class="sig-name descname"><span class="pre">info_extra</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#syncify.utils.logger.SyncifyLogger.info_extra" title="Link to this definition">¶</a></dt>
+<dd><p>Log ‘msg % args’ with severity ‘INFO_EXTRA’.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="syncify.utils.logger.SyncifyLogger.print">
+<span class="sig-name descname"><span class="pre">print</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">51</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#syncify.utils.logger.SyncifyLogger.print" title="Link to this definition">¶</a></dt>
+<dd><p>Print a new line only when DEBUG &lt; <code class="docutils literal notranslate"><span class="pre">logger</span> <span class="pre">level</span></code> &lt;= <code class="docutils literal notranslate"><span class="pre">level</span></code> for all console handlers</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="syncify.utils.logger.SyncifyLogger.report">
+<span class="sig-name descname"><span class="pre">report</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#syncify.utils.logger.SyncifyLogger.report" title="Link to this definition">¶</a></dt>
+<dd><p>Log ‘msg % args’ with severity ‘REPORT’.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="syncify.utils.logger.SyncifyLogger.stat">
+<span class="sig-name descname"><span class="pre">stat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#syncify.utils.logger.SyncifyLogger.stat" title="Link to this definition">¶</a></dt>
+<dd><p>Log ‘msg % args’ with severity ‘STAT’.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="syncify.utils.logger.SyncifyLogger.stdout_handlers">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">stdout_handlers</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">StreamHandler</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#syncify.utils.logger.SyncifyLogger.stdout_handlers" title="Link to this definition">¶</a></dt>
+<dd><p>Get a list of all <code class="xref py py-class docutils literal notranslate"><span class="pre">logging.StreamHandler</span></code> handlers that log to stdout</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="syncify.utils.logger.format_full_func_name">
+<span class="sig-prename descclassname"><span class="pre">syncify.utils.logger.</span></span><span class="sig-name descname"><span class="pre">format_full_func_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">record</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">LogRecord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">40</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#syncify.utils.logger.format_full_func_name" title="Link to this definition">¶</a></dt>
+<dd><p>Set fully qualified path name to function including class name to the given record.
+Optionally, provide a max <code class="docutils literal notranslate"><span class="pre">width</span></code> to attempt to truncate the path name to
+by taking only the first letter of each part of the path until the length is equal to <code class="docutils literal notranslate"><span class="pre">width</span></code>.</p>
+</dd></dl>
+
+</section>
+<section id="module-syncify.utils.printers">
+<span id="syncify-utils-printers-module"></span><h2>syncify.utils.printers module<a class="headerlink" href="#module-syncify.utils.printers" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="syncify.utils.printers.print_line">
+<span class="sig-prename descclassname"><span class="pre">syncify.utils.printers.</span></span><span class="sig-name descname"><span class="pre">print_line</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">line_char</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'-'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#syncify.utils.printers.print_line" title="Link to this definition">¶</a></dt>
+<dd><p>Print an aligned line with the given text in the centre of the terminal</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="syncify.utils.printers.print_logo">
+<span class="sig-prename descclassname"><span class="pre">syncify.utils.printers.</span></span><span class="sig-name descname"><span class="pre">print_logo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fonts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">('basic',</span> <span class="pre">'broadway',</span> <span class="pre">'chunky',</span> <span class="pre">'doom',</span> <span class="pre">'drpepper',</span> <span class="pre">'epic',</span> <span class="pre">'hollywood',</span> <span class="pre">'isometric1',</span> <span class="pre">'isometric2',</span> <span class="pre">'isometric3',</span> <span class="pre">'isometric4',</span> <span class="pre">'larry3d',</span> <span class="pre">'shadow',</span> <span class="pre">'slant',</span> <span class="pre">'speed',</span> <span class="pre">'standard',</span> <span class="pre">'univers',</span> <span class="pre">'whimsy')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colours</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Collection</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(91,</span> <span class="pre">93,</span> <span class="pre">92,</span> <span class="pre">94,</span> <span class="pre">96,</span> <span class="pre">95)</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#syncify.utils.printers.print_logo" title="Link to this definition">¶</a></dt>
+<dd><p>Pretty print the Syncify logo in the centre of the terminal</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="syncify.utils.printers.print_time">
+<span class="sig-prename descclassname"><span class="pre">syncify.utils.printers.</span></span><span class="sig-name descname"><span class="pre">print_time</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seconds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#syncify.utils.printers.print_time" title="Link to this definition">¶</a></dt>
+<dd><p>Print the time in minutes and seconds in the centre of the terminal</p>
+</dd></dl>
+
+</section>
+<section id="module-syncify.utils">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-syncify.utils" title="Link to this heading">¶</a></h2>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Syncify</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2024, geo-martino.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="_sources/syncify.utils.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

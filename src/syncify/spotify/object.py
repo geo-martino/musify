@@ -699,9 +699,9 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
         self._check_for_api()
 
         response = self.api.handler.get(url=self.url, use_cache=use_cache, log_pad=self._url_pad)
-        if extend_albums or extend_tracks:
+        if extend_albums:
             self.api.get_artist_albums(response, use_cache=use_cache)
-        if extend_tracks:
+        if extend_albums and extend_tracks:
             kind = RemoteObjectType.ALBUM
             key = self.api.collection_item_map[kind]
             for album in response["albums"]["items"]:
