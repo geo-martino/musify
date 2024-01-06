@@ -36,7 +36,7 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
     @classmethod
     @abstractmethod
     def validate_id_type(cls, value: str, kind: RemoteIDType = RemoteIDType.ALL) -> bool:
-        """Check that the given ``value`` is a type of remote ID given by ``kind ``"""
+        """Check that the given ``value`` is a type of remote ID given by ``kind``"""
         raise NotImplementedError
 
     @classmethod
@@ -96,7 +96,7 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
     @classmethod
     def validate_item_type(cls, values: APIMethodInputType, kind: RemoteObjectType) -> None:
         """
-        Check that the given ``values`` is a type of item given by ``kind `` or a simple ID.
+        Check that the given ``values`` are a type of item given by ``kind`` or a simple ID.
 
         ``values`` may be:
             * A string representing a URL/URI/ID.

@@ -150,7 +150,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
 
         :param tracks: When True, also get all tracks for each album.
         :param types: Provide a list of albums types to get to limit the types of albums loaded.
-        Select from ``{"album", "single", "compilation", "appears_on"}``.
+            Select from ``{"album", "single", "compilation", "appears_on"}``.
         """
         if not self.artists:
             return

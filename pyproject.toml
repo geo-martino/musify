@@ -46,8 +46,7 @@ dev = [
 ]
 docs = [
     "sphinx~=7.2",
-    "sphinx_rtd_theme~=2.0",
-    "myst_parser~=2.0",
+    "renku_sphinx_theme",
 ]
 
 [project.urls]

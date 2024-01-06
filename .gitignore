@@ -23,7 +23,7 @@ config.yml
 # build/dev/doc directories
 dist/
 .grip/
-.build/
+_site/
 
 # large data & log folders
 _data/
