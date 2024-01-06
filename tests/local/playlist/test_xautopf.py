@@ -7,7 +7,7 @@ import pytest
 
 from tests.local.track.utils import random_track, random_tracks
 from tests.local.playlist.testers import LocalPlaylistTester
-from syncify.local.track.fields import LocalTrackField
+from syncify.local.track.field import LocalTrackField
 from syncify.local.exception import InvalidFileType
 from syncify.local.playlist import XAutoPF
 from syncify.local.track import LocalTrack

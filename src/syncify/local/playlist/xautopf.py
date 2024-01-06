@@ -6,7 +6,7 @@ from typing import Any
 
 import xmltodict
 
-from syncify.shared.core.enums import Fields
+from syncify.shared.core.enum import Fields
 from syncify.shared.core.misc import Result
 from syncify.local.playlist.match import LocalMatcher
 from syncify.local.playlist.base import LocalPlaylist

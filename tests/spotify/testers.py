@@ -6,7 +6,7 @@ from urllib.parse import parse_qs
 # noinspection PyProtectedMember,PyUnresolvedReferences
 from requests_mock.request import _RequestObjectProxy
 
-from syncify.shared.remote.enums import RemoteObjectType
+from syncify.shared.remote.enum import RemoteObjectType
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.base import SpotifyItem
 from syncify.spotify.object import SpotifyCollectionLoader, SpotifyTrack

@@ -11,14 +11,14 @@ from typing import Any
 
 from syncify.shared.core.base import Item
 from syncify.shared.core.collection import ItemCollection
-from syncify.shared.core.enums import Fields, TagField, TagFields
+from syncify.shared.core.enum import Fields, TagField, TagFields
 from syncify.shared.core.object import Track, Library, Folder, Album, Artist, Genre
 from syncify.shared.exception import SyncifyKeyError
-from syncify.local.track.fields import LocalTrackField
+from syncify.local.track.field import LocalTrackField
 from syncify.local.base import LocalItem
 from syncify.local.exception import LocalCollectionError
 from syncify.local.track import LocalTrack, SyncResultTrack, load_track, TRACK_FILETYPES
-from syncify.shared.remote.enums import RemoteIDType
+from syncify.shared.remote.enum import RemoteIDType
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
 from syncify.shared.types import UnitCollection
 from syncify.shared.utils import get_most_common_values, to_collection, align_and_truncate, get_max_width

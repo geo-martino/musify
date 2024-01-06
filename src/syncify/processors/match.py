@@ -7,7 +7,7 @@ from typing import Any
 
 from syncify.shared.core.base import NamedObject
 from syncify.shared.core.collection import ItemCollection
-from syncify.shared.core.enums import TagField, TagFields as Tag, ALL_TAG_FIELDS
+from syncify.shared.core.enum import TagField, TagFields as Tag, ALL_TAG_FIELDS
 from syncify.shared.core.misc import PrettyPrinter
 from syncify.shared.core.object import Track, Album
 from syncify.processors.base import ItemProcessor

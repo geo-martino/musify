@@ -5,7 +5,7 @@ from random import shuffle
 from typing import Any, Self
 
 from syncify.shared.core.base import Item
-from syncify.shared.core.enums import SyncifyEnum, Field, Fields
+from syncify.shared.core.enum import SyncifyEnum, Field, Fields
 from syncify.local.exception import FieldError
 from syncify.processors.base import MusicBeeProcessor
 from syncify.shared.types import UnitSequence, UnitIterable

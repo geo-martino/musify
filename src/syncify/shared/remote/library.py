@@ -7,7 +7,7 @@ from syncify.shared.core.base import Item
 from syncify.shared.core.object import Track, Library, Playlist
 from syncify.shared.remote.api import RemoteAPI
 from syncify.shared.remote.config import RemoteObjectClasses
-from syncify.shared.remote.enums import RemoteObjectType
+from syncify.shared.remote.enum import RemoteObjectType
 from syncify.shared.remote.object import RemoteTrack, RemoteCollection, RemotePlaylist, SyncResultRemotePlaylist, \
     RemoteArtist, RemoteAlbum
 from syncify.shared.utils import align_and_truncate, get_max_width

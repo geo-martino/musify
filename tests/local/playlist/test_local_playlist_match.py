@@ -4,7 +4,7 @@ from random import sample
 import pytest
 import xmltodict
 
-from syncify.local.track.fields import LocalTrackField
+from syncify.local.track.field import LocalTrackField
 from syncify.local.playlist import LocalMatcher
 from syncify.local.track import LocalTrack
 from syncify.processors.compare import Comparer

@@ -17,13 +17,13 @@ import yaml
 
 from syncify import PACKAGE_ROOT, MODULE_ROOT
 from syncify.shared.core.base import NamedObject
-from syncify.shared.core.enums import TagField
+from syncify.shared.core.enum import TagField
 from syncify.shared.core.misc import PrettyPrinter, Filter
 from syncify.shared.core.object import Library
 from syncify.shared.api.authorise import APIAuthoriser
 from syncify.shared.api.request import RequestHandler
 from syncify.shared.exception import ConfigError, SyncifyError
-from syncify.local.track.fields import LocalTrackField
+from syncify.local.track.field import LocalTrackField
 from syncify.local.collection import LocalCollection
 from syncify.local.exception import InvalidFileType, FileDoesNotExistError
 from syncify.local.library import MusicBee, LocalLibrary

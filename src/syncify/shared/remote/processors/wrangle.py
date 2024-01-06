@@ -2,8 +2,8 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping
 from typing import Any
 
-from syncify.shared.remote._base import Remote
-from syncify.shared.remote.enums import RemoteIDType, RemoteObjectType
+from syncify.shared.remote import Remote
+from syncify.shared.remote.enum import RemoteIDType, RemoteObjectType
 from syncify.shared.remote.exception import RemoteObjectTypeError
 from syncify.shared.remote.types import APIMethodInputType
 

@@ -9,7 +9,7 @@ import pytest
 from tests.spotify.testers import SpotifyCollectionLoaderTester
 from syncify import PROGRAM_NAME
 from syncify.shared.api.exception import APIError
-from syncify.shared.remote.enums import RemoteObjectType
+from syncify.shared.remote.enum import RemoteObjectType
 from syncify.shared.remote.exception import RemoteObjectTypeError, RemoteError
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.exception import SpotifyCollectionError

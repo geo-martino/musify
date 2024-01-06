@@ -6,8 +6,8 @@ from operator import mul
 from typing import Any, Self
 
 from syncify.shared.core.base import Item
-from syncify.shared.core.enums import Field
-from syncify.local.track.fields import LocalTrackField
+from syncify.shared.core.enum import Field
+from syncify.local.track.field import LocalTrackField
 from syncify.local.exception import FieldError
 from syncify.processors.base import DynamicProcessor, MusicBeeProcessor, dynamicprocessormethod
 from syncify.processors.exception import ItemComparerError

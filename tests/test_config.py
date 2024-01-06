@@ -7,12 +7,12 @@ from pytest_lazyfixture import lazy_fixture
 from requests_cache import CachedSession
 
 from syncify import PACKAGE_ROOT, MODULE_ROOT
-from syncify.shared.core.enums import TagFields
+from syncify.shared.core.enum import TagFields
 from syncify.config import ConfigLocal, ConfigMusicBee
 from syncify.config import ConfigRemote, ConfigSpotify
 from syncify.config import LOCAL_CONFIG, REMOTE_CONFIG, Config, ConfigFilter, ConfigReports
 from syncify.shared.exception import ConfigError, SyncifyError
-from syncify.local.track.fields import LocalTrackField
+from syncify.local.track.field import LocalTrackField
 from syncify.local.exception import FileDoesNotExistError
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
 from syncify.shared.utils import correct_platform_separators

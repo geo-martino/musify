@@ -1,6 +1,6 @@
 import pytest
 
-from syncify.shared.core.enums import TagFields as Tag
+from syncify.shared.core.enum import TagFields as Tag
 from syncify.local.track import LocalTrack
 from syncify.processors.match import ItemMatcher, CleanTagConfig
 from tests.shared.core.misc import PrettyPrinterTester

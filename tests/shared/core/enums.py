@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod, ABCMeta
 from collections.abc import Container
 
 from syncify.shared.core.base import NamedObject
-from syncify.shared.core.enums import SyncifyEnum, Fields, TagField, ALL_FIELDS, Field
+from syncify.shared.core.enum import SyncifyEnum, Fields, TagField, ALL_FIELDS, Field
 
 
 class EnumTester(ABC):

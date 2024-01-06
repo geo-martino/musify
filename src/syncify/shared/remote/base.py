@@ -4,7 +4,7 @@ from typing import Any, Self
 from syncify.shared.core.base import Item, NamedObjectPrinter
 from syncify.shared.api.exception import APIError
 from syncify.shared.remote.api import RemoteAPI
-from syncify.shared.remote._base import Remote
+from syncify.shared.remote import Remote
 
 
 class RemoteObject(NamedObjectPrinter, Remote, metaclass=ABCMeta):

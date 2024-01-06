@@ -13,7 +13,7 @@ from syncify.shared.core.object import Track, Album, Playlist, Artist
 from syncify.shared.api.exception import APIError
 from syncify.shared.exception import SyncifyKeyError
 from syncify.shared.remote.api import RemoteAPI
-from syncify.shared.remote.enums import RemoteIDType
+from syncify.shared.remote.enum import RemoteIDType
 from syncify.shared.remote.exception import RemoteIDTypeError, RemoteError
 from syncify.shared.remote.base import RemoteObject, RemoteItem
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler

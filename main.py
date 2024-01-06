@@ -14,12 +14,12 @@ from typing import Any
 from syncify import PROGRAM_NAME
 from syncify.config import Config, ConfigLibraryDifferences, ConfigMissingTags, ConfigRemote, ConfigLocal
 from syncify.shared.exception import ConfigError
-from syncify.local.track.fields import LocalTrackField
+from syncify.local.track.field import LocalTrackField
 from syncify.local.collection import LocalCollection
 from syncify.local.track import LocalTrack, SyncResultTrack
 from syncify.processors.base import DynamicProcessor, dynamicprocessormethod
 from syncify.shared.remote.api import RemoteAPI
-from syncify.shared.remote.enums import RemoteObjectType
+from syncify.shared.remote.enum import RemoteObjectType
 from syncify.shared.remote.object import RemoteAlbum
 from syncify.report import report_playlist_differences, report_missing_tags
 from syncify.shared.utils import get_user_input, to_collection
@@ -760,6 +760,7 @@ if __name__ == "__main__":
 
 
 ## SELECTED FOR DEVELOPMENT
+# TODO: fix bug in spotify api test: artist albums have unexpected keys
 # TODO: expand readme + check all python functions work
 # TODO: implement XAutoPF full update functionality
 # TODO: implement merge_playlists functions and, by extension, implement android library sync

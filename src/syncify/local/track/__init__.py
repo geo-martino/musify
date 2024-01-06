@@ -1,5 +1,5 @@
-from ._base.track import LocalTrack
-from ._base.writer import SyncResultTrack
+from .base.track import LocalTrack
+from .base.writer import SyncResultTrack
 from .flac import FLAC
 from .m4a import M4A
 from .mp3 import MP3

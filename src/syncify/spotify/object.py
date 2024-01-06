@@ -6,7 +6,7 @@ from copy import copy, deepcopy
 from datetime import datetime
 from typing import Any, Self
 
-from syncify.shared.remote.enums import RemoteObjectType, RemoteIDType
+from syncify.shared.remote.enum import RemoteObjectType, RemoteIDType
 from syncify.shared.remote.object import RemoteCollection, RemoteCollectionLoader, RemoteTrack
 from syncify.shared.remote.object import RemotePlaylist, RemoteAlbum, RemoteArtist
 from syncify.spotify.api import SpotifyAPI

@@ -5,7 +5,7 @@ from typing import Any
 # noinspection PyProtectedMember,PyUnresolvedReferences
 from requests_mock.request import _RequestObjectProxy
 
-from syncify.shared.remote.enums import RemoteIDType, RemoteObjectType
+from syncify.shared.remote.enum import RemoteIDType, RemoteObjectType
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
 from syncify.spotify import URL_API, URL_EXT, SPOTIFY_NAME
 from syncify.spotify.base import SpotifyObject

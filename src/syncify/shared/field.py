@@ -1,6 +1,6 @@
 from typing import Self
 
-from syncify.shared.core.enums import Field, Fields, TagField, TagFields
+from syncify.shared.core.enum import Field, Fields, TagField, TagFields
 
 
 class TrackFieldMixin(TagField):

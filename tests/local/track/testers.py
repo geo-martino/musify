@@ -7,7 +7,6 @@ import pytest
 from tests.local.track.utils import random_tracks
 from syncify.local.collection import LocalCollection
 from syncify.local.track import LocalTrack
-# noinspection PyProtectedMember
 from syncify.shared.exception import SyncifyKeyError
 from syncify.spotify.object import SpotifyTrack
 from tests.shared.core.collection import ItemCollectionTester

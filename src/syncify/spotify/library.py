@@ -4,7 +4,7 @@ from typing import Any
 from syncify.shared.core.misc import Filter
 from syncify.shared.core.object import Playlist, Library
 from syncify.shared.remote.config import RemoteObjectClasses
-from syncify.shared.remote.enums import RemoteObjectType
+from syncify.shared.remote.enum import RemoteObjectType
 from syncify.shared.remote.library import RemoteLibrary
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.config import SPOTIFY_OBJECT_CLASSES

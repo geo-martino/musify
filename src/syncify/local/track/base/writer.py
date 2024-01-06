@@ -7,8 +7,8 @@ from typing import Any
 import mutagen
 
 from syncify.shared.core.misc import Result
-from syncify.local.track.fields import LocalTrackField as Tags
-from syncify.local.track._base.reader import TagReader
+from syncify.local.track.field import LocalTrackField as Tags
+from syncify.local.track.base.reader import TagReader
 from syncify.shared.types import UnitIterable
 from syncify.shared.utils import to_collection
 

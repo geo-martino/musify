@@ -7,7 +7,7 @@ from urllib.parse import parse_qs, urlparse
 
 from syncify.shared.api.exception import APIError
 from syncify.shared.remote.api import APIMethodInputType
-from syncify.shared.remote.enums import RemoteObjectType, RemoteIDType
+from syncify.shared.remote.enum import RemoteObjectType, RemoteIDType
 from syncify.shared.remote.exception import RemoteObjectTypeError
 from syncify.spotify.api.base import SpotifyAPIBase
 from syncify.shared.utils import limit_value

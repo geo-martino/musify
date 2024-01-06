@@ -4,7 +4,7 @@ from collections.abc import Collection, MutableMapping, Mapping
 from typing import Any, Self
 
 from syncify.shared.api.request import RequestHandler
-from syncify.shared.remote.enums import RemoteIDType, RemoteObjectType
+from syncify.shared.remote.enum import RemoteIDType, RemoteObjectType
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
 from syncify.shared.remote.types import APIMethodInputType
 from syncify.shared.utils import align_and_truncate

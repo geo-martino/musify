@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 
 from syncify import PROGRAM_NAME
-from syncify.shared.remote.enums import RemoteObjectType as ObjectType, RemoteIDType
+from syncify.shared.remote.enum import RemoteObjectType as ObjectType, RemoteIDType
 from syncify.shared.remote.exception import RemoteObjectTypeError, RemoteIDTypeError
 from syncify.spotify.api import SpotifyAPI
 from tests.shared.remote.utils import ALL_ITEM_TYPES

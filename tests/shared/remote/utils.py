@@ -8,7 +8,7 @@ from requests_mock import Mocker
 # noinspection PyProtectedMember,PyUnresolvedReferences
 from requests_mock.request import _RequestObjectProxy
 
-from syncify.shared.remote.enums import RemoteIDType, RemoteObjectType
+from syncify.shared.remote.enum import RemoteIDType, RemoteObjectType
 
 ALL_ID_TYPES = RemoteIDType.all()
 ALL_ITEM_TYPES = RemoteObjectType.all()

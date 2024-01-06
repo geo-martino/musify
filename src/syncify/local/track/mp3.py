@@ -7,11 +7,11 @@ import mutagen.id3
 import mutagen.mp3
 from PIL import Image
 
-from syncify.shared.core.enums import TagMap
-from syncify.local.track.fields import LocalTrackField
+from syncify.shared.core.enum import TagMap
+from syncify.local.track.field import LocalTrackField
 from syncify.local.file import open_image, get_image_bytes
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
-from ._base import LocalTrack
+from syncify.local.track.base.track import LocalTrack
 
 
 class MP3(LocalTrack):

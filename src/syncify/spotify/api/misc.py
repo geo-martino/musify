@@ -2,7 +2,7 @@ from abc import ABCMeta
 from collections.abc import MutableMapping
 from typing import Any
 
-from syncify.shared.remote.enums import RemoteIDType, RemoteObjectType
+from syncify.shared.remote.enum import RemoteIDType, RemoteObjectType
 from syncify.spotify.api.base import SpotifyAPIBase
 from syncify.shared.utils import limit_value
 

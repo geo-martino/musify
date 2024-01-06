@@ -10,7 +10,7 @@ import pytest
 from requests_mock.request import _RequestObjectProxy as Request
 
 from syncify.shared.api.exception import APIError
-from syncify.shared.remote.enums import RemoteObjectType as ObjectType, RemoteIDType as IDType, RemoteIDType
+from syncify.shared.remote.enum import RemoteObjectType as ObjectType, RemoteIDType as IDType, RemoteIDType
 from syncify.shared.remote.exception import RemoteObjectTypeError
 from syncify.spotify.api import SpotifyAPI
 from tests.shared.remote.utils import ALL_ITEM_TYPES
@@ -603,7 +603,7 @@ class TestSpotifyAPIItems:
         types = ("album", "single")
         expected_map = {
             artist["id"]: [
-                album for album in api_mock.artist_albums
+                deepcopy(album) for album in api_mock.artist_albums
                 if any(art["id"] == artist["id"] for art in album["artists"])
                 and album["album_type"] in types
             ]
@@ -646,7 +646,10 @@ class TestSpotifyAPIItems:
         source = sample(source, api_mock.limit_lower) if len(source) > api_mock.limit_lower else source
         source_map = {item["id"]: deepcopy(item) for item in source}
         expected_map = {
-            id_: [album for album in api_mock.artist_albums if any(art["id"] == id_ for art in album["artists"])]
+            id_: [
+                deepcopy(album) for album in api_mock.artist_albums
+                if any(art["id"] == id_ for art in album["artists"])
+            ]
             for id_ in source_map
         }
         test = random_id_types(id_list=source_map, wrangler=api, kind=ObjectType.ARTIST)

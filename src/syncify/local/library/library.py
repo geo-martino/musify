@@ -6,7 +6,7 @@ from typing import Any
 from syncify.shared.core.misc import Result, Filter
 from syncify.shared.core.object import Playlist, Library
 from syncify.shared.exception import SyncifyError
-from syncify.local.track.fields import LocalTrackField
+from syncify.local.track.field import LocalTrackField
 from syncify.local.collection import LocalCollection, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from syncify.local.exception import LocalCollectionError
 from syncify.local.playlist import PLAYLIST_FILETYPES, LocalPlaylist, load_playlist

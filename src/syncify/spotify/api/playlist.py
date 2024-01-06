@@ -4,7 +4,7 @@ from itertools import batched
 from typing import Any
 
 from syncify import PROGRAM_NAME, PROGRAM_URL
-from syncify.shared.remote.enums import RemoteIDType, RemoteObjectType
+from syncify.shared.remote.enum import RemoteIDType, RemoteObjectType
 from syncify.shared.remote.exception import RemoteIDTypeError
 from syncify.spotify.api.base import SpotifyAPIBase
 from syncify.shared.utils import limit_value

@@ -4,7 +4,7 @@ from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Hashable
 from typing import Any
 
-from syncify.shared.core.enums import TagField
+from syncify.shared.core.enum import TagField
 from syncify.shared.core.misc import PrettyPrinter
 
 

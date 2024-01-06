@@ -2,7 +2,7 @@ from abc import ABCMeta
 from typing import Any
 
 from syncify.shared.core.misc import PrettyPrinter
-from syncify.shared.remote.enums import RemoteObjectType
+from syncify.shared.remote.enum import RemoteObjectType
 from syncify.shared.remote.exception import RemoteObjectTypeError, RemoteError
 from syncify.shared.remote.base import RemoteObject, RemoteItem
 from syncify.spotify import SpotifyRemote

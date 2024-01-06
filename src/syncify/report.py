@@ -3,7 +3,7 @@ from collections.abc import Iterable
 
 from syncify.shared.core.base import Item
 from syncify.shared.core.collection import ItemCollection
-from syncify.shared.core.enums import TagField, Fields, ALL_FIELDS, TagFields
+from syncify.shared.core.enum import TagField, Fields, ALL_FIELDS, TagFields
 from syncify.shared.core.object import Library, Playlist
 from syncify.local.library import LocalLibrary
 from syncify.shared.utils import align_and_truncate, get_max_width, to_collection

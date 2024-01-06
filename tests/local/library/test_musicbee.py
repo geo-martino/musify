@@ -5,7 +5,6 @@ import pytest
 
 from syncify.local.exception import MusicBeeError, FileDoesNotExistError
 from syncify.local.library import LocalLibrary, MusicBee
-# noinspection PyProtectedMember
 from syncify.local.library.musicbee import XMLLibraryParser
 from syncify.local.track import LocalTrack
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler

@@ -1,4 +1,3 @@
-import logging
 import re
 from collections.abc import Mapping, Callable
 from copy import deepcopy
@@ -14,15 +13,13 @@ from requests_mock.request import _RequestObjectProxy as Request
 # noinspection PyProtectedMember,PyUnresolvedReferences
 from requests_mock.response import _Context as Context
 
-from syncify.shared.core.enums import SyncifyEnum
-from syncify.shared.remote.enums import RemoteObjectType as ObjectType
+from syncify.shared.core.enum import SyncifyEnum
+from syncify.shared.remote.enum import RemoteObjectType as ObjectType
 from syncify.spotify import URL_API, URL_EXT, SPOTIFY_NAME
 from syncify.spotify.api import SpotifyAPI
 from tests.shared.remote.utils import RemoteMock
 from tests.spotify.utils import random_id
 from tests.utils import random_str, random_date_str, random_dt, random_genres
-
-logger = logging.getLogger(__name__)
 
 
 # noinspection SpellCheckingInspection
@@ -112,11 +109,11 @@ class SpotifyMock(RemoteMock):
         self.artist_albums = []
         for album in self.albums:
             album = {
-                k: deepcopy(v) for k, v in album.items()
+                k: v for k, v in album.items()
                 if k not in {"tracks", "copyrights", "external_ids", "genres", "label", "popularity"}
             }
             album["album_group"] = choice(("album", "single", "compilation", "appears_on"))
-            self.artist_albums.append(album)
+            self.artist_albums.append(deepcopy(album))
 
         self.setup_specific_conditions()
         self.setup_valid_references()
@@ -172,12 +169,12 @@ class SpotifyMock(RemoteMock):
             self.albums.append(album)
 
             album = {
-                k: deepcopy(v) for k, v in album.items()
+                k: v for k, v in album.items()
                 if k not in {"tracks", "copyrights", "external_ids", "genres", "label", "popularity"}
             }
             album["album_group"] = choice(("album", "single", "compilation", "appears_on"))
             albums.append(album)
-            self.artist_albums.append(album)
+            self.artist_albums.append(deepcopy(album))
 
         for album in sample(albums, k=15):
             album["artists"].append(artist)
@@ -214,7 +211,7 @@ class SpotifyMock(RemoteMock):
         for track in self.tracks:
             if track["album"]["id"] not in album_ids:
                 track["album"] = {
-                    k: v for k, v in choice(self.albums).items()
+                    k: v for k, v in deepcopy(choice(self.albums)).items()
                     if k not in {"tracks", "copyrights", "external_ids", "genres", "label", "popularity"}
                 }
             for artist in track["artists"]:
@@ -228,7 +225,7 @@ class SpotifyMock(RemoteMock):
     def setup_requests_mock(self):
         """Driver to setup requests_mock responses for all endpoints"""
         self.setup_search_mock()
-        self.get(url=f"{URL_API}/me", json=self.user)
+        self.get(url=f"{URL_API}/me", json=lambda _, __: deepcopy(self.user))
 
         # setup responses as needed for each item type
         self.setup_items_mock(kind=ObjectType.TRACK, id_map={item["id"]: item for item in self.tracks})
@@ -351,7 +348,7 @@ class SpotifyMock(RemoteMock):
             self.get(url=re.compile(url + r"\?"), json=response_getter)  # item batched calls
 
         for id_, item in id_map.items():
-            self.get(url=f"{url}/{id_}", json=item)  # item multi calls
+            self.get(url=f"{url}/{id_}", json=deepcopy(item))  # item multi calls
 
     def setup_items_block_mock(self, url: str, items: list[dict[str, Any]], total: int | None = None) -> None:
         """Setup requests mock for returning preset responses from the given ``items`` in an 'items block' format."""
@@ -369,8 +366,8 @@ class SpotifyMock(RemoteMock):
                 types = req_params["include_groups"][0].split(",")
                 available = [i for i in items if i["album_type"] in types]
                 total = len(available)
-            it = deepcopy(available[offset: offset + limit])
 
+            it = deepcopy(available[offset: offset + limit])
             items_block = self.format_items_block(url=req.url, items=it, offset=offset, limit=limit, total=total)
 
             if url.endswith("me/following"):  # special case for following artists

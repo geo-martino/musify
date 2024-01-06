@@ -1,5 +1,5 @@
-from syncify.shared.core.enums import TagFields
-from syncify.shared.fields import TrackFieldMixin
+from syncify.shared.core.enum import TagFields
+from syncify.shared.field import TrackFieldMixin
 
 
 class LocalTrackField(TrackFieldMixin):

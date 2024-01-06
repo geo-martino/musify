@@ -3,7 +3,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from syncify.shared.exception import SyncifyEnumError
-from syncify.shared.remote.enums import RemoteIDType, RemoteObjectType
+from syncify.shared.remote.enum import RemoteIDType, RemoteObjectType
 from syncify.shared.remote.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
 from syncify.shared.remote.api import APIMethodInputType

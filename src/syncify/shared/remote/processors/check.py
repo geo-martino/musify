@@ -7,13 +7,13 @@ from dataclasses import dataclass, field
 from syncify import PROGRAM_NAME
 from syncify.shared.core.base import Item
 from syncify.shared.core.collection import ItemCollection
-from syncify.shared.core.enums import Fields
+from syncify.shared.core.enum import Fields
 from syncify.shared.core.misc import Result
 from syncify.shared.core.object import Track
 from syncify.processors.match import ItemMatcher
 from syncify.shared.remote.api import RemoteAPI
 from syncify.shared.remote.config import RemoteObjectClasses
-from syncify.shared.remote.enums import RemoteObjectType, RemoteIDType
+from syncify.shared.remote.enum import RemoteObjectType, RemoteIDType
 from syncify.shared.remote.processors.search import RemoteItemSearcher
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
 from syncify.shared.utils import get_user_input, get_max_width, align_and_truncate

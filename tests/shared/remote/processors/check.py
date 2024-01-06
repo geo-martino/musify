@@ -8,7 +8,7 @@ from pytest_mock import MockerFixture
 
 from syncify.shared.core.object import BasicCollection
 from syncify.local.track import LocalTrack
-from syncify.shared.remote.enums import RemoteObjectType
+from syncify.shared.remote.enum import RemoteObjectType
 from syncify.shared.remote.object import RemotePlaylist
 from syncify.shared.remote.processors.check import RemoteItemChecker
 from tests.shared.api.utils import path_token

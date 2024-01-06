@@ -3,8 +3,8 @@ from datetime import datetime, date, timedelta
 import pytest
 import xmltodict
 
-from syncify.shared.fields import TrackField
-from syncify.local.track.fields import LocalTrackField
+from syncify.shared.field import TrackField
+from syncify.local.track.field import LocalTrackField
 from syncify.local.track import MP3, M4A, FLAC
 from syncify.processors.compare import Comparer
 from syncify.processors.exception import ItemComparerError, ProcessorLookupError
