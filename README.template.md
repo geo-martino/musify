@@ -31,8 +31,9 @@
 
 1. Get [Spotify for Developers](https://developer.spotify.com/dashboard/login) access. 
 2. Create an app and take note of the **client ID** and **client secret**.
-3. Create a `SpotifyAPI` object and load your `SpotifyLibrary`:
-   > [!NOTE] The scopes listed in this example will allow access to read your library data and write to your playlists.
+3. Create a `SpotifyAPI` object and load your `SpotifyLibrary` as follows:
+   
+   > The scopes listed in this example will allow access to read your library data and write to your playlists.
    > See Spotify Web API documentation for more information about [scopes](https://developer.spotify.com/documentation/web-api/concepts/scopes)
     ```python
     from syncify.spotify.api import SpotifyAPI
@@ -83,7 +84,7 @@
     # pretty print an overview of your library
     print(library)
     ```
-4. Load some Spotify objects using any of the supported identifiers:
+4. Load some Spotify objects using any of the supported identifiers as follows:
     ```python
     from syncify.spotify.object import SpotifyTrack, SpotifyAlbum, SpotifyPlaylist, SpotifyArtist
     
@@ -104,8 +105,9 @@
     # pretty print information about the loaded objects
     print(track1, track2, track3, album, playlist, artist)
     ```
-5. Add some tracks to a playlist in your library, synchronise with Spotify, and log the results
-   > [!NOTE] This step will only work if you chose to load either your entire library or just your playlists in step 3.
+5. Add some tracks to a playlist in your library, synchronise with Spotify, and log the results as follows:
+   
+   > This step will only work if you chose to load either your playlists or your entire library in step 3.
     ```python   
     my_playlist = library.playlists["<YOUR PLAYLIST'S NAME>"]
     
