@@ -20,10 +20,10 @@
 
 > [!TIP]
 > Set up logger to ensure you can see all info reported by the later operations.
-> Libraries log info about loaded objects to the custom `REPORT` level.
+> Libraries log info about loaded objects to the custom `STAT` level.
 > ```python
 > import logging
-> logging.basicConfig(format="%(message)s", level=logging.REPORT)
+> logging.basicConfig(format="%(message)s", level=logging.STAT)
 > ```
 
 <a id="quick-start-spotify"></a>
@@ -32,7 +32,8 @@
 1. Get [Spotify for Developers](https://developer.spotify.com/dashboard/login) access. 
 2. Create an app and take note of the **client ID** and **client secret**.
 3. Create a `SpotifyAPI` object and load your `SpotifyLibrary`:
-    > **NOTE**: See Spotify Web API documentation for available [scopes](https://developer.spotify.com/documentation/web-api/concepts/scopes)
+   > [!NOTE] The scopes listed in this example will allow access to read your library data and write to your playlists.
+   > See Spotify Web API documentation for more information about [scopes](https://developer.spotify.com/documentation/web-api/concepts/scopes)
     ```python
     from syncify.spotify.api import SpotifyAPI
     from syncify.spotify.library import SpotifyLibrary
@@ -41,10 +42,12 @@
        client_id="<YOUR CLIENT ID>",
        client_secret="<YOUR CLIENT SECRET>",
        scopes=[
-           "user-library-read",
-           "user-follow-read",
-           "playlist-read-collaborative",
-           "playlist-read-private"
+            "user-library-read",
+            "user-follow-read",
+            "playlist-read-collaborative",
+            "playlist-read-private",
+            "playlist-modify-public",
+            "playlist-modify-private"
        ],
        # providing a `token_file_path` will save the generated token to your system 
        # for quicker authorisations in future
@@ -84,15 +87,16 @@
     ```python
     from syncify.spotify.object import SpotifyTrack, SpotifyAlbum, SpotifyPlaylist, SpotifyArtist
     
-    # load objects by ID
+    # load by ID
     track1 = SpotifyTrack.load("6fWoFduMpBem73DMLCOh1Z", api=api)
-    # load objects by URI
+    # load by URI
     track2 = SpotifyTrack.load("spotify:track:4npv0xZO9fVLBmDS2XP9Bw", api=api)
-    # load objects by open/external style URL
+    # load by open/external style URL
     track3 = SpotifyTrack.load("https://open.spotify.com/track/1TjVbzJUAuOvas1bL00TiH", api=api)
-    # load objects by API style URI
+    # load by API style URI
     track4 = SpotifyTrack.load("https://api.spotify.com/v1/tracks/6pmSweeisgfxxsiLINILdJ", api=api)
     
+    # load many different kinds of supported Spotify types
     album = SpotifyAlbum.load("https://open.spotify.com/album/0rAWaAAMfzHzCbYESj4mfx", api=api, extend_tracks=True)
     playlist = SpotifyPlaylist.load("spotify:playlist:37i9dQZF1E4zg1xOOORiP1", api=api, extend_tracks=True)
     artist = SpotifyArtist.load("1odSzdzUpm3ZEEb74GdyiS", api=api, extend_tracks=True) 
@@ -101,14 +105,20 @@
     print(track1, track2, track3, album, playlist, artist)
     ```
 5. Add some tracks to a playlist in your library, synchronise with Spotify, and log the results
-   (assuming you chose to either load your entire library or just your playlists in step 3).
+   > [!NOTE] This step will only work if you chose to load either your entire library or just your playlists in step 3.
     ```python   
     my_playlist = library.playlists["<YOUR PLAYLIST'S NAME>"]
+    
+    # add a track to the playlist
     my_playlist.append(track1)
-    my_playlist.extend(album)
    
-    results = library.sync(dry_run=False)
-    library.log_sync(results)
+    # add an album to the playlist using either of the following
+    my_playlist.extend(album)
+    my_playlist += album
+    
+    # sync the object with Spotify and log the results
+    result = my_playlist.sync(dry_run=False)
+    library.log_sync(result)
     ```
 
 <a id="quick-start-local"></a>

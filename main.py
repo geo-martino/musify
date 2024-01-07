@@ -24,7 +24,7 @@ from syncify.shared.remote.object import RemoteAlbum
 from syncify.report import report_playlist_differences, report_missing_tags
 from syncify.shared.utils import get_user_input, to_collection
 from syncify.shared.types import UnitIterable
-from syncify.shared.logger import SyncifyLogger, STAT, CurrentTimeRotatingFileHandler, REPORT
+from syncify.shared.logger import SyncifyLogger, STAT, CurrentTimeRotatingFileHandler
 from syncify.printers import print_logo, print_line, print_time
 
 
@@ -168,7 +168,7 @@ class Syncify(DynamicProcessor):
             if "saved_artists" in kinds:
                 self.remote.library.load_saved_artists()
 
-            self.logger.print(REPORT)
+            self.logger.print(STAT)
             self.remote.library.log_playlists()
             self.remote.library.log_tracks()
             self.remote.library.log_albums()
@@ -558,11 +558,13 @@ class Syncify(DynamicProcessor):
 
         def match_date(alb: RemoteAlbum) -> bool:
             """Match start and end dates to the release date of this given ``album``"""
-            return any({
-                alb.date and start <= alb.date <= end,
-                alb.month and start.year <= alb.year <= end.year and start.month <= alb.month <= end.month,
-                alb.year and start.year <= alb.year <= end.year,
-            })
+            if alb.date:
+                return start <= alb.date <= end
+            if alb.month:
+                return start.year <= alb.year <= end.year and start.month <= alb.month <= end.month
+            if alb.year:
+                return start.year <= alb.year <= end.year
+            return False
 
         # filter albums and check if any albums need extending
         albums = [album for artist in self.remote.library.artists for album in artist.albums if match_date(album)]
@@ -578,7 +580,7 @@ class Syncify(DynamicProcessor):
 
         # log load results
         if not self.remote.library_loaded or albums_need_extend:
-            self.logger.print(REPORT)
+            self.logger.print(STAT)
             self.remote.library.log_artists()
             self.logger.print()
 
@@ -601,12 +603,14 @@ class Syncify(DynamicProcessor):
             pl = self.remote.playlist.create(api=self.remote.api.api, name=name)
 
         # add tracks to remote playlist
+        pl.clear()
         pl.extend(tracks, allow_duplicates=False)
-        results = pl.sync(kind="refresh", reload=False, dry_run=False)
+        results = pl.sync(kind="refresh", reload=False, dry_run=self.config.dry_run)
 
         self.logger.print(STAT)
         self.remote.library.log_sync({name: results})
-        self.logger.info(f"\33[92mAdded {results.added} new tracks to playlist: '{name}' \33[0m")
+        log_prefix = "Would have added" if self.config.dry_run else "Added"
+        self.logger.info(f"\33[92m{log_prefix} {results.added} new tracks to playlist: '{name}' \33[0m")
         self.logger.debug(f"New music playlist: DONE")
 
 
@@ -760,6 +764,7 @@ if __name__ == "__main__":
 
 
 ## SELECTED FOR DEVELOPMENT
+# TODO: tracks_in_playlists + tracks_saved properties on libraries
 # TODO: fix bug in spotify api test: artist albums have unexpected keys
 # TODO: expand readme + check all python functions work
 # TODO: implement XAutoPF full update functionality

@@ -1,4 +1,4 @@
-from functools import partial
+
 
 import pytest
 
@@ -283,7 +283,7 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
         assert len(responses) > 4
 
         albums = []
-        for album in map(partial(SpotifyAlbum, api=api, skip_checks=True), responses):
+        for album in map(lambda response: SpotifyAlbum(api=api, response=response, skip_checks=True), responses):
             tracks = []
             for remote_track in album:
                 local_track = random_track()

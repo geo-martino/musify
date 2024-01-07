@@ -409,7 +409,7 @@ class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[Spot
 
     @property
     def followers(self):
-        return self.response["followers"]["total"]
+        return int(self.response["followers"]["total"])
 
     @property
     def owner_name(self):
@@ -652,12 +652,14 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
 
     @property
     def rating(self):
-        return self.response.get("popularity")
+        rating = self.response.get("popularity")
+        return int(rating) if rating else None
 
     @property
     def followers(self) -> int | None:
         """The total number of followers for this artist"""
-        return self.response.get("followers", {}).get("total")
+        followers = self.response.get("followers", {}).get("total")
+        return int(followers) if followers else None
 
     def __init__(self, response: dict[str, Any], api: SpotifyAPI | None = None, skip_checks: bool = False):
         self._albums: list[SpotifyAlbum] | None = None

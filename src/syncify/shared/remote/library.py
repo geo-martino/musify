@@ -1,6 +1,5 @@
 from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, Mapping, Iterable
-from functools import partial
 from typing import Any, Literal
 
 from syncify.shared.core.base import Item
@@ -11,7 +10,7 @@ from syncify.shared.remote.enum import RemoteObjectType
 from syncify.shared.remote.object import RemoteTrack, RemoteCollection, RemotePlaylist, SyncResultRemotePlaylist, \
     RemoteArtist, RemoteAlbum
 from syncify.shared.utils import align_and_truncate, get_max_width
-from syncify.shared.logger import REPORT, STAT
+from syncify.shared.logger import STAT
 
 
 class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=ABCMeta):
@@ -124,12 +123,12 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         self.load_saved_albums()
         self.load_saved_artists()
 
-        self.logger.print(REPORT)
+        self.logger.print(STAT)
         self.log_playlists()
         self.log_tracks()
         self.log_albums()
         self.log_artists()
-        self.logger.print(REPORT)
+        self.logger.print(STAT)
 
         self.logger.print()
         self.logger.debug(f"Load {self.source} library: DONE\n")
@@ -187,10 +186,10 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         """Log stats on currently loaded playlists"""
         max_width = get_max_width(self.playlists)
 
-        self.logger.report(f"\33[1;96m{self.source} PLAYLISTS: \33[0m")
+        self.logger.stat(f"\33[1;96m{self.source} PLAYLISTS: \33[0m")
         for name, playlist in self.playlists.items():
             name = align_and_truncate(playlist.name, max_width=max_width)
-            self.logger.report(f"\33[97m{name} \33[0m| \33[92m{len(playlist):>6} total tracks \33[0m")
+            self.logger.stat(f"\33[97m{name} \33[0m| \33[92m{len(playlist):>6} total tracks \33[0m")
 
     ###########################################################################
     ## Load - tracks
@@ -234,7 +233,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         in_albums = len([track for track in self.tracks if track.uri in album_tracks])
 
         width = get_max_width(self.playlists)
-        self.logger.report(
+        self.logger.stat(
             f"\33[1;96m{"USER'S " + self.source.upper() + " TRACKS":<{width}}\33[1;0m |"
             f"\33[92m{in_playlists:>7} in playlists  \33[0m|"
             f"\33[92m{in_albums:>7} in saved albums \33[0m|"
@@ -279,7 +278,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
     def log_albums(self) -> None:
         """Log stats on currently loaded albums"""
         width = get_max_width(self.playlists)
-        self.logger.report(
+        self.logger.stat(
             f"\33[1;96m{"USER'S " + self.source.upper() + " ALBUMS":<{width}}\33[1;0m |"
             f"\33[92m{sum(len(album.tracks) for album in self.albums):>7} album tracks  \33[0m|"
             f"\33[92m{sum(len(album.artists) for album in self.albums):>7} album artists   \33[0m|"
@@ -322,7 +321,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
     def log_artists(self) -> None:
         """Log stats on currently loaded artists"""
         width = get_max_width(self.playlists)
-        self.logger.report(
+        self.logger.stat(
             f"\33[1;96m{"USER'S " + self.source.upper() + " ARTISTS":<{width}}\33[1;0m |"
             f"\33[92m{sum(len(artist.tracks) for artist in self.artists):>7} artist tracks \33[0m|"
             f"\33[92m{sum(len(artist.albums) for artist in self.artists):>7} artist albums   \33[0m|"
@@ -372,7 +371,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
 
         if uri_get:
             tracks_data = self.api.get_tracks(uri_get, features=False, use_cache=self.use_cache)
-            tracks = list(map(partial(self._object_cls.track, api=self.api), tracks_data))
+            tracks = list(map(lambda response: self._object_cls.track(api=self.api, response=response), tracks_data))
             uri_tracks |= {track.uri: track for track in tracks}
 
         for name, uri_list in playlists.items():
@@ -443,10 +442,12 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         self.logger.debug(f"Sync {self.source} playlists: DONE\n")
         return results
 
-    def log_sync(self, results: Mapping[str, SyncResultRemotePlaylist]) -> None:
+    def log_sync(self, results: SyncResultRemotePlaylist | Mapping[str, SyncResultRemotePlaylist]) -> None:
         """Log stats from the results of a ``sync`` operation"""
         if not results:
             return
+        if not isinstance(results, Mapping):
+            results = {"": results}
 
         max_width = get_max_width(self.playlists)
 

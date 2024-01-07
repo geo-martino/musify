@@ -91,7 +91,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
         self.logger.debug(f"Enrich {self.source} tracks: START")
         self.logger.info(f"\33[1;95m  >\33[1;97m Enriching {len(self.tracks)} {self.source} tracks \33[0m")
 
-        responses = [track.response for track in self.tracks]
+        responses = [track.response for track in self.tracks if track.has_uri]
         self.api.get_tracks_extra(responses, features=features, analysis=analysis, use_cache=self.use_cache)
 
         # enrich on list of URIs to avoid duplicate calls for same items

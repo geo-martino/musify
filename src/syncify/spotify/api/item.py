@@ -257,7 +257,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             return results
 
         bar = self.logger.get_progress_bar(
-            iterable=results, desc=f"Extending {unit}", unit=key_name, disable=len(id_list) < self._bar_threshold
+            iterable=results, desc=f"Extending {unit}", unit=unit, disable=len(id_list) < self._bar_threshold
         )
 
         for result in bar:

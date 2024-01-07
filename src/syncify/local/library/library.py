@@ -15,7 +15,7 @@ from syncify.processors.sort import ItemSorter
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
 from syncify.shared.types import UnitCollection, UnitIterable
 from syncify.shared.utils import align_and_truncate, get_max_width, correct_platform_separators
-from syncify.shared.logger import REPORT
+from syncify.shared.logger import STAT
 
 
 class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
@@ -239,17 +239,28 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
         if tracks:
             self._tracks = self.load_tracks()
-            self.logger.print(REPORT)
+            self.logger.print(STAT)
             self.log_tracks()
 
         if playlists:
             self._playlists = {pl.name: pl for pl in sorted(self.load_playlists(), key=lambda pl: pl.name.casefold())}
-            self.logger.print(REPORT)
+            self.logger.print(STAT)
             self.log_playlists()
 
         self.logger.print()
         self.logger.debug(f"Load {self.name} library: DONE\n")
 
+    def _log_errors(self, message: str = "Could not load") -> None:
+        """Log paths which had some error while loading"""
+        errors = tuple(f"\33[91m{e}\33[0m" for e in self.errors)
+        if len(errors) > 0:
+            self.logger.warning(f"\33[97m{message}: \33[0m\n\t- {"\n\t- ".join(errors)} ")
+            self.logger.print()
+        self.errors.clear()
+
+    ###########################################################################
+    ## Tracks
+    ###########################################################################
     def load_tracks(self) -> list[LocalTrack]:
         """Returns a list of loaded tracks from all the valid paths in this library"""
         self.logger.debug(f"Load {self.name} tracks: START")
@@ -276,15 +287,17 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     def log_tracks(self) -> None:
         """Log stats on currently loaded tracks"""
         width = get_max_width(self._playlist_paths) if self._playlist_paths else 20
-        self.logger.report(
+        self.logger.stat(
             f"\33[1;96m{'LIBRARY URIS':<{width}}\33[1;0m |"
             f"\33[92m{sum([track.has_uri is True for track in self.tracks]):>6} available \33[0m|"
             f"\33[91m{sum([track.has_uri is None for track in self.tracks]):>6} missing \33[0m|"
             f"\33[93m{sum([track.has_uri is False for track in self.tracks]):>6} unavailable \33[0m|"
             f"\33[1;94m{len(self.tracks):>6} total \33[0m"
         )
-        self.logger.print(REPORT)
 
+    ###########################################################################
+    ## Playlists
+    ###########################################################################
     def load_playlists(self, names: Collection[str] | None = None) -> list[LocalPlaylist]:
         """
         Load a playlist from a given list of names or, if None, load all playlists found in this library's loaded paths.
@@ -323,9 +336,22 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
             playlists.append(pl)
 
-        # self._log_errors()
         self.logger.debug(f"Load {self.name} playlist data: DONE\n")
         return playlists
+
+    def log_playlists(self) -> None:
+        """Log stats on currently loaded playlists"""
+        max_width = get_max_width(self.playlists)
+
+        self.logger.stat(f"\33[1;96m{self.name.upper()} PLAYLISTS: \33[0m")
+        for name, playlist in self.playlists.items():
+            self.logger.stat(
+                f"\33[97m{align_and_truncate(name, max_width=max_width)} \33[0m|"
+                f"\33[92m{len([t for t in playlist if t.has_uri]):>6} available \33[0m|"
+                f"\33[91m{len([t for t in playlist if t.has_uri is None]):>6} missing \33[0m|"
+                f"\33[93m{len([t for t in playlist if t.has_uri is False]):>6} unavailable \33[0m|"
+                f"\33[1;94m{len(playlist):>6} total \33[0m"
+            )
 
     def save_playlists(self, dry_run: bool = True) -> dict[str, Result]:
         """
@@ -336,32 +362,12 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         """
         return {name: pl.save(dry_run=dry_run) for name, pl in self.playlists.items()}
 
-    def log_playlists(self) -> None:
-        """Log stats on currently loaded playlists"""
-        max_width = get_max_width(self.playlists)
-
-        self.logger.report(f"\33[1;96m{self.name.upper()} PLAYLISTS: \33[0m")
-        for name, playlist in self.playlists.items():
-            self.logger.report(
-                f"\33[97m{align_and_truncate(name, max_width=max_width)} \33[0m|"
-                f"\33[92m{len([t for t in playlist if t.has_uri]):>6} available \33[0m|"
-                f"\33[91m{len([t for t in playlist if t.has_uri is None]):>6} missing \33[0m|"
-                f"\33[93m{len([t for t in playlist if t.has_uri is False]):>6} unavailable \33[0m|"
-                f"\33[1;94m{len(playlist):>6} total \33[0m"
-            )
-        self.logger.print(REPORT)
-
-    def _log_errors(self, message: str = "Could not load") -> None:
-        """Log paths which had some error while loading"""
-        errors = tuple(f"\33[91m{e}\33[0m" for e in self.errors)
-        if len(errors) > 0:
-            self.logger.warning(f"\33[97m{message}: \33[0m\n\t- {"\n\t- ".join(errors)} ")
-            self.logger.print()
-        self.errors.clear()
-
     def merge_playlists(self, playlists: Library | Collection[Playlist] | Mapping[Any, Playlist]) -> None:
         raise NotImplementedError
 
+    ###########################################################################
+    ## Backup/restore
+    ###########################################################################
     def restore_tracks(
             self, backup: Mapping[str, Mapping[str, Any]], tags: UnitIterable[LocalTrackField] = LocalTrackField.ALL
     ) -> int:

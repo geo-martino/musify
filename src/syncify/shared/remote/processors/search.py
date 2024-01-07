@@ -1,7 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Sequence, Iterable, Collection
 from dataclasses import dataclass, field
-from functools import partial
 from typing import Any
 
 from syncify.shared.core.base import Item, NamedObject
@@ -239,7 +238,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
 
             result = self.match(
                 item,
-                results=map(partial(self._object_cls.track, api=self.api), results),
+                results=map(lambda response: self._object_cls.track(api=self.api, response=response), results),
                 match_on=self.settings_items.match_fields,
                 min_score=self.settings_items.min_score,
                 max_score=self.settings_items.max_score,
@@ -257,7 +256,9 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
         results = self._get_results(collection, kind=RemoteObjectType.ALBUM, settings=self.settings_albums)
 
         # convert to RemoteAlbum objects and extend items on each response
-        albums = list(map(partial(self._object_cls.album, api=self.api, skip_checks=True), results))
+        albums = list(map(
+            lambda response: self._object_cls.album(api=self.api, response=response, skip_checks=True), results
+        ))
         kind = RemoteObjectType.ALBUM
         key = self.api.collection_item_map[kind]
         for album in albums:  # extend album's tracks
