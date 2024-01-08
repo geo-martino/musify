@@ -754,7 +754,8 @@ if __name__ == "__main__":
 #  Maybe https://audd.io/ ?
 # TODO: add lyrics property to tracks? Possibly through a separate API
 # TODO: expand search/match functionality to include all item types
-# TODO: expand docstrings everywhere
+# TODO: implement XAutoPF full update functionality
+# TODO: implement merge_playlists functions and, by extension, implement android library sync
 
 
 ## SMALLER/GENERAL ONES
@@ -764,11 +765,13 @@ if __name__ == "__main__":
 
 
 ## SELECTED FOR DEVELOPMENT
-# TODO: tracks_in_playlists + tracks_saved properties on libraries
+# TODO: Replace all include/exclude/filter_tags logic with Filters to enable full Comparer functionality
+# TODO: LocalLibrary to accept many library paths?
+# TODO: MusicBee to load library paths from settings ini file
+
 # TODO: fix bug in spotify api test: artist albums have unexpected keys
-# TODO: expand readme + check all python functions work
-# TODO: implement XAutoPF full update functionality
-# TODO: implement merge_playlists functions and, by extension, implement android library sync
+# TODO: expand readme + check all example functions work
+# TODO: expand docstrings everywhere
 # TODO: release to pypi + implement CI/CD structure on GitHub
-# TODO: function to open search website tabs for all songs in 2get playlist
+# TODO: function in main.py to open search website tabs for all songs in 2get playlist
 #  on common music stores/torrent sites

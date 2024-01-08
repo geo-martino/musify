@@ -48,10 +48,10 @@ class PrettyPrinter(ABC):
 
     def json(self) -> dict[str, _T_JSON_VALUE]:
         """Return a dictionary representation of the key attributes of this object that is safe to output to JSON"""
-        return self.__to_json(self.as_dict())
+        return self._to_json(self.as_dict())
 
     @classmethod
-    def __to_json(cls, attributes: Mapping[str, _T_JSON_VALUE]) -> dict[str, _T_JSON_VALUE]:
+    def _to_json(cls, attributes: Mapping[str, _T_JSON_VALUE]) -> dict[str, _T_JSON_VALUE]:
         result: dict[str, _T_JSON_VALUE] = {}
 
         for attr_key, attr_val in attributes.items():
@@ -68,7 +68,7 @@ class PrettyPrinter(ABC):
                     else:
                         result[attr_key].append(item)
             elif isinstance(attr_val, Mapping):
-                result[attr_key] = cls.__to_json(attr_val)
+                result[attr_key] = cls._to_json(attr_val)
             elif isinstance(attr_val, PrettyPrinter):
                 result[attr_key] = attr_val.json()
             elif isinstance(attr_val, (datetime, date)):
@@ -84,11 +84,11 @@ class PrettyPrinter(ABC):
             return f"{self.__class__.__name__}()"
 
         result = f"{self.__class__.__name__}(\n{{}}\n" + " " * (indent - increment) + ")"
-        attributes_repr = self.__to_str(obj_dict, indent=indent, increment=increment)
+        attributes_repr = self._to_str(obj_dict, indent=indent, increment=increment)
         return result.format("\n".join([" " * indent + attribute for attribute in attributes_repr]))
 
     @classmethod
-    def __to_str(cls, attributes: Mapping[str, Any], indent: int = 2, increment: int = 2) -> list[str]:
+    def _to_str(cls, attributes: Mapping[str, Any], indent: int = 2, increment: int = 2) -> list[str]:
         if len(attributes) == 0:
             return []
         max_key_width = max(len(tag_name) for tag_name in attributes) + 1  # +1 for space after key
@@ -128,7 +128,7 @@ class PrettyPrinter(ABC):
                             attr_val_pp.append(str(val))
                     attr_val_str = pp_repr.format((",\n" + " " * indent).join(attr_val_pp))
             elif isinstance(attr_val, Mapping) and len(attr_val) > 0:
-                attr_val_pp = cls.__to_str(attr_val, indent=indent, increment=increment)
+                attr_val_pp = cls._to_str(attr_val, indent=indent, increment=increment)
                 attr_val_str = "{" + ", ".join(attr_val_pp) + "}"
 
                 if len(attr_val_str) > max_val_width:
@@ -167,7 +167,7 @@ class Filter[T](ABC, Collection[T]):
         raise NotImplementedError
 
     def __iter__(self):
-        return (v for v in self.process(self.values)) if self.values else ()
+        return (v for v in self.process(self.values)) if self.values else iter(())
 
     def __len__(self):
         return len(self.process(self.values)) if self.values else 0

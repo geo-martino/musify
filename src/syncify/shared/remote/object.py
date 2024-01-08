@@ -26,11 +26,15 @@ class RemoteItemWranglerMixin[T: RemoteObject](RemoteItem, RemoteDataWrangler, m
 
 class RemoteTrack(RemoteItemWranglerMixin, Track, metaclass=ABCMeta):
     """Extracts key ``track`` data from a remote API JSON response."""
-    pass
+
+    __attributes_classes__ = (Track, RemoteItem)
 
 
 class RemoteCollection[T: RemoteObject](ItemCollection[T], RemoteDataWrangler, metaclass=ABCMeta):
     """Generic class for storing a collection of remote objects."""
+
+    __attributes_classes__ = (ItemCollection,)
+    __attributes_exclude__ = ("items", "track_total", "_total")
 
     def __getitem__(self, __key: str | int | slice | Item | RemoteObject) -> T | list[T] | list[T, None, None]:
         """
@@ -78,6 +82,8 @@ class RemoteCollection[T: RemoteObject](ItemCollection[T], RemoteDataWrangler, m
 
 class RemoteCollectionLoader[T: RemoteObject](RemoteObject, RemoteCollection[T], metaclass=ABCMeta):
     """Generic class for storing a collection of remote objects that can be loaded from an API response."""
+
+    __attributes_classes__ = (RemoteObject, RemoteCollection)
 
     def __eq__(self, __collection: RemoteObject | ItemCollection | Iterable[T]):
         if isinstance(__collection, RemoteObject):
@@ -155,6 +161,8 @@ PLAYLIST_SYNC_KINDS = Literal["new", "refresh", "sync"]
 
 class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], metaclass=ABCMeta):
     """Extracts key ``playlist`` data from a remote API JSON response."""
+
+    __attributes_classes__ = (Playlist, RemoteCollectionLoader)
 
     @property
     @abstractmethod
@@ -290,12 +298,14 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
         """
         raise NotImplementedError
 
-    def merge(self, playlist: Playlist) -> None:
+    def merge(self, playlist: Playlist[T]) -> None:
         raise NotImplementedError
 
 
 class RemoteAlbum[T: RemoteTrack](Album[T], RemoteCollectionLoader[T], metaclass=ABCMeta):
     """Extracts key ``album`` data from a remote API JSON response."""
+
+    __attributes_classes__ = (Album, RemoteCollectionLoader)
 
     @property
     def _total(self):
@@ -303,19 +313,21 @@ class RemoteAlbum[T: RemoteTrack](Album[T], RemoteCollectionLoader[T], metaclass
 
     @property
     @abstractmethod
-    def artists(self) -> list[RemoteArtist]:
+    def artists(self) -> list[RemoteArtist[T]]:
         raise NotImplementedError
 
 
 class RemoteArtist[T: RemoteTrack](Artist[T], RemoteCollectionLoader[T], metaclass=ABCMeta):
     """Extracts key ``artist`` data from a remote API JSON response."""
 
+    __attributes_classes__ = (Artist, RemoteCollectionLoader)
+
     @property
     def _total(self):
         return 0
 
     @property
-    def tracks(self) -> list[RemoteTrack]:
+    def tracks(self) -> list[T]:
         return [track for album in self.albums for track in album]
 
     @property
@@ -324,7 +336,7 @@ class RemoteArtist[T: RemoteTrack](Artist[T], RemoteCollectionLoader[T], metacla
 
     @property
     @abstractmethod
-    def albums(self) -> list[RemoteAlbum]:
+    def albums(self) -> list[RemoteAlbum[T]]:
         raise NotImplementedError
 
     @property

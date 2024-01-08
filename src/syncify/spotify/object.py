@@ -178,6 +178,8 @@ class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
 
     @property
     def length(self):
+        if isinstance(self.response["duration_ms"], Mapping):
+            return self.response["duration_ms"]["totalMilliseconds"] / 1000
         return self.response["duration_ms"] / 1000
 
     @property
@@ -362,6 +364,7 @@ class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[Spot
     """
 
     __slots__ = ("_tracks",)
+    __attributes_exclude__ = ("date_added",)
 
     @staticmethod
     def _validate_item_type(items: Any | Iterable[Any]) -> bool:

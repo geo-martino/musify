@@ -3,19 +3,19 @@ from glob import glob
 from os.path import splitext, join, exists, basename
 from typing import Any
 
-from syncify.shared.core.misc import Result, Filter
-from syncify.shared.core.object import Playlist, Library
-from syncify.shared.exception import SyncifyError
-from syncify.local.track.field import LocalTrackField
 from syncify.local.collection import LocalCollection, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from syncify.local.exception import LocalCollectionError
 from syncify.local.playlist import PLAYLIST_FILETYPES, LocalPlaylist, load_playlist
 from syncify.local.track import TRACK_CLASSES, LocalTrack, load_track
+from syncify.local.track.field import LocalTrackField
 from syncify.processors.sort import ItemSorter
+from syncify.shared.core.misc import Result, Filter
+from syncify.shared.core.object import Playlist, Library
+from syncify.shared.exception import SyncifyError
+from syncify.shared.logger import STAT
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
 from syncify.shared.types import UnitCollection, UnitIterable
 from syncify.shared.utils import align_and_truncate, get_max_width, correct_platform_separators
-from syncify.shared.logger import STAT
 
 
 class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
@@ -50,6 +50,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         "_track_paths",
         "_tracks",
     )
+    __attributes_classes__ = (Library, LocalCollection)
 
     # noinspection PyTypeChecker,PyPropertyDefinition
     @classmethod
@@ -153,7 +154,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         grouped = ItemSorter.group_by_field(items=self.tracks, field=LocalTrackField.FOLDER)
         collections = [
             LocalFolder(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
-            for name, group in grouped.items()
+            for name, group in grouped.items() if name
         ]
         return sorted(collections, key=lambda x: x.name)
 
@@ -163,7 +164,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         grouped = ItemSorter.group_by_field(items=self.tracks, field=LocalTrackField.ALBUM)
         collections = [
             LocalAlbum(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
-            for name, group in grouped.items()
+            for name, group in grouped.items() if name
         ]
         return sorted(collections, key=lambda x: x.name)
 
@@ -173,7 +174,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         grouped = ItemSorter.group_by_field(items=self.tracks, field=LocalTrackField.ARTIST)
         collections = [
             LocalArtist(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
-            for name, group in grouped.items()
+            for name, group in grouped.items() if name
         ]
         return sorted(collections, key=lambda x: x.name)
 
@@ -183,7 +184,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         grouped = ItemSorter.group_by_field(items=self.tracks, field=LocalTrackField.GENRES)
         collections = [
             LocalGenres(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
-            for name, group in grouped.items()
+            for name, group in grouped.items() if name
         ]
         return sorted(collections, key=lambda x: x.name)
 
@@ -362,7 +363,9 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         """
         return {name: pl.save(dry_run=dry_run) for name, pl in self.playlists.items()}
 
-    def merge_playlists(self, playlists: Library | Collection[Playlist] | Mapping[Any, Playlist]) -> None:
+    def merge_playlists(
+            self, playlists: Library[LocalTrack] | Collection[Playlist[LocalTrack]] | Mapping[Any, Playlist[LocalTrack]]
+    ) -> None:
         raise NotImplementedError
 
     ###########################################################################
@@ -393,21 +396,6 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
         return count
 
-    def as_dict(self):
-        return {
-            "library_folder": self.library_folder,
-            "playlists_folder": self.playlist_folder,
-            "other_folders": self.other_folders,
-            "track_count": len(self.tracks),
-            "playlist_counts": {name: len(pl) for name, pl in self._playlists.items()},
-            "remote_source": self.remote_wrangler.source if self.remote_wrangler else None,
-        }
-
-    def json(self):
-        return {
-            "library_folder": self.library_folder,
-            "playlists_folder": self.playlist_folder,
-            "other_folders": self.other_folders,
-            "tracks": dict(sorted(((track.path, track.json()) for track in self.tracks), key=lambda x: x[0])),
-            "playlists": {name: [tr.path for tr in pl] for name, pl in self.playlists.items()},
-        }
+    def _get_attributes(self) -> dict[str, Any]:
+        attributes_extra = {"remote_source": self.remote_wrangler.source if self.remote_wrangler else None}
+        return super()._get_attributes() | attributes_extra

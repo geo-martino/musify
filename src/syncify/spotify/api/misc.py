@@ -3,6 +3,7 @@ from collections.abc import MutableMapping
 from typing import Any
 
 from syncify.shared.remote.enum import RemoteIDType, RemoteObjectType
+from syncify.shared.types import Number
 from syncify.spotify.api.base import SpotifyAPIBase
 from syncify.shared.utils import limit_value
 
@@ -58,7 +59,10 @@ class SpotifyAPIMisc(SpotifyAPIBase, metaclass=ABCMeta):
 
             tracks = [item[key] if key in item else item for item in response[self.items_key]]
             for i, track in enumerate(tracks, i + 1):  # print each item in this page
-                length = track["duration_ms"] / 1000
+                if isinstance(track["duration_ms"], Number):
+                    length = track["duration_ms"] / 1000
+                else:
+                    length = track["duration_ms"]["totalMilliseconds"] / 1000
                 self.print_item(i=i, name=track["name"], uri=track["uri"], length=length, total=response["total"])
 
             if response["next"]:

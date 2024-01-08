@@ -22,6 +22,8 @@ class Track(Item, metaclass=ABCMeta):
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
 
+    __attributes_exclude__ = ("name",)
+
     @property
     def name(self) -> str:
         """This track's title"""
@@ -215,12 +217,12 @@ class BasicCollection[T: Item](ItemCollection[T]):
         except StopIteration:
             raise SyncifyKeyError(f"No matching URI found: '{__key}'")
 
-    def as_dict(self):
-        return {"name": self.name, "items": self.items}
-
 
 class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
     """A playlist of items and some of their derived properties/objects."""
+
+    __attributes_classes__ = (ItemCollection,)
+    __attributes_exclude__ = ("items",)
 
     @property
     @abstractmethod
@@ -241,7 +243,7 @@ class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def tracks(self):
+    def tracks(self) -> list[T]:
         """The tracks in this playlist"""
         raise NotImplementedError
 
@@ -270,17 +272,17 @@ class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
     @property
     @abstractmethod
     def date_created(self) -> datetime.datetime | None:
-        """:py:class:`datetime` object representing when the playlist was created"""
+        """:py:class:`datetime.datetime` object representing when the playlist was created"""
         raise NotImplementedError
 
     @property
     @abstractmethod
     def date_modified(self) -> datetime.datetime | None:
-        """:py:class:`datetime` object representing when the playlist was last modified"""
+        """:py:class:`datetime.datetime` object representing when the playlist was last modified"""
         raise NotImplementedError
 
     @abstractmethod
-    def merge(self, playlist: Playlist) -> None:
+    def merge(self, playlist: Playlist[T]) -> None:
         """
         Merge tracks in this playlist with another playlist synchronising tracks between the two.
         Only modifies this playlist.
@@ -289,7 +291,7 @@ class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
     # noinspection PyTypeChecker
-    def __or__(self, other: Playlist) -> Self:
+    def __or__(self, other: Playlist[T]) -> Self:
         if not isinstance(other, self.__class__):
             raise SyncifyTypeError(
                 f"Incorrect item given. Cannot merge with {other.__class__.__name__} "
@@ -298,7 +300,7 @@ class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
     # noinspection PyTypeChecker
-    def __ior__(self, other: Playlist) -> Self:
+    def __ior__(self, other: Playlist[T]) -> Self:
         if not isinstance(other, self.__class__):
             raise SyncifyTypeError(
                 f"Incorrect item given. Cannot merge with {other.__class__.__name__} "
@@ -307,13 +309,15 @@ class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
 
-# noinspection PyShadowingNames
 class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
     """
     A library of items and playlists
 
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
+
+    __attributes_classes__ = (ItemCollection,)
+    __attributes_exclude__ = ("items",)
 
     @property
     @abstractmethod
@@ -328,7 +332,7 @@ class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def tracks(self):
+    def tracks(self) -> list[T]:
         """The tracks in this library"""
         raise NotImplementedError
 
@@ -338,8 +342,13 @@ class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
         return len(self)
 
     @property
+    def tracks_in_playlists(self) -> set[T]:
+        """All unique tracks from all playlists in this library"""
+        return set(track for pl in self.playlists.values() for track in pl)
+
+    @property
     @abstractmethod
-    def playlists(self) -> dict[str, Playlist]:
+    def playlists(self) -> dict[str, Playlist[T]]:
         """The playlists in this library"""
         raise NotImplementedError
 
@@ -354,7 +363,7 @@ class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
             include: Container[str] | Filter[str] | None = None,
             exclude: Container[str] | Filter[str] | None = None,
             **filter_tags: dict[str, tuple[str, ...]]
-    ) -> dict[str, Playlist]:
+    ) -> dict[str, Playlist[T]]:
         """
         Returns a filtered set of playlists in this library.
         The playlists returned are deep copies of the playlists in the library.
@@ -380,7 +389,7 @@ class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
         if isinstance(exclude, Filter):
             exclude = set(self.playlists).difference(exclude.process(self.playlists.keys()))
 
-        filtered: dict[str, Playlist] = {}
+        filtered: dict[str, Playlist[T]] = {}
         for name, playlist in bar:
             if (include and name not in include) or (exclude and name in exclude):
                 continue
@@ -405,7 +414,7 @@ class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
         return filtered
 
     @abstractmethod
-    def merge_playlists(self, playlists: Library | Collection[Playlist] | Mapping[Any, Playlist]) -> None:
+    def merge_playlists(self, playlists: Library[T] | Collection[Playlist[T]] | Mapping[Any, Playlist[T]]) -> None:
         """Merge playlists from given list/map/library to this library"""
         # TODO: merge playlists adding/removing tracks as needed.
         #  Most likely will need to implement some method on playlist class too
@@ -418,6 +427,9 @@ class Folder[T: Track](ItemCollection[T], metaclass=ABCMeta):
 
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
+
+    __attributes_classes__ = (ItemCollection,)
+    __attributes_exclude__ = ("name", "items")
 
     @property
     @abstractmethod
@@ -483,6 +495,9 @@ class Album[T: Track](ItemCollection[T], metaclass=ABCMeta):
 
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
+
+    __attributes_classes__ = (ItemCollection,)
+    __attributes_exclude__ = ("name", "items")
 
     @property
     @abstractmethod
@@ -601,6 +616,9 @@ class Artist[T: Track](ItemCollection[T], metaclass=ABCMeta):
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
 
+    __attributes_classes__ = (ItemCollection,)
+    __attributes_exclude__ = ("name", "items")
+
     @property
     @abstractmethod
     def name(self):
@@ -665,6 +683,9 @@ class Genre[T: Track](ItemCollection[T], metaclass=ABCMeta):
 
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
+
+    __attributes_classes__ = (ItemCollection,)
+    __attributes_exclude__ = ("name", "items")
 
     @property
     @abstractmethod

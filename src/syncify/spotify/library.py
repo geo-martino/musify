@@ -6,6 +6,7 @@ from syncify.shared.core.object import Playlist, Library
 from syncify.shared.remote.config import RemoteObjectClasses
 from syncify.shared.remote.enum import RemoteObjectType
 from syncify.shared.remote.library import RemoteLibrary
+from syncify.shared.remote.object import RemoteTrack
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.config import SPOTIFY_OBJECT_CLASSES
 from syncify.spotify.object import SpotifyTrack, SpotifyCollection, SpotifyPlaylist, SpotifyAlbum, SpotifyArtist
@@ -16,6 +17,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
     Represents a Spotify library, providing various methods for manipulating
     tracks and playlists across an entire Spotify library collection.
     """
+    __attributes_classes__ = (RemoteLibrary,)
 
     @staticmethod
     def _validate_item_type(items: Any | Iterable[Any]) -> bool:
@@ -178,5 +180,8 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
 
         self.logger.debug(f"Enrich {self.source} artists: DONE\n")
 
-    def merge_playlists(self, playlists: Library | Collection[Playlist] | Mapping[Any, Playlist]) -> None:
+    def merge_playlists(
+            self,
+            playlists: Library[RemoteTrack] | Collection[Playlist[RemoteTrack]] | Mapping[Any, Playlist[RemoteTrack]]
+    ) -> None:
         raise NotImplementedError

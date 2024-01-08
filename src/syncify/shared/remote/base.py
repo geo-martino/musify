@@ -1,10 +1,10 @@
 from abc import ABCMeta, abstractmethod
 from typing import Any, Self
 
-from syncify.shared.core.base import Item, NamedObjectPrinter
 from syncify.shared.api.exception import APIError
-from syncify.shared.remote.api import RemoteAPI
+from syncify.shared.core.base import Item, NamedObjectPrinter
 from syncify.shared.remote import Remote
+from syncify.shared.remote.api import RemoteAPI
 
 
 class RemoteObject(NamedObjectPrinter, Remote, metaclass=ABCMeta):
@@ -16,6 +16,7 @@ class RemoteObject(NamedObjectPrinter, Remote, metaclass=ABCMeta):
     """
 
     __slots__ = ("_response", "api")
+    __attributes_exclude__ = ("api", "response")
 
     _url_pad = 71
 
@@ -114,16 +115,6 @@ class RemoteObject(NamedObjectPrinter, Remote, metaclass=ABCMeta):
         """
         raise NotImplementedError
 
-    def as_dict(self):
-        ignore = {"api", "response", "name", "remote_source", "unavailable_uri_dummy", "tag_sep", "clean_tags"}
-        return {
-            k: getattr(self, k) for k in self.__dir__()
-            if not k.startswith("_")
-            and k not in ignore
-            and not callable(getattr(self, k))
-            and k not in self.__annotations__
-        }
-
     def __hash__(self):
         """Uniqueness of a remote object is its URI"""
         return hash(self.uri)
@@ -131,4 +122,5 @@ class RemoteObject(NamedObjectPrinter, Remote, metaclass=ABCMeta):
 
 class RemoteItem(RemoteObject, Item, metaclass=ABCMeta):
     """Generic base class for remote items. Extracts key data from a remote API JSON response."""
-    pass
+
+    __attributes_classes__ = (RemoteObject, Item)

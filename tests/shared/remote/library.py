@@ -32,12 +32,12 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
 
         # all playlist tracks were added to the stored library tracks
         unique_tracks_count = len(set(track for pl in library_unloaded.playlists.values() for track in pl))
-        assert len(library_unloaded.tracks) == unique_tracks_count
+        assert len(library_unloaded.tracks_in_playlists) == unique_tracks_count
 
         # does not add duplicates to the loaded lists
         library_unloaded.load_playlists()
         assert len(library_unloaded.playlists) == len(list(library_unloaded.include))
-        assert len(library_unloaded.tracks) == unique_tracks_count
+        assert len(library_unloaded.tracks_in_playlists) == unique_tracks_count
 
     @abstractmethod
     def test_load_tracks(self, *_, **__):
@@ -229,6 +229,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         requests = [req for req in api_mock.get_requests(method="POST") if req.url.startswith(url)]
         assert len(requests) > 0
 
+    # TODO: figure out why the 'actual' playlist in this test is sometimes un-writeable
     def test_sync(
             self, library: RemoteLibrary, collection_merge_items: list[RemoteTrack], api_mock: RemoteMock
     ):

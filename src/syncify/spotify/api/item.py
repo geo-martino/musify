@@ -401,7 +401,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         url_suffix = "+".join(c[0].split("/")[-1] for c in config.values())
         self.logger.debug(
             f"{'DONE':<7}: {f"{self.api_url_base}/{url_suffix}":<71} | Retrieved "
-            f"{" and ".join(f"{len(v):>6} {map_key(k)}" for k, v in results.items())} for {len(id_list):>5} tracks"
+            f"{" and ".join(map_key(k) for k in results)} for {len(id_list):>5} tracks"
         )
 
         return results

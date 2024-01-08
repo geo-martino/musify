@@ -1,4 +1,3 @@
-import inspect
 import os
 from abc import ABCMeta
 from collections.abc import Mapping, Iterable
@@ -9,14 +8,13 @@ from typing import Any, Self
 
 import mutagen
 
+from syncify.local.exception import FileDoesNotExistError
+from syncify.local.track.base.reader import TagReader
+from syncify.local.track.base.writer import TagWriter
 from syncify.shared.core.base import Item
 from syncify.shared.core.object import Track
 from syncify.shared.exception import SyncifyKeyError, SyncifyAttributeError, SyncifyTypeError
 from syncify.shared.field import TrackField
-from syncify.local.file import File
-from syncify.local.exception import FileDoesNotExistError
-from syncify.local.track.base.reader import TagReader
-from syncify.local.track.base.writer import TagWriter
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
 from syncify.shared.types import UnitIterable
 
@@ -40,6 +38,7 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
     """
 
     __slots__ = ("_file", "_available_paths", "_available_paths_lower")
+    __attributes_classes__ = (TagReader,)
 
     @property
     def file(self):
@@ -123,36 +122,8 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
         return count
 
     def as_dict(self):
-        """Return a dictionary representation of the tags for this track."""
-        exclude = {
-            inspect.currentframe().f_code.co_name,
-            "name",
-            "valid_extensions",
-            "load",
-            "save",
-            "remote_wrangler",
-            "_clean_tags",
-            "_available_paths",
-            "_available_paths_lower",
-            "_file",
-        }
-
-        # manually prep attributes in specific order according to parent classes
-        attributes_core = {
-            k: getattr(self, k) for k in Track.__dict__.keys() if not k.startswith("_") and k not in exclude
-        }
-        attributes_uri = {k: getattr(self, k) for k in Item.__dict__.keys() if "uri" in k}
-        attributes_uri["remote_source"] = self.remote_wrangler.source if self.remote_wrangler else None
-        attributes_file = {
-            k: getattr(self, k) for k in File.__dict__.keys() if not k.startswith("_") and k not in exclude
-        }
-        attributes = attributes_core | attributes_uri | attributes_file
-        attributes_other = {
-            k.lstrip("_"): getattr(self, k) for k in self.__dict__.keys()
-            if k not in exclude and k.lstrip("_") not in attributes
-        }
-
-        return attributes | attributes_other
+        attributes_extra = {"remote_source": self.remote_wrangler.source if self.remote_wrangler else None}
+        return self._get_attributes() | attributes_extra
 
     def __hash__(self):  # TODO: why doesn't this get inherited correctly from File
         return super().__hash__()

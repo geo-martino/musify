@@ -4,13 +4,13 @@ from typing import Any, Literal
 
 from syncify.shared.core.base import Item
 from syncify.shared.core.object import Track, Library, Playlist
+from syncify.shared.logger import STAT
 from syncify.shared.remote.api import RemoteAPI
 from syncify.shared.remote.config import RemoteObjectClasses
 from syncify.shared.remote.enum import RemoteObjectType
 from syncify.shared.remote.object import RemoteTrack, RemoteCollection, RemotePlaylist, SyncResultRemotePlaylist, \
     RemoteArtist, RemoteAlbum
 from syncify.shared.utils import align_and_truncate, get_max_width
-from syncify.shared.logger import STAT
 
 
 class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=ABCMeta):
@@ -25,6 +25,8 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
     """
 
     __slots__ = ("_api", "_tracks", "_playlists", "include", "exclude", "use_cache")
+    __attributes_classes__ = (Library, RemoteCollection)
+    __attributes_exclude__ = ("api", "_object_cls")
 
     @property
     @abstractmethod
@@ -43,21 +45,22 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         return self.api.user_id
 
     @property
-    def playlists(self) -> dict[str, RemotePlaylist]:
+    def playlists(self) -> dict[str, RemotePlaylist[T]]:
         return self._playlists
 
     @property
     def tracks(self) -> list[T]:
+        """All user's saved tracks"""
         return self._tracks
 
     @property
-    def artists(self) -> list[RemoteArtist]:
-        """The saved artists in this library"""
+    def artists(self) -> list[RemoteArtist[T]]:
+        """All user's saved artists"""
         return self._artists
 
     @property
-    def albums(self) -> list[RemoteAlbum]:
-        """The saved albums in this library"""
+    def albums(self) -> list[RemoteAlbum[T]]:
+        """All user's saved albums"""
         return self._albums
 
     @property
@@ -75,10 +78,10 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         self.exclude = exclude
         self.use_cache = use_cache
 
-        self._playlists: dict[str, RemotePlaylist] = {}
+        self._playlists: dict[str, RemotePlaylist[T]] = {}
         self._tracks: list[T] = []
-        self._albums: list[RemoteAlbum] = []
-        self._artists: list[RemoteArtist] = []
+        self._albums: list[RemoteAlbum[T]] = []
+        self._artists: list[RemoteArtist[T]] = []
 
     def extend(self, __items: Iterable[Item], allow_duplicates: bool = True) -> None:
         self.logger.debug(f"Extend {self.source} tracks data: START")
@@ -153,15 +156,10 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         )
         self.api.get_items(responses, kind=RemoteObjectType.PLAYLIST, use_cache=self.use_cache)
 
-        playlists = []
-        for response in self.logger.get_progress_bar(iterable=responses, desc="Processing playlists", unit="playlists"):
-            pl = self._object_cls.playlist(response=response, api=self.api, skip_checks=False)
-
-            for track in pl.tracks:  # add tracks from this playlist to the user's saved tracks
-                if track not in self.tracks:
-                    self._tracks.append(track)
-
-            playlists.append(pl)
+        playlists = [
+            self._object_cls.playlist(response=r, api=self.api, skip_checks=False)
+            for r in self.logger.get_progress_bar(iterable=responses, desc="Processing playlists", unit="playlists")
+        ]
 
         self._playlists = {pl.name: pl for pl in sorted(playlists, key=lambda x: x.name.casefold())}
         self.logger.debug(f"Load {self.source} playlists: DONE")
@@ -463,19 +461,3 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
                 f"\33[1;97m{result.final:>6} final \33[0m"
             )
         self.logger.print(STAT)
-
-    def as_dict(self):
-        return {
-            "user_name": self.api.user_name if self.api.user_data else None,
-            "user_id": self.api.user_id if self.api.user_data else None,
-            "track_count": len(self.tracks),
-            "playlist_counts": {name: len(pl) for name, pl in self.playlists.items()},
-        }
-
-    def json(self):
-        return {
-            "user_name": self.api.user_name if self.api.user_data else None,
-            "user_id": self.api.user_id if self.api.user_data else None,
-            "tracks": dict(sorted(((track.uri, track.json()) for track in self.tracks), key=lambda x: x[0])),
-            "playlists": {name: [tr.uri for tr in pl] for name, pl in self.playlists.items()},
-        }

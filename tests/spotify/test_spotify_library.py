@@ -14,8 +14,6 @@ from tests.spotify.api.mock import SpotifyMock
 
 class TestSpotifyLibrary(RemoteLibraryTester):
 
-    dict_json_equal = False
-
     @pytest.fixture
     def collection_merge_items(self, api_mock: SpotifyMock) -> list[SpotifyTrack]:
         tracks = [SpotifyTrack(track) for track in api_mock.tracks[api_mock.range_max: api_mock.range_max + 10]]

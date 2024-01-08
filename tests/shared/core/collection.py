@@ -22,6 +22,8 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
     to merge with the collection.
     """
 
+    dict_json_equal = False
+
     @abstractmethod
     def collection(self, *args, **kwargs) -> ItemCollection:
         """Yields an :py:class:`ItemCollection` object to be tested as pytest.fixture"""

@@ -85,13 +85,19 @@ class SpotifyMock(RemoteMock):
     def __init__(self, **kwargs):
         super().__init__(case_sensitive=True, **{k: v for k, v in kwargs.items() if k != "case_sensitive"})
 
+        def get_duration(track: dict[str, Any]) -> int:
+            """Get duration in ms from response"""
+            if isinstance(track["duration_ms"], dict):
+                return track["duration_ms"]["totalMilliseconds"]
+            return track["duration_ms"]
+
         # generate initial responses for generic item calls
         # track count needs to be at least 10 more than total possible collection item count i.e. `range_max`
         self.tracks = [self.generate_track() for _ in range(self.range_max + 20)]
         self.audio_features = {
-            t["id"]: self.generate_audio_features(track_id=t["id"], duration_ms=t["duration_ms"]) for t in self.tracks
+            t["id"]: self.generate_audio_features(track_id=t["id"], duration_ms=get_duration(t)) for t in self.tracks
         }
-        self.audio_analysis = {t["id"]: {"track": {"duration": t["duration_ms"] / 1000}} for t in self.tracks}
+        self.audio_analysis = {t["id"]: {"track": {"duration": get_duration(t) / 1000}} for t in self.tracks}
 
         self.artists = [self.generate_artist() for _ in range(randrange(self.range_start, self.range_stop))]
         self.users = [self.generate_user() for _ in range(randrange(self.range_start, self.range_stop))]
@@ -518,11 +524,12 @@ class SpotifyMock(RemoteMock):
         """
         kind = ObjectType.TRACK.name.lower()
         track_id = random_id()
+        duration_ms = randrange(int(10e4), int(6*10e5))  # 1 second to 10 minutes range
 
         response = {
             "available_markets": sample(COUNTRY_CODES, k=randrange(1, 5)),
             "disc_number": randrange(1, 4),
-            "duration_ms": randrange(int(10e4), int(6*10e5)),  # 1 second to 10 minutes range
+            "duration_ms": choice((duration_ms, {"totalMilliseconds": duration_ms})),
             "explicit": choice([True, False, None]),
             "external_ids": self.generate_external_ids(),
             "external_urls": {SPOTIFY_NAME.lower(): f"{URL_EXT}/{kind}/{track_id}"},
@@ -561,7 +568,7 @@ class SpotifyMock(RemoteMock):
         """
         kind = ObjectType.TRACK.name.lower()
         track_id = track_id or random_id()
-        duration_ms = duration_ms or randrange(int(10e4), int(6*10e6))
+        duration_ms = duration_ms or randrange(int(10e4), int(6*10e5))  # 1 second to 10 minutes range
 
         # noinspection SpellCheckingInspection
         return {
@@ -1052,7 +1059,7 @@ class SpotifyMock(RemoteMock):
         """
         kind = ObjectType.CHAPTER.name.lower()
         chapter_id = random_id()
-        duration_ms = randrange(int(10e4), int(6 * 10e5))  # 1 second to 10 minutes range
+        duration_ms = randrange(int(10e4), int(6*10e5))  # 1 second to 10 minutes range
 
         response = {
             "audio_preview_url": f"https://p.scdn.co/mp3-preview/{chapter_id}",

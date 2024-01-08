@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from collections.abc import MutableSequence, Iterable, Mapping
+from collections.abc import MutableSequence, Iterable, Mapping, Collection
 from typing import Any, SupportsIndex, Self
 
-from syncify.shared.core.base import Item, NamedObjectPrinter
+from syncify.shared.core.base import Item, NamedObjectPrinter, NamedObject
 from syncify.shared.core.enum import Field
 from syncify.shared.exception import SyncifyTypeError, SyncifyKeyError
 from syncify.processors.sort import ShuffleMode, ShuffleBy, ItemSorter
@@ -137,6 +137,24 @@ class ItemCollection[T: Item](NamedObjectPrinter, MutableSequence[T], metaclass=
 
         if reverse:
             self.items.reverse()
+
+    @staticmethod
+    def _condense_attributes(attributes: dict[str, Any]) -> dict[str, Any]:
+        """Condense the attributes of the given map for cleaner attribute displaying"""
+        def condense(key: str, value: Any) -> tuple[str, Any]:
+            """Decide whether this key-value pair should be condensed and condense them."""
+            if isinstance(value, Collection) and not isinstance(value, str):
+                if any(isinstance(v, NamedObject) for v in value) or len(value) > 20 or len(value) == 0:
+                    return f"{key.rstrip("s")}_count", len(value)
+            return key, value
+
+        return dict(condense(k, v) for k, v in attributes.items())
+
+    def as_dict(self):
+        return self._condense_attributes(self._get_attributes())
+
+    def json(self):
+        return self._to_json(self._get_attributes())
 
     def __eq__(self, __collection: ItemCollection | Iterable[T]):
         """Names equal and all items equal in order"""

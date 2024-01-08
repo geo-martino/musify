@@ -4,14 +4,14 @@ from collections.abc import Collection, Iterable
 from datetime import datetime
 from os.path import dirname, join, getmtime, getctime, exists
 
-from syncify.shared.core.misc import Result
-from syncify.shared.core.object import Playlist
-from syncify.local.file import File
 from syncify.local.collection import LocalCollection
+from syncify.local.file import File
 from syncify.local.playlist.match import LocalMatcher
 from syncify.local.track import LocalTrack, load_track
 from syncify.processors.limit import ItemLimiter
 from syncify.processors.sort import ItemSorter
+from syncify.shared.core.misc import Result
+from syncify.shared.core.object import Playlist
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
 
 
@@ -33,6 +33,7 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
     """
 
     __slots__ = ("_path", "_tracks", "_tracks_original", "matcher", "limiter", "sorter", "available_track_paths")
+    __attributes_classes__ = (Playlist, LocalCollection, File)
 
     @property
     def name(self) -> str:
@@ -148,19 +149,5 @@ class LocalPlaylist(LocalCollection[LocalTrack], Playlist[LocalTrack], File, met
         """
         raise NotImplementedError
 
-    def merge(self, playlist: Playlist) -> None:
+    def merge(self, playlist: Playlist[LocalTrack]) -> None:
         raise NotImplementedError
-
-    def as_dict(self):
-        return {
-            "name": self.name,
-            "description": self.description,
-            "path": self.path,
-            "processors": [p for p in [self.matcher, self.limiter, self.sorter] if p is not None],
-            "track_total": self.track_total,
-            "length": self.length,
-            "date_created": self.date_created,
-            "date_modified": self.date_modified,
-            "last_played": self.last_played,
-            "remote_source": self.remote_wrangler.source if self.remote_wrangler else None,
-        }

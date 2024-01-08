@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 
+from syncify.shared.types import Number
 from tests.spotify.testers import SpotifyCollectionLoaderTester
 from syncify.shared.api.exception import APIError
 from syncify.shared.remote.enum import RemoteObjectType
@@ -146,10 +147,18 @@ class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
         album.response["images"].append({"height": max(images) * 2, "url": new_image_link})
         assert album.image_links["cover_front"] == new_image_link
 
-        original_duration = int(sum(track["duration_ms"] for track in original_response["tracks"]["items"]) / 1000)
+        original_duration = int(sum(
+            track["duration_ms"]
+            if isinstance(track["duration_ms"], Number)
+            else track["duration_ms"]["totalMilliseconds"]
+            for track in original_response["tracks"]["items"]
+        ) / 1000)
         assert int(album.length) == original_duration
         for track in album.tracks:
-            track.response["duration_ms"] += 2000
+            if isinstance(track.response["duration_ms"], Number):
+                track.response["duration_ms"] += 2000
+            else:
+                track.response["duration_ms"]["totalMilliseconds"] += 2000
         assert int(album.length) == original_duration + (2 * len(album.tracks))
 
         assert album.rating == original_response["popularity"]

@@ -41,7 +41,37 @@ class NamedObject(ABC):
 
 
 class NamedObjectPrinter(NamedObject, PrettyPrinter, metaclass=ABCMeta):
-    pass
+
+    __attributes_classes__: tuple[type] = ()
+    __attributes_exclude__: tuple[str] = ()
+
+    def _get_attributes(self) -> dict[str, Any]:
+        """Returns the key attributes of the current instance for pretty printing"""
+        def get_settings(kls: type) -> None:
+            """Build up classes and exclude keys for getting attributes"""
+            if kls != self.__class__ and kls not in classes:
+                classes.append(kls)
+            if issubclass(kls, NamedObjectPrinter):
+                exclude.update(kls.__attributes_exclude__)
+                for k in kls.__attributes_classes__:
+                    get_settings(k)
+
+        classes: list[type] = []
+        exclude: set[str] = set()
+        get_settings(self.__class__)
+        classes.insert(1, self.__class__)
+
+        attributes = {}
+        for cls in classes:
+            attributes |= {
+                k: getattr(self, k) for k in cls.__dict__.keys()
+                if k not in exclude and isinstance(getattr(cls, k), property)
+            }
+
+        return attributes
+
+    def as_dict(self) -> dict[str, Any]:
+        return self._get_attributes()
 
 
 class Item(NamedObjectPrinter, Hashable, metaclass=ABCMeta):

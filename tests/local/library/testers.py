@@ -11,8 +11,6 @@ from tests.shared.core.collection import LibraryTester
 
 class LocalLibraryTester(LibraryTester, LocalCollectionTester, metaclass=ABCMeta):
 
-    dict_json_equal = False
-
     @abstractmethod
     def blank_library(self) -> LocalLibrary:
         """A blank :py:class:`LocalLibrary` implementation to be tested."""

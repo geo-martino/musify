@@ -60,6 +60,8 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
         "_last_played",
         "_play_count",
     )
+    __attributes_classes__ = (LocalItem, Track)
+    __attributes_exclude__ = ("tag_map", "file")
 
     uri_tag: LocalTrackField = LocalTrackField.COMMENTS
     num_sep: str = "/"
@@ -301,7 +303,7 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
     def bit_depth(self) -> int | None:
         """The bit depth of this track in bits"""
         try:
-            return self.file.info.bits_per_sample / 1000
+            return self.file.info.bits_per_sample
         except AttributeError:
             return None
 

@@ -58,7 +58,7 @@ def test_loaded_attributes_flac(track_flac: FLAC):
     assert track_flac.size == 1818191
     assert track_flac.channels == 1
     assert track_flac.bit_rate == 706.413
-    assert track_flac.bit_depth == 0.016
+    assert track_flac.bit_depth == 16
     assert track_flac.sample_rate == 44.1
 
 
@@ -133,7 +133,7 @@ def test_loaded_attributes_m4a(track_m4a: M4A):
     assert track_m4a.size == 302199
     assert track_m4a.channels == 2
     assert track_m4a.bit_rate == 98.17
-    assert track_m4a.bit_depth == 0.016
+    assert track_m4a.bit_depth == 16
     assert track_m4a.sample_rate == 44.1
 
 

@@ -1,4 +1,4 @@
-from collections.abc import Callable, Mapping, MutableMapping, Sequence, MutableSequence
+from collections.abc import Callable, Mapping, MutableMapping, Sequence, MutableSequence, Iterable
 from copy import copy
 from datetime import datetime
 from random import shuffle
@@ -125,12 +125,20 @@ class ItemSorter(MusicBeeProcessor):
 
         tag_name = field.map(field)[0].name.lower()
 
+        def group(v: Any) -> None:
+            """Group items by the given value ``v``"""
+            if grouped.get(v) is None:
+                grouped[v] = []
+            grouped[v].append(item)
+
         grouped: dict[Any | None, list[T]] = {}
         for item in items:  # produce map of grouped values
-            value = item[tag_name]
-            if grouped.get(value) is None:
-                grouped[value] = []
-            grouped[value].append(item)
+            value = to_collection(item[tag_name])
+            if isinstance(value, Iterable):
+                for val in value:
+                    group(val)
+            else:
+                group(value)
 
         return grouped
 

@@ -103,7 +103,7 @@
     artist = SpotifyArtist.load("1odSzdzUpm3ZEEb74GdyiS", api=api, extend_tracks=True) 
     
     # pretty print information about the loaded objects
-    print(track1, track2, track3, album, playlist, artist)
+    print(track1, track2, track3, album, playlist, artist, sep="\n")
     ```
 5. Add some tracks to a playlist in your library, synchronise with Spotify, and log the results as follows:
    

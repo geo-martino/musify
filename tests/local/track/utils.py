@@ -17,6 +17,9 @@ class MutagenMock(mutagen.FileType):
     class MutagenInfoMock(mutagen.StreamInfo):
         def __init__(self):
             self.length = 0
+            self.channels = randrange(1, 5)
+            self.bitrate = randrange(96, 1400) * 1000
+            self.sample_rate = choice([44.1, 48, 88.2, 96]) * 1000
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

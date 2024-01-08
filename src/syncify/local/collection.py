@@ -38,6 +38,7 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
     """
 
     __slots__ = ("logger", "remote_wrangler")
+    __attributes_exclude__ = ("track_paths", "track_total")
 
     @staticmethod
     def _validate_item_type(items: Any | Iterable[Any]) -> bool:
@@ -46,13 +47,13 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
         return isinstance(items, LocalItem)
 
     @property
-    def items(self) -> list[LocalTrack]:
+    def items(self) -> list[T]:
         """The tracks in this collection"""
         return self.tracks
 
     @property
     @abstractmethod
-    def tracks(self) -> list[LocalTrack]:
+    def tracks(self) -> list[T]:
         """The tracks in this collection"""
         raise NotImplementedError
 
@@ -176,7 +177,7 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
             tag_names.append("image_links")
 
         for track in tracks:  # perform the merge
-            track_in_collection = next((t for t in self.tracks if t == track), None)
+            track_in_collection: LocalTrack = next((t for t in self.tracks if t == track), None)
             if not track_in_collection:  # skip if the item does not exist in this collection
                 continue
 
@@ -191,20 +192,6 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
 
         if isinstance(self, Library):
             self.logger.print()
-
-    def as_dict(self):
-        return {
-            "name": self.name,
-            "artists": self.artists,
-            "track_total": self.track_total,
-            "genres": self.genres,
-            "length": self.length,
-            "tracks": self.tracks,
-            "last_added": self.last_added,
-            "last_modified": self.last_modified,
-            "last_played": self.last_played,
-            "remote_source": self.remote_wrangler.source if self.remote_wrangler else None,
-        }
 
     def __getitem__(self, __key: str | int | slice | Item) -> T | list[T] | list[T, None, None]:
         """
@@ -240,7 +227,7 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
             raise SyncifyKeyError(f"No matching item found for URI: '{__key}'")
 
 
-class LocalCollectionFiltered[T: LocalItem](LocalCollection[T]):
+class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], metaclass=ABCMeta):
     """
     Generic class for storing and filtering on a collection of local tracks
     with methods for enriching the attributes of this object from the attributes of the collection of tracks
@@ -323,6 +310,8 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
         ``folder`` when name is None.
     """
 
+    __attributes_classes__ = (Folder, LocalCollection)
+
     @property
     def albums(self):
         return get_most_common_values(track.album for track in self.tracks if track.album)
@@ -382,22 +371,6 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
                 track.compilation = False
                 count += 1
 
-    def as_dict(self):
-        return {
-            "name": self.folder,
-            "artists": self.artists,
-            "albums": self.albums,
-            "track_total": self.track_total,
-            "genres": self.genres,
-            "compilation": self.compilation,
-            "length": self.length,
-            "tracks": self.tracks,
-            "last_added": self.last_added,
-            "last_modified": self.last_modified,
-            "last_played": self.last_played,
-            "remote_source": self.remote_wrangler.source if self.remote_wrangler else None,
-        }
-
 
 class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):
     """
@@ -414,6 +387,8 @@ class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):
     :raise LocalCollectionError: If the given tracks contain more than one unique value for
         ``album`` when name is None.
     """
+
+    __attributes_classes__ = (Album, LocalCollection)
 
     @property
     def album_artist(self):
@@ -480,25 +455,6 @@ class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):
         )
         self._image_links: dict[str, str] = {}
 
-    def as_dict(self):
-        return {
-            "name": self.album,
-            "artists": self.artists,
-            "album_artist": self.album_artist,
-            "genres": self.genres,
-            "year": self.year,
-            "compilation": self.compilation,
-            "image_links": self.image_links,
-            "has_image": self.has_image,
-            "length": self.length,
-            "rating": self.rating,
-            "tracks": self.tracks,
-            "last_added": self.last_added,
-            "last_modified": self.last_modified,
-            "last_played": self.last_played,
-            "remote_source": self.remote_wrangler.source if self.remote_wrangler else None,
-        }
-
 
 class LocalArtist(LocalCollectionFiltered[LocalTrack], Artist[LocalTrack]):
     """
@@ -515,6 +471,8 @@ class LocalArtist(LocalCollectionFiltered[LocalTrack], Artist[LocalTrack]):
     :raise LocalCollectionError: If the given tracks contain more than one unique value for
         ``artist`` when name is None.
     """
+
+    __attributes_classes__ = (Artist, LocalCollection)
 
     @property
     def albums(self):
@@ -537,20 +495,6 @@ class LocalArtist(LocalCollectionFiltered[LocalTrack], Artist[LocalTrack]):
                            x.filename or __max_str)
         )
 
-    def as_dict(self):
-        return {
-            "name": self.artist,
-            "artists": self.artists,
-            "genres": self.genres,
-            "length": self.length,
-            "rating": self.rating,
-            "tracks": self.tracks,
-            "last_added": self.last_added,
-            "last_modified": self.last_modified,
-            "last_played": self.last_played,
-            "remote_source": self.remote_wrangler.source if self.remote_wrangler else None,
-        }
-
 
 class LocalGenres(LocalCollectionFiltered[LocalTrack], Genre[LocalTrack]):
     """
@@ -568,6 +512,8 @@ class LocalGenres(LocalCollectionFiltered[LocalTrack], Genre[LocalTrack]):
         ``genre`` when name is None.
     """
 
+    __attributes_classes__ = (Genre, LocalCollection)
+
     @property
     def albums(self):
         return get_most_common_values(track.album for track in self.tracks if track.album)
@@ -583,16 +529,3 @@ class LocalGenres(LocalCollectionFiltered[LocalTrack], Genre[LocalTrack]):
                            x.track_number or sys.maxsize,
                            x.filename or __max_str)
         )
-
-    def as_dict(self):
-        return {
-            "name": self.genre,
-            "artists": self.artists,
-            "genres": self.genres,
-            "length": self.length,
-            "tracks": self.tracks,
-            "last_added": self.last_added,
-            "last_modified": self.last_modified,
-            "last_played": self.last_played,
-            "remote_source": self.remote_wrangler.source if self.remote_wrangler else None,
-        }
