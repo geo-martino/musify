@@ -364,7 +364,7 @@ class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[Spot
     """
 
     __slots__ = ("_tracks",)
-    __attributes_exclude__ = ("date_added",)
+    __attributes_ignore__ = "date_added"
 
     @staticmethod
     def _validate_item_type(items: Any | Iterable[Any]) -> bool:

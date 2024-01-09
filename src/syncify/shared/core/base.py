@@ -6,6 +6,8 @@ from typing import Any
 
 from syncify.shared.core.enum import TagField
 from syncify.shared.core.misc import PrettyPrinter
+from syncify.shared.types import UnitIterable
+from syncify.shared.utils import to_collection
 
 
 class NamedObject(ABC):
@@ -42,8 +44,8 @@ class NamedObject(ABC):
 
 class NamedObjectPrinter(NamedObject, PrettyPrinter, metaclass=ABCMeta):
 
-    __attributes_classes__: tuple[type] = ()
-    __attributes_exclude__: tuple[str] = ()
+    __attributes_classes__: UnitIterable[type] = ()
+    __attributes_ignore__: UnitIterable[str] = ()
 
     def _get_attributes(self) -> dict[str, Any]:
         """Returns the key attributes of the current instance for pretty printing"""
@@ -52,12 +54,12 @@ class NamedObjectPrinter(NamedObject, PrettyPrinter, metaclass=ABCMeta):
             if kls != self.__class__ and kls not in classes:
                 classes.append(kls)
             if issubclass(kls, NamedObjectPrinter):
-                exclude.update(kls.__attributes_exclude__)
-                for k in kls.__attributes_classes__:
+                ignore.update(to_collection(kls.__attributes_ignore__))
+                for k in to_collection(kls.__attributes_classes__):
                     get_settings(k)
 
         classes: list[type] = []
-        exclude: set[str] = set()
+        ignore: set[str] = set()
         get_settings(self.__class__)
         classes.insert(1, self.__class__)
 
@@ -65,7 +67,7 @@ class NamedObjectPrinter(NamedObject, PrettyPrinter, metaclass=ABCMeta):
         for cls in classes:
             attributes |= {
                 k: getattr(self, k) for k in cls.__dict__.keys()
-                if k not in exclude and isinstance(getattr(cls, k), property)
+                if k not in ignore and isinstance(getattr(cls, k), property)
             }
 
         return attributes

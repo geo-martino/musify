@@ -6,7 +6,7 @@ import pytest
 
 from syncify.local.library import LocalLibrary
 from syncify.local.track import LocalTrack
-from tests.shared.core.misc import BasicFilter
+from syncify.processors.filter import FilterDefinedList, FilterIncludeExclude
 from tests.local.library.testers import LocalLibraryTester
 from tests.local.playlist.utils import path_playlist_resources, path_playlist_m3u
 from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
@@ -37,7 +37,9 @@ class TestLocalLibrary(LocalLibraryTester):
         library_include = LocalLibrary(
             library_folder=path_track_resources,
             playlist_folder=path_playlist_resources,
-            include=[splitext(basename(path_playlist_m3u))[0], splitext(basename(path_playlist_xautopf_bp))[0]],
+            playlist_filter=FilterDefinedList(
+                [splitext(basename(path_playlist_m3u))[0], splitext(basename(path_playlist_xautopf_bp))[0]]
+            ),
         )
         assert library_include.library_folder == path_track_resources
         assert library_include._track_paths == path_track_all
@@ -47,40 +49,16 @@ class TestLocalLibrary(LocalLibraryTester):
             splitext(basename(path_playlist_xautopf_bp).casefold())[0]: path_playlist_xautopf_bp,
         }
 
-        include = BasicFilter()
-        include.values = [
-            splitext(basename(path_playlist_m3u))[0],
-            splitext(basename(path_playlist_xautopf_bp))[0]
-        ]
-        library_include = LocalLibrary(
-            library_folder=path_track_resources,
-            playlist_folder=path_playlist_resources,
-            include=include,
-        )
-        assert library_include._playlist_paths == {
-            splitext(basename(path_playlist_m3u).casefold())[0]: path_playlist_m3u,
-            splitext(basename(path_playlist_xautopf_bp).casefold())[0]: path_playlist_xautopf_bp,
-        }
-
     def test_init_exclude(self):
         library_exclude = LocalLibrary(
             library_folder=path_track_resources,
             playlist_folder=path_playlist_resources,
-            exclude=[splitext(basename(path_playlist_xautopf_bp))[0]],
+            playlist_filter=FilterIncludeExclude(
+                include=FilterDefinedList(),
+                exclude=FilterDefinedList([splitext(basename(path_playlist_xautopf_bp))[0]])
+            ),
         )
         assert library_exclude.playlist_folder == path_playlist_resources
-        assert library_exclude._playlist_paths == {
-            splitext(basename(path_playlist_m3u).casefold())[0]: path_playlist_m3u,
-            splitext(basename(path_playlist_xautopf_ra).casefold())[0]: path_playlist_xautopf_ra,
-        }
-
-        exclude = BasicFilter()
-        exclude.values = [splitext(basename(path_playlist_xautopf_bp))[0]]
-        library_exclude = LocalLibrary(
-            library_folder=path_track_resources,
-            playlist_folder=path_playlist_resources,
-            exclude=exclude,
-        )
         assert library_exclude._playlist_paths == {
             splitext(basename(path_playlist_m3u).casefold())[0]: path_playlist_m3u,
             splitext(basename(path_playlist_xautopf_ra).casefold())[0]: path_playlist_xautopf_ra,

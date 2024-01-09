@@ -1,7 +1,6 @@
 from collections.abc import Collection, Mapping, Iterable
 from typing import Any
 
-from syncify.shared.core.misc import Filter
 from syncify.shared.core.object import Playlist, Library
 from syncify.shared.remote.config import RemoteObjectClasses
 from syncify.shared.remote.enum import RemoteObjectType
@@ -17,7 +16,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
     Represents a Spotify library, providing various methods for manipulating
     tracks and playlists across an entire Spotify library collection.
     """
-    __attributes_classes__ = (RemoteLibrary,)
+    __attributes_classes__ = RemoteLibrary
 
     @staticmethod
     def _validate_item_type(items: Any | Iterable[Any]) -> bool:
@@ -50,25 +49,13 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
         return self._api
 
     def _filter_playlists(self, responses: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        total_pl = len(responses)
-        names = {pl["name"] for pl in responses}
-
-        if self.include:  # filter on include playlist names
-            if isinstance(self.include, Filter):
-                include = {name.casefold() for name in self.include.process(names)}
-            else:
-                include = {name.casefold() for name in self.include}
-            responses = [pl for pl in responses if pl["name"].casefold() in include]
-        if self.exclude:  # filter out exclude playlist names
-            if isinstance(self.exclude, Filter):
-                exclude = {name.casefold() for name in names.difference(self.exclude.process(names))}
-            else:
-                exclude = {name.casefold() for name in self.exclude}
-            responses = [pl for pl in responses if pl["name"].casefold() not in exclude]
+        pl_total = len(responses)
+        pl_names_filtered = self.playlist_filter({response["name"] for response in responses})
+        responses = [response for response in responses if response["name"] in pl_names_filtered]
 
         self.logger.debug(
-            f"Filtered out {total_pl - len(responses)} playlists "
-            f"from {total_pl} {self.source} playlists"
+            f"Filtered out {pl_total - len(responses)} playlists from {pl_total} {self.source} available playlists"
+            if (pl_total - len(responses)) > 0 else f"{len(responses)} playlists found"
         )
 
         return responses

@@ -3,10 +3,10 @@ from collections.abc import Collection, Iterable
 from dataclasses import dataclass
 from os.path import exists, dirname
 
-from syncify.shared.core.misc import Result
-from syncify.local.playlist.match import LocalMatcher
 from syncify.local.playlist.base import LocalPlaylist
 from syncify.local.track import LocalTrack
+from syncify.processors.filter import FilterPath
+from syncify.shared.core.misc import Result
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
 from syncify.shared.types import UnitCollection
 
@@ -31,7 +31,7 @@ class SyncResultM3U(Result):
     final: int
 
 
-class M3U(LocalPlaylist):
+class M3U(LocalPlaylist[FilterPath[LocalTrack]]):
     """
     For reading and writing data from M3U playlist format.
     You must provide either a valid playlist path of a file that exists,
@@ -95,29 +95,34 @@ class M3U(LocalPlaylist):
 
         self._description = None
 
-        matcher = LocalMatcher(
-            include_paths=paths,
+        self.matcher = FilterPath(
+            values=paths,
+            stem_replacement=library_folder,
+            possible_stems=other_folders,
             existing_paths=available_track_paths,
-            library_folder=library_folder,
-            other_folders=other_folders,
             check_existence=check_existence,
         )
         super().__init__(
-            path=path, matcher=matcher, available_track_paths=available_track_paths, remote_wrangler=remote_wrangler,
+            path=path,
+            matcher=self.matcher,
+            stem_replacement=library_folder,
+            stem_original=self.matcher.stem_original,
+            available_track_paths=available_track_paths,
+            remote_wrangler=remote_wrangler,
         )
 
         self.load(tracks=tracks)
 
     def load(self, tracks: Collection[LocalTrack] = ()) -> list[LocalTrack]:
-        if not self.matcher.include_paths:
+        if not self.matcher.values:
             # use the given tracks if no valid matcher present
             self.tracks = tracks or []
         elif tracks:  # match paths from given tracks using the matcher
             self._match(tracks)
         else:  # use the paths in the matcher to load tracks from scratch
-            self.tracks = [self._load_track(path) for path in self.matcher.include_paths if path is not None]
+            self.tracks = [self._load_track(path) for path in self.matcher.values if path is not None]
 
-        self._limit(ignore=self.matcher.include_paths)
+        self._limit(ignore=self.matcher.values)
         self._sort()
 
         self._tracks_original = self.tracks.copy() if exists(self._path) else []

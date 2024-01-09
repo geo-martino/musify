@@ -3,16 +3,16 @@ from __future__ import annotations
 import datetime
 import logging
 from abc import ABCMeta, abstractmethod
-from collections.abc import Collection, Mapping, Iterable, Container
+from collections.abc import Collection, Mapping
 from copy import deepcopy
-from typing import Any, Self
+from typing import Any, Self, Iterable
 
+from syncify.processors.base import Filter
 from syncify.shared.core.base import Item
 from syncify.shared.core.collection import ItemCollection
-from syncify.shared.core.misc import Filter
 from syncify.shared.exception import SyncifyKeyError, SyncifyTypeError
-from syncify.shared.utils import to_collection, align_and_truncate, get_max_width
 from syncify.shared.logger import SyncifyLogger
+from syncify.shared.utils import to_collection, align_and_truncate, get_max_width
 
 
 class Track(Item, metaclass=ABCMeta):
@@ -22,7 +22,7 @@ class Track(Item, metaclass=ABCMeta):
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
 
-    __attributes_exclude__ = ("name",)
+    __attributes_ignore__ = "name"
 
     @property
     def name(self) -> str:
@@ -221,8 +221,8 @@ class BasicCollection[T: Item](ItemCollection[T]):
 class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
     """A playlist of items and some of their derived properties/objects."""
 
-    __attributes_classes__ = (ItemCollection,)
-    __attributes_exclude__ = ("items",)
+    __attributes_classes__ = ItemCollection
+    __attributes_ignore__ = "items"
 
     @property
     @abstractmethod
@@ -316,8 +316,8 @@ class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
 
-    __attributes_classes__ = (ItemCollection,)
-    __attributes_exclude__ = ("items",)
+    __attributes_classes__ = ItemCollection
+    __attributes_ignore__ = "items"
 
     @property
     @abstractmethod
@@ -359,55 +359,47 @@ class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
         self.logger: SyncifyLogger = logging.getLogger(__name__)
 
     def get_filtered_playlists(
-            self,
-            include: Container[str] | Filter[str] | None = None,
-            exclude: Container[str] | Filter[str] | None = None,
-            **filter_tags: dict[str, tuple[str, ...]]
+            self, playlist_filter: Filter[str] | None = None, **tag_filter: dict[str, tuple[str, ...]]
     ) -> dict[str, Playlist[T]]:
         """
         Returns a filtered set of playlists in this library.
         The playlists returned are deep copies of the playlists in the library.
 
-        :param include: An optional list or :py:class:`Filter` of playlist names to include.
-        :param exclude: An optional list or :py:class:`Filter` of playlist names to exclude.
-        :param filter_tags: Provide optional kwargs of the tags and values of items to filter out of every playlist.
+        :param playlist_filter: An optional :py:class:`Filter` to apply when loading playlists.
+            Playlist names will be passed to this filter to limit which playlists are loaded.
+        :param tag_filter: Provide optional kwargs of the tags and values of items to filter out of every playlist.
             Parse a tag name as a parameter, any item matching the values given for this tag will be filtered out.
             NOTE: Only `string` value types are currently supported.
         :return: Filtered playlists.
         """
         self.logger.info(
             f"\33[1;95m ->\33[1;97m Filtering playlists and tracks from {len(self.playlists)} playlists\n"
-            f"\33[0;90m    Filter out tags: {filter_tags} \33[0m"
+            f"\33[0;90m    Filter out tags: {tag_filter} \33[0m"
         )
         max_width = get_max_width(self.playlists)
-        bar = self.logger.get_progress_bar(
-            iterable=self.playlists.items(), desc="Filtering playlists", unit="playlists"
+        pl_filtered = [
+            pl for name, pl in self.playlists.items() if not playlist_filter or name in playlist_filter(self.playlists)
+        ]
+        bar: Iterable[Playlist[T]] = self.logger.get_progress_bar(
+            iterable=pl_filtered, desc="Filtering playlists", unit="playlists"
         )
 
-        if isinstance(include, Filter):
-            include = set(include.process(self.playlists.keys()))
-        if isinstance(exclude, Filter):
-            exclude = set(self.playlists).difference(exclude.process(self.playlists.keys()))
-
         filtered: dict[str, Playlist[T]] = {}
-        for name, playlist in bar:
-            if (include and name not in include) or (exclude and name in exclude):
-                continue
-
-            filtered[name] = deepcopy(playlist)
-            for item in playlist.items:
-                for tag, filter_vals in filter_tags.items():
-                    item_val = item[tag]
+        for pl in bar:
+            filtered[pl.name] = deepcopy(pl)
+            for track in pl.tracks:
+                for tag, values in tag_filter.items():
+                    item_val = track[tag]
                     if not isinstance(item_val, str):
                         continue
 
-                    if any(v.strip().casefold() in item_val.strip().casefold() for v in filter_vals):
-                        filtered[name].remove(item)
+                    if any(v.strip().casefold() in item_val.strip().casefold() for v in values):
+                        filtered[pl.name].remove(track)
                         break
 
             self.logger.debug(
-                f"{align_and_truncate(name, max_width=max_width)} | "
-                f"Filtered out {len(playlist) - len(filtered[name]):>3} items"
+                f"{align_and_truncate(pl.name, max_width=max_width)} | "
+                f"Filtered out {len(pl) - len(filtered[pl.name]):>3} items"
             )
 
         self.logger.print()
@@ -428,8 +420,8 @@ class Folder[T: Track](ItemCollection[T], metaclass=ABCMeta):
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
 
-    __attributes_classes__ = (ItemCollection,)
-    __attributes_exclude__ = ("name", "items")
+    __attributes_classes__ = ItemCollection
+    __attributes_ignore__ = ("name", "items")
 
     @property
     @abstractmethod
@@ -496,8 +488,8 @@ class Album[T: Track](ItemCollection[T], metaclass=ABCMeta):
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
 
-    __attributes_classes__ = (ItemCollection,)
-    __attributes_exclude__ = ("name", "items")
+    __attributes_classes__ = ItemCollection
+    __attributes_ignore__ = ("name", "items")
 
     @property
     @abstractmethod
@@ -616,8 +608,8 @@ class Artist[T: Track](ItemCollection[T], metaclass=ABCMeta):
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
 
-    __attributes_classes__ = (ItemCollection,)
-    __attributes_exclude__ = ("name", "items")
+    __attributes_classes__ = ItemCollection
+    __attributes_ignore__ = ("name", "items")
 
     @property
     @abstractmethod
@@ -684,8 +676,8 @@ class Genre[T: Track](ItemCollection[T], metaclass=ABCMeta):
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
 
-    __attributes_classes__ = (ItemCollection,)
-    __attributes_exclude__ = ("name", "items")
+    __attributes_classes__ = ItemCollection
+    __attributes_ignore__ = ("name", "items")
 
     @property
     @abstractmethod

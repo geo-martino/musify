@@ -8,8 +8,10 @@ from syncify.local.exception import LocalCollectionError
 from syncify.local.playlist import PLAYLIST_FILETYPES, LocalPlaylist, load_playlist
 from syncify.local.track import TRACK_CLASSES, LocalTrack, load_track
 from syncify.local.track.field import LocalTrackField
+from syncify.processors.base import Filter
+from syncify.processors.filter import FilterDefinedList
 from syncify.processors.sort import ItemSorter
-from syncify.shared.core.misc import Result, Filter
+from syncify.shared.core.misc import Result
 from syncify.shared.core.object import Playlist, Library
 from syncify.shared.exception import SyncifyError
 from syncify.shared.logger import STAT
@@ -28,11 +30,11 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     :param playlist_folder: The absolute path of the playlist folder containing all playlists
         or the relative path within the given ``library_folder``.
         The intialiser will check for the existence of this path and only store the absolute path if it exists.
+    :param playlist_filter: An optional :py:class:`Filter` to apply when loading playlists.
+        Playlist names will be passed to this filter to limit which playlists are loaded.
     :param other_folders: Absolute paths of other possible library paths.
         Use to replace path stems from other libraries for the paths in loaded playlists.
         Useful when managing similar libraries on multiple platforms.
-    :param include: An optional list or :py:class:`Filter` of playlist names to include when loading playlists.
-    :param exclude: An optional list or :py:class:`Filter` of playlist names to exclude when loading playlists.
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
         The wrangler is also used when loading tracks to allow them to process URI tags.
@@ -42,9 +44,8 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     __slots__ = (
         "_library_folder",
         "_playlist_folder",
+        "playlist_filter",
         "other_folders",
-        "include",
-        "exclude",
         "_playlist_paths",
         "_playlists",
         "_track_paths",
@@ -126,27 +127,18 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             }
             playlists |= entry
 
-        if isinstance(self.include, Filter):
-            include = {name.casefold() for name in self.include.process(playlists.keys())} if self.include.ready else {}
-        else:
-            include = {name.strip().casefold() for name in self.include}
-        if isinstance(self.exclude, Filter):
-            exclude = {name.casefold() for name in self.exclude.process(playlists.keys())} if self.exclude.ready else {}
-        else:
-            exclude = {name.strip().casefold() for name in self.exclude}
-
-        playlists_total = len(playlists)
+        pl_total = len(playlists)
+        pl_filtered = self.playlist_filter(playlists)
         self._playlist_paths = {
             name.casefold(): path for name, path in sorted(playlists.items(), key=lambda x: x[0])
-            if (not include or name.casefold() in include) and (not exclude or name.casefold() not in exclude)
+            if name in pl_filtered
         }
 
-        log = (
-            f"Filtered out {playlists_total - len(self._playlist_paths)} playlists "
-            f"from {playlists_total} {self.name} playlists"
-        ) if include or exclude else f"{len(self._playlist_paths)} playlists found"
-
-        self.logger.debug(f"Set playlist folder: {self.playlist_folder} | {log}")
+        self.logger.debug(f"Set playlist folder: {self.playlist_folder} | " + (
+            f"Filtered out {pl_total - len(self._playlist_paths)} playlists "
+            f"from {pl_total} {self.name} available playlists"
+            if (pl_total - len(pl_filtered)) > 0 else f"{len(self._playlist_paths)} playlists found"
+        ))
 
     @property
     def folders(self) -> list[LocalFolder]:
@@ -192,9 +184,8 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             self,
             library_folder: str | None = None,
             playlist_folder: str | None = None,
+            playlist_filter: Filter[str] = FilterDefinedList(),
             other_folders: UnitCollection[str] = (),
-            include: Iterable[str] | Filter[str] = (),
-            exclude: Iterable[str] | Filter[str] = (),
             remote_wrangler: RemoteDataWrangler | None = None,
     ):
         super().__init__(remote_wrangler=remote_wrangler)
@@ -207,8 +198,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         self.logger.info(f"\33[1;95m ->\33[1;97m Setting up {log_name} library \33[0m")
         self.logger.print()
 
-        self.include = include
-        self.exclude = exclude
+        self.playlist_filter = playlist_filter
 
         self._library_folder: str | None = None
         # name of track object to set of paths valid for that track object

@@ -8,7 +8,7 @@ import xmltodict
 
 from syncify.shared.core.enum import Fields
 from syncify.shared.core.misc import Result
-from syncify.local.playlist.match import LocalMatcher
+from syncify.processors.filter import FilterMatcher, FilterPath, FilterComparers
 from syncify.local.playlist.base import LocalPlaylist
 from syncify.local.track import LocalTrack
 from syncify.processors.limit import ItemLimiter
@@ -26,7 +26,7 @@ class SyncResultXAutoPF(Result):
     :ivar start_description: The description of the playlist before sync.
     :ivar start_include: The number of tracks that matched the include settings before the sync.
     :ivar start_exclude: The number of tracks that matched the exclude settings before the sync.
-    :ivar start_comparers: The number of tracks that matched all the :py:class:`ItemComparer` settings before the sync.
+    :ivar start_comparers: The number of tracks that matched all the :py:class:`Comparer` settings before the sync.
     :ivar start_limiter: Was a limiter present on the playlist before the sync.
     :ivar start_sorter: Was a sorter present on the playlist before the sync.
 
@@ -34,7 +34,7 @@ class SyncResultXAutoPF(Result):
     :ivar final_description: The description of the playlist after sync.
     :ivar final_include: The number of tracks that matched the include settings after the sync.
     :ivar final_exclude: The number of tracks that matched the exclude settings after the sync.
-    :ivar final_comparers: The number of tracks that matched all the :py:class:`ItemComparer` settings after the sync.
+    :ivar final_comparers: The number of tracks that matched all the :py:class:`Comparer` settings after the sync.
     :ivar final_limiter: Was a limiter present on the playlist after the sync.
     :ivar final_sorter: Was a sorter present on the playlist after the sync.
     """
@@ -55,7 +55,9 @@ class SyncResultXAutoPF(Result):
     final_sorter: bool
 
 
-class XAutoPF(LocalPlaylist):
+class XAutoPF(LocalPlaylist[FilterMatcher[
+    LocalTrack, FilterPath[LocalTrack], FilterPath[LocalTrack], FilterComparers[LocalTrack]
+]]):
     """
     For reading and writing data from MusicBee's auto-playlist format.
 
@@ -118,7 +120,9 @@ class XAutoPF(LocalPlaylist):
 
         self._description = self.xml["SmartPlaylist"]["Source"]["Description"]
 
-        matcher = LocalMatcher.from_xml(
+        self.matcher: FilterMatcher[
+            LocalTrack, FilterPath[LocalTrack], FilterPath[LocalTrack], FilterComparers[LocalTrack]
+        ] = FilterMatcher.from_xml(
             xml=self.xml,
             library_folder=library_folder,
             other_folders=other_folders,
@@ -127,9 +131,11 @@ class XAutoPF(LocalPlaylist):
         )
         super().__init__(
             path=path,
-            matcher=matcher,
+            matcher=self.matcher,
             limiter=ItemLimiter.from_xml(xml=self.xml),
             sorter=ItemSorter.from_xml(xml=self.xml),
+            stem_replacement=library_folder,
+            stem_original=self.matcher.include.stem_original or self.matcher.exclude.stem_original,
             available_track_paths=available_track_paths,
             remote_wrangler=remote_wrangler,
         )
@@ -139,11 +145,11 @@ class XAutoPF(LocalPlaylist):
 
     def load(self, tracks: Collection[LocalTrack] | None = None) -> list[LocalTrack] | None:
         if tracks is None:
-            tracks = [self._load_track(path) for path in self.matcher.include_paths if path is not None]
+            tracks = [self._load_track(path) for path in self.matcher.include if path is not None]
 
         self.sorter.sort_by_field(tracks, field=Fields.LAST_PLAYED, reverse=True)
         self._match(tracks=tracks, reference=tracks[0] if len(tracks) > 0 else None)
-        self._limit(ignore=self.matcher.include_paths)
+        self._limit(ignore=self.matcher.exclude)
         self._sort()
 
         if not self.tracks:

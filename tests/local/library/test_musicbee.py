@@ -7,6 +7,7 @@ from syncify.local.exception import MusicBeeError, FileDoesNotExistError
 from syncify.local.library import LocalLibrary, MusicBee
 from syncify.local.library.musicbee import XMLLibraryParser
 from syncify.local.track import LocalTrack
+from syncify.processors.filter import FilterIncludeExclude, FilterDefinedList
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
 from tests.local.library.testers import LocalLibraryTester
 from tests.local.library.utils import path_library_resources
@@ -101,7 +102,9 @@ class TestMusicBee(LocalLibraryTester):
             library_folder=path_resources,
             musicbee_folder=basename(path_library_resources),
             playlist_folder=basename(path_playlist_resources),
-            include=[splitext(basename(path_playlist_m3u))[0], splitext(basename(path_playlist_xautopf_bp))[0]],
+            playlist_filter=FilterDefinedList(
+                [splitext(basename(path_playlist_m3u))[0], splitext(basename(path_playlist_xautopf_bp))[0]]
+            ),
         )
         assert library_include.playlist_folder == path_playlist_resources
         assert library_include._playlist_paths == {
@@ -114,7 +117,10 @@ class TestMusicBee(LocalLibraryTester):
             library_folder=path_resources,
             musicbee_folder=basename(path_library_resources),
             playlist_folder=basename(path_playlist_resources),
-            exclude=[splitext(basename(path_playlist_xautopf_bp))[0]],
+            playlist_filter=FilterIncludeExclude(
+                include=FilterDefinedList(),
+                exclude=FilterDefinedList([splitext(basename(path_playlist_xautopf_bp))[0]])
+            ),
         )
         assert library_exclude.playlist_folder == path_playlist_resources
         assert library_exclude._playlist_paths == {

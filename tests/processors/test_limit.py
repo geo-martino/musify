@@ -11,7 +11,7 @@ from tests.local.track.utils import random_tracks
 from tests.utils import random_file
 
 
-class TestItemComparer(PrettyPrinterTester):
+class TestItemLimiter(PrettyPrinterTester):
 
     @pytest.fixture
     def obj(self) -> ItemLimiter:
@@ -137,6 +137,6 @@ class TestItemComparer(PrettyPrinterTester):
         assert limiter.allowance == 1.25
         assert limiter._processor_method == limiter._most_recently_added
 
+    @pytest.mark.skip  # TODO: add test for to_xml
     def test_to_xml(self):
-        # TODO: add test for to_xml
         pass

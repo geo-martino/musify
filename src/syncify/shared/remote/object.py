@@ -33,8 +33,8 @@ class RemoteTrack(RemoteItemWranglerMixin, Track, metaclass=ABCMeta):
 class RemoteCollection[T: RemoteObject](ItemCollection[T], RemoteDataWrangler, metaclass=ABCMeta):
     """Generic class for storing a collection of remote objects."""
 
-    __attributes_classes__ = (ItemCollection,)
-    __attributes_exclude__ = ("items", "track_total", "_total")
+    __attributes_classes__ = ItemCollection
+    __attributes_ignore__ = ("items", "track_total", "_total")
 
     def __getitem__(self, __key: str | int | slice | Item | RemoteObject) -> T | list[T] | list[T, None, None]:
         """

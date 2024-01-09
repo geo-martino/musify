@@ -61,7 +61,7 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
         "_play_count",
     )
     __attributes_classes__ = (LocalItem, Track)
-    __attributes_exclude__ = ("tag_map", "file")
+    __attributes_ignore__ = ("tag_map", "file")
 
     uri_tag: LocalTrackField = LocalTrackField.COMMENTS
     num_sep: str = "/"

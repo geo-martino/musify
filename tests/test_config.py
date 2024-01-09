@@ -7,16 +7,16 @@ from pytest_lazyfixture import lazy_fixture
 from requests_cache import CachedSession
 
 from syncify import PACKAGE_ROOT, MODULE_ROOT
-from syncify.shared.core.enum import TagFields
 from syncify.config import ConfigLocal, ConfigMusicBee
 from syncify.config import ConfigRemote, ConfigSpotify
 from syncify.config import LOCAL_CONFIG, REMOTE_CONFIG, Config, ConfigFilter, ConfigReports
-from syncify.shared.exception import ConfigError, SyncifyError
-from syncify.local.track.field import LocalTrackField
 from syncify.local.exception import FileDoesNotExistError
+from syncify.local.track.field import LocalTrackField
+from syncify.shared.core.enum import TagFields
+from syncify.shared.exception import ConfigError, SyncifyError
+from syncify.shared.logger import SyncifyLogger
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
 from syncify.shared.utils import correct_platform_separators
-from syncify.shared.logger import SyncifyLogger
 from tests.shared.core.misc import PrettyPrinterTester
 from tests.utils import path_resources, path_txt
 
@@ -156,21 +156,11 @@ class TestConfig(PrettyPrinterTester):
                 assert config.api.api
 
     def test_empty_filter(self, config_empty: Config):
-        def assert_empty_config_options(options: ConfigFilter.ConfigMatch):
-            """Assert the given filter matcher is empty and returns the same values as input every time"""
-            assert options.values is None
-            assert options.process(values) == values  # no filter happens
-            assert len(options) == 0
-
         values = ("please", "keep", "all", "of", "these")
-        assert_empty_config_options(config_empty.filter.include)
-        assert_empty_config_options(config_empty.filter.exclude)
-        assert config_empty.filter.process(values) == values
 
+        assert config_empty.filter(values) == values
         for conf_library in config_empty.libraries.values():
-            assert_empty_config_options(conf_library.playlists.include)
-            assert_empty_config_options(conf_library.playlists.exclude)
-            assert conf_library.playlists.process(values) == values
+            assert conf_library.playlists.filter(values) == values
 
     def test_empty_reports(self, config_empty: Config):
         config = config_empty.reports
@@ -208,8 +198,8 @@ class TestConfig(PrettyPrinterTester):
         assert config.library_folder == "/path/to/library"
         assert config.playlist_folder == "/path/to/playlists"
 
-        config.playlists.values = ["cool playlist 1", "awesome playlist", "terrible playlist", "other"]
-        assert config.playlists.process() == ("cool playlist 1", "awesome playlist")
+        playlist_names = ["cool playlist 1", "awesome playlist", "terrible playlist", "other"]
+        assert config.playlists.filter(playlist_names) == ["cool playlist 1", "awesome playlist"]
 
         if isinstance(config, ConfigMusicBee):
             assert config.musicbee_folder == "musicbee_folder"
@@ -230,8 +220,7 @@ class TestConfig(PrettyPrinterTester):
             assert config.library.library_folder == correct_platform_separators(config.library_folder)
             assert config.library.playlist_folder is None
             assert config.library.other_folders == config.other_folders
-            assert config.library.include == config.playlists.include
-            assert config.library.exclude == config.playlists.exclude
+            assert config.library.playlist_filter == config.playlists.filter
             assert config.library.other_folders == config.other_folders
             assert config.library.remote_wrangler == spotify_wrangler
 
@@ -246,8 +235,7 @@ class TestConfig(PrettyPrinterTester):
         assert config.library.source == config.source
         assert config.library.api == config.api.api
         assert config.library.use_cache == config.api.use_cache
-        assert config.library.include == config.playlists.include
-        assert config.library.exclude == config.playlists.exclude
+        assert config.library.playlist_filter == config.playlists.filter
 
         assert config.wrangler.source == config.source
 
@@ -284,9 +272,8 @@ class TestConfig(PrettyPrinterTester):
         config = config_valid.filter
 
         values = ["include me", "exclude me", "don't include me"]
-        assert config.include.process(values) == ("include me",)
-        assert config.exclude.process(values) == ("exclude me",)
-        assert config.process(values) == ("include me",)
+        assert config(values) == ["include me"]
+        assert config.process(values) == ["include me"]
 
     def test_load_reports(self, config_valid: Config):
         config = config_valid.reports
@@ -345,8 +332,8 @@ class TestConfig(PrettyPrinterTester):
         assert new.reload == {"spotify": ("extend",)}
         assert new.pause is None
 
-        new.filter.values = ["cool playlist 1", "awesome playlist", "terrible playlist", "other"]
-        assert new.filter.process() == ("cool playlist 1", "awesome playlist")
+        playlist_names = ["cool playlist 1", "awesome playlist", "terrible playlist", "other"]
+        assert new.filter.process(playlist_names) == ["cool playlist 1", "awesome playlist"]
 
         # reports always revert to default values when not defined and override is True
         assert not new.reports.library_differences.enabled
@@ -373,8 +360,11 @@ class TestConfig(PrettyPrinterTester):
         # overriden values
         assert new.library_folder == "/new/path/to/library"
         assert new.playlist_folder == "/new/path/to/playlists"
-        assert new.playlists.include.values == ["new playlist to include", "include me now too"]
-        assert new.playlists.exclude.values == ["and don't include me"]
+
+        assert new.playlists.filter.comparers[0].condition == "is_in"
+        assert new.playlists.filter.comparers[0].expected == ["new playlist to include", "include me now too"]
+        assert new.playlists.filter.comparers[1].condition == "is_not"
+        assert new.playlists.filter.comparers[1].expected == ["and don't include me"]
 
         assert new.update.tags == (LocalTrackField.GENRES,)
         assert new.update.replace
@@ -408,7 +398,8 @@ class TestConfig(PrettyPrinterTester):
         assert new.checker.interval == 100
         assert not new.checker.allow_karaoke
 
-        assert new.playlists.exclude.values == ["terrible playlist"]
+        assert new.playlists.filter.comparers[0].condition == "is_not"
+        assert new.playlists.filter.comparers[0].expected == ["terrible playlist"]
         assert new.playlists.sync.kind == "refresh"
         assert new.playlists.sync.reload
         assert new.playlists.sync.filter == {
@@ -419,7 +410,6 @@ class TestConfig(PrettyPrinterTester):
         assert new.searcher.use_cache
 
         # old values
-        assert new.playlists.include.values == old.playlists.include.values
         assert new.wrangler.source == old.wrangler.source
         assert new.checker.source == old.checker.source
         assert new.searcher.source == old.searcher.source
@@ -440,7 +430,7 @@ class TestConfig(PrettyPrinterTester):
     ###########################################################################
     ## Merge tests - no override
     ###########################################################################
-    def test_enrich_override(self, config_valid: Config, tmp_path: str):
+    def test_core_enrich(self, config_valid: Config, tmp_path: str):
         old = deepcopy(config_valid)
         config_valid.load("core_enrich")
         new = config_valid
@@ -450,8 +440,8 @@ class TestConfig(PrettyPrinterTester):
         assert new.pause is None
 
         # filter is always overriden
-        new.filter.values = ["cool playlist 1", "awesome playlist", "terrible playlist", "other"]
-        assert new.filter.process() == ("cool playlist 1", "awesome playlist")
+        playlist_names = ["cool playlist 1", "awesome playlist", "terrible playlist", "other"]
+        assert new.filter.process(playlist_names) == ["cool playlist 1", "awesome playlist"]
 
         assert not new.reports.library_differences.enabled
         assert new.reports.missing_tags.enabled
@@ -465,7 +455,7 @@ class TestConfig(PrettyPrinterTester):
         )
         assert new.reports.missing_tags.tags == tags
 
-    def test_enrich_local(self, config_valid: Config):
+    def test_local_enrich(self, config_valid: Config):
         name = "local"
 
         old = config_valid.libraries[name]
@@ -482,8 +472,10 @@ class TestConfig(PrettyPrinterTester):
         assert new.kind == old.kind == name
 
         # overriden values
-        assert new.playlists.include.values == ["new playlist to include", "include me now too"]
-        assert new.playlists.exclude.values == ["and don't include me"]
+        assert new.playlists.filter.comparers[0].condition == "is_in"
+        assert new.playlists.filter.comparers[0].expected == ["new playlist to include", "include me now too"]
+        assert new.playlists.filter.comparers[1].condition == "is_not"
+        assert new.playlists.filter.comparers[1].expected == ["and don't include me"]
 
         # kept values
         assert new.library_folder == old.library_folder
@@ -498,7 +490,7 @@ class TestConfig(PrettyPrinterTester):
 
         assert not new.library_loaded and not old.library_loaded
 
-    def test_enrich_remote(self, config_valid: Config):
+    def test_remote_enrich(self, config_valid: Config):
         name = "spotify"
 
         old = config_valid.libraries[name]
@@ -513,7 +505,8 @@ class TestConfig(PrettyPrinterTester):
             raise TypeError("Config if not a RemoteLibrary config")
 
         # new values
-        assert new.playlists.exclude.values == ["terrible playlist"]
+        assert new.playlists.filter.comparers[0].condition == "is_not"
+        assert new.playlists.filter.comparers[0].expected == ["terrible playlist"]
 
         # kept values
         assert new.api.use_cache == old.api.use_cache
@@ -527,7 +520,6 @@ class TestConfig(PrettyPrinterTester):
         assert new.searcher.source == old.searcher.source
         assert new.searcher.use_cache == old.searcher.use_cache
 
-        assert new.playlists.include.values == old.playlists.include.values
         assert new.playlists.sync.kind == old.playlists.sync.kind
         assert new.playlists.sync.reload == old.playlists.sync.reload
         assert new.playlists.sync.filter == old.playlists.sync.filter

@@ -7,6 +7,7 @@ import pytest
 
 from syncify.shared.api.exception import APIError
 from syncify.shared.remote.exception import RemoteObjectTypeError
+from syncify.shared.types import Number
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.object import SpotifyTrack
 from tests.shared.core.base import ItemTester
@@ -161,7 +162,11 @@ class TestSpotifyTrack(ItemTester):
         track.response["album"]["images"].append({"height": max(images) * 2, "url": new_image_link})
         assert track.image_links["cover_front"] == new_image_link
 
-        assert track.length == original_response["duration_ms"] / 1000
+        original_duration = int(
+            original_response["duration_ms"] if isinstance(original_response["duration_ms"], Number)
+            else original_response["duration_ms"]["totalMilliseconds"]
+        ) / 1000
+        assert track.length == original_duration
         new_duration = track.response["duration_ms"] + 2000
         track.response["duration_ms"] = new_duration
         assert track.length == new_duration / 1000

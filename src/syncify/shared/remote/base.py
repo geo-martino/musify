@@ -16,7 +16,7 @@ class RemoteObject(NamedObjectPrinter, Remote, metaclass=ABCMeta):
     """
 
     __slots__ = ("_response", "api")
-    __attributes_exclude__ = ("api", "response")
+    __attributes_ignore__ = ("api", "response")
 
     _url_pad = 71
 

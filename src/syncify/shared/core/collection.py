@@ -170,7 +170,7 @@ class ItemCollection[T: Item](NamedObjectPrinter, MutableSequence[T], metaclass=
         return len(self.items)
 
     def __iter__(self):
-        return (t for t in self.items)
+        return iter(self.items)
 
     def __reversed__(self):
         return reversed(self.items)

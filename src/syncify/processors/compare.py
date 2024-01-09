@@ -10,7 +10,7 @@ from syncify.shared.core.enum import Field
 from syncify.local.track.field import LocalTrackField
 from syncify.local.exception import FieldError
 from syncify.processors.base import DynamicProcessor, MusicBeeProcessor, dynamicprocessormethod
-from syncify.processors.exception import ItemComparerError
+from syncify.processors.exception import ComparerError
 from syncify.processors.time import TimeMapper
 from syncify.shared.types import UnitSequence
 from syncify.shared.utils import to_collection
@@ -131,7 +131,7 @@ class Comparer(MusicBeeProcessor, DynamicProcessor):
             return False
 
         if reference is None and not self.expected:
-            raise ItemComparerError("No comparative item given and no expected values set")
+            raise ComparerError("No comparative item given and no expected values set")
 
         tag_name = None
         if self.field and isinstance(item, Item):

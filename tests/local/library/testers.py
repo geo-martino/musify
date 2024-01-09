@@ -1,6 +1,8 @@
 from abc import ABCMeta, abstractmethod
 from os.path import splitext, basename
 
+import pytest
+
 from syncify.local.library import LocalLibrary
 from tests.local.playlist.utils import path_playlist_resources, path_playlist_m3u
 from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
@@ -35,6 +37,6 @@ class LocalLibraryTester(LibraryTester, LocalCollectionTester, metaclass=ABCMeta
             splitext(basename(path_playlist_xautopf_ra).casefold())[0]: path_playlist_xautopf_ra,
         }
 
+    @pytest.mark.skip  # TODO: write merge_playlists tests
     def test_merge_playlists(self, library: LocalLibrary):
-        # TODO: write merge_playlists tests
         pass

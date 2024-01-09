@@ -38,7 +38,7 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
     """
 
     __slots__ = ("_file", "_available_paths", "_available_paths_lower")
-    __attributes_classes__ = (TagReader,)
+    __attributes_classes__ = TagReader
 
     @property
     def file(self):

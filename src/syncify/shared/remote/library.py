@@ -2,6 +2,8 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, Mapping, Iterable
 from typing import Any, Literal
 
+from syncify.processors.base import Filter
+from syncify.processors.filter import FilterDefinedList
 from syncify.shared.core.base import Item
 from syncify.shared.core.object import Track, Library, Playlist
 from syncify.shared.logger import STAT
@@ -19,14 +21,14 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
     tracks and playlists across an entire remote library collection.
 
     :param api: An authorised API object for the authenticated user you wish to load the library from.
-    :param include: An optional list of playlist names to include when loading playlists.
-    :param exclude: An optional list of playlist names to exclude when loading playlists.
+    :param playlist_filter: An optional :py:class:`Filter` to apply when loading playlists.
+        Playlist names will be passed to this filter to limit which playlists are loaded.
     :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
     """
 
-    __slots__ = ("_api", "_tracks", "_playlists", "include", "exclude", "use_cache")
+    __slots__ = ("_api", "_tracks", "_playlists", "playlist_filter", "use_cache")
     __attributes_classes__ = (Library, RemoteCollection)
-    __attributes_exclude__ = ("api", "_object_cls")
+    __attributes_ignore__ = ("api", "_object_cls")
 
     @property
     @abstractmethod
@@ -68,15 +70,13 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         """Authorised API object for making authenticated calls to a user's library"""
         return self._api
 
-    def __init__(
-            self, api: RemoteAPI, include: Iterable[str] = (), exclude: Iterable[str] = (), use_cache: bool = True,
-    ):
+    def __init__(self, api: RemoteAPI, playlist_filter: Filter[str] = FilterDefinedList(), use_cache: bool = True):
         super().__init__()
 
         self._api = api
-        self.include = include
-        self.exclude = exclude
         self.use_cache = use_cache
+
+        self.playlist_filter = playlist_filter
 
         self._playlists: dict[str, RemotePlaylist[T]] = {}
         self._tracks: list[T] = []
@@ -105,8 +105,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
             return
 
         self.logger.info(
-            f"\33[1;95m  >\33[1;97m Extending {self.source} library "
-            f"with {len(load_uris)} additional tracks \33[0m"
+            f"\33[1;95m  >\33[1;97m Extending {self.source} library with {len(load_uris)} additional tracks \33[0m"
         )
 
         load_tracks = self.api.get_tracks(load_uris, features=True, use_cache=self.use_cache)
@@ -460,4 +459,3 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
                 f"\33[94m{result.difference:>6} difference \33[0m|"
                 f"\33[1;97m{result.final:>6} final \33[0m"
             )
-        self.logger.print(STAT)

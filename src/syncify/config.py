@@ -6,7 +6,7 @@ import logging.config
 import os
 import sys
 from abc import ABCMeta, abstractmethod
-from collections.abc import Mapping, Collection, Callable, Iterable
+from collections.abc import Mapping, Callable, Iterable
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime
@@ -16,18 +16,21 @@ from typing import Any, Self, get_args
 import yaml
 
 from syncify import PACKAGE_ROOT, MODULE_ROOT
-from syncify.shared.core.base import NamedObject
-from syncify.shared.core.enum import TagField
-from syncify.shared.core.misc import PrettyPrinter, Filter
-from syncify.shared.core.object import Library
-from syncify.shared.api.authorise import APIAuthoriser
-from syncify.shared.api.request import RequestHandler
-from syncify.shared.exception import ConfigError, SyncifyError
-from syncify.local.track.field import LocalTrackField
 from syncify.local.collection import LocalCollection
 from syncify.local.exception import InvalidFileType, FileDoesNotExistError
 from syncify.local.library import MusicBee, LocalLibrary
+from syncify.local.track.field import LocalTrackField
 from syncify.processors.compare import Comparer
+from syncify.processors.filter import FilterComparers
+from syncify.report import report_missing_tags
+from syncify.shared.api.authorise import APIAuthoriser
+from syncify.shared.api.request import RequestHandler
+from syncify.shared.core.base import NamedObject
+from syncify.shared.core.enum import TagField
+from syncify.shared.core.misc import PrettyPrinter
+from syncify.shared.core.object import Library
+from syncify.shared.exception import ConfigError, SyncifyError
+from syncify.shared.logger import LOGGING_DT_FORMAT, SyncifyLogger
 from syncify.shared.remote.api import RemoteAPI
 from syncify.shared.remote.base import RemoteObject
 from syncify.shared.remote.library import RemoteLibrary
@@ -35,7 +38,7 @@ from syncify.shared.remote.object import PLAYLIST_SYNC_KINDS, RemotePlaylist
 from syncify.shared.remote.processors.check import RemoteItemChecker
 from syncify.shared.remote.processors.search import RemoteItemSearcher
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
-from syncify.report import report_missing_tags
+from syncify.shared.utils import to_collection
 from syncify.spotify import SPOTIFY_NAME
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.base import SpotifyObject
@@ -43,8 +46,6 @@ from syncify.spotify.library import SpotifyLibrary
 from syncify.spotify.object import SpotifyPlaylist
 from syncify.spotify.processors.processors import SpotifyItemChecker, SpotifyItemSearcher
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
-from syncify.shared.utils import to_collection
-from syncify.shared.logger import LOGGING_DT_FORMAT, SyncifyLogger
 
 
 def _get_local_track_tags(tags: Any) -> tuple[LocalTrackField, ...]:
@@ -294,7 +295,7 @@ class ConfigLibrary(BaseConfig):
         return obj
 
 
-class ConfigFilter(BaseConfig, Filter[str]):
+class ConfigFilter[T: str | NamedObject](BaseConfig, FilterComparers[T]):
     """
     Set the settings for granular filtering from a config file.
     See :py:class:`Config` for more documentation regarding operation.
@@ -302,136 +303,25 @@ class ConfigFilter(BaseConfig, Filter[str]):
     :param settings: The loaded config from the config file.
     """
 
-    @property
-    def ready(self):
-        return self.include.ready and self.exclude.ready
-
     def __init__(self, settings: dict[Any, Any]):
-        super().__init__(settings=settings.get("filter", settings))
+        super().__init__(settings=settings, key="filter")
 
-        self.include = self.ConfigMatch(settings=self._file, key="include")
-        self.exclude = self.ConfigMatch(settings=self._file, key="exclude")
+        if isinstance(self._file, str):
+            self.comparers = (Comparer(condition="is", expected=self._file),)
+            return
+        elif isinstance(self._file, list):
+            self.comparers = (Comparer(condition="is in", expected=self._file),)
+            return
 
-    def process[T: str | NamedObject](self, values: Iterable[T] | None = None) -> tuple[T, ...]:
-        """Filter down ``values`` that match this filter's settings from"""
-        values = self.include.process(values if values else self.values) if self.include.ready else values
-        exclude = self.exclude.process(values) if self.exclude.ready else ()
-        return tuple(v for v in values if v not in exclude)
+        self.match_all = self._file.pop("match_all", self.match_all)
+        self.comparers = tuple(Comparer(condition=cond, expected=exp) for cond, exp in self._file.items())
 
-    def as_dict(self) -> dict[str, Any]:
-        return {
-            "values": to_collection(self.values),
-            "include": self.include,
-            "exclude": self.exclude,
-        }
-
-    class ConfigMatch(BaseConfig, Filter[str]):
-        """
-        Set the settings for filter options from a config file.
-        See :py:class:`Config` for more documentation regarding operation.
-
-        :param settings: The loaded config from the config file.
-        :param key: The key to load filter options for.
-            Used as the parent key to use to pull the required configuration from the config file.
-        """
-
-        @property
-        def ready(self):
-            return bool(self.values) or bool(self.comparers)
-
-        def __init__(self, settings: dict[Any, Any], key: Any | None = None):
-            super().__init__(settings=settings, key=key)
-            self._file: dict[Any, Any] | list[Any] = self._file
-
-            self._values: list[str] | None = None
-
-            self.comparers: list[Comparer] = []
-            self._match_all: bool | None = None
-            if isinstance(self._file, Mapping):
-                self.comparers = [
-                    Comparer(condition=condition, expected=expected)
-                    for condition, expected in self._file.items() if condition != "match_all"
-                ]
-
-        def merge(self, other: Self | None, override: bool = False) -> None:
-            if self.ready and not override:
-                return
-
-            if override:
-                self._values = other.values
-                self.comparers = other.comparers
-            else:
-                self._values = other.values if not self._values else self._values
-                if not self._values:
-                    self.comparers = other.comparers if not self.comparers else self.comparers
-                    self._match_all = other.match_all
-                else:
-                    self.comparers.clear()
-                    self._match_all = None
-
-        def process[T: str | NamedObject](self, values: Iterable[T] | None = None) -> tuple[T, ...]:
-            """Returns all strings from ``values`` that match this filter's settings"""
-            def name(v: T) -> str:
-                """Get the name from a NamedObject"""
-                return v.name if isinstance(v, NamedObject) else v
-
-            if values and self.values:  # only keep values in self.values
-                return tuple(value for value in values if name(value) in self.values)
-            if not values and self.values:
-                values = self.values
-            if values and not self.comparers:
-                return to_collection(values, tuple)
-
-            if self.match_all:
-                for comparer in self.comparers:
-                    values = tuple(value for value in values if comparer(name(value)))
-            else:
-                matches = []
-                for comparer in self.comparers:
-                    matches.extend(value for value in values if comparer(name(value)) and value not in matches)
-                values = tuple(matches)
-            return values
-
-        @property
-        def values(self) -> list[str] | None:
-            """
-            `DEFAULT = ()` | The filtered values.
-            Filters ``available`` values based on ``prefix``, ``start``, and ``stop`` as applicable.
-            ``available`` values are taken from the config if the config is a list of strings.
-            """
-            if self._values is not None:
-                return self._values
-
-            is_str_collection = isinstance(self._file, Collection) and all(isinstance(v, str) for v in self._file)
-            if not isinstance(self._file, Mapping) and is_str_collection:
-                self._values = to_collection(self._file, list)
-            return self._values
-
-        @values.setter
-        def values(self, values: Collection[str]):
-            self._values = values
-
-        @property
-        def match_all(self) -> bool:
-            """
-            `DEFAULT = False` | When True, a value has to match all conditions
-            to be considered a match by the filter when processing.
-            """
-            if self._match_all is not None:
-                return self._match_all
-
-            self._match_all = self._file.get("match_all", False) if isinstance(self._file, Mapping) else False
-            return self._match_all
-
-        def as_dict(self) -> dict[str, Any]:
-            return {
-                "values": to_collection(self.values),
-                "match_all": self.match_all,
-                "comparers": self.comparers,
-            }
+    @staticmethod
+    def transform(value: T) -> T:
+        return value.name if isinstance(value, NamedObject) else value
 
 
-class ConfigPlaylists(ConfigFilter):
+class ConfigPlaylists(BaseConfig):
     """
     Set the settings for the playlists from a config file.
     See :py:class:`Config` for more documentation regarding operation.
@@ -440,7 +330,11 @@ class ConfigPlaylists(ConfigFilter):
     """
 
     def __init__(self, settings: dict[Any, Any]):
-        super().__init__(settings=settings.get("playlists", {}))
+        super().__init__(settings=settings, key="playlists")
+        self.filter = ConfigFilter(settings=self._file)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {"filter": self.filter}
 
 
 ###########################################################################
@@ -483,9 +377,8 @@ class ConfigLocal(ConfigLibrary):
         self._library = LocalLibrary(
             library_folder=self.library_folder,
             playlist_folder=self.playlist_folder,
+            playlist_filter=self.playlists.filter,
             other_folders=self.other_folders,
-            include=self.playlists.include,
-            exclude=self.playlists.exclude,
             remote_wrangler=self.remote_wrangler
         )
         return self._library
@@ -636,9 +529,8 @@ class ConfigMusicBee(ConfigLocal):
             musicbee_folder=self.musicbee_folder,
             library_folder=self.library_folder,
             playlist_folder=self.playlist_folder,
+            playlist_filter=self.playlists.filter,
             other_folders=self.other_folders,
-            include=self.playlists.include,
-            exclude=self.playlists.exclude,
             remote_wrangler=self.remote_wrangler,
         )
         return self._library
@@ -700,9 +592,8 @@ class ConfigRemote(ConfigLibrary):
 
         self._library = self._classes.library(
             api=self.api.api,
-            include=self.playlists.include,
-            exclude=self.playlists.exclude,
             use_cache=self.api.use_cache,
+            playlist_filter=self.playlists.filter,
         )
         return self._library
 

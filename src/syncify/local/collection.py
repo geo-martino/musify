@@ -23,7 +23,7 @@ from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
 from syncify.shared.types import UnitCollection
 from syncify.shared.utils import get_most_common_values, to_collection, align_and_truncate, get_max_width
 from syncify.shared.types import UnitIterable
-from syncify.shared.logger import SyncifyLogger, STAT
+from syncify.shared.logger import SyncifyLogger
 
 __max_str = "z" * 50
 
@@ -38,7 +38,7 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
     """
 
     __slots__ = ("logger", "remote_wrangler")
-    __attributes_exclude__ = ("track_paths", "track_total")
+    __attributes_ignore__ = ("track_paths", "track_total")
 
     @staticmethod
     def _validate_item_type(items: Any | Iterable[Any]) -> bool:
@@ -142,14 +142,11 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
 
         self.logger.stat("\33[1;96mSaved tags to the following tracks: \33[0m")
         for track, result in results.items():
-            name = align_and_truncate(track.path, max_width=max_width, right_align=True)
-
             self.logger.stat(
-                f"\33[97m{name} \33[0m| " +
+                f"\33[97m{align_and_truncate(track.path, max_width=max_width, right_align=True)} \33[0m| " +
                 ("\33[92mSAVED \33[0m| " if result.saved else "\33[91mNOT SAVED \33[0m| ") +
                 f"\33[94m{', '.join(tag.name for tag in result.updated.keys())} \33[0m"
             )
-        self.logger.print(STAT)
 
     def merge_tracks(self, tracks: Collection[Track], tags: UnitIterable[TagField] = Fields.ALL) -> None:
         """

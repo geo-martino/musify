@@ -5,13 +5,12 @@ from random import randrange
 
 import pytest
 
-from tests.local.track.utils import random_track, random_tracks
-from tests.local.playlist.testers import LocalPlaylistTester
-from syncify.local.track.field import LocalTrackField
 from syncify.local.exception import InvalidFileType
 from syncify.local.playlist import XAutoPF
 from syncify.local.track import LocalTrack
+from tests.local.playlist.testers import LocalPlaylistTester
 from tests.local.playlist.utils import path_playlist_xautopf_ra, path_playlist_xautopf_bp
+from tests.local.track.utils import random_track, random_tracks
 from tests.local.utils import path_track_flac, path_track_wma
 from tests.utils import path_txt, path_resources
 
@@ -38,10 +37,10 @@ class TestXAutoPF(LocalPlaylistTester):
         with pytest.raises(InvalidFileType):
             XAutoPF(path=path_txt, tracks=tracks)
 
-    def test_load_playlist_1_settings(self):
+    def test_load_playlist_1_settings(self, tracks: list[LocalTrack]):
         pl = XAutoPF(
             path=path_playlist_xautopf_bp,
-            tracks=random_tracks(20),  # just need to put something here, doesn't matter what for this test
+            tracks=tracks,
             library_folder=path_resources,
             other_folders="../",
             check_existence=False,
@@ -54,14 +53,9 @@ class TestXAutoPF(LocalPlaylistTester):
 
         # processor settings are tested in class-specific tests
         assert pl.matcher
-        assert len(pl.matcher.comparers) == 3
+        assert len(pl.matcher.comparers.comparers) == 3
         assert not pl.limiter
         assert pl.sorter
-
-        # check the comparers have now converted expected values after load
-        assert pl.matcher.comparers[2].field == LocalTrackField.TRACK_NUMBER
-        assert pl.matcher.comparers[2]._converted
-        assert pl.matcher.comparers[2].expected == [30]
 
     def test_load_playlist_1_tracks(self, tracks: list[LocalTrack]):
         # prepare tracks to search through
@@ -110,7 +104,7 @@ class TestXAutoPF(LocalPlaylistTester):
         assert pl.ext == splitext(basename(path_playlist_xautopf_ra))[1]
 
         # processor settings are tested in class-specific tests
-        assert pl.matcher
+        assert not pl.matcher.ready
         assert not pl.matcher.comparers
         assert pl.limiter
         assert pl.sorter

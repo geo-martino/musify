@@ -1,6 +1,6 @@
 import re
 from abc import ABC, ABCMeta, abstractmethod
-from collections.abc import Mapping, Collection, Iterable
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, date
 from typing import Any
@@ -147,30 +147,3 @@ class PrettyPrinter(ABC):
 
     def __repr__(self):
         return f"{self.__class__.__name__}({repr(self.as_dict())})"
-
-
-class Filter[T](ABC, Collection[T]):
-    """Base class for filtering down values based on some settings"""
-
-    @property
-    @abstractmethod
-    def ready(self) -> bool:
-        """Does this filter have valid settings and can process values"""
-        raise NotImplementedError
-
-    def __init__(self, *_, **__):
-        self.values: Collection[T] | None = None
-
-    @abstractmethod
-    def process(self, values: Iterable[T]) -> Collection[T]:
-        """Filter down given ``values`` or stored ``available`` values that match this filter's settings"""
-        raise NotImplementedError
-
-    def __iter__(self):
-        return (v for v in self.process(self.values)) if self.values else iter(())
-
-    def __len__(self):
-        return len(self.process(self.values)) if self.values else 0
-
-    def __contains__(self, item: T):
-        return item in self.process(self.values) if self.values else False

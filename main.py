@@ -385,9 +385,10 @@ class Syncify(DynamicProcessor):
                 if not self.remote.library.playlists:
                     continue
 
-                source = report.filter.process(self.local.library.playlists.values())
-                reference = self.config.filter.process(self.remote.library.playlists.values())
-                report_playlist_differences(source=source, reference=reference)
+                report_playlist_differences(
+                    source=report.filter.process(self.local.library.playlists.values()),
+                    reference=report.filter.process(self.remote.library.playlists.values())
+                )
             elif isinstance(report, ConfigMissingTags):
                 source = report.filter.process(self.local.library.albums)
                 report_missing_tags(collections=source, tags=report.tags, match_all=report.match_all)
@@ -765,7 +766,6 @@ if __name__ == "__main__":
 
 
 ## SELECTED FOR DEVELOPMENT
-# TODO: Replace all include/exclude/filter_tags logic with Filters to enable full Comparer functionality
 # TODO: LocalLibrary to accept many library paths?
 # TODO: MusicBee to load library paths from settings ini file
 

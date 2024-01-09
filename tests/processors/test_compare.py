@@ -7,13 +7,13 @@ from syncify.shared.field import TrackField
 from syncify.local.track.field import LocalTrackField
 from syncify.local.track import MP3, M4A, FLAC
 from syncify.processors.compare import Comparer
-from syncify.processors.exception import ItemComparerError, ProcessorLookupError
+from syncify.processors.exception import ComparerError, ProcessorLookupError
 from tests.shared.core.misc import PrettyPrinterTester
 from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
 from tests.local.track.utils import random_track
 
 
-class TestItemComparer(PrettyPrinterTester):
+class TestComparer(PrettyPrinterTester):
 
     @pytest.fixture
     def obj(self) -> Comparer:
@@ -60,7 +60,7 @@ class TestItemComparer(PrettyPrinterTester):
         assert comparer._expected is None
         assert not comparer._converted
 
-        with pytest.raises(ItemComparerError):
+        with pytest.raises(ComparerError):
             comparer.compare(item=track_1)
 
         track_1.album = "album 124 is a great album"
@@ -70,7 +70,7 @@ class TestItemComparer(PrettyPrinterTester):
         assert comparer._expected is None
         assert not comparer._converted
 
-        with pytest.raises(ItemComparerError):
+        with pytest.raises(ComparerError):
             comparer.compare(item=track_1)
 
     def test_compare_str(self, track: MP3):
@@ -221,6 +221,6 @@ class TestItemComparer(PrettyPrinterTester):
         assert comparer.condition == "contains"
         assert comparer._processor_method == comparer._contains
 
+    @pytest.mark.skip  # TODO: add test for to_xml
     def test_to_xml(self):
-        # TODO: add test for to_xml
         pass

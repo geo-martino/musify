@@ -1,20 +1,8 @@
 import json
 import re
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Collection
-from typing import Any
 
-from syncify.shared.core.misc import PrettyPrinter, Filter
-
-
-class BasicFilter(Filter[Any]):
-
-    def process(self, values: Iterable[Any]) -> Collection[Any]:
-        return [v for v in values if v in self.values]
-
-    @property
-    def ready(self):
-        return True
+from syncify.shared.core.misc import PrettyPrinter
 
 
 class PrettyPrinterTester(ABC):

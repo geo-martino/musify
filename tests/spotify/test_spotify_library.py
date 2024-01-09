@@ -4,6 +4,7 @@ from urllib.parse import parse_qs
 
 import pytest
 
+from syncify.processors.filter import FilterDefinedList, FilterIncludeExclude
 from syncify.shared.remote.enum import RemoteObjectType
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.library import SpotifyLibrary
@@ -23,13 +24,13 @@ class TestSpotifyLibrary(RemoteLibraryTester):
     @pytest.fixture
     def library_unloaded(self, api: SpotifyAPI, api_mock: SpotifyMock) -> SpotifyLibrary:
         """Yields an unloaded Library object to be tested as pytest.fixture"""
-        include = [pl["name"] for pl in sample(api_mock.user_playlists, k=10)]
-        return SpotifyLibrary(api=api, include=include, use_cache=False)
+        include = FilterDefinedList([pl["name"] for pl in sample(api_mock.user_playlists, k=10)])
+        return SpotifyLibrary(api=api, playlist_filter=include, use_cache=False)
 
     @pytest.fixture(scope="class")
     def _library(self, api: SpotifyAPI, api_mock: SpotifyMock) -> SpotifyLibrary:
-        include = [pl["name"] for pl in sample(api_mock.user_playlists, k=10)]
-        library = SpotifyLibrary(api=api, include=include, use_cache=False)
+        include = FilterDefinedList([pl["name"] for pl in sample(api_mock.user_playlists, k=10)])
+        library = SpotifyLibrary(api=api, playlist_filter=include, use_cache=False)
         library.load()
         return library
 
@@ -46,8 +47,10 @@ class TestSpotifyLibrary(RemoteLibraryTester):
         assert len(filtered) == len(api_mock.user_playlists) == len(responses)
 
         # filter on include and exclude
-        library.include = [pl["name"] for pl in api_mock.user_playlists[:20]]
-        library.exclude = [pl["name"] for pl in api_mock.user_playlists[:10]]
+        library.playlist_filter = FilterIncludeExclude(
+            include=FilterDefinedList([pl["name"] for pl in api_mock.user_playlists[:20]]),
+            exclude=FilterDefinedList([pl["name"] for pl in api_mock.user_playlists[:10]])
+        )
         pl_responses = library._filter_playlists(responses)
         assert len(pl_responses) == 10
 
@@ -213,5 +216,6 @@ class TestSpotifyLibrary(RemoteLibraryTester):
         req_urls = set(req.url.split("?")[0] for req in api_mock.request_history)
         assert all(album.url + "/tracks" in req_urls for artist in library.artists for album in artist.albums)
 
+    @pytest.mark.skip  # TODO: write merge_playlists tests
     def test_merge_playlists(self, library: SpotifyLibrary):
         pass

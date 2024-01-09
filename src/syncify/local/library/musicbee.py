@@ -14,6 +14,8 @@ from syncify.local.exception import MusicBeeIDError, XMLReaderError, MusicBeeErr
 from syncify.local.library.library import LocalLibrary
 from syncify.local.playlist import LocalPlaylist
 from syncify.local.track import LocalTrack
+from syncify.processors.base import Filter
+from syncify.processors.filter import FilterDefinedList
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
 from syncify.shared.types import UnitCollection, Number
 from syncify.shared.utils import correct_platform_separators
@@ -36,11 +38,11 @@ class MusicBee(LocalLibrary, File):
     :param playlist_folder: The absolute path of the playlist folder containing all playlists
         or the relative path within the given ``library_folder`` or ``library_folder``/``musicbee_folder``.
         The intialiser will check for the existence of this path and only store the absolute path if it exists.
+    :param playlist_filter: An optional :py:class:`Filter` to apply when loading playlists.
+        Playlist names will be passed to this filter to limit which playlists are loaded.
     :param other_folders: Absolute paths of other possible library paths.
         Use to replace path stems from other libraries for the paths in loaded playlists.
         Useful when managing similar libraries on multiple platforms.
-    :param include: An optional list of playlist names to include when loading playlists.
-    :param exclude: An optional list of playlist names to exclude when loading playlists.
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
         The wrangler is also used when loading tracks to allow them to process URI tags.
@@ -62,9 +64,8 @@ class MusicBee(LocalLibrary, File):
             library_folder: str | None = None,
             musicbee_folder: str | None = "MusicBee",
             playlist_folder: str | None = "Playlists",
+            playlist_filter: Filter[str] = FilterDefinedList(),
             other_folders: UnitCollection[str] = (),
-            include: Iterable[str] = (),
-            exclude: Iterable[str] = (),
             remote_wrangler: RemoteDataWrangler = None,
     ):
         if library_folder is None and musicbee_folder is None:
@@ -103,9 +104,8 @@ class MusicBee(LocalLibrary, File):
         super().__init__(
             library_folder=library_folder,
             playlist_folder=playlist_folder,
+            playlist_filter=playlist_filter,
             other_folders=other_folders,
-            include=include,
-            exclude=exclude,
             remote_wrangler=remote_wrangler,
         )
 

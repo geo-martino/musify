@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from collections.abc import Mapping, Callable
+from collections.abc import Mapping, Callable, Collection
 from functools import partial, update_wrapper
 from typing import Any, Self, Optional
 
@@ -116,7 +116,7 @@ class DynamicProcessor(Processor, metaclass=ABCMeta):
 
 
 class ItemProcessor(Processor, PrettyPrinter, metaclass=ABCMeta):
-    """Base object for processing tracks in a playlist"""
+    """Base object for processing :py:class:`Item` objects"""
 
 
 class MusicBeeProcessor(ItemProcessor):
@@ -140,3 +140,32 @@ class MusicBeeProcessor(ItemProcessor):
     def to_xml(self, **kwargs) -> Mapping[str, Any]:
         """Export this object's settings to a map ready for export to an XML playlist file."""
         raise NotImplementedError
+
+
+class Filter[T](Processor, PrettyPrinter, metaclass=ABCMeta):
+    """Base class for filtering down values based on some settings"""
+
+    @property
+    @abstractmethod
+    def ready(self) -> bool:
+        """Does this filter have valid settings and can process values"""
+        raise NotImplementedError
+
+    @abstractmethod
+    def process(self, values: Collection[T], *args, **kwargs) -> Collection[T]:
+        """Apply this filter's settings to the given values"""
+        raise NotImplementedError
+
+    @staticmethod
+    def transform(value: T) -> T:
+        """
+        Transform the input ``value`` to the value that should be used when comparing against this filter's settings
+        Simply returns the given ``value`` at baseline unless overriden.
+        """
+        return value
+
+    def __call__(self, *args, **kwargs) -> Collection[T]:
+        return self.process(*args, **kwargs)
+
+    def __bool__(self):
+        return self.ready

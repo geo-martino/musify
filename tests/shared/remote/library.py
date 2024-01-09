@@ -28,7 +28,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         library_unloaded.load_playlists()
 
         # only loaded playlists matching the filter
-        assert len(library_unloaded.playlists) == len(list(library_unloaded.include))
+        assert len(library_unloaded.playlists) == 10
 
         # all playlist tracks were added to the stored library tracks
         unique_tracks_count = len(set(track for pl in library_unloaded.playlists.values() for track in pl))
@@ -36,7 +36,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
 
         # does not add duplicates to the loaded lists
         library_unloaded.load_playlists()
-        assert len(library_unloaded.playlists) == len(list(library_unloaded.include))
+        assert len(library_unloaded.playlists) == 10
         assert len(library_unloaded.tracks_in_playlists) == unique_tracks_count
 
     @abstractmethod
