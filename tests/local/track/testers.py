@@ -4,11 +4,11 @@ from random import randrange, sample
 
 import pytest
 
-from tests.local.track.utils import random_tracks
 from syncify.local.collection import LocalCollection
 from syncify.local.track import LocalTrack
 from syncify.shared.exception import SyncifyKeyError
 from syncify.spotify.object import SpotifyTrack
+from tests.local.track.utils import random_tracks
 from tests.shared.core.collection import ItemCollectionTester
 from tests.spotify.api.mock import SpotifyMock
 

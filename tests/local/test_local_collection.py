@@ -2,11 +2,11 @@ from copy import copy
 
 import pytest
 
-from tests.local.track.utils import random_track, random_tracks
-from tests.local.track.testers import LocalCollectionTester
 from syncify.local.collection import LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from syncify.local.exception import LocalCollectionError
 from syncify.local.track import LocalTrack
+from tests.local.track.testers import LocalCollectionTester
+from tests.local.track.utils import random_track, random_tracks
 from tests.local.utils import path_track_resources, path_track_all
 from tests.utils import random_str
 

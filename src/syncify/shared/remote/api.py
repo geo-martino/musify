@@ -4,11 +4,11 @@ from collections.abc import Collection, MutableMapping, Mapping
 from typing import Any, Self
 
 from syncify.shared.api.request import RequestHandler
+from syncify.shared.logger import SyncifyLogger
 from syncify.shared.remote.enum import RemoteIDType, RemoteObjectType
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
 from syncify.shared.remote.types import APIMethodInputType
 from syncify.shared.utils import align_and_truncate
-from syncify.shared.logger import SyncifyLogger
 
 
 class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):

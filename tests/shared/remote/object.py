@@ -4,13 +4,13 @@ from typing import Any
 
 import pytest
 
-from syncify.shared.exception import SyncifyKeyError
 from syncify.local.track import LocalTrack
+from syncify.shared.exception import SyncifyKeyError
 from syncify.shared.remote.api import RemoteAPI
 from syncify.shared.remote.base import RemoteItem
 from syncify.shared.remote.object import RemoteTrack, RemoteCollection, RemotePlaylist
-from tests.shared.core.collection import ItemCollectionTester, PlaylistTester
 from tests.local.track.utils import random_tracks
+from tests.shared.core.collection import ItemCollectionTester, PlaylistTester
 from tests.shared.remote.utils import RemoteMock
 
 

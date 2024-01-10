@@ -1,14 +1,14 @@
 import logging
 from collections.abc import Iterable
 
+from syncify.local.library import LocalLibrary
 from syncify.shared.core.base import Item
 from syncify.shared.core.collection import ItemCollection
 from syncify.shared.core.enum import TagField, Fields, ALL_FIELDS, TagFields
 from syncify.shared.core.object import Library, Playlist
-from syncify.local.library import LocalLibrary
-from syncify.shared.utils import align_and_truncate, get_max_width, to_collection
-from syncify.shared.types import UnitIterable
 from syncify.shared.logger import SyncifyLogger, REPORT
+from syncify.shared.types import UnitIterable
+from syncify.shared.utils import align_and_truncate, get_max_width, to_collection
 
 
 def report_playlist_differences(

@@ -2,11 +2,11 @@
 
 import pytest
 
-from syncify.shared.core.enum import TagFields as Tag
-from syncify.shared.exception import SyncifyEnumError
 from syncify.local.collection import LocalAlbum
 from syncify.local.track import LocalTrack
 from syncify.processors.match import CleanTagConfig
+from syncify.shared.core.enum import TagFields as Tag
+from syncify.shared.exception import SyncifyEnumError
 from syncify.shared.remote.enum import RemoteIDType as IDType, RemoteObjectType as ObjectType
 from syncify.shared.remote.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
 from syncify.shared.remote.processors.search import SearchSettings

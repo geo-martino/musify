@@ -4,13 +4,13 @@ from operator import mul
 from random import shuffle
 from typing import Any, Self
 
-from syncify.shared.core.base import Item
-from syncify.shared.core.enum import SyncifyEnum, Fields
-from syncify.shared.core.object import Track
 from syncify.local.file import File
 from syncify.processors.base import DynamicProcessor, MusicBeeProcessor, dynamicprocessormethod
 from syncify.processors.exception import ItemLimiterError
 from syncify.processors.sort import ItemSorter
+from syncify.shared.core.base import Item
+from syncify.shared.core.enum import SyncifyEnum, Fields
+from syncify.shared.core.object import Track
 
 
 class LimitType(SyncifyEnum):

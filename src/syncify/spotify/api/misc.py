@@ -4,8 +4,8 @@ from typing import Any
 
 from syncify.shared.remote.enum import RemoteIDType, RemoteObjectType
 from syncify.shared.types import Number
-from syncify.spotify.api.base import SpotifyAPIBase
 from syncify.shared.utils import limit_value
+from syncify.spotify.api.base import SpotifyAPIBase
 
 
 class SpotifyAPIMisc(SpotifyAPIBase, metaclass=ABCMeta):

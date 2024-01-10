@@ -3,12 +3,12 @@ from collections.abc import Iterable
 from copy import deepcopy
 
 from syncify import PROGRAM_NAME
+from syncify.shared.utils import safe_format_map
 from syncify.spotify import URL_API, URL_AUTH
-from syncify.spotify.api.misc import SpotifyAPIMisc
 from syncify.spotify.api.item import SpotifyAPIItems
+from syncify.spotify.api.misc import SpotifyAPIMisc
 from syncify.spotify.api.playlist import SpotifyAPIPlaylists
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
-from syncify.shared.utils import safe_format_map
 
 # user authenticated access with scopes
 SPOTIFY_API_AUTH_ARGS = {

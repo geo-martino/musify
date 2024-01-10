@@ -3,18 +3,18 @@ from collections.abc import Mapping, Sequence, Iterable, Collection
 from dataclasses import dataclass, field
 from typing import Any
 
+from syncify.processors.match import ItemMatcher
 from syncify.shared.core.base import Item, NamedObject
 from syncify.shared.core.collection import ItemCollection
 from syncify.shared.core.enum import TagField, TagFields as Tag
 from syncify.shared.core.misc import Result
 from syncify.shared.core.object import Track
-from syncify.processors.match import ItemMatcher
-from syncify.shared.remote.api import RemoteAPI
+from syncify.shared.logger import REPORT
 from syncify.shared.remote import Remote
+from syncify.shared.remote.api import RemoteAPI
 from syncify.shared.remote.config import RemoteObjectClasses
 from syncify.shared.remote.enum import RemoteObjectType
 from syncify.shared.utils import align_and_truncate, get_max_width
-from syncify.shared.logger import REPORT
 
 
 @dataclass(frozen=True)

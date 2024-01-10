@@ -12,8 +12,8 @@ from requests_mock.request import _RequestObjectProxy as Request
 # noinspection PyProtectedMember,PyUnresolvedReferences
 from requests_mock.response import _Context as Context
 
-from syncify.shared.api.request import RequestHandler
 from syncify.shared.api.exception import APIError
+from syncify.shared.api.request import RequestHandler
 
 
 class TestRequestHandler:

@@ -1,7 +1,7 @@
 from abc import ABCMeta
 
-from syncify.shared.core.base import Item
 from syncify.local.file import File
+from syncify.shared.core.base import Item
 
 
 class LocalItem(File, Item, metaclass=ABCMeta):

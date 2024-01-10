@@ -5,15 +5,15 @@ from collections.abc import Iterable, Callable, MutableSequence
 from dataclasses import dataclass
 from typing import Any
 
+from syncify.processors.base import ItemProcessor
 from syncify.shared.core.base import NamedObject
 from syncify.shared.core.collection import ItemCollection
 from syncify.shared.core.enum import TagField, TagFields as Tag, ALL_TAG_FIELDS
 from syncify.shared.core.misc import PrettyPrinter
 from syncify.shared.core.object import Track, Album
-from syncify.processors.base import ItemProcessor
+from syncify.shared.logger import SyncifyLogger
 from syncify.shared.types import UnitIterable
 from syncify.shared.utils import limit_value, to_collection
-from syncify.shared.logger import SyncifyLogger
 
 
 @dataclass

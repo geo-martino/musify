@@ -7,11 +7,11 @@ from typing import Any
 import mutagen
 from PIL import Image
 
+from syncify.local.base import LocalItem
+from syncify.local.track.field import LocalTrackField
 from syncify.shared.core.enum import TagMap
 from syncify.shared.core.object import Track
 from syncify.shared.exception import SyncifyValueError
-from syncify.local.track.field import LocalTrackField
-from syncify.local.base import LocalItem
 from syncify.shared.remote.enum import RemoteIDType
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
 from syncify.shared.types import UnitIterable

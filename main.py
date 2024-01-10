@@ -773,11 +773,11 @@ if __name__ == "__main__":
 ## SMALLER/GENERAL ONES
 # TODO: parallelize all the things
 # TODO: generally improve performance
-# TODO: revisit the config logic, it's a bit of a mess
 
 
 ## SELECTED FOR DEVELOPMENT
 # TODO: fix bug in spotify api test: artist albums have unexpected keys
+# TODO: separate all CLI concerns to other repo
 # TODO: expand readme + check all example functions work
 # TODO: expand docstrings everywhere
 # TODO: release to pypi + implement CI/CD structure on GitHub

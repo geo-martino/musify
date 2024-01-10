@@ -3,8 +3,8 @@ from typing import Any
 
 from dateutil.relativedelta import relativedelta
 
-from syncify.shared.core.misc import PrettyPrinter
 from syncify.processors.base import DynamicProcessor, dynamicprocessormethod
+from syncify.shared.core.misc import PrettyPrinter
 
 
 class TimeMapper(DynamicProcessor, PrettyPrinter):

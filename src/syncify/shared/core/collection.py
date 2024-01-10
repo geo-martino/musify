@@ -4,10 +4,10 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import MutableSequence, Iterable, Mapping, Collection
 from typing import Any, SupportsIndex, Self
 
+from syncify.processors.sort import ShuffleMode, ShuffleBy, ItemSorter
 from syncify.shared.core.base import Item, NamedObjectPrinter, NamedObject
 from syncify.shared.core.enum import Field
 from syncify.shared.exception import SyncifyTypeError, SyncifyKeyError
-from syncify.processors.sort import ShuffleMode, ShuffleBy, ItemSorter
 from syncify.shared.types import UnitSequence
 
 

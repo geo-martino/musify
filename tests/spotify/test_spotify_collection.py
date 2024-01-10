@@ -6,17 +6,17 @@ from typing import Any
 
 import pytest
 
-from syncify.shared.types import Number
-from tests.spotify.testers import SpotifyCollectionLoaderTester
 from syncify.shared.api.exception import APIError
 from syncify.shared.remote.enum import RemoteObjectType
 from syncify.shared.remote.exception import RemoteObjectTypeError, RemoteError
+from syncify.shared.types import Number
 from syncify.spotify import URL_API
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.object import SpotifyAlbum, SpotifyArtist
 from syncify.spotify.object import SpotifyTrack
 from tests.shared.remote.object import RemoteCollectionTester
 from tests.spotify.api.mock import SpotifyMock
+from tests.spotify.testers import SpotifyCollectionLoaderTester
 from tests.spotify.utils import assert_id_attributes
 
 

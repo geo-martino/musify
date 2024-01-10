@@ -6,10 +6,10 @@ import mutagen
 import mutagen.mp4
 from PIL import Image
 
-from syncify.shared.core.enum import TagMap
 from syncify.local.file import open_image, get_image_bytes
-from syncify.shared.utils import to_collection
 from syncify.local.track.base.track import LocalTrack
+from syncify.shared.core.enum import TagMap
+from syncify.shared.utils import to_collection
 
 
 class M4A(LocalTrack[mutagen.mp4.MP4]):

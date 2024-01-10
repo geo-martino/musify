@@ -4,16 +4,16 @@ from os.path import basename, dirname, splitext, getmtime
 
 import pytest
 
+from syncify.local.exception import InvalidFileType, FileDoesNotExistError
+from syncify.local.file import open_image
+from syncify.local.track import LocalTrack, load_track, FLAC, M4A, MP3, WMA
+from syncify.local.track.field import LocalTrackField
 from syncify.shared.core.base import Item
 from syncify.shared.core.object import Track
 from syncify.shared.exception import SyncifyKeyError
-from syncify.local.track.field import LocalTrackField
-from syncify.local.file import open_image
-from syncify.local.exception import InvalidFileType, FileDoesNotExistError
-from syncify.local.track import LocalTrack, load_track, FLAC, M4A, MP3, WMA
 from syncify.shared.remote.enum import RemoteObjectType
-from tests.shared.core.base import ItemTester
 from tests.local.utils import path_track_all, path_track_img, path_track_resources
+from tests.shared.core.base import ItemTester
 from tests.spotify.utils import random_uri
 from tests.utils import path_txt
 

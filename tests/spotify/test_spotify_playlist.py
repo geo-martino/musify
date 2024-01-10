@@ -6,7 +6,6 @@ from typing import Any
 
 import pytest
 
-from tests.spotify.testers import SpotifyCollectionLoaderTester
 from syncify import PROGRAM_NAME
 from syncify.shared.api.exception import APIError
 from syncify.shared.remote.enum import RemoteObjectType
@@ -17,6 +16,7 @@ from syncify.spotify.object import SpotifyPlaylist
 from syncify.spotify.object import SpotifyTrack
 from tests.shared.remote.object import RemotePlaylistTester
 from tests.spotify.api.mock import SpotifyMock
+from tests.spotify.testers import SpotifyCollectionLoaderTester
 from tests.spotify.utils import random_uri, assert_id_attributes
 
 

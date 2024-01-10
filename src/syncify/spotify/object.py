@@ -9,12 +9,12 @@ from typing import Any, Self
 from syncify.shared.remote.enum import RemoteObjectType, RemoteIDType
 from syncify.shared.remote.object import RemoteCollection, RemoteCollectionLoader, RemoteTrack
 from syncify.shared.remote.object import RemotePlaylist, RemoteAlbum, RemoteArtist
-from syncify.spotify.api import SpotifyAPI
-from syncify.spotify.exception import SpotifyCollectionError
-from syncify.spotify.base import SpotifyObject, SpotifyItem
-from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 from syncify.shared.types import UnitCollection
 from syncify.shared.utils import to_collection
+from syncify.spotify.api import SpotifyAPI
+from syncify.spotify.base import SpotifyObject, SpotifyItem
+from syncify.spotify.exception import SpotifyCollectionError
+from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 
 
 class SpotifyItemWranglerMixin(SpotifyItem, SpotifyDataWrangler, metaclass=ABCMeta):

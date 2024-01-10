@@ -2,10 +2,10 @@ from random import choice
 
 import pytest
 
-from local.track.utils import random_tracks
-from local.utils import path_track_all
-from shared.core.misc import PrettyPrinterTester
 from syncify.local.file import PathMapper, PathStemMapper, File
+from syncify.shared.core.misc import PrettyPrinterTester
+from tests.local.track.utils import random_tracks
+from tests.local.utils import path_track_all
 from tests.utils import random_str
 
 

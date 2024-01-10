@@ -5,19 +5,19 @@ from collections.abc import Mapping, Sequence, MutableSequence, Collection
 from dataclasses import dataclass, field
 
 from syncify import PROGRAM_NAME
+from syncify.processors.match import ItemMatcher
 from syncify.shared.core.base import Item
 from syncify.shared.core.collection import ItemCollection
 from syncify.shared.core.enum import Fields
 from syncify.shared.core.misc import Result
 from syncify.shared.core.object import Track
-from syncify.processors.match import ItemMatcher
+from syncify.shared.logger import REPORT
 from syncify.shared.remote.api import RemoteAPI
 from syncify.shared.remote.config import RemoteObjectClasses
 from syncify.shared.remote.enum import RemoteObjectType, RemoteIDType
 from syncify.shared.remote.processors.search import RemoteItemSearcher
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
 from syncify.shared.utils import get_user_input, get_max_width, align_and_truncate
-from syncify.shared.logger import REPORT
 
 ALLOW_KARAOKE_DEFAULT = RemoteItemSearcher.settings_items.allow_karaoke
 
