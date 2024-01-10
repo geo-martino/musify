@@ -10,6 +10,7 @@ import pytest
 from pytest_mock import MockerFixture
 from requests_mock import Mocker
 
+from syncify import MODULE_ROOT
 from syncify.shared.api.authorise import APIAuthoriser
 from syncify.shared.api.exception import APIError
 from tests.shared.api.utils import path_token
@@ -109,7 +110,7 @@ class TestAPIAuthoriser:
         socket_listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         requests_mock.post(user_url)
-        mocker.patch("syncify.shared.api.authorise.webopen", new=check_url)
+        mocker.patch(f"{MODULE_ROOT}.shared.api.authorise.webopen", new=check_url)
         mocker.patch.object(socket.socket, attribute="accept", return_value=(socket_listener, None))
         mocker.patch.object(socket.socket, attribute="send")
         mocker.patch.object(socket.socket, attribute="recv", return_value=response.encode("utf-8"))

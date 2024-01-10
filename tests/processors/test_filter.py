@@ -257,6 +257,6 @@ class TestFilterMatcher(FilterTester):
         assert len(filter_.include) == 0
         assert len(filter_.exclude) == 0
 
-    @pytest.mark.skip(reason="# TODO: add test for to_xml")
+    @pytest.mark.skip(reason="not implemented yet")
     def test_to_xml(self):
         pass

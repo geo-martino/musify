@@ -19,5 +19,5 @@ def api(spotify_api: SpotifyAPI, api_mock: SpotifyMock) -> SpotifyAPI:
 
 @pytest.fixture(scope="module")
 def api_mock(spotify_mock: SpotifyMock) -> SpotifyMock:
-    """Yield an authorised :py:class:`SpotifyMock` object"""
+    """Yield a :py:class:`SpotifyMock` object with valid mock data ready to be called via HTTP requests"""
     return spotify_mock

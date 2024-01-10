@@ -1,4 +1,5 @@
-
+from copy import deepcopy
+from random import sample
 
 import pytest
 
@@ -254,7 +255,7 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
             self, searcher: SpotifyItemSearcher, api_mock: SpotifyMock, wrangler: SpotifyDataWrangler
     ) -> list[LocalTrack]:
         items = []
-        for remote_track in map(SpotifyTrack, api_mock.tracks[:searcher.settings_items.result_count]):
+        for remote_track in map(SpotifyTrack, sample(api_mock.tracks, k=searcher.settings_items.result_count)):
             local_track = random_track()
             local_track.uri = None
             local_track.remote_wrangler = wrangler
@@ -277,9 +278,9 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
             api_mock: SpotifyMock,
             wrangler: SpotifyDataWrangler
     ) -> list[LocalAlbum]:
-
         limit = searcher.settings_items.result_count
-        responses = [album for album in api_mock.albums if 2 < album["tracks"]["total"] <= api_mock.limit_lower][:limit]
+        albums = [album for album in api_mock.albums if 2 < album["tracks"]["total"] <= api_mock.limit_lower]
+        responses = deepcopy(sample(albums, k=min(len(albums), limit)))
         assert len(responses) > 4
 
         albums = []
@@ -306,7 +307,7 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
 
 class TestSpotifyItemChecker(RemoteItemCheckerTester):
 
-    @pytest.fixture(scope="function")
+    @pytest.fixture
     def checker(self, api: SpotifyAPI) -> SpotifyItemChecker:
         return SpotifyItemChecker(api=api)
 

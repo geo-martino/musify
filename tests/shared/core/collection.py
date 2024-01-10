@@ -201,12 +201,11 @@ class PlaylistTester(ItemCollectionTester, metaclass=ABCMeta):
     def collection(self, playlist: Playlist) -> ItemCollection:
         return playlist
 
-    @pytest.mark.skip(reason="# TODO: write merge tests")
+    @pytest.mark.skip(reason="not implemented yet")
     def test_merge(self, playlist: Playlist):
-        # TODO: write merge tests
         pass
 
-    @pytest.mark.skip(reason="# TODO: write merge tests")
+    @pytest.mark.skip(reason="not implemented yet")
     def test_merge_dunder_methods(self, playlist: Playlist):
         pass
 

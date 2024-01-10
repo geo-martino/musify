@@ -38,10 +38,12 @@ test = [
     "pytest~=7.4",
     "pytest-lazy-fixture~=0.6",
     "pytest-mock~=3.12",
+    "pytest-repeat~=0.9",
     "pycountry~=23.12",
     "requests-mock~=1.11",
 ]
 dev = [
+    "syncify[test]",
     "grip~=4.6",
 ]
 docs = [

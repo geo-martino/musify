@@ -9,6 +9,6 @@ from tests.shared.core.collection import LibraryTester
 
 class LocalLibraryTester(LibraryTester, LocalCollectionTester, metaclass=ABCMeta):
 
-    @pytest.mark.skip(reason="# TODO: write merge_playlists tests")
+    @pytest.mark.skip(reason="not implemented yet")
     def test_merge_playlists(self, library: LocalLibrary):
         pass

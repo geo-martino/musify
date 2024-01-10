@@ -776,8 +776,8 @@ if __name__ == "__main__":
 
 
 ## SELECTED FOR DEVELOPMENT
-# TODO: fix bug in spotify api test: artist albums have unexpected keys
 # TODO: separate all CLI concerns to other repo
+# TODO: check loaded numbers on linux again
 # TODO: expand readme + check all example functions work
 # TODO: expand docstrings everywhere
 # TODO: release to pypi + implement CI/CD structure on GitHub

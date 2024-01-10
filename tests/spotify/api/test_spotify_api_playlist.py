@@ -21,7 +21,7 @@ class TestSpotifyAPIPlaylists:
     @pytest.fixture
     def playlist(api_mock: SpotifyMock) -> dict[str, Any]:
         """Yields a response representing a user playlist on Spotify"""
-        return deepcopy(next(pl for pl in api_mock.user_playlists if pl["tracks"]["total"] > api_mock.limit_lower))
+        return next(deepcopy(pl) for pl in api_mock.user_playlists if pl["tracks"]["total"] > api_mock.limit_lower)
 
     @staticmethod
     @pytest.fixture
@@ -29,7 +29,7 @@ class TestSpotifyAPIPlaylists:
         """Yields a response representing a uniquely named user playlist on Spotify"""
         names = [pl["name"] for pl in api_mock.user_playlists]
         return next(
-            pl for pl in api_mock.user_playlists
+            deepcopy(pl) for pl in api_mock.user_playlists
             if names.count(pl["name"]) == 1 and len(pl["name"]) != RemoteIDType.ID.value
         )
 

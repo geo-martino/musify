@@ -16,14 +16,13 @@ from tests.utils import random_str, random_dt, random_genres
 class MutagenMock(mutagen.FileType):
     class MutagenInfoMock(mutagen.StreamInfo):
         def __init__(self):
-            self.length = 0
+            self.length = randrange(int(10e4), int(6*10e5))  # 1 second to 10 minutes range
             self.channels = randrange(1, 5)
             self.bitrate = randrange(96, 1400) * 1000
             self.sample_rate = choice([44.1, 48, 88.2, 96]) * 1000
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.mock = True
+    # noinspection PyMissingConstructor
+    def __init__(self):
         self.info = self.MutagenInfoMock()
         self.pictures = []
 

@@ -198,12 +198,8 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
         try:
             self._check_for_api()
         except APIError:
-            print("NO API")
             return False
-        writeable = self.api.user_id == self.owner_id
-        if not writeable:  # TODO: check these values when test_sync next fails
-            print(self.api.user_id, self.owner_id, self.response["owner"])
-        return writeable
+        return self.api.user_id == self.owner_id
 
     @classmethod
     def create(cls, api: RemoteAPI, name: str, public: bool = True, collaborative: bool = False) -> Self:

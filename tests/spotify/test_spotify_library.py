@@ -17,7 +17,7 @@ class TestSpotifyLibrary(RemoteLibraryTester):
 
     @pytest.fixture
     def collection_merge_items(self, api_mock: SpotifyMock) -> list[SpotifyTrack]:
-        tracks = [SpotifyTrack(track) for track in api_mock.tracks[api_mock.range_max: api_mock.range_max + 10]]
+        tracks = list(map(SpotifyTrack, deepcopy(api_mock.tracks[api_mock.range_max: api_mock.range_max + 10])))
         assert len(tracks) > 4
         return tracks
 
@@ -216,6 +216,6 @@ class TestSpotifyLibrary(RemoteLibraryTester):
         req_urls = set(req.url.split("?")[0] for req in api_mock.request_history)
         assert all(album.url + "/tracks" in req_urls for artist in library.artists for album in artist.albums)
 
-    @pytest.mark.skip(reason="# TODO: write merge_playlists tests")
+    @pytest.mark.skip(reason="not implemented yet")
     def test_merge_playlists(self, library: SpotifyLibrary):
         pass

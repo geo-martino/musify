@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, Mapping
 from copy import copy, deepcopy
+from random import choice
 from typing import Any
 
 from syncify.shared.core.base import Item
@@ -143,7 +144,6 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         library_test = deepcopy(library)
         library_test.restore_playlists(playlists=backup, dry_run=False)
         assert len(library_test.playlists[name_actual]) == len(backup_check[name_actual])
-        # TODO: figure out why this occasionally fails
         assert len(library_test.playlists[name_actual]) != len(library.playlists[name_actual])
 
         assert name_new in library_test.playlists
@@ -152,7 +152,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         assert library.api.handler.get(pl_new.url)  # new playlist was created and is callable
 
     def test_restore(self, library: RemoteLibrary, collection_merge_items: list[RemoteTrack]):
-        name_actual, pl_actual = next((name, pl) for name, pl in library.playlists.items() if len(pl) > 10)
+        name_actual, pl_actual = choice([(name, pl) for name, pl in library.playlists.items() if len(pl) > 10])
         name_new = "new playlist"
 
         # check test parameters are valid
@@ -183,6 +183,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
 
         # Library
         backup_library = deepcopy(library)
+        backup_library._playlists = {name_actual: backup_library.playlists[name_actual]}
         backup_library.restore_playlists(playlists=backup_uri, dry_run=False)
         self.assert_restore(library=library, backup=backup_library)
 
@@ -229,12 +230,8 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         requests = [req for req in api_mock.get_requests(method="POST") if req.url.startswith(url)]
         assert len(requests) > 0
 
-    # TODO: figure out why the 'actual' playlist in this test is sometimes un-writeable
-    def test_sync(
-            self, library: RemoteLibrary, collection_merge_items: list[RemoteTrack], api_mock: RemoteMock
-    ):
-
-        name_actual, pl_actual = next((name, pl) for name, pl in library.playlists.items() if len(pl) > 10)
+    def test_sync(self, library: RemoteLibrary, collection_merge_items: list[RemoteTrack], api_mock: RemoteMock):
+        name_actual, pl_actual = choice([(name, pl) for name, pl in library.playlists.items() if len(pl) > 10])
         name_new = "new playlist"
 
         # check test parameters are valid

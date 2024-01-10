@@ -47,17 +47,9 @@ class TestSpotifyAPIItems:
         initial_calls = max(len(list(batched(expected, limit))) if limit else len(expected), 1)
         extend_calls = 0
         if key:
-            # minus 1 for initial call to get the collection
-            extend_calls += sum(api_mock.calculate_pages_from_response(expect) - 1 for expect in expected)
+            # minus 1 for initial call to get the collection unless all items were present in the initial call
+            extend_calls += sum(max(api_mock.calculate_pages_from_response(expect) - 1, 0) for expect in expected)
 
-        # TODO: figure out why test_get_items_many sometimes fails on PLAYLIST
-        print(len(requests), initial_calls, extend_calls)
-        if key:
-            for expect in expected:
-                kind = ObjectType.from_name(expect["type"])[0]
-                key = SpotifyAPI.collection_item_map[kind].name.casefold() + "s"
-
-                print(expect[key]["limit"], expect[key]["total"])
         assert len(requests) == initial_calls + extend_calls
 
     ###########################################################################
@@ -498,8 +490,8 @@ class TestSpotifyAPIItems:
         api_mock.reset_mock()  # test checks the number of requests made
 
         source = api_mock.tracks
-        source = sample(source, api_mock.limit_lower) if len(source) > api_mock.limit_lower else source
-        source_map = {item["id"]: deepcopy(item) for item in source}
+        source = deepcopy(sample(source, api_mock.limit_lower) if len(source) > api_mock.limit_lower else source)
+        source_map = {item["id"]: item for item in source}
         source_features = {item["id"]: api_mock.audio_features[item["id"]] for item in source}
         source_analysis = {item["id"]: api_mock.audio_analysis[item["id"]] for item in source}
         test = random_id_types(id_list=source_map, wrangler=api, kind=ObjectType.TRACK)
@@ -610,7 +602,7 @@ class TestSpotifyAPIItems:
             for artist in api_mock.artists
         }
         id_, expected = next((id_, albums) for id_, albums in expected_map.items() if len(albums) >= 10)
-        source = deepcopy(next(artist for artist in api_mock.artists if artist["id"] == id_))
+        source = next(deepcopy(artist) for artist in api_mock.artists if artist["id"] == id_)
         test = random_id_type(id_=id_, wrangler=api, kind=ObjectType.ARTIST)
 
         # force pagination
@@ -643,8 +635,8 @@ class TestSpotifyAPIItems:
 
     def test_get_artist_albums_many(self, api: SpotifyAPI, api_mock: SpotifyMock):
         source = api_mock.artists
-        source = sample(source, api_mock.limit_lower) if len(source) > api_mock.limit_lower else source
-        source_map = {item["id"]: deepcopy(item) for item in source}
+        source = deepcopy(sample(source, api_mock.limit_lower) if len(source) > api_mock.limit_lower else source)
+        source_map = {item["id"]: item for item in source}
         expected_map = {
             id_: [
                 deepcopy(album) for album in api_mock.artist_albums

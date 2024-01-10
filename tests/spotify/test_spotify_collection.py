@@ -43,11 +43,10 @@ class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
 
     @pytest.fixture(scope="class")
     def _response_valid(self, api: SpotifyAPI, api_mock: SpotifyMock) -> dict[str, Any]:
-        response = deepcopy(next(
-            album for album in api_mock.albums
-            if album["tracks"]["total"] > len(album["tracks"]["items"]) > 5
-            and album["genres"]
-        ))
+        response = next(
+            deepcopy(album) for album in api_mock.albums
+            if album["tracks"]["total"] > len(album["tracks"]["items"]) > 5 and album["genres"]
+        )
         api.extend_items(items_block=response, key=RemoteObjectType.TRACK)
 
         api_mock.reset_mock()
@@ -276,12 +275,13 @@ class TestSpotifyArtist(RemoteCollectionTester):
         """Yield a valid enriched response from the Spotify API for an artist item type."""
         artist_album_map = {
             artist["id"]: [
-                album for album in api_mock.artist_albums if any(art["id"] == artist["id"] for art in album["artists"])
+                deepcopy(album) for album in api_mock.artist_albums
+                if any(art["id"] == artist["id"] for art in album["artists"])
             ]
             for artist in api_mock.artists
         }
         id_, albums = next((id_, albums) for id_, albums in artist_album_map.items() if len(albums) >= 10)
-        artist = deepcopy(next(artist for artist in api_mock.artists if artist["id"] == id_))
+        artist = next(deepcopy(artist) for artist in api_mock.artists if artist["id"] == id_)
 
         for album in albums:
             tracks = [deepcopy(track) for track in api_mock.tracks if track["album"]["id"] == album["id"]]

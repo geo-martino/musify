@@ -42,7 +42,10 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
 
     @pytest.fixture
     def _response_valid(self, api: SpotifyAPI, api_mock: SpotifyMock) -> dict[str, Any]:
-        response = deepcopy(next(pl for pl in api_mock.user_playlists if pl["tracks"]["total"] > 50))
+        response = next(
+            deepcopy(pl) for pl in api_mock.user_playlists
+            if pl["tracks"]["total"] > 50 and len(pl["tracks"]["items"]) > 10
+        )
         api.extend_items(items_block=response, key=RemoteObjectType.TRACK)
 
         api_mock.reset_mock()
@@ -235,7 +238,7 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
         api_mock.reset_mock()  # test checks the number of requests made
 
         names = [pl["name"] for pl in api_mock.user_playlists]
-        response = deepcopy(next(pl for pl in api_mock.user_playlists if names.count(pl["name"]) == 1))
+        response = next(deepcopy(pl) for pl in api_mock.user_playlists if names.count(pl["name"]) == 1)
         api.extend_items(items_block=response, key=RemoteObjectType.TRACK)
         pl = SpotifyPlaylist(response=response, api=api)
         url = pl.url

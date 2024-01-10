@@ -147,6 +147,11 @@ class SpotifyMock(RemoteMock):
         self.setup_specific_conditions_user()
         self.setup_requests_mock()
 
+        track_uris = {track["uri"] for track in self.tracks}
+        for album in self.albums:
+            for track in album["tracks"]["items"]:
+                assert track["uri"] in track_uris
+
     ###########################################################################
     ## Setup
     ###########################################################################
@@ -190,7 +195,8 @@ class SpotifyMock(RemoteMock):
         # ensure a certain minimum number of small user playlists
         count = max(10 - len([pl for pl in self.user_playlists if self.limit_lower < pl["tracks"]["total"] <= 60]), 0)
         for _ in range(count):
-            self.user_playlists.append(self.generate_playlist(item_count=randrange(self.limit_lower + 1, 60)))
+            pl = self.generate_playlist(owner=self.user, item_count=randrange(self.limit_lower + 1, 60))
+            self.user_playlists.append(pl)
 
     def setup_valid_references(self):
         """Sets up cross-referenced valid responses needed for RemoteObject tests"""
@@ -307,7 +313,8 @@ class SpotifyMock(RemoteMock):
             for kind in kinds:
                 kind_enum = ObjectType.from_name(kind)[0]
                 values = self.item_type_map[kind_enum]
-                matches = [v for v in values if v["name"] == query]  # simple match on name for given query
+                # simple match on name for given query
+                results[kind + "s"] = [v for v in values if v["name"].casefold() == query.casefold()]
                 total += len(values)
 
                 # ensure minimal items response for collections to improve speed on some tests
@@ -315,15 +322,13 @@ class SpotifyMock(RemoteMock):
                     key = SpotifyAPI.collection_item_map[kind_enum].name.casefold() + "s"
                     values = [v for v in values if 2 < v[key]["total"] <= self.limit_lower]
 
-                results[kind + "s"] = matches[:count]
-
-                available = len(values) - len(matches)
-                if len(matches) < limit and available:
-                    offset_min = offset + len(matches)
-                    offset_max = min(available, offset + limit) - len(matches) - count
-                    results[kind + "s"] += values[offset_min:offset_max]
+                available = len(values) - len(results[kind + "s"])
+                if len(results[kind + "s"]) < limit and available:
+                    offset_max = min(available, offset + limit) - len(results[kind + "s"]) - count
+                    results[kind + "s"] += values[offset:max(offset, offset_max)]
 
                 shuffle(results[kind + "s"])
+                count += len(results[kind + "s"])
 
             return {
                 kind: self.format_items_block(url=url, items=items, offset=offset, limit=limit, total=total)

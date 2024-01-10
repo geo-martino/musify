@@ -302,9 +302,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
             artist = self._object_cls.artist(response=response, api=self.api, skip_checks=True)
 
             current = next((item for item in self._artists if item == artist), None)
-            artist_uris = {artist.uri for artist in self.artists}
             if current is None:
-                assert artist.uri not in artist_uris
                 self._artists.append(artist)
             else:
                 current._response = artist.response
