@@ -22,7 +22,7 @@ class PrettyPrinterTester(ABC):
 
         assert re.match(rf"^{name}\([\s\S]*\)$", str(obj))
         # plus 2 for class name line and final closing bracket line
-        assert len(str(obj).split('\n')) >= len(obj_dict) + 2
+        assert len(str(obj).split('\n')) >= len(obj_dict) + (2 if "\n" in str(obj) else 0)
         assert repr(obj) == f"{name}({obj_dict})"
 
     def test_json(self, obj: PrettyPrinter):

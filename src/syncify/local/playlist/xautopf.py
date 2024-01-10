@@ -1,4 +1,4 @@
-from collections.abc import Collection, Mapping, Iterable
+from collections.abc import Collection
 from copy import deepcopy
 from dataclasses import dataclass
 from os.path import exists
@@ -6,15 +6,14 @@ from typing import Any
 
 import xmltodict
 
-from syncify.shared.core.enum import Fields
-from syncify.shared.core.misc import Result
-from syncify.processors.filter import FilterMatcher, FilterPath, FilterComparers
+from syncify.local.file import PathMapper
 from syncify.local.playlist.base import LocalPlaylist
 from syncify.local.track import LocalTrack
+from syncify.processors.filter import FilterDefinedList, FilterComparers, FilterMatcher
 from syncify.processors.limit import ItemLimiter
 from syncify.processors.sort import ItemSorter
-from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
-from syncify.shared.types import UnitCollection
+from syncify.shared.core.enum import Fields
+from syncify.shared.core.misc import Result
 
 
 @dataclass(frozen=True)
@@ -56,7 +55,7 @@ class SyncResultXAutoPF(Result):
 
 
 class XAutoPF(LocalPlaylist[FilterMatcher[
-    LocalTrack, FilterPath[LocalTrack], FilterPath[LocalTrack], FilterComparers[LocalTrack]
+    LocalTrack, FilterDefinedList[LocalTrack], FilterDefinedList[LocalTrack], FilterComparers[LocalTrack]
 ]]):
     """
     For reading and writing data from MusicBee's auto-playlist format.
@@ -64,21 +63,11 @@ class XAutoPF(LocalPlaylist[FilterMatcher[
     **Note**: You must provide a list of tracks to search on initialisation for this playlist type.
 
     :param path: Absolute path of the playlist.
-    :param tracks: Available Tracks to search through for matches.
-        If none are provided, will load only the paths listed in the ``ExceptionsInclude`` key of the playlist file.
-    :param library_folder: Absolute path of folder containing tracks.
-    :param other_folders: Absolute paths of other possible library paths.
-        Use to replace path stems from other libraries for the paths in loaded playlists.
-        Useful when managing similar libraries on multiple platforms.
-    :param check_existence: If True, when processing paths,
-        check for the existence of the file paths on the file system and reject any that don't.
-    :param available_track_paths: A list of available track paths that are known to exist
-        and are valid for the track types supported by this program.
-        Useful for case-insensitive path loading and correcting paths to case-sensitive.
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
-        If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
-        The wrangler is also used when loading tracks to allow them to process URI tags.
-        For more info on this, see :py:class:`LocalTrack`.
+    :param tracks: Optional. Available Tracks to search through for matches.
+        If none are provided, no tracks will be loaded initially
+    :param path_mapper: Optionally, provide a :py:class:`PathMapper` for paths stored in the playlist file.
+        Useful if the playlist file contains relative paths and/or paths for other systems that need to be
+        mapped to absolute, system-specific paths to be loaded and back again when saved.
     """
 
     __slots__ = ("_description", "xml",)
@@ -97,16 +86,7 @@ class XAutoPF(LocalPlaylist[FilterMatcher[
     def image_links(self):
         return {}
 
-    def __init__(
-            self,
-            path: str,
-            tracks: Collection[LocalTrack] = (),
-            library_folder: str | None = None,
-            other_folders: UnitCollection[str] = (),
-            check_existence: bool = True,
-            available_track_paths: Iterable[str] = (),
-            remote_wrangler: RemoteDataWrangler = None,
-    ):
+    def __init__(self, path: str, tracks: Collection[LocalTrack] = (), path_mapper: PathMapper = PathMapper()):
         self._validate_type(path)
         if not exists(path):
             # TODO: implement creation of auto-playlist from scratch (very low priority)
@@ -120,42 +100,26 @@ class XAutoPF(LocalPlaylist[FilterMatcher[
 
         self._description = self.xml["SmartPlaylist"]["Source"]["Description"]
 
-        self.matcher: FilterMatcher[
-            LocalTrack, FilterPath[LocalTrack], FilterPath[LocalTrack], FilterComparers[LocalTrack]
-        ] = FilterMatcher.from_xml(
-            xml=self.xml,
-            library_folder=library_folder,
-            other_folders=other_folders,
-            existing_paths=available_track_paths,
-            check_existence=check_existence
-        )
         super().__init__(
             path=path,
-            matcher=self.matcher,
+            matcher=FilterMatcher.from_xml(xml=self.xml, path_mapper=path_mapper),
             limiter=ItemLimiter.from_xml(xml=self.xml),
             sorter=ItemSorter.from_xml(xml=self.xml),
-            stem_replacement=library_folder,
-            stem_original=self.matcher.include.stem_original or self.matcher.exclude.stem_original,
-            available_track_paths=available_track_paths,
-            remote_wrangler=remote_wrangler,
+            path_mapper=path_mapper,
         )
 
-        self._tracks_original: list[LocalTrack]
         self.load(tracks=tracks)
 
-    def load(self, tracks: Collection[LocalTrack] | None = None) -> list[LocalTrack] | None:
-        if tracks is None:
-            tracks = [self._load_track(path) for path in self.matcher.include if path is not None]
+    def load(self, tracks: Collection[LocalTrack] = ()) -> list[LocalTrack]:
+        tracks_list = list(tracks)
+        self.sorter.sort_by_field(tracks_list, field=Fields.LAST_PLAYED, reverse=True)
 
-        self.sorter.sort_by_field(tracks, field=Fields.LAST_PLAYED, reverse=True)
-        self._match(tracks=tracks, reference=tracks[0] if len(tracks) > 0 else None)
+        self._match(tracks=tracks, reference=tracks_list[0] if len(tracks) > 0 else None)
         self._limit(ignore=self.matcher.exclude)
         self._sort()
 
-        if not self.tracks:
-            self.tracks = []
-        self._tracks_original = self.tracks.copy()
-        return tracks
+        self._original = self.tracks.copy()
+        return self.tracks
 
     def save(self, dry_run: bool = True, *_, **__) -> SyncResultXAutoPF:
         """
@@ -164,46 +128,49 @@ class XAutoPF(LocalPlaylist[FilterMatcher[
         :param dry_run: Run function, but do not modify file at all.
         :return: The results of the sync as a :py:class:`SyncResultXAutoPF` object.
         """
-        start_xml = deepcopy(self.xml)
+        xml_start = deepcopy(self.xml)
+        xml_final = deepcopy(self.xml)
+
+        count_start = len(self._original)
+        source_start: dict[str, Any] = xml_start["SmartPlaylist"]["Source"]
+        source_final: dict[str, Any] = xml_final["SmartPlaylist"]["Source"]
 
         # update the stored XML object
-        self.xml["SmartPlaylist"]["Source"]["Description"] = self.description
-        self._update_xml_paths()
-        # self._update_comparers()
-        # self._update_limiter()
-        # self._update_sorter()
+        source_final["Description"] = self.description
+        self._update_xml_paths(xml_final)
+        # self._update_comparers(xml_final)
+        # self._update_limiter(xml_final)
+        # self._update_sorter(xml_final)
 
-        if not dry_run:  # save the modified XML object to file
+        if not dry_run:  # save the modified XML object to file and update stored values
+            self.xml = xml_final
             self._save_xml()
-
-        # generate stats for logging
-        count_start = len(self._tracks_original)
-        self._tracks_original = self.tracks.copy()
-        start_source: Mapping[str, Any] = start_xml["SmartPlaylist"]["Source"]
-        final_source: Mapping[str, Any] = self.xml["SmartPlaylist"]["Source"]
+            self._original = self.tracks.copy()
 
         return SyncResultXAutoPF(
             start=count_start,
-            start_description=start_source["Description"],
-            start_include=len([p for p in start_source.get("ExceptionsInclude", "").split("|") if p]),
-            start_exclude=len([p for p in start_source.get("Exceptions", "").split("|") if p]),
-            start_comparers=len(start_source["Conditions"].get("Condition", [])),
-            start_limiter=start_source["Limit"].get("@Enabled", "False") == "True",
-            start_sorter=len(start_source.get("SortBy", start_source.get("DefinedSort", []))) > 0,
-            final=len(self._tracks_original),
-            final_description=final_source["Description"],
-            final_include=len([p for p in final_source.get("ExceptionsInclude", "").split("|") if p]),
-            final_exclude=len([p for p in final_source.get("Exceptions", "").split("|") if p]),
-            final_comparers=len(final_source["Conditions"].get("Condition", [])),
-            final_limiter=final_source["Limit"].get("@Enabled", "False") == "True",
-            final_sorter=len(final_source.get("SortBy", final_source.get("DefinedSort", []))) > 0,
+            start_description=source_start["Description"],
+            start_include=len([p for p in source_start.get("ExceptionsInclude", "").split("|") if p]),
+            start_exclude=len([p for p in source_start.get("Exceptions", "").split("|") if p]),
+            start_comparers=len(source_start["Conditions"].get("Condition", [])),
+            start_limiter=source_start["Limit"].get("@Enabled", "False") == "True",
+            start_sorter=len(source_start.get("SortBy", source_start.get("DefinedSort", []))) > 0,
+            final=len(self.tracks),
+            final_description=source_final["Description"],
+            final_include=len([p for p in source_final.get("ExceptionsInclude", "").split("|") if p]),
+            final_exclude=len([p for p in source_final.get("Exceptions", "").split("|") if p]),
+            final_comparers=len(source_final["Conditions"].get("Condition", [])),
+            final_limiter=source_final["Limit"].get("@Enabled", "False") == "True",
+            final_sorter=len(source_final.get("SortBy", source_final.get("DefinedSort", []))) > 0,
         )
 
-    def _update_xml_paths(self) -> None:
+    def _update_xml_paths(self, xml: dict[str, Any]) -> None:
         """Update the stored, parsed XML object with valid include and exclude paths"""
-        source = self.xml["SmartPlaylist"]["Source"]
+        source = xml["SmartPlaylist"]["Source"]
         output = self.matcher.to_xml(
-            tracks=self.tracks, tracks_original=self._tracks_original, path_mapper=self._prepare_paths_for_output
+            items=self.tracks,
+            original=self._original,
+            path_mapper=lambda paths: self.path_mapper.unmaps(paths, check_existence=False)
         )
 
         # assign values to stored, parsed XML map
@@ -212,17 +179,17 @@ class XAutoPF(LocalPlaylist[FilterMatcher[
             if output.get(k):
                 source[k] = v
 
-    def _update_comparers(self) -> None:
+    def _update_comparers(self, xml: dict[str, Any]) -> None:
         """Update the stored, parsed XML object with appropriately formatted comparer settings"""
         # TODO: implement comparison XML part updater (low priority)
         raise NotImplementedError
 
-    def _update_limiter(self) -> None:
+    def _update_limiter(self, xml: dict[str, Any]) -> None:
         """Update the stored, parsed XML object with appropriately formatted limiter settings"""
         # TODO: implement limit XML part updater (low priority)
         raise NotImplementedError
 
-    def _update_sorter(self) -> None:
+    def _update_sorter(self, xml: dict[str, Any]) -> None:
         """Update the stored, parsed XML object with appropriately formatted sorter settings"""
         # TODO: implement sort XML part updater (low priority)
         raise NotImplementedError

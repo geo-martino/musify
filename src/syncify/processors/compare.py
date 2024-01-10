@@ -7,7 +7,7 @@ from typing import Any, Self
 
 from syncify.shared.core.base import Item
 from syncify.shared.core.enum import Field
-from syncify.local.track.field import LocalTrackField
+from syncify.shared.field import Fields
 from syncify.local.exception import FieldError
 from syncify.processors.base import DynamicProcessor, MusicBeeProcessor, dynamicprocessormethod
 from syncify.processors.exception import ComparerError
@@ -19,39 +19,39 @@ from syncify.shared.utils import to_collection
 # noinspection SpellCheckingInspection
 field_name_map = {
     "None": None,
-    "Title": LocalTrackField.TITLE,
-    "ArtistPeople": LocalTrackField.ARTIST,
-    "Album": LocalTrackField.ALBUM,  # album ignoring articles like 'the' and 'a' etc.
-    "Album Artist": LocalTrackField.ALBUM_ARTIST,
-    "TrackNo": LocalTrackField.TRACK_NUMBER,
-    "TrackCount": LocalTrackField.TRACK_TOTAL,
-    "GenreSplits": LocalTrackField.GENRES,
-    "Year": LocalTrackField.YEAR,  # could also be 'YearOnly'?
-    "BeatsPerMin": LocalTrackField.BPM,
-    "DiscNo": LocalTrackField.DISC_NUMBER,
-    "DiscCount": LocalTrackField.DISC_TOTAL,
-    # "": LocalTrackField.COMPILATION,  # unmapped for compare
-    "Comment": LocalTrackField.COMMENTS,
-    "FileDuration": LocalTrackField.LENGTH,
-    "Rating": LocalTrackField.RATING,
-    # "ComposerPeople": LocalTrackField.COMPOSER,  # currently not supported by this program
-    # "Conductor": LocalTrackField.CONDUCTOR,  # currently not supported by this program
-    # "Publisher": LocalTrackField.PUBLISHER,  # currently not supported by this program
-    "FilePath": LocalTrackField.PATH,
-    "FolderName": LocalTrackField.FOLDER,
-    "FileName": LocalTrackField.FILENAME,
-    "FileExtension": LocalTrackField.EXT,
-    # "": LocalTrackField.SIZE,  # unmapped for compare
-    "FileKind": LocalTrackField.KIND,
-    "FileBitrate": LocalTrackField.BIT_RATE,
-    "BitDepth": LocalTrackField.BIT_DEPTH,
-    "FileSampleRate": LocalTrackField.SAMPLE_RATE,
-    "FileChannels": LocalTrackField.CHANNELS,
-    # "": LocalTrackField.DATE_CREATED,  # unmapped for compare
-    "FileDateModified": LocalTrackField.DATE_MODIFIED,
-    "FileDateAdded": LocalTrackField.DATE_ADDED,
-    "FileLastPlayed": LocalTrackField.LAST_PLAYED,
-    "FilePlayCount": LocalTrackField.PLAY_COUNT,
+    "Title": Fields.TITLE,
+    "ArtistPeople": Fields.ARTIST,
+    "Album": Fields.ALBUM,  # album ignoring articles like 'the' and 'a' etc.
+    "Album Artist": Fields.ALBUM_ARTIST,
+    "TrackNo": Fields.TRACK_NUMBER,
+    "TrackCount": Fields.TRACK_TOTAL,
+    "GenreSplits": Fields.GENRES,
+    "Year": Fields.YEAR,  # could also be 'YearOnly'?
+    "BeatsPerMin": Fields.BPM,
+    "DiscNo": Fields.DISC_NUMBER,
+    "DiscCount": Fields.DISC_TOTAL,
+    # "": Fields.COMPILATION,  # unmapped for compare
+    "Comment": Fields.COMMENTS,
+    "FileDuration": Fields.LENGTH,
+    "Rating": Fields.RATING,
+    # "ComposerPeople": Fields.COMPOSER,  # currently not supported by this program
+    # "Conductor": Fields.CONDUCTOR,  # currently not supported by this program
+    # "Publisher": Fields.PUBLISHER,  # currently not supported by this program
+    "FilePath": Fields.PATH,
+    "FolderName": Fields.FOLDER,
+    "FileName": Fields.FILENAME,
+    "FileExtension": Fields.EXT,
+    # "": Fields.SIZE,  # unmapped for compare
+    "FileKind": Fields.KIND,
+    "FileBitrate": Fields.BIT_RATE,
+    "BitDepth": Fields.BIT_DEPTH,
+    "FileSampleRate": Fields.SAMPLE_RATE,
+    "FileChannels": Fields.CHANNELS,
+    # "": Fields.DATE_CREATED,  # unmapped for compare
+    "FileDateModified": Fields.DATE_MODIFIED,
+    "FileDateAdded": Fields.DATE_ADDED,
+    "FileLastPlayed": Fields.LAST_PLAYED,
+    "FilePlayCount": Fields.PLAY_COUNT,
 }
 
 

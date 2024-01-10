@@ -1,32 +1,31 @@
 from __future__ import annotations
 
 import logging
-from abc import ABCMeta
-from collections.abc import Collection, Mapping, Sequence, Iterable, Callable
+from collections.abc import Collection, Mapping, Sequence, Callable
 from dataclasses import dataclass, field
-from os.path import exists
 from typing import Any
 
-from syncify.local.file import File
-from syncify.local.track import LocalTrack
-from syncify.processors.base import Filter, MusicBeeProcessor
+from syncify.local.base import LocalItem
+from syncify.local.file import File, PathMapper
+from syncify.processors.base import Filter, MusicBeeProcessor, FilterComposite
 from syncify.processors.compare import Comparer
 from syncify.processors.sort import ItemSorter
 from syncify.shared.core.base import NamedObject
 from syncify.shared.core.enum import Fields
 from syncify.shared.core.misc import Result
 from syncify.shared.logger import SyncifyLogger
-from syncify.shared.types import UnitCollection
-from syncify.shared.utils import to_collection
 
 
 class FilterDefinedList[T: str | NamedObject](Filter[T], Collection[T]):
+
+    __slots__ = ("values",)
 
     @property
     def ready(self):
         return len(self.values) > 0
 
     def __init__(self, values: Collection[T] = (), *_, **__):
+        super().__init__()
         self.values: Collection[T] = values
 
     def __call__(self, values: Collection[T] | None = None, *_, **__) -> Collection[T]:
@@ -55,91 +54,16 @@ class FilterDefinedList[T: str | NamedObject](Filter[T], Collection[T]):
         return item in self.values
 
 
-class FilterPath[T: str | File](FilterDefinedList[T]):
-
-    def __init__(
-            self,
-            values: Collection[T] = (),
-            stem_replacement: str | None = None,
-            possible_stems: UnitCollection[str] = (),
-            existing_paths: Iterable[str] = (),
-            check_existence: bool = True,
-            *_,
-            **__
-    ):
-        super().__init__(values)
-        self.stem_original: str | None = None
-        self.stem_replacement = stem_replacement
-        self.possible_stems = tuple(stem.rstrip("\\/") for stem in to_collection(possible_stems) if stem is not None)
-        self.existing_paths: Mapping[str, str] = {path.casefold(): path for path in existing_paths}
-
-        if not self.values:
-            return
-
-        # determine original_stem from possible_stems using given values
-        for path in self.values:
-            if path is None:
-                continue
-
-            self.stem_original = next((
-                stem for stem in self.possible_stems if path.casefold().startswith(stem.casefold())
-            ), None)
-            if self.stem_original:
-                break
-
-        paths = []
-        for path in self.values:
-            path = self.transform(path, check_existence=check_existence)
-            if path:
-                paths.append(path)
-
-        self.values = paths
-
-    def transform(self, value: T | None, check_existence: bool = False) -> str | None:
-        """
-        Sanitise a file path by:
-            - replacing any paths with ``original_stem`` with ``replacement_stem``
-            - sanitising path separators to match current OS separator
-            - replacing path with case-sensitive path if found in ``existing_paths``
-
-        :param value: Path of :py:class:`File` with a path to sanitise.
-        :param check_existence: Check for the existence of the file path on the file system.
-        :return: Sanitised path if path exists, None if not.
-        """
-        if not value:
-            return
-        path = value.path if isinstance(value, File) else value
-
-        if self.stem_replacement is not None:
-            for stem in self.possible_stems:
-                path = path.replace(stem, self.stem_replacement)
-
-            # sanitise path separators
-            path = path.replace("//", "/").replace("\\\\", "\\")
-            if self.stem_replacement is not None:
-                seps = ("\\", "/") if "/" in self.stem_replacement else ("/", "\\")
-                path = path.replace(*seps)
-
-        path = self.existing_paths.get(path.casefold(), path)
-        if not check_existence or exists(path):
-            return path.casefold()
-
-    def as_dict(self) -> dict[str, Any]:
-        return {
-            "values": self.values,
-            "original_stem": self.stem_original,
-            "replacement_stem": self.stem_replacement,
-            "existing_paths": self.existing_paths,
-        }
-
-
 class FilterComparers[T: str | NamedObject](Filter[T]):
+
+    __slots__ = ("comparers", "match_all")
 
     @property
     def ready(self):
         return len(self.comparers) > 0
 
     def __init__(self, comparers: Collection[Comparer] = (), match_all: bool = True, *_, **__):
+        super().__init__()
         self.comparers: Collection[Comparer] = comparers
         self.match_all: bool = match_all
 
@@ -171,34 +95,9 @@ class FilterComparers[T: str | NamedObject](Filter[T]):
 ###########################################################################
 ## Composites
 ###########################################################################
-class FilterComposite[T](Filter[T], Collection[Filter], metaclass=ABCMeta):
-
-    @property
-    def ready(self):
-        return any(filter_.ready for filter_ in self.filters)
-
-    def __init__(self, *filters: Filter[T], **__):
-        self.filters = filters
-
-    def __iter__(self):
-        def flat_filter_list(fltr: Filter | Collection[Filter]) -> Iterable[Filter]:
-            """
-            Get flat list of all :py:class:`Filter` objects in the given Filter,
-            flattening out any :py:class:`FilterComposite` objects
-            """
-            if isinstance(fltr, FilterComposite):
-                return iter(fltr)
-            return [fltr]
-        return (f for filter_ in self.filters for f in flat_filter_list(filter_))
-
-    def __len__(self):
-        return len(self.filters)
-
-    def __contains__(self, item: Any):
-        return item in self.filters
-
-
 class FilterIncludeExclude[T: Any, U: Filter, V: Filter](FilterComposite[T]):
+
+    __slots__ = ("include", "exclude")
 
     def __init__(self, include: U, exclude: V, *_, **__):
         super().__init__(include, exclude)
@@ -223,9 +122,9 @@ class MatchResult[T: Any](Result):
     """
     Results from :py:class:`FilterMatcher` separated by individual filter results.
 
-    :ivar included: Sequence of LocalTracks that matched include settings.
-    :ivar excluded: Sequence of LocalTracks that matched exclude settings.
-    :ivar compared: Sequence of LocalTracks that matched :py:class:`ItemComparer` settings
+    :ivar included: Objects that matched include settings.
+    :ivar excluded: Objects that matched exclude settings.
+    :ivar compared: Objects that matched :py:class:`Comparer` settings
     """
     included: Collection[T] = field(default=tuple())
     excluded: Collection[T] = field(default=tuple())
@@ -248,42 +147,27 @@ class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](MusicBeePr
         returns all given values on match unless include or exclude are defined and ready.
     """
 
-    __slots__ = ("comparers", "include", "exclude")
+    __slots__ = ("include", "exclude", "comparers")
 
     @classmethod
     def from_xml(
-            cls,
-            xml: Mapping[str, Any],
-            library_folder: str | None = None,
-            other_folders: UnitCollection[str] = (),
-            existing_paths: Iterable[str] = (),
-            check_existence: bool = True,
-            **__
-    ) -> FilterMatcher[T, FilterPath[T], FilterPath[T], FilterComparers[T]]:
+            cls, xml: Mapping[str, Any], path_mapper: PathMapper = PathMapper(), **__
+    ) -> FilterMatcher[T, FilterDefinedList[T], FilterDefinedList[T], FilterComparers[T]]:
         """
         Initialise object from XML playlist.
 
         :param xml: The loaded XML object for this playlist.
-        :param library_folder: Absolute path of the folder containing all tracks.
-        :param other_folders: Absolute paths of other possible library paths.
-            Use to replace path stems from other libraries for the paths in loaded playlists.
-            Useful when managing similar libraries on multiple platforms.
-        :param existing_paths: List of existing paths on the file system.
-            Used when sanitising paths to perform case-sensitive path replacement.
-        :param check_existence: Check for the existence of the file paths on the file system
-            when sanitising the given paths and reject any that don't.
+        :param path_mapper: Optionally, provide a :py:class:`PathMapper` for paths stored in the playlist file.
+            Useful if the playlist file contains relative paths and/or paths for other systems that need to be
+            mapped to absolute, system-specific paths to be loaded and back again when saved.
         """
         source = xml["SmartPlaylist"]["Source"]
 
-        match_all: bool = source["Conditions"]["@CombineMethod"] == "All"
-
-        # tracks to include even if they don't meet match conditions
-        include_str: str = source.get("ExceptionsInclude")
-        include = set(include_str.split("|")) if isinstance(include_str, str) else ()
-
-        # tracks to exclude even if they do meet match conditions
-        exclude_str: str = source.get("Exceptions")
-        exclude = set(exclude_str.split("|")) if isinstance(exclude_str, str) else ()
+        # tracks to include/exclude even if they meet/don't meet match compare conditions
+        include_str: str = source.get("ExceptionsInclude") or ""
+        include = path_mapper.maps(set(include_str.split("|")), check_existence=True)
+        exclude_str: str = source.get("Exceptions") or ""
+        exclude = path_mapper.maps(set(exclude_str.split("|")), check_existence=True)
 
         comparers: Sequence[Comparer] = Comparer.from_xml(xml=xml)
 
@@ -294,36 +178,27 @@ class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](MusicBeePr
             if "contains" in c.condition.casefold() and len(c.expected) == 1 and not c.expected[0]:
                 comparers = ()
 
-        return cls(
-            include=FilterPath(
-                values=include,
-                stem_replacement=library_folder,
-                possible_stems=other_folders,
-                existing_paths=existing_paths,
-                check_existence=check_existence
-            ),
-            exclude=FilterPath(
-                values=exclude,
-                stem_replacement=library_folder,
-                possible_stems=other_folders,
-                existing_paths=existing_paths,
-                check_existence=check_existence
-            ),
-            comparers=FilterComparers(comparers, match_all=match_all),
-        )
+        filter_include = FilterDefinedList(values=[path.casefold() for path in include])
+        filter_exclude = FilterDefinedList(values=[path.casefold() for path in exclude])
+        filter_compare = FilterComparers(comparers, match_all=source["Conditions"]["@CombineMethod"] == "All")
+
+        filter_include.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
+        filter_exclude.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
+
+        return cls(include=filter_include, exclude=filter_exclude, comparers=filter_compare)
 
     def to_xml(
             self,
-            tracks: list[LocalTrack],
-            tracks_original: list[LocalTrack],
-            path_mapper: Callable[[Collection[str]], Collection[str]] = lambda x: x,
+            items: list[LocalItem],
+            original: list[LocalItem],
+            path_mapper: Callable[[Collection[str | File]], Collection[str]] = lambda x: x,
             **__
     ) -> Mapping[str, Any]:
         """
         Export this object's include and exclude filters to a map ready for export to an XML playlist file.
 
-        :param tracks: The tracks to export.
-        :param tracks_original: The original tracks matched from the settings in the original file.
+        :param items: The items to export.
+        :param original: The original items matched from the settings in the original file.
         :param path_mapper: A mapper to apply for paths before formatting to a string value for the XML-like output.
         :return: A map representing the values to be exported to the XML playlist file.
         """
@@ -333,7 +208,7 @@ class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](MusicBeePr
             )
             return {}
 
-        output_path_map: Mapping[str, LocalTrack] = {track.path.casefold(): track for track in tracks}
+        output_path_map: Mapping[str, File] = {item.path.casefold(): item for item in items}
 
         if self.comparers:
             # match again on current conditions to check for differences from original list
@@ -341,12 +216,12 @@ class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](MusicBeePr
             # do not include paths that match any of the conditions in the comparers
 
             # copy the list of tracks as the sorter will modify the list order
-            tracks_original = tracks_original.copy()
+            original = original.copy()
             # get the last played track as reference in case comparer is looking for the playing tracks as reference
-            ItemSorter.sort_by_field(tracks_original, field=Fields.LAST_PLAYED, reverse=True)
+            ItemSorter.sort_by_field(original, field=Fields.LAST_PLAYED, reverse=True)
 
             compared_path_map = {
-                track.path.casefold(): track for track in self.comparers(tracks_original, reference=tracks_original[0])
+                item.path.casefold(): item for item in self.comparers(original, reference=original[0])
             } if self.comparers.ready else {}
 
             # get new include/exclude paths based on the leftovers after matching on comparers
@@ -355,17 +230,14 @@ class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](MusicBeePr
         else:
             compared_path_map = output_path_map
 
-        # get the track objects related to these paths and their actual paths as stored in their objects
-        include_tracks: tuple[LocalTrack | None, ...] = tuple(output_path_map.get(p) for p in self.include)
-        exclude_tracks: tuple[LocalTrack | None, ...] = tuple(compared_path_map.get(p) for p in self.exclude)
-        include_paths: tuple[str, ...] = tuple(track.path for track in include_tracks if track is not None)
-        exclude_paths: tuple[str, ...] = tuple(track.path for track in exclude_tracks if track is not None)
+        include_items = tuple(output_path_map[path] for path in self.include if path in output_path_map)
+        exclude_items = tuple(compared_path_map[path] for path in self.exclude if path in compared_path_map)
 
         xml = {}
-        if len(include_paths) > 0:  # assign include paths to XML object
-            xml["ExceptionsInclude"] = "|".join(path_mapper(include_paths))
-        if len(exclude_paths) > 0:  # assign exclude paths to XML object
-            xml["Exceptions"] = "|".join(path_mapper(exclude_paths))
+        if len(include_items) > 0:  # assign include paths to XML object
+            xml["ExceptionsInclude"] = "|".join(path_mapper(include_items))
+        if len(exclude_items) > 0:  # assign exclude paths to XML object
+            xml["Exceptions"] = "|".join(path_mapper(exclude_items))
 
         return xml
 

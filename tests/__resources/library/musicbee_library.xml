@@ -5,7 +5,7 @@
 	<key>Major Version</key><integer>3</integer>
 	<key>Minor Version</key><integer>5</integer>
 	<key>Application Version</key><string>3.5.8447.35892</string>
-	<key>Music Folder</key><string>file://localhost/D:/Coding/syncify/tests/__resources</string>
+	<key>Music Folder</key><string>file://localhost/{path_resources}</string>
 	<key>Library Persistent ID</key><string>3D76B2A6FD362901</string>
 	<key>Tracks</key>
 	<dict>
@@ -38,7 +38,7 @@
 			<key>Play Date UTC</key><date>2023-07-20T06:12:26Z</date>
 			<key>Play Count</key><integer>5</integer>
 			<key>Track Type</key><string>File</string>
-			<key>Location</key><string>file://localhost/D:/Coding/syncify/tests/__resources/track/noise_mp3.mp3</string>
+			<key>Location</key><string>file://localhost/{path_resources}/track/noise_mp3.mp3</string>
 		</dict>
 		<key>2</key>
 		<dict>
@@ -70,7 +70,7 @@
 			<key>Play Date UTC</key><date>2023-09-02T08:21:22Z</date>
 			<key>Play Count</key><integer>10</integer>
 			<key>Track Type</key><string>File</string>
-			<key>Location</key><string>file://localhost/D:/Coding/syncify/tests/__resources/track/noise_flac.flac</string>
+			<key>Location</key><string>file://localhost/{path_resources}/track/noise_flac.flac</string>
 		</dict>
 		<key>3</key>
 		<dict>
@@ -102,7 +102,7 @@
 			<key>Play Date UTC</key><date>2023-09-15T22:10:04Z</date>
 			<key>Play Count</key><integer>12</integer>
 			<key>Track Type</key><string>File</string>
-			<key>Location</key><string>file://localhost/D:/Coding/syncify/tests/__resources/playlist/exclude_me.flac</string>
+			<key>Location</key><string>file://localhost/{path_resources}/playlist/exclude_me.flac</string>
 		</dict>
 		<key>4</key>
 		<dict>
@@ -133,7 +133,7 @@
 			<key>Play Date UTC</key><date>2023-11-01T15:11:11Z</date>
 			<key>Play Count</key><integer>20</integer>
 			<key>Track Type</key><string>File</string>
-			<key>Location</key><string>file://localhost/D:/Coding/syncify/tests/__resources/track/noise_m4a.m4a</string>
+			<key>Location</key><string>file://localhost/{path_resources}/track/noise_m4a.m4a</string>
 		</dict>
 		<key>5</key>
 		<dict>
@@ -164,7 +164,7 @@
 			<key>Play Date UTC</key><date>2023-11-09T11:22:33Z</date>
 			<key>Play Count</key><integer>18</integer>
 			<key>Track Type</key><string>File</string>
-			<key>Location</key><string>file://localhost/D:/Coding/syncify/tests/__resources/playlist/exclude_me_2.mp3</string>
+			<key>Location</key><string>file://localhost/{path_resources}/playlist/exclude_me_2.mp3</string>
 		</dict>
 		<key>6</key>
 		<dict>
@@ -195,7 +195,7 @@
 			<key>Play Date UTC</key><date>2023-05-30T22:57:24Z</date>
 			<key>Play Count</key><integer>200</integer>
 			<key>Track Type</key><string>File</string>
-			<key>Location</key><string>file://localhost/D:/Coding/syncify/tests/__resources/track/noise_wma.wma</string>
+			<key>Location</key><string>file://localhost/{path_resources}/track/noise_wma.wma</string>
 		</dict>
 	</dict>
 	<key>Playlists</key>

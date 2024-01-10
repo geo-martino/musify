@@ -25,12 +25,12 @@ class TestSpotifyLibrary(RemoteLibraryTester):
     def library_unloaded(self, api: SpotifyAPI, api_mock: SpotifyMock) -> SpotifyLibrary:
         """Yields an unloaded Library object to be tested as pytest.fixture"""
         include = FilterDefinedList([pl["name"] for pl in sample(api_mock.user_playlists, k=10)])
-        return SpotifyLibrary(api=api, playlist_filter=include, use_cache=False)
+        return SpotifyLibrary(api=api, use_cache=False, playlist_filter=include)
 
     @pytest.fixture(scope="class")
     def _library(self, api: SpotifyAPI, api_mock: SpotifyMock) -> SpotifyLibrary:
         include = FilterDefinedList([pl["name"] for pl in sample(api_mock.user_playlists, k=10)])
-        library = SpotifyLibrary(api=api, playlist_filter=include, use_cache=False)
+        library = SpotifyLibrary(api=api, use_cache=False, playlist_filter=include)
         library.load()
         return library
 
@@ -58,11 +58,11 @@ class TestSpotifyLibrary(RemoteLibraryTester):
     ## Load tests
     ###########################################################################
     def test_load_tracks(self, library_unloaded: SpotifyLibrary, api_mock: SpotifyMock):
-        library_unloaded.load_saved_tracks()
+        library_unloaded.load_tracks()
         assert len(library_unloaded.tracks) == len(api_mock.user_tracks)
 
         # does not add duplicates to the loaded list
-        library_unloaded.load_saved_tracks()
+        library_unloaded.load_tracks()
         assert len(library_unloaded.tracks) == len(api_mock.user_tracks)
 
     def test_load_saved_albums(self, library_unloaded: SpotifyLibrary, api_mock: SpotifyMock):
@@ -216,6 +216,6 @@ class TestSpotifyLibrary(RemoteLibraryTester):
         req_urls = set(req.url.split("?")[0] for req in api_mock.request_history)
         assert all(album.url + "/tracks" in req_urls for artist in library.artists for album in artist.albums)
 
-    @pytest.mark.skip  # TODO: write merge_playlists tests
+    @pytest.mark.skip(reason="# TODO: write merge_playlists tests")
     def test_merge_playlists(self, library: SpotifyLibrary):
         pass

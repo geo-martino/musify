@@ -167,7 +167,7 @@ class TestSpotifyTrack(ItemTester):
             else original_response["duration_ms"]["totalMilliseconds"]
         ) / 1000
         assert track.length == original_duration
-        new_duration = track.response["duration_ms"] + 2000
+        new_duration = original_duration + 2000
         track.response["duration_ms"] = new_duration
         assert track.length == new_duration / 1000
 

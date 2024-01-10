@@ -65,7 +65,7 @@
     
     # ...or you may also just load distinct sections of your library as follows
     library.load_playlists()
-    library.load_saved_tracks()
+    library.load_tracks()
     library.load_saved_albums()
     library.load_saved_artists()
    

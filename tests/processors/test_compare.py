@@ -221,6 +221,6 @@ class TestComparer(PrettyPrinterTester):
         assert comparer.condition == "contains"
         assert comparer._processor_method == comparer._contains
 
-    @pytest.mark.skip  # TODO: add test for to_xml
+    @pytest.mark.skip(reason="# TODO: add test for to_xml")
     def test_to_xml(self):
         pass

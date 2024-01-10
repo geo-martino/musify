@@ -8,6 +8,7 @@ from copy import deepcopy
 from typing import Any, Self, Iterable
 
 from syncify.processors.base import Filter
+from syncify.processors.filter import FilterDefinedList
 from syncify.shared.core.base import Item
 from syncify.shared.core.collection import ItemCollection
 from syncify.shared.exception import SyncifyKeyError, SyncifyTypeError
@@ -359,14 +360,14 @@ class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
         self.logger: SyncifyLogger = logging.getLogger(__name__)
 
     def get_filtered_playlists(
-            self, playlist_filter: Filter[str] | None = None, **tag_filter: dict[str, tuple[str, ...]]
+            self, playlist_filter: Collection[str] | Filter[str] = (), **tag_filter: dict[str, tuple[str, ...]]
     ) -> dict[str, Playlist[T]]:
         """
         Returns a filtered set of playlists in this library.
         The playlists returned are deep copies of the playlists in the library.
 
-        :param playlist_filter: An optional :py:class:`Filter` to apply when loading playlists.
-            Playlist names will be passed to this filter to limit which playlists are loaded.
+        :param playlist_filter: An optional :py:class:`Filter` to apply or collection of playlist names to include when
+            loading playlists. Playlist names will be passed to this filter to limit which playlists are loaded.
         :param tag_filter: Provide optional kwargs of the tags and values of items to filter out of every playlist.
             Parse a tag name as a parameter, any item matching the values given for this tag will be filtered out.
             NOTE: Only `string` value types are currently supported.
@@ -376,16 +377,16 @@ class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
             f"\33[1;95m ->\33[1;97m Filtering playlists and tracks from {len(self.playlists)} playlists\n"
             f"\33[0;90m    Filter out tags: {tag_filter} \33[0m"
         )
-        max_width = get_max_width(self.playlists)
+
+        if not isinstance(playlist_filter, Filter):
+            playlist_filter = FilterDefinedList(playlist_filter)
         pl_filtered = [
             pl for name, pl in self.playlists.items() if not playlist_filter or name in playlist_filter(self.playlists)
         ]
-        bar: Iterable[Playlist[T]] = self.logger.get_progress_bar(
-            iterable=pl_filtered, desc="Filtering playlists", unit="playlists"
-        )
 
+        max_width = get_max_width(self.playlists)
         filtered: dict[str, Playlist[T]] = {}
-        for pl in bar:
+        for pl in self.logger.get_progress_bar(iterable=pl_filtered, desc="Filtering playlists", unit="playlists"):
             filtered[pl.name] = deepcopy(pl)
             for track in pl.tracks:
                 for tag, values in tag_filter.items():
@@ -404,6 +405,37 @@ class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
 
         self.logger.print()
         return filtered
+
+    @abstractmethod
+    def load(self):
+        """Implementations of this function should load all data for this library and log results."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def load_tracks(self) -> None:
+        """
+        Implementations of this function should load all tracks for this library
+        and store them within the library object to be retrieved with property ``tracks``.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def log_tracks(self) -> None:
+        """Log stats on currently loaded tracks"""
+        raise NotImplementedError
+
+    @abstractmethod
+    def load_playlists(self) -> None:
+        """
+        Implementations of this function should load all playlists for this library
+        and store them within the library object to be retrieved with property ``playlists``.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def log_playlists(self) -> None:
+        """Log stats on currently loaded playlists"""
+        raise NotImplementedError
 
     @abstractmethod
     def merge_playlists(self, playlists: Library[T] | Collection[Playlist[T]] | Mapping[Any, Playlist[T]]) -> None:

@@ -5,14 +5,14 @@ from random import sample, shuffle
 import pytest
 import xmltodict
 
+from syncify.local.file import PathStemMapper, PathMapper
 from syncify.local.track import LocalTrack
 from syncify.local.track.field import LocalTrackField
 from syncify.processors.compare import Comparer
-from syncify.processors.filter import FilterDefinedList, FilterPath, FilterComparers, FilterMatcher, \
-    FilterIncludeExclude
+from syncify.processors.filter import FilterDefinedList, FilterComparers, FilterMatcher, FilterIncludeExclude
 from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra, path_playlist_resources
 from tests.local.track.utils import random_tracks
-from tests.local.utils import path_track_wma, path_track_flac, path_track_mp3, path_track_resources
+from tests.local.utils import path_track_all, path_track_wma, path_track_flac, path_track_mp3
 from tests.shared.core.misc import PrettyPrinterTester
 from tests.utils import random_str, path_resources
 
@@ -37,76 +37,6 @@ class TestFilterDefinedList(FilterTester):
         shuffle(expected_shuffled)
         filter_ = FilterDefinedList(values=values)
         assert filter_(values[:10]) == values[:10]
-
-
-class TestFilterPath(FilterTester):
-
-    @pytest.fixture
-    def obj(self) -> FilterPath:
-        return FilterPath(
-            values=[f"D:\\exclude\\{random_str(30, 50)}.MP3" for _ in range(20)],
-            stem_replacement="/Path/to/LIBRARY/on/linux",
-            possible_stems=["../", "D:\\paTh\\on\\Windows"],
-            check_existence=False
-        )
-
-    def test_init_existence_check(self):
-        # none of the random file paths exist, check existence should return empty lists
-        replacement_stem = "/Path/to/LIBRARY/on/linux"
-        possible_stems = ["../", "D:\\paTh\\on\\Windows"]
-        paths = [f"{possible_stems[1]}\\include\\{random_str(30, 50)}.MP3" for _ in range(20)]
-
-        assert not FilterPath(
-            paths, stem_replacement=replacement_stem, possible_stems=possible_stems, check_existence=True
-        ).ready
-
-    def test_init_stem_replacement(self):
-        replacement_stem = "/Path/to/LIBRARY/on/linux"
-        possible_stems = ["../", "D:\\paTh\\on\\Windows"]
-
-        paths_0 = [f"{possible_stems[1]}\\include\\{random_str(30, 50)}.MP3" for _ in range(20)]
-        filter_0 = FilterPath(
-            paths_0, stem_replacement=replacement_stem, possible_stems=possible_stems, check_existence=False
-        )
-
-        assert filter_0.stem_original == possible_stems[1].rstrip("/\\")
-        assert filter_0.values == [
-            path.replace(possible_stems[1], replacement_stem).replace("\\", "/").casefold() for path in paths_0
-        ]
-
-        paths_1 = [f"{possible_stems[1]}\\include\\{random_str(30, 50)}.MP3" for _ in range(20)]
-        filter_1 = FilterPath(
-            paths_1, stem_replacement=replacement_stem, possible_stems=possible_stems, check_existence=False
-        )
-
-        assert filter_1.stem_original == possible_stems[1].rstrip("/\\")
-        assert filter_1.values == [
-            path.replace(possible_stems[1], replacement_stem).replace("\\", "/").casefold() for path in paths_1
-        ]
-
-    def test_init_replaces_with_existing_paths(self):
-        filter_ = FilterPath(
-            values=(path_track_flac.upper(), path_track_mp3.upper()),
-            stem_replacement=path_track_resources,
-            existing_paths=(path_track_flac, path_track_mp3, path_track_wma),
-            check_existence=True
-        )
-        assert filter_.values == [path_track_flac.casefold(), path_track_mp3.casefold()]
-
-    def test_filter(self):
-        replacement_stem = "/Path/to/LIBRARY/on/linux"
-        possible_stems = ["../", "D:\\paTh\\on\\Windows"]
-
-        paths = [f"{possible_stems[1]}\\include\\{random_str(30, 50)}.MP3" for _ in range(20)]
-        filter_ = FilterPath(
-            paths, stem_replacement=replacement_stem, possible_stems=possible_stems, check_existence=False
-        )
-
-        expected = [path.replace(possible_stems[1], possible_stems[0]).replace("\\", "/") for path in paths[:10]]
-        extra = [f"{possible_stems[0]}/exclude/{random_str(30, 50)}.MP3" for _ in range(13)]
-        expected_shuffled = expected.copy()
-        shuffle(expected_shuffled)
-        assert filter_(expected_shuffled + extra) == expected
 
 
 class TestFilterComparers(FilterTester):
@@ -171,15 +101,11 @@ class TestFilterMatcher(FilterTester):
     def obj(self, comparers: list[Comparer]) -> FilterMatcher:
         return FilterMatcher(
             comparers=FilterComparers(*comparers),
-            include=FilterPath(
-                values=[f"{self.library_folder}/include/{random_str(30, 50)}.MP3" for _ in range(20)],
-                stem_replacement=self.library_folder,
-                check_existence=False
+            include=FilterDefinedList(
+                [f"{self.library_folder}/include/{random_str(30, 50)}.MP3" for _ in range(20)],
             ),
-            exclude=FilterPath(
-                values=[f"{self.library_folder}/exclude/{random_str(30, 50)}.MP3" for _ in range(20)],
-                stem_replacement=self.library_folder,
-                check_existence=False
+            exclude=FilterDefinedList(
+                [f"{self.library_folder}/exclude/{random_str(30, 50)}.MP3" for _ in range(20)],
             ),
         )
 
@@ -230,17 +156,28 @@ class TestFilterMatcher(FilterTester):
             track._path = exclude_paths[i]
         return tracks_exclude
 
+    @pytest.fixture(scope="class")
+    def path_mapper(self) -> PathStemMapper:
+        """Yields a :py:class:`PathMapper` that can map paths from the test playlist files"""
+        yield PathStemMapper(stem_map={"../": path_resources}, available_paths=path_track_all)
+
     def test_filter_empty(self, tracks_include: list[LocalTrack], tracks_exclude: list[LocalTrack]):
         assert FilterMatcher().process(values=tracks_include) == tracks_include
         assert FilterMatcher().process(values=tracks_exclude) == tracks_exclude
 
     def test_filter_no_comparers(
-            self, tracks: list[LocalTrack], tracks_include: list[LocalTrack], tracks_exclude: list[LocalTrack],
+            self,
+            tracks: list[LocalTrack],
+            tracks_include: list[LocalTrack],
+            tracks_exclude: list[LocalTrack],
+            path_mapper: PathMapper
     ):
         filter_ = FilterMatcher(
-            include=FilterPath(tracks_include, check_existence=False),
-            exclude=FilterPath(tracks_exclude, check_existence=False),
+            include=FilterDefinedList([track.path.casefold() for track in tracks_include]),
+            exclude=FilterDefinedList([track.path.casefold() for track in tracks_exclude]),
         )
+        filter_.include.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
+        filter_.exclude.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
         tracks_include_reduced = [track for track in tracks_include if track not in tracks_exclude]
 
         assert filter_(values=tracks) == tracks_include_reduced
@@ -253,12 +190,15 @@ class TestFilterMatcher(FilterTester):
             tracks_album: list[LocalTrack],
             tracks_include: list[LocalTrack],
             tracks_exclude: list[LocalTrack],
+            path_mapper: PathMapper,
     ):
         filter_ = FilterMatcher(
             comparers=FilterComparers(comparers, match_all=False),
-            include=FilterPath(tracks_include, check_existence=False),
-            exclude=FilterPath(tracks_exclude, check_existence=False),
+            include=FilterDefinedList([track.path.casefold() for track in tracks_include]),
+            exclude=FilterDefinedList([track.path.casefold() for track in tracks_exclude]),
         )
+        filter_.include.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
+        filter_.exclude.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
         tracks_album_reduced = [track for track in tracks_album if track not in tracks_exclude]
         tracks_include_reduced = [track for track in tracks_include if track not in tracks_exclude]
 
@@ -273,12 +213,15 @@ class TestFilterMatcher(FilterTester):
             tracks_artist: list[LocalTrack],
             tracks_include: list[LocalTrack],
             tracks_exclude: list[LocalTrack],
+            path_mapper: PathMapper,
     ):
         filter_ = FilterMatcher(
             comparers=FilterComparers(comparers, match_all=True),
-            include=FilterPath(tracks_include, check_existence=False),
-            exclude=FilterPath(tracks_exclude, check_existence=False),
+            include=FilterDefinedList([track.path.casefold() for track in tracks_include]),
+            exclude=FilterDefinedList([track.path.casefold() for track in tracks_exclude]),
         )
+        filter_.include.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
+        filter_.exclude.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
         tracks_artist_reduced = [track for track in tracks_artist if track not in tracks_exclude]
         tracks_include_reduced = [track for track in tracks_include if track not in tracks_exclude]
 
@@ -288,48 +231,32 @@ class TestFilterMatcher(FilterTester):
     ###########################################################################
     ## XML I/O
     ###########################################################################
-    def test_from_xml_1(self):
+    def test_from_xml_1(self, path_mapper: PathStemMapper):
         with open(path_playlist_xautopf_bp, "r", encoding="utf-8") as f:
             xml = xmltodict.parse(f.read())
-        filter_: FilterMatcher = FilterMatcher.from_xml(
-            xml=xml, library_folder=path_resources, other_folders="../", check_existence=False
-        )
-
-        include: FilterPath = filter_.include
-        exclude: FilterPath = filter_.exclude
+        filter_: FilterMatcher = FilterMatcher.from_xml(xml=xml, path_mapper=path_mapper)
 
         assert len(filter_.comparers.comparers) == 3  # loaded Comparer settings are tested in class-specific tests
         assert filter_.comparers.match_all
-        assert include.stem_replacement == path_resources.rstrip("\\/")
-        assert include.stem_original == ".."
-        assert exclude.stem_replacement == path_resources.rstrip("\\/")
-        assert exclude.stem_original == ".."
-        assert set(include) == {path_track_wma.casefold(), path_track_mp3.casefold(), path_track_flac.casefold()}
-        assert set(exclude) == {
+        assert set(filter_.include) == {
+            path_track_wma.casefold(), path_track_mp3.casefold(), path_track_flac.casefold()
+        }
+        assert set(filter_.exclude) == {
             join(path_playlist_resources,  "exclude_me_2.mp3").casefold(),
             path_track_mp3.casefold(),
             join(path_playlist_resources, "exclude_me.flac").casefold(),
         }
 
-    def test_from_xml_2(self):
+    def test_from_xml_2(self, path_mapper: PathStemMapper):
         with open(path_playlist_xautopf_ra, "r", encoding="utf-8") as f:
             xml = xmltodict.parse(f.read())
-        filter_: FilterMatcher = FilterMatcher.from_xml(
-            xml=xml, library_folder=path_resources, other_folders="../", check_existence=False
-        )
-
-        include: FilterPath = filter_.include
-        exclude: FilterPath = filter_.exclude
+        filter_: FilterMatcher = FilterMatcher.from_xml(xml=xml, path_mapper=path_mapper)
 
         assert len(filter_.comparers.comparers) == 0
         assert not filter_.comparers.match_all
-        assert include.stem_replacement == path_resources.rstrip("\\/")
-        assert include.stem_original is None
-        assert exclude.stem_replacement == path_resources.rstrip("\\/")
-        assert exclude.stem_original is None
-        assert len(include) == 0
-        assert len(exclude) == 0
+        assert len(filter_.include) == 0
+        assert len(filter_.exclude) == 0
 
-    @pytest.mark.skip  # TODO: add test for to_xml
+    @pytest.mark.skip(reason="# TODO: add test for to_xml")
     def test_to_xml(self):
         pass

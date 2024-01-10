@@ -1,17 +1,16 @@
 import sys
 from os.path import join, splitext, basename, exists
 from random import randrange
-from time import sleep
 
 import pytest
 
-from tests.local.track.utils import random_track, random_tracks
-from tests.local.playlist.testers import LocalPlaylistTester
 from syncify.local.exception import InvalidFileType
+from syncify.local.file import PathMapper, PathStemMapper
 from syncify.local.playlist import M3U
 from syncify.local.track import LocalTrack
-from tests.local.playlist.utils import path_playlist_m3u, path_resources
-from tests.local.utils import path_track_all
+from tests.local.playlist.testers import LocalPlaylistTester
+from tests.local.playlist.utils import path_playlist_m3u
+from tests.local.track.utils import random_track, random_tracks
 from tests.utils import path_txt
 
 
@@ -22,7 +21,7 @@ class TestM3U(LocalPlaylistTester):
         # needed to ensure __setitem__ check passes
         tracks = random_tracks(randrange(5, 20))
         tracks.append(random_track(cls=tracks[0].__class__))
-        playlist = M3U(path=join(tmp_path, "does_not_exist.m3u"), tracks=tracks, check_existence=False)
+        playlist = M3U(path=join(tmp_path, "does_not_exist.m3u"), tracks=tracks)
         return playlist
 
     @pytest.fixture(scope="class")
@@ -61,16 +60,14 @@ class TestM3U(LocalPlaylistTester):
         assert pl.path == path_fake
         assert pl.tracks == tracks_random
 
-        pl.load(tracks)
-        assert pl.tracks == tracks
+        pl.load(tracks + tracks_random[:4])
+        assert pl.tracks == tracks_random[:4]
 
-    def test_load_file_with_no_tracks(self, tracks_actual: list[LocalTrack], tracks_limited: list[LocalTrack]):
-        pl = M3U(
-            path=path_playlist_m3u,
-            library_folder=path_resources,
-            other_folders="../",
-            available_track_paths=path_track_all,
-        )
+    def test_load_file_with_no_tracks(
+            self, tracks_actual: list[LocalTrack], tracks_limited: list[LocalTrack], path_mapper: PathMapper
+    ):
+        pl = M3U(path=path_playlist_m3u, path_mapper=path_mapper)
+
         assert pl.path == path_playlist_m3u
         assert pl.tracks == tracks_actual
 
@@ -82,14 +79,11 @@ class TestM3U(LocalPlaylistTester):
         pl.load()
         assert pl.tracks == tracks_actual
 
-    def test_load_file_with_tracks(self, tracks_actual: list[LocalTrack], tracks_limited: list[LocalTrack]):
-        pl = M3U(
-            path=path_playlist_m3u,
-            tracks=tracks_limited,
-            library_folder=path_resources,
-            other_folders="../",
-            available_track_paths=path_track_all,
-        )
+    def test_load_file_with_tracks(
+            self, tracks_actual: list[LocalTrack], tracks_limited: list[LocalTrack], path_mapper: PathMapper
+    ):
+        pl = M3U(path=path_playlist_m3u, tracks=tracks_limited, path_mapper=path_mapper)
+
         assert pl.path == path_playlist_m3u
         assert pl.tracks == [track for track in tracks_limited if track in tracks_actual]
 
@@ -116,12 +110,14 @@ class TestM3U(LocalPlaylistTester):
 
         # ...save these loaded tracks as a dry run - no output
         result = pl.save(dry_run=True)
+
         assert result.start == 0
         assert result.added == len(tracks_random)
         assert result.removed == 0
         assert result.unchanged == 0
         assert result.difference == len(tracks_random)
         assert result.final == len(tracks_random)
+
         assert not exists(path_new)
         assert pl.date_modified is None
         assert pl.date_created is None
@@ -140,6 +136,7 @@ class TestM3U(LocalPlaylistTester):
         assert result.difference == len(tracks_random)
         assert result.final == len(tracks_random)
 
+        assert exists(path_new)
         assert pl.date_modified is not None
         assert pl.date_created is not None
 
@@ -172,13 +169,22 @@ class TestM3U(LocalPlaylistTester):
         assert paths == [track.path for track in pl.tracks]
 
     @pytest.mark.parametrize("path", [path_playlist_m3u], indirect=["path"])
-    def test_save_existing_file(self, tracks_actual: list[LocalTrack], path: str, tmp_path: str):
-        pl = M3U(
-            path=path,
-            library_folder=path_resources,
-            other_folders="../",
-            available_track_paths=path_track_all,
-        )
+    def test_save_existing_file(
+            self, tracks_actual: list[LocalTrack], path: str, path_mapper: PathStemMapper, tmp_path: str
+    ):
+        path_prefix = list(path_mapper.stem_map)[0]
+
+        # ensure all paths in the file have relative paths and will therefore undergo path mapping
+        with open(path, "r") as f:
+            for line in f:
+                assert line.startswith(path_prefix)
+
+        # ensure all loaded track path have absolute paths and will therefore undergo path mapping
+        for track in tracks_actual:
+            assert not track.path.startswith(path_prefix)
+
+        pl = M3U(path=path, path_mapper=path_mapper)
+
         assert pl.path == path
         assert pl.tracks == tracks_actual
         original_dt_modified = pl.date_modified
@@ -201,10 +207,16 @@ class TestM3U(LocalPlaylistTester):
             assert pl.date_created == original_dt_created
         new_dt_modified = pl.date_modified
 
+        # assert file has reported path count and paths in the file have been mapped to relative paths
+        with open(path, "r") as f:
+            lines = [line.strip() for line in f]
+        assert len(lines) == result.final
+        for line in lines:
+            assert line.startswith(path_prefix)
+
         # change the name and save to new file
         pl.name = "New Playlist"
         assert pl.path == join(tmp_path, "New Playlist" + pl.ext)
-        sleep(0.01)
         pl.save(dry_run=False)
 
         assert pl.date_modified > new_dt_modified
@@ -212,4 +224,4 @@ class TestM3U(LocalPlaylistTester):
 
         with open(pl.path, 'r') as f:
             paths = [line.strip() for line in f]
-        assert paths == pl._prepare_paths_for_output([track.path for track in pl.tracks])
+        assert paths == path_mapper.unmaps(pl.tracks, check_existence=False)

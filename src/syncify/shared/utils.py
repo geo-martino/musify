@@ -1,7 +1,6 @@
 import re
 from collections import Counter
 from collections.abc import Iterable, Collection, MutableSequence, Mapping, MutableMapping
-from os.path import sep
 from typing import Any
 
 from syncify.shared.exception import SyncifyTypeError, SafeDict
@@ -68,13 +67,6 @@ def align_and_truncate(value: Any, max_width: int = 0, right_align: bool = False
         return value
     truncated = str(value)[:(max_width - 3)] + "..." if not right_align else "..." + str(value)[-(max_width - 3):]
     return f"{value if len(str(value)) < max_width else truncated:<{max_width}}"
-
-
-def correct_platform_separators(path: str | None) -> str | None:
-    """Correct separators in the given ``path`` to match those used by the current platform"""
-    if path is None:
-        return
-    return path.replace("/", sep) if sep == "\\" else path.replace("\\", "/")
 
 
 ###########################################################################

@@ -16,8 +16,8 @@ from typing import Any, Self, get_args
 import yaml
 
 from syncify import PACKAGE_ROOT, MODULE_ROOT
-from syncify.local.collection import LocalCollection
 from syncify.local.exception import InvalidFileType, FileDoesNotExistError
+from syncify.local.file import PathStemMapper
 from syncify.local.library import MusicBee, LocalLibrary
 from syncify.local.track.field import LocalTrackField
 from syncify.processors.compare import Comparer
@@ -316,9 +316,7 @@ class ConfigFilter[T: str | NamedObject](BaseConfig, FilterComparers[T]):
         self.match_all = self._file.pop("match_all", self.match_all)
         self.comparers = tuple(Comparer(condition=cond, expected=exp) for cond, exp in self._file.items())
 
-    @staticmethod
-    def transform(value: T) -> T:
-        return value.name if isinstance(value, NamedObject) else value
+        self.transform = lambda value: value.name if isinstance(value, NamedObject) else value
 
 
 class ConfigPlaylists(BaseConfig):
@@ -340,7 +338,7 @@ class ConfigPlaylists(BaseConfig):
 ###########################################################################
 ## Local
 ###########################################################################
-class ConfigLocal(ConfigLibrary):
+class ConfigLocalBase(ConfigLibrary, metaclass=ABCMeta):
     """
     Set the settings for the local functionality of the program from a config file.
     See :py:class:`Config` for more documentation regarding operation.
@@ -357,31 +355,20 @@ class ConfigLocal(ConfigLibrary):
         super().__init__(settings=settings)
         self._defaults = _get_default_args(LocalLibrary)
 
-        self._library_folder: str | None = None
-        self._playlist_folder: str | None = None
-        self._other_folders: tuple[str, ...] | None = None
+        self._stems: dict[str, str] | None = None
         self._remote_wrangler: RemoteDataWrangler | None = self._defaults["remote_wrangler"]
 
         self.playlists = ConfigPlaylists(settings=self._file)
         self.update = self.ConfigUpdateTags(settings=self._file)
 
     @property
-    def source(self):
-        return LocalLibrary.source
+    @abstractmethod
+    def library(self) -> LocalLibrary:
+        raise NotImplementedError
 
     @property
-    def library(self) -> LocalLibrary:
-        if self._library is not None and isinstance(self._library, LocalLibrary):
-            return self._library
-
-        self._library = LocalLibrary(
-            library_folder=self.library_folder,
-            playlist_folder=self.playlist_folder,
-            playlist_filter=self.playlists.filter,
-            other_folders=self.other_folders,
-            remote_wrangler=self.remote_wrangler
-        )
-        return self._library
+    def source(self):
+        return LocalLibrary.source
 
     @property
     def remote_wrangler(self) -> RemoteDataWrangler:
@@ -402,64 +389,16 @@ class ConfigLocal(ConfigLibrary):
         return self._file.get("paths", {})
 
     @property
-    def library_folder(self) -> str:
-        """`REQUIRED` | The path of the local library folder"""
-        if self._library_folder is not None:
-            return self._library_folder
+    def stems(self) -> dict[str, str]:
+        """`DEFAULT = {}` | The mapped paths of other folders to use for replacement when processing local libraries"""
+        if self._stems is not None:
+            return self._stems
 
-        if isinstance(self._paths.get("library"), str):
-            self._library_folder = self._paths["library"]
-            return self._library_folder
-        elif not isinstance(self._paths.get("library"), dict):
-            raise ConfigError("Config not found", key=["local", "paths", "library"], value=self._paths)
-
-        # assume platform sub-keys
-        value = self._paths["library"].get(self._platform_key)
-        if not value:
-            raise ConfigError(
-                "Library folder for the current platform not given",
-                key=["local", "paths", "library", self._platform_key],
-                value=self._paths["library"]
-            )
-
-        self._library_folder = value
-        return self._library_folder
-
-    @property
-    def playlist_folder(self) -> str:
-        """`DEFAULT = 'Playlists'` | The path of the playlist folder."""
-        if self._playlist_folder is not None:
-            return self._playlist_folder
-        self._playlist_folder = self._paths.get("playlists", self._defaults["playlist_folder"])
-        return self._playlist_folder
-
-    @property
-    def other_folders(self) -> tuple[str, ...]:
-        """`DEFAULT = ()` | The paths of other folder to use for replacement when processing local libraries"""
-        if self._other_folders is not None:
-            return self._other_folders
-
-        other_folders = to_collection(self._paths.get("other"), list) or []
-        if isinstance(self._paths.get("library"), Mapping):
-            other_folders.extend(
-                {path for key, path in self._paths["library"].items() if path and key != self._platform_key}
-            )
-
-        self._other_folders = tuple(other_folders) or self._defaults["other_folders"]
-        return self._other_folders
+        self._stems = self._paths.get("map") or {}
+        return self._stems
 
     def as_dict(self) -> dict[str, Any]:
-        try:
-            library_folder = self.library_folder
-        except ConfigError:
-            library_folder = None
-
-        return {
-            "library_folder": library_folder,
-            "playlist_folder": self.playlist_folder,
-            "other_folders": self.other_folders,
-            "update": self.update,
-        } | super().as_dict()
+        return {"stems": self.stems, "update": self.update} | super().as_dict()
 
     class ConfigUpdateTags(BaseConfig):
         """
@@ -471,7 +410,7 @@ class ConfigLocal(ConfigLibrary):
 
         def __init__(self, settings: dict[Any, Any]):
             super().__init__(settings=settings, key="update")
-            self._defaults = _get_default_args(LocalCollection.save_tracks)
+            self._defaults = _get_default_args(LocalLibrary.save_tracks)
 
             self._tags: tuple[LocalTrackField, ...] | None = None
             self._replace: bool | None = None
@@ -503,7 +442,79 @@ class ConfigLocal(ConfigLibrary):
             }
 
 
-class ConfigMusicBee(ConfigLocal):
+class ConfigLocalLibrary(ConfigLocalBase):
+    """
+    Set the settings for the local functionality of the program for a generic LocalLibrary from a config file.
+    See :py:class:`Config` for more documentation regarding operation.
+
+    :param settings: The loaded config from the config file.
+    """
+
+    def __init__(self, settings: dict[Any, Any]):
+        super().__init__(settings=settings)
+        self._defaults = _get_default_args(LocalLibrary)
+
+        self._library_folders: tuple[str, ...] | None = None
+        self._playlist_folder: str | None = None
+
+    @property
+    def library(self) -> LocalLibrary:
+        if self._library is not None and isinstance(self._library, LocalLibrary):
+            return self._library
+
+        self._library = LocalLibrary(
+            library_folders=self.library_folders,
+            playlist_folder=self.playlist_folder,
+            playlist_filter=self.playlists.filter,
+            path_mapper=PathStemMapper(stem_map=self.stems),
+            remote_wrangler=self.remote_wrangler
+        )
+        return self._library
+
+    @property
+    def library_folders(self) -> tuple[str, ...]:
+        """`REQUIRED` | The path of the local library folder"""
+        if self._library_folders is not None:
+            return self._library_folders
+
+        if isinstance(self._paths.get("library"), (str, list)):
+            folder = self._paths["library"]
+        elif isinstance(self._paths.get("library"), dict):  # assume platform sub-keys
+            folder = self._paths["library"].get(self._platform_key)
+            self.stems.update(
+                {path: folder for key, path in self._paths["library"].items() if path and key != self._platform_key}
+            )
+        else:
+            raise ConfigError("Config not found", key=["local", "paths", "library"], value=self._paths)
+
+        if not folder:
+            raise ConfigError(
+                "Library folder for the current platform not given",
+                key=["local", "paths", "library", self._platform_key],
+                value=self._paths["library"]
+            )
+
+        self._library_folders = to_collection(folder)
+        return self._library_folders
+
+    @property
+    def playlist_folder(self) -> str:
+        """`DEFAULT = 'Playlists'` | The path of the playlist folder."""
+        if self._playlist_folder is not None:
+            return self._playlist_folder
+        self._playlist_folder = self._paths.get("playlists", self._defaults["playlist_folder"])
+        return self._playlist_folder
+
+    def as_dict(self) -> dict[str, Any]:
+        try:
+            library_folders = self.library_folders
+        except ConfigError:
+            library_folders = None
+
+        return {"library_folders": library_folders, "playlist_folder": self.playlist_folder} | super().as_dict()
+
+
+class ConfigMusicBee(ConfigLocalBase):
     """
     Set the settings for the local functionality of the program for a MusicBee from a config file.
     See :py:class:`Config` for more documentation regarding operation.
@@ -527,24 +538,42 @@ class ConfigMusicBee(ConfigLocal):
 
         self._library = MusicBee(
             musicbee_folder=self.musicbee_folder,
-            library_folder=self.library_folder,
-            playlist_folder=self.playlist_folder,
             playlist_filter=self.playlists.filter,
-            other_folders=self.other_folders,
+            path_mapper=PathStemMapper(stem_map=self.stems),
             remote_wrangler=self.remote_wrangler,
         )
         return self._library
 
     @property
     def musicbee_folder(self) -> str | None:
-        """`OPTIONAL` | The path of the MusicBee library folder."""
+        """`REQUIRED` | The path of the MusicBee library folder."""
         if self._musicbee_folder is not None:
             return self._musicbee_folder
-        self._musicbee_folder = self._paths.get("musicbee", self._defaults["musicbee_folder"])
+
+        if isinstance(self._paths.get("library"), str):
+            folder = self._paths["library"]
+        elif isinstance(self._paths.get("library"), dict):  # assume platform sub-keys
+            folder = self._paths["library"].get(self._platform_key)
+        else:
+            raise ConfigError("Config not found/invalid", key=["local", "paths", "library"], value=self._paths)
+
+        if not folder:
+            raise ConfigError(
+                "MusicBee Library folder for the current platform not given",
+                key=["local", "paths", "library", self._platform_key],
+                value=self._paths["library"]
+            )
+
+        self._musicbee_folder = folder
         return self._musicbee_folder
 
     def as_dict(self) -> dict[str, Any]:
-        return {"musicbee_folder": self.musicbee_folder} | super().as_dict()
+        try:
+            musicbee_folder = self.musicbee_folder
+        except ConfigError:
+            musicbee_folder = None
+
+        return {"musicbee_folder": musicbee_folder} | super().as_dict()
 
 
 ###########################################################################
@@ -896,8 +925,8 @@ REMOTE_CONFIG: Mapping[str, RemoteClasses] = {
     "spotify": SPOTIFY_CLASSES,
 }
 
-LOCAL_CONFIG: Mapping[str, type[ConfigLocal]] = {
-    "local": ConfigLocal,
+LOCAL_CONFIG: Mapping[str, type[ConfigLocalBase]] = {
+    "local": ConfigLocalLibrary,
     "musicbee": ConfigMusicBee,
 }
 

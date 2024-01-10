@@ -25,15 +25,34 @@ valid:
       match_all: True
 
   libraries:
+    local:
+      bad key: this is an invalid key and should be ignored
+      type: local
+      paths:
+        bad key: this is an invalid key and should be ignored
+        library:
+          win:  &local_win_lib /path/to/library
+          mac: /path/to/library
+          lin:  &local_lin_lib /path/to/library
+        playlists: /path/to/playlists
+        map:
+          /different/folder: *local_win_lib
+          /another/path: *local_lin_lib
+      update:
+        tags: [title, album, artist]
+        replace: False
+      playlists:
+        filter:
+          match_all: False
+          contains: cool
+          matches reg ex: ^awesome.*
     musicbee:
       bad key: this is an invalid key and should be ignored
       type: musicbee
       paths:
         bad key: this is an invalid key and should be ignored
-        library: /path/to/library
-        playlists: /path/to/playlists
-        musicbee: musicbee_folder
-        other: ../
+        library: /path/to/musicbee_folder
+        map: {../:  *local_win_lib}
       update:
         bad key: this is an invalid key and should be ignored
         tags: title
@@ -46,25 +65,6 @@ valid:
             - awesome playlist
             - terrible playlist
           is not: terrible playlist
-    local:
-      bad key: this is an invalid key and should be ignored
-      type: local
-      paths:
-        bad key: this is an invalid key and should be ignored
-        library:
-          win: /path/to/library
-          mac: /path/to/library
-          lin: /path/to/library
-        playlists: /path/to/playlists
-        other: [/different/folder, /another/path]
-      update:
-        tags: [title, album, artist]
-        replace: False
-      playlists:
-        filter:
-          match_all: False
-          contains: cool
-          matches reg ex: ^awesome.*
     spotify:
       bad key: this is an invalid key and should be ignored
       type: spotify

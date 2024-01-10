@@ -216,7 +216,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
                 - a valid item type value under a ``type`` key if ``kind`` is None.
             * A MutableSequence of remote API JSON responses for a collection including the same structure as above.
 
-        If JSON response/s given, this update each response given by merging with the new response
+        If JSON response(s) given, this update each response given by merging with the new response
         and replacing the ``items`` with the new results.
 
         :param values: The values representing some remote objects. See description for allowed value types.
@@ -342,7 +342,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
                 - a valid ID value under an ``id`` key.
             * A MutableSequence of remote API JSON responses for a set of tracks including the same structure as above.
 
-        If JSON response/s given, this updates each response given by adding the results
+        If JSON response(s) given, this updates each response given by adding the results
         under the ``audio_features`` and ``audio_analysis`` keys as appropriate.
 
         :param values: The values representing some remote track/s. See description for allowed value types.
@@ -419,7 +419,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         """
         ``GET: /{kind}s`` + GET: /audio-features`` and/or ``GET: /audio-analysis``
 
-        Get track/s info and any audio features/analysis.
+        Get track(s) info and any audio features/analysis.
         Mostly just a wrapper for ``get_items`` and ``get_tracks_extra`` functions.
 
         ``values`` may be:
@@ -430,7 +430,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
                 - a valid ID value under an ``id`` key.
             * A MutableSequence of remote API JSON responses for a set of tracks including the same structure as above.
 
-        If JSON response/s given, this updates each response given by adding the results
+        If JSON response(s) given, this updates each response given by adding the results
         under the ``audio_features`` and ``audio_analysis`` keys as appropriate.
 
         :param values: The values representing some remote track/s. See description for allowed value types.
@@ -444,7 +444,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         """
         tracks = self.get_items(values=values, kind=RemoteObjectType.TRACK, limit=limit, use_cache=use_cache)
 
-        # ensure that response are being assigned back to the original values if API response/s given
+        # ensure that response are being assigned back to the original values if API response(s) given
         if isinstance(values, Mapping):
             tracks = [values]
         elif isinstance(values, Collection) and all(isinstance(v, Mapping) for v in values):
@@ -469,7 +469,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             * A remote API JSON response for an artist including a valid ID value under an ``id`` key.
             * A MutableSequence of remote API JSON responses for a set of artists including the same structure as above.
 
-        If JSON response/s given, this updates each response given by adding the results under the ``albums`` key.
+        If JSON response(s) given, this updates each response given by adding the results under the ``albums`` key.
 
         :param values: The values representing some remote artist/s. See description for allowed value types.
         :param types: The types of albums to return. Select from ``{"album", "single", "compilation", "appears_on"}``.

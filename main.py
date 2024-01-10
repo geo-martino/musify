@@ -12,7 +12,7 @@ from time import perf_counter
 from typing import Any
 
 from syncify import PROGRAM_NAME
-from syncify.config import Config, ConfigLibraryDifferences, ConfigMissingTags, ConfigRemote, ConfigLocal
+from syncify.config import Config, ConfigLibraryDifferences, ConfigMissingTags, ConfigRemote, ConfigLocalBase
 from syncify.shared.exception import ConfigError
 from syncify.local.track.field import LocalTrackField
 from syncify.local.collection import LocalCollection
@@ -37,10 +37,10 @@ class Syncify(DynamicProcessor):
         return perf_counter() - self._start_time
 
     @property
-    def local(self) -> ConfigLocal:
+    def local(self) -> ConfigLocalBase:
         """The local config for this session"""
         config = self.config.libraries[self.local_name]
-        if not isinstance(config, ConfigLocal):
+        if not isinstance(config, ConfigLocalBase):
             raise ConfigError("The given name does not relate to the config for a local library")
         return config
 
@@ -146,7 +146,18 @@ class Syncify(DynamicProcessor):
         self.logger.debug("Reload local library: START")
 
         load_all = not kinds
-        self.local.library.load(tracks=load_all or "tracks" in kinds, playlists=load_all or "playlists" in kinds)
+        if load_all:
+            self.remote.library.load()
+        elif kinds:
+            if "tracks" in kinds:
+                self.local.library.load_tracks()
+            if "playlists" in kinds:
+                self.local.library.load_playlists()
+
+            self.logger.print(STAT)
+            self.local.library.log_tracks()
+            self.local.library.log_playlists()
+            self.logger.print()
 
         self.local.library_loaded = True
         self.logger.debug("Reload local library: DONE")
@@ -158,11 +169,11 @@ class Syncify(DynamicProcessor):
         load_all = not kinds
         if load_all:
             self.remote.library.load()
-        else:
+        elif kinds:
             if "playlists" in kinds:
                 self.remote.library.load_playlists()
             if "saved_tracks" in kinds:
-                self.remote.library.load_saved_tracks()
+                self.remote.library.load_tracks()
             if "saved_albums" in kinds:
                 self.remote.library.load_saved_albums()
             if "saved_artists" in kinds:
@@ -766,9 +777,6 @@ if __name__ == "__main__":
 
 
 ## SELECTED FOR DEVELOPMENT
-# TODO: LocalLibrary to accept many library paths?
-# TODO: MusicBee to load library paths from settings ini file
-
 # TODO: fix bug in spotify api test: artist albums have unexpected keys
 # TODO: expand readme + check all example functions work
 # TODO: expand docstrings everywhere

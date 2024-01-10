@@ -7,7 +7,7 @@ from pytest_lazyfixture import lazy_fixture
 from requests_cache import CachedSession
 
 from syncify import PACKAGE_ROOT, MODULE_ROOT
-from syncify.config import ConfigLocal, ConfigMusicBee
+from syncify.config import ConfigLocalBase, ConfigMusicBee, ConfigLocalLibrary
 from syncify.config import ConfigRemote, ConfigSpotify
 from syncify.config import LOCAL_CONFIG, REMOTE_CONFIG, Config, ConfigFilter, ConfigReports
 from syncify.local.exception import FileDoesNotExistError
@@ -16,7 +16,6 @@ from syncify.shared.core.enum import TagFields
 from syncify.shared.exception import ConfigError, SyncifyError
 from syncify.shared.logger import SyncifyLogger
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
-from syncify.shared.utils import correct_platform_separators
 from tests.shared.core.misc import PrettyPrinterTester
 from tests.utils import path_resources, path_txt
 
@@ -53,7 +52,7 @@ class TestConfig(PrettyPrinterTester):
     ###########################################################################
     ## Load config
     ###########################################################################
-    @pytest.mark.skip  # this messes up logging for later tests
+    @pytest.mark.skip(reason="this removes all handlers hence removing ability to see logs for tests that follow this")
     def test_load_log_config(self, config_empty: Config, tmp_path: str):
         with pytest.raises(ConfigError):
             config_empty.load_log_config(path_txt)
@@ -99,34 +98,34 @@ class TestConfig(PrettyPrinterTester):
     @pytest.mark.parametrize("name", LOCAL_CONFIG.keys())
     def test_empty_local(self, config_empty: Config, name: str):
         config = config_empty.libraries[name]
-        if not isinstance(config, ConfigLocal):
-            raise TypeError("Config if not a LocalLibrary config")
+        if not isinstance(config, ConfigLocalBase):
+            raise TypeError("Config is not a LocalLibrary config")
 
         assert config._library is None
         assert config.remote_wrangler is None
 
         # paths tests
-        assert config.other_folders == ()
-        with pytest.raises(ConfigError):
-            assert config.library_folder
+        assert config.stems == {}
 
         assert config.update.tags == (LocalTrackField.ALL,)
         assert not config.update.replace
 
-        if isinstance(config, ConfigMusicBee):
-            assert config.playlist_folder == "Playlists"
-            assert config.musicbee_folder == "MusicBee"
+        if isinstance(config, ConfigLocalLibrary):
+            assert config.playlist_folder is None
 
+            with pytest.raises(ConfigError):
+                assert config.library_folders
+        elif isinstance(config, ConfigMusicBee):
+            with pytest.raises(ConfigError):
+                assert config.musicbee_folder
             with pytest.raises(SyncifyError):
                 assert config.library
-        else:
-            assert config.playlist_folder is None
 
     @pytest.mark.parametrize("name", REMOTE_CONFIG.keys())
     def test_empty_remote(self, config_empty: Config, name: str):
         config = config_empty.libraries[name]
         if not isinstance(config, ConfigRemote):
-            raise TypeError("Config if not a RemoteLibrary config")
+            raise TypeError("Config is not a RemoteLibrary config")
 
         assert config.kind == config._classes.source
         assert config._library is None
@@ -184,26 +183,42 @@ class TestConfig(PrettyPrinterTester):
         assert config_valid.reload == {"main": ("tracks", "playlists"), "spotify": tuple()}
         assert config_valid.pause == "this is a test message"
 
-    @pytest.mark.parametrize("name", ["musicbee", "local"])
+    @pytest.mark.parametrize("name", LOCAL_CONFIG.keys())
     def test_load_local(self, config_valid: Config, name: str, spotify_wrangler: RemoteDataWrangler):
         config = config_valid.libraries[name]
-        if not isinstance(config, ConfigLocal):
-            raise TypeError("Config if not a LocalLibrary config")
+        if not isinstance(config, ConfigLocalBase):
+            raise TypeError("Config is not a LocalLibrary config")
 
         assert config.kind == next(kind for kind, setter in LOCAL_CONFIG.items() if config.__class__ == setter)
         assert config._library is None
         assert config.remote_wrangler is None
         config.remote_wrangler = spotify_wrangler
 
-        assert config.library_folder == "/path/to/library"
-        assert config.playlist_folder == "/path/to/playlists"
-
         playlist_names = ["cool playlist 1", "awesome playlist", "terrible playlist", "other"]
         assert config.playlists.filter(playlist_names) == ["cool playlist 1", "awesome playlist"]
 
-        if isinstance(config, ConfigMusicBee):
-            assert config.musicbee_folder == "musicbee_folder"
-            assert config.other_folders == ("../",)
+        if isinstance(config, ConfigLocalLibrary):
+            assert config.library_folders == ("/path/to/library",)
+            assert config.playlist_folder == "/path/to/playlists"
+            assert config.stems == {
+                "/different/folder": config.library_folders[0],
+                "/another/path": config.library_folders[0],
+                "/path/to/library": config.library_folders[0],
+            }
+
+            assert config.update.tags == (LocalTrackField.TITLE, LocalTrackField.ARTIST, LocalTrackField.ALBUM)
+            assert not config.update.replace
+
+            assert not config.library.library_folders  # folders don't exist so not kept
+            assert config.library.playlist_folder is None
+            assert config.library.playlist_filter == config.playlists.filter
+            # noinspection PyUnresolvedReferences
+            assert config.library.path_mapper.stem_map == config.stems
+            assert config.library.remote_wrangler == spotify_wrangler
+
+        elif isinstance(config, ConfigMusicBee):
+            assert config.musicbee_folder == "/path/to/musicbee_folder"
+            assert config.stems == {"../": "/path/to/library"}
 
             assert config.update.tags == (LocalTrackField.TITLE,)
             assert config.update.replace
@@ -211,26 +226,13 @@ class TestConfig(PrettyPrinterTester):
             with pytest.raises(FileDoesNotExistError):
                 assert config.library
 
-        else:
-            assert config.other_folders == ("/different/folder", "/another/path", "/path/to/library")
-
-            assert config.update.tags == (LocalTrackField.TITLE, LocalTrackField.ARTIST, LocalTrackField.ALBUM)
-            assert not config.update.replace
-
-            assert config.library.library_folder == correct_platform_separators(config.library_folder)
-            assert config.library.playlist_folder is None
-            assert config.library.other_folders == config.other_folders
-            assert config.library.playlist_filter == config.playlists.filter
-            assert config.library.other_folders == config.other_folders
-            assert config.library.remote_wrangler == spotify_wrangler
-
         assert not config.library_loaded
 
     @pytest.mark.parametrize("name", ["spotify"])
     def test_load_remote(self, config_valid: Config, name: str):
         config = config_valid.libraries[name]
         if not isinstance(config, ConfigRemote):
-            raise TypeError("Config if not a RemoteLibrary config")
+            raise TypeError("Config is not a RemoteLibrary config")
 
         assert config.library.source == config.source
         assert config.library.api == config.api.api
@@ -297,24 +299,30 @@ class TestConfig(PrettyPrinterTester):
     @pytest.mark.parametrize("name", LOCAL_CONFIG.keys())
     def test_library_folder_conditions(self, config_empty: Config, name: str):
         config = config_empty.libraries[name]
-        if not isinstance(config, ConfigLocal):
-            raise TypeError("Config if not a LocalLibrary config")
+        if not isinstance(config, ConfigLocalBase):
+            raise TypeError("Config is not a LocalLibrary config")
 
         bad_platform = next(key for key in {"win", "lin", "mac"} if key != config._platform_key)
         config._file["paths"] = {}
         config._paths["library"] = {}
         config._paths["library"][bad_platform] = "/path/to/library/on/other/platform"
         with pytest.raises(ConfigError):
-            assert config.library_folder
+            if isinstance(config, ConfigLocalLibrary):
+                assert config.library_folders
+            elif isinstance(config, ConfigMusicBee):
+                assert config.musicbee_folder
 
         config._paths["library"][config._platform_key] = "/path/to/library/on/this/platform"
-        assert config.library_folder == config._paths["library"][config._platform_key]
+        if isinstance(config, ConfigLocalLibrary):
+            assert config.library_folders == (config._paths["library"][config._platform_key],)
+        elif isinstance(config, ConfigMusicBee):
+            assert config.musicbee_folder == config._paths["library"][config._platform_key]
 
     @pytest.mark.parametrize("name", REMOTE_CONFIG.keys())
     def test_playlists_sync_kind_fails(self, config_empty: Config, name: str):
         config = config_empty.libraries[name]
         if not isinstance(config, ConfigRemote):
-            raise TypeError("Config if not a RemoteLibrary config")
+            raise TypeError("Config is not a RemoteLibrary config")
 
         config.playlists.sync._file["kind"] = "invalid kind"
         with pytest.raises(ConfigError):
@@ -345,22 +353,19 @@ class TestConfig(PrettyPrinterTester):
         name = "local"
 
         old = config_valid.libraries[name]
-        if not isinstance(old, ConfigLocal):
-            raise TypeError("Config if not a LocalLibrary config")
+        if not isinstance(old, ConfigLocalBase):
+            raise TypeError("Config is not a LocalLibrary config")
         old_library = old.library
 
         config_valid.load("local_override")
         new = config_valid.libraries[name]
-        if not isinstance(new, ConfigLocal):
-            raise TypeError("Config if not a LocalLibrary config")
+        if not isinstance(new, ConfigLocalBase):
+            raise TypeError("Config is not a LocalLibrary config")
 
         assert new != old
         assert new.kind == old.kind == name
 
         # overriden values
-        assert new.library_folder == "/new/path/to/library"
-        assert new.playlist_folder == "/new/path/to/playlists"
-
         assert new.playlists.filter.comparers[0].condition == "is_in"
         assert new.playlists.filter.comparers[0].expected == ["new playlist to include", "include me now too"]
         assert new.playlists.filter.comparers[1].condition == "is_not"
@@ -369,8 +374,12 @@ class TestConfig(PrettyPrinterTester):
         assert new.update.tags == (LocalTrackField.GENRES,)
         assert new.update.replace
 
+        if isinstance(new, ConfigLocalLibrary):
+            assert new.library_folders == ("/new/path/to/library",)
+            assert new.playlist_folder == "/new/path/to/playlists"
+
         # kept values
-        assert new.other_folders == old.other_folders
+        assert new.stems == old.stems
 
         # the library was instantiated already so the new library should be forcibly overriden
         assert id(old_library) == id(new.library)
@@ -382,7 +391,7 @@ class TestConfig(PrettyPrinterTester):
 
         old = config_valid.libraries[name]
         if not isinstance(old, ConfigRemote):
-            raise TypeError("Config if not a RemoteLibrary config")
+            raise TypeError("Config is not a RemoteLibrary config")
         old_library = old.library
         old_api = old.api.api
         old.library_loaded = True
@@ -390,7 +399,7 @@ class TestConfig(PrettyPrinterTester):
         config_valid.load("remote_override")
         new = config_valid.libraries[name]
         if not isinstance(new, ConfigRemote):
-            raise TypeError("Config if not a RemoteLibrary config")
+            raise TypeError("Config is not a RemoteLibrary config")
 
         # new values
         assert new.api.use_cache
@@ -459,14 +468,14 @@ class TestConfig(PrettyPrinterTester):
         name = "local"
 
         old = config_valid.libraries[name]
-        if not isinstance(old, ConfigLocal):
-            raise TypeError("Config if not a LocalLibrary config")
+        if not isinstance(old, ConfigLocalBase):
+            raise TypeError("Config is not a LocalLibrary config")
         old_library = old.library
 
         config_valid.load("local_enrich")
         new = config_valid.libraries[name]
-        if not isinstance(new, ConfigLocal):
-            raise TypeError("Config if not a LocalLibrary config")
+        if not isinstance(new, ConfigLocalBase):
+            raise TypeError("Config is not a LocalLibrary config")
 
         assert new != old
         assert new.kind == old.kind == name
@@ -478,12 +487,14 @@ class TestConfig(PrettyPrinterTester):
         assert new.playlists.filter.comparers[1].expected == ["and don't include me"]
 
         # kept values
-        assert new.library_folder == old.library_folder
-        assert new.playlist_folder == old.playlist_folder
-        assert new.other_folders == old.other_folders
+        assert new.stems == old.stems
 
         assert new.update.tags == old.update.tags
         assert new.update.replace == old.update.replace
+
+        if isinstance(new, ConfigLocalLibrary) and isinstance(old, ConfigLocalLibrary):
+            assert new.library_folders == old.library_folders
+            assert new.playlist_folder == old.playlist_folder
 
         # the library was instantiated already so the new library should be forcibly overriden
         assert id(old_library) == id(new.library)
@@ -495,14 +506,14 @@ class TestConfig(PrettyPrinterTester):
 
         old = config_valid.libraries[name]
         if not isinstance(old, ConfigRemote):
-            raise TypeError("Config if not a RemoteLibrary config")
+            raise TypeError("Config is not a RemoteLibrary config")
         old_library = old.library
         old_api = old.api.api
 
         config_valid.load("remote_enrich")
         new = config_valid.libraries[name]
         if not isinstance(new, ConfigRemote):
-            raise TypeError("Config if not a RemoteLibrary config")
+            raise TypeError("Config is not a RemoteLibrary config")
 
         # new values
         assert new.playlists.filter.comparers[0].condition == "is_not"

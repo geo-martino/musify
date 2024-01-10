@@ -1,13 +1,13 @@
-from collections.abc import Iterable, Collection
+from collections.abc import Collection
 from os.path import splitext
 
 from syncify.local.exception import InvalidFileType
-from syncify.local.playlist.m3u import M3U
+from syncify.local.file import PathMapper
 from syncify.local.playlist.base import LocalPlaylist
+from syncify.local.playlist.m3u import M3U
 from syncify.local.playlist.xautopf import XAutoPF
 from syncify.local.track import LocalTrack
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
-from syncify.shared.types import UnitCollection
 
 PLAYLIST_CLASSES = frozenset({M3U, XAutoPF})
 PLAYLIST_FILETYPES = frozenset(filetype for c in PLAYLIST_CLASSES for filetype in c.valid_extensions)
@@ -16,10 +16,7 @@ PLAYLIST_FILETYPES = frozenset(filetype for c in PLAYLIST_CLASSES for filetype i
 def load_playlist(
         path: str,
         tracks: Collection[LocalTrack] = (),
-        library_folder: str | None = None,
-        other_folders: UnitCollection[str] = (),
-        check_existence: bool = True,
-        available_track_paths: Iterable[str] = (),
+        path_mapper: PathMapper = PathMapper(),
         remote_wrangler: RemoteDataWrangler = None,
 ) -> LocalPlaylist:
     """
@@ -29,17 +26,10 @@ def load_playlist(
         If the playlist ``path`` given does not exist, the playlist instance will use all the tracks
         given in ``tracks`` as the tracks in the playlist.
     :param tracks: Optional. Available Tracks to search through for matches.
-        If no tracks are given, the playlist instance load all the tracks from paths
-        listed in file at the playlist ``path``.
-    :param library_folder: Absolute path of folder containing tracks.
-    :param other_folders: Absolute paths of other possible library paths.
-        Use to replace path stems from other libraries for the paths in loaded playlists.
-        Useful when managing similar libraries on multiple platforms.
-    :param check_existence: If True, when processing paths,
-        check for the existence of the file paths on the file system and reject any that don't.
-    :param available_track_paths: A list of available track paths that are known to exist
-        and are valid for the track types supported by this program.
-        Useful for case-insensitive path loading and correcting paths to case-sensitive.
+        If no tracks are given, the playlist instance will load all the tracks from scratch according to its settings.
+    :param path_mapper: Optionally, provide a :py:class:`PathMapper` for paths stored in the playlist file.
+        Useful if the playlist file contains relative paths and/or paths for other systems that need to be
+        mapped to absolute, system-specific paths to be loaded and back again when saved.
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
         The wrangler is also used when loading tracks to allow them to process URI tags.
@@ -50,27 +40,8 @@ def load_playlist(
     ext = splitext(path)[1].casefold()
 
     if ext in M3U.valid_extensions:
-        return M3U(
-            path=path,
-            tracks=tracks,
-            library_folder=library_folder,
-            other_folders=other_folders,
-            check_existence=check_existence,
-            available_track_paths=available_track_paths,
-            remote_wrangler=remote_wrangler
-        )
+        return M3U(path=path, tracks=tracks, path_mapper=path_mapper, remote_wrangler=remote_wrangler)
     elif ext in XAutoPF.valid_extensions:
-        return XAutoPF(
-            path=path,
-            tracks=tracks,
-            library_folder=library_folder,
-            other_folders=other_folders,
-            check_existence=check_existence,
-            available_track_paths=available_track_paths,
-            remote_wrangler=remote_wrangler
-        )
+        return XAutoPF(path=path, tracks=tracks, path_mapper=path_mapper)
 
-    raise InvalidFileType(
-        ext, f"Not an accepted extension. Use only: {', '.join(PLAYLIST_FILETYPES)}"
-    )
-
+    raise InvalidFileType(ext, f"Not an accepted extension. Use only: {', '.join(PLAYLIST_FILETYPES)}")

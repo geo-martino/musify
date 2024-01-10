@@ -1,24 +1,24 @@
 import hashlib
 import re
 import urllib.parse
-from collections.abc import Iterable, Mapping, Sequence, Generator
+from collections.abc import Iterable, Mapping, Sequence, Generator, Collection
 from datetime import datetime
 from os.path import join, exists, normpath
 from typing import Any
 
+import xmltodict
 from lxml import etree
 from lxml.etree import iterparse
 
-from syncify.local.file import File
-from syncify.local.exception import MusicBeeIDError, XMLReaderError, MusicBeeError, FileDoesNotExistError
+from syncify.local.exception import MusicBeeIDError, XMLReaderError, FileDoesNotExistError
+from syncify.local.file import File, PathMapper, PathStemMapper
 from syncify.local.library.library import LocalLibrary
 from syncify.local.playlist import LocalPlaylist
 from syncify.local.track import LocalTrack
 from syncify.processors.base import Filter
-from syncify.processors.filter import FilterDefinedList
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
-from syncify.shared.types import UnitCollection, Number
-from syncify.shared.utils import correct_platform_separators
+from syncify.shared.types import Number
+from syncify.shared.utils import to_collection
 
 
 class MusicBee(LocalLibrary, File):
@@ -27,116 +27,108 @@ class MusicBee(LocalLibrary, File):
     tracks and playlists across an entire local library collection.
 
     :ivar valid_extensions: Extensions of library files that can be loaded by this class.
-    :ivar xml_library_filename: The filename of the MusicBee library folder.
-    :ivar xml_path_keys: A list of keys for the XML library that need to be processed as system paths
+    :ivar musicbee_playlist_folder: The relative path of the playlist folder within the MusicBee folder.
+    :ivar xml_library_filename: The filename of the MusicBee library file.
+    :ivar xml_library_path_keys: A list of keys for the XML library that need to be processed as system paths.
+    :ivar xml_settings_filename: The filename of the MusicBee settings file.
 
-    :param library_folder: The absolute path of the library folder containing all tracks.
-        The intialiser will check for the existence of this path and only store it if it exists.
-    :param musicbee_folder: The absolute path of the playlist folder containing all playlists
-        or the relative path within the given ``library_folder``.
-        The intialiser will check for the existence of this path and only store the absolute path if it exists.
-    :param playlist_folder: The absolute path of the playlist folder containing all playlists
-        or the relative path within the given ``library_folder`` or ``library_folder``/``musicbee_folder``.
-        The intialiser will check for the existence of this path and only store the absolute path if it exists.
-    :param playlist_filter: An optional :py:class:`Filter` to apply when loading playlists.
-        Playlist names will be passed to this filter to limit which playlists are loaded.
-    :param other_folders: Absolute paths of other possible library paths.
-        Use to replace path stems from other libraries for the paths in loaded playlists.
-        Useful when managing similar libraries on multiple platforms.
+    :param musicbee_folder: The absolute path of the musicbee folder containing settings and library files.
+    :param playlist_filter: An optional :py:class:`Filter` to apply or collection of playlist names to include when
+        loading playlists. Playlist names will be passed to this filter to limit which playlists are loaded.
+    :param path_mapper: Optionally, provide a :py:class:`PathMapper` for paths stored in the playlist files.
+        Useful if the playlist files contain relative paths and/or paths for other systems that need to be
+        mapped to absolute, system-specific paths to be loaded and back again when saved.
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
         The wrangler is also used when loading tracks to allow them to process URI tags.
         For more info on this, see :py:class:`LocalTrack`.
     """
 
-    __slots__ = ("_path", "_xml_parser", "xml")
+    __slots__ = (
+        "musicbee_folder",
+        "library_xml",
+        "_library_xml_path",
+        "_library_xml_parser",
+        "settings_xml"
+        "_settings_xml_path",
+        "_settings_xml_parser",
+    )
 
     valid_extensions = frozenset({".xml"})
     xml_library_filename = "iTunes Music Library.xml"
-    xml_path_keys = {"Location", "Music Folder"}
+    xml_library_path_keys = {"Location", "Music Folder"}
+    xml_settings_filename = "MusicBeeLibrarySettings.ini"
+    musicbee_playlist_folder = "Playlists"
 
     @property
     def path(self) -> str:
-        return self._path
+        return self._library_xml_path
 
     def __init__(
             self,
-            library_folder: str | None = None,
-            musicbee_folder: str | None = "MusicBee",
-            playlist_folder: str | None = "Playlists",
-            playlist_filter: Filter[str] = FilterDefinedList(),
-            other_folders: UnitCollection[str] = (),
+            musicbee_folder: str,
+            playlist_filter: Collection[str] | Filter[str] = (),
+            path_mapper: PathMapper = PathMapper(),
             remote_wrangler: RemoteDataWrangler = None,
     ):
-        if library_folder is None and musicbee_folder is None:
-            raise MusicBeeError("Must give either library_folder or musicbee_folder")
+        self.musicbee_folder = musicbee_folder
 
-        library_folder = correct_platform_separators(library_folder)
-        musicbee_folder = correct_platform_separators(musicbee_folder)
-        playlist_folder = correct_platform_separators(playlist_folder)
+        self._library_xml_path: str = join(musicbee_folder, self.xml_library_filename)
+        if not exists(self._library_xml_path):
+            raise FileDoesNotExistError(f"Cannot find MusicBee library at given path: {self._library_xml_path}")
 
-        # try to resolve the musicbee folder if relative path to library_folder given
-        if musicbee_folder and not exists(musicbee_folder):
-            if not library_folder:
-                raise FileDoesNotExistError(f"Cannot find MusicBee library at given path: {musicbee_folder}")
+        self._library_xml_parser = XMLLibraryParser(self._library_xml_path, path_keys=self.xml_library_path_keys)
+        self.library_xml: dict[str, Any] = self._library_xml_parser.parse()
 
-            in_library = join(library_folder.rstrip("\\/"), musicbee_folder.lstrip("\\/"))
-            if not exists(in_library):
-                raise FileDoesNotExistError(
-                    f"Cannot find MusicBee library at given path: {musicbee_folder} OR {in_library}"
-                )
-            musicbee_folder = in_library
-        elif library_folder and (not musicbee_folder or not exists(musicbee_folder)):
-            musicbee_folder = library_folder
+        self._settings_xml_path: str = join(musicbee_folder, self.xml_settings_filename)
+        if not exists(self._settings_xml_path):
+            raise FileDoesNotExistError(f"Cannot find MusicBee settings at given path: {self._settings_xml_path}")
 
-        # try to resolve the playlist folder if relative path to musicbee_folder given
-        musicbee_playlist_folder = join(musicbee_folder, playlist_folder)
-        if exists(musicbee_playlist_folder):
-            playlist_folder = musicbee_playlist_folder
+        with open(self._settings_xml_path, "r", encoding="utf-8") as f:
+            self.settings_xml: dict[str, Any] = xmltodict.parse(f.read())["ApplicationSettings"]
 
-        self._path: str = join(musicbee_folder, self.xml_library_filename)
-        if not exists(self._path):
-            raise FileDoesNotExistError(f"Cannot find MusicBee library at given path: {self._path}")
-
-        self._xml_parser = XMLLibraryParser(self._path, path_keys=self.xml_path_keys)
-        self.xml: dict[str, Any] = self._xml_parser.parse()
+        library_folders = []
+        for path in to_collection(self.settings_xml.get("OrganisationMonitoredFolders", {}).get("string")):
+            library_folders.append(path)
 
         super().__init__(
-            library_folder=library_folder,
-            playlist_folder=playlist_folder,
+            library_folders=library_folders,
+            playlist_folder=join(self.musicbee_folder, self.musicbee_playlist_folder),
             playlist_filter=playlist_filter,
-            other_folders=other_folders,
+            path_mapper=path_mapper,
             remote_wrangler=remote_wrangler,
         )
 
-    def _get_track_from_xml_path(self, track_xml: dict[str, Any], tracks: dict[str, LocalTrack]) -> LocalTrack | None:
+    def _get_track_from_xml_path(
+            self, track_xml: dict[str, Any], track_map: dict[str, LocalTrack]
+    ) -> LocalTrack | None:
         if track_xml["Track Type"] != "File":
             return
 
         path = track_xml["Location"]
-        prefixes = {
-            self.library_folder,
-            self.xml["Music Folder"],
-            *{other.replace("\\", "/") for other in self.other_folders},
-            *{other.replace("/", "\\") for other in self.other_folders}
-        }
+        prefixes = {*self.library_folders, self.library_xml["Music Folder"]}
+        if isinstance(self.path_mapper, PathStemMapper):
+            prefixes.update(self.path_mapper.stem_map.keys())
 
         for prefix in prefixes:
-            track = tracks.get(path.removeprefix(prefix).casefold(), tracks.get(path.removeprefix(prefix)))
+            track = track_map.get(path.removeprefix(prefix).casefold(), track_map.get(path.removeprefix(prefix)))
             if track is not None:
                 return track
 
         self.errors.append(path)
 
-    def load_tracks(self) -> list[LocalTrack]:
-        # need to remove the library folder to make it os agnostic
-        tracks = super().load_tracks()
-        tracks_paths = {track.path.removeprefix(self.library_folder).casefold(): track for track in tracks}
-
+    def load_tracks(self) -> None:
+        super().load_tracks()
         self.logger.debug(f"Enrich {self.name} tracks: START")
 
-        for track_xml in self.xml["Tracks"].values():
-            track = self._get_track_from_xml_path(track_xml, tracks_paths)
+        # need to remove library folders to allow match to be os agnostic
+        track_map = {
+            track.path.removeprefix(folder).casefold(): track
+            for folder in self.library_folders for track in self.tracks
+        }
+
+        for track_xml in self.library_xml["Tracks"].values():
+            track = self._get_track_from_xml_path(track_xml=track_xml, track_map=track_map)
             if track is None:
                 continue
 
@@ -147,7 +139,6 @@ class MusicBee(LocalLibrary, File):
 
         self._log_errors("Could not find a loaded track for these paths from the MusicBee library file")
         self.logger.debug(f"Enrich {self.name} tracks: DONE\n")
-        return list(tracks_paths.values())
 
     def save(self, dry_run: bool = True, *_, **__) -> dict[str, Any]:
         """
@@ -156,11 +147,16 @@ class MusicBee(LocalLibrary, File):
         :param dry_run: Run function, but do not modify file at all.
         :return: Map representation of the saved XML file.
         """
-        tracks_paths = {track.path.removeprefix(self.library_folder).casefold(): track for track in self.tracks}
+        self.logger.debug(f"Save {self.name} library file: START")
+        # need to remove library folders to allow match to be os agnostic
+        track_map = {
+            track.path.removeprefix(folder).casefold(): track
+            for folder in self.library_folders for track in self.tracks
+        }
         track_id_map: dict[LocalTrack, tuple[int, str]] = {}
 
-        for track_xml in self.xml["Tracks"].values():
-            track = self._get_track_from_xml_path(track_xml, tracks_paths)
+        for track_xml in self.library_xml["Tracks"].values():
+            track = self._get_track_from_xml_path(track_xml=track_xml, track_map=track_map)
             if track is None:
                 continue
 
@@ -177,7 +173,7 @@ class MusicBee(LocalLibrary, File):
 
         playlist_id_map = {
             playlist_xml["Name"]: (playlist_xml["Playlist ID"], playlist_xml["Playlist Persistent ID"])
-            for playlist_xml in self.xml["Playlists"]
+            for playlist_xml in self.library_xml["Playlists"]
         }
 
         playlists: list[dict[str, Any]] = []
@@ -190,19 +186,21 @@ class MusicBee(LocalLibrary, File):
             playlists.append(playlist)
 
         xml = {
-            "Major Version": self.xml.get("Major Version", "1"),
-            "Minor Version": self.xml.get("Minor Version", "1"),
-            "Application Version": self.xml.get("Application Version", "1"),
-            "Music Folder": self.library_folder,
+            "Major Version": self.library_xml.get("Major Version", "1"),
+            "Minor Version": self.library_xml.get("Minor Version", "1"),
+            "Application Version": self.library_xml.get("Application Version", "1"),
+            "Music Folder": self.musicbee_folder,
             "Library Persistent ID":
-                self.xml.get("Library Persistent ID", self.generate_persistent_id(self.library_folder)),
+                self.library_xml.get("Library Persistent ID", self.generate_persistent_id(self.musicbee_folder)),
             "Tracks": dict(sorted(((id_, track) for id_, track in tracks.items()), key=lambda x: x[0])),
             "Playlists": sorted(playlists, key=lambda x: x["Playlist ID"]),
         }
 
-        self._xml_parser.unparse(data=xml, dry_run=dry_run)
-        self.xml = xml
-        return self.xml
+        self._library_xml_parser.unparse(data=xml, dry_run=dry_run)
+        self.library_xml = xml
+
+        self.logger.debug(f"Save {self.name} library file: DONE")
+        return self.library_xml
 
     @staticmethod
     def generate_persistent_id(value: str | None = None, id_: str | None = None) -> str:
@@ -323,22 +321,17 @@ class MusicBee(LocalLibrary, File):
 # noinspection PyProtectedMember
 class XMLLibraryParser:
     """
-    Parses the MusicBee library to and from iTunes style XML
+    Parses MusicBee XML files to and from iTunes style XML
 
     :ivar timestamp_format: The string representation of the timestamp format when parsing.
-    :ivar doctype: The doctype to add to the XML file when exporting data to file.
-    :ivar schema_version: The schema version to add to the XML file when exporting data to file.
 
     :param path: Path to the XML file.
     :param path_keys: A list of keys in the XML file that need to be processed as system paths.
     """
 
-    __slots__ = ("path", "path_keys", "iterparse")
+    __slots__ = ("path", "path_keys", "iterparse", "schema_version", "doctype")
 
     timestamp_format = "%Y-%m-%dT%H:%M:%SZ"
-    doctype = ('<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" '
-               '"http://www.apple.com/DTDs/PropertyList-1.0.dtd">')
-    schema_version = 1.0
 
     def __init__(self, path: str, path_keys: Iterable[str] | None = None):
         self.path: str = path
@@ -443,6 +436,7 @@ class XMLLibraryParser:
 
     def parse(self) -> dict[str, Any]:
         """Parse the XML file from the currently stored ``path`` to a dictionary"""
+        root_name = etree.parse(self.path).docinfo.root_name
         self.iterparse = etree.iterparse(self.path)
         results = {}
 
@@ -451,7 +445,7 @@ class XMLLibraryParser:
             if peek is None:
                 break
 
-            if element.tag == "plist":
+            if element.tag == root_name:
                 continue
             elif element.tag == "key":
                 key = element.text
@@ -472,7 +466,6 @@ class XMLLibraryParser:
         return results
 
     def _unparse_dict(self, element: etree._Element, data: Mapping[str, Any]):
-
         sub_element: etree._Element = etree.SubElement(element, "dict")
         for key, value in data.items():
             etree.SubElement(sub_element, "key").text = str(key)
@@ -504,14 +497,19 @@ class XMLLibraryParser:
         :param data: Map of XML data to export.
         :param dry_run: Run function, but do not modify file at all.
         """
-        root: etree.Element = etree.Element("plist")
-        root.set("version", str(self.schema_version))
+        et: etree._ElementTree = etree.parse(self.path)
+        parsed: dict[str, Any] = xmltodict.parse(etree.tostring(et.getroot(), encoding='utf-8', method='xml'))
+
+        root: etree.Element = etree.Element(et.docinfo.root_name)
+        root.set("version", parsed[et.docinfo.root_name]["@version"])
 
         self._unparse_dict(element=root, data=data)
         etree.indent(root, space="\t", level=0)
 
         # convert to string and apply formatting to ensure output string is expected format
-        output: str = etree.tostring(root, xml_declaration=True, encoding="UTF-8", doctype=self.doctype).decode("utf-8")
+        output: str = etree.tostring(
+            root, xml_declaration=True, encoding=et.docinfo.encoding, doctype=et.docinfo.doctype
+        ).decode(et.docinfo.encoding)
         output = re.sub(r"</key>\n\s+<(string|integer|date|true|false)", r"</key><\1", output)
         output = re.sub("\n\t", "\n", output)
         output = output.replace("'", '"')

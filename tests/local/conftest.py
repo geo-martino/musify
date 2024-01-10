@@ -1,10 +1,12 @@
 import pytest
 from pytest_lazyfixture import lazy_fixture
 
+from syncify.local.file import PathStemMapper
 from syncify.local.track import LocalTrack, FLAC, MP3, M4A, WMA
 from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
 from syncify.spotify.processors.wrangle import SpotifyDataWrangler
-from tests.local.utils import path_track_flac, path_track_mp3, path_track_m4a, path_track_wma, path_track_all
+from tests.local.utils import path_track_all, path_track_flac, path_track_mp3, path_track_m4a, path_track_wma
+from utils import path_resources
 
 
 @pytest.fixture(scope="module")
@@ -13,28 +15,34 @@ def remote_wrangler(spotify_wrangler: SpotifyDataWrangler) -> RemoteDataWrangler
     yield spotify_wrangler
 
 
+@pytest.fixture(scope="module")
+def path_mapper() -> PathStemMapper:
+    """Yields a :py:class:`PathMapper` that can map paths from the test playlist files"""
+    yield PathStemMapper(stem_map={"../": path_resources}, available_paths=path_track_all)
+
+
 @pytest.fixture(params=[path_track_flac])
 def track_flac(path: str, remote_wrangler: RemoteDataWrangler) -> FLAC:
     """Yields instantiated :py:class:`FLAC` objects for testing"""
-    return FLAC(file=path, available=path_track_all, remote_wrangler=remote_wrangler)
+    return FLAC(file=path, remote_wrangler=remote_wrangler)
 
 
 @pytest.fixture(params=[path_track_mp3])
 def track_mp3(path: str, remote_wrangler: RemoteDataWrangler) -> MP3:
     """Yields instantiated :py:class:`MP3` objects for testing"""
-    return MP3(file=path, available=path_track_all, remote_wrangler=remote_wrangler)
+    return MP3(file=path, remote_wrangler=remote_wrangler)
 
 
 @pytest.fixture(params=[path_track_m4a])
 def track_m4a(path: str, remote_wrangler: RemoteDataWrangler) -> M4A:
     """Yields instantiated :py:class:`M4A` objects for testing"""
-    return M4A(file=path, available=path_track_all, remote_wrangler=remote_wrangler)
+    return M4A(file=path, remote_wrangler=remote_wrangler)
 
 
 @pytest.fixture(params=[path_track_wma])
 def track_wma(path: str, remote_wrangler: RemoteDataWrangler) -> WMA:
     """Yields instantiated :py:class:`WMA` objects for testing"""
-    return WMA(file=path, available=path_track_all, remote_wrangler=remote_wrangler)
+    return WMA(file=path, remote_wrangler=remote_wrangler)
 
 
 @pytest.fixture(params=[
@@ -46,4 +54,3 @@ def track_wma(path: str, remote_wrangler: RemoteDataWrangler) -> WMA:
 def track(request) -> LocalTrack:
     """Yields instantiated :py:class:`LocalTrack` objects for testing"""
     return request.param
-

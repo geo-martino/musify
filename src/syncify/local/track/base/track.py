@@ -1,6 +1,5 @@
 import os
 from abc import ABCMeta
-from collections.abc import Mapping, Iterable
 from copy import deepcopy
 from glob import glob
 from os.path import join, exists, dirname
@@ -19,7 +18,7 @@ from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
 from syncify.shared.types import UnitIterable
 
 
-class LocalTrack(TagWriter, metaclass=ABCMeta):
+class LocalTrack[T: mutagen.FileType](TagWriter, metaclass=ABCMeta):
     """
     Generic track object for extracting, modifying, and saving tags for a given file.
 
@@ -29,15 +28,13 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
 
     :param file: The path or Mutagen object of the file to load.
-    :param available: A list of available track paths that are known to exist and are valid for this track type.
-        Useful for case-insensitive path loading and correcting paths to case-sensitive.
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs.
         This object will be used to check for and validate a URI tag on the file.
         The tag that is used for reading and writing is set by the ``uri_tag`` class attribute.
         If no ``remote_wrangler`` is given, no URI processing will occur.
     """
 
-    __slots__ = ("_file", "_available_paths", "_available_paths_lower")
+    __slots__ = ("_file",)
     __attributes_classes__ = TagReader
 
     @property
@@ -57,23 +54,13 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
 
         return paths
 
-    def __init__(
-            self,
-            file: str | mutagen.FileType,
-            available: Iterable[str] = (),
-            remote_wrangler: RemoteDataWrangler = None,
-    ):
+    def __init__(self, file: str | T, remote_wrangler: RemoteDataWrangler = None):
         super().__init__(remote_wrangler=remote_wrangler)
 
-        # all available paths for this file type
-        self._available_paths = set(available)
-        # all available paths mapped as lower case to actual
-        self._available_paths_lower: Mapping[str, str] = {path.casefold(): path for path in self._available_paths}
-
-        self._file: mutagen.FileType = self.load(file) if isinstance(file, str) else file
+        self._file: T = self.load(file) if isinstance(file, str) else file
         self.load_metadata()
 
-    def load(self, path: str | None = None) -> mutagen.FileType:
+    def load(self, path: str | None = None) -> T:
         """
         Load local file using mutagen from the given path or the path stored in the object's ``file``.
         Re-formats to case-sensitive system path if applicable.
@@ -85,12 +72,6 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
         """
         path = path or self.path
         self._validate_type(path)
-
-        if self._available_paths and path not in self._available_paths:
-            # attempt to correct case-insensitive path to case-sensitive
-            path_sys = self._available_paths_lower.get(path.casefold())
-            if path_sys is not None and exists(path_sys):
-                path = path_sys
 
         if not path or not exists(path):
             raise FileDoesNotExistError(f"File not found | {path}")
@@ -143,13 +124,13 @@ class LocalTrack(TagWriter, metaclass=ABCMeta):
             for key in self.__slots__:
                 setattr(obj, key, getattr(self, key))
             return obj
-        return self.__class__(file=self.file, available=self._available_paths, remote_wrangler=self.remote_wrangler)
+        return self.__class__(file=self.file, remote_wrangler=self.remote_wrangler)
 
     def __deepcopy__(self, _: dict = None):
         """Deepcopy object by reloading from the disk"""
         # use path if file is a real file, use file object otherwise (when testing)
         file = self.file if not self.file.tags else self.path
-        return self.__class__(file=file, available=self._available_paths, remote_wrangler=self.remote_wrangler)
+        return self.__class__(file=file, remote_wrangler=self.remote_wrangler)
 
     def __setitem__(self, key: str, value: Any):
         if not hasattr(self, key):

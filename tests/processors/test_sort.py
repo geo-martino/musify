@@ -124,6 +124,6 @@ class TestItemSorter(PrettyPrinterTester):
         assert sorter.shuffle_by == ShuffleBy.TRACK
         assert sorter.shuffle_weight == 0
 
-    @pytest.mark.skip  # TODO: add test for to_xml
+    @pytest.mark.skip(reason="# TODO: add test for to_xml")
     def test_to_xml(self):
         pass

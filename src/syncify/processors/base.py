@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from collections.abc import Mapping, Callable, Collection
+from collections.abc import Mapping, Callable, Collection, Iterable
 from functools import partial, update_wrapper
 from typing import Any, Self, Optional
 
@@ -55,6 +55,8 @@ class DynamicProcessor(Processor, metaclass=ABCMeta):
 
     :ivar __processormethods__: The set of processor methods on this processor and any alternative names for them.
     """
+
+    __slots__ = ("_processor_name",)
 
     __processormethods__: frozenset[str] = frozenset()
 
@@ -145,6 +147,8 @@ class MusicBeeProcessor(ItemProcessor):
 class Filter[T](Processor, PrettyPrinter, metaclass=ABCMeta):
     """Base class for filtering down values based on some settings"""
 
+    __slots__ = ("_transform",)
+
     @property
     @abstractmethod
     def ready(self) -> bool:
@@ -156,16 +160,62 @@ class Filter[T](Processor, PrettyPrinter, metaclass=ABCMeta):
         """Apply this filter's settings to the given values"""
         raise NotImplementedError
 
-    @staticmethod
-    def transform(value: T) -> T:
+    @property
+    def transform(self) -> Callable[[Any], Any]:
         """
         Transform the input ``value`` to the value that should be used when comparing against this filter's settings
         Simply returns the given ``value`` at baseline unless overriden.
         """
-        return value
+        return self._transform
+
+    @transform.setter
+    def transform(self, transformer: Callable[[Any], Any]):
+        self._transform = transformer
+
+    def __init__(self):
+        self._transform = lambda x: x
 
     def __call__(self, *args, **kwargs) -> Collection[T]:
         return self.process(*args, **kwargs)
 
     def __bool__(self):
         return self.ready
+
+
+class FilterComposite[T](Filter[T], Collection[Filter], metaclass=ABCMeta):
+
+    __slots__ = ("filters",)
+
+    @property
+    def ready(self):
+        return any(filter_.ready for filter_ in self.filters)
+
+    @property
+    def transform(self) -> Callable[[Any], Any]:
+        return lambda _: None
+
+    @transform.setter
+    def transform(self, transformer: Callable[[Any], Any]):
+        for filter_ in self.filters:
+            filter_.transform = transformer
+
+    def __init__(self, *filters: Filter[T], **__):
+        super().__init__()
+        self.filters = filters
+
+    def __iter__(self):
+        def flat_filter_list(filter_: Filter | Collection[Filter]) -> Iterable[Filter]:
+            """
+            Get flat list of all :py:class:`Filter` objects in the given Filter,
+            flattening out any :py:class:`FilterComposite` objects
+            """
+            if isinstance(filter_, FilterComposite):
+                return iter(filter_)
+            return [filter_]
+        return (f for filter_ in self.filters for f in flat_filter_list(filter_))
+
+    def __len__(self):
+        return len(self.filters)
+
+    def __contains__(self, item: Any):
+        return item in self.filters

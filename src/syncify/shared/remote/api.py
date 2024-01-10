@@ -261,7 +261,7 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
             * A remote API JSON response for a collection.
             * A MutableSequence of remote API JSON responses for a collection.
 
-        If JSON response/s given, this update each response given by merging with the new response.
+        If JSON response(s) given, this update each response given by merging with the new response.
 
         :param values: The values representing some remote objects. See description for allowed value types.
             These items must all be of the same type of item i.e. all tracks OR all artists etc.

@@ -213,14 +213,14 @@ class TestLocalTrack(ItemTester):
 
         # raises error on unrecognised file type
         with pytest.raises(InvalidFileType):
-            track.__class__(file=path_txt, available=path_track_all)
+            track.__class__(file=path_txt)
 
         # raises error on files that do not exist
         with pytest.raises(FileDoesNotExistError):
-            track.__class__(file=f"does_not_exist.{set(track.valid_extensions).pop()}", available=path_track_all)
+            track.__class__(file=f"does_not_exist.{set(track.valid_extensions).pop()}")
 
     def test_copy_track(self, track: LocalTrack):
-        track_from_file = track.__class__(file=track.file, available=path_track_all)
+        track_from_file = track.__class__(file=track.file)
         assert id(track.file) == id(track_from_file.file)
 
         track_copy = copy(track)
@@ -237,8 +237,6 @@ class TestLocalTrack(ItemTester):
         paths = track.__class__.get_filepaths(tmp_path)
         assert paths == {track.path}
         assert len(track.__class__.get_filepaths(path_track_resources)) == 1
-
-        assert track.__class__(file=track.path.upper(), available=paths).path == track.path
 
     @staticmethod
     def assert_track_tags_equal(actual: LocalTrack, expected: LocalTrack, check_tag_exists: bool = False):

@@ -21,8 +21,8 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
     tracks and playlists across an entire remote library collection.
 
     :param api: An authorised API object for the authenticated user you wish to load the library from.
-    :param playlist_filter: An optional :py:class:`Filter` to apply when loading playlists.
-        Playlist names will be passed to this filter to limit which playlists are loaded.
+    :param playlist_filter: An optional :py:class:`Filter` to apply or collection of playlist names to include when
+        loading playlists. Playlist names will be passed to this filter to limit which playlists are loaded.
     :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
     """
 
@@ -70,13 +70,20 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         """Authorised API object for making authenticated calls to a user's library"""
         return self._api
 
-    def __init__(self, api: RemoteAPI, playlist_filter: Filter[str] = FilterDefinedList(), use_cache: bool = True):
+    def __init__(
+            self,
+            api: RemoteAPI,
+            use_cache: bool = True,
+            playlist_filter: Collection[str] | Filter[str] = (),
+    ):
         super().__init__()
 
         self._api = api
         self.use_cache = use_cache
 
-        self.playlist_filter = playlist_filter
+        if not isinstance(playlist_filter, Filter):
+            playlist_filter = FilterDefinedList(playlist_filter)
+        self.playlist_filter: Filter[str] = playlist_filter
 
         self._playlists: dict[str, RemotePlaylist[T]] = {}
         self._tracks: list[T] = []
@@ -121,7 +128,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         self.logger.info(f"\33[1;95m ->\33[1;97m Loading {self.source} library \33[0m")
 
         self.load_playlists()
-        self.load_saved_tracks()
+        self.load_tracks()
         self.load_saved_albums()
         self.load_saved_artists()
 
@@ -130,7 +137,6 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         self.log_tracks()
         self.log_albums()
         self.log_artists()
-        self.logger.print(STAT)
 
         self.logger.print()
         self.logger.debug(f"Load {self.source} library: DONE\n")
@@ -180,7 +186,6 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         raise NotImplementedError
 
     def log_playlists(self) -> None:
-        """Log stats on currently loaded playlists"""
         max_width = get_max_width(self.playlists)
 
         self.logger.stat(f"\33[1;96m{self.source} PLAYLISTS: \33[0m")
@@ -191,7 +196,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
     ###########################################################################
     ## Load - tracks
     ###########################################################################
-    def load_saved_tracks(self) -> None:
+    def load_tracks(self) -> None:
         """
         Load all user's saved tracks from the API.
         Updates currently loaded tracks in-place or appends if not already loaded.
@@ -223,7 +228,6 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         self.logger.debug("Enrich tracks not implemented for this library, skipping...")
 
     def log_tracks(self) -> None:
-        """Log stats on currently loaded tracks"""
         playlist_tracks = [track.uri for tracks in self.playlists.values() for track in tracks]
         in_playlists = len([track for track in self.tracks if track.uri in playlist_tracks])
         album_tracks = [track.uri for tracks in self.albums for track in tracks]

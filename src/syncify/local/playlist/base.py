@@ -1,12 +1,11 @@
-import re
 from abc import ABCMeta, abstractmethod
-from collections.abc import Collection, Iterable
+from collections.abc import Collection
 from datetime import datetime
 from os.path import dirname, join, getmtime, getctime, exists
 
 from syncify.local.collection import LocalCollection
-from syncify.local.file import File
-from syncify.local.track import LocalTrack, load_track
+from syncify.local.file import File, PathMapper
+from syncify.local.track import LocalTrack
 from syncify.processors.base import Filter
 from syncify.processors.limit import ItemLimiter
 from syncify.processors.sort import ItemSorter
@@ -23,9 +22,9 @@ class LocalPlaylist[T: Filter[LocalTrack]](LocalCollection[LocalTrack], Playlist
     :param matcher: :py:class:`Filter` object to use for matching tracks.
     :param limiter: :py:class:`ItemLimiter` object to use for limiting the number of tracks matched.
     :param sorter: :py:class:`ItemSorter` object to use for sorting the final track list.
-    :param available_track_paths: A list of available track paths that are known to exist
-        and are valid for the track types supported by this program.
-        Useful for case-insensitive path loading and correcting paths to case-sensitive.
+    :param path_mapper: Optionally, provide a :py:class:`PathMapper` for paths stored in the playlist file.
+        Useful if the playlist file contains relative paths and/or paths for other systems that need to be
+        mapped to absolute, system-specific paths to be loaded and back again when saved.
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
         The wrangler is also used when loading tracks to allow them to process URI tags.
@@ -34,14 +33,12 @@ class LocalPlaylist[T: Filter[LocalTrack]](LocalCollection[LocalTrack], Playlist
 
     __slots__ = (
         "_path",
-        "_tracks",
-        "_tracks_original",
         "matcher",
         "limiter",
         "sorter",
-        "stem_replacement",
-        "stem_original",
-        "available_track_paths"
+        "path_mapper",
+        "_tracks",
+        "_original",
     )
     __attributes_classes__ = (Playlist, LocalCollection, File)
 
@@ -82,29 +79,20 @@ class LocalPlaylist[T: Filter[LocalTrack]](LocalCollection[LocalTrack], Playlist
             matcher: T | None = None,
             limiter: ItemLimiter | None = None,
             sorter: ItemSorter | None = None,
-            stem_replacement: str | None = None,
-            stem_original: str | None = None,
-            available_track_paths: Iterable[str] = (),
+            path_mapper: PathMapper = PathMapper(),
             remote_wrangler: RemoteDataWrangler = None,
     ):
         super().__init__(remote_wrangler=remote_wrangler)
 
         self._path: str = path
-        self._tracks: list[LocalTrack] | None = None
-        self._tracks_original: list[LocalTrack] | None = None
 
         self.matcher = matcher
         self.limiter = limiter
         self.sorter = sorter
+        self.path_mapper = path_mapper
 
-        self.stem_replacement = stem_replacement
-        self.stem_original = stem_original
-
-        self.available_track_paths: Iterable[str] = available_track_paths
-
-    def _load_track(self, path: str) -> LocalTrack:
-        """Wrapper for LocalTrack loader. Returns the loaded track."""
-        return load_track(path=path, available=self.available_track_paths, remote_wrangler=self.remote_wrangler)
+        self._tracks: list[LocalTrack] = []
+        self._original: list[LocalTrack] = []
 
     def _match(self, tracks: Collection[LocalTrack] = (), reference: LocalTrack | None = None) -> None:
         """Wrapper for matcher operations"""
@@ -128,19 +116,8 @@ class LocalPlaylist[T: Filter[LocalTrack]](LocalCollection[LocalTrack], Playlist
         if self.sorter is not None and self.tracks is not None:
             self.sorter(items=self.tracks)
 
-    def _prepare_paths_for_output(self, paths: Collection[str]) -> list[str]:
-        """
-        Reconfigure the given list of paths by adding back the original library folder.
-        Used to ensure saving of correct and valid paths back to playlists.
-        """
-        if len(paths) > 0 and self.stem_replacement is not None and self.stem_original is not None:
-            pattern = re.compile(self.stem_replacement.replace("\\", "\\\\"), re.I)
-            paths = [pattern.sub(self.stem_original, p) for p in paths]
-
-        return paths
-
     @abstractmethod
-    def load(self, tracks: Collection[LocalTrack] | None = None) -> list[LocalTrack] | None:
+    def load(self, tracks: Collection[LocalTrack] = ()) -> list[LocalTrack]:
         """
         Read the playlist file and update the tracks in this playlist instance.
 
