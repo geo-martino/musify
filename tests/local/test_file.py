@@ -3,9 +3,9 @@ from random import choice
 import pytest
 
 from syncify.local.file import PathMapper, PathStemMapper, File
-from syncify.shared.core.misc import PrettyPrinterTester
 from tests.local.track.utils import random_tracks
 from tests.local.utils import path_track_all
+from tests.shared.core.misc import PrettyPrinterTester
 from tests.utils import random_str
 
 
