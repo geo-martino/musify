@@ -22,8 +22,10 @@
 * [Quick Start](#quick-start)
   * [Spotify](#quick-start-spotify)
   * [Local](#quick-start-local)
-  * [Local](#quick-start-local)
-* [Currently Supported](#currenty-supported)
+  * [Sync local and remote](#quick-start-sync)
+* [Currently Supported](#supported)
+* [Motivation & Aims](#aims)
+* [Author Notes](#notes)
 
 ## Installation
 Package is listed on PyPI and can be installed as usual through pip.
@@ -33,6 +35,7 @@ pip install syncify
 python -m pip install syncify
 ```
 
+<a id="quick-start"></a>
 ## Quick Start
 
 > [!TIP]
@@ -329,7 +332,7 @@ python -m pip install syncify
    ```
 
 3. Load the matched tracks, get tags from the music streaming service, and save the tags to the file:
-   > **NOTE**: By default, URIs are saved to the `c` `o` `m` `m` `e` `n` `t` `s` tag.
+   > **NOTE**: By default, URIs are saved to the `comments` tag.
    ```python
    from syncify.spotify.object import SpotifyTrack
    
@@ -368,16 +371,16 @@ python -m pip install syncify
    print(remote_playlist)
    ```
 
-
+<a id="supported"></a>
 ## Currently Supported
 
 - **Music Streaming Services**: `Spotify`
-- **Audio filetypes**: `.mp3` `.wma` `.flac` `.m4a`
-- **Local playlist filetypes**: `.m3u` `.xautopf`
+- **Audio filetypes**: `.wma` `.flac` `.mp3` `.m4a`
+- **Local playlist filetypes**: `.xautopf` `.m3u`
 - **Local Libraries**: `MusicBee`
 
-
-## Motivations and aims
+<a id="aims"></a>
+## Motivations & Aims
 
 The key aim of this package is to provide a seamless framework for interoperability between all types of music 
 libraries whether local or remote. </br>
@@ -411,7 +414,7 @@ and instead return to a culture of nurturing talent by providing artists with a 
 on the work of their craft. One can dream.
 
 
-
+<a id="notes"></a>
 ## Author notes, contributions, and reporting issues
 
 I initially developed this program for my own use so that I can share my local playlists with friends online. 
