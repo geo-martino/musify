@@ -1,5 +1,5 @@
 from syncify.shared.exception import SafeDict
-from syncify.local.track import TRACK_FILETYPES
+from syncify.local.track import TRACK_FILETYPES, LocalTrack
 from syncify.local.playlist import PLAYLIST_FILETYPES
 from syncify.local.library import LIBRARY_CLASSES, LocalLibrary
 
@@ -12,6 +12,7 @@ TRG_FILENAME = SRC_FILENAME.replace(".template", "")
 def format_readme():
     """Format the readme template and save the formatted readme"""
     format_map = {
+        "uri_tag": [LocalTrack.uri_tag.name.lower()],
         "local_sources": [cls.name for cls in LIBRARY_CLASSES if cls != LocalLibrary],
         "remote_sources": [SPOTIFY_NAME],
         "track_filetypes": TRACK_FILETYPES,

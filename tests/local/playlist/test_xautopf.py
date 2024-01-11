@@ -136,16 +136,16 @@ class TestXAutoPF(LocalPlaylistTester):
 
         assert result.start == 11
         assert result.start_description == "I am a description"
-        assert result.start_include == 3
-        assert result.start_exclude == 3
-        assert result.start_comparers == 3
+        assert result.start_included == 3
+        assert result.start_excluded == 3
+        assert result.start_compared == 3
         assert not result.start_limiter
         assert result.start_sorter
         assert result.final == len(pl.tracks)
         assert result.final_description == pl.description
-        assert result.final_include == 4
-        assert result.final_exclude == 2
-        assert result.final_comparers == 3
+        assert result.final_included == 4
+        assert result.final_excluded == 2
+        assert result.final_compared == 3
         assert not result.start_limiter
         assert result.start_sorter
 
@@ -163,6 +163,6 @@ class TestXAutoPF(LocalPlaylistTester):
 
         # assert file has reported path count and paths in the file have been mapped to relative paths
         paths = pl.xml["SmartPlaylist"]["Source"]["ExceptionsInclude"].split("|")
-        assert len(paths) == result.final_include
+        assert len(paths) == result.final_included
         for path in paths:
             assert path.startswith("../")

@@ -24,33 +24,33 @@ class SyncResultXAutoPF(Result):
 
     :ivar start: The total number of tracks in the playlist before the sync.
     :ivar start_description: The description of the playlist before sync.
-    :ivar start_include: The number of tracks that matched the include settings before the sync.
-    :ivar start_exclude: The number of tracks that matched the exclude settings before the sync.
-    :ivar start_comparers: The number of tracks that matched all the :py:class:`Comparer` settings before the sync.
+    :ivar start_included: The number of tracks that matched the include settings before the sync.
+    :ivar start_excluded: The number of tracks that matched the exclude settings before the sync.
+    :ivar start_compared: The number of tracks that matched all the :py:class:`Comparer` settings before the sync.
     :ivar start_limiter: Was a limiter present on the playlist before the sync.
     :ivar start_sorter: Was a sorter present on the playlist before the sync.
 
     :ivar final: The total number of tracks in the playlist after the sync.
     :ivar final_description: The description of the playlist after sync.
-    :ivar final_include: The number of tracks that matched the include settings after the sync.
-    :ivar final_exclude: The number of tracks that matched the exclude settings after the sync.
-    :ivar final_comparers: The number of tracks that matched all the :py:class:`Comparer` settings after the sync.
+    :ivar final_included: The number of tracks that matched the include settings after the sync.
+    :ivar final_excluded: The number of tracks that matched the exclude settings after the sync.
+    :ivar final_compared: The number of tracks that matched all the :py:class:`Comparer` settings after the sync.
     :ivar final_limiter: Was a limiter present on the playlist after the sync.
     :ivar final_sorter: Was a sorter present on the playlist after the sync.
     """
     start: int
     start_description: str
-    start_include: int
-    start_exclude: int
-    start_comparers: int
+    start_included: int
+    start_excluded: int
+    start_compared: int
     start_limiter: bool
     start_sorter: bool
 
     final: int
     final_description: str
-    final_include: int
-    final_exclude: int
-    final_comparers: int
+    final_included: int
+    final_excluded: int
+    final_compared: int
     final_limiter: bool
     final_sorter: bool
 
@@ -151,16 +151,16 @@ class XAutoPF(LocalPlaylist[FilterMatcher[
         return SyncResultXAutoPF(
             start=count_start,
             start_description=source_start["Description"],
-            start_include=len([p for p in source_start.get("ExceptionsInclude", "").split("|") if p]),
-            start_exclude=len([p for p in source_start.get("Exceptions", "").split("|") if p]),
-            start_comparers=len(source_start["Conditions"].get("Condition", [])),
+            start_included=len([p for p in source_start.get("ExceptionsInclude", "").split("|") if p]),
+            start_excluded=len([p for p in source_start.get("Exceptions", "").split("|") if p]),
+            start_compared=len(source_start["Conditions"].get("Condition", [])),
             start_limiter=source_start["Limit"].get("@Enabled", "False") == "True",
             start_sorter=len(source_start.get("SortBy", source_start.get("DefinedSort", []))) > 0,
             final=len(self.tracks),
             final_description=source_final["Description"],
-            final_include=len([p for p in source_final.get("ExceptionsInclude", "").split("|") if p]),
-            final_exclude=len([p for p in source_final.get("Exceptions", "").split("|") if p]),
-            final_comparers=len(source_final["Conditions"].get("Condition", [])),
+            final_included=len([p for p in source_final.get("ExceptionsInclude", "").split("|") if p]),
+            final_excluded=len([p for p in source_final.get("Exceptions", "").split("|") if p]),
+            final_compared=len(source_final["Conditions"].get("Condition", [])),
             final_limiter=source_final["Limit"].get("@Enabled", "False") == "True",
             final_sorter=len(source_final.get("SortBy", source_final.get("DefinedSort", []))) > 0,
         )

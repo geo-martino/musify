@@ -4,9 +4,9 @@ from random import choice, randrange
 
 import pytest
 
-from syncify.local.track.field import LocalTrackField
 from syncify.local.library import LocalLibrary
 from syncify.local.playlist import M3U
+from syncify.local.track.field import LocalTrackField
 from syncify.report import report_playlist_differences, report_missing_tags
 from syncify.spotify.api import SpotifyAPI
 from syncify.spotify.library import SpotifyLibrary
