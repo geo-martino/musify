@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/syncify.iml" filepath="$PROJECT_DIR$/.idea/syncify.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../syncify-cli/.idea/syncify-cli.iml" filepath="$PROJECT_DIR$/../syncify-cli/.idea/syncify-cli.iml" />
     </modules>
   </component>
 </project>

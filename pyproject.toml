@@ -30,7 +30,6 @@ dependencies = [
     "xmltodict~=0.13",
     "lxml~=4.9",
     "tqdm~=4.66",
-    "pyfiglet~=1.0",
 ]
 
 [project.optional-dependencies]
