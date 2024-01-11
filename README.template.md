@@ -5,8 +5,8 @@
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/syncify)](https://pypi.org/project/syncify/)
 [![Contributors](https://img.shields.io/github/contributors/geo-martino/syncify)](https://github.com/geo-martino/syncify/graphs/contributors)
 </br>
-[![GitHub - Deployment](https://github.com/geo-martino/syncify/workflows/validate/badge.svg)](https://github.com/geo-martino/syncify/actions)
-[![GitHub - Documentation](https://github.com/geo-martino/syncify/workflows/documentation/badge.svg)](https://github.com/geo-martino/syncify/actions)
+[![GitHub - Deployment](https://github.com/geo-martino/syncify/workflows/validate/badge.svg)](https://github.com/geo-martino/syncify/actions/workflows/validate.yml)
+[![GitHub - Documentation](https://github.com/geo-martino/syncify/workflows/documentation/badge.svg)](https://github.com/geo-martino/syncify/actions/workflows/documentation.yml)
 
 ### A complete local and music streaming service (remote) library management tool.
 - Extract data for all item types from remote libraries, including following/saved items, such as:
@@ -43,7 +43,8 @@ python -m pip install syncify
 > Libraries log info about loaded objects to the custom `STAT` level.
 > ```python
 > import logging
-> logging.basicConfig(format="%(message)s", level=logging.STAT)
+> from syncify.shared.logger import STAT
+> logging.basicConfig(format="%(message)s", level=STAT)
 > ```
 
 <a id="quick-start-spotify"></a>
@@ -94,7 +95,7 @@ python -m pip install syncify
    # if you have a very large library, this will take some time...
    library.load()
    
-   # ...or you may also just load distinct sections of your library as follows
+   # ...or you may also just load distinct sections of your library
    library.load_playlists()
    library.load_tracks()
    library.load_saved_albums()
@@ -186,7 +187,7 @@ python -m pip install syncify
    # if you have a very large library, this will take some time...
    library.load()
    
-   # ...or you may also just load distinct sections of your library as follows
+   # ...or you may also just load distinct sections of your library
    library.load_tracks()
    library.load_playlists()
    
@@ -204,7 +205,7 @@ python -m pip install syncify
    album = next(album for album in library.albums if album.name == "<ALBUM NAME>")
    artist = next(artist for artist in library.artists if artist.name == "<ARTIST NAME>")
    folder = next(folder for folder in library.folders if folder.name == "<ALBUM NAME>")
-   genre = next(genre for genre in library.genres if genre.name == "<genre NAME>")
+   genre = next(genre for genre in library.genres if genre.name == "<GENRE NAME>")
    
    # pretty print information about the loaded objects
    print(playlist, album, artist, folder, genre, sep="\n")
@@ -239,10 +240,13 @@ python -m pip install syncify
    track.bpm = 120.5
    track.date = date(year=2024, month=1, day=1)
    track.compilation = True
-   track.image_links = {{
+   track.image_links.update({{
         "cover front": "https://i.scdn.co/image/ab67616d0000b2737f0918f1560fc4b40b967dd4",
         "cover back": "<PATH TO AN IMAGE ON YOUR LOCAL DRIVE>"
-   }}
+   }})
+   
+   # see the updated information
+   print(track)
    ```
 
 6. Save the tags to the file:
@@ -269,7 +273,7 @@ python -m pip install syncify
    my_playlist = library.playlists["<NAME OF YOUR PLAYLIST>"]  # case sensitive
    
    # add a track to the playlist
-   my_playlist.append(track1)
+   my_playlist.append(track)
    
    # add album's and artist's tracks to the playlist using either of the following
    my_playlist.extend(album)
@@ -322,7 +326,7 @@ python -m pip install syncify
    ```python
    from syncify.spotify.processors.processors import SpotifyItemSearcher, SpotifyItemChecker
    
-   albums = local_library.albums[:5]
+   albums = local_library.albums[:3]
    
    searcher = SpotifyItemSearcher(api=api)
    searcher.search(albums)

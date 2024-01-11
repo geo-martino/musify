@@ -247,7 +247,10 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         :param page: The current page number i.e. the current number of pauses that have happened so far.
         :param total: The total number of pages (pauses) that will occur in this run.
         """
-        header = [f"\n\t\33[1;94mTemporary playlists created. You may now check the songs in each playlist. \33[0m"]
+        header = [
+            f"\n\t\33[1;94mTemporary playlists created on {self.source}.",
+            f"You may now check the songs in each playlist on {self.source}. \33[0m"
+        ]
         options = {
             "<Name of playlist>":
                 "Print position, item name, URI, and URL from given link of items as originally added to temp playlist",

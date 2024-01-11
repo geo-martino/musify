@@ -58,19 +58,22 @@ class FLAC(LocalTrack[mutagen.flac.FLAC]):
 
     def _write_images(self, dry_run: bool = True) -> bool:
         updated = False
-        for image_type, image_link in self.image_links.items():
+        for image_kind, image_link in self.image_links.items():
             image = open_image(image_link)
+            image_kind_attr = image_kind.upper().replace(" ", "_")
 
             picture = mutagen.flac.Picture()
-            picture.type = getattr(mutagen.id3.PictureType, image_type.upper())
+            picture.type = getattr(mutagen.id3.PictureType, image_kind_attr)
             picture.mime = Image.MIME[image.format]
             picture.data = get_image_bytes(image)
 
             if not dry_run:
-                # clear images that match the new image's type
-                for pic in self._file.pictures.copy():
-                    if pic.type == picture.type:
-                        self._file.pictures.remove(pic)
+                # clear all images, adding back those that don't match the new image's type
+                pictures_current = self._file.pictures.copy()
+                self._file.clear_pictures()
+                for pic in pictures_current:
+                    if pic.type != picture.type:
+                        self._file.add_picture(pic)
 
                 self._file.add_picture(picture)
 

@@ -100,24 +100,3 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists, SpotifyDa
         safe_format_map(auth_kwargs, format_map=format_map)
 
         super().__init__(**auth_kwargs, **kwargs)
-
-
-if __name__ == "__main__":
-    import os
-
-    api = SpotifyAPI(
-        client_id=os.getenv("CLIENT_ID"),
-        client_secret=os.getenv("CLIENT_SECRET"),
-        scopes=[
-            "user-library-read",
-            "user-follow-read",
-            "playlist-modify-public",
-            "playlist-modify-private",
-            "playlist-read-collaborative",
-            "playlist-read-private"
-        ],
-        token_file_path="_data/token.json",
-    )
-    api.authorise(force_new=False)
-
-    print(api.get_self())

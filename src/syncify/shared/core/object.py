@@ -206,17 +206,16 @@ class BasicCollection[T: Item](ItemCollection[T]):
             if not __key.has_uri:
                 raise SyncifyKeyError(f"Given item does not have a URI associated: {__key.name}")
             __key = __key.uri
-        else:
-            # assume the string is a name
+        else:  # assume the string is a name
             try:
                 return next(item for item in self.items if item.name == __key)
             except StopIteration:
-                raise SyncifyKeyError(f"No matching name found: '{__key}'")
+                raise SyncifyKeyError(f"No matching item found for name: '{__key}'")
 
         try:  # string is a URI
             return next(item for item in self.items if item.uri == __key)
         except StopIteration:
-            raise SyncifyKeyError(f"No matching URI found: '{__key}'")
+            raise SyncifyKeyError(f"No matching item found for URI: '{__key}'")
 
 
 class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):

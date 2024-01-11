@@ -79,6 +79,7 @@ docs/syncify*.rst
 target/
 
 # Jupyter Notebook
+jupyter/
 .ipynb_checkpoints
 
 # IPython

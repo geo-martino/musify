@@ -216,7 +216,7 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
             try:  # last try, assume given string is a name
                 return next(item for item in self.items if item.name == __key)
             except StopIteration:
-                raise SyncifyKeyError(f"No matching item found for name: '{__key}'")
+                raise SyncifyKeyError(f"No matching item found for name/path: '{__key}'")
 
         try:  # string is a URI
             return next(item for item in self.items if item.uri == __key)
