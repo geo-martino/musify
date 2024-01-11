@@ -8,6 +8,3 @@ class LocalItem(File, Item, metaclass=ABCMeta):
     """Generic base class for locally-stored items"""
 
     __attributes_classes__ = (File, Item)
-
-    def __hash__(self):  # TODO: why doesn't this get inherited correctly from File
-        return super().__hash__()

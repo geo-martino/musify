@@ -44,6 +44,7 @@ test = [
 dev = [
     "syncify[test]",
     "grip~=4.6",
+    "jupyterlab~=4.0",
 ]
 docs = [
     "sphinx~=7.2",

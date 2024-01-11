@@ -5,7 +5,7 @@
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/syncify)](https://pypi.org/project/syncify/)
 [![Contributors](https://img.shields.io/github/contributors/geo-martino/syncify)](https://github.com/geo-martino/syncify/graphs/contributors)
 </br>
-[![GitHub - Deployment](https://github.com/geo-martino/syncify/workflows/validate/badge.svg)](https://github.com/geo-martino/syncify/actions/workflows/validate.yml)
+[![GitHub - Deployment](https://github.com/geo-martino/syncify/workflows/deploy/badge.svg)](https://github.com/geo-martino/syncify/actions/workflows/deploy.yml)
 [![GitHub - Documentation](https://github.com/geo-martino/syncify/workflows/documentation/badge.svg)](https://github.com/geo-martino/syncify/actions/workflows/documentation.yml)
 
 ### A complete local and music streaming service (remote) library management tool.
@@ -379,7 +379,7 @@ python -m pip install syncify
 ## Currently Supported
 
 - **Music Streaming Services**: `Spotify`
-- **Audio filetypes**: `.flac` `.wma` `.m4a` `.mp3`
+- **Audio filetypes**: `.mp3` `.m4a` `.wma` `.flac`
 - **Local playlist filetypes**: `.m3u` `.xautopf`
 - **Local Libraries**: `MusicBee`
 

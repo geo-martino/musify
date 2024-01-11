@@ -260,6 +260,10 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
     def image_links(self):
         return self._image_links
 
+    @image_links.setter
+    def image_links(self, value: dict[str, str]):
+        self._image_links = value
+
     @property
     def has_image(self):
         return self._has_image

@@ -180,11 +180,6 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
 
             for tag in tag_names:  # merge on each tag
                 if hasattr(track, tag):
-                    if tag == "image_links":  # TODO: find a better way to do this
-                        track_in_collection[tag].clear()
-                        track_in_collection[tag].update(track[tag])
-                        continue
-
                     track_in_collection[tag] = track[tag]
 
         if isinstance(self, Library):

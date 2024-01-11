@@ -406,7 +406,7 @@ class TestLocalTrack(ItemTester):
     @staticmethod
     def get_update_image_test_track(track: LocalTrack) -> tuple[LocalTrack, LocalTrack]:
         """Load track and modify its tags for update tags tests"""
-        track._image_links = {"cover_front": path_track_img}
+        track.image_links = {"cover front": path_track_img}
         return track, copy(track)
 
     def test_update_image_dry_run(self, track: LocalTrack):

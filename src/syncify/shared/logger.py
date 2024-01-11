@@ -99,13 +99,7 @@ class SyncifyLogger(logging.Logger):
             cols = 120
 
         # clear closed bars
-        # TODO: why does this need to run twice to actually clear all disabled bars
-        for bar in self._bars:
-            if bar.n >= bar.total or bar.disable:
-                self._bars.remove(bar)
-        for bar in self._bars:
-            if bar.n >= bar.total or bar.disable:
-                self._bars.remove(bar)
+        self._bars = [bar for bar in self._bars if bar.n < bar.total]
 
         # determine the level of bar to generate and whether to leave the bar based on current active count
         position = kwargs.get("position", abs(min(bar.pos for bar in self._bars)) + 1 if self._bars else 0)

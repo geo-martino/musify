@@ -1,7 +1,7 @@
 from os.path import basename, dirname
 
 PROGRAM_NAME = "Syncify"
-__version__ = "0.3"
+__version__ = "0.3.0"
 PROGRAM_OWNER_NAME = "George Martin Marino"
 PROGRAM_OWNER_USER = "geo-martino"
 PROGRAM_OWNER_EMAIL = f"gm.engineer+{PROGRAM_NAME.lower()}@pm.me"

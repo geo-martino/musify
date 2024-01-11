@@ -294,10 +294,10 @@ class Comparer(MusicBeeProcessor, DynamicProcessor):
     def _does_not_contain(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
         return not self._contains(value=value, expected=expected)
 
-    @dynamicprocessormethod
-    def _in_tag_hierarchy(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
-        # TODO: what does this even mean
-        raise NotImplementedError
+    # no plans to ever implement this
+    # @dynamicprocessormethod
+    # def _in_tag_hierarchy(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
+    #     raise NotImplementedError
 
     @dynamicprocessormethod
     def _matches_reg_ex(self, value: Any | None, expected: Sequence[Any] | None) -> bool:

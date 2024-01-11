@@ -121,7 +121,7 @@ class Fields(Field):
     # file properties
     PATH = 106
     FOLDER = 179
-    FILENAME = 52
+    FILENAME = 3
     EXT = 100
     SIZE = 7
     KIND = 4

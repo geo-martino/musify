@@ -57,7 +57,7 @@ def random_track[T: LocalTrack](cls: type[T] | None = None) -> T:
     has_uri = choice([True, False])
     track.uri = random_uri() if has_uri else remote_wrangler.unavailable_uri_dummy
 
-    track._image_links = {}
+    track.image_links = {}
     track.has_image = False
 
     filename_ext = f"{str(track.track_number).zfill(2)} - {track.title}" + choice(tuple(track.valid_extensions))

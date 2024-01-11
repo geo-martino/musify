@@ -1,0 +1,98 @@
+name: Deploy package to PyPI
+
+on:
+  push:
+    branches: [ v0.3 ]
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate_windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install '.[test]'
+
+    - name: Run tests
+      run: |
+        pytest --junit-xml=test-results.xml
+
+    - name: Report failed tests
+      if: always()
+      uses: pmeier/pytest-results-action@main
+      with:
+        path: test-results.xml
+        summary: true
+        display-options: fEXs
+        fail-on-empty: true
+        title: Test results
+
+  validate_linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install '.[test]'
+
+    - name: Run tests
+      run: |
+        pytest --junit-xml=test-results.xml
+
+    - name: Report failed tests
+      if: always()
+      uses: pmeier/pytest-results-action@main
+      with:
+        path: test-results.xml
+        summary: true
+        display-options: fEXs
+        fail-on-empty: true
+        title: Test results
+
+  validate_mac:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install '.[test]'
+
+    - name: Run tests
+      run: |
+        pytest --junit-xml=test-results.xml
+
+    - name: Report failed tests
+      if: always()
+      uses: pmeier/pytest-results-action@main
+      with:
+        path: test-results.xml
+        summary: true
+        display-options: fEXs
+        fail-on-empty: true
+        title: Test results

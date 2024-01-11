@@ -243,7 +243,7 @@ class LibraryTester(ItemCollectionTester, metaclass=ABCMeta):
     @staticmethod
     def test_get_filtered_playlists_on_tags(library: Library):
         # filters out tags
-        filter_names = [item.name for item in next(pl for pl in library.playlists.values())[:2]]
+        filter_names = [item.name for item in next(pl for pl in library.playlists.values() if len(pl) > 0)[:2]]
         filter_tags = {"name": [name.upper() + "  " for name in filter_names]}
         expected_counts = {}
         for name, pl in library.playlists.items():
