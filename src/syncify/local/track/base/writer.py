@@ -394,7 +394,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
         if not self.remote_wrangler:
             return False
 
-        tag_id = next(iter(self.tag_map[self.uri_tag.name.casefold()]), None)
+        tag_id = next(iter(self.tag_map[self.uri_tag.name.lower()]), None)
         tag_value = self.remote_wrangler.unavailable_uri_dummy if not self.has_uri else self.uri
         return self._write_tag(tag_id, tag_value, dry_run)
 

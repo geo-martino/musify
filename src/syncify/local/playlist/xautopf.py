@@ -9,7 +9,8 @@ import xmltodict
 from syncify.local.file import PathMapper
 from syncify.local.playlist.base import LocalPlaylist
 from syncify.local.track import LocalTrack
-from syncify.processors.filter import FilterDefinedList, FilterComparers, FilterMatcher
+from syncify.processors.filter import FilterDefinedList, FilterComparers
+from syncify.processors.filter_matcher import FilterMatcher
 from syncify.processors.limit import ItemLimiter
 from syncify.processors.sort import ItemSorter
 from syncify.shared.core.enum import Fields

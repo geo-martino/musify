@@ -36,7 +36,7 @@ class SpotifyAPIMisc(SpotifyAPIBase, metaclass=ABCMeta):
             value = input("\33[1mEnter URL/URI/ID: \33[0m")
         if not kind:
             kind = self.get_item_type(value)
-        key = self.collection_item_map[kind].name.casefold()
+        key = self.collection_item_map[kind].name.lower()
 
         while kind is None:  # get user to input ID type
             kind = RemoteObjectType.from_name(input("\33[1mEnter ID type: \33[0m"))[0]
@@ -53,7 +53,7 @@ class SpotifyAPIMisc(SpotifyAPIBase, metaclass=ABCMeta):
             if response.get("offset", 0) == 0:  # first page, show header
                 url_ext = self.convert(id_, kind=kind, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL_EXT)
                 print(
-                    f"\n\t\33[96mShowing tracks for {kind.name.casefold()}\33[0m: "
+                    f"\n\t\33[96mShowing tracks for {kind.name.lower()}\33[0m: "
                     f"\33[94m{name} \33[97m- {url_ext} \33[0m\n"
                 )
 
@@ -99,18 +99,18 @@ class SpotifyAPIMisc(SpotifyAPIBase, metaclass=ABCMeta):
             return []
 
         url = f"{self.api_url_base}/search"
-        params = {'q': query, "type": kind.name.casefold(), "limit": limit_value(limit, floor=1, ceil=50)}
+        params = {'q': query, "type": kind.name.lower(), "limit": limit_value(limit, floor=1, ceil=50)}
         response = self.handler.get(url, params=params, use_cache=use_cache)
 
         if "error" in response:
             self.logger.error(f"{'ERROR':<7}: {url:<43} | Query: {query} | {response['error']}")
             return []
 
-        results = response[f"{kind.name.casefold()}s"]["items"]
+        results = response[f"{kind.name.lower()}s"]["items"]
         if kind not in self.collection_item_map:
             return results
 
-        key = self.collection_item_map[kind].name.casefold() + "s"
+        key = self.collection_item_map[kind].name.lower() + "s"
         totals_key = {
             RemoteObjectType.ALBUM: "total_tracks",
             RemoteObjectType.SHOW: "total_episodes",

@@ -1,5 +1,3 @@
-from typing import Any
-
 from syncify.shared.exception import SyncifyError
 
 
@@ -97,23 +95,14 @@ class ImageLoadError(FileError):
 
 
 ###########################################################################
-## MusicBee errors
+## Library errors
 ###########################################################################
-class MusicBeeError(LocalError):
+class LocalLibraryError(LocalError):
     """Exception raised for errors related to MusicBee logic."""
 
 
-class FieldError(MusicBeeError):
-    """
-    Exception raised for errors related to MusicBee field.
-
-    :param message: Explanation of the error.
-    """
-    def __init__(self, message: str | None = None, field: Any | None = None):
-        self.field = field
-        self.message = message
-        formatted = f"{message}: {field}" if field else message
-        super().__init__(message=formatted)
+class MusicBeeError(LocalLibraryError):
+    """Exception raised for errors related to MusicBee logic."""
 
 
 class MusicBeeIDError(MusicBeeError):

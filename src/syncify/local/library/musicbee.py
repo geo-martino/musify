@@ -89,7 +89,7 @@ class MusicBee(LocalLibrary, File):
 
         library_folders = []
         for path in to_collection(self.settings_xml.get("OrganisationMonitoredFolders", {}).get("string")):
-            library_folders.append(path)
+            library_folders.append(path_mapper.map(path))
 
         super().__init__(
             library_folders=library_folders,

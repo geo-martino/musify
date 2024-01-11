@@ -2,12 +2,12 @@ from abc import ABCMeta, abstractmethod
 from typing import Any, Self
 
 from syncify.shared.api.exception import APIError
-from syncify.shared.core.base import Item, NamedObjectPrinter
+from syncify.shared.core.base import AttributePrinter, NameableTaggableMixin, Item
 from syncify.shared.remote import Remote
 from syncify.shared.remote.api import RemoteAPI
 
 
-class RemoteObject(NamedObjectPrinter, Remote, metaclass=ABCMeta):
+class RemoteObject(AttributePrinter, NameableTaggableMixin, Remote, metaclass=ABCMeta):
     """
     Generic base class for remote objects. Extracts key data from a remote API JSON response.
 

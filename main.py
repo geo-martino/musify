@@ -147,7 +147,7 @@ class Syncify(DynamicProcessor):
 
         load_all = not kinds
         if load_all:
-            self.remote.library.load()
+            self.local.library.load()
         elif kinds:
             if "tracks" in kinds:
                 self.local.library.load_tracks()
@@ -777,7 +777,6 @@ if __name__ == "__main__":
 
 ## SELECTED FOR DEVELOPMENT
 # TODO: separate all CLI concerns to other repo
-# TODO: check loaded numbers on linux again
 # TODO: expand readme + check all example functions work
 # TODO: expand docstrings everywhere
 # TODO: release to pypi + implement CI/CD structure on GitHub

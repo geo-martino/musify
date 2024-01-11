@@ -65,7 +65,7 @@ class TestSpotifyAPIItems:
     def test_get_items_batches_limited(self, api: SpotifyAPI, api_mock: SpotifyMock):
         api_mock.reset_mock()  # test checks the number of requests made
 
-        key = ObjectType.TRACK.name.casefold() + "s"
+        key = ObjectType.TRACK.name.lower() + "s"
         url = f"{api.api_url_base}/{key}"
         id_list = [track["id"] for track in api_mock.tracks]
         valid_limit = 30
@@ -154,7 +154,7 @@ class TestSpotifyAPIItems:
     def test_get_item_multi(self, kind: ObjectType, api: SpotifyAPI, api_mock: SpotifyMock):
         api_mock.reset_mock()  # test checks the number of requests made
 
-        url = f"{api.api_url_base}/{kind.name.casefold()}s"
+        url = f"{api.api_url_base}/{kind.name.lower()}s"
         params = {"key": "value"}
 
         source = api_mock.item_type_map[kind]
@@ -182,7 +182,7 @@ class TestSpotifyAPIItems:
     def test_get_item_batched(self, kind: ObjectType, api: SpotifyAPI, api_mock: SpotifyMock):
         api_mock.reset_mock()  # test checks the number of requests made
 
-        key = kind.name.casefold() + "s"
+        key = kind.name.lower() + "s"
         url = f"{api.api_url_base}/{key}"
         params = {"key": "value"}
 
@@ -210,7 +210,7 @@ class TestSpotifyAPIItems:
     def test_extend_items(self, kind: ObjectType, api: SpotifyAPI, api_mock: SpotifyMock):
         api_mock.reset_mock()  # test checks the number of requests made
 
-        key = api.collection_item_map.get(kind, kind).name.casefold() + "s"
+        key = api.collection_item_map.get(kind, kind).name.lower() + "s"
         source = deepcopy(next(item[key] for item in api_mock.item_type_map[kind] if item[key]["total"] >= 4))
         total = source["total"]
         limit = max(min(total // 3, len(source[api.items_key]) // 3, api_mock.limit_max), 1)  # force pagination
@@ -259,18 +259,18 @@ class TestSpotifyAPIItems:
         test = None
         if user:
             test = random_id_type(id_=api_mock.user_id, wrangler=api, kind=ObjectType.USER)
-            url = f"{api.api_url_base}/users/{api_mock.user_id}/{kind.name.casefold()}s"
+            url = f"{api.api_url_base}/users/{api_mock.user_id}/{kind.name.lower()}s"
         elif kind == ObjectType.ARTIST:
             url = f"{api.api_url_base}/me/following"
         else:
-            url = f"{api.api_url_base}/me/{kind.name.casefold()}s"
+            url = f"{api.api_url_base}/me/{kind.name.lower()}s"
 
         source = deepcopy(api_mock.item_type_map_user[kind])
         if kind == ObjectType.PLAYLIST:  # ensure items block is reduced for playlist responses as expected
             for pl in source:
                 pl["tracks"] = {"href": pl["tracks"]["href"], "total": pl["tracks"]["total"]}
 
-        source_map = {item["id"] if "id" in item else item[kind.name.casefold()]["id"]: item for item in source}
+        source_map = {item["id"] if "id" in item else item[kind.name.lower()]["id"]: item for item in source}
 
         total = len(source)
         limit = max(min(total // 3, api_mock.limit_max), 1)  # force pagination
@@ -286,8 +286,8 @@ class TestSpotifyAPIItems:
         for result in results:  # check results are as expected
             if kind not in {ObjectType.PLAYLIST, ObjectType.ARTIST}:
                 assert "added_at" in result
-                result = result[kind.name.casefold()]
-                assert result == source_map[result["id"]][kind.name.casefold()]
+                result = result[kind.name.lower()]
+                assert result == source_map[result["id"]][kind.name.lower()]
             else:
                 assert result == source_map[result["id"]]
 
@@ -306,7 +306,7 @@ class TestSpotifyAPIItems:
             assert len(results) == len(expected)
 
         for result in results:
-            assert result["type"] == kind.name.casefold()
+            assert result["type"] == kind.name.lower()
 
             if key is None:
                 # item get with no extension, result should match source
@@ -335,7 +335,7 @@ class TestSpotifyAPIItems:
 
             expected_total = expect[key]["total"]
             expected_no_items = {k: v for k, v in expect.items() if k != key}
-            assert result["type"] == kind.name.casefold()
+            assert result["type"] == kind.name.lower()
 
             assert len(result[key]["items"]) == expected_total
             assert len(actual[key]["items"]) == expected_total
@@ -364,7 +364,7 @@ class TestSpotifyAPIItems:
         api_mock.reset_mock()  # test checks the number of requests made
 
         extend = kind in api.collection_item_map
-        key = api.collection_item_map[kind].name.casefold() + "s" if extend else None
+        key = api.collection_item_map[kind].name.lower() + "s" if extend else None
 
         source = deepcopy(choice(api_mock.item_type_map[kind]))
         test = random_id_type(id_=source["id"], wrangler=api, kind=kind)
@@ -373,7 +373,7 @@ class TestSpotifyAPIItems:
         self.assert_get_items_results(expected={source["id"]: source}, results=results, kind=kind, key=key)
 
         # appropriate number of requests made
-        url = f"{api.api_url_base}/{kind.name.casefold()}s/{source["id"]}"
+        url = f"{api.api_url_base}/{kind.name.lower()}s/{source["id"]}"
         requests = api_mock.get_requests(url=url)
         if key:
             requests += api_mock.get_requests(url=f"{url}/{key}")
@@ -410,7 +410,7 @@ class TestSpotifyAPIItems:
         api_mock.reset_mock()  # test checks the number of requests made
 
         extend = kind in api.collection_item_map
-        key = api.collection_item_map[kind].name.casefold() + "s" if extend else None
+        key = api.collection_item_map[kind].name.lower() + "s" if extend else None
 
         source = api_mock.item_type_map[kind]
         source = sample(source, api_mock.limit_lower) if len(source) > api_mock.limit_lower else source
@@ -427,7 +427,7 @@ class TestSpotifyAPIItems:
         self.assert_get_items_results(expected=source_map, results=results, kind=kind, key=key)
 
         # appropriate number of requests made
-        url = f"{api.api_url_base}/{kind.name.casefold()}s"
+        url = f"{api.api_url_base}/{kind.name.lower()}s"
         requests = api_mock.get_requests(url=url)
         for item in source:
             if kind in {ObjectType.USER, ObjectType.PLAYLIST}:

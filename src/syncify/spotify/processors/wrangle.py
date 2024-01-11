@@ -106,7 +106,7 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
                     continue
 
             if kind == RemoteObjectType.USER:
-                name = kind.name.casefold()
+                name = kind.name.lower()
                 try:
                     id_ = url_path[url_path.index(name) + 1]
                 except ValueError:
@@ -128,7 +128,7 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
             raise RemoteIDTypeError(f"Could not determine item type: {value}")
 
         # reformat
-        item = kind.name.casefold().rstrip('s')
+        item = kind.name.lower().rstrip('s')
         if type_out == RemoteIDType.URL:
             return f'{URL_API}/{item}s/{id_}'
         elif type_out == RemoteIDType.URL_EXT:

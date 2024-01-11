@@ -153,7 +153,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             When None, allow the logger to decide this setting.
         :return: API JSON responses for each item
         """
-        key = key.name.casefold() + "s" if key else None
+        key = key.name.lower() + "s" if key else None
         if key and key in items_block:
             items_block = items_block[key]
         if self.items_key not in items_block:
@@ -167,7 +167,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         if "limit" not in items_block:
             items_block["limit"] = int(parse_qs(urlparse(items_block["next"]).query).get("limit", [50])[0])
 
-        kind = kind.name.casefold() + "s" if isinstance(kind, RemoteObjectType) else kind or self.items_key
+        kind = kind.name.lower() + "s" if isinstance(kind, RemoteObjectType) else kind or self.items_key
         pages = (items_block["total"] - len(items_block[self.items_key])) / (items_block["limit"] or 1)
         bar = self.logger.get_progress_bar(
             initial=len(items_block[self.items_key]),
@@ -240,7 +240,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         else:
             self.validate_item_type(values, kind=kind)
 
-        unit = kind.name.casefold() + "s"
+        unit = kind.name.lower() + "s"
         url = f"{self.api_url_base}/{unit}"
         id_list = self.extract_ids(values, kind=kind)
 
@@ -250,7 +250,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             results = self._get_items_batched(url=url, id_list=id_list, key=unit, use_cache=use_cache, limit=limit)
 
         key = self.collection_item_map.get(kind, kind)
-        key_name = key.name.casefold() + "s"
+        key_name = key.name.lower() + "s"
         if len(results) == 0 or any(key_name not in result for result in results) or not extend:
             self._merge_results_to_input(original=values, results=results, ordered=True)
             self.logger.debug(f"{'DONE':<7}: {url:<43} | Retrieved {len(results):>6} {unit}")
@@ -299,27 +299,27 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             raise RemoteObjectTypeError(f"{kind.name.title()}s are not a valid user collection type", kind=kind)
         if kind != RemoteObjectType.PLAYLIST and user is not None:
             raise RemoteObjectTypeError(
-                f"Only able to retrieve {kind.name.casefold()}s from the currently authenticated user",
+                f"Only able to retrieve {kind.name.lower()}s from the currently authenticated user",
                 kind=kind
             )
 
         params = {"limit": limit_value(limit, floor=1, ceil=50)}
         if user is not None:
-            url = f"{self.convert(user, kind=RemoteObjectType.USER, type_out=RemoteIDType.URL)}/{kind.name.casefold()}s"
+            url = f"{self.convert(user, kind=RemoteObjectType.USER, type_out=RemoteIDType.URL)}/{kind.name.lower()}s"
             desc_qualifier = "user's"
         elif kind == RemoteObjectType.ARTIST:
             url = f"{self.api_url_base}/me/following"
             desc_qualifier = "current user's followed"
             params["type"] = "artist"
         else:
-            url = f"{self.api_url_base}/me/{kind.name.casefold()}s"
+            url = f"{self.api_url_base}/me/{kind.name.lower()}s"
             desc_qualifier = "current user's" if kind == RemoteObjectType.PLAYLIST else "current user's saved"
 
-        desc = f"Getting {desc_qualifier} {kind.name.casefold()}s"
+        desc = f"Getting {desc_qualifier} {kind.name.lower()}s"
         initial = self.handler.get(url, params=params, use_cache=use_cache, log_pad=71)
         results = self.extend_items(initial, kind=desc, key=kind, use_cache=use_cache)
 
-        self.logger.debug(f"{'DONE':<7}: {url:<43} | Retrieved {len(results):>6} {kind.name.casefold()}s")
+        self.logger.debug(f"{'DONE':<7}: {url:<43} | Retrieved {len(results):>6} {kind.name.lower()}s")
 
         return results
 

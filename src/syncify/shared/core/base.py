@@ -10,9 +10,25 @@ from syncify.shared.types import UnitIterable
 from syncify.shared.utils import to_collection
 
 
-class NamedObject(ABC):
+class Nameable(ABC):
+    """Generic base class for any nameable object."""
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """A name for this object"""
+        raise NotImplementedError
+
+    def __lt__(self, other: Nameable):
+        return self.name < other.name
+
+    def __gt__(self, other: Nameable):
+        return self.name > other.name
+
+
+class Taggable(ABC):
     """
-    Generic base class for all local/remote item/collections.
+    Generic base class for any taggable object.
 
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
@@ -22,12 +38,6 @@ class NamedObject(ABC):
     tag_sep: str = "; "
 
     @property
-    @abstractmethod
-    def name(self) -> str:
-        """A name for this object"""
-        raise NotImplementedError
-
-    @property
     def clean_tags(self) -> dict[TagField, Any]:
         """A map of tags that have been cleaned to use when matching/searching"""
         return self._clean_tags
@@ -35,14 +45,12 @@ class NamedObject(ABC):
     def __init__(self):
         self._clean_tags: dict[TagField, Any] = {}
 
-    def __lt__(self, other: NamedObject):
-        return self.name < other.name
 
-    def __gt__(self, other: NamedObject):
-        return self.name > other.name
+class NameableTaggableMixin(Nameable, Taggable, metaclass=ABCMeta):
+    pass
 
 
-class NamedObjectPrinter(NamedObject, PrettyPrinter, metaclass=ABCMeta):
+class AttributePrinter(PrettyPrinter, metaclass=ABCMeta):
 
     __attributes_classes__: UnitIterable[type] = ()
     __attributes_ignore__: UnitIterable[str] = ()
@@ -53,7 +61,7 @@ class NamedObjectPrinter(NamedObject, PrettyPrinter, metaclass=ABCMeta):
             """Build up classes and exclude keys for getting attributes"""
             if kls != self.__class__ and kls not in classes:
                 classes.append(kls)
-            if issubclass(kls, NamedObjectPrinter):
+            if issubclass(kls, AttributePrinter):
                 ignore.update(to_collection(kls.__attributes_ignore__))
                 for k in to_collection(kls.__attributes_classes__):
                     get_settings(k)
@@ -76,7 +84,7 @@ class NamedObjectPrinter(NamedObject, PrettyPrinter, metaclass=ABCMeta):
         return self._get_attributes()
 
 
-class Item(NamedObjectPrinter, Hashable, metaclass=ABCMeta):
+class Item(AttributePrinter, NameableTaggableMixin, Hashable, metaclass=ABCMeta):
     """
     Generic class for storing an item.
 

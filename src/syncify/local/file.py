@@ -74,7 +74,7 @@ class File(Hashable, metaclass=ABCMeta):
     @property
     def ext(self) -> str:
         """The file extension in lowercase."""
-        return splitext(self.path)[1].casefold()
+        return splitext(self.path)[1].lower()
 
     @property
     def size(self) -> int | None:
@@ -242,7 +242,7 @@ class PathStemMapper(PathMapper):
                     seps = ("\\", "/")
                 elif "\\" in replacement and "\\" not in path:
                     seps = ("/", "\\")
-                path = sep.join([replacement.rstrip("\\/"), path[len(stem):].lstrip("\\/")])
+                path = sep.join([replacement.rstrip("\\/"), path[len(stem):].lstrip("\\/")]).rstrip("\\/")
                 break
 
         if sep == "\\":

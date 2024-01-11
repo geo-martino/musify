@@ -7,7 +7,6 @@ class SpotifyError(RemoteError):
 
     :param message: Explanation of the error.
     """
-
     def __init__(self, message: str | None = None):
         self.message = message
         super().__init__(message)
@@ -15,7 +14,7 @@ class SpotifyError(RemoteError):
 
 class SpotifyItemError(SpotifyError):
     """
-    Exception raised for local item errors.
+    Exception raised for Spotify item errors.
 
     :param message: Explanation of the error.
     :param kind: The item type related to the error.
@@ -29,7 +28,7 @@ class SpotifyItemError(SpotifyError):
 
 class SpotifyCollectionError(SpotifyError):
     """
-    Exception raised for local collection errors.
+    Exception raised for Spotify collection errors.
 
     :param message: Explanation of the error.
     :param kind: The collection type related to the error.

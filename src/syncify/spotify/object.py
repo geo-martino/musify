@@ -283,7 +283,7 @@ class SpotifyCollectionLoader[T: SpotifyItem](SpotifyObjectLoaderMixin[T], Spoti
     ) -> Self:
         unit = cls.__name__.removeprefix("Spotify").lower()
         kind = RemoteObjectType.from_name(unit)[0]
-        key = api.collection_item_map[kind].name.casefold() + "s"
+        key = api.collection_item_map[kind].name.lower() + "s"
 
         # no items given, regenerate API response from the URL
         if not items or (isinstance(value, Mapping) and (key not in value or api.items_key not in value[key])):

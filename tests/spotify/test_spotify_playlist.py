@@ -191,7 +191,7 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
 
     def test_load_with_items(self, response_valid: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
         api_mock.reset_mock()  # test checks the number of requests made
-        key = api.collection_item_map[RemoteObjectType.PLAYLIST].name.casefold() + "s"
+        key = api.collection_item_map[RemoteObjectType.PLAYLIST].name.lower() + "s"
 
         # ensure extension can be made by reducing available items and adding next page URL
         response_valid[key]["items"] = response_valid[key]["items"][:response_valid[key]["limit"]]

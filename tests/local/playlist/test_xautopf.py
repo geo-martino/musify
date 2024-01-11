@@ -157,7 +157,7 @@ class TestXAutoPF(LocalPlaylistTester):
 
         assert pl.date_modified > original_dt_modified
         if sys.platform != "linux":
-            # linux appears to always update the date created when modifying a file, skip this test on linux
+            # linux appears to always update the date created when modifying a file, skip this assertion on linux
             assert pl.date_created == original_dt_created
         assert pl.xml != original_xml
 

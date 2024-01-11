@@ -4,25 +4,11 @@ from datetime import datetime
 from random import shuffle
 from typing import Any, Self
 
-from syncify.local.exception import FieldError
 from syncify.processors.base import MusicBeeProcessor
 from syncify.shared.core.base import Item
 from syncify.shared.core.enum import SyncifyEnum, Field, Fields
 from syncify.shared.types import UnitSequence, UnitIterable
 from syncify.shared.utils import flatten_nested, strip_ignore_words, to_collection, limit_value
-
-
-def _get_field_from_code(field_code: int) -> Field | None:
-    """
-    Get the :py:class:`Field` enum for a given MusicBee field code.
-
-    :raise FieldError: When the given ``field_code`` cannot be found.
-    """
-    if field_code == 0:
-        return
-    elif field_code in {x.value for x in Fields.all()}:
-        return Fields.from_value(field_code)[0]
-    raise FieldError(f"Field code not recognised", field=field_code)
 
 
 class ShuffleMode(SyncifyEnum):
@@ -158,7 +144,7 @@ class ItemSorter(MusicBeeProcessor):
             fields = cls._custom_sort[field_code]
             return cls(fields=fields)
         else:
-            field = _get_field_from_code(field_code)
+            field = Fields.from_value(field_code)[0]
 
         if field is None:
             return cls()

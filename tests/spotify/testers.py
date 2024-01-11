@@ -31,7 +31,7 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
 
         unit = collection.__class__.__name__.removeprefix("Spotify")
         kind = RemoteObjectType.from_name(unit)[0]
-        key = api.collection_item_map[kind].name.casefold() + "s"
+        key = api.collection_item_map[kind].name.lower() + "s"
 
         test = collection.__class__.load(response_valid["href"], api=api, extend_tracks=True)
 
@@ -64,7 +64,7 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
         """Run test with assertions on load method with given ``items``"""
         unit = cls.__name__.removeprefix("Spotify")
         kind = RemoteObjectType.from_name(unit)[0]
-        key = api.collection_item_map[kind].name.casefold() + "s"
+        key = api.collection_item_map[kind].name.lower() + "s"
 
         test = cls.load(response, api=api, items=items, extend_tracks=True)
         assert len(test.response[key]["items"]) == response[key]["total"]

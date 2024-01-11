@@ -94,7 +94,7 @@ class LocalTrack[T: mutagen.FileType](TagWriter, metaclass=ABCMeta):
         count = 0
 
         for i, image in enumerate(images):
-            output_path = join(output_folder, self.filename + f"_{str(i).zfill(2)}" + image.format.casefold())
+            output_path = join(output_folder, self.filename + f"_{str(i).zfill(2)}" + image.format.lower())
             os.makedirs(dirname(output_path), exist_ok=True)
 
             image.save(output_path)

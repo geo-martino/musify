@@ -112,8 +112,8 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
         """
         item_type = cls.get_item_type(values, kind=kind)
         if item_type is not None and not item_type == kind:
-            item_str = "unknown" if item_type is None else item_type.name.casefold() + "s"
-            raise RemoteObjectTypeError(f"Given items must all be {kind.name.casefold()} URLs/URIs/IDs, not {item_str}")
+            item_str = "unknown" if item_type is None else item_type.name.lower() + "s"
+            raise RemoteObjectTypeError(f"Given items must all be {kind.name.lower()} URLs/URIs/IDs, not {item_str}")
 
     @classmethod
     @abstractmethod

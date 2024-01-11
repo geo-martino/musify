@@ -5,12 +5,12 @@ from functools import reduce
 from operator import mul
 from typing import Any, Self
 
-from syncify.local.exception import FieldError
 from syncify.processors.base import DynamicProcessor, MusicBeeProcessor, dynamicprocessormethod
 from syncify.processors.exception import ComparerError
 from syncify.processors.time import TimeMapper
 from syncify.shared.core.base import Item
 from syncify.shared.core.enum import Field
+from syncify.shared.exception import FieldError
 from syncify.shared.field import Fields
 from syncify.shared.types import UnitSequence
 from syncify.shared.utils import to_collection

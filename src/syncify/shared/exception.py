@@ -31,6 +31,9 @@ class SyncifyAttributeError(SyncifyError, AttributeError):
     """Exception raised for invalid attributes."""
 
 
+###########################################################################
+## Enum errors
+###########################################################################
 class SyncifyEnumError(SyncifyError):
     """Exception raised when searching enums gives an exception.
 
@@ -41,6 +44,16 @@ class SyncifyEnumError(SyncifyError):
     def __init__(self, value: Any, message: str = "Could not find enum"):
         self.message = message
         super().__init__(f"{self.message}: {value}")
+
+
+class FieldError(SyncifyEnumError):
+    """
+    Exception raised for errors related to field enums.
+
+    :param message: Explanation of the error.
+    """
+    def __init__(self, message: str | None = None, field: Any | None = None):
+        super().__init__(value=field, message=message)
 
 
 class ConfigError(SyncifyError):

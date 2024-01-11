@@ -25,7 +25,7 @@ from syncify.processors.filter import FilterComparers
 from syncify.report import report_missing_tags
 from syncify.shared.api.authorise import APIAuthoriser
 from syncify.shared.api.request import RequestHandler
-from syncify.shared.core.base import NamedObject
+from syncify.shared.core.base import Nameable
 from syncify.shared.core.enum import TagField
 from syncify.shared.core.misc import PrettyPrinter
 from syncify.shared.core.object import Library
@@ -295,7 +295,7 @@ class ConfigLibrary(BaseConfig):
         return obj
 
 
-class ConfigFilter[T: str | NamedObject](BaseConfig, FilterComparers[T]):
+class ConfigFilter[T: str | Nameable](BaseConfig, FilterComparers[T]):
     """
     Set the settings for granular filtering from a config file.
     See :py:class:`Config` for more documentation regarding operation.
@@ -316,7 +316,7 @@ class ConfigFilter[T: str | NamedObject](BaseConfig, FilterComparers[T]):
         self.match_all = self._file.pop("match_all", self.match_all)
         self.comparers = tuple(Comparer(condition=cond, expected=exp) for cond, exp in self._file.items())
 
-        self.transform = lambda value: value.name if isinstance(value, NamedObject) else value
+        self.transform = lambda value: value.name if isinstance(value, Nameable) else value
 
 
 class ConfigPlaylists(BaseConfig):

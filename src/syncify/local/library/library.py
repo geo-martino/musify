@@ -4,7 +4,6 @@ from os.path import splitext, join, exists, basename
 from typing import Any
 
 from syncify.local.collection import LocalCollection, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
-from syncify.local.exception import LocalCollectionError
 from syncify.local.file import PathMapper, PathStemMapper
 from syncify.local.playlist import PLAYLIST_FILETYPES, LocalPlaylist, load_playlist
 from syncify.local.track import TRACK_CLASSES, LocalTrack, load_track
@@ -143,7 +142,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         pl_total = len(playlists)
         pl_filtered = self.playlist_filter(playlists)
         self._playlist_paths = {
-            name: path for name, path in sorted(playlists.items(), key=lambda x: x[0])
+            name: path for name, path in sorted(playlists.items(), key=lambda x: x[0].casefold())
             if name in pl_filtered
         }
 
@@ -304,24 +303,19 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             return
 
         self.logger.debug(f"Load {self.name} playlist data: START")
-        names = sorted(self._playlist_paths.keys())
+        self.logger.info(
+            f"\33[1;95m  >\33[1;97m Loading playlist data for {len(self._playlist_paths)} playlists \33[0m"
+        )
 
-        self.logger.info(f"\33[1;95m  >\33[1;97m Loading playlist data for {len(names)} playlists \33[0m")
-
-        playlists: dict[str, LocalPlaylist] = {}
-        bar: Iterable[str] = self.logger.get_progress_bar(iterable=names, desc="Loading playlists", unit="playlists")
-        for name in bar:
-            path = self._playlist_paths.get(name)
-            if path is None:
-                raise LocalCollectionError(
-                    f"Playlist name not found in the stored paths of this manager: {name}", kind="playlist"
-                )
-
-            playlists[name] = load_playlist(
+        iterable = self._playlist_paths.items()
+        bar = self.logger.get_progress_bar(iterable=iterable, desc="Loading playlists", unit="playlists")
+        playlists: list[LocalPlaylist] = [
+            load_playlist(
                 path=path, tracks=self.tracks, path_mapper=self.path_mapper, remote_wrangler=self.remote_wrangler,
-            )
+            ) for name, path in bar
+        ]
 
-        self._playlists = playlists
+        self._playlists = {pl.name: pl for pl in sorted(playlists, key=lambda x: x.name.casefold())}
         self.logger.debug(f"Load {self.name} playlists: DONE\n")
 
     def log_playlists(self) -> None:

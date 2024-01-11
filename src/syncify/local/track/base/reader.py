@@ -250,7 +250,7 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
         else:
             self._uri = value
             self._has_uri = True
-        setattr(self, self.uri_tag.name.casefold(), value)
+        setattr(self, self.uri_tag.name.lower(), value)
 
     @property
     def has_uri(self):
@@ -539,7 +539,7 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
             return
 
         # WORKAROUND: for dodgy MP3 tag comments, split on null and take first value
-        possible_values: tuple[str, ...] | None = to_collection(self[self.uri_tag.name.casefold()])
+        possible_values: tuple[str, ...] | None = to_collection(self[self.uri_tag.name.lower()])
         if not possible_values:
             return None
 

@@ -173,7 +173,7 @@ def format_full_func_name(record: logging.LogRecord, width: int = 40) -> None:
         while folder.casefold() != PROGRAM_NAME.casefold():  # get relative path to sources root
             path, folder = split(path)
             path_split.append(folder)
-        path_split.append(PROGRAM_NAME.casefold())
+        path_split.append(PROGRAM_NAME.lower())
 
         # produce fully qualified path
         path_split = list(reversed(path_split[:-1]))

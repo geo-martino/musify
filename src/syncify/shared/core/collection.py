@@ -5,13 +5,13 @@ from collections.abc import MutableSequence, Iterable, Mapping, Collection
 from typing import Any, SupportsIndex, Self
 
 from syncify.processors.sort import ShuffleMode, ShuffleBy, ItemSorter
-from syncify.shared.core.base import Item, NamedObjectPrinter, NamedObject
+from syncify.shared.core.base import Nameable, NameableTaggableMixin, AttributePrinter, Item
 from syncify.shared.core.enum import Field
 from syncify.shared.exception import SyncifyTypeError, SyncifyKeyError
 from syncify.shared.types import UnitSequence
 
 
-class ItemCollection[T: Item](NamedObjectPrinter, MutableSequence[T], metaclass=ABCMeta):
+class ItemCollection[T: Item](AttributePrinter, NameableTaggableMixin, MutableSequence[T], metaclass=ABCMeta):
     """
     Generic class for storing a collection of items.
 
@@ -144,7 +144,7 @@ class ItemCollection[T: Item](NamedObjectPrinter, MutableSequence[T], metaclass=
         def condense(key: str, value: Any) -> tuple[str, Any]:
             """Decide whether this key-value pair should be condensed and condense them."""
             if isinstance(value, Collection) and not isinstance(value, str):
-                if any(isinstance(v, NamedObject) for v in value) or len(value) > 20 or len(value) == 0:
+                if any(isinstance(v, Nameable) for v in value) or len(value) > 20 or len(value) == 0:
                     return f"{key.rstrip("s")}_count", len(value)
             return key, value
 

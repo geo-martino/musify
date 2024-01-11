@@ -1,7 +1,6 @@
 from abc import ABCMeta
 from typing import Any
 
-from syncify.shared.core.misc import PrettyPrinter
 from syncify.shared.remote.base import RemoteObject, RemoteItem
 from syncify.shared.remote.enum import RemoteObjectType
 from syncify.shared.remote.exception import RemoteObjectTypeError, RemoteError
@@ -13,7 +12,7 @@ class SpotifyObjectMixin(RemoteObject, SpotifyRemote, metaclass=ABCMeta):
     pass
 
 
-class SpotifyObject(SpotifyObjectMixin, PrettyPrinter, metaclass=ABCMeta):
+class SpotifyObject(SpotifyObjectMixin, metaclass=ABCMeta):
     """Generic base class for Spotify-stored objects. Extracts key data from a Spotify API JSON response."""
 
     _url_pad = 71

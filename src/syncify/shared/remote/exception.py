@@ -9,7 +9,7 @@ class RemoteError(SyncifyError):
 
 
 ###########################################################################
-## Type errors
+## Enum errors
 ###########################################################################
 class RemoteIDTypeError(RemoteError):
     """

@@ -9,7 +9,8 @@ from syncify.local.file import PathStemMapper, PathMapper
 from syncify.local.track import LocalTrack
 from syncify.local.track.field import LocalTrackField
 from syncify.processors.compare import Comparer
-from syncify.processors.filter import FilterDefinedList, FilterComparers, FilterMatcher, FilterIncludeExclude
+from syncify.processors.filter import FilterDefinedList, FilterComparers, FilterIncludeExclude
+from syncify.processors.filter_matcher import FilterMatcher
 from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra, path_playlist_resources
 from tests.local.track.utils import random_tracks
 from tests.local.utils import path_track_all, path_track_wma, path_track_flac, path_track_mp3

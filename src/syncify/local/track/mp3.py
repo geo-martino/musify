@@ -146,7 +146,7 @@ class MP3(LocalTrack[mutagen.mp3.MP3]):
 
             return tag_id is not None
         else:
-            tag_id = next(iter(self.tag_map[self.uri_tag.name.casefold()]), None)
+            tag_id = next(iter(self.tag_map[self.uri_tag.name.lower()]), None)
             return self._write_tag(tag_id, tag_value, dry_run)
 
     def delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:

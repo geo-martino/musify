@@ -85,14 +85,14 @@ class TestSpotifyAPICore:
 
         assert len(results) <= min(len(expected), limit)
         for result in results:
-            assert result["type"] == kind.name.casefold()
+            assert result["type"] == kind.name.lower()
 
         request = api_mock.get_requests(url=f"{api.api_url_base}/search", params={"q": query})[0]
         params = parse_qs(request.query)
 
         assert params["q"][0] == query
         assert int(params["limit"][0]) == limit
-        assert params["type"][0] == kind.name.casefold()
+        assert params["type"][0] == kind.name.lower()
 
     ###########################################################################
     ## Utilities
@@ -105,7 +105,7 @@ class TestSpotifyAPICore:
     ):
         api_mock.reset_mock()  # test checks the number of requests made
 
-        key = api.collection_item_map.get(kind, kind).name.casefold() + "s"
+        key = api.collection_item_map.get(kind, kind).name.lower() + "s"
         source = deepcopy(next(item for item in api_mock.item_type_map[kind] if item[key]["total"] > 50))
 
         api.print_collection(value=source)

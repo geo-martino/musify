@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from syncify.processors.match import ItemMatcher
-from syncify.shared.core.base import Item, NamedObject
+from syncify.shared.core.base import NameableTaggableMixin, Item
 from syncify.shared.core.collection import ItemCollection
 from syncify.shared.core.enum import TagField, TagFields as Tag
 from syncify.shared.core.misc import Result
@@ -102,7 +102,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
         self.use_cache = use_cache
 
     def _get_results(
-            self, item: NamedObject, kind: RemoteObjectType, settings: SearchSettings
+            self, item: NameableTaggableMixin, kind: RemoteObjectType, settings: SearchSettings
     ) -> list[dict[str, Any]] | None:
         """Query the API to get results for the current item based on algorithm settings"""
         self.clean_tags(item)

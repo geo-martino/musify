@@ -366,8 +366,8 @@ class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
         Returns a filtered set of playlists in this library.
         The playlists returned are deep copies of the playlists in the library.
 
-        :param playlist_filter: An optional :py:class:`Filter` to apply or collection of playlist names to include when
-            loading playlists. Playlist names will be passed to this filter to limit which playlists are loaded.
+        :param playlist_filter: An optional :py:class:`Filter` to apply or collection of playlist names.
+            Playlist names will be passed to this filter to limit which playlists are processed.
         :param tag_filter: Provide optional kwargs of the tags and values of items to filter out of every playlist.
             Parse a tag name as a parameter, any item matching the values given for this tag will be filtered out.
             NOTE: Only `string` value types are currently supported.

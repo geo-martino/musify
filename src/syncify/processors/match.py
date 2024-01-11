@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from syncify.processors.base import ItemProcessor
-from syncify.shared.core.base import NamedObject
+from syncify.shared.core.base import Nameable, NameableTaggableMixin, Taggable
 from syncify.shared.core.collection import ItemCollection
 from syncify.shared.core.enum import TagField, TagFields as Tag, ALL_TAG_FIELDS
 from syncify.shared.core.misc import PrettyPrinter
@@ -48,7 +48,7 @@ class CleanTagConfig(PrettyPrinter):
 
     def as_dict(self) -> dict[str, Any]:
         return {
-            "tag": self.tag.name.casefold(),
+            "tag": self.tag.name.lower(),
             "remove": [value for value in self.remove],
             "split": [value for value in self.split],
             "preprocess": self._preprocess is not None,
@@ -108,7 +108,7 @@ class ItemMatcher(ItemProcessor):
         log[0] = pad * 3 + ' ' + (log[0] if log[0] else "unknown")
         self.logger.debug(" | ".join(log))
 
-    def _log_algorithm(self, source: NamedObject, extra: Iterable[str] = ()) -> None:
+    def _log_algorithm(self, source: Nameable, extra: Iterable[str] = ()) -> None:
         """Wrapper for initially logging an algorithm in a correctly aligned format"""
         algorithm = inspect.stack()[1][0].f_code.co_name.upper().lstrip("_").replace("_", " ")
         log = [source.name, algorithm]
@@ -117,7 +117,7 @@ class ItemMatcher(ItemProcessor):
         self._log_padded(log, pad='>')
 
     def _log_test[T: (Track, Album)](
-            self, source: NamedObject, result: T, test: Any, extra: Iterable[str] = ()
+            self, source: Nameable, result: T, test: Any, extra: Iterable[str] = ()
     ) -> None:
         """Wrapper for initially logging a test result in a correctly aligned format"""
         algorithm = inspect.stack()[1][0].f_code.co_name.replace("match", "").upper().lstrip("_").replace("_", " ")
@@ -127,14 +127,14 @@ class ItemMatcher(ItemProcessor):
             log.extend(extra)
         self._log_padded(log)
 
-    def _log_match[T: (Track, Album)](self, source: NamedObject, result: T, extra: Iterable[str] = ()) -> None:
+    def _log_match[T: (Track, Album)](self, source: Nameable, result: T, extra: Iterable[str] = ()) -> None:
         """Wrapper for initially logging a match in a correctly aligned format"""
         log = [source.name, f"< Matched URI: {result.uri}"]
         if extra:
             log.extend(extra)
         self._log_padded(log, pad='<')
 
-    def clean_tags(self, source: NamedObject) -> None:
+    def clean_tags(self, source: NameableTaggableMixin) -> None:
         """
         Clean tags on the input item and assign to its ``clean_tags`` attribute. Used for better matching/searching.
         Clean by removing words, and only taking phrases before a certain word e.g. 'featuring', 'part'.
@@ -143,7 +143,7 @@ class ItemMatcher(ItemProcessor):
         :param source: The base object with tags to clean.
         """
         def process(val: str, conf: CleanTagConfig) -> str:
-            """Apply transformations to the given ``value`` to clean it"""
+            """Apply transformations to the given ``val`` to clean it"""
             val = conf.preprocess(val)
             val = re.sub(r"[(\[].*?[)\]]", "", val).casefold()
 
@@ -172,8 +172,8 @@ class ItemMatcher(ItemProcessor):
             if name == value:
                 source.clean_tags[Tag.NAME] = value_cleaned
 
-        source.clean_tags[Tag.LENGTH] = getattr(source, Tag.LENGTH.name.casefold(), None)
-        source.clean_tags[Tag.YEAR] = getattr(source, Tag.YEAR.name.casefold(), None)
+        source.clean_tags[Tag.LENGTH] = getattr(source, Tag.LENGTH.name.lower(), None)
+        source.clean_tags[Tag.YEAR] = getattr(source, Tag.YEAR.name.lower(), None)
 
     ###########################################################################
     ## Conditions
@@ -228,8 +228,8 @@ class ItemMatcher(ItemProcessor):
             self._log_test(source=source, result=result, test=score, extra=[f"{source_val} -> {result_val}"])
             return score
 
-        artists_source = source_val.replace(NamedObject.tag_sep, " ")
-        artists_result = result_val.split(NamedObject.tag_sep)
+        artists_source = source_val.replace(Taggable.tag_sep, " ")
+        artists_result = result_val.split(Taggable.tag_sep)
 
         for i, artist in enumerate(artists_result, 1):
             score += (sum(word in artists_source for word in artist.split()) / len(artists_source.split())) * (1 / i)

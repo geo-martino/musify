@@ -78,7 +78,7 @@ class SpotifyMock(RemoteMock):
 
     def calculate_pages_from_response(self, response: Mapping[str, Any]) -> int:
         kind = ObjectType.from_name(response["type"])[0]
-        key = SpotifyAPI.collection_item_map[kind].name.casefold() + "s"
+        key = SpotifyAPI.collection_item_map[kind].name.lower() + "s"
 
         return self.calculate_pages(limit=response[key]["limit"], total=response[key]["total"])
 
@@ -319,7 +319,7 @@ class SpotifyMock(RemoteMock):
 
                 # ensure minimal items response for collections to improve speed on some tests
                 if kind_enum in SpotifyAPI.collection_item_map:
-                    key = SpotifyAPI.collection_item_map[kind_enum].name.casefold() + "s"
+                    key = SpotifyAPI.collection_item_map[kind_enum].name.lower() + "s"
                     values = [v for v in values if 2 < v[key]["total"] <= self.limit_lower]
 
                 available = len(values) - len(results[kind + "s"])
@@ -354,7 +354,7 @@ class SpotifyMock(RemoteMock):
             id_list = req_params["ids"][0].split(",")
             return {req_kind: [deepcopy(id_map[i]) for i in id_list]}
 
-        url = f"{URL_API}/{kind.name.casefold()}s" if isinstance(kind, ObjectType) else f"{URL_API}/{kind}"
+        url = f"{URL_API}/{kind.name.lower()}s" if isinstance(kind, ObjectType) else f"{URL_API}/{kind}"
         if batchable:
             self.get(url=re.compile(url + r"\?"), json=response_getter)  # item batched calls
 
@@ -456,7 +456,7 @@ class SpotifyMock(RemoteMock):
         """Format a response to expected response for a 'saved user's...' endpoint type"""
         return {
             "added_at": random_dt(start=datetime(2008, 10, 7)).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            kind.name.casefold(): response
+            kind.name.lower(): response
         }
 
     ###########################################################################
