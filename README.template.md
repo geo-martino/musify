@@ -5,8 +5,8 @@
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/syncify)](https://pypi.org/project/syncify/)
 [![Contributors](https://img.shields.io/github/contributors/geo-martino/syncify)](https://github.com/geo-martino/syncify/graphs/contributors)
 </br>
-[![GitHub - Deployment](https://github.com/geo-martino/syncify/workflows/deploy/badge.svg)](https://github.com/geo-martino/syncify/actions/workflows/deploy.yml)
-[![GitHub - Documentation](https://github.com/geo-martino/syncify/workflows/documentation/badge.svg)](https://github.com/geo-martino/syncify/actions/workflows/documentation.yml)
+[![GitHub - Deployment](https://github.com/geo-martino/syncify/actions/workflows/deploy.yml/badge.svg)](https://github.com/geo-martino/syncify/actions/workflows/deploy.yml)
+[![GitHub - Documentation](https://github.com/geo-martino/syncify/actions/workflows/documentation.yml/badge.svg)](https://github.com/geo-martino/syncify/actions/workflows/documentation.yml)
 
 ### A complete local and music streaming service (remote) library management tool.
 - Extract data for all item types from remote libraries, including following/saved items, such as:

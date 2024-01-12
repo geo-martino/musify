@@ -20,41 +20,49 @@ class APIAuthoriser:
     Authorises and validates an API token for given input parameters.
     Functions for returning formatted headers for future, authorised requests.
 
+    Any ``..._args`` parameters must be provided as a dictionary of parameters to be passed directly
+    to the :py:class:`requests` module e.g.
+
+    .. code-block:: python
+
+        user_args = {
+            "url": token_url,
+            "params": {},
+            "data": {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "grant_type": "client_credentials",
+            },
+            "auth": ('user', 'pass'),
+            "headers": {},
+            "json": {},
+        }
+
     :param name: The name of the API service being accessed.
     :param auth_args: The parameters to be passed to the requests.post() function for initial token authorisation.
-        e.g.    {
-                    "url": token_url,
-                    "params": {},
-                    "data": {
-                        "client_id": client_id,
-                        "client_secret": client_secret,
-                        "grant_type": "client_credentials",
-                    },
-                    "auth": ('user', 'pass'),
-                    "headers": {},
-                    "json": {},
-                }
+        See description for possible example values.
     :param user_args: Parameters to be passed to the requests.post() function
         for requesting user authorised access to API services.
         The code response from this request is then added to the authorisation request args
         to grant user authorisation to the API.
-        See ``auth_args`` for possible example values.
+        See description for possible example values.
     :param refresh_args: Parameters to be passed to the requests.post() function
         for refreshing an expired token when a refresh_token is present.
-        See ``auth_args`` for possible example values.
+        See description for possible example values.
     :param test_args: Parameters to be passed to the requests.get() function for testing validity of the token.
         Must be set in conjunction with test_condition to work.
-        See auth_args doc string for possible example values.
+        See description for possible example values.
     :param test_condition: Callable function for testing the response from the given
-        test_args. e.g. lambda r: "error" not in r
+        test_args. e.g. ``lambda r: "error" not in r``
     :param test_expiry: The time allowance in seconds left until the token is due to expire to use when testing.
-        Useful at ensuring the token will be valid for long enough to run your operations.
-        e.g. if a token has 600 second total expiry time,
-            it is 60 seconds old and therefore still had 540 seconds of authorised time left,
-            and you set ``test_expiry``=300, the token will pass tests.
-            However, if the same token is tested again later when it is 500 seconds old
-            and has only 100 seconds of authorised time left,
-            it will now fail the tests and will need to be refreshed.
+        Useful for ensuring the token will be valid for long enough to run your operations e.g.
+
+        - a token has 600 second total expiry time,
+        - it is 60 seconds old and therefore still has 540 seconds of authorised time left,
+        - you set ``test_expiry`` = 300, the token will pass tests.
+        - the same token is tested again later when it is 500 seconds old,
+        - it now has only 100 seconds of authorised time left,
+        - it will now fail the tests as 100 < 300 and will need to be refreshed.
     :param token: Define a custom input token for initialisation.
     :param token_file_path: Path to use for loading and saving a token.
     :param token_key_path: Keys to the token in auth response. Looks for key 'access_token' by default.
