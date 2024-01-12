@@ -173,22 +173,24 @@ class SpotifyMock(RemoteMock):
         # one artist with many albums associated for artist albums test
         artist = deepcopy(choice(self.artists))
         artist = {k: v for k, v in artist.items() if k not in {"followers", "genres", "images", "popularity"}}
-        albums = [album for album in self.artist_albums if album["album_type"] in ("album", "single")]
+        album_types = ("album", "single")
+        albums = [
+            album for album in self.artist_albums
+            if any(art["id"] == artist["id"] for art in album["artists"]) and album["album_type"] in album_types
+        ]
 
         for _ in range(self.range_start - len(albums)):
             album = self.generate_album()
-            self.albums.append(album)
+            album["artists"].append(deepcopy(artist))
+            self.albums.append(deepcopy(album))
 
             album = {
                 k: v for k, v in album.items()
                 if k not in {"tracks", "copyrights", "external_ids", "genres", "label", "popularity"}
             }
-            album["album_group"] = choice(("album", "single", "compilation", "appears_on"))
+            album["album_group"] = choice(album_types)
             albums.append(album)
             self.artist_albums.append(deepcopy(album))
-
-        for album in sample(albums, k=15):
-            album["artists"].append(artist)
 
     def setup_specific_conditions_user(self):
         """Some tests need items of certain size and properties. Set these up for user items here."""
