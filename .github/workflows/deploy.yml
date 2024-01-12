@@ -38,7 +38,7 @@ jobs:
         summary: true
         display-options: fEX
         fail-on-empty: true
-        title: Test results - Windows
+        title: Test results - Windows 🪟
 
   test_linux:
     name: Run tests - Linux 🐧
@@ -68,7 +68,7 @@ jobs:
         summary: true
         display-options: fEX
         fail-on-empty: true
-        title: Test results - Linux
+        title: Test results - Linux 🐧
 
   test_mac:
     name: Run tests - Mac 🍎
@@ -98,4 +98,4 @@ jobs:
         summary: true
         display-options: fEX
         fail-on-empty: true
-        title: Test results - MacOS
+        title: Test results - Mac 🍎
