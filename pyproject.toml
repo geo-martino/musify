@@ -28,7 +28,7 @@ dependencies = [
     "Pillow~=10.1",
     "python-dateutil~=2.8.2",
     "xmltodict~=0.13",
-    "lxml~=4.9",
+    "lxml~=5.1",
     "tqdm~=4.66",
 ]
 
