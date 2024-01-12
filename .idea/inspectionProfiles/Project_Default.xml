@@ -23,6 +23,7 @@
       <option name="ignoredNames">
         <list>
           <option value="type" />
+          <option value="copyright" />
         </list>
       </option>
     </inspection_tool>
