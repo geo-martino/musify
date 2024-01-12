@@ -191,7 +191,7 @@ class RemoteItemCheckerTester(ABC):
 
         stdout = get_stdout(capfd)
         assert stdout.count("Enter one of the following") == 1
-        # assert stdout.count("Input not recognised") == 2  # TODO: capfd is not capturing this string, investigate
+        # assert stdout.count("Input not recognised") == 2  # TODO: capfd is not capturing this string, why?
         assert f"Showing items originally added to" not in stdout
         assert f"Showing tracks for playlist" not in stdout
 
@@ -262,7 +262,7 @@ class RemoteItemCheckerTester(ABC):
 
         stdout = get_stdout(capfd)
         assert stdout.count("Enter one of the following") == 3
-        # assert stdout.count("Input not recognised") == 1  # TODO: capfd is not capturing this string, investigate
+        # assert stdout.count("Input not recognised") == 1  # TODO: capfd is not capturing this string, why?
         assert not checker.skip
         assert not checker.quit
         assert not checker.remaining

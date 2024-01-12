@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   validate_windows:
+    name: Run tests - Windows 🪟
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
@@ -40,6 +41,7 @@ jobs:
         title: Test results - Windows
 
   validate_linux:
+    name: Run tests - Linux 🐧
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -69,6 +71,7 @@ jobs:
         title: Test results - Linux
 
   validate_mac:
+    name: Run tests - MacOS 🍎
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
