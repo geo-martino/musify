@@ -656,7 +656,7 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
     @property
     def rating(self):
         rating = self.response.get("popularity")
-        return int(rating) if rating else None
+        return int(rating) if rating is not None else None
 
     @property
     def followers(self) -> int | None:

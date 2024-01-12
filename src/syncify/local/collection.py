@@ -436,7 +436,7 @@ class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):
     def rating(self):
         """Average rating of all tracks on this album"""
         ratings = tuple(track.rating for track in self.tracks if track.rating is not None)
-        return sum(ratings) / len(ratings) if ratings else None
+        return sum(ratings) / len(ratings) if len(ratings) > 0 else None
 
     def __init__(
             self, tracks: Collection[LocalTrack], name: str | None = None, remote_wrangler: RemoteDataWrangler = None
@@ -474,7 +474,7 @@ class LocalArtist(LocalCollectionFiltered[LocalTrack], Artist[LocalTrack]):
     def rating(self):
         """Average rating of all tracks by this artist"""
         ratings = tuple(track.rating for track in self.tracks if track.rating is not None)
-        return sum(ratings) / len(ratings) if ratings else None
+        return sum(ratings) / len(ratings) if len(ratings) > 0 else None
 
     def __init__(
             self, tracks: Collection[LocalTrack], name: str | None = None, remote_wrangler: RemoteDataWrangler = None

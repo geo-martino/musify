@@ -356,8 +356,8 @@ python -m pip install syncify
            # save the track here or...
            local_track.save(replace=True, dry_run=False)
       
-      # ...save all tracks on the album at once here
-      album.save_tracks(replace=True, dry_run=False)
+       # ...save all tracks on the album at once here
+       album.save_tracks(replace=True, dry_run=False)
    ```
 4. Once all tracks in a playlist have URIs assigned, sync the local playlist with a remote playlist:
    ```python
@@ -380,7 +380,7 @@ python -m pip install syncify
 
 - **Music Streaming Services**: `Spotify`
 - **Audio filetypes**: `.mp3` `.m4a` `.wma` `.flac`
-- **Local playlist filetypes**: `.m3u` `.xautopf`
+- **Local playlist filetypes**: `.xautopf` `.m3u`
 - **Local Libraries**: `MusicBee`
 
 <a id="aims"></a>
