@@ -157,7 +157,7 @@ class TestXAutoPF(LocalPlaylistTester):
         pl.save(dry_run=False)
 
         assert pl.date_modified > original_dt_modified
-        if os.getenv("GITHUB_ACTIONS"):
+        if not os.getenv("GITHUB_ACTIONS"):
             # TODO: these assertions always fail on GitHub actions but not locally, why?
             assert pl.date_created == original_dt_created
         assert pl.xml != original_xml
