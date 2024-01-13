@@ -3,9 +3,10 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse, urlencode, quote, urlunparse
 
 from syncify.shared.remote.api import RemoteAPI
+from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 
 
-class SpotifyAPIBase(RemoteAPI, metaclass=ABCMeta):
+class SpotifyAPIBase(RemoteAPI, SpotifyDataWrangler, metaclass=ABCMeta):
 
     items_key = "items"
 

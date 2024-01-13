@@ -8,7 +8,6 @@ from syncify.spotify import URL_API, URL_AUTH
 from syncify.spotify.api.item import SpotifyAPIItems
 from syncify.spotify.api.misc import SpotifyAPIMisc
 from syncify.spotify.api.playlist import SpotifyAPIPlaylists
-from syncify.spotify.processors.wrangle import SpotifyDataWrangler
 
 # user authenticated access with scopes
 SPOTIFY_API_AUTH_ARGS = {
@@ -54,10 +53,9 @@ SPOTIFY_API_AUTH_ARGS = {
 }
 
 
-class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists, SpotifyDataWrangler):
+class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
     """
     Collection of endpoints for the Spotify API.
-    See :py:class:`RequestHandler` for more info on optional params to pass as ``**kwargs``.
 
     :param client_id: The client ID to use when authorising requests.
     :param client_secret: The client secret to use when authorising requests.

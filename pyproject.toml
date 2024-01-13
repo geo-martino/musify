@@ -49,6 +49,8 @@ dev = [
 docs = [
     "sphinx~=7.2",
     "renku_sphinx_theme",
+    "graphviz~=0.20",
+    "autodocsumm~=0.2",
 ]
 
 [project.urls]

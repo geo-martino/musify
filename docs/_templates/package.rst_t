@@ -1,0 +1,90 @@
+{%- set is_root = pkgname == project -%}
+{%- set module_footer = ["base", "exception"] -%}
+{%- set module_caps = ["api", "m3u", "xautopf", "flac", "mp3", "m4a", "wma"] -%}
+
+{%- macro formatname(name) -%}
+    {%- if name.endswith(".exception") -%}
+        {%- set name = "exceptions"-%}
+    {%- else -%}
+        {%- set name = name.replace("syncify.", "").split(".") | last -%}
+    {%- endif -%}
+
+    {%- if name | lower in module_caps -%}
+        {{- name | upper -}}
+    {%- else -%}
+        {{- name | title -}}
+    {%- endif -%}
+{%- endmacro -%}
+
+{%- macro toctree(docnames, caption) %}
+.. toctree::
+   :maxdepth: {{ maxdepth }}
+   :caption: {{ caption }}:
+
+   {% for docname in docnames if docname.rstrip("s") not in module_footer -%}
+        {{ docname }}
+   {% endfor -%}
+
+   {% for docname in docnames if docname.rstrip("s") in module_footer -%}
+        {{ docname }}
+   {% endfor -%}
+{%- endmacro -%}
+
+{%- macro automodule(modname, options) %}
+.. automodule:: {{ modname }}
+    {% for option in automodule_options -%}
+        :{{ option }}:
+    {% endfor -%}
+{%- endmacro -%}
+
+{%- macro autosubmodule(modname, options) %}
+    {%- if show_headings -%}
+        {{ formatname(modname) | e | heading(1 if is_root else 2) }}
+
+.. inheritance-diagram:: {{ modname }}
+   :parts: 1
+    {% endif -%}
+
+    {{ automodule(modname, automodule_options) -}}
+{%- endmacro -%}
+
+{%- if not is_root -%}
+    {%- if is_namespace %}
+        {{- formatname(pkgname) | e | heading }}
+    {% else -%}
+        {{- formatname(pkgname) | e | heading }}
+    {% endif -%}
+
+    {% if is_namespace -%}
+        .. py:module:: {{ pkgname }}
+    {%- endif -%}
+
+    {% if modulefirst and not is_namespace -%}
+        {{- automodule(pkgname, automodule_options) -}}
+    {%- endif -%}
+
+    {%- if subpackages -%}
+        {{- toctree(subpackages, "Subpackages") -}}
+    {%- endif -%}
+{%- endif -%}
+
+{%- if submodules and (not separatemodules or not is_root) -%}
+    {%- if not is_root and separatemodules -%}
+        {{- toctree(submodules, "Submodules") -}}
+    {% else %}
+        {% for submodule in submodules if not submodule.split(".")[-1] in module_footer -%}
+            {{- autosubmodule(submodule, automodule_options) }}
+        {% endfor %}
+        {%- for submodule in submodules if submodule.split(".")[-1] in module_footer -%}
+            {{- autosubmodule(submodule, automodule_options) }}
+        {% endfor %}
+    {%- endif -%}
+
+    {%- if not modulefirst and not is_namespace -%}
+        Module contents
+        ---------------
+
+        {{- automodule(pkgname, automodule_options) -}}
+    {%- endif -%}
+
+{%- endif -%}

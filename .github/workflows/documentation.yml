@@ -41,13 +41,17 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
+      - name: Install dependencies
+        run: |
+          sudo apt install graphviz
+
       - name: Install module
         run: |
           pip install -e '.[docs]'
 
       - name: Sphinx build
         run: |
-          sphinx-apidoc -o ./docs ./src/syncify
+          sphinx-apidoc -o ./docs ./src/syncify -f -d 2 -M
           make html
 
       - name: Upload artifact

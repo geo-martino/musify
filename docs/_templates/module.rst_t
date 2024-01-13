@@ -1,0 +1,29 @@
+{%- set is_root = basename == project -%}
+{%- set module_footer = ["base", "exception"] -%}
+{%- set module_caps = ["api", "m3u", "xautopf", "flac", "mp3", "m4a", "wma"] -%}
+
+{%- macro formatname(name) -%}
+    {%- if name.endswith(".exception") -%}
+        {%- set name = "exceptions"-%}
+    {%- else -%}
+        {%- set name = name.replace("syncify.", "").split(".") | last -%}
+    {%- endif -%}
+
+    {%- if name | lower in module_caps -%}
+        {{- name | upper -}}
+    {%- else -%}
+        {{- name | title -}}
+    {%- endif -%}
+{%- endmacro -%}
+
+{%- if show_headings -%}
+    {{- formatname(basename) | e | heading }}
+
+.. inheritance-diagram:: {{ basename }}
+   :parts: 1
+{%- endif %}
+
+.. automodule:: {{ qualname }}
+    {% for option in automodule_options -%}
+        :{{ option }}:
+    {% endfor -%}

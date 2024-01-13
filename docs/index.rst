@@ -8,13 +8,11 @@ Welcome to Syncify!
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: 📖 Reference:
 
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   syncify.local
+   syncify.processors
+   syncify.shared
+   syncify.spotify
+   syncify.report
+   genindex

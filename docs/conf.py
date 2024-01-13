@@ -3,8 +3,9 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 from datetime import datetime
+from os.path import dirname, basename
 
-from syncify import PROGRAM_NAME, PROGRAM_OWNER_NAME, __version__
+from syncify import PROGRAM_NAME, PROGRAM_OWNER_NAME, __version__, PROGRAM_URL, MODULE_ROOT, PROGRAM_OWNER_USER
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -19,11 +20,22 @@ release = __version__
 
 
 extensions = [
-    'sphinx.ext.autodoc',  # Core library for html generation from docstrings
-    'sphinx.ext.autosummary',  # Create neat summary tables
-    'sphinx_rtd_theme'
+    'sphinx.ext.autodoc',
+    'sphinx_rtd_theme',
+    'sphinx.ext.graphviz',
+    'sphinx.ext.inheritance_diagram',
+    'autodocsumm',
 ]
-autosummary_generate = True  # Turn on sphinx.ext.autosummary
+autodoc_member_order = 'bysource'
+autodoc_default_options = {
+    "autosummary": True,
+    "members": True,
+    "undoc-members": False,
+    "inherited-members": False,
+    "special-members": False,
+    "show-inheritance": True,
+    # "member-order": 'bysource',
+}
 
 templates_path = ['_templates']
 exclude_patterns = ["_build"]
@@ -31,5 +43,29 @@ exclude_patterns = ["_build"]
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'renku'
 html_static_path = ['_static']
+html_theme = 'renku'
+html_theme_options = dict(
+    collapse_navigation=False,
+    sticky_navigation=True,
+    navigation_depth=-1,
+    includehidden=True,
+    titles_only=False,
+)
+html_css_files = [
+    'style.css',
+]
+html_context = dict(
+    display_github=True,
+    github_user=PROGRAM_OWNER_USER,
+    github_repo=MODULE_ROOT,
+    github_version="HEAD",
+    conf_py_path=f"/{basename(dirname(__file__))}/",
+)
+
+# -- GraphViz configuration ----------------------------------
+graphviz_output_format = 'svg'
+inheritance_graph_attrs = dict(rankdir="TB", size='""',
+                               fontsize=10, ratio='auto',
+                               center='true', style='solid')
+inheritance_node_attrs = dict(shape='ellipse', fontsize=10, fontname="monospace")
