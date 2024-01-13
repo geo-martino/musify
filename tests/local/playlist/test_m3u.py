@@ -222,7 +222,7 @@ class TestM3U(LocalPlaylistTester):
         if not os.getenv("GITHUB_ACTIONS"):
             # TODO: these assertions always fail on GitHub actions but not locally, why?
             assert pl.date_modified > new_dt_modified
-        assert pl.date_created > original_dt_created
+            assert pl.date_created > original_dt_created
 
         with open(pl.path, 'r') as f:
             paths = [line.strip() for line in f]

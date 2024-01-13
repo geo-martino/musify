@@ -20,88 +20,91 @@ jobs:
     name: Run tests - Windows 🪟
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '>=3.12'
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install '.[test]'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install '.[test]'
 
-    - name: Run tests
-      run: |
-        pytest --junit-xml=test-results.xml
+      - name: Run tests
+        run: |
+          pytest --junit-xml=test-results.xml
 
-    - name: Publish test results report
-      if: always()
-      uses: pmeier/pytest-results-action@main
-      with:
-        path: test-results.xml
-        summary: true
-        display-options: fEX
-        fail-on-empty: true
-        title: Test results - Windows 🪟
+      - name: Publish test results report
+        if: always()
+        uses: pmeier/pytest-results-action@main
+        with:
+          path: test-results.xml
+          summary: true
+          display-options: fEX
+          fail-on-empty: true
+          title: Test results - Windows 🪟
 
   test_linux:
     name: Run tests - Linux 🐧
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '>=3.12'
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install '.[test]'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install '.[test]'
 
-    - name: Run tests
-      run: |
-        pytest --junit-xml=test-results.xml
+      - name: Run tests
+        run: |
+          pytest --junit-xml=test-results.xml
 
-    - name: Publish test results report
-      if: always()
-      uses: pmeier/pytest-results-action@main
-      with:
-        path: test-results.xml
-        summary: true
-        display-options: fEX
-        fail-on-empty: true
-        title: Test results - Linux 🐧
+      - name: Publish test results report
+        if: always()
+        uses: pmeier/pytest-results-action@main
+        with:
+          path: test-results.xml
+          summary: true
+          display-options: fEX
+          fail-on-empty: true
+          title: Test results - Linux 🐧
 
   test_mac:
     name: Run tests - Mac 🍎
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '>=3.12'
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install '.[test]'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install '.[test]'
 
-    - name: Run tests
-      run: |
-        pytest --junit-xml=test-results.xml
+      - name: Run tests
+        run: |
+          pytest --junit-xml=test-results.xml
 
-    - name: Publish test results report
-      if: always()
-      uses: pmeier/pytest-results-action@main
-      with:
-        path: test-results.xml
-        summary: true
-        display-options: fEX
-        fail-on-empty: true
-        title: Test results - Mac 🍎
+      - name: Publish test results report
+        if: always()
+        uses: pmeier/pytest-results-action@main
+        with:
+          path: test-results.xml
+          summary: true
+          display-options: fEX
+          fail-on-empty: true
+          title: Test results - Mac 🍎
