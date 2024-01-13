@@ -53,7 +53,8 @@ jobs:
 
       - name: Sphinx build
         run: |
-          sphinx-apidoc -o ./docs ./src/syncify -f -d 2 -M
+          make clean
+          sphinx-apidoc -o ./docs ./src/syncify -d 4 --force --module-first --separate --no-toc -t ./docs/_templates
           make html
 
       - name: Upload artifact
