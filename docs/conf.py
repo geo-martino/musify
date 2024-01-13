@@ -5,12 +5,12 @@
 from datetime import datetime
 from os.path import dirname, basename
 
-from syncify import PROGRAM_NAME, PROGRAM_OWNER_NAME, __version__, PROGRAM_URL, MODULE_ROOT, PROGRAM_OWNER_USER
+from syncify import MODULE_ROOT, PROGRAM_OWNER_NAME, PROGRAM_OWNER_USER, __version__,
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = PROGRAM_NAME
+project = MODULE_ROOT
 copyright = f'{datetime.now().year}, {PROGRAM_OWNER_NAME}'
 author = PROGRAM_OWNER_NAME
 release = __version__
