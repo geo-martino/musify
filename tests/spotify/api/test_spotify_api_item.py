@@ -635,7 +635,7 @@ class TestSpotifyAPIItems:
 
     def test_get_artist_albums_many(self, api: SpotifyAPI, api_mock: SpotifyMock):
         source = api_mock.artists
-        source = deepcopy(sample(source, api_mock.limit_lower) if len(source) > api_mock.limit_lower else source)
+        source = deepcopy(sample(source, k=api_mock.limit_lower) if len(source) > api_mock.limit_lower else source)
         source_map = {item["id"]: item for item in source}
         expected_map = {
             id_: [

@@ -123,6 +123,7 @@ class SpotifyMock(RemoteMock):
 
         self.setup_specific_conditions()
         self.setup_valid_references()
+        self.setup_specific_conditions_artist_albums()
 
         # randomly choose currently authenticated user and setup mock
         self.user = choice(self.users)
@@ -153,7 +154,7 @@ class SpotifyMock(RemoteMock):
                 assert track["uri"] in track_uris
 
     ###########################################################################
-    ## Setup
+    ## Setup - cross-reference
     ###########################################################################
     def setup_specific_conditions(self):
         """Some tests need items of certain size and properties. Set these up for non-user items here."""
@@ -170,6 +171,8 @@ class SpotifyMock(RemoteMock):
         for _ in range(count):
             self.albums.append(self.generate_album(track_count=randrange(3, self.limit_lower)))
 
+    def setup_specific_conditions_artist_albums(self):
+        """Some tests need artist albums to return results of certain size and properties. Set these up here."""
         # one artist with many albums associated for artist albums test
         artist = deepcopy(choice(self.artists))
         artist = {k: v for k, v in artist.items() if k not in {"followers", "genres", "images", "popularity"}}
@@ -189,7 +192,6 @@ class SpotifyMock(RemoteMock):
                 if k not in {"tracks", "copyrights", "external_ids", "genres", "label", "popularity"}
             }
             album["album_group"] = choice(album_types)
-            albums.append(album)
             self.artist_albums.append(deepcopy(album))
 
     def setup_specific_conditions_user(self):
@@ -236,6 +238,9 @@ class SpotifyMock(RemoteMock):
                         if k not in {"followers", "genres", "images", "popularity"}
                     }
 
+    ###########################################################################
+    ## Setup - requests
+    ###########################################################################
     def setup_requests_mock(self):
         """Driver to setup requests_mock responses for all endpoints"""
         self.setup_search_mock()
