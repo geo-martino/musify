@@ -1,12 +1,12 @@
-# Syncify
+# {program_name}
 
-[![PyPI - Version](https://badge.fury.io/py/syncify.svg)](https://badge.fury.io/py/syncify)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/syncify.svg)](https://pypi.org/project/syncify/)
-[![PyPI - Downloads](https://img.shields.io/pypi/dm/syncify)](https://pypi.org/project/syncify/)
-[![Contributors](https://img.shields.io/github/contributors/geo-martino/syncify)](https://github.com/geo-martino/syncify/graphs/contributors)
+[![PyPI - Version](https://badge.fury.io/py/{program_name_lower}.svg)](https://badge.fury.io/py/{program_name_lower})
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/{program_name_lower}.svg)](https://pypi.org/project/{program_name_lower}/)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/{program_name_lower})](https://pypi.org/project/{program_name_lower}/)
+[![Contributors](https://img.shields.io/github/contributors/{program_owner_user}/{program_name_lower})](https://github.com/{program_owner_user}/{program_name_lower}/graphs/contributors)
 </br>
-[![GitHub - Deployment](https://github.com/geo-martino/syncify/actions/workflows/deploy.yml/badge.svg)](https://github.com/geo-martino/syncify/actions/workflows/deploy.yml)
-[![GitHub - Documentation](https://github.com/geo-martino/syncify/actions/workflows/documentation.yml/badge.svg)](https://github.com/geo-martino/syncify/actions/workflows/documentation.yml)
+[![GitHub - Deployment](https://github.com/{program_owner_user}/{program_name_lower}/actions/workflows/deploy.yml/badge.svg)](https://github.com/{program_owner_user}/{program_name_lower}/actions/workflows/deploy.yml)
+[![GitHub - Documentation](https://github.com/{program_owner_user}/{program_name_lower}/actions/workflows/documentation.yml/badge.svg)](https://github.com/{program_owner_user}/{program_name_lower}/actions/workflows/documentation.yml)
 
 ### A complete local and music streaming service (remote) library management tool.
 - Extract data for all item types from remote libraries, including following/saved items, such as:
@@ -27,12 +27,16 @@
 * [Motivation & Aims](#aims)
 * [Author Notes](#notes)
 
+> [!NOTE]  
+> This readme provides a brief overview of the program. 
+> [Read the docs](https://{program_owner_user}.github.io/{program_name_lower}/) for full reference documentation.
+
 ## Installation
 Package is listed on PyPI and can be installed as usual through pip.
 
 ```bash
-pip install syncify
-python -m pip install syncify
+pip install {program_name_lower}
+python -m pip install {program_name_lower}
 ```
 
 <a id="quick-start"></a>
@@ -431,4 +435,4 @@ allowing users the same conveniences while compensating artists fairly for their
 
 If you have any suggestions, wish to contribute, or have any issues to report, please do let me know 
 via the issues tab or make a new pull request with your new feature for review. 
-Otherwise, I hope you enjoy using Syncify!
+Otherwise, I hope you enjoy using {program_name}!

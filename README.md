@@ -27,6 +27,10 @@
 * [Motivation & Aims](#aims)
 * [Author Notes](#notes)
 
+> [!NOTE]  
+> This readme provides a brief overview of the program. 
+> [Read the docs](https://geo-martino.github.io/syncify/) for full reference documentation.
+
 ## Installation
 Package is listed on PyPI and can be installed as usual through pip.
 
@@ -379,8 +383,8 @@ python -m pip install syncify
 ## Currently Supported
 
 - **Music Streaming Services**: `Spotify`
-- **Audio filetypes**: `.flac` `.m4a` `.mp3` `.wma`
-- **Local playlist filetypes**: `.m3u` `.xautopf`
+- **Audio filetypes**: `.wma` `.mp3` `.m4a` `.flac`
+- **Local playlist filetypes**: `.xautopf` `.m3u`
 - **Local Libraries**: `MusicBee`
 
 <a id="aims"></a>
