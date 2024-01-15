@@ -1,6 +1,6 @@
 import pytest
 
-from syncify.local.track import LocalTrack, FLAC, M4A, MP3, WMA
+from musify.local.track import LocalTrack, FLAC, M4A, MP3, WMA
 from tests.local.utils import path_track_flac, path_track_m4a, path_track_wma, path_track_mp3
 
 

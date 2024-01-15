@@ -5,11 +5,11 @@ from typing import Any
 
 import pytest
 
-from syncify.shared.api.exception import APIError
-from syncify.shared.remote.exception import RemoteObjectTypeError
-from syncify.shared.types import Number
-from syncify.spotify.api import SpotifyAPI
-from syncify.spotify.object import SpotifyTrack
+from musify.shared.api.exception import APIError
+from musify.shared.remote.exception import RemoteObjectTypeError
+from musify.shared.types import Number
+from musify.spotify.api import SpotifyAPI
+from musify.spotify.object import SpotifyTrack
 from tests.shared.core.base import ItemTester
 from tests.spotify.api.mock import SpotifyMock
 from tests.spotify.utils import assert_id_attributes

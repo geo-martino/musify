@@ -4,10 +4,10 @@ from typing import Any
 
 import pytest
 
-from syncify import PROGRAM_NAME
-from syncify.shared.remote.enum import RemoteObjectType as ObjectType, RemoteIDType
-from syncify.shared.remote.exception import RemoteObjectTypeError, RemoteIDTypeError
-from syncify.spotify.api import SpotifyAPI
+from musify import PROGRAM_NAME
+from musify.shared.remote.enum import RemoteObjectType as ObjectType, RemoteIDType
+from musify.shared.remote.exception import RemoteObjectTypeError, RemoteIDTypeError
+from musify.spotify.api import SpotifyAPI
 from tests.shared.remote.utils import ALL_ITEM_TYPES
 from tests.spotify.api.mock import SpotifyMock
 from tests.spotify.utils import random_ids, random_id, random_id_type, random_id_types

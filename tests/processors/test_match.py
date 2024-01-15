@@ -1,8 +1,8 @@
 import pytest
 
-from syncify.local.track import LocalTrack
-from syncify.processors.match import ItemMatcher, CleanTagConfig
-from syncify.shared.core.enum import TagFields as Tag
+from musify.local.track import LocalTrack
+from musify.processors.match import ItemMatcher, CleanTagConfig
+from musify.shared.core.enum import TagFields as Tag
 from tests.local.track.utils import random_track
 from tests.shared.core.misc import PrettyPrinterTester
 

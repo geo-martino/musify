@@ -2,7 +2,7 @@ import json
 import re
 from abc import ABC, abstractmethod
 
-from syncify.shared.core.misc import PrettyPrinter
+from musify.shared.core.misc import PrettyPrinter
 
 
 class PrettyPrinterTester(ABC):

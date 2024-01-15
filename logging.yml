@@ -16,10 +16,10 @@ formatters:
 
 filters:
   console:
-    (): "syncify.shared.logger.LogConsoleFilter"
+    (): "musify.shared.logger.LogConsoleFilter"
     module_width: 40
   file:
-    (): "syncify.shared.logger.LogFileFilter"
+    (): "musify.shared.logger.LogFileFilter"
     module_width: 40
 
 handlers:
@@ -50,7 +50,7 @@ handlers:
     stream: ext://sys.stdout
 
   file:
-    class: syncify.shared.logger.CurrentTimeRotatingFileHandler
+    class: musify.shared.logger.CurrentTimeRotatingFileHandler
     level: DEBUG
     formatter: extended
     filters: ["file"]

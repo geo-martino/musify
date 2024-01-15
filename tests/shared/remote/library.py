@@ -4,10 +4,10 @@ from copy import copy, deepcopy
 from random import choice
 from typing import Any
 
-from syncify.shared.core.base import Item
-from syncify.shared.core.object import Playlist
-from syncify.shared.remote.library import RemoteLibrary
-from syncify.shared.remote.object import RemoteTrack
+from musify.shared.core.base import Item
+from musify.shared.core.object import Playlist
+from musify.shared.remote.library import RemoteLibrary
+from musify.shared.remote.object import RemoteTrack
 from tests.local.track.utils import random_tracks
 from tests.shared.core.collection import LibraryTester
 from tests.shared.remote.object import RemoteCollectionTester

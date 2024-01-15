@@ -71,7 +71,7 @@ instance/
 # Sphinx/other documentation
 docs/_build/
 docs/modules.rst
-docs/syncify*.rst
+docs/musify*.rst
 .grip/
 
 # PyBuilder

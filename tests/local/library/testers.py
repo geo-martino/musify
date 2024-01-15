@@ -2,7 +2,7 @@ from abc import ABCMeta
 
 import pytest
 
-from syncify.local.library import LocalLibrary
+from musify.local.library import LocalLibrary
 from tests.local.track.testers import LocalCollectionTester
 from tests.shared.core.collection import LibraryTester
 

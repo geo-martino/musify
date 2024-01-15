@@ -3,7 +3,7 @@ from datetime import timedelta
 import pytest
 from dateutil.relativedelta import relativedelta
 
-from syncify.processors.time import TimeMapper
+from musify.processors.time import TimeMapper
 from tests.shared.core.misc import PrettyPrinterTester
 
 

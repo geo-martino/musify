@@ -2,10 +2,10 @@ from copy import deepcopy
 
 import pytest
 
-from syncify.shared.exception import SyncifyTypeError
-from syncify.shared.utils import flatten_nested, merge_maps, get_most_common_values
-from syncify.shared.utils import limit_value, to_collection, unique_list
-from syncify.shared.utils import strip_ignore_words, safe_format_map, get_max_width, align_and_truncate
+from musify.shared.exception import MusifyTypeError
+from musify.shared.utils import flatten_nested, merge_maps, get_most_common_values
+from musify.shared.utils import limit_value, to_collection, unique_list
+from musify.shared.utils import strip_ignore_words, safe_format_map, get_max_width, align_and_truncate
 
 
 ###########################################################################
@@ -117,7 +117,7 @@ def test_to_collection():
     assert to_collection({1: "a", 2: "b", 3: "c"}, list) == [{1: "a", 2: "b", 3: "c"}]
 
     # fails on unrecognised type
-    with pytest.raises(SyncifyTypeError):
+    with pytest.raises(MusifyTypeError):
         to_collection("123", dict)
         to_collection(1, str)
         to_collection([1, 2, 3], bool)

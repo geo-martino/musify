@@ -4,13 +4,13 @@ on:
   push:
     branches: [ v0.3 ]
     paths:
-      - src/**
+      - musify/**
       - docs/**
       - make*
   pull_request_target:
     branches: [ v0.3 ]
     paths:
-      - src/**
+      - musify/**
       - docs/**
       - make*
 
@@ -54,7 +54,7 @@ jobs:
       - name: Sphinx build
         run: |
           make clean
-          sphinx-apidoc -o ./docs ./src/syncify -d 4 --force --module-first --separate --no-toc -t ./docs/_templates
+          sphinx-apidoc -o ./docs ./musify -d 4 --force --module-first --separate --no-toc -t ./docs/_templates
           make html
 
       - name: Upload artifact

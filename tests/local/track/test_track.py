@@ -4,14 +4,14 @@ from os.path import basename, dirname, splitext, getmtime
 
 import pytest
 
-from syncify.local.exception import InvalidFileType, FileDoesNotExistError
-from syncify.local.file import open_image
-from syncify.local.track import LocalTrack, load_track, FLAC, M4A, MP3, WMA
-from syncify.local.track.field import LocalTrackField
-from syncify.shared.core.base import Item
-from syncify.shared.core.object import Track
-from syncify.shared.exception import SyncifyKeyError
-from syncify.shared.remote.enum import RemoteObjectType
+from musify.local.exception import InvalidFileType, FileDoesNotExistError
+from musify.local.file import open_image
+from musify.local.track import LocalTrack, load_track, FLAC, M4A, MP3, WMA
+from musify.local.track.field import LocalTrackField
+from musify.shared.core.base import Item
+from musify.shared.core.object import Track
+from musify.shared.exception import MusifyKeyError
+from musify.shared.remote.enum import RemoteObjectType
 from tests.local.utils import path_track_all, path_track_img, path_track_resources
 from tests.shared.core.base import ItemTester
 from tests.spotify.utils import random_uri
@@ -470,7 +470,7 @@ class TestLocalTrack(ItemTester):
         track["uri"] = "new_uri"
         assert track.uri == "new_uri"
 
-        with pytest.raises(SyncifyKeyError):
+        with pytest.raises(MusifyKeyError):
             track["bad key"] = "value"
 
         with pytest.raises(AttributeError):

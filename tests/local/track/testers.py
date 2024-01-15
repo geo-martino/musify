@@ -4,10 +4,10 @@ from random import randrange, sample
 
 import pytest
 
-from syncify.local.collection import LocalCollection
-from syncify.local.track import LocalTrack
-from syncify.shared.exception import SyncifyKeyError
-from syncify.spotify.object import SpotifyTrack
+from musify.local.collection import LocalCollection
+from musify.local.track import LocalTrack
+from musify.shared.exception import MusifyKeyError
+from musify.spotify.object import SpotifyTrack
 from tests.local.track.utils import random_tracks
 from tests.shared.core.collection import ItemCollectionTester
 from tests.spotify.api.mock import SpotifyMock
@@ -40,17 +40,17 @@ class LocalCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
         if collection.remote_wrangler is not None:
             assert collection[item.uri] == item
         else:
-            with pytest.raises(SyncifyKeyError):
+            with pytest.raises(MusifyKeyError):
                 assert collection[item.uri]
 
         invalid_track = next(item for item in collection_merge_items)
-        with pytest.raises(SyncifyKeyError):
+        with pytest.raises(MusifyKeyError):
             assert collection[invalid_track]
-        with pytest.raises(SyncifyKeyError):
+        with pytest.raises(MusifyKeyError):
             assert collection[invalid_track.name]
-        with pytest.raises(SyncifyKeyError):
+        with pytest.raises(MusifyKeyError):
             assert collection[invalid_track.path]
-        with pytest.raises(SyncifyKeyError):
+        with pytest.raises(MusifyKeyError):
             assert collection[invalid_track.uri]
 
     @staticmethod

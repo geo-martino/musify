@@ -7,11 +7,11 @@ import pytest
 import yaml
 from _pytest.fixtures import SubRequest
 
-from syncify import MODULE_ROOT
-from syncify.shared.api.request import RequestHandler
-from syncify.shared.logger import SyncifyLogger
-from syncify.spotify.api import SpotifyAPI
-from syncify.spotify.processors.wrangle import SpotifyDataWrangler
+from musify import MODULE_ROOT
+from musify.shared.api.request import RequestHandler
+from musify.shared.logger import MusifyLogger
+from musify.spotify.api import SpotifyAPI
+from musify.spotify.processors.wrangle import SpotifyDataWrangler
 from tests.spotify.api.mock import SpotifyMock
 
 
@@ -24,8 +24,8 @@ def pytest_configure(config: pytest.Config):
         log_config = yaml.full_load(file)
 
     log_config.pop("compact", False)
-    SyncifyLogger.disable_bars = True
-    SyncifyLogger.compact = True
+    MusifyLogger.disable_bars = True
+    MusifyLogger.compact = True
 
     for formatter in log_config["formatters"].values():  # ensure ANSI colour codes in format are recognised
         formatter["format"] = formatter["format"].replace(r"\33", "\33")

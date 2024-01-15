@@ -3,19 +3,19 @@ from random import sample
 
 import pytest
 
-from syncify.local.collection import LocalAlbum
-from syncify.local.track import LocalTrack
-from syncify.processors.match import CleanTagConfig
-from syncify.shared.core.enum import TagFields as Tag
-from syncify.shared.exception import SyncifyEnumError
-from syncify.shared.remote.enum import RemoteIDType as IDType, RemoteObjectType as ObjectType
-from syncify.shared.remote.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
-from syncify.shared.remote.processors.search import SearchSettings
-from syncify.spotify import URL_API, URL_EXT
-from syncify.spotify.api import SpotifyAPI
-from syncify.spotify.object import SpotifyTrack, SpotifyAlbum
-from syncify.spotify.processors.processors import SpotifyItemSearcher, SpotifyItemChecker
-from syncify.spotify.processors.wrangle import SpotifyDataWrangler
+from musify.local.collection import LocalAlbum
+from musify.local.track import LocalTrack
+from musify.processors.match import CleanTagConfig
+from musify.shared.core.enum import TagFields as Tag
+from musify.shared.exception import MusifyEnumError
+from musify.shared.remote.enum import RemoteIDType as IDType, RemoteObjectType as ObjectType
+from musify.shared.remote.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
+from musify.shared.remote.processors.search import SearchSettings
+from musify.spotify import URL_API, URL_EXT
+from musify.spotify.api import SpotifyAPI
+from musify.spotify.object import SpotifyTrack, SpotifyAlbum
+from musify.spotify.processors.processors import SpotifyItemSearcher, SpotifyItemChecker
+from musify.spotify.processors.wrangle import SpotifyDataWrangler
 from tests.local.track.utils import random_track
 from tests.shared.remote.processors.check import RemoteItemCheckerTester
 from tests.shared.remote.processors.search import RemoteItemSearcherTester
@@ -117,7 +117,7 @@ def test_get_item_type(wrangler: SpotifyDataWrangler):
     with pytest.raises(RemoteObjectTypeError):
         wrangler.get_item_type(f"bad_uri:chapter:{random_id()}")
 
-    with pytest.raises(SyncifyEnumError):
+    with pytest.raises(MusifyEnumError):
         wrangler.get_item_type(f"spotify:bad_type:{random_id()}")
 
 

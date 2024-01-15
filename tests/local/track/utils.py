@@ -6,8 +6,8 @@ from random import choice, randrange, randint
 import mutagen
 from dateutil.relativedelta import relativedelta
 
-from syncify.local.track import TRACK_CLASSES, LocalTrack
-from syncify.local.track.base.writer import TagWriter
+from musify.local.track import TRACK_CLASSES, LocalTrack
+from musify.local.track.base.writer import TagWriter
 from tests.local.utils import remote_wrangler, path_track_resources
 from tests.spotify.utils import random_uri
 from tests.utils import random_str, random_dt, random_genres

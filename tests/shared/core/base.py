@@ -2,8 +2,8 @@ from abc import ABCMeta, abstractmethod
 
 import pytest
 
-from syncify.shared.core.base import Item
-from syncify.shared.core.misc import PrettyPrinter
+from musify.shared.core.base import Item
+from musify.shared.core.misc import PrettyPrinter
 from tests.shared.core.misc import PrettyPrinterTester
 
 

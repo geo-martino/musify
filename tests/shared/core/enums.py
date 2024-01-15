@@ -1,17 +1,17 @@
 from abc import ABC, abstractmethod, ABCMeta
 from collections.abc import Container
 
-from syncify.shared.core.base import Nameable
-from syncify.shared.core.enum import SyncifyEnum, Fields, TagField, ALL_FIELDS, Field
+from musify.shared.core.base import Nameable
+from musify.shared.core.enum import MusifyEnum, Fields, TagField, ALL_FIELDS, Field
 
 
 class EnumTester(ABC):
-    """Run generic tests for :py:class:`SyncifyEnum` implementations"""
+    """Run generic tests for :py:class:`MusifyEnum` implementations"""
 
     @property
     @abstractmethod
-    def cls(self) -> type[SyncifyEnum]:
-        """The :py:class:`SyncifyEnum` class to test"""
+    def cls(self) -> type[MusifyEnum]:
+        """The :py:class:`MusifyEnum` class to test"""
         raise NotImplementedError
 
     def test_gets_enum_from_name_and_value(self):

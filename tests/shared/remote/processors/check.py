@@ -6,11 +6,11 @@ from random import randrange, choice
 import pytest
 from pytest_mock import MockerFixture
 
-from syncify.local.track import LocalTrack
-from syncify.shared.core.object import BasicCollection
-from syncify.shared.remote.enum import RemoteObjectType
-from syncify.shared.remote.object import RemotePlaylist
-from syncify.shared.remote.processors.check import RemoteItemChecker
+from musify.local.track import LocalTrack
+from musify.shared.core.object import BasicCollection
+from musify.shared.remote.enum import RemoteObjectType
+from musify.shared.remote.object import RemotePlaylist
+from musify.shared.remote.processors.check import RemoteItemChecker
 from tests.local.track.utils import random_track, random_tracks
 from tests.shared.api.utils import path_token
 from tests.shared.remote.utils import RemoteMock

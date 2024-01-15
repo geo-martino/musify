@@ -9,10 +9,10 @@ import pytest
 # noinspection PyProtectedMember,PyUnresolvedReferences
 from requests_mock.request import _RequestObjectProxy as Request
 
-from syncify.shared.api.exception import APIError
-from syncify.shared.remote.enum import RemoteObjectType as ObjectType, RemoteIDType as IDType, RemoteIDType
-from syncify.shared.remote.exception import RemoteObjectTypeError
-from syncify.spotify.api import SpotifyAPI
+from musify.shared.api.exception import APIError
+from musify.shared.remote.enum import RemoteObjectType as ObjectType, RemoteIDType as IDType, RemoteIDType
+from musify.shared.remote.exception import RemoteObjectTypeError
+from musify.spotify.api import SpotifyAPI
 from tests.shared.remote.utils import ALL_ITEM_TYPES
 from tests.spotify.api.mock import SpotifyMock, idfn
 from tests.spotify.utils import random_ids, random_id, random_id_type, random_id_types

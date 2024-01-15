@@ -4,9 +4,9 @@ from urllib.parse import parse_qs
 
 import pytest
 
-from syncify.shared.remote.enum import RemoteObjectType as ObjectType
-from syncify.spotify import URL_EXT
-from syncify.spotify.api import SpotifyAPI
+from musify.shared.remote.enum import RemoteObjectType as ObjectType
+from musify.spotify import URL_EXT
+from musify.spotify.api import SpotifyAPI
 from tests.spotify.api.mock import SpotifyMock, idfn
 from tests.utils import random_str, get_stdout
 

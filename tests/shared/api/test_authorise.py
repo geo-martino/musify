@@ -10,9 +10,9 @@ import pytest
 from pytest_mock import MockerFixture
 from requests_mock import Mocker
 
-from syncify import MODULE_ROOT
-from syncify.shared.api.authorise import APIAuthoriser
-from syncify.shared.api.exception import APIError
+from musify import MODULE_ROOT
+from musify.shared.api.authorise import APIAuthoriser
+from musify.shared.api.exception import APIError
 from tests.shared.api.utils import path_token
 
 

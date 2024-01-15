@@ -1,7 +1,7 @@
 from os.path import join
 
-from syncify.local.track import TRACK_CLASSES
-from syncify.spotify.processors.wrangle import SpotifyDataWrangler
+from musify.local.track import TRACK_CLASSES
+from musify.spotify.processors.wrangle import SpotifyDataWrangler
 from tests.utils import path_resources
 
 path_track_resources = join(path_resources, "track")

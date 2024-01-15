@@ -4,10 +4,10 @@ from random import randrange
 
 import pytest
 
-from syncify.local.exception import InvalidFileType
-from syncify.local.file import PathMapper, PathStemMapper
-from syncify.local.playlist import M3U
-from syncify.local.track import LocalTrack
+from musify.local.exception import InvalidFileType
+from musify.local.file import PathMapper, PathStemMapper
+from musify.local.playlist import M3U
+from musify.local.track import LocalTrack
 from tests.local.playlist.testers import LocalPlaylistTester
 from tests.local.playlist.utils import path_playlist_m3u
 from tests.local.track.utils import random_track, random_tracks
@@ -226,4 +226,4 @@ class TestM3U(LocalPlaylistTester):
 
         with open(pl.path, 'r') as f:
             paths = [line.strip() for line in f]
-        assert paths == path_mapper.unmaps(pl.tracks, check_existence=False)
+        assert paths == path_mapper.unmap_many(pl.tracks, check_existence=False)

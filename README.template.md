@@ -47,7 +47,7 @@ python -m pip install {program_name_lower}
 > Libraries log info about loaded objects to the custom `STAT` level.
 > ```python
 > import logging
-> from syncify.shared.logger import STAT
+> from musify.shared.logger import STAT
 > logging.basicConfig(format="%(message)s", level=STAT)
 > ```
 
@@ -69,7 +69,7 @@ python -m pip install {program_name_lower}
    > The scopes listed in this example will allow access to read your library data and write to your playlists.
    > See Spotify Web API documentation for more information about [scopes](https://developer.spotify.com/documentation/web-api/concepts/scopes)
    ```python
-   from syncify.spotify.api import SpotifyAPI
+   from musify.spotify.api import SpotifyAPI
    
    api = SpotifyAPI(
        client_id="<YOUR CLIENT ID>",
@@ -92,7 +92,7 @@ python -m pip install {program_name_lower}
    ```
 4. Create a `SpotifyLibrary` object and load your library data as follows:
    ```python
-   from syncify.spotify.library import SpotifyLibrary
+   from musify.spotify.library import SpotifyLibrary
    
    library = SpotifyLibrary(api=api)
    
@@ -122,7 +122,7 @@ python -m pip install {program_name_lower}
    ```
 5. Load some Spotify objects using any of the supported identifiers as follows:
    ```python
-   from syncify.spotify.object import SpotifyTrack, SpotifyAlbum, SpotifyPlaylist, SpotifyArtist
+   from musify.spotify.object import SpotifyTrack, SpotifyAlbum, SpotifyPlaylist, SpotifyArtist
    
    # load by ID
    track1 = SpotifyTrack.load("6fWoFduMpBem73DMLCOh1Z", api=api)
@@ -171,7 +171,7 @@ python -m pip install {program_name_lower}
 
    #### Generic local library
    ```python
-   from syncify.local.library import LocalLibrary
+   from musify.local.library import LocalLibrary
    
    library = LocalLibrary(
        library_folders=["<PATH TO YOUR LIBRARY FOLDER>", ...],
@@ -181,7 +181,7 @@ python -m pip install {program_name_lower}
    
    #### MusicBee
    ```python
-   from syncify.local.library import MusicBee
+   from musify.local.library import MusicBee
    
    library = MusicBee(musicbee_folder="<PATH TO YOUR MUSICBEE FOLDER>")
    ```
@@ -255,7 +255,7 @@ python -m pip install {program_name_lower}
 
 6. Save the tags to the file:
    ```python
-   from syncify.local.track.field import LocalTrackField
+   from musify.local.track.field import LocalTrackField
    
    # you don't have to save all the tags you just modified
    # select which you wish to save first like so
@@ -299,9 +299,9 @@ python -m pip install {program_name_lower}
    > This guide will use Spotify, but any supported music streaming service can be used in generally the same way. 
    > Just modify the imports as required.
    ```python
-   from syncify.local.library import LocalLibrary
-   from syncify.spotify.api import SpotifyAPI
-   from syncify.spotify.processors.wrangle import SpotifyDataWrangler
+   from musify.local.library import LocalLibrary
+   from musify.spotify.api import SpotifyAPI
+   from musify.spotify.processors.wrangle import SpotifyDataWrangler
    
    local_library = LocalLibrary(
        library_folders=["<PATH TO YOUR LIBRARY FOLDER>", ...],
@@ -328,7 +328,7 @@ python -m pip install {program_name_lower}
 
 2. Search for tracks and check the results:
    ```python
-   from syncify.spotify.processors.processors import SpotifyItemSearcher, SpotifyItemChecker
+   from musify.spotify.processors.processors import SpotifyItemSearcher, SpotifyItemChecker
    
    albums = local_library.albums[:3]
    
@@ -342,7 +342,7 @@ python -m pip install {program_name_lower}
 3. Load the matched tracks, get tags from the music streaming service, and save the tags to the file:
    > **NOTE**: By default, URIs are saved to the {uri_tag} tag.
    ```python
-   from syncify.spotify.object import SpotifyTrack
+   from musify.spotify.object import SpotifyTrack
    
    for album in albums:
        for local_track in album:
@@ -365,7 +365,7 @@ python -m pip install {program_name_lower}
    ```
 4. Once all tracks in a playlist have URIs assigned, sync the local playlist with a remote playlist:
    ```python
-   from syncify.spotify.library import SpotifyLibrary
+   from musify.spotify.library import SpotifyLibrary
    
    remote_library = SpotifyLibrary(api=api)
    remote_library.load_playlists()

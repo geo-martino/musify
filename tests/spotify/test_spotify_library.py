@@ -4,11 +4,11 @@ from urllib.parse import parse_qs
 
 import pytest
 
-from syncify.processors.filter import FilterDefinedList, FilterIncludeExclude
-from syncify.shared.remote.enum import RemoteObjectType
-from syncify.spotify.api import SpotifyAPI
-from syncify.spotify.library import SpotifyLibrary
-from syncify.spotify.object import SpotifyTrack
+from musify.processors.filter import FilterDefinedList, FilterIncludeExclude
+from musify.shared.remote.enum import RemoteObjectType
+from musify.spotify.api import SpotifyAPI
+from musify.spotify.library import SpotifyLibrary
+from musify.spotify.object import SpotifyTrack
 from tests.shared.remote.library import RemoteLibraryTester
 from tests.spotify.api.mock import SpotifyMock
 

@@ -5,14 +5,14 @@ from urllib.parse import parse_qs
 
 import pytest
 
-from syncify.local.collection import LocalAlbum
-from syncify.local.track import LocalTrack
-from syncify.shared.core.base import Item
-from syncify.shared.core.collection import ItemCollection
-from syncify.shared.core.enum import TagFields as Tag
-from syncify.shared.core.object import BasicCollection, Album
-from syncify.shared.remote.enum import RemoteObjectType
-from syncify.shared.remote.processors.search import RemoteItemSearcher, SearchSettings
+from musify.local.collection import LocalAlbum
+from musify.local.track import LocalTrack
+from musify.shared.core.base import Item
+from musify.shared.core.collection import ItemCollection
+from musify.shared.core.enum import TagFields as Tag
+from musify.shared.core.object import BasicCollection, Album
+from musify.shared.remote.enum import RemoteObjectType
+from musify.shared.remote.processors.search import RemoteItemSearcher, SearchSettings
 from tests.local.track.utils import random_track, random_tracks
 from tests.shared.remote.utils import RemoteMock
 

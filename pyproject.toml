@@ -4,9 +4,9 @@ build-backend = "hatchling.build"
 
 [project]
 dynamic = ["version"]
-name = "syncify"
+name = "musify"
 authors = [
-  { name="George Marino", email="gm.engineer+syncify@pm.me" },
+  { name="George Marino", email="gm.engineer+musify@pm.me" },
 ]
 description = "Synchronise your music library to local or remote libraries"
 readme = "README.md"
@@ -42,7 +42,7 @@ test = [
     "requests-mock~=1.11",
 ]
 dev = [
-    "syncify[test]",
+    "musify[test]",
     "grip~=4.6",
     "jupyterlab~=4.0",
 ]
@@ -54,14 +54,14 @@ docs = [
 ]
 
 [project.urls]
-"Source code" = "https://github.com/geo-martino/syncify"
-Issues = "https://github.com/geo-martino/syncify/issues"
+"Source code" = "https://github.com/geo-martino/musify"
+Issues = "https://github.com/geo-martino/musify/issues"
 
 [tool.hatch.version]
-path = "src/syncify/__init__.py"
+path = "musify/__init__.py"
 
 [tool.hatch.build.targets.sdist]
-include = ["src/syncify"]
+include = ["musify"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"

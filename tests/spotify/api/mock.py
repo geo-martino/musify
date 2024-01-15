@@ -13,10 +13,10 @@ from requests_mock.request import _RequestObjectProxy as Request
 # noinspection PyProtectedMember,PyUnresolvedReferences
 from requests_mock.response import _Context as Context
 
-from syncify.shared.core.enum import SyncifyEnum
-from syncify.shared.remote.enum import RemoteObjectType as ObjectType
-from syncify.spotify import URL_API, URL_EXT, SPOTIFY_NAME
-from syncify.spotify.api import SpotifyAPI
+from musify.shared.core.enum import MusifyEnum
+from musify.shared.remote.enum import RemoteObjectType as ObjectType
+from musify.spotify import URL_API, URL_EXT, SPOTIFY_NAME
+from musify.spotify.api import SpotifyAPI
 from tests.shared.remote.utils import RemoteMock
 from tests.spotify.utils import random_id
 from tests.utils import random_str, random_date_str, random_dt, random_genres
@@ -25,7 +25,7 @@ from tests.utils import random_str, random_date_str, random_dt, random_genres
 # noinspection SpellCheckingInspection
 def idfn(value: Any) -> str | None:
     """Generate test ID for Spotify API tests"""
-    if isinstance(value, SyncifyEnum):
+    if isinstance(value, MusifyEnum):
         return value.name
     return value
 

@@ -4,14 +4,14 @@ from copy import deepcopy
 
 import pytest
 
-from syncify.processors.filter import FilterDefinedList, FilterIncludeExclude
-from syncify.shared.core.base import Item
-from syncify.shared.core.collection import ItemCollection
-from syncify.shared.core.misc import PrettyPrinter
-from syncify.shared.core.object import BasicCollection, Library, Playlist
-from syncify.shared.exception import SyncifyTypeError
-from syncify.shared.remote.library import RemoteLibrary
-from syncify.shared.remote.object import RemoteCollectionLoader
+from musify.processors.filter import FilterDefinedList, FilterIncludeExclude
+from musify.shared.core.base import Item
+from musify.shared.core.collection import ItemCollection
+from musify.shared.core.misc import PrettyPrinter
+from musify.shared.core.object import BasicCollection, Library, Playlist
+from musify.shared.exception import MusifyTypeError
+from musify.shared.remote.library import RemoteLibrary
+from musify.shared.remote.object import RemoteCollectionLoader
 from tests.shared.core.misc import PrettyPrinterTester
 
 
@@ -46,19 +46,19 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
 
     @staticmethod
     def test_collection_input_validation(collection: ItemCollection, collection_merge_invalid: Iterable[Item]):
-        with pytest.raises(SyncifyTypeError):
+        with pytest.raises(MusifyTypeError):
             collection.index(next(c for c in collection_merge_invalid))
-        with pytest.raises(SyncifyTypeError):
+        with pytest.raises(MusifyTypeError):
             collection.count(next(c for c in collection_merge_invalid))
-        with pytest.raises(SyncifyTypeError):
+        with pytest.raises(MusifyTypeError):
             collection.append(next(c for c in collection_merge_invalid))
-        with pytest.raises(SyncifyTypeError):
+        with pytest.raises(MusifyTypeError):
             collection.insert(0, next(c for c in collection_merge_invalid))
 
         if not isinstance(collection, RemoteLibrary):  # overriden by remote libraries
-            with pytest.raises(SyncifyTypeError):
+            with pytest.raises(MusifyTypeError):
                 collection.extend(collection_merge_invalid)
-            with pytest.raises(SyncifyTypeError):
+            with pytest.raises(MusifyTypeError):
                 collection += collection_merge_invalid
 
     @staticmethod

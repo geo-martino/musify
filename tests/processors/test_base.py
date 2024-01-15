@@ -1,4 +1,4 @@
-from syncify.processors.base import DynamicProcessor, dynamicprocessormethod
+from musify.processors.base import DynamicProcessor, dynamicprocessormethod
 
 
 def test_dynamic_processor_method_decorator():
@@ -21,6 +21,7 @@ def test_dynamic_processor_method_decorator():
 
 # noinspection PyMissingOrEmptyDocstring
 class TestDynamicProcessor(DynamicProcessor):
+    __test__ = False
 
     @dynamicprocessormethod
     def processor_1(self):

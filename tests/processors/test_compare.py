@@ -3,11 +3,11 @@ from datetime import datetime, date, timedelta
 import pytest
 import xmltodict
 
-from syncify.local.track import MP3, M4A, FLAC
-from syncify.local.track.field import LocalTrackField
-from syncify.processors.compare import Comparer
-from syncify.processors.exception import ComparerError, ProcessorLookupError
-from syncify.shared.field import TrackField
+from musify.local.track import MP3, M4A, FLAC
+from musify.local.track.field import LocalTrackField
+from musify.processors.compare import Comparer
+from musify.processors.exception import ComparerError, ProcessorLookupError
+from musify.shared.field import TrackField
 from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
 from tests.local.track.utils import random_track
 from tests.shared.core.misc import PrettyPrinterTester

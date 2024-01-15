@@ -6,14 +6,14 @@ from typing import Any
 
 import pytest
 
-from syncify import PROGRAM_NAME
-from syncify.shared.api.exception import APIError
-from syncify.shared.remote.enum import RemoteObjectType
-from syncify.shared.remote.exception import RemoteObjectTypeError, RemoteError
-from syncify.spotify.api import SpotifyAPI
-from syncify.spotify.exception import SpotifyCollectionError
-from syncify.spotify.object import SpotifyPlaylist
-from syncify.spotify.object import SpotifyTrack
+from musify import PROGRAM_NAME
+from musify.shared.api.exception import APIError
+from musify.shared.remote.enum import RemoteObjectType
+from musify.shared.remote.exception import RemoteObjectTypeError, RemoteError
+from musify.spotify.api import SpotifyAPI
+from musify.spotify.exception import SpotifyCollectionError
+from musify.spotify.object import SpotifyPlaylist
+from musify.spotify.object import SpotifyTrack
 from tests.shared.remote.object import RemotePlaylistTester
 from tests.spotify.api.mock import SpotifyMock
 from tests.spotify.testers import SpotifyCollectionLoaderTester

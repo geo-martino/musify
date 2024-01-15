@@ -1,10 +1,10 @@
 import pytest
 from pytest_lazyfixture import lazy_fixture
 
-from syncify.local.file import PathStemMapper
-from syncify.local.track import LocalTrack, FLAC, MP3, M4A, WMA
-from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
-from syncify.spotify.processors.wrangle import SpotifyDataWrangler
+from musify.local.file import PathStemMapper
+from musify.local.track import LocalTrack, FLAC, MP3, M4A, WMA
+from musify.shared.remote.processors.wrangle import RemoteDataWrangler
+from musify.spotify.processors.wrangle import SpotifyDataWrangler
 from tests.local.utils import path_track_all, path_track_flac, path_track_mp3, path_track_m4a, path_track_wma
 from utils import path_resources
 

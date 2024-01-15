@@ -4,11 +4,11 @@ on:
   push:
     branches: [ v0.3 ]
     paths:
-      - src/**
+      - musify/**
   pull_request_target:
     branches: [ v0.3 ]
     paths:
-      - src/**
+      - musify/**
 
   workflow_dispatch:
 

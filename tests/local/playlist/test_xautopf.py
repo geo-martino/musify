@@ -6,10 +6,10 @@ from random import randrange
 
 import pytest
 
-from syncify.local.exception import InvalidFileType
-from syncify.local.file import PathMapper
-from syncify.local.playlist import XAutoPF
-from syncify.local.track import LocalTrack
+from musify.local.exception import InvalidFileType
+from musify.local.file import PathMapper
+from musify.local.playlist import XAutoPF
+from musify.local.track import LocalTrack
 from tests.local.playlist.testers import LocalPlaylistTester
 from tests.local.playlist.utils import path_playlist_xautopf_ra, path_playlist_xautopf_bp
 from tests.local.track.utils import random_track, random_tracks

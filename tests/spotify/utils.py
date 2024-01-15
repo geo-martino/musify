@@ -5,10 +5,10 @@ from typing import Any
 # noinspection PyProtectedMember,PyUnresolvedReferences
 from requests_mock.request import _RequestObjectProxy
 
-from syncify.shared.remote.enum import RemoteIDType, RemoteObjectType
-from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
-from syncify.spotify import URL_API, URL_EXT, SPOTIFY_NAME
-from syncify.spotify.base import SpotifyObject
+from musify.shared.remote.enum import RemoteIDType, RemoteObjectType
+from musify.shared.remote.processors.wrangle import RemoteDataWrangler
+from musify.spotify import URL_API, URL_EXT, SPOTIFY_NAME
+from musify.spotify.base import SpotifyObject
 from tests.utils import random_str
 
 ALL_ID_TYPES = RemoteIDType.all()

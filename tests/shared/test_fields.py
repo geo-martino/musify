@@ -1,10 +1,10 @@
 import pytest
 
-from syncify.local.track import LocalTrack
-from syncify.local.track.field import LocalTrackField
-from syncify.shared.core.object import Track, Playlist, Folder, Artist, Album
-from syncify.shared.field import FolderField, PlaylistField, AlbumField, ArtistField
-from syncify.shared.field import TrackField
+from musify.local.track import LocalTrack
+from musify.local.track.field import LocalTrackField
+from musify.shared.core.object import Track, Playlist, Folder, Artist, Album
+from musify.shared.field import FolderField, PlaylistField, AlbumField, ArtistField
+from musify.shared.field import TrackField
 from tests.shared.core.enums import FieldTester, TagFieldTester
 
 

@@ -5,13 +5,13 @@ from os.path import basename, splitext, join, dirname, relpath, getmtime, sep
 
 import pytest
 
-from syncify.local.exception import FileDoesNotExistError
-from syncify.local.file import PathMapper
-from syncify.local.library import LocalLibrary, MusicBee
-from syncify.local.library.musicbee import XMLLibraryParser
-from syncify.local.track import LocalTrack
-from syncify.processors.filter import FilterIncludeExclude, FilterDefinedList
-from syncify.shared.remote.processors.wrangle import RemoteDataWrangler
+from musify.local.exception import FileDoesNotExistError
+from musify.local.file import PathMapper
+from musify.local.library import LocalLibrary, MusicBee
+from musify.local.library.musicbee import XMLLibraryParser
+from musify.local.track import LocalTrack
+from musify.processors.filter import FilterIncludeExclude, FilterDefinedList
+from musify.shared.remote.processors.wrangle import RemoteDataWrangler
 from tests.local.library.testers import LocalLibraryTester
 from tests.local.library.utils import path_library_resources
 from tests.local.playlist.utils import path_playlist_resources, path_playlist_m3u

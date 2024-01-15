@@ -1,9 +1,9 @@
-from syncify import PROGRAM_OWNER_USER, PROGRAM_NAME
-from syncify.local.track import TRACK_FILETYPES, LocalTrack
-from syncify.local.playlist import PLAYLIST_FILETYPES
-from syncify.local.library import LIBRARY_CLASSES, LocalLibrary
-from syncify.shared.exception import SafeDict
-from syncify.spotify import SPOTIFY_NAME
+from musify import PROGRAM_OWNER_USER, PROGRAM_NAME
+from musify.local.track import TRACK_FILETYPES, LocalTrack
+from musify.local.playlist import PLAYLIST_FILETYPES
+from musify.local.library import LIBRARY_CLASSES, LocalLibrary
+from musify.shared.exception import SafeDict
+from musify.spotify import SPOTIFY_NAME
 
 SRC_FILENAME = "README.template.md"
 TRG_FILENAME = SRC_FILENAME.replace(".template", "")

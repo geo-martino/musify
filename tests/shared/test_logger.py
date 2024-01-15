@@ -10,19 +10,19 @@ from random import choice
 
 import pytest
 
-from syncify import PACKAGE_ROOT
-from syncify.shared.logger import SyncifyLogger, INFO_EXTRA, REPORT, STAT, LOGGING_DT_FORMAT
-from syncify.shared.logger import format_full_func_name, LogFileFilter, CurrentTimeRotatingFileHandler
+from musify import PACKAGE_ROOT
+from musify.shared.logger import MusifyLogger, INFO_EXTRA, REPORT, STAT, LOGGING_DT_FORMAT
+from musify.shared.logger import format_full_func_name, LogFileFilter, CurrentTimeRotatingFileHandler
 from tests.utils import random_str
 
 
 ###########################################################################
-## SyncifyLogger tests
+## MusifyLogger tests
 ###########################################################################
 @pytest.fixture
-def logger() -> SyncifyLogger:
-    """Yields a :py:class:`SyncifyLogger` with all handlers removed for testing"""
-    logger = SyncifyLogger(__name__)
+def logger() -> MusifyLogger:
+    """Yields a :py:class:`MusifyLogger` with all handlers removed for testing"""
+    logger = MusifyLogger(__name__)
     logger.compact = False
 
     for handler in logger.handlers:
@@ -31,7 +31,7 @@ def logger() -> SyncifyLogger:
     return logger
 
 
-def test_print(logger: SyncifyLogger, capfd: pytest.CaptureFixture):
+def test_print(logger: MusifyLogger, capfd: pytest.CaptureFixture):
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.WARNING)
     logger.addHandler(handler)
@@ -67,13 +67,13 @@ def test_print(logger: SyncifyLogger, capfd: pytest.CaptureFixture):
     assert capfd.readouterr().out == ''
 
 
-def test_file_paths(logger: SyncifyLogger):
+def test_file_paths(logger: MusifyLogger):
     logger.addHandler(logging.FileHandler(filename="test1.log", delay=True))
     logger.addHandler(logging.FileHandler(filename="test2.log", delay=True))
     assert [basename(path) for path in logger.file_paths] == ["test1.log", "test2.log"]
 
 
-def test_get_progress_bar(logger: SyncifyLogger):
+def test_get_progress_bar(logger: MusifyLogger):
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.DEBUG)  # forces leave to be False
     logger.addHandler(handler)
@@ -132,7 +132,7 @@ def test_get_progress_bar(logger: SyncifyLogger):
     logger.disable_bars = True
 
 
-def test_copy(logger: SyncifyLogger):
+def test_copy(logger: MusifyLogger):
     assert id(copy(logger)) == id(logger)
     assert id(deepcopy(logger)) == id(logger)
 
@@ -142,8 +142,8 @@ def test_logger_set():
     assert logging.getLevelName("REPORT") == REPORT
     assert logging.getLevelName("STAT") == STAT
 
-    assert logging.getLoggerClass() == SyncifyLogger
-    assert isinstance(logging.getLogger(__name__), SyncifyLogger)
+    assert logging.getLoggerClass() == MusifyLogger
+    assert isinstance(logging.getLogger(__name__), MusifyLogger)
 
 
 ###########################################################################

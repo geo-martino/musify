@@ -1,7 +1,7 @@
 import pytest
 
-from syncify.spotify.api import SpotifyAPI
-from syncify.spotify.processors.wrangle import SpotifyDataWrangler
+from musify.spotify.api import SpotifyAPI
+from musify.spotify.processors.wrangle import SpotifyDataWrangler
 from tests.spotify.api.mock import SpotifyMock
 
 

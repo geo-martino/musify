@@ -3,8 +3,8 @@ from datetime import datetime
 import pytest
 import xmltodict
 
-from syncify.local.track import LocalTrack
-from syncify.processors.limit import ItemLimiter, LimitType
+from musify.local.track import LocalTrack
+from musify.processors.limit import ItemLimiter, LimitType
 from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
 from tests.local.track.utils import random_tracks
 from tests.shared.core.misc import PrettyPrinterTester

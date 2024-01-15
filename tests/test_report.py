@@ -4,14 +4,14 @@ from random import choice, randrange
 
 import pytest
 
-from syncify.local.library import LocalLibrary
-from syncify.local.playlist import M3U
-from syncify.local.track.field import LocalTrackField
-from syncify.report import report_playlist_differences, report_missing_tags
-from syncify.spotify.api import SpotifyAPI
-from syncify.spotify.library import SpotifyLibrary
-from syncify.spotify.object import SpotifyPlaylist
-from syncify.spotify.processors.wrangle import SpotifyDataWrangler
+from musify.local.library import LocalLibrary
+from musify.local.playlist import M3U
+from musify.local.track.field import LocalTrackField
+from musify.report import report_playlist_differences, report_missing_tags
+from musify.spotify.api import SpotifyAPI
+from musify.spotify.library import SpotifyLibrary
+from musify.spotify.object import SpotifyPlaylist
+from musify.spotify.processors.wrangle import SpotifyDataWrangler
 from tests.local.track.utils import random_track
 from tests.spotify.api.mock import SpotifyMock
 from tests.spotify.utils import random_uri
