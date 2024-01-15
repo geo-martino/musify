@@ -2,13 +2,13 @@ name: Publish documentation
 
 on:
   push:
-    branches: [ v0.3 ]
+    branches: [ master ]
     paths:
       - musify/**
       - docs/**
       - make*
   pull_request_target:
-    branches: [ v0.3 ]
+    branches: [ master ]
     paths:
       - musify/**
       - docs/**
@@ -59,15 +59,17 @@ jobs:
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/master'
         with:
           path: ./docs/_build/html
 
   deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/master'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
