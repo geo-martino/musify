@@ -13,8 +13,8 @@ readme = "README.md"
 license-files = { paths = ["LICENSE"] }
 requires-python = ">=3.12"
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: European Union Public Licence 1.2 (EUPL 1.2)",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
     "Operating System :: OS Independent",
     "Development Status :: 2 - Pre-Alpha",
     "Natural Language :: English",
