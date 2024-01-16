@@ -12,6 +12,7 @@ concurrency:
 
 jobs:
   validate:
+    name: ✅ Validate
     uses: ./.github/workflows/validate.yml
 
   deploy:
