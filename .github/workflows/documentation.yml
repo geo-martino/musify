@@ -1,4 +1,4 @@
-name: Publish documentation
+name: 📃 Publish documentation
 
 on:
   push:
