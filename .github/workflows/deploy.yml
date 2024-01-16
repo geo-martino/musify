@@ -41,16 +41,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        os: [ ubuntu-latest ]
+        name: [ Linux 🐧 ]
+        python-version: [ 3.12 ]
         include:
           - os: windows-latest
             name: Windows 🪟
-            python-version: ${{ env.python-version }}
-          - os: ubuntu-latest
-            name: Linux 🐧
-            python-version: ${{ env.python-version }}
+            python-version: 3.12
           - os: macos-latest
             name: Mac 🍎
-            python-version: ${{ env.python-version }}
+            python-version: 3.12
     steps:
       - name: Checkout 🛒
         uses: actions/checkout@v4

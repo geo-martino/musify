@@ -36,3 +36,4 @@ def format_readme():
 
 if __name__ == "__main__":
     format_readme()
+    print(f"Formatted {TRG_FILENAME} file using template: {SRC_FILENAME}")
