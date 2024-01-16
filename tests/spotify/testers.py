@@ -3,9 +3,6 @@ from collections.abc import Iterable
 from typing import Any
 from urllib.parse import parse_qs
 
-# noinspection PyProtectedMember,PyUnresolvedReferences
-from requests_mock.request import _RequestObjectProxy
-
 from musify.shared.remote.enum import RemoteObjectType
 from musify.spotify.api import SpotifyAPI
 from musify.spotify.base import SpotifyItem

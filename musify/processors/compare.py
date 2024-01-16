@@ -93,7 +93,7 @@ class Comparer(MusicBeeProcessor, DynamicProcessor):
             field_str = condition.get("@Field", "None")
             field: Field = field_name_map.get(field_str)
             if field is None:
-                raise FieldError(f"Unrecognised field name", field=field_str)
+                raise FieldError("Unrecognised field name", field=field_str)
 
             expected: tuple[str, ...] | None = tuple(v for k, v in condition.items() if k.startswith("@Value"))
             if len(expected) == 0 or expected[0] == "[playing track]":

@@ -490,7 +490,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
 
         id_list = self.extract_ids(values, kind=RemoteObjectType.ARTIST)
         bar = self.logger.get_progress_bar(
-            iterable=id_list, desc=f"Getting artist albums", unit="artist", disable=len(id_list) < self._bar_threshold
+            iterable=id_list, desc="Getting artist albums", unit="artist", disable=len(id_list) < self._bar_threshold
         )
 
         params = {"limit": limit_value(limit, floor=1, ceil=50)}

@@ -360,7 +360,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
 
         if len(added) + len(removed) + len(missing) == 0:
             if len(source_valid) == len(remote_valid):
-                self._log_padded([name, f"Playlist unchanged and no missing URIs, skipping match"])
+                self._log_padded([name, "Playlist unchanged and no missing URIs, skipping match"])
                 return
 
             # if item collection originally contained duplicate URIS and one or more of the duplicates were removed,

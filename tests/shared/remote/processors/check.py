@@ -192,8 +192,8 @@ class RemoteItemCheckerTester(ABC):
         stdout = get_stdout(capfd)
         assert stdout.count("Enter one of the following") == 1
         # assert stdout.count("Input not recognised") == 2  # TODO: capfd is not capturing this string, why?
-        assert f"Showing items originally added to" not in stdout
-        assert f"Showing tracks for playlist" not in stdout
+        assert "Showing items originally added to" not in stdout
+        assert "Showing tracks for playlist" not in stdout
 
         assert not api_mock.request_history
 
@@ -217,8 +217,8 @@ class RemoteItemCheckerTester(ABC):
         stdout = get_stdout(capfd)
         assert stdout.count("Enter one of the following") == 1
         assert "Input not recognised" not in stdout
-        assert f"Showing items originally added to" not in stdout
-        assert f"Showing tracks for playlist" not in stdout
+        assert "Showing items originally added to" not in stdout
+        assert f"Showing tracks for playlist" not in stdout  # poison apple
         assert not api_mock.request_history
 
         assert not checker.skip

@@ -94,12 +94,12 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         self.logger.debug(f"Extend {self.source} tracks data: START")
         if not allow_duplicates:
             self.logger.info(
-                f"\33[1;95m ->\33[1;97m Extending library: "
+                "\33[1;95m ->\33[1;97m Extending library: "
                 "checking if the given items are already in this library \33[0m"
             )
 
         load_uris = []
-        bar = self.logger.get_progress_bar(iterable=__items, desc=f"Checking items", unit="items")
+        bar = self.logger.get_progress_bar(iterable=__items, desc="Checking items", unit="items")
         for item in bar:
             if not allow_duplicates and item in self.items:
                 continue

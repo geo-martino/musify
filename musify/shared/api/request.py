@@ -226,4 +226,3 @@ class RequestHandler(APIAuthoriser):
     def __deepcopy__(self, _: dict = None):
         """Do not copy handler"""
         return self
-

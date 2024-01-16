@@ -16,28 +16,53 @@ permissions:
   contents: read
 
 jobs:
-  test_windows:
-    name: Run tests - Windows 🪟
-    runs-on: windows-latest
+  lint:
+    name: Lint 🔎
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout 🛒
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup ⚙️ - Python
         uses: actions/setup-python@v5
         with:
           python-version: '>=3.12'
 
-      - name: Install dependencies
+      - name: Setup ⚙️ - Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install '.[test]'
 
-      - name: Run tests
+      - name: Run flake8 🔎
+        uses: suo/flake8-github-action@releases/v1
+        with:
+          checkName: 'lint'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test_windows:
+    name: Run tests 🧪 - Windows 🪟
+    runs-on: windows-latest
+    needs: lint
+    steps:
+      - name: Checkout 🛒
+        uses: actions/checkout@v4
+
+      - name: Setup ⚙️ - Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '>=3.12'
+
+      - name: Setup ⚙️ - Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install '.[test]'
+
+      - name: Run tests 🧪
         run: |
           pytest --junit-xml=test-results.xml
 
-      - name: Publish test results report
+      - name: Publish test results report 📃
         if: always()
         uses: pmeier/pytest-results-action@main
         with:
@@ -48,27 +73,28 @@ jobs:
           title: Test results - Windows 🪟
 
   test_linux:
-    name: Run tests - Linux 🐧
+    name: Run tests 🧪 - Linux 🐧
     runs-on: ubuntu-latest
+    needs: lint
     steps:
-      - name: Checkout
+      - name: Checkout 🛒
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup ⚙️ - Python
         uses: actions/setup-python@v5
         with:
           python-version: '>=3.12'
 
-      - name: Install dependencies
+      - name: Setup ⚙️ - Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install '.[test]'
 
-      - name: Run tests
+      - name: Run tests 🧪
         run: |
           pytest --junit-xml=test-results.xml
 
-      - name: Publish test results report
+      - name: Publish test results report 📃
         if: always()
         uses: pmeier/pytest-results-action@main
         with:
@@ -79,27 +105,28 @@ jobs:
           title: Test results - Linux 🐧
 
   test_mac:
-    name: Run tests - Mac 🍎
+    name: Run tests 🧪 - Mac 🍎
     runs-on: macos-latest
+    needs: lint
     steps:
-      - name: Checkout
+      - name: Checkout 🛒
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup ⚙️ - Python
         uses: actions/setup-python@v5
         with:
           python-version: '>=3.12'
 
-      - name: Install dependencies
+      - name: Setup ⚙️ - Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install '.[test]'
 
-      - name: Run tests
+      - name: Run tests 🧪
         run: |
           pytest --junit-xml=test-results.xml
 
-      - name: Publish test results report
+      - name: Publish test results report 📃
         if: always()
         uses: pmeier/pytest-results-action@main
         with:
@@ -114,24 +141,24 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test_windows, test_linux, test_mac]
     steps:
-      - name: Checkout
+      - name: Checkout 🛒
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup ⚙️ - Python
         uses: actions/setup-python@v5
         with:
           python-version: '>=3.12'
 
-      - name: Install dependencies
+      - name: Setup ⚙️ - Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install hatch
 
-      - name: Build package
+      - name: Build package 🏗️
         run: |
           hatch build
 
-      - name: Upload package artifacts
+      - name: Upload package artifacts 📦
         uses: actions/upload-artifact@v3
         with:
           name: python-package-distributions
@@ -149,14 +176,14 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - name: Checkout
+      - name: Checkout 🛒
         uses: actions/checkout@v4
 
-      - name: Download package artifacts
+      - name: Download package artifacts 📦
         uses: actions/download-artifact@v3
         with:
           name: python-package-distributions
           path: dist/
 
-      - name: Publish to PyPI
+      - name: Publish to PyPI 🚀
         uses: pypa/gh-action-pypi-publish@release/v1

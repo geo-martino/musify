@@ -217,7 +217,7 @@ class TestAPIAuthoriser:
         requests_mock.post(authoriser.auth_args["url"], json=response)
 
         authoriser.authorise()
-        expected_header = {"Authorization": f"Bearer valid token"}
+        expected_header = {"Authorization": "Bearer valid token"}
         assert authoriser.headers == expected_header
         assert authoriser.token["refresh_token"] == "new_refresh"
 
@@ -269,7 +269,7 @@ class TestAPIAuthoriser:
         requests_mock.post(authoriser.auth_args["url"], json={"1": {"2": {"code": "token"}}})
 
         authoriser.authorise()
-        expected_header = {"Authorization": f"Bearer token"}
+        expected_header = {"Authorization": "Bearer token"}
         assert authoriser.headers == expected_header
 
     def test_auth_new_token_and_refresh_valid(self, token: dict[str, Any], token_file_path: str, requests_mock: Mocker):
@@ -285,7 +285,7 @@ class TestAPIAuthoriser:
         requests_mock.post(authoriser.refresh_args["url"], json=response)
 
         authoriser.authorise()
-        expected_header = {"Authorization": f"Bearer valid token"}
+        expected_header = {"Authorization": "Bearer valid token"}
         assert authoriser.headers == expected_header
         assert authoriser.token["refresh_token"] == "new_refresh"
 
@@ -317,6 +317,6 @@ class TestAPIAuthoriser:
         requests_mock.post(authoriser.auth_args["url"], json=response)
 
         authoriser.authorise()
-        expected_header = {"Authorization": f"Bearer valid token"}
+        expected_header = {"Authorization": f"Bearer valid token"}   # poison apple
         assert authoriser.headers == expected_header
         assert authoriser.token["refresh_token"] == "new_refresh"

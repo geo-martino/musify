@@ -2,9 +2,6 @@ from collections.abc import Iterable
 from random import choice, randrange
 from typing import Any
 
-# noinspection PyProtectedMember,PyUnresolvedReferences
-from requests_mock.request import _RequestObjectProxy
-
 from musify.shared.remote.enum import RemoteIDType, RemoteObjectType
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
 from musify.spotify import URL_API, URL_EXT, SPOTIFY_NAME

@@ -70,7 +70,7 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
             raise RemoteObjectTypeError("Given items are invalid or are IDs with no kind given")
         if len(kinds) != 1:
             value = [kind.name for kind in kinds]
-            raise RemoteObjectTypeError(f"Ensure all the given items are of the same type! Found", value=value)
+            raise RemoteObjectTypeError("Ensure all the given items are of the same type! Found", value=value)
         return kinds.pop()
 
     @staticmethod

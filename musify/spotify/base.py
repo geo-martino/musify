@@ -61,7 +61,7 @@ class SpotifyObject(SpotifyObjectMixin, metaclass=ABCMeta):
         kind = self.__class__.__name__.removeprefix("Spotify").lower()
         if self.response.get("type") != kind:
             kind = RemoteObjectType.from_name(kind)[0]
-            raise RemoteObjectTypeError(f"Response type invalid", kind=kind, value=self.response.get("type"))
+            raise RemoteObjectTypeError("Response type invalid", kind=kind, value=self.response.get("type"))
 
 
 class SpotifyItem(RemoteItem, SpotifyObject, metaclass=ABCMeta):

@@ -23,7 +23,7 @@ def strip_ignore_words(value: str, words: Iterable[str] | None = frozenset(["The
 
     special_chars = list('!"£$%^&*()_+-=…')
     special_start = any(value.startswith(c) for c in special_chars)
-    value = re.sub(rf"^\W+", "", value).strip()
+    value = re.sub(r"^\W+", "", value).strip()
 
     if not words:
         return not special_start, value

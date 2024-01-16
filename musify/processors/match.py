@@ -372,7 +372,7 @@ class ItemMatcher(ItemProcessor):
         :return: Tuple of (the score between 0-1, the item that had the best score)
         """
         if not results:
-            self._log_algorithm(source=source, extra=[f"NO RESULTS GIVEN, SKIPPING"])
+            self._log_algorithm(source=source, extra=["NO RESULTS GIVEN, SKIPPING"])
             return 0, None
         max_score = limit_value(max_score, floor=0.01, ceil=1.0)
         self._log_algorithm(source=source, extra=[f"max_score={max_score}"])
