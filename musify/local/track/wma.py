@@ -86,13 +86,11 @@ class WMA(LocalTrack[mutagen.asf.ASF]):
         return images
 
     def _write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
-        if tag_value is None:
-            remove = not dry_run and tag_id in self.file and self.file[tag_id]
-            if remove:
-                del self.file[tag_id]
-            return remove
+        result = super()._write_tag(tag_id=tag_id, tag_value=tag_value, dry_run=dry_run)
+        if result is not None:
+            return result
 
-        if not dry_run and tag_id is not None:
+        if not dry_run:
             if isinstance(tag_value, (list, set, tuple)):
                 if all(isinstance(v, mutagen.asf.ASFByteArrayAttribute) for v in tag_value):
                     self._file[tag_id] = tag_value
@@ -100,7 +98,7 @@ class WMA(LocalTrack[mutagen.asf.ASF]):
                     self._file[tag_id] = [mutagen.asf.ASFUnicodeAttribute(str(v)) for v in tag_value]
             else:
                 self._file[tag_id] = mutagen.asf.ASFUnicodeAttribute(str(tag_value))
-        return tag_id is not None
+        return True
 
     def _write_images(self, dry_run: bool = True) -> bool:
         tag_id = next(iter(self.tag_map.images), None)

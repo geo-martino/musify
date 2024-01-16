@@ -1,9 +1,9 @@
 import re
 from abc import ABC, abstractmethod
-from itertools import batched
 from random import randrange, choice
 
 import pytest
+from itertools import batched
 from pytest_mock import MockerFixture
 
 from musify.local.track import LocalTrack

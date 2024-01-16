@@ -5,13 +5,13 @@ import logging.handlers
 import os
 import re
 import shutil
-import sys
 from collections.abc import Iterable
 from datetime import datetime
 from glob import glob
 from os.path import join, dirname, splitext, split, basename, isfile, sep, isdir
 from typing import Any
 
+import sys
 from tqdm.auto import tqdm
 
 from musify import PROGRAM_NAME

@@ -1,7 +1,6 @@
 import logging
 import os
 import string
-import sys
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from glob import glob
@@ -9,6 +8,7 @@ from os.path import join, basename, splitext
 from random import choice
 
 import pytest
+import sys
 
 from musify.shared.logger import MusifyLogger, INFO_EXTRA, REPORT, STAT, LOGGING_DT_FORMAT
 from musify.shared.logger import format_full_func_name, LogFileFilter, CurrentTimeRotatingFileHandler

@@ -70,15 +70,13 @@ class MP3(LocalTrack[mutagen.mp3.MP3]):
         return [Image.open(BytesIO(value.data)) for value in values] if values is not None else None
 
     def _write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
-        if tag_value is None:
-            remove = not dry_run and tag_id in self.file and self.file[tag_id]
-            if remove:
-                del self.file[tag_id]
-            return remove
+        result = super()._write_tag(tag_id=tag_id, tag_value=tag_value, dry_run=dry_run)
+        if result is not None:
+            return result
 
-        if not dry_run and tag_id is not None:
+        if not dry_run:
             self._file[tag_id] = getattr(mutagen.id3, tag_id)(3, text=str(tag_value))
-        return tag_id is not None
+        return True
 
     def _write_genres(self, dry_run: bool = True) -> bool:
         values = ";".join(self.genres or [])

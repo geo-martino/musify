@@ -1,9 +1,10 @@
 import re
 from abc import ABCMeta
 from collections.abc import Collection, Mapping, MutableMapping
-from itertools import batched
 from typing import Any
 from urllib.parse import parse_qs, urlparse
+
+from itertools import batched
 
 from musify.shared.api.exception import APIError
 from musify.shared.remote.api import APIMethodInputType
@@ -54,7 +55,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         kind = self._get_unit(key=key, kind=kind)
 
         bar = self.logger.get_progress_bar(
-            iterable=id_list, desc=f"Getting {kind}", unit=kind, disable=len(id_list) < self._bar_threshold * 10
+            iterable=id_list, desc=f"Getting {kind}", unit=kind, disable=len(id_list) < self._bar_threshold
         )
 
         results: list[dict[str, Any]] = []

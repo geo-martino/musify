@@ -234,7 +234,7 @@ class TagWriter(TagReader, metaclass=ABCMeta):
         return SyncResultTrack(saved=save, updated=updated)
 
     @abstractmethod
-    def _write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
+    def _write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool | None:
         """
         Generic method for updating a tag value in the file.
 
@@ -243,6 +243,14 @@ class TagWriter(TagReader, metaclass=ABCMeta):
         :param dry_run: Run function, but do not modify file at all.
         :return: True if the file was updated or would have been when dry_run is True, False otherwise.
         """
+        if tag_id is None:
+            return False
+
+        if tag_value is None:
+            remove = not dry_run and tag_id in self.file and self.file[tag_id]
+            if remove:
+                del self.file[tag_id]
+            return remove
 
     def _write_title(self, dry_run: bool = True) -> bool:
         """

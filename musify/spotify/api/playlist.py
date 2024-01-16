@@ -1,7 +1,8 @@
 from abc import ABCMeta
 from collections.abc import Collection, Mapping
-from itertools import batched
 from typing import Any
+
+from itertools import batched
 
 from musify import PROGRAM_NAME, PROGRAM_URL
 from musify.shared.remote.enum import RemoteIDType, RemoteObjectType

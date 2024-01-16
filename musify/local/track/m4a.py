@@ -78,13 +78,11 @@ class M4A(LocalTrack[mutagen.mp4.MP4]):
         return [Image.open(BytesIO(bytes(value))) for value in values] if values is not None else None
 
     def _write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
-        if tag_value is None:
-            remove = not dry_run and tag_id in self.file and self.file[tag_id]
-            if remove:
-                del self.file[tag_id]
-            return remove
+        result = super()._write_tag(tag_id=tag_id, tag_value=tag_value, dry_run=dry_run)
+        if result is not None:
+            return result
 
-        if not dry_run and tag_id is not None:
+        if not dry_run:
             if tag_id.startswith("----:com.apple.iTunes"):
                 self._file[tag_id] = [
                     mutagen.mp4.MP4FreeForm(str(v).encode("utf-8"), 1) for v in to_collection(tag_value)
@@ -95,7 +93,7 @@ class M4A(LocalTrack[mutagen.mp4.MP4]):
                 self._file[tag_id] = [tag_value]
             else:
                 self._file[tag_id] = to_collection(tag_value, list)
-        return tag_id is not None
+        return True
 
     def _write_track(self, dry_run: bool = True) -> bool:
         tag_id = next(iter(self.tag_map.track_number), None)
