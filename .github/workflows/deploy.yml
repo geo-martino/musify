@@ -6,15 +6,11 @@ on:
     paths:
       - musify/**
 
-permissions:
-  contents: read
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: false
-
-env:
-  python-version: '3.12'
 
 jobs:
   validate:
@@ -37,7 +33,7 @@ jobs:
       - name: 📦 Download package artifacts
         uses: actions/download-artifact@v3
         with:
-          name: ${{ needs.validate.outputs.artifact-id }}
+          name: ${{ needs.validate.outputs.artifact-name }}
           path: dist/
 
       - name: 🚀 Publish to PyPI

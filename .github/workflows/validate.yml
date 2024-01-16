@@ -10,14 +10,15 @@ on:
 
   workflow_call:
     outputs:
-      artifact-id:
-        description: "The ID of the uploaded package artifacts"
-        value: ${{ jobs.build.outputs.artifact-id }}
+      artifact-name:
+        description: "The name of the uploaded package artifacts"
+        value: ${{ env.artifact-name }}
 
 permissions:
   contents: read
 
 env:
+  artifact-name: python-package-distributions
   python-version: '3.12'
 
 jobs:
@@ -128,6 +129,6 @@ jobs:
         id: upload
         uses: actions/upload-artifact@v3
         with:
-          name: python-package-distributions
+          name: ${{ env.artifact-name }}
           path: dist/
           if-no-files-found: error
