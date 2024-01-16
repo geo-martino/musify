@@ -58,7 +58,7 @@ loggers:
   test:  &logger
     level: DEBUG
     handlers: [console_info, file]
-    propagate: no
+    propagate: yes
 
   dev:
     <<: *logger

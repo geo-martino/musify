@@ -45,10 +45,18 @@ class MusifyLogger(logging.Logger):
     @property
     def file_paths(self) -> list[str]:
         """Get a list of the paths of all file handlers for this logger"""
+        def extract_paths(lggr: logging.Logger) -> None:
+            """Extract file path from the handlers of the given ``lggr``"""
+            for handler in lggr.handlers:
+                if isinstance(handler, logging.FileHandler) and handler.baseFilename not in paths:
+                    paths.append(handler.baseFilename)
+
         paths = []
-        for handler in self.handlers:
-            if isinstance(handler, logging.FileHandler):
-                paths.append(handler.baseFilename)
+        logger = self
+        extract_paths(logger)
+        while logger.propagate and logger.parent:
+            logger = logger.parent
+            extract_paths(logger)
         return paths
 
     @property
