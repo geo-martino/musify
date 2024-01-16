@@ -14,7 +14,7 @@ from typing import Any
 
 from tqdm.auto import tqdm
 
-from musify import PROGRAM_NAME, PACKAGE_ROOT
+from musify import PROGRAM_NAME
 from musify.processors.time import TimeMapper
 
 LOGGING_DT_FORMAT = "%Y-%m-%d_%H.%M.%S"
