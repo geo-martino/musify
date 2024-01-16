@@ -8,7 +8,8 @@
 [![GitHub - Deployment](https://github.com/{program_owner_user}/{program_name_lower}/actions/workflows/deploy.yml/badge.svg)](https://github.com/{program_owner_user}/{program_name_lower}/actions/workflows/deploy.yml)
 [![GitHub - Documentation](https://github.com/{program_owner_user}/{program_name_lower}/actions/workflows/documentation.yml/badge.svg)](https://github.com/{program_owner_user}/{program_name_lower}/actions/workflows/documentation.yml)
 
-### A complete local and music streaming service (remote) library management tool.
+### A Swiss Army knife for music library management
+Supporting local and music streaming service (remote) libraries.
 - Extract data for all item types from remote libraries, including following/saved items, such as:
 **playlists, tracks, albums, artists, users, podcasts, audiobooks**
 - Load local audio files, programmatically manipulate, and save tags/metadata/embedded images

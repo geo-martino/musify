@@ -8,7 +8,8 @@
 [![GitHub - Deployment](https://github.com/geo-martino/musify/actions/workflows/deploy.yml/badge.svg)](https://github.com/geo-martino/musify/actions/workflows/deploy.yml)
 [![GitHub - Documentation](https://github.com/geo-martino/musify/actions/workflows/documentation.yml/badge.svg)](https://github.com/geo-martino/musify/actions/workflows/documentation.yml)
 
-### A complete local and music streaming service (remote) library management tool.
+### A Swiss Army knife for music library management
+Supporting local and music streaming service (remote) libraries.
 - Extract data for all item types from remote libraries, including following/saved items, such as:
 **playlists, tracks, albums, artists, users, podcasts, audiobooks**
 - Load local audio files, programmatically manipulate, and save tags/metadata/embedded images
@@ -383,8 +384,8 @@ python -m pip install musify
 ## Currently Supported
 
 - **Music Streaming Services**: `Spotify`
-- **Audio filetypes**: `.wma` `.mp3` `.m4a` `.flac`
-- **Local playlist filetypes**: `.xautopf` `.m3u`
+- **Audio filetypes**: `.mp3` `.wma` `.flac` `.m4a`
+- **Local playlist filetypes**: `.m3u` `.xautopf`
 - **Local Libraries**: `MusicBee`
 
 <a id="aims"></a>
