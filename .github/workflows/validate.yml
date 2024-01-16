@@ -12,13 +12,12 @@ on:
     outputs:
       artifact-name:
         description: "The name of the uploaded package artifacts"
-        value: ${{ env.artifact-name }}
+        value: ${{ jobs.build.outputs.artifact-name }}
 
 permissions:
   contents: read
 
 env:
-  artifact-name: python-package-distributions
   python-version: '3.12'
 
 jobs:
@@ -73,7 +72,6 @@ jobs:
           pytest --junit-xml=test-results.xml
 
       - name: 📃 Publish test results report
-        if: always()
         uses: pmeier/pytest-results-action@main
         with:
           path: test-results.xml
@@ -86,8 +84,10 @@ jobs:
     name: 📦 Build package
     runs-on: ubuntu-latest
     needs: test
+    env:
+      artifact-name: python-package-distributions
     outputs:
-      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+      artifact-name: ${{ env.artifact-name }}
     steps:
       - name: 🛒 Checkout
         uses: actions/checkout@v4
