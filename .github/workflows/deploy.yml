@@ -15,6 +15,9 @@ on:
 permissions:
   contents: read
 
+env:
+  python-version: 3.12
+
 jobs:
   lint:
     name: Lint 🔎
@@ -26,24 +29,27 @@ jobs:
       - name: Setup ⚙️ - Python
         uses: actions/setup-python@v5
         with:
-          python-version: '>=3.12'
-
-      - name: Setup ⚙️ - Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install '.[test]'
+          python-version: ${{ env.python-version }}
 
       - name: Run flake8 🔎
-        uses: suo/flake8-github-action@releases/v1
-        with:
-          checkName: 'lint'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: py-actions/flake8@v2
 
-  test_windows:
-    name: Run tests 🧪 - Windows 🪟
-    runs-on: windows-latest
+  test:
+    name: Run tests 🧪
+    runs-on: ${{ matrix.os }}
     needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest ]
+        python-version: [ 3.12 ]
+        include:
+          - os: windows-latest
+            name: Windows 🪟
+          - os: ubuntu-latest
+            name: Linux 🐧
+          - os: macos-latest
+            name: Mac 🍎
     steps:
       - name: Checkout 🛒
         uses: actions/checkout@v4
@@ -51,7 +57,7 @@ jobs:
       - name: Setup ⚙️ - Python
         uses: actions/setup-python@v5
         with:
-          python-version: '>=3.12'
+          python-version: ${{ matrix.python-version }}
 
       - name: Setup ⚙️ - Install dependencies
         run: |
@@ -70,76 +76,12 @@ jobs:
           summary: true
           display-options: fEX
           fail-on-empty: true
-          title: Test results - Windows 🪟
-
-  test_linux:
-    name: Run tests 🧪 - Linux 🐧
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - name: Checkout 🛒
-        uses: actions/checkout@v4
-
-      - name: Setup ⚙️ - Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '>=3.12'
-
-      - name: Setup ⚙️ - Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install '.[test]'
-
-      - name: Run tests 🧪
-        run: |
-          pytest --junit-xml=test-results.xml
-
-      - name: Publish test results report 📃
-        if: always()
-        uses: pmeier/pytest-results-action@main
-        with:
-          path: test-results.xml
-          summary: true
-          display-options: fEX
-          fail-on-empty: true
-          title: Test results - Linux 🐧
-
-  test_mac:
-    name: Run tests 🧪 - Mac 🍎
-    runs-on: macos-latest
-    needs: lint
-    steps:
-      - name: Checkout 🛒
-        uses: actions/checkout@v4
-
-      - name: Setup ⚙️ - Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '>=3.12'
-
-      - name: Setup ⚙️ - Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install '.[test]'
-
-      - name: Run tests 🧪
-        run: |
-          pytest --junit-xml=test-results.xml
-
-      - name: Publish test results report 📃
-        if: always()
-        uses: pmeier/pytest-results-action@main
-        with:
-          path: test-results.xml
-          summary: true
-          display-options: fEX
-          fail-on-empty: true
-          title: Test results - Mac 🍎
+          title: Test results | ${{ matrix.name }} - Python${{ matrix.python-version }}
 
   build:
     name: Build package 📦
     runs-on: ubuntu-latest
-    needs: [test_windows, test_linux, test_mac]
+    needs: test
     steps:
       - name: Checkout 🛒
         uses: actions/checkout@v4
@@ -147,7 +89,7 @@ jobs:
       - name: Setup ⚙️ - Python
         uses: actions/setup-python@v5
         with:
-          python-version: '>=3.12'
+          python-version: ${{ env.python-version }}
 
       - name: Setup ⚙️ - Install dependencies
         run: |
