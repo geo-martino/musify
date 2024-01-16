@@ -41,16 +41,16 @@ test = [
     "pycountry~=23.12",
     "requests-mock~=1.11",
 ]
-dev = [
-    "musify[test]",
-    "flake8",
-    "grip~=4.6",
-]
 docs = [
     "sphinx~=7.2",
     "renku_sphinx_theme",
     "graphviz~=0.20",
     "autodocsumm~=0.2",
+]
+dev = [
+    "musify[test,docs]",
+    "flake8",
+    "grip~=4.6",
 ]
 
 [project.urls]

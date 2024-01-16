@@ -6,13 +6,11 @@ on:
     paths:
       - musify/**
       - docs/**
-      - make*
   pull_request_target:
     branches: [ master ]
     paths:
       - musify/**
       - docs/**
-      - make*
 
   workflow_dispatch:
 
