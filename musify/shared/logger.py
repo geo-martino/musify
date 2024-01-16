@@ -9,7 +9,7 @@ import sys
 from collections.abc import Iterable
 from datetime import datetime
 from glob import glob
-from os.path import join, dirname, splitext, split, basename, isfile, sep, isdir, isabs
+from os.path import join, dirname, splitext, split, basename, isfile, sep, isdir
 from typing import Any
 
 from tqdm.auto import tqdm
@@ -250,8 +250,7 @@ class CurrentTimeRotatingFileHandler(logging.handlers.BaseRotatingHandler):
             filename = "{}.log"
         filename = filename.replace("\\", sep) if sep == "/" else filename.replace("/", sep)
         self.filename = filename.format(dt_str) if "{}" in filename else filename
-        if not isabs(self.filename):
-            self.filename = join(PACKAGE_ROOT, self.filename)
+        os.makedirs(dirname(self.filename), exist_ok=True)
 
         self.delta = TimeMapper(when.lower())(interval) if when and interval else None
         self.count = count
