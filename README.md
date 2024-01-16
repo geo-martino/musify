@@ -33,10 +33,12 @@ Supporting local and music streaming service (remote) libraries.
 > [Read the docs](https://geo-martino.github.io/musify/) for full reference documentation.
 
 ## Installation
-Package is listed on PyPI and can be installed as usual through pip.
+Install through pip using one of the following commands:
 
 ```bash
 pip install musify
+```
+```bash
 python -m pip install musify
 ```
 
@@ -384,7 +386,7 @@ python -m pip install musify
 ## Currently Supported
 
 - **Music Streaming Services**: `Spotify`
-- **Audio filetypes**: `.wma` `.flac` `.m4a` `.mp3`
+- **Audio filetypes**: `.m4a` `.mp3` `.wma` `.flac`
 - **Local playlist filetypes**: `.m3u` `.xautopf`
 - **Local Libraries**: `MusicBee`
 

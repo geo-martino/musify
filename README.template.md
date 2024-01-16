@@ -33,10 +33,12 @@ Supporting local and music streaming service (remote) libraries.
 > [Read the docs](https://{program_owner_user}.github.io/{program_name_lower}/) for full reference documentation.
 
 ## Installation
-Package is listed on PyPI and can be installed as usual through pip.
+Install through pip using one of the following commands:
 
 ```bash
 pip install {program_name_lower}
+```
+```bash
 python -m pip install {program_name_lower}
 ```
 
