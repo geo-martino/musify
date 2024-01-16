@@ -372,25 +372,26 @@ class SpotifyMock(RemoteMock):
         """Setup requests mock for returning preset responses from the given ``items`` in an 'items block' format."""
         def response_getter(req: Request, _: Context) -> dict[str, Any]:
             """Dynamically generate expected response for an items block from the given ``generator``"""
-            nonlocal total
-
             req_params = parse_qs(req.query)
             limit = int(req_params["limit"][0])
             offset = int(req_params.get("offset", [0])[0])
 
             available = items
+            available_total = total
             if re.match(r".*/artists/\w+/albums$", url) and "include_groups" in req_params:
                 # special case for artist's albums
                 types = req_params["include_groups"][0].split(",")
                 available = [i for i in items if i["album_type"] in types]
-                total = len(available)
+                available_total = len(available)
 
             it = deepcopy(available[offset: offset + limit])
-            items_block = self.format_items_block(url=req.url, items=it, offset=offset, limit=limit, total=total)
+            items_block = self.format_items_block(
+                url=req.url, items=it, offset=offset, limit=limit, total=available_total
+            )
 
             if url.endswith("me/following"):  # special case for following artists
                 items_block["cursors"] = {}
-                if offset < total:
+                if offset < available_total:
                     items_block["cursors"]["after"] = it[-1]["id"]
                 if (offset - limit) > 0:
                     items_block["cursors"]["before"] = items[offset - limit]["id"]

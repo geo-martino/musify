@@ -587,6 +587,7 @@ class TestSpotifyAPIItems:
                 return
 
             # TODO: why does this keep failing? 25 == ...
+            print(len(source[id_]["albums"]["items"]),  source[id_]["albums"]["total"], len(expected[id_]))
             assert len(source[id_]["albums"]["items"]) == source[id_]["albums"]["total"] == len(expected[id_])
             reduced = [{k: v for k, v in album.items() if k != "tracks"} for album in source[id_]["albums"]["items"]]
             assert reduced == expected[id_]
@@ -602,7 +603,7 @@ class TestSpotifyAPIItems:
             ]
             for artist in api_mock.artists
         }
-        id_, expected = next((id_, albums) for id_, albums in expected_map.items() if len(albums) >= 10)
+        id_, expected = choice([(id_, albums) for id_, albums in expected_map.items() if len(albums) >= 10])
         source = next(deepcopy(artist) for artist in api_mock.artists if artist["id"] == id_)
         test = random_id_type(id_=id_, wrangler=api, kind=ObjectType.ARTIST)
 
