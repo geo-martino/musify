@@ -44,11 +44,13 @@ jobs:
         include:
           - os: windows-latest
             name: Windows 🪟
+            python-version: ${{ env.python-version }}
           - os: ubuntu-latest
             name: Linux 🐧
-            python-version: [ '3.12' ]
+            python-version: ${{ env.python-version }}
           - os: macos-latest
             name: Mac 🍎
+            python-version: ${{ env.python-version }}
     steps:
       - name: Checkout 🛒
         uses: actions/checkout@v4
@@ -56,7 +58,7 @@ jobs:
       - name: Setup ⚙️ - Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version || env.python-version }}
+          python-version: ${{ matrix.python-version }}
 
       - name: Setup ⚙️ - Install dependencies
         run: |
@@ -94,6 +96,25 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install hatch
+
+      - name: Setup ⚙️ - Calculate and assign new version
+        run: |
+          export CURRENT_VERSION=$(curl -L https://pypi.python.org/pypi/musify/json | jq .info.version)
+          export CURRENT_MAJOR=$(echo ${CURRENT_VERSION//\"} | sed -r "s|^([0-9]+)\..*|\1|")
+          export CURRENT_MINOR=$(echo ${CURRENT_VERSION//\"} | sed -r "s|.*\.([0-9]+)\..*|\1|")
+          export CURRENT_PATCH=$(echo ${CURRENT_VERSION//\"} | sed -r "s|.*\.([0-9]+)$|\1|")
+          echo Current version = $CURRENT_VERSION
+          echo Major=$CURRENT_MAJOR \| Minor=$CURRENT_MINOR \| Patch=$CURRENT_PATCH
+          
+          if [[ $CURRENT_MAJOR -ne $(date -u "+%Y") || ${CURRENT_MINOR} -ne $(date -u "+%-m") ]]
+          then
+            echo Resetting patch number 
+            export CURRENT_PATCH=-1
+          fi
+          
+          export VERSION=$(date -u "+%Y").$(date -u "+%-m").$((CURRENT_PATCH + 1))
+          echo Assigning new version = $VERSION
+          hatch version $VERSION
 
       - name: Build package 🏗️
         run: |

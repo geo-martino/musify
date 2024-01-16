@@ -1,6 +1,7 @@
 from os.path import basename, dirname
 
 PROGRAM_NAME = "Musify"
+__version__ = "0.0.0"  # just a placeholder, version number is calculated dynamically at build time
 PROGRAM_OWNER_NAME = "George Martin Marino"
 PROGRAM_OWNER_USER = "geo-martino"
 PROGRAM_OWNER_EMAIL = f"gm.engineer+{PROGRAM_NAME.lower()}@pm.me"

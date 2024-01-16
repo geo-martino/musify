@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 dynamic = ["version"]
 name = "musify"
 authors = [
-  { name="George Marino", email="gm.engineer+musify@pm.me" },
+  { name="George Martin Marino", email="gm.engineer+musify@pm.me" },
 ]
 description = "Synchronise your music library to local or remote libraries"
 readme = "README.md"
@@ -58,7 +58,7 @@ dev = [
 Issues = "https://github.com/geo-martino/musify/issues"
 
 [tool.hatch.version]
-path = "musify/version.py"
+path = "musify/__init__.py"
 
 [tool.hatch.build.targets.sdist]
 include = ["musify"]
