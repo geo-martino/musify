@@ -586,8 +586,6 @@ class TestSpotifyAPIItems:
                 assert "albums" not in source[id_]
                 return
 
-            # TODO: why does this keep failing? 25 == ...
-            print(len(source[id_]["albums"]["items"]),  source[id_]["albums"]["total"], len(expected[id_]))
             assert len(source[id_]["albums"]["items"]) == source[id_]["albums"]["total"] == len(expected[id_])
             reduced = [{k: v for k, v in album.items() if k != "tracks"} for album in source[id_]["albums"]["items"]]
             assert reduced == expected[id_]
