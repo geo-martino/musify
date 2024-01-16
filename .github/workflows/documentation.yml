@@ -18,40 +18,37 @@ on:
 permissions:
   contents: read
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+env:
+  python-version: '3.12'
 
 jobs:
   build:
-    name: Build pages 📃
+    name: 📃 Build pages
     runs-on: ubuntu-latest
     steps:
       - name: Checkout 🛒
         uses: actions/checkout@v4
 
-      - name: Setup ⚙️ - Python
+      - name: ⚙️ Setup - Python 🐍
         uses: actions/setup-python@v5
         with:
-          python-version: '>=3.12'
+          python-version: ${{ env.python-version }}
 
-      - name: Setup ⚙️ - Pages
+      - name: ⚙️ Setup - Pages
         uses: actions/configure-pages@v4
 
-      - name: Setup ⚙️ - Install dependencies
+      - name: ⚙️ Setup - Install dependencies
         run: |
           sudo apt install graphviz
           pip install -e '.[docs]'
 
-      - name: Sphinx build 🏗️
+      - name: 🏗️ Sphinx build
         run: |
           make clean
           sphinx-apidoc -o ./docs ./musify -d 4 --force --module-first --separate --no-toc -t ./docs/_templates
           make html
 
-      - name: Upload artifact 📦
+      - name: 📦 Upload build artifacts
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./docs/_build/html
@@ -67,7 +64,10 @@ jobs:
     permissions:
       pages: write
       id-token: write
+    concurrency:
+      group: ${{ github.workflow }}
+      cancel-in-progress: false
     steps:
-      - name: Deploy to GitHub Pages 🚀
+      - name: 🚀 Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
