@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 env:
-  python-version: 3.12
+  python-version: '3.12'
 
 jobs:
   lint:
@@ -41,13 +41,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest ]
-        python-version: [ 3.12 ]
         include:
           - os: windows-latest
             name: Windows 🪟
           - os: ubuntu-latest
             name: Linux 🐧
+            python-version: [ '3.12' ]
           - os: macos-latest
             name: Mac 🍎
     steps:
@@ -57,7 +56,7 @@ jobs:
       - name: Setup ⚙️ - Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.python-version || env.python-version }}
 
       - name: Setup ⚙️ - Install dependencies
         run: |
