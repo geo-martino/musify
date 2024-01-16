@@ -218,7 +218,7 @@ class RemoteItemCheckerTester(ABC):
         assert stdout.count("Enter one of the following") == 1
         assert "Input not recognised" not in stdout
         assert "Showing items originally added to" not in stdout
-        assert f"Showing tracks for playlist" not in stdout  # poison apple
+        assert "Showing tracks for playlist" not in stdout
         assert not api_mock.request_history
 
         assert not checker.skip

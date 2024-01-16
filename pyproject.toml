@@ -34,7 +34,6 @@ dependencies = [
 
 [project.optional-dependencies]
 test = [
-    "flake8",
     "pytest~=7.4",
     "pytest-lazy-fixture~=0.6",
     "pytest-mock~=3.12",
@@ -44,8 +43,8 @@ test = [
 ]
 dev = [
     "musify[test]",
+    "flake8",
     "grip~=4.6",
-    "jupyterlab~=4.0",
 ]
 docs = [
     "sphinx~=7.2",

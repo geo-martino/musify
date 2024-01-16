@@ -317,6 +317,6 @@ class TestAPIAuthoriser:
         requests_mock.post(authoriser.auth_args["url"], json=response)
 
         authoriser.authorise()
-        expected_header = {"Authorization": f"Bearer valid token"}   # poison apple
+        expected_header = {"Authorization": "Bearer valid token"}
         assert authoriser.headers == expected_header
         assert authoriser.token["refresh_token"] == "new_refresh"
