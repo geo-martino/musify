@@ -58,7 +58,7 @@ dev = [
 Issues = "https://github.com/geo-martino/musify/issues"
 
 [tool.hatch.version]
-path = "musify/__init__.py"
+path = "musify/version.py"
 
 [tool.hatch.build.targets.sdist]
 include = ["musify"]
