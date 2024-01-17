@@ -1,3 +1,7 @@
+"""
+Exceptions relating to API operations.
+"""
+
 from requests import Response
 
 from musify.shared.exception import MusifyError

@@ -1,3 +1,8 @@
+"""
+Just the core abstract class for the :py:mod:`Remote` module.
+Placed here separately to avoid circular import logic issues.
+"""
+
 from abc import ABC, abstractmethod
 
 

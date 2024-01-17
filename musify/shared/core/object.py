@@ -1,3 +1,7 @@
+"""
+The core implementations of :py:class:`Item` and :py:class:`ItemCollection` classes.
+"""
+
 from __future__ import annotations
 
 import datetime
@@ -18,7 +22,7 @@ from musify.shared.utils import to_collection, align_and_truncate, get_max_width
 
 class Track(Item, metaclass=ABCMeta):
     """
-    Metadata/tags associated with a track.
+    Represents a track including its metadata/tags/properties.
 
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
@@ -219,7 +223,7 @@ class BasicCollection[T: Item](ItemCollection[T]):
 
 
 class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
-    """A playlist of items and some of their derived properties/objects."""
+    """A playlist of items and their derived properties/objects."""
 
     __attributes_classes__ = ItemCollection
     __attributes_ignore__ = "items"
@@ -311,7 +315,7 @@ class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
 
 class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
     """
-    A library of items and playlists
+    A library of items and playlists and other object types.
 
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
@@ -356,6 +360,7 @@ class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
         super().__init__()
 
         # noinspection PyTypeChecker
+        #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
 
     def get_filtered_playlists(
@@ -446,7 +451,7 @@ class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
 
 class Folder[T: Track](ItemCollection[T], metaclass=ABCMeta):
     """
-    A folder of items and some of their derived properties/objects
+    A folder of items and their derived properties/objects
 
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
@@ -514,7 +519,7 @@ class Folder[T: Track](ItemCollection[T], metaclass=ABCMeta):
 
 class Album[T: Track](ItemCollection[T], metaclass=ABCMeta):
     """
-    An album of items and some of their derived properties/objects.
+    An album of items and their derived properties/objects.
 
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
@@ -634,7 +639,7 @@ class Album[T: Track](ItemCollection[T], metaclass=ABCMeta):
 
 class Artist[T: Track](ItemCollection[T], metaclass=ABCMeta):
     """
-    An artist of items and some of their derived properties/objects
+    An artist of items and their derived properties/objects
 
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """
@@ -702,7 +707,7 @@ class Artist[T: Track](ItemCollection[T], metaclass=ABCMeta):
 
 class Genre[T: Track](ItemCollection[T], metaclass=ABCMeta):
     """
-    A genre of items and some of their derived properties/objects
+    A genre of items and their derived properties/objects
 
     :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     """

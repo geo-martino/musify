@@ -1,3 +1,8 @@
+"""
+All core :py:class:`Field` implementations relating to
+core :py:class:`Item` and :py:class`ItemCollection` implementations.
+"""
+
 from typing import Self
 
 from musify.shared.core.enum import Field, Fields, TagField, TagFields
@@ -55,6 +60,7 @@ class TrackField(TrackFieldMixin):
 
 
 class PlaylistField(Field):
+    """Represent all currently supported fields for objects of type :py:class:`Playlist`"""
     ALL = Fields.ALL.value
 
     # tags/core properties
@@ -71,6 +77,7 @@ class PlaylistField(Field):
 
 
 class FolderField(Field):
+    """Represent all currently supported fields for objects of type :py:class:`Folder`"""
     ALL = Fields.ALL.value
 
     # tags/core properties
@@ -85,6 +92,7 @@ class FolderField(Field):
 
 
 class AlbumField(Field):
+    """Represent all currently supported fields for objects of type :py:class:`Album`"""
     ALL = Fields.ALL.value
 
     # tags/core properties
@@ -105,6 +113,7 @@ class AlbumField(Field):
 
 
 class ArtistField(Field):
+    """Represent all currently supported fields for objects of type :py:class:`Artist`"""
     ALL = Fields.ALL.value
 
     # tags/core properties

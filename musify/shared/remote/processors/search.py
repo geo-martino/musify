@@ -1,3 +1,10 @@
+"""
+Processor operations that search for and match given items with remote items.
+
+Searches for matches on remote APIs, matches the item to the best matching result from the query,
+and assigns the ID of the matched object back to the item.
+"""
+
 from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Sequence, Iterable, Collection
 from dataclasses import dataclass, field
@@ -70,6 +77,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
 
     __slots__ = ("api", "use_cache")
 
+    #: The :py:class:`SearchSettings` to use when running item searches
     settings_items = SearchSettings(
         search_fields_1=[Tag.NAME, Tag.ARTIST],
         search_fields_2=[Tag.NAME, Tag.ALBUM],
@@ -80,6 +88,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
         min_score=0.1,
         max_score=0.8
     )
+    #: The :py:class:`SearchSettings` to use when running album searches
     settings_albums = SearchSettings(
         search_fields_1=[Tag.NAME, Tag.ARTIST],
         search_fields_2=[Tag.NAME],
@@ -98,7 +107,10 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
 
     def __init__(self, api: RemoteAPI, use_cache: bool = False):
         super().__init__()
+
+        #: The :py:class:`RemoteAPI` to call
         self.api = api
+        #: When true, use the cache when calling the API endpoint
         self.use_cache = use_cache
 
     def _get_results(

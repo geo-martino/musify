@@ -1,3 +1,7 @@
+"""
+The fundamental core classes for the entire package.
+"""
+
 from __future__ import annotations
 
 from abc import ABC, ABCMeta, abstractmethod
@@ -47,10 +51,17 @@ class Taggable(ABC):
 
 
 class NameableTaggableMixin(Nameable, Taggable, metaclass=ABCMeta):
+    """Mixin for :py:class:`Nameable` and :py:class:`Taggable`"""
     pass
 
 
 class AttributePrinter(PrettyPrinter, metaclass=ABCMeta):
+    """
+    Extends the functionality of a :py:class:`PrettyPrinter`.
+
+    Adds functionality to automatically determine the key attributes that represent child objects
+    and uses these for printer representations.
+    """
 
     __attributes_classes__: UnitIterable[type] = ()
     __attributes_ignore__: UnitIterable[str] = ()

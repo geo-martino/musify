@@ -1,3 +1,9 @@
+"""
+The framework for interacting with a remote API.
+
+All methods that interact with the API should return raw, unprocessed responses.
+"""
+
 import logging
 from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, MutableMapping, Mapping
@@ -22,12 +28,15 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
 
     __slots__ = ("logger", "handler", "user_data")
 
+    #: Map of :py:class:`RemoteObjectType` for remote collections
+    #: to the  :py:class:`RemoteObjectType` of the items they hold
     collection_item_map = {
         RemoteObjectType.PLAYLIST: RemoteObjectType.TRACK,
         RemoteObjectType.ALBUM: RemoteObjectType.TRACK,
         RemoteObjectType.AUDIOBOOK: RemoteObjectType.CHAPTER,
         RemoteObjectType.SHOW: RemoteObjectType.EPISODE,
     }
+    #: A set of possible saved item types that can be retrieved for the currently authenticated user
     user_item_types = (
             set(collection_item_map) | {RemoteObjectType.TRACK, RemoteObjectType.ARTIST, RemoteObjectType.EPISODE}
     )
@@ -52,10 +61,13 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
 
     def __init__(self, **handler_kwargs):
         # noinspection PyTypeChecker
+        #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
 
         handler_kwargs = {k: v for k, v in handler_kwargs.items() if k != "name"}
+        #: The :py:class:`RequestHandler` for handling authorised requests to the API
         self.handler = RequestHandler(name=self.source, **handler_kwargs)
+        #: Stores the loaded user data for the currently authorised user
         self.user_data: dict[str, Any] = {}
 
     def authorise(self, force_load: bool = False, force_new: bool = False) -> Self:
@@ -135,6 +147,7 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
     ) -> None:
         """
         Pretty print item data for displaying to the user.
+        Format = ``<i> - <name> | <length> | <URI> - <URL>``.
 
         :param i: The position of this item in the collection.
         :param name: The name of the item.
@@ -160,8 +173,8 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
             use_cache: bool = True
     ) -> None:
         """
-        Diagnostic function.
-        Print tracks from a given link in ``<track> - <title> | <URI> - <URL>`` format for a given URL/URI/ID.
+        Pretty print collection data for displaying to the user.
+        Runs :py:meth:`print_item()` for each item in the collection.
 
         ``value`` may be:
             * A string representing a URL/URI/ID.

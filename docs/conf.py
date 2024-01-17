@@ -11,7 +11,7 @@ from musify import MODULE_ROOT, PROGRAM_OWNER_NAME, PROGRAM_OWNER_USER, __versio
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = MODULE_ROOT
-copyright = f'{datetime.now().year}, {PROGRAM_OWNER_NAME}'
+copyright = f"{datetime.now().year}, {PROGRAM_OWNER_NAME}"
 author = PROGRAM_OWNER_NAME
 release = __version__
 
@@ -20,13 +20,14 @@ release = __version__
 
 
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx_rtd_theme',
-    'sphinx.ext.graphviz',
-    'sphinx.ext.inheritance_diagram',
-    'autodocsumm',
+    "sphinx.ext.autodoc",
+    "sphinx_rtd_theme",
+    "sphinx.ext.graphviz",
+    "sphinx.ext.inheritance_diagram",
+    "sphinx_autodoc_typehints",
+    "autodocsumm",
 ]
-autodoc_member_order = 'bysource'
+autodoc_member_order = "bysource"
 autodoc_default_options = {
     "autosummary": True,
     "members": True,
@@ -34,17 +35,19 @@ autodoc_default_options = {
     "inherited-members": False,
     "special-members": False,
     "show-inheritance": True,
-    # "member-order": 'bysource',
+    # "member-order": "bysource",
 }
+typehints_defaults = "braces"
+typehints_use_rtype = False
 
-templates_path = ['_templates']
+templates_path = ["_templates"]
 exclude_patterns = ["_build"]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_static_path = ['_static']
-html_theme = 'renku'
+html_static_path = ["_static"]
+html_theme = "renku"
 html_theme_options = dict(
     collapse_navigation=False,
     sticky_navigation=True,
@@ -53,7 +56,7 @@ html_theme_options = dict(
     titles_only=False,
 )
 html_css_files = [
-    'style.css',
+    "style.css",
 ]
 html_context = dict(
     display_github=True,
@@ -64,8 +67,8 @@ html_context = dict(
 )
 
 # -- GraphViz configuration ----------------------------------
-graphviz_output_format = 'svg'
+graphviz_output_format = "svg"
 inheritance_graph_attrs = dict(rankdir="TB", size='""',
-                               fontsize=10, ratio='auto',
-                               center='true', style='solid')
-inheritance_node_attrs = dict(shape='ellipse', fontsize=10, fontname="monospace")
+                               fontsize=10, ratio="auto",
+                               center="true", style="solid")
+inheritance_node_attrs = dict(shape="ellipse", fontsize=10, fontname="monospace")

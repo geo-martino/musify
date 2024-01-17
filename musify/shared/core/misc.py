@@ -1,3 +1,7 @@
+"""
+The fundamental core miscellaneous classes for the entire package.
+"""
+
 import re
 from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Mapping
@@ -12,7 +16,7 @@ _T_JSON_VALUE = str | int | float | list | dict | bool | None
 
 @dataclass(frozen=True)
 class Result(metaclass=ABCMeta):
-    """Stores the results of an operation within Musify"""
+    """Stores the results of an operation"""
     pass
 
 

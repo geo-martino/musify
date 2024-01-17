@@ -1,3 +1,7 @@
+"""
+All operations relating to handling of requests to an API.
+"""
+
 import json
 from collections.abc import Mapping, Iterable
 from datetime import datetime as dt
@@ -27,8 +31,11 @@ class RequestHandler(APIAuthoriser):
 
     __slots__ = ("session", "__dict__")
 
+    #: The initial backoff time for failed requests
     backoff_start = 0.5
+    #: The factor by which to increase backoff time for failed requests i.e. backoff_start ** backoff_factor
     backoff_factor = 2
+    #: The maximum number of request attempts to make before giving up and raising an exception
     backoff_count = 10
 
     @property
@@ -50,6 +57,7 @@ class RequestHandler(APIAuthoriser):
     def __init__(self, cache_path: str | None = None, cache_expiry=timedelta(weeks=4), **auth_kwargs):
         super().__init__(**auth_kwargs)
 
+        #: The :py:class:`Session` or :py:class:`CachedSession` object
         self.session: CachedSession | Session
         if cache_path:
             self.logger.debug(f"Setting up requests cache: {cache_path}")

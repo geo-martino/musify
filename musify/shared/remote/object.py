@@ -1,3 +1,9 @@
+"""
+Functionality relating to generic remote objects.
+
+Implements core :py:class:`Item` and :py:class:`ItemCollection` classes for remote object types.
+"""
+
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
@@ -21,6 +27,7 @@ from musify.shared.utils import get_most_common_values
 
 
 class RemoteItemWranglerMixin[T: RemoteObject](RemoteItem, RemoteDataWrangler, metaclass=ABCMeta):
+    """Mixin for :py:class:`RemoteItem` and :py:class:`RemoteDataWrangler`"""
     pass
 
 

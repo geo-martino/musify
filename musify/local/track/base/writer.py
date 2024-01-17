@@ -27,7 +27,7 @@ class SyncResultTrack(Result):
 
 class TagWriter(TagReader, metaclass=ABCMeta):
     """
-    Contains methods for updating and removing tags from a loaded
+    Functionality for updating and removing tags from a loaded
 
     :ivar uri_tag: The tag field to use as the URI tag in the file's metadata.
     :ivar num_sep: Some number values come as a combined string i.e. track number/track total

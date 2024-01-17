@@ -1,3 +1,9 @@
+"""
+Configuration relating to the :py:mod:`Remote` module.
+
+This configuration can be used to inject dependencies into dependencies throughout the module.
+"""
+
 from dataclasses import dataclass
 
 from musify.shared.remote.object import RemoteTrack, RemoteAlbum, RemotePlaylist, RemoteArtist

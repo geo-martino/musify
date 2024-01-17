@@ -1,3 +1,7 @@
+"""
+All type hints to use throughout the module.
+"""
+
 from collections.abc import MutableMapping
 from typing import Any
 

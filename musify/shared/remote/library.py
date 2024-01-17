@@ -1,3 +1,7 @@
+"""
+Functionality relating to a generic remote library.
+"""
+
 from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, Mapping, Iterable
 from typing import Any, Literal
@@ -79,10 +83,12 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         super().__init__()
 
         self._api = api
+        #: When true, use the cache when calling the API endpoint
         self.use_cache = use_cache
 
         if not isinstance(playlist_filter, Filter):
             playlist_filter = FilterDefinedList(playlist_filter)
+        #: :py:class:`Filter` to apply when loading playlists.
         self.playlist_filter: Filter[str] = playlist_filter
 
         self._playlists: dict[str, RemotePlaylist[T]] = {}

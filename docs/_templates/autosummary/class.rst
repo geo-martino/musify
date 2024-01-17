@@ -6,7 +6,7 @@
     {%- if name.endswith(".exception") -%}
         {%- set name = "exceptions"-%}
     {%- else -%}
-        {%- set name = name.replace(project + ".", "").split(".") | last -%}
+        {%- set name = name.replace(project + ".", "").replace("_", " ").split(".") | last -%}
     {%- endif -%}
 
     {%- if name | lower in module_caps -%}

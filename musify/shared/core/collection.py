@@ -1,3 +1,7 @@
+"""
+The fundamental core collection classes for the entire package.
+"""
+
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod

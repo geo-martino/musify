@@ -1,3 +1,7 @@
+"""
+Convert and validate remote ID types according to specific remote implementations.
+"""
+
 from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping
 from typing import Any
@@ -53,7 +57,7 @@ class RemoteDataWrangler(Remote, metaclass=ABCMeta):
         :param values: The values representing some remote objects. See description for allowed value types.
             These items must all be of the same type of item to pass i.e. all tracks OR all artists etc.
         :param kind: The :py:class:`RemoteObjectType` if the value is found to be an ID.
-        :return: :py:class:`RemoteObjectType`
+        :return: The :py:class:`RemoteObjectType`
         :raise RemoteObjectTypeError: Raised when the function cannot determine the item type
             of the input ``values``.
             Or when the list contains strings representing many differing remote object types or only IDs.

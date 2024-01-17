@@ -1,3 +1,7 @@
+"""
+All classes and operations relating to logging for the entire package.
+"""
+
 import inspect
 import logging
 import logging.config
@@ -38,8 +42,11 @@ logging.STAT = STAT
 class MusifyLogger(logging.Logger):
     """The logger for all logging operations in Musify."""
 
+    #: When true, never print a new line in the console when :py:meth:`print()` is called
     compact: bool = False
+    #: When true, all bars returned by :py:meth:`get_progress_bar()` will be disabled by default
     disable_bars: bool = False
+    #: All currently active progress bars
     _bars: list[tqdm] = []
 
     @property
@@ -227,6 +234,7 @@ class LogFileFilter(logging.Filter):
 ###########################################################################
 class CurrentTimeRotatingFileHandler(logging.handlers.BaseRotatingHandler):
     """
+    Handles log file and directory rotation based on log file/folder name.
 
     :param filename: The full path to the log file.
         Optionally, include a '{}' part in the path to format in the current datetime.

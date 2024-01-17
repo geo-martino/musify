@@ -1,9 +1,12 @@
 # Musify
 
-[![PyPI - Version](https://badge.fury.io/py/musify.svg)](https://badge.fury.io/py/musify)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/musify.svg)](https://pypi.org/project/musify/)
-[![PyPI - Downloads](https://img.shields.io/pypi/dm/musify)](https://pypi.org/project/musify/)
-[![Contributors](https://img.shields.io/github/contributors/geo-martino/musify)](https://github.com/geo-martino/musify/graphs/contributors)
+[![PyPI Version](https://img.shields.io/pypi/v/musify?logo=pypi&label=Latest%20Version)](https://pypi.org/project/musify)
+[![Python Version](https://img.shields.io/pypi/pyversions/musify.svg?logo=python&label=Supported%20Python%20Versions)](https://pypi.org/project/musify/)
+</br>
+[![PyPI Downloads](https://img.shields.io/pypi/dm/musify?label=Downloads)](https://pypi.org/project/musify/)
+[![Code Size](https://img.shields.io/github/languages/code-size/geo-martino/musify?label=Code%20Size)](https://github.com/geo-martino/musify)
+[![Contributors](https://img.shields.io/github/contributors/geo-martino/musify?logo=github&label=Contributors)](https://github.com/geo-martino/musify/graphs/contributors)
+[![License](https://img.shields.io/github/license/geo-martino/musify?label=License)](https://github.com/geo-martino/musify/blob/master/LICENSE)
 </br>
 [![GitHub - Deployment](https://github.com/geo-martino/musify/actions/workflows/deploy.yml/badge.svg)](https://github.com/geo-martino/musify/actions/workflows/deploy.yml)
 [![GitHub - Documentation](https://github.com/geo-martino/musify/actions/workflows/documentation.yml/badge.svg)](https://github.com/geo-martino/musify/actions/workflows/documentation.yml)

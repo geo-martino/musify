@@ -20,7 +20,7 @@ from musify.shared.utils import to_collection
 
 class TagReader(LocalItem, Track, metaclass=ABCMeta):
     """
-    Contains methods for extracting tags from a loaded file
+    Functionality for extracting tags from a loaded file
 
     :ivar uri_tag: The tag field to use as the URI tag in the file's metadata.
     :ivar num_sep: Some number values come as a combined string i.e. track number/track total

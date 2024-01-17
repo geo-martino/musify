@@ -1,10 +1,20 @@
+"""
+Generic utility functions and classes which can be used throughout the entire package.
+"""
+
 import re
 from collections import Counter
 from collections.abc import Iterable, Collection, MutableSequence, Mapping, MutableMapping
 from typing import Any
 
-from musify.shared.exception import MusifyTypeError, SafeDict
+from musify.shared.exception import MusifyTypeError
 from musify.shared.types import Number
+
+
+class SafeDict(dict):
+    """Extends dict to ignore missing keys when using format_map operations"""
+    def __missing__(self, key):
+        return "{" + key + "}"
 
 
 ###########################################################################
@@ -13,6 +23,7 @@ from musify.shared.types import Number
 def strip_ignore_words(value: str, words: Iterable[str] | None = frozenset(["The", "A"])) -> tuple[bool, str]:
     """
     Remove ignorable words from the beginning of a string.
+
     Useful for sorting collections strings with ignorable start words and/or special characters.
     Only removes the first word it finds at the start of the string.
 
@@ -83,6 +94,7 @@ def limit_value(value: Number, floor: Number = 1, ceil: Number = 50) -> Number:
 def to_collection[T: (list, set, tuple)](data: Any, cls: type[T] = tuple) -> T | None:
     """
     Safely turn any object into a collection of a given type ``T``.
+
     Strings are converted to collections of size 1 where the first element is the string.
     Returns None if value is None.
     """

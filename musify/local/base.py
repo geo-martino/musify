@@ -1,3 +1,7 @@
+"""
+Core abstract classes for the :py:mod:`Local` module.
+"""
+
 from abc import ABCMeta
 
 from musify.local.file import File
