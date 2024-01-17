@@ -43,7 +43,7 @@ python -m pip install musify
 ```
 
 <a id="quick-guides"></a>
-## Quick Start
+## Quick Guides
 
 > [!TIP]
 > Set up logger to ensure you can see all info reported by the later operations.
@@ -386,8 +386,8 @@ python -m pip install musify
 ## Currently Supported
 
 - **Music Streaming Services**: `Spotify`
-- **Audio filetypes**: `.mp3` `.flac` `.wma` `.m4a`
-- **Local playlist filetypes**: `.xautopf` `.m3u`
+- **Audio filetypes**: `.mp3` `.m4a` `.wma` `.flac`
+- **Local playlist filetypes**: `.m3u` `.xautopf`
 - **Local Libraries**: `MusicBee`
 
 <a id="aims"></a>
@@ -411,9 +411,6 @@ of purchasing songs.
 - Share local playlists and other local library data with friends over music streaming services 
 without ever having to use them personally
 - Easily maintain a high-quality local library with complete metadata
-
-Ultimately, it is not currently so simple to switch between different types of libraries leading to isolation of 
-user's library data. This forces users to be locked into one service or one style of library management. 
 
 **User's should have the freedom to choose how and where they want to listen to their favourite artists.**
 

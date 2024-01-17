@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 import xmltodict
@@ -18,7 +19,7 @@ class TestItemLimiter(PrettyPrinterTester):
         return ItemLimiter(limit=30, on=LimitType.MINUTES, sorted_by="HighestRating", allowance=2)
 
     @pytest.fixture
-    def tracks(self, tmp_path: str) -> list[LocalTrack]:
+    def tracks(self, tmp_path: Path) -> list[LocalTrack]:
         """Yields a list of random tracks with dynamically configured properties for limit tests"""
         tracks = random_tracks(50)
         for i in range(1, 6):

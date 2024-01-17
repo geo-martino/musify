@@ -2,6 +2,7 @@ import logging.config
 import os
 import shutil
 from os.path import join, basename, dirname
+from pathlib import Path
 
 import pytest
 import yaml
@@ -35,7 +36,7 @@ def pytest_configure(config: pytest.Config):
 
 
 @pytest.fixture
-def path(request: pytest.FixtureRequest | SubRequest, tmp_path: str) -> str:
+def path(request: pytest.FixtureRequest | SubRequest, tmp_path: Path) -> str:
     """
     Copy the path of the source file to the test cache for this test and return the cache path.
     Deletes the test folder when test is done.

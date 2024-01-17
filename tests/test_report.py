@@ -1,5 +1,6 @@
 from copy import copy
 from os.path import join
+from pathlib import Path
 from random import choice, randrange
 
 import pytest
@@ -37,7 +38,7 @@ def spotify_library(spotify_api: SpotifyAPI, spotify_mock: SpotifyMock) -> Spoti
 
 @pytest.fixture
 def local_library(
-        spotify_library: SpotifyLibrary, spotify_wrangler: SpotifyDataWrangler, tmp_path: str
+        spotify_library: SpotifyLibrary, spotify_wrangler: SpotifyDataWrangler, tmp_path: Path
 ) -> LocalLibrary:
     """Yields a :py:class:`LocalLibrary` of local tracks and playlists"""
     library = LocalLibrary(remote_wrangler=spotify_wrangler)

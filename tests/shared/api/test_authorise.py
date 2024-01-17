@@ -3,6 +3,7 @@ import os
 import socket
 from datetime import datetime, timedelta
 from os.path import join
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse, parse_qs
 
@@ -75,7 +76,7 @@ class TestAPIAuthoriser:
         assert token["token_type"] == "Bearer"
         assert token["scope"] == "test-read"
 
-    def test_save_token(self, authoriser: APIAuthoriser, token: dict[str, Any], tmp_path: str):
+    def test_save_token(self, authoriser: APIAuthoriser, token: dict[str, Any], tmp_path: Path):
         # just check it doesn't fail when no path given
         authoriser.token = None
         authoriser.token_file_path = None

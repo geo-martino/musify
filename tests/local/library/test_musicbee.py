@@ -2,6 +2,7 @@ import os
 import shutil
 from datetime import datetime
 from os.path import basename, splitext, join, dirname, relpath, getmtime, sep
+from pathlib import Path
 
 import pytest
 
@@ -29,7 +30,7 @@ settings_xml_filepath = join(path_library_resources, settings_xml_filename)
 class TestMusicBee(LocalLibraryTester):
 
     @pytest.fixture
-    def musicbee_folder(self, tmp_path: str):
+    def musicbee_folder(self, tmp_path: Path):
         """
         Formats the MusicBee XML files and copies them to the tmp folder, returning the absolute path to this
         folder to use as the musicbee_folder when instantiating MusicBee library objects.

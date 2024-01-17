@@ -1,6 +1,7 @@
 from copy import copy, deepcopy
 from datetime import datetime, date
 from os.path import basename, dirname, splitext, getmtime
+from pathlib import Path
 
 import pytest
 
@@ -233,7 +234,7 @@ class TestLocalTrack(ItemTester):
         for key, value in vars(track).items():
             assert value == track_deepcopy[key]
 
-    def test_set_and_find_file_paths(self, track: LocalTrack, tmp_path: str):
+    def test_set_and_find_file_paths(self, track: LocalTrack, tmp_path: Path):
         paths = track.__class__.get_filepaths(tmp_path)
         assert paths == {track.path}
         assert len(track.__class__.get_filepaths(path_track_resources)) == 1

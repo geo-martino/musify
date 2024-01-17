@@ -2,6 +2,7 @@ import os
 from copy import deepcopy
 from datetime import datetime
 from os.path import dirname, join, splitext, basename
+from pathlib import Path
 from random import randrange
 
 import pytest
@@ -103,7 +104,7 @@ class TestXAutoPF(LocalPlaylistTester):
         assert pl.tracks == sorted(tracks_expected, key=lambda t: t.date_added, reverse=True)
 
     @pytest.mark.parametrize("path", [path_playlist_xautopf_bp], indirect=["path"])
-    def test_save_playlist(self, tracks: list[LocalTrack], path: str, path_mapper: PathMapper, tmp_path: str):
+    def test_save_playlist(self, tracks: list[LocalTrack], path: str, path_mapper: PathMapper, tmp_path: Path):
         # prepare tracks to search through
         tracks_actual = [track for track in tracks if track.path in [path_track_flac, path_track_wma]]
         tracks = random_tracks(30)

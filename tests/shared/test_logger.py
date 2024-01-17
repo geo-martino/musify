@@ -5,6 +5,7 @@ from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from glob import glob
 from os.path import join, basename, splitext
+from pathlib import Path
 from random import choice
 
 import pytest
@@ -199,7 +200,7 @@ def test_file_filter():
 ###########################################################################
 ## Logging handlers
 ###########################################################################
-def test_current_time_file_handler_namer():
+def test_current_time_file_handler_namer(tmp_path: Path):
     # no filename given
     handler = CurrentTimeRotatingFileHandler(delay=True)
     assert handler.filename == handler.dt.strftime(LOGGING_DT_FORMAT) + ".log"
@@ -210,19 +211,19 @@ def test_current_time_file_handler_namer():
 
     # filename with format part given and fixes separators
     sep = "\\" if os.path.sep == "/" else "/"
-    base_parts = ["folder", "file_{}_suffix.log"]
+    base_parts = [*str(tmp_path).split(os.path.sep), "folder", "file_{}_suffix.log"]
     base_str = sep.join(base_parts)
 
     handler = CurrentTimeRotatingFileHandler(filename=base_str, delay=True)
     assert handler.filename == os.path.sep.join(base_parts).format(handler.dt.strftime(LOGGING_DT_FORMAT))
 
-    base_parts[1] = base_parts[1].format(handler.dt.strftime(LOGGING_DT_FORMAT))
+    base_parts[-1] = base_parts[-1].format(handler.dt.strftime(LOGGING_DT_FORMAT))
     assert sep not in handler.filename
     assert handler.filename.split(os.path.sep) == base_parts
 
 
 @pytest.fixture
-def log_paths(tmp_path: str) -> list[str]:
+def log_paths(tmp_path: Path) -> list[str]:
     """Generate a set of log files and return their paths"""
     dt_now = datetime.now()
 
@@ -239,7 +240,7 @@ def log_paths(tmp_path: str) -> list[str]:
     return paths
 
 
-def test_current_time_file_handler_rotator_time(log_paths: list[str], tmp_path: str):
+def test_current_time_file_handler_rotator_time(log_paths: list[str], tmp_path: Path):
     handler = CurrentTimeRotatingFileHandler(filename=join(tmp_path, "{}.log"), when="h", interval=10)
 
     for dt in handler.removed:
@@ -249,12 +250,12 @@ def test_current_time_file_handler_rotator_time(log_paths: list[str], tmp_path: 
         assert dt >= handler.dt - timedelta(hours=10)
 
 
-def test_current_time_file_handler_rotator_count(log_paths: list[str], tmp_path: str):
+def test_current_time_file_handler_rotator_count(log_paths: list[str], tmp_path: Path):
     CurrentTimeRotatingFileHandler(filename=join(tmp_path, "{}.log"), count=10)
     assert len(glob(join(tmp_path, "*"))) == 10
 
 
-def test_current_time_file_handler_rotator_combined(log_paths: list[str], tmp_path: str):
+def test_current_time_file_handler_rotator_combined(log_paths: list[str], tmp_path: Path):
     handler = CurrentTimeRotatingFileHandler(filename=join(tmp_path, "{}.log"), when="h", interval=10, count=3)
 
     for path in glob(join(tmp_path, "*")):
@@ -264,7 +265,7 @@ def test_current_time_file_handler_rotator_combined(log_paths: list[str], tmp_pa
     assert len(glob(join(tmp_path, "*"))) <= 3
 
 
-def test_current_time_file_handler_rotator_folders(tmp_path: str):
+def test_current_time_file_handler_rotator_folders(tmp_path: Path):
     dt_now = datetime.now()
 
     paths = []

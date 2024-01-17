@@ -1,6 +1,7 @@
 import json
 from datetime import timedelta
 from os.path import join
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -19,7 +20,7 @@ from musify.shared.api.request import RequestHandler
 class TestRequestHandler:
 
     @pytest.fixture
-    def request_handler(self, token: dict[str, Any], tmp_path: str) -> RequestHandler:
+    def request_handler(self, token: dict[str, Any], tmp_path: Path) -> RequestHandler:
         """Yield a simple :py:class:`RequestHandler` object"""
         return RequestHandler(name="test", token=token, cache_path=join(tmp_path, "api_cache"))
 
@@ -33,7 +34,7 @@ class TestRequestHandler:
         }
 
     # noinspection PyTestUnpassedFixture
-    def test_init(self, token: dict[str, Any], tmp_path: str):
+    def test_init(self, token: dict[str, Any], tmp_path: Path):
         request_handler = RequestHandler(name="test", token=token, cache_path=None)
         assert not isinstance(request_handler.session, CachedSession)
 

@@ -1,5 +1,6 @@
 import os
 from os.path import join, splitext, basename, exists
+from pathlib import Path
 from random import randrange
 
 import pytest
@@ -17,7 +18,7 @@ from tests.utils import path_txt
 class TestM3U(LocalPlaylistTester):
 
     @pytest.fixture
-    def playlist(self, tmp_path: str) -> M3U:
+    def playlist(self, tmp_path: Path) -> M3U:
         # needed to ensure __setitem__ check passes
         tracks = random_tracks(randrange(5, 20))
         tracks.append(random_track(cls=tracks[0].__class__))
@@ -40,7 +41,7 @@ class TestM3U(LocalPlaylistTester):
         with pytest.raises(InvalidFileType):
             M3U(path=path_txt)
 
-    def test_load_fake_file_with_no_tracks(self, tracks: list[LocalTrack], tmp_path: str):
+    def test_load_fake_file_with_no_tracks(self, tracks: list[LocalTrack], tmp_path: Path):
         path_fake = join(tmp_path, "does_not_exist.m3u")
 
         pl = M3U(path=path_fake)
@@ -52,7 +53,7 @@ class TestM3U(LocalPlaylistTester):
         pl.load(tracks)
         assert pl.tracks == tracks
 
-    def test_load_fake_file_with_fake_tracks(self, tracks: list[LocalTrack], tmp_path: str):
+    def test_load_fake_file_with_fake_tracks(self, tracks: list[LocalTrack], tmp_path: Path):
         path_fake = join(tmp_path, "does_not_exist.m3u")
         tracks_random = random_tracks(30)
 
@@ -95,7 +96,7 @@ class TestM3U(LocalPlaylistTester):
         pl.load()
         assert pl.tracks == tracks_actual
 
-    def test_save_file_dry_run(self, tmp_path: str):
+    def test_save_file_dry_run(self, tmp_path: Path):
         path_new = join(tmp_path, "new_playlist.m3u")
 
         # creates a new M3U file
@@ -122,7 +123,7 @@ class TestM3U(LocalPlaylistTester):
         assert pl.date_modified is None
         assert pl.date_created is None
 
-    def test_save_new_file(self, tmp_path: str):
+    def test_save_new_file(self, tmp_path: Path):
         path_new = join(tmp_path, "new_playlist.m3u")
         tracks_random = random_tracks(30)
 
@@ -170,7 +171,7 @@ class TestM3U(LocalPlaylistTester):
 
     @pytest.mark.parametrize("path", [path_playlist_m3u], indirect=["path"])
     def test_save_existing_file(
-            self, tracks_actual: list[LocalTrack], path: str, path_mapper: PathStemMapper, tmp_path: str
+            self, tracks_actual: list[LocalTrack], path: str, path_mapper: PathStemMapper, tmp_path: Path
     ):
         path_prefix = list(path_mapper.stem_map)[0]
 

@@ -2,6 +2,7 @@ import datetime
 import re
 import string
 from os.path import join, dirname
+from pathlib import Path
 from random import choice, randrange, sample
 from uuid import uuid4
 
@@ -25,7 +26,7 @@ def random_str(start: int = 30, stop: int = 50) -> str:
     return "".join(choice(string.ascii_letters) for _ in range(range_))
 
 
-def random_file(tmp_path: str, size: int | None = None) -> str:
+def random_file(tmp_path: Path, size: int | None = None) -> str:
     """Generates a random file of a given ``size`` in bytes in the test cache folder and returns its path."""
     path = join(tmp_path, str(uuid4()) + ".txt")
     with open(path, 'w') as f:
