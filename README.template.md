@@ -20,10 +20,10 @@ Supporting local and music streaming service (remote) libraries.
 
 ## Contents
 
-* [Quick Start](#quick-start)
-  * [Spotify](#quick-start-spotify)
-  * [Local](#quick-start-local)
-  * [Sync local and remote](#quick-start-sync)
+* [Quick Guides](#quick-guides)
+  * [Spotify](#quick-guides-spotify)
+  * [Local](#quick-guides-local)
+  * [Sync local and remote](#quick-guides-sync)
 * [Currently Supported](#supported)
 * [Motivation & Aims](#aims)
 * [Author Notes](#notes)
@@ -42,7 +42,7 @@ pip install {program_name_lower}
 python -m pip install {program_name_lower}
 ```
 
-<a id="quick-start"></a>
+<a id="quick-guides"></a>
 ## Quick Start
 
 > [!TIP]
@@ -54,7 +54,7 @@ python -m pip install {program_name_lower}
 > logging.basicConfig(format="%(message)s", level=STAT)
 > ```
 
-<a id="quick-start-spotify"></a>
+<a id="quick-guides-spotify"></a>
 ### Spotify
 
 > In this example, you will: 
@@ -64,7 +64,7 @@ python -m pip install {program_name_lower}
 > - Add some tracks to a playlist
 
 1. If you don't already have one, create a [Spotify for Developers](https://developer.spotify.com/dashboard/login) account. 
-2. [Create an app](https://developer.spotify.com/documentation/web-api/concepts/apps). 
+2. If you don't already have one, [create an app](https://developer.spotify.com/documentation/web-api/concepts/apps). 
    Select "Web API" when asked which APIs you are planning on using. 
    To use this program, you will only need to take note of the **client ID** and **client secret**.
 3. Create a `SpotifyAPI` object and authorise the program access to Spotify data as follows:
@@ -162,7 +162,7 @@ python -m pip install {program_name_lower}
    library.log_sync(result)
    ```
 
-<a id="quick-start-local"></a>
+<a id="quick-guides-local"></a>
 ### Local
 
 > In this example, you will: 
@@ -290,7 +290,7 @@ python -m pip install {program_name_lower}
    print(result)
    ```
 
-<a id="quick-start-sync"></a>
+<a id="quick-guides-sync"></a>
 ### Sync data between local and remote libraries
 
 > In this example, you will: 

@@ -127,7 +127,7 @@ jobs:
 
       - name: 📦 Upload package artifacts
         id: upload
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.artifact-name }}
           path: dist/
