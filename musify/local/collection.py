@@ -333,18 +333,16 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
         Modify tags for tracks in the folders of this library.
 
         The following steps are applied to all non-compilation folders:
-
-        * Set compilation to False
+            * Set compilation to False
 
         The following steps are applied to all compilation folders:
-
-        * Set album name to folder name
-        * Set album artist to 'Various'
-        * Set track_number in ascending order by filename
-        * Set track_total to the number of tracks in the folder
-        * Set disc_number to 1
-        * Set disc_total to 1
-        * Set compilation to True
+            * Set album name to folder name
+            * Set album artist to 'Various'
+            * Set track_number in ascending order by filename
+            * Set track_total to the number of tracks in the folder
+            * Set disc_number to 1
+            * Set disc_total to 1
+            * Set compilation to True
         """
 
         count = 0

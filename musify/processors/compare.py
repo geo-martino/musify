@@ -1,3 +1,7 @@
+"""
+Processor making comparisons between objects and data types.
+"""
+
 import re
 from collections.abc import Mapping, Sequence
 from datetime import datetime, date
@@ -111,6 +115,8 @@ class Comparer(MusicBeeProcessor, DynamicProcessor):
         self._expected: list[Any] | None = None
         self._converted = False
 
+        #: The :py:class:`Field` representing the property to extract the comparison value from
+        #: when an :py:class:`Item` is given
         self.field: Field | None = field.map(field)[0] if field else None
         self.expected: list[Any] | None = to_collection(expected, list)
 

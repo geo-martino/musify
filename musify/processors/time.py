@@ -1,3 +1,7 @@
+"""
+Processor that converts representations of time units to python time objects.
+"""
+
 from datetime import timedelta
 from typing import Any
 

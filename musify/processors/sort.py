@@ -1,3 +1,7 @@
+"""
+Processor that sorts the given collection of items based on given configuration.
+"""
+
 from collections.abc import Callable, Mapping, MutableMapping, Sequence, MutableSequence, Iterable
 from copy import copy
 from datetime import datetime

@@ -19,10 +19,9 @@ class TrackFieldMixin(TagField):
         or from :py:meth:`to_tag` and :py:meth:`to_tags` calls
 
         Applies the following mapping:
-
-        * ``TRACK`` returns both ``TRACK_NUMBER`` and ``TRACK_TOTAL`` enums
-        * ``DISC`` returns both ``DISC_NUMBER`` and ``DISC_TOTAL`` enums
-        * all other enums return the enum in a unit list
+            * ``TRACK`` returns both ``TRACK_NUMBER`` and ``TRACK_TOTAL`` enums
+            * ``DISC`` returns both ``DISC_NUMBER`` and ``DISC_TOTAL`` enums
+            * all other enums return the enum in a unit list
         """
         if enum == cls.TRACK:
             return [cls.TRACK_NUMBER, cls.TRACK_TOTAL]

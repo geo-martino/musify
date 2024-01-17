@@ -1,3 +1,7 @@
+"""
+Processors that filter down objects and data types based on some given configuration.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Collection, Sequence
@@ -18,6 +22,7 @@ class FilterDefinedList[T: str | Nameable](Filter[T], Collection[T]):
 
     def __init__(self, values: Collection[T] = (), *_, **__):
         super().__init__()
+        #: The values to include when processing for this filter
         self.values: Collection[T] = values
 
     def __call__(self, values: Collection[T] | None = None, *_, **__) -> Collection[T]:
@@ -56,7 +61,9 @@ class FilterComparers[T: str | Nameable](Filter[T]):
 
     def __init__(self, comparers: Collection[Comparer] = (), match_all: bool = True, *_, **__):
         super().__init__()
+        #: The comparers to use when processing for this filter
         self.comparers: Collection[Comparer] = comparers
+        #: When true, only include those items that match on all comparers
         self.match_all: bool = match_all
 
     def __call__(self, values: Collection[T], reference: T | None = None, *_, **__) -> Collection[T]:
@@ -93,7 +100,9 @@ class FilterIncludeExclude[T: Any, U: Filter, V: Filter](FilterComposite[T]):
 
     def __init__(self, include: U, exclude: V, *_, **__):
         super().__init__(include, exclude)
+        #: The filter that, when processed, returns items to include
         self.include: U = include
+        #: The filter that, when processed, returns items to exclude
         self.exclude: V = exclude
 
     def __call__(self, values: Collection[T], *_, **__) -> list[T]:

@@ -1,3 +1,7 @@
+"""
+Processors that filter down objects and data types based on some given configuration.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -153,8 +157,11 @@ class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](MusicBeePr
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
 
+        #: The comparers to use when processing for this filter
         self.comparers = comparers
+        #: The filter that, when processed, returns items to include
         self.include = include
+        #: The filter that, when processed, returns items to exclude
         self.exclude = exclude
 
     def __call__(self, values: Collection[T], reference: T | None = None, *_, **__) -> list[T]:

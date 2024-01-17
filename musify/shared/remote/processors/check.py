@@ -46,16 +46,16 @@ class ItemCheckResult(Result):
 class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
     """
     Runs operations for checking the URIs associated with a collection of items.
-    When running :py:func:`check`, the object will do the following:
 
-    * Make temporary playlists for each collection up to a ``interval`` limit of playlists.
-      At which point, playlist creation pauses.
-    * User can then check and modify the temporary playlists to match items to correct items or otherwise.
-    * When operations resume at the user's behest, the program will search each playlist to find changes
-      and attempt to match any new items to a source item.
-    * If no matches are found for certain items, the program will prompt the user
-      to determine how they wish to deal with these items.
-    * Operation completes once user exists or all items have an associated URI.
+    When running :py:func:`check`, the object will do the following:
+        * Make temporary playlists for each collection up to a ``interval`` limit of playlists.
+          At which point, playlist creation pauses.
+        * User can then check and modify the temporary playlists to match items to correct items or otherwise.
+        * When operations resume at the user's behest, the program will search each playlist to find changes
+          and attempt to match any new items to a source item.
+        * If no matches are found for certain items, the program will prompt the user
+          to determine how they wish to deal with these items.
+        * Operation completes once user exists or all items have an associated URI.
 
     :param api: An API object with authorised access to a remote User to create playlists for.
     :param interval: Stop creating playlists after this many playlists have been created and pause for user input.

@@ -241,13 +241,14 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
             dry_run: bool = True,
     ) -> SyncResultRemotePlaylist:
         """
-        Synchronise this playlist object's items with the remote playlist it is associated with. Sync options:
+        Synchronise this playlist object's items with the remote playlist it is associated with.
 
-        * 'new': Do not clear any items from the remote playlist and only add any tracks
-            from this playlist object not currently in the remote playlist.
-        * 'refresh': Clear all items from the remote playlist first, then add all items from this playlist object.
-        * 'sync': Clear all items not currently in this object's items list, then add all tracks
-            from this playlist object not currently in the remote playlist.
+        Sync options:
+            * 'new': Do not clear any items from the remote playlist and only add any tracks
+                from this playlist object not currently in the remote playlist.
+            * 'refresh': Clear all items from the remote playlist first, then add all items from this playlist object.
+            * 'sync': Clear all items not currently in this object's items list, then add all tracks
+                from this playlist object not currently in the remote playlist.
 
         :param items: Provide an item collection or list of items to synchronise to the remote playlist.
             Use the currently loaded ``tracks`` in this object if not given.

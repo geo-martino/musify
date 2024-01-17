@@ -397,13 +397,14 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
             dry_run: bool = True
     ) -> dict[str, SyncResultRemotePlaylist]:
         """
-        Synchronise this playlist object with the remote playlist it is associated with. Clear options:
+        Synchronise this playlist object with the remote playlist it is associated with.
 
-        * 'new': Do not clear any items from the remote playlist and only add any tracks
-            from this playlist object not currently in the remote playlist.
-        * 'refresh': Clear all items from the remote playlist first, then add all items from this playlist object.
-        * 'sync': Clear all items not currently in this object's items list, then add all tracks
-            from this playlist object not currently in the remote playlist.
+        Clear options:
+            * 'new': Do not clear any items from the remote playlist and only add any tracks
+                from this playlist object not currently in the remote playlist.
+            * 'refresh': Clear all items from the remote playlist first, then add all items from this playlist object.
+            * 'sync': Clear all items not currently in this object's items list, then add all tracks
+                from this playlist object not currently in the remote playlist.
 
         :param playlists: Provide a library, map of playlist name to playlist or collection of playlists
             to synchronise to the remote library.

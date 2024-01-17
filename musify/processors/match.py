@@ -1,3 +1,7 @@
+"""
+Processor that matches objects and data types based on given configuration.
+"""
+
 import inspect
 import logging
 import re

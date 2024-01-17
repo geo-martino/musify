@@ -1,3 +1,7 @@
+"""
+Processor that limits the items in a given collection of items
+"""
+
 from collections.abc import Collection, Mapping
 from functools import reduce
 from operator import mul
@@ -82,8 +86,12 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
     ):
         super().__init__()
 
+        #: The number of items to limit to.
         self.limit_max = limit
+        #: The type to limit on e.g. items, albums, minutes.
         self.kind = on
+        #: When limiting on bytes or length, add this extra allowance factor to
+        #: the max size limit on comparison.
         self.allowance = allowance
 
         self._set_processor_name(sorted_by, fail_on_empty=False)
