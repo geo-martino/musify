@@ -27,7 +27,7 @@ jobs:
       id-token: write
     steps:
       - name: 📦 Download package artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ needs.validate.outputs.artifact-name }}
           path: dist/
