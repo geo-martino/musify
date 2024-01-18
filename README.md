@@ -9,7 +9,7 @@
 [![License](https://img.shields.io/github/license/geo-martino/musify?label=License)](https://github.com/geo-martino/musify/blob/master/LICENSE)
 </br>
 [![GitHub - Deployment](https://github.com/geo-martino/musify/actions/workflows/deploy.yml/badge.svg)](https://github.com/geo-martino/musify/actions/workflows/deploy.yml)
-[![GitHub - Documentation](https://github.com/geo-martino/musify/actions/workflows/docs_deploy.yml/badge.svg)](https://github.com/geo-martino/musify/actions/workflows/docs_deploy.yml)
+[![GitHub - Documentation](https://github.com/geo-martino/musify/actions/workflows/docs_publish.yml/badge.svg)](https://github.com/geo-martino/musify/actions/workflows/docs_publish.yml)
 
 ### A Swiss Army knife for music library management
 Supporting local and music streaming service (remote) libraries.
@@ -389,7 +389,7 @@ python -m pip install musify
 ## Currently Supported
 
 - **Music Streaming Services**: `Spotify`
-- **Audio filetypes**: `.flac` `.m4a` `.wma` `.mp3`
+- **Audio filetypes**: `.wma` `.mp3` `.m4a` `.flac`
 - **Local playlist filetypes**: `.m3u` `.xautopf`
 - **Local Libraries**: `MusicBee`
 
