@@ -1,3 +1,9 @@
+"""
+Mixin for all implementations of :py:class:`RemoteAPI` for the Spotify API.
+
+Also includes the default arguments to be used when requesting authorisation from the Spotify API.
+"""
+
 import base64
 from collections.abc import Iterable
 from copy import deepcopy

@@ -1,3 +1,8 @@
+"""
+An implementation of :py:class:`LocalLibrary` for the MusicBee library manager.
+Reads library/settings files from MusicBee to load and enrich playlist/track etc. data.
+"""
+
 import hashlib
 import re
 import urllib.parse
@@ -26,12 +31,6 @@ class MusicBee(LocalLibrary, File):
     Represents a local MusicBee library, providing various methods for manipulating
     tracks and playlists across an entire local library collection.
 
-    :ivar valid_extensions: Extensions of library files that can be loaded by this class.
-    :ivar musicbee_playlist_folder: The relative path of the playlist folder within the MusicBee folder.
-    :ivar xml_library_filename: The filename of the MusicBee library file.
-    :ivar xml_library_path_keys: A list of keys for the XML library that need to be processed as system paths.
-    :ivar xml_settings_filename: The filename of the MusicBee settings file.
-
     :param musicbee_folder: The absolute path of the musicbee folder containing settings and library files.
     :param playlist_filter: An optional :py:class:`Filter` to apply or collection of playlist names to include when
         loading playlists. Playlist names will be passed to this filter to limit which playlists are loaded.
@@ -55,9 +54,13 @@ class MusicBee(LocalLibrary, File):
     )
 
     valid_extensions = frozenset({".xml"})
+    #: The relative path of the playlist folder within the MusicBee folder.
     xml_library_filename = "iTunes Music Library.xml"
+    #: The filename of the MusicBee library file.
     xml_library_path_keys = {"Location", "Music Folder"}
+    #: A list of keys for the XML library that need to be processed as system paths.
     xml_settings_filename = "MusicBeeLibrarySettings.ini"
+    #: The filename of the MusicBee settings file.
     musicbee_playlist_folder = "Playlists"
 
     @property
@@ -71,6 +74,7 @@ class MusicBee(LocalLibrary, File):
             path_mapper: PathMapper = PathMapper(),
             remote_wrangler: RemoteDataWrangler = None,
     ):
+        #: The absolute path of the musicbee folder containing settings and library files.
         self.musicbee_folder = musicbee_folder
 
         self._library_xml_path: str = join(musicbee_folder, self.xml_library_filename)
@@ -78,6 +82,7 @@ class MusicBee(LocalLibrary, File):
             raise FileDoesNotExistError(f"Cannot find MusicBee library at given path: {self._library_xml_path}")
 
         self._library_xml_parser = XMLLibraryParser(self._library_xml_path, path_keys=self.xml_library_path_keys)
+        #: A map representation of the loaded XML library data
         self.library_xml: dict[str, Any] = self._library_xml_parser.parse()
 
         self._settings_xml_path: str = join(musicbee_folder, self.xml_settings_filename)
@@ -85,6 +90,7 @@ class MusicBee(LocalLibrary, File):
             raise FileDoesNotExistError(f"Cannot find MusicBee settings at given path: {self._settings_xml_path}")
 
         with open(self._settings_xml_path, "r", encoding="utf-8") as f:
+            #: A map representation of the loaded XML settings data
             self.settings_xml: dict[str, Any] = xmltodict.parse(f.read())["ApplicationSettings"]
 
         library_folders = []
@@ -321,22 +327,24 @@ class MusicBee(LocalLibrary, File):
 # noinspection PyProtectedMember
 class XMLLibraryParser:
     """
-    Parses MusicBee XML files to and from iTunes style XML
-
-    :ivar timestamp_format: The string representation of the timestamp format when parsing.
+    Parses MusicBee XML files to and from iTunes style XML.
 
     :param path: Path to the XML file.
     :param path_keys: A list of keys in the XML file that need to be processed as system paths.
     """
 
-    __slots__ = ("path", "path_keys", "iterparse", "schema_version", "doctype")
+    __slots__ = ("path", "path_keys", "_iterparse")
 
+    #: The string representation of the timestamp format when parsing.
     timestamp_format = "%Y-%m-%dT%H:%M:%SZ"
 
     def __init__(self, path: str, path_keys: Iterable[str] | None = None):
+        #: Path to the XML file.
         self.path: str = path
+        #: A list of keys in the XML file that need to be processed as system paths.
         self.path_keys: frozenset[str] = frozenset(path_keys) if path_keys else frozenset()
-        self.iterparse: iterparse | None = None
+        #: Stores the iterparse operator for parsing XML file
+        self._iterparse: iterparse | None = None
 
     @classmethod
     def to_xml_timestamp(cls, timestamp: datetime | None) -> str | None:
@@ -361,7 +369,7 @@ class XMLLibraryParser:
         return normpath(urllib.parse.unquote(path.removeprefix("file://localhost/")))
 
     def _iter_elements(self) -> Generator[etree.Element, [], []]:
-        for event, element in self.iterparse:
+        for event, element in self._iterparse:
             yield element
 
     def _parse_value(self, value: Any, tag: str, parent: str | None = None):
@@ -437,7 +445,7 @@ class XMLLibraryParser:
     def parse(self) -> dict[str, Any]:
         """Parse the XML file from the currently stored ``path`` to a dictionary"""
         root_name = etree.parse(self.path).docinfo.root_name
-        self.iterparse = etree.iterparse(self.path)
+        self._iterparse = etree.iterparse(self.path)
         results = {}
 
         for element in self._iter_elements():
@@ -459,9 +467,9 @@ class XMLLibraryParser:
                 raise NotImplementedError
 
         # close the iterator
-        for _ in self.iterparse:
+        for _ in self._iterparse:
             pass
-        self.iterparse = None
+        self._iterparse = None
 
         return results
 

@@ -3,7 +3,7 @@ Welcome to Musify!
 
 .. toctree::
    :maxdepth: 2
-   :caption: 📖 Reference:
+   :caption: 📖 Reference
 
    musify.local
    musify.processors

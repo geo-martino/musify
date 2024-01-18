@@ -1,3 +1,7 @@
+"""
+Convert and validate Spotify ID and item types.
+"""
+
 from collections.abc import Mapping, Collection
 from typing import Any
 from urllib.parse import urlparse

@@ -1,3 +1,7 @@
+"""
+Implements all functionality pertaining to writing and deleting metadata/tags/properties of a :py:class:`LocalTrack`.
+"""
+
 from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Collection
 from copy import copy
@@ -15,26 +19,17 @@ from musify.shared.utils import to_collection
 
 @dataclass(frozen=True)
 class SyncResultTrack(Result):
-    """
-    Stores the results of a sync with local track
-
-    :ivar saved: Were changes to the file on the disk made.
-    :ivar updated: Map of the tag updated and the index of the condition it satisfied to be updated.
-    """
+    """Stores the results of a sync with local track"""
+    #: Were changes to the file on the disk made.
     saved: bool
+    #: Map of the tag updated and the index of the condition it satisfied to be updated.
     updated: Mapping[Tags, int]
 
 
 class TagWriter(TagReader, metaclass=ABCMeta):
-    """
-    Contains methods for updating and removing tags from a loaded
+    """Functionality for updating and removing tags/metadata/properties from a loaded audio file."""
 
-    :ivar uri_tag: The tag field to use as the URI tag in the file's metadata.
-    :ivar num_sep: Some number values come as a combined string i.e. track number/track total
-        Define the separator to use when representing both values as a combined string.
-    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
-    """
-
+    #: The date format to use when saving string representations of dates to tag values
     date_format = "%Y-%m-%d"
 
     def delete_tags(self, tags: UnitIterable[Tags] = (), dry_run: bool = True) -> SyncResultTrack:

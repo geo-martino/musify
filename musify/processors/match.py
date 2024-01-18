@@ -1,8 +1,12 @@
+"""
+Processor that matches objects and data types based on given configuration.
+"""
+
 import inspect
 import logging
 import re
 from collections.abc import Iterable, Callable, MutableSequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from musify.processors.base import ItemProcessor
@@ -18,89 +22,67 @@ from musify.shared.utils import limit_value, to_collection
 
 @dataclass
 class CleanTagConfig(PrettyPrinter):
-    """
-    Config for processing string-type tag values before matching with :py:class:`ItemMatcher`
-
-    :ivar tag: The name of the tag to clean.
-    :ivar _remove: A set of string values to remove from this tag.
-    :ivar _split: A set of string values for which the cleaner will
-        slice the tag on and remove anything that comes after.
-    :ivar _preprocess: A function to apply before the _remove and _split values are applied.
-    """
+    """Config for processing string-type tag values before matching with :py:class:`ItemMatcher`"""
+    #: The name of the tag to clean.
     tag: TagField
-    _remove: set[str] | None = None
-    _split: set[str] | None = None
-    _preprocess: Callable[[str], str] = None
-
-    @property
-    def remove(self) -> set[str]:
-        """Get all redundant words to be removed for this tag"""
-        return self._remove or set()
-
-    @property
-    def split(self) -> set[str]:
-        """Get all split words for which the cleaner will only take words before this word"""
-        return self._split or set()
-
-    def preprocess(self, value: str) -> str:
-        """Apply the preprocess function to value if given, return value unprocessed if not"""
-        return self._preprocess(value) if self._preprocess else value
+    #: A set of string values to remove from this tag.
+    remove: set[str] = field(default_factory=lambda: set())
+    #: A set of string values for which the cleaner will slice the tag on and remove anything that comes after.
+    split: set[str] = field(default_factory=lambda: set())
+    #: A function to apply before the remove and split values are applied.
+    preprocess: Callable[[str], str] = field(default=lambda x: x)
 
     def as_dict(self) -> dict[str, Any]:
         return {
             "tag": self.tag.name.lower(),
             "remove": [value for value in self.remove],
             "split": [value for value in self.split],
-            "preprocess": self._preprocess is not None,
+            "preprocess": self.preprocess is not None,
         }
 
 
 class ItemMatcher(ItemProcessor):
-    """
-    Matches source items/collections to given result(s).
-
-    :ivar karaoke_tags: A set of words to search for in tag values that identify the item as being a karaoke item.
-    :ivar year_range: A difference in years of this value gives a score of 0 for the :py:meth:`match_year` algorithm.
-        See the :py:meth:`match_year` method for more information.
-    :ivar clean_tags_remove_all: Apply these remove settings to all tags
-        when processing tags as per :py:meth:`clean_tags` method.
-        See also :py:class:`CleanTagConfig` for more info on this configuration.
-    :ivar clean_tags_split_all: Apply these split settings to all tags
-        when processing tags as per :py:meth:`clean_tags` method.
-        See also :py:class:`CleanTagConfig` for more info on this configuration.
-    :ivar clean_tags_config: A list of configurations in the form of :py:class:`CleanTagConfig`
-        to apply for each tag type. See also :py:class:`CleanTagConfig` for more info.
-    :ivar reduce_name_score_on: A set of words to check for when applying name score reduction logic.
-        If a word from this list is present in the name of the result to score against
-        but not in the source :py:class:`Item`, reduce the score for the name match by
-        the ``_reduce_name_score_factor``.
-        This set is always combined with the ``karaoke_tags``.
-    :ivar reduce_name_score_factor: The factor to reduce a name score on when a word from
-        ``_reduce_name_score_on`` is found in the result but not in the source :py:class:`Item`.
-    """
+    """Matches source items/collections to given result(s)."""
 
     __slots__ = ("logger",)
 
+    #: A set of words to search for in tag values that identify the item as being a karaoke item.
     karaoke_tags = {"karaoke", "backing", "instrumental"}
+    #: A difference in years of this value gives a score of 0 for the :py:meth:`match_year` algorithm.
+    #: See the :py:meth:`match_year` method for more information.
     year_range = 10
 
     # config for cleaning string-type tags for matching
+    #: Apply these remove settings to all tags when processing tags as per :py:meth:`clean_tags` method.
+    #: See also :py:class:`CleanTagConfig` for more info on this configuration.
     clean_tags_remove_all = {"the", "a", "&", "and"}
+    #: Apply these split settings to all tags when processing tags as per :py:meth:`clean_tags` method.
+    #: See also :py:class:`CleanTagConfig` for more info on this configuration.
     clean_tags_split_all = set()
+    #: A list of configurations in the form of :py:class:`CleanTagConfig`
+    #: to apply for each tag type. See also :py:class:`CleanTagConfig` for more info.
     clean_tags_config = (
-        CleanTagConfig(tag=Tag.TITLE, _remove={"part"}, _split={"featuring", "feat.", "ft.", "/"}),
-        CleanTagConfig(tag=Tag.ARTIST, _split={"featuring", "feat.", "ft.", "vs"}),
-        CleanTagConfig(tag=Tag.ALBUM, _remove={"ep"}, _preprocess=lambda x: x.split('-')[0])
+        CleanTagConfig(tag=Tag.TITLE, remove={"part"}, split={"featuring", "feat.", "ft.", "/"}),
+        CleanTagConfig(tag=Tag.ARTIST, split={"featuring", "feat.", "ft.", "vs"}),
+        CleanTagConfig(tag=Tag.ALBUM, remove={"ep"}, preprocess=lambda x: x.split('-')[0])
     )
 
     # config for name score reduction
+    #: A set of words to check for when applying name score reduction logic.
+    #:
+    #: If a word from this list is present in the name of the result to score against
+    #: but not in the source :py:class:`Item`, apply the ``reduce_name_score_factor`` to reduce its score.
+    #: This set is always combined with the ``karaoke_tags``.
     reduce_name_score_on = {"live", "demo", "acoustic"}
+    #: The factor to apply to a name score when a word from ``reduce_name_score_on``
+    #: is found in the result but not in the source :py:class:`Item`.
     reduce_name_score_factor = 0.5
 
     def __init__(self):
         super().__init__()
 
         # noinspection PyTypeChecker
+        #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
 
     def _log_padded(self, log: MutableSequence[str], pad: str = ' ') -> None:
@@ -208,7 +190,7 @@ class ItemMatcher(ItemProcessor):
             reduce_on = self.reduce_name_score_on | self.karaoke_tags
             reduce_on = {word.casefold() for word in reduce_on}
             if any(word in result.name.casefold() and word not in source.name.casefold() for word in reduce_on):
-                score = max(score - self.reduce_name_score_factor, 0)
+                score = max(score * self.reduce_name_score_factor, 0)
 
         self._log_test(source=source, result=result, test=round(score, 2), extra=[f"{source_val} -> {result_val}"])
         return score
@@ -318,7 +300,7 @@ class ItemMatcher(ItemProcessor):
         :param max_score: Stop matching once this score has been reached.
             Value will be limited to between 0.01 and 1.0.
         :param match_on: List of tags to match on. Currently only the following fields are supported:
-            title, artist, album, year, length.
+            ``title``, ``artist``, ``album``, ``year``, ``length``.
         :param allow_karaoke: When True, items determined to be karaoke are allowed when matching added items.
             Skip karaoke results otherwise. Karaoke items are identified using the ``karaoke_tags`` attribute.
         :return: T. The item that matched best if found, None if no item matched conditions.
@@ -328,11 +310,11 @@ class ItemMatcher(ItemProcessor):
 
         # process and limit match options
         match_on_filtered = set()
-        for field in to_collection(match_on, set):
-            if field == Tag.ALL:
-                match_on_filtered.update(field.all())
+        for match_field in to_collection(match_on, set):
+            if match_field == Tag.ALL:
+                match_on_filtered.update(match_field.all())
             else:
-                match_on_filtered.add(field)
+                match_on_filtered.add(match_field)
 
         score, result = self._score(
             source=source, results=results, max_score=max_score, match_on=match_on_filtered, allow_karaoke=allow_karaoke
@@ -366,7 +348,7 @@ class ItemMatcher(ItemProcessor):
         :param max_score: Stop matching once this score has been reached.
             Value will be limited to between 0.01 and 1.0.
         :param match_on: List of tags to match on. Currently only the following fields are supported:
-            title, artist, album, year, length.
+            ``title``, ``artist``, ``album``, ``year``, ``length``.
         :param allow_karaoke: When True, items determined to be karaoke are allowed when matching added items.
             Skip karaoke results otherwise. Karaoke items are identified using the ``karaoke_tags`` attribute.
         :return: Tuple of (the score between 0-1, the item that had the best score)
@@ -411,7 +393,7 @@ class ItemMatcher(ItemProcessor):
         :param source: Source item to compare against and find a match for with assigned ``clean_tags``.
         :param result: Result item to compare against with assigned ``clean_tags``.
         :param match_on: List of tags to match on. Currently only the following fields are supported:
-            title, artist, album, year, length.
+            ``title``, ``artist``, ``album``, ``year``, ``length``.
         :param allow_karaoke: When True, items determined to be karaoke are allowed when matching added items.
             Skip karaoke results otherwise. Karaoke items are identified using the ``karaoke_tags`` attribute.
         :return: Map of score type name to score.

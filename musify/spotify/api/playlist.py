@@ -1,3 +1,7 @@
+"""
+Implements endpoints for manipulating playlists with the Spotify API.
+"""
+
 from abc import ABCMeta
 from collections.abc import Collection, Mapping
 from typing import Any
@@ -13,8 +17,6 @@ from musify.spotify.api.base import SpotifyAPIBase
 
 class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
     """API endpoints for processing collections i.e. playlists, albums, shows, and audiobooks"""
-
-    playlist_items_key = "tracks"
 
     def get_playlist_url(self, playlist: str | Mapping[str, Any], use_cache: bool = True) -> str:
         """
@@ -109,7 +111,9 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
         uri_list = [self.convert(item, kind=RemoteObjectType.TRACK, type_out=RemoteIDType.URI) for item in items]
         if skip_dupes:  # skip tracks currently in playlist
             pl_current = self.get_items(url, kind=RemoteObjectType.PLAYLIST, use_cache=False)[0]
-            tracks = pl_current[self.playlist_items_key][self.items_key]
+            tracks_key = self.collection_item_map[RemoteObjectType.PLAYLIST].name.lower() + "s"
+            tracks = pl_current[tracks_key][self.items_key]
+
             uri_current = [track["track"]["uri"] for track in tracks]
             uri_list = [uri for uri in uri_list if uri not in uri_current]
 
@@ -163,8 +167,10 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
 
         if items is None:  # clear everything
             pl_current = self.get_items(url, kind=RemoteObjectType.PLAYLIST, extend=True, use_cache=False)[0]
-            tracks = pl_current[self.playlist_items_key][self.items_key]
-            uri_list = [track[self.playlist_items_key.rstrip("s")]["uri"] for track in tracks]
+
+            tracks_key = self.collection_item_map[RemoteObjectType.PLAYLIST].name.lower() + "s"
+            tracks = pl_current[tracks_key][self.items_key]
+            uri_list = [track[tracks_key.rstrip("s")]["uri"] for track in tracks]
         else:  # clear only the items given
             self.validate_item_type(items, kind=RemoteObjectType.TRACK)
             uri_list = [self.convert(item, kind=RemoteObjectType.TRACK, type_out=RemoteIDType.URI) for item in items]

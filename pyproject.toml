@@ -45,6 +45,7 @@ docs = [
     "sphinx~=7.2",
     "renku_sphinx_theme",
     "graphviz~=0.20",
+    "sphinx-autodoc-typehints~=1.25",
     "autodocsumm~=0.2",
 ]
 dev = [

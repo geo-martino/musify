@@ -1,3 +1,7 @@
+"""
+Exceptions relating to Spotify operations.
+"""
+
 from musify.shared.remote.exception import RemoteError
 
 

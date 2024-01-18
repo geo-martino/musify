@@ -1,3 +1,7 @@
+"""
+The fundamental core classes for the entire package.
+"""
+
 from __future__ import annotations
 
 from abc import ABC, ABCMeta, abstractmethod
@@ -27,14 +31,11 @@ class Nameable(ABC):
 
 
 class Taggable(ABC):
-    """
-    Generic base class for any taggable object.
-
-    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
-    """
+    """Generic base class for any taggable object."""
 
     __slots__ = ("_clean_tags",)
 
+    #: When representing a list of tags as a string, use this value as the separator.
     tag_sep: str = "; "
 
     @property
@@ -47,10 +48,17 @@ class Taggable(ABC):
 
 
 class NameableTaggableMixin(Nameable, Taggable, metaclass=ABCMeta):
+    """Mixin for :py:class:`Nameable` and :py:class:`Taggable`"""
     pass
 
 
 class AttributePrinter(PrettyPrinter, metaclass=ABCMeta):
+    """
+    Extends the functionality of a :py:class:`PrettyPrinter`.
+
+    Adds functionality to automatically determine the key attributes that represent child objects
+    and uses these for printer representations.
+    """
 
     __attributes_classes__: UnitIterable[type] = ()
     __attributes_ignore__: UnitIterable[str] = ()
@@ -85,11 +93,7 @@ class AttributePrinter(PrettyPrinter, metaclass=ABCMeta):
 
 
 class Item(AttributePrinter, NameableTaggableMixin, Hashable, metaclass=ABCMeta):
-    """
-    Generic class for storing an item.
-
-    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
-    """
+    """Generic class for storing an item."""
 
     @property
     @abstractmethod

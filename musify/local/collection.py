@@ -1,3 +1,7 @@
+"""
+Implements all collection types for a local library.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -33,7 +37,6 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
     """
     Generic class for storing a collection of local tracks.
 
-    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on items.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
     """
@@ -113,7 +116,9 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
         super().__init__()
 
         # noinspection PyTypeChecker
+        #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
+        #: A :py:class:`RemoteDataWrangler` object for processing URIs
         self.remote_wrangler = remote_wrangler
 
     def save_tracks(
@@ -225,8 +230,6 @@ class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], metaclass=ABCMet
     Generic class for storing and filtering on a collection of local tracks
     with methods for enriching the attributes of this object from the attributes of the collection of tracks
 
-    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
-
     :param tracks: A list of loaded tracks.
     :param name: The name of this collection.
         If given, the object only stores tracks that match the name given on the attribute of this object.
@@ -289,9 +292,7 @@ class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], metaclass=ABCMet
 
 class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
     """
-    Object representing a collection of tracks in a folder on the local drive
-
-    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
+    Object representing a collection of tracks in a folder on the local drive.
 
     :param tracks: A list of loaded tracks.
     :param name: The name of this folder.
@@ -332,18 +333,16 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
         Modify tags for tracks in the folders of this library.
 
         The following steps are applied to all non-compilation folders:
-
-        * Set compilation to False
+            * Set compilation to False
 
         The following steps are applied to all compilation folders:
-
-        * Set album name to folder name
-        * Set album artist to 'Various'
-        * Set track_number in ascending order by filename
-        * Set track_total to the number of tracks in the folder
-        * Set disc_number to 1
-        * Set disc_total to 1
-        * Set compilation to True
+            * Set album name to folder name
+            * Set album artist to 'Various'
+            * Set track_number in ascending order by filename
+            * Set track_total to the number of tracks in the folder
+            * Set disc_number to 1
+            * Set disc_total to 1
+            * Set compilation to True
         """
 
         count = 0
@@ -368,8 +367,6 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
 class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):
     """
     Object representing a collection of tracks of an album.
-
-    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
 
     :param tracks: A list of loaded tracks.
     :param name: The name of this album.
@@ -453,8 +450,6 @@ class LocalArtist(LocalCollectionFiltered[LocalTrack], Artist[LocalTrack]):
     """
     Object representing a collection of tracks by a single artist.
 
-    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
-
     :param tracks: A list of loaded tracks.
     :param name: The name of this artist.
         If given, the object only stores tracks that match the artist ``name`` given.
@@ -492,8 +487,6 @@ class LocalArtist(LocalCollectionFiltered[LocalTrack], Artist[LocalTrack]):
 class LocalGenres(LocalCollectionFiltered[LocalTrack], Genre[LocalTrack]):
     """
     Object representing a collection of tracks within a genre.
-
-    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
 
     :param tracks: A list of loaded tracks.
     :param name: The name of this genre.

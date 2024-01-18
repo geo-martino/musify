@@ -1,3 +1,10 @@
+"""
+Utilities for operations on :py:class:`LocalPlaylist` types.
+
+Generally, this will contain global variables representing all supported playlist file types
+and a utility function for loading the appropriate :py:class:`LocalPlaylist` type for a path based on its extension.
+"""
+
 from collections.abc import Collection
 from os.path import splitext
 

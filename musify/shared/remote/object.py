@@ -1,3 +1,9 @@
+"""
+Functionality relating to generic remote objects.
+
+Implements core :py:class:`Item` and :py:class:`ItemCollection` classes for remote object types.
+"""
+
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
@@ -21,6 +27,7 @@ from musify.shared.utils import get_most_common_values
 
 
 class RemoteItemWranglerMixin[T: RemoteObject](RemoteItem, RemoteDataWrangler, metaclass=ABCMeta):
+    """Mixin for :py:class:`RemoteItem` and :py:class:`RemoteDataWrangler`"""
     pass
 
 
@@ -138,21 +145,18 @@ class RemoteCollectionLoader[T: RemoteObject](RemoteObject, RemoteCollection[T],
 
 @dataclass(frozen=True)
 class SyncResultRemotePlaylist(Result):
-    """
-    Stores the results of a sync with a remote playlist
-
-    :ivar start: The total number of tracks in the playlist before the sync.
-    :ivar added: The number of tracks added to the playlist.
-    :ivar removed: The number of tracks removed from the playlist.
-    :ivar unchanged: The number of tracks that were in the playlist before and after the sync.
-    :ivar difference: The difference between the total number tracks in the playlist from before and after the sync.
-    :ivar final: The total number of tracks in the playlist after the sync.
-    """
+    """Stores the results of a sync with a remote playlist."""
+    #: The total number of tracks in the playlist before the sync.
     start: int
+    #: The number of tracks added to the playlist.
     added: int
+    #: The number of tracks removed from the playlist.
     removed: int
+    #: The number of tracks that were in the playlist before and after the sync.
     unchanged: int
+    #: The difference between the total number tracks in the playlist from before and after the sync.
     difference: int
+    #: The total number of tracks in the playlist after the sync.
     final: int
 
 
@@ -185,7 +189,7 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
     @property
     @abstractmethod
     def date_added(self) -> dict[str, datetime]:
-        """A map of ``{URI: date}`` for each item for when that item was added to the playlist"""
+        """A map of ``{<URI>: <date>}`` for each item for when that item was added to the playlist"""
         raise NotImplementedError
 
     @property
@@ -234,13 +238,14 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
             dry_run: bool = True,
     ) -> SyncResultRemotePlaylist:
         """
-        Synchronise this playlist object's items with the remote playlist it is associated with. Sync options:
+        Synchronise this playlist object's items with the remote playlist it is associated with.
 
-        * 'new': Do not clear any items from the remote playlist and only add any tracks
-            from this playlist object not currently in the remote playlist.
-        * 'refresh': Clear all items from the remote playlist first, then add all items from this playlist object.
-        * 'sync': Clear all items not currently in this object's items list, then add all tracks
-            from this playlist object not currently in the remote playlist.
+        Sync options:
+            * 'new': Do not clear any items from the remote playlist and only add any tracks
+                from this playlist object not currently in the remote playlist.
+            * 'refresh': Clear all items from the remote playlist first, then add all items from this playlist object.
+            * 'sync': Clear all items not currently in this object's items list, then add all tracks
+                from this playlist object not currently in the remote playlist.
 
         :param items: Provide an item collection or list of items to synchronise to the remote playlist.
             Use the currently loaded ``tracks`` in this object if not given.
@@ -342,7 +347,7 @@ class RemoteArtist[T: RemoteTrack](Artist[T], RemoteCollectionLoader[T], metacla
     @property
     @abstractmethod
     def image_links(self) -> dict[str, str]:
-        """The images associated with this artist in the form ``{image name: image link}``"""
+        """The images associated with this artist in the form ``{<image name/type>: <image link>}``"""
         raise NotImplementedError
 
     @property

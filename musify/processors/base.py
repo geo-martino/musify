@@ -1,3 +1,7 @@
+"""
+Base classes for all processors in this module. Also contains decorators for use in implementations.
+"""
+
 from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Callable, Collection, Iterable
 from functools import partial, update_wrapper
@@ -52,12 +56,11 @@ class DynamicProcessor(Processor, metaclass=ABCMeta):
     The transformed method name is then appended to the class' ``__dict__``.
     The transformation is always applied before extending the class with any given
     alternative method names.
-
-    :ivar __processormethods__: The set of processor methods on this processor and any alternative names for them.
     """
 
     __slots__ = ("_processor_name",)
 
+    #: The set of processor methods on this processor and any alternative names for them.
     __processormethods__: frozenset[str] = frozenset()
 
     @property
@@ -122,6 +125,7 @@ class ItemProcessor(Processor, PrettyPrinter, metaclass=ABCMeta):
 
 
 class MusicBeeProcessor(ItemProcessor):
+    """Base object for processing :py:class:`Item` objects on MusicBee settings"""
 
     @classmethod
     def _processor_method_fmt(cls, name: str) -> str:
@@ -183,6 +187,7 @@ class Filter[T](Processor, PrettyPrinter, metaclass=ABCMeta):
 
 
 class FilterComposite[T](Filter[T], Collection[Filter], metaclass=ABCMeta):
+    """Composite filter which filters based on many :py:class:`Filter` objects"""
 
     __slots__ = ("filters",)
 
@@ -201,6 +206,8 @@ class FilterComposite[T](Filter[T], Collection[Filter], metaclass=ABCMeta):
 
     def __init__(self, *filters: Filter[T], **__):
         super().__init__()
+
+        #: The filters to use when processing
         self.filters = filters
 
     def __iter__(self):

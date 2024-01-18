@@ -1,12 +1,20 @@
+"""
+The fundamental core enum classes for the :py:mod:`Remote` module.
+
+Represents ID and item types.
+"""
+
 from musify.shared.core.enum import MusifyEnum
 
 
 class RemoteIDType(MusifyEnum):
-    """Represents remote ID type"""
+    """Represents remote ID types"""
     ALL: int = 0
 
-    ID: int = 22  # value is the expected length of ID string
-    URI: int = 3  # value is the expected number of chunks in a URI
+    #: Value is the expected length of ID string
+    ID: int = 22
+    #: Value is the expected number of chunks in a URI
+    URI: int = 3
     URL: int = 1
     URL_EXT: int = 2
 

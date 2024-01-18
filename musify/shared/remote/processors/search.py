@@ -1,3 +1,10 @@
+"""
+Processor operations that search for and match given items with remote items.
+
+Searches for matches on remote APIs, matches the item to the best matching result from the query,
+and assigns the ID of the matched object back to the item.
+"""
+
 from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Sequence, Iterable, Collection
 from dataclasses import dataclass, field
@@ -19,44 +26,39 @@ from musify.shared.utils import align_and_truncate, get_max_width
 
 @dataclass(frozen=True)
 class ItemSearchResult(Result):
-    """Stores the results of the searching process
-
-    :ivar matched: Sequence of Items for which matches were found from the search.
-    :ivar unmatched: Sequence of Items for which matches were not found from the search.
-    :ivar skipped: Sequence of Items which were skipped during the search.
-    """
+    """Stores the results of the searching process."""
+    #: Sequence of Items for which matches were found from the search.
     matched: Sequence[Item] = field(default=tuple())
+    #: Sequence of Items for which matches were not found from the search.
     unmatched: Sequence[Item] = field(default=tuple())
+    #: Sequence of Items which were skipped during the search.
     skipped: Sequence[Item] = field(default=tuple())
 
 
 @dataclass(frozen=True)
 class SearchSettings:
-    """
-    Key settings related to a search algorithm.
-
-    :ivar search_fields_1: A list of the tag names to use as search fields in the 1st pass.
-    :ivar search_fields_2: If no results are found from the tag names in ``search_fields_1`` on the 1st pass,
-        an optional list of the tag names to use as search fields in the 2nd pass.
-    :ivar search_fields_3: If no results are found from the tag names in ``search_fields_2`` on the 2nd pass,
-        an optional list of the tag names to use as search fields in the 3rd pass.
-    :ivar match_fields: The fields to match results on.
-    :ivar result_count: The number of the results to request when querying the API.
-    :ivar allow_karaoke: When True, items determined to be karaoke are allowed when matching added items.
-        Skip karaoke results otherwise.
-    :ivar min_score: The minimum acceptable score for an item to be considered a match.
-    :ivar min_score: The maximum score for an item to be considered a perfect match.
-        After this score is reached by an item, any other items are disregarded as potential matches.
-    """
+    """Key settings related to a search algorithm."""
+    #: A sequence of the tag names to use as search fields in the 1st pass.
     search_fields_1: Sequence[TagField]
+    #: The fields to match results on.
     match_fields: TagField | Iterable[TagField]
+    #: The number of the results to request when querying the API.
     result_count: int
+    #: When True, items determined to be karaoke are allowed when matching added items.
+    #: Skip karaoke results otherwise.
     allow_karaoke: bool = False
 
+    #: The minimum acceptable score for an item to be considered a match.
     min_score: float = 0.1
+    #: The maximum score for an item to be considered a perfect match.
+    #: After this score is reached by an item, any other items are disregarded as potential matches.
     max_score: float = 0.8
 
+    #: If no results are found from the tag names in ``search_fields_1`` on the 1st pass,
+    #: an optional sequence of the tag names to use as search fields in the 2nd pass.
     search_fields_2: Iterable[TagField] = ()
+    #: If no results are found from the tag names in ``search_fields_2`` on the 2nd pass,
+    #: an optional sequence of the tag names to use as search fields in the 3rd pass.
     search_fields_3: Iterable[TagField] = ()
 
 
@@ -70,6 +72,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
 
     __slots__ = ("api", "use_cache")
 
+    #: The :py:class:`SearchSettings` to use when running item searches
     settings_items = SearchSettings(
         search_fields_1=[Tag.NAME, Tag.ARTIST],
         search_fields_2=[Tag.NAME, Tag.ALBUM],
@@ -80,6 +83,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
         min_score=0.1,
         max_score=0.8
     )
+    #: The :py:class:`SearchSettings` to use when running album searches
     settings_albums = SearchSettings(
         search_fields_1=[Tag.NAME, Tag.ARTIST],
         search_fields_2=[Tag.NAME],
@@ -98,7 +102,10 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
 
     def __init__(self, api: RemoteAPI, use_cache: bool = False):
         super().__init__()
+
+        #: The :py:class:`RemoteAPI` to call
         self.api = api
+        #: When true, use the cache when calling the API endpoint
         self.use_cache = use_cache
 
     def _get_results(

@@ -1,3 +1,7 @@
+"""
+The fundamental core enum classes for the entire package.
+"""
+
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import IntEnum
@@ -9,7 +13,7 @@ from musify.shared.utils import unique_list
 
 
 class MusifyEnum(IntEnum):
-    """Generic class for storing IntEnums."""
+    """Generic class for :py:class:`IntEnum` implementations for the entire package."""
 
     @classmethod
     def map(cls, enum: Self) -> list[Self]:
@@ -82,7 +86,7 @@ class Field(MusifyEnum):
 
 class Fields(Field):
     """
-    Contains all possible Field enums in this program.
+    All possible Field enums in this program.
 
     This is used to ensure all Field enum implementations have the same values for their enum names.
     """
@@ -151,7 +155,7 @@ class Fields(Field):
 
 @dataclass(frozen=True)
 class TagMap:
-    """Map of human-friendly tag name to ID3 tag ids for a given file type"""
+    """Map of human-friendly tag name to ID3 tag ids for a file type"""
     # helpful for determining tags map: https://wiki.hydrogenaud.io/index.php?title=Tag_Mapping
 
     title: Sequence[str] = field(default=())
@@ -179,7 +183,7 @@ class TagMap:
 
 
 class TagField(Field):
-    """Applies extra functionality to the Field enum for Field types relating to :py:class:`Track` types"""
+    """Applies extra functionality to :py:class:`Field` for objects which contain modifiable tags"""
 
     __tags__: frozenset[str] = frozenset(list(TagMap.__annotations__.keys()) + ["uri"])
 
@@ -221,7 +225,7 @@ class TagField(Field):
 
 class TagFields(TagField):
     """
-    Contains all possible TagField enums in this program.
+    All possible TagField enums in this program.
 
     This is used to ensure all TagField enum implementations have the same values for their enum names.
     """

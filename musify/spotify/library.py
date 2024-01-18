@@ -1,3 +1,7 @@
+"""
+Implements a :py:class:`RemoteLibrary` for Spotify.
+"""
+
 from collections.abc import Collection, Mapping, Iterable
 from typing import Any
 
@@ -13,7 +17,7 @@ from musify.spotify.object import SpotifyTrack, SpotifyCollection, SpotifyPlayli
 
 class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack]):
     """
-    Represents a Spotify library, providing various methods for manipulating
+    Represents a Spotify library. Provides various methods for manipulating
     tracks and playlists across an entire Spotify library collection.
     """
     __attributes_classes__ = RemoteLibrary

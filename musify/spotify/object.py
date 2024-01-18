@@ -1,3 +1,7 @@
+"""
+Implements all :py:mod:`Remote` object types for Spotify.
+"""
+
 from __future__ import annotations
 
 from abc import ABCMeta
@@ -18,6 +22,7 @@ from musify.spotify.processors.wrangle import SpotifyDataWrangler
 
 
 class SpotifyItemWranglerMixin(SpotifyItem, SpotifyDataWrangler, metaclass=ABCMeta):
+    """Mixin for :py:class:`SpotifyItem` and :py:class:`SpotifyDataWrangler`"""
     pass
 
 

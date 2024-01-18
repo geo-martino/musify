@@ -1,3 +1,7 @@
+"""
+The MP3 implementation of a :py:class:`LocalTrack`.
+"""
+
 from collections.abc import Iterable
 from io import BytesIO
 from typing import Any
@@ -18,6 +22,7 @@ class MP3(LocalTrack[mutagen.mp3.MP3]):
     valid_extensions = frozenset({".mp3"})
 
     # noinspection SpellCheckingInspection
+    #: Map of human-friendly tag name to ID3 tag ids for a given file type
     tag_map = TagMap(
         title=["TIT2"],
         artist=["TPE1"],

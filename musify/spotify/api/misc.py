@@ -1,3 +1,7 @@
+"""
+Implements all required non-items and non-playlist endpoints from the Spotify API.
+"""
+
 from abc import ABCMeta
 from collections.abc import MutableMapping
 from typing import Any
@@ -17,21 +21,6 @@ class SpotifyAPIMisc(SpotifyAPIBase, metaclass=ABCMeta):
             limit: int = 20,
             use_cache: bool = True
     ) -> None:
-        """
-        Diagnostic function.
-        Print items from a given collection in ``<track> - <title> | <URI> - <URL>`` format for a given URL/URI/ID.
-
-        ``value`` may be:
-            * A string representing a URL/URI/ID.
-            * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
-
-        :param value: The value representing some remote collection. See description for allowed value types.
-        :param kind: When an ID is provided, give the kind of ID this is here.
-            If None and ID is given, user will be prompted to give the kind anyway.
-        :param limit: The number of results to call per request and,
-            therefore, the number of items in each printed block.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
-        """
         if not value:  # get user to paste in URL/URI
             value = input("\33[1mEnter URL/URI/ID: \33[0m")
         if not kind:

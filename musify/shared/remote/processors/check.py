@@ -1,3 +1,10 @@
+"""
+Processor operations that help a user to check whether the currently matched ID is valid for given items.
+
+Provides the user the ability to modify associated IDs using a Remote player as an interface for
+reviewing matches through temporary playlist creation.
+"""
+
 import traceback
 from abc import ABCMeta, abstractmethod
 from collections import Counter
@@ -24,49 +31,48 @@ ALLOW_KARAOKE_DEFAULT = RemoteItemSearcher.settings_items.allow_karaoke
 
 @dataclass(frozen=True)
 class ItemCheckResult(Result):
-    """
-    Stores the results of the checking proces
-
-    :ivar switched: Sequence of Items that had URIs switched during the check.
-    :ivar unavailable: Sequence of Items that were marked as unavailable.
-    :ivar skipped: Sequence of Items that were skipped from the check.
-    """
+    """Stores the results of the checking process."""
+    #: Sequence of Items that had URIs switched during the check.
     switched: Sequence[Item] = field(default=tuple())
+    #: Sequence of Items that were marked as unavailable.
     unavailable: Sequence[Item] = field(default=tuple())
+    #: Sequence of Items that were skipped from the check.
     skipped: Sequence[Item] = field(default=tuple())
 
 
 class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
     """
     Runs operations for checking the URIs associated with a collection of items.
-    When running :py:func:`check`, the object will do the following:
 
-    * Make temporary playlists for each collection up to a ``interval`` limit of playlists.
-        At which point, playlist creation pauses.
-    * User can then check and modify the temporary playlists to match items to correct items or otherwise.
-    * When operations resume at the user's behest, the program will search each playlist to find changes and
-        attempt to match any new items to a source item.
-    * If no matches are found for certain items, the program will prompt the user
-        to determine how they wish to deal with these items.
-    * Operation completes once user exists or all items have an associated URI.
+    When running :py:func:`check`, the object will do the following:
+        * Make temporary playlists for each collection up to a ``interval`` limit of playlists.
+          At which point, playlist creation pauses.
+        * User can then check and modify the temporary playlists to match items to correct items or otherwise.
+        * When operations resume at the user's behest, the program will search each playlist to find changes
+          and attempt to match any new items to a source item.
+        * If no matches are found for certain items, the program will prompt the user
+          to determine how they wish to deal with these items.
+        * Operation completes once user exists or all items have an associated URI.
 
     :param api: An API object with authorised access to a remote User to create playlists for.
     :param interval: Stop creating playlists after this many playlists have been created and pause for user input.
+    :param allow_karaoke: When True, items determined to be karaoke are allowed when matching switched items.
+        Skip karaoke results otherwise. Karaoke items are identified using the ``karaoke_tags`` attribute.
     """
 
     __slots__ = (
         "interval",
         "allow_karaoke",
         "api",
-        "playlist_name_urls",
-        "playlist_name_collection",
-        "skip",
-        "quit",
-        "remaining",
-        "switched",
-        "final_switched",
-        "final_unavailable",
-        "final_skipped",
+        "_playlist_name_urls",
+        "_playlist_name_collection",
+        "_skip",
+        "_quit",
+        "_remaining",
+        "_switched",
+        "_final_switched",
+        "_final_unavailable",
+        "_final_skipped",
     )
 
     @property
@@ -78,22 +84,34 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
     def __init__(self, api: RemoteAPI, interval: int = 10, allow_karaoke: bool = ALLOW_KARAOKE_DEFAULT):
         super().__init__()
 
+        #: Stop creating playlists after this many playlists have been created and pause for user input
         self.interval = interval
+        #: Allow karaoke items when matching on switched items
         self.allow_karaoke = allow_karaoke
 
+        #: The :py:class:`RemoteAPI` to call
         self.api = api
-        self.playlist_name_urls = {}
-        self.playlist_name_collection = {}
+        #: Map of playlist names to their URLs for created temporary playlists
+        self._playlist_name_urls = {}
+        #: Map of playlist names to the collection of items added for created temporary playlists
+        self._playlist_name_collection = {}
 
-        self.skip = False  # when true, skip the current loop
-        self.quit = False  # when true, quit ItemChecker
+        #: When true, skip the current loop and eventually safely quit check
+        self._skip = False
+        #: When true, safely quit check
+        self._quit = False
 
-        self.remaining: list[Track] = []
-        self.switched: list[Track] = []
+        #: The currently remaining items that the user needs to manually check
+        self._remaining: list[Track] = []
+        #: The list of items with switched URIs currently processed by the checker
+        self._switched: list[Track] = []
 
-        self.final_switched: list[Track] = []
-        self.final_unavailable: list[Track] = []
-        self.final_skipped: list[Track] = []
+        #: The final list of items with switched URIs as processed by the checker
+        self._final_switched: list[Track] = []
+        #: The final list of items marked as unavailable for this remote source
+        self._final_unavailable: list[Track] = []
+        #: The final list of items skipped by the checker
+        self._final_skipped: list[Track] = []
 
     def _get_user_input(self, text: str | None = None) -> str:
         """Print dialog with optional text and get the user's input."""
@@ -129,8 +147,8 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
             return
 
         url = self.api.create_playlist(collection.name, public=False)
-        self.playlist_name_urls[collection.name] = url
-        self.playlist_name_collection[collection.name] = collection
+        self._playlist_name_urls[collection.name] = url
+        self._playlist_name_collection[collection.name] = collection
 
         self.api.add_to_playlist(url, items=uris, skip_dupes=False)
 
@@ -138,12 +156,12 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         """Delete all temporary playlists stored and clear stored playlists and collections"""
         self._check_api()
 
-        self.logger.info_extra(f"\33[93mDeleting {len(self.playlist_name_urls)} temporary playlists... \33[0m")
-        for url in self.playlist_name_urls.values():  # delete playlists
+        self.logger.info_extra(f"\33[93mDeleting {len(self._playlist_name_urls)} temporary playlists... \33[0m")
+        for url in self._playlist_name_urls.values():  # delete playlists
             self.api.delete_playlist(url)
 
-        self.playlist_name_urls.clear()
-        self.playlist_name_collection.clear()
+        self._playlist_name_urls.clear()
+        self._playlist_name_collection.clear()
 
     # noinspection PyMethodOverriding
     def __call__(self, collections: Collection[ItemCollection]) -> ItemCheckResult | None:
@@ -151,16 +169,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
 
     def check(self, collections: Collection[ItemCollection]) -> ItemCheckResult | None:
         """
-        Run the following operations to check a list of ItemCollections on the remote application.
-
-        * Make temporary playlists for each collection up to a ``interval`` limit of playlists.
-            At which point, playlist creation pauses.
-        * User can then check and modify the temporary playlists to match items to correct items or otherwise.
-        * When operations resume at the user's behest, the program will search each playlist to find changes and
-            attempt to match any new items to a source item.
-        * If no matches are found for certain items, the program will prompt the user
-            to determine how they wish to deal with these items.
-        * Operation completes once user exists or all items have an associated URI.
+        Run the checker for the given ``collections``.
 
         :param collections: A list of collections to check.
         :return: A :py:class:`ItemCheckResult` object containing the remapped items created during the check.
@@ -180,8 +189,8 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         pages_total = (total // self.interval) + (total % self.interval > 0)
         bar = self.logger.get_progress_bar(total=total, desc="Creating temp playlists", unit="playlists")
 
-        self.skip = False
-        self.quit = False
+        self._skip = False
+        self._quit = False
 
         collections_iter = (collection for collection in collections)
         for page in range(1, pages_total + 1):
@@ -194,22 +203,22 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
                         break
 
                 self._pause(page=page, total=pages_total)
-                if not self.quit:  # still run if skip is True
+                if not self._quit:  # still run if skip is True
                     self._check_uri()
             except KeyboardInterrupt:
                 self.logger.error("User triggered exit with KeyboardInterrupt")
-                self.quit = True
+                self._quit = True
             except BaseException as ex:  # delete playlists first before raising error
                 self.logger.error(traceback.format_exc())
                 self._delete_playlists()
                 raise ex
 
             self._delete_playlists()
-            if self.quit or self.skip:  # quit check
+            if self._quit or self._skip:  # quit check
                 break
 
         bar.close()
-        result = self._finalise() if not self.quit else None
+        result = self._finalise() if not self._quit else None
         self.logger.debug("Checking items: DONE\n")
         return result
 
@@ -218,22 +227,22 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         self.logger.print()
         self.logger.report(
             f"\33[1;96mCHECK TOTALS \33[0m| "
-            f"\33[94m{len(self.final_switched):>5} switched  \33[0m| "
-            f"\33[91m{len(self.final_unavailable):>5} unavailable \33[0m| "
-            f"\33[93m{len(self.final_skipped):>5} skipped \33[0m"
+            f"\33[94m{len(self._final_switched):>5} switched  \33[0m| "
+            f"\33[91m{len(self._final_unavailable):>5} unavailable \33[0m| "
+            f"\33[93m{len(self._final_skipped):>5} skipped \33[0m"
         )
         self.logger.print(REPORT)
 
         result = ItemCheckResult(
-            switched=self.final_switched, unavailable=self.final_unavailable, skipped=self.final_skipped
+            switched=self._final_switched, unavailable=self._final_unavailable, skipped=self._final_skipped
         )
 
-        self.skip = True
-        self.remaining.clear()
-        self.switched.clear()
-        self.final_switched = []
-        self.final_unavailable = []
-        self.final_skipped = []
+        self._skip = True
+        self._remaining.clear()
+        self._switched.clear()
+        self._final_switched = []
+        self._final_unavailable = []
+        self._final_skipped = []
 
         return result
 
@@ -269,14 +278,14 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         print("\n" + help_text)
         while current_input != '':  # while user has not hit return only
             current_input = self._get_user_input(f"Enter ({page}/{total})")
-            pl_names = [name for name in self.playlist_name_collection if current_input.casefold() in name.casefold()]
+            pl_names = [name for name in self._playlist_name_collection if current_input.casefold() in name.casefold()]
 
             if current_input == "":  # user entered no option, break loop and return
                 break
 
             elif current_input.casefold() == 's' or current_input.casefold() == 'q':  # quit/skip
-                self.quit = current_input.casefold() == 'q' or self.quit
-                self.skip = current_input.casefold() == 's' or self.skip
+                self._quit = current_input.casefold() == 'q' or self._quit
+                self._skip = current_input.casefold() == 's' or self._skip
                 break
 
             elif current_input.casefold() == "h":  # print help text
@@ -284,7 +293,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
 
             elif pl_names:  # print originally added items
                 name = pl_names[0]
-                items = [item for item in self.playlist_name_collection[name] if item.has_uri]
+                items = [item for item in self._playlist_name_collection[name] if item.has_uri]
                 max_width = get_max_width(items)
 
                 print(f"\n\t\33[96mShowing items originally added to \33[94m{name}\33[0m:\n")
@@ -307,33 +316,33 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
     ###########################################################################
     def _check_uri(self) -> None:
         """Run operations to check that URIs are assigned to all the items in the current list of collections."""
-        skip_hold = self.skip
-        self.skip = False
-        for name, collection in self.playlist_name_collection.items():
+        skip_hold = self._skip
+        self._skip = False
+        for name, collection in self._playlist_name_collection.items():
             self._log_padded([name, f"{len(collection):>6} total items"], pad='>')
 
             while True:
                 self._match_to_remote(name=name)
                 self._match_to_input(name=name)
-                if not self.remaining:
+                if not self._remaining:
                     break
 
             unavailable = tuple(item for item in collection if item.has_uri is False)
             skipped = tuple(item for item in collection if item.has_uri is None)
 
-            self._log_padded([name, f"{len(self.switched):>6} items switched"], pad='<')
+            self._log_padded([name, f"{len(self._switched):>6} items switched"], pad='<')
             self._log_padded([name, f"{len(unavailable):>6} items unavailable"])
             self._log_padded([name, f"{len(skipped):>6} items skipped"])
 
-            self.final_switched += self.switched
-            self.final_unavailable += unavailable
-            self.final_skipped += skipped
-            self.switched.clear()
+            self._final_switched += self._switched
+            self._final_unavailable += unavailable
+            self._final_skipped += skipped
+            self._switched.clear()
 
-            if self.quit or self.skip:
+            if self._quit or self._skip:
                 break
 
-        self.skip = skip_hold
+        self._skip = skip_hold
 
     def _match_to_remote(self, name: str) -> None:
         """
@@ -347,16 +356,16 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
             f"{self.source} playlist: \33[94m{name}\33[0m..."
         )
 
-        source = self.playlist_name_collection[name]
+        source = self._playlist_name_collection[name]
         source_valid = [item for item in source if item.has_uri]
 
-        remote_response = self.api.get_items(self.playlist_name_urls[name], extend=True, use_cache=False)[0]
+        remote_response = self.api.get_items(self._playlist_name_urls[name], extend=True, use_cache=False)[0]
         remote = self._object_cls.playlist(response=remote_response, api=self.api).tracks
         remote_valid = [item for item in remote if item.has_uri]
 
         added = [item for item in remote_valid if item not in source]
-        removed = [item for item in source_valid if item not in remote] if not self.remaining else []
-        missing = self.remaining or [item for item in source if item.has_uri is None]
+        removed = [item for item in source_valid if item not in remote] if not self._remaining else []
+        missing = self._remaining or [item for item in source if item.has_uri is None]
 
         if len(added) + len(removed) + len(missing) == 0:
             if len(source_valid) == len(remote_valid):
@@ -389,10 +398,10 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
 
             added.remove(result)
             removed.remove(item) if item in removed else missing.remove(item)
-            self.switched.append(result)
+            self._switched.append(result)
 
-        self.remaining = removed + missing
-        count_final = len(self.remaining)
+        self._remaining = removed + missing
+        count_final = len(self._remaining)
         self._log_padded([name, f"{count_start - count_final:>6} items switched"])
         self._log_padded([name, f"{count_final:>6} items still not found"])
 
@@ -401,7 +410,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         Get the user's input for any items in the ``remaining`` list that are still missing URIs.
         Provide a ``name`` to use for logging only.
         """
-        if not self.remaining:
+        if not self._remaining:
             return
 
         header = [f"\t\33[1;94m{name}:\33[91m The following items were removed and/or matches were not found. \33[0m"]
@@ -420,25 +429,25 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         help_text = self._format_help_text(options=options, header=header)
         help_text += "OR enter a custom URI/URL/ID for this item\n"
 
-        self._log_padded([name, f"Getting user input for {len(self.remaining)} items"])
-        max_width = get_max_width({item.name for item in self.remaining})
+        self._log_padded([name, f"Getting user input for {len(self._remaining)} items"])
+        max_width = get_max_width({item.name for item in self._remaining})
 
         print("\n" + help_text)
-        for item in self.remaining.copy():
-            while item in self.remaining:  # while item not matched or skipped
-                self._log_padded([name, f"{len(self.remaining):>6} remaining items"])
+        for item in self._remaining.copy():
+            while item in self._remaining:  # while item not matched or skipped
+                self._log_padded([name, f"{len(self._remaining):>6} remaining items"])
                 if 'a' not in current_input:
                     current_input = self._get_user_input(align_and_truncate(item.name, max_width=max_width))
 
                 if current_input.casefold().replace('a', '') == 'u':  # mark item as unavailable
                     self._log_padded([name, "Marking as unavailable"], pad="<")
                     item.uri = self.unavailable_uri_dummy
-                    self.remaining.remove(item)
+                    self._remaining.remove(item)
 
                 elif current_input.casefold().replace('a', '') == 'n':  # leave item without URI and unprocessed
                     self._log_padded([name, "Skipping"], pad="<")
                     item.uri = None
-                    self.remaining.remove(item)
+                    self._remaining.remove(item)
 
                 elif current_input.casefold() == 'r':  # return to former 'while' loop
                     self._log_padded([name, "Refreshing playlist metadata and restarting loop"])
@@ -446,9 +455,9 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
 
                 elif current_input.casefold() == 's' or current_input.casefold() == 'q':  # quit/skip
                     self._log_padded([name, "Skipping all loops"], pad="<")
-                    self.quit = current_input.casefold() == 'q' or self.quit
-                    self.skip = current_input.casefold() == 's' or self.skip
-                    self.remaining.clear()
+                    self._quit = current_input.casefold() == 'q' or self._quit
+                    self._skip = current_input.casefold() == 's' or self._skip
+                    self._remaining.clear()
                     return
 
                 elif current_input.casefold() == 'h':  # print help
@@ -463,13 +472,13 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
                     self._log_padded([name, f"Updating URI: {item.uri} -> {uri}"], pad="<")
                     item.uri = uri
 
-                    self.switched.append(item)
-                    self.remaining.remove(item)
+                    self._switched.append(item)
+                    self._remaining.remove(item)
                     current_input = ""
 
                 elif current_input:  # invalid input
                     self.logger.warning("Input not recognised.")
                     current_input = ""
 
-            if not self.remaining:
+            if not self._remaining:
                 break

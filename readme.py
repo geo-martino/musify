@@ -1,8 +1,12 @@
+"""
+Fills in the variable fields of the README template and generates README.md file.
+"""
+
 from musify import PROGRAM_OWNER_USER, PROGRAM_NAME
 from musify.local.track import TRACK_FILETYPES, LocalTrack
 from musify.local.playlist import PLAYLIST_FILETYPES
 from musify.local.library import LIBRARY_CLASSES, LocalLibrary
-from musify.shared.exception import SafeDict
+from musify.shared.utils import SafeDict
 from musify.spotify import SPOTIFY_NAME
 
 SRC_FILENAME = "README.template.md"

@@ -1,3 +1,8 @@
+"""
+Just the core abstract class for the :py:mod:`Spotify` module.
+Placed here separately to avoid circular import logic issues.
+"""
+
 from musify.shared.remote import Remote
 
 

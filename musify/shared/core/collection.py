@@ -1,3 +1,7 @@
+"""
+The fundamental core collection classes for the entire package.
+"""
+
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
@@ -12,11 +16,7 @@ from musify.shared.types import UnitSequence
 
 
 class ItemCollection[T: Item](AttributePrinter, NameableTaggableMixin, MutableSequence[T], metaclass=ABCMeta):
-    """
-    Generic class for storing a collection of items.
-
-    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
-    """
+    """Generic class for storing a collection of items."""
 
     @property
     @abstractmethod
@@ -118,7 +118,7 @@ class ItemCollection[T: Item](AttributePrinter, NameableTaggableMixin, MutableSe
         :param fields:
             * When None and ShuffleMode is RANDOM, shuffle the tracks. Otherwise, do nothing.
             * List of tags/properties to sort by.
-            * Map of {``tag/property``: ``reversed``}. If reversed is true, sort the ``tag/property`` in reverse.
+            * Map of `{<tag/property>: <reversed>}`. If reversed is true, sort the ``tag/property`` in reverse.
         :param shuffle_mode: The mode to use for shuffling.
         :param shuffle_by: The field to shuffle by when shuffling.
         :param shuffle_weight: The weights (between 0 and 1) to apply to shuffling modes that can use it.

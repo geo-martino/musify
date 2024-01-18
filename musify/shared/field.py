@@ -1,3 +1,8 @@
+"""
+All core :py:class:`Field` implementations relating to
+core :py:class:`Item` and :py:class`ItemCollection` implementations.
+"""
+
 from typing import Self
 
 from musify.shared.core.enum import Field, Fields, TagField, TagFields
@@ -14,10 +19,9 @@ class TrackFieldMixin(TagField):
         or from :py:meth:`to_tag` and :py:meth:`to_tags` calls
 
         Applies the following mapping:
-
-        * ``TRACK`` returns both ``TRACK_NUMBER`` and ``TRACK_TOTAL`` enums
-        * ``DISC`` returns both ``DISC_NUMBER`` and ``DISC_TOTAL`` enums
-        * all other enums return the enum in a unit list
+            * ``TRACK`` returns both ``TRACK_NUMBER`` and ``TRACK_TOTAL`` enums
+            * ``DISC`` returns both ``DISC_NUMBER`` and ``DISC_TOTAL`` enums
+            * all other enums return the enum in a unit list
         """
         if enum == cls.TRACK:
             return [cls.TRACK_NUMBER, cls.TRACK_TOTAL]
@@ -55,6 +59,7 @@ class TrackField(TrackFieldMixin):
 
 
 class PlaylistField(Field):
+    """Represent all currently supported fields for objects of type :py:class:`Playlist`"""
     ALL = Fields.ALL.value
 
     # tags/core properties
@@ -71,6 +76,7 @@ class PlaylistField(Field):
 
 
 class FolderField(Field):
+    """Represent all currently supported fields for objects of type :py:class:`Folder`"""
     ALL = Fields.ALL.value
 
     # tags/core properties
@@ -85,6 +91,7 @@ class FolderField(Field):
 
 
 class AlbumField(Field):
+    """Represent all currently supported fields for objects of type :py:class:`Album`"""
     ALL = Fields.ALL.value
 
     # tags/core properties
@@ -105,6 +112,7 @@ class AlbumField(Field):
 
 
 class ArtistField(Field):
+    """Represent all currently supported fields for objects of type :py:class:`Artist`"""
     ALL = Fields.ALL.value
 
     # tags/core properties

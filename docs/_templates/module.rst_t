@@ -6,7 +6,7 @@
     {%- if name.endswith(".exception") -%}
         {%- set name = "exceptions"-%}
     {%- else -%}
-        {%- set name = name.replace("musify.", "").split(".") | last -%}
+        {%- set name = name.replace("musify.", "").replace("_", " ").split(".") | last -%}
     {%- endif -%}
 
     {%- if name | lower in module_caps -%}

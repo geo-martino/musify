@@ -1,3 +1,7 @@
+"""
+Exceptions relating to remote operations.
+"""
+
 from typing import Any
 
 from musify.shared.exception import MusifyError

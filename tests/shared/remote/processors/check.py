@@ -50,8 +50,8 @@ class RemoteItemCheckerTester(ABC):
         assert len({item.uri for item in pl}) == len(pl)  # all unique tracks
 
         collection = BasicCollection(name="test", items=pl.tracks.copy())
-        checker.playlist_name_urls = {collection.name: url}
-        checker.playlist_name_collection = {collection.name: collection}
+        checker._playlist_name_urls = {collection.name: url}
+        checker._playlist_name_collection = {collection.name: collection}
 
         api_mock.reset_mock()
         return pl, collection
@@ -87,8 +87,8 @@ class RemoteItemCheckerTester(ABC):
 
         # does nothing when no URIs to add
         checker._create_playlist(collection=collection)
-        assert not checker.playlist_name_urls
-        assert not checker.playlist_name_collection
+        assert not checker._playlist_name_urls
+        assert not checker._playlist_name_collection
         assert not api_mock.request_history
 
         for item in collection:
@@ -96,8 +96,8 @@ class RemoteItemCheckerTester(ABC):
 
         checker._create_playlist(collection=collection)
         assert checker.api.handler.token is not None
-        assert collection.name in checker.playlist_name_urls
-        assert checker.playlist_name_collection[collection.name] == collection
+        assert collection.name in checker._playlist_name_urls
+        assert checker._playlist_name_collection[collection.name] == collection
         assert len(api_mock.request_history) >= 2
 
     @staticmethod
@@ -112,33 +112,33 @@ class RemoteItemCheckerTester(ABC):
         checker.api.handler.token = None
         checker.api.handler.token_file_path = token_file_path
 
-        checker.playlist_name_urls = {collection.name: url for collection, url in zip(collections, playlist_urls)}
-        checker.playlist_name_collection = {collection.name: collection for collection in collections}
+        checker._playlist_name_urls = {collection.name: url for collection, url in zip(collections, playlist_urls)}
+        checker._playlist_name_collection = {collection.name: collection for collection in collections}
 
         checker._delete_playlists()
         assert checker.api.handler.token is not None
-        assert not checker.playlist_name_urls
-        assert not checker.playlist_name_collection
+        assert not checker._playlist_name_urls
+        assert not checker._playlist_name_collection
         assert len(api_mock.get_requests(method="DELETE")) == min(len(playlist_urls), len(collections))
 
     @staticmethod
     def test_finalise(checker: RemoteItemChecker):
-        checker.skip = False
-        checker.remaining.extend(random_tracks(3))
-        checker.switched.extend(random_tracks(2))
+        checker._skip = False
+        checker._remaining.extend(random_tracks(3))
+        checker._switched.extend(random_tracks(2))
 
-        checker.final_switched = switched = random_tracks(1)
-        checker.final_unavailable = unavailable = random_tracks(2)
-        checker.final_skipped = skipped = random_tracks(3)
+        checker._final_switched = switched = random_tracks(1)
+        checker._final_unavailable = unavailable = random_tracks(2)
+        checker._final_skipped = skipped = random_tracks(3)
 
         result = checker._finalise()
 
-        assert checker.skip
-        assert not checker.remaining
-        assert not checker.switched
-        assert not checker.final_switched
-        assert not checker.final_unavailable
-        assert not checker.final_skipped
+        assert checker._skip
+        assert not checker._remaining
+        assert not checker._switched
+        assert not checker._final_switched
+        assert not checker._final_unavailable
+        assert not checker._final_skipped
 
         assert result.switched == switched
         assert result.unavailable == unavailable
@@ -172,8 +172,8 @@ class RemoteItemCheckerTester(ABC):
         pl_pages = api_mock.calculate_pages(limit=20, total=len(pl))
         assert len(api_mock.get_requests(url=re.compile(pl.url + ".*"), method="GET")) == pl_pages + 1
 
-        assert not checker.skip
-        assert not checker.quit
+        assert not checker._skip
+        assert not checker._quit
 
     def test_pause_2(
             self,
@@ -197,8 +197,8 @@ class RemoteItemCheckerTester(ABC):
 
         assert not api_mock.request_history
 
-        assert checker.skip
-        assert not checker.quit
+        assert checker._skip
+        assert not checker._quit
 
     def test_pause_3(
             self,
@@ -221,12 +221,13 @@ class RemoteItemCheckerTester(ABC):
         assert "Showing tracks for playlist" not in stdout
         assert not api_mock.request_history
 
-        assert not checker.skip
-        assert checker.quit
+        assert not checker._skip
+        assert checker._quit
 
     ###########################################################################
     ## ``match_to_input`` step
     ###########################################################################
+    # noinspection PyProtectedMember
     @pytest.fixture
     def remaining(self, checker: RemoteItemChecker) -> list[LocalTrack]:
         """
@@ -238,8 +239,8 @@ class RemoteItemCheckerTester(ABC):
             track.uri = None
             assert track.has_uri is None
 
-        checker.remaining.clear()
-        checker.remaining.extend(tracks)
+        checker._remaining.clear()
+        checker._remaining.extend(tracks)
         return tracks.copy()
 
     def test_match_to_input_unavailable_all(
@@ -263,10 +264,10 @@ class RemoteItemCheckerTester(ABC):
         stdout = get_stdout(capfd)
         assert stdout.count("Enter one of the following") == 3
         # assert stdout.count("Input not recognised") == 1  # TODO: capfd is not capturing this string, why?
-        assert not checker.skip
-        assert not checker.quit
-        assert not checker.remaining
-        assert not checker.switched
+        assert not checker._skip
+        assert not checker._quit
+        assert not checker._remaining
+        assert not checker._switched
 
         # marked as unavailable
         assert remaining[0].path not in stdout
@@ -311,10 +312,10 @@ class RemoteItemCheckerTester(ABC):
 
         stdout = get_stdout(capfd)
         assert stdout.count("Enter one of the following") == 1
-        assert not checker.skip
-        assert not checker.quit
-        assert not checker.remaining
-        assert checker.switched == remaining[:len(uri_list)]
+        assert not checker._skip
+        assert not checker._quit
+        assert not checker._remaining
+        assert checker._switched == remaining[:len(uri_list)]
 
         # results of each command on the remaining items
         assert stdout.count(remaining[0].path) == 3
@@ -342,10 +343,10 @@ class RemoteItemCheckerTester(ABC):
 
         stdout = get_stdout(capfd)
         assert stdout.count("Enter one of the following") == 1
-        assert not checker.skip
-        assert not checker.quit
-        assert checker.remaining == remaining[3:]  # returned early before checking all remaining
-        assert not checker.switched
+        assert not checker._skip
+        assert not checker._quit
+        assert checker._remaining == remaining[3:]  # returned early before checking all remaining
+        assert not checker._switched
 
         for item in remaining[:3]:  # marked as unavailable
             assert item.uri is None
@@ -367,10 +368,10 @@ class RemoteItemCheckerTester(ABC):
 
         stdout = get_stdout(capfd)
         assert stdout.count("Enter one of the following") == 1
-        assert checker.skip
-        assert not checker.quit
-        assert not checker.remaining
-        assert not checker.switched
+        assert checker._skip
+        assert not checker._quit
+        assert not checker._remaining
+        assert not checker._switched
 
         for item in remaining:  # skipped
             assert item.uri is None
@@ -392,10 +393,10 @@ class RemoteItemCheckerTester(ABC):
 
         stdout = get_stdout(capfd)
         assert stdout.count("Enter one of the following") == 1
-        assert not checker.skip
-        assert checker.quit
-        assert not checker.remaining
-        assert not checker.switched
+        assert not checker._skip
+        assert checker._quit
+        assert not checker._remaining
+        assert not checker._switched
 
         for item in remaining:  # skipped
             assert item.uri is None
@@ -414,8 +415,8 @@ class RemoteItemCheckerTester(ABC):
 
         # test collection == remote playlist; nothing happens
         checker._match_to_remote(collection.name)
-        assert not checker.switched
-        assert not checker.remaining
+        assert not checker._switched
+        assert not checker._remaining
 
         pl_pages = api_mock.calculate_pages_from_response(pl.response)
         assert len(api_mock.get_requests(url=re.compile(pl.url + ".*"), method="GET")) == pl_pages
@@ -431,8 +432,8 @@ class RemoteItemCheckerTester(ABC):
         collection.extend(extra_tracks)
 
         checker._match_to_remote(collection.name)
-        assert not checker.switched
-        assert checker.remaining == extra_tracks
+        assert not checker._switched
+        assert checker._remaining == extra_tracks
 
     @staticmethod
     def test_match_to_remote_added(
@@ -446,8 +447,8 @@ class RemoteItemCheckerTester(ABC):
             collection.remove(item)
 
         checker._match_to_remote(collection.name)
-        assert not checker.switched
-        assert not checker.remaining
+        assert not checker._switched
+        assert not checker._remaining
 
     @staticmethod
     def test_match_to_remote_switched(
@@ -462,8 +463,8 @@ class RemoteItemCheckerTester(ABC):
             collection[i].uri = random_uri(kind=RemoteObjectType.TRACK)
 
         checker._match_to_remote(collection.name)
-        assert checker.switched == collection[:5]
-        assert not checker.remaining
+        assert checker._switched == collection[:5]
+        assert not checker._remaining
 
     @staticmethod
     def test_match_to_remote_complex(
@@ -487,8 +488,8 @@ class RemoteItemCheckerTester(ABC):
             collection.remove(item)
 
         checker._match_to_remote(collection.name)
-        assert checker.switched == collection[:5]
-        assert checker.remaining == 2 * extra_tracks
+        assert checker._switched == collection[:5]
+        assert checker._remaining == 2 * extra_tracks
 
     ###########################################################################
     ## ``check_uri`` meta-step
@@ -506,7 +507,7 @@ class RemoteItemCheckerTester(ABC):
 
         # extend collection i.e. simulate tracks removed from playlist
         collection.extend(remaining)
-        checker.remaining.clear()
+        checker._remaining.clear()
 
         # switch URIs for some collection items i.e. simulate tracks on remote playlist have been switched
         for i, item in enumerate(collection[:5]):
@@ -516,17 +517,17 @@ class RemoteItemCheckerTester(ABC):
 
         uri_list = random_uris(kind=RemoteObjectType.TRACK, start=8, stop=8)
         self.setup_input([*uri_list, "r", "u", "u", "u", "n", "n", "n", "n", "s"], mocker=mocker)  # end on skip
-        checker.skip = False
-        checker.playlist_name_collection["do not run"] = collection
+        checker._skip = False
+        checker._playlist_name_collection["do not run"] = collection
 
         checker._check_uri()
         mocker.stopall()
         capfd.close()
 
-        assert not checker.quit
-        assert not checker.skip  # skip triggered by input, but should still hold initial value
-        assert not checker.switched
-        assert not checker.remaining
+        assert not checker._quit
+        assert not checker._skip  # skip triggered by input, but should still hold initial value
+        assert not checker._switched
+        assert not checker._remaining
 
         stdout = get_stdout(capfd)
         assert "do not run" not in stdout  # skip triggered, 2nd collection should not be processed
@@ -542,9 +543,9 @@ class RemoteItemCheckerTester(ABC):
         pl_pages = api_mock.calculate_pages_from_response(pl.response)
         assert len(api_mock.get_requests(url=re.compile(pl.url + ".*"), method="GET")) == 2 * pl_pages
 
-        assert checker.final_switched == collection[:5] + remaining[:len(uri_list)]
-        assert checker.final_unavailable == remaining[len(uri_list):len(uri_list)+3]
-        assert checker.final_skipped == remaining[len(uri_list) + 3:]
+        assert checker._final_switched == collection[:5] + remaining[:len(uri_list)]
+        assert checker._final_unavailable == remaining[len(uri_list):len(uri_list) + 3]
+        assert checker._final_skipped == remaining[len(uri_list) + 3:]
 
     ###########################################################################
     ## Main ``check`` function
@@ -559,8 +560,8 @@ class RemoteItemCheckerTester(ABC):
     ):
         def add_collection(collection: BasicCollection):
             """Just simply add the collection and associated URL to the ItemChecker without calling API"""
-            checker.playlist_name_urls[collection.name] = playlist_name_urls[collection.name]
-            checker.playlist_name_collection[collection.name] = collection
+            checker._playlist_name_urls[collection.name] = playlist_name_urls[collection.name]
+            checker._playlist_name_collection[collection.name] = collection
 
         playlist_name_urls = {collection.name: url for collection, url in zip(collections, playlist_urls)}
         mocker.patch.object(checker, "_create_playlist", new=add_collection)
@@ -577,11 +578,11 @@ class RemoteItemCheckerTester(ABC):
         mocker.stopall()
 
         # resets after each run
-        assert not checker.remaining
-        assert not checker.switched
-        assert not checker.final_switched
-        assert not checker.final_unavailable
-        assert not checker.final_skipped
+        assert not checker._remaining
+        assert not checker._switched
+        assert not checker._final_switched
+        assert not checker._final_unavailable
+        assert not checker._final_skipped
 
         assert not result.switched
         assert len(result.unavailable) == sum(len(collection) for collection in batch)

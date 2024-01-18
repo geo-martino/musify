@@ -1,3 +1,9 @@
+"""
+Core abstract classes for the :py:mod:`Remote` module.
+
+These define the foundations of any remote object or item.
+"""
+
 from abc import ABCMeta, abstractmethod
 from typing import Any, Self
 
@@ -58,7 +64,10 @@ class RemoteObject(AttributePrinter, NameableTaggableMixin, Remote, metaclass=AB
     def __init__(self, response: dict[str, Any], api: RemoteAPI | None = None, skip_checks: bool = False):
         super().__init__()
         self._response = response
+
+        #: The :py:class:`RemoteAPI` to call when reloading
         self.api = api
+
         self._check_type()
         self.refresh(skip_checks=skip_checks)
 

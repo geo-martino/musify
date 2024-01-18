@@ -1,3 +1,7 @@
+"""
+Processors that filter down objects and data types based on some given configuration.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -18,15 +22,12 @@ from musify.shared.logger import MusifyLogger
 
 @dataclass(frozen=True)
 class MatchResult[T: Any](Result):
-    """
-    Results from :py:class:`FilterMatcher` separated by individual filter results.
-
-    :ivar included: Objects that matched include settings.
-    :ivar excluded: Objects that matched exclude settings.
-    :ivar compared: Objects that matched :py:class:`Comparer` settings
-    """
+    """Results from :py:class:`FilterMatcher` separated by individual filter results."""
+    #: Objects that matched include settings.
     included: Collection[T] = field(default=tuple())
+    #: Objects that matched exclude settings.
     excluded: Collection[T] = field(default=tuple())
+    #: Objects that matched :py:class:`Comparer` settings
     compared: Collection[T] = field(default=tuple())
 
     @property
@@ -150,10 +151,14 @@ class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](MusicBeePr
     ):
         super().__init__(comparers, include, exclude)
         # noinspection PyTypeChecker
+        #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
 
+        #: The comparers to use when processing for this filter
         self.comparers = comparers
+        #: The filter that, when processed, returns items to include
         self.include = include
+        #: The filter that, when processed, returns items to exclude
         self.exclude = exclude
 
     def __call__(self, values: Collection[T], reference: T | None = None, *_, **__) -> list[T]:

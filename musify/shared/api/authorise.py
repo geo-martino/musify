@@ -1,3 +1,7 @@
+"""
+Handle API authorisation for requesting access tokens to an API.
+"""
+
 import json
 import logging
 import os
@@ -138,6 +142,7 @@ class APIAuthoriser:
         header_extra: Mapping[str, str] | None = None,
     ):
         # noinspection PyTypeChecker
+        #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
         self.name = name
 
@@ -182,7 +187,7 @@ class APIAuthoriser:
 
     def authorise(self, force_load: bool = False, force_new: bool = False) -> dict[str, str]:
         """
-        Main method for authorisation, tests/refreshes/reauthorises as needed
+        Main method for authorisation which tests/refreshes/reauthorises as needed.
 
         :param force_load: Reloads the token even if it's already been loaded into the object.
             Ignored when force_new is True.

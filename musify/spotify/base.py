@@ -1,3 +1,9 @@
+"""
+Core abstract classes for the :py:mod:`Spotify` module.
+
+These define the foundations of any Spotify object or item.
+"""
+
 from abc import ABCMeta
 from typing import Any
 
@@ -9,6 +15,7 @@ from musify.spotify.api import SpotifyAPI
 
 
 class SpotifyObjectMixin(RemoteObject, SpotifyRemote, metaclass=ABCMeta):
+    """Mixin for :py:class:`RemoteObject` and :py:class:`SpotifyRemote`"""
     pass
 
 

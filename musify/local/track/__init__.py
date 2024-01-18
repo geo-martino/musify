@@ -1,3 +1,9 @@
+"""
+Operations relating to reading and writing tags/metadata/properties to various types of audio files.
+
+Specific audio file types should implement :py:class:`LocalTrack`.
+"""
+
 from .base.track import LocalTrack
 from .base.writer import SyncResultTrack
 from .flac import FLAC

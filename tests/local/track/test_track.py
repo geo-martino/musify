@@ -235,7 +235,7 @@ class TestLocalTrack(ItemTester):
             assert value == track_deepcopy[key]
 
     def test_set_and_find_file_paths(self, track: LocalTrack, tmp_path: Path):
-        paths = track.__class__.get_filepaths(tmp_path)
+        paths = track.__class__.get_filepaths(str(tmp_path))
         assert paths == {track.path}
         assert len(track.__class__.get_filepaths(path_track_resources)) == 1
 

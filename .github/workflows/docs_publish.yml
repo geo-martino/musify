@@ -1,0 +1,32 @@
+name: 📃 Publish documentation
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - musify/**
+      - docs/**
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: 🏗️ Build
+    uses: ./.github/workflows/docs_build.yml
+
+  deploy:
+    name: 🚀 Deploy pages
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: 🚀 Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

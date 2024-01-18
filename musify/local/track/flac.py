@@ -1,3 +1,7 @@
+"""
+The FLAC implementation of a :py:class:`LocalTrack`.
+"""
+
 from io import BytesIO
 from typing import Any
 
@@ -17,6 +21,7 @@ class FLAC(LocalTrack[mutagen.flac.FLAC]):
     valid_extensions = frozenset({".flac"})
 
     # noinspection SpellCheckingInspection
+    #: Map of human-friendly tag name to ID3 tag ids for a given file type
     tag_map = TagMap(
         title=["title"],
         artist=["artist"],

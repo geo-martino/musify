@@ -1,3 +1,7 @@
+"""
+Processor that sorts the given collection of items based on given configuration.
+"""
+
 from collections.abc import Callable, Mapping, MutableMapping, Sequence, MutableSequence, Iterable
 from copy import copy
 from datetime import datetime
@@ -31,12 +35,10 @@ class ItemSorter(MusicBeeProcessor):
     """
     Sort items in-place based on given conditions.
 
-    :ivar _custom_sort: Settings for custom sort codes.
-
     :param fields:
         * When None and ShuffleMode is RANDOM, shuffle the items. Otherwise, do nothing.
         * List of tags/properties to sort by.
-        * Map of {``tag/property``: ``reversed``}. If reversed is true, sort the ``tag/property`` in reverse.
+        * Map of ``{<tag/property>: <reversed>}``. If reversed is true, sort the ``tag/property`` in reverse.
     :param shuffle_mode: The mode to use for shuffling.
     :param shuffle_by: The field to shuffle by when shuffling.
     :param shuffle_weight: The weights (between 0 and 1) to apply to shuffling modes that can use it.
@@ -45,7 +47,7 @@ class ItemSorter(MusicBeeProcessor):
 
     __slots__ = ("sort_fields", "shuffle_mode", "shuffle_by", "shuffle_weight")
 
-    # define custom sort codes
+    #: Settings for custom sort codes.
     _custom_sort: dict[int, Mapping[Field, bool]] = {
         6: {
             Fields.ALBUM: False,
@@ -103,7 +105,7 @@ class ItemSorter(MusicBeeProcessor):
         Group items by the values of a given field.
 
         :param items: List of items to sort.
-        :param field: Tag or property to group by. None returns map of {``None``: ``items``}.
+        :param field: Tag or property to group by. None returns map of ``{None: <items>}``.
         :return: Map of grouped items.
         """
         if field is None:  # group by None
@@ -207,7 +209,8 @@ class ItemSorter(MusicBeeProcessor):
         Sort items by the given fields recursively in the order given.
 
         :param items_grouped: Map of items grouped by the last sort value.
-        :param fields: Map of ``{tag/property: reversed}``. If reversed is True, sort the ``tag/property`` in reverse.
+        :param fields: Map of ``{<tag/property>: <reversed>}``.
+            If reversed is True, sort the ``tag/property`` in reverse.
         :return: Map of grouped and sorted items.
         """
         field, reverse = next(iter(fields.items()), (None, None))

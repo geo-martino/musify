@@ -1,3 +1,7 @@
+"""
+The M4A implementation of a :py:class:`LocalTrack`.
+"""
+
 from collections.abc import Iterable
 from io import BytesIO
 from typing import Any
@@ -17,6 +21,7 @@ class M4A(LocalTrack[mutagen.mp4.MP4]):
     valid_extensions = frozenset({".m4a"})
 
     # noinspection SpellCheckingInspection
+    #: Map of human-friendly tag name to ID3 tag ids for a given file type
     tag_map = TagMap(
         title=["©nam"],
         artist=["©ART"],

@@ -1,3 +1,7 @@
+"""
+Exceptions relating to local operations.
+"""
+
 from musify.shared.exception import MusifyError
 
 
@@ -98,15 +102,15 @@ class ImageLoadError(FileError):
 ## Library errors
 ###########################################################################
 class LocalLibraryError(LocalError):
-    """Exception raised for errors related to MusicBee logic."""
+    """Exception raised for errors related to :py:class:`LocalLibrary` logic."""
 
 
 class MusicBeeError(LocalLibraryError):
-    """Exception raised for errors related to MusicBee logic."""
+    """Exception raised for errors related to :py:class:`MusicBee` logic."""
 
 
 class MusicBeeIDError(MusicBeeError):
-    """Exception raised for errors related to MusicBee a persistent ID."""
+    """Exception raised for errors related to MusicBee IDs."""
 
 
 class XMLReaderError(MusicBeeError):
