@@ -1,5 +1,5 @@
 """
-Convert and validate remote ID types according to specific remote implementations.
+Convert and validate remote ID and item types according to specific remote implementations.
 """
 
 from abc import ABCMeta, abstractmethod

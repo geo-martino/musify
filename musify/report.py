@@ -1,3 +1,7 @@
+"""
+Meta-functions for providing reports to the user based on comparisons between objects implemented in this package.
+"""
+
 import logging
 from collections.abc import Iterable
 

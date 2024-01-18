@@ -1,3 +1,7 @@
+"""
+Base functionality to be shared by all classes that implement :py:class:`RemoteAPI` functionality for Spotify.
+"""
+
 from abc import ABCMeta
 from typing import Any
 from urllib.parse import parse_qs, urlparse, urlencode, quote, urlunparse
@@ -7,7 +11,9 @@ from musify.spotify.processors.wrangle import SpotifyDataWrangler
 
 
 class SpotifyAPIBase(RemoteAPI, SpotifyDataWrangler, metaclass=ABCMeta):
+    """Base functionality required for all endpoint functions for the Spotify API"""
 
+    #: The key to reference when extracting items from a collection
     items_key = "items"
 
     @staticmethod

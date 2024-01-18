@@ -389,8 +389,8 @@ python -m pip install musify
 ## Currently Supported
 
 - **Music Streaming Services**: `Spotify`
-- **Audio filetypes**: `.flac` `.wma` `.mp3` `.m4a`
-- **Local playlist filetypes**: `.xautopf` `.m3u`
+- **Audio filetypes**: `.flac` `.m4a` `.wma` `.mp3`
+- **Local playlist filetypes**: `.m3u` `.xautopf`
 - **Local Libraries**: `MusicBee`
 
 <a id="aims"></a>

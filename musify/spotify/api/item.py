@@ -1,3 +1,7 @@
+"""
+Implements endpoints for getting items from the Spotify API.
+"""
+
 import re
 from abc import ABCMeta
 from collections.abc import Collection, Mapping, MutableMapping
@@ -420,7 +424,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             **__,
     ) -> list[dict[str, Any]]:
         """
-        ``GET: /{kind}s`` + GET: /audio-features`` and/or ``GET: /audio-analysis``
+        ``GET: /{kind}s`` + ``GET: /audio-features`` and/or ``GET: /audio-analysis``
 
         Get track(s) info and any audio features/analysis.
         Mostly just a wrapper for ``get_items`` and ``get_tracks_extra`` functions.

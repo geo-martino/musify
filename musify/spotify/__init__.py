@@ -1,3 +1,7 @@
+"""
+Implements the :py:mod:`Remote` module for Spotify.
+"""
+
 from ._base import SpotifyRemote
 
 # noinspection PyTypeChecker

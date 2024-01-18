@@ -1,3 +1,7 @@
+"""
+Implements all collection types for a local library.
+"""
+
 from __future__ import annotations
 
 import logging

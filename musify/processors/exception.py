@@ -1,3 +1,7 @@
+"""
+Exceptions relating to processor operations.
+"""
+
 from musify.shared.exception import MusifyError
 
 
