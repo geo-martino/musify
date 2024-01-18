@@ -88,7 +88,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
 
         if not isinstance(playlist_filter, Filter):
             playlist_filter = FilterDefinedList(playlist_filter)
-        #: :py:class:`Filter` to apply when loading playlists.
+        #: :py:class:`Filter` to filter out the playlists loaded by name.
         self.playlist_filter: Filter[str] = playlist_filter
 
         self._playlists: dict[str, RemotePlaylist[T]] = {}

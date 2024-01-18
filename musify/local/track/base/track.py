@@ -1,3 +1,7 @@
+"""
+Combines reader and writer classes for metadata/tags/properties operations on audio files.
+"""
+
 import os
 from abc import ABCMeta
 from copy import deepcopy
@@ -20,12 +24,7 @@ from musify.shared.types import UnitIterable
 
 class LocalTrack[T: mutagen.FileType](TagWriter, metaclass=ABCMeta):
     """
-    Generic track object for extracting, modifying, and saving tags for a given file.
-
-    :ivar uri_tag: The tag field to use as the URI tag in the file's metadata.
-    :ivar num_sep: Some number values come as a combined string i.e. track number/track total
-        Define the separator to use when representing both values as a combined string.
-    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
+    Generic track object for extracting, modifying, and saving metadata/tags/properties for a given file.
 
     :param file: The path or Mutagen object of the file to load.
     :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs.

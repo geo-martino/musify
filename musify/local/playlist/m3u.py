@@ -1,3 +1,7 @@
+"""
+The M3U implementation of a :py:class:`LocalPlaylist`.
+"""
+
 import os
 from collections.abc import Collection
 from dataclasses import dataclass
@@ -13,21 +17,18 @@ from musify.shared.remote.processors.wrangle import RemoteDataWrangler
 
 @dataclass(frozen=True)
 class SyncResultM3U(Result):
-    """
-    Stores the results of a sync with a local M3U playlist
-
-    :ivar start: The total number of tracks in the playlist before the sync.
-    :ivar added: The number of tracks added to the playlist.
-    :ivar removed: The number of tracks removed from the playlist.
-    :ivar unchanged: The number of tracks that were in the playlist before and after the sync.
-    :ivar difference: The difference between the total number tracks in the playlist from before and after the sync.
-    :ivar final: The total number of tracks in the playlist after the sync.
-    """
+    """Stores the results of a sync with a local M3U playlist"""
+    #: The total number of tracks in the playlist before the sync.
     start: int
+    #: The number of tracks added to the playlist.
     added: int
+    #: The number of tracks removed from the playlist.
     removed: int
+    #: The number of tracks that were in the playlist before and after the sync.
     unchanged: int
+    #: The difference between the total number tracks in the playlist from before and after the sync.
     difference: int
+    #: The total number of tracks in the playlist after the sync.
     final: int
 
 

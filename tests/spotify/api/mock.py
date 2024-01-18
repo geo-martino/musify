@@ -350,7 +350,7 @@ class SpotifyMock(RemoteMock):
     ) -> None:
         """
         Setup requests mock for getting responses from the given ``id_map``.
-        Sets up mocks for /{``kind``}/{id} endpoints for multi-calls and,
+        Sets up mocks for /{``kind``}/{ID} endpoints for multi-calls and,
         when ``batchable`` is True, /{``kind``}?... for batchable-calls.
         """
         def response_getter(req: Request, _: Context) -> dict[str, Any]:

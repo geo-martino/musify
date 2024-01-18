@@ -31,14 +31,11 @@ class Nameable(ABC):
 
 
 class Taggable(ABC):
-    """
-    Generic base class for any taggable object.
-
-    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
-    """
+    """Generic base class for any taggable object."""
 
     __slots__ = ("_clean_tags",)
 
+    #: When representing a list of tags as a string, use this value as the separator.
     tag_sep: str = "; "
 
     @property
@@ -96,11 +93,7 @@ class AttributePrinter(PrettyPrinter, metaclass=ABCMeta):
 
 
 class Item(AttributePrinter, NameableTaggableMixin, Hashable, metaclass=ABCMeta):
-    """
-    Generic class for storing an item.
-
-    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
-    """
+    """Generic class for storing an item."""
 
     @property
     @abstractmethod

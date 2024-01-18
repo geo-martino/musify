@@ -1,3 +1,10 @@
+"""
+Utilities for operations on :py:class:`LocalTrack` types.
+
+Generally, this will contain global variables representing all supported audio file types
+and a utility function for loading the appropriate :py:class:`LocalTrack` type for a path based on its extension.
+"""
+
 from os.path import splitext
 
 from musify.local.exception import InvalidFileType

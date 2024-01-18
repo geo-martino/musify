@@ -22,9 +22,9 @@ class TestItemMatcher(PrettyPrinterTester):
         ItemMatcher.clean_tags_remove_all = {"the", "a", "&", "and"}
         ItemMatcher.clean_tags_split_all = set()
         ItemMatcher.clean_tags_config = (
-            CleanTagConfig(tag=Tag.TITLE, _remove={"part"}, _split={"featuring", "feat.", "ft.", "/"}),
-            CleanTagConfig(tag=Tag.ARTIST, _split={"featuring", "feat.", "ft.", "vs"}),
-            CleanTagConfig(tag=Tag.ALBUM, _remove={"ep"}, _preprocess=lambda x: x.split('-')[0])
+            CleanTagConfig(tag=Tag.TITLE, remove={"part"}, split={"featuring", "feat.", "ft.", "/"}),
+            CleanTagConfig(tag=Tag.ARTIST, split={"featuring", "feat.", "ft.", "vs"}),
+            CleanTagConfig(tag=Tag.ALBUM, remove={"ep"}, preprocess=lambda x: x.split('-')[0])
         )
 
         ItemMatcher.reduce_name_score_on = {"live", "demo", "acoustic"}

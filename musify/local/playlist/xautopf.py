@@ -1,3 +1,7 @@
+"""
+The XAutoPF implementation of a :py:class:`LocalPlaylist`.
+"""
+
 from collections.abc import Collection
 from copy import deepcopy
 from dataclasses import dataclass
@@ -19,39 +23,35 @@ from musify.shared.core.misc import Result
 
 @dataclass(frozen=True)
 class SyncResultXAutoPF(Result):
-    """
-    Stores the results of a sync with a local XAutoPF playlist
-
-    :ivar start: The total number of tracks in the playlist before the sync.
-    :ivar start_description: The description of the playlist before sync.
-    :ivar start_included: The number of tracks that matched the include settings before the sync.
-    :ivar start_excluded: The number of tracks that matched the exclude settings before the sync.
-    :ivar start_compared: The number of tracks that matched all the :py:class:`Comparer` settings before the sync.
-    :ivar start_limiter: Was a limiter present on the playlist before the sync.
-    :ivar start_sorter: Was a sorter present on the playlist before the sync.
-
-    :ivar final: The total number of tracks in the playlist after the sync.
-    :ivar final_description: The description of the playlist after sync.
-    :ivar final_included: The number of tracks that matched the include settings after the sync.
-    :ivar final_excluded: The number of tracks that matched the exclude settings after the sync.
-    :ivar final_compared: The number of tracks that matched all the :py:class:`Comparer` settings after the sync.
-    :ivar final_limiter: Was a limiter present on the playlist after the sync.
-    :ivar final_sorter: Was a sorter present on the playlist after the sync.
-    """
+    """Stores the results of a sync with a local XAutoPF playlist."""
+    #: The total number of tracks in the playlist before the sync.
     start: int
+    #: The description of the playlist before sync.
     start_description: str
+    #: The number of tracks that matched the include settings before the sync.
     start_included: int
+    #: The number of tracks that matched the exclude settings before the sync.
     start_excluded: int
+    #: The number of tracks that matched all the :py:class:`Comparer` settings before the sync.
     start_compared: int
+    #: Was a limiter present on the playlist before the sync.
     start_limiter: bool
+    #: Was a sorter present on the playlist before the sync.
     start_sorter: bool
 
+    #: The total number of tracks in the playlist after the sync.
     final: int
+    #: The description of the playlist after sync.
     final_description: str
+    #: The number of tracks that matched the include settings after the sync.
     final_included: int
+    #: The number of tracks that matched the exclude settings after the sync.
     final_excluded: int
+    #: The number of tracks that matched all the :py:class:`Comparer` settings after the sync.
     final_compared: int
+    #: Was a limiter present on the playlist after the sync.
     final_limiter: bool
+    #: Was a sorter present on the playlist after the sync.
     final_sorter: bool
 
 
@@ -97,6 +97,7 @@ class XAutoPF(LocalPlaylist[FilterMatcher[
             )
 
         with open(path, "r", encoding="utf-8") as file:
+            #: A map representation of the loaded XML playlist data
             self.xml: dict[str, Any] = xmltodict.parse(file.read())
 
         self._description = self.xml["SmartPlaylist"]["Source"]["Description"]

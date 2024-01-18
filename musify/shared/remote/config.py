@@ -12,7 +12,11 @@ from musify.shared.remote.object import RemoteTrack, RemoteAlbum, RemotePlaylist
 @dataclass
 class RemoteObjectClasses:
     """Stores the key object classes for a remote source"""
+    #: The playlist type for this remote source
     playlist: type[RemotePlaylist]
+    #: The track type for this remote source
     track: type[RemoteTrack]
+    #: The album type for this remote source
     album: type[RemoteAlbum]
+    #: The artist type for this remote source
     artist: type[RemoteArtist]

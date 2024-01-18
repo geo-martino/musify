@@ -56,12 +56,11 @@ class DynamicProcessor(Processor, metaclass=ABCMeta):
     The transformed method name is then appended to the class' ``__dict__``.
     The transformation is always applied before extending the class with any given
     alternative method names.
-
-    :ivar __processormethods__: The set of processor methods on this processor and any alternative names for them.
     """
 
     __slots__ = ("_processor_name",)
 
+    #: The set of processor methods on this processor and any alternative names for them.
     __processormethods__: frozenset[str] = frozenset()
 
     @property

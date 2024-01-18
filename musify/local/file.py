@@ -1,3 +1,7 @@
+"""
+Generic file operations. Base class for generic File and functions for reading/writing basic file types.
+"""
+
 from abc import ABCMeta, abstractmethod
 from collections.abc import Hashable, Collection, Iterable
 from datetime import datetime
@@ -47,12 +51,9 @@ def get_image_bytes(image: Image.Image) -> bytes:
 
 
 class File(Hashable, metaclass=ABCMeta):
-    """
-    Generic class for representing a file on a system.
+    """Generic class for representing a file on a system."""
 
-    :ivar valid_extensions: Extensions of files that can be loaded by this class.
-    """
-
+    #: Extensions of files that can be loaded by this class.
     valid_extensions: frozenset[str]
 
     @property
@@ -182,7 +183,7 @@ class PathStemMapper(PathMapper):
     @property
     def available_paths(self) -> dict[str, str]:
         """
-        A map of the available paths stored in this object. Simply {<lower-case path>: <correctly-cased path>}.
+        A map of the available paths stored in this object. Simply ``{<lower-case path>: <correctly-cased path>}``.
         When assigning new values to this property, the stored map will update itself
         with the new values rather than overwrite.
         """
@@ -195,7 +196,7 @@ class PathStemMapper(PathMapper):
     @property
     def stem_map(self) -> dict[str, str]:
         """
-        A map of {<stem to be replaced>: <its replacement>}.
+        A map of ``{<stem to be replaced>: <its replacement>}``.
         Assigning new values to this property updates itself
         plus the ``stem_unmap`` property with the reverse of this map.
         """
@@ -209,7 +210,7 @@ class PathStemMapper(PathMapper):
     @property
     def stem_unmap(self) -> dict[str, str]:
         """
-        A map of {<replacement stems>: <stem to be replaced>} i.e. just the opposite map of ``stem_map``.
+        A map of ``{<replacement stems>: <stem to be replaced>}`` i.e. just the opposite map of ``stem_map``.
         Assign new values to ``stem_map`` to update.
         """
         return self._stem_unmap

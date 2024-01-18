@@ -1,3 +1,7 @@
+"""
+Base implementation for the functionality of a local playlist.
+"""
+
 from abc import ABCMeta, abstractmethod
 from collections.abc import Collection
 from datetime import datetime
@@ -86,9 +90,13 @@ class LocalPlaylist[T: Filter[LocalTrack]](LocalCollection[LocalTrack], Playlist
 
         self._path: str = path
 
+        #: :py:class:`Filter` object to use for matching tracks.
         self.matcher = matcher
+        #: :py:class:`ItemLimiter` object to use for limiting the number of tracks matched.
         self.limiter = limiter
+        #: :py:class:`ItemSorter` object to use for sorting the final track list.
         self.sorter = sorter
+        #: Maps paths stored in the playlist file.
         self.path_mapper = path_mapper
 
         self._tracks: list[LocalTrack] = []

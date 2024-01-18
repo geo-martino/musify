@@ -31,15 +31,12 @@ ALLOW_KARAOKE_DEFAULT = RemoteItemSearcher.settings_items.allow_karaoke
 
 @dataclass(frozen=True)
 class ItemCheckResult(Result):
-    """
-    Stores the results of the checking proces
-
-    :ivar switched: Sequence of Items that had URIs switched during the check.
-    :ivar unavailable: Sequence of Items that were marked as unavailable.
-    :ivar skipped: Sequence of Items that were skipped from the check.
-    """
+    """Stores the results of the checking process."""
+    #: Sequence of Items that had URIs switched during the check.
     switched: Sequence[Item] = field(default=tuple())
+    #: Sequence of Items that were marked as unavailable.
     unavailable: Sequence[Item] = field(default=tuple())
+    #: Sequence of Items that were skipped from the check.
     skipped: Sequence[Item] = field(default=tuple())
 
 

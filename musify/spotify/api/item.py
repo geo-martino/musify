@@ -39,8 +39,9 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             **__,
     ) -> list[dict[str, Any]]:
         """
-        Get responses from a given ``url`` appending an ID to each request from a given ``id_list`` i.e. ``{URL}/{ID}``.
-        This function executes each URL request individually for each ID i.e. ``url``/``id``.
+        Get responses from a given ``url`` appending an ID to each request from a given ``id_list``
+        i.e. ``URL`` or ``ID``.
+        This function executes each URL request individually for each ID i.e. ``URL`` or ``ID``.
 
         :param url: The base API URL endpoint for the required requests.
         :param id_list: List of IDs to append to the given URL.
@@ -84,10 +85,11 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             **__,
     ) -> list[dict[str, Any]]:
         """
-        Get responses from a given ``url`` appending an ID to each request from a given ``id_list`` i.e. ``{URL}/{ID}``.
+        Get responses from a given ``url`` appending an ID to each request from a given ``id_list``
+        i.e. ``URL`` or ``ID``.
         This function executes each URL request in batches of IDs based on the given ``batch_size``.
         It passes this chunked list of IDs to the request handler as a set of params in the form:
-        ``{'ids': '<comma separated string of IDs>'}``
+        ``{<IDs>: '<comma separated string of IDs>'}``
 
         :param url: The base API URL endpoint for the required requests.
         :param id_list: List of IDs to append to the given URL.
@@ -462,7 +464,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             use_cache: bool = True,
     ) -> dict[str, list[dict[str, Any]]]:
         """
-        ``GET: /artists/{id}/albums`` - Get all albums associated with the given artist/s.
+        ``GET: /artists/{ID}/albums`` - Get all albums associated with the given artist/s.
 
         ``values`` may be:
             * A string representing a URL/URI/ID of type 'artist'.

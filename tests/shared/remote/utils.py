@@ -20,13 +20,13 @@ class RemoteMock(Mocker):
     @property
     @abstractmethod
     def item_type_map(self) -> dict[RemoteObjectType, list[dict[str, Any]]]:
-        """Map of :py:class:`RemoteObjectType` to the mocked items mapped as {``id``: <item>}"""
+        """Map of :py:class:`RemoteObjectType` to the mocked items mapped as ``{<ID>: <item>}``"""
         raise NotImplementedError
 
     @property
     @abstractmethod
     def item_type_map_user(self) -> dict[RemoteObjectType, list[dict[str, Any]]]:
-        """Map of :py:class:`RemoteObjectType` to the mocked user items mapped as {``id``: <item>}"""
+        """Map of :py:class:`RemoteObjectType` to the mocked user items mapped as ``{<ID>: <item>}``"""
         raise NotImplementedError
 
     @staticmethod

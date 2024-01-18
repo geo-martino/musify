@@ -1,3 +1,7 @@
+"""
+The WMA implementation of a :py:class:`LocalTrack`.
+"""
+
 import struct
 from collections.abc import Collection, Iterable
 from io import BytesIO
@@ -17,6 +21,7 @@ class WMA(LocalTrack[mutagen.asf.ASF]):
 
     valid_extensions = frozenset({".wma"})
 
+    #: Map of human-friendly tag name to ID3 tag ids for a given file type
     tag_map = TagMap(
         title=["Title"],
         artist=["Author"],

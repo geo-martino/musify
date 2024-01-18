@@ -1,3 +1,7 @@
+"""
+The core, basic library implementation which is just a simple set of folders.
+"""
+
 from collections.abc import Collection, Mapping, Iterable
 from glob import glob
 from os.path import splitext, join, exists, basename
@@ -76,7 +80,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
     @property
     def playlists(self) -> dict[str, LocalPlaylist]:
-        """The playlists in this library mapped as ``{name: playlist}``"""
+        """The playlists in this library mapped as ``{<name>: <playlist>}``"""
         return self._playlists
 
     @property
@@ -206,6 +210,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         self.logger.info(f"\33[1;95m ->\33[1;97m Setting up {self.name} library \33[0m")
         self.logger.print()
 
+        #: Passed to playlist objects when loading playlists to map paths stored in the playlist file.
         self.path_mapper = path_mapper
 
         self._library_folders: list[str] = []
@@ -214,6 +219,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
         if not isinstance(playlist_filter, Filter):
             playlist_filter = FilterDefinedList(playlist_filter)
+        #: :py:class:`Filter` to filter out the playlists loaded by name.
         self.playlist_filter: Filter[str] = playlist_filter
 
         self._playlist_folder: str | None = None
@@ -224,6 +230,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         self._tracks: list[LocalTrack] = []
         self._playlists: dict[str, LocalPlaylist] = {}
 
+        #: Stores the paths that caused errors when loading/enriching
         self.errors: list[str] = []
         self.logger.debug(f"Setup {self.name} library: DONE\n")
 
@@ -354,7 +361,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         """
         Restore track tags from a backup to loaded track objects. This does not save the updated tags.
 
-        :param backup: Backup data in the form ``{path: {JSON formatted track data}}``
+        :param backup: Backup data in the form ``{<path>: {<Map of JSON formatted track data>}}``
         :param tags: Set of tags to restore.
         :return: The number of tracks restored
         """

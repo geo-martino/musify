@@ -1,3 +1,7 @@
+"""
+Implements all functionality pertaining to reading metadata/tags/properties of a :py:class:`LocalTrack`.
+"""
+
 import datetime
 import re
 from abc import ABCMeta, abstractmethod
@@ -20,14 +24,9 @@ from musify.shared.utils import to_collection
 
 class TagReader(LocalItem, Track, metaclass=ABCMeta):
     """
-    Functionality for extracting tags from a loaded file
+    Functionality for reading tags/metadata/properties from a loaded audio file.
 
-    :ivar uri_tag: The tag field to use as the URI tag in the file's metadata.
-    :ivar num_sep: Some number values come as a combined string i.e. track number/track total
-        Define the separator to use when representing both values as a combined string.
-    :ivar tag_sep: When representing a list of tags as a string, use this value as the separator.
-
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs.
+    :param remote_wrangler: Optionally, provide a :py:class:`RemoteDataWrangler` object for processing URIs.
         This object will be used to check for and validate a URI tag on the file.
         The tag that is used for reading and writing is set by the ``uri_tag`` class attribute.
         If no ``remote_wrangler`` is given, no URI processing will occur.
@@ -63,7 +62,10 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
     __attributes_classes__ = (LocalItem, Track)
     __attributes_ignore__ = ("tag_map", "file")
 
+    #: The tag field to use as the URI tag in the file's metadata
     uri_tag: LocalTrackField = LocalTrackField.COMMENTS
+    #: The separator to use when representing separated tag values as a combined string.
+    #: Used when some number type tag values come as a combined string i.e. track number/track total
     num_sep: str = "/"
 
     @property
@@ -345,6 +347,7 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
 
     def __init__(self, remote_wrangler: RemoteDataWrangler = None):
         super().__init__()
+        #: A :py:class:`RemoteDataWrangler` object for processing URIs
         self.remote_wrangler = remote_wrangler
 
         self._title = None
@@ -375,7 +378,7 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
         self._play_count = None
 
     def load_metadata(self) -> None:
-        """Driver for extracting metadata from a loaded file"""
+        """Driver for extracting all supported metadata from a loaded file"""
 
         self.title = self._read_title()
         self.artist = self._read_artist()

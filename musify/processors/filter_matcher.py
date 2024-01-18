@@ -22,15 +22,12 @@ from musify.shared.logger import MusifyLogger
 
 @dataclass(frozen=True)
 class MatchResult[T: Any](Result):
-    """
-    Results from :py:class:`FilterMatcher` separated by individual filter results.
-
-    :ivar included: Objects that matched include settings.
-    :ivar excluded: Objects that matched exclude settings.
-    :ivar compared: Objects that matched :py:class:`Comparer` settings
-    """
+    """Results from :py:class:`FilterMatcher` separated by individual filter results."""
+    #: Objects that matched include settings.
     included: Collection[T] = field(default=tuple())
+    #: Objects that matched exclude settings.
     excluded: Collection[T] = field(default=tuple())
+    #: Objects that matched :py:class:`Comparer` settings
     compared: Collection[T] = field(default=tuple())
 
     @property
