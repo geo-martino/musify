@@ -2,6 +2,7 @@
 
 [![PyPI Version](https://img.shields.io/pypi/v/musify?logo=pypi&label=Latest%20Version)](https://pypi.org/project/musify)
 [![Python Version](https://img.shields.io/pypi/pyversions/musify.svg?logo=python&label=Supported%20Python%20Versions)](https://pypi.org/project/musify/)
+[![Documentation](https://img.shields.io/badge/Documentation-red.svg)](https://geo-martino.github.io/musify/)
 </br>
 [![PyPI Downloads](https://img.shields.io/pypi/dm/musify?label=Downloads)](https://pypi.org/project/musify/)
 [![Code Size](https://img.shields.io/github/languages/code-size/geo-martino/musify?label=Code%20Size)](https://github.com/geo-martino/musify)
@@ -389,8 +390,8 @@ python -m pip install musify
 ## Currently Supported
 
 - **Music Streaming Services**: `Spotify`
-- **Audio filetypes**: `.mp3` `.m4a` `.wma` `.flac`
-- **Local playlist filetypes**: `.m3u` `.xautopf`
+- **Audio filetypes**: `.wma` `.m4a` `.flac` `.mp3`
+- **Local playlist filetypes**: `.xautopf` `.m3u`
 - **Local Libraries**: `MusicBee`
 
 <a id="aims"></a>

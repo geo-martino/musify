@@ -15,9 +15,12 @@ requires-python = ">=3.12"
 classifiers = [
     "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: GNU Affero General Public License v3",
-    "Operating System :: OS Independent",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: POSIX :: Linux",
     "Development Status :: 2 - Pre-Alpha",
     "Natural Language :: English",
+    "Intended Audience :: Developers",
     "Intended Audience :: End Users/Desktop",
 ]
 dependencies = [
@@ -55,6 +58,7 @@ dev = [
 ]
 
 [project.urls]
+"Documentation" = "https://geo-martino.github.io/musify/"
 "Source code" = "https://github.com/geo-martino/musify"
 Issues = "https://github.com/geo-martino/musify/issues"
 
