@@ -26,9 +26,6 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - name: 🛒 Checkout
-        uses: actions/checkout@v4
-
       - name: 📦 Download package artifacts
         uses: actions/download-artifact@v3
         with:
