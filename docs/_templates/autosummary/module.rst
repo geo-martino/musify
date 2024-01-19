@@ -1,4 +1,4 @@
-{%- set is_root = basename == project -%}
+{%- set is_root = basename == project.lower() -%}
 {%- set module_footer = ["base", "exception"] -%}
 {%- set module_caps = ["api", "m3u", "xautopf", "flac", "mp3", "m4a", "wma"] -%}
 

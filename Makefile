@@ -7,10 +7,17 @@ SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     = docs
 BUILDDIR      = docs/_build
+PROJECTNAME   = musify
 
 # Put it first so that "make" without argument is like "make help".
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+rebuild-html: Makefile
+	$(SPHINXBUILD) -M clean "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	rm -f docs/"$(PROJECTNAME)"*.rst
+	sphinx-apidoc -o "$(SOURCEDIR)" ./"$(PROJECTNAME)" -d 4 --force --module-first --separate --no-toc -t "$(SOURCEDIR)"/_templates
+	$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 .PHONY: help Makefile
 

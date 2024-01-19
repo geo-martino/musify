@@ -70,7 +70,6 @@ instance/
 
 # Sphinx/other documentation
 docs/_build/
-docs/modules.rst
 docs/musify*.rst
 .grip/
 

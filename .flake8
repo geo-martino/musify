@@ -3,4 +3,5 @@ extend-exclude = .venv*
 extend-ignore = E266
 per-file-ignores =
     **/__init__.py:F401
+    docs/_howto/scripts/*:E402
 max-line-length = 120

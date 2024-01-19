@@ -40,9 +40,7 @@ jobs:
 
       - name: 🏗️ Sphinx build
         run: |
-          make clean
-          sphinx-apidoc -o ./docs ./musify -d 4 --force --module-first --separate --no-toc -t ./docs/_templates
-          make html
+          make rebuild-html
 
       - name: 📦 Upload build artifacts
         uses: actions/upload-pages-artifact@v3

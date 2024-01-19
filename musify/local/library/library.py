@@ -375,7 +375,8 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
                 continue
 
             for tag in tag_names:
-                track[tag] = track_map.get(tag)
+                if tag in track.__dict__:
+                    track[tag] = track_map.get(tag)
             count += 1
 
         return count

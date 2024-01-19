@@ -25,16 +25,18 @@ Supporting local and music streaming service (remote) libraries.
 ## Contents
 
 * [Quick Guides](#quick-guides)
-  * [Spotify](#quick-guides-spotify)
-  * [Local](#quick-guides-local)
-  * [Sync local and remote](#quick-guides-sync)
-* [Currently Supported](#supported)
+  * [Spotify](#spotify)
+  * [Local](#local)
+* [Currently Supported](#currently-supported)
+* [Release History](#release-history)
+* [Contributing](#contributing)
 * [Motivation & Aims](#aims)
 * [Author Notes](#notes)
 
 > [!NOTE]  
 > This readme provides a brief overview of the program. 
 > [Read the docs](https://geo-martino.github.io/musify/) for full reference documentation.
+
 
 ## Installation
 Install through pip using one of the following commands:
@@ -46,11 +48,13 @@ pip install musify
 python -m pip install musify
 ```
 
-<a id="quick-guides"></a>
 ## Quick Guides
 
+These quick guides will help you get set up and going with Musify in just a few minutes.
+For more detailed guides, check out the [documentation](https://geo-martino.github.io/musify/)
+
 > [!TIP]
-> Set up logger to ensure you can see all info reported by the later operations.
+> Set up logging to ensure you can see all info reported by the later operations.
 > Libraries log info about loaded objects to the custom `STAT` level.
 > ```python
 > import logging
@@ -58,7 +62,6 @@ python -m pip install musify
 > logging.basicConfig(format="%(message)s", level=STAT)
 > ```
 
-<a id="quick-guides-spotify"></a>
 ### Spotify
 
 > In this example, you will: 
@@ -166,7 +169,6 @@ python -m pip install musify
    library.log_sync(result)
    ```
 
-<a id="quick-guides-local"></a>
 ### Local
 
 > In this example, you will: 
@@ -215,7 +217,7 @@ python -m pip install musify
    playlist = library.playlists["<NAME OF YOUR PLAYLIST>"]  # case sensitive
    album = next(album for album in library.albums if album.name == "<ALBUM NAME>")
    artist = next(artist for artist in library.artists if artist.name == "<ARTIST NAME>")
-   folder = next(folder for folder in library.folders if folder.name == "<ALBUM NAME>")
+   folder = next(folder for folder in library.folders if folder.name == "<FOLDER NAME>")
    genre = next(genre for genre in library.genres if genre.name == "<GENRE NAME>")
    
    # pretty print information about the loaded objects
@@ -232,7 +234,7 @@ python -m pip install musify
    
    # get a track according to a specific tag
    track = next(track for track in library if track.artist == "<ARTIST NAME>")
-   track = next(track for track in library if "<GENRE>" in track.genres)
+   track = next(track for track in library if "<GENRE>" in (track.genres or []))
    
    # pretty print information about this track
    print(track)
@@ -294,105 +296,25 @@ python -m pip install musify
    print(result)
    ```
 
-<a id="quick-guides-sync"></a>
-### Sync data between local and remote libraries
-
-> In this example, you will: 
-> - Search for local tracks on a music streaming service and assign unique remote IDs to tags in your local tracks
-> - Get tags and images for a track from a music stream service and save it them to your local track file
-> - Create remote playlists from your local playlists
-
-1. Set up and load at least one local library with a remote wrangler attached, and one remote API object.
-   > This guide will use Spotify, but any supported music streaming service can be used in generally the same way. 
-   > Just modify the imports as required.
-   ```python
-   from musify.local.library import LocalLibrary
-   from musify.spotify.api import SpotifyAPI
-   from musify.spotify.processors.wrangle import SpotifyDataWrangler
-   
-   local_library = LocalLibrary(
-       library_folders=["<PATH TO YOUR LIBRARY FOLDER>", ...],
-       playlist_folder="<PATH TO YOUR PLAYLIST FOLDER",
-       # this wrangler will be needed to interpret matched URIs as valid
-       remote_wrangler=SpotifyDataWrangler(), 
-   )
-   local_library.load()
-   
-   api = SpotifyAPI(
-       client_id="<YOUR CLIENT ID>",
-       client_secret="<YOUR CLIENT SECRET>",
-       scopes=[
-           "user-library-read",
-           "user-follow-read",
-           "playlist-read-collaborative",
-           "playlist-read-private",
-           "playlist-modify-public",
-           "playlist-modify-private"
-       ],
-   )
-   api.authorise()
-   ```
-
-2. Search for tracks and check the results:
-   ```python
-   from musify.spotify.processors.processors import SpotifyItemSearcher, SpotifyItemChecker
-   
-   albums = local_library.albums[:3]
-   
-   searcher = SpotifyItemSearcher(api=api)
-   searcher.search(albums)
-   
-   checker = SpotifyItemChecker(api=api)
-   checker.check(albums)
-   ```
-
-3. Load the matched tracks, get tags from the music streaming service, and save the tags to the file:
-   > **NOTE**: By default, URIs are saved to the {uri_tag} tag.
-   ```python
-   from musify.spotify.object import SpotifyTrack
-   
-   for album in albums:
-       for local_track in album:
-           remote_track = SpotifyTrack.load(local_track.uri, api=api)
-           
-           local_track.title = remote_track.title
-           local_track.artist = remote_track.artist
-           local_track.date = remote_track.date
-           local_track.genres = remote_track.genres
-           local_track.image_links = remote_track.image_links
-   
-           # alternatively, just merge all tags
-           local_track |= remote_track
-   
-           # save the track here or...
-           local_track.save(replace=True, dry_run=False)
-      
-       # ...save all tracks on the album at once here
-       album.save_tracks(replace=True, dry_run=False)
-   ```
-4. Once all tracks in a playlist have URIs assigned, sync the local playlist with a remote playlist:
-   ```python
-   from musify.spotify.library import SpotifyLibrary
-   
-   remote_library = SpotifyLibrary(api=api)
-   remote_library.load_playlists()
-   
-   local_playlist = local_library.playlists["<YOUR PLAYLIST'S NAME>"]  # case sensitive
-   remote_playlist = remote_library.playlists["<YOUR PLAYLIST'S NAME>"]  # case sensitive
-   
-   remote_playlist.sync(items=local_playlist, kind="new", reload=True, dry_run=False)
-   
-   # pretty print info about the reloaded remote playlist
-   print(remote_playlist)
-   ```
-
-<a id="supported"></a>
 ## Currently Supported
 
 - **Music Streaming Services**: `Spotify`
-- **Audio filetypes**: `.flac` `.m4a` `.mp3` `.wma`
-- **Local playlist filetypes**: `.m3u` `.xautopf`
+- **Audio filetypes**: `.mp3` `.flac` `.m4a` `.wma`
+- **Local playlist filetypes**: `.xautopf` `.m3u`
 - **Local Libraries**: `MusicBee`
+
+
+## Release History
+
+For change and release history, 
+check out the [documentation](https://geo-martino.github.io/musify/release-history.html)
+
+
+## Contributing
+
+For info on how to contribute to Musify, 
+check out the [documentation](https://geo-martino.github.io/musify/contributing.html)
+
 
 <a id="aims"></a>
 ## Motivations & Aims
