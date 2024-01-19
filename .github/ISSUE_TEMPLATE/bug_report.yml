@@ -1,0 +1,80 @@
+---
+name: Bug report
+description: Problems and issues with code
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for using Musify and for finding the time to help make using it a better experience for everyone!
+
+        Note, you do not need to create an issue if you already have a fix for an issue.
+
+        You can open a [pull request](https://github.com/geo-martino/musify/pulls) immediately instead.
+  - type: input
+    attributes:
+      label: Musify version
+      description: What Musify version are you using?.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: What happened?
+      description: Describe what happened.
+      placeholder: >
+        Please provide the context in which the problem occurred and explain what happened
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: What you think should happen instead?
+      description: What do you think went wrong?
+      placeholder: >
+        Please explain why you think the behaviour is erroneous. 
+        Please do paste screenshots, links to videos demonstrating the problem or
+        whatever else you may need to be able to help us understand the issue fully.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Please paste any logs that you see related to this issue here
+  - type: textarea
+    attributes:
+      label: How to reproduce
+      description: >
+        What should we do to reproduce the problem?.
+      placeholder: >
+        Please make sure you provide a reproducible step-by-step case of how to reproduce the problem
+        as minimally and precisely as possible.
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Operating System
+      description: What Operating System are you using?
+      placeholder: "You can get it via `cat /etc/os-release` for example"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Version of Python used
+      description: What Python version are you using?
+      placeholder: Use `python --version` to find out.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Anything else?
+      description: Anything else we need to know?
+      placeholder: >
+        How often does this problem occur? (Once? Every time? Only when certain conditions are met?)
+  - type: checkboxes
+    attributes:
+      label: Are you willing to submit PR?
+      description: >
+        Optional, but we welcome anyone to contribute if they can!
+      options:
+        - label: Yes I am willing to submit a PR!
+  - type: markdown
+    attributes:
+      value: "Thanks for letting us know about this issue!"

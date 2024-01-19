@@ -1,0 +1,42 @@
+---
+name: Feature request
+description: Suggest an idea for this project
+labels: ["feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for using Musify and for finding the time to help make using it a better experience for everyone!
+        
+        Note, you do not need to create an issue if you have already developed a feature to release.
+
+        You can open a [pull request](https://github.com/geo-martino/musify/pulls) immediately instead.
+  - type: textarea
+    attributes:
+      label: Description
+      description: A short description of your feature
+  - type: textarea
+    attributes:
+      label: Use case/motivation
+      description: What would you like to happen?
+      placeholder: >
+          Rather than telling us how you might implement this feature, try to take a
+          step back and describe what you are trying to achieve.
+  - type: textarea
+    attributes:
+      label: Related issues
+      description: Is there currently another issue associated with this?
+  - type: checkboxes
+    attributes:
+      label: Are you willing to submit a PR?
+      description: >
+        If want to submit a PR you do not need to open feature request, <b>just create the PR!</b>.
+        Especially if you already have a good understanding of how to implement the feature.
+        We welcome anyone to contribute if they can!
+        Though others might implement it if they pick an interest in it, so feel free to leave that
+        checkbox unchecked.
+      options:
+        - label: Yes I am willing to submit a PR!
+  - type: markdown
+    attributes:
+      value: "Thanks for sharing your ideas with us!"
