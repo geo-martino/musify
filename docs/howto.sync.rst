@@ -10,17 +10,28 @@ Note:
    This guide will use Spotify, but any supported music streaming service can be used in generally the same way.
    Just modify the imports and classes as required.
 
+
+.. include:: _howto/setup.logger.txt
+
+
+Sync data
+---------
+
 1. Set up and load at least one local library with a remote wrangler attached, and one remote API object:
 
    .. literalinclude:: _howto/scripts/sync.py
       :language: Python
-      :lines: 1-25
+      :lines: 4-13
+
+   .. literalinclude:: _howto/scripts/spotify.api.py
+      :language: Python
+      :lines: 1-20
 
 2. Search for tracks and check the results:
 
    .. literalinclude:: _howto/scripts/sync.py
       :language: Python
-      :lines: 27-35
+      :lines: 15-23
 
 3. Load the matched tracks, get tags from the music streaming service, and save the tags to the file:
 
@@ -28,10 +39,10 @@ Note:
 
    .. literalinclude:: _howto/scripts/sync.py
       :language: Python
-      :lines: 37-56
+      :lines: 25-44
 
 4. Once all tracks in a playlist have URIs assigned, sync the local playlist with a remote playlist:
 
    .. literalinclude:: _howto/scripts/sync.py
       :language: Python
-      :lines: 58-69
+      :lines: 46-56

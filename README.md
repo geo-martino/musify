@@ -49,7 +49,7 @@ python -m pip install musify
 ## Quick Guides
 
 > [!TIP]
-> Set up logger to ensure you can see all info reported by the later operations.
+> Set up logging to ensure you can see all info reported by the later operations.
 > Libraries log info about loaded objects to the custom `STAT` level.
 > ```python
 > import logging
@@ -297,8 +297,8 @@ python -m pip install musify
 ## Currently Supported
 
 - **Music Streaming Services**: `Spotify`
-- **Audio filetypes**: `.m4a` `.mp3` `.flac` `.wma`
-- **Local playlist filetypes**: `.xautopf` `.m3u`
+- **Audio filetypes**: `.wma` `.mp3` `.m4a` `.flac`
+- **Local playlist filetypes**: `.m3u` `.xautopf`
 - **Local Libraries**: `MusicBee`
 
 <a id="aims"></a>

@@ -1,5 +1,7 @@
-from musify.local.library import LocalLibrary
 from musify.spotify.api import SpotifyAPI
+api = SpotifyAPI()
+
+from musify.local.library import LocalLibrary
 from musify.spotify.processors.wrangle import SpotifyDataWrangler
 
 local_library = LocalLibrary(
@@ -9,20 +11,6 @@ local_library = LocalLibrary(
     remote_wrangler=SpotifyDataWrangler(),
 )
 local_library.load()
-
-api = SpotifyAPI(
-    client_id="<YOUR CLIENT ID>",
-    client_secret="<YOUR CLIENT SECRET>",
-    scopes=[
-        "user-library-read",
-        "user-follow-read",
-        "playlist-read-collaborative",
-        "playlist-read-private",
-        "playlist-modify-public",
-        "playlist-modify-private"
-    ],
-)
-api.authorise()
 
 from musify.spotify.processors.processors import SpotifyItemSearcher, SpotifyItemChecker
 
@@ -63,7 +51,6 @@ remote_library.load_playlists()
 local_playlist = local_library.playlists["<YOUR PLAYLIST'S NAME>"]  # case sensitive
 remote_playlist = remote_library.playlists["<YOUR PLAYLIST'S NAME>"]  # case sensitive
 
+# sync the object with Spotify and pretty print info about the reloaded remote playlist
 remote_playlist.sync(items=local_playlist, kind="new", reload=True, dry_run=False)
-
-# pretty print info about the reloaded remote playlist
 print(remote_playlist)

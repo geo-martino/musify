@@ -7,6 +7,7 @@ from os.path import dirname, basename
 
 from musify import MODULE_ROOT, PROGRAM_OWNER_NAME, PROGRAM_OWNER_USER, __version__
 
+
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
@@ -15,9 +16,9 @@ copyright = f"{datetime.now().year}, {PROGRAM_OWNER_NAME}"
 author = PROGRAM_OWNER_NAME
 release = __version__
 
+
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
-
 
 extensions = [
     "sphinx.ext.autodoc",
@@ -43,11 +44,12 @@ typehints_use_rtype = False
 templates_path = ["_templates"]
 exclude_patterns = ["_build"]
 
+
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_static_path = ["_static"]
-html_theme = "renku"
+html_theme = "sphinx_rtd_theme"
 html_theme_options = dict(
     collapse_navigation=False,
     sticky_navigation=True,
@@ -66,7 +68,10 @@ html_context = dict(
     conf_py_path=f"/{basename(dirname(__file__))}/",
 )
 
-# -- GraphViz configuration ----------------------------------
+
+# -- GraphViz configuration --------------------------------------------------
+# https://graphviz.org/doc/info/attrs.html
+
 graphviz_output_format = "svg"
 inheritance_graph_attrs = dict(rankdir="TB", size='""',
                                fontsize=10, ratio="auto",

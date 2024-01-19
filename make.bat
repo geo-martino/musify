@@ -9,6 +9,7 @@ if "%SPHINXBUILD%" == "" (
 )
 set SOURCEDIR=docs
 set BUILDDIR=docs/_build
+set PROJECTNAME=musify
 
 %SPHINXBUILD% >NUL 2>NUL
 if errorlevel 9009 (
@@ -35,8 +36,8 @@ goto end
 
 :rebuild-html
 %SPHINXBUILD% -M clean %SOURCEDIR% %BUILDDIR% %SPHINXOPTS% %O%
-rm docs/musify*.rst
-sphinx-apidoc -o %SOURCEDIR% ./musify -d 4 --force --module-first --separate --no-toc -t %SOURCEDIR%/_templates
+rm docs/%PROJECTNAME%*.rst
+sphinx-apidoc -o %SOURCEDIR% ./%PROJECTNAME% -d 4 --force --module-first --separate --no-toc -t %SOURCEDIR%/_templates
 %SPHINXBUILD% -M html %SOURCEDIR% %BUILDDIR% %SPHINXOPTS% %O%
 goto end
 

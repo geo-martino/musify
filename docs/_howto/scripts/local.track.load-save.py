@@ -10,7 +10,7 @@ print(track)
 
 from musify.local.track import load_track
 
-track = load_track("<PATH TO AN MP3 TRACK>", remote_wrangler=SpotifyDataWrangler())
+track = load_track("<PATH TO AN MP3 TRACK>")
 
 from musify.spotify.processors.wrangle import SpotifyDataWrangler
 
@@ -27,10 +27,10 @@ track.key = "C#"
 track.bpm = 120.5
 track.date = date(year=2024, month=1, day=1)
 track.compilation = True
-track.image_links.update({{
+track.image_links.update({
     "cover front": "https://i.scdn.co/image/ab67616d0000b2737f0918f1560fc4b40b967dd4",
     "cover back": "<PATH TO AN IMAGE ON YOUR LOCAL DRIVE>"
-}})
+})
 
 # see the updated information
 print(track)

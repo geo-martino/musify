@@ -9,7 +9,10 @@ Welcome to Musify!
    howto.local.playlist.load-save
    howto.local.track.load-save
    howto.spotify.load
+   howto.library.backup-restore
    howto.sync
+   howto.remote.new-music
+   howto.reports
 
 .. toctree::
    :maxdepth: 2

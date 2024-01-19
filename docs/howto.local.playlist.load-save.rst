@@ -5,6 +5,10 @@ In this example, you will:
    * Load a local playlist
    * Modify the tracks in a playlist and save the changes to the file
 
+
+.. include:: _howto/setup.logger.txt
+
+
 Load a playlist
 ---------------
 
@@ -43,6 +47,7 @@ The following is an example for doing this with Spotify as the data source:
 .. literalinclude:: _howto/scripts/local.playlist.load-save.py
    :language: Python
    :lines: 28-30
+
 
 Modify the playlist
 -------------------

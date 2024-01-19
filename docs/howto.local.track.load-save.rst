@@ -5,6 +5,10 @@ In this example, you will:
    * Load a local track
    * Modify the tags of a local track and save them to the file
 
+
+.. include:: _howto/setup.logger.txt
+
+
 Load a track
 ------------
 
@@ -28,6 +32,7 @@ The following is an example for doing this with Spotify as the data source:
 .. literalinclude:: _howto/scripts/local.track.load-save.py
    :language: Python
    :lines: 15-17
+
 
 Modify the track's tags
 -----------------------

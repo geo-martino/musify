@@ -49,7 +49,7 @@ python -m pip install {program_name_lower}
 ## Quick Guides
 
 > [!TIP]
-> Set up logger to ensure you can see all info reported by the later operations.
+> Set up logging to ensure you can see all info reported by the later operations.
 > Libraries log info about loaded objects to the custom `STAT` level.
 > ```python
 > import logging

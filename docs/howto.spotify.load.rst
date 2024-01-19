@@ -7,6 +7,10 @@ In this example, you will:
    * Load some other Spotify objects
    * Add some tracks to a playlist
 
+
+.. include:: _howto/setup.logger.txt
+
+
 Setup the Spotify API
 ---------------------
 
@@ -22,9 +26,9 @@ Setup the Spotify API
    The scopes listed in this example will allow access to read your library data and write to your playlists.
    See Spotify Web API documentation for more information about [scopes](https://developer.spotify.com/documentation/web-api/concepts/scopes)
 
-   .. literalinclude:: _howto/scripts/spotify.load.py
+   .. literalinclude:: _howto/scripts/spotify.api.py
       :language: Python
-      :lines: 1-17
+
 
 Load your library
 -----------------
@@ -33,13 +37,13 @@ Load your library
 
    .. literalinclude:: _howto/scripts/spotify.load.py
       :language: Python
-      :lines: 22-48
+      :lines: 4-30
 
 2. Load some Spotify objects using any of the supported identifiers as follows:
 
    .. literalinclude:: _howto/scripts/spotify.load.py
       :language: Python
-      :lines: 50-67
+      :lines: 32-49
 
 3. Add some tracks to a playlist in your library, synchronise with Spotify, and log the results as follows:
 
@@ -47,4 +51,4 @@ Load your library
 
    .. literalinclude:: _howto/scripts/spotify.load.py
       :language: Python
-      :lines: 69-80
+      :lines: 51-62
