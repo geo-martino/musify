@@ -7,7 +7,7 @@ In this example, you will:
    * Create a playlist containing these tracks
 
 
-.. include:: _howto/setup.logger.txt
+.. include:: _howto/setup.logging.txt
 
 
 Create the playlist

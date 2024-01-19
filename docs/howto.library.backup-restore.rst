@@ -8,7 +8,7 @@ In this example, you will:
    * Restore remote playlists from a JSON file backup
 
 
-.. include:: _howto/setup.logger.txt
+.. include:: _howto/setup.logging.txt
 
 
 Backup and restore a local library
@@ -34,19 +34,19 @@ Backup and restore a local library
 
    .. literalinclude:: _howto/scripts/local.library.backup-restore.py
       :language: Python
-      :lines: 10-13
+      :lines: 10-14
 
    ... or restore only a specific set of tags:
 
    .. literalinclude:: _howto/scripts/local.library.backup-restore.py
       :language: Python
-      :lines: 15-27
+      :lines: 16-28
 
 4. Save the tags to the track files:
 
    .. literalinclude:: _howto/scripts/local.library.backup-restore.py
       :language: Python
-      :lines: 29-30
+      :lines: 30-31
 
 
 Backup and restore a remote library

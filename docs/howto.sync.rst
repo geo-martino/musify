@@ -11,7 +11,7 @@ Note:
    Just modify the imports and classes as required.
 
 
-.. include:: _howto/setup.logger.txt
+.. include:: _howto/setup.logging.txt
 
 
 Sync data

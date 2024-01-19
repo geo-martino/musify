@@ -36,7 +36,7 @@ track.image_links.update({
 print(track)
 
 # save all the tags like so...
-track.save(replace=True, dry_run=False)
+results = track.save(replace=True, dry_run=False)
 
 # ...or select which tags you wish to save like so
 from musify.local.track.field import LocalTrackField
@@ -51,4 +51,7 @@ tags = [
     LocalTrackField.IMAGES
 ]
 
-track.save(tags=tags, replace=True, dry_run=False)
+results = track.save(tags=tags, replace=True, dry_run=False)
+
+# print a list of the tags that were saved
+print([tag.name for tag in results.updated])

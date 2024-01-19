@@ -8,7 +8,7 @@ library.enrich_saved_artists()
 
 from datetime import datetime, date
 
-start_date = date(2023, 1, 1)
+start_date = date(2024, 1, 1)
 end_date = datetime.now().date()
 
 
@@ -31,7 +31,8 @@ if albums_need_extend:
     kind = RemoteObjectType.ALBUM
     key = api.collection_item_map[kind]
 
-    for album in albums_need_extend:
+    bar = library.logger.get_progress_bar(iterable=albums_need_extend, desc="Getting album tracks", unit="albums")
+    for album in bar:
         api.extend_items(album.response, kind=kind, key=key, use_cache=False)
         album.refresh(skip_checks=False)
 

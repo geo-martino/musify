@@ -9,8 +9,9 @@ with open(path, "w") as file:
 
 with open(path, "r") as file:
     backup = json.load(file)
+tracks = {track["path"]: track for track in backup["tracks"]}
 
-library.restore_tracks(backup["tracks"])
+library.restore_tracks(tracks)
 
 from musify.local.track.field import LocalTrackField
 
@@ -24,7 +25,7 @@ tags = [
     LocalTrackField.IMAGES
 ]
 
-library.restore_tracks(backup["tracks"], tags=tags)
+library.restore_tracks(tracks, tags=tags)
 
 results = library.save_tracks(tags=tags, replace=True, dry_run=False)
 library.log_sync_result(results)

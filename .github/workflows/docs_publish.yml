@@ -6,6 +6,8 @@ on:
     paths:
       - musify/**
       - docs/**
+  schedule:
+    - cron: '0 0 1 1 *'  # refresh copyright year on docs at least once every year
 
 concurrency:
   group: ${{ github.workflow }}

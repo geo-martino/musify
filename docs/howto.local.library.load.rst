@@ -7,7 +7,7 @@ In this example, you will:
    * Load a local library including tracks, playlists, and other local objects
 
 
-.. include:: _howto/setup.logger.txt
+.. include:: _howto/setup.logging.txt
 
 
 Create a library object
@@ -47,4 +47,4 @@ Load your library and other objects
 
    .. literalinclude:: _howto/scripts/local.library.load.py
       :language: Python
-      :lines: 38-46
+      :lines: 35-46

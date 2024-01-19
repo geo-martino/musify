@@ -6,7 +6,7 @@ In this example, you will:
    * Modify the tags of a local track and save them to the file
 
 
-.. include:: _howto/setup.logger.txt
+.. include:: _howto/setup.logging.txt
 
 
 Load a track
@@ -47,4 +47,4 @@ Modify the track's tags
 
    .. literalinclude:: _howto/scripts/local.track.load-save.py
       :language: Python
-      :lines: 38-54
+      :lines: 38-57

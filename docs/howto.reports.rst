@@ -6,7 +6,7 @@ In this example, you will:
    * Get stats on the missing tags in a local library
 
 
-.. include:: _howto/setup.logger.txt
+.. include:: _howto/setup.logging.txt
 
 
 Report on differences in playlists

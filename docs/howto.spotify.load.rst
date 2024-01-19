@@ -8,7 +8,7 @@ In this example, you will:
    * Add some tracks to a playlist
 
 
-.. include:: _howto/setup.logger.txt
+.. include:: _howto/setup.logging.txt
 
 
 Setup the Spotify API
