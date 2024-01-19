@@ -26,6 +26,17 @@ What's in this documentation
 * How to get started with contributing to Musify
 * Reference documentation
 
+Installation
+------------
+
+Install through pip using one of the following commands:
+
+.. code-block:: bash
+
+   pip install musify
+   # or
+   python -m pip install musify
+
 .. toctree::
    :maxdepth: 1
    :caption: 📜 How to...

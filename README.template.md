@@ -25,15 +25,18 @@ Supporting local and music streaming service (remote) libraries.
 ## Contents
 
 * [Quick Guides](#quick-guides)
-  * [Spotify](#quick-guides-spotify)
-  * [Local](#quick-guides-local)
-* [Currently Supported](#supported)
+  * [Spotify](spotify)
+  * [Local](#local)
+* [Currently Supported](#currently-supported)
+* [Release History](#release-history)
+* [Contributing](#contributing)
 * [Motivation & Aims](#aims)
 * [Author Notes](#notes)
 
 > [!NOTE]  
 > This readme provides a brief overview of the program. 
 > [Read the docs](https://{program_owner_user}.github.io/{program_name_lower}/) for full reference documentation.
+
 
 ## Installation
 Install through pip using one of the following commands:
@@ -45,8 +48,10 @@ pip install {program_name_lower}
 python -m pip install {program_name_lower}
 ```
 
-<a id="quick-guides"></a>
 ## Quick Guides
+
+These quick guides will help you get set up and going with {program_name} in just a few minutes.
+For more detailed guides, check out the [documentation](https://{program_owner_user}.github.io/{program_name_lower}/)
 
 > [!TIP]
 > Set up logging to ensure you can see all info reported by the later operations.
@@ -57,7 +62,6 @@ python -m pip install {program_name_lower}
 > logging.basicConfig(format="%(message)s", level=STAT)
 > ```
 
-<a id="quick-guides-spotify"></a>
 ### Spotify
 
 > In this example, you will: 
@@ -165,7 +169,6 @@ python -m pip install {program_name_lower}
    library.log_sync(result)
    ```
 
-<a id="quick-guides-local"></a>
 ### Local
 
 > In this example, you will: 
@@ -293,13 +296,25 @@ python -m pip install {program_name_lower}
    print(result)
    ```
 
-<a id="supported"></a>
 ## Currently Supported
 
 - **Music Streaming Services**: {remote_sources}
 - **Audio filetypes**: {track_filetypes}
 - **Local playlist filetypes**: {playlist_filetypes}
 - **Local Libraries**: {local_sources}
+
+
+## Release History
+
+For change and release history, 
+check out the [documentation](https://{program_owner_user}.github.io/{program_name_lower}/release-history.html)
+
+
+## Contributing
+
+For info on how to contribute to {program_name}, 
+check out the [documentation](https://{program_owner_user}.github.io/{program_name_lower}/contributing.html)
+
 
 <a id="aims"></a>
 ## Motivations & Aims

@@ -39,6 +39,11 @@ This project adheres to a modified `Calendar Versioning <https://calver.org/>`_ 
 2024.1.4
 ========
 
+Fixed
+-----
+
+* fixed bug in ``restore_tracks`` method on library due to 'images' tag name not being present in track properties
+
 Documentation
 -------------
 
