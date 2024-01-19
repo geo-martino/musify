@@ -57,7 +57,7 @@ body:
       required: true
   - type: textarea
     attributes:
-      label: Version of Python used
+      label: Python version
       description: What Python version are you using?
       placeholder: Use `python --version` to find out.
     validations:
