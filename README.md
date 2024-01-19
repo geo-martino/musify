@@ -25,7 +25,7 @@ Supporting local and music streaming service (remote) libraries.
 ## Contents
 
 * [Quick Guides](#quick-guides)
-  * [Spotify](spotify)
+  * [Spotify](#spotify)
   * [Local](#local)
 * [Currently Supported](#currently-supported)
 * [Release History](#release-history)
@@ -299,7 +299,7 @@ For more detailed guides, check out the [documentation](https://geo-martino.gith
 ## Currently Supported
 
 - **Music Streaming Services**: `Spotify`
-- **Audio filetypes**: `.flac` `.m4a` `.mp3` `.wma`
+- **Audio filetypes**: `.mp3` `.flac` `.m4a` `.wma`
 - **Local playlist filetypes**: `.xautopf` `.m3u`
 - **Local Libraries**: `MusicBee`
 

@@ -25,7 +25,7 @@ Supporting local and music streaming service (remote) libraries.
 ## Contents
 
 * [Quick Guides](#quick-guides)
-  * [Spotify](spotify)
+  * [Spotify](#spotify)
   * [Local](#local)
 * [Currently Supported](#currently-supported)
 * [Release History](#release-history)
