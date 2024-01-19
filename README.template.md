@@ -27,7 +27,6 @@ Supporting local and music streaming service (remote) libraries.
 * [Quick Guides](#quick-guides)
   * [Spotify](#quick-guides-spotify)
   * [Local](#quick-guides-local)
-  * [Sync local and remote](#quick-guides-sync)
 * [Currently Supported](#supported)
 * [Motivation & Aims](#aims)
 * [Author Notes](#notes)
@@ -292,98 +291,6 @@ python -m pip install {program_name_lower}
    
    result = my_playlist.save(dry_run=False)
    print(result)
-   ```
-
-<a id="quick-guides-sync"></a>
-### Sync data between local and remote libraries
-
-> In this example, you will: 
-> - Search for local tracks on a music streaming service and assign unique remote IDs to tags in your local tracks
-> - Get tags and images for a track from a music stream service and save it them to your local track file
-> - Create remote playlists from your local playlists
-
-1. Set up and load at least one local library with a remote wrangler attached, and one remote API object.
-   > This guide will use Spotify, but any supported music streaming service can be used in generally the same way. 
-   > Just modify the imports as required.
-   ```python
-   from musify.local.library import LocalLibrary
-   from musify.spotify.api import SpotifyAPI
-   from musify.spotify.processors.wrangle import SpotifyDataWrangler
-   
-   local_library = LocalLibrary(
-       library_folders=["<PATH TO YOUR LIBRARY FOLDER>", ...],
-       playlist_folder="<PATH TO YOUR PLAYLIST FOLDER",
-       # this wrangler will be needed to interpret matched URIs as valid
-       remote_wrangler=SpotifyDataWrangler(), 
-   )
-   local_library.load()
-   
-   api = SpotifyAPI(
-       client_id="<YOUR CLIENT ID>",
-       client_secret="<YOUR CLIENT SECRET>",
-       scopes=[
-           "user-library-read",
-           "user-follow-read",
-           "playlist-read-collaborative",
-           "playlist-read-private",
-           "playlist-modify-public",
-           "playlist-modify-private"
-       ],
-   )
-   api.authorise()
-   ```
-
-2. Search for tracks and check the results:
-   ```python
-   from musify.spotify.processors.processors import SpotifyItemSearcher, SpotifyItemChecker
-   
-   albums = local_library.albums[:3]
-   
-   searcher = SpotifyItemSearcher(api=api)
-   searcher.search(albums)
-   
-   checker = SpotifyItemChecker(api=api)
-   checker.check(albums)
-   ```
-
-3. Load the matched tracks, get tags from the music streaming service, and save the tags to the file:
-   > **NOTE**: By default, URIs are saved to the {uri_tag} tag.
-   ```python
-   from musify.spotify.object import SpotifyTrack
-   
-   for album in albums:
-       for local_track in album:
-           remote_track = SpotifyTrack.load(local_track.uri, api=api)
-           
-           local_track.title = remote_track.title
-           local_track.artist = remote_track.artist
-           local_track.date = remote_track.date
-           local_track.genres = remote_track.genres
-           local_track.image_links = remote_track.image_links
-   
-           # alternatively, just merge all tags
-           local_track |= remote_track
-   
-           # save the track here or...
-           local_track.save(replace=True, dry_run=False)
-      
-       # ...save all tracks on the album at once here
-       album.save_tracks(replace=True, dry_run=False)
-   ```
-4. Once all tracks in a playlist have URIs assigned, sync the local playlist with a remote playlist:
-   ```python
-   from musify.spotify.library import SpotifyLibrary
-   
-   remote_library = SpotifyLibrary(api=api)
-   remote_library.load_playlists()
-   
-   local_playlist = local_library.playlists["<YOUR PLAYLIST'S NAME>"]  # case sensitive
-   remote_playlist = remote_library.playlists["<YOUR PLAYLIST'S NAME>"]  # case sensitive
-   
-   remote_playlist.sync(items=local_playlist, kind="new", reload=True, dry_run=False)
-   
-   # pretty print info about the reloaded remote playlist
-   print(remote_playlist)
    ```
 
 <a id="supported"></a>

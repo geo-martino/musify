@@ -12,6 +12,12 @@ BUILDDIR      = docs/_build
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
+rebuild-html: Makefile
+	$(SPHINXBUILD) -M clean "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	rm -f docs/musify*.rst
+	sphinx-apidoc -o "$(SOURCEDIR)" ./musify -d 4 --force --module-first --separate --no-toc -t "$(SOURCEDIR)"/_templates
+	$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
 .PHONY: help Makefile
 
 # Catch-all target: route all unknown targets to Sphinx using the new

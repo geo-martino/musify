@@ -1,5 +1,5 @@
 [flake8]
-extend-exclude = .venv*
+extend-exclude = .venv* docs/_howto/scripts
 extend-ignore = E266
 per-file-ignores =
     **/__init__.py:F401
