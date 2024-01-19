@@ -52,7 +52,15 @@ Submitting your changes for review
 1. Ensure all tests pass locally first.
 2. Add any changes you made to the :ref:`release-history`.
 3. Go to your forked repository and open a pull request for your branch.
+
+   .. image:: _images/contributing/musify_pr_new.png
+
+   .. image:: _images/contributing/musify_pr_create1.png
+
 4. Add a title, a motivation for your changes, and the changes you have made.
    This can just be a copy-paste from your release history notes.
+
+   .. image:: _images/contributing/musify_pr_create2.png
+
 5. Wait for a review and make any necessary changes.
 6. Have your changes committed 🎉

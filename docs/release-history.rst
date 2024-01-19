@@ -43,6 +43,7 @@ Documentation
 -------------
 
 * Expanded docstrings across entire package
+* Expand documentation with how to section, release history, and contributions pages
 
 
 2024.1.3

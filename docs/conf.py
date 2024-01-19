@@ -5,13 +5,12 @@
 from datetime import datetime
 from os.path import dirname, basename
 
-from musify import MODULE_ROOT, PROGRAM_OWNER_NAME, PROGRAM_OWNER_USER, __version__
-
+from musify import MODULE_ROOT, PROGRAM_OWNER_NAME, PROGRAM_OWNER_USER, __version__, PROGRAM_NAME
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = MODULE_ROOT
+project = PROGRAM_NAME
 copyright = f"{datetime.now().year}, {PROGRAM_OWNER_NAME}"
 author = PROGRAM_OWNER_NAME
 release = __version__

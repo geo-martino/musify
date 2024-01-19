@@ -1,5 +1,30 @@
+==================
 Welcome to Musify!
 ==================
+
+A Swiss Army knife for music library management
+-----------------------------------------------
+
+Helping you to manage your local and music streaming service (remote) libraries.
+
+Features
+--------
+
+* Extract data for all item types from remote libraries, including following/saved items,
+  such as: playlists, tracks, albums, artists, users, podcasts, audiobooks
+* Load local audio files, programmatically manipulate, and save tags/metadata/embedded images
+* Synchronise local tracks metadata with its matching track's metadata on supported music streaming services
+* Synchronise local playlists with playlists on supported music streaming services
+* Backup and restore track tags/metadata and playlists for local and remote libraries
+* Extract and save images from remote tracks or embedded in local tracks
+
+What's in this documentation
+----------------------------
+
+* How to guides on getting started with Musify and other key functionality of the package
+* Release history
+* How to get started with contributing to Musify
+* Reference documentation
 
 .. toctree::
    :maxdepth: 1
