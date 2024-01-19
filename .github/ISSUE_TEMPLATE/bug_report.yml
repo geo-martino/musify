@@ -55,7 +55,7 @@ body:
       placeholder: "You can get it via `cat /etc/os-release` for example"
     validations:
       required: true
-  - type: textarea
+  - type: input
     attributes:
       label: Python version
       description: What Python version are you using?
