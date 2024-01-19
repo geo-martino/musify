@@ -347,7 +347,7 @@ python -m pip install musify
    ```
 
 3. Load the matched tracks, get tags from the music streaming service, and save the tags to the file:
-   > **NOTE**: By default, URIs are saved to the `comments` tag.
+   > **NOTE**: By default, URIs are saved to the {uri_tag} tag.
    ```python
    from musify.spotify.object import SpotifyTrack
    
@@ -390,7 +390,7 @@ python -m pip install musify
 ## Currently Supported
 
 - **Music Streaming Services**: `Spotify`
-- **Audio filetypes**: `.wma` `.flac` `.m4a` `.mp3`
+- **Audio filetypes**: `.flac` `.m4a` `.mp3` `.wma`
 - **Local playlist filetypes**: `.m3u` `.xautopf`
 - **Local Libraries**: `MusicBee`
 

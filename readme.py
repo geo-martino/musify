@@ -3,7 +3,7 @@ Fills in the variable fields of the README template and generates README.md file
 """
 
 from musify import PROGRAM_OWNER_USER, PROGRAM_NAME
-from musify.local.track import TRACK_FILETYPES, LocalTrack
+from musify.local.track import TRACK_FILETYPES
 from musify.local.playlist import PLAYLIST_FILETYPES
 from musify.local.library import LIBRARY_CLASSES, LocalLibrary
 from musify.shared.utils import SafeDict
@@ -21,11 +21,10 @@ def format_readme():
         "program_owner_user": PROGRAM_OWNER_USER,
     }
     format_map_code = {
-        "uri_tag": [LocalTrack.uri_tag.name.lower()],
-        "local_sources": [cls.name for cls in LIBRARY_CLASSES if cls != LocalLibrary],
+        "local_sources": sorted(cls.name for cls in LIBRARY_CLASSES if cls != LocalLibrary),
         "remote_sources": [SPOTIFY_NAME],
-        "track_filetypes": TRACK_FILETYPES,
-        "playlist_filetypes": PLAYLIST_FILETYPES,
+        "track_filetypes": sorted(TRACK_FILETYPES),
+        "playlist_filetypes": sorted(PLAYLIST_FILETYPES),
     }
     format_map_code = {k: "`" + "` `".join(v) + "`" for k, v in format_map_code.items()}
     format_map = SafeDict(format_map_standard | format_map_code)
