@@ -6,7 +6,7 @@ In this example, you will:
    * Get tags and images for a track from a music stream service and save it them to your local track file
    * Create remote playlists from your local playlists
 
-Note:
+.. note::
    This guide will use Spotify, but any supported music streaming service can be used in generally the same way.
    Just modify the imports and classes as required.
 
@@ -35,7 +35,8 @@ Sync data
 
 3. Load the matched tracks, get tags from the music streaming service, and save the tags to the file:
 
-   **NOTE**: By default, URIs are saved to the ``comments`` tag.
+   .. note::
+      By default, URIs are saved to the ``comments`` tag.
 
    .. literalinclude:: _howto/scripts/sync.py
       :language: Python

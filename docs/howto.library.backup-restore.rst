@@ -55,7 +55,7 @@ Backup and restore a remote library
 1. Load a remote library. For more information on how to do this see any of
    the relevant guides for loading remote libraries.
 
-   Note:
+   .. note::
       This step uses the ``SpotifyLibrary``, but any supported music streaming service
       can be used in generally the same way. Just modify the imports and classes as required.
 

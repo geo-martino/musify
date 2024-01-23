@@ -15,7 +15,7 @@ Create the playlist
 
 1. Create a remote library object:
 
-   Note:
+   .. note::
       This step uses the ``SpotifyLibrary``, but any supported music streaming service
       can be used in generally the same way. Just modify the imports and classes as required.
 
