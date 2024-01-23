@@ -9,6 +9,7 @@ from collections.abc import Iterable
 from copy import deepcopy
 
 from musify import PROGRAM_NAME
+from musify.shared.api.exception import APIError
 from musify.shared.utils import safe_format_map
 from musify.spotify import URL_API, URL_AUTH
 from musify.spotify.api.item import SpotifyAPIItems
@@ -78,14 +79,20 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
     def user_id(self) -> str | None:
         """ID of the currently authenticated user"""
         if not self.user_data:
-            self.user_data = self.get_self()
+            try:
+                self.user_data = self.get_self()
+            except APIError:
+                return None
         return self.user_data["id"]
 
     @property
     def user_name(self) -> str | None:
         """Name of the currently authenticated user"""
         if not self.user_data:
-            self.user_data = self.get_self()
+            try:
+                self.user_data = self.get_self()
+            except APIError:
+                return None
         return self.user_data["display_name"]
 
     def __init__(

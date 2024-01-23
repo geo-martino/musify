@@ -54,6 +54,8 @@ Fixed
 -----
 
 * Captured stdout assertions in RemoteItemChecker tests re-enabled, now fixed
+* Surround RemoteApi 'user' properties in try-except block so they can still be
+  pretty printed even if API is not authorised
 
 Documentation
 -------------

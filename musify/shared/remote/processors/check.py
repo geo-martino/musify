@@ -263,7 +263,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, InputProcessor, metacla
             pl_names = [name for name in self._playlist_name_collection if current_input.casefold() in name.casefold()]
 
             if current_input.casefold() == "h":  # print help text
-                print(help_text)
+                print("\n" + help_text)
 
             elif current_input.casefold() == 's' or current_input.casefold() == 'q':  # quit/skip
                 self._quit = current_input.casefold() == 'q' or self._quit

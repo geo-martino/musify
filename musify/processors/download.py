@@ -33,7 +33,15 @@ class ItemDownloadHelper(InputProcessor, ItemProcessor):
         self.fields: list[Field] = to_collection(fields, list)
         self.interval = interval
 
+    def __call__(self, collections: UnitIterable[ItemCollection]) -> None:
+        self.open_sites(collections=collections)
+
     def open_sites(self, collections: UnitIterable[ItemCollection]) -> None:
+        """
+        Run the download helper.
+
+        Opens the formatted ``urls`` for each item in all given collections in the user's browser.
+        """
         if isinstance(collections, ItemCollection):
             items = collections.items
         else:
@@ -81,7 +89,9 @@ class ItemDownloadHelper(InputProcessor, ItemProcessor):
         not_opened = f" - Could not open sites for {len(not_queried)} items. " if not_queried else ". "
         valid_fields = [
             field.name.lower() for field in Fields.all()
-            if any(hasattr(item, field.name.lower()) for item in items)
+            if any(
+                hasattr(item, field.name.lower()) and getattr(item, field.name.lower()) is not None for item in items
+            )
         ]
 
         header = [
@@ -104,14 +114,14 @@ class ItemDownloadHelper(InputProcessor, ItemProcessor):
 
         current_input = "START"
         help_text = self._format_help_text(options=options, header=header)
-        help_text += f"\n\t\33[90mValid <fields> for this batch: {" ".join(valid_fields)}\33[0m\n"
+        help_text += f"\n\t\33[90mValid fields for this batch: {" ".join(valid_fields)}\33[0m\n"
 
         print("\n" + help_text)
         while current_input != '':
             current_input = self._get_user_input(f"Enter ({page}/{total})")
 
             if current_input.casefold() == "h":  # print help text
-                print(help_text)
+                print("\n" + help_text)
 
             elif current_input.casefold() == "r":
                 self._open_sites_for_items(items=items, fields=self.fields)
@@ -135,6 +145,6 @@ class ItemDownloadHelper(InputProcessor, ItemProcessor):
     def as_dict(self) -> dict[str, Any]:
         return {
             "urls": self.urls,
-            "fields": [field.name for field in self.fields],
+            "fields": [field.name.lower() for field in self.fields],
             "interval": self.interval,
         }
