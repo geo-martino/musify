@@ -8,10 +8,11 @@ reviewing matches through temporary playlist creation.
 import traceback
 from abc import ABCMeta, abstractmethod
 from collections import Counter
-from collections.abc import Mapping, Sequence, MutableSequence, Collection
+from collections.abc import Sequence, Collection
 from dataclasses import dataclass, field
 
 from musify import PROGRAM_NAME
+from musify.processors.base import InputProcessor
 from musify.processors.match import ItemMatcher
 from musify.shared.core.base import Item
 from musify.shared.core.collection import ItemCollection
@@ -24,7 +25,7 @@ from musify.shared.remote.config import RemoteObjectClasses
 from musify.shared.remote.enum import RemoteObjectType, RemoteIDType
 from musify.shared.remote.processors.search import RemoteItemSearcher
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
-from musify.shared.utils import get_user_input, get_max_width, align_and_truncate
+from musify.shared.utils import get_max_width, align_and_truncate
 
 ALLOW_KARAOKE_DEFAULT = RemoteItemSearcher.settings_items.allow_karaoke
 
@@ -40,7 +41,7 @@ class ItemCheckResult(Result):
     skipped: Sequence[Item] = field(default=tuple())
 
 
-class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
+class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, InputProcessor, metaclass=ABCMeta):
     """
     Runs operations for checking the URIs associated with a collection of items.
 
@@ -112,25 +113,6 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         self._final_unavailable: list[Track] = []
         #: The final list of items skipped by the checker
         self._final_skipped: list[Track] = []
-
-    def _get_user_input(self, text: str | None = None) -> str:
-        """Print dialog with optional text and get the user's input."""
-        inp = get_user_input(text)
-        self.logger.debug(f"User input: {inp}")
-        return inp.strip()
-
-    @staticmethod
-    def _format_help_text(options: Mapping[str, str], header: MutableSequence[str] | None = None) -> str:
-        """Format help text with a given mapping of options. Add an option header to include before options."""
-        max_width = get_max_width(options)
-
-        help_text = header or []
-        help_text.append("\n\t\33[96mEnter one of the following: \33[0m\n\t")
-        help_text.extend(
-            f"{align_and_truncate(k, max_width=max_width)}{': ' + v or ''}" for k, v in options.items()
-        )
-
-        return "\n\t".join(help_text) + '\n'
 
     def _check_api(self):
         """Check if the API token has expired and refresh as necessary"""
@@ -257,7 +239,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
         :param total: The total number of pages (pauses) that will occur in this run.
         """
         header = [
-            f"\n\t\33[1;94mTemporary playlists created on {self.source}.",
+            f"\t\33[1;94mTemporary playlists created on {self.source}.",
             f"You may now check the songs in each playlist on {self.source}. \33[0m"
         ]
         options = {
@@ -280,16 +262,13 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
             current_input = self._get_user_input(f"Enter ({page}/{total})")
             pl_names = [name for name in self._playlist_name_collection if current_input.casefold() in name.casefold()]
 
-            if current_input == "":  # user entered no option, break loop and return
-                break
+            if current_input.casefold() == "h":  # print help text
+                print("\n" + help_text)
 
             elif current_input.casefold() == 's' or current_input.casefold() == 'q':  # quit/skip
                 self._quit = current_input.casefold() == 'q' or self._quit
                 self._skip = current_input.casefold() == 's' or self._skip
                 break
-
-            elif current_input.casefold() == "h":  # print help text
-                print(help_text)
 
             elif pl_names:  # print originally added items
                 name = pl_names[0]
@@ -308,7 +287,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
                 self._check_api()
                 self.api.print_collection(current_input)
 
-            else:
+            elif current_input != "":
                 self.logger.warning("Input not recognised.")
 
     ###########################################################################
@@ -439,7 +418,17 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
                 if 'a' not in current_input:
                     current_input = self._get_user_input(align_and_truncate(item.name, max_width=max_width))
 
-                if current_input.casefold().replace('a', '') == 'u':  # mark item as unavailable
+                if current_input.casefold() == 'h':  # print help
+                    print("\n" + help_text)
+
+                elif current_input.casefold() == 's' or current_input.casefold() == 'q':  # quit/skip
+                    self._log_padded([name, "Skipping all loops"], pad="<")
+                    self._quit = current_input.casefold() == 'q' or self._quit
+                    self._skip = current_input.casefold() == 's' or self._skip
+                    self._remaining.clear()
+                    return
+
+                elif current_input.casefold().replace('a', '') == 'u':  # mark item as unavailable
                     self._log_padded([name, "Marking as unavailable"], pad="<")
                     item.uri = self.unavailable_uri_dummy
                     self._remaining.remove(item)
@@ -452,16 +441,6 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, metaclass=ABCMeta):
                 elif current_input.casefold() == 'r':  # return to former 'while' loop
                     self._log_padded([name, "Refreshing playlist metadata and restarting loop"])
                     return
-
-                elif current_input.casefold() == 's' or current_input.casefold() == 'q':  # quit/skip
-                    self._log_padded([name, "Skipping all loops"], pad="<")
-                    self._quit = current_input.casefold() == 'q' or self._quit
-                    self._skip = current_input.casefold() == 's' or self._skip
-                    self._remaining.clear()
-                    return
-
-                elif current_input.casefold() == 'h':  # print help
-                    print("\n" + help_text)
 
                 elif current_input.casefold() == 'p' and hasattr(item, "path"):  # print item path
                     print(f"\33[96m{item.path}\33[0m")

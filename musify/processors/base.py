@@ -2,17 +2,80 @@
 Base classes for all processors in this module. Also contains decorators for use in implementations.
 """
 
+import logging
 from abc import ABCMeta, abstractmethod
-from collections.abc import Mapping, Callable, Collection, Iterable
+from collections.abc import Mapping, Callable, Collection, Iterable, MutableSequence
 from functools import partial, update_wrapper
 from typing import Any, Self, Optional
 
 from musify.processors.exception import ProcessorLookupError
 from musify.shared.core.misc import PrettyPrinter
+from musify.shared.logger import MusifyLogger
+from musify.shared.utils import get_user_input, get_max_width, align_and_truncate
 
 
-class Processor:
+class Processor(PrettyPrinter, metaclass=ABCMeta):
     """Generic base class for processors"""
+
+
+class InputProcessor(Processor, metaclass=ABCMeta):
+    """
+    Processor that gets user input as part of it processing.
+
+    Contains methods for getting user input and printing formatted options text to the terminal.
+    """
+
+    def __init__(self):
+        # noinspection PyTypeChecker
+        #: The :py:class:`MusifyLogger` for this  object
+        self.logger: MusifyLogger = logging.getLogger(__name__)
+
+    def _get_user_input(self, text: str | None = None) -> str:
+        """Print dialog with optional text and get the user's input."""
+        inp = get_user_input(text)
+        self.logger.debug(f"User input: {inp}")
+        return inp.strip()
+
+    @staticmethod
+    def _format_help_text(options: Mapping[str, str], header: MutableSequence[str] | None = None) -> str:
+        """Format help text with a given mapping of options. Add an option header to include before options."""
+        max_width = get_max_width(options)
+
+        help_text = header or []
+        help_text.append("\n\t\33[96mEnter one of the following: \33[0m\n\t")
+        help_text.extend(
+            f"{align_and_truncate(k, max_width=max_width)}{': ' + v or ''}" for k, v in options.items()
+        )
+
+        return "\n\t".join(help_text) + '\n'
+
+
+class ItemProcessor(Processor, metaclass=ABCMeta):
+    """Base object for processing :py:class:`Item` objects"""
+
+
+class MusicBeeProcessor(ItemProcessor):
+    """Base object for processing :py:class:`Item` objects on MusicBee settings"""
+
+    @classmethod
+    def _processor_method_fmt(cls, name: str) -> str:
+        """A custom formatter to apply to the dynamic processor name"""
+        return "_" + cls._pascal_to_snake(name)
+
+    @classmethod
+    @abstractmethod
+    def from_xml(cls, xml: Mapping[str, Any], **kwargs) -> Self:
+        """
+        Initialise object from XML playlist data.
+
+        :param xml: The loaded XML object for this playlist.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def to_xml(self, **kwargs) -> Mapping[str, Any]:
+        """Export this object's settings to a map ready for export to an XML playlist file."""
+        raise NotImplementedError
 
 
 # noinspection PyPep8Naming,SpellCheckingInspection
@@ -120,35 +183,7 @@ class DynamicProcessor(Processor, metaclass=ABCMeta):
         return self._processor_method(*args, **kwargs)
 
 
-class ItemProcessor(Processor, PrettyPrinter, metaclass=ABCMeta):
-    """Base object for processing :py:class:`Item` objects"""
-
-
-class MusicBeeProcessor(ItemProcessor):
-    """Base object for processing :py:class:`Item` objects on MusicBee settings"""
-
-    @classmethod
-    def _processor_method_fmt(cls, name: str) -> str:
-        """A custom formatter to apply to the dynamic processor name"""
-        return "_" + cls._pascal_to_snake(name)
-
-    @classmethod
-    @abstractmethod
-    def from_xml(cls, xml: Mapping[str, Any], **kwargs) -> Self:
-        """
-        Initialise object from XML playlist data.
-
-        :param xml: The loaded XML object for this playlist.
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def to_xml(self, **kwargs) -> Mapping[str, Any]:
-        """Export this object's settings to a map ready for export to an XML playlist file."""
-        raise NotImplementedError
-
-
-class Filter[T](Processor, PrettyPrinter, metaclass=ABCMeta):
+class Filter[T](Processor, metaclass=ABCMeta):
     """Base class for filtering down values based on some settings"""
 
     __slots__ = ("_transform",)

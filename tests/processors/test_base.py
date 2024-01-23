@@ -1,3 +1,5 @@
+from typing import Any
+
 from musify.processors.base import DynamicProcessor, dynamicprocessormethod
 
 
@@ -34,6 +36,9 @@ class TestDynamicProcessor(DynamicProcessor):
     @dynamicprocessormethod("processor_3_alternative", "processor_extra")
     def processor_3(self):
         return 3
+
+    def as_dict(self) -> dict[str, Any]:
+        return {}
 
 
 def test_dynamic_processor():

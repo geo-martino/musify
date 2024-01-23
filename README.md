@@ -70,7 +70,7 @@ For more detailed guides, check out the [documentation](https://geo-martino.gith
 > - Load some other Spotify objects
 > - Add some tracks to a playlist
 
-1. If you don't already have one, create a [Spotify for Developers](https://developer.spotify.com/dashboard/login) account. 
+1. If you don't already have one, create a [Spotify for Developers](https://developer.spotify.com/dashboard) account. 
 2. If you don't already have one, [create an app](https://developer.spotify.com/documentation/web-api/concepts/apps). 
    Select "Web API" when asked which APIs you are planning on using. 
    To use this program, you will only need to take note of the **client ID** and **client secret**.
@@ -299,8 +299,8 @@ For more detailed guides, check out the [documentation](https://geo-martino.gith
 ## Currently Supported
 
 - **Music Streaming Services**: `Spotify`
-- **Audio filetypes**: `.mp3` `.flac` `.m4a` `.wma`
-- **Local playlist filetypes**: `.xautopf` `.m3u`
+- **Audio filetypes**: `.flac` `.m4a` `.mp3` `.wma`
+- **Local playlist filetypes**: `.m3u` `.xautopf`
 - **Local Libraries**: `MusicBee`
 
 

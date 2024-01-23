@@ -7,9 +7,9 @@ from __future__ import annotations
 import datetime
 import logging
 from abc import ABCMeta, abstractmethod
-from collections.abc import Collection, Mapping
+from collections.abc import Iterable, Collection, Mapping
 from copy import deepcopy
-from typing import Any, Self, Iterable
+from typing import Any, Self
 
 from musify.processors.base import Filter
 from musify.processors.filter import FilterDefinedList

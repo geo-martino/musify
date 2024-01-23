@@ -7,7 +7,7 @@ To contribute to Musify, follow these steps:
 Setup your development environment
 ==================================
 1. Ensure you have Python3.12 or greater installed on your system.
-2. Go to the `GitHub repository <https://geo-martino.github.com/musify>`_ and fork the project by clicking
+2. Go to the `GitHub repository <https://github.com/geo-martino/musify>`_ and fork the project by clicking
    **Fork** in the top left:
 
    .. image:: _images/contributing/musify_fork.png

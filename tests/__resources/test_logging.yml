@@ -43,7 +43,7 @@ handlers:
     level: INFO_EXTRA
 
   file:
-    class: musify.shared.logger.CurrentTimeRotatingFileHandler
+    class: musify.shared.handlers.CurrentTimeRotatingFileHandler
     level: DEBUG
     formatter: extended
     filters: ["file"]
@@ -57,7 +57,7 @@ handlers:
 loggers:
   test:  &logger
     level: DEBUG
-    handlers: [console_info, file]
+    handlers: [console_info]
     propagate: no
 
   dev:

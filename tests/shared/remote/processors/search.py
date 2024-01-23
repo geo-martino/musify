@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 from collections.abc import Callable, Iterable
 from copy import copy
 from urllib.parse import parse_qs
@@ -14,11 +14,16 @@ from musify.shared.core.object import BasicCollection, Album
 from musify.shared.remote.enum import RemoteObjectType
 from musify.shared.remote.processors.search import RemoteItemSearcher, SearchSettings
 from tests.local.track.utils import random_track, random_tracks
+from tests.shared.core.misc import PrettyPrinterTester
 from tests.shared.remote.utils import RemoteMock
 
 
-class RemoteItemSearcherTester(ABC):
+class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
     """Run generic tests for :py:class:`RemoteItemSearcher` implementations."""
+
+    @pytest.fixture
+    def obj(self, searcher: RemoteItemSearcher) -> RemoteItemSearcher:
+        return searcher
 
     @abstractmethod
     def searcher(self, *args, **kwargs) -> RemoteItemSearcher:
