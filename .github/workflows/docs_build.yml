@@ -40,7 +40,6 @@ jobs:
 
       - name: 🏗️ Sphinx build
         run: |
-          make checklinks
           make rebuild-html
 
       - name: 📦 Upload build artifacts

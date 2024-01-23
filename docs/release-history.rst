@@ -35,6 +35,32 @@ This project adheres to a modified `Calendar Versioning <https://calver.org/>`_ 
 * ``M`` = The current month
 * ``P`` = An 0-indexed incrementing index for the release version for this month
 
+2024.1.5
+========
+
+Added
+-----
+
+* Add the ItemDownloadHelper general processor
+
+Changed
+-------
+
+* Factor out logging handlers to their own script to avoid circular import issues
+* Abstract away input methods of RemoteItemChecker to InputProcessor base class
+* Factor out patch_input method to function in InputProcessor derived tests
+
+Fixed
+-----
+
+* Captured stdout assertions in RemoteItemChecker tests re-enabled, now fixed
+
+Documentation
+-------------
+
+* Fix redirect/broken links
+* Change notes text to proper rst syntax
+
 
 2024.1.4
 ========
@@ -42,12 +68,12 @@ This project adheres to a modified `Calendar Versioning <https://calver.org/>`_ 
 Fixed
 -----
 
-* fixed bug in ``restore_tracks`` method on library due to 'images' tag name not being present in track properties
+* Fix bug in ``restore_tracks`` method on library due to 'images' tag name not being present in track properties
 
 Documentation
 -------------
 
-* Expanded docstrings across entire package
+* Expand docstrings across entire package
 * Expand documentation with how to section, release history, and contributions pages
 
 
@@ -57,7 +83,7 @@ Documentation
 Changed
 -------
 
-* Removed x10 factor on bar threshold on _get_items_multi function in SpotifyAPI
+* Remove x10 factor on bar threshold on _get_items_multi function in SpotifyAPI
 
 Fixed
 -----
