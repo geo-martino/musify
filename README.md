@@ -51,7 +51,7 @@ python -m pip install musify
 ## Quick Guides
 
 These quick guides will help you get set up and going with Musify in just a few minutes.
-For more detailed guides, check out the [documentation](https://geo-martino.github.io/musify/)
+For more detailed guides, check out the [documentation](https://geo-martino.github.io/musify/).
 
 > [!TIP]
 > Set up logging to ensure you can see all info reported by the later operations.
@@ -307,13 +307,13 @@ For more detailed guides, check out the [documentation](https://geo-martino.gith
 ## Release History
 
 For change and release history, 
-check out the [documentation](https://geo-martino.github.io/musify/release-history.html)
+check out the [documentation](https://geo-martino.github.io/musify/release-history.html).
 
 
 ## Contributing
 
 For info on how to contribute to Musify, 
-check out the [documentation](https://geo-martino.github.io/musify/contributing.html)
+check out the [documentation](https://geo-martino.github.io/musify/contributing.html).
 
 
 <a id="aims"></a>

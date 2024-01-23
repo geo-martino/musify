@@ -51,7 +51,7 @@ python -m pip install {program_name_lower}
 ## Quick Guides
 
 These quick guides will help you get set up and going with {program_name} in just a few minutes.
-For more detailed guides, check out the [documentation](https://{program_owner_user}.github.io/{program_name_lower}/)
+For more detailed guides, check out the [documentation](https://{program_owner_user}.github.io/{program_name_lower}/).
 
 > [!TIP]
 > Set up logging to ensure you can see all info reported by the later operations.
@@ -307,13 +307,13 @@ For more detailed guides, check out the [documentation](https://{program_owner_u
 ## Release History
 
 For change and release history, 
-check out the [documentation](https://{program_owner_user}.github.io/{program_name_lower}/release-history.html)
+check out the [documentation](https://{program_owner_user}.github.io/{program_name_lower}/release-history.html).
 
 
 ## Contributing
 
 For info on how to contribute to {program_name}, 
-check out the [documentation](https://{program_owner_user}.github.io/{program_name_lower}/contributing.html)
+check out the [documentation](https://{program_owner_user}.github.io/{program_name_lower}/contributing.html).
 
 
 <a id="aims"></a>
