@@ -59,6 +59,8 @@ dev = [
 
 [project.urls]
 "Documentation" = "https://geo-martino.github.io/musify/"
+"Release Notes" = "https://geo-martino.github.io/musify/release-history.html"
+"Contribute" = "https://geo-martino.github.io/musify/contributing.html"
 "Source code" = "https://github.com/geo-martino/musify"
 Issues = "https://github.com/geo-martino/musify/issues"
 

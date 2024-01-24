@@ -3,6 +3,7 @@ import os
 import shutil
 from os.path import join, basename, dirname
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
@@ -27,6 +28,18 @@ def pytest_configure(config: pytest.Config):
     log_config.pop("compact", False)
     MusifyLogger.disable_bars = True
     MusifyLogger.compact = True
+
+    def remove_file_handler(c: dict[str, Any]) -> None:
+        """Remove all config for file handlers"""
+        for k, v in c.items():
+            if k == "handlers" and isinstance(v, list) and "file" in v:
+                v.pop(v.index("file"))
+            elif k == "handlers" and isinstance(v, dict) and "file" in v:
+                v.pop("file")
+            elif isinstance(v, dict):
+                remove_file_handler(v)
+
+    remove_file_handler(log_config)
 
     for formatter in log_config["formatters"].values():  # ensure ANSI colour codes in format are recognised
         formatter["format"] = formatter["format"].replace(r"\33", "\33")
