@@ -260,7 +260,10 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, InputProcessor, metacla
         print("\n" + help_text)
         while current_input != '':  # while user has not hit return only
             current_input = self._get_user_input(f"Enter ({page}/{total})")
-            pl_names = [name for name in self._playlist_name_collection if current_input.casefold() in name.casefold()]
+            pl_name = next(
+                name for name in self._playlist_name_collection
+                if current_input and current_input.casefold() in name.casefold()
+            )
 
             if current_input.casefold() == "h":  # print help text
                 print("\n" + help_text)
@@ -270,12 +273,11 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, InputProcessor, metacla
                 self._skip = current_input.casefold() == 's' or self._skip
                 break
 
-            elif pl_names:  # print originally added items
-                name = pl_names[0]
-                items = [item for item in self._playlist_name_collection[name] if item.has_uri]
+            elif pl_name:  # print originally added items
+                items = [item for item in self._playlist_name_collection[pl_name] if item.has_uri]
                 max_width = get_max_width(items)
 
-                print(f"\n\t\33[96mShowing items originally added to \33[94m{name}\33[0m:\n")
+                print(f"\n\t\33[96mShowing items originally added to \33[94m{pl_name}\33[0m:\n")
                 for i, item in enumerate(items, 1):
                     length = getattr(item, "length", 0)
                     self.api.print_item(

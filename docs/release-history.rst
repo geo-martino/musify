@@ -35,6 +35,17 @@ This project adheres to a modified `Calendar Versioning <https://calver.org/>`_ 
 * ``M`` = The current month
 * ``P`` = An 0-indexed incrementing index for the release version for this month
 
+2024.1.6
+========
+
+Fixed
+-----
+
+* Rename __max_str in local/collection.py to _max_str - functions could not see variable
+* Add default value of 0 to sort_key in ItemSorter.sort_by_field
+* Fixed RemoteItemChecker _pause logic to only get playlist name when input is not False-y
+
+
 2024.1.5
 ========
 

@@ -30,7 +30,7 @@ from musify.shared.types import UnitCollection
 from musify.shared.types import UnitIterable
 from musify.shared.utils import get_most_common_values, to_collection, align_and_truncate, get_max_width
 
-__max_str = "z" * 50
+_max_str = "z" * 50
 
 
 class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
@@ -326,7 +326,7 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
             tracks = [load_track(path) for path in glob(join(name, "*")) if splitext(path)[1] in TRACK_FILETYPES]
             name = basename(name)
         super().__init__(tracks=tracks, name=name, remote_wrangler=remote_wrangler)
-        self.tracks.sort(key=lambda x: x.filename or __max_str)
+        self.tracks.sort(key=lambda x: x.filename or _max_str)
 
     def set_compilation_tags(self) -> None:
         """
@@ -441,7 +441,7 @@ class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):
     ):
         super().__init__(tracks=tracks, name=name, remote_wrangler=remote_wrangler)
         self.tracks.sort(
-            key=lambda x: (x.disc_number or sys.maxsize, x.track_number or sys.maxsize, x.filename or __max_str)
+            key=lambda x: (x.disc_number or sys.maxsize, x.track_number or sys.maxsize, x.filename or _max_str)
         )
         self._image_links: dict[str, str] = {}
 
@@ -477,10 +477,10 @@ class LocalArtist(LocalCollectionFiltered[LocalTrack], Artist[LocalTrack]):
     ):
         super().__init__(tracks=tracks, name=name, remote_wrangler=remote_wrangler)
         self.tracks.sort(
-            key=lambda x: (x.album or __max_str,
+            key=lambda x: (x.album or _max_str,
                            x.disc_number or sys.maxsize,
                            x.track_number or sys.maxsize,
-                           x.filename or __max_str)
+                           x.filename or _max_str)
         )
 
 
@@ -509,9 +509,9 @@ class LocalGenres(LocalCollectionFiltered[LocalTrack], Genre[LocalTrack]):
     ):
         super().__init__(tracks=tracks, name=name, remote_wrangler=remote_wrangler)
         self.tracks.sort(
-            key=lambda x: (x.artist or __max_str,
-                           x.album or __max_str,
+            key=lambda x: (x.artist or _max_str,
+                           x.album or _max_str,
                            x.disc_number or sys.maxsize,
                            x.track_number or sys.maxsize,
-                           x.filename or __max_str)
+                           x.filename or _max_str)
         )

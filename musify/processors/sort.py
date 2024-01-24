@@ -95,7 +95,7 @@ class ItemSorter(MusicBeeProcessor):
         elif isinstance(example_value, str):  # key strips ignore words from string
             sort_key: Callable[[Item], (bool, str)] = lambda t: strip_ignore_words(t[tag_name])
         else:
-            sort_key: Callable[[Item], object] = lambda t: t[tag_name]
+            sort_key: Callable[[Item], object] = lambda t: t[tag_name] if t[tag_name] else 0
 
         items.sort(key=sort_key, reverse=reverse)
 
