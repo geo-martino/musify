@@ -260,10 +260,10 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, InputProcessor, metacla
         print("\n" + help_text)
         while current_input != '':  # while user has not hit return only
             current_input = self._get_user_input(f"Enter ({page}/{total})")
-            pl_name = next(
+            pl_name = next((
                 name for name in self._playlist_name_collection
                 if current_input and current_input.casefold() in name.casefold()
-            )
+            ), None)
 
             if current_input.casefold() == "h":  # print help text
                 print("\n" + help_text)
