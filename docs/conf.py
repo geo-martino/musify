@@ -71,8 +71,12 @@ html_context = dict(
 )
 
 # -- OpenGraph configuration --------------------------------------------------
+
 ogp_site_url = f"https://{PROGRAM_OWNER_NAME}.github.io/{PROGRAM_NAME.lower()}/"
 ogp_use_first_image = False
+ogp_social_cards = dict(
+    enable=True,
+)
 
 # -- GraphViz configuration --------------------------------------------------
 # https://graphviz.org/doc/info/attrs.html
