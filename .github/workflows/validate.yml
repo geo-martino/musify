@@ -106,20 +106,20 @@ jobs:
 
       - name: ⚙️ Setup - Calculate and assign new version
         run: |
-          export CURRENT_VERSION=$(curl -L https://pypi.python.org/pypi/musify/json | jq .info.version)
-          export CURRENT_MAJOR=$(echo ${CURRENT_VERSION//\"} | sed -r "s|^([0-9]+)\..*|\1|")
-          export CURRENT_MINOR=$(echo ${CURRENT_VERSION//\"} | sed -r "s|.*\.([0-9]+)\..*|\1|")
-          export CURRENT_PATCH=$(echo ${CURRENT_VERSION//\"} | sed -r "s|.*\.([0-9]+)$|\1|")
+          CURRENT_VERSION=$(curl -L https://pypi.python.org/pypi/musify/json | jq .info.version)
+          CURRENT_MAJOR=$(echo ${CURRENT_VERSION//\"} | sed -r "s|^([0-9]+)\..*|\1|")
+          CURRENT_MINOR=$(echo ${CURRENT_VERSION//\"} | sed -r "s|.*\.([0-9]+)\..*|\1|")
+          CURRENT_PATCH=$(echo ${CURRENT_VERSION//\"} | sed -r "s|.*\.([0-9]+)$|\1|")
           echo Current version = $CURRENT_VERSION
           echo Major=$CURRENT_MAJOR \| Minor=$CURRENT_MINOR \| Patch=$CURRENT_PATCH
           
           if [[ $CURRENT_MAJOR -ne $(date -u "+%Y") || ${CURRENT_MINOR} -ne $(date -u "+%-m") ]]
           then
             echo Resetting patch number 
-            export CURRENT_PATCH=-1
+            CURRENT_PATCH=-1
           fi
           
-          export VERSION=$(date -u "+%Y").$(date -u "+%-m").$((CURRENT_PATCH + 1))
+          VERSION=$(date -u "+%Y").$(date -u "+%-m").$((CURRENT_PATCH + 1))
           echo Assigning new version = $VERSION
           hatch version $VERSION
 

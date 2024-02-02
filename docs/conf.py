@@ -26,6 +26,7 @@ extensions = [
     "sphinx.ext.inheritance_diagram",
     "sphinx_autodoc_typehints",
     "autodocsumm",
+    "sphinxext.opengraph",
 ]
 autodoc_member_order = "bysource"
 autodoc_default_options = {
@@ -48,6 +49,8 @@ exclude_patterns = ["_build"]
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_static_path = ["_static"]
+html_title = project
+
 html_theme = "sphinx_rtd_theme"
 html_theme_options = dict(
     collapse_navigation=False,
@@ -67,6 +70,9 @@ html_context = dict(
     conf_py_path=f"/{basename(dirname(__file__))}/",
 )
 
+# -- OpenGraph configuration --------------------------------------------------
+ogp_site_url = f"https://{PROGRAM_OWNER_NAME}.github.io/{PROGRAM_NAME.lower()}/"
+ogp_use_first_image = False
 
 # -- GraphViz configuration --------------------------------------------------
 # https://graphviz.org/doc/info/attrs.html
