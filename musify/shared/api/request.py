@@ -9,6 +9,7 @@ from datetime import timedelta
 from http import HTTPStatus
 from typing import Any
 
+import requests
 from requests import Response, Session
 from requests_cache import CachedSession
 from time import sleep
@@ -67,7 +68,7 @@ class RequestHandler(APIAuthoriser):
 
     def authorise(self, force_load: bool = False, force_new: bool = False) -> dict[str, str]:
         headers = super().authorise(force_load=force_load, force_new=force_new)
-        self.session.headers = headers
+        self.session.headers.update(headers)
         return headers
 
     def request(self, method: str, url: str, *args, **kwargs) -> dict[str, Any]:
@@ -137,7 +138,7 @@ class RequestHandler(APIAuthoriser):
             return self.session.request(
                 method=method.upper(), force_refresh=not use_cache, url=url, headers=headers, *args, **kwargs
             )
-        except ConnectionError as ex:
+        except requests.exceptions.ConnectionError as ex:
             self.logger.warning(str(ex))
             return
 

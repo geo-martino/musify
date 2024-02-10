@@ -33,7 +33,15 @@ This project adheres to a modified `Calendar Versioning <https://calver.org/>`_ 
 
 * ``YYYY`` = The current year
 * ``M`` = The current month
-* ``P`` = An 0-indexed incrementing index for the release version for this month
+* ``P`` = An 1-indexed incrementing index for the release version for this month
+
+2024.1.7
+========
+
+Fixed
+-----
+
+* ConnectionError catch in RequestHandler now handles correctly
 
 2024.1.6
 ========

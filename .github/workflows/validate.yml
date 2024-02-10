@@ -116,7 +116,7 @@ jobs:
           if [[ $CURRENT_MAJOR -ne $(date -u "+%Y") || ${CURRENT_MINOR} -ne $(date -u "+%-m") ]]
           then
             echo Resetting patch number 
-            CURRENT_PATCH=-1
+            CURRENT_PATCH=0
           fi
           
           VERSION=$(date -u "+%Y").$(date -u "+%-m").$((CURRENT_PATCH + 1))

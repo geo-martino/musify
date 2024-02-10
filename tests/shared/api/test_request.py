@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import requests
 from requests import Response
 from requests_cache import OriginalResponse, CachedResponse, CachedSession
 from requests_mock import Mocker
@@ -49,7 +50,8 @@ class TestRequestHandler:
         assert request_handler.session.expire_after == cache_expiry
 
         request_handler.authorise()
-        assert request_handler.session.headers == request_handler.headers
+        for k, v in request_handler.headers.items():
+            assert request_handler.session.headers.get(k) == v
 
     def test_check_response_codes(self, request_handler: RequestHandler):
         response = Response()
@@ -121,7 +123,7 @@ class TestRequestHandler:
     def test_request(self, request_handler: RequestHandler, requests_mock: Mocker):
         def raise_error(*_, **__):
             """Just raise a ConnectionError"""
-            raise ConnectionError
+            raise requests.exceptions.ConnectionError()
 
         # handles connection errors safely
         url = "http://localhost/text_response"
