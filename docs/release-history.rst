@@ -67,8 +67,10 @@ Now converts path to expected XML format correctly.
 * FilterMatcher now handles '&' character correctly.
 * SpotifyAPI now only requests batches of up to 20 items when getting albums.
 Now matches Spotify Web API specifications better.
-* Loading of logging yaml config uses utf8 encoding now
-
+* Loading of logging yaml config uses UTF-8 encoding now
+* Removed dependency on pytest-lazy-fixture.
+Package is `broken for pytest >8.0 <https://github.com/TvoroG/pytest-lazy-fixture/issues/65>`_.
+Replaced functionality with forked version of code.
 
 2024.1.6
 ========
