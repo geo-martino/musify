@@ -230,7 +230,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             These items must all be of the same type of item i.e. all tracks OR all artists etc.
         :param kind: Item type if given string is ID.
         :param limit: When requests can be batched, size of batches to request.
-            This value will be limited to be between ``1`` and ``50``.
+            This value will be limited to be between ``1`` and ``50`` or ``20`` if getting albums.
         :param extend: When True and the given ``kind`` is a collection of items,
             extend the response to include all items in this collection.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
@@ -254,6 +254,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         if kind in {RemoteObjectType.USER, RemoteObjectType.PLAYLIST} or len(id_list) <= 1:
             results = self._get_items_multi(url=url, id_list=id_list, kind=unit, use_cache=use_cache)
         else:
+            if kind == RemoteObjectType.ALBUM:
+                limit = limit_value(limit, floor=1, ceil=20)
             results = self._get_items_batched(url=url, id_list=id_list, key=unit, use_cache=use_cache, limit=limit)
 
         key = self.collection_item_map.get(kind, kind)

@@ -1,10 +1,11 @@
 """
 The core, basic library implementation which is just a simple set of folders.
 """
-
+import itertools
 from collections.abc import Collection, Mapping, Iterable
+from functools import reduce
 from glob import glob
-from os.path import splitext, join, exists, basename
+from os.path import splitext, join, exists, basename, dirname
 from typing import Any
 
 from musify.local.collection import LocalCollection, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
@@ -158,12 +159,27 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
     @property
     def folders(self) -> list[LocalFolder]:
-        """Dynamically generate a set of folder collections from the tracks in this library"""
-        grouped = ItemSorter.group_by_field(items=self.tracks, field=LocalTrackField.FOLDER)
-        collections = [
-            LocalFolder(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
-            for name, group in grouped.items() if name
-        ]
+        """
+        Dynamically generate a set of folder collections from the tracks in this library.
+        Folder collections are generated relevant to the library folder it is found in.
+        """
+        def get_relative_path(track: LocalTrack) -> str:
+            """Return path of a track relative to the library folders of this library"""
+            return dirname(reduce(
+                lambda path, folder: path.replace(folder, ""), self.library_folders, track.path
+            )).lstrip("\\/")
+
+        def create_folder_collection(name: str, tracks: Collection[LocalTrack]) -> LocalFolder:
+            """
+            Create a :py:class:`LocalFolder` collection from the given ``tracks``,
+            ensuring the collection has the exact given ``name``.
+            """
+            folder = LocalFolder(tracks=tracks, name=basename(name), remote_wrangler=self.remote_wrangler)
+            folder._name = name
+            return folder
+
+        grouped = itertools.groupby(sorted(self.tracks, key=lambda track: track.path), get_relative_path)
+        collections = [create_folder_collection(name=name, tracks=list(group)) for name, group in grouped if name]
         return sorted(collections, key=lambda x: x.name)
 
     @property
@@ -277,7 +293,8 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         for path in bar:
             try:
                 tracks.append(load_track(path=path, remote_wrangler=self.remote_wrangler))
-            except MusifyError:
+            except MusifyError as ex:
+                self.logger.debug(f"Load error: {path} - {ex}")
                 self.errors.append(path)
                 continue
 

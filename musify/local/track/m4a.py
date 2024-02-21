@@ -107,7 +107,11 @@ class M4A(LocalTrack[mutagen.mp4.MP4]):
 
     def _write_date(self, dry_run: bool = True) -> tuple[bool, bool, bool, bool]:
         date_str = self.date.strftime(self.date_format) if self.date else None
+        if not date_str:
+            date_str = f"{self.year}-{str(self.month).zfill(2)}" if self.month else str(self.year)
         date = self._write_tag(next(iter(self.tag_map.date), None), date_str, dry_run)
+        if date:
+            return date, False, False, False
 
         year = self._write_tag(next(iter(self.tag_map.year), None), str(self.year) if self.year else None, dry_run)
         month = self._write_tag(next(iter(self.tag_map.month), None), str(self.month) if self.month else None, dry_run)

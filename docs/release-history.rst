@@ -38,10 +38,36 @@ This project adheres to a modified `Calendar Versioning <https://calver.org/>`_ 
 2024.1.7
 ========
 
+Added
+-----
+
+* Add debug log for error failure reason when loading tracks
+
+Changed
+-------
+
+* Generating folders for a LocalLibrary now uses folder names as relative to the library folders of the LocalLibrary.
+This now supports nested folder structures better.
+* Writing date tags to LocalTrack now supports partial dates of only YYYY-MM.
+* Writing date tags to LocalTrack skips writing year, month, day tags if date tag already written.
+
+Removed
+-------
+
+* set_compilation_tags method removed from LocalFolder.
+This contained author specific logic and was not appropriate for general use.
+*
+
 Fixed
 -----
 
 * ConnectionError catch in RequestHandler now handles correctly
+* Added safe characters and replacements for path conversion in MusicBee XMLLibraryParser.
+Now converts path to expected XML format correctly.
+* FilterMatcher now handles '&' character correctly.
+* SpotifyAPI now only requests batches of up to 20 items when getting albums.
+Now matches Spotify Web API specifications better.
+
 
 2024.1.6
 ========
