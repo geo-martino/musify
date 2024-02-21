@@ -56,7 +56,7 @@ Removed
 
 * set_compilation_tags method removed from LocalFolder.
 This contained author specific logic and was not appropriate for general use.
-*
+
 
 Fixed
 -----
@@ -67,6 +67,7 @@ Now converts path to expected XML format correctly.
 * FilterMatcher now handles '&' character correctly.
 * SpotifyAPI now only requests batches of up to 20 items when getting albums.
 Now matches Spotify Web API specifications better.
+* Loading of logging yaml config uses utf8 encoding now
 
 
 2024.1.6
