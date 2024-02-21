@@ -38,7 +38,6 @@ dependencies = [
 [project.optional-dependencies]
 test = [
     "pytest~=8.0",
-    "pytest-lazy-fixture~=0.6",
     "pytest-mock~=3.12",
     "pytest-repeat~=0.9",
     "pycountry~=23.12",

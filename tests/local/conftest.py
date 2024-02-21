@@ -1,5 +1,4 @@
 import pytest
-from pytest_lazyfixture import lazy_fixture
 
 from musify.local.file import PathStemMapper
 from musify.local.track import LocalTrack, FLAC, MP3, M4A, WMA
@@ -46,10 +45,10 @@ def track_wma(path: str, remote_wrangler: RemoteDataWrangler) -> WMA:
 
 
 @pytest.fixture(params=[
-    lazy_fixture("track_flac"),
-    lazy_fixture("track_mp3"),
-    lazy_fixture("track_m4a"),
-    lazy_fixture("track_wma")
+    pytest.lazy_fixture("track_flac"),
+    pytest.lazy_fixture("track_mp3"),
+    pytest.lazy_fixture("track_m4a"),
+    pytest.lazy_fixture("track_wma")
 ])
 def track(request) -> LocalTrack:
     """Yields instantiated :py:class:`LocalTrack` objects for testing"""
