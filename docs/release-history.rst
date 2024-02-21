@@ -42,6 +42,9 @@ Fixed
 -----
 
 * ConnectionError catch in RequestHandler now handles correctly
+* Removed dependency on pytest-lazy-fixture.
+Package is `broken for pytest >8.0 <https://github.com/TvoroG/pytest-lazy-fixture/issues/65>`_.
+Replaced functionality with forked version of code.
 
 2024.1.6
 ========
