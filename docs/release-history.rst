@@ -44,7 +44,7 @@ Changed
 -------
 
 * Generating folders for a LocalLibrary now uses folder names as relative to the library folders of the LocalLibrary.
-This now supports nested folder structures better.
+  This now supports nested folder structures better.
 * Writing date tags to LocalTrack now supports partial dates of only YYYY-MM.
 * Writing date tags to LocalTrack skips writing year, month, day tags if date tag already written.
 
@@ -52,21 +52,21 @@ Removed
 -------
 
 * set_compilation_tags method removed from LocalFolder.
-This contained author specific logic and was not appropriate for general use.
+  This contained author specific logic and was not appropriate for general use.
 
 Fixed
 -----
 
 * ConnectionError catch in RequestHandler now handles correctly
 * Added safe characters and replacements for path conversion in MusicBee XMLLibraryParser.
-Now converts path to expected XML format correctly.
+  Now converts path to expected XML format correctly.
 * FilterMatcher now handles '&' character correctly.
 * SpotifyAPI now only requests batches of up to 20 items when getting albums.
-Now matches Spotify Web API specifications better.
+  Now matches Spotify Web API specifications better.
 * Loading of logging yaml config uses UTF-8 encoding now
 * Removed dependency on pytest-lazy-fixture.
-Package is `broken for pytest >8.0 <https://github.com/TvoroG/pytest-lazy-fixture/issues/65>`_.
-Replaced functionality with forked version of code.
+  Package is `broken for pytest >8.0 <https://github.com/TvoroG/pytest-lazy-fixture/issues/65>`_.
+  Replaced functionality with forked version of code.
 
 
 0.7.6
