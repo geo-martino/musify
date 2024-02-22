@@ -48,6 +48,7 @@ test = [
     "requests-mock~=1.11",
 ]
 docs = [
+    "musify[build]",
     "sphinx~=7.2",
     "renku_sphinx_theme",
     "graphviz~=0.20",

@@ -3,7 +3,8 @@
 
 # You can set these variables from the command line, and also
 # from the environment for the first two.
-SPHINXOPTS    ?=
+VERSION       = $(shell hatch version)
+SPHINXOPTS    ?= -D release=${VERSION}
 SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     = docs
 BUILDDIR      = docs/_build
@@ -12,14 +13,14 @@ LINKCHECKDIR  = docs/_linkcheck
 
 # Put it first so that "make" without argument is like "make help".
 help:
-	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 rebuild-html: Makefile
-	$(SPHINXBUILD) -M clean "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-	rm -f docs/"$(PROJECTNAME)"*.rst
-	sphinx-apidoc -o "$(SOURCEDIR)" ./"$(PROJECTNAME)" -d 4 --force --module-first --separate --no-toc -t "$(SOURCEDIR)"/_templates
-	$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-	$(SPHINXBUILD) -b linkcheck "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@$(SPHINXBUILD) -M clean "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@rm -f docs/"$(PROJECTNAME)"*.rst
+	@sphinx-apidoc -o "$(SOURCEDIR)" ./"$(PROJECTNAME)" -d 4 --force --module-first --separate --no-toc -t "$(SOURCEDIR)"/_templates
+	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@$(SPHINXBUILD) -b linkcheck "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 .PHONY: help Makefile
 
