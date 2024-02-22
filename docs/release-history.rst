@@ -28,15 +28,11 @@
 Release History
 ===============
 
-The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_.
-This project adheres to a modified `Calendar Versioning <https://calver.org/>`_ i.e. ``YYYY-M-P`` where
+The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
+and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
-* ``YYYY`` = The current year
-* ``M`` = The current month
-* ``P`` = An 1-indexed incrementing index for the release version for this month
-
-2024.1.7
-========
+0.8.0
+=====
 
 Added
 -----
@@ -72,8 +68,8 @@ Now matches Spotify Web API specifications better.
 Package is `broken for pytest >8.0 <https://github.com/TvoroG/pytest-lazy-fixture/issues/65>`_.
 Replaced functionality with forked version of code.
 
-2024.1.6
-========
+0.7.6
+=====
 
 Fixed
 -----
@@ -83,8 +79,8 @@ Fixed
 * Fixed RemoteItemChecker _pause logic to only get playlist name when input is not False-y
 
 
-2024.1.5
-========
+0.7.5
+=====
 
 Added
 -----
@@ -112,8 +108,8 @@ Documentation
 * Change notes text to proper rst syntax
 
 
-2024.1.4
-========
+0.7.4
+=====
 
 Fixed
 -----
@@ -127,8 +123,8 @@ Documentation
 * Expand documentation with how to section, release history, and contributions pages
 
 
-2024.1.3
-========
+0.7.3
+=====
 
 Changed
 -------
@@ -141,8 +137,8 @@ Fixed
 * LocalTrack would break when trying to save tags for unmapped tag names, now handles correctly
 
 
-2024.1.2
-========
+0.7.2
+=====
 
 Fixed
 -----
@@ -150,8 +146,8 @@ Fixed
 * MusifyLogger would not get file_paths for parent loggers when propagate == True, now it does
 
 
-2024.1.1
-========
+0.7.1
+=====
 
 Changed
 -------
@@ -164,8 +160,8 @@ Fixed
 * CurrentTimeRotatingFileHandler now creates dirs for new log directories
 
 
-2024.1.0
-========
+0.7.0
+=====
 
 Added
 -----

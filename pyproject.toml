@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling~=1.21"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
@@ -36,6 +36,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+build = [
+    "hatch",
+    "hatch-vcs",
+]
 test = [
     "pytest~=8.0",
     "pytest-mock~=3.12",
@@ -52,7 +56,7 @@ docs = [
     "sphinxext-opengraph~=0.9",
 ]
 dev = [
-    "musify[test,docs]",
+    "musify[build,test,docs]",
     "flake8",
     "grip~=4.6",
 ]
@@ -65,7 +69,8 @@ dev = [
 Issues = "https://github.com/geo-martino/musify/issues"
 
 [tool.hatch.version]
-path = "musify/__init__.py"
+source = "vcs"
+fallback-version = "0.0.0"
 
 [tool.hatch.build.targets.sdist]
 include = ["musify"]
