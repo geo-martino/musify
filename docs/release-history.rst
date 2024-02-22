@@ -31,6 +31,7 @@ Release History
 The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
+
 0.8.0
 =====
 
@@ -53,7 +54,6 @@ Removed
 * set_compilation_tags method removed from LocalFolder.
 This contained author specific logic and was not appropriate for general use.
 
-
 Fixed
 -----
 
@@ -67,6 +67,7 @@ Now matches Spotify Web API specifications better.
 * Removed dependency on pytest-lazy-fixture.
 Package is `broken for pytest >8.0 <https://github.com/TvoroG/pytest-lazy-fixture/issues/65>`_.
 Replaced functionality with forked version of code.
+
 
 0.7.6
 =====
