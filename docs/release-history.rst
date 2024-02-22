@@ -31,10 +31,6 @@ Release History
 The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
-0.8.1
-=====
-
-Nothing changed from 0.8.0. New release scheduled to force deployment.
 
 0.8.0
 =====
