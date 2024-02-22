@@ -135,9 +135,9 @@ class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](MusicBeePr
 
         xml = {}
         if len(include_items) > 0:  # assign include paths to XML object
-            xml["ExceptionsInclude"] = "|".join(path_mapper(include_items))
+            xml["ExceptionsInclude"] = "|".join(path_mapper(include_items)).replace("&", "&amp;")
         if len(exclude_items) > 0:  # assign exclude paths to XML object
-            xml["Exceptions"] = "|".join(path_mapper(exclude_items))
+            xml["Exceptions"] = "|".join(path_mapper(exclude_items)).replace("&", "&amp;")
 
         return xml
 

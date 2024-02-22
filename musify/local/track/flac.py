@@ -30,7 +30,7 @@ class FLAC(LocalTrack[mutagen.flac.FLAC]):
         track_number=["tracknumber", "track"],
         track_total=["tracktotal"],
         genres=["genre"],
-        date=["date"],
+        date=["date", "year"],
         year=["year"],
         bpm=["bpm"],
         key=["initialkey"],

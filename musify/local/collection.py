@@ -328,41 +328,6 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
         super().__init__(tracks=tracks, name=name, remote_wrangler=remote_wrangler)
         self.tracks.sort(key=lambda x: x.filename or _max_str)
 
-    def set_compilation_tags(self) -> None:
-        """
-        Modify tags for tracks in the folders of this library.
-
-        The following steps are applied to all non-compilation folders:
-            * Set compilation to False
-
-        The following steps are applied to all compilation folders:
-            * Set album name to folder name
-            * Set album artist to 'Various'
-            * Set track_number in ascending order by filename
-            * Set track_total to the number of tracks in the folder
-            * Set disc_number to 1
-            * Set disc_total to 1
-            * Set compilation to True
-        """
-
-        count = 0
-        if self.compilation:
-            tracks = sorted(self.tracks, key=lambda x: x.path)
-
-            for i, track in enumerate(tracks, 1):  # set tags
-                track.album = track.folder
-                track.album_artist = "Various"
-                track.track_number = i
-                track.track_total = len(tracks)
-                track.disc_number = 1
-                track.disc_total = 1
-                track.compilation = True
-                count += 1
-        else:
-            for track in self.tracks:  # set tags
-                track.compilation = False
-                count += 1
-
 
 class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):
     """

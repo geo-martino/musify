@@ -321,7 +321,11 @@ class TagWriter(TagReader, metaclass=ABCMeta):
         :return: True if the file was updated or would have been when dry_run is True, False otherwise.
         """
         date_str = self.date.strftime(self.date_format) if self.date else None
+        if not date_str:
+            date_str = f"{self.year}-{str(self.month).zfill(2)}" if self.month else str(self.year)
         date = self._write_tag(next(iter(self.tag_map.date), None), date_str, dry_run)
+        if date:
+            return date, False, False, False
 
         year = self._write_tag(next(iter(self.tag_map.year), None), self.year, dry_run)
         month = self._write_tag(next(iter(self.tag_map.month), None), self.month, dry_run)

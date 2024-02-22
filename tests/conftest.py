@@ -25,7 +25,7 @@ from tests.spotify.api.mock import SpotifyMock
 def pytest_configure(config: pytest.Config):
     """Loads logging config"""
     config_file = join(dirname(dirname(__file__)), "logging.yml")
-    with open(config_file, "r") as file:
+    with open(config_file, "r", encoding="utf-8") as file:
         log_config = yaml.full_load(file)
 
     log_config.pop("compact", False)
@@ -149,7 +149,6 @@ def normalize_call(callspec, metafunc, used_keys):
     used_keys = used_keys or set()
     # valtype_keys = set(getattr(callspec, valtype).keys()) - used_keys
     keys = set(callspec.params.keys()) - used_keys
-    print(used_keys, keys)
 
     # for arg in valtype_keys:
     #     val = getattr(callspec, valtype)[arg]

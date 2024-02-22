@@ -361,7 +361,9 @@ class XMLLibraryParser:
     @staticmethod
     def to_xml_path(path: str) -> str:
         """Convert a standard system path to a file path as found in the MusicBee XML library file"""
-        return f"file://localhost/{urllib.parse.quote(path.replace('\\', '/'), safe=':/')}"
+        return f"file://localhost/{urllib.parse.quote(path.replace('\\', '/'), safe=':/!(),;@[]+')}"\
+            .replace("%26", "&#38;")\
+            .replace("%27", "&#39;")
 
     @staticmethod
     def from_xml_path(path: str) -> str:
