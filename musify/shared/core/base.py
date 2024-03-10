@@ -101,12 +101,6 @@ class Item(AttributePrinter, NameableTaggableMixin, Hashable, metaclass=ABCMeta)
         """URI (Uniform Resource Indicator) is the unique identifier for this item."""
         raise NotImplementedError
 
-    @uri.setter
-    @abstractmethod
-    def uri(self, value: str | None) -> None:
-        """Set both the ``uri`` property and the ``has_uri`` property ."""
-        raise NotImplementedError
-
     @property
     @abstractmethod
     def has_uri(self) -> bool | None:

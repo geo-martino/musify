@@ -58,6 +58,7 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
         "_date_added",
         "_last_played",
         "_play_count",
+        "_loaded",
     )
     __attributes_classes__ = (LocalItem, Track)
     __attributes_ignore__ = ("tag_map", "file")
@@ -243,6 +244,7 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
 
     @uri.setter
     def uri(self, value: str | None):
+        """Set both the ``uri`` property and the ``has_uri`` property ."""
         if value is None:
             self._uri = None
             self._has_uri = None
@@ -252,7 +254,9 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
         else:
             self._uri = value
             self._has_uri = True
-        setattr(self, self.uri_tag.name.lower(), value)
+
+        if self._loaded:
+            setattr(self, self.uri_tag.name.lower(), value)
 
     @property
     def has_uri(self):
@@ -377,6 +381,8 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
         self._last_played = None
         self._play_count = None
 
+        self._loaded = False
+
     def load_metadata(self) -> None:
         """Driver for extracting all supported metadata from a loaded file"""
 
@@ -397,6 +403,8 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
 
         self.uri = self._read_uri()
         self.has_image = self._check_for_images()
+
+        self._loaded = True
 
     def _read_tag(self, tag_ids: Iterable[str]) -> list[Any] | None:
         """Extract all tag values from file for a given list of tag IDs"""

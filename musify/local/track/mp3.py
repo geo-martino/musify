@@ -117,10 +117,10 @@ class MP3(LocalTrack[mutagen.mp3.MP3]):
         tag_id_prefix = next(iter(self.tag_map.comments), None)
         self.delete_tags(tags=LocalTrackField.COMMENTS, dry_run=dry_run)
 
-        for i, comment in enumerate(self.comments, 1):
+        for comment in self.comments:
             # noinspection PyUnresolvedReferences
             comm = mutagen.id3.COMM(
-                encoding=mutagen.id3.Encoding.UTF8, desc=f"ID3v1 Comment {i}", lang="eng", text=[comment]
+                encoding=mutagen.id3.Encoding.UTF8, desc="ID3v1 Comment", lang="eng", text=[comment]
             )
             # noinspection PyUnresolvedReferences
             tag_id = f"{tag_id_prefix}:{comm.desc}:{comm.lang}"
@@ -160,7 +160,7 @@ class MP3(LocalTrack[mutagen.mp3.MP3]):
             return removed
 
         for tag_id_prefix in tag_ids:
-            for mp3_id in list(self.file.keys()).copy():
+            for mp3_id in list(self._file.keys()).copy():
                 if mp3_id.split(":")[0] == tag_id_prefix and self._file[mp3_id]:
                     if not dry_run:
                         del self._file[mp3_id]
