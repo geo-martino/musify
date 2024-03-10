@@ -32,6 +32,21 @@ The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
 
+0.8.1
+=====
+
+Fixed
+-----
+
+* Comments from LocalTrack metadata loading no longer gets wiped after setting URI on init
+* Tweaked description of IDv3 tag for MP3
+
+Removed
+-------
+
+* Abstract uri.setter method on `Item`
+
+
 0.8.0
 =====
 
