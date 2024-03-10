@@ -58,6 +58,7 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
         "_date_added",
         "_last_played",
         "_play_count",
+        "_loaded",
     )
     __attributes_classes__ = (LocalItem, Track)
     __attributes_ignore__ = ("tag_map", "file")

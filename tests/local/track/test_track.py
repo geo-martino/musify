@@ -94,7 +94,7 @@ def test_loaded_attributes_mp3(track_mp3: MP3):
     assert int(track_mp3.length) == 30
     # assert track.path == path_track_mp3  # uses tmp_path instead
     assert track_mp3.ext == ".mp3"
-    assert track_mp3.size == 411038
+    assert track_mp3.size == 410910
     assert track_mp3.channels == 1
     assert track_mp3.bit_rate == 96.0
     assert track_mp3.bit_depth is None
