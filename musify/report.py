@@ -12,7 +12,7 @@ from musify.shared.core.enum import TagField, Fields, ALL_FIELDS, TagFields
 from musify.shared.core.object import Library, Playlist
 from musify.shared.logger import MusifyLogger, REPORT
 from musify.shared.types import UnitIterable
-from musify.shared.utils import align_and_truncate, get_max_width, to_collection
+from musify.shared.utils import align_string, get_max_width, to_collection
 
 
 def report_playlist_differences(
@@ -54,7 +54,7 @@ def report_playlist_differences(
         unavailable[name] = source_no_uri + reference_no_uri
 
         logger.report(
-            f"\33[97m{align_and_truncate(name, max_width=max_width)} \33[0m|"
+            f"\33[97m{align_string(name, max_width=max_width)} \33[0m|"
             f"\33[92m{len(reference_extra):>6} extra \33[0m|"
             f"\33[91m{len(source_extra):>6} missing \33[0m|"
             f"\33[93m{len(source_no_uri) + len(reference_no_uri):>6} unavailable \33[0m|"
@@ -148,7 +148,7 @@ def report_missing_tags(
     for name, result in missing.items():
         logger.report(f"\33[1;91m -> {name} \33[0m")
         for item, tags in result.items():
-            n = align_and_truncate(item.name, max_width=max_width)
+            n = align_string(item.name, max_width=max_width)
             logger.report(f"\33[96m{n} \33[0m| \33[93m{', '.join(tags)} \33[0m")
         logger.print(REPORT)
 

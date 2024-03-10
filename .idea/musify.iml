@@ -25,7 +25,7 @@
       <excludeFolder url="file://$MODULE_DIR$/jupyter" />
       <excludeFolder url="file://$MODULE_DIR$/docs/_build" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.12 (musify)" jdkType="Python SDK" />
+    <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

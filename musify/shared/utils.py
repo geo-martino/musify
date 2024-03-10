@@ -7,6 +7,8 @@ from collections import Counter
 from collections.abc import Iterable, Collection, MutableSequence, Mapping, MutableMapping
 from typing import Any
 
+import unicodedata
+
 from musify.shared.exception import MusifyTypeError
 from musify.shared.types import Number
 
@@ -72,12 +74,19 @@ def get_max_width(values: Collection[Any], min_width: int = 15, max_width: int =
     return limit_value(value=max_len + 1, floor=min_width, ceil=max_width)
 
 
-def align_and_truncate(value: Any, max_width: int = 0, right_align: bool = False) -> str:
+def align_string(value: Any, max_width: int = 0, right_align: bool = False) -> str:
     """Align string with space padding. Truncate any string longer than max width with ..."""
+    value_str = str(value)
+    modifier_categories = {'Mc', 'Mn'}
+
     if max_width == 0:
-        return value
-    truncated = str(value)[:(max_width - 3)] + "..." if not right_align else "..." + str(value)[-(max_width - 3):]
-    return f"{value if len(str(value)) < max_width else truncated:<{max_width}}"
+        return value_str
+    elif max_width <= 3:
+        value_str = value_str[:max_width]
+    elif sum(unicodedata.category(char) not in modifier_categories for char in value_str) > max_width:
+        value_str = value_str[:(max_width - 3)] + "..." if not right_align else "..." + value_str[-(max_width - 3):]
+
+    return f"{value_str:<{max_width}}"
 
 
 ###########################################################################

@@ -16,7 +16,7 @@ from musify.shared.remote.config import RemoteObjectClasses
 from musify.shared.remote.enum import RemoteObjectType
 from musify.shared.remote.object import RemoteTrack, RemoteCollection, RemotePlaylist, SyncResultRemotePlaylist, \
     RemoteArtist, RemoteAlbum
-from musify.shared.utils import align_and_truncate, get_max_width
+from musify.shared.utils import align_string, get_max_width
 
 
 class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=ABCMeta):
@@ -196,7 +196,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
 
         self.logger.stat(f"\33[1;96m{self.source} PLAYLISTS: \33[0m")
         for name, playlist in self.playlists.items():
-            name = align_and_truncate(playlist.name, max_width=max_width)
+            name = align_string(playlist.name, max_width=max_width)
             self.logger.stat(f"\33[97m{name} \33[0m| \33[92m{len(playlist):>6} total tracks \33[0m")
 
     ###########################################################################
@@ -460,7 +460,7 @@ class RemoteLibrary[T: RemoteTrack](Library[T], RemoteCollection[T], metaclass=A
         self.logger.stat(f"\33[1;96mSync {self.source} playlists' stats: \33[0m")
         for name, result in results.items():
             self.logger.stat(
-                f"\33[97m{align_and_truncate(name, max_width=max_width)} \33[0m|"
+                f"\33[97m{align_string(name, max_width=max_width)} \33[0m|"
                 f"\33[96m{result.start:>6} initial \33[0m|"
                 f"\33[92m{result.added:>6} added \33[0m|"
                 f"\33[91m{result.removed:>6} removed \33[0m|"

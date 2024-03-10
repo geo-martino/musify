@@ -5,7 +5,7 @@ import pytest
 from musify.shared.exception import MusifyTypeError
 from musify.shared.utils import flatten_nested, merge_maps, get_most_common_values
 from musify.shared.utils import limit_value, to_collection, unique_list
-from musify.shared.utils import strip_ignore_words, safe_format_map, get_max_width, align_and_truncate
+from musify.shared.utils import strip_ignore_words, safe_format_map, get_max_width, align_string
 
 
 ###########################################################################
@@ -55,12 +55,35 @@ def test_get_max_width():
     assert get_max_width([]) == 0
 
 
-def test_align_and_truncate():
-    assert align_and_truncate("a" * 10, max_width=19, right_align=False) == "a" * 10 + " " * 9
-    assert align_and_truncate("b" * 15, max_width=19, right_align=False) == "b" * 15 + " " * 4
-    assert align_and_truncate("c" * 20, max_width=19, right_align=False) == "c" * 16 + "..."
-    assert align_and_truncate("d" * 25, max_width=19, right_align=False) == "d" * 16 + "..."
-    assert align_and_truncate("e" * 25, max_width=19, right_align=True) == "..." + "e" * 16
+def test_align_string():
+    # no truncate when max_width == 0
+    assert align_string("abcdefghijkl", max_width=0, right_align=False) == "abcdefghijkl"
+
+    # edge case where max_width <= 3
+    assert align_string("abcdefghijkl", max_width=1, right_align=False) == "a"
+    assert align_string("abcdefghijkl", max_width=3, right_align=False) == "abc"
+
+    # value length <= max_width
+    assert align_string("", max_width=3, right_align=False) == " " * 3
+    assert align_string("a", max_width=3, right_align=False) == "a" + " " * 2
+    assert align_string("abcd", max_width=4, right_align=False) == "abcd"
+
+    # value length > max_width
+    assert align_string("a" * 10, max_width=19, right_align=False) == "a" * 10 + " " * 9
+    assert align_string("b" * 15, max_width=19, right_align=False) == "b" * 15 + " " * 4
+    assert align_string("c" * 20, max_width=19, right_align=False) == "c" * 16 + "..."
+    assert align_string("d" * 25, max_width=19, right_align=False) == "d" * 16 + "..."
+    assert align_string("e" * 25, max_width=19, right_align=True) == "..." + "e" * 16
+
+    # value contains combining unicode characters
+    value_emoji = "some text 🏗️🐧🎙️👢🥾🐈📃🚀"
+    assert len(value_emoji) > 18  # visible length == 18
+    assert len(align_string(value_emoji, max_width=40)) == 40
+    assert len(align_string(value_emoji, max_width=15)) == 15
+    assert align_string(value_emoji, max_width=18) == "some text 🏗️🐧🎙️👢🥾🐈📃🚀"
+    assert align_string(value_emoji, max_width=17) == "some text 🏗️🐧🎙️👢..."
+    assert align_string(value_emoji, max_width=16) == "some text 🏗️🐧🎙️..."
+    assert align_string(value_emoji, max_width=15) == "some text 🏗️🐧..."
 
 
 ###########################################################################

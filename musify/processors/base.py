@@ -11,7 +11,7 @@ from typing import Any, Self, Optional
 from musify.processors.exception import ProcessorLookupError
 from musify.shared.core.misc import PrettyPrinter
 from musify.shared.logger import MusifyLogger
-from musify.shared.utils import get_user_input, get_max_width, align_and_truncate
+from musify.shared.utils import get_user_input, get_max_width, align_string
 
 
 class Processor(PrettyPrinter, metaclass=ABCMeta):
@@ -44,7 +44,7 @@ class InputProcessor(Processor, metaclass=ABCMeta):
         help_text = header or []
         help_text.append("\n\t\33[96mEnter one of the following: \33[0m\n\t")
         help_text.extend(
-            f"\33[1m{align_and_truncate(k, max_width=max_width)}\33[0m{': ' + v or ''}" for k, v in options.items()
+            f"\33[1m{align_string(k, max_width=max_width)}\33[0m{': ' + v or ''}" for k, v in options.items()
         )
 
         return "\n\t".join(help_text) + '\n'

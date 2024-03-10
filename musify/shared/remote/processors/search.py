@@ -21,7 +21,7 @@ from musify.shared.remote import Remote
 from musify.shared.remote.api import RemoteAPI
 from musify.shared.remote.config import RemoteObjectClasses
 from musify.shared.remote.enum import RemoteObjectType
-from musify.shared.utils import align_and_truncate, get_max_width
+from musify.shared.utils import align_string, get_max_width
 
 
 @dataclass(frozen=True)
@@ -159,7 +159,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
             colour3 = "\33[92m" if skipped == 0 else "\33[93m"
 
             self.logger.report(
-                f"\33[1m{align_and_truncate(name, max_width=max_width)} \33[0m|"
+                f"\33[1m{align_string(name, max_width=max_width)} \33[0m|"
                 f"{colour1}{matched:>6} matched \33[0m| "
                 f"{colour2}{unmatched:>6} unmatched \33[0m| "
                 f"{colour3}{skipped:>6} skipped \33[0m| "
