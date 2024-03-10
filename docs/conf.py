@@ -72,16 +72,12 @@ html_context = dict(
 # -- OpenGraph configuration --------------------------------------------------
 
 ogp_site_url = f"https://{PROGRAM_OWNER_USER}.github.io/{PROGRAM_NAME.lower()}/"
-ogp_use_first_image = False
-ogp_social_cards = dict(
-    enable=True,
-)
 
 # -- GraphViz configuration --------------------------------------------------
 # https://graphviz.org/doc/info/attrs.html
 
 graphviz_output_format = "svg"
-inheritance_graph_attrs = dict(rankdir="TB", size='""',
-                               fontsize=10, ratio="auto",
-                               center="true", style="solid")
+inheritance_graph_attrs = dict(
+    rankdir="TB", size='""', fontsize=10, ratio="auto", center="true", style="solid"
+)
 inheritance_node_attrs = dict(shape="ellipse", fontsize=10, fontname="monospace")
