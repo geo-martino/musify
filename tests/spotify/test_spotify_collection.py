@@ -35,7 +35,7 @@ class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
     @pytest.fixture
     def response_random(self, api_mock: SpotifyMock) -> dict[str, Any]:
         """Yield a randomly generated response from the Spotify API for a track item type"""
-        response = api_mock.generate_album(track_count=10)
+        response = api_mock.generate_album(track_count=10, use_stored=False)
         response["total_tracks"] = len(response["tracks"]["items"])
         response["tracks"]["total"] = len(response["tracks"]["items"])
         response["tracks"]["next"] = None
@@ -260,7 +260,10 @@ class TestSpotifyArtist(RemoteCollectionTester):
     def response_random(self, api_mock: SpotifyMock) -> dict[str, Any]:
         """Yield a randomly generated response from the Spotify API for an artist item type"""
         artist = api_mock.generate_artist()
-        albums = [api_mock.generate_album(tracks=False, artists=False) for _ in range(randrange(5, 10))]
+        albums = [
+            api_mock.generate_album(tracks=False, artists=False, use_stored=False)
+            for _ in range(randrange(5, 10))
+        ]
         for album in albums:
             album["artists"] = [deepcopy(artist)]
             album["total_tracks"] = 0

@@ -35,7 +35,7 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
     @pytest.fixture
     def response_random(self, api_mock: SpotifyMock) -> dict[str, Any]:
         """Yield a randomly generated response from the Spotify API for a track item type"""
-        response = api_mock.generate_playlist(item_count=100)
+        response = api_mock.generate_playlist(item_count=100, use_stored=False)
         response["tracks"]["total"] = len(response["tracks"]["items"])
         response["tracks"]["next"] = None
         return response
