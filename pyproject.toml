@@ -43,9 +43,8 @@ build = [
 test = [
     "pytest~=8.0",
     "pytest-mock~=3.12",
-    "pytest-repeat~=0.9",
-    "pycountry~=23.12",
     "requests-mock~=1.11",
+    "pycountry~=23.12",
 ]
 docs = [
     "musify[build]",

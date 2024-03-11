@@ -707,6 +707,7 @@ class SpotifyMock(RemoteMock):
             item_count: int | None = None,
             owner: str | dict[str, Any] | None = None,
             api: SpotifyAPI | None = None,
+            use_stored: bool = True,
     ) -> dict[str, Any]:
         """
         Return a randomly generated Spotify API response for a Playlist.
@@ -718,6 +719,7 @@ class SpotifyMock(RemoteMock):
         :param api: An optional, authenticated :py:class:`SpotifyAPI` object to extract user information from.
             This will be used to generate an owner block to playlist when ``owner`` is None.
             Has priority over ``owner`` when ``owner`` is a string.
+        :param use_stored: When True, add stored items to the playlist response instead of generating new ones.
         """
         kind = ObjectType.PLAYLIST.name.lower()
         playlist_id = random_id()
@@ -751,7 +753,7 @@ class SpotifyMock(RemoteMock):
             "uri": f"{SPOTIFY_NAME.lower()}:{kind}:{playlist_id}",
         }
 
-        tracks = self.generate_playlist_tracks(response=response)
+        tracks = self.generate_playlist_tracks(response=response, use_stored=use_stored)
         url = response["tracks"]["href"]
         response["tracks"] = self.format_items_block(url=url, items=tracks, limit=len(tracks), total=item_count)
 
@@ -797,7 +799,12 @@ class SpotifyMock(RemoteMock):
     ## Generators - ALBUM
     ###########################################################################
     def generate_album(
-            self, track_count: int | None = None, tracks: bool = True, artists: bool = True, properties: bool = True,
+            self,
+            track_count: int | None = None,
+            tracks: bool = True,
+            artists: bool = True,
+            properties: bool = True,
+            use_stored: bool = True,
     ) -> dict[str, Any]:
         """
         Return a randomly generated Spotify API response for an Album.
@@ -806,6 +813,7 @@ class SpotifyMock(RemoteMock):
         :param tracks: Add randomly generated tracks information to the response as per documentation.
         :param artists: Add randomly generated artists information to the response as per documentation.
         :param properties: Add extra randomly generated properties information to the response as per documentation.
+        :param use_stored: When True, add stored tracks to the playlist response instead of generating new ones.
         """
         kind = ObjectType.ALBUM.name.lower()
         album_id = random_id()
@@ -827,7 +835,7 @@ class SpotifyMock(RemoteMock):
         }
 
         if tracks:
-            tracks = self.generate_album_tracks(response=response)
+            tracks = self.generate_album_tracks(response=response, use_stored=use_stored)
             url = response["href"] + "/tracks"
             response["tracks"] = self.format_items_block(url=url, items=tracks, limit=len(tracks), total=track_count)
 
