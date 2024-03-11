@@ -25,7 +25,7 @@ from musify.shared.remote.config import RemoteObjectClasses
 from musify.shared.remote.enum import RemoteObjectType, RemoteIDType
 from musify.shared.remote.processors.search import RemoteItemSearcher
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
-from musify.shared.utils import get_max_width, align_and_truncate
+from musify.shared.utils import get_max_width, align_string
 
 ALLOW_KARAOKE_DEFAULT = RemoteItemSearcher.settings_items.allow_karaoke
 
@@ -418,7 +418,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, InputProcessor, metacla
             while item in self._remaining:  # while item not matched or skipped
                 self._log_padded([name, f"{len(self._remaining):>6} remaining items"])
                 if 'a' not in current_input:
-                    current_input = self._get_user_input(align_and_truncate(item.name, max_width=max_width))
+                    current_input = self._get_user_input(align_string(item.name, max_width=max_width))
 
                 if current_input.casefold() == 'h':  # print help
                     print("\n" + help_text)

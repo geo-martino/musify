@@ -17,7 +17,7 @@ from musify.shared.core.base import Item
 from musify.shared.core.collection import ItemCollection
 from musify.shared.exception import MusifyKeyError, MusifyTypeError
 from musify.shared.logger import MusifyLogger
-from musify.shared.utils import to_collection, align_and_truncate, get_max_width
+from musify.shared.utils import to_collection, align_string, get_max_width
 
 
 class Track(Item, metaclass=ABCMeta):
@@ -396,7 +396,7 @@ class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
                         break
 
             self.logger.debug(
-                f"{align_and_truncate(pl.name, max_width=max_width)} | "
+                f"{align_string(pl.name, max_width=max_width)} | "
                 f"Filtered out {len(pl) - len(filtered[pl.name]):>3} items"
             )
 

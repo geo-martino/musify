@@ -24,7 +24,7 @@ You can also just have Musify automatically determine the track type to load bas
    :language: Python
    :lines: 11-13
 
-If you want to be able to assign a URI to your track, you'll need a give the provide a ``RemoteDataWrangler``
+If you want to be able to assign a URI to your track, you'll need to provide a :py:class:`.RemoteDataWrangler`
 to the track object for the relevant music streaming source.
 
 The following is an example for doing this with Spotify as the data source:

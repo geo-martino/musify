@@ -14,7 +14,7 @@ from musify.shared.logger import MusifyLogger
 from musify.shared.remote.enum import RemoteIDType, RemoteObjectType
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
 from musify.shared.remote.types import APIMethodInputType
-from musify.shared.utils import align_and_truncate
+from musify.shared.utils import align_string
 
 
 class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
@@ -158,7 +158,7 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
         """
         print(
             f"\t\33[92m{str(i).zfill(len(str(total)))} \33[0m- "
-            f"\33[97m{align_and_truncate(name, max_width=max_width)} \33[0m| "
+            f"\33[97m{align_string(name, max_width=max_width)} \33[0m| "
             f"\33[91m{str(int(length // 60)).zfill(2)}:{str(round(length % 60)).zfill(2)} \33[0m| "
             f"\33[93m{uri} \33[0m- "
             f"{self.convert(uri, type_in=RemoteIDType.URI, type_out=RemoteIDType.URL_EXT)}"

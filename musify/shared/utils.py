@@ -7,6 +7,8 @@ from collections import Counter
 from collections.abc import Iterable, Collection, MutableSequence, Mapping, MutableMapping
 from typing import Any
 
+import unicodedata
+
 from musify.shared.exception import MusifyTypeError
 from musify.shared.types import Number
 
@@ -64,20 +66,91 @@ def safe_format_map[T](value: T, format_map: Mapping[str, Any]) -> T:
     return value
 
 
+_UNICODE_MODIFIERS = {"Mc", "Mn"}
+_UNICODE_DOUBLE_WIDTH = {"So"}
+
+
+def unicode_len(value: str) -> int:
+    """
+    Returns the visible length of ``value`` when rendered with fixed-width font.
+
+    Takes into account unicode characters which render with varying widths.
+    """
+    length = sum(unicodedata.category(char) not in _UNICODE_MODIFIERS for char in value)
+    length += sum(unicodedata.category(char) in _UNICODE_DOUBLE_WIDTH for char in value)  # takes up 2 spaces
+    return length
+
+
+def unicode_reversed(value: str) -> str:
+    """Returns a reversed string or ``value`` keeping unicode characters which combine in the correct order"""
+    value_reversed = ""
+    char_combined = ""
+
+    for i, char in enumerate(value):
+        char_combined += char
+        if i + 1 < len(value) and unicodedata.category(value[i + 1]) in _UNICODE_MODIFIERS:
+            continue
+
+        value_reversed = char_combined + value_reversed
+        char_combined = ""
+    return value_reversed
+
+
 def get_max_width(values: Collection[Any], min_width: int = 15, max_width: int = 50) -> int:
-    """Get max width of given list of ``values`` for column-aligned logging"""
+    """
+    Get max width of given list of ``values`` for column-aligned logging.
+
+    Uses width as would be seen in a fixed-width font taking into account characters with varying widths.
+    """
     if len(values) == 0:
         return 0
-    max_len = len(max(map(str, values), key=len))
+    max_len = unicode_len(max(map(str, values), key=unicode_len))
     return limit_value(value=max_len + 1, floor=min_width, ceil=max_width)
 
 
-def align_and_truncate(value: Any, max_width: int = 0, right_align: bool = False) -> str:
-    """Align string with space padding. Truncate any string longer than max width with ..."""
-    if max_width == 0:
-        return value
-    truncated = str(value)[:(max_width - 3)] + "..." if not right_align else "..." + str(value)[-(max_width - 3):]
-    return f"{value if len(str(value)) < max_width else truncated:<{max_width}}"
+def align_string(value: Any, max_width: int = 0, truncate_left: bool = False) -> str:
+    """
+    Align string with space padding and truncate any string longer than ``max_width`` with ``...``
+
+    This function aligns based on fixed-width fonts.
+    Therefore, unicode characters (e.g. emojis) will be aligned based on their width in a fixed-width font.
+
+    :param value: The value to be aligned. Will first be converted to a string.
+    :param max_width: The expected width (i.e. number of fixed-width characters)
+        the string should occupy in a fixed-width font.
+    :param truncate_left: When truncating, truncate the left (i.e. start) of the string.
+    :return: The padded and truncated string with visible length == ``max_width``.
+    """
+    value_str = str(value)
+    if not value_str or max_width == 0:
+        return " " * max_width
+
+    if truncate_left:  # reverse string for truncate right operations
+        value_str = unicode_reversed(value_str)
+
+    value_truncated = ""
+    dots_count = limit_value(max_width - 3, 0, 3) if max_width < unicode_len(value_str) else 0
+    expected_len = max_width - dots_count
+    for char in value_str:
+        # stop on double width characters and extend dots_count to cover missing character if needed
+        if unicodedata.category(char) in _UNICODE_DOUBLE_WIDTH and unicode_len(value_truncated + char) > expected_len:
+            dots_count += 1 if dots_count < 3 and unicode_len(value_truncated) < max_width else 0
+            break
+
+        # always add unicode modifiers even if unicode_len == expected_width
+        if unicodedata.category(char) not in _UNICODE_MODIFIERS and unicode_len(value_truncated) == expected_len:
+            break
+
+        value_truncated += char
+
+    value_truncated += "." * dots_count  # add ellipses
+
+    if truncate_left:  # reverse back
+        value_truncated = unicode_reversed(value_truncated)
+
+    # extend max_width with difference in length from actual len to unicode_len
+    max_width += len(value_truncated) - unicode_len(value_truncated)
+    return f"{value_truncated:<{max_width}.{max_width}}"
 
 
 ###########################################################################

@@ -16,7 +16,7 @@ Create the playlist
 1. Create a remote library object:
 
    .. note::
-      This step uses the ``SpotifyLibrary``, but any supported music streaming service
+      This step uses the :py:class:`.SpotifyLibrary`, but any supported music streaming service
       can be used in generally the same way. Just modify the imports and classes as required.
 
    .. literalinclude:: _howto/scripts/spotify.api.py

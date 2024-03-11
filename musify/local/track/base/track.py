@@ -51,7 +51,8 @@ class LocalTrack[T: mutagen.FileType](TagWriter, metaclass=ABCMeta):
             # second glob only picks up filenames that start with a period
             paths |= set(glob(join(library_folder, "*", "**", f".*{ext}"), recursive=True))
 
-        return paths
+        # do not return paths in the recycle bin in Windows-based folders
+        return {path for path in paths if "$RECYCLE.BIN" not in path}
 
     def __init__(self, file: str | T, remote_wrangler: RemoteDataWrangler = None):
         super().__init__(remote_wrangler=remote_wrangler)
