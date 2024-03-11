@@ -3,7 +3,7 @@ from copy import deepcopy
 import pytest
 
 from musify.shared.exception import MusifyTypeError
-from musify.shared.utils import flatten_nested, merge_maps, get_most_common_values
+from musify.shared.utils import flatten_nested, merge_maps, get_most_common_values, unicode_len
 from musify.shared.utils import limit_value, to_collection, unique_list
 from musify.shared.utils import strip_ignore_words, safe_format_map, get_max_width, align_string
 
@@ -55,35 +55,94 @@ def test_get_max_width():
     assert get_max_width([]) == 0
 
 
-def test_align_string():
-    # no truncate when max_width == 0
-    assert align_string("abcdefghijkl", max_width=0, right_align=False) == "abcdefghijkl"
+def test_align_string_truncate_left():
+    assert align_string("123456789", max_width=0, truncate_left=False) == ""
+    assert align_string("123456789", max_width=1, truncate_left=False) == "1"
+    assert align_string("123456789", max_width=2, truncate_left=False) == "12"
+    assert align_string("123456789", max_width=3, truncate_left=False) == "123"
+    assert align_string("123456789", max_width=4, truncate_left=False) == "123."
+    assert align_string("123456789", max_width=5, truncate_left=False) == "123.."
+    assert align_string("123456789", max_width=6, truncate_left=False) == "123..."
+    assert align_string("123456789", max_width=7, truncate_left=False) == "1234..."
+    assert align_string("123456789", max_width=8, truncate_left=False) == "12345..."
+    assert align_string("123456789", max_width=9, truncate_left=False) == "123456789"
+    assert align_string("123456789", max_width=10, truncate_left=False) == "123456789" + " "
+    assert align_string("123456789", max_width=14, truncate_left=False) == "123456789" + " " * 5
 
-    # edge case where max_width <= 3
-    assert align_string("abcdefghijkl", max_width=1, right_align=False) == "a"
-    assert align_string("abcdefghijkl", max_width=3, right_align=False) == "abc"
 
-    # value length <= max_width
-    assert align_string("", max_width=3, right_align=False) == " " * 3
-    assert align_string("a", max_width=3, right_align=False) == "a" + " " * 2
-    assert align_string("abcd", max_width=4, right_align=False) == "abcd"
+def test_align_string_truncate_right():
+    assert align_string("123456789", max_width=0, truncate_left=True) == ""
+    assert align_string("123456789", max_width=1, truncate_left=True) == "9"
+    assert align_string("123456789", max_width=2, truncate_left=True) == "89"
+    assert align_string("123456789", max_width=3, truncate_left=True) == "789"
+    assert align_string("123456789", max_width=4, truncate_left=True) == ".789"
+    assert align_string("123456789", max_width=5, truncate_left=True) == "..789"
+    assert align_string("123456789", max_width=6, truncate_left=True) == "...789"
+    assert align_string("123456789", max_width=7, truncate_left=True) == "...6789"
+    assert align_string("123456789", max_width=8, truncate_left=True) == "...56789"
+    assert align_string("123456789", max_width=9, truncate_left=True) == "123456789"
+    assert align_string("123456789", max_width=10, truncate_left=True) == "123456789" + " "
+    assert align_string("123456789", max_width=14, truncate_left=True) == "123456789" + " " * 5
 
-    # value length > max_width
-    assert align_string("a" * 10, max_width=19, right_align=False) == "a" * 10 + " " * 9
-    assert align_string("b" * 15, max_width=19, right_align=False) == "b" * 15 + " " * 4
-    assert align_string("c" * 20, max_width=19, right_align=False) == "c" * 16 + "..."
-    assert align_string("d" * 25, max_width=19, right_align=False) == "d" * 16 + "..."
-    assert align_string("e" * 25, max_width=19, right_align=True) == "..." + "e" * 16
 
-    # value contains combining unicode characters
-    value_emoji = "some text 🏗️🐧🎙️👢🥾🐈📃🚀"
-    assert len(value_emoji) > 18  # visible length == 18
-    assert len(align_string(value_emoji, max_width=40)) == 40
-    assert len(align_string(value_emoji, max_width=15)) == 15
-    assert align_string(value_emoji, max_width=18) == "some text 🏗️🐧🎙️👢🥾🐈📃🚀"
-    assert align_string(value_emoji, max_width=17) == "some text 🏗️🐧🎙️👢..."
-    assert align_string(value_emoji, max_width=16) == "some text 🏗️🐧🎙️..."
-    assert align_string(value_emoji, max_width=15) == "some text 🏗️🐧..."
+def test_align_string_short():
+    assert align_string("", max_width=1, truncate_left=False) == " "
+    assert align_string("", max_width=3, truncate_left=False) == " " * 3
+    assert align_string("", max_width=5, truncate_left=False) == " " * 5
+    assert align_string("a", max_width=3, truncate_left=False) == "a  "
+    assert align_string("abcd", max_width=4, truncate_left=False) == "abcd"
+
+
+def test_align_string_unicode_truncate_left():
+    value_emoji_1 = "🏗️🐧🎙️👢🥾"
+    assert align_string(value_emoji_1, max_width=1) == "."
+    assert align_string(value_emoji_1, max_width=2) == "🏗️"
+    assert align_string(value_emoji_1, max_width=3) == "🏗️."
+    assert align_string(value_emoji_1, max_width=4) == "🏗️.."
+    assert align_string(value_emoji_1, max_width=5) == "🏗️..."
+    assert align_string(value_emoji_1, max_width=6) == "🏗️... "
+    assert align_string(value_emoji_1, max_width=7) == "🏗️🐧..."
+    assert align_string(value_emoji_1, max_width=8) == "🏗️🐧... "
+    assert align_string(value_emoji_1, max_width=9) == "🏗️🐧🎙️..."
+    assert align_string(value_emoji_1, max_width=10) == "🏗️🐧🎙️👢🥾"
+    assert align_string(value_emoji_1, max_width=11) == "🏗️🐧🎙️👢🥾" + " "
+    assert align_string(value_emoji_1, max_width=15) == "🏗️🐧🎙️👢🥾" + " " * 5
+
+    value_emoji_2 = "text 🏗️🐧🎙️👢🥾🎙️"  # actual length == 14
+    assert len(value_emoji_2) != unicode_len(value_emoji_2)  # fixed-width length == 17
+    assert len(align_string(value_emoji_2, max_width=24)) == 21  # diff = actual length - fixed-width length
+    assert unicode_len(align_string(value_emoji_2, max_width=24)) == 24
+    assert align_string(value_emoji_2, max_width=17) == "text 🏗️🐧🎙️👢🥾🎙️"
+    assert align_string(value_emoji_2, max_width=16) == "text 🏗️🐧🎙️👢..."
+    assert align_string(value_emoji_2, max_width=15) == "text 🏗️🐧🎙️... "
+    assert align_string(value_emoji_2, max_width=14) == "text 🏗️🐧🎙️..."
+    assert align_string(value_emoji_2, max_width=13) == "text 🏗️🐧... "
+
+
+def test_align_string_unicode_truncate_right():
+    value_emoji_1 = "🥾👢🎙️🐧🏗️"
+    assert align_string(value_emoji_1, max_width=1, truncate_left=True) == "."
+    assert align_string(value_emoji_1, max_width=2, truncate_left=True) == "🏗️"
+    assert align_string(value_emoji_1, max_width=3, truncate_left=True) == ".🏗️"
+    assert align_string(value_emoji_1, max_width=4, truncate_left=True) == "..🏗️"
+    assert align_string(value_emoji_1, max_width=5, truncate_left=True) == "...🏗️"
+    assert align_string(value_emoji_1, max_width=6, truncate_left=True) == "...🏗️ "
+    assert align_string(value_emoji_1, max_width=7, truncate_left=True) == "...🐧🏗️"
+    assert align_string(value_emoji_1, max_width=8, truncate_left=True) == "...🐧🏗️ "
+    assert align_string(value_emoji_1, max_width=9, truncate_left=True) == "...🎙️🐧🏗️"
+    assert align_string(value_emoji_1, max_width=10, truncate_left=True) == "🥾👢🎙️🐧🏗️"
+    assert align_string(value_emoji_1, max_width=11, truncate_left=True) == "🥾👢🎙️🐧🏗️" + " "
+    assert align_string(value_emoji_1, max_width=15, truncate_left=True) == "🥾👢🎙️🐧🏗️" + " " * 5
+
+    value_emoji_2 = "text 🎙️🥾👢🎙️🐧🏗️"  # actual length == 14
+    assert len(value_emoji_2) != unicode_len(value_emoji_2)  # fixed-width length == 17
+    assert len(align_string(value_emoji_2, max_width=24, truncate_left=True)) == 21
+    assert unicode_len(align_string(value_emoji_2, max_width=24, truncate_left=True)) == 24
+    assert align_string(value_emoji_2, max_width=17, truncate_left=True) == "text 🎙️🥾👢🎙️🐧🏗️"
+    assert align_string(value_emoji_2, max_width=16, truncate_left=True) == "... 🎙️🥾👢🎙️🐧🏗️"
+    assert align_string(value_emoji_2, max_width=15, truncate_left=True) == "...🎙️🥾👢🎙️🐧🏗️"
+    assert align_string(value_emoji_2, max_width=14, truncate_left=True) == "...🥾👢🎙️🐧🏗️ "
+    assert align_string(value_emoji_2, max_width=13, truncate_left=True) == "...🥾👢🎙️🐧🏗️"
 
 
 ###########################################################################

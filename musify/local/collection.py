@@ -149,7 +149,7 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
         self.logger.stat("\33[1;96mSaved tags to the following tracks: \33[0m")
         for track, result in results.items():
             self.logger.stat(
-                f"\33[97m{align_string(track.path, max_width=max_width, right_align=True)} \33[0m| " +
+                f"\33[97m{align_string(track.path, max_width=max_width, truncate_left=True)} \33[0m| " +
                 ("\33[92mSAVED \33[0m| " if result.saved else "\33[91mNOT SAVED \33[0m| ") +
                 f"\33[94m{', '.join(tag.name for tag in result.updated.keys())} \33[0m"
             )

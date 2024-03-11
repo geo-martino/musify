@@ -32,6 +32,29 @@ The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
 
+0.8.1
+=====
+
+Documentation
+-------------
+
+* References to python objects now link correctly
+
+Fixed
+-----
+
+* Comments from :py:class:`.LocalTrack` metadata loading no longer gets wiped after setting URI on init
+* Tweaked assignment of description of IDv3 comment tags for :py:class:`.MP3`
+* :py:func:`.align_string` function now handles combining unicode characters properly for fixed-width fonts
+* :py:meth:`.LocalTrack.get_filepaths` on LocalTrack no longer returns paths from ``$RECYCLE.BIN`` folders.
+  These are deleted files and were causing the package to crash when trying to load them.
+
+Removed
+-------
+
+* Abstract uri.setter method on :py:class:`.Item`
+
+
 0.8.0
 =====
 
@@ -43,25 +66,26 @@ Added
 Changed
 -------
 
-* Generating folders for a LocalLibrary now uses folder names as relative to the library folders of the LocalLibrary.
+* Generating folders for a :py:class:`.LocalLibrary` now uses folder names
+  as relative to the library folders of the :py:class:`.LocalLibrary`.
   This now supports nested folder structures better.
-* Writing date tags to LocalTrack now supports partial dates of only YYYY-MM.
-* Writing date tags to LocalTrack skips writing year, month, day tags if date tag already written.
+* Writing date tags to :py:class:`.LocalTrack` now supports partial dates of only YYYY-MM.
+* Writing date tags to :py:class:`.LocalTrack` skips writing year, month, day tags if date tag already written.
 
 Removed
 -------
 
-* set_compilation_tags method removed from LocalFolder.
+* set_compilation_tags method removed from :py:class:`.LocalFolder`.
   This contained author specific logic and was not appropriate for general use.
 
 Fixed
 -----
 
-* ConnectionError catch in RequestHandler now handles correctly
-* Added safe characters and replacements for path conversion in MusicBee XMLLibraryParser.
+* ConnectionError catch in :py:class:`.RequestHandler` now handles correctly
+* Added safe characters and replacements for path conversion in MusicBee :py:class:`.XMLLibraryParser`.
   Now converts path to expected XML format correctly.
-* FilterMatcher now handles '&' character correctly.
-* SpotifyAPI now only requests batches of up to 20 items when getting albums.
+* :py:class:`.FilterMatcher` now handles '&' character correctly.
+* :py:class:`.SpotifyAPI` now only requests batches of up to 20 items when getting albums.
   Now matches Spotify Web API specifications better.
 * Loading of logging yaml config uses UTF-8 encoding now
 * Removed dependency on pytest-lazy-fixture.
@@ -76,8 +100,8 @@ Fixed
 -----
 
 * Rename __max_str in local/collection.py to _max_str - functions could not see variable
-* Add default value of 0 to sort_key in ItemSorter.sort_by_field
-* Fixed RemoteItemChecker _pause logic to only get playlist name when input is not False-y
+* Add default value of 0 to sort_key in :py:meth:`.ItemSorter.sort_by_field`
+* Fixed :py:class:`.RemoteItemChecker` :py:meth:`._pause` logic to only get playlist name when input is not False-y
 
 
 0.7.5
@@ -86,20 +110,20 @@ Fixed
 Added
 -----
 
-* Add the ItemDownloadHelper general processor
+* Add the :py:class:`.ItemDownloadHelper` general processor
 
 Changed
 -------
 
 * Factor out logging handlers to their own script to avoid circular import issues
-* Abstract away input methods of RemoteItemChecker to InputProcessor base class
-* Factor out patch_input method to function in InputProcessor derived tests
+* Abstract away input methods of :py:class:`.RemoteItemChecker` to :py:class:`.InputProcessor` base class
+* Factor out patch_input method to function in :py:class:`.InputProcessor` derived tests
 
 Fixed
 -----
 
-* Captured stdout assertions in RemoteItemChecker tests re-enabled, now fixed
-* Surround RemoteApi 'user' properties in try-except block so they can still be
+* Captured stdout assertions in :py:class:`.RemoteItemChecker` tests re-enabled, now fixed
+* Surround :py:class:`.RemoteAPI` 'user' properties in try-except block so they can still be
   pretty printed even if API is not authorised
 
 Documentation
@@ -115,7 +139,8 @@ Documentation
 Fixed
 -----
 
-* Fix bug in ``restore_tracks`` method on library due to 'images' tag name not being present in track properties
+* Fix bug in :py:meth:`.LocalLibrary.restore_tracks` method on library
+  due to 'images' tag name not being present in track properties
 
 Documentation
 -------------
@@ -130,12 +155,12 @@ Documentation
 Changed
 -------
 
-* Remove x10 factor on bar threshold on _get_items_multi function in SpotifyAPI
+* Remove x10 factor on bar threshold on _get_items_multi function in :py:class:`.SpotifyAPI`
 
 Fixed
 -----
 
-* LocalTrack would break when trying to save tags for unmapped tag names, now handles correctly
+* :py:class:`.LocalTrack` would break when trying to save tags for unmapped tag names, now handles correctly
 
 
 0.7.2
@@ -144,7 +169,7 @@ Fixed
 Fixed
 -----
 
-* MusifyLogger would not get file_paths for parent loggers when propagate == True, now it does
+* :py:class:`.MusifyLogger` would not get file_paths for parent loggers when propagate == True, now it does
 
 
 0.7.1
@@ -153,12 +178,13 @@ Fixed
 Changed
 -------
 
-* Remove automatic assignment of absolute path to package root for relative paths on CurrentTimeRotatingFileHandler
+* Remove automatic assignment of absolute path to package root
+  for relative paths on :py:class:`.CurrentTimeRotatingFileHandler`
 
 Fixed
 -----
 
-* CurrentTimeRotatingFileHandler now creates dirs for new log directories
+* :py:class:`.CurrentTimeRotatingFileHandler` now creates dirs for new log directories
 
 
 0.7.0

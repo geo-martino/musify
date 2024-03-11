@@ -20,7 +20,7 @@ Setup the Spotify API
    Select "Web API" when asked which APIs you are planning on using.
    To use this program, you will only need to take note of the **client ID** and **client secret**.
 
-3. Create a ``SpotifyAPI`` object and authorise the program access to Spotify data as follows:
+3. Create a :py:class:`.SpotifyAPI` object and authorise the program access to Spotify data as follows:
 
    .. note::
       The scopes listed in this example will allow access to read your library data and write to your playlists.
@@ -34,7 +34,7 @@ Setup the Spotify API
 Load your library
 -----------------
 
-1. Create a ``SpotifyLibrary`` object and load your library data as follows:
+1. Create a :py:class:`.SpotifyLibrary` object and load your library data as follows:
 
    .. literalinclude:: _howto/scripts/spotify.load.py
       :language: Python

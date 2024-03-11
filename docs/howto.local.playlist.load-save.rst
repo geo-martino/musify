@@ -43,13 +43,14 @@ the tracks itself, you can pass these pre-loaded tracks to the playlist too.
 
 There may also be cases where the files in the file need mapping to be loaded e.g. if the paths
 contained in the playlist file are relative paths.
-You may give the playlist object a ``PathMapper`` or ``PathStemMapper`` to handle this.
+You may give the playlist object a :py:class:`.PathMapper` or :py:class:`.PathStemMapper` to handle this.
 
 .. literalinclude:: _howto/scripts/local.playlist.load-save.py
    :language: Python
    :lines: 34-36
 
-If you want to be able to read/update URIs on the loaded tracks, you'll need a give the provide a ``RemoteDataWrangler``
+If you want to be able to read/update URIs on the loaded tracks,
+you'll need to provide a :py:class:`.RemoteDataWrangler`
 to the playlist object for the relevant music streaming source.
 
 The following is an example for doing this with Spotify as the data source:
