@@ -338,7 +338,7 @@ of purchasing songs.
 without ever having to use them personally
 - Easily maintain a high-quality local library with complete metadata
 
-**User's should have the freedom to choose how and where they want to listen to their favourite artists.**
+**Users should have the freedom to choose how and where they want to listen to their favourite artists.**
 
 Given the near non-existence of income these services provide to artists, user's should have the choice to 
 compensate their favourite artists fairly for their work, choosing to switch to other services that do and/or choosing 
