@@ -10,7 +10,6 @@ from typing import Any, Self
 from musify.processors.base import Filter, FilterComposite
 from musify.processors.compare import Comparer
 from musify.shared.core.base import Nameable
-from musify.shared.utils import to_collection
 
 
 class FilterDefinedList[T: str | Nameable](Filter[T], Collection[T]):
@@ -78,18 +77,18 @@ class FilterComparers[T: str | Nameable](Filter[T]):
         #: When true, only include those items that match on all comparers
         self.match_all: bool = match_all
 
-    def __call__(self, values: Collection[T], reference: T | None = None, *_, **__) -> list[T]:
+    def __call__(self, values: Collection[T], reference: T | None = None, *_, **__) -> Collection[T]:
         return self.process(values=values, reference=reference)
 
-    def process(self, values: Collection[T], reference: T | None = None, *_, **__) -> list[T]:
+    def process(self, values: Collection[T], reference: T | None = None, *_, **__) -> Collection[T]:
         if not self.ready:
-            return to_collection(values, list)
+            return values
 
         def run_comparer(c: Comparer, v: T) -> bool:
             """Run the comparer ``c`` for the given value ``v``"""
             return c(self.transform(v), reference=reference) if c.expected is None else c(self.transform(v))
 
-        def run_sub_filter(s: FilterComparers, c: bool, v: list[T]) -> list[T]:
+        def run_sub_filter(s: FilterComparers, c: bool, v: list[T]) -> Collection[T]:
             """Run the sub_filter ``s`` for the given value ``v`` and return the results"""
             if not s.ready:
                 return v

@@ -179,11 +179,11 @@ class TestXAutoPF(LocalPlaylistTester):
 )
 @pytest.mark.parametrize("source,expected,mapper", [
     (
-        join(os.getenv("TEST_PL_SOURCE"), f"{splitext(basename(name))[0]}.xautopf"),
-        join(os.getenv("TEST_PL_COMPARISON"), f"{splitext(basename(name))[0]}.m3u"),
-        PathStemMapper({"../..": os.getenv("TEST_PL_LIBRARY")})
+        join(os.getenv("TEST_PL_SOURCE", ""), f"{splitext(basename(name))[0]}.xautopf"),
+        join(os.getenv("TEST_PL_COMPARISON", ""), f"{splitext(basename(name))[0]}.m3u"),
+        PathStemMapper({"../..": os.getenv("TEST_PL_LIBRARY", "")})
     )
-    for name in glob(join(os.getenv("TEST_PL_SOURCE"), "**", "*.xautopf"), recursive=True)
+    for name in glob(join(os.getenv("TEST_PL_SOURCE", ""), "**", "*.xautopf"), recursive=True)
 ])
 def test_playlist_paths_manual(source: str, expected: str, mapper: PathMapper):
     assert exists(source)
