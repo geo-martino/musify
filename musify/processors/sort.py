@@ -41,7 +41,7 @@ class ItemSorter(MusicBeeProcessor):
         * Map of ``{<tag/property>: <reversed>}``. If reversed is true, sort the ``tag/property`` in reverse.
     :param shuffle_mode: The mode to use for shuffling.
     :param shuffle_by: The field to shuffle by when shuffling.
-    :param shuffle_weight: The weights (between 0 and 1) to apply to shuffling modes that can use it.
+    :param shuffle_weight: The weights (between -1 and 1) to apply to shuffling modes that can use it.
         This value will automatically be limited to within the accepted range 0 and 1.
     """
 
@@ -159,7 +159,7 @@ class ItemSorter(MusicBeeProcessor):
 
         shuffle_mode = ShuffleMode.from_name(cls._pascal_to_snake(xml["SmartPlaylist"]["@ShuffleMode"]))[0]
         shuffle_by = ShuffleBy.from_name(cls._pascal_to_snake(xml["SmartPlaylist"]["@GroupBy"]))[0]
-        shuffle_weight = float(xml["SmartPlaylist"].get("@ShuffleSameArtistWeight", 1))
+        shuffle_weight = float(xml["SmartPlaylist"].get("@ShuffleSameArtistWeight", 1.0))
 
         return cls(fields=fields, shuffle_mode=shuffle_mode, shuffle_by=shuffle_by, shuffle_weight=shuffle_weight)
 
@@ -181,7 +181,7 @@ class ItemSorter(MusicBeeProcessor):
         self.shuffle_mode: ShuffleMode | None
         self.shuffle_mode = shuffle_mode if shuffle_mode in [ShuffleMode.NONE, ShuffleMode.RANDOM] else ShuffleMode.NONE
         self.shuffle_by: ShuffleBy | None = shuffle_by
-        self.shuffle_weight = limit_value(shuffle_weight, floor=0, ceil=1)
+        self.shuffle_weight = limit_value(shuffle_weight, floor=-1, ceil=1)
 
     def __call__(self, items: MutableSequence[Item]) -> None:
         return self.sort(items=items)

@@ -6,7 +6,7 @@ Reads library/settings files from MusicBee to load and enrich playlist/track etc
 import hashlib
 import re
 import urllib.parse
-from collections.abc import Iterable, Mapping, Sequence, Generator, Collection
+from collections.abc import Iterable, Mapping, Sequence, Collection, Iterator
 from datetime import datetime
 from os.path import join, exists, normpath
 from typing import Any
@@ -172,7 +172,7 @@ class MusicBee(LocalLibrary, File):
 
         tracks: dict[int, dict[str, Any]] = {}
         max_track_id = max(id_ for id_, _ in track_id_map.values()) if track_id_map else 0
-        for i, track in enumerate(self.tracks, max(1, max_track_id)):
+        for i, track in enumerate(self.tracks, max(1, max_track_id + 1)):
             track_id, persistent_id = track_id_map.get(track, [i, None])
             tracks[track_id] = self.track_to_xml(track, track_id=track_id, persistent_id=persistent_id)
             track_id_map[track] = (tracks[track_id]["Track ID"], tracks[track_id]["Persistent ID"])
@@ -184,7 +184,7 @@ class MusicBee(LocalLibrary, File):
 
         playlists: list[dict[str, Any]] = []
         max_playlist_id = max(id_ for id_, _ in playlist_id_map.values()) if playlist_id_map else 0
-        for i, (name, playlist) in enumerate(self.playlists.items(), max_playlist_id):
+        for i, (name, playlist) in enumerate(self.playlists.items(), max_playlist_id + 1):
             playlist_id, persistent_id = playlist_id_map.get(name, [i, None])
             playlist = self.playlist_to_xml(
                 playlist, tracks=track_id_map, playlist_id=playlist_id, persistent_id=persistent_id
@@ -370,7 +370,7 @@ class XMLLibraryParser:
         """Clean the file paths as found in the MusicBee XML library file to a standard system path"""
         return normpath(urllib.parse.unquote(path.removeprefix("file://localhost/")))
 
-    def _iter_elements(self) -> Generator[etree.Element, [], []]:
+    def _iter_elements(self) -> Iterator[etree.Element]:
         for event, element in self._iterparse:
             yield element
 
@@ -411,6 +411,9 @@ class XMLLibraryParser:
 
     def _parse_array(self, element: etree._Element | None = None) -> list[Any]:
         array = []
+
+        if element is not None and element.tag == "array" and element.text is None:
+            return array  # array is empty, skip processing
 
         for elem in self._iter_elements():
             if elem is None or elem.tag == "array":

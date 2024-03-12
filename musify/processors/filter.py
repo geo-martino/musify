@@ -4,12 +4,13 @@ Processors that filter down objects and data types based on some given configura
 
 from __future__ import annotations
 
-from collections.abc import Collection, Sequence
-from typing import Any
+from collections.abc import Collection, Sequence, Mapping
+from typing import Any, Self
 
 from musify.processors.base import Filter, FilterComposite
 from musify.processors.compare import Comparer
 from musify.shared.core.base import Nameable
+from musify.shared.utils import to_collection
 
 
 class FilterDefinedList[T: str | Nameable](Filter[T], Collection[T]):
@@ -59,32 +60,57 @@ class FilterComparers[T: str | Nameable](Filter[T]):
     def ready(self):
         return len(self.comparers) > 0
 
-    def __init__(self, comparers: Collection[Comparer] = (), match_all: bool = True, *_, **__):
+    def __init__(
+            self,
+            comparers: Collection[Comparer] | Mapping[Comparer, tuple[bool, Self]] = (),
+            match_all: bool = True,
+            *_,
+            **__
+    ):
         super().__init__()
+        if not isinstance(comparers, Mapping):
+            comparers = {comparer: (False, FilterComparers()) for comparer in comparers}
+
         #: The comparers to use when processing for this filter
-        self.comparers: Collection[Comparer] = comparers
+        #: When a mapping with other :py:class:`FilterComparers` is given,
+        #: will apply this sub-filter to all parent filters when processing
+        self.comparers: Mapping[Comparer, tuple[bool, Self]] = comparers
         #: When true, only include those items that match on all comparers
         self.match_all: bool = match_all
 
-    def __call__(self, values: Collection[T], reference: T | None = None, *_, **__) -> Collection[T]:
+    def __call__(self, values: Collection[T], reference: T | None = None, *_, **__) -> list[T]:
         return self.process(values=values, reference=reference)
 
-    def process(self, values: Collection[T], reference: T | None = None, *_, **__) -> Collection[T]:
+    def process(self, values: Collection[T], reference: T | None = None, *_, **__) -> list[T]:
         if not self.ready:
-            return values
+            return to_collection(values, list)
 
         def run_comparer(c: Comparer, v: T) -> bool:
             """Run the comparer ``c`` for the given value ``v``"""
             return c(self.transform(v), reference=reference) if c.expected is None else c(self.transform(v))
 
+        def run_sub_filter(s: FilterComparers, c: bool, v: list[T]) -> list[T]:
+            """Run the sub_filter ``s`` for the given value ``v`` and return the results"""
+            if not s.ready:
+                return v
+            elif c:
+                return sub_filter(v, reference=reference)
+            else:
+                v.extend([value for value in sub_filter(values, reference=reference) if value not in v])
+                return v
+
         if self.match_all:
-            for comparer in self.comparers:
-                values = [value for value in values if run_comparer(comparer, value)]
+            for comparer, (combine, sub_filter) in self.comparers.items():
+                matched = [value for value in values if run_comparer(comparer, value)]
+                values = run_sub_filter(sub_filter, combine, matched)
             return values
 
         matches = []
-        for comparer in self.comparers:
-            matches.extend(value for value in values if run_comparer(comparer, value) and value not in matches)
+        for comparer, (combine, sub_filter) in self.comparers.items():
+            matched = [value for value in values if value not in matches and run_comparer(comparer, value)]
+            matched = run_sub_filter(sub_filter, combine, matched)
+            matches.extend([value for value in matched if value not in matches])
+
         return matches
 
     def as_dict(self) -> dict[str, Any]:

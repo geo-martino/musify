@@ -8,11 +8,11 @@ import logging.config
 import logging.handlers
 import os
 import re
+import sys
 from collections.abc import Iterable
 from os.path import join, splitext, split, basename
 from typing import Any
 
-import sys
 from tqdm.auto import tqdm
 
 from musify import PROGRAM_NAME

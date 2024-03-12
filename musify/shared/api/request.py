@@ -7,12 +7,12 @@ from collections.abc import Mapping, Iterable
 from datetime import datetime as dt
 from datetime import timedelta
 from http import HTTPStatus
+from time import sleep
 from typing import Any
 
 import requests
 from requests import Response, Session
 from requests_cache import CachedSession
-from time import sleep
 
 from musify.shared.api.authorise import APIAuthoriser
 from musify.shared.api.exception import APIError

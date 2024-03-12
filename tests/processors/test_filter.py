@@ -1,6 +1,7 @@
 from abc import ABCMeta
+from collections.abc import Mapping
 from os.path import join
-from random import sample, shuffle
+from random import sample, shuffle, randrange
 
 import pytest
 import xmltodict
@@ -11,8 +12,10 @@ from musify.local.track.field import LocalTrackField
 from musify.processors.compare import Comparer
 from musify.processors.filter import FilterDefinedList, FilterComparers, FilterIncludeExclude
 from musify.processors.filter_matcher import FilterMatcher
-from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra, path_playlist_resources
+from musify.shared.core.enum import Fields
 from tests.local.track.utils import random_tracks
+from tests.local.utils import path_playlist_resources
+from tests.local.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra, path_playlist_xautopf_cm
 from tests.local.utils import path_track_all, path_track_wma, path_track_flac, path_track_mp3
 from tests.shared.core.misc import PrettyPrinterTester
 from tests.utils import random_str, path_resources
@@ -44,7 +47,7 @@ class TestFilterComparers(FilterTester):
 
     @pytest.fixture(scope="class")
     def comparers(self) -> list[Comparer]:
-        """Yields a list :py:class:`Comparer` objects to be used as pytest.fixture"""
+        """Yields a list of :py:class:`Comparer` objects to be used as pytest.fixture"""
         return [
             Comparer(condition="is", expected="album name", field=LocalTrackField.ALBUM),
             Comparer(condition="starts with", expected="artist", field=LocalTrackField.ARTIST)
@@ -54,21 +57,81 @@ class TestFilterComparers(FilterTester):
     def obj(self, comparers: list[Comparer]) -> FilterComparers:
         return FilterComparers(comparers=comparers)
 
-    def test_filter(self, comparers: list[Comparer]):
+    @pytest.fixture
+    def tracks(self) -> list[LocalTrack]:
+        """
+        Yields a list of :py:class:`LocalTrack` objects that match the comparers fixtures
+        to be used as pytest.fixture
+        """
         tracks = random_tracks(30)
-        for track in tracks[:12]:
+        for track in tracks[:18]:
             track.album = "album name"
-        tracks_artist = tracks[10:20]
+
+        tracks_artist = tracks[10:25]
         for track in tracks_artist:
             track.artist = "artist name"
 
+        return tracks
+
+    def test_filter(self, comparers: list[Comparer], tracks: list[LocalTrack]):
         assert FilterComparers().process(tracks) == tracks
 
-        filter_ = FilterComparers(comparers=comparers, match_all=False)
-        assert filter_(tracks) == tracks[:20]
+        comparer = FilterComparers(comparers=comparers, match_all=False)
+        assert comparer(tracks) == tracks[:25]
 
-        filter_ = FilterComparers(comparers=comparers, match_all=True)
-        assert filter_(tracks) == tracks[10:12]
+        comparer = FilterComparers(comparers=comparers, match_all=True)
+        assert comparer(tracks) == tracks[10:18]
+
+    def test_filter_nested(self, comparers: list[Comparer], tracks: list[LocalTrack]):
+        sub_filter_1 = FilterComparers(
+            comparers=[
+                Comparer(condition="is", expected=2020, field=LocalTrackField.YEAR),
+                Comparer(condition="in range", expected=[80, 100], field=LocalTrackField.BPM)
+            ],
+            match_all=False
+        )
+        sub_filter_2 = FilterComparers(
+            comparers=[
+                Comparer(condition="greater than", expected=20, field=LocalTrackField.TRACK_NUMBER)
+            ],
+            match_all=True
+        )
+
+        for i, track in enumerate(tracks):
+            track.track_number = i + 1
+            track.year = 2020 if i >= 8 else 1990
+            track.bpm = randrange(80, 100) if 10 < i < 15 else 120
+
+        comparer = FilterComparers(
+            comparers={comparers[0]: (False, sub_filter_1), comparers[1]: (False, sub_filter_2)},
+            match_all=False
+        )
+        assert sorted(comparer(tracks), key=lambda x: x.track_number) == tracks  # loose conditions, matches everything
+
+        comparer = FilterComparers(
+            comparers={comparers[0]: (True, sub_filter_1), comparers[1]: (False, sub_filter_2)},
+            match_all=False
+        )
+        assert sorted(comparer(tracks), key=lambda x: x.track_number) == tracks[8:]
+
+        sub_filter_1.match_all = True
+        comparer = FilterComparers(
+            comparers={comparers[0]: (True, sub_filter_1), comparers[1]: (False, sub_filter_2)},
+            match_all=False
+        )
+        assert sorted(comparer(tracks), key=lambda x: x.track_number) == tracks[10:]
+
+        comparer = FilterComparers(
+            comparers={comparers[0]: (True, sub_filter_1), comparers[1]: (True, sub_filter_2)},
+            match_all=False
+        )
+        assert sorted(comparer(tracks), key=lambda x: x.track_number) == tracks[11:15] + tracks[20:25]
+
+        comparer = FilterComparers(
+            comparers={comparers[0]: (True, sub_filter_1), comparers[1]: (True, sub_filter_2)},
+            match_all=True
+        )
+        assert not comparer(tracks)  # no overlap between the 2 parent comparers
 
 
 class TestFilterIncludeExclude(FilterTester):
@@ -101,7 +164,7 @@ class TestFilterMatcher(FilterTester):
     @pytest.fixture
     def obj(self, comparers: list[Comparer]) -> FilterMatcher:
         return FilterMatcher(
-            comparers=FilterComparers(*comparers),
+            comparers=FilterComparers(comparers),
             include=FilterDefinedList(
                 [f"{self.library_folder}/include/{random_str(30, 50)}.MP3" for _ in range(20)],
             ),
@@ -173,16 +236,16 @@ class TestFilterMatcher(FilterTester):
             tracks_exclude: list[LocalTrack],
             path_mapper: PathMapper
     ):
-        filter_ = FilterMatcher(
+        matcher = FilterMatcher(
             include=FilterDefinedList([track.path.casefold() for track in tracks_include]),
             exclude=FilterDefinedList([track.path.casefold() for track in tracks_exclude]),
         )
-        filter_.include.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
-        filter_.exclude.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
+        matcher.include.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
+        matcher.exclude.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
         tracks_include_reduced = [track for track in tracks_include if track not in tracks_exclude]
 
-        assert filter_(values=tracks) == tracks_include_reduced
-        assert filter_.process(values=tracks) == tracks_include_reduced
+        assert matcher(values=tracks) == tracks_include_reduced
+        assert matcher.process(values=tracks) == tracks_include_reduced
 
     def test_filter_on_any_comparers(
             self,
@@ -193,17 +256,17 @@ class TestFilterMatcher(FilterTester):
             tracks_exclude: list[LocalTrack],
             path_mapper: PathMapper,
     ):
-        filter_ = FilterMatcher(
+        matcher = FilterMatcher(
             comparers=FilterComparers(comparers, match_all=False),
             include=FilterDefinedList([track.path.casefold() for track in tracks_include]),
             exclude=FilterDefinedList([track.path.casefold() for track in tracks_exclude]),
         )
-        filter_.include.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
-        filter_.exclude.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
+        matcher.include.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
+        matcher.exclude.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
         tracks_album_reduced = [track for track in tracks_album if track not in tracks_exclude]
         tracks_include_reduced = [track for track in tracks_include if track not in tracks_exclude]
 
-        matches = sorted(filter_(values=tracks), key=self.sort_key)
+        matches = sorted(matcher(values=tracks), key=self.sort_key)
         assert matches == sorted(tracks_album_reduced + tracks_include_reduced, key=self.sort_key)
 
     def test_filter_on_all_comparers(
@@ -216,47 +279,110 @@ class TestFilterMatcher(FilterTester):
             tracks_exclude: list[LocalTrack],
             path_mapper: PathMapper,
     ):
-        filter_ = FilterMatcher(
+        matcher = FilterMatcher(
             comparers=FilterComparers(comparers, match_all=True),
             include=FilterDefinedList([track.path.casefold() for track in tracks_include]),
             exclude=FilterDefinedList([track.path.casefold() for track in tracks_exclude]),
         )
-        filter_.include.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
-        filter_.exclude.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
+        matcher.include.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
+        matcher.exclude.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
+
         tracks_artist_reduced = [track for track in tracks_artist if track not in tracks_exclude]
         tracks_include_reduced = [track for track in tracks_include if track not in tracks_exclude]
 
-        matches = sorted(filter_(values=tracks), key=self.sort_key)
+        matches = sorted(matcher(values=tracks), key=self.sort_key)
         assert matches == sorted(tracks_artist_reduced + tracks_include_reduced, key=self.sort_key)
 
     ###########################################################################
     ## XML I/O
     ###########################################################################
-    def test_from_xml_1(self, path_mapper: PathStemMapper):
+    def test_from_xml_bp(self, path_mapper: PathStemMapper):
         with open(path_playlist_xautopf_bp, "r", encoding="utf-8") as f:
             xml = xmltodict.parse(f.read())
-        filter_: FilterMatcher = FilterMatcher.from_xml(xml=xml, path_mapper=path_mapper)
+        matcher = FilterMatcher.from_xml(xml=xml, path_mapper=path_mapper)
 
-        assert len(filter_.comparers.comparers) == 3  # loaded Comparer settings are tested in class-specific tests
-        assert filter_.comparers.match_all
-        assert set(filter_.include) == {
+        assert set(matcher.include) == {
             path_track_wma.casefold(), path_track_mp3.casefold(), path_track_flac.casefold()
         }
-        assert set(filter_.exclude) == {
+        assert set(matcher.exclude) == {
             join(path_playlist_resources,  "exclude_me_2.mp3").casefold(),
             path_track_mp3.casefold(),
             join(path_playlist_resources, "exclude_me.flac").casefold(),
         }
 
-    def test_from_xml_2(self, path_mapper: PathStemMapper):
+        assert isinstance(matcher.comparers.comparers, dict)
+        assert len(matcher.comparers.comparers) == 3  # loaded Comparer settings are tested in class-specific tests
+        assert matcher.comparers.match_all
+        assert all(not m[1].ready for m in matcher.comparers.comparers.values())
+
+    def test_from_xml_ra(self, path_mapper: PathStemMapper):
         with open(path_playlist_xautopf_ra, "r", encoding="utf-8") as f:
             xml = xmltodict.parse(f.read())
-        filter_: FilterMatcher = FilterMatcher.from_xml(xml=xml, path_mapper=path_mapper)
+        matcher = FilterMatcher.from_xml(xml=xml, path_mapper=path_mapper)
 
-        assert len(filter_.comparers.comparers) == 0
-        assert not filter_.comparers.match_all
-        assert len(filter_.include) == 0
-        assert len(filter_.exclude) == 0
+        assert len(matcher.include) == 0
+        assert len(matcher.exclude) == 0
+
+        assert isinstance(matcher.comparers.comparers, dict)
+        assert len(matcher.comparers.comparers) == 0
+        assert not matcher.comparers.match_all
+        assert all(not m[1].ready for m in matcher.comparers.comparers.values())
+
+    def test_from_xml_cm(self, path_mapper: PathStemMapper):
+        with open(path_playlist_xautopf_cm, "r", encoding="utf-8") as f:
+            xml = xmltodict.parse(f.read())
+        matcher = FilterMatcher.from_xml(xml=xml, path_mapper=path_mapper)
+
+        assert isinstance(matcher.comparers.comparers, Mapping)
+        assert len(matcher.comparers.comparers) == 3
+        assert not matcher.comparers.match_all
+
+        # assertions on parent comparers
+        comparers: list[Comparer] = list(matcher.comparers.comparers)
+        assert comparers[0].field == Fields.ALBUM
+        assert comparers[0].condition == "contains"
+        assert comparers[0].expected == ["an album"]
+        assert comparers[1].field == Fields.RATING
+        assert comparers[1].condition == "in_range"
+        assert comparers[1].expected == ["40", "80"]
+        assert comparers[2].field == Fields.YEAR
+        assert comparers[2].condition == "is"
+        assert comparers[2].expected == ["2024"]
+
+        # assertions on child comparers
+        sub_filters: list[tuple[bool, FilterComparers]] = list(matcher.comparers.comparers.values())
+        assert not sub_filters[0][1].ready
+        assert not sub_filters[0][0]  # And/Or condition
+
+        sub_filter_1 = sub_filters[1][1]
+        assert sub_filter_1.ready
+        assert not sub_filter_1.match_all
+        assert isinstance(sub_filter_1.comparers, Mapping)
+        assert all(not m[1].ready for m in sub_filter_1.comparers.values())
+        assert sub_filters[1][0]  # And/Or condition
+
+        sub_comparers_1: list[Comparer] = list(sub_filters[1][1].comparers)
+        assert sub_comparers_1[0].field == Fields.GENRES
+        assert sub_comparers_1[0].condition == "is_in"
+        assert sub_comparers_1[0].expected == ["Jazz", "Rock", "Pop"]
+        assert sub_comparers_1[1].field == Fields.TRACK_NUMBER
+        assert sub_comparers_1[1].condition == "less_than"
+        assert sub_comparers_1[1].expected == ["50"]
+
+        sub_filter_2 = sub_filters[2][1]
+        assert sub_filter_2.ready
+        assert sub_filter_2.match_all
+        assert isinstance(sub_filter_2.comparers, Mapping)
+        assert all(not m[1].ready for m in sub_filter_2.comparers.values())
+        assert not sub_filters[2][0]  # And/Or condition
+
+        sub_comparers_2: list[Comparer] = list(sub_filter_2.comparers)
+        assert sub_comparers_2[0].field == Fields.ARTIST
+        assert sub_comparers_2[0].condition == "starts_with"
+        assert sub_comparers_2[0].expected == ["an artist"]
+        assert sub_comparers_2[1].field == Fields.LAST_PLAYED
+        assert sub_comparers_2[1].condition == "in_the_last"
+        assert sub_comparers_2[1].expected == ["7d"]
 
     @pytest.mark.skip(reason="not implemented yet")
     def test_to_xml(self):

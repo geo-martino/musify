@@ -5,10 +5,9 @@ Implements endpoints for getting items from the Spotify API.
 import re
 from abc import ABCMeta
 from collections.abc import Collection, Mapping, MutableMapping
+from itertools import batched
 from typing import Any
 from urllib.parse import parse_qs, urlparse
-
-from itertools import batched
 
 from musify.shared.api.exception import APIError
 from musify.shared.remote.api import APIMethodInputType

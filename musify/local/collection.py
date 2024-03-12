@@ -5,14 +5,13 @@ Implements all collection types for a local library.
 from __future__ import annotations
 
 import logging
+import sys
 from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Collection, Iterable, Container
 from datetime import datetime
 from glob import glob
 from os.path import splitext, join, basename, exists, isdir
 from typing import Any
-
-import sys
 
 from musify.local.base import LocalItem
 from musify.local.exception import LocalCollectionError

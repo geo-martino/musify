@@ -59,6 +59,7 @@ class PrettyPrinter(ABC):
         result: dict[str, _T_JSON_VALUE] = {}
 
         for attr_key, attr_val in attributes.items():
+            attr_key = str(attr_key)
             if isinstance(attr_val, set):
                 attr_val = to_collection(attr_val)
 
@@ -95,7 +96,7 @@ class PrettyPrinter(ABC):
     def _to_str(cls, attributes: Mapping[str, Any], indent: int = 2, increment: int = 2) -> list[str]:
         if len(attributes) == 0:
             return []
-        max_key_width = max(len(tag_name) for tag_name in attributes) + 1  # +1 for space after key
+        max_key_width = max(len(str(attr_key)) for attr_key in attributes) + 1  # +1 for space after key
         max_key_width += max_key_width % increment
         max_val_width = cls._max_val_width - max_key_width
 
@@ -104,7 +105,7 @@ class PrettyPrinter(ABC):
 
         attributes_repr: list[str] = []
         for attr_key, attr_val in attributes.items():
-            attr_key = attr_key.title().replace('_', ' ')
+            attr_key = str(attr_key).title().replace('_', ' ')
             for word in cls._upper_key_words:
                 pattern = re.compile(rf"(^{word}$|^{word} | {word}$| {word})", flags=re.I)
                 attr_key = re.sub(pattern, lambda m: m.group(1).upper(), attr_key)

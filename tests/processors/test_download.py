@@ -6,9 +6,9 @@ from pytest_mock import MockerFixture
 
 from musify import MODULE_ROOT
 from musify.local.track import LocalTrack
+from musify.processors.download import ItemDownloadHelper
 from musify.shared.core.enum import Fields
 from musify.shared.core.object import BasicCollection
-from musify.processors.download import ItemDownloadHelper
 from tests.local.track.utils import random_tracks
 from tests.shared.core.misc import PrettyPrinterTester
 from tests.shared.remote.processors.utils import patch_input
