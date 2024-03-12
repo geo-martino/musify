@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<SmartPlaylist SaveStaticCopy="False" LiveUpdating="True" Layout="4" LayoutGroupBy="0" ShuffleMode="None" ShuffleSameArtistWeight="0" MinimumArtistGap="0" GroupBy="track" ConsolidateAlbums="False" MusicLibraryPath="/mnt/d/Music/">
+<SmartPlaylist SaveStaticCopy="False" LiveUpdating="True" Layout="4" LayoutGroupBy="0" ShuffleMode="None" ShuffleSameArtistWeight="-0.2" MinimumArtistGap="0" GroupBy="track" ConsolidateAlbums="False" MusicLibraryPath="/mnt/d/Music/">
   <Source Type="1">
     <Description />
     <Conditions CombineMethod="Any">

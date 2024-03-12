@@ -247,7 +247,16 @@
 		</dict>
 		<dict>
 			<key>Playlist ID</key><integer>6567</integer>
-			<key>Playlist Persistent ID</key><string>71C043F5FDDF9129</string>
+			<key>Playlist Persistent ID</key><string>4A99495C0BC1926D</string>
+			<key>All Items</key><true/>
+			<key>Name</key><string>Complex Match</string>
+			<key>Description</key><string>This has got some complex matching</string>
+			<key>Playlist Items</key>
+			<array/>
+		</dict>
+		<dict>
+			<key>Playlist ID</key><integer>6570</integer>
+			<key>Playlist Persistent ID</key><string>B526A789D1FC5173</string>
 			<key>All Items</key><true/>
 			<key>Name</key><string>The Best Playlist Ever</string>
 			<key>Description</key><string>I am a description</string>

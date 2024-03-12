@@ -5,7 +5,6 @@ Combines reader and writer classes for metadata/tags/properties operations on au
 import os
 from abc import ABCMeta
 from copy import deepcopy
-from glob import glob
 from os.path import join, exists, dirname
 from typing import Any, Self
 
@@ -39,20 +38,6 @@ class LocalTrack[T: mutagen.FileType](TagWriter, metaclass=ABCMeta):
     @property
     def file(self):
         return self._file
-
-    @classmethod
-    def get_filepaths(cls, library_folder: str) -> set[str]:
-        """Get all files in a given library that match this Track object's valid filetypes."""
-        paths = set()
-
-        for ext in cls.valid_extensions:
-            # first glob doesn't get filenames that start with a period
-            paths |= set(glob(join(library_folder, "**", f"*{ext}"), recursive=True))
-            # second glob only picks up filenames that start with a period
-            paths |= set(glob(join(library_folder, "*", "**", f".*{ext}"), recursive=True))
-
-        # do not return paths in the recycle bin in Windows-based folders
-        return {path for path in paths if "$RECYCLE.BIN" not in path}
 
     def __init__(self, file: str | T, remote_wrangler: RemoteDataWrangler = None):
         super().__init__(remote_wrangler=remote_wrangler)

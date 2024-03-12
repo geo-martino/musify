@@ -1,19 +1,21 @@
 import os
 from copy import deepcopy
 from datetime import datetime
-from os.path import dirname, join, splitext, basename
+from glob import glob
+from os.path import dirname, join, splitext, basename, exists
 from pathlib import Path
 from random import randrange
 
 import pytest
 
 from musify.local.exception import InvalidFileType
-from musify.local.file import PathMapper
-from musify.local.playlist import XAutoPF
+from musify.local.file import PathMapper, PathStemMapper
+from musify.local.library import MusicBee
+from musify.local.playlist import XAutoPF, load_playlist
 from musify.local.track import LocalTrack
 from tests.local.playlist.testers import LocalPlaylistTester
-from tests.local.playlist.utils import path_playlist_xautopf_ra, path_playlist_xautopf_bp
 from tests.local.track.utils import random_track, random_tracks
+from tests.local.utils import path_playlist_xautopf_ra, path_playlist_xautopf_bp
 from tests.local.utils import path_track_flac, path_track_wma
 from tests.utils import path_txt
 
@@ -167,3 +169,33 @@ class TestXAutoPF(LocalPlaylistTester):
         assert len(paths) == result.final_included
         for path in paths:
             assert path.startswith("../")
+
+
+# noinspection PyTestUnpassedFixture
+@pytest.mark.manual
+@pytest.mark.skipif(
+    "not config.getoption('-m') and not config.getoption('-k')",
+    reason="Only runs when the test or marker is specified explicitly by the user",
+)
+@pytest.mark.parametrize("source,expected,mapper", [
+    (
+        join(os.getenv("TEST_PL_SOURCE", ""), f"{splitext(basename(name))[0]}.xautopf"),
+        join(os.getenv("TEST_PL_COMPARISON", ""), f"{splitext(basename(name))[0]}.m3u"),
+        PathStemMapper({"../..": os.getenv("TEST_PL_LIBRARY", "")})
+    )
+    for name in glob(join(os.getenv("TEST_PL_SOURCE", ""), "**", "*.xautopf"), recursive=True)
+])
+def test_playlist_paths_manual(source: str, expected: str, mapper: PathMapper):
+    assert exists(source)
+    assert exists(expected)
+
+    library = MusicBee(musicbee_folder=join(os.getenv("TEST_PL_LIBRARY"), "MusicBee"), path_mapper=mapper)
+    library.load_tracks()
+
+    pl = load_playlist(source, tracks=library.tracks, path_mapper=mapper)
+    paths_source = [track.path for track in pl]
+
+    with open(expected, "r") as f:
+        paths_expected = [mapper.map(line.strip()) for line in f]
+
+    assert paths_source == paths_expected

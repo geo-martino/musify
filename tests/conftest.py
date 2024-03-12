@@ -50,8 +50,6 @@ def pytest_configure(config: pytest.Config):
     log_config["loggers"][MODULE_ROOT] = log_config["loggers"]["test"]
     logging.config.dictConfig(log_config)
 
-    pytest.lazy_fixture = lazy_fixture
-
 
 # This is a fork of the pytest-lazy-fixture package
 # Fixes applied for issues with pytest >8.0: https://github.com/TvoroG/pytest-lazy-fixture/issues/65
@@ -112,16 +110,12 @@ def pytest_make_parametrize_id(config, val, argname):
 def pytest_generate_tests(metafunc):
     yield
 
-    # normalize_metafunc_calls(metafunc, 'funcargs')
-    # normalize_metafunc_calls(metafunc, 'params')
     normalize_metafunc_calls(metafunc)
 
 
-# def normalize_metafunc_calls(metafunc, valtype, used_keys=None):
 def normalize_metafunc_calls(metafunc, used_keys=None):
     newcalls = []
     for callspec in metafunc._calls:
-        # calls = normalize_call(callspec, metafunc, valtype, used_keys)
         calls = normalize_call(callspec, metafunc, used_keys)
         newcalls.extend(calls)
     metafunc._calls = newcalls
@@ -142,16 +136,12 @@ def copy_metafunc(metafunc):
     return copied
 
 
-# def normalize_call(callspec, metafunc, valtype, used_keys):
 def normalize_call(callspec, metafunc, used_keys):
     fm = metafunc.config.pluginmanager.get_plugin('funcmanage')
 
     used_keys = used_keys or set()
-    # valtype_keys = set(getattr(callspec, valtype).keys()) - used_keys
     keys = set(callspec.params.keys()) - used_keys
 
-    # for arg in valtype_keys:
-    #     val = getattr(callspec, valtype)[arg]
     for arg in keys:
         val = callspec.params[arg]
         if is_lazy_fixture(val):
@@ -172,16 +162,13 @@ def normalize_call(callspec, metafunc, used_keys):
                 # pytest < 3.6.0; `Metafunc` has no `definition` attribute
                 fixturenames_closure, arg2fixturedefs = fm.getfixtureclosure([val.name], current_node)
 
-            extra_fixturenames = [fname for fname in fixturenames_closure
-                                  # if fname not in callspec.params and fname not in callspec.funcargs]
-                                  if fname not in callspec.params]  # and fname not in callspec.funcargs]
+            extra_fixturenames = [fname for fname in fixturenames_closure if fname not in callspec.params]
 
             newmetafunc = copy_metafunc(metafunc)
             newmetafunc.fixturenames = extra_fixturenames
             newmetafunc._arg2fixturedefs.update(arg2fixturedefs)
             newmetafunc._calls = [callspec]
             fm.pytest_generate_tests(newmetafunc)
-            # normalize_metafunc_calls(newmetafunc, valtype, used_keys | set([arg]))
             normalize_metafunc_calls(newmetafunc, used_keys | set([arg]))
             return newmetafunc._calls
 
@@ -238,6 +225,9 @@ def lazy_fixture(names):
         return LazyFixture(names)
     else:
         return [LazyFixture(name) for name in names]
+
+
+pytest.lazy_fixture = lazy_fixture
 
 
 def is_lazy_fixture(val):

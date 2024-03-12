@@ -6,8 +6,8 @@ import xmltodict
 
 from musify.local.track import LocalTrack
 from musify.processors.limit import ItemLimiter, LimitType
-from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
 from tests.local.track.utils import random_tracks
+from tests.local.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
 from tests.shared.core.misc import PrettyPrinterTester
 from tests.utils import random_file
 
@@ -123,12 +123,12 @@ class TestItemLimiter(PrettyPrinterTester):
     ###########################################################################
     ## XML I/O
     ###########################################################################
-    def test_from_xml_1(self):
+    def test_from_xml_bp(self):
         with open(path_playlist_xautopf_bp, "r", encoding="utf-8") as f:
             xml = xmltodict.parse(f.read())
         assert ItemLimiter.from_xml(xml=xml) is None
 
-    def test_from_xml_2(self):
+    def test_from_xml_ra(self):
         with open(path_playlist_xautopf_ra, "r", encoding="utf-8") as f:
             xml = xmltodict.parse(f.read())
         limiter = ItemLimiter.from_xml(xml=xml)

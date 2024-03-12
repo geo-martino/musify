@@ -4,13 +4,12 @@ The core, basic library implementation which is just a simple set of folders.
 import itertools
 from collections.abc import Collection, Mapping, Iterable
 from functools import reduce
-from glob import glob
 from os.path import splitext, join, exists, basename, dirname
 from typing import Any
 
 from musify.local.collection import LocalCollection, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from musify.local.file import PathMapper, PathStemMapper
-from musify.local.playlist import PLAYLIST_FILETYPES, LocalPlaylist, load_playlist
+from musify.local.playlist import LocalPlaylist, load_playlist, PLAYLIST_CLASSES
 from musify.local.track import TRACK_CLASSES, LocalTrack, load_track
 from musify.local.track.field import LocalTrackField
 from musify.processors.base import Filter
@@ -135,14 +134,10 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         self._playlist_folder: str = value.rstrip("\\/")
         self._playlist_paths = None
 
-        playlists = {}
-        for filetype in PLAYLIST_FILETYPES:
-            paths = glob(join(self._playlist_folder, "**", f"*{filetype}"), recursive=True)
-            entry = {
-                splitext(basename(path.removeprefix(self._playlist_folder)))[0]: path
-                for path in paths
-            }
-            playlists |= entry
+        playlists = {
+            splitext(basename(path.removeprefix(self._playlist_folder)))[0]: path
+            for cls in PLAYLIST_CLASSES for path in cls.get_filepaths(self._playlist_folder)
+        }
 
         pl_total = len(playlists)
         pl_filtered = self.playlist_filter(playlists)

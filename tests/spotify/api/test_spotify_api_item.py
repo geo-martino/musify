@@ -1,11 +1,11 @@
 from collections.abc import Collection
 from copy import deepcopy
+from itertools import batched
 from random import sample, choice
 from typing import Any
 from urllib.parse import parse_qs
 
 import pytest
-from itertools import batched
 # noinspection PyProtectedMember,PyUnresolvedReferences
 from requests_mock.request import _RequestObjectProxy as Request
 

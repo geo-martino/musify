@@ -5,10 +5,11 @@ Generic file operations. Base class for generic File and functions for reading/w
 from abc import ABCMeta, abstractmethod
 from collections.abc import Hashable, Collection, Iterable
 from datetime import datetime
+from glob import glob
 from http.client import HTTPResponse
 from io import BytesIO
 from os import sep
-from os.path import splitext, basename, dirname, getsize, getmtime, getctime, exists
+from os.path import splitext, basename, dirname, getsize, getmtime, getctime, exists, join
 from pathlib import Path
 from typing import Any
 from urllib.error import URLError
@@ -101,6 +102,17 @@ class File(Hashable, metaclass=ABCMeta):
                 f"Not an accepted {self.__class__.__name__} file extension. "
                 f"Use only: {', '.join(self.valid_extensions)}"
             )
+
+    @classmethod
+    def get_filepaths(cls, folder: str) -> set[str]:
+        """Get all files in a given folder that match this File object's valid filetypes recursively."""
+        paths = set()
+
+        for ext in cls.valid_extensions:
+            paths |= set(glob(join(folder, "**", f"*{ext}"), recursive=True, include_hidden=True))
+
+        # do not return paths in the recycle bin in Windows-based folders
+        return {path for path in paths if "$RECYCLE.BIN" not in path}
 
     @abstractmethod
     def load(self, *args, **kwargs) -> Any:

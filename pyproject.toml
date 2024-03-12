@@ -79,3 +79,6 @@ include = ["musify"]
 minversion = "7.0"
 testpaths = ["tests"]
 addopts = "-color=yes"
+markers = [
+    "manual: marks tests to be run only when manually directed to by the developer",
+]
