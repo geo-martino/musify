@@ -159,7 +159,7 @@ class ItemSorter(MusicBeeProcessor):
 
         shuffle_mode = ShuffleMode.from_name(cls._pascal_to_snake(xml["SmartPlaylist"]["@ShuffleMode"]))[0]
         shuffle_by = ShuffleBy.from_name(cls._pascal_to_snake(xml["SmartPlaylist"]["@GroupBy"]))[0]
-        shuffle_weight = float(xml["SmartPlaylist"].get("@ShuffleSameArtistWeight", 1.0))
+        shuffle_weight = float(xml["SmartPlaylist"].get("@ShuffleSameArtistWeight", 1))
 
         return cls(fields=fields, shuffle_mode=shuffle_mode, shuffle_by=shuffle_by, shuffle_weight=shuffle_weight)
 

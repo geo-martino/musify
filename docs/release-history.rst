@@ -60,6 +60,8 @@ Fixed
 * :py:class:`.FilterMatcher` and :py:class:`.FilterComparers` now correctly import conditions from XML playlist files.
   Previously, these filters could not import nested match conditions from files.
   Changes to logic also made to :py:meth:`.Comparer.from_xml` to accommodate.
+* :py:class:`.XMLLibraryParser` now handles empty arrays correctly. Previously would crash.
+* Fixed :py:class:`.Comparer` dynamic process method alternate names for ``in_the_last`` and ``not_in_the_last``
 
 Removed
 -------
