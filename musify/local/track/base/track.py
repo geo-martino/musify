@@ -5,12 +5,11 @@ Combines reader and writer classes for metadata/tags/properties operations on au
 import os
 from abc import ABCMeta
 from copy import deepcopy
-from os.path import join, exists, dirname
+from os.path import join, dirname
 from typing import Any, Self
 
 import mutagen
 
-from musify.local.exception import FileDoesNotExistError
 from musify.local.track.base.reader import TagReader
 from musify.local.track.base.writer import TagWriter
 from musify.shared.core.base import Item
@@ -44,24 +43,6 @@ class LocalTrack[T: mutagen.FileType](TagWriter, metaclass=ABCMeta):
 
         self._file: T = self.load(file) if isinstance(file, str) else file
         self.load_metadata()
-
-    def load(self, path: str | None = None) -> T:
-        """
-        Load local file using mutagen from the given path or the path stored in the object's ``file``.
-        Re-formats to case-sensitive system path if applicable.
-
-        :param path: The path to the file. If not given, use the stored ``file`` path.
-        :return: Mutagen file object or None if load error.
-        :raise FileDoesNotExistError: If the file cannot be found.
-        :raise InvalidFileType: If the file type is not supported.
-        """
-        path = path or self.path
-        self._validate_type(path)
-
-        if not path or not exists(path):
-            raise FileDoesNotExistError(f"File not found | {path}")
-
-        return mutagen.File(path)
 
     def merge(self, track: Track, tags: UnitIterable[TrackField] = TrackField.ALL) -> None:
         """Set the tags of this track equal to the given ``track``. Give a list of ``tags`` to limit which are set"""
@@ -103,12 +84,12 @@ class LocalTrack[T: mutagen.FileType](TagWriter, metaclass=ABCMeta):
     def __copy__(self):
         """Copy object by reloading from the file object in memory"""
         if not self.file.tags:  # file is not a real file, used in testing
-            obj = self.__class__.__new__(self.__class__)
+            new = self.__class__.__new__(self.__class__)
             for key in TagReader.__slots__:
-                setattr(obj, key, getattr(self, key))
+                setattr(new, key, getattr(self, key))
             for key in self.__slots__:
-                setattr(obj, key, getattr(self, key))
-            return obj
+                setattr(new, key, getattr(self, key))
+            return new
         return self.__class__(file=self.file, remote_wrangler=self.remote_wrangler)
 
     def __deepcopy__(self, _: dict = None):

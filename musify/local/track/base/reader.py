@@ -1,7 +1,6 @@
 """
 Implements all functionality pertaining to reading metadata/tags/properties of a :py:class:`LocalTrack`.
 """
-
 import datetime
 import re
 from abc import ABCMeta, abstractmethod
@@ -22,7 +21,7 @@ from musify.shared.types import UnitIterable
 from musify.shared.utils import to_collection
 
 
-class TagReader(LocalItem, Track, metaclass=ABCMeta):
+class TagReader[T: mutagen.FileType](LocalItem, Track, metaclass=ABCMeta):
     """
     Functionality for reading tags/metadata/properties from a loaded audio file.
 
@@ -382,6 +381,21 @@ class TagReader(LocalItem, Track, metaclass=ABCMeta):
         self._play_count = None
 
         self._loaded = False
+
+    def load(self, path: str | None = None) -> T:
+        """
+        Load local file using mutagen from the given path or the path stored in the object's ``file``.
+        Re-formats to case-sensitive system path if applicable.
+
+        :param path: The path to the file. If not given, use the stored ``file`` path.
+        :return: Mutagen file object or None if load error.
+        :raise FileDoesNotExistError: If the file cannot be found.
+        :raise InvalidFileType: If the file type is not supported.
+        """
+        path = path or self.path
+        self._validate_type(path)
+        self._validate_existence(path)
+        return mutagen.File(path)
 
     def load_metadata(self) -> None:
         """Driver for extracting all supported metadata from a loaded file"""
