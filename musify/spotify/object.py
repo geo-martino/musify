@@ -221,22 +221,22 @@ class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
             *_,
             **__
     ) -> Self:
-        obj = cls.__new__(cls)
-        obj.api = api
+        self = cls.__new__(cls)
+        self.api = api
 
         # set a mock response with URL to load from
         id_ = cls.extract_ids(value)[0]
-        obj._response = {
+        self._response = {
             "href": cls.convert(id_, kind=RemoteObjectType.TRACK, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
         }
-        obj.reload(
+        self.reload(
             features=features,
             analysis=analysis,
             extend_album=extend_album,
             extend_artists=extend_artists,
             use_cache=use_cache
         )
-        return obj
+        return self
 
     def reload(
             self,
@@ -295,11 +295,11 @@ class SpotifyCollectionLoader[T: SpotifyItem](SpotifyObjectLoaderMixin[T], Spoti
             if kind == RemoteObjectType.PLAYLIST:
                 value = api.get_playlist_url(value)
 
-            obj = cls.__new__(cls)
-            obj.api = api
-            obj._response = {"href": value}
-            obj.reload(*args, **kwargs, extend_tracks=extend_tracks, use_cache=use_cache)
-            return obj
+            self = cls.__new__(cls)
+            self.api = api
+            self._response = {"href": value}
+            self.reload(*args, **kwargs, extend_tracks=extend_tracks, use_cache=use_cache)
+            return self
 
         # get response
         if isinstance(value, MutableMapping) and cls.get_item_type(value) == kind:
@@ -692,16 +692,16 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
             *_,
             **__
     ) -> Self:
-        obj = cls.__new__(cls)
-        obj.api = api
+        self = cls.__new__(cls)
+        self.api = api
 
         # set a mock response with URL to load from
         id_ = cls.extract_ids(value)[0]
-        obj._response = {
+        self._response = {
             "href": cls.convert(id_, kind=RemoteObjectType.ARTIST, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
         }
-        obj.reload(extend_albums=extend_albums, extend_tracks=extend_tracks, use_cache=use_cache)
-        return obj
+        self.reload(extend_albums=extend_albums, extend_tracks=extend_tracks, use_cache=use_cache)
+        return self
 
     def reload(
             self, extend_albums: bool = False, extend_tracks: bool = False, use_cache: bool = True, *_, **__

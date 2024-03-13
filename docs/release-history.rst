@@ -32,6 +32,16 @@ The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
 
+0.9.0
+=====
+
+Changed
+-------
+
+* :py:meth:`.LocalLibrary.load_tracks` and :py:meth:`.LocalLibrary.load_playlists` now run concurrently.
+* Made :py:func:`.load_tracks` and :py:func:`.load_playlists` utility functions more DRY
+* Move :py:meth:`.TagReader.load` from :py:class:`.LocalTrack` to super class :py:class:`.TagReader`
+
 0.8.1
 =====
 

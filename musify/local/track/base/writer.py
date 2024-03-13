@@ -26,7 +26,7 @@ class SyncResultTrack(Result):
     updated: Mapping[Tags, int]
 
 
-class TagWriter(TagReader, metaclass=ABCMeta):
+class TagWriter[T: mutagen.FileType](TagReader[T], metaclass=ABCMeta):
     """Functionality for updating and removing tags/metadata/properties from a loaded audio file."""
 
     #: The date format to use when saving string representations of dates to tag values

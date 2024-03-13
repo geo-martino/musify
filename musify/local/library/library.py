@@ -2,10 +2,12 @@
 The core, basic library implementation which is just a simple set of folders.
 """
 import itertools
-from collections.abc import Collection, Mapping, Iterable
+from collections.abc import Collection, Mapping
 from functools import reduce
 from os.path import splitext, join, exists, basename, dirname
 from typing import Any
+
+from concurrent.futures import ThreadPoolExecutor
 
 from musify.local.collection import LocalCollection, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from musify.local.file import PathMapper, PathStemMapper
@@ -274,27 +276,37 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     ###########################################################################
     ## Tracks
     ###########################################################################
+    def load_track(self, path: str) -> LocalTrack | None:
+        """
+        Wrapper for :py:func:`load_track` which automatically loads the track at the given ``path``
+        and assigns optional arguments using this library's attributes.
+
+        Handles exceptions by logging paths which produce errors to internal list of ``errors``.
+        """
+        try:
+            return load_track(path=path, remote_wrangler=self.remote_wrangler)
+        except MusifyError as ex:
+            self.logger.debug(f"Load error for track: {path} - {ex}")
+            self.errors.append(path)
+
     def load_tracks(self) -> None:
         """Load all tracks from all the valid paths in this library, replacing currently loaded tracks."""
+        if not self._track_paths:
+            return
+
         self.logger.debug(f"Load {self.name} tracks: START")
         self.logger.info(
             f"\33[1;95m  >\33[1;97m Extracting metadata and properties for {len(self._track_paths)} tracks \33[0m"
         )
 
-        tracks: list[LocalTrack] = []
-        bar: Iterable[str] = self.logger.get_progress_bar(
-            iterable=self._track_paths, desc="Loading tracks", unit="tracks"
-        )
-        for path in bar:
-            try:
-                tracks.append(load_track(path=path, remote_wrangler=self.remote_wrangler))
-            except MusifyError as ex:
-                self.logger.debug(f"Load error: {path} - {ex}")
-                self.errors.append(path)
-                continue
+        with ThreadPoolExecutor(thread_name_prefix="track-loader") as executor:
+            tasks = executor.map(self.load_track, self._track_paths)
+            bar = self.logger.get_progress_bar(
+                tasks, desc="Loading tracks", unit="tracks", total=len(self._track_paths)
+            )
+            self._tracks = list(bar)
 
-        self._tracks = tracks
-        self._log_errors()
+        self._log_errors("Could not load the following tracks")
         self.logger.debug(f"Load {self.name} tracks: DONE\n")
 
     def log_tracks(self) -> None:
@@ -310,6 +322,21 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     ###########################################################################
     ## Playlists
     ###########################################################################
+    def load_playlist(self, path: str) -> LocalPlaylist:
+        """
+        Wrapper for :py:func:`load_playlist` which automatically loads the playlist at the given ``path``
+        and assigns optional arguments using this library's attributes.
+
+        Handles exceptions by logging paths which produce errors to internal list of ``errors``.
+        """
+        try:
+            return load_playlist(
+                path=path, tracks=self.tracks, path_mapper=self.path_mapper, remote_wrangler=self.remote_wrangler,
+            )
+        except MusifyError as ex:
+            self.logger.debug(f"Load error for playlist: {path} - {ex}")
+            self.errors.append(path)
+
     def load_playlists(self) -> None:
         """
         Load all playlists found in this library's ``playlist_folder``,
@@ -326,15 +353,14 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             f"\33[1;95m  >\33[1;97m Loading playlist data for {len(self._playlist_paths)} playlists \33[0m"
         )
 
-        iterable = self._playlist_paths.items()
-        bar = self.logger.get_progress_bar(iterable=iterable, desc="Loading playlists", unit="playlists")
-        playlists: list[LocalPlaylist] = [
-            load_playlist(
-                path=path, tracks=self.tracks, path_mapper=self.path_mapper, remote_wrangler=self.remote_wrangler,
-            ) for name, path in bar
-        ]
+        with ThreadPoolExecutor(thread_name_prefix="playlist-loader") as executor:
+            tasks = executor.map(self.load_playlist, self._playlist_paths.values())
+            bar = self.logger.get_progress_bar(
+                tasks, desc="Loading playlists", unit="playlists", total=len(self._playlist_paths)
+            )
+            self._playlists = {pl.name: pl for pl in sorted(bar, key=lambda x: x.name.casefold())}
 
-        self._playlists = {pl.name: pl for pl in sorted(playlists, key=lambda x: x.name.casefold())}
+        self._log_errors("Could not load the following playlists")
         self.logger.debug(f"Load {self.name} playlists: DONE\n")
 
     def log_playlists(self) -> None:

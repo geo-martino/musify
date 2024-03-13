@@ -100,7 +100,7 @@ class TestFilterComparers(FilterTester):
         for i, track in enumerate(tracks):
             track.track_number = i + 1
             track.year = 2020 if i >= 8 else 1990
-            track.bpm = randrange(80, 100) if 10 < i < 15 else 120
+            track.bpm = randrange(85, 95) if 10 < i < 15 else 120
 
         comparer = FilterComparers(
             comparers={comparers[0]: (False, sub_filter_1), comparers[1]: (False, sub_filter_2)},

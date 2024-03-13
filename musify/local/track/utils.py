@@ -32,16 +32,8 @@ def load_track(path: str, remote_wrangler: RemoteDataWrangler = None) -> LocalTr
     :raise InvalidFileType: If the file type is not supported.
     """
     ext = splitext(path)[1].casefold()
+    if ext not in TRACK_FILETYPES:
+        raise InvalidFileType(ext, f"Not an accepted extension. Use only: {', '.join(TRACK_FILETYPES)}")
 
-    if ext in FLAC.valid_extensions:
-        return FLAC(file=path, remote_wrangler=remote_wrangler)
-    elif ext in MP3.valid_extensions:
-        return MP3(file=path, remote_wrangler=remote_wrangler)
-    elif ext in M4A.valid_extensions:
-        return M4A(file=path, remote_wrangler=remote_wrangler)
-    elif ext in WMA.valid_extensions:
-        return WMA(file=path, remote_wrangler=remote_wrangler)
-
-    raise InvalidFileType(
-        ext, f"Not an accepted extension. Use only: {', '.join(TRACK_FILETYPES)}"
-    )
+    cls = next(cls for cls in TRACK_CLASSES if ext in cls.valid_extensions)
+    return cls(file=path, remote_wrangler=remote_wrangler)

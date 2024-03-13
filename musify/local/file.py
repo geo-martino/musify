@@ -17,7 +17,7 @@ from urllib.request import urlopen, Request
 
 from PIL import Image, UnidentifiedImageError
 
-from musify.local.exception import InvalidFileType, ImageLoadError
+from musify.local.exception import InvalidFileType, ImageLoadError, FileDoesNotExistError
 from musify.shared.core.misc import PrettyPrinter
 
 
@@ -94,7 +94,7 @@ class File(Hashable, metaclass=ABCMeta):
         return datetime.fromtimestamp(getmtime(self.path)) if exists(self.path) else None
 
     def _validate_type(self, path: str) -> None:
-        """Raises exception if the path's extension is not accepted"""
+        """Raises an exception if the ``path`` extension is not accepted"""
         ext = splitext(path)[1].casefold()
         if ext not in self.valid_extensions:
             raise InvalidFileType(
@@ -102,6 +102,12 @@ class File(Hashable, metaclass=ABCMeta):
                 f"Not an accepted {self.__class__.__name__} file extension. "
                 f"Use only: {', '.join(self.valid_extensions)}"
             )
+
+    @staticmethod
+    def _validate_existence(path: str):
+        """Raises an exception if there is no file at the given ``path``"""
+        if not path or not exists(path):
+            raise FileDoesNotExistError(f"File not found | {path}")
 
     @classmethod
     def get_filepaths(cls, folder: str) -> set[str]:

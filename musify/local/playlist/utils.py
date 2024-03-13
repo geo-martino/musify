@@ -45,10 +45,8 @@ def load_playlist(
     :raise InvalidFileType: If the file type is not supported.
     """
     ext = splitext(path)[1].casefold()
+    if ext not in PLAYLIST_FILETYPES:
+        raise InvalidFileType(ext, f"Not an accepted extension. Use only: {', '.join(PLAYLIST_FILETYPES)}")
 
-    if ext in M3U.valid_extensions:
-        return M3U(path=path, tracks=tracks, path_mapper=path_mapper, remote_wrangler=remote_wrangler)
-    elif ext in XAutoPF.valid_extensions:
-        return XAutoPF(path=path, tracks=tracks, path_mapper=path_mapper)
-
-    raise InvalidFileType(ext, f"Not an accepted extension. Use only: {', '.join(PLAYLIST_FILETYPES)}")
+    cls = next(cls for cls in PLAYLIST_CLASSES if ext in cls.valid_extensions)
+    return cls(path=path, tracks=tracks, path_mapper=path_mapper, remote_wrangler=remote_wrangler)
