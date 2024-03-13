@@ -104,6 +104,10 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install '.[build]'
 
+      - name: 📄 Sanitise readme
+        run: |
+          sed -i -r "s|\[\!(\w+)\]|**\\1:**|g" README.md
+
       - name: 🏗️ Build package
         run: |
           echo "Building artifacts for v$(hatch version)"
