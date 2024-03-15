@@ -6,12 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from musify.local.exception import FileDoesNotExistError
-from musify.local.file import PathMapper
 from musify.local.library import LocalLibrary, MusicBee
 from musify.local.library.musicbee import XMLLibraryParser
 from musify.local.track import LocalTrack
 from musify.processors.filter import FilterIncludeExclude, FilterDefinedList
+from musify.shared.exception import FileDoesNotExistError
+from musify.shared.file import PathMapper
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
 from tests.local.library.testers import LocalLibraryTester
 from tests.local.library.utils import path_library_resources

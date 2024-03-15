@@ -5,19 +5,20 @@ All methods that interact with the API should return raw, unprocessed responses.
 """
 
 import logging
-from abc import ABCMeta, abstractmethod
-from collections.abc import Collection, MutableMapping, Mapping
+from abc import ABC, abstractmethod
+from collections.abc import Collection, MutableMapping, Mapping, Sequence
 from typing import Any, Self
 
 from musify.shared.api.request import RequestHandler
 from musify.shared.logger import MusifyLogger
 from musify.shared.remote.enum import RemoteIDType, RemoteObjectType
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
-from musify.shared.remote.types import APIMethodInputType
-from musify.shared.utils import align_string
+from musify.shared.remote.types import APIInputValue
+from musify.shared.types import UnitSequence, JSON, UnitList
+from musify.shared.utils import align_string, to_collection
 
 
-class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
+class RemoteAPI(ABC):
     """
     Collection of endpoints for a remote API.
     See :py:class:`RequestHandler` and :py:class:`APIAuthoriser`
@@ -26,7 +27,7 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
     :param handler_kwargs: The authorisation kwargs to be passed to :py:class:`APIAuthoriser`.
     """
 
-    __slots__ = ("logger", "handler", "user_data")
+    __slots__ = ("logger", "handler", "user_data", "wrangler")
 
     #: Map of :py:class:`RemoteObjectType` for remote collections
     #: to the  :py:class:`RemoteObjectType` of the items they hold
@@ -40,12 +41,7 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
     user_item_types = (
             set(collection_item_map) | {RemoteObjectType.TRACK, RemoteObjectType.ARTIST, RemoteObjectType.EPISODE}
     )
-
-    @property
-    @abstractmethod
-    def api_url_base(self) -> str:
-        """The base URL for making calls to the remote API"""
-        raise NotImplementedError
+    id_key = "id"
 
     @property
     @abstractmethod
@@ -59,14 +55,28 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
         """Name of the currently authorised user"""
         raise NotImplementedError
 
-    def __init__(self, **handler_kwargs):
+    @property
+    def url(self) -> str:
+        """The base URL of the API"""
+        return self.wrangler.url_api
+
+    @property
+    def source(self) -> str:
+        """The name of the API service"""
+        return self.wrangler.source
+
+    def __init__(self, wrangler: RemoteDataWrangler, **handler_kwargs):
+        super().__init__()
+        #: A :py:class:`RemoteDataWrangler` object for processing URIs
+        self.wrangler = wrangler
+
         # noinspection PyTypeChecker
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
 
         handler_kwargs = {k: v for k, v in handler_kwargs.items() if k != "name"}
         #: The :py:class:`RequestHandler` for handling authorised requests to the API
-        self.handler = RequestHandler(name=self.source, **handler_kwargs)
+        self.handler = RequestHandler(name=self.wrangler.source, **handler_kwargs)
         #: Stores the loaded user data for the currently authorised user
         self.user_data: dict[str, Any] = {}
 
@@ -83,6 +93,10 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
         self.handler.authorise(force_load=force_load, force_new=force_new)
         return self
 
+    def close(self) -> None:
+        """Close the current session. No more requests will be possible once this has been called."""
+        self.handler.close()
+
     ###########################################################################
     ## Misc helpers
     ###########################################################################
@@ -91,56 +105,59 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
         self.user_data = self.get_self()
 
     @staticmethod
+    def _merge_results_to_input_mapping(
+            original: MutableMapping[str, Any], response: Mapping[str, Any], clear: bool = True,
+    ) -> None:
+        if clear:
+            original.clear()
+        original |= response
+
     def _merge_results_to_input(
-            original: APIMethodInputType, results: list[dict[str, Any]], ordered: bool = True, clear: bool = True,
+            self, original: UnitSequence[JSON], responses: UnitList[JSON], ordered: bool = True, clear: bool = True,
     ) -> None:
         """
         If API response type given on input, update with new results.
         Assumes on a one-to-one relationship between ``original`` and the list of ``results``.
 
         :param original: The original values given to the function.
-        :param results: The new results from the API.
+        :param responses: The new results from the API.
         :param ordered: When True, function assumes the order of items in ``original`` and ``results`` is the same.
             When False, the function will attempt to match each input value to each result by matching on
             the ``id`` key of each dictionary.
         :param ordered: When True, clear the original value before merging, completely replacing all original data.
         """
-        id_key = "id"
+        if not isinstance(original, Sequence):
+            original = to_collection(original)
+        if not isinstance(responses, Sequence):
+            responses = to_collection(responses, list)
 
-        if isinstance(original, MutableMapping):
-            if not len(results) == 1:
+        valid_types_input = all(isinstance(item, MutableMapping) for item in original)
+        valid_types_responses = all(isinstance(item, MutableMapping) for item in responses)
+        valid_lengths = len(original) == len(responses)
+        if not all((valid_types_input, valid_types_responses, valid_lengths)):
+            self.logger.warning(
+                "Could not merge responses to given user input | "
+                "Reason: assertions failed | "
+                f"{valid_types_input=} {valid_types_responses=} {valid_lengths=} | "
+            )
+            return
+
+        if not ordered:
+            expected_keys_input = all(self.id_key in item for item in original)
+            expected_keys_responses = all(self.id_key in item for item in responses)
+            if not all((expected_keys_input, expected_keys_responses)):
+                self.logger.warning(
+                    "Could not merge responses to given user input | "
+                    f"Reason: unordered and cannot order on {self.id_key=} | "
+                    f"{expected_keys_input=} {expected_keys_responses=}"
+                )
                 return
 
-            if clear:
-                original.clear()
-            original |= results[0]
-            return
-        elif not isinstance(original, Collection):
-            return
+            id_ordered = [response[self.id_key] for response in original]
+            responses.sort(key=lambda response: id_ordered.index(response[self.id_key]))
 
-        # process as lists
-        valid_input_types = all(isinstance(item, MutableMapping) for item in original)
-        valid_lengths = len(original) == len(results)
-        if not valid_input_types or not valid_lengths:
-            return
-
-        if ordered:
-            for item, res in zip(original, results):
-                if clear:
-                    item.clear()
-                item |= res
-            return
-
-        valid_keys_values = all(id_key in item for item in original)
-        valid_keys_results = all(id_key in item for item in results)
-        if not valid_keys_values or not valid_keys_results:
-            return
-
-        result_mapped = {result[id_key]: result for result in results if result}
-        for item in original:
-            if clear:
-                item.clear()
-            item |= result_mapped[item[id_key]]
+        for item, response in zip(original, responses):
+            self._merge_results_to_input_mapping(original=item, response=response, clear=clear)
 
     def print_item(
             self, i: int, name: str, uri: str, length: float = 0, total: int = 1, max_width: int = 50
@@ -161,7 +178,7 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
             f"\33[97m{align_string(name, max_width=max_width)} \33[0m| "
             f"\33[91m{str(int(length // 60)).zfill(2)}:{str(round(length % 60)).zfill(2)} \33[0m| "
             f"\33[93m{uri} \33[0m- "
-            f"{self.convert(uri, type_in=RemoteIDType.URI, type_out=RemoteIDType.URL_EXT)}"
+            f"{self.wrangler.convert(uri, type_in=RemoteIDType.URI, type_out=RemoteIDType.URL_EXT)}"
         )
 
     @abstractmethod
@@ -259,7 +276,7 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
     @abstractmethod
     def get_items(
             self,
-            values: APIMethodInputType,
+            values: APIInputValue,
             kind: RemoteObjectType | None = None,
             limit: int = 50,
             extend: bool = True,
@@ -292,7 +309,7 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
 
     @abstractmethod
     def get_tracks(
-            self, values: APIMethodInputType, limit: int = 50, use_cache: bool = True, *args, **kwargs,
+            self, values: APIInputValue, limit: int = 50, use_cache: bool = True, *args, **kwargs,
     ) -> list[dict[str, Any]]:
         """
         Wrapper for :py:meth:`get_items` which only returns Track type responses.
@@ -390,8 +407,7 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
         :param limit: Size of each batch of IDs to clear in a single request.
             This value will be limited to be between ``1`` and ``100``.
         :return: The number of tracks cleared from the playlist.
-        :raise RemoteIDTypeError: Raised when the input ``playlist`` does not represent
-            a playlist URL/URI/ID.
+        :raise RemoteIDTypeError: Raised when the input ``playlist`` does not represent a playlist URL/URI/ID.
         :raise RemoteObjectTypeError: Raised when the item types of the input ``items``
             are not all tracks or IDs.
         """

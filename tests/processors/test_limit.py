@@ -27,8 +27,8 @@ class TestItemLimiter(PrettyPrinterTester):
             for track in tracks[(i-1)*10:i*10]:
 
                 track.album = f"album {i}"
-                track.file.info.length = i * 60
-                track.file.filename = random_file_path
+                track._reader.file.info.length = i * 60
+                track._reader.file.filename = random_file_path
                 track.rating = i
 
                 if i != 1 and i != 5:

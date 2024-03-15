@@ -7,7 +7,6 @@ import mutagen
 from dateutil.relativedelta import relativedelta
 
 from musify.local.track import TRACK_CLASSES, LocalTrack
-from musify.local.track.base.writer import TagWriter
 from tests.local.utils import remote_wrangler, path_track_resources
 from tests.spotify.utils import random_uri
 from tests.utils import random_str, random_dt, random_genres
@@ -27,17 +26,25 @@ class MutagenMock(mutagen.FileType):
         self.pictures = []
 
 
+# noinspection PyProtectedMember
 def random_track[T: LocalTrack](cls: type[T] | None = None) -> T:
     """Generates a new, random track of the given class."""
     if cls is None:
         cls = choice(tuple(TRACK_CLASSES))
     track = cls.__new__(cls)
-    TagWriter.__init__(track, remote_wrangler=remote_wrangler)
+    super(LocalTrack, track).__init__()
+
     track._available_paths = set()
     track._available_paths_lower = set()
 
-    track._file = MutagenMock()
-    track.file.info.length = randint(30, 600)
+    file = MutagenMock()
+    file.info.length = randint(30, 600)
+
+    track._reader = track._create_reader(file=file, tag_map=track.tag_map, remote_wrangler=remote_wrangler)
+    track._writer = track._create_writer(file=file, tag_map=track.tag_map, remote_wrangler=remote_wrangler)
+    track.remote_wrangler = remote_wrangler
+
+    track._loaded = True
 
     track.title = random_str(30, 50)
     track.artist = random_str(30, 50)
@@ -61,7 +68,7 @@ def random_track[T: LocalTrack](cls: type[T] | None = None) -> T:
     track.has_image = False
 
     filename_ext = f"{str(track.track_number).zfill(2)} - {track.title}" + choice(tuple(track.valid_extensions))
-    track.file.filename = join(path_track_resources, random_str(30, 50), filename_ext)
+    track._reader.file.filename = join(path_track_resources, random_str(30, 50), filename_ext)
 
     track.date_added = datetime.now() - relativedelta(days=randrange(8, 20), hours=randrange(1, 24))
     track.last_played = datetime.now() - relativedelta(days=randrange(1, 6), hours=randrange(1, 24))

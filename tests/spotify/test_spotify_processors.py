@@ -10,16 +10,16 @@ from musify.shared.core.enum import TagFields as Tag
 from musify.shared.exception import MusifyEnumError
 from musify.shared.remote.enum import RemoteIDType as IDType, RemoteObjectType as ObjectType
 from musify.shared.remote.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
-from musify.shared.remote.processors.search import SearchSettings
-from musify.spotify import URL_API, URL_EXT
+from musify.shared.remote.processors.check import RemoteItemChecker
+from musify.shared.remote.processors.search import SearchSettings, RemoteItemSearcher
 from musify.spotify.api import SpotifyAPI
+from musify.spotify.factory import SpotifyObjectFactory
 from musify.spotify.object import SpotifyTrack, SpotifyAlbum
-from musify.spotify.processors.processors import SpotifyItemSearcher, SpotifyItemChecker
-from musify.spotify.processors.wrangle import SpotifyDataWrangler
+from musify.spotify.processors import SpotifyDataWrangler
 from tests.local.track.utils import random_track
 from tests.shared.remote.processors.check import RemoteItemCheckerTester
 from tests.shared.remote.processors.search import RemoteItemSearcherTester
-from tests.spotify.api.mock import SpotifyMock
+from tests.spotify.api.mock import SpotifyMock, URL_API, URL_EXT
 from tests.spotify.utils import random_id, random_ids, random_uri, random_api_url, random_ext_url
 from tests.utils import random_str
 
@@ -216,22 +216,22 @@ def test_extract_ids(wrangler: SpotifyDataWrangler):
 class TestSpotifyItemSearcher(RemoteItemSearcherTester):
 
     @pytest.fixture(scope="class")
-    def searcher(self, api: SpotifyAPI, api_mock: SpotifyMock) -> SpotifyItemSearcher:
-        SpotifyItemSearcher.karaoke_tags = {"karaoke", "backing", "instrumental"}
-        SpotifyItemSearcher.year_range = 10
+    def searcher(self, api: SpotifyAPI, api_mock: SpotifyMock) -> RemoteItemSearcher:
+        RemoteItemSearcher.karaoke_tags = {"karaoke", "backing", "instrumental"}
+        RemoteItemSearcher.year_range = 10
 
-        SpotifyItemSearcher.clean_tags_remove_all = {"the", "a", "&", "and"}
-        SpotifyItemSearcher.clean_tags_split_all = set()
-        SpotifyItemSearcher.clean_tags_config = (
+        RemoteItemSearcher.clean_tags_remove_all = {"the", "a", "&", "and"}
+        RemoteItemSearcher.clean_tags_split_all = set()
+        RemoteItemSearcher.clean_tags_config = (
             CleanTagConfig(tag=Tag.TITLE, remove={"part"}, split={"featuring", "feat.", "ft.", "/"}),
             CleanTagConfig(tag=Tag.ARTIST, split={"featuring", "feat.", "ft.", "vs"}),
             CleanTagConfig(tag=Tag.ALBUM, remove={"ep"}, preprocess=lambda x: x.split('-')[0])
         )
 
-        SpotifyItemSearcher.reduce_name_score_on = {"live", "demo", "acoustic"}
-        SpotifyItemSearcher.reduce_name_score_factor = 0.5
+        RemoteItemSearcher.reduce_name_score_on = {"live", "demo", "acoustic"}
+        RemoteItemSearcher.reduce_name_score_factor = 0.5
 
-        SpotifyItemSearcher.settings_items = SearchSettings(
+        RemoteItemSearcher.settings_items = SearchSettings(
             search_fields_1=[Tag.TITLE],  # query mock always returns match on name
             match_fields={Tag.TITLE},
             result_count=10,
@@ -239,7 +239,7 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
             min_score=0.1,
             max_score=0.5
         )
-        SpotifyItemSearcher.settings_albums = SearchSettings(
+        RemoteItemSearcher.settings_albums = SearchSettings(
             search_fields_1=[Tag.ALBUM],  # query mock always returns match on name
             match_fields={Tag.ALBUM},
             result_count=5,
@@ -248,11 +248,11 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
             max_score=0.5
         )
 
-        return SpotifyItemSearcher(api=api)
+        return RemoteItemSearcher(object_factory=SpotifyObjectFactory(api=api))
 
     @pytest.fixture
     def search_items(
-            self, searcher: SpotifyItemSearcher, api_mock: SpotifyMock, wrangler: SpotifyDataWrangler
+            self, searcher: RemoteItemSearcher, api_mock: SpotifyMock, wrangler: SpotifyDataWrangler
     ) -> list[LocalTrack]:
         items = []
         for remote_track in map(SpotifyTrack, sample(api_mock.tracks, k=searcher.settings_items.result_count)):
@@ -263,7 +263,7 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
             local_track.title = remote_track.title
             local_track.album = remote_track.album
             local_track.artist = remote_track.artist
-            local_track.file.info.length = remote_track.length
+            local_track._reader.file.info.length = remote_track.length
             local_track.year = remote_track.year
 
             items.append(local_track)
@@ -273,7 +273,7 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
     @pytest.fixture
     def search_albums(
             self,
-            searcher: SpotifyItemSearcher,
+            searcher: RemoteItemSearcher,
             api: SpotifyAPI,
             api_mock: SpotifyMock,
             wrangler: SpotifyDataWrangler
@@ -296,7 +296,7 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
                 local_track.album = album.name
                 local_track.artist = remote_track.artist
                 local_track.year = remote_track.year
-                local_track.file.info.length = remote_track.length
+                local_track._reader.file.info.length = remote_track.length
 
                 tracks.append(local_track)
 
@@ -308,8 +308,8 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
 class TestSpotifyItemChecker(RemoteItemCheckerTester):
 
     @pytest.fixture
-    def checker(self, api: SpotifyAPI) -> SpotifyItemChecker:
-        return SpotifyItemChecker(api=api)
+    def checker(self, api: SpotifyAPI) -> RemoteItemChecker:
+        return RemoteItemChecker(object_factory=SpotifyObjectFactory(api=api))
 
     @pytest.fixture(scope="class")
     def playlist_urls(self, api_mock: SpotifyMock) -> list[str]:

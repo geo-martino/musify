@@ -1,7 +1,7 @@
 from os.path import join
 
 from musify.local.track import TRACK_CLASSES
-from musify.spotify.processors.wrangle import SpotifyDataWrangler
+from musify.spotify.processors import SpotifyDataWrangler
 from tests.utils import path_resources
 
 path_track_resources = join(path_resources, "track")

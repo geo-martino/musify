@@ -5,8 +5,8 @@ from urllib.parse import parse_qs
 import pytest
 
 from musify.shared.remote.enum import RemoteObjectType as ObjectType
-from musify.spotify import URL_EXT
 from musify.spotify.api import SpotifyAPI
+from musify.spotify.processors import SpotifyDataWrangler
 from tests.spotify.api.mock import SpotifyMock, idfn
 from tests.utils import random_str, get_stdout
 
@@ -87,7 +87,7 @@ class TestSpotifyAPICore:
         for result in results:
             assert result["type"] == kind.name.lower()
 
-        request = api_mock.get_requests(url=f"{api.api_url_base}/search", params={"q": query})[0]
+        request = api_mock.get_requests(url=f"{api.url}/search", params={"q": query})[0]
         params = parse_qs(request.query)
 
         assert params["q"][0] == query
@@ -112,9 +112,9 @@ class TestSpotifyAPICore:
         stdout = get_stdout(capfd)
 
         # printed in blocks
-        blocks = [block for block in stdout.strip().split("\n\n") if URL_EXT in block]
+        blocks = [block for block in stdout.strip().split("\n\n") if SpotifyDataWrangler.url_ext in block]
         assert len(blocks) == len(api_mock.request_history)
 
         # lines printed = total tracks + 1 extra for title
-        lines = [line for line in stdout.strip().split("\n") if URL_EXT in line]
+        lines = [line for line in stdout.strip().split("\n") if SpotifyDataWrangler.url_ext in line]
         assert len(lines) == source[key]["total"] + 1

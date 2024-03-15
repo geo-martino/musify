@@ -5,12 +5,12 @@ from random import sample, shuffle
 import pytest
 import xmltodict
 
-from musify.local.file import PathStemMapper, PathMapper
 from musify.local.track import LocalTrack
 from musify.local.track.field import LocalTrackField
 from musify.processors.compare import Comparer
 from musify.processors.filter import FilterDefinedList, FilterComparers, FilterIncludeExclude
 from musify.processors.filter_matcher import FilterMatcher
+from musify.shared.file import PathStemMapper, PathMapper
 from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra, path_playlist_resources
 from tests.local.track.utils import random_tracks
 from tests.local.utils import path_track_all, path_track_wma, path_track_flac, path_track_mp3

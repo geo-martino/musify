@@ -4,19 +4,96 @@ The fundamental core collection classes for the entire package.
 
 from __future__ import annotations
 
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta, abstractmethod, ABC
 from collections.abc import MutableSequence, Iterable, Mapping, Collection
+from dataclasses import dataclass
 from typing import Any, SupportsIndex, Self
 
 from musify.processors.sort import ShuffleMode, ShuffleBy, ItemSorter
-from musify.shared.core.base import Nameable, NameableTaggableMixin, AttributePrinter, Item
+from musify.shared.core.base import MusifyObject, MusifyItem
 from musify.shared.core.enum import Field
-from musify.shared.exception import MusifyTypeError, MusifyKeyError
+from musify.shared.exception import MusifyTypeError, MusifyKeyError, MusifyAttributeError
+from musify.shared.file import File
+from musify.shared.remote import RemoteResponse
+from musify.shared.remote.base import RemoteObject
+from musify.shared.remote.processors.wrangle import RemoteDataWrangler
 from musify.shared.types import UnitSequence
 
 
-class ItemCollection[T: Item](AttributePrinter, NameableTaggableMixin, MutableSequence[T], metaclass=ABCMeta):
-    """Generic class for storing a collection of items."""
+@dataclass
+class ItemGetter(ABC):
+    key: str
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """The name of the name to assign to this ItemGetter when logging"""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_value_from_item(self, item: MusifyItem) -> str:
+        """Retrieve the appropriate value from a given ``item`` for this ItemGetter type"""
+        raise NotImplementedError
+
+    def get_item[T](self, collection: MusifyCollection[T]) -> T:
+        try:
+            return next(item for item in collection.items if str(self.get_value_from_item(item)) == self.key)
+        except AttributeError:
+            raise MusifyAttributeError(f"Items in collection do not have the attribute '{self.name}'")
+        except StopIteration:
+            raise MusifyKeyError(f"No matching item found for {self.name}: {self.key}")
+
+
+class NameGetter(ItemGetter):
+    def name(self) -> str:
+        return "name"
+
+    def get_value_from_item(self, item: MusifyObject) -> str:
+        return item.name
+
+
+class PathGetter(ItemGetter):
+    def name(self) -> str:
+        return "path"
+
+    def get_value_from_item(self, item: File) -> str:
+        return item.path
+
+
+class RemoteIDGetter(ItemGetter):
+    def name(self) -> str:
+        return "remote ID"
+
+    def get_value_from_item(self, item: RemoteResponse) -> str:
+        return item.id
+
+
+class RemoteURIGetter(ItemGetter):
+    def name(self) -> str:
+        return "URI"
+
+    def get_value_from_item(self, item: MusifyItem | RemoteObject) -> str:
+        return item.uri
+
+
+class RemoteURLAPIGetter(ItemGetter):
+    def name(self) -> str:
+        return "API URL"
+
+    def get_value_from_item(self, item: RemoteObject) -> str:
+        return item.url
+
+
+class RemoteURLEXTGetter(ItemGetter):
+    def name(self) -> str:
+        return "external URL"
+
+    def get_value_from_item(self, item: RemoteObject) -> str:
+        return item.url_ext
+
+
+class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], metaclass=ABCMeta):
+    """Generic class for storing a collection of musify items."""
 
     @property
     @abstractmethod
@@ -36,6 +113,11 @@ class ItemCollection[T: Item](AttributePrinter, NameableTaggableMixin, MutableSe
         :return: True if valid, False if not.
         """
         raise NotImplementedError
+
+    def __init__(self, remote_wrangler: RemoteDataWrangler | None = None):
+        super().__init__()
+        #: A :py:class:`RemoteDataWrangler` object for processing remote data
+        self.remote_wrangler = remote_wrangler
 
     def count(self, __item: T) -> int:
         """Return the number of occurrences of the given :py:class:`Item` in this collection"""
@@ -69,7 +151,7 @@ class ItemCollection[T: Item](AttributePrinter, NameableTaggableMixin, MutableSe
         """Append many items to the items in this collection"""
         if not self._validate_item_type(__items):
             raise MusifyTypeError([type(i).__name__ for i in __items])
-        if isinstance(__items, ItemCollection):
+        if isinstance(__items, MusifyCollection):
             __items = __items.items
 
         if allow_duplicates:
@@ -144,7 +226,7 @@ class ItemCollection[T: Item](AttributePrinter, NameableTaggableMixin, MutableSe
         def condense(key: str, value: Any) -> tuple[str, Any]:
             """Decide whether this key-value pair should be condensed and condense them."""
             if isinstance(value, Collection) and not isinstance(value, str):
-                if any(isinstance(v, Nameable) for v in value) or len(value) > 20 or len(value) == 0:
+                if any(isinstance(v, MusifyObject) for v in value) or len(value) > 20 or len(value) == 0:
                     return f"{key.rstrip("s")}_count", len(value)
             return key, value
 
@@ -156,14 +238,14 @@ class ItemCollection[T: Item](AttributePrinter, NameableTaggableMixin, MutableSe
     def json(self):
         return self._to_json(self._get_attributes())
 
-    def __eq__(self, __collection: ItemCollection | Iterable[T]):
+    def __eq__(self, __collection: MusifyCollection | Iterable[T]):
         """Names equal and all items equal in order"""
-        name = self.name == __collection.name if isinstance(__collection, ItemCollection) else True
+        name = self.name == __collection.name if isinstance(__collection, MusifyCollection) else True
         length = len(self) == len(__collection)
         items = all(x == y for x, y in zip(self, __collection))
         return name and length and items
 
-    def __ne__(self, __collection: ItemCollection | Iterable[T]):
+    def __ne__(self, __collection: MusifyCollection | Iterable[T]):
         return not self.__eq__(__collection)
 
     def __len__(self):
@@ -179,7 +261,7 @@ class ItemCollection[T: Item](AttributePrinter, NameableTaggableMixin, MutableSe
         return any(__item == i for i in self.items)
 
     def __add__(self, __items: list[T] | Self):
-        if isinstance(__items, ItemCollection):
+        if isinstance(__items, MusifyCollection):
             return self.items + __items.items
         return self.items + __items
 
@@ -198,14 +280,52 @@ class ItemCollection[T: Item](AttributePrinter, NameableTaggableMixin, MutableSe
             self.remove(item)
         return self
 
-    @abstractmethod
-    def __getitem__(self, __key: str | int | slice | Item) -> T | list[T] | list[T, None, None]:
+    def __getitem__(
+            self, __key: str | int | slice | MusifyItem | File | RemoteResponse
+    ) -> T | list[T] | list[T, None, None]:
         """
-        Returns the item in this collection by matching on a given index/Item/URI.
-        If an item is given, the URI is extracted from this item
+        Returns the item in this collection by matching on a given index/Item/URI/ID/URL.
+        If an :py:class:`Item` is given, the URI is extracted from this item
         and the matching Item from this collection is returned.
+        If a :py:class:`RemoteObject` is given, the ID is extracted from this object
+        and the matching RemoteObject from this collection is returned.
         """
-        raise NotImplementedError
+        if isinstance(__key, int) or isinstance(__key, slice):  # simply index the list or items
+            return self.items[__key]
+
+        getters = []
+        if isinstance(__key, File):
+            getters.append(PathGetter(__key.path))
+        if isinstance(__key, RemoteResponse) and self.remote_wrangler:
+            getters.append(RemoteIDGetter(__key.id))
+        if isinstance(__key, MusifyItem) and __key.has_uri:
+            getters.append(RemoteURIGetter(__key.uri))
+        if isinstance(__key, MusifyObject):
+            getters.append(NameGetter(__key.name))
+        if isinstance(__key, str):
+            getters.extend([
+                RemoteIDGetter(__key),
+                RemoteURIGetter(__key),
+                RemoteURLAPIGetter(__key),
+                RemoteURLEXTGetter(__key),
+                PathGetter(__key),
+                NameGetter(__key),
+            ])
+
+        if not getters:
+            raise MusifyKeyError(f"Unrecognised key type | {__key=} | type={type(__key).__name__}")
+
+        caught_exceptions = []
+        for getter in getters:
+            try:
+                return getter.get_item(self)
+            except (MusifyAttributeError, MusifyKeyError) as ex:
+                caught_exceptions.append(ex)
+
+        raise MusifyKeyError(
+            "Key is invalid. The following errors were thrown: \n- "
+            "\n- ".join([str(ex) for ex in caught_exceptions])
+        )
 
     def __setitem__(self, __key: str | int | T, __value: T):
         """Replace the item at a given ``__key`` with the given ``__value``."""

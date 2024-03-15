@@ -13,86 +13,41 @@ from datetime import datetime
 from typing import Self, Literal, Any
 
 from musify.shared.api.exception import APIError
-from musify.shared.core.base import Item
-from musify.shared.core.collection import ItemCollection
+from musify.shared.core.base import MusifyItem
+from musify.shared.core.collection import MusifyCollection
 from musify.shared.core.misc import Result
 from musify.shared.core.object import Track, Album, Playlist, Artist
-from musify.shared.exception import MusifyKeyError
 from musify.shared.remote.api import RemoteAPI
 from musify.shared.remote.base import RemoteObject, RemoteItem
-from musify.shared.remote.enum import RemoteIDType
-from musify.shared.remote.exception import RemoteIDTypeError, RemoteError
-from musify.shared.remote.processors.wrangle import RemoteDataWrangler
+from musify.shared.remote.enum import RemoteObjectType
+from musify.shared.remote.exception import RemoteError
 from musify.shared.utils import get_most_common_values
 
 
-class RemoteItemWranglerMixin[T: RemoteObject](RemoteItem, RemoteDataWrangler, metaclass=ABCMeta):
-    """Mixin for :py:class:`RemoteItem` and :py:class:`RemoteDataWrangler`"""
-    pass
-
-
-class RemoteTrack(RemoteItemWranglerMixin, Track, metaclass=ABCMeta):
+class RemoteTrack(RemoteItem, Track, metaclass=ABCMeta):
     """Extracts key ``track`` data from a remote API JSON response."""
 
     __attributes_classes__ = (Track, RemoteItem)
 
+    @property
+    def kind(self):
+        return RemoteObjectType.TRACK
 
-class RemoteCollection[T: RemoteObject](ItemCollection[T], RemoteDataWrangler, metaclass=ABCMeta):
+
+class RemoteCollection[T: RemoteObject](MusifyCollection[T], metaclass=ABCMeta):
     """Generic class for storing a collection of remote objects."""
 
-    __attributes_classes__ = ItemCollection
-    __attributes_ignore__ = ("items", "track_total", "_total")
-
-    def __getitem__(self, __key: str | int | slice | Item | RemoteObject) -> T | list[T] | list[T, None, None]:
-        """
-        Returns the item in this collection by matching on a given index/Item/URI/ID/URL.
-        If an :py:class:`Item` is given, the URI is extracted from this item
-        and the matching Item from this collection is returned.
-        If a :py:class:`RemoteObject` is given, the ID is extracted from this object
-        and the matching RemoteObject from this collection is returned.
-        """
-        if isinstance(__key, int) or isinstance(__key, slice):  # simply index the list or items
-            return self.items[__key]
-        elif isinstance(__key, Item):  # take the URI
-            if not __key.has_uri:
-                raise MusifyKeyError(f"Given item does not have a URI associated: {__key.name}")
-            __key = __key.uri
-            key_type = RemoteIDType.URI
-        elif isinstance(__key, RemoteObject):
-            __key = __key.id
-            key_type = RemoteIDType.ID
-        else:  # determine the ID type
-            try:
-                return next(item for item in self.items if item.name == __key)
-            except StopIteration:
-                try:
-                    key_type = self.get_id_type(__key)
-                except RemoteIDTypeError:
-                    raise MusifyKeyError(f"ID Type not recognised: '{__key}'")
-
-        try:  # get the item based on the ID type
-            if key_type == RemoteIDType.URI:
-                return next(item for item in self.items if item.uri == __key)
-            elif key_type == RemoteIDType.ID:
-                return next(item for item in self.items if item.uri.split(":")[2] == __key)
-            elif key_type == RemoteIDType.URL:
-                __key = self.convert(__key, type_in=RemoteIDType.URL, type_out=RemoteIDType.URI)
-                return next(item for item in self.items if item.uri == __key)
-            elif key_type == RemoteIDType.URL_EXT:
-                __key = self.convert(__key, type_in=RemoteIDType.URL_EXT, type_out=RemoteIDType.URI)
-                return next(item for item in self.items if item.uri == __key)
-            else:
-                raise MusifyKeyError(f"ID Type not recognised: '{__key}'")
-        except StopIteration:
-            raise MusifyKeyError(f"No matching {key_type.name} found: '{__key}'")
+    __attributes_classes__ = MusifyCollection
+    __attributes_ignore__ = ("items", "track_total")
 
 
 class RemoteCollectionLoader[T: RemoteObject](RemoteObject, RemoteCollection[T], metaclass=ABCMeta):
     """Generic class for storing a collection of remote objects that can be loaded from an API response."""
 
     __attributes_classes__ = (RemoteObject, RemoteCollection)
+    __attributes_ignore__ = "_total"
 
-    def __eq__(self, __collection: RemoteObject | ItemCollection | Iterable[T]):
+    def __eq__(self, __collection: RemoteObject | MusifyCollection | Iterable[T]):
         if isinstance(__collection, RemoteObject):
             return self.uri == __collection.uri
         return super().__eq__(__collection)
@@ -169,6 +124,10 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
     __attributes_classes__ = (Playlist, RemoteCollectionLoader)
 
     @property
+    def kind(self):
+        return RemoteObjectType.PLAYLIST
+
+    @property
     @abstractmethod
     def owner_id(self) -> str:
         """The ID of the owner of this playlist"""
@@ -232,7 +191,7 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
 
     def sync(
             self,
-            items: Iterable[Item] = (),
+            items: Iterable[MusifyItem] = (),
             kind: PLAYLIST_SYNC_KINDS = "new",
             reload: bool = True,
             dry_run: bool = True,
@@ -303,10 +262,14 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
         raise NotImplementedError
 
 
-class RemoteAlbum[T: RemoteTrack](Album[T], RemoteCollectionLoader[T], metaclass=ABCMeta):
+class RemoteAlbum[T: RemoteTrack](RemoteCollectionLoader[T], Album[T], metaclass=ABCMeta):
     """Extracts key ``album`` data from a remote API JSON response."""
 
     __attributes_classes__ = (Album, RemoteCollectionLoader)
+
+    @property
+    def kind(self):
+        return RemoteObjectType.ALBUM
 
     @property
     def _total(self):
@@ -322,6 +285,10 @@ class RemoteArtist[T: RemoteTrack](Artist[T], RemoteCollectionLoader[T], metacla
     """Extracts key ``artist`` data from a remote API JSON response."""
 
     __attributes_classes__ = (Artist, RemoteCollectionLoader)
+
+    @property
+    def kind(self):
+        return RemoteObjectType.ARTIST
 
     @property
     def _total(self):

@@ -5,8 +5,8 @@ from typing import Any
 from webbrowser import open as webopen
 
 from musify.processors.base import InputProcessor, ItemProcessor
-from musify.shared.core.base import Item
-from musify.shared.core.collection import ItemCollection
+from musify.shared.core.base import MusifyItem
+from musify.shared.core.collection import MusifyCollection
 from musify.shared.core.enum import Field, Fields
 from musify.shared.exception import MusifyEnumError
 from musify.shared.types import UnitIterable
@@ -33,16 +33,16 @@ class ItemDownloadHelper(InputProcessor, ItemProcessor):
         self.fields: list[Field] = to_collection(fields, list)
         self.interval = interval
 
-    def __call__(self, collections: UnitIterable[ItemCollection]) -> None:
+    def __call__(self, collections: UnitIterable[MusifyCollection]) -> None:
         self.open_sites(collections=collections)
 
-    def open_sites(self, collections: UnitIterable[ItemCollection]) -> None:
+    def open_sites(self, collections: UnitIterable[MusifyCollection]) -> None:
         """
         Run the download helper.
 
         Opens the formatted ``urls`` for each item in all given collections in the user's browser.
         """
-        if isinstance(collections, ItemCollection):
+        if isinstance(collections, MusifyCollection):
             items = collections.items
         else:
             items = [item for coll in collections for item in coll]
@@ -52,7 +52,7 @@ class ItemDownloadHelper(InputProcessor, ItemProcessor):
             not_queried = self._open_sites_for_items(items=items, fields=self.fields)
             self._pause(items=items, not_queried=not_queried, page=page, total=pages_total)
 
-    def _open_sites_for_items(self, items: Iterable[Item], fields: Iterable[Field]) -> list[Item]:
+    def _open_sites_for_items(self, items: Iterable[MusifyItem], fields: Iterable[Field]) -> list[MusifyItem]:
         not_queried = []
         for item in items:
             queried = self._open_sites_for_item(item=item, fields=fields)
@@ -61,7 +61,7 @@ class ItemDownloadHelper(InputProcessor, ItemProcessor):
 
         return not_queried
 
-    def _open_sites_for_item(self, item: Item, fields: Iterable[Field]) -> bool:
+    def _open_sites_for_item(self, item: MusifyItem, fields: Iterable[Field]) -> bool:
         query_parts = []
         for field in fields:
             field_name = field.name.lower()
@@ -84,7 +84,7 @@ class ItemDownloadHelper(InputProcessor, ItemProcessor):
 
         return True
 
-    def _pause(self, items: Iterable[Item], not_queried: Collection[Item], page: int, total: int):
+    def _pause(self, items: Iterable[MusifyItem], not_queried: Collection[MusifyItem], page: int, total: int):
         opened = len(self.urls) * (self.interval - len(not_queried))
         not_opened = f" - Could not open sites for {len(not_queried)} items. " if not_queried else ". "
         valid_fields = [

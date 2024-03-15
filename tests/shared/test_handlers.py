@@ -8,8 +8,8 @@ from random import choice
 
 import pytest
 
-from musify.shared.logger import LOGGING_DT_FORMAT
 from musify.shared.handlers import CurrentTimeRotatingFileHandler
+from musify.shared.logger import LOGGING_DT_FORMAT
 from tests.utils import random_str
 
 

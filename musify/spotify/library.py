@@ -5,17 +5,17 @@ Implements a :py:class:`RemoteLibrary` for Spotify.
 from collections.abc import Collection, Mapping, Iterable
 from typing import Any
 
+from musify.processors.base import Filter
 from musify.shared.core.object import Playlist, Library
-from musify.shared.remote.config import RemoteObjectClasses
 from musify.shared.remote.enum import RemoteObjectType
 from musify.shared.remote.library import RemoteLibrary
 from musify.shared.remote.object import RemoteTrack
 from musify.spotify.api import SpotifyAPI
-from musify.spotify.config import SPOTIFY_OBJECT_CLASSES
-from musify.spotify.object import SpotifyTrack, SpotifyCollection, SpotifyPlaylist, SpotifyAlbum, SpotifyArtist
+from musify.spotify.factory import SpotifyObjectFactory
+from musify.spotify.object import SpotifyTrack
 
 
-class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack]):
+class SpotifyLibrary(RemoteLibrary):
     """
     Represents a Spotify library. Provides various methods for manipulating
     tracks and playlists across an entire Spotify library collection.
@@ -28,29 +28,14 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
             return all(isinstance(item, SpotifyTrack) for item in items)
         return isinstance(items, SpotifyTrack)
 
-    @property
-    def _object_cls(self) -> RemoteObjectClasses:
-        return SPOTIFY_OBJECT_CLASSES
-
-    # noinspection PyTypeChecker
-    @property
-    def playlists(self) -> dict[str, SpotifyPlaylist]:
-        return self._playlists
-
-    # noinspection PyTypeChecker
-    @property
-    def albums(self) -> list[SpotifyAlbum]:
-        return self._albums
-
-    # noinspection PyTypeChecker
-    @property
-    def artists(self) -> list[SpotifyArtist]:
-        return self._artists
-
-    # noinspection PyTypeChecker
-    @property
-    def api(self) -> SpotifyAPI:
-        return self._api
+    def __init__(
+            self,
+            api: SpotifyAPI,
+            use_cache: bool = True,
+            playlist_filter: Collection[str] | Filter[str] = (),
+    ):
+        object_factory = SpotifyObjectFactory(api=api)
+        super().__init__(object_factory=object_factory, use_cache=use_cache, playlist_filter=playlist_filter)
 
     def _filter_playlists(self, responses: list[dict[str, Any]]) -> list[dict[str, Any]]:
         pl_total = len(responses)
@@ -58,7 +43,8 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
         responses = [response for response in responses if response["name"] in pl_names_filtered]
 
         self.logger.debug(
-            f"Filtered out {pl_total - len(responses)} playlists from {pl_total} {self.source} available playlists"
+            f"Filtered out {pl_total - len(responses)} playlists from "
+            f"{pl_total} {self.api.source} available playlists"
             if (pl_total - len(responses)) > 0 else f"{len(responses)} playlists found"
         )
 
@@ -81,8 +67,10 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
         """
         if not self.tracks or not any((features, analysis, albums, artists)):
             return
-        self.logger.debug(f"Enrich {self.source} tracks: START")
-        self.logger.info(f"\33[1;95m  >\33[1;97m Enriching {len(self.tracks)} {self.source} tracks \33[0m")
+        self.logger.debug(f"Enrich {self.api.source} tracks: START")
+        self.logger.info(
+            f"\33[1;95m  >\33[1;97m Enriching {len(self.tracks)} {self.api.source} tracks \33[0m"
+        )
 
         responses = [track.response for track in self.tracks if track.has_uri]
         self.api.get_tracks_extra(responses, features=features, analysis=analysis, use_cache=self.use_cache)
@@ -113,14 +101,16 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
         for track in self.tracks:
             track.refresh(skip_checks=False)  # tracks are popped from albums so checks will skip by default
 
-        self.logger.debug(f"Enrich {self.source} tracks: DONE\n")
+        self.logger.debug(f"Enrich {self.api.source} tracks: DONE\n")
 
     def enrich_saved_albums(self) -> None:
         """Extends the tracks data for currently loaded albums, getting all available tracks data for each album"""
         if not self.albums or all(len(album) == album.track_total for album in self.albums):
             return
-        self.logger.debug(f"Enrich {self.source} artists: START")
-        self.logger.info(f"\33[1;95m  >\33[1;97m Enriching {len(self.albums)} {self.source} albums \33[0m")
+        self.logger.debug(f"Enrich {self.api.source} artists: START")
+        self.logger.info(
+            f"\33[1;95m  >\33[1;97m Enriching {len(self.albums)} {self.api.source} albums \33[0m"
+        )
 
         kind = RemoteObjectType.ALBUM
         key = self.api.collection_item_map[kind]
@@ -135,7 +125,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
                 if track not in self.tracks:
                     self._tracks.append(track)
 
-        self.logger.debug(f"Enrich {self.source} artists: DONE\n")
+        self.logger.debug(f"Enrich {self.api.source} artists: DONE\n")
 
     def enrich_saved_artists(self, tracks: bool = False, types: Collection[str] = ()) -> None:
         """
@@ -147,8 +137,10 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
         """
         if not self.artists:
             return
-        self.logger.debug(f"Enrich {self.source} artists: START")
-        self.logger.info(f"\33[1;95m  >\33[1;97m Enriching {len(self.artists)} {self.source} artists \33[0m")
+        self.logger.debug(f"Enrich {self.api.source} artists: START")
+        self.logger.info(
+            f"\33[1;95m  >\33[1;97m Enriching {len(self.artists)} {self.api.source} artists \33[0m"
+        )
 
         responses = [artist.response for artist in self.artists]
         self.api.get_artist_albums(responses, types=types, use_cache=self.use_cache)
@@ -169,7 +161,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyTrack], SpotifyCollection[SpotifyTrack
                 for album in artist.albums:
                     album.refresh(skip_checks=False)
 
-        self.logger.debug(f"Enrich {self.source} artists: DONE\n")
+        self.logger.debug(f"Enrich {self.api.source} artists: DONE\n")
 
     def merge_playlists(
             self,

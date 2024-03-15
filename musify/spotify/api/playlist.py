@@ -4,9 +4,8 @@ Implements endpoints for manipulating playlists with the Spotify API.
 
 from abc import ABCMeta
 from collections.abc import Collection, Mapping
-from typing import Any
-
 from itertools import batched
+from typing import Any
 
 from musify import PROGRAM_NAME, PROGRAM_URL
 from musify.shared.remote.enum import RemoteIDType, RemoteObjectType
@@ -37,15 +36,15 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             if "href" in playlist:
                 return playlist["href"]
             elif "id" in playlist:
-                return self.convert(
+                return self.wrangler.convert(
                     playlist["id"], kind=RemoteObjectType.PLAYLIST, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL
                 )
             elif "uri" in playlist:
-                return self.convert(
+                return self.wrangler.convert(
                     playlist["uri"], kind=RemoteObjectType.PLAYLIST, type_in=RemoteIDType.URI, type_out=RemoteIDType.URL
                 )
         try:
-            return self.convert(playlist, kind=RemoteObjectType.PLAYLIST, type_out=RemoteIDType.URL)
+            return self.wrangler.convert(playlist, kind=RemoteObjectType.PLAYLIST, type_out=RemoteIDType.URL)
         except RemoteIDTypeError:
             playlists = self.get_user_items(kind=RemoteObjectType.PLAYLIST, use_cache=use_cache)
             playlists = {pl["name"]: pl["href"] for pl in playlists}
@@ -68,7 +67,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
         :param collaborative: Set playlist to collaborative i.e. other users may edit the playlist.
         :return: API URL for playlist.
         """
-        url = f"{self.api_url_base}/users/{self.user_id}/playlists"
+        url = f"{self.url}/users/{self.user_id}/playlists"
 
         body = {
             "name": name,
@@ -106,9 +105,11 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             self.logger.debug(f"{'SKIP':<7}: {url:<43} | No data given")
             return 0
 
-        self.validate_item_type(items, kind=RemoteObjectType.TRACK)
+        self.wrangler.validate_item_type(items, kind=RemoteObjectType.TRACK)
 
-        uri_list = [self.convert(item, kind=RemoteObjectType.TRACK, type_out=RemoteIDType.URI) for item in items]
+        uri_list = [
+            self.wrangler.convert(item, kind=RemoteObjectType.TRACK, type_out=RemoteIDType.URI) for item in items
+        ]
         if skip_dupes:  # skip tracks currently in playlist
             pl_current = self.get_items(url, kind=RemoteObjectType.PLAYLIST, use_cache=False)[0]
             tracks_key = self.collection_item_map[RemoteObjectType.PLAYLIST].name.lower() + "s"
@@ -172,8 +173,10 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             tracks = pl_current[tracks_key][self.items_key]
             uri_list = [track[tracks_key.rstrip("s")]["uri"] for track in tracks]
         else:  # clear only the items given
-            self.validate_item_type(items, kind=RemoteObjectType.TRACK)
-            uri_list = [self.convert(item, kind=RemoteObjectType.TRACK, type_out=RemoteIDType.URI) for item in items]
+            self.wrangler.validate_item_type(items, kind=RemoteObjectType.TRACK)
+            uri_list = [
+                self.wrangler.convert(item, kind=RemoteObjectType.TRACK, type_out=RemoteIDType.URI) for item in items
+            ]
 
         if not uri_list:  # skip when nothing to clear
             self.logger.debug(f"{'SKIP':<7}: {url:<43} | No tracks to clear")

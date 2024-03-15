@@ -16,7 +16,7 @@ from musify import MODULE_ROOT
 from musify.shared.api.request import RequestHandler
 from musify.shared.logger import MusifyLogger
 from musify.spotify.api import SpotifyAPI
-from musify.spotify.processors.wrangle import SpotifyDataWrangler
+from musify.spotify.processors import SpotifyDataWrangler
 from tests.spotify.api.mock import SpotifyMock
 
 
@@ -182,7 +182,7 @@ def normalize_call(callspec, metafunc, used_keys):
             newmetafunc._calls = [callspec]
             fm.pytest_generate_tests(newmetafunc)
             # normalize_metafunc_calls(newmetafunc, valtype, used_keys | set([arg]))
-            normalize_metafunc_calls(newmetafunc, used_keys | set([arg]))
+            normalize_metafunc_calls(newmetafunc, used_keys | {arg})
             return newmetafunc._calls
 
         used_keys.add(arg)

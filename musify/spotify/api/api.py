@@ -11,10 +11,12 @@ from copy import deepcopy
 from musify import PROGRAM_NAME
 from musify.shared.api.exception import APIError
 from musify.shared.utils import safe_format_map
-from musify.spotify import URL_API, URL_AUTH
 from musify.spotify.api.item import SpotifyAPIItems
 from musify.spotify.api.misc import SpotifyAPIMisc
 from musify.spotify.api.playlist import SpotifyAPIPlaylists
+from musify.spotify.processors import SpotifyDataWrangler
+
+URL_AUTH = "https://accounts.spotify.com"
 
 # user authenticated access with scopes
 SPOTIFY_API_AUTH_ARGS = {
@@ -52,7 +54,7 @@ SPOTIFY_API_AUTH_ARGS = {
             "Authorization": "Basic {client_base64}"
         },
     },
-    "test_args": {"url": f"{URL_API}/me"},
+    "test_args": {"url": "{url}/me"},
     "test_condition": lambda r: "href" in r and "display_name" in r,
     "test_expiry": 600,
     "token_key_path": ["access_token"],
@@ -70,10 +72,6 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
     """
 
     items_key = "items"
-
-    @property
-    def api_url_base(self) -> str:
-        return URL_API
 
     @property
     def user_id(self) -> str | None:
@@ -102,12 +100,14 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
             scopes: Iterable[str] = (),
             **kwargs,
     ):
+        wrangler = SpotifyDataWrangler()
         format_map = {
             "client_id": client_id,
             "client_base64": base64.b64encode(f"{client_id}:{client_secret}".encode()).decode(),
             "scopes": " ".join(scopes),
+            "url": wrangler.url_api
         }
         auth_kwargs = deepcopy(SPOTIFY_API_AUTH_ARGS)
         safe_format_map(auth_kwargs, format_map=format_map)
 
-        super().__init__(**auth_kwargs, **kwargs)
+        super().__init__(wrangler=wrangler, **auth_kwargs, **kwargs)

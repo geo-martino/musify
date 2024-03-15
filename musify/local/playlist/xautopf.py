@@ -10,7 +10,6 @@ from typing import Any
 
 import xmltodict
 
-from musify.local.file import PathMapper
 from musify.local.playlist.base import LocalPlaylist
 from musify.local.track import LocalTrack
 from musify.processors.filter import FilterDefinedList, FilterComparers
@@ -18,6 +17,7 @@ from musify.processors.filter_matcher import FilterMatcher
 from musify.processors.limit import ItemLimiter
 from musify.processors.sort import ItemSorter
 from musify.shared.core.enum import Fields
+from musify.shared.file import PathMapper
 from musify.shared.core.misc import Result
 
 

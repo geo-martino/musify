@@ -31,11 +31,11 @@ tracks = [
 
 playlist = M3U("<PATH TO AN M3U PLAYLIST>", tracks=tracks)
 
-from musify.local.file import PathMapper
+from musify.shared.file import PathMapper
 
 playlist = M3U("<PATH TO AN M3U PLAYLIST>", path_mapper=PathMapper())
 
-from musify.spotify.processors.wrangle import SpotifyDataWrangler
+from musify.spotify.processors import SpotifyDataWrangler
 
 playlist = M3U("<PATH TO AN M3U PLAYLIST>", remote_wrangler=SpotifyDataWrangler())
 

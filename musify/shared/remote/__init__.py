@@ -8,4 +8,4 @@ Also defines abstract classes to represent objects derived from the types of
 responses that can be returned by the API.
 """
 
-from ._base import Remote
+from .response import RemoteResponse

@@ -13,14 +13,15 @@ from typing import Any, Self
 
 from musify.processors.base import Filter
 from musify.processors.filter import FilterDefinedList
-from musify.shared.core.base import Item
-from musify.shared.core.collection import ItemCollection
-from musify.shared.exception import MusifyKeyError, MusifyTypeError
+from musify.shared.core.base import MusifyItem
+from musify.shared.core.collection import MusifyCollection
+from musify.shared.exception import MusifyTypeError
 from musify.shared.logger import MusifyLogger
+from musify.shared.remote.processors.wrangle import RemoteDataWrangler
 from musify.shared.utils import to_collection, align_string, get_max_width
 
 
-class Track(Item, metaclass=ABCMeta):
+class Track(MusifyItem, metaclass=ABCMeta):
     """Represents a track including its metadata/tags/properties."""
 
     __attributes_ignore__ = "name"
@@ -164,7 +165,7 @@ class Track(Item, metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class BasicCollection[T: Item](ItemCollection[T]):
+class BasicCollection[T: MusifyItem](MusifyCollection[T]):
     """
     A basic implementation of ItemCollection for storing ``items`` with a given ``name``.
 
@@ -177,8 +178,8 @@ class BasicCollection[T: Item](ItemCollection[T]):
     @staticmethod
     def _validate_item_type(items: Any | Iterable[Any]) -> bool:
         if isinstance(items, Iterable):
-            return all(isinstance(item, Item) for item in items)
-        return isinstance(items, Item)
+            return all(isinstance(item, MusifyItem) for item in items)
+        return isinstance(items, MusifyItem)
 
     @property
     def name(self):
@@ -194,34 +195,11 @@ class BasicCollection[T: Item](ItemCollection[T]):
         self._name = name
         self._items = to_collection(items, list)
 
-    def __getitem__(self, __key: str | int | slice | Item) -> T | list[T] | list[T, None, None]:
-        """
-        Returns the item in this collection by matching on a given index/Item/URI.
-        If an item is given, the URI is extracted from this item
-        and the matching Item from this collection is returned.
-        """
-        if isinstance(__key, int) or isinstance(__key, slice):  # simply index the list or items
-            return self.items[__key]
-        elif isinstance(__key, Item):  # take the URI
-            if not __key.has_uri:
-                raise MusifyKeyError(f"Given item does not have a URI associated: {__key.name}")
-            __key = __key.uri
-        else:  # assume the string is a name
-            try:
-                return next(item for item in self.items if item.name == __key)
-            except StopIteration:
-                raise MusifyKeyError(f"No matching item found for name: '{__key}'")
 
-        try:  # string is a URI
-            return next(item for item in self.items if item.uri == __key)
-        except StopIteration:
-            raise MusifyKeyError(f"No matching item found for URI: '{__key}'")
-
-
-class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
+class Playlist[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     """A playlist of items and their derived properties/objects."""
 
-    __attributes_classes__ = ItemCollection
+    __attributes_classes__ = MusifyCollection
     __attributes_ignore__ = "items"
 
     @property
@@ -310,10 +288,10 @@ class Playlist[T: Track](ItemCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
+class Library[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     """A library of items and playlists and other object types."""
 
-    __attributes_classes__ = ItemCollection
+    __attributes_classes__ = MusifyCollection
     __attributes_ignore__ = "items"
 
     @property
@@ -349,8 +327,8 @@ class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
         """The playlists in this library"""
         raise NotImplementedError
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, remote_wrangler: RemoteDataWrangler()):
+        super().__init__(remote_wrangler=remote_wrangler)
 
         # noinspection PyTypeChecker
         #: The :py:class:`MusifyLogger` for this  object
@@ -445,12 +423,12 @@ class Library[T: Track](ItemCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class Folder[T: Track](ItemCollection[T], metaclass=ABCMeta):
+class Folder[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     """
     A folder of items and their derived properties/objects
     """
 
-    __attributes_classes__ = ItemCollection
+    __attributes_classes__ = MusifyCollection
     __attributes_ignore__ = ("name", "items")
 
     @property
@@ -511,10 +489,10 @@ class Folder[T: Track](ItemCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class Album[T: Track](ItemCollection[T], metaclass=ABCMeta):
+class Album[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     """An album of items and their derived properties/objects."""
 
-    __attributes_classes__ = ItemCollection
+    __attributes_classes__ = MusifyCollection
     __attributes_ignore__ = ("name", "items")
 
     @property
@@ -627,10 +605,10 @@ class Album[T: Track](ItemCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class Artist[T: Track](ItemCollection[T], metaclass=ABCMeta):
+class Artist[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     """An artist of items and their derived properties/objects."""
 
-    __attributes_classes__ = ItemCollection
+    __attributes_classes__ = MusifyCollection
     __attributes_ignore__ = ("name", "items")
 
     @property
@@ -691,10 +669,10 @@ class Artist[T: Track](ItemCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class Genre[T: Track](ItemCollection[T], metaclass=ABCMeta):
+class Genre[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     """A genre of items and their derived properties/objects."""
 
-    __attributes_classes__ = ItemCollection
+    __attributes_classes__ = MusifyCollection
     __attributes_ignore__ = ("name", "items")
 
     @property

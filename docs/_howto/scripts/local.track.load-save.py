@@ -12,7 +12,7 @@ from musify.local.track import load_track
 
 track = load_track("<PATH TO AN MP3 TRACK>")
 
-from musify.spotify.processors.wrangle import SpotifyDataWrangler
+from musify.spotify.processors import SpotifyDataWrangler
 
 track = MP3("<PATH TO AN MP3 TRACK>", remote_wrangler=SpotifyDataWrangler())
 

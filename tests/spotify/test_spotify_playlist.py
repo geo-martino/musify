@@ -221,7 +221,7 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
         name = "new playlist"
         pl = SpotifyPlaylist.create(api=api, name="new playlist", public=False, collaborative=True)
 
-        url = f"{api.api_url_base}/users/{api_mock.user_id}/playlists"
+        url = f"{api.url}/users/{api_mock.user_id}/playlists"
         body = api_mock.get_requests(url=url, response={"name": name})[0].json()
 
         assert body["name"] == name

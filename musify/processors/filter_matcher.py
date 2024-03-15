@@ -9,13 +9,13 @@ from collections.abc import Collection, Mapping, Sequence, Callable
 from dataclasses import field, dataclass
 from typing import Any
 
-from musify.local.file import File, PathMapper
 from musify.local.track import LocalTrack
 from musify.processors.base import Filter, MusicBeeProcessor, FilterComposite
 from musify.processors.compare import Comparer
 from musify.processors.filter import FilterComparers, FilterDefinedList
 from musify.processors.sort import ItemSorter
 from musify.shared.core.enum import Fields
+from musify.shared.file import File, PathMapper
 from musify.shared.core.misc import Result
 from musify.shared.logger import MusifyLogger
 

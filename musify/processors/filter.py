@@ -9,10 +9,10 @@ from typing import Any
 
 from musify.processors.base import Filter, FilterComposite
 from musify.processors.compare import Comparer
-from musify.shared.core.base import Nameable
+from musify.shared.core.base import MusifyObject
 
 
-class FilterDefinedList[T: str | Nameable](Filter[T], Collection[T]):
+class FilterDefinedList[T: str | MusifyObject](Filter[T], Collection[T]):
 
     __slots__ = ("values",)
 
@@ -51,7 +51,7 @@ class FilterDefinedList[T: str | Nameable](Filter[T], Collection[T]):
         return item in self.values
 
 
-class FilterComparers[T: str | Nameable](Filter[T]):
+class FilterComparers[T: str | MusifyObject](Filter[T]):
 
     __slots__ = ("comparers", "match_all")
 

@@ -6,7 +6,6 @@ reviewing matches through temporary playlist creation.
 """
 
 import traceback
-from abc import ABCMeta, abstractmethod
 from collections import Counter
 from collections.abc import Sequence, Collection
 from dataclasses import dataclass, field
@@ -14,17 +13,15 @@ from dataclasses import dataclass, field
 from musify import PROGRAM_NAME
 from musify.processors.base import InputProcessor
 from musify.processors.match import ItemMatcher
-from musify.shared.core.base import Item
-from musify.shared.core.collection import ItemCollection
+from musify.shared.core.base import MusifyItem
+from musify.shared.core.collection import MusifyCollection
 from musify.shared.core.enum import Fields
 from musify.shared.core.misc import Result
 from musify.shared.core.object import Track
 from musify.shared.logger import REPORT
-from musify.shared.remote.api import RemoteAPI
-from musify.shared.remote.config import RemoteObjectClasses
+from musify.shared.remote.factory import RemoteObjectFactory
 from musify.shared.remote.enum import RemoteObjectType, RemoteIDType
 from musify.shared.remote.processors.search import RemoteItemSearcher
-from musify.shared.remote.processors.wrangle import RemoteDataWrangler
 from musify.shared.utils import get_max_width, align_string
 
 ALLOW_KARAOKE_DEFAULT = RemoteItemSearcher.settings_items.allow_karaoke
@@ -34,14 +31,14 @@ ALLOW_KARAOKE_DEFAULT = RemoteItemSearcher.settings_items.allow_karaoke
 class ItemCheckResult(Result):
     """Stores the results of the checking process."""
     #: Sequence of Items that had URIs switched during the check.
-    switched: Sequence[Item] = field(default=tuple())
+    switched: Sequence[MusifyItem] = field(default=tuple())
     #: Sequence of Items that were marked as unavailable.
-    unavailable: Sequence[Item] = field(default=tuple())
+    unavailable: Sequence[MusifyItem] = field(default=tuple())
     #: Sequence of Items that were skipped from the check.
-    skipped: Sequence[Item] = field(default=tuple())
+    skipped: Sequence[MusifyItem] = field(default=tuple())
 
 
-class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, InputProcessor, metaclass=ABCMeta):
+class RemoteItemChecker(ItemMatcher, InputProcessor):
     """
     Runs operations for checking the URIs associated with a collection of items.
 
@@ -55,7 +52,8 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, InputProcessor, metacla
           to determine how they wish to deal with these items.
         * Operation completes once user exists or all items have an associated URI.
 
-    :param api: An API object with authorised access to a remote User to create playlists for.
+    :param object_factory: The :py:class:`RemoteObjectFactory` to use when creating new remote objects.
+        This must have a :py:class:`RemoteAPI` assigned for this processor to work as expected.
     :param interval: Stop creating playlists after this many playlists have been created and pause for user input.
     :param allow_karaoke: When True, items determined to be karaoke are allowed when matching switched items.
         Skip karaoke results otherwise. Karaoke items are identified using the ``karaoke_tags`` attribute.
@@ -76,13 +74,9 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, InputProcessor, metacla
         "_final_skipped",
     )
 
-    @property
-    @abstractmethod
-    def _object_cls(self) -> RemoteObjectClasses:
-        """Stores the key object classes for a remote source."""
-        raise NotImplementedError
-
-    def __init__(self, api: RemoteAPI, interval: int = 10, allow_karaoke: bool = ALLOW_KARAOKE_DEFAULT):
+    def __init__(
+            self, object_factory: RemoteObjectFactory, interval: int = 10, allow_karaoke: bool = ALLOW_KARAOKE_DEFAULT
+    ):
         super().__init__()
 
         #: Stop creating playlists after this many playlists have been created and pause for user input
@@ -91,7 +85,10 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, InputProcessor, metacla
         self.allow_karaoke = allow_karaoke
 
         #: The :py:class:`RemoteAPI` to call
-        self.api = api
+        self.api = object_factory.api
+        #: The :py:class:`RemoteObjectFactory` to use when creating new remote objects.
+        self.factory = object_factory
+
         #: Map of playlist names to their URLs for created temporary playlists
         self._playlist_name_urls = {}
         #: Map of playlist names to the collection of items added for created temporary playlists
@@ -120,7 +117,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, InputProcessor, metacla
             self.logger.info_extra("\33[93mAPI token has expired, re-authorising... \33[0m")
             self.api.authorise()
 
-    def _create_playlist(self, collection: ItemCollection) -> None:
+    def _create_playlist(self, collection: MusifyCollection) -> None:
         """Create a temporary playlist, store its URL for later unfollowing, and add all given URIs."""
         self._check_api()
 
@@ -146,10 +143,10 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, InputProcessor, metacla
         self._playlist_name_collection.clear()
 
     # noinspection PyMethodOverriding
-    def __call__(self, collections: Collection[ItemCollection]) -> ItemCheckResult | None:
+    def __call__(self, collections: Collection[MusifyCollection]) -> ItemCheckResult | None:
         return self.check(collections=collections)
 
-    def check(self, collections: Collection[ItemCollection]) -> ItemCheckResult | None:
+    def check(self, collections: Collection[MusifyCollection]) -> ItemCheckResult | None:
         """
         Run the checker for the given ``collections``.
 
@@ -163,7 +160,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, InputProcessor, metacla
 
         self.logger.debug("Checking items: START")
         self.logger.info(
-            f"\33[1;95m ->\33[1;97m Checking items by creating temporary {self.source} playlists "
+            f"\33[1;95m ->\33[1;97m Checking items by creating temporary {self.api.source} playlists "
             f"for the current user: {self.api.user_name} \33[0m"
         )
 
@@ -239,13 +236,13 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, InputProcessor, metacla
         :param total: The total number of pages (pauses) that will occur in this run.
         """
         header = [
-            f"\t\33[1;94mTemporary playlists created on {self.source}.",
-            f"You may now check the songs in each playlist on {self.source}. \33[0m"
+            f"\t\33[1;94mTemporary playlists created on {self.api.source}.",
+            f"You may now check the songs in each playlist on {self.api.source}. \33[0m"
         ]
         options = {
             "<Name of playlist>":
                 "Print position, item name, URI, and URL from given link of items as originally added to temp playlist",
-            f"<{self.source} URL/URI>":
+            f"<{self.api.source} URL/URI>":
                 "Print position, item name, URI, and URL from given link (useful to check current status of playlist)",
             "<Return/Enter>":
                 "Once you have checked all playlist's items, continue on and check for any switches by the user",
@@ -285,7 +282,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, InputProcessor, metacla
                     )
                 print()
 
-            elif self.validate_id_type(current_input):  # print URL/URI/ID result
+            elif self.api.wrangler.validate_id_type(current_input):  # print URL/URI/ID result
                 self._check_api()
                 self.api.print_collection(current_input)
 
@@ -334,14 +331,14 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, InputProcessor, metacla
 
         self.logger.info(
             "\33[1;95m ->\33[1;97m Checking for changes to items in "
-            f"{self.source} playlist: \33[94m{name}\33[0m..."
+            f"{self.api.source} playlist: \33[94m{name}\33[0m..."
         )
 
         source = self._playlist_name_collection[name]
         source_valid = [item for item in source if item.has_uri]
 
         remote_response = self.api.get_items(self._playlist_name_urls[name], extend=True, use_cache=False)[0]
-        remote = self._object_cls.playlist(response=remote_response, api=self.api).tracks
+        remote = self.factory.playlist(response=remote_response).tracks
         remote_valid = [item for item in remote if item.has_uri]
 
         added = [item for item in remote_valid if item not in source]
@@ -396,7 +393,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, InputProcessor, metacla
 
         header = [f"\t\33[1;94m{name}:\33[91m The following items were removed and/or matches were not found. \33[0m"]
         options = {
-            "u": f"Mark item as 'Unavailable on {self.source}'",
+            "u": f"Mark item as 'Unavailable on {self.api.source}'",
             "n": f"Leave item with no URI. ({PROGRAM_NAME} will still attempt to find this item at the next run)",
             "a": "Add in addition to 'u' or 'n' options to apply this setting to all items in this playlist",
             "r": "Recheck playlist for all items in the album",
@@ -432,7 +429,7 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, InputProcessor, metacla
 
                 elif current_input.casefold().replace('a', '') == 'u':  # mark item as unavailable
                     self._log_padded([name, "Marking as unavailable"], pad="<")
-                    item.uri = self.unavailable_uri_dummy
+                    item.uri = self.api.wrangler.unavailable_uri_dummy
                     self._remaining.remove(item)
 
                 elif current_input.casefold().replace('a', '') == 'n':  # leave item without URI and unprocessed
@@ -447,8 +444,10 @@ class RemoteItemChecker(RemoteDataWrangler, ItemMatcher, InputProcessor, metacla
                 elif current_input.casefold() == 'p' and hasattr(item, "path"):  # print item path
                     print(f"\33[96m{item.path}\33[0m")
 
-                elif self.validate_id_type(current_input):  # update URI and add item to switched list
-                    uri = self.convert(current_input, kind=RemoteObjectType.TRACK, type_out=RemoteIDType.URI)
+                elif self.api.wrangler.validate_id_type(current_input):  # update URI and add item to switched list
+                    uri = self.api.wrangler.convert(
+                        current_input, kind=RemoteObjectType.TRACK, type_out=RemoteIDType.URI
+                    )
 
                     self._log_padded([name, f"Updating URI: {item.uri} -> {uri}"], pad="<")
                     item.uri = uri

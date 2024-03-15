@@ -6,8 +6,8 @@ import logging
 from collections.abc import Iterable
 
 from musify.local.library import LocalLibrary
-from musify.shared.core.base import Item
-from musify.shared.core.collection import ItemCollection
+from musify.shared.core.base import MusifyItem
+from musify.shared.core.collection import MusifyCollection
 from musify.shared.core.enum import TagField, Fields, ALL_FIELDS, TagFields
 from musify.shared.core.object import Library, Playlist
 from musify.shared.logger import MusifyLogger, REPORT
@@ -17,7 +17,7 @@ from musify.shared.utils import align_string, get_max_width, to_collection
 
 def report_playlist_differences(
         source: Library | Iterable[Playlist], reference: Library | Iterable[Playlist]
-) -> dict[str, dict[str, tuple[Item, ...]]]:
+) -> dict[str, dict[str, tuple[MusifyItem, ...]]]:
     """
     Generate a report on the differences between two library's playlists.
 
@@ -30,9 +30,9 @@ def report_playlist_differences(
     logger: MusifyLogger = logging.getLogger(__name__)
     logger.debug("Report library differences: START")
 
-    extra: dict[str, tuple[Item, ...]] = {}
-    missing: dict[str, tuple[Item, ...]] = {}
-    unavailable: dict[str, tuple[Item, ...]] = {}
+    extra: dict[str, tuple[MusifyItem, ...]] = {}
+    missing: dict[str, tuple[MusifyItem, ...]] = {}
+    unavailable: dict[str, tuple[MusifyItem, ...]] = {}
 
     source = source.playlists if isinstance(source, Library) else {pl.name: pl for pl in source}
     reference = reference.playlists if isinstance(reference, Library) else {pl.name: pl for pl in reference}
@@ -61,7 +61,7 @@ def report_playlist_differences(
             f"\33[94m{len(pl_source):>6} in source \33[0m"
         )
 
-    report: dict[str, dict[str, tuple[Item, ...]]] = {
+    report: dict[str, dict[str, tuple[MusifyItem, ...]]] = {
         "Source ✗ | Compare ✓": extra,
         "Source ✓ | Compare ✗": missing,
         "Items unavailable (no URI)": unavailable
@@ -80,10 +80,10 @@ def report_playlist_differences(
 
 
 def report_missing_tags(
-        collections: LocalLibrary | Iterable[ItemCollection],
+        collections: LocalLibrary | Iterable[MusifyCollection],
         tags: UnitIterable[TagField] = TagFields.ALL,
         match_all: bool = False
-) -> dict[str, dict[Item, tuple[str, ...]]]:
+) -> dict[str, dict[MusifyItem, tuple[str, ...]]]:
     """
     Generate a report on the items with a set of collections that have missing tags.
 
@@ -119,9 +119,9 @@ def report_missing_tags(
     if Fields.IMAGES in tags or Fields.ALL in tags:
         tag_names[tag_names.index(Fields.IMAGES.name.lower())] = "has_image"
 
-    missing: dict[str, dict[Item, tuple[str, ...]]] = {}
+    missing: dict[str, dict[MusifyItem, tuple[str, ...]]] = {}
     for collection in collections:
-        missing_collection: dict[Item, tuple[str, ...]] = {}
+        missing_collection: dict[MusifyItem, tuple[str, ...]] = {}
         for item in collection.items:
             missing_tags: list[str] = [tag for tag in tag_names if item[tag] is None]
             if "has_uri" in missing_tags:

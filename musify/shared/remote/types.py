@@ -3,8 +3,14 @@ All type hints to use throughout the module.
 """
 
 from collections.abc import MutableMapping
-from typing import Any
+from typing import Any, TypeVar
 
-from musify.shared.types import UnitMutableSequence
+from musify.shared.remote import RemoteResponse
+from musify.shared.types import UnitMutableSequence, UnitSequence
 
-APIMethodInputType = UnitMutableSequence[str] | UnitMutableSequence[MutableMapping[str, Any]]
+UT = TypeVar('UT')
+APIInputValue = (
+        UnitMutableSequence[str] |
+        UnitMutableSequence[MutableMapping[str, Any]] |
+        UnitSequence[UT: RemoteResponse]
+)

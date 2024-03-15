@@ -2,7 +2,7 @@ from musify.spotify.api import SpotifyAPI
 api = SpotifyAPI()
 
 from musify.local.library import LocalLibrary
-from musify.spotify.processors.wrangle import SpotifyDataWrangler
+from musify.spotify.processors import SpotifyDataWrangler
 
 local_library = LocalLibrary(
     library_folders=["<PATH TO YOUR LIBRARY FOLDER>", ...],
@@ -12,14 +12,17 @@ local_library = LocalLibrary(
 )
 local_library.load()
 
-from musify.spotify.processors.processors import SpotifyItemSearcher, SpotifyItemChecker
+from musify.shared.remote.processors.search import RemoteItemSearcher
+from musify.shared.remote.processors.check import RemoteItemChecker
+from musify.spotify.factory import SpotifyObjectFactory
 
 albums = local_library.albums[:3]
+factory = SpotifyObjectFactory(api=api)
 
-searcher = SpotifyItemSearcher(api=api)
+searcher = RemoteItemSearcher(object_factory=factory)
 searcher.search(albums)
 
-checker = SpotifyItemChecker(api=api)
+checker = RemoteItemChecker(object_factory=factory)
 checker.check(albums)
 
 from musify.spotify.object import SpotifyTrack

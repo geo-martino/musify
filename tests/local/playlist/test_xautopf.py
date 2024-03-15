@@ -7,10 +7,10 @@ from random import randrange
 
 import pytest
 
-from musify.local.exception import InvalidFileType
-from musify.local.file import PathMapper
 from musify.local.playlist import XAutoPF
 from musify.local.track import LocalTrack
+from musify.shared.exception import InvalidFileType
+from musify.shared.file import PathMapper
 from tests.local.playlist.testers import LocalPlaylistTester
 from tests.local.playlist.utils import path_playlist_xautopf_ra, path_playlist_xautopf_bp
 from tests.local.track.utils import random_track, random_tracks

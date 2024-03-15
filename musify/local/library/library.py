@@ -9,13 +9,13 @@ from os.path import splitext, join, exists, basename, dirname
 from typing import Any
 
 from musify.local.collection import LocalCollection, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
-from musify.local.file import PathMapper, PathStemMapper
 from musify.local.playlist import PLAYLIST_FILETYPES, LocalPlaylist, load_playlist
 from musify.local.track import TRACK_CLASSES, LocalTrack, load_track
 from musify.local.track.field import LocalTrackField
 from musify.processors.base import Filter
 from musify.processors.filter import FilterDefinedList
 from musify.processors.sort import ItemSorter
+from musify.shared.file import PathMapper, PathStemMapper
 from musify.shared.core.misc import Result
 from musify.shared.core.object import Playlist, Library
 from musify.shared.exception import MusifyError

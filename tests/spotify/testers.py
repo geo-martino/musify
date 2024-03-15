@@ -38,7 +38,7 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
 
         requests = api_mock.get_requests(test.url)
         requests += api_mock.get_requests(f"{test.url}/{key}")
-        requests += api_mock.get_requests(f"{collection.api.api_url_base}/audio-features")
+        requests += api_mock.get_requests(f"{collection.api.url}/audio-features")
 
         # 1 call for initial collection + (pages - 1) for tracks + (pages) for audio-features
         assert len(requests) == 2 * api_mock.calculate_pages_from_response(test.response)
@@ -71,7 +71,7 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
         # requests to extend album start from page 2 onward
         requests = api_mock.get_requests(test.url)
         requests += api_mock.get_requests(f"{test.url}/{key}")
-        requests += api_mock.get_requests(f"{api.api_url_base}/audio-features")
+        requests += api_mock.get_requests(f"{api.url}/audio-features")
 
         # 0 calls for initial collection + (extend_pages - 1) for tracks + (extend_pages) for audio-features
         # + (get_pages) for audio-features get on response items not in input items

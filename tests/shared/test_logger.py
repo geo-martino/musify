@@ -1,9 +1,9 @@
 import logging
+import sys
 from copy import copy, deepcopy
 from os.path import basename
 
 import pytest
-import sys
 
 from musify.shared.logger import MusifyLogger, INFO_EXTRA, REPORT, STAT
 from musify.shared.logger import format_full_func_name, LogFileFilter

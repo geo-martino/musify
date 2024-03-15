@@ -1,11 +1,11 @@
 from collections.abc import Collection
 from copy import deepcopy
+from itertools import batched
 from random import sample, choice
 from typing import Any
 from urllib.parse import parse_qs
 
 import pytest
-from itertools import batched
 # noinspection PyProtectedMember,PyUnresolvedReferences
 from requests_mock.request import _RequestObjectProxy as Request
 
@@ -66,7 +66,7 @@ class TestSpotifyAPIItems:
         api_mock.reset_mock()  # test checks the number of requests made
 
         key = ObjectType.TRACK.name.lower() + "s"
-        url = f"{api.api_url_base}/{key}"
+        url = f"{api.url}/{key}"
         id_list = [track["id"] for track in api_mock.tracks]
         valid_limit = 30
 
@@ -107,17 +107,17 @@ class TestSpotifyAPIItems:
                 api.get_user_items(user=random_str(1, RemoteIDType.ID.value - 1), kind=kind)
 
     def test_get_tracks_extra_input_validation(self, api: SpotifyAPI):
-        assert api.get_tracks_extra(values=random_ids(), features=False, analysis=False) == {}
-        assert api.get_tracks_extra(values=[], features=True, analysis=True) == {}
+        assert api.get_tracks_extra(values=random_ids(), features=False, analysis=False) == []
+        assert api.get_tracks_extra(values=[], features=True, analysis=True) == []
 
-        value = api.convert(random_id(), kind=ObjectType.ALBUM, type_in=IDType.ID, type_out=IDType.URL)
+        value = api.wrangler.convert(random_id(), kind=ObjectType.ALBUM, type_in=IDType.ID, type_out=IDType.URL)
         with pytest.raises(RemoteObjectTypeError):
             api.get_tracks_extra(values=value, features=True)
 
     def test_get_artist_albums_input_validation(self, api: SpotifyAPI):
         assert api.get_artist_albums(values=[]) == {}
 
-        value = api.convert(random_id(), kind=ObjectType.ALBUM, type_in=IDType.ID, type_out=IDType.URL)
+        value = api.wrangler.convert(random_id(), kind=ObjectType.ALBUM, type_in=IDType.ID, type_out=IDType.URL)
         with pytest.raises(RemoteObjectTypeError):
             api.get_artist_albums(values=value)
 
@@ -154,7 +154,7 @@ class TestSpotifyAPIItems:
     def test_get_item_multi(self, kind: ObjectType, api: SpotifyAPI, api_mock: SpotifyMock):
         api_mock.reset_mock()  # test checks the number of requests made
 
-        url = f"{api.api_url_base}/{kind.name.lower()}s"
+        url = f"{api.url}/{kind.name.lower()}s"
         params = {"key": "value"}
 
         source = api_mock.item_type_map[kind]
@@ -183,7 +183,7 @@ class TestSpotifyAPIItems:
         api_mock.reset_mock()  # test checks the number of requests made
 
         key = kind.name.lower() + "s"
-        url = f"{api.api_url_base}/{key}"
+        url = f"{api.url}/{key}"
         params = {"key": "value"}
 
         source = api_mock.item_type_map[kind]
@@ -258,12 +258,12 @@ class TestSpotifyAPIItems:
 
         test = None
         if user:
-            test = random_id_type(id_=api_mock.user_id, wrangler=api, kind=ObjectType.USER)
-            url = f"{api.api_url_base}/users/{api_mock.user_id}/{kind.name.lower()}s"
+            test = random_id_type(id_=api_mock.user_id, wrangler=api.wrangler, kind=ObjectType.USER)
+            url = f"{api.url}/users/{api_mock.user_id}/{kind.name.lower()}s"
         elif kind == ObjectType.ARTIST:
-            url = f"{api.api_url_base}/me/following"
+            url = f"{api.url}/me/following"
         else:
-            url = f"{api.api_url_base}/me/{kind.name.lower()}s"
+            url = f"{api.url}/me/{kind.name.lower()}s"
 
         source = deepcopy(api_mock.item_type_map_user[kind])
         if kind == ObjectType.PLAYLIST:  # ensure items block is reduced for playlist responses as expected
@@ -367,13 +367,13 @@ class TestSpotifyAPIItems:
         key = api.collection_item_map[kind].name.lower() + "s" if extend else None
 
         source = deepcopy(choice(api_mock.item_type_map[kind]))
-        test = random_id_type(id_=source["id"], wrangler=api, kind=kind)
+        test = random_id_type(id_=source["id"], wrangler=api.wrangler, kind=kind)
 
         results = api.get_items(values=test, kind=kind, extend=extend)
         self.assert_get_items_results(expected={source["id"]: source}, results=results, kind=kind, key=key)
 
         # appropriate number of requests made
-        url = f"{api.api_url_base}/{kind.name.lower()}s/{source["id"]}"
+        url = f"{api.url}/{kind.name.lower()}s/{source["id"]}"
         requests = api_mock.get_requests(url=url)
         if key:
             requests += api_mock.get_requests(url=f"{url}/{key}")
@@ -415,7 +415,7 @@ class TestSpotifyAPIItems:
         source = api_mock.item_type_map[kind]
         source = sample(source, api_mock.limit_lower) if len(source) > api_mock.limit_lower else source
         source_map = {item["id"]: deepcopy(item) for item in source}
-        test = random_id_types(id_list=source_map, wrangler=api, kind=kind)
+        test = random_id_types(id_list=source_map, wrangler=api.wrangler, kind=kind)
 
         # force pagination
         limit = max(min(len(source) // 3, api_mock.limit_max), 1)
@@ -427,7 +427,7 @@ class TestSpotifyAPIItems:
         self.assert_get_items_results(expected=source_map, results=results, kind=kind, key=key)
 
         # appropriate number of requests made
-        url = f"{api.api_url_base}/{kind.name.lower()}s"
+        url = f"{api.url}/{kind.name.lower()}s"
         requests = api_mock.get_requests(url=url)
         for item in source:
             if kind in {ObjectType.USER, ObjectType.PLAYLIST}:
@@ -454,16 +454,16 @@ class TestSpotifyAPIItems:
         source = deepcopy(choice(api_mock.tracks))
         source_features = api_mock.audio_features[source["id"]]
         source_analysis = api_mock.audio_analysis[source["id"]]
-        test = random_id_type(id_=source["id"], wrangler=api, kind=ObjectType.TRACK)
+        test = random_id_type(id_=source["id"], wrangler=api.wrangler, kind=ObjectType.TRACK)
 
         results = api.get_tracks_extra(values=test, features=True, analysis=True)
-        assert set(results) == {"audio_features", "audio_analysis"}
-        assert results["audio_features"][0] == source_features
-        assert results["audio_analysis"][0] == source_analysis | {"id": source["id"]}
+        assert len(results) == 1
+        assert results[0]["audio_features"] == source_features
+        assert results[0]["audio_analysis"] == source_analysis | {"id": source["id"]}
 
         # appropriate number of requests made
-        requests = api_mock.get_requests(url=f"{api.api_url_base}/audio-features/{source["id"]}")
-        requests += api_mock.get_requests(url=f"{api.api_url_base}/audio-analysis/{source["id"]}")
+        requests = api_mock.get_requests(url=f"{api.url}/audio-features/{source["id"]}")
+        requests += api_mock.get_requests(url=f"{api.url}/audio-analysis/{source["id"]}")
         assert len(requests) == 2
 
         # test input map is updated when API response is given
@@ -471,13 +471,11 @@ class TestSpotifyAPIItems:
         assert "audio_features" not in test
         assert "audio_analysis" not in test
 
-        results = api.get_tracks_extra(values=test, features=True, analysis=False)
-        assert len(results) == 1
+        api.get_tracks_extra(values=test, features=True, analysis=False)
         assert test["audio_features"] == source_features
         assert "audio_analysis" not in test
 
-        results = api.get_tracks_extra(values=test, features=False, analysis=True)
-        assert len(results) == 1
+        api.get_tracks_extra(values=test, features=False, analysis=True)
         assert test["audio_features"] == source_features
         assert test["audio_analysis"] == source_analysis | {"id": source["id"]}
 
@@ -494,23 +492,23 @@ class TestSpotifyAPIItems:
         source_map = {item["id"]: item for item in source}
         source_features = {item["id"]: api_mock.audio_features[item["id"]] for item in source}
         source_analysis = {item["id"]: api_mock.audio_analysis[item["id"]] for item in source}
-        test = random_id_types(id_list=source_map, wrangler=api, kind=ObjectType.TRACK)
+        test = random_id_types(id_list=source_map, wrangler=api.wrangler, kind=ObjectType.TRACK)
 
         limit = max(min(len(source) // 3, api_mock.limit_max), 1)  # force pagination
         assert len(source) > limit  # ensure ranges are valid for test to work
 
         results = api.get_tracks_extra(values=test, features=True, analysis=True, limit=limit)
 
-        assert set(results) == {"audio_features", "audio_analysis"}
-        for result in results["audio_features"]:
-            assert result == source_features[result["id"]]
-        for result, expected in zip(results["audio_analysis"], source_analysis.values()):
-            assert result == expected | {"id": result["id"]}
+        assert all(all(key in result for key in {"audio_features", "audio_analysis"}) for result in results)
+        for result in results:
+            assert result["audio_features"] == source_features[result["id"]]
+        for result, expected in zip(results, source_analysis.values()):
+            assert result["audio_analysis"] == expected | {"id": result["id"]}
 
         # appropriate number of requests made
-        requests = api_mock.get_requests(url=f"{api.api_url_base}/audio-features")
+        requests = api_mock.get_requests(url=f"{api.url}/audio-features")
         for id_ in source_map:
-            requests += api_mock.get_requests(url=f"{api.api_url_base}/audio-analysis/{id_}")
+            requests += api_mock.get_requests(url=f"{api.url}/audio-analysis/{id_}")
         assert len(api_mock.request_history) == len(list(batched(test, limit))) + len(test)
 
         # test input maps are updated when API responses are given
@@ -520,13 +518,12 @@ class TestSpotifyAPIItems:
             assert "audio_analysis" not in item
 
         results = api.get_tracks_extra(values=test.values(), features=True, analysis=False)
-        assert len(results) == 1
+        assert len(results) == len(test)
         for id_, item in test.items():
             assert item["audio_features"] == source_features[id_]
             assert "audio_analysis" not in item
 
-        results = api.get_tracks_extra(values=test.values(), features=False, analysis=True)
-        assert len(results) == 1
+        api.get_tracks_extra(values=test.values(), features=False, analysis=True)
         for id_, item in test.items():
             assert item["audio_features"] == source_features[id_]
             assert item["audio_analysis"] == source_analysis[id_] | {"id": item["id"]}
@@ -534,7 +531,7 @@ class TestSpotifyAPIItems:
     def test_get_tracks(self, api: SpotifyAPI, api_mock: SpotifyMock):
         source = choice(api_mock.tracks)
 
-        test = random_id_type(id_=source["id"], wrangler=api, kind=ObjectType.TRACK)
+        test = random_id_type(id_=source["id"], wrangler=api.wrangler, kind=ObjectType.TRACK)
         results = api.get_tracks(values=test, features=True, analysis=True)
         assert {k: v for k, v in results[0].items() if k not in {"audio_features", "audio_analysis"}} == source
         assert "audio_features" not in test
@@ -578,7 +575,7 @@ class TestSpotifyAPIItems:
             self.assert_artist_albums_enriched(result)
 
             # appropriate number of requests made
-            url = f"{api.api_url_base}/artists/{id_}/albums"
+            url = f"{api.url}/artists/{id_}/albums"
             requests = api_mock.get_requests(url=url)
             self.assert_calls(expected=expected[id_], requests=requests, limit=limit, api_mock=api_mock)
 
@@ -603,7 +600,7 @@ class TestSpotifyAPIItems:
         }
         id_, expected = choice([(id_, albums) for id_, albums in expected_map.items() if len(albums) >= 10])
         source = next(deepcopy(artist) for artist in api_mock.artists if artist["id"] == id_)
-        test = random_id_type(id_=id_, wrangler=api, kind=ObjectType.ARTIST)
+        test = random_id_type(id_=id_, wrangler=api.wrangler, kind=ObjectType.ARTIST)
 
         # force pagination
         limit = max(min(len(expected) // 3, api_mock.limit_max), 1)
@@ -644,7 +641,7 @@ class TestSpotifyAPIItems:
             ]
             for id_ in source_map
         }
-        test = random_id_types(id_list=source_map, wrangler=api, kind=ObjectType.ARTIST)
+        test = random_id_types(id_list=source_map, wrangler=api.wrangler, kind=ObjectType.ARTIST)
         limit = 50
 
         # string given

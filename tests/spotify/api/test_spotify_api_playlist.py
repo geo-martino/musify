@@ -48,7 +48,7 @@ class TestSpotifyAPIPlaylists:
     ###########################################################################
     def test_create_playlist(self, api: SpotifyAPI, api_mock: SpotifyMock):
         name = "test playlist"
-        url = f"{api.api_url_base}/users/{api_mock.user_id}/playlists"
+        url = f"{api.url}/users/{api_mock.user_id}/playlists"
         result = api.create_playlist(name=name, public=False, collaborative=True)
 
         body = api_mock.get_requests(url=url, response={"name": name})[0].json()
@@ -56,10 +56,10 @@ class TestSpotifyAPIPlaylists:
         assert PROGRAM_NAME in body["description"]
         assert not body["public"]
         assert body["collaborative"]
-        assert result.removeprefix(f"{api.api_url_base}/playlists/").strip("/")
+        assert result.removeprefix(f"{api.url}/playlists/").strip("/")
 
     def test_add_to_playlist_input_validation_and_skips(self, api: SpotifyAPI, api_mock: SpotifyMock):
-        url = f"{api.api_url_base}/playlists/{random_id()}"
+        url = f"{api.url}/playlists/{random_id()}"
         for kind in ALL_ITEM_TYPES:
             if kind == ObjectType.TRACK:
                 continue
@@ -103,7 +103,7 @@ class TestSpotifyAPIPlaylists:
         assert total > limit  # ensure ranges are valid for test to work
 
         id_list = random_id_types(
-            wrangler=api, kind=ObjectType.TRACK, start=total - api_mock.limit_lower, stop=total - 1
+            wrangler=api.wrangler, kind=ObjectType.TRACK, start=total - api_mock.limit_lower, stop=total - 1
         )
         assert len(id_list) < total
         result = api.add_to_playlist(playlist=playlist["id"], items=id_list, limit=limit, skip_dupes=False)
@@ -131,7 +131,7 @@ class TestSpotifyAPIPlaylists:
         source = sample(playlist["tracks"]["items"], k=randrange(start=initial // 3, stop=initial // 2))
         id_list_dupes = [item["track"]["id"] for item in source]
         id_list_new = random_id_types(
-            wrangler=api, kind=ObjectType.TRACK, start=api_mock.limit_lower, stop=randrange(20, 30)
+            wrangler=api.wrangler, kind=ObjectType.TRACK, start=api_mock.limit_lower, stop=randrange(20, 30)
         )
 
         result = api.add_to_playlist(playlist=playlist["uri"], items=id_list_dupes + id_list_new, limit=limit)
@@ -151,11 +151,13 @@ class TestSpotifyAPIPlaylists:
     ## DELETE playlist operations
     ###########################################################################
     def test_delete_playlist(self, playlist_unique: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
-        result = api.delete_playlist(random_id_type(id_=playlist_unique["id"], wrangler=api, kind=ObjectType.PLAYLIST))
+        result = api.delete_playlist(
+            random_id_type(id_=playlist_unique["id"], wrangler=api.wrangler, kind=ObjectType.PLAYLIST)
+        )
         assert result == playlist_unique["href"] + "/followers"
 
     def test_clear_from_playlist_input_validation_and_skips(self, api: SpotifyAPI, api_mock: SpotifyMock):
-        url = f"{api.api_url_base}/playlists/{random_id()}"
+        url = f"{api.url}/playlists/{random_id()}"
         for kind in ALL_ITEM_TYPES:
             if kind == ObjectType.TRACK:
                 continue
@@ -201,7 +203,7 @@ class TestSpotifyAPIPlaylists:
         assert total > limit  # ensure ranges are valid for test to work
 
         id_list = random_id_types(
-            wrangler=api, kind=ObjectType.TRACK, start=total - api_mock.limit_lower, stop=total - 1
+            wrangler=api.wrangler, kind=ObjectType.TRACK, start=total - api_mock.limit_lower, stop=total - 1
         )
         assert len(id_list) < total
 

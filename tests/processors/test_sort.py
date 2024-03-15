@@ -1,9 +1,9 @@
 from collections.abc import Callable
+from itertools import groupby
 from random import choice, randrange
 
 import pytest
 import xmltodict
-from itertools import groupby
 
 from musify.local.track import LocalTrack
 from musify.local.track.field import LocalTrackField

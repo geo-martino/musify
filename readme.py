@@ -7,7 +7,7 @@ from musify.local.track import TRACK_FILETYPES
 from musify.local.playlist import PLAYLIST_FILETYPES
 from musify.local.library import LIBRARY_CLASSES, LocalLibrary
 from musify.shared.utils import SafeDict
-from musify.spotify import SPOTIFY_NAME
+from musify.spotify.processors import SpotifyDataWrangler
 
 SRC_FILENAME = "README.template.md"
 TRG_FILENAME = SRC_FILENAME.replace(".template", "")
@@ -22,7 +22,7 @@ def format_readme():
     }
     format_map_code = {
         "local_sources": sorted(cls.name for cls in LIBRARY_CLASSES if cls != LocalLibrary),
-        "remote_sources": [SPOTIFY_NAME],
+        "remote_sources": [SpotifyDataWrangler.source],
         "track_filetypes": sorted(TRACK_FILETYPES),
         "playlist_filetypes": sorted(PLAYLIST_FILETYPES),
     }

@@ -5,10 +5,10 @@ from random import randrange
 
 import pytest
 
-from musify.local.exception import InvalidFileType
-from musify.local.file import PathMapper, PathStemMapper
 from musify.local.playlist import M3U
 from musify.local.track import LocalTrack
+from musify.shared.exception import InvalidFileType
+from musify.shared.file import PathMapper, PathStemMapper
 from tests.local.playlist.testers import LocalPlaylistTester
 from tests.local.playlist.utils import path_playlist_m3u
 from tests.local.track.utils import random_track, random_tracks
