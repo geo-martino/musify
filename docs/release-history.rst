@@ -32,8 +32,25 @@ The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
 
+0.9.0
+=====
+
+Changed
+-------
+
+* :py:meth:`.LocalLibrary.load_tracks` and :py:meth:`.LocalLibrary.load_playlists` now run concurrently.
+* Made :py:func:`.load_tracks` and :py:func:`.load_playlists` utility functions more DRY
+* Move :py:meth:`.TagReader.load` from :py:class:`.LocalTrack` to super class :py:class:`.TagReader`
+
 0.8.1
 =====
+
+Changed
+-------
+
+* :py:class:`.ItemSorter` now accepts ``shuffle_weight`` between -1 and 1 instead of 0 and 1.
+  This parameter's logic has not yet been implemented so no changes to functionality have been made yet.
+* Move :py:meth:`.get_filepaths` from :py:class:`.LocalTrack` to super class :py:class:`.File`
 
 Documentation
 -------------
@@ -48,6 +65,13 @@ Fixed
 * :py:func:`.align_string` function now handles combining unicode characters properly for fixed-width fonts
 * :py:meth:`.LocalTrack.get_filepaths` on LocalTrack no longer returns paths from ``$RECYCLE.BIN`` folders.
   These are deleted files and were causing the package to crash when trying to load them.
+* :py:meth:`.PrettyPrinter.json` and :py:meth:`.PrettyPrinter._to_str` converts attribute keys to string
+  to ensure safe json/str/repr output
+* :py:class:`.FilterMatcher` and :py:class:`.FilterComparers` now correctly import conditions from XML playlist files.
+  Previously, these filters could not import nested match conditions from files.
+  Changes to logic also made to :py:meth:`.Comparer.from_xml` to accommodate.
+* :py:class:`.XMLLibraryParser` now handles empty arrays correctly. Previously would crash.
+* Fixed :py:class:`.Comparer` dynamic process method alternate names for ``in_the_last`` and ``not_in_the_last``
 
 Removed
 -------

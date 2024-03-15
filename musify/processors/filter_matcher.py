@@ -5,7 +5,7 @@ Processors that filter down objects and data types based on some given configura
 from __future__ import annotations
 
 import logging
-from collections.abc import Collection, Mapping, Sequence, Callable
+from collections.abc import Collection, Mapping, Callable
 from dataclasses import field, dataclass
 from typing import Any
 
@@ -18,6 +18,7 @@ from musify.shared.core.enum import Fields
 from musify.shared.file import File, PathMapper
 from musify.shared.core.misc import Result
 from musify.shared.logger import MusifyLogger
+from musify.shared.utils import to_collection
 
 
 @dataclass(frozen=True)
@@ -52,7 +53,7 @@ class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](MusicBeePr
     @classmethod
     def from_xml(
             cls, xml: Mapping[str, Any], path_mapper: PathMapper = PathMapper(), **__
-    ) -> FilterMatcher[T, FilterDefinedList[T], FilterDefinedList[T], FilterComparers[T]]:
+    ) -> FilterMatcher[str, FilterDefinedList[str], FilterDefinedList[str], FilterComparers[str]]:
         """
         Initialise object from XML playlist.
 
@@ -69,18 +70,32 @@ class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](MusicBeePr
         exclude_str: str = source.get("Exceptions") or ""
         exclude = path_mapper.map_many(set(exclude_str.split("|")), check_existence=True)
 
-        comparers: Sequence[Comparer] = Comparer.from_xml(xml=xml)
+        conditions = xml["SmartPlaylist"]["Source"]["Conditions"]
+        comparers: dict[Comparer, tuple[bool, FilterComparers]] = {}
+        for condition in to_collection(conditions["Condition"]):
+            if any(key in condition for key in {"And", "Or"}):
+                sub_combine = "And" in condition
+                sub_conditions = condition["And" if sub_combine else "Or"]
+                sub_comparers = [Comparer.from_xml(sub) for sub in to_collection(sub_conditions["Condition"])]
+                sub_filter = FilterComparers(
+                    comparers=sub_comparers, match_all=sub_conditions["@CombineMethod"] == "All"
+                )
+            else:
+                sub_combine = False
+                sub_filter = FilterComparers()
 
-        if len(comparers) == 1:
-            # when user has not set an explicit comparer, there will still be an 'allow all' comparer
-            # check for this 'allow all' comparer and remove if present to speed up comparisons
-            c = comparers[0]
+            comparers[Comparer.from_xml(xml=condition)] = (sub_combine, sub_filter)
+
+        if len(comparers) == 1 and not next(iter(comparers.values()))[1].ready:
+            # when user has not set an explicit comparer, a single empty 'allow all' comparer is assigned
+            # check for this 'allow all' comparer and remove it if present to speed up comparisons
+            c = next(iter(comparers))
             if "contains" in c.condition.casefold() and len(c.expected) == 1 and not c.expected[0]:
-                comparers = ()
+                comparers = {}
 
         filter_include = FilterDefinedList(values=[path.casefold() for path in include])
         filter_exclude = FilterDefinedList(values=[path.casefold() for path in exclude])
-        filter_compare = FilterComparers(comparers, match_all=source["Conditions"]["@CombineMethod"] == "All")
+        filter_compare = FilterComparers(comparers, match_all=conditions["@CombineMethod"] == "All")
 
         filter_include.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
         filter_exclude.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()

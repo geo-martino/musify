@@ -20,6 +20,9 @@ from tests.spotify.utils import random_uri, random_api_url, random_ext_url
 from tests.utils import random_str
 
 
+# TODO: separate out setup of single/many tests to fixture
+#  and then separate out the execution/assertions parts to distinct tests.
+#  Apply this to all tests like it across all files
 class TestSpotifyAPIItems:
     """Tester for item-type endpoints of :py:class:`SpotifyAPI`"""
 

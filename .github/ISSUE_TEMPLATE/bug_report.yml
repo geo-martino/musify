@@ -27,7 +27,7 @@ body:
       required: true
   - type: textarea
     attributes:
-      label: What you think should happen instead?
+      label: What do you think should have happened instead?
       description: What do you think went wrong?
       placeholder: >
         Please explain why you think the behaviour is erroneous. 

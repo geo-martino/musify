@@ -87,7 +87,9 @@ class XAutoPF(LocalPlaylist[FilterMatcher[
     def image_links(self):
         return {}
 
-    def __init__(self, path: str, tracks: Collection[LocalTrack] = (), path_mapper: PathMapper = PathMapper()):
+    def __init__(
+            self, path: str, tracks: Collection[LocalTrack] = (), path_mapper: PathMapper = PathMapper(), *_, **__
+    ):
         self._validate_type(path)
         if not exists(path):
             # TODO: implement creation of auto-playlist from scratch (very low priority)

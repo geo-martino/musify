@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from os.path import basename, splitext, dirname
+from os.path import basename, splitext
 from random import randrange
 
 import pytest
@@ -9,10 +9,10 @@ from musify.local.track import LocalTrack
 from musify.processors.filter import FilterDefinedList, FilterIncludeExclude
 from musify.shared.file import PathMapper, PathStemMapper
 from tests.local.library.testers import LocalLibraryTester
-from tests.local.playlist.utils import path_playlist_resources, path_playlist_m3u
-from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
 from tests.local.track.utils import random_track, random_tracks
+from tests.local.utils import path_playlist_resources, path_playlist_all, path_playlist_m3u, path_playlist_xautopf_bp
 from tests.local.utils import path_track_resources, path_track_all
+from tests.utils import path_resources
 
 
 class TestLocalLibrary(LocalLibraryTester):
@@ -44,11 +44,7 @@ class TestLocalLibrary(LocalLibraryTester):
 
         library.playlist_folder = path_playlist_resources
         assert library.playlist_folder == path_playlist_resources
-        assert library._playlist_paths == {
-            splitext(basename(path_playlist_m3u))[0]: path_playlist_m3u,
-            splitext(basename(path_playlist_xautopf_bp))[0]: path_playlist_xautopf_bp,
-            splitext(basename(path_playlist_xautopf_ra))[0]: path_playlist_xautopf_ra,
-        }
+        assert library._playlist_paths == {splitext(basename(path))[0]: path for path in path_playlist_all}
 
     def test_init_include(self):
         library = LocalLibrary(
@@ -81,20 +77,17 @@ class TestLocalLibrary(LocalLibraryTester):
 
         assert library.playlist_folder == path_playlist_resources
         assert library._playlist_paths == {
-            splitext(basename(path_playlist_m3u))[0]: path_playlist_m3u,
-            splitext(basename(path_playlist_xautopf_ra))[0]: path_playlist_xautopf_ra,
+            splitext(basename(path))[0]: path for path in path_playlist_all if path != path_playlist_xautopf_bp
         }
 
     def test_init_relative_paths(self):
         library_relative_paths = LocalLibrary(
-            library_folders=dirname(path_playlist_resources), playlist_folder=basename(path_playlist_resources),
+            library_folders=path_resources, playlist_folder=basename(path_playlist_resources),
         )
         assert len(library_relative_paths._track_paths) == 6
         assert library_relative_paths.playlist_folder == path_playlist_resources
         assert library_relative_paths._playlist_paths == {
-            splitext(basename(path_playlist_m3u))[0]: path_playlist_m3u,
-            splitext(basename(path_playlist_xautopf_bp))[0]: path_playlist_xautopf_bp,
-            splitext(basename(path_playlist_xautopf_ra))[0]: path_playlist_xautopf_ra,
+            splitext(basename(path))[0]: path for path in path_playlist_all
         }
 
     def test_load(self, path_mapper: PathMapper):
@@ -106,11 +99,7 @@ class TestLocalLibrary(LocalLibraryTester):
         playlists = {name: pl.path for name, pl in library.playlists.items()}
 
         assert tracks == library._track_paths == path_track_all
-        assert playlists == {
-            splitext(basename(path_playlist_m3u))[0]: path_playlist_m3u,
-            splitext(basename(path_playlist_xautopf_bp))[0]: path_playlist_xautopf_bp,
-            splitext(basename(path_playlist_xautopf_ra))[0]: path_playlist_xautopf_ra,
-        }
+        assert playlists == {splitext(basename(path))[0]: path for path in path_playlist_all}
         assert all(pl.path_mapper == path_mapper for pl in library.playlists.values())
 
         assert library.last_played is None

@@ -88,24 +88,23 @@ class Comparer(MusicBeeProcessor, DynamicProcessor):
         self._expected = to_collection(value, list)
 
     @classmethod
-    def from_xml(cls, xml: Mapping[str, Any], **__) -> list[Self]:
-        conditions = xml["SmartPlaylist"]["Source"]["Conditions"]["Condition"]
-        conditions: tuple[Mapping[str, str], ...] = to_collection(conditions)
+    def from_xml(cls, xml: Mapping[str, Any], **__) -> Self:
+        """
+        Initialise object from XML playlist data.
 
-        objs = []
-        for condition in conditions:
-            field_str = condition.get("@Field", "None")
-            field: Field = field_name_map.get(field_str)
-            if field is None:
-                raise FieldError("Unrecognised field name", field=field_str)
+        :param xml: The loaded XML object for this playlist.
+            This function expects to be given only the XML part related to one Comparer condition.
+        """
+        field_str = xml.get("@Field", "None")
+        field: Field = field_name_map.get(field_str)
+        if field is None:
+            raise FieldError("Unrecognised field name", field=field_str)
 
-            expected: tuple[str, ...] | None = tuple(v for k, v in condition.items() if k.startswith("@Value"))
-            if len(expected) == 0 or expected[0] == "[playing track]":
-                expected = None
+        expected: tuple[str, ...] | None = tuple(v for k, v in xml.items() if k.startswith("@Value"))
+        if len(expected) == 0 or expected[0] == "[playing track]":
+            expected = None
 
-            objs.append(cls(condition=condition["@Comparison"], expected=expected, field=field))
-
-        return objs
+        return cls(condition=xml["@Comparison"], expected=expected, field=field)
 
     def to_xml(self, **kwargs) -> Mapping[str, Any]:
         raise NotImplementedError
@@ -252,11 +251,11 @@ class Comparer(MusicBeeProcessor, DynamicProcessor):
     def _is_not(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
         return not self._is(value=value, expected=expected)
 
-    @dynamicprocessormethod("greater_than", "_is_in_the_last")
+    @dynamicprocessormethod("greater_than", "in_the_last")
     def _is_after(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
         return value > expected[0] if value is not None and expected[0] is not None else False
 
-    @dynamicprocessormethod("less_than", "_is_not_in_the_last")
+    @dynamicprocessormethod("less_than", "not_in_the_last")
     def _is_before(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
         return value < expected[0] if value is not None and expected[0] is not None else False
 

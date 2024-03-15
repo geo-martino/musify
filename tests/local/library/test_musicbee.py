@@ -14,10 +14,9 @@ from musify.shared.exception import FileDoesNotExistError
 from musify.shared.file import PathMapper
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
 from tests.local.library.testers import LocalLibraryTester
-from tests.local.library.utils import path_library_resources
-from tests.local.playlist.utils import path_playlist_resources, path_playlist_m3u
-from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
 from tests.local.track.utils import random_track
+from tests.local.utils import path_library_resources
+from tests.local.utils import path_playlist_resources, path_playlist_all, path_playlist_m3u, path_playlist_xautopf_bp
 from tests.local.utils import path_track_all, path_track_mp3, path_track_flac, path_track_wma, path_track_resources
 from tests.utils import path_resources
 
@@ -85,7 +84,7 @@ class TestMusicBee(LocalLibraryTester):
         assert xml["Music Folder"].endswith(relpath(dirname(path_library_resources)).lstrip("./\\"))
         assert xml["Library Persistent ID"] == "3D76B2A6FD362901"
         assert len(xml["Tracks"]) == 6
-        assert len(xml["Playlists"]) == 3
+        assert len(xml["Playlists"]) == 4
 
         xml["Major Version"] = 7
         xml["Minor Version"] = 9
@@ -135,7 +134,8 @@ class TestMusicBee(LocalLibraryTester):
         )
         assert library.playlist_folder == join(musicbee_folder, MusicBee.musicbee_playlist_folder)
         assert set(library._playlist_paths) == {
-            splitext(basename(path_playlist_m3u))[0], splitext(basename(path_playlist_xautopf_bp))[0],
+            splitext(basename(path_playlist_m3u))[0],
+            splitext(basename(path_playlist_xautopf_bp))[0],
         }
 
     def test_init_exclude(self, musicbee_folder: str):
@@ -148,7 +148,7 @@ class TestMusicBee(LocalLibraryTester):
         )
         assert library.playlist_folder == join(musicbee_folder, MusicBee.musicbee_playlist_folder)
         assert set(library._playlist_paths) == {
-            splitext(basename(path_playlist_xautopf_ra))[0], splitext(basename(path_playlist_m3u))[0],
+            splitext(basename(path))[0] for path in path_playlist_all if path != path_playlist_xautopf_bp
         }
 
     def test_load(self, musicbee_folder: str, path_mapper: PathMapper):
@@ -157,11 +157,7 @@ class TestMusicBee(LocalLibraryTester):
         library.load()
 
         assert len(library.tracks) == 6
-        assert set(library.playlists) == {
-            splitext(basename(path_playlist_m3u))[0],
-            splitext(basename(path_playlist_xautopf_bp))[0],
-            splitext(basename(path_playlist_xautopf_ra))[0],
-        }
+        assert set(library.playlists) == {splitext(basename(path))[0] for path in path_playlist_all}
 
         assert library.last_played == datetime(2023, 11, 9, 11, 22, 33)
         assert library.last_added == datetime(2023, 10, 17, 14, 42, 37)
@@ -204,7 +200,7 @@ class TestMusicBee(LocalLibraryTester):
         # these keys fail on other systems, ignore them in line checks
         ignore_keys = ["Music Folder", "Date Modified", "Location"]
         with open(library_xml_filepath, "r") as f_in, open(library._library_xml_parser.path, "r") as f_out:
-            for line_in, line_out in zip(f_in, f_out):
+            for i, (line_in, line_out) in enumerate(zip(f_in, f_out)):
                 if any(f"<key>{key}</key>" in line_in for key in ignore_keys):
                     continue
                 assert line_in == line_out

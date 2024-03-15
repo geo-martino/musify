@@ -8,8 +8,9 @@ from musify.local.track.field import LocalTrackField
 from musify.processors.compare import Comparer
 from musify.processors.exception import ComparerError, ProcessorLookupError
 from musify.shared.field import TrackField
-from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
+from musify.shared.utils import to_collection
 from tests.local.track.utils import random_track
+from tests.local.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
 from tests.shared.core.misc import PrettyPrinterTester
 
 
@@ -166,7 +167,7 @@ class TestComparer(PrettyPrinterTester):
         assert comparer._converted
 
     def test_compare_date_ranges(self, track: MP3):
-        comparer = Comparer(condition="is_in_the_last", expected="8h", field=LocalTrackField.DATE_ADDED)
+        comparer = Comparer(condition="in_the_last", expected="8h", field=LocalTrackField.DATE_ADDED)
         assert comparer._expected == ["8h"]
         assert not comparer._converted
         assert comparer._processor_method == comparer._is_after
@@ -182,11 +183,12 @@ class TestComparer(PrettyPrinterTester):
     ###########################################################################
     ## XML I/O
     ###########################################################################
-    def test_from_xml_1(self):
+    def test_from_xml_bp(self):
         with open(path_playlist_xautopf_bp, "r", encoding="utf-8") as f:
             xml = xmltodict.parse(f.read())
 
-        comparers = Comparer.from_xml(xml=xml)
+        conditions = xml["SmartPlaylist"]["Source"]["Conditions"]
+        comparers = [Comparer.from_xml(xml=condition) for condition in to_collection(conditions["Condition"])]
         assert len(comparers) == 3
 
         assert comparers[0].field == LocalTrackField.ALBUM
@@ -207,11 +209,12 @@ class TestComparer(PrettyPrinterTester):
         assert comparers[2].condition == "less_than"
         assert comparers[2]._processor_method == comparers[2]._is_before
 
-    def test_from_xml_2(self):
+    def test_from_xml_ra(self):
         with open(path_playlist_xautopf_ra, "r", encoding="utf-8") as f:
             xml = xmltodict.parse(f.read())
 
-        comparers = Comparer.from_xml(xml=xml)
+        conditions = xml["SmartPlaylist"]["Source"]["Conditions"]
+        comparers = [Comparer.from_xml(xml=condition) for condition in to_collection(conditions["Condition"])]
         assert len(comparers) == 1
         comparer = comparers[0]
 

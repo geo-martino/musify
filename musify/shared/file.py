@@ -5,12 +5,15 @@ Generic file operations. Base class for generic File and functions for reading/w
 from abc import ABCMeta, abstractmethod
 from collections.abc import Hashable, Collection, Iterable
 from datetime import datetime
+
+from glob import glob
 from os import sep
-from os.path import splitext, basename, dirname, getsize, getmtime, getctime, exists
+from os.path import splitext, basename, dirname, getsize, getmtime, getctime, exists, join
 from typing import Any
 
+
 from musify.shared.core.misc import PrettyPrinter
-from musify.shared.exception import InvalidFileType
+from musify.shared.exception import InvalidFileType, FileDoesNotExistError
 
 
 class File(Hashable, metaclass=ABCMeta):
@@ -57,7 +60,7 @@ class File(Hashable, metaclass=ABCMeta):
 
     @classmethod
     def _validate_type(cls, path: str) -> None:
-        """Raises exception if the path's extension is not accepted"""
+        """Raises an exception if the ``path`` extension is not accepted"""
         ext = splitext(path)[1].casefold()
         if ext not in cls.valid_extensions:
             raise InvalidFileType(
@@ -65,6 +68,23 @@ class File(Hashable, metaclass=ABCMeta):
                 f"Not an accepted {cls.__name__} file extension. "
                 f"Use only: {', '.join(cls.valid_extensions)}"
             )
+
+    @staticmethod
+    def _validate_existence(path: str):
+        """Raises an exception if there is no file at the given ``path``"""
+        if not path or not exists(path):
+            raise FileDoesNotExistError(f"File not found | {path}")
+
+    @classmethod
+    def get_filepaths(cls, folder: str) -> set[str]:
+        """Get all files in a given folder that match this File object's valid filetypes recursively."""
+        paths = set()
+
+        for ext in cls.valid_extensions:
+            paths |= set(glob(join(folder, "**", f"*{ext}"), recursive=True, include_hidden=True))
+
+        # do not return paths in the recycle bin in Windows-based folders
+        return {path for path in paths if "$RECYCLE.BIN" not in path}
 
     @abstractmethod
     def load(self, *args, **kwargs) -> Any:

@@ -10,8 +10,8 @@ from musify.local.track.field import LocalTrackField
 from musify.processors.sort import ItemSorter, ShuffleMode, ShuffleBy
 from musify.shared.field import TrackField
 from musify.shared.utils import strip_ignore_words
-from tests.local.playlist.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
 from tests.local.track.utils import random_tracks
+from tests.local.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
 from tests.shared.core.misc import PrettyPrinterTester
 
 
@@ -104,7 +104,7 @@ class TestItemSorter(PrettyPrinterTester):
     ###########################################################################
     ## XML I/O
     ###########################################################################
-    def test_from_xml_1(self):
+    def test_from_xml_bp(self):
         with open(path_playlist_xautopf_bp, "r", encoding="utf-8") as f:
             xml = xmltodict.parse(f.read())
         sorter = ItemSorter.from_xml(xml=xml)
@@ -114,7 +114,7 @@ class TestItemSorter(PrettyPrinterTester):
         assert sorter.shuffle_by == ShuffleBy.ALBUM
         assert sorter.shuffle_weight == 0.5
 
-    def test_from_xml_2(self):
+    def test_from_xml_ra(self):
         with open(path_playlist_xautopf_ra, "r", encoding="utf-8") as f:
             xml = xmltodict.parse(f.read())
         sorter = ItemSorter.from_xml(xml=xml)
@@ -122,7 +122,7 @@ class TestItemSorter(PrettyPrinterTester):
         assert sorter.sort_fields == {LocalTrackField.DATE_ADDED: True}
         assert sorter.shuffle_mode == ShuffleMode.NONE
         assert sorter.shuffle_by == ShuffleBy.TRACK
-        assert sorter.shuffle_weight == 0
+        assert sorter.shuffle_weight == -0.2
 
     @pytest.mark.skip(reason="not implemented yet")
     def test_to_xml(self):
