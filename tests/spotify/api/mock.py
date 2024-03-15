@@ -43,6 +43,8 @@ URL_API = SpotifyDataWrangler.url_api
 URL_EXT = SpotifyDataWrangler.url_ext
 
 
+# TODO: add assertions/tests for updating+refreshing input RemoteResponses
+# TODO: simplify input to api functions where RemoteResponses were having responses extracted and refreshed manually
 class SpotifyMock(RemoteMock):
     """Generates responses and sets up Spotify API requests mock"""
 

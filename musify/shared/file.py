@@ -55,14 +55,15 @@ class File(Hashable, metaclass=ABCMeta):
         """:py:class:`datetime` object representing when the file was last modified"""
         return datetime.fromtimestamp(getmtime(self.path)) if exists(self.path) else None
 
-    def _validate_type(self, path: str) -> None:
+    @classmethod
+    def _validate_type(cls, path: str) -> None:
         """Raises exception if the path's extension is not accepted"""
         ext = splitext(path)[1].casefold()
-        if ext not in self.valid_extensions:
+        if ext not in cls.valid_extensions:
             raise InvalidFileType(
                 ext,
-                f"Not an accepted {self.__class__.__name__} file extension. "
-                f"Use only: {', '.join(self.valid_extensions)}"
+                f"Not an accepted {cls.__name__} file extension. "
+                f"Use only: {', '.join(cls.valid_extensions)}"
             )
 
     @abstractmethod

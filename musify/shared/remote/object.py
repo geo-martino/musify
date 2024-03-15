@@ -62,7 +62,7 @@ class RemoteCollectionLoader[T: RemoteObject](RemoteObject, RemoteCollection[T],
     @abstractmethod
     def load(
             cls,
-            value: str | Mapping[str, Any],
+            value: str | Mapping[str, Any] | Self,
             api: RemoteAPI,
             use_cache: bool = True,
             items: Iterable[T] = (),
@@ -75,6 +75,8 @@ class RemoteCollectionLoader[T: RemoteObject](RemoteObject, RemoteCollection[T],
         ``value`` may be:
             * A string representing a URL/URI/ID.
             * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
+            * An object of the same type as this collection.
+              The remote API JSON response will be used to load a new object.
 
         :param value: The value representing some remote collection. See description for allowed value types.
         :param api: An authorised API object to load the object from.

@@ -11,6 +11,7 @@ from typing import Any, Self
 
 from musify.shared.api.request import RequestHandler
 from musify.shared.logger import MusifyLogger
+from musify.shared.remote import RemoteResponse
 from musify.shared.remote.enum import RemoteIDType, RemoteObjectType
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
 from musify.shared.remote.types import APIInputValue
@@ -113,7 +114,11 @@ class RemoteAPI(ABC):
         original |= response
 
     def _merge_results_to_input(
-            self, original: UnitSequence[JSON], responses: UnitList[JSON], ordered: bool = True, clear: bool = True,
+            self,
+            original: UnitSequence[JSON] | UnitSequence[RemoteResponse],
+            responses: UnitList[JSON],
+            ordered: bool = True,
+            clear: bool = True,
     ) -> None:
         """
         If API response type given on input, update with new results.
@@ -126,10 +131,16 @@ class RemoteAPI(ABC):
             the ``id`` key of each dictionary.
         :param ordered: When True, clear the original value before merging, completely replacing all original data.
         """
+        if isinstance(original, str) or not isinstance(original, Collection | RemoteResponse):
+            return
+
         if not isinstance(original, Sequence):
             original = to_collection(original)
         if not isinstance(responses, Sequence):
             responses = to_collection(responses, list)
+
+        original_remote = [item for item in original if isinstance(item, RemoteResponse)]
+        original = [item.response if isinstance(item, RemoteResponse) else item for item in original]
 
         valid_types_input = all(isinstance(item, MutableMapping) for item in original)
         valid_types_responses = all(isinstance(item, MutableMapping) for item in responses)
@@ -159,6 +170,10 @@ class RemoteAPI(ABC):
         for item, response in zip(original, responses):
             self._merge_results_to_input_mapping(original=item, response=response, clear=clear)
 
+        # refresh input remote responses
+        for item in original_remote:
+            item.refresh()
+
     def print_item(
             self, i: int, name: str, uri: str, length: float = 0, total: int = 1, max_width: int = 50
     ) -> None:
@@ -184,7 +199,7 @@ class RemoteAPI(ABC):
     @abstractmethod
     def print_collection(
             self,
-            value: str | Mapping[str, Any] | None = None,
+            value: str | Mapping[str, Any] | RemoteResponse | None = None,
             kind: RemoteIDType | None = None,
             limit: int = 20,
             use_cache: bool = True
@@ -196,6 +211,7 @@ class RemoteAPI(ABC):
         ``value`` may be:
             * A string representing a URL/URI/ID.
             * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
+            * A RemoteResponse representing some remote collection of items.
 
         :param value: The value representing some remote collection. See description for allowed value types.
         :param kind: When an ID is provided, give the kind of ID this is here.
@@ -207,7 +223,7 @@ class RemoteAPI(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_playlist_url(self, playlist: str, use_cache: bool = True) -> str:
+    def get_playlist_url(self, playlist: str | Mapping[str, Any] | RemoteResponse, use_cache: bool = True) -> str:
         """
         Determine the type of the given ``playlist`` and return its API URL.
         If type cannot be determined, attempt to find the playlist in the
@@ -290,6 +306,9 @@ class RemoteAPI(ABC):
             * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
             * A remote API JSON response for a collection.
             * A MutableSequence of remote API JSON responses for a collection.
+            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
+              as described above.
+            * A Sequence of RemoteResponses as above.
 
         If JSON response(s) given, this update each response given by merging with the new response.
 
@@ -354,7 +373,11 @@ class RemoteAPI(ABC):
 
     @abstractmethod
     def add_to_playlist(
-            self, playlist: str | Mapping[str, Any], items: Collection[str], limit: int = 50, skip_dupes: bool = True
+            self,
+            playlist: str | Mapping[str, Any] | RemoteResponse,
+            items: Collection[str],
+            limit: int = 50,
+            skip_dupes: bool = True
     ) -> int:
         """
         ``POST`` - Add list of tracks to a given playlist.
@@ -363,6 +386,7 @@ class RemoteAPI(ABC):
             - playlist URL/URI/ID,
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
+            - a RemoteResponse object representing a remote playlist.
         :param items: List of URLs/URIs/IDs of the tracks to add.
         :param limit: Size of each batch of IDs to add. This value will be limited to be between ``1`` and ``50``.
         :param skip_dupes: Skip duplicates.
@@ -378,7 +402,7 @@ class RemoteAPI(ABC):
     ## Collection - DELETE endpoints
     ###########################################################################
     @abstractmethod
-    def delete_playlist(self, playlist: str | Mapping[str, Any]) -> str:
+    def delete_playlist(self, playlist: str | Mapping[str, Any] | RemoteResponse) -> str:
         """
         ``DELETE`` - Unfollow/delete a given playlist.
         WARNING: This function will destructively modify your remote playlists.
@@ -387,13 +411,17 @@ class RemoteAPI(ABC):
             - playlist URL/URI/ID,
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
+            - a RemoteResponse object representing a remote playlist.
         :return: API URL for playlist.
         """
         raise NotImplementedError
 
     @abstractmethod
     def clear_from_playlist(
-            self, playlist: str | Mapping[str, Any], items: Collection[str] | None = None, limit: int = 100
+            self,
+            playlist: str | Mapping[str, Any] | RemoteResponse,
+            items: Collection[str] | None = None,
+            limit: int = 100
     ) -> int:
         """
         ``DELETE`` - Clear tracks from a given playlist.
@@ -403,6 +431,7 @@ class RemoteAPI(ABC):
             - playlist URL/URI/ID,
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
+            - a RemoteResponse object representing a remote playlist.
         :param items: List of URLs/URIs/IDs of the tracks to remove. If None, clear all songs from the playlist.
         :param limit: Size of each batch of IDs to clear in a single request.
             This value will be limited to be between ``1`` and ``100``.

@@ -5,6 +5,7 @@ These define the foundations of any remote object or item.
 """
 
 from abc import ABCMeta, abstractmethod
+from collections.abc import Mapping
 from typing import Any, Self
 
 from musify.shared.api.exception import APIError
@@ -85,7 +86,14 @@ class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, metaclass=ABCMeta):
 
     @classmethod
     @abstractmethod
-    def load(cls, value: str | dict[str, Any], api: RemoteAPI, use_cache: bool = True, *args, **kwargs) -> Self:
+    def load(
+            cls,
+            value: str | Mapping[str, Any] | RemoteResponse,
+            api: RemoteAPI,
+            use_cache: bool = True,
+            *args,
+            **kwargs
+    ) -> Self:
         """
         Generate a new object of this class,
         calling all required endpoints to get a complete set of data for this item type.
@@ -93,6 +101,8 @@ class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, metaclass=ABCMeta):
         ``value`` may be:
             * A string representing a URL/URI/ID.
             * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
+            * An object of the same type as this collection.
+              The remote API JSON response will be used to load a new object.
 
         :param value: The value representing some remote object. See description for allowed value types.
         :param api: An authorised API object to load the object from.

@@ -7,12 +7,14 @@ from typing import Any
 from urllib.parse import urlparse
 
 from musify.shared.exception import MusifyEnumError
+from musify.shared.remote import RemoteResponse
 from musify.shared.remote.api import APIInputValue
 from musify.shared.remote.enum import RemoteIDType, RemoteObjectType
 from musify.shared.remote.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
 
 
+# TODO: add assertions/tests for RemoteResponse inputs
 class SpotifyDataWrangler(RemoteDataWrangler):
 
     source = "Spotify"
@@ -62,7 +64,11 @@ class SpotifyDataWrangler(RemoteDataWrangler):
         return False
 
     @classmethod
-    def _get_item_type(cls, value: str | Mapping[str, Any], kind: RemoteObjectType) -> RemoteObjectType | None:
+    def _get_item_type(
+            cls, value: str | Mapping[str, Any] | RemoteResponse, kind: RemoteObjectType
+    ) -> RemoteObjectType | None:
+        if isinstance(value, RemoteResponse):
+            return value.kind
         if isinstance(value, Mapping):
             if value.get("is_local", False):
                 raise RemoteObjectTypeError("Cannot process local items")
@@ -150,6 +156,8 @@ class SpotifyDataWrangler(RemoteDataWrangler):
             return [cls.convert(values, kind=kind, type_out=RemoteIDType.ID)]
         elif isinstance(values, Mapping) and "id" in values:  # is a raw API response from Spotify
             return [values["id"]]
+        elif isinstance(values, RemoteResponse):  # is a raw API response from Spotify
+            return [values.id]
         elif isinstance(values, Collection):
             if len(values) == 0:
                 return []
@@ -157,5 +165,7 @@ class SpotifyDataWrangler(RemoteDataWrangler):
                 return [cls.convert(d, kind=kind, type_out=RemoteIDType.ID) for d in values]
             elif all(isinstance(d, Mapping) and "id" in d for d in values):
                 return [track["id"] for track in values]
+            elif all(isinstance(d, RemoteResponse) for d in values):
+                return [track.id for track in values]
 
         raise RemoteError(f"Could not extract IDs. Input data not recognised: {type(values)}")

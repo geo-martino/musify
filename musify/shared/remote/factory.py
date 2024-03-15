@@ -31,10 +31,10 @@ class RemoteObjectFactory[A: RemoteAPI, PL: RemotePlaylist, TR: RemoteTrack, AL:
         if inspect.isclass(attribute) and issubclass(attribute, RemoteResponse) and self.api is not None:
             executable = partial(attribute, api=self.api)
 
-            # need to assign the classmethods back to the partial object to ensure seamless use
+            # need to assign the classmethods back to the partial object to ensure near seamless user use
             for key in dir(attribute):
                 value = getattr(attribute, key)
                 if inspect.ismethod(value) and not key.startswith("_"):
-                    setattr(executable, key, value)
+                    setattr(executable, key, partial(value, api=self.api))
             return executable
         return attribute

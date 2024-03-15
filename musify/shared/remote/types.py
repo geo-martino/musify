@@ -12,5 +12,5 @@ UT = TypeVar('UT')
 APIInputValue = (
         UnitMutableSequence[str] |
         UnitMutableSequence[MutableMapping[str, Any]] |
-        UnitSequence[UT: RemoteResponse]
+        UnitSequence[RemoteResponse]
 )

@@ -8,6 +8,7 @@ from itertools import batched
 from typing import Any
 
 from musify import PROGRAM_NAME, PROGRAM_URL
+from musify.shared.remote import RemoteResponse
 from musify.shared.remote.enum import RemoteIDType, RemoteObjectType
 from musify.shared.remote.exception import RemoteIDTypeError
 from musify.shared.utils import limit_value
@@ -17,7 +18,8 @@ from musify.spotify.api.base import SpotifyAPIBase
 class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
     """API endpoints for processing collections i.e. playlists, albums, shows, and audiobooks"""
 
-    def get_playlist_url(self, playlist: str | Mapping[str, Any], use_cache: bool = True) -> str:
+    # TODO: add assertions/tests for RemoteResponse inputs
+    def get_playlist_url(self, playlist: str | Mapping[str, Any] | RemoteResponse, use_cache: bool = True) -> str:
         """
         Determine the type of the given ``playlist`` and return its API URL.
         If type cannot be determined, attempt to find the playlist in the
@@ -27,11 +29,15 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             - playlist URL/URI/ID,
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
+            - a RemoteResponse object representing a remote playlist.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         :return: The playlist URL.
         :raise RemoteIDTypeError: Raised when the function cannot determine the item type of
             the input ``playlist``. Or when it does not recognise the type of the input ``playlist`` parameter.
         """
+        if isinstance(playlist, RemoteResponse):
+            playlist = playlist.response
+
         if isinstance(playlist, Mapping):
             if "href" in playlist:
                 return playlist["href"]
@@ -81,15 +87,20 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
         return pl_url
 
     def add_to_playlist(
-            self, playlist: str | Mapping[str, Any], items: Collection[str], limit: int = 100, skip_dupes: bool = True
+            self,
+            playlist: str | Mapping[str, Any] | RemoteResponse,
+            items: Collection[str],
+            limit: int = 100,
+            skip_dupes: bool = True
     ) -> int:
         """
         ``POST: /playlists/{playlist_id}/tracks`` - Add list of tracks to a given playlist.
 
-        :param playlist: One of the following to identify the playlist to clear:
+        :param playlist: One of the following to identify the playlist to add to:
             - playlist URL/URI/ID,
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
+            - a RemoteResponse object representing a remote playlist.
         :param items: List of URLs/URIs/IDs of the tracks to add.
         :param limit: Size of each batch of IDs to add. This value will be limited to be between ``1`` and ``100``.
         :param skip_dupes: Skip duplicates.
@@ -129,12 +140,16 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
     ###########################################################################
     ## DELETE endpoints
     ###########################################################################
-    def delete_playlist(self, playlist: str | Mapping[str, Any]) -> str:
+    def delete_playlist(self, playlist: str | Mapping[str, Any] | RemoteResponse) -> str:
         """
         ``DELETE: /playlists/{playlist_id}/followers`` - Unfollow a given playlist.
         WARNING: This function will destructively modify your remote playlists.
 
-        :param playlist: Playlist URL/URI/ID to unfollow OR the name of the playlist in the current user's playlists.
+        :param playlist: One of the following to identify the playlist to delete:
+            - playlist URL/URI/ID,
+            - the name of the playlist in the current user's playlists,
+            - the API response of a playlist.
+            - a RemoteResponse object representing a remote playlist.
         :return: API URL for playlist.
         """
         url = f"{self.get_playlist_url(playlist, use_cache=False)}/followers"
@@ -142,16 +157,20 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
         return url
 
     def clear_from_playlist(
-            self, playlist: str | Mapping[str, Any], items: Collection[str] | None = None, limit: int = 100
+            self,
+            playlist: str | Mapping[str, Any] | RemoteResponse,
+            items: Collection[str] | None = None,
+            limit: int = 100
     ) -> int:
         """
         ``DELETE: /playlists/{playlist_id}/tracks`` - Clear tracks from a given playlist.
         WARNING: This function can destructively modify your remote playlists.
 
-        :param playlist: One of the following to identify the playlist to clear:
+        :param playlist: One of the following to identify the playlist to clear from :
             - playlist URL/URI/ID,
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
+            - a RemoteResponse object representing a remote playlist.
         :param items: List of URLs/URIs/IDs of the tracks to remove. If None, clear all songs from the playlist.
         :param limit: Size of each batch of IDs to clear in a single request.
             This value will be limited to be between ``1`` and ``100``.

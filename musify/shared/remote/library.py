@@ -394,7 +394,7 @@ class RemoteLibrary[
             if not playlist and dry_run:  # skip on dry run
                 continue
             if not playlist:  # new playlist given, create it on remote first
-                playlist = self.factory.playlist.create(api=self.api, name=name)
+                playlist = self.factory.playlist.create(name=name)
 
             playlist._tracks = [uri_tracks.get(uri) for uri in uri_list]
             self.playlists[name] = playlist
@@ -451,7 +451,7 @@ class RemoteLibrary[
         results = {}
         for name, pl in bar:  # synchronise playlists
             if name not in self.playlists:  # new playlist given, create it on remote first
-                self.playlists[name] = self.factory.playlist.create(api=self.api, name=name)
+                self.playlists[name] = self.factory.playlist.create(name=name)
             results[name] = self.playlists[name].sync(items=pl, kind=kind, reload=reload, dry_run=dry_run)
 
         self.logger.print()

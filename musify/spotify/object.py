@@ -10,6 +10,7 @@ from copy import copy, deepcopy
 from datetime import datetime
 from typing import Any, Self
 
+from musify.shared.remote import RemoteResponse
 from musify.shared.remote.enum import RemoteObjectType, RemoteIDType
 from musify.shared.remote.object import RemoteCollectionLoader, RemoteTrack
 from musify.shared.remote.object import RemotePlaylist, RemoteAlbum, RemoteArtist
@@ -205,7 +206,7 @@ class SpotifyTrack(SpotifyItem, RemoteTrack):
     @classmethod
     def load(
             cls,
-            value: str | dict[str, Any],
+            value: str | Mapping[str, Any] | RemoteResponse,
             api: SpotifyAPI,
             features: bool = False,
             analysis: bool = False,
@@ -264,7 +265,7 @@ class SpotifyCollectionLoader[T: SpotifyItem](RemoteCollectionLoader[T], Spotify
     @classmethod
     def load(
             cls,
-            value: str | MutableMapping[str, Any],
+            value: str | Mapping[str, Any] | RemoteResponse,
             api: SpotifyAPI,
             items: Iterable[SpotifyTrack] = (),
             extend_tracks: bool = False,
@@ -278,7 +279,10 @@ class SpotifyCollectionLoader[T: SpotifyItem](RemoteCollectionLoader[T], Spotify
         key = api.collection_item_map[kind].name.lower() + "s"
 
         # no items given, regenerate API response from the URL
-        if not items or (isinstance(value, Mapping) and (key not in value or api.items_key not in value[key])):
+        if any({
+            not items,
+            isinstance(value, Mapping | RemoteResponse) and (key not in value or api.items_key not in value[key])
+        }):
             if kind == RemoteObjectType.PLAYLIST:
                 value = api.get_playlist_url(value)
 
@@ -671,7 +675,7 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
     @classmethod
     def load(
             cls,
-            value: str | dict[str, Any],
+            value: str | Mapping[str, Any] | RemoteResponse,
             api: SpotifyAPI,
             extend_albums: bool = False,
             extend_tracks: bool = False,

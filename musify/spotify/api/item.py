@@ -10,6 +10,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from musify.shared.api.exception import APIError
+from musify.shared.remote import RemoteResponse
 from musify.shared.remote.enum import RemoteObjectType, RemoteIDType
 from musify.shared.remote.exception import RemoteObjectTypeError
 from musify.shared.remote.types import APIInputValue
@@ -221,6 +222,9 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
                 - a valid ID value under an ``id`` key,
                 - a valid item type value under a ``type`` key if ``kind`` is None.
             * A MutableSequence of remote API JSON responses for a collection including the same structure as above.
+            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
+              as described above.
+            * A Sequence of RemoteResponses as above.
 
         If JSON response(s) given, this update each response given by merging with the new response
         and replacing the ``items`` with the new results.
@@ -351,6 +355,9 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
                 - some items under an ``items`` key,
                 - a valid ID value under an ``id`` key.
             * A MutableSequence of remote API JSON responses for a set of tracks including the same structure as above.
+            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
+              as described above.
+            * A Sequence of RemoteResponses as above.
 
         If JSON response(s) given, this updates each response given by adding the results
         under the ``audio_features`` and ``audio_analysis`` keys as appropriate.
@@ -406,7 +413,6 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
                 else:
                     results = [result | response for result, response in zip(results, responses)]
 
-        # re-map results and extend original input if required
         self._merge_results_to_input(original=values, responses=results, ordered=False, clear=False)
 
         def map_key(value: str) -> str:
@@ -444,6 +450,9 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
                 - some items under an ``items`` key,
                 - a valid ID value under an ``id`` key.
             * A MutableSequence of remote API JSON responses for a set of tracks including the same structure as above.
+            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
+              as described above.
+            * A Sequence of RemoteResponses as above.
 
         If JSON response(s) given, this updates each response given by adding the results
         under the ``audio_features`` and ``audio_analysis`` keys as appropriate.
@@ -460,9 +469,9 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         tracks = self.get_items(values=values, kind=RemoteObjectType.TRACK, limit=limit, use_cache=use_cache)
 
         # ensure that response are being assigned back to the original values if API response(s) given
-        if isinstance(values, Mapping):
+        if isinstance(values, Mapping | RemoteResponse):
             tracks = [values]
-        elif isinstance(values, Collection) and all(isinstance(v, Mapping) for v in values):
+        elif isinstance(values, Collection) and all(isinstance(v, Mapping | RemoteResponse) for v in values):
             tracks = values
 
         self.get_tracks_extra(values=tracks, features=features, analysis=analysis, limit=limit, use_cache=use_cache)
@@ -483,6 +492,9 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             * A MutableSequence of strings representing URLs/URIs/IDs of the type 'artist'.
             * A remote API JSON response for an artist including a valid ID value under an ``id`` key.
             * A MutableSequence of remote API JSON responses for a set of artists including the same structure as above.
+            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
+              as described above.
+            * A Sequence of RemoteResponses as above.
 
         If JSON response(s) given, this updates each response given by adding the results under the ``albums`` key.
 
@@ -526,10 +538,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
                     "total": album["total_tracks"]
                 }
 
-        # re-map results and extend original input if required
-        if isinstance(values, MutableMapping) or (isinstance(values, Collection) and not isinstance(values, str)):
-            results_remapped = [{"id": id_, "albums": result} for id_, result in results.items()]
-            self._merge_results_to_input(original=values, responses=results_remapped, ordered=False, clear=False)
+        results_remapped = [{"id": id_, "albums": result} for id_, result in results.items()]
+        self._merge_results_to_input(original=values, responses=results_remapped, ordered=False, clear=False)
 
         item_count = sum(len(result) for result in results.values())
         self.logger.debug(
