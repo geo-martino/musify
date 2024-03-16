@@ -47,7 +47,7 @@ class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
             deepcopy(album) for album in api_mock.albums
             if album["tracks"]["total"] > len(album["tracks"]["items"]) > 5 and album["genres"]
         )
-        api.extend_items(items_block=response, key=RemoteObjectType.TRACK)
+        api.extend_items(response=response, key=RemoteObjectType.TRACK)
 
         api_mock.reset_mock()
         return response

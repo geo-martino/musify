@@ -9,10 +9,10 @@ from PIL.Image import Image
 from musify.local.track import LocalTrack, load_track, FLAC, M4A, MP3, WMA, SyncResultTrack
 from musify.local.track.field import LocalTrackField
 from musify.shared.core.base import MusifyItem
-from musify.shared.exception import InvalidFileType, FileDoesNotExistError
-from musify.shared.image import open_image
 from musify.shared.core.object import Track
+from musify.shared.exception import InvalidFileType, FileDoesNotExistError
 from musify.shared.exception import MusifyKeyError
+from musify.shared.image import open_image
 from musify.shared.remote.enum import RemoteObjectType
 from tests.local.utils import path_track_all, path_track_img, path_track_resources
 from tests.shared.core.base import ItemTester

@@ -2,19 +2,20 @@
 Convert and validate Spotify ID and item types.
 """
 
-from collections.abc import Mapping, Collection
+from collections.abc import Mapping
 from typing import Any
 from urllib.parse import urlparse
 
+from musify.shared.core.collection import MusifyCollection
 from musify.shared.exception import MusifyEnumError
 from musify.shared.remote import RemoteResponse
 from musify.shared.remote.api import APIInputValue
 from musify.shared.remote.enum import RemoteIDType, RemoteObjectType
 from musify.shared.remote.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
+from musify.shared.utils import to_collection
 
 
-# TODO: add assertions/tests for RemoteResponse inputs
 class SpotifyDataWrangler(RemoteDataWrangler):
 
     source = "Spotify"
@@ -65,9 +66,14 @@ class SpotifyDataWrangler(RemoteDataWrangler):
 
     @classmethod
     def _get_item_type(
-            cls, value: str | Mapping[str, Any] | RemoteResponse, kind: RemoteObjectType
+            cls, value: str | Mapping[str, Any] | RemoteResponse, kind: RemoteObjectType | None = None
     ) -> RemoteObjectType | None:
         if isinstance(value, RemoteResponse):
+            response_kind = cls._get_item_type(value.response)
+            if value.kind != response_kind:
+                raise RemoteObjectTypeError(
+                    f"RemoteResponse kind != actual response kind: {value.kind} != {response_kind}"
+                )
             return value.kind
         if isinstance(value, Mapping):
             if value.get("is_local", False):
@@ -90,6 +96,7 @@ class SpotifyDataWrangler(RemoteDataWrangler):
         elif len(uri_check) == RemoteIDType.URI.value and uri_check[0].casefold() == "spotify":
             return RemoteObjectType.from_name(uri_check[1])[0]
         elif len(value) == RemoteIDType.ID.value or kind == RemoteObjectType.USER:
+            # in these cases, we have to go on faith...
             return kind
         raise RemoteObjectTypeError(f"Could not determine item type of given value: {value}")
 
@@ -152,20 +159,16 @@ class SpotifyDataWrangler(RemoteDataWrangler):
 
     @classmethod
     def extract_ids(cls, values: APIInputValue, kind: RemoteObjectType | None = None) -> list[str]:
-        if isinstance(values, str):
-            return [cls.convert(values, kind=kind, type_out=RemoteIDType.ID)]
-        elif isinstance(values, Mapping) and "id" in values:  # is a raw API response from Spotify
-            return [values["id"]]
-        elif isinstance(values, RemoteResponse):  # is a raw API response from Spotify
-            return [values.id]
-        elif isinstance(values, Collection):
-            if len(values) == 0:
-                return []
-            elif all(isinstance(d, str) for d in values):
-                return [cls.convert(d, kind=kind, type_out=RemoteIDType.ID) for d in values]
-            elif all(isinstance(d, Mapping) and "id" in d for d in values):
-                return [track["id"] for track in values]
-            elif all(isinstance(d, RemoteResponse) for d in values):
-                return [track.id for track in values]
+        def extract_id(value: str | Mapping[str, Any] | RemoteResponse) -> str:
+            """Extract an ID from a given ``value``"""
+            if isinstance(value, str):
+                return cls.convert(value, kind=kind, type_out=RemoteIDType.ID)
+            elif isinstance(value, Mapping) and "id" in value:
+                return value["id"]
+            elif isinstance(value, RemoteResponse):
+                return value.id
 
-        raise RemoteError(f"Could not extract IDs. Input data not recognised: {type(values)}")
+            raise RemoteError(f"Could not extract ID. Input data not recognised: {type(value)}")
+
+        values = to_collection(values) if not isinstance(values, MusifyCollection) else [values]
+        return [extract_id(value=value) for value in to_collection(values)]

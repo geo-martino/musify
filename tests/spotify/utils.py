@@ -6,10 +6,8 @@ from musify.shared.remote.enum import RemoteIDType, RemoteObjectType
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
 from musify.spotify.base import SpotifyObject
 from musify.spotify.processors import SpotifyDataWrangler
+from tests.shared.remote.utils import ALL_ID_TYPES
 from tests.utils import random_str
-
-ALL_ID_TYPES = RemoteIDType.all()
-ALL_ITEM_TYPES = RemoteObjectType.all()
 
 
 def random_id() -> str:

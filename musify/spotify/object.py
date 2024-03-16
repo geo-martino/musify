@@ -254,7 +254,7 @@ class SpotifyTrack(SpotifyItem, RemoteTrack):
         if extend_artists:
             self.api.get_items(response["artists"], kind=RemoteObjectType.ARTIST, use_cache=use_cache)
         if features or analysis:
-            self.api.get_tracks_extra(response, features=features, analysis=analysis, use_cache=use_cache)
+            self.api.extend_tracks(response, features=features, analysis=analysis, use_cache=use_cache)
 
         self.__init__(response=response, api=self.api)
 
@@ -347,7 +347,7 @@ class SpotifyCollectionLoader[T: SpotifyItem](RemoteCollectionLoader[T], Spotify
         if extend_tracks:
             if kind == RemoteObjectType.PLAYLIST:
                 extend_response = [item["track"] for item in extend_response]
-            api.get_tracks_extra(extend_response, limit=response[key]["limit"], features=True, use_cache=use_cache)
+            api.extend_tracks(extend_response, limit=response[key]["limit"], features=True, use_cache=use_cache)
 
         return cls(response=response, api=api, skip_checks=False)
 
@@ -470,7 +470,7 @@ class SpotifyPlaylist(SpotifyCollectionLoader[SpotifyTrack], RemotePlaylist[Spot
         response = self.api.get_items(self.url, kind=RemoteObjectType.PLAYLIST, use_cache=use_cache)[0]
         if extend_tracks:
             tracks = [track["track"] for track in response["tracks"]["items"]]
-            self.api.get_tracks_extra(tracks, limit=response["tracks"]["limit"], features=True, use_cache=use_cache)
+            self.api.extend_tracks(tracks, limit=response["tracks"]["limit"], features=True, use_cache=use_cache)
 
         self.__init__(response=response, api=self.api, skip_checks=not extend_tracks)
 
@@ -603,7 +603,7 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTra
             self.api.get_items(response["artists"], kind=RemoteObjectType.ARTIST, use_cache=use_cache)
         if extend_tracks:
             tracks = response["tracks"]
-            self.api.get_tracks_extra(tracks["items"], limit=tracks["limit"], features=True, use_cache=use_cache)
+            self.api.extend_tracks(tracks["items"], limit=tracks["limit"], features=True, use_cache=use_cache)
 
         self.__init__(response=response, api=self.api, skip_checks=not extend_tracks)
 

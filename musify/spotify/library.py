@@ -73,7 +73,7 @@ class SpotifyLibrary(RemoteLibrary):
         )
 
         responses = [track.response for track in self.tracks if track.has_uri]
-        self.api.get_tracks_extra(responses, features=features, analysis=analysis, use_cache=self.use_cache)
+        self.api.extend_tracks(responses, features=features, analysis=analysis, use_cache=self.use_cache)
 
         # enrich on list of URIs to avoid duplicate calls for same items
         if albums:

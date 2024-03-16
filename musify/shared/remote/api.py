@@ -269,19 +269,19 @@ class RemoteAPI(ABC):
     @abstractmethod
     def extend_items(
             self,
-            items_block: MutableMapping[str, Any],
+            response: MutableMapping[str, Any] | RemoteResponse,
             kind: RemoteObjectType | str | None = None,
             key: RemoteObjectType | None = None,
             use_cache: bool = True,
     ) -> list[dict[str, Any]]:
         """
-        Extend the items for a given ``items_block`` API response.
+        Extend the items for a given API ``response``.
         The function requests each page of the collection returning a list of all items
         found across all pages for this URL.
 
         Updates the value of the ``items`` key in-place by extending the value of the ``items`` key with new results.
 
-        :param items_block: A remote API JSON response for an items type endpoint.
+        :param response: A remote API JSON response for an items type endpoint.
         :param kind: The type of response being extended. Optional, used only for logging.
         :param key: The type of response of the child objects.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.

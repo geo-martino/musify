@@ -505,7 +505,10 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         attributes_extra = {"remote_source": self._reader.remote_source}
         return self._get_attributes() | attributes_extra
 
-    def __hash__(self):  # TODO: why doesn't this get inherited correctly from File
+    def __hash__(self):
+        # TODO: why doesn't this get inherited correctly from File.
+        #  If you remove this, tests will fail with error 'un-hashable type' for all subclasses of LocalTrack.
+        #  LocalTrack should be inheriting __hash__ from File superclass
         return super().__hash__()
 
     def __eq__(self, item: MusifyItem):

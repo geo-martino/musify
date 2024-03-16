@@ -18,7 +18,6 @@ from musify.spotify.api.base import SpotifyAPIBase
 class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
     """API endpoints for processing collections i.e. playlists, albums, shows, and audiobooks"""
 
-    # TODO: add assertions/tests for RemoteResponse inputs
     def get_playlist_url(self, playlist: str | Mapping[str, Any] | RemoteResponse, use_cache: bool = True) -> str:
         """
         Determine the type of the given ``playlist`` and return its API URL.

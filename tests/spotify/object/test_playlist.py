@@ -46,7 +46,7 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
             deepcopy(pl) for pl in api_mock.user_playlists
             if pl["tracks"]["total"] > 50 and len(pl["tracks"]["items"]) > 10
         )
-        api.extend_items(items_block=response, key=RemoteObjectType.TRACK)
+        api.extend_items(response=response, key=RemoteObjectType.TRACK)
 
         api_mock.reset_mock()
         return response
@@ -239,7 +239,7 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
 
         names = [pl["name"] for pl in api_mock.user_playlists]
         response = next(deepcopy(pl) for pl in api_mock.user_playlists if names.count(pl["name"]) == 1)
-        api.extend_items(items_block=response, key=RemoteObjectType.TRACK)
+        api.extend_items(response=response, key=RemoteObjectType.TRACK)
         pl = SpotifyPlaylist(response=response, api=api)
         url = pl.url
 

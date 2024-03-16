@@ -78,7 +78,7 @@ class RemoteDataWrangler(ABC):
 
         :param values: The values representing some remote objects. See description for allowed value types.
             These items must all be of the same type of item to pass i.e. all tracks OR all artists etc.
-        :param kind: The :py:class:`RemoteObjectType` if the value is found to be an ID.
+        :param kind: The :py:class:`RemoteObjectType` to use as backup if the value is found to be an ID.
         :return: The :py:class:`RemoteObjectType`
         :raise RemoteObjectTypeError: Raised when the function cannot determine the item type
             of the input ``values``.
@@ -102,7 +102,7 @@ class RemoteDataWrangler(ABC):
     @staticmethod
     @abstractmethod
     def _get_item_type(
-            value: str | Mapping[str, Any] | RemoteResponse, kind: RemoteObjectType
+            value: str | Mapping[str, Any] | RemoteResponse, kind: RemoteObjectType | None = None
     ) -> RemoteObjectType | None:
         """
         Determine the remote object type of the given ``value`` and return its type.
@@ -113,7 +113,7 @@ class RemoteDataWrangler(ABC):
             * A RemoteResponse containing a remote API JSON response with the same structure as above.
 
         :param value: The value representing some remote collection. See description for allowed value types.
-        :param kind: The :py:class:`RemoteObjectType` if the value is found to be an ID.
+        :param kind: The :py:class:`RemoteObjectType` to use as backup if the value is found to be an ID.
         :return: The :py:class:`RemoteObjectType`. If the given value is determined to be an ID, returns None.
         :raise RemoteObjectTypeError: Raised when the function cannot determine the item type
             of the input ``values``.

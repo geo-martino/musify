@@ -8,6 +8,7 @@ from musify import PROGRAM_NAME
 from musify.shared.remote.enum import RemoteObjectType as ObjectType, RemoteIDType
 from musify.shared.remote.exception import RemoteObjectTypeError, RemoteIDTypeError
 from musify.spotify.api import SpotifyAPI
+from musify.spotify.object import SpotifyPlaylist
 from tests.shared.remote.utils import ALL_ITEM_TYPES
 from tests.spotify.api.mock import SpotifyMock
 from tests.spotify.utils import random_ids, random_id, random_id_type, random_id_types
@@ -39,6 +40,8 @@ class TestSpotifyAPIPlaylists:
     def test_get_playlist_url(self, playlist_unique: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
         assert api.get_playlist_url(playlist=playlist_unique) == playlist_unique["href"]
         assert api.get_playlist_url(playlist=playlist_unique["name"]) == playlist_unique["href"]
+        pl_object = SpotifyPlaylist(playlist_unique, skip_checks=True)
+        assert api.get_playlist_url(playlist=pl_object) == playlist_unique["href"]
 
         with pytest.raises(RemoteIDTypeError):
             api.get_playlist_url("does not exist")
@@ -95,6 +98,7 @@ class TestSpotifyAPIPlaylists:
             assert count >= 1
             assert count <= 100
 
+    # TODO: add assertions/tests for RemoteResponses input
     def test_add_to_playlist(self, playlist: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
         api_mock.reset_mock()  # test checks the number of requests made
 
@@ -150,6 +154,7 @@ class TestSpotifyAPIPlaylists:
     ###########################################################################
     ## DELETE playlist operations
     ###########################################################################
+    # TODO: add assertions/tests for RemoteResponses input
     def test_delete_playlist(self, playlist_unique: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
         result = api.delete_playlist(
             random_id_type(id_=playlist_unique["id"], wrangler=api.wrangler, kind=ObjectType.PLAYLIST)
@@ -195,6 +200,7 @@ class TestSpotifyAPIPlaylists:
             assert count >= 1
             assert count <= 100
 
+    # TODO: add assertions/tests for RemoteResponses input
     def test_clear_from_playlist_items(self, playlist: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
         api_mock.reset_mock()  # test checks the number of requests made
 

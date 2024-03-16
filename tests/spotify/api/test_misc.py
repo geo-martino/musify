@@ -7,8 +7,8 @@ import pytest
 from musify.shared.remote.enum import RemoteObjectType as ObjectType
 from musify.spotify.api import SpotifyAPI
 from musify.spotify.processors import SpotifyDataWrangler
-from tests.spotify.api.mock import SpotifyMock, idfn
-from tests.utils import random_str, get_stdout
+from tests.spotify.api.mock import SpotifyMock
+from tests.utils import idfn, get_stdout, random_str
 
 
 class TestSpotifyAPICore:
