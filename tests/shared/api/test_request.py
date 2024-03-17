@@ -51,6 +51,11 @@ class TestRequestHandler:
         for k, v in request_handler.headers.items():
             assert request_handler.session.headers.get(k) == v
 
+    def test_context_management(self, token: dict[str, Any], tmp_path: Path):
+        with RequestHandler(name="test", token=token, cache_path=None) as handler:
+            for k, v in handler.headers.items():
+                assert handler.session.headers.get(k) == v
+
     def test_check_response_codes(self, request_handler: RequestHandler):
         response = Response()
 
