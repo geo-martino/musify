@@ -2,7 +2,7 @@
 Functionality relating to a generic remote library.
 """
 
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, Mapping, Iterable
 from typing import Any, Literal
 
@@ -12,9 +12,8 @@ from musify.shared.core.base import MusifyItem
 from musify.shared.core.object import Track, Library, Playlist
 from musify.shared.logger import STAT
 from musify.shared.remote.api import RemoteAPI
-from musify.shared.remote.factory import RemoteObjectFactory
 from musify.shared.remote.enum import RemoteObjectType
-from musify.shared.remote.exception import RemoteError
+from musify.shared.remote.factory import RemoteObjectFactory
 from musify.shared.remote.object import RemoteCollection, SyncResultRemotePlaylist
 from musify.shared.remote.object import RemoteTrack, RemotePlaylist, RemoteArtist, RemoteAlbum
 from musify.shared.utils import align_string, get_max_width
@@ -27,8 +26,7 @@ class RemoteLibrary[
     Represents a remote library, providing various methods for manipulating
     tracks and playlists across an entire remote library collection.
 
-    :param object_factory: The :py:class:`RemoteObjectFactory` to use when creating new remote objects.
-        This must have a :py:class:`RemoteAPI` assigned.
+    :param api: The instantiated and authorised API object for this source type.
     :param playlist_filter: An optional :py:class:`Filter` to apply or collection of playlist names to include when
         loading playlists. Playlist names will be passed to this filter to limit which playlists are loaded.
     :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
@@ -39,9 +37,14 @@ class RemoteLibrary[
     __attributes_ignore__ = ("api", "factory")
 
     @property
-    def factory(self) -> RemoteObjectFactory:
+    def factory(self) -> RemoteObjectFactory[A, PL, TR, AL, AR]:
         """Stores the key object classes for a remote source."""
         return self._factory
+
+    @abstractmethod
+    def _create_factory(self, api: A) -> RemoteObjectFactory[A, PL, TR, AL, AR]:
+        """Stores the key object classes for a remote source."""
+        raise NotImplementedError
 
     @property
     def api(self):
@@ -77,17 +80,8 @@ class RemoteLibrary[
         """All user's saved albums"""
         return self._albums
 
-    def __init__(
-            self,
-            object_factory: RemoteObjectFactory[A, PL, TR, AL, AR],
-            use_cache: bool = True,
-            playlist_filter: Collection[str] | Filter[str] = (),
-    ):
-        self._factory = object_factory
-        if object_factory.api is None:
-            raise RemoteError("Could not find a RemoteAPI object in the given RemoteObjectFactory")
-
-        super().__init__(remote_wrangler=self.api.wrangler)
+    def __init__(self, api: A, use_cache: bool = True, playlist_filter: Collection[str] | Filter[str] = ()):
+        super().__init__(remote_wrangler=api.wrangler)
 
         #: When true, use the cache when calling the API endpoint
         self.use_cache = use_cache
@@ -97,6 +91,7 @@ class RemoteLibrary[
         #: :py:class:`Filter` to filter out the playlists loaded by name.
         self.playlist_filter: Filter[str] = playlist_filter
 
+        self._factory = self._create_factory(api=api)
         self._playlists: dict[str, PL] = {}
         self._tracks: list[TR] = []
         self._albums: list[AL] = []
@@ -229,7 +224,7 @@ class RemoteLibrary[
                 self._tracks.append(track)
             else:
                 current._response = track.response
-                current.refresh()
+                current.refresh(skip_checks=False)
 
         self.logger.debug(f"Load user's saved {self.api.source} tracks: DONE")
 
@@ -394,6 +389,7 @@ class RemoteLibrary[
             if not playlist and dry_run:  # skip on dry run
                 continue
             if not playlist:  # new playlist given, create it on remote first
+                # noinspection PyArgumentList
                 playlist = self.factory.playlist.create(name=name)
 
             playlist._tracks = [uri_tracks.get(uri) for uri in uri_list]
@@ -451,6 +447,7 @@ class RemoteLibrary[
         results = {}
         for name, pl in bar:  # synchronise playlists
             if name not in self.playlists:  # new playlist given, create it on remote first
+                # noinspection PyArgumentList
                 self.playlists[name] = self.factory.playlist.create(name=name)
             results[name] = self.playlists[name].sync(items=pl, kind=kind, reload=reload, dry_run=dry_run)
 

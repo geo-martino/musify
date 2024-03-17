@@ -10,8 +10,8 @@ from os.path import exists, dirname
 from musify.local.playlist.base import LocalPlaylist
 from musify.local.track import LocalTrack, load_track
 from musify.processors.filter import FilterDefinedList
-from musify.shared.file import PathMapper, File
 from musify.shared.core.misc import Result
+from musify.shared.file import PathMapper, File
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
 
 

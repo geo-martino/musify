@@ -15,8 +15,8 @@ from musify.processors.compare import Comparer
 from musify.processors.filter import FilterComparers, FilterDefinedList
 from musify.processors.sort import ItemSorter
 from musify.shared.core.enum import Fields
-from musify.shared.file import File, PathMapper
 from musify.shared.core.misc import Result
+from musify.shared.file import File, PathMapper
 from musify.shared.logger import MusifyLogger
 from musify.shared.utils import to_collection
 

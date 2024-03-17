@@ -12,7 +12,7 @@ import mutagen.asf
 import mutagen.id3
 from PIL import Image, UnidentifiedImageError
 
-from musify.local.track import LocalTrack
+from musify.local.track.track import LocalTrack
 from musify.local.track.tags.reader import TagReader
 from musify.local.track.tags.writer import TagWriter
 from musify.shared.core.enum import TagMap

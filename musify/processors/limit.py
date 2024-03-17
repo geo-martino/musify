@@ -13,8 +13,8 @@ from musify.processors.exception import ItemLimiterError
 from musify.processors.sort import ItemSorter
 from musify.shared.core.base import MusifyItem
 from musify.shared.core.enum import MusifyEnum, Fields
-from musify.shared.file import File
 from musify.shared.core.object import Track
+from musify.shared.file import File
 
 
 class LimitType(MusifyEnum):

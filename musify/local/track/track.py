@@ -12,14 +12,14 @@ from typing import Any, Self
 import mutagen
 
 from musify.local.base import LocalItem
+from musify.local.track.field import LocalTrackField as Tags
 from musify.local.track.tags.reader import TagReader
 from musify.local.track.tags.writer import TagWriter, SyncResultTrack
-from musify.local.track.field import LocalTrackField as Tags
 from musify.shared.core.base import MusifyItem
 from musify.shared.core.enum import TagMap
 from musify.shared.core.object import Track
-from musify.shared.exception import MusifyKeyError, MusifyAttributeError, MusifyTypeError, MusifyValueError
 from musify.shared.exception import FileDoesNotExistError
+from musify.shared.exception import MusifyKeyError, MusifyAttributeError, MusifyTypeError, MusifyValueError
 from musify.shared.field import TrackField
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
 from musify.shared.types import UnitIterable

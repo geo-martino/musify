@@ -5,12 +5,10 @@ Generic file operations. Base class for generic File and functions for reading/w
 from abc import ABCMeta, abstractmethod
 from collections.abc import Hashable, Collection, Iterable
 from datetime import datetime
-
 from glob import glob
 from os import sep
 from os.path import splitext, basename, dirname, getsize, getmtime, getctime, exists, join
 from typing import Any
-
 
 from musify.shared.core.misc import PrettyPrinter
 from musify.shared.exception import InvalidFileType, FileDoesNotExistError

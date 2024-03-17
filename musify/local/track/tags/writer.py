@@ -9,8 +9,8 @@ from typing import Any
 
 import mutagen
 
-from musify.local.track.tags.base import TagProcessor
 from musify.local.track.field import LocalTrackField as Tags
+from musify.local.track.tags.base import TagProcessor
 from musify.shared.core.misc import Result
 from musify.shared.core.object import Track
 from musify.shared.types import UnitIterable
@@ -546,6 +546,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         """
         return self.write_tag(next(iter(self.tag_map.comments), None), track.comments, dry_run)
 
+    # noinspection PyUnusedLocal
     def write_uri(self, source: Track, target: Track, replace: bool = False, dry_run: bool = True) -> int | None:
         """
         Write track URI tag to file if appropriate related conditions are met.

@@ -136,7 +136,7 @@ class TestSpotifyLibrary(RemoteLibraryTester):
         req_album_ids = {id_ for req in req_albums for id_ in parse_qs(req.query)["ids"][0].split(",")}
         assert req_album_ids == album_ids
 
-        api_mock.reset_mock()
+        api_mock.reset_mock()  # test checks the number of requests made
 
         # enriches artists without replacing previous enrichment
         library.enrich_tracks(albums=False, artists=True)
@@ -186,7 +186,7 @@ class TestSpotifyLibrary(RemoteLibraryTester):
             assert "albums" not in artist.response
             assert len(artist.albums) == 0
 
-        api_mock.reset_mock()
+        api_mock.reset_mock()  # test checks the number of requests made
 
         # gets albums but does not extend them
         library.enrich_saved_artists(tracks=False)
@@ -204,7 +204,7 @@ class TestSpotifyLibrary(RemoteLibraryTester):
         req_urls = [req.url.split("?")[0] for req in api_mock.request_history]
         assert req_urls == [artist.url + "/albums" for artist in library.artists]
 
-        api_mock.reset_mock()
+        api_mock.reset_mock()  # test checks the number of requests made
 
         library.enrich_saved_artists(tracks=True)
         for artist in library.artists:

@@ -17,8 +17,8 @@ from musify.processors.filter_matcher import FilterMatcher
 from musify.processors.limit import ItemLimiter
 from musify.processors.sort import ItemSorter
 from musify.shared.core.enum import Fields
-from musify.shared.file import PathMapper
 from musify.shared.core.misc import Result
+from musify.shared.file import PathMapper
 
 
 @dataclass(frozen=True)

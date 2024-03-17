@@ -16,8 +16,8 @@ from musify.shared.core.enum import TagField, TagFields as Tag
 from musify.shared.core.misc import Result
 from musify.shared.core.object import Track
 from musify.shared.logger import REPORT
-from musify.shared.remote.factory import RemoteObjectFactory
 from musify.shared.remote.enum import RemoteObjectType
+from musify.shared.remote.factory import RemoteObjectFactory
 from musify.shared.utils import align_string, get_max_width
 
 

@@ -206,7 +206,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         name_actual = next(name for name in playlists_check if name in library.playlists)
         name_new = next(name for name in playlists_check if name not in library.playlists)
 
-        api_mock.reset_mock()
+        api_mock.reset_mock()  # test checks the number of requests made
         library_test = deepcopy(library)
         results = library_test.sync(playlists=playlists, dry_run=False)
 

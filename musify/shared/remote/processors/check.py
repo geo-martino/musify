@@ -19,8 +19,8 @@ from musify.shared.core.enum import Fields
 from musify.shared.core.misc import Result
 from musify.shared.core.object import Track
 from musify.shared.logger import REPORT
-from musify.shared.remote.factory import RemoteObjectFactory
 from musify.shared.remote.enum import RemoteObjectType, RemoteIDType
+from musify.shared.remote.factory import RemoteObjectFactory
 from musify.shared.remote.processors.search import RemoteItemSearcher
 from musify.shared.utils import get_max_width, align_string
 

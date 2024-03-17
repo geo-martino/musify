@@ -12,9 +12,9 @@ from musify.local.track import LocalTrack
 from musify.processors.base import Filter
 from musify.processors.limit import ItemLimiter
 from musify.processors.sort import ItemSorter
-from musify.shared.file import File, PathMapper
 from musify.shared.core.misc import Result
 from musify.shared.core.object import Playlist
+from musify.shared.file import File, PathMapper
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
 
 

@@ -14,9 +14,9 @@ from musify.spotify.api import SpotifyAPI
 from musify.spotify.exception import SpotifyCollectionError
 from musify.spotify.object import SpotifyPlaylist
 from musify.spotify.object import SpotifyTrack
+from spotify.object.testers import SpotifyCollectionLoaderTester
 from tests.shared.remote.object import RemotePlaylistTester
 from tests.spotify.api.mock import SpotifyMock
-from tests.spotify.testers import SpotifyCollectionLoaderTester
 from tests.spotify.utils import random_uri, assert_id_attributes
 
 
@@ -48,7 +48,7 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
         )
         api.extend_items(response=response, key=RemoteObjectType.TRACK)
 
-        api_mock.reset_mock()
+        api_mock.reset_mock()  # tests check the number of requests made
         return response
 
     @pytest.fixture
@@ -261,7 +261,7 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
             response_valid: dict[str, Any], response_random: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock,
     ) -> list[SpotifyTrack]:
         api.load_user_data()
-        api_mock.reset_mock()  # all sync tests check the number of requests made
+        api_mock.reset_mock()  # tests check the number of requests made
 
         uri_valid = [track["track"]["uri"] for track in response_valid["tracks"]["items"]]
         return [

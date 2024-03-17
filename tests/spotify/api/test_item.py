@@ -1,95 +1,85 @@
 from collections.abc import Collection
 from copy import deepcopy
 from itertools import batched
-from random import sample, choice
+from random import sample, randrange
 from typing import Any
 from urllib.parse import parse_qs
 
 import pytest
-# noinspection PyProtectedMember,PyUnresolvedReferences
-from requests_mock.request import _RequestObjectProxy as Request
 
 from musify.shared.api.exception import APIError
-from musify.shared.remote.enum import RemoteObjectType as ObjectType, RemoteIDType as IDType, RemoteIDType
+from musify.shared.remote import RemoteResponse
+from musify.shared.remote.enum import RemoteObjectType, RemoteIDType as IDType, RemoteIDType
 from musify.shared.remote.exception import RemoteObjectTypeError
+from musify.shared.remote.object import RemoteCollection
 from musify.spotify.api import SpotifyAPI
+from musify.spotify.factory import SpotifyObjectFactory
+from musify.spotify.object import SpotifyPlaylist, SpotifyAlbum, SpotifyTrack
+from shared.remote.api import RemoteAPITester
 from tests.shared.remote.utils import ALL_ITEM_TYPES
 from tests.spotify.api.mock import SpotifyMock
 from tests.spotify.api.utils import get_limit, assert_calls
 from tests.spotify.utils import random_ids, random_id, random_id_type, random_id_types
-from tests.spotify.utils import random_uri, random_api_url, random_ext_url
 from tests.utils import idfn, random_str
 
 
-class TestSpotifyAPIItems:
+class TestSpotifyAPIItems(RemoteAPITester):
     """Tester for item-type endpoints of :py:class:`SpotifyAPI`"""
 
     id_key = SpotifyAPI.id_key
 
-    @pytest.fixture
-    def responses(self, object_type: ObjectType, api_mock: SpotifyMock) -> dict[str, dict[str, Any]]:
-        """Yields valid responses mapped by ID for a given ``object_type`` as a pytest.fixture"""
-        api_mock.reset_mock()  # tests check the number of requests made
-        source = api_mock.item_type_map[object_type]
-        if len(source) > api_mock.limit_lower:
-            source = sample(source, k=api_mock.limit_lower)
+    @pytest.fixture(scope="class")
+    def object_factory(self) -> SpotifyObjectFactory:
+        """Yield the object factory for Spotify objects as a pytest.fixture"""
+        return SpotifyObjectFactory()
 
-        return {response[self.id_key]: deepcopy(response) for response in source}
+    @staticmethod
+    def reduce_items(response: dict[str, Any], key: str, api: SpotifyAPI, api_mock: SpotifyMock, pages: int = 3) -> int:
+        """
+        Some tests require the existing items in a given ``response``
+        to be less than the total available items for that ``response``.
+        This function reduces the existing items so that the given number of ``pages``
+        will be called when the test runs.
 
-    @pytest.fixture
-    def response(self, responses: dict[str, dict[str, Any]]) -> dict[str, Any]:
-        """Yields a random valid response from a given set of ``responses`` as a pytest.fixture"""
-        return choice(list(responses.values()))
+        :return: The number of items expected in each page.
+        """
+        response_items = response[key]
+        limit = get_limit(
+            response_items["total"],
+            max_limit=min(len(response_items[api.items_key]) // 3, api_mock.limit_max),
+            pages=pages
+        )
+        assert len(response_items[api.items_key]) >= limit
 
-    @pytest.fixture
-    def extend(self, object_type: ObjectType, api: SpotifyAPI) -> bool:
-        """For a given ``object_type``, should the API object attempt to extend the results"""
-        return object_type in api.collection_item_map
+        response_reduced = api_mock.format_items_block(
+            url=response_items["href"],
+            items=response_items[api.items_key][:limit],
+            limit=limit,
+            total=response_items["total"]
+        )
 
-    @pytest.fixture
-    def key(self, object_type: ObjectType, extend: bool, api: SpotifyAPI) -> str:
-        """For a given ``object_type``, determine the key of its sub objects if ``extend`` is True. None otherwise."""
-        return api.collection_item_map[object_type].name.lower() + "s" if extend else None
+        # assert ranges are valid for test to work and test value generated correctly
+        assert 0 < len(response_reduced[api.items_key]) <= limit
+        assert response_reduced["total"] == response_items["total"]
+        assert response_reduced["total"] > response_reduced["limit"]
+        assert response_reduced["total"] > len(response_reduced[api.items_key])
+
+        response[key] = response_reduced
+        return limit
 
     ###########################################################################
     ## Assertions
     ###########################################################################
-    @staticmethod
-    def assert_similar(source: dict[str, Any], *test: dict[str, Any], key: str | None = None):
-        """Check ``source`` and ``test`` are the same, skip comparing on ``key`` for performance"""
-        expected = {k: v for k, v in source.items() if k != key}
-        for t in test:
-            assert {k: v for k, v in t.items() if k != key} == expected
 
     @staticmethod
-    def assert_differ(source: dict[str, Any], *test: dict[str, Any], key: str | None = None):
-        """Check ``source`` and ``test`` are different, skip comparing on ``key`` for performance"""
-        expected = {k: v for k, v in source.items() if k != key}
-        for t in test:
-            assert {k: v for k, v in t.items() if k != key} != expected
-
-    @staticmethod
-    def assert_params(requests: list[Request], params: dict[str, Any] | list[dict[str, Any]]):
-        """Check for expected ``params`` in the given ``requests``"""
-        for request in requests:
-            request_params = parse_qs(request.query)
-            if isinstance(params, list):
-                assert any(request_params[k][0] == param[k] for param in params for k in param)
-                continue
-
-            for k, v in params.items():
-                assert k in request_params
-                assert request_params[k][0] == params[k]
-
-    @staticmethod
-    def assert_item_types(results: list[dict[str, Any]], key: str, object_type: ObjectType | None = None):
+    def assert_item_types(results: list[dict[str, Any]], key: str, object_type: RemoteObjectType | None = None):
         """
         Assert all items are of the correct type by checking the result at key 'type' has value ``key``.
         Provide an ``object_type`` to apply object_type specific logic.
         """
         key = key.rstrip("s")
         for result in results:
-            if object_type == ObjectType.PLAYLIST:
+            if object_type == RemoteObjectType.PLAYLIST:
                 # playlist responses next items deeper under 'track' key
                 assert result[key]["type"] == key
             else:
@@ -100,7 +90,7 @@ class TestSpotifyAPIItems:
             results: list[dict[str, Any]],
             expected: dict[str, dict[str, Any]],
             test: dict[str, dict[str, Any]] | None = None,
-            object_type: ObjectType | None = None,
+            object_type: RemoteObjectType | None = None,
             key: str | None = None,
     ):
         """
@@ -128,19 +118,18 @@ class TestSpotifyAPIItems:
             # just check length of sub-items match and objet_types are correct
             # fully checking result == expected would take too long as responses are normally very large
 
-            similarity_test = [result]
-            if test:
-                assert len(test[result[self.id_key]][key]["items"]) == expect[key]["total"]
-                similarity_test.append(test[result[self.id_key]])
-
             assert len(result[key]["items"]) == expect[key]["total"]
             self.assert_item_types(results=result[key]["items"], object_type=object_type, key=key)
-            self.assert_similar(expect, result, *similarity_test, key=key)
+            self.assert_similar(expect, result, key)
+
+            if test:
+                assert len(test[result[self.id_key]][key]["items"]) == expect[key]["total"]
+                self.assert_similar(expect, test[result[self.id_key]], key)
 
     def assert_get_items_calls(
             self,
             responses: Collection[dict[str, Any]],
-            object_type: ObjectType,
+            object_type: RemoteObjectType,
             api: SpotifyAPI,
             api_mock: SpotifyMock,
             key: str | None = None,
@@ -150,11 +139,26 @@ class TestSpotifyAPIItems:
         url = f"{api.url}/{object_type.name.lower()}s"
         requests = api_mock.get_requests(url=url)
         for response in responses:
-            if limit is None or object_type in {ObjectType.USER, ObjectType.PLAYLIST}:
+            if limit is None or object_type in {RemoteObjectType.USER, RemoteObjectType.PLAYLIST}:
                 requests += api_mock.get_requests(url=f"{url}/{response[self.id_key]}")
             if key:
                 requests += api_mock.get_requests(url=f"{url}/{response[self.id_key]}/{key}")
         assert_calls(expected=responses, requests=requests, key=key, limit=limit, api_mock=api_mock)
+
+    @staticmethod
+    def assert_response_extended[T: RemoteResponse](actual: T, expected: T):
+        """
+        Check that a :py:class:`RemoteResponse` has been refreshed
+        by asserting that the items in its collection have been extended.
+        Ignores any RemoteResponse that is not also a :py:class:`MusifyCollection`
+        """
+        if not isinstance(actual, RemoteCollection):
+            return
+
+        if isinstance(actual, SpotifyPlaylist):
+            assert len(actual.tracks) == actual.track_total > len(expected.tracks)
+        elif isinstance(actual, SpotifyAlbum):
+            assert len(actual.tracks) == actual.track_total > len(expected.tracks)
 
     ###########################################################################
     ## Basic functionality
@@ -169,13 +173,14 @@ class TestSpotifyAPIItems:
     def test_get_items_batches_limited(self, api: SpotifyAPI, api_mock: SpotifyMock):
         api_mock.reset_mock()  # test checks the number of requests made
 
-        key = ObjectType.TRACK.name.lower() + "s"
+        key = RemoteObjectType.TRACK.name.lower() + "s"
         url = f"{api.url}/{key}"
         id_list = [track[self.id_key] for track in api_mock.tracks]
-        valid_limit = 30
+        valid_limit = randrange(api_mock.limit_lower + 1, api_mock.limit_upper - 1)
 
-        api._get_items_batched(url=url, id_list=sample(id_list, k=api_mock.limit_lower), key=key, limit=-30)
-        api._get_items_batched(url=url, id_list=id_list, key=key, limit=200)
+        id_list_reduced = sample(id_list, k=api_mock.limit_lower)
+        api._get_items_batched(url=url, id_list=id_list_reduced, key=key, limit=api_mock.limit_upper - 50)
+        api._get_items_batched(url=url, id_list=id_list, key=key, limit=api_mock.limit_upper + 50)
         api._get_items_batched(url=url, id_list=id_list, key=key, limit=valid_limit)
 
         for request in api_mock.get_requests(url=url):
@@ -187,18 +192,6 @@ class TestSpotifyAPIItems:
     ###########################################################################
     ## Input validation
     ###########################################################################
-    def test_get_items_input_validation(self, api: SpotifyAPI):
-        assert api.get_items(values=[]) == []
-
-        with pytest.raises(RemoteObjectTypeError):
-            api.get_items(values=random_ids(), kind=None)
-        with pytest.raises(RemoteObjectTypeError):
-            api.get_items(values=random_uri(kind=ObjectType.TRACK), kind=ObjectType.SHOW)
-        with pytest.raises(RemoteObjectTypeError):
-            api.get_items(values=random_api_url(kind=ObjectType.ARTIST), kind=ObjectType.PLAYLIST)
-        with pytest.raises(RemoteObjectTypeError):
-            api.get_items(values=random_ext_url(kind=ObjectType.CHAPTER), kind=ObjectType.AUDIOBOOK)
-
     def test_get_user_items_input_validation(self, api: SpotifyAPI):
         # raises error when invalid item type given
         for kind in set(ALL_ITEM_TYPES) - api.user_item_types:
@@ -206,7 +199,7 @@ class TestSpotifyAPIItems:
                 api.get_user_items(kind=kind)
 
         # may only get valid user item types that are not playlists from the currently authorised user
-        for kind in api.user_item_types - {ObjectType.PLAYLIST}:
+        for kind in api.user_item_types - {RemoteObjectType.PLAYLIST}:
             with pytest.raises(RemoteObjectTypeError):
                 api.get_user_items(user=random_str(1, RemoteIDType.ID.value - 1), kind=kind)
 
@@ -214,14 +207,14 @@ class TestSpotifyAPIItems:
         assert api.extend_tracks(values=random_ids(), features=False, analysis=False) == []
         assert api.extend_tracks(values=[], features=True, analysis=True) == []
 
-        value = api.wrangler.convert(random_id(), kind=ObjectType.ALBUM, type_in=IDType.ID, type_out=IDType.URL)
+        value = api.wrangler.convert(random_id(), kind=RemoteObjectType.ALBUM, type_in=IDType.ID, type_out=IDType.URL)
         with pytest.raises(RemoteObjectTypeError):
             api.extend_tracks(values=value, features=True)
 
     def test_get_artist_albums_input_validation(self, api: SpotifyAPI):
         assert api.get_artist_albums(values=[]) == {}
 
-        value = api.wrangler.convert(random_id(), kind=ObjectType.ALBUM, type_in=IDType.ID, type_out=IDType.URL)
+        value = api.wrangler.convert(random_id(), kind=RemoteObjectType.ALBUM, type_in=IDType.ID, type_out=IDType.URL)
         with pytest.raises(RemoteObjectTypeError):
             api.get_artist_albums(values=value)
 
@@ -233,7 +226,7 @@ class TestSpotifyAPIItems:
     ###########################################################################
     def test_get_item_multi(
             self,
-            object_type: ObjectType,
+            object_type: RemoteObjectType,
             responses: dict[str, dict[str, Any]],
             api: SpotifyAPI,
             api_mock: SpotifyMock
@@ -253,17 +246,17 @@ class TestSpotifyAPIItems:
         assert len(requests) == len(responses)
 
     @pytest.mark.parametrize("object_type", [
-        ObjectType.TRACK,
-        ObjectType.ALBUM,
-        ObjectType.ARTIST,
-        ObjectType.SHOW,
-        ObjectType.EPISODE,
-        ObjectType.AUDIOBOOK,
-        ObjectType.CHAPTER,
+        RemoteObjectType.TRACK,
+        RemoteObjectType.ALBUM,
+        RemoteObjectType.ARTIST,
+        RemoteObjectType.SHOW,
+        RemoteObjectType.EPISODE,
+        RemoteObjectType.AUDIOBOOK,
+        RemoteObjectType.CHAPTER,
     ], ids=idfn)
     def test_get_item_batched(
             self,
-            object_type: ObjectType,
+            object_type: RemoteObjectType,
             responses: dict[str, dict[str, Any]],
             api: SpotifyAPI,
             api_mock: SpotifyMock
@@ -286,34 +279,23 @@ class TestSpotifyAPIItems:
         assert len(requests) == len(id_params) < len(results)
         self.assert_params(requests=requests, params=id_params)
 
-    # TODO: add assertions/tests for RemoteResponses input
     @pytest.mark.parametrize("object_type", [
-        ObjectType.PLAYLIST, ObjectType.ALBUM,  ObjectType.SHOW, ObjectType.AUDIOBOOK,
+        RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM,  RemoteObjectType.SHOW, RemoteObjectType.AUDIOBOOK,
     ], ids=idfn)
     def test_extend_items(
             self,
-            object_type: ObjectType,
+            object_type: RemoteObjectType,
             response: dict[str, Any],
             key: str,
             api: SpotifyAPI,
             api_mock: SpotifyMock
     ):
-        response = response[key]
-        total = response["total"]
-        limit = get_limit(total, max_limit=min(len(response[api.items_key]) // 3, api_mock.limit_max), pages=3)
-        test = api_mock.format_items_block(
-            url=response["href"], items=response[api.items_key][:limit], limit=limit, total=total
-        )
-
-        # assert ranges are valid for test to work and test value generated correctly
-        assert len(response[api.items_key]) >= limit
-        assert 0 < len(test[api.items_key]) <= limit
-        assert response["total"] == test["total"]
-        assert test["total"] > test["limit"]
-        assert test["total"] > len(test[api.items_key])
+        total = response[key]["total"]
+        limit = self.reduce_items(response=response, key=key, api=api, api_mock=api_mock)
+        test = response[key]
 
         results = api.extend_items(response=test, key=api.collection_item_map.get(object_type, object_type))
-        requests = api_mock.get_requests(url=response["href"].split("?")[0])
+        requests = api_mock.get_requests(url=test["href"].split("?")[0])
 
         # assert extension to total
         assert len(results) == total
@@ -324,22 +306,44 @@ class TestSpotifyAPIItems:
         # appropriate number of requests made (minus 1 for initial input)
         assert len(requests) == api_mock.calculate_pages(limit=limit, total=total) - 1
 
+    @pytest.mark.parametrize("object_type", [
+        RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM,
+        # RemoteObjectType.SHOW, RemoteObjectType.AUDIOBOOK,  RemoteResponse types not yet implemented for these
+    ], ids=idfn)
+    def test_extend_items(
+            self,
+            object_type: RemoteObjectType,
+            response: dict[str, Any],
+            key: str,
+            api: SpotifyAPI,
+            api_mock: SpotifyMock,
+            object_factory: SpotifyObjectFactory,
+    ):
+        self.reduce_items(response=response, key=key, api=api, api_mock=api_mock)
+        original = object_factory[object_type](deepcopy(response), skip_checks=True)
+        test = object_factory[object_type](response, skip_checks=True)
+
+        api.extend_items(response=test, key=api.collection_item_map.get(object_type, object_type))
+        test.refresh()
+
+        self.assert_response_extended(actual=test, expected=original)
+
     ###########################################################################
     ## ``get_user_items``
     ###########################################################################
     @pytest.mark.parametrize("object_type,user", [
-        (ObjectType.PLAYLIST, False),
-        (ObjectType.PLAYLIST, True),
-        (ObjectType.TRACK, False),
-        (ObjectType.ALBUM, False),
-        (ObjectType.ARTIST, False),
-        (ObjectType.SHOW, False),
-        (ObjectType.EPISODE, False),
-        (ObjectType.AUDIOBOOK, False),
+        (RemoteObjectType.PLAYLIST, False),
+        (RemoteObjectType.PLAYLIST, True),
+        (RemoteObjectType.TRACK, False),
+        (RemoteObjectType.ALBUM, False),
+        (RemoteObjectType.ARTIST, False),
+        (RemoteObjectType.SHOW, False),
+        (RemoteObjectType.EPISODE, False),
+        (RemoteObjectType.AUDIOBOOK, False),
     ], ids=idfn)
     def test_get_user_items(
             self,
-            object_type: ObjectType,
+            object_type: RemoteObjectType,
             user: bool,
             api: SpotifyAPI,
             api_mock: SpotifyMock
@@ -348,9 +352,9 @@ class TestSpotifyAPIItems:
 
         test = None
         if user:
-            test = random_id_type(id_=api_mock.user_id, wrangler=api.wrangler, kind=ObjectType.USER)
+            test = random_id_type(id_=api_mock.user_id, wrangler=api.wrangler, kind=RemoteObjectType.USER)
             url = f"{api.url}/users/{api_mock.user_id}/{object_type.name.lower()}s"
-        elif object_type == ObjectType.ARTIST:
+        elif object_type == RemoteObjectType.ARTIST:
             url = f"{api.url}/me/following"
         else:
             url = f"{api.url}/me/{object_type.name.lower()}s"
@@ -360,7 +364,7 @@ class TestSpotifyAPIItems:
                 deepcopy(response)
             for response in api_mock.item_type_map_user[object_type]
         }
-        if object_type == ObjectType.PLAYLIST:  # ensure items block is reduced for playlist responses as expected
+        if object_type == RemoteObjectType.PLAYLIST:  # ensure items block is reduced for playlist responses as expected
             for response in responses.values():
                 response["tracks"] = {"href": response["tracks"]["href"], "total": response["tracks"]["total"]}
 
@@ -375,7 +379,7 @@ class TestSpotifyAPIItems:
         assert len(requests) == api_mock.calculate_pages(limit=limit, total=total)
 
         for result in results:  # check results are as expected
-            if object_type not in {ObjectType.PLAYLIST, ObjectType.ARTIST}:
+            if object_type not in {RemoteObjectType.PLAYLIST, RemoteObjectType.ARTIST}:
                 assert "added_at" in result
                 result = result[object_type.name.lower()]
                 assert result == responses[result[self.id_key]][object_type.name.lower()]
@@ -385,23 +389,21 @@ class TestSpotifyAPIItems:
     ###########################################################################
     ## ``get_items`` - tests
     ###########################################################################
-    # TODO: add assertions/tests for RemoteResponses input
-
     update_keys = {
-        ObjectType.PLAYLIST: {"description", "followers", "images", "public"},
-        ObjectType.TRACK: {"artists", "album"},
-        ObjectType.ALBUM: {"artists", "copyrights", "external_ids", "genres", "label", "popularity", "tracks"},
-        ObjectType.ARTIST: {"followers", "genres", "images", "popularity"},
-        ObjectType.USER: {"display_name", "followers", "images", "product"},
-        ObjectType.SHOW: {"copyrights", "images", "languages", "episodes"},
-        ObjectType.EPISODE: {"language", "images", "languages", "show"},
-        ObjectType.AUDIOBOOK: {"copyrights", "edition", "languages", "images", "chapters"},
-        ObjectType.CHAPTER: {"languages", "images", "chapters"},
+        RemoteObjectType.PLAYLIST: {"description", "followers", "images", "public"},
+        RemoteObjectType.TRACK: {"artists", "album"},
+        RemoteObjectType.ALBUM: {"artists", "copyrights", "external_ids", "genres", "label", "popularity", "tracks"},
+        RemoteObjectType.ARTIST: {"followers", "genres", "images", "popularity"},
+        RemoteObjectType.USER: {"display_name", "followers", "images", "product"},
+        RemoteObjectType.SHOW: {"copyrights", "images", "languages", "episodes"},
+        RemoteObjectType.EPISODE: {"language", "images", "languages", "show"},
+        RemoteObjectType.AUDIOBOOK: {"copyrights", "edition", "languages", "images", "chapters"},
+        RemoteObjectType.CHAPTER: {"languages", "images", "chapters"},
     }
 
     def test_get_items_single_string(
             self,
-            object_type: ObjectType,
+            object_type: RemoteObjectType,
             response: dict[str, Any],
             extend: bool,
             key: str,
@@ -426,7 +428,7 @@ class TestSpotifyAPIItems:
 
     def test_get_items_many_string(
             self,
-            object_type: ObjectType,
+            object_type: RemoteObjectType,
             responses: dict[str, dict[str, Any]],
             extend: bool,
             key: str,
@@ -434,7 +436,7 @@ class TestSpotifyAPIItems:
             api_mock: SpotifyMock
     ):
         limit = None
-        if object_type not in {ObjectType.PLAYLIST, ObjectType.USER}:
+        if object_type not in {RemoteObjectType.PLAYLIST, RemoteObjectType.USER}:
             limit = get_limit(responses, max_limit=api_mock.limit_max)
             assert len(responses) > limit
 
@@ -452,15 +454,13 @@ class TestSpotifyAPIItems:
 
     def test_get_items_single_mapping(
             self,
-            object_type: ObjectType,
+            object_type: RemoteObjectType,
             response: dict[str, Any],
-            extend: bool,
             key: str,
             api: SpotifyAPI,
-            api_mock: SpotifyMock
     ):
         test = {k: v for k, v in response.items() if k not in self.update_keys[object_type]}
-        self.assert_differ(response, test, key=key)
+        self.assert_different(response, test, key)
 
         results = api.get_items(values=test)
         self.assert_item_types(results=results, key=object_type.name.lower())
@@ -474,12 +474,10 @@ class TestSpotifyAPIItems:
 
     def test_get_items_many_mapping(
             self,
-            object_type: ObjectType,
+            object_type: RemoteObjectType,
             responses: dict[str, dict[str, Any]],
-            extend: bool,
             key: str,
             api: SpotifyAPI,
-            api_mock: SpotifyMock
     ):
         # test input maps are updated when API responses are given
         test = {
@@ -487,11 +485,90 @@ class TestSpotifyAPIItems:
             for id_, response in responses.items()
         }
         for response in responses.values():
-            self.assert_differ(response, test[response[self.id_key]], key=key)
+            self.assert_different(response, test[response[self.id_key]], key)
 
         results = api.get_items(values=test.values())
         self.assert_item_types(results=results, key=object_type.name.lower())
         self.assert_get_items_results(results=results, expected=responses, test=test, key=key, object_type=object_type)
+
+    @pytest.mark.parametrize("object_type", [
+        RemoteObjectType.TRACK, RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM,
+        # other RemoteResponse types not yet implemented/do not provide expected results
+    ], ids=idfn)
+    def test_get_items_single_response(
+            self,
+            object_type: RemoteObjectType,
+            response: dict[str, Any],
+            key: str,
+            api: SpotifyAPI,
+            api_mock: SpotifyMock,
+            object_factory: SpotifyObjectFactory,
+    ):
+        if object_type in api.collection_item_map:
+            self.reduce_items(response=response, key=key, api=api, api_mock=api_mock)
+
+        factory = object_factory[object_type]
+        original = factory(deepcopy(response), skip_checks=True)
+        test = factory({k: v for k, v in response.items() if k not in self.update_keys[object_type]}, skip_checks=True)
+        self.assert_different(original.response, test.response, key)
+
+        results = api.get_items(values=test)
+        self.assert_get_items_results(
+            results=results,
+            expected={original.id: original.response},
+            test={test.id: test.response},
+            key=key,
+            object_type=object_type
+        )
+        if object_type in api.collection_item_map:
+            self.assert_response_extended(actual=test, expected=original)
+
+    # noinspection PyTestUnpassedFixture
+    @pytest.mark.parametrize("object_type", [
+        RemoteObjectType.TRACK, RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM,
+        # other RemoteResponse types not yet implemented/do not provide expected results
+    ], ids=idfn)
+    def test_get_items_many_response(
+            self,
+            object_type: RemoteObjectType,
+            responses: dict[str, dict[str, Any]],
+            key: str,
+            api: SpotifyAPI,
+            api_mock: SpotifyMock,
+            object_factory: SpotifyObjectFactory,
+    ):
+        if object_type in api.collection_item_map:
+            valid_responses = {}
+            for id_, response in responses.items():
+                try:
+                    self.reduce_items(response=response, key=key, api=api, api_mock=api_mock)
+                    valid_responses[id_] = response
+                except AssertionError:  # filter out invalid collections i.e. those with too few items
+                    continue
+
+            responses = valid_responses
+            assert len(responses) > 3
+
+        factory = object_factory[object_type]
+        original = [factory(deepcopy(response), skip_checks=True) for response in responses.values()]
+        test = [
+            factory({k: v for k, v in response.items() if k not in self.update_keys[object_type]}, skip_checks=True)
+            for response in responses.values()
+        ]
+        for orig, ts in zip(original, test):
+            self.assert_different(orig.response, ts.response, key)
+
+        results = api.get_items(values=test)
+        self.assert_get_items_results(
+            results=results,
+            expected={response.id: response.response for response in original},
+            test={response.id: response.response for response in test},
+            key=key,
+            object_type=object_type
+        )
+        if object_type in api.collection_item_map:
+            for orig, ts in zip(original, test):
+                self.assert_response_extended(actual=ts, expected=orig)
 
     ###########################################################################
     ## ``extend_tracks`` tests
@@ -501,7 +578,7 @@ class TestSpotifyAPIItems:
         """Yield all audio features responses for the given ``responses`` as a pytest.fixture"""
         for response in responses:
             assert "audio_features" not in response
-        return {id_: deepcopy(api_mock.audio_features[id_]) for id_ in responses}
+        return {id_: deepcopy(api_mock.audio_features[id_]) for id_ in responses if id_ in api_mock.audio_features}
 
     @pytest.fixture
     def features(self, response: dict[str, Any], features_all: dict[str, dict[str, Any]]) -> dict[str, Any]:
@@ -514,7 +591,7 @@ class TestSpotifyAPIItems:
         """Yield all audio analyses responses for the given ``responses`` as a pytest.fixture"""
         for response in responses:
             assert "audio_analysis" not in response
-        return {id_: deepcopy(api_mock.audio_analysis[id_]) for id_ in responses}
+        return {id_: deepcopy(api_mock.audio_analysis[id_]) for id_ in responses if id_ in api_mock.audio_analysis}
 
     @pytest.fixture
     def analysis(self, response: dict[str, Any], analysis_all: dict[str, dict[str, Any]]) -> dict[str, Any]:
@@ -527,9 +604,9 @@ class TestSpotifyAPIItems:
             results: list[dict[str, Any]],
             test: dict[str, dict[str, Any]] | None = None,
             features: dict[str, dict[str, Any]] | None = None,
-            features_updated: bool = True,
+            features_in_results: bool = True,
             analysis: dict[str, dict[str, Any]] | None = None,
-            analysis_updated: bool = True,
+            analysis_in_results: bool = True,
     ):
         """
         Check the results contain the appropriate keys and values after running ``extend_tracks`` related methods.
@@ -540,7 +617,7 @@ class TestSpotifyAPIItems:
         for result in results:
             if features:
                 expected = features[result[self.id_key]]
-                if features_updated:
+                if features_in_results:
                     assert result["audio_features"] == expected
                 else:
                     assert "audio_features" not in result
@@ -555,7 +632,7 @@ class TestSpotifyAPIItems:
             if analysis:
                 expected = analysis[result[self.id_key]] | {self.id_key: result[self.id_key]}
                 assert result["audio_analysis"] == expected
-                if analysis_updated:
+                if analysis_in_results:
                     assert result["audio_analysis"] == expected
                 else:
                     assert "audio_analysis" not in result
@@ -591,11 +668,10 @@ class TestSpotifyAPIItems:
 
         assert len(api_mock.request_history) == len(list(batched(responses, limit))) + len(responses)
 
-    # TODO: add assertions/tests for RemoteResponses input
-    @pytest.mark.parametrize("object_type", [ObjectType.TRACK], ids=idfn)
+    @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
     def test_extend_tracks_single_string(
             self,
-            object_type: ObjectType,
+            object_type: RemoteObjectType,
             response: dict[str, Any],
             features: dict[str, Any],
             analysis: dict[str, Any],
@@ -603,7 +679,7 @@ class TestSpotifyAPIItems:
             api_mock: SpotifyMock
     ):
         results = api.extend_tracks(
-            values=random_id_type(id_=response[self.id_key], wrangler=api.wrangler, kind=ObjectType.TRACK),
+            values=random_id_type(id_=response[self.id_key], wrangler=api.wrangler, kind=RemoteObjectType.TRACK),
             features=True,
             analysis=True
         )
@@ -612,19 +688,37 @@ class TestSpotifyAPIItems:
         self.assert_extend_tracks_results(
             results=results, features={response[self.id_key]: features}, analysis={response[self.id_key]: analysis}
         )
-        self.assert_extend_tracks_calls(
-            responses=[response], features=True, analysis=True, api=api, api_mock=api_mock
-        )
+        self.assert_extend_tracks_calls(responses=[response], features=True, analysis=True, api=api, api_mock=api_mock)
 
         # just check that these don't fail
         api.extend_tracks(values=response["uri"])
         api.extend_tracks(values=response["href"])
         api.extend_tracks(values=response["external_urls"]["spotify"])
 
-    @pytest.mark.parametrize("object_type", [ObjectType.TRACK], ids=idfn)
+    @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
+    def test_extend_tracks_many_string(
+            self,
+            object_type: RemoteObjectType,
+            responses: dict[str, Any],
+            features_all: dict[str, dict[str, Any]],
+            analysis_all: dict[str, dict[str, Any]],
+            api: SpotifyAPI,
+            api_mock: SpotifyMock,
+    ):
+        limit = get_limit(responses, max_limit=api_mock.limit_max)
+        test = random_id_types(id_list=responses, wrangler=api.wrangler, kind=RemoteObjectType.TRACK)
+
+        results = api.extend_tracks(values=test, features=True, analysis=True, limit=limit)
+
+        self.assert_extend_tracks_results(results=results, features=features_all, analysis=analysis_all)
+        self.assert_extend_tracks_calls(
+            responses=responses.values(), features=True, analysis=True, api=api, api_mock=api_mock, limit=limit
+        )
+
+    @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
     def test_extend_tracks_single_mapping(
             self,
-            object_type: ObjectType,
+            object_type: RemoteObjectType,
             response: dict[str, Any],
             features: dict[str, Any],
             analysis: dict[str, Any],
@@ -640,35 +734,15 @@ class TestSpotifyAPIItems:
             results=results,
             test={response[self.id_key]: response},
             features={response[self.id_key]: features},
-            features_updated=False,
+            features_in_results=False,
             analysis={response[self.id_key]: analysis},
         )
 
-    @pytest.mark.parametrize("object_type", [ObjectType.TRACK], ids=idfn)
-    def test_extend_tracks_many_string(
-            self,
-            object_type: ObjectType,
-            responses: dict[str, Any],
-            features_all: dict[str, dict[str, Any]],
-            analysis_all: dict[str, dict[str, Any]],
-            api: SpotifyAPI,
-            api_mock: SpotifyMock,
-    ):
-        limit = get_limit(responses, max_limit=api_mock.limit_max)
-        test = random_id_types(id_list=responses, wrangler=api.wrangler, kind=ObjectType.TRACK)
-
-        results = api.extend_tracks(values=test, features=True, analysis=True, limit=limit)
-
-        self.assert_extend_tracks_results(results=results, features=features_all, analysis=analysis_all)
-        self.assert_extend_tracks_calls(
-            responses=responses.values(), features=True, analysis=True, api=api, api_mock=api_mock, limit=limit
-        )
-
     # noinspection PyTestUnpassedFixture
-    @pytest.mark.parametrize("object_type", [ObjectType.TRACK], ids=idfn)
+    @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
     def test_extend_tracks_many_mapping(
             self,
-            object_type: ObjectType,
+            object_type: RemoteObjectType,
             responses: dict[str, Any],
             features_all: dict[str, dict[str, Any]],
             analysis_all: dict[str, dict[str, Any]],
@@ -676,32 +750,102 @@ class TestSpotifyAPIItems:
             api_mock: SpotifyMock,
     ):
         results = api.extend_tracks(values=responses.values(), features=True, analysis=False)
-        self.assert_extend_tracks_results(results=results, test=responses, features=features_all,)
+        self.assert_extend_tracks_results(results=results, test=responses, features=features_all)
 
         results = api.extend_tracks(values=responses.values(), features=False, analysis=True)
         self.assert_extend_tracks_results(
-            results=results, test=responses, features=features_all, features_updated=False, analysis=analysis_all,
+            results=results, test=responses, features=features_all, features_in_results=False, analysis=analysis_all,
         )
 
-    # TODO: add assertions/tests for RemoteResponses input
-    @pytest.mark.parametrize("object_type", [ObjectType.TRACK], ids=idfn)
+    @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
+    def test_extend_tracks_single_response(
+            self,
+            object_type: RemoteObjectType,
+            response: dict[str, Any],
+            key: str,
+            features: dict[str, Any],
+            analysis: dict[str, Any],
+            api: SpotifyAPI,
+            api_mock: SpotifyMock,
+            object_factory: SpotifyObjectFactory,
+    ):
+        # noinspection PyTypeChecker
+        test: SpotifyTrack = object_factory[object_type](response, skip_checks=True)
+        assert test.bpm is None
+
+        results = api.extend_tracks(values=response, features=True, analysis=False)
+        self.assert_extend_tracks_results(results=results, test={test.id: test.response}, features={test.id: features})
+        assert test.bpm is not None
+
+        results = api.extend_tracks(values=response, features=False, analysis=True)
+        self.assert_extend_tracks_results(
+            results=results,
+            test={test.id: test.response},
+            features={test.id: features},
+            features_in_results=False,
+            analysis={test.id: analysis},
+        )
+        assert test.bpm is not None
+
+    # noinspection PyTestUnpassedFixture
+
+    @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
+    def test_extend_tracks_many_response(
+            self,
+            object_type: RemoteObjectType,
+            responses: dict[str, dict[str, Any]],
+            key: str,
+            features_all: dict[str, dict[str, Any]],
+            analysis_all: dict[str, dict[str, Any]],
+            api: SpotifyAPI,
+            api_mock: SpotifyMock,
+            object_factory: SpotifyObjectFactory,
+    ):
+        factory = object_factory[object_type]
+        # noinspection PyTypeChecker
+        test: list[SpotifyTrack] = [factory(response, skip_checks=True) for response in responses.values()]
+        for t in test:
+            assert t.bpm is None
+
+        results = api.extend_tracks(values=responses.values(), features=True, analysis=False)
+        self.assert_extend_tracks_results(results=results, test=responses, features=features_all)
+        for t in test:
+            assert t.bpm is not None
+
+        results = api.extend_tracks(values=responses.values(), features=False, analysis=True)
+        self.assert_extend_tracks_results(
+            results=results, test=responses, features=features_all, features_in_results=False, analysis=analysis_all,
+        )
+
+    @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
     def test_get_tracks(
             self,
-            object_type: ObjectType,
+            object_type: RemoteObjectType,
             response: dict[str, Any],
             api: SpotifyAPI,
             api_mock: SpotifyMock,
+            object_factory: SpotifyObjectFactory,
     ):
         results = api.get_tracks(
-            values=random_id_type(id_=response[self.id_key], wrangler=api.wrangler, kind=ObjectType.TRACK),
+            values=random_id_type(id_=response[self.id_key], wrangler=api.wrangler, kind=RemoteObjectType.TRACK),
             features=True,
             analysis=True
         )
-        assert {k: v for k, v in results[0].items() if k not in {"audio_features", "audio_analysis"}} == response
+        self.assert_similar(response, results[0], "audio_features", "audio_analysis")
         assert "audio_features" not in response
         assert "audio_analysis" not in response
 
-        results = api.get_tracks(values=response, features=True, analysis=True)
-        assert results[0] == response
+        test_response = deepcopy(response)
+        results = api.get_tracks(values=test_response, features=True, analysis=True)
+        assert results[0] == test_response
+        assert "audio_features" in test_response
+        assert "audio_analysis" in test_response
+
+        # noinspection PyTypeChecker
+        test_object: SpotifyTrack = object_factory[object_type](response, skip_checks=True)
+        assert test_object.bpm is None
+
+        api.get_tracks(values=response, features=True, analysis=True)
         assert "audio_features" in response
         assert "audio_analysis" in response
+        assert test_object.bpm is not None

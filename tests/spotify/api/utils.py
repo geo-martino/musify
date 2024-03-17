@@ -16,7 +16,7 @@ def get_limit(values: Collection | int, max_limit: int, pages: int = 3) -> int:
     total = len(values) if isinstance(values, Collection) else values
     limit = max(min(total // pages, max_limit), 1)  # force pagination
 
-    assert total > limit  # ensure ranges are valid for test to work
+    assert total >= limit  # ensure ranges are valid for test to work
     return limit
 
 

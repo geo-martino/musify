@@ -96,7 +96,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         # make these tags too long to query forcing them to return on results
         item.artist = 'b' * 200
         item.album = 'c' * 200
-        api_mock.reset_mock()
+        api_mock.reset_mock()  # test checks the number of requests made
 
         results = searcher._get_results(item=item, kind=RemoteObjectType.TRACK, settings=settings)
         requests = api_mock.get_requests(method="GET")
@@ -283,7 +283,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert len(result.skipped) == skip_album
 
         # check nothing happens on matched collections
-        api_mock.reset_mock()
+        api_mock.reset_mock()  # test checks the number of requests made
         search_matched = BasicCollection(name="test", items=search_items)
         assert len(searcher.search([search_matched, search_album])) == 0
         assert len(api_mock.request_history) == 0

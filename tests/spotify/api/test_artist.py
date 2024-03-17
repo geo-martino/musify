@@ -5,15 +5,18 @@ from typing import Any
 
 import pytest
 
-from musify.shared.remote.enum import RemoteObjectType as ObjectType
+from musify.shared.remote.enum import RemoteObjectType
 from musify.spotify.api import SpotifyAPI
 from musify.spotify.api.item import ARTIST_ALBUM_TYPES
+from musify.spotify.object import SpotifyArtist
 from tests.spotify.api.mock import SpotifyMock
 from tests.spotify.api.utils import assert_calls, get_limit
 from tests.spotify.utils import random_id_type, random_id_types
 
 
 class TestSpotifyAPIArtists:
+    """Tester for a subsection of artist-type endpoints of :py:class:`SpotifyAPI`"""
+
     @pytest.fixture
     def artist_album_types(self) -> tuple[str, ...]:
         """Yields the artist album types to get for a given artist as a pytest.fixture"""
@@ -36,6 +39,7 @@ class TestSpotifyAPIArtists:
                 and album["album_type"] in artist_album_types
             ]
 
+        api_mock.reset_mock()  # tests check the number of requests made
         artists_albums = {artist["id"]: get_artist_albums(artist["id"]) for artist in api_mock.artists}
         return {artist_id: deepcopy(albums) for artist_id, albums in artists_albums.items() if albums}
 
@@ -110,7 +114,7 @@ class TestSpotifyAPIArtists:
     ):
         limit = get_limit(artist_albums, api_mock.limit_max)
         results = api.get_artist_albums(
-            values=random_id_type(id_=artist["id"], wrangler=api.wrangler, kind=ObjectType.ARTIST),
+            values=random_id_type(id_=artist["id"], wrangler=api.wrangler, kind=RemoteObjectType.ARTIST),
             types=artist_album_types,
             limit=limit
         )
@@ -156,7 +160,7 @@ class TestSpotifyAPIArtists:
     ):
         limit = 50
         results = api.get_artist_albums(
-            values=random_id_types(id_list=artists, wrangler=api.wrangler, kind=ObjectType.ARTIST),
+            values=random_id_types(id_list=artists, wrangler=api.wrangler, kind=RemoteObjectType.ARTIST),
             types=artist_album_types,
             limit=limit,
         )
@@ -191,3 +195,33 @@ class TestSpotifyAPIArtists:
             limit=limit,
             update=True
         )
+
+    def test_artist_albums_single_response(
+            self,
+            artist_albums: list[dict[str, Any]],
+            artist: dict[str, Any],
+            artist_album_types: tuple[str, ...],
+            api: SpotifyAPI,
+            api_mock: SpotifyMock,
+    ):
+        test = SpotifyArtist(artist, skip_checks=True)
+        assert len(test.albums) < len(artist_albums)
+
+        api.get_artist_albums(values=test, types=artist_album_types)
+        assert len(test.albums) == len(artist_albums)
+
+    def test_artist_albums_many_response(
+            self,
+            artists_albums: dict[str, list[dict[str, Any]]],
+            artists: dict[str, dict[str, Any]],
+            artist_album_types: tuple[str, ...],
+            api: SpotifyAPI,
+            api_mock: SpotifyMock,
+    ):
+        test = [SpotifyArtist(artist, skip_checks=True) for artist in artists.values()]
+        for artist in test:
+            assert len(artist.albums) < len(artists_albums[artist.id])
+
+        api.get_artist_albums(values=test, types=artist_album_types)
+        for artist in test:
+            assert len(artist.albums) == len(artists_albums[artist.id])

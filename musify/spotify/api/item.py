@@ -151,6 +151,9 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
 
         Updates the value of the ``items`` key in-place by extending the value of the ``items`` key with new results.
 
+        If a :py:class:`RemoteResponse`, this function will not refresh itself with the new response.
+        The user must call `refresh` manually after execution.
+
         :param response: A remote API JSON response for an items type endpoint
             or a RemoteResponse which contains this response.
             Must include required keys:
@@ -236,6 +239,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         If JSON response(s) given, this update each response given by merging with the new response
         and replacing the ``items`` with the new results.
 
+        If :py:class:`RemoteResponse` values are given, this function will call `refresh` on them.
+
         :param values: The values representing some remote objects. See description for allowed value types.
             These items must all be of the same type of item i.e. all tracks OR all artists etc.
         :param kind: Item type if given string is ID.
@@ -249,7 +254,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             of the input ``values``. Or when it does not recognise the type of the input ``values`` parameter.
         """
         # input validation
-        if not values:  # skip on empty
+        if not isinstance(values, RemoteResponse) and not values:  # skip on empty
             url = f"{self.url}/{kind.name.lower() + "s"}" if kind else self.url
             self.logger.debug(f"{'SKIP':<7}: {url:<43} | No data given")
             return []
@@ -273,6 +278,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         key_name = key.name.lower() + "s"
         if len(results) == 0 or any(key_name not in result for result in results) or not extend:
             self._merge_results_to_input(original=values, responses=results, ordered=True)
+            self._refresh_responses(responses=values, skip_checks=False)
             self.logger.debug(f"{'DONE':<7}: {url:<43} | Retrieved {len(results):>6} {unit}")
             return results
 
@@ -285,6 +291,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
                 self.extend_items(result[key_name], kind=kind, key=key, use_cache=use_cache, leave_bar=False)
 
         self._merge_results_to_input(original=values, responses=results, ordered=True)
+        self._refresh_responses(responses=values, skip_checks=False)
 
         item_count = sum(len(result[key_name][self.items_key]) for result in results)
         self.logger.debug(
@@ -369,6 +376,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         If JSON response(s) given, this updates each response given by adding the results
         under the ``audio_features`` and ``audio_analysis`` keys as appropriate.
 
+        If :py:class:`RemoteResponse` values are given, this function will call `refresh` on them.
+
         :param values: The values representing some remote track/s. See description for allowed value types.
         :param features: When True, get audio features.
         :param analysis: When True, get audio analysis.
@@ -421,6 +430,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
                     results = [result | response for result, response in zip(results, responses)]
 
         self._merge_results_to_input(original=values, responses=results, ordered=False, clear=False)
+        self._refresh_responses(responses=values, skip_checks=False)
 
         def map_key(value: str) -> str:
             """Map the given ``value`` to logging appropriate string"""
@@ -505,6 +515,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
 
         If JSON response(s) given, this updates each response given by adding the results under the ``albums`` key.
 
+        If :py:class:`RemoteResponse` values are given, this function will call `refresh` on them.
+
         :param values: The values representing some remote artist/s. See description for allowed value types.
         :param types: The types of albums to return. Select from ``{"album", "single", "compilation", "appears_on"}``.
         :param limit: Size of batches to request.
@@ -516,7 +528,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         url = f"{self.url}/artists/{{id}}/albums"
 
         # input validation
-        if not values:  # skip on empty
+        if not isinstance(values, RemoteResponse) and not values:  # skip on empty
             self.logger.debug(f"{'SKIP':<7}: {url:<43} | No data given")
             return {}
 
@@ -549,6 +561,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
 
         results_remapped = [{"id": id_, "albums": result} for id_, result in results.items()]
         self._merge_results_to_input(original=values, responses=results_remapped, ordered=False, clear=False)
+        self._refresh_responses(responses=values, skip_checks=True)
 
         item_count = sum(len(result) for result in results.values())
         self.logger.debug(

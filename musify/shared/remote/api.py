@@ -42,6 +42,7 @@ class RemoteAPI(ABC):
     user_item_types = (
             set(collection_item_map) | {RemoteObjectType.TRACK, RemoteObjectType.ARTIST, RemoteObjectType.EPISODE}
     )
+    #: The key to use when getting an ID from a response
     id_key = "id"
 
     @property
@@ -75,9 +76,10 @@ class RemoteAPI(ABC):
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
 
-        handler_kwargs = {k: v for k, v in handler_kwargs.items() if k != "name"}
         #: The :py:class:`RequestHandler` for handling authorised requests to the API
-        self.handler = RequestHandler(name=self.wrangler.source, **handler_kwargs)
+        self.handler = RequestHandler(
+            name=self.wrangler.source, **{k: v for k, v in handler_kwargs.items() if k != "name"}
+        )
         #: Stores the loaded user data for the currently authorised user
         self.user_data: dict[str, Any] = {}
 
@@ -134,12 +136,13 @@ class RemoteAPI(ABC):
         if isinstance(original, str) or not isinstance(original, Collection | RemoteResponse):
             return
 
-        if not isinstance(original, Sequence):
+        if isinstance(original, RemoteResponse):
+            original = [original]
+        elif not isinstance(original, Sequence):
             original = to_collection(original)
         if not isinstance(responses, Sequence):
             responses = to_collection(responses, list)
 
-        original_remote = [item for item in original if isinstance(item, RemoteResponse)]
         original = [item.response if isinstance(item, RemoteResponse) else item for item in original]
 
         valid_types_input = all(isinstance(item, MutableMapping) for item in original)
@@ -170,9 +173,14 @@ class RemoteAPI(ABC):
         for item, response in zip(original, responses):
             self._merge_results_to_input_mapping(original=item, response=response, clear=clear)
 
-        # refresh input remote responses
-        for item in original_remote:
-            item.refresh()
+    @staticmethod
+    def _refresh_responses(responses: Any, skip_checks: bool = False) -> None:
+        if isinstance(responses, RemoteResponse):
+            responses = [responses]
+
+        for response in responses:
+            if isinstance(response, RemoteResponse):
+                response.refresh(skip_checks=skip_checks)
 
     def print_item(
             self, i: int, name: str, uri: str, length: float = 0, total: int = 1, max_width: int = 50
@@ -281,6 +289,9 @@ class RemoteAPI(ABC):
 
         Updates the value of the ``items`` key in-place by extending the value of the ``items`` key with new results.
 
+        If a :py:class:`RemoteResponse`, this function will not refresh itself with the new response.
+        The user must call `refresh` manually after execution.
+
         :param response: A remote API JSON response for an items type endpoint.
         :param kind: The type of response being extended. Optional, used only for logging.
         :param key: The type of response of the child objects.
@@ -310,7 +321,9 @@ class RemoteAPI(ABC):
               as described above.
             * A Sequence of RemoteResponses as above.
 
-        If JSON response(s) given, this update each response given by merging with the new response.
+        If JSON response(s) given, this updates each response given by merging with the new response.
+
+        If :py:class:`RemoteResponse` values are given, this function will call `refresh` on them.
 
         :param values: The values representing some remote objects. See description for allowed value types.
             These items must all be of the same type of item i.e. all tracks OR all artists etc.

@@ -21,7 +21,9 @@ from musify.shared.types import UnitSequence
 
 
 @dataclass
-class ItemGetter(ABC):
+class ItemGetterStrategy(ABC):
+    """Abstract base class for strategies relating to __getitem__ operations on a :py:class:`MusifyCollection`"""
+
     key: str
 
     @property
@@ -36,6 +38,7 @@ class ItemGetter(ABC):
         raise NotImplementedError
 
     def get_item[T](self, collection: MusifyCollection[T]) -> T:
+        """Run this strategy and return the matched item from the given ``collection``"""
         try:
             return next(item for item in collection.items if str(self.get_value_from_item(item)) == self.key)
         except AttributeError:
@@ -44,7 +47,8 @@ class ItemGetter(ABC):
             raise MusifyKeyError(f"No matching item found for {self.name}: {self.key}")
 
 
-class NameGetter(ItemGetter):
+class NameGetter(ItemGetterStrategy):
+    """Get an item via its name for a :py:class:`MusifyCollection`"""
     def name(self) -> str:
         return "name"
 
@@ -52,7 +56,8 @@ class NameGetter(ItemGetter):
         return item.name
 
 
-class PathGetter(ItemGetter):
+class PathGetter(ItemGetterStrategy):
+    """Get an item via its path for a :py:class:`MusifyCollection`"""
     def name(self) -> str:
         return "path"
 
@@ -60,7 +65,8 @@ class PathGetter(ItemGetter):
         return item.path
 
 
-class RemoteIDGetter(ItemGetter):
+class RemoteIDGetter(ItemGetterStrategy):
+    """Get an item via its remote ID for a :py:class:`MusifyCollection`"""
     def name(self) -> str:
         return "remote ID"
 
@@ -68,7 +74,8 @@ class RemoteIDGetter(ItemGetter):
         return item.id
 
 
-class RemoteURIGetter(ItemGetter):
+class RemoteURIGetter(ItemGetterStrategy):
+    """Get an item via its remote URI for a :py:class:`MusifyCollection`"""
     def name(self) -> str:
         return "URI"
 
@@ -76,7 +83,8 @@ class RemoteURIGetter(ItemGetter):
         return item.uri
 
 
-class RemoteURLAPIGetter(ItemGetter):
+class RemoteURLAPIGetter(ItemGetterStrategy):
+    """Get an item via its remote API URL for a :py:class:`MusifyCollection`"""
     def name(self) -> str:
         return "API URL"
 
@@ -84,7 +92,8 @@ class RemoteURLAPIGetter(ItemGetter):
         return item.url
 
 
-class RemoteURLEXTGetter(ItemGetter):
+class RemoteURLEXTGetter(ItemGetterStrategy):
+    """Get an item via its remote external URL for a :py:class:`MusifyCollection`"""
     def name(self) -> str:
         return "external URL"
 

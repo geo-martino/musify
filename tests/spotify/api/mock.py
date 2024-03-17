@@ -87,7 +87,9 @@ class SpotifyMock(RemoteMock):
         self.audio_features = {
             t["id"]: self.generate_audio_features(track_id=t["id"], duration_ms=get_duration(t)) for t in self.tracks
         }
-        self.audio_analysis = {t["id"]: {"track": {"duration": get_duration(t) / 1000}} for t in self.tracks}
+        self.audio_analysis = {
+            t["id"]: self.generate_audio_analysis(duration_ms=get_duration(t)) for t in self.tracks
+        }
 
         self.artists = [self.generate_artist() for _ in range(randrange(self.range_start, self.range_stop))]
         self.users = [self.generate_user() for _ in range(randrange(self.range_start, self.range_stop))]
@@ -138,10 +140,10 @@ class SpotifyMock(RemoteMock):
         self.setup_specific_conditions_user()
         self.setup_requests_mock()
 
-        track_uris = {track["uri"] for track in self.tracks}
+        track_ids = {track["id"] for track in self.tracks}
         for album in self.albums:
             for track in album["tracks"]["items"]:
-                assert track["uri"] in track_uris
+                assert track["id"] in track_ids
 
     ###########################################################################
     ## Setup - cross-reference
@@ -566,7 +568,7 @@ class SpotifyMock(RemoteMock):
     @staticmethod
     def generate_audio_features(track_id: str | None = None, duration_ms: int | None = None) -> dict[str, Any]:
         """
-        Return a randomly generated Spotify API response for an Album's tracks.
+        Return a randomly generated Spotify API response for a Track's audio features.
 
         :param track_id: The Track ID to use in the response. Will randomly generate if not given.
         :param duration_ms: The duration of the track in ms to use in the response. Will randomly generate if not given.
@@ -596,6 +598,16 @@ class SpotifyMock(RemoteMock):
             "uri": f"{SpotifyDataWrangler.source.lower()}:{kind}:{track_id}",
             "valence": random()
         }
+
+    @staticmethod
+    def generate_audio_analysis(duration_ms: int | None = None) -> dict[str, Any]:
+        """
+        Return a randomly generated Spotify API response for a Track's audio features.
+
+        :param duration_ms: The duration of the track in ms to use in the response. Will randomly generate if not given.
+        """
+        duration_ms = duration_ms or randrange(int(10e4), int(6*10e5))  # 1 second to 10 minutes range
+        return {"track": {"duration": duration_ms / 1000}}
 
     ###########################################################################
     ## Generators - ARTIST

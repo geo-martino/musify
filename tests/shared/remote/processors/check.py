@@ -59,7 +59,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         checker._playlist_name_urls = {collection.name: url}
         checker._playlist_name_collection = {collection.name: collection}
 
-        api_mock.reset_mock()
+        api_mock.reset_mock()  # tests check the number of requests made
         return pl, collection
 
     ###########################################################################
@@ -570,7 +570,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         # initially skip at pause, then mark all items in all processed collections in the first batch as unavailable
         patch_input(["s", *["ua" for _ in batch]], mocker=mocker)
 
-        api_mock.reset_mock()
+        api_mock.reset_mock()  # test checks the number of requests made
         result = checker.check(collections)
         mocker.stopall()
 

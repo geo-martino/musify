@@ -5,17 +5,16 @@ Implements a :py:class:`RemoteLibrary` for Spotify.
 from collections.abc import Collection, Mapping, Iterable
 from typing import Any
 
-from musify.processors.base import Filter
 from musify.shared.core.object import Playlist, Library
 from musify.shared.remote.enum import RemoteObjectType
 from musify.shared.remote.library import RemoteLibrary
 from musify.shared.remote.object import RemoteTrack
 from musify.spotify.api import SpotifyAPI
 from musify.spotify.factory import SpotifyObjectFactory
-from musify.spotify.object import SpotifyTrack
+from musify.spotify.object import SpotifyTrack, SpotifyAlbum, SpotifyArtist, SpotifyPlaylist
 
 
-class SpotifyLibrary(RemoteLibrary):
+class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, SpotifyAlbum, SpotifyArtist]):
     """
     Represents a Spotify library. Provides various methods for manipulating
     tracks and playlists across an entire Spotify library collection.
@@ -28,14 +27,8 @@ class SpotifyLibrary(RemoteLibrary):
             return all(isinstance(item, SpotifyTrack) for item in items)
         return isinstance(items, SpotifyTrack)
 
-    def __init__(
-            self,
-            api: SpotifyAPI,
-            use_cache: bool = True,
-            playlist_filter: Collection[str] | Filter[str] = (),
-    ):
-        object_factory = SpotifyObjectFactory(api=api)
-        super().__init__(object_factory=object_factory, use_cache=use_cache, playlist_filter=playlist_filter)
+    def _create_factory(self, api: SpotifyAPI) -> SpotifyObjectFactory:
+        return SpotifyObjectFactory(api=api)
 
     def _filter_playlists(self, responses: list[dict[str, Any]]) -> list[dict[str, Any]]:
         pl_total = len(responses)
@@ -72,8 +65,8 @@ class SpotifyLibrary(RemoteLibrary):
             f"\33[1;95m  >\33[1;97m Enriching {len(self.tracks)} {self.api.source} tracks \33[0m"
         )
 
-        responses = [track.response for track in self.tracks if track.has_uri]
-        self.api.extend_tracks(responses, features=features, analysis=analysis, use_cache=self.use_cache)
+        tracks = [track for track in self.tracks if track.has_uri]
+        self.api.extend_tracks(tracks, features=features, analysis=analysis, use_cache=self.use_cache)
 
         # enrich on list of URIs to avoid duplicate calls for same items
         if albums:
@@ -99,7 +92,7 @@ class SpotifyLibrary(RemoteLibrary):
                 track.response["artists"] = [artists[artist["uri"]] for artist in track.response["artists"]]
 
         for track in self.tracks:
-            track.refresh(skip_checks=False)  # tracks are popped from albums so checks will skip by default
+            track.refresh(skip_checks=False)  # tracks are popped from albums so checks should skip by default anyway
 
         self.logger.debug(f"Enrich {self.api.source} tracks: DONE\n")
 
@@ -114,12 +107,10 @@ class SpotifyLibrary(RemoteLibrary):
 
         kind = RemoteObjectType.ALBUM
         key = self.api.collection_item_map[kind]
-        responses = [album.response for album in self.albums]
-        for response in responses:
-            self.api.extend_items(response, kind=kind, key=key, use_cache=self.use_cache)
 
         for album in self.albums:
-            album.refresh(skip_checks=False)  # tracks are extended so checks should pass
+            self.api.extend_items(album, kind=kind, key=key, use_cache=self.use_cache)
+            album.refresh(skip_checks=False)
 
             for track in album.tracks:  # add tracks from this album to the user's saved tracks
                 if track not in self.tracks:
@@ -142,24 +133,17 @@ class SpotifyLibrary(RemoteLibrary):
             f"\33[1;95m  >\33[1;97m Enriching {len(self.artists)} {self.api.source} artists \33[0m"
         )
 
-        responses = [artist.response for artist in self.artists]
-        self.api.get_artist_albums(responses, types=types, use_cache=self.use_cache)
-
-        for artist in self.artists:
-            artist.refresh(skip_checks=True)  # album tracks extended in next step if required
+        self.api.get_artist_albums(self.artists, types=types, use_cache=self.use_cache)
 
         if tracks:
             kind = RemoteObjectType.ALBUM
             key = self.api.collection_item_map[kind]
 
-            responses_albums = [album.response for artist in self.artists for album in artist.albums]
+            responses_albums = [album for artist in self.artists for album in artist.albums]
             bar = self.logger.get_progress_bar(iterable=responses_albums, desc="Getting album tracks", unit="albums")
             for album in bar:
                 self.api.extend_items(album, kind=kind, key=key, use_cache=self.use_cache)
-
-            for artist in self.artists:
-                for album in artist.albums:
-                    album.refresh(skip_checks=False)
+                album.refresh(skip_checks=False)
 
         self.logger.debug(f"Enrich {self.api.source} artists: DONE\n")
 
