@@ -15,7 +15,7 @@ from musify.shared.remote.object import RemoteCollection
 from musify.spotify.api import SpotifyAPI
 from musify.spotify.factory import SpotifyObjectFactory
 from musify.spotify.object import SpotifyPlaylist, SpotifyAlbum, SpotifyTrack
-from shared.remote.api import RemoteAPITester
+from tests.shared.remote.api import RemoteAPITester
 from tests.shared.remote.utils import ALL_ITEM_TYPES
 from tests.spotify.api.mock import SpotifyMock
 from tests.spotify.api.utils import get_limit, assert_calls
