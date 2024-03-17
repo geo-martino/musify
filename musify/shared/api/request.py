@@ -58,7 +58,7 @@ class RequestHandler(APIAuthoriser):
         super().__init__(**auth_kwargs)
 
         #: The :py:class:`Session` or :py:class:`CachedSession` object
-        self.session: CachedSession | Session | None = None
+        self.session: CachedSession | Session
         if cache_path:
             self.logger.debug(f"Setting up requests cache: {cache_path}")
             self.session = CachedSession(cache_path, expire_after=cache_expiry, allowable_methods=["GET"])
