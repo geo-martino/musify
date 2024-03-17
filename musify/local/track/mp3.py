@@ -11,10 +11,10 @@ import mutagen.id3
 import mutagen.mp3
 from PIL import Image
 
-from musify.local.track.track import LocalTrack
 from musify.local.track.field import LocalTrackField
 from musify.local.track.tags.reader import TagReader
 from musify.local.track.tags.writer import TagWriter
+from musify.local.track.track import LocalTrack
 from musify.shared.core.enum import TagMap
 from musify.shared.image import open_image, get_image_bytes
 

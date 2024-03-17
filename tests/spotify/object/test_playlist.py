@@ -14,9 +14,9 @@ from musify.spotify.api import SpotifyAPI
 from musify.spotify.exception import SpotifyCollectionError
 from musify.spotify.object import SpotifyPlaylist
 from musify.spotify.object import SpotifyTrack
-from spotify.object.testers import SpotifyCollectionLoaderTester
 from tests.shared.remote.object import RemotePlaylistTester
 from tests.spotify.api.mock import SpotifyMock
+from tests.spotify.object.testers import SpotifyCollectionLoaderTester
 from tests.spotify.utils import random_uri, assert_id_attributes
 
 

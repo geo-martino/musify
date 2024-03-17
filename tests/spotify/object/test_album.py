@@ -14,9 +14,9 @@ from musify.spotify.api import SpotifyAPI
 from musify.spotify.object import SpotifyAlbum, SpotifyArtist
 from musify.spotify.object import SpotifyTrack
 from musify.spotify.processors import SpotifyDataWrangler
-from spotify.object.testers import SpotifyCollectionLoaderTester
 from tests.shared.remote.object import RemoteCollectionTester
 from tests.spotify.api.mock import SpotifyMock
+from tests.spotify.object.testers import SpotifyCollectionLoaderTester
 from tests.spotify.utils import assert_id_attributes
 
 
