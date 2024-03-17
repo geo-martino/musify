@@ -4,15 +4,14 @@ All operations relating to handling of requests to an API.
 
 import json
 from collections.abc import Mapping, Iterable
-from datetime import datetime as dt
-from datetime import timedelta
+from datetime import datetime, timedelta
 from http import HTTPStatus
 from time import sleep
 from typing import Any
 
 import requests
 from requests import Response, Session
-from requests_cache import CachedSession
+from requests_cache import CachedSession, ExpirationTime
 
 from musify.shared.api.authorise import APIAuthoriser
 from musify.shared.api.exception import APIError
@@ -55,7 +54,7 @@ class RequestHandler(APIAuthoriser):
         """
         return sum(self.backoff_start * self.backoff_factor ** i for i in range(self.backoff_count + 1))
 
-    def __init__(self, cache_path: str | None = None, cache_expiry=timedelta(weeks=4), **auth_kwargs):
+    def __init__(self, cache_path: str | None = None, cache_expiry: ExpirationTime = timedelta(weeks=4), **auth_kwargs):
         super().__init__(**auth_kwargs)
 
         #: The :py:class:`Session` or :py:class:`CachedSession` object
@@ -178,7 +177,7 @@ class RequestHandler(APIAuthoriser):
             return False
 
         wait_time = int(response.headers["retry-after"])
-        wait_str = (dt.now() + timedelta(seconds=wait_time)).strftime("%Y-%m-%d %H:%M:%S")
+        wait_str = (datetime.now() + timedelta(seconds=wait_time)).strftime("%Y-%m-%d %H:%M:%S")
         self.logger.info(f"\33[91mRate limit exceeded. Retrying again at {wait_str}\33[0m")
 
         if wait_time > self.timeout:  # exception if too long
@@ -239,3 +238,10 @@ class RequestHandler(APIAuthoriser):
     def __deepcopy__(self, _: dict = None):
         """Do not copy handler"""
         return self
+
+    def __enter__(self):
+        self.authorise()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()

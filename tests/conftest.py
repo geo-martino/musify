@@ -289,7 +289,8 @@ def spotify_api(spotify_mock: SpotifyMock) -> SpotifyAPI:
     token = {"access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"}
     api = SpotifyAPI(cache_path=None)
     api.handler = RequestHandler(name=api.source, token=token, cache_path=None)
-    return api
+    with api as a:
+        yield a
 
 
 @pytest.fixture(scope="session")

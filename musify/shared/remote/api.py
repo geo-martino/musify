@@ -80,6 +80,7 @@ class RemoteAPI(ABC):
         self.handler = RequestHandler(
             name=self.wrangler.source, **{k: v for k, v in handler_kwargs.items() if k != "name"}
         )
+
         #: Stores the loaded user data for the currently authorised user
         self.user_data: dict[str, Any] = {}
 
@@ -454,3 +455,10 @@ class RemoteAPI(ABC):
             are not all tracks or IDs.
         """
         raise NotImplementedError
+
+    def __enter__(self):
+        self.authorise()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
