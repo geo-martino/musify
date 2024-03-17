@@ -46,7 +46,7 @@ Changed
 * :py:meth:`.LocalLibrary.load_tracks` and :py:meth:`.LocalLibrary.load_playlists` now run concurrently.
 * Made :py:func:`.load_tracks` and :py:func:`.load_playlists` utility functions more DRY
 * Move :py:meth:`.TagReader.load` from :py:class:`.LocalTrack` to super class :py:class:`.TagReader`
-* Major refactoring to local and remote modules to add composition
+* Major refactoring and restructuring to local and remote modules to add composition
 
 0.8.1
 =====
