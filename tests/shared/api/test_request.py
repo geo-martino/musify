@@ -41,9 +41,7 @@ class TestRequestHandler:
 
         cache_path = join(tmp_path, "test")
         cache_expiry = timedelta(days=6)
-        request_handler = RequestHandler(
-            name="test", token=token, cache_expiry=cache_expiry, cache_path=cache_path
-        )
+        request_handler = RequestHandler(name="test", token=token, cache_expiry=cache_expiry, cache_path=cache_path)
         assert isinstance(request_handler.session, CachedSession)
         assert request_handler.token == token
         assert request_handler.session.cache.cache_name == cache_path
