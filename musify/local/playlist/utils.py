@@ -8,12 +8,12 @@ and a utility function for loading the appropriate :py:class:`LocalPlaylist` typ
 from collections.abc import Collection
 from os.path import splitext
 
-from musify.local.exception import InvalidFileType
-from musify.local.file import PathMapper
 from musify.local.playlist.base import LocalPlaylist
 from musify.local.playlist.m3u import M3U
 from musify.local.playlist.xautopf import XAutoPF
 from musify.local.track import LocalTrack
+from musify.shared.exception import InvalidFileType
+from musify.shared.file import PathMapper
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
 
 PLAYLIST_CLASSES = frozenset({M3U, XAutoPF})

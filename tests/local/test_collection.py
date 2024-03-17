@@ -35,7 +35,7 @@ class TestLocalFolder(LocalCollectionTester):
         tracks = random_tracks(10)
 
         for i, track in enumerate(tracks[:7]):
-            track.file.filename = f"/test/{self.name}/{random_str(30, 50)}{track.ext}"
+            track._reader.file.filename = f"/test/{self.name}/{random_str(30, 50)}{track.ext}"
             track.compilation = i > 2
 
             if i % 2 == 0:
@@ -65,7 +65,6 @@ class TestLocalFolder(LocalCollectionTester):
         genres = {genre for track in tracks_filtered if track.genres for genre in track.genres}
         assert sorted(folder.genres) == sorted(genres)
         assert folder.compilation
-        assert folder.track_paths == {track.path for track in tracks_filtered}
 
         assert folder.last_added == sorted(tracks_filtered, key=lambda t: t.date_added, reverse=True)[0].date_added
         assert folder.last_played == sorted(tracks_filtered, key=lambda t: t.last_played, reverse=True)[0].last_played
@@ -139,7 +138,6 @@ class TestLocalAlbum(LocalCollectionTester):
             assert album.rating == sum(ratings) / len(ratings)
         else:
             assert album.rating is None
-        assert album.track_paths == {track.path for track in tracks_filtered}
 
         assert album.last_added == sorted(tracks_filtered, key=lambda t: t.date_added, reverse=True)[0].date_added
         assert album.last_played == sorted(tracks_filtered, key=lambda t: t.last_played, reverse=True)[0].last_played
@@ -202,7 +200,6 @@ class TestLocalArtist(LocalCollectionTester):
             assert artist.rating == sum(ratings) / len(ratings)
         else:
             assert artist.rating is None
-        assert artist.track_paths == {track.path for track in tracks_filtered}
 
         assert artist.last_added == sorted(tracks_filtered, key=lambda t: t.date_added, reverse=True)[0].date_added
         assert artist.last_played == sorted(tracks_filtered, key=lambda t: t.last_played, reverse=True)[0].last_played
@@ -265,7 +262,6 @@ class TestLocalGenres(LocalCollectionTester):
         assert genre.track_total == len(genre.tracks)
         genres = {genre for track in tracks_filtered if track.genres for genre in track.genres}
         assert sorted(genre.genres) == sorted(genres)
-        assert genre.track_paths == {track.path for track in tracks_filtered}
 
         assert genre.last_added == sorted(tracks_filtered, key=lambda t: t.date_added, reverse=True)[0].date_added
         assert genre.last_played == sorted(tracks_filtered, key=lambda t: t.last_played, reverse=True)[0].last_played

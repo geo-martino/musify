@@ -12,7 +12,7 @@ from typing import Any, Self
 from musify.processors.base import DynamicProcessor, MusicBeeProcessor, dynamicprocessormethod
 from musify.processors.exception import ComparerError
 from musify.processors.time import TimeMapper
-from musify.shared.core.base import Item
+from musify.shared.core.base import MusifyItem
 from musify.shared.core.enum import Field
 from musify.shared.exception import FieldError
 from musify.shared.field import Fields
@@ -139,7 +139,7 @@ class Comparer(MusicBeeProcessor, DynamicProcessor):
             raise ComparerError("No comparative item given and no expected values set")
 
         tag_name = None
-        if self.field and isinstance(item, Item):
+        if self.field and isinstance(item, MusifyItem):
             tag_name = self.field.name.lower()
             actual = item[tag_name]
         else:

@@ -14,9 +14,9 @@ from musify.spotify.api import SpotifyAPI
 from musify.spotify.exception import SpotifyCollectionError
 from musify.spotify.object import SpotifyPlaylist
 from musify.spotify.object import SpotifyTrack
+from spotify.object.testers import SpotifyCollectionLoaderTester
 from tests.shared.remote.object import RemotePlaylistTester
 from tests.spotify.api.mock import SpotifyMock
-from tests.spotify.testers import SpotifyCollectionLoaderTester
 from tests.spotify.utils import random_uri, assert_id_attributes
 
 
@@ -46,9 +46,9 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
             deepcopy(pl) for pl in api_mock.user_playlists
             if pl["tracks"]["total"] > 50 and len(pl["tracks"]["items"]) > 10
         )
-        api.extend_items(items_block=response, key=RemoteObjectType.TRACK)
+        api.extend_items(response=response, key=RemoteObjectType.TRACK)
 
-        api_mock.reset_mock()
+        api_mock.reset_mock()  # tests check the number of requests made
         return response
 
     @pytest.fixture
@@ -221,7 +221,7 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
         name = "new playlist"
         pl = SpotifyPlaylist.create(api=api, name="new playlist", public=False, collaborative=True)
 
-        url = f"{api.api_url_base}/users/{api_mock.user_id}/playlists"
+        url = f"{api.url}/users/{api_mock.user_id}/playlists"
         body = api_mock.get_requests(url=url, response={"name": name})[0].json()
 
         assert body["name"] == name
@@ -239,7 +239,7 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
 
         names = [pl["name"] for pl in api_mock.user_playlists]
         response = next(deepcopy(pl) for pl in api_mock.user_playlists if names.count(pl["name"]) == 1)
-        api.extend_items(items_block=response, key=RemoteObjectType.TRACK)
+        api.extend_items(response=response, key=RemoteObjectType.TRACK)
         pl = SpotifyPlaylist(response=response, api=api)
         url = pl.url
 
@@ -261,7 +261,7 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
             response_valid: dict[str, Any], response_random: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock,
     ) -> list[SpotifyTrack]:
         api.load_user_data()
-        api_mock.reset_mock()  # all sync tests check the number of requests made
+        api_mock.reset_mock()  # tests check the number of requests made
 
         uri_valid = [track["track"]["uri"] for track in response_valid["tracks"]["items"]]
         return [

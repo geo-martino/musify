@@ -12,7 +12,7 @@ from musify.report import report_playlist_differences, report_missing_tags
 from musify.spotify.api import SpotifyAPI
 from musify.spotify.library import SpotifyLibrary
 from musify.spotify.object import SpotifyPlaylist
-from musify.spotify.processors.wrangle import SpotifyDataWrangler
+from musify.spotify.processors import SpotifyDataWrangler
 from tests.local.track.utils import random_track
 from tests.spotify.api.mock import SpotifyMock
 from tests.spotify.utils import random_uri

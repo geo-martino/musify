@@ -4,14 +4,15 @@ from os.path import basename, dirname, splitext, getmtime
 from pathlib import Path
 
 import pytest
+from PIL.Image import Image
 
-from musify.local.exception import InvalidFileType, FileDoesNotExistError
-from musify.local.file import open_image
-from musify.local.track import LocalTrack, load_track, FLAC, M4A, MP3, WMA
+from musify.local.track import LocalTrack, load_track, FLAC, M4A, MP3, WMA, SyncResultTrack
 from musify.local.track.field import LocalTrackField
-from musify.shared.core.base import Item
+from musify.shared.core.base import MusifyItem
 from musify.shared.core.object import Track
+from musify.shared.exception import InvalidFileType, FileDoesNotExistError
 from musify.shared.exception import MusifyKeyError
+from musify.shared.image import open_image
 from musify.shared.remote.enum import RemoteObjectType
 from tests.local.utils import path_track_all, path_track_img, path_track_resources
 from tests.shared.core.base import ItemTester
@@ -159,7 +160,7 @@ def test_loaded_attributes_wma(track_wma: WMA):
     assert track_wma.disc_number == 3
     assert track_wma.disc_total == 4
     assert not track_wma.compilation
-    assert track_wma.comments == [track_wma.remote_wrangler.unavailable_uri_dummy]
+    assert track_wma.comments == [track_wma._reader.unavailable_uri_dummy]
 
     assert track_wma.uri is None
     assert not track_wma.has_uri
@@ -175,11 +176,28 @@ def test_loaded_attributes_wma(track_wma: WMA):
     assert track_wma.sample_rate == 44.1
 
 
+def test_loaded_attributes_common(track: LocalTrack):
+    assert track.image_links == {}
+    assert track.has_image
+
+    # file properties
+    assert track.folder == basename(dirname(track.path))
+    assert track.filename == splitext(basename(track.path))[0]
+    assert track.kind == track.__class__.__name__
+    assert track.date_modified == datetime.fromtimestamp(getmtime(track.path))
+
+    # library properties
+    assert track.rating is None
+    assert track.date_added is None
+    assert track.last_played is None
+    assert track.play_count is None
+
+
 class TestLocalTrack(ItemTester):
     """Run generic tests for :py:class:`LocalTrack` implementations"""
 
     @pytest.fixture
-    def item(self, track: LocalTrack) -> Item:
+    def item(self, track: LocalTrack) -> MusifyItem:
         return track
 
     @pytest.fixture
@@ -187,7 +205,7 @@ class TestLocalTrack(ItemTester):
         return next(load_track(path) for path in path_track_all if path != track.path)
 
     @pytest.fixture
-    def item_modified(self, track: LocalTrack) -> Item:
+    def item_modified(self, track: LocalTrack) -> MusifyItem:
         track = copy(track)
         track.title = "new title"
         track.artist = "new artist"
@@ -210,7 +228,7 @@ class TestLocalTrack(ItemTester):
 
     def test_load_track_class(self, track: LocalTrack):
         # has actually reloaded the file
-        assert id(track.file) != id(track.load())
+        assert id(track._reader.file) != id(track.load())
 
         # raises error on unrecognised file type
         with pytest.raises(InvalidFileType):
@@ -221,16 +239,16 @@ class TestLocalTrack(ItemTester):
             track.__class__(file=f"does_not_exist.{set(track.valid_extensions).pop()}")
 
     def test_copy_track(self, track: LocalTrack):
-        track_from_file = track.__class__(file=track.file)
-        assert id(track.file) == id(track_from_file.file)
+        track_from_file = track.__class__(file=track._reader.file)
+        assert id(track._reader.file) == id(track_from_file._reader.file)
 
         track_copy = copy(track)
-        assert id(track.file) == id(track_copy.file)
+        assert id(track._reader.file) == id(track_copy._reader.file)
         for key, value in vars(track).items():
             assert value == track_copy[key]
 
         track_deepcopy = deepcopy(track)
-        assert id(track.file) != id(track_deepcopy.file)
+        assert id(track._reader.file) != id(track_deepcopy._reader.file)
         for key, value in vars(track).items():
             assert value == track_deepcopy[key]
 
@@ -238,233 +256,6 @@ class TestLocalTrack(ItemTester):
         paths = track.__class__.get_filepaths(str(tmp_path))
         assert paths == {track.path}
         assert len(track.__class__.get_filepaths(path_track_resources)) == 1
-
-    @staticmethod
-    def assert_track_tags_equal(actual: LocalTrack, expected: LocalTrack, check_tag_exists: bool = False):
-        """
-        Assert the tags of the givens tracks equal.
-        ``check_tag_exists`` checks that a mapping for that tag exists before comparing, skipping any that don't
-        """
-        if not check_tag_exists or actual.tag_map.title:
-            assert actual.title == expected.title
-        if not check_tag_exists or actual.tag_map.artist:
-            assert actual.artist == expected.artist
-        if not check_tag_exists or actual.tag_map.album:
-            assert actual.album == expected.album
-        if not check_tag_exists or actual.tag_map.album_artist:
-            assert actual.album_artist == expected.album_artist
-        if not check_tag_exists or actual.tag_map.track_number:
-            assert actual.track_number == expected.track_number
-        if not check_tag_exists or actual.tag_map.track_total:
-            assert actual.track_total == expected.track_total
-        if not check_tag_exists or actual.tag_map.genres:
-            assert actual.genres == expected.genres
-        if not check_tag_exists or actual.tag_map.date:
-            assert actual.date == expected.date
-        if not check_tag_exists or actual.tag_map.year:
-            assert actual.year == expected.year
-        if not check_tag_exists or actual.tag_map.month:
-            assert actual.month == expected.month
-        if not check_tag_exists or actual.tag_map.day:
-            assert actual.day == expected.day
-        if not check_tag_exists or actual.tag_map.bpm:
-            assert actual.bpm == expected.bpm
-        if not check_tag_exists or actual.tag_map.key:
-            assert actual.key == expected.key
-        if not check_tag_exists or actual.tag_map.disc_number:
-            assert actual.disc_number == expected.disc_number
-        if not check_tag_exists or actual.tag_map.disc_total:
-            assert actual.disc_total == expected.disc_total
-        if not check_tag_exists or actual.tag_map.compilation:
-            assert actual.compilation == expected.compilation
-
-    def test_clear_tags_dry_run(self, track: LocalTrack):
-        track_update = track
-        track_original = copy(track)
-
-        # when dry run, no updates should happen
-        result = track_update.delete_tags(tags=LocalTrackField.ALL, dry_run=True)
-        assert not result.saved
-
-        track_update_dry = load_track(track.path, remote_wrangler=track.remote_wrangler)
-
-        self.assert_track_tags_equal(track_update_dry, track_original)
-        assert track_update.comments == track_original.comments
-
-        assert track_update_dry.uri == track_original.uri
-        assert track_update_dry.has_uri == track_original.has_uri
-        assert track_update_dry.has_image == track_original.has_image
-
-    def test_clear_tags(self, track: LocalTrack):
-        track_update = track
-        track_original = copy(track)
-
-        result = track_update.delete_tags(tags=LocalTrackField.ALL, dry_run=False)
-        assert result.saved
-
-        track_update = load_track(track.path, remote_wrangler=track.remote_wrangler)
-
-        assert track_update.title is None
-        assert track_update.artist is None
-        assert track_update.album is None
-        assert track_update.album_artist is None
-        assert track_update.track_number is None
-        assert track_update.track_total is None
-        assert track_update.genres is None
-        assert track_update.date is None
-        assert track_update.year is None
-        assert track_update.month is None
-        assert track_update.day is None
-        assert track_update.bpm is None
-        assert track_update.key is None
-        assert track_update.disc_number is None
-        assert track_update.disc_total is None
-        assert not track_update.compilation
-        assert track_update.comments is None
-
-        assert track_update.uri is None
-        assert track.has_uri == track_original.has_uri
-        assert not track_update.has_image
-
-    @staticmethod
-    def get_update_tags_test_track(track: LocalTrack) -> tuple[LocalTrack, LocalTrack, str]:
-        """Load track and modify its tags for update tags tests"""
-        track_original = copy(track)
-        new_uri = track.remote_wrangler.unavailable_uri_dummy if track.has_uri else random_uri()
-
-        track.title = "new title"
-        track.artist = "new artist"
-        track.album = "new album artist"
-        track.album_artist = "new various"
-        track.track_number = 2
-        track.track_total = 3
-        track.genres = ["Big Band", "Swing"]
-        track.year = 1956
-        track.month = 4
-        track.day = 16
-        track.bpm = 98.0
-        track.key = "F#"
-        track.disc_number = 2
-        track.disc_total = 3
-        track.compilation = False
-        track.uri = new_uri
-        track.image_links.clear()
-
-        return track, track_original, new_uri
-
-    def test_update_tags_dry_run(self, track: LocalTrack):
-        track_update, track_original, _ = self.get_update_tags_test_track(track)
-
-        # dry run, no updates should happen
-        result = track_update.save(tags=LocalTrackField.ALL, replace=False, dry_run=True)
-        assert not result.saved
-
-        track_update_dry = deepcopy(track_update)
-
-        self.assert_track_tags_equal(track_update_dry, track_original)
-        assert track_update_dry.comments == track_original.comments
-
-        assert track_update_dry.uri == track_original.uri
-        assert track_update_dry.has_uri == track_original.has_uri
-        assert track_update_dry.has_image == track_original.has_image
-
-    def test_update_tags_no_replace(self, track: LocalTrack):
-        track_update, track_original, new_uri = self.get_update_tags_test_track(track)
-
-        # update and don't replace current tags (except URI if URI is False)
-        result = track_update.save(tags=LocalTrackField.ALL, replace=False, dry_run=False)
-        assert result.saved
-
-        track_update = deepcopy(track_update)
-
-        self.assert_track_tags_equal(track_update, track_original)
-        assert track_update.comments == [new_uri]
-
-        if new_uri == track.remote_wrangler.unavailable_uri_dummy:
-            assert track_update.uri is None
-        else:
-            assert track_update.uri == new_uri
-        assert track_update.has_uri == track_update.has_uri
-        assert track_update.has_image == track_original.has_image
-
-    def test_update_tags_with_replace(self, track: LocalTrack):
-        track_update, track_original, new_uri = self.get_update_tags_test_track(track)
-
-        result = track_update.save(tags=LocalTrackField.ALL, replace=True, dry_run=False)
-        assert result.saved
-        track_update_replace = deepcopy(track_update)
-
-        self.assert_track_tags_equal(track_update_replace, track_update, check_tag_exists=True)
-        assert track_update_replace.comments == [new_uri]
-
-        if new_uri == track.remote_wrangler.unavailable_uri_dummy:
-            assert track_update.uri is None
-        else:
-            assert track_update.uri == new_uri
-        assert track_update_replace.image_links == track_update.image_links
-        assert track_update_replace.has_image == track_update.has_image
-
-    @staticmethod
-    def get_update_image_test_track(track: LocalTrack) -> tuple[LocalTrack, LocalTrack]:
-        """Load track and modify its tags for update tags tests"""
-        track.image_links = {"cover front": path_track_img}
-        return track, copy(track)
-
-    def test_update_image_dry_run(self, track: LocalTrack):
-        track_update, track_original = self.get_update_image_test_track(track)
-
-        image_original = track_update._read_images()[0]
-
-        # dry run, no updates should happen
-        result = track_update.save(tags=LocalTrackField.IMAGES, replace=False, dry_run=True)
-        assert not result.saved
-
-        track_update_dry = deepcopy(track_update)
-        image_update_dry = track_update_dry._read_images()[0]
-        assert track_update_dry.has_image == track_original.has_image
-        assert image_update_dry.size == image_original.size
-
-    def test_update_image_no_replace(self, track: LocalTrack):
-        track_update, track_original = self.get_update_image_test_track(track)
-
-        # clear current image and update
-        track_update.delete_tags(LocalTrackField.IMAGES, dry_run=False)
-        assert not track_update.has_image
-
-        result = track_update.save(tags=LocalTrackField.IMAGES, replace=False, dry_run=False)
-        assert result.saved
-
-        track_update = deepcopy(track_update)
-        image_update = track_update._read_images()[0]
-        assert track_update.has_image
-        assert image_update.size == open_image(path_track_img).size
-
-    def test_update_image_with_replace(self, track: LocalTrack):
-        track_update, track_original = self.get_update_image_test_track(track)
-
-        result = track_update.save(tags=LocalTrackField.IMAGES, replace=True, dry_run=False)
-        assert result.saved
-
-        track_update_replace = deepcopy(track_update)
-        image_update_replace = track_update_replace._read_images()[0]
-        assert track_update_replace.has_image
-        assert image_update_replace.size == open_image(path_track_img).size
-
-    def test_loaded_attributes_common(self, track: LocalTrack):
-        assert track.image_links == {}
-        assert track.has_image
-
-        # file properties
-        assert track.folder == basename(dirname(track.path))
-        assert track.filename == splitext(basename(track.path))[0]
-        assert track.kind == track.__class__.__name__
-        assert track.date_modified == datetime.fromtimestamp(getmtime(track.path))
-
-        # library properties
-        assert track.rating is None
-        assert track.date_added is None
-        assert track.last_played is None
-        assert track.play_count is None
 
     def test_setitem_dunder_method(self, track: LocalTrack):
         assert track.uri != "new_uri"
@@ -515,3 +306,225 @@ class TestLocalTrack(ItemTester):
         assert track.uri == item_modified.uri
         assert track.album == item_modified.album
         assert track.rating == item_modified.rating
+
+
+class TestLocalTrackWriter:
+
+    @staticmethod
+    def assert_track_tags_equal(actual: LocalTrack, expected: LocalTrack, check_tag_exists: bool = False):
+        """
+        Assert the tags of the givens tracks equal.
+        ``check_tag_exists`` checks that a mapping for that tag exists before comparing, skipping any that don't
+        """
+        if not check_tag_exists or actual.tag_map.title:
+            assert actual.title == expected.title, "title"
+        if not check_tag_exists or actual.tag_map.artist:
+            assert actual.artist == expected.artist, "artist"
+        if not check_tag_exists or actual.tag_map.album:
+            assert actual.album == expected.album, "album"
+        if not check_tag_exists or actual.tag_map.album_artist:
+            assert actual.album_artist == expected.album_artist, "album_artist"
+        if not check_tag_exists or actual.tag_map.track_number:
+            assert actual.track_number == expected.track_number, "track_number"
+        if not check_tag_exists or actual.tag_map.track_total:
+            assert actual.track_total == expected.track_total, "track_total"
+        if not check_tag_exists or actual.tag_map.genres:
+            assert actual.genres == expected.genres, "genres"
+        if not check_tag_exists or actual.tag_map.date:
+            assert actual.date == expected.date, "date"
+        if not check_tag_exists or actual.tag_map.year:
+            assert actual.year == expected.year, "year"
+        if not check_tag_exists or actual.tag_map.month:
+            assert actual.month == expected.month, "month"
+        if not check_tag_exists or actual.tag_map.day:
+            assert actual.day == expected.day, "day"
+        if not check_tag_exists or actual.tag_map.bpm:
+            assert actual.bpm == expected.bpm, "bpm"
+        if not check_tag_exists or actual.tag_map.key:
+            assert actual.key == expected.key, "key"
+        if not check_tag_exists or actual.tag_map.disc_number:
+            assert actual.disc_number == expected.disc_number, "disc_number"
+        if not check_tag_exists or actual.tag_map.disc_total:
+            assert actual.disc_total == expected.disc_total, "disc_total"
+        if not check_tag_exists or actual.tag_map.compilation:
+            assert actual.compilation == expected.compilation, "compilation"
+
+    def test_clear_tags_dry_run(self, track: LocalTrack):
+        track_update = track
+        track_original = copy(track)
+
+        # when dry run, no updates should happen
+        result = track_update.delete_tags(tags=LocalTrackField.ALL, dry_run=True)
+        assert not result.saved
+
+        # noinspection PyTestUnpassedFixture
+        track_update_dry = load_track(track.path, remote_wrangler=track._reader.remote_wrangler)
+
+        self.assert_track_tags_equal(track_update_dry, track_original)
+        assert track_update.comments == track_original.comments
+
+        assert track_update_dry.uri == track_original.uri
+        assert track_update_dry.has_uri == track_original.has_uri
+        assert track_update_dry.has_image == track_original.has_image
+
+    def test_clear_tags(self, track: LocalTrack):
+        track_update = track
+        track_original = copy(track)
+
+        result = track_update.delete_tags(tags=LocalTrackField.ALL, dry_run=False)
+        assert result.saved
+
+        # noinspection PyTestUnpassedFixture
+        track_update = load_track(track.path, remote_wrangler=track._reader.remote_wrangler)
+
+        assert track_update.title is None
+        assert track_update.artist is None
+        assert track_update.album is None
+        assert track_update.album_artist is None
+        assert track_update.track_number is None
+        assert track_update.track_total is None
+        assert track_update.genres is None
+        assert track_update.date is None
+        assert track_update.year is None
+        assert track_update.month is None
+        assert track_update.day is None
+        assert track_update.bpm is None
+        assert track_update.key is None
+        assert track_update.disc_number is None
+        assert track_update.disc_total is None
+        assert not track_update.compilation
+        assert track_update.comments is None
+
+        assert track_update.uri is None
+        assert track.has_uri == track_original.has_uri
+        assert not track_update.has_image
+
+    @staticmethod
+    def get_update_tags_test_track(track: LocalTrack) -> tuple[LocalTrack, LocalTrack, str]:
+        """Load track and modify its tags for update tags tests"""
+        track_original = copy(track)
+        new_uri = track._reader.unavailable_uri_dummy if track.has_uri else random_uri()
+
+        track.title = "new title"
+        track.artist = "new artist"
+        track.album = "new album artist"
+        track.album_artist = "new various"
+        track.track_number = 2
+        track.track_total = 3
+        track.genres = ["Big Band", "Swing"]
+        track.year = 1956
+        track.month = 4
+        track.day = 16
+        track.bpm = 98.0
+        track.key = "F#"
+        track.disc_number = 2
+        track.disc_total = 3
+        track.compilation = False
+        track.uri = new_uri
+        track.image_links.clear()
+
+        return track, track_original, new_uri
+
+    def test_update_tags_dry_run(self, track: LocalTrack):
+        track_update, track_original, _ = self.get_update_tags_test_track(track)
+
+        # dry run, no updates should happen
+        result = track_update.save(tags=LocalTrackField.ALL, replace=False, dry_run=True)
+        assert not result.saved
+
+        track_update_dry = deepcopy(track_update)
+
+        self.assert_track_tags_equal(track_update_dry, track_original)
+        assert track_update_dry.comments == track_original.comments
+
+        assert track_update_dry.uri == track_original.uri
+        assert track_update_dry.has_uri == track_original.has_uri
+        assert track_update_dry.has_image == track_original.has_image
+
+    def test_update_tags_no_replace(self, track: LocalTrack):
+        track_update, track_original, new_uri = self.get_update_tags_test_track(track)
+
+        # update and don't replace current tags (except URI if URI is False)
+        result = track_update.save(tags=LocalTrackField.ALL, replace=False, dry_run=False)
+        assert result.saved
+
+        track_update = deepcopy(track_update)
+
+        self.assert_track_tags_equal(track_update, track_original)
+        assert track_update.comments == [new_uri]
+
+        if new_uri == track._reader.unavailable_uri_dummy:
+            assert track_update.uri is None
+        else:
+            assert track_update.uri == new_uri
+        assert track_update.has_uri == track_update.has_uri
+        assert track_update.has_image == track_original.has_image
+
+    def test_update_tags_with_replace(self, track: LocalTrack):
+        track_update, track_original, new_uri = self.get_update_tags_test_track(track)
+
+        result = track_update.save(tags=LocalTrackField.ALL, replace=True, dry_run=False)
+        assert result.saved
+        track_update_replace = deepcopy(track_update)
+
+        self.assert_track_tags_equal(track_update_replace, track_update, check_tag_exists=True)
+        assert track_update_replace.comments == [new_uri]
+
+        if new_uri == track._reader.unavailable_uri_dummy:
+            assert track_update.uri is None
+        else:
+            assert track_update.uri == new_uri
+        assert track_update_replace.image_links == track_update.image_links
+        assert track_update_replace.has_image == track_update.has_image
+
+    @staticmethod
+    def get_update_image_test_track(track: LocalTrack) -> tuple[LocalTrack, LocalTrack]:
+        """Load track and modify its tags for update tags tests"""
+        track.image_links = {"cover front": path_track_img}
+        return track, copy(track)
+
+    @staticmethod
+    def assert_update_image_result(track: LocalTrack, image: Image, result: SyncResultTrack):
+        """Check for expected results after non-dry_run operations to update LocalTrack images"""
+        assert result.saved
+
+        track.refresh()
+        assert track.has_image
+
+        images = track._reader.read_images()
+        if not isinstance(track, MP3):
+            # MP3 tagging works slightly differently so more than one image will be saved
+            assert len(images) == 1
+        assert images[0].size == image.size
+
+    def test_update_image_dry_run(self, track: LocalTrack):
+        track_update, track_original = self.get_update_image_test_track(track)
+
+        image_original = track_update._reader.read_images()[0]
+
+        # dry run, no updates should happen
+        result = track_update.save(tags=LocalTrackField.IMAGES, replace=False, dry_run=True)
+        assert not result.saved
+
+        track_update.refresh()
+        assert track_update.has_image == track_original.has_image
+
+        images = track_update._reader.read_images()
+        assert len(images) == 1
+        assert images[0].size == image_original.size
+
+    def test_update_image_no_replace(self, track: LocalTrack):
+        track_update, track_original = self.get_update_image_test_track(track)
+
+        # clear current image and update
+        track_update.delete_tags(LocalTrackField.IMAGES, dry_run=False)
+        assert not track_update.has_image
+
+        result = track_update.save(tags=LocalTrackField.IMAGES, replace=False, dry_run=False)
+        self.assert_update_image_result(track=track_update, image=open_image(path_track_img), result=result)
+
+    def test_update_image_with_replace(self, track: LocalTrack):
+        track_update, track_original = self.get_update_image_test_track(track)
+
+        result = track_update.save(tags=LocalTrackField.IMAGES, replace=True, dry_run=False)
+        self.assert_update_image_result(track=track_update, image=open_image(path_track_img), result=result)

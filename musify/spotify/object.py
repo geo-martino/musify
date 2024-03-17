@@ -10,23 +10,18 @@ from copy import copy, deepcopy
 from datetime import datetime
 from typing import Any, Self
 
+from musify.shared.remote import RemoteResponse
 from musify.shared.remote.enum import RemoteObjectType, RemoteIDType
-from musify.shared.remote.object import RemoteCollection, RemoteCollectionLoader, RemoteTrack
+from musify.shared.remote.object import RemoteCollectionLoader, RemoteTrack
 from musify.shared.remote.object import RemotePlaylist, RemoteAlbum, RemoteArtist
 from musify.shared.types import UnitCollection
 from musify.shared.utils import to_collection
 from musify.spotify.api import SpotifyAPI
 from musify.spotify.base import SpotifyObject, SpotifyItem
 from musify.spotify.exception import SpotifyCollectionError
-from musify.spotify.processors.wrangle import SpotifyDataWrangler
 
 
-class SpotifyItemWranglerMixin(SpotifyItem, SpotifyDataWrangler, metaclass=ABCMeta):
-    """Mixin for :py:class:`SpotifyItem` and :py:class:`SpotifyDataWrangler`"""
-    pass
-
-
-class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
+class SpotifyTrack(SpotifyItem, RemoteTrack):
     """
     Extracts key ``track`` data from a Spotify API JSON response.
 
@@ -211,7 +206,7 @@ class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
     @classmethod
     def load(
             cls,
-            value: str | dict[str, Any],
+            value: str | Mapping[str, Any] | RemoteResponse,
             api: SpotifyAPI,
             features: bool = False,
             analysis: bool = False,
@@ -225,9 +220,11 @@ class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
         self.api = api
 
         # set a mock response with URL to load from
-        id_ = cls.extract_ids(value)[0]
+        id_ = api.wrangler.extract_ids(value)[0]
         self._response = {
-            "href": cls.convert(id_, kind=RemoteObjectType.TRACK, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
+            "href": api.wrangler.convert(
+                id_, kind=RemoteObjectType.TRACK, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL
+            )
         }
         self.reload(
             features=features,
@@ -257,27 +254,18 @@ class SpotifyTrack(SpotifyItemWranglerMixin, RemoteTrack):
         if extend_artists:
             self.api.get_items(response["artists"], kind=RemoteObjectType.ARTIST, use_cache=use_cache)
         if features or analysis:
-            self.api.get_tracks_extra(response, features=features, analysis=analysis, use_cache=use_cache)
+            self.api.extend_tracks(response, features=features, analysis=analysis, use_cache=use_cache)
 
         self.__init__(response=response, api=self.api)
 
 
-class SpotifyCollection[T: SpotifyItem](RemoteCollection[T], SpotifyDataWrangler, metaclass=ABCMeta):
-    """Generic class for storing a collection of Spotify objects."""
-
-
-class SpotifyObjectLoaderMixin[T: SpotifyItem](RemoteCollectionLoader[T], SpotifyObject, metaclass=ABCMeta):
-    """Mixin for :py:class:`RemoteCollectionLoader` and :py:class:`SpotifyObject`"""
-    pass
-
-
-class SpotifyCollectionLoader[T: SpotifyItem](SpotifyObjectLoaderMixin[T], SpotifyCollection[T], metaclass=ABCMeta):
+class SpotifyCollectionLoader[T: SpotifyItem](RemoteCollectionLoader[T], SpotifyObject, metaclass=ABCMeta):
     """Generic class for storing a collection of Spotify objects that can be loaded from an API response."""
 
     @classmethod
     def load(
             cls,
-            value: str | MutableMapping[str, Any],
+            value: str | Mapping[str, Any] | RemoteResponse,
             api: SpotifyAPI,
             items: Iterable[SpotifyTrack] = (),
             extend_tracks: bool = False,
@@ -291,7 +279,10 @@ class SpotifyCollectionLoader[T: SpotifyItem](SpotifyObjectLoaderMixin[T], Spoti
         key = api.collection_item_map[kind].name.lower() + "s"
 
         # no items given, regenerate API response from the URL
-        if not items or (isinstance(value, Mapping) and (key not in value or api.items_key not in value[key])):
+        if any({
+            not items,
+            isinstance(value, Mapping | RemoteResponse) and (key not in value or api.items_key not in value[key])
+        }):
             if kind == RemoteObjectType.PLAYLIST:
                 value = api.get_playlist_url(value)
 
@@ -302,7 +293,7 @@ class SpotifyCollectionLoader[T: SpotifyItem](SpotifyObjectLoaderMixin[T], Spoti
             return self
 
         # get response
-        if isinstance(value, MutableMapping) and cls.get_item_type(value) == kind:
+        if isinstance(value, MutableMapping) and api.wrangler.get_item_type(value) == kind:
             response = deepcopy(value)
         else:  # reload response from the API
             response = cls.api.get_items(value, kind=kind, use_cache=use_cache)[0]
@@ -356,12 +347,12 @@ class SpotifyCollectionLoader[T: SpotifyItem](SpotifyObjectLoaderMixin[T], Spoti
         if extend_tracks:
             if kind == RemoteObjectType.PLAYLIST:
                 extend_response = [item["track"] for item in extend_response]
-            api.get_tracks_extra(extend_response, limit=response[key]["limit"], features=True, use_cache=use_cache)
+            api.extend_tracks(extend_response, limit=response[key]["limit"], features=True, use_cache=use_cache)
 
         return cls(response=response, api=api, skip_checks=False)
 
 
-class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[SpotifyTrack]):
+class SpotifyPlaylist(SpotifyCollectionLoader[SpotifyTrack], RemotePlaylist[SpotifyTrack]):
     """
     Extracts key ``playlist`` data from a Spotify API JSON response.
 
@@ -479,7 +470,7 @@ class SpotifyPlaylist(RemotePlaylist[SpotifyTrack], SpotifyCollectionLoader[Spot
         response = self.api.get_items(self.url, kind=RemoteObjectType.PLAYLIST, use_cache=use_cache)[0]
         if extend_tracks:
             tracks = [track["track"] for track in response["tracks"]["items"]]
-            self.api.get_tracks_extra(tracks, limit=response["tracks"]["limit"], features=True, use_cache=use_cache)
+            self.api.extend_tracks(tracks, limit=response["tracks"]["limit"], features=True, use_cache=use_cache)
 
         self.__init__(response=response, api=self.api, skip_checks=not extend_tracks)
 
@@ -612,7 +603,7 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTra
             self.api.get_items(response["artists"], kind=RemoteObjectType.ARTIST, use_cache=use_cache)
         if extend_tracks:
             tracks = response["tracks"]
-            self.api.get_tracks_extra(tracks["items"], limit=tracks["limit"], features=True, use_cache=use_cache)
+            self.api.extend_tracks(tracks["items"], limit=tracks["limit"], features=True, use_cache=use_cache)
 
         self.__init__(response=response, api=self.api, skip_checks=not extend_tracks)
 
@@ -684,7 +675,7 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
     @classmethod
     def load(
             cls,
-            value: str | dict[str, Any],
+            value: str | Mapping[str, Any] | RemoteResponse,
             api: SpotifyAPI,
             extend_albums: bool = False,
             extend_tracks: bool = False,
@@ -696,9 +687,11 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
         self.api = api
 
         # set a mock response with URL to load from
-        id_ = cls.extract_ids(value)[0]
+        id_ = api.wrangler.extract_ids(value)[0]
         self._response = {
-            "href": cls.convert(id_, kind=RemoteObjectType.ARTIST, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
+            "href": api.wrangler.convert(
+                id_, kind=RemoteObjectType.ARTIST, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL
+            )
         }
         self.reload(extend_albums=extend_albums, extend_tracks=extend_tracks, use_cache=use_cache)
         return self

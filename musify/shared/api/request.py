@@ -71,6 +71,10 @@ class RequestHandler(APIAuthoriser):
         self.session.headers.update(headers)
         return headers
 
+    def close(self) -> None:
+        """Close the current session. No more requests will be possible once this has been called."""
+        self.session.close()
+
     def request(self, method: str, url: str, *args, **kwargs) -> dict[str, Any]:
         """
         Generic method for handling API requests with back-off on failed requests.

@@ -6,13 +6,13 @@ from random import sample, shuffle, randrange
 import pytest
 import xmltodict
 
-from musify.local.file import PathStemMapper, PathMapper
 from musify.local.track import LocalTrack
 from musify.local.track.field import LocalTrackField
 from musify.processors.compare import Comparer
 from musify.processors.filter import FilterDefinedList, FilterComparers, FilterIncludeExclude
 from musify.processors.filter_matcher import FilterMatcher
 from musify.shared.core.enum import Fields
+from musify.shared.file import PathStemMapper, PathMapper
 from tests.local.track.utils import random_tracks
 from tests.local.utils import path_playlist_resources
 from tests.local.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra, path_playlist_xautopf_cm

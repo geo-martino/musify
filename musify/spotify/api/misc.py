@@ -24,14 +24,14 @@ class SpotifyAPIMisc(SpotifyAPIBase, metaclass=ABCMeta):
         if not value:  # get user to paste in URL/URI
             value = input("\33[1mEnter URL/URI/ID: \33[0m")
         if not kind:
-            kind = self.get_item_type(value)
+            kind = self.wrangler.get_item_type(value)
         key = self.collection_item_map[kind].name.lower()
 
         while kind is None:  # get user to input ID type
             kind = RemoteObjectType.from_name(input("\33[1mEnter ID type: \33[0m"))[0]
 
-        id_ = self.extract_ids(values=value, kind=kind)[0]
-        url = self.convert(id_, kind=kind, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
+        id_ = self.wrangler.extract_ids(values=value, kind=kind)[0]
+        url = self.wrangler.convert(id_, kind=kind, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
         limit = limit_value(limit, floor=1, ceil=50)
 
         name = self.handler.get(url, params={"limit": limit}, log_pad=43)["name"]
@@ -40,7 +40,7 @@ class SpotifyAPIMisc(SpotifyAPIBase, metaclass=ABCMeta):
         i = 0
         while response.get("next") or i < response["total"]:  # loop through each page, printing data in blocks of 20
             if response.get("offset", 0) == 0:  # first page, show header
-                url_ext = self.convert(id_, kind=kind, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL_EXT)
+                url_ext = self.wrangler.convert(id_, kind=kind, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL_EXT)
                 print(
                     f"\n\t\33[96mShowing tracks for {kind.name.lower()}\33[0m: "
                     f"\33[94m{name} \33[97m- {url_ext} \33[0m\n"
@@ -67,7 +67,7 @@ class SpotifyAPIMisc(SpotifyAPIBase, metaclass=ABCMeta):
 
         :param update_user_data: When True, update the ``_user_data`` stored in this API object.
         """
-        r = self.handler.get(url=f"{self.api_url_base}/me", use_cache=True, log_pad=71)
+        r = self.handler.get(url=f"{self.url}/me", use_cache=True, log_pad=71)
         if update_user_data:
             self.user_data = r
         return r
@@ -87,7 +87,7 @@ class SpotifyAPIMisc(SpotifyAPIBase, metaclass=ABCMeta):
         if not query or len(query) > 150:  # query is too short or too long, skip
             return []
 
-        url = f"{self.api_url_base}/search"
+        url = f"{self.url}/search"
         params = {'q': query, "type": kind.name.lower(), "limit": limit_value(limit, floor=1, ceil=50)}
         response = self.handler.get(url, params=params, use_cache=use_cache)
 

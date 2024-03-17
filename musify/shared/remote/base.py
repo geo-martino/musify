@@ -5,15 +5,16 @@ These define the foundations of any remote object or item.
 """
 
 from abc import ABCMeta, abstractmethod
+from collections.abc import Mapping
 from typing import Any, Self
 
 from musify.shared.api.exception import APIError
-from musify.shared.core.base import AttributePrinter, NameableTaggableMixin, Item
-from musify.shared.remote import Remote
+from musify.shared.core.base import MusifyItem
+from musify.shared.remote import RemoteResponse
 from musify.shared.remote.api import RemoteAPI
 
 
-class RemoteObject(AttributePrinter, NameableTaggableMixin, Remote, metaclass=ABCMeta):
+class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, metaclass=ABCMeta):
     """
     Generic base class for remote objects. Extracts key data from a remote API JSON response.
 
@@ -22,15 +23,9 @@ class RemoteObject(AttributePrinter, NameableTaggableMixin, Remote, metaclass=AB
     """
 
     __slots__ = ("_response", "api")
-    __attributes_ignore__ = ("api", "response")
+    __attributes_ignore__ = ("response", "api")
 
     _url_pad = 71
-
-    @property
-    @abstractmethod
-    def id(self) -> str:
-        """The ID of this item/collection."""
-        raise NotImplementedError
 
     @property
     @abstractmethod
@@ -61,7 +56,7 @@ class RemoteObject(AttributePrinter, NameableTaggableMixin, Remote, metaclass=AB
         """The API response for this object"""
         return self._response
 
-    def __init__(self, response: dict[str, Any], api: RemoteAPI | None = None, skip_checks: bool = False):
+    def __init__(self, response: dict[str, Any], api: T = None, skip_checks: bool = False):
         super().__init__()
         self._response = response
 
@@ -70,14 +65,6 @@ class RemoteObject(AttributePrinter, NameableTaggableMixin, Remote, metaclass=AB
 
         self._check_type()
         self.refresh(skip_checks=skip_checks)
-
-    @abstractmethod
-    def refresh(self, skip_checks: bool = False) -> None:
-        """
-        Refresh this object by updating from the stored API response.
-        Useful for updating stored variables after making changes to the stored API response manually.
-        """
-        raise NotImplementedError
 
     @abstractmethod
     def _check_type(self) -> None:
@@ -99,7 +86,14 @@ class RemoteObject(AttributePrinter, NameableTaggableMixin, Remote, metaclass=AB
 
     @classmethod
     @abstractmethod
-    def load(cls, value: str | dict[str, Any], api: RemoteAPI, use_cache: bool = True, *args, **kwargs) -> Self:
+    def load(
+            cls,
+            value: str | Mapping[str, Any] | RemoteResponse,
+            api: RemoteAPI,
+            use_cache: bool = True,
+            *args,
+            **kwargs
+    ) -> Self:
         """
         Generate a new object of this class,
         calling all required endpoints to get a complete set of data for this item type.
@@ -107,6 +101,8 @@ class RemoteObject(AttributePrinter, NameableTaggableMixin, Remote, metaclass=AB
         ``value`` may be:
             * A string representing a URL/URI/ID.
             * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
+            * An object of the same type as this collection.
+              The remote API JSON response will be used to load a new object.
 
         :param value: The value representing some remote object. See description for allowed value types.
         :param api: An authorised API object to load the object from.
@@ -129,7 +125,7 @@ class RemoteObject(AttributePrinter, NameableTaggableMixin, Remote, metaclass=AB
         return hash(self.uri)
 
 
-class RemoteItem(RemoteObject, Item, metaclass=ABCMeta):
+class RemoteItem(RemoteObject, MusifyItem, metaclass=ABCMeta):
     """Generic base class for remote items. Extracts key data from a remote API JSON response."""
 
-    __attributes_classes__ = (RemoteObject, Item)
+    __attributes_classes__ = (RemoteObject, MusifyItem)

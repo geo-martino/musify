@@ -2,7 +2,7 @@ from random import choice
 
 import pytest
 
-from musify.local.file import PathMapper, PathStemMapper, File
+from musify.shared.file import PathMapper, PathStemMapper, File
 from tests.local.track.utils import random_tracks
 from tests.local.utils import path_track_all
 from tests.shared.core.misc import PrettyPrinterTester

@@ -84,7 +84,7 @@ class TestSpotifyLibrary(RemoteLibraryTester):
     ###########################################################################
     ## Enrich tests
     ###########################################################################
-    # noinspection PyMethodOverriding
+    # noinspection PyMethodOverriding,PyTestUnpassedFixture
     def test_enrich_tracks(self, library: SpotifyLibrary, api_mock: SpotifyMock, **kwargs):
         def validate_track_extras_not_enriched(t: SpotifyTrack) -> None:
             """Check track does not contain audio features or analysis fields"""
@@ -131,12 +131,12 @@ class TestSpotifyLibrary(RemoteLibraryTester):
             assert len(api_mock.get_requests(url=track.response["album"]["href"] + "/tracks")) == 0
 
         # check requests
-        assert len(api_mock.get_requests(url=library.api.api_url_base + "/artists")) == 0
-        req_albums = api_mock.get_requests(url=library.api.api_url_base + "/albums")
+        assert len(api_mock.get_requests(url=library.api.url + "/artists")) == 0
+        req_albums = api_mock.get_requests(url=library.api.url + "/albums")
         req_album_ids = {id_ for req in req_albums for id_ in parse_qs(req.query)["ids"][0].split(",")}
         assert req_album_ids == album_ids
 
-        api_mock.reset_mock()
+        api_mock.reset_mock()  # test checks the number of requests made
 
         # enriches artists without replacing previous enrichment
         library.enrich_tracks(albums=False, artists=True)
@@ -158,8 +158,8 @@ class TestSpotifyLibrary(RemoteLibraryTester):
             validate_track_extras_not_enriched(track)
 
         # check requests
-        assert len(api_mock.get_requests(url=library.api.api_url_base + "/albums")) == 0
-        req_artists = api_mock.get_requests(url=library.api.api_url_base + "/artists")
+        assert len(api_mock.get_requests(url=library.api.url + "/albums")) == 0
+        req_artists = api_mock.get_requests(url=library.api.url + "/artists")
         req_artist_ids = {id_ for req in req_artists for id_ in parse_qs(req.query)["ids"][0].split(",")}
         assert req_artist_ids == artist_ids
 
@@ -186,7 +186,7 @@ class TestSpotifyLibrary(RemoteLibraryTester):
             assert "albums" not in artist.response
             assert len(artist.albums) == 0
 
-        api_mock.reset_mock()
+        api_mock.reset_mock()  # test checks the number of requests made
 
         # gets albums but does not extend them
         library.enrich_saved_artists(tracks=False)
@@ -204,7 +204,7 @@ class TestSpotifyLibrary(RemoteLibraryTester):
         req_urls = [req.url.split("?")[0] for req in api_mock.request_history]
         assert req_urls == [artist.url + "/albums" for artist in library.artists]
 
-        api_mock.reset_mock()
+        api_mock.reset_mock()  # test checks the number of requests made
 
         library.enrich_saved_artists(tracks=True)
         for artist in library.artists:

@@ -10,11 +10,14 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from musify.shared.api.exception import APIError
-from musify.shared.remote.api import APIMethodInputType
+from musify.shared.remote import RemoteResponse
 from musify.shared.remote.enum import RemoteObjectType, RemoteIDType
 from musify.shared.remote.exception import RemoteObjectTypeError
+from musify.shared.remote.types import APIInputValue
 from musify.shared.utils import limit_value
 from musify.spotify.api.base import SpotifyAPIBase
+
+ARTIST_ALBUM_TYPES = {"album", "single", "compilation", "appears_on"}
 
 
 class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
@@ -135,20 +138,25 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
     ###########################################################################
     def extend_items(
             self,
-            items_block: MutableMapping[str, Any],
+            response: MutableMapping[str, Any] | RemoteResponse,
             kind: RemoteObjectType | str | None = None,
             key: RemoteObjectType | None = None,
             use_cache: bool = True,
             leave_bar: bool | None = None,
     ) -> list[dict[str, Any]]:
         """
-        Extend the items for a given ``items_block`` API response.
+        Extend the items for a given API ``response``.
         The function requests each page of the collection returning a list of all items
         found across all pages for this URL.
 
         Updates the value of the ``items`` key in-place by extending the value of the ``items`` key with new results.
 
-        :param items_block: A remote API JSON response for an items type endpoint which includes required keys:
+        If a :py:class:`RemoteResponse`, this function will not refresh itself with the new response.
+        The user must call `refresh` manually after execution.
+
+        :param response: A remote API JSON response for an items type endpoint
+            or a RemoteResponse which contains this response.
+            Must include required keys:
             ``total`` and either ``next`` or ``href``, plus optional keys ``previous``, ``limit``, ``items`` etc.
         :param kind: The type of response being extended. Optional, used only for logging.
         :param key: The type of response of the child objects. Used when selecting nested data for certain responses
@@ -159,52 +167,55 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             When None, allow the logger to decide this setting.
         :return: API JSON responses for each item
         """
+        if isinstance(response, RemoteResponse):
+            response = response.response
+
         key = key.name.lower() + "s" if key else None
-        if key and key in items_block:
-            items_block = items_block[key]
-        if self.items_key not in items_block:
-            items_block[self.items_key] = []
+        if key and key in response:
+            response = response[key]
+        if self.items_key not in response:
+            response[self.items_key] = []
 
         # this usually happens on the items block of a current user's playlist
-        if "next" not in items_block:
-            items_block["next"] = items_block["href"]
-        if "previous" not in items_block:
-            items_block["previous"] = None
-        if "limit" not in items_block:
-            items_block["limit"] = int(parse_qs(urlparse(items_block["next"]).query).get("limit", [50])[0])
+        if "next" not in response:
+            response["next"] = response["href"]
+        if "previous" not in response:
+            response["previous"] = None
+        if "limit" not in response:
+            response["limit"] = int(parse_qs(urlparse(response["next"]).query).get("limit", [50])[0])
 
         kind = kind.name.lower() + "s" if isinstance(kind, RemoteObjectType) else kind or self.items_key
-        pages = (items_block["total"] - len(items_block[self.items_key])) / (items_block["limit"] or 1)
+        pages = (response["total"] - len(response[self.items_key])) / (response["limit"] or 1)
         bar = self.logger.get_progress_bar(
-            initial=len(items_block[self.items_key]),
-            total=items_block["total"],
+            initial=len(response[self.items_key]),
+            total=response["total"],
             desc=f"Extending {kind}".rstrip("s") if kind[0].islower() else kind,
             unit=key or self.items_key,
             leave=leave_bar,
             disable=pages < self._bar_threshold,
         )
 
-        while items_block.get("next"):  # loop through each page
-            log_count = min(len(items_block[self.items_key]) + items_block["limit"], items_block["total"])
-            log = [f"{log_count:>6}/{items_block["total"]:<6} {key or self.items_key}"]
+        while response.get("next"):  # loop through each page
+            log_count = min(len(response[self.items_key]) + response["limit"], response["total"])
+            log = [f"{log_count:>6}/{response["total"]:<6} {key or self.items_key}"]
 
-            response = self.handler.get(items_block["next"], use_cache=use_cache, log_pad=95, log_extra=log)
-            if key and key in response:
-                response = response[key]
+            response_next = self.handler.get(response["next"], use_cache=use_cache, log_pad=95, log_extra=log)
+            if key and key in response_next:
+                response_next = response_next[key]
 
-            items_block[self.items_key].extend(response[self.items_key])
-            items_block["href"] = response["href"]
-            items_block["next"] = response.get("next")
-            items_block["previous"] = response.get("previous")
+            response[self.items_key].extend(response_next[self.items_key])
+            response["href"] = response_next["href"]
+            response["next"] = response_next.get("next")
+            response["previous"] = response_next.get("previous")
 
-            bar.update(len(response[self.items_key]))
+            bar.update(len(response_next[self.items_key]))
 
         bar.close()
-        return items_block[self.items_key]
+        return response[self.items_key]
 
     def get_items(
             self,
-            values: APIMethodInputType,
+            values: APIInputValue,
             kind: RemoteObjectType | None = None,
             limit: int = 50,
             extend: bool = True,
@@ -221,9 +232,14 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
                 - a valid ID value under an ``id`` key,
                 - a valid item type value under a ``type`` key if ``kind`` is None.
             * A MutableSequence of remote API JSON responses for a collection including the same structure as above.
+            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
+              as described above.
+            * A Sequence of RemoteResponses as above.
 
         If JSON response(s) given, this update each response given by merging with the new response
         and replacing the ``items`` with the new results.
+
+        If :py:class:`RemoteResponse` values are given, this function will call `refresh` on them.
 
         :param values: The values representing some remote objects. See description for allowed value types.
             These items must all be of the same type of item i.e. all tracks OR all artists etc.
@@ -238,17 +254,18 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             of the input ``values``. Or when it does not recognise the type of the input ``values`` parameter.
         """
         # input validation
-        if not values:  # skip on empty
-            self.logger.debug(f"{'SKIP':<7}: {self.api_url_base:<43} | No data given")
+        if not isinstance(values, RemoteResponse) and not values:  # skip on empty
+            url = f"{self.url}/{kind.name.lower() + "s"}" if kind else self.url
+            self.logger.debug(f"{'SKIP':<7}: {url:<43} | No data given")
             return []
         if kind is None:  # determine the item type
-            kind = self.get_item_type(values)
+            kind = self.wrangler.get_item_type(values)
         else:
-            self.validate_item_type(values, kind=kind)
+            self.wrangler.validate_item_type(values, kind=kind)
 
         unit = kind.name.lower() + "s"
-        url = f"{self.api_url_base}/{unit}"
-        id_list = self.extract_ids(values, kind=kind)
+        url = f"{self.url}/{unit}"
+        id_list = self.wrangler.extract_ids(values, kind=kind)
 
         if kind in {RemoteObjectType.USER, RemoteObjectType.PLAYLIST} or len(id_list) <= 1:
             results = self._get_items_multi(url=url, id_list=id_list, kind=unit, use_cache=use_cache)
@@ -260,7 +277,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         key = self.collection_item_map.get(kind, kind)
         key_name = key.name.lower() + "s"
         if len(results) == 0 or any(key_name not in result for result in results) or not extend:
-            self._merge_results_to_input(original=values, results=results, ordered=True)
+            self._merge_results_to_input(original=values, responses=results, ordered=True)
+            self._refresh_responses(responses=values, skip_checks=False)
             self.logger.debug(f"{'DONE':<7}: {url:<43} | Retrieved {len(results):>6} {unit}")
             return results
 
@@ -272,7 +290,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             if result[key_name].get("next") or ("next" not in result[key_name] and result[key_name].get("href")):
                 self.extend_items(result[key_name], kind=kind, key=key, use_cache=use_cache, leave_bar=False)
 
-        self._merge_results_to_input(original=values, results=results, ordered=True)
+        self._merge_results_to_input(original=values, responses=results, ordered=True)
+        self._refresh_responses(responses=values, skip_checks=False)
 
         item_count = sum(len(result[key_name][self.items_key]) for result in results)
         self.logger.debug(
@@ -313,14 +332,15 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
 
         params = {"limit": limit_value(limit, floor=1, ceil=50)}
         if user is not None:
-            url = f"{self.convert(user, kind=RemoteObjectType.USER, type_out=RemoteIDType.URL)}/{kind.name.lower()}s"
+            url = self.wrangler.convert(user, kind=RemoteObjectType.USER, type_out=RemoteIDType.URL)
+            url = f"{url}/{kind.name.lower()}s"
             desc_qualifier = "user's"
         elif kind == RemoteObjectType.ARTIST:
-            url = f"{self.api_url_base}/me/following"
+            url = f"{self.url}/me/following"
             desc_qualifier = "current user's followed"
             params["type"] = "artist"
         else:
-            url = f"{self.api_url_base}/me/{kind.name.lower()}s"
+            url = f"{self.url}/me/{kind.name.lower()}s"
             desc_qualifier = "current user's" if kind == RemoteObjectType.PLAYLIST else "current user's saved"
 
         desc = f"Getting {desc_qualifier} {kind.name.lower()}s"
@@ -331,14 +351,14 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
 
         return results
 
-    def get_tracks_extra(
+    def extend_tracks(
             self,
-            values: APIMethodInputType,
+            values: APIInputValue,
             features: bool = False,
             analysis: bool = False,
             limit: int = 50,
             use_cache: bool = True,
-    ) -> dict[str, list[dict[str, Any]]]:
+    ) -> list[dict[str, Any]]:
         """
         ``GET: /audio-features`` and/or ``GET: /audio-analysis`` - Get audio features/analysis for given track/s.
 
@@ -349,9 +369,14 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
                 - some items under an ``items`` key,
                 - a valid ID value under an ``id`` key.
             * A MutableSequence of remote API JSON responses for a set of tracks including the same structure as above.
+            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
+              as described above.
+            * A Sequence of RemoteResponses as above.
 
         If JSON response(s) given, this updates each response given by adding the results
         under the ``audio_features`` and ``audio_analysis`` keys as appropriate.
+
+        If :py:class:`RemoteResponse` values are given, this function will call `refresh` on them.
 
         :param values: The values representing some remote track/s. See description for allowed value types.
         :param features: When True, get audio features.
@@ -365,58 +390,63 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         """
         # input validation
         if not features and not analysis:  # skip on all False
-            return {}
+            return []
         if not values:  # skip on empty
-            self.logger.debug(f"{'SKIP':<7}: {self.api_url_base:<43} | No data given")
-            return {}
-        self.validate_item_type(values, kind=RemoteObjectType.TRACK)
+            self.logger.debug(f"{'SKIP':<7}: {self.url:<43} | No data given")
+            return []
+        self.wrangler.validate_item_type(values, kind=RemoteObjectType.TRACK)
 
-        id_list = self.extract_ids(values, kind=RemoteObjectType.TRACK)
+        id_list = self.wrangler.extract_ids(values, kind=RemoteObjectType.TRACK)
 
         # value list takes the form [URL, key, batched]
         config: dict[str, tuple[str, str, bool]] = {}
         if features:
-            config["features"] = (f"{self.api_url_base}/audio-features", "audio_features", True)
+            config["features"] = (f"{self.url}/audio-features", "audio_features", True)
         if analysis:
-            config["analysis"] = (f"{self.api_url_base}/audio-analysis", "audio_analysis", False)
+            config["analysis"] = (f"{self.url}/audio-analysis", "audio_analysis", False)
 
-        results: dict[str, list[dict[str, Any]]] = {}
+        results: list[dict[str, Any]]
         if len(id_list) == 1:
             id_ = id_list[0]
+            id_map = {self.id_key: id_}
+
+            result = id_map.copy()
             for (url, key, _) in config.values():
-                results[key] = [self.handler.get(f"{url}/{id_}", use_cache=use_cache, log_pad=43) | {"id": id_}]
+                result[key] = self.handler.get(f"{url}/{id_}", use_cache=use_cache, log_pad=43) | id_map.copy()
+            results = [result]
         else:
+            results = []
             for kind, (url, key, batch) in config.items():
                 method = self._get_items_batched if batch else self._get_items_multi
-                results[key] = method(
+                responses = method(
                     url=url, id_list=id_list, kind=kind, key=key if batch else None, limit=limit, use_cache=use_cache
                 )
+                responses.sort(key=lambda response: id_list.index(response[self.id_key]))
+                responses = [{self.id_key: response[self.id_key], key: response} for response in responses]
 
-        # re-map results and extend original input if required
-        if isinstance(values, MutableMapping) or (isinstance(values, Collection) and not isinstance(values, str)):
-            results_id_mapped = {}
-            for k, v in results.items():
-                for result in v:
-                    results_id_mapped[result["id"]] = results_id_mapped.get(result["id"], {"id": result["id"]})
-                    results_id_mapped[result["id"]][k] = result
-            results_remapped = list(results_id_mapped.values())
-            self._merge_results_to_input(original=values, results=results_remapped, ordered=False, clear=False)
+                if not results:
+                    results = responses
+                else:
+                    results = [result | response for result, response in zip(results, responses)]
+
+        self._merge_results_to_input(original=values, responses=results, ordered=False, clear=False)
+        self._refresh_responses(responses=values, skip_checks=False)
 
         def map_key(value: str) -> str:
             """Map the given ``value`` to logging appropriate string"""
             return value.replace("_", " ").replace("analysis", "analyses")
 
-        url_suffix = "+".join(c[0].split("/")[-1] for c in config.values())
+        log_url = f"{self.url}/{"+".join(c[0].split("/")[-1] for c in config.values())}"
         self.logger.debug(
-            f"{'DONE':<7}: {f"{self.api_url_base}/{url_suffix}":<71} | Retrieved "
-            f"{" and ".join(map_key(k) for k in results)} for {len(id_list):>5} tracks"
+            f"{'DONE':<7}: {log_url:<71} | "
+            f"Retrieved {" and ".join(map_key(key) for _, key, _ in config.values())} for {len(id_list):>5} tracks"
         )
 
         return results
 
     def get_tracks(
             self,
-            values: APIMethodInputType,
+            values: APIInputValue,
             features: bool = False,
             analysis: bool = False,
             limit: int = 50,
@@ -428,7 +458,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         ``GET: /{kind}s`` + ``GET: /audio-features`` and/or ``GET: /audio-analysis``
 
         Get track(s) info and any audio features/analysis.
-        Mostly just a wrapper for ``get_items`` and ``get_tracks_extra`` functions.
+        Mostly just a wrapper for ``get_items`` and ``extend_tracks`` functions.
 
         ``values`` may be:
             * A string representing a URL/URI/ID of type 'track'.
@@ -437,6 +467,9 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
                 - some items under an ``items`` key,
                 - a valid ID value under an ``id`` key.
             * A MutableSequence of remote API JSON responses for a set of tracks including the same structure as above.
+            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
+              as described above.
+            * A Sequence of RemoteResponses as above.
 
         If JSON response(s) given, this updates each response given by adding the results
         under the ``audio_features`` and ``audio_analysis`` keys as appropriate.
@@ -453,17 +486,17 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         tracks = self.get_items(values=values, kind=RemoteObjectType.TRACK, limit=limit, use_cache=use_cache)
 
         # ensure that response are being assigned back to the original values if API response(s) given
-        if isinstance(values, Mapping):
+        if isinstance(values, Mapping | RemoteResponse):
             tracks = [values]
-        elif isinstance(values, Collection) and all(isinstance(v, Mapping) for v in values):
+        elif isinstance(values, Collection) and all(isinstance(v, Mapping | RemoteResponse) for v in values):
             tracks = values
 
-        self.get_tracks_extra(values=tracks, features=features, analysis=analysis, limit=limit, use_cache=use_cache)
+        self.extend_tracks(values=tracks, features=features, analysis=analysis, limit=limit, use_cache=use_cache)
         return tracks
 
     def get_artist_albums(
             self,
-            values: APIMethodInputType,
+            values: APIInputValue,
             types: Collection[str] = (),
             limit: int = 50,
             use_cache: bool = True,
@@ -476,8 +509,13 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             * A MutableSequence of strings representing URLs/URIs/IDs of the type 'artist'.
             * A remote API JSON response for an artist including a valid ID value under an ``id`` key.
             * A MutableSequence of remote API JSON responses for a set of artists including the same structure as above.
+            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
+              as described above.
+            * A Sequence of RemoteResponses as above.
 
         If JSON response(s) given, this updates each response given by adding the results under the ``albums`` key.
+
+        If :py:class:`RemoteResponse` values are given, this function will call `refresh` on them.
 
         :param values: The values representing some remote artist/s. See description for allowed value types.
         :param types: The types of albums to return. Select from ``{"album", "single", "compilation", "appears_on"}``.
@@ -487,16 +525,20 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         :return: A map of the Artist ID to a list of the API JSON responses for each album.
         :raise RemoteObjectTypeError: Raised when the item types of the input ``values`` are not all artists or IDs.
         """
-        # input validation
-        if not values:  # skip on empty
-            self.logger.debug(f"{'SKIP':<7}: {self.api_url_base:<43} | No data given")
-            return {}
-        valid_types = {"album", "single", "compilation", "appears_on"}
-        if types and not all(t in valid_types for t in types):
-            raise APIError(f"Given types not recognised, must be one or many of the following: {valid_types} ({types})")
-        self.validate_item_type(values, kind=RemoteObjectType.ARTIST)
+        url = f"{self.url}/artists/{{id}}/albums"
 
-        id_list = self.extract_ids(values, kind=RemoteObjectType.ARTIST)
+        # input validation
+        if not isinstance(values, RemoteResponse) and not values:  # skip on empty
+            self.logger.debug(f"{'SKIP':<7}: {url:<43} | No data given")
+            return {}
+
+        if types and not all(t in ARTIST_ALBUM_TYPES for t in types):
+            raise APIError(
+                f"Given types not recognised, must be one or many of the following: {ARTIST_ALBUM_TYPES} ({types})"
+            )
+        self.wrangler.validate_item_type(values, kind=RemoteObjectType.ARTIST)
+
+        id_list = self.wrangler.extract_ids(values, kind=RemoteObjectType.ARTIST)
         bar = self.logger.get_progress_bar(
             iterable=id_list, desc="Getting artist albums", unit="artist", disable=len(id_list) < self._bar_threshold
         )
@@ -506,7 +548,6 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             params["include_groups"] = ",".join(set(types))
 
         key = RemoteObjectType.ALBUM
-        url = self.api_url_base + "/artists/{id}/albums"
         results: dict[str, dict[str, Any]] = {}
         for id_ in bar:
             results[id_] = self.handler.get(url=url.format(id=id_), params=params, use_cache=use_cache)
@@ -518,10 +559,9 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
                     "total": album["total_tracks"]
                 }
 
-        # re-map results and extend original input if required
-        if isinstance(values, MutableMapping) or (isinstance(values, Collection) and not isinstance(values, str)):
-            results_remapped = [{"id": id_, "albums": result} for id_, result in results.items()]
-            self._merge_results_to_input(original=values, results=results_remapped, ordered=False, clear=False)
+        results_remapped = [{"id": id_, "albums": result} for id_, result in results.items()]
+        self._merge_results_to_input(original=values, responses=results_remapped, ordered=False, clear=False)
+        self._refresh_responses(responses=values, skip_checks=True)
 
         item_count = sum(len(result) for result in results.values())
         self.logger.debug(

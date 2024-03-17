@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod, ABCMeta
 from collections.abc import Container
 
-from musify.shared.core.base import Nameable
+from musify.shared.core.base import MusifyObject
 from musify.shared.core.enum import MusifyEnum, Fields, TagField, ALL_FIELDS, Field
 
 
@@ -28,12 +28,12 @@ class FieldTester(EnumTester, metaclass=ABCMeta):
     """Run generic tests for :py:class:`Field` enum implementations"""
 
     @abstractmethod
-    def reference_cls(self) -> type[Nameable]:
+    def reference_cls(self) -> type[MusifyObject]:
         """The associated class to validate field names against."""
         raise NotImplementedError
 
     @abstractmethod
-    def reference_ignore(self) -> type[Nameable]:
+    def reference_ignore(self) -> type[MusifyObject]:
         """The associated class to validate field names against."""
         raise NotImplementedError
 
@@ -56,7 +56,7 @@ class FieldTester(EnumTester, metaclass=ABCMeta):
             assert len(enum_combined) == 1
             assert enum.value == enum_combined[0]
 
-    def test_all_fields_are_valid(self, reference_cls: type[Nameable], reference_ignore: Container[Field]):
+    def test_all_fields_are_valid(self, reference_cls: type[MusifyObject], reference_ignore: Container[Field]):
         names = [e.name.lower() for enum in self.cls.all() if enum not in reference_ignore for e in self.cls.map(enum)]
 
         for name in names:

@@ -4,12 +4,10 @@ from typing import Any
 
 from musify.shared.remote.enum import RemoteIDType, RemoteObjectType
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
-from musify.spotify import URL_API, URL_EXT, SPOTIFY_NAME
 from musify.spotify.base import SpotifyObject
+from musify.spotify.processors import SpotifyDataWrangler
+from tests.shared.remote.utils import ALL_ID_TYPES
 from tests.utils import random_str
-
-ALL_ID_TYPES = RemoteIDType.all()
-ALL_ITEM_TYPES = RemoteObjectType.all()
 
 
 def random_id() -> str:
@@ -50,7 +48,7 @@ def random_id_types(
 
 def random_uri(kind: RemoteObjectType = RemoteObjectType.TRACK) -> str:
     """Generates a valid looking random Spotify URI of item :py:class:`RemoteObjectType` ``kind``"""
-    return f"{SPOTIFY_NAME.lower()}:{kind.name.lower()}:{random_id()}"
+    return f"{SpotifyDataWrangler.source.lower()}:{kind.name.lower()}:{random_id()}"
 
 
 def random_uris(kind: RemoteObjectType = RemoteObjectType.TRACK, start: int = 1, stop: int = 50) -> list[str]:
@@ -61,7 +59,7 @@ def random_uris(kind: RemoteObjectType = RemoteObjectType.TRACK, start: int = 1,
 
 def random_api_url(kind: RemoteObjectType = RemoteObjectType.TRACK) -> str:
     """Generates a valid looking random Spotify API URL of item :py:class:`RemoteObjectType` ``kind``"""
-    return f"{URL_API}/{kind.name.lower()}s/{random_id()}"
+    return f"{SpotifyDataWrangler.url_api}/{kind.name.lower()}s/{random_id()}"
 
 
 def random_api_urls(kind: RemoteObjectType = RemoteObjectType.TRACK, start: int = 1, stop: int = 50) -> list[str]:
@@ -72,7 +70,7 @@ def random_api_urls(kind: RemoteObjectType = RemoteObjectType.TRACK, start: int 
 
 def random_ext_url(kind: RemoteObjectType = RemoteObjectType.TRACK) -> str:
     """Generates a valid looking random Spotify external URL of item :py:class:`RemoteObjectType` ``kind``"""
-    return f"{URL_EXT}/{kind.name.lower()}/{random_id()}"
+    return f"{SpotifyDataWrangler.url_ext}/{kind.name.lower()}/{random_id()}"
 
 
 def random_ext_urls(kind: RemoteObjectType = RemoteObjectType.TRACK, start: int = 1, stop: int = 50) -> list[str]:

@@ -56,7 +56,7 @@ class RemoteCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
             assert collection[invalid_item.url_ext]
 
         with pytest.raises(MusifyKeyError):
-            assert collection[item.source]
+            assert collection["this key does not exist"]
 
 
 class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, metaclass=ABCMeta):

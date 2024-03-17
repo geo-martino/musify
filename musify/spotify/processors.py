@@ -2,30 +2,35 @@
 Convert and validate Spotify ID and item types.
 """
 
-from collections.abc import Mapping, Collection
+from collections.abc import Mapping
 from typing import Any
 from urllib.parse import urlparse
 
+from musify.shared.core.collection import MusifyCollection
 from musify.shared.exception import MusifyEnumError
-from musify.shared.remote.api import APIMethodInputType
+from musify.shared.remote import RemoteResponse
+from musify.shared.remote.api import APIInputValue
 from musify.shared.remote.enum import RemoteIDType, RemoteObjectType
 from musify.shared.remote.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
-from musify.spotify import URL_API, URL_EXT, SPOTIFY_UNAVAILABLE_URI, SpotifyRemote
+from musify.shared.utils import to_collection
 
 
-class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
+class SpotifyDataWrangler(RemoteDataWrangler):
 
-    unavailable_uri_dummy = SPOTIFY_UNAVAILABLE_URI
+    source = "Spotify"
+    unavailable_uri_dummy = "spotify:track:unavailable"
+    url_api = "https://api.spotify.com/v1"
+    url_ext = "https://open.spotify.com"
 
-    @staticmethod
-    def get_id_type(value: str, kind: RemoteObjectType | None = None) -> RemoteIDType:
+    @classmethod
+    def get_id_type(cls, value: str, kind: RemoteObjectType | None = None) -> RemoteIDType:
         value = value.strip().casefold()
         uri_split = value.split(':')
 
-        if value.startswith(URL_API):
+        if value.startswith(cls.url_api):
             return RemoteIDType.URL
-        elif value.startswith(URL_EXT):
+        elif value.startswith(cls.url_ext):
             return RemoteIDType.URL_EXT
         elif len(uri_split) == RemoteIDType.URI.value and uri_split[0] == "spotify":  # URI
             if uri_split[1] == "user":
@@ -41,9 +46,9 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
         value = value.strip().casefold()
 
         if kind == RemoteIDType.URL:
-            return value.startswith(URL_API)
+            return value.startswith(cls.url_api)
         elif kind == RemoteIDType.URL_EXT:
-            return value.startswith(URL_EXT)
+            return value.startswith(cls.url_ext)
         elif kind == RemoteIDType.URI:
             uri_split = value.split(':')
             if len(uri_split) != RemoteIDType.URI.value or uri_split[0] != "spotify":
@@ -59,8 +64,17 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
                 pass
         return False
 
-    @staticmethod
-    def _get_item_type(value: str | Mapping[str, Any], kind: RemoteObjectType) -> RemoteObjectType | None:
+    @classmethod
+    def _get_item_type(
+            cls, value: str | Mapping[str, Any] | RemoteResponse, kind: RemoteObjectType | None = None
+    ) -> RemoteObjectType | None:
+        if isinstance(value, RemoteResponse):
+            response_kind = cls._get_item_type(value.response)
+            if value.kind != response_kind:
+                raise RemoteObjectTypeError(
+                    f"RemoteResponse kind != actual response kind: {value.kind} != {response_kind}"
+                )
+            return value.kind
         if isinstance(value, Mapping):
             if value.get("is_local", False):
                 raise RemoteObjectTypeError("Cannot process local items")
@@ -71,8 +85,8 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
         value = value.strip()
         uri_check = value.split(':')
 
-        if value.startswith(URL_API) or value.startswith(URL_EXT):  # open/API URL
-            value = value.removeprefix(URL_API) if value.startswith(URL_API) else value.removeprefix(URL_EXT)
+        if value.startswith(cls.url_api) or value.startswith(cls.url_ext):  # open/API URL
+            value = value.removeprefix(cls.url_api if value.startswith(cls.url_api) else cls.url_ext)
             url_path = urlparse(value).path.split("/")
             for chunk in url_path:
                 try:
@@ -82,6 +96,7 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
         elif len(uri_check) == RemoteIDType.URI.value and uri_check[0].casefold() == "spotify":
             return RemoteObjectType.from_name(uri_check[1])[0]
         elif len(value) == RemoteIDType.ID.value or kind == RemoteObjectType.USER:
+            # in these cases, we have to go on faith...
             return kind
         raise RemoteObjectTypeError(f"Could not determine item type of given value: {value}")
 
@@ -134,26 +149,26 @@ class SpotifyDataWrangler(RemoteDataWrangler, SpotifyRemote):
         # reformat
         item = kind.name.lower().rstrip('s')
         if type_out == RemoteIDType.URL:
-            return f'{URL_API}/{item}s/{id_}'
+            return f'{cls.url_api}/{item}s/{id_}'
         elif type_out == RemoteIDType.URL_EXT:
-            return f'{URL_EXT}/{item}/{id_}'
+            return f'{cls.url_ext}/{item}/{id_}'
         elif type_out == RemoteIDType.URI:
             return f"spotify:{item}:{id_}"
         else:
             return id_
 
     @classmethod
-    def extract_ids(cls, values: APIMethodInputType, kind: RemoteObjectType | None = None) -> list[str]:
-        if isinstance(values, str):
-            return [cls.convert(values, kind=kind, type_out=RemoteIDType.ID)]
-        elif isinstance(values, Mapping) and "id" in values:  # is a raw API response from Spotify
-            return [values["id"]]
-        elif isinstance(values, Collection):
-            if len(values) == 0:
-                return []
-            elif all(isinstance(d, str) for d in values):
-                return [cls.convert(d, kind=kind, type_out=RemoteIDType.ID) for d in values]
-            elif all(isinstance(d, Mapping) and "id" in d for d in values):
-                return [track["id"] for track in values]
+    def extract_ids(cls, values: APIInputValue, kind: RemoteObjectType | None = None) -> list[str]:
+        def extract_id(value: str | Mapping[str, Any] | RemoteResponse) -> str:
+            """Extract an ID from a given ``value``"""
+            if isinstance(value, str):
+                return cls.convert(value, kind=kind, type_out=RemoteIDType.ID)
+            elif isinstance(value, Mapping) and "id" in value:
+                return value["id"]
+            elif isinstance(value, RemoteResponse):
+                return value.id
 
-        raise RemoteError(f"Could not extract IDs. Input data not recognised: {type(values)}")
+            raise RemoteError(f"Could not extract ID. Input data not recognised: {type(value)}")
+
+        values = to_collection(values) if not isinstance(values, MusifyCollection) else [values]
+        return [extract_id(value=value) for value in to_collection(values)]

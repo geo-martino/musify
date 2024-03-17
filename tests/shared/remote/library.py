@@ -4,7 +4,7 @@ from copy import copy, deepcopy
 from random import choice
 from typing import Any
 
-from musify.shared.core.base import Item
+from musify.shared.core.base import MusifyItem
 from musify.shared.core.object import Playlist
 from musify.shared.remote.library import RemoteLibrary
 from musify.shared.remote.object import RemoteTrack
@@ -129,7 +129,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         backup_check: Mapping[str, list[str]]
         if isinstance(backup, RemoteLibrary):  # get URIs from playlists in library
             backup_check = {name: [track.uri for track in pl] for name, pl in backup.playlists.items()}
-        elif isinstance(backup, Mapping) and all(isinstance(v, Item) for vals in backup.values() for v in vals):
+        elif isinstance(backup, Mapping) and all(isinstance(v, MusifyItem) for vals in backup.values() for v in vals):
             # get URIs from playlists in map values
             backup_check = {name: [track.uri for track in pl] for name, pl in backup.items()}
         elif not isinstance(backup, Mapping) and isinstance(backup, Collection):
@@ -194,7 +194,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
     @staticmethod
     def assert_sync(library: RemoteLibrary, playlists: Any, api_mock: RemoteMock):
         """Run test and assertions on library sync functionality for given input playlists data type"""
-        playlists_check: Mapping[str, Collection[Item]]
+        playlists_check: Mapping[str, Collection[MusifyItem]]
         if isinstance(playlists, RemoteLibrary):  # get map of playlists from the given library
             playlists_check = playlists.playlists
         elif isinstance(playlists, Collection) and all(isinstance(pl, Playlist) for pl in playlists):
@@ -206,7 +206,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         name_actual = next(name for name in playlists_check if name in library.playlists)
         name_new = next(name for name in playlists_check if name not in library.playlists)
 
-        api_mock.reset_mock()
+        api_mock.reset_mock()  # test checks the number of requests made
         library_test = deepcopy(library)
         results = library_test.sync(playlists=playlists, dry_run=False)
 

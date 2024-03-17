@@ -6,49 +6,12 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import Hashable, Collection, Iterable
 from datetime import datetime
 from glob import glob
-from http.client import HTTPResponse
-from io import BytesIO
 from os import sep
 from os.path import splitext, basename, dirname, getsize, getmtime, getctime, exists, join
-from pathlib import Path
 from typing import Any
-from urllib.error import URLError
-from urllib.request import urlopen, Request
 
-from PIL import Image, UnidentifiedImageError
-
-from musify.local.exception import InvalidFileType, ImageLoadError, FileDoesNotExistError
 from musify.shared.core.misc import PrettyPrinter
-
-
-def open_image(source: str | bytes | Path | Request) -> Image.Image:
-    """
-    Open Image object from a given URL or file path
-
-    :return: The loaded :py:class:`Image.Image`
-    :raise ImageLoadError: If the image cannot be loaded.
-    """
-
-    try:  # open image from link
-        if isinstance(source, Request) or (isinstance(source, str) and source.startswith("http")):
-            response: HTTPResponse = urlopen(source)
-            image = Image.open(response)
-            response.close()
-            return image
-
-        elif not isinstance(source, Request):
-            return Image.open(source)
-
-    except (URLError, FileNotFoundError, UnidentifiedImageError):
-        pass
-    raise ImageLoadError(f"{source} | Failed to open image")
-
-
-def get_image_bytes(image: Image.Image) -> bytes:
-    """Extracts bytes from a given Image file"""
-    image_bytes_arr = BytesIO()
-    image.save(image_bytes_arr, format=image.format)
-    return image_bytes_arr.getvalue()
+from musify.shared.exception import InvalidFileType, FileDoesNotExistError
 
 
 class File(Hashable, metaclass=ABCMeta):
@@ -93,14 +56,15 @@ class File(Hashable, metaclass=ABCMeta):
         """:py:class:`datetime` object representing when the file was last modified"""
         return datetime.fromtimestamp(getmtime(self.path)) if exists(self.path) else None
 
-    def _validate_type(self, path: str) -> None:
+    @classmethod
+    def _validate_type(cls, path: str) -> None:
         """Raises an exception if the ``path`` extension is not accepted"""
         ext = splitext(path)[1].casefold()
-        if ext not in self.valid_extensions:
+        if ext not in cls.valid_extensions:
             raise InvalidFileType(
                 ext,
-                f"Not an accepted {self.__class__.__name__} file extension. "
-                f"Use only: {', '.join(self.valid_extensions)}"
+                f"Not an accepted {cls.__name__} file extension. "
+                f"Use only: {', '.join(cls.valid_extensions)}"
             )
 
     @staticmethod

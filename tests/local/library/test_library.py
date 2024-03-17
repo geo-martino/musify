@@ -4,10 +4,10 @@ from random import randrange
 
 import pytest
 
-from musify.local.file import PathMapper, PathStemMapper
 from musify.local.library import LocalLibrary
 from musify.local.track import LocalTrack
 from musify.processors.filter import FilterDefinedList, FilterIncludeExclude
+from musify.shared.file import PathMapper, PathStemMapper
 from tests.local.library.testers import LocalLibraryTester
 from tests.local.track.utils import random_track, random_tracks
 from tests.local.utils import path_playlist_resources, path_playlist_all, path_playlist_m3u, path_playlist_xautopf_bp

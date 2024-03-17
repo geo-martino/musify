@@ -37,7 +37,7 @@ class LocalCollectionTester(ItemCollectionTester, metaclass=ABCMeta):
         assert collection[item.name] == item
         assert collection[item.path] == item
 
-        if collection.remote_wrangler is not None:
+        if item.has_uri:
             assert collection[item.uri] == item
         else:
             with pytest.raises(MusifyKeyError):

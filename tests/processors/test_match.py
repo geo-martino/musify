@@ -168,8 +168,8 @@ class TestItemMatcher(PrettyPrinterTester):
         track2.artist = "nope"
         track1.album = "album"
         track2.album = "name"
-        track1.file.info.length = 100
-        track2.file.info.length = 10
+        track1._reader.file.info.length = 100
+        track2._reader.file.info.length = 10
         track1.year = 2020
         track2.year = 2010
 
@@ -190,7 +190,7 @@ class TestItemMatcher(PrettyPrinterTester):
         track4.title = "a longer title"
         track4.artist = f"band{sep}a singer{sep}artist"
         track4.album = "album"
-        track4.file.info.length = 100
+        track4._reader.file.info.length = 100
         track4.year = 2015
         assert matcher.match(track1, [track2, track4, track3], min_score=0.2, max_score=0.8) == track4
         assert matcher(track1, [track2, track4, track3], min_score=0.2, max_score=0.8) == track4
@@ -211,9 +211,9 @@ class TestItemMatcher(PrettyPrinterTester):
         track2.album = "name"
         track3.album = "valid album"
 
-        track1.file.info.length = 100
-        track2.file.info.length = 10
-        track3.file.info.length = 100
+        track1._reader.file.info.length = 100
+        track2._reader.file.info.length = 10
+        track3._reader.file.info.length = 100
 
         track1.year = 2020
         track2.year = 2010

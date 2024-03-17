@@ -8,13 +8,13 @@ from operator import mul
 from random import shuffle
 from typing import Any, Self
 
-from musify.local.file import File
 from musify.processors.base import DynamicProcessor, MusicBeeProcessor, dynamicprocessormethod
 from musify.processors.exception import ItemLimiterError
 from musify.processors.sort import ItemSorter
-from musify.shared.core.base import Item
+from musify.shared.core.base import MusifyItem
 from musify.shared.core.enum import MusifyEnum, Fields
 from musify.shared.core.object import Track
+from musify.shared.file import File
 
 
 class LimitType(MusifyEnum):
@@ -96,10 +96,10 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
 
         self._set_processor_name(sorted_by, fail_on_empty=False)
 
-    def __call__[T: Item](self, items: list[T], ignore: Collection[T] = ()) -> None:
+    def __call__[T: MusifyItem](self, items: list[T], ignore: Collection[T] = ()) -> None:
         return self.limit(items=items, ignore=ignore)
 
-    def limit[T: Item](self, items: list[T], ignore: Collection[T] = ()) -> None:
+    def limit[T: MusifyItem](self, items: list[T], ignore: Collection[T] = ()) -> None:
         """
         Limit ``items`` in-place based on set conditions.
 
@@ -144,7 +144,7 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
                 if count > self.limit_max:  # limit reached
                     break
 
-    def _convert(self, item: Item) -> float:
+    def _convert(self, item: MusifyItem) -> float:
         """
         Convert units for item length or size and return the value.
 
@@ -169,39 +169,39 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
             raise ItemLimiterError(f"Unrecognised LimitType: {self.kind}")
 
     @dynamicprocessormethod
-    def _random(self, items: list[Item]) -> None:
+    def _random(self, items: list[MusifyItem]) -> None:
         shuffle(items)
 
     @dynamicprocessormethod
-    def _highest_rating(self, items: list[Item]) -> None:
+    def _highest_rating(self, items: list[MusifyItem]) -> None:
         ItemSorter.sort_by_field(items, Fields.RATING, reverse=True)
 
     @dynamicprocessormethod
-    def _lowest_rating(self, items: list[Item]) -> None:
+    def _lowest_rating(self, items: list[MusifyItem]) -> None:
         ItemSorter.sort_by_field(items, Fields.RATING)
 
     @dynamicprocessormethod
-    def _most_recently_played(self, items: list[Item]) -> None:
+    def _most_recently_played(self, items: list[MusifyItem]) -> None:
         ItemSorter.sort_by_field(items, Fields.LAST_PLAYED, reverse=True)
 
     @dynamicprocessormethod
-    def _least_recently_played(self, items: list[Item]) -> None:
+    def _least_recently_played(self, items: list[MusifyItem]) -> None:
         ItemSorter.sort_by_field(items, Fields.LAST_PLAYED)
 
     @dynamicprocessormethod
-    def _most_often_played(self, items: list[Item]) -> None:
+    def _most_often_played(self, items: list[MusifyItem]) -> None:
         ItemSorter.sort_by_field(items, Fields.PLAY_COUNT, reverse=True)
 
     @dynamicprocessormethod
-    def _least_often_played(self, items: list[Item]) -> None:
+    def _least_often_played(self, items: list[MusifyItem]) -> None:
         ItemSorter.sort_by_field(items, Fields.PLAY_COUNT)
 
     @dynamicprocessormethod
-    def _most_recently_added(self, items: list[Item]) -> None:
+    def _most_recently_added(self, items: list[MusifyItem]) -> None:
         ItemSorter.sort_by_field(items, Fields.DATE_ADDED, reverse=True)
 
     @dynamicprocessormethod
-    def _least_recently_added(self, items: list[Item]) -> None:
+    def _least_recently_added(self, items: list[MusifyItem]) -> None:
         ItemSorter.sort_by_field(items, Fields.DATE_ADDED)
 
     def as_dict(self):

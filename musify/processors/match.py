@@ -10,8 +10,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from musify.processors.base import ItemProcessor
-from musify.shared.core.base import Nameable, NameableTaggableMixin, Taggable
-from musify.shared.core.collection import ItemCollection
+from musify.shared.core.base import MusifyObject
+from musify.shared.core.collection import MusifyCollection
 from musify.shared.core.enum import TagField, TagFields as Tag, ALL_TAG_FIELDS
 from musify.shared.core.misc import PrettyPrinter
 from musify.shared.core.object import Track, Album
@@ -90,7 +90,7 @@ class ItemMatcher(ItemProcessor):
         log[0] = pad * 3 + ' ' + (log[0] if log[0] else "unknown")
         self.logger.debug(" | ".join(log))
 
-    def _log_algorithm(self, source: Nameable, extra: Iterable[str] = ()) -> None:
+    def _log_algorithm(self, source: MusifyObject, extra: Iterable[str] = ()) -> None:
         """Wrapper for initially logging an algorithm in a correctly aligned format"""
         algorithm = inspect.stack()[1][0].f_code.co_name.upper().lstrip("_").replace("_", " ")
         log = [source.name, algorithm]
@@ -99,7 +99,7 @@ class ItemMatcher(ItemProcessor):
         self._log_padded(log, pad='>')
 
     def _log_test[T: (Track, Album)](
-            self, source: Nameable, result: T, test: Any, extra: Iterable[str] = ()
+            self, source: MusifyObject, result: T, test: Any, extra: Iterable[str] = ()
     ) -> None:
         """Wrapper for initially logging a test result in a correctly aligned format"""
         algorithm = inspect.stack()[1][0].f_code.co_name.replace("match", "").upper().lstrip("_").replace("_", " ")
@@ -109,14 +109,14 @@ class ItemMatcher(ItemProcessor):
             log.extend(extra)
         self._log_padded(log)
 
-    def _log_match[T: (Track, Album)](self, source: Nameable, result: T, extra: Iterable[str] = ()) -> None:
+    def _log_match[T: (Track, Album)](self, source: MusifyObject, result: T, extra: Iterable[str] = ()) -> None:
         """Wrapper for initially logging a match in a correctly aligned format"""
         log = [source.name, f"< Matched URI: {result.uri}"]
         if extra:
             log.extend(extra)
         self._log_padded(log, pad='<')
 
-    def clean_tags(self, source: NameableTaggableMixin) -> None:
+    def clean_tags(self, source: MusifyObject) -> None:
         """
         Clean tags on the input item and assign to its ``clean_tags`` attribute. Used for better matching/searching.
         Clean by removing words, and only taking phrases before a certain word e.g. 'featuring', 'part'.
@@ -210,8 +210,8 @@ class ItemMatcher(ItemProcessor):
             self._log_test(source=source, result=result, test=score, extra=[f"{source_val} -> {result_val}"])
             return score
 
-        artists_source = source_val.replace(Taggable.tag_sep, " ")
-        artists_result = result_val.split(Taggable.tag_sep)
+        artists_source = source_val.replace(MusifyObject.tag_sep, " ")
+        artists_result = result_val.split(MusifyObject.tag_sep)
 
         for i, artist in enumerate(artists_result, 1):
             score += (sum(word in artists_source for word in artist.split()) / len(artists_source.split())) * (1 / i)
@@ -414,7 +414,7 @@ class ItemMatcher(ItemProcessor):
         if Tag.YEAR in match_on:
             scores_current[Tag.YEAR] = self.match_year(source=source, result=result)
 
-        if isinstance(source, ItemCollection) and isinstance(result, ItemCollection):
+        if isinstance(source, MusifyCollection) and isinstance(result, MusifyCollection):
             # skip this if not a collection of items
             if not all(isinstance(i, Track) for i in source.items):
                 return scores_current

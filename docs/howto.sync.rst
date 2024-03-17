@@ -31,7 +31,7 @@ Sync data
 
    .. literalinclude:: _howto/scripts/sync.py
       :language: Python
-      :lines: 15-23
+      :lines: 15-26
 
 3. Load the matched tracks, get tags from the music streaming service, and save the tags to the file:
 
@@ -40,10 +40,10 @@ Sync data
 
    .. literalinclude:: _howto/scripts/sync.py
       :language: Python
-      :lines: 25-44
+      :lines: 28-47
 
 4. Once all tracks in a playlist have URIs assigned, sync the local playlist with a remote playlist:
 
    .. literalinclude:: _howto/scripts/sync.py
       :language: Python
-      :lines: 46-56
+      :lines: 49-59

@@ -10,13 +10,13 @@ from musify.shared.api.exception import APIError
 from musify.shared.remote.enum import RemoteObjectType
 from musify.shared.remote.exception import RemoteObjectTypeError, RemoteError
 from musify.shared.types import Number
-from musify.spotify import URL_API
 from musify.spotify.api import SpotifyAPI
 from musify.spotify.object import SpotifyAlbum, SpotifyArtist
 from musify.spotify.object import SpotifyTrack
+from musify.spotify.processors import SpotifyDataWrangler
+from spotify.object.testers import SpotifyCollectionLoaderTester
 from tests.shared.remote.object import RemoteCollectionTester
 from tests.spotify.api.mock import SpotifyMock
-from tests.spotify.testers import SpotifyCollectionLoaderTester
 from tests.spotify.utils import assert_id_attributes
 
 
@@ -47,9 +47,9 @@ class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
             deepcopy(album) for album in api_mock.albums
             if album["tracks"]["total"] > len(album["tracks"]["items"]) > 5 and album["genres"]
         )
-        api.extend_items(items_block=response, key=RemoteObjectType.TRACK)
+        api.extend_items(response=response, key=RemoteObjectType.TRACK)
 
-        api_mock.reset_mock()
+        api_mock.reset_mock()  # tests check the number of requests made
         return response
 
     @pytest.fixture
@@ -269,7 +269,7 @@ class TestSpotifyArtist(RemoteCollectionTester):
             album["total_tracks"] = 0
 
         items_block = api_mock.format_items_block(
-            url=f"{URL_API}/artists/{artist["id"]}/albums", items=albums, total=len(albums)
+            url=f"{SpotifyDataWrangler.url_api}/artists/{artist["id"]}/albums", items=albums, total=len(albums)
         )
         return artist | {"albums": items_block}
 
@@ -294,7 +294,7 @@ class TestSpotifyArtist(RemoteCollectionTester):
             album["tracks"] = api_mock.format_items_block(url=album["href"], items=tracks, total=len(tracks))
 
         items_block = api_mock.format_items_block(
-            url=f"{URL_API}/artists/{artist["id"]}/albums", items=albums, total=len(albums)
+            url=f"{SpotifyDataWrangler.url_api}/artists/{artist["id"]}/albums", items=albums, total=len(albums)
         )
         return artist | {"albums": items_block}
 

@@ -3,15 +3,13 @@ The core, basic library implementation which is just a simple set of folders.
 """
 import itertools
 from collections.abc import Collection, Mapping
+from concurrent.futures import ThreadPoolExecutor
 from functools import reduce
 from os.path import splitext, join, exists, basename, dirname
 from typing import Any
 
-from concurrent.futures import ThreadPoolExecutor
-
 from musify.local.collection import LocalCollection, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
-from musify.local.file import PathMapper, PathStemMapper
-from musify.local.playlist import LocalPlaylist, load_playlist, PLAYLIST_CLASSES
+from musify.local.playlist import PLAYLIST_CLASSES, LocalPlaylist, load_playlist
 from musify.local.track import TRACK_CLASSES, LocalTrack, load_track
 from musify.local.track.field import LocalTrackField
 from musify.processors.base import Filter
@@ -20,6 +18,7 @@ from musify.processors.sort import ItemSorter
 from musify.shared.core.misc import Result
 from musify.shared.core.object import Playlist, Library
 from musify.shared.exception import MusifyError
+from musify.shared.file import PathMapper, PathStemMapper
 from musify.shared.logger import STAT
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
 from musify.shared.types import UnitCollection, UnitIterable

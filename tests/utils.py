@@ -4,15 +4,26 @@ import string
 from os.path import join, dirname
 from pathlib import Path
 from random import choice, randrange, sample
+from typing import Any
 from uuid import uuid4
 
 import pytest
+
+from musify.shared.core.enum import MusifyEnum
 
 path_root = dirname(dirname(__file__))
 path_tests = dirname(__file__)
 path_resources = join(dirname(__file__), "__resources")
 
 path_txt = join(path_resources, "test.txt")
+
+
+# noinspection SpellCheckingInspection
+def idfn(value: Any) -> str | None:
+    """Generate test ID for Spotify API tests"""
+    if isinstance(value, MusifyEnum):
+        return value.name
+    return value
 
 
 def get_stdout(capfd: pytest.CaptureFixture) -> str:

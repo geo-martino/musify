@@ -17,13 +17,10 @@ from musify.local.base import LocalItem
 from musify.local.exception import LocalCollectionError
 from musify.local.track import LocalTrack, SyncResultTrack, load_track, TRACK_FILETYPES
 from musify.local.track.field import LocalTrackField
-from musify.shared.core.base import Item
-from musify.shared.core.collection import ItemCollection
+from musify.shared.core.collection import MusifyCollection
 from musify.shared.core.enum import Fields, TagField, TagFields
 from musify.shared.core.object import Track, Library, Folder, Album, Artist, Genre
-from musify.shared.exception import MusifyKeyError
 from musify.shared.logger import MusifyLogger
-from musify.shared.remote.enum import RemoteIDType
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
 from musify.shared.types import UnitCollection
 from musify.shared.types import UnitIterable
@@ -32,7 +29,7 @@ from musify.shared.utils import get_most_common_values, to_collection, align_str
 _max_str = "z" * 50
 
 
-class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
+class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
     """
     Generic class for storing a collection of local tracks.
 
@@ -106,19 +103,12 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
         """Total number of plays of all tracks in this collection"""
         return sum(track.play_count for track in self.tracks if track.play_count)
 
-    @property
-    def track_paths(self) -> set[str]:
-        """Set of all unique track paths in this collection"""
-        return {track.path for track in self.tracks}
-
     def __init__(self, remote_wrangler: RemoteDataWrangler = None):
-        super().__init__()
+        super().__init__(remote_wrangler=remote_wrangler)
 
         # noinspection PyTypeChecker
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
-        #: A :py:class:`RemoteDataWrangler` object for processing URIs
-        self.remote_wrangler = remote_wrangler
 
     def save_tracks(
             self,
@@ -189,39 +179,6 @@ class LocalCollection[T: LocalTrack](ItemCollection[T], metaclass=ABCMeta):
 
         if isinstance(self, Library):
             self.logger.print()
-
-    def __getitem__(self, __key: str | int | slice | Item) -> T | list[T] | list[T, None, None]:
-        """
-        Returns the item in this collection by matching on a given path/index/URI.
-        If an item is given, the URI or path is extracted from this item
-        and the matching Item from this collection is returned.
-        """
-        if isinstance(__key, int) or isinstance(__key, slice):  # simply index the list or items
-            return self.items[__key]
-        elif isinstance(__key, LocalTrack):  # take the path
-            __key = __key.path
-        elif isinstance(__key, Item):  # take the URI
-            if not __key.has_uri:
-                raise MusifyKeyError(f"Given item does not have a URI associated to use as a key: {__key.name}")
-            __key = __key.uri
-
-        if self.remote_wrangler is None or not self.remote_wrangler.validate_id_type(__key, kind=RemoteIDType.URI):
-            # string is not a URI, assume it is a path or name
-            if __key in self.track_paths:  # path is valid
-                try:
-                    return next(track for track in self.tracks if track.path == __key)
-                except StopIteration:
-                    raise MusifyKeyError(f"No matching item found for path: '{__key}'")
-
-            try:  # last try, assume given string is a name
-                return next(item for item in self.items if item.name == __key)
-            except StopIteration:
-                raise MusifyKeyError(f"No matching item found for name/path: '{__key}'")
-
-        try:  # string is a URI
-            return next(item for item in self.items if item.uri == __key)
-        except StopIteration:
-            raise MusifyKeyError(f"No matching item found for URI: '{__key}'")
 
 
 class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], metaclass=ABCMeta):

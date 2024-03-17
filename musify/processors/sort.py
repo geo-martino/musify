@@ -9,7 +9,7 @@ from random import shuffle
 from typing import Any, Self
 
 from musify.processors.base import MusicBeeProcessor
-from musify.shared.core.base import Item
+from musify.shared.core.base import MusifyItem
 from musify.shared.core.enum import MusifyEnum, Field, Fields
 from musify.shared.types import UnitSequence, UnitIterable
 from musify.shared.utils import flatten_nested, strip_ignore_words, to_collection, limit_value
@@ -61,7 +61,7 @@ class ItemSorter(MusicBeeProcessor):
     _custom_sort[78] = _custom_sort[6]
 
     @classmethod
-    def sort_by_field(cls, items: list[Item], field: Field | None = None, reverse: bool = False) -> None:
+    def sort_by_field(cls, items: list[MusifyItem], field: Field | None = None, reverse: bool = False) -> None:
         """
         Sort items by the values of a given field.
 
@@ -88,19 +88,19 @@ class ItemSorter(MusicBeeProcessor):
 
         # get sort key based on value type
         if isinstance(example_value, datetime):  # key converts datetime to floats
-            def sort_key(t: Item) -> float:
+            def sort_key(t: MusifyItem) -> float:
                 """Get the sort key for timestamp tags from the given ``t``"""
                 value = t[tag_name]
                 return value.timestamp() if value is not None else 0.0
         elif isinstance(example_value, str):  # key strips ignore words from string
-            sort_key: Callable[[Item], (bool, str)] = lambda t: strip_ignore_words(t[tag_name])
+            sort_key: Callable[[MusifyItem], (bool, str)] = lambda t: strip_ignore_words(t[tag_name])
         else:
-            sort_key: Callable[[Item], object] = lambda t: t[tag_name] if t[tag_name] else 0
+            sort_key: Callable[[MusifyItem], object] = lambda t: t[tag_name] if t[tag_name] else 0
 
         items.sort(key=sort_key, reverse=reverse)
 
     @classmethod
-    def group_by_field[T: Item](cls, items: UnitIterable[T], field: Field | None = None) -> dict[Any, list[T]]:
+    def group_by_field[T: MusifyItem](cls, items: UnitIterable[T], field: Field | None = None) -> dict[Any, list[T]]:
         """
         Group items by the values of a given field.
 
@@ -183,10 +183,10 @@ class ItemSorter(MusicBeeProcessor):
         self.shuffle_by: ShuffleBy | None = shuffle_by
         self.shuffle_weight = limit_value(shuffle_weight, floor=-1, ceil=1)
 
-    def __call__(self, items: MutableSequence[Item]) -> None:
+    def __call__(self, items: MutableSequence[MusifyItem]) -> None:
         return self.sort(items=items)
 
-    def sort(self, items: MutableSequence[Item]) -> None:
+    def sort(self, items: MutableSequence[MusifyItem]) -> None:
         """Sorts a list of ``items`` in-place."""
         if len(items) == 0:
             return

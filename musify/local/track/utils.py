@@ -7,12 +7,12 @@ and a utility function for loading the appropriate :py:class:`LocalTrack` type f
 
 from os.path import splitext
 
-from musify.local.exception import InvalidFileType
 from musify.local.track import LocalTrack
 from musify.local.track.flac import FLAC
 from musify.local.track.m4a import M4A
 from musify.local.track.mp3 import MP3
 from musify.local.track.wma import WMA
+from musify.shared.exception import InvalidFileType
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
 
 TRACK_CLASSES = frozenset({FLAC, MP3, M4A, WMA})

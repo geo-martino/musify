@@ -5,22 +5,19 @@ Searches for matches on remote APIs, matches the item to the best matching resul
 and assigns the ID of the matched object back to the item.
 """
 
-from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Sequence, Iterable, Collection
 from dataclasses import dataclass, field
 from typing import Any
 
 from musify.processors.match import ItemMatcher
-from musify.shared.core.base import NameableTaggableMixin, Item
-from musify.shared.core.collection import ItemCollection
+from musify.shared.core.base import MusifyObject, MusifyItem
+from musify.shared.core.collection import MusifyCollection
 from musify.shared.core.enum import TagField, TagFields as Tag
 from musify.shared.core.misc import Result
 from musify.shared.core.object import Track
 from musify.shared.logger import REPORT
-from musify.shared.remote import Remote
-from musify.shared.remote.api import RemoteAPI
-from musify.shared.remote.config import RemoteObjectClasses
 from musify.shared.remote.enum import RemoteObjectType
+from musify.shared.remote.factory import RemoteObjectFactory
 from musify.shared.utils import align_string, get_max_width
 
 
@@ -28,11 +25,11 @@ from musify.shared.utils import align_string, get_max_width
 class ItemSearchResult(Result):
     """Stores the results of the searching process."""
     #: Sequence of Items for which matches were found from the search.
-    matched: Sequence[Item] = field(default=tuple())
+    matched: Sequence[MusifyItem] = field(default=tuple())
     #: Sequence of Items for which matches were not found from the search.
-    unmatched: Sequence[Item] = field(default=tuple())
+    unmatched: Sequence[MusifyItem] = field(default=tuple())
     #: Sequence of Items which were skipped during the search.
-    skipped: Sequence[Item] = field(default=tuple())
+    skipped: Sequence[MusifyItem] = field(default=tuple())
 
 
 @dataclass(frozen=True)
@@ -62,11 +59,12 @@ class SearchSettings:
     search_fields_3: Iterable[TagField] = ()
 
 
-class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
+class RemoteItemSearcher(ItemMatcher):
     """
     Searches for remote matches for a list of item collections.
 
-    :param api: An API object for calling the remote query endpoint.
+    :param object_factory: The :py:class:`RemoteObjectFactory` to use when creating new remote objects.
+        This must have a :py:class:`RemoteAPI` assigned for this processor to work as expected.
     :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
     """
 
@@ -94,22 +92,18 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
         max_score=0.7
     )
 
-    @property
-    @abstractmethod
-    def _object_cls(self) -> RemoteObjectClasses:
-        """Stores the key object classes for a remote source."""
-        raise NotImplementedError
-
-    def __init__(self, api: RemoteAPI, use_cache: bool = False):
+    def __init__(self, object_factory: RemoteObjectFactory, use_cache: bool = False):
         super().__init__()
 
         #: The :py:class:`RemoteAPI` to call
-        self.api = api
+        self.api = object_factory.api
+        #: The :py:class:`RemoteObjectFactory` to use when creating new remote objects.
+        self.factory = object_factory
         #: When true, use the cache when calling the API endpoint
         self.use_cache = use_cache
 
     def _get_results(
-            self, item: NameableTaggableMixin, kind: RemoteObjectType, settings: SearchSettings
+            self, item: MusifyObject, kind: RemoteObjectType, settings: SearchSettings
     ) -> list[dict[str, Any]] | None:
         """Query the API to get results for the current item based on algorithm settings"""
         self.clean_tags(item)
@@ -176,10 +170,10 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
         self.logger.print(REPORT)
 
     # noinspection PyMethodOverriding
-    def __call__(self, collections: Collection[ItemCollection]) -> dict[str, ItemSearchResult]:
+    def __call__(self, collections: Collection[MusifyCollection]) -> dict[str, ItemSearchResult]:
         return self.search(collections=collections)
 
-    def search(self, collections: Collection[ItemCollection]) -> dict[str, ItemSearchResult]:
+    def search(self, collections: Collection[MusifyCollection]) -> dict[str, ItemSearchResult]:
         """
         Searches for remote matches for the given list of item collections.
 
@@ -194,7 +188,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
         kind = kinds.pop() if len(kinds) == 1 else "collection"
         self.logger.info(
             f"\33[1;95m ->\33[1;97m "
-            f"Searching for matches on {self.source} for {len(collections)} {kind}s\33[0m"
+            f"Searching for matches on {self.api.source} for {len(collections)} {kind}s\33[0m"
         )
 
         bar = self.logger.get_progress_bar(iterable=collections, desc="Searching", unit=f"{kind}s")
@@ -205,7 +199,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
         self.logger.debug("Searching: DONE\n")
         return search_results
 
-    def _search_collection(self, collection: ItemCollection) -> ItemSearchResult:
+    def _search_collection(self, collection: MusifyCollection) -> ItemSearchResult:
         kind = collection.__class__.__name__
 
         skipped = tuple(item for item in collection if item.has_uri is not None)
@@ -230,7 +224,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
             skipped=skipped
         )
 
-    def _search_items(self, collection: Iterable[Item]) -> None:
+    def _search_items(self, collection: Iterable[MusifyItem]) -> None:
         """Search for matches on individual items in an item collection that have ``None`` on ``has_uri`` attribute"""
         for item in filter(lambda i: i.has_uri is None, collection):
             if not isinstance(item, Track):
@@ -245,7 +239,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
 
             result = self.match(
                 item,
-                results=map(lambda response: self._object_cls.track(api=self.api, response=response), results),
+                results=map(self.factory.track, results),
                 match_on=self.settings_items.match_fields,
                 min_score=self.settings_items.min_score,
                 max_score=self.settings_items.max_score,
@@ -255,7 +249,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
             if result and result.has_uri:
                 item.uri = result.uri
 
-    def _search_album(self, collection: ItemCollection) -> None:
+    def _search_album(self, collection: MusifyCollection) -> None:
         """Search for matches on an entire album"""
         if all(item.has_uri for item in collection):
             return
@@ -263,9 +257,7 @@ class RemoteItemSearcher(Remote, ItemMatcher, metaclass=ABCMeta):
         results = self._get_results(collection, kind=RemoteObjectType.ALBUM, settings=self.settings_albums)
 
         # convert to RemoteAlbum objects and extend items on each response
-        albums = list(map(
-            lambda response: self._object_cls.album(api=self.api, response=response, skip_checks=True), results
-        ))
+        albums = list(map(lambda response: self.factory.album(response=response, skip_checks=True), results))
         kind = RemoteObjectType.ALBUM
         key = self.api.collection_item_map[kind]
         for album in albums:  # extend album's tracks

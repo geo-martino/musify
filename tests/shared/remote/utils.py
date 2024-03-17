@@ -17,6 +17,14 @@ ALL_ITEM_TYPES = RemoteObjectType.all()
 class RemoteMock(Mocker):
     """Generates responses and sets up Remote API requests mock"""
 
+    range_start = 25
+    range_stop = 50
+    range_max = 200
+
+    limit_lower = 10
+    limit_upper = 20
+    limit_max = 50
+
     @property
     @abstractmethod
     def item_type_map(self) -> dict[RemoteObjectType, list[dict[str, Any]]]:

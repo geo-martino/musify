@@ -12,39 +12,20 @@ import mutagen.asf
 import mutagen.id3
 from PIL import Image, UnidentifiedImageError
 
-from musify.local.file import open_image, get_image_bytes
-from musify.local.track.base.track import LocalTrack
+from musify.local.track.track import LocalTrack
+from musify.local.track.tags.reader import TagReader
+from musify.local.track.tags.writer import TagWriter
 from musify.shared.core.enum import TagMap
+from musify.shared.image import open_image, get_image_bytes
 
 
-class WMA(LocalTrack[mutagen.asf.ASF]):
+class WMATagReader(TagReader[mutagen.asf.ASF]):
 
-    valid_extensions = frozenset({".wma"})
-
-    #: Map of human-friendly tag name to ID3 tag ids for a given file type
-    tag_map = TagMap(
-        title=["Title"],
-        artist=["Author"],
-        album=["WM/AlbumTitle"],
-        album_artist=["WM/AlbumArtist"],
-        track_number=["WM/TrackNumber"],
-        track_total=["TotalTracks", "WM/TrackNumber"],
-        genres=["WM/Genre"],
-        year=["WM/Year", "WM/OriginalReleaseYear"],
-        bpm=["WM/BeatsPerMinute"],
-        key=["WM/InitialKey"],
-        disc_number=["WM/PartOfSet"],
-        disc_total=["WM/PartOfSet"],
-        compilation=["COMPILATION"],
-        comments=["Description", "WM/Comments"],
-        images=["WM/Picture"],
-    )
-
-    def _read_tag(self, tag_ids: Iterable[str]) -> list[Any] | None:
+    def read_tag(self, tag_ids: Iterable[str]) -> list[Any] | None:
         # WMA tag values are returned as mutagen.asf._attrs.ASFUnicodeAttribute
         values = []
         for tag_id in tag_ids:
-            value: Collection[mutagen.asf.ASFBaseAttribute] = self._file.get(tag_id)
+            value: Collection[mutagen.asf.ASFBaseAttribute] = self.file.get(tag_id)
             if value is None:
                 # skip null or empty/blank strings
                 continue
@@ -53,8 +34,8 @@ class WMA(LocalTrack[mutagen.asf.ASF]):
 
         return values if len(values) > 0 else None
 
-    def _read_images(self) -> list[Image.Image] | None:
-        values = self._read_tag(self.tag_map.images)
+    def read_images(self) -> list[Image.Image] | None:
+        values = self.read_tag(self.tag_map.images)
         if values is None:
             return
 
@@ -90,27 +71,30 @@ class WMA(LocalTrack[mutagen.asf.ASF]):
 
         return images
 
-    def _write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
-        result = super()._write_tag(tag_id=tag_id, tag_value=tag_value, dry_run=dry_run)
+
+class WMATagWriter(TagWriter[mutagen.asf.ASF]):
+
+    def write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
+        result = super().write_tag(tag_id=tag_id, tag_value=tag_value, dry_run=dry_run)
         if result is not None:
             return result
 
         if not dry_run:
             if isinstance(tag_value, (list, set, tuple)):
                 if all(isinstance(v, mutagen.asf.ASFByteArrayAttribute) for v in tag_value):
-                    self._file[tag_id] = tag_value
+                    self.file[tag_id] = tag_value
                 else:
-                    self._file[tag_id] = [mutagen.asf.ASFUnicodeAttribute(str(v)) for v in tag_value]
+                    self.file[tag_id] = [mutagen.asf.ASFUnicodeAttribute(str(v)) for v in tag_value]
             else:
-                self._file[tag_id] = mutagen.asf.ASFUnicodeAttribute(str(tag_value))
+                self.file[tag_id] = mutagen.asf.ASFUnicodeAttribute(str(tag_value))
         return True
 
-    def _write_images(self, dry_run: bool = True) -> bool:
+    def _write_images(self, track: LocalTrack, dry_run: bool = True) -> bool:
         tag_id = next(iter(self.tag_map.images), None)
 
         updated = False
         tag_value = []
-        for image_kind, image_link in self.image_links.items():
+        for image_kind, image_link in track.image_links.items():
             image_kind_attr = image_kind.upper().replace(" ", "_")
             image_type: mutagen.id3.PictureType = getattr(mutagen.id3.PictureType, image_kind_attr)
 
@@ -125,7 +109,39 @@ class WMA(LocalTrack[mutagen.asf.ASF]):
             image.close()
 
         if len(tag_value) > 0:
-            updated = self._write_tag(tag_id, tag_value, dry_run)
+            updated = self.write_tag(tag_id, tag_value, dry_run)
 
-        self.has_image = updated or self.has_image
+        track.has_image = updated or track.has_image
         return updated
+
+
+class WMA(LocalTrack[mutagen.asf.ASF, WMATagReader, WMATagWriter]):
+
+    valid_extensions = frozenset({".wma"})
+
+    #: Map of human-friendly tag name to ID3 tag ids for a given file type
+    tag_map = TagMap(
+        title=["Title"],
+        artist=["Author"],
+        album=["WM/AlbumTitle"],
+        album_artist=["WM/AlbumArtist"],
+        track_number=["WM/TrackNumber"],
+        track_total=["TotalTracks", "WM/TrackNumber"],
+        genres=["WM/Genre"],
+        year=["WM/Year", "WM/OriginalReleaseYear"],
+        bpm=["WM/BeatsPerMinute"],
+        key=["WM/InitialKey"],
+        disc_number=["WM/PartOfSet"],
+        disc_total=["WM/PartOfSet"],
+        compilation=["COMPILATION"],
+        comments=["Description", "WM/Comments"],
+        images=["WM/Picture"],
+    )
+
+    @staticmethod
+    def _create_reader(*args, **kwargs):
+        return WMATagReader(*args, **kwargs)
+
+    @staticmethod
+    def _create_writer(*args, **kwargs):
+        return WMATagWriter(*args, **kwargs)

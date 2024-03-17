@@ -15,9 +15,12 @@ from _pytest.fixtures import SubRequest
 from musify import MODULE_ROOT
 from musify.shared.api.request import RequestHandler
 from musify.shared.logger import MusifyLogger
+from musify.shared.remote.enum import RemoteObjectType
 from musify.spotify.api import SpotifyAPI
-from musify.spotify.processors.wrangle import SpotifyDataWrangler
+from musify.spotify.processors import SpotifyDataWrangler
+from tests.shared.remote.utils import ALL_ITEM_TYPES
 from tests.spotify.api.mock import SpotifyMock
+from tests.utils import idfn
 
 
 # noinspection PyUnusedLocal
@@ -169,7 +172,8 @@ def normalize_call(callspec, metafunc, used_keys):
             newmetafunc._arg2fixturedefs.update(arg2fixturedefs)
             newmetafunc._calls = [callspec]
             fm.pytest_generate_tests(newmetafunc)
-            normalize_metafunc_calls(newmetafunc, used_keys | set([arg]))
+
+            normalize_metafunc_calls(newmetafunc, used_keys | {arg})
             return newmetafunc._calls
 
         used_keys.add(arg)
@@ -265,6 +269,12 @@ def path(request: pytest.FixtureRequest | SubRequest, tmp_path: Path) -> str:
     yield trg_path
 
     shutil.rmtree(dirname(trg_path))
+
+
+@pytest.fixture(scope="session", params=ALL_ITEM_TYPES, ids=idfn)
+def object_type(request) -> RemoteObjectType:
+    """Yields the valid :py:class:`RemoteObjectTypes` to use throughout tests in this suite as a pytest.fixture"""
+    return request.param
 
 
 @pytest.fixture(scope="session")

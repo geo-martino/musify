@@ -5,8 +5,8 @@ from copy import deepcopy
 import pytest
 
 from musify.processors.filter import FilterDefinedList, FilterIncludeExclude
-from musify.shared.core.base import Item
-from musify.shared.core.collection import ItemCollection
+from musify.shared.core.base import MusifyItem
+from musify.shared.core.collection import MusifyCollection
 from musify.shared.core.misc import PrettyPrinter
 from musify.shared.core.object import BasicCollection, Library, Playlist
 from musify.shared.exception import MusifyTypeError
@@ -26,26 +26,26 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
     dict_json_equal = False
 
     @abstractmethod
-    def collection(self, *args, **kwargs) -> ItemCollection:
+    def collection(self, *args, **kwargs) -> MusifyCollection:
         """Yields an :py:class:`ItemCollection` object to be tested as pytest.fixture"""
         raise NotImplementedError
 
     @abstractmethod
-    def collection_merge_items(self, *args, **kwargs) -> Iterable[Item]:
+    def collection_merge_items(self, *args, **kwargs) -> Iterable[MusifyItem]:
         """Yields an Iterable of :py:class:`Item` for use in :py:class:`ItemCollection` tests as pytest.fixture"""
         raise NotImplementedError
 
     @abstractmethod
-    def collection_merge_invalid(self, *args, **kwargs) -> Iterable[Item]:
+    def collection_merge_invalid(self, *args, **kwargs) -> Iterable[MusifyItem]:
         """Yields an Iterable of :py:class:`Item` for use in :py:class:`ItemCollection` tests as pytest.fixture"""
         raise NotImplementedError
 
     @pytest.fixture
-    def obj(self, collection: ItemCollection) -> PrettyPrinter:
+    def obj(self, collection: MusifyCollection) -> PrettyPrinter:
         return collection
 
     @staticmethod
-    def test_collection_input_validation(collection: ItemCollection, collection_merge_invalid: Iterable[Item]):
+    def test_collection_input_validation(collection: MusifyCollection, collection_merge_invalid: Iterable[MusifyItem]):
         with pytest.raises(MusifyTypeError):
             collection.index(next(c for c in collection_merge_invalid))
         with pytest.raises(MusifyTypeError):
@@ -62,7 +62,7 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
                 collection += collection_merge_invalid
 
     @staticmethod
-    def test_collection_mutable_sequence_methods(collection: ItemCollection):
+    def test_collection_mutable_sequence_methods(collection: MusifyCollection):
         assert len(collection.items) >= 3
 
         # get a unique item and its index
@@ -109,7 +109,7 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert len(collection) == 0
 
     @staticmethod
-    def test_collection_basic_dunder_methods(collection: ItemCollection):
+    def test_collection_basic_dunder_methods(collection: MusifyCollection):
         """:py:class:`ItemCollection` basic dunder operation tests"""
         collection_original = deepcopy(collection)
         collection_basic = BasicCollection(name="this is a basic collection", items=collection.items)
@@ -137,7 +137,7 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
 
     @staticmethod
     def test_collection_iterator_and_container_dunder_methods(
-            collection: ItemCollection, collection_merge_items: Iterable[Item]
+            collection: MusifyCollection, collection_merge_items: Iterable[MusifyItem]
     ):
         """:py:class:`ItemCollection` dunder iterator and contains tests"""
         assert len([item for item in collection]) == len(collection.items)
@@ -149,11 +149,13 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert all(item not in collection.items for item in collection_merge_items)
 
     @abstractmethod
-    def test_collection_getitem_dunder_method(self, collection: ItemCollection, collection_merge_items: Iterable[Item]):
+    def test_collection_getitem_dunder_method(
+            self, collection: MusifyCollection, collection_merge_items: Iterable[MusifyItem]
+    ):
         raise NotImplementedError
 
     @staticmethod
-    def test_collection_setitem_dunder_method(collection: ItemCollection):
+    def test_collection_setitem_dunder_method(collection: MusifyCollection):
         classes = [item.__class__ for item in collection]
         idx_1, item_1 = next((i, item) for i, item in enumerate(collection.items) if classes.count(item.__class__) > 1)
         idx_2, item_2 = next(
@@ -173,14 +175,14 @@ class ItemCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
             collection[len(collection.items) + 5] = item_1
 
     @staticmethod
-    def test_collection_delitem_dunder_method(collection: ItemCollection):
+    def test_collection_delitem_dunder_method(collection: MusifyCollection):
         item = next(i for i in collection.items if collection.items.count(i) == 1)
 
         del collection[item]
         assert item not in collection
 
     @staticmethod
-    def test_collection_sort(collection: ItemCollection):
+    def test_collection_sort(collection: MusifyCollection):
         items = collection.items.copy()
 
         collection.reverse()
@@ -198,7 +200,7 @@ class PlaylistTester(ItemCollectionTester, metaclass=ABCMeta):
         raise NotImplementedError
 
     @pytest.fixture
-    def collection(self, playlist: Playlist) -> ItemCollection:
+    def collection(self, playlist: Playlist) -> MusifyCollection:
         return playlist
 
     @pytest.mark.skip(reason="not implemented yet")
@@ -222,7 +224,7 @@ class LibraryTester(ItemCollectionTester, metaclass=ABCMeta):
         raise NotImplementedError
 
     @pytest.fixture
-    def collection(self, library: Library) -> ItemCollection:
+    def collection(self, library: Library) -> MusifyCollection:
         return library
 
     @staticmethod

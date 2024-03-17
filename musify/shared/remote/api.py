@@ -5,19 +5,21 @@ All methods that interact with the API should return raw, unprocessed responses.
 """
 
 import logging
-from abc import ABCMeta, abstractmethod
-from collections.abc import Collection, MutableMapping, Mapping
+from abc import ABC, abstractmethod
+from collections.abc import Collection, MutableMapping, Mapping, Sequence
 from typing import Any, Self
 
 from musify.shared.api.request import RequestHandler
 from musify.shared.logger import MusifyLogger
+from musify.shared.remote import RemoteResponse
 from musify.shared.remote.enum import RemoteIDType, RemoteObjectType
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
-from musify.shared.remote.types import APIMethodInputType
-from musify.shared.utils import align_string
+from musify.shared.remote.types import APIInputValue
+from musify.shared.types import UnitSequence, JSON, UnitList
+from musify.shared.utils import align_string, to_collection
 
 
-class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
+class RemoteAPI(ABC):
     """
     Collection of endpoints for a remote API.
     See :py:class:`RequestHandler` and :py:class:`APIAuthoriser`
@@ -26,7 +28,7 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
     :param handler_kwargs: The authorisation kwargs to be passed to :py:class:`APIAuthoriser`.
     """
 
-    __slots__ = ("logger", "handler", "user_data")
+    __slots__ = ("logger", "handler", "user_data", "wrangler")
 
     #: Map of :py:class:`RemoteObjectType` for remote collections
     #: to the  :py:class:`RemoteObjectType` of the items they hold
@@ -40,12 +42,8 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
     user_item_types = (
             set(collection_item_map) | {RemoteObjectType.TRACK, RemoteObjectType.ARTIST, RemoteObjectType.EPISODE}
     )
-
-    @property
-    @abstractmethod
-    def api_url_base(self) -> str:
-        """The base URL for making calls to the remote API"""
-        raise NotImplementedError
+    #: The key to use when getting an ID from a response
+    id_key = "id"
 
     @property
     @abstractmethod
@@ -59,14 +57,29 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
         """Name of the currently authorised user"""
         raise NotImplementedError
 
-    def __init__(self, **handler_kwargs):
+    @property
+    def url(self) -> str:
+        """The base URL of the API"""
+        return self.wrangler.url_api
+
+    @property
+    def source(self) -> str:
+        """The name of the API service"""
+        return self.wrangler.source
+
+    def __init__(self, wrangler: RemoteDataWrangler, **handler_kwargs):
+        super().__init__()
+        #: A :py:class:`RemoteDataWrangler` object for processing URIs
+        self.wrangler = wrangler
+
         # noinspection PyTypeChecker
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
 
-        handler_kwargs = {k: v for k, v in handler_kwargs.items() if k != "name"}
         #: The :py:class:`RequestHandler` for handling authorised requests to the API
-        self.handler = RequestHandler(name=self.source, **handler_kwargs)
+        self.handler = RequestHandler(
+            name=self.wrangler.source, **{k: v for k, v in handler_kwargs.items() if k != "name"}
+        )
         #: Stores the loaded user data for the currently authorised user
         self.user_data: dict[str, Any] = {}
 
@@ -83,6 +96,10 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
         self.handler.authorise(force_load=force_load, force_new=force_new)
         return self
 
+    def close(self) -> None:
+        """Close the current session. No more requests will be possible once this has been called."""
+        self.handler.close()
+
     ###########################################################################
     ## Misc helpers
     ###########################################################################
@@ -91,56 +108,79 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
         self.user_data = self.get_self()
 
     @staticmethod
+    def _merge_results_to_input_mapping(
+            original: MutableMapping[str, Any], response: Mapping[str, Any], clear: bool = True,
+    ) -> None:
+        if clear:
+            original.clear()
+        original |= response
+
     def _merge_results_to_input(
-            original: APIMethodInputType, results: list[dict[str, Any]], ordered: bool = True, clear: bool = True,
+            self,
+            original: UnitSequence[JSON] | UnitSequence[RemoteResponse],
+            responses: UnitList[JSON],
+            ordered: bool = True,
+            clear: bool = True,
     ) -> None:
         """
         If API response type given on input, update with new results.
         Assumes on a one-to-one relationship between ``original`` and the list of ``results``.
 
         :param original: The original values given to the function.
-        :param results: The new results from the API.
+        :param responses: The new results from the API.
         :param ordered: When True, function assumes the order of items in ``original`` and ``results`` is the same.
             When False, the function will attempt to match each input value to each result by matching on
             the ``id`` key of each dictionary.
         :param ordered: When True, clear the original value before merging, completely replacing all original data.
         """
-        id_key = "id"
+        if isinstance(original, str) or not isinstance(original, Collection | RemoteResponse):
+            return
 
-        if isinstance(original, MutableMapping):
-            if not len(results) == 1:
+        if isinstance(original, RemoteResponse):
+            original = [original]
+        elif not isinstance(original, Sequence):
+            original = to_collection(original)
+        if not isinstance(responses, Sequence):
+            responses = to_collection(responses, list)
+
+        original = [item.response if isinstance(item, RemoteResponse) else item for item in original]
+
+        valid_types_input = all(isinstance(item, MutableMapping) for item in original)
+        valid_types_responses = all(isinstance(item, MutableMapping) for item in responses)
+        valid_lengths = len(original) == len(responses)
+        if not all((valid_types_input, valid_types_responses, valid_lengths)):
+            self.logger.warning(
+                "Could not merge responses to given user input | "
+                "Reason: assertions failed | "
+                f"{valid_types_input=} {valid_types_responses=} {valid_lengths=} | "
+            )
+            return
+
+        if not ordered:
+            expected_keys_input = all(self.id_key in item for item in original)
+            expected_keys_responses = all(self.id_key in item for item in responses)
+            if not all((expected_keys_input, expected_keys_responses)):
+                self.logger.warning(
+                    "Could not merge responses to given user input | "
+                    f"Reason: unordered and cannot order on {self.id_key=} | "
+                    f"{expected_keys_input=} {expected_keys_responses=}"
+                )
                 return
 
-            if clear:
-                original.clear()
-            original |= results[0]
-            return
-        elif not isinstance(original, Collection):
-            return
+            id_ordered = [response[self.id_key] for response in original]
+            responses.sort(key=lambda response: id_ordered.index(response[self.id_key]))
 
-        # process as lists
-        valid_input_types = all(isinstance(item, MutableMapping) for item in original)
-        valid_lengths = len(original) == len(results)
-        if not valid_input_types or not valid_lengths:
-            return
+        for item, response in zip(original, responses):
+            self._merge_results_to_input_mapping(original=item, response=response, clear=clear)
 
-        if ordered:
-            for item, res in zip(original, results):
-                if clear:
-                    item.clear()
-                item |= res
-            return
+    @staticmethod
+    def _refresh_responses(responses: Any, skip_checks: bool = False) -> None:
+        if isinstance(responses, RemoteResponse):
+            responses = [responses]
 
-        valid_keys_values = all(id_key in item for item in original)
-        valid_keys_results = all(id_key in item for item in results)
-        if not valid_keys_values or not valid_keys_results:
-            return
-
-        result_mapped = {result[id_key]: result for result in results if result}
-        for item in original:
-            if clear:
-                item.clear()
-            item |= result_mapped[item[id_key]]
+        for response in responses:
+            if isinstance(response, RemoteResponse):
+                response.refresh(skip_checks=skip_checks)
 
     def print_item(
             self, i: int, name: str, uri: str, length: float = 0, total: int = 1, max_width: int = 50
@@ -161,13 +201,13 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
             f"\33[97m{align_string(name, max_width=max_width)} \33[0m| "
             f"\33[91m{str(int(length // 60)).zfill(2)}:{str(round(length % 60)).zfill(2)} \33[0m| "
             f"\33[93m{uri} \33[0m- "
-            f"{self.convert(uri, type_in=RemoteIDType.URI, type_out=RemoteIDType.URL_EXT)}"
+            f"{self.wrangler.convert(uri, type_in=RemoteIDType.URI, type_out=RemoteIDType.URL_EXT)}"
         )
 
     @abstractmethod
     def print_collection(
             self,
-            value: str | Mapping[str, Any] | None = None,
+            value: str | Mapping[str, Any] | RemoteResponse | None = None,
             kind: RemoteIDType | None = None,
             limit: int = 20,
             use_cache: bool = True
@@ -179,6 +219,7 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
         ``value`` may be:
             * A string representing a URL/URI/ID.
             * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
+            * A RemoteResponse representing some remote collection of items.
 
         :param value: The value representing some remote collection. See description for allowed value types.
         :param kind: When an ID is provided, give the kind of ID this is here.
@@ -190,7 +231,7 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def get_playlist_url(self, playlist: str, use_cache: bool = True) -> str:
+    def get_playlist_url(self, playlist: str | Mapping[str, Any] | RemoteResponse, use_cache: bool = True) -> str:
         """
         Determine the type of the given ``playlist`` and return its API URL.
         If type cannot be determined, attempt to find the playlist in the
@@ -236,19 +277,22 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
     @abstractmethod
     def extend_items(
             self,
-            items_block: MutableMapping[str, Any],
+            response: MutableMapping[str, Any] | RemoteResponse,
             kind: RemoteObjectType | str | None = None,
             key: RemoteObjectType | None = None,
             use_cache: bool = True,
     ) -> list[dict[str, Any]]:
         """
-        Extend the items for a given ``items_block`` API response.
+        Extend the items for a given API ``response``.
         The function requests each page of the collection returning a list of all items
         found across all pages for this URL.
 
         Updates the value of the ``items`` key in-place by extending the value of the ``items`` key with new results.
 
-        :param items_block: A remote API JSON response for an items type endpoint.
+        If a :py:class:`RemoteResponse`, this function will not refresh itself with the new response.
+        The user must call `refresh` manually after execution.
+
+        :param response: A remote API JSON response for an items type endpoint.
         :param kind: The type of response being extended. Optional, used only for logging.
         :param key: The type of response of the child objects.
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
@@ -259,7 +303,7 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
     @abstractmethod
     def get_items(
             self,
-            values: APIMethodInputType,
+            values: APIInputValue,
             kind: RemoteObjectType | None = None,
             limit: int = 50,
             extend: bool = True,
@@ -273,8 +317,13 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
             * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
             * A remote API JSON response for a collection.
             * A MutableSequence of remote API JSON responses for a collection.
+            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
+              as described above.
+            * A Sequence of RemoteResponses as above.
 
-        If JSON response(s) given, this update each response given by merging with the new response.
+        If JSON response(s) given, this updates each response given by merging with the new response.
+
+        If :py:class:`RemoteResponse` values are given, this function will call `refresh` on them.
 
         :param values: The values representing some remote objects. See description for allowed value types.
             These items must all be of the same type of item i.e. all tracks OR all artists etc.
@@ -292,7 +341,7 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
 
     @abstractmethod
     def get_tracks(
-            self, values: APIMethodInputType, limit: int = 50, use_cache: bool = True, *args, **kwargs,
+            self, values: APIInputValue, limit: int = 50, use_cache: bool = True, *args, **kwargs,
     ) -> list[dict[str, Any]]:
         """
         Wrapper for :py:meth:`get_items` which only returns Track type responses.
@@ -337,7 +386,11 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
 
     @abstractmethod
     def add_to_playlist(
-            self, playlist: str | Mapping[str, Any], items: Collection[str], limit: int = 50, skip_dupes: bool = True
+            self,
+            playlist: str | Mapping[str, Any] | RemoteResponse,
+            items: Collection[str],
+            limit: int = 50,
+            skip_dupes: bool = True
     ) -> int:
         """
         ``POST`` - Add list of tracks to a given playlist.
@@ -346,6 +399,7 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
             - playlist URL/URI/ID,
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
+            - a RemoteResponse object representing a remote playlist.
         :param items: List of URLs/URIs/IDs of the tracks to add.
         :param limit: Size of each batch of IDs to add. This value will be limited to be between ``1`` and ``50``.
         :param skip_dupes: Skip duplicates.
@@ -361,7 +415,7 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
     ## Collection - DELETE endpoints
     ###########################################################################
     @abstractmethod
-    def delete_playlist(self, playlist: str | Mapping[str, Any]) -> str:
+    def delete_playlist(self, playlist: str | Mapping[str, Any] | RemoteResponse) -> str:
         """
         ``DELETE`` - Unfollow/delete a given playlist.
         WARNING: This function will destructively modify your remote playlists.
@@ -370,13 +424,17 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
             - playlist URL/URI/ID,
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
+            - a RemoteResponse object representing a remote playlist.
         :return: API URL for playlist.
         """
         raise NotImplementedError
 
     @abstractmethod
     def clear_from_playlist(
-            self, playlist: str | Mapping[str, Any], items: Collection[str] | None = None, limit: int = 100
+            self,
+            playlist: str | Mapping[str, Any] | RemoteResponse,
+            items: Collection[str] | None = None,
+            limit: int = 100
     ) -> int:
         """
         ``DELETE`` - Clear tracks from a given playlist.
@@ -386,12 +444,12 @@ class RemoteAPI(RemoteDataWrangler, metaclass=ABCMeta):
             - playlist URL/URI/ID,
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
+            - a RemoteResponse object representing a remote playlist.
         :param items: List of URLs/URIs/IDs of the tracks to remove. If None, clear all songs from the playlist.
         :param limit: Size of each batch of IDs to clear in a single request.
             This value will be limited to be between ``1`` and ``100``.
         :return: The number of tracks cleared from the playlist.
-        :raise RemoteIDTypeError: Raised when the input ``playlist`` does not represent
-            a playlist URL/URI/ID.
+        :raise RemoteIDTypeError: Raised when the input ``playlist`` does not represent a playlist URL/URI/ID.
         :raise RemoteObjectTypeError: Raised when the item types of the input ``items``
             are not all tracks or IDs.
         """

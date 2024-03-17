@@ -15,12 +15,13 @@ import xmltodict
 from lxml import etree
 from lxml.etree import iterparse
 
-from musify.local.exception import MusicBeeIDError, XMLReaderError, FileDoesNotExistError
-from musify.local.file import File, PathMapper, PathStemMapper
+from musify.local.exception import MusicBeeIDError, XMLReaderError
 from musify.local.library.library import LocalLibrary
 from musify.local.playlist import LocalPlaylist
 from musify.local.track import LocalTrack
 from musify.processors.base import Filter
+from musify.shared.exception import FileDoesNotExistError
+from musify.shared.file import File, PathMapper, PathStemMapper
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
 from musify.shared.types import Number
 from musify.shared.utils import to_collection
