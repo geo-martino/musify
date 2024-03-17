@@ -5,7 +5,7 @@ from musify.shared.file import PathStemMapper
 from musify.shared.remote.processors.wrangle import RemoteDataWrangler
 from musify.spotify.processors import SpotifyDataWrangler
 from tests.local.utils import path_track_all, path_track_flac, path_track_mp3, path_track_m4a, path_track_wma
-from utils import path_resources
+from tests.utils import path_resources
 
 
 @pytest.fixture(scope="module")
