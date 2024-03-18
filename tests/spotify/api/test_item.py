@@ -1,7 +1,7 @@
 from collections.abc import Collection
 from copy import deepcopy
 from itertools import batched
-from random import sample, randrange
+from random import sample, randrange, choice
 from typing import Any
 from urllib.parse import parse_qs
 
@@ -192,6 +192,22 @@ class TestSpotifyAPIItems(RemoteAPITester):
     ###########################################################################
     ## Input validation
     ###########################################################################
+    @pytest.mark.parametrize("object_type", [RemoteObjectType.ALBUM], ids=idfn)
+    def test_extend_items_input_validation(
+            self,
+            object_type: RemoteObjectType,
+            response: dict[str, Any],
+            key: str,
+            api: SpotifyAPI,
+            api_mock: SpotifyMock
+    ):
+        # function should skip on fully extended response
+        while len(response[key][api.items_key]) < response[key]["total"]:
+            response[key][api.items_key].append(choice(response[key][api.items_key]))
+
+        api.extend_items(response, kind=object_type, key=api.collection_item_map[object_type])
+        assert not api_mock.request_history
+
     def test_get_user_items_input_validation(self, api: SpotifyAPI):
         # raises error when invalid item type given
         for kind in set(ALL_ITEM_TYPES) - api.user_item_types:

@@ -176,6 +176,11 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         if self.items_key not in response:
             response[self.items_key] = []
 
+        if len(response[self.items_key]) == response["total"]:  # skip on fully extended response
+            url = response["href"].split("?")[0]
+            self.logger.debug(f"{'SKIP':<7}: {url:<43} | Response already extended")
+            return response[self.items_key]
+
         # this usually happens on the items block of a current user's playlist
         if "next" not in response:
             response["next"] = response["href"]

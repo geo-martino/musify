@@ -43,7 +43,9 @@ class RemoteMock(Mocker):
         Calculates the numbers of a pages that need to be called from a given ``total`` and ``limit`` per page
         to get all items related to this response.
         """
-        return total // limit + (total % limit > 0)  # round up
+        if limit > 0 and total > 0:
+            return total // limit + (total % limit > 0)  # round up
+        return 0
 
     @abstractmethod
     def calculate_pages_from_response(self, response: Mapping[str, Any]) -> int:

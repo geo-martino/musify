@@ -3,10 +3,12 @@ from collections.abc import Iterable
 from typing import Any
 from urllib.parse import parse_qs
 
+import pytest
+
 from musify.shared.remote.enum import RemoteObjectType
 from musify.spotify.api import SpotifyAPI
-from musify.spotify.base import SpotifyItem
-from musify.spotify.object import SpotifyCollectionLoader, SpotifyTrack
+from musify.spotify.base import SpotifyItem, SpotifyObject
+from musify.spotify.object import SpotifyCollectionLoader, SpotifyArtist
 from tests.shared.remote.object import RemoteCollectionTester
 from tests.spotify.api.mock import SpotifyMock
 
@@ -17,77 +19,104 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
     def collection_merge_items(self, *args, **kwargs) -> Iterable[SpotifyItem]:
         raise NotImplementedError
 
+    @abstractmethod
+    def item_kind(self, api: SpotifyAPI) -> RemoteObjectType:
+        """Yields the RemoteObjectType of items in this collection as a pytest.fixture"""
+        raise NotImplementedError
+
+    @pytest.fixture
+    def item_key(self, item_kind: RemoteObjectType) -> str:
+        """Yields the key of items in this collection as a pytest.fixture"""
+        return item_kind.name.lower() + "s"
+
+    ###########################################################################
+    ## Assertions
+    ###########################################################################
     @staticmethod
-    def test_load_without_items(
-            collection: SpotifyCollectionLoader,
-            response_valid: dict[str, Any],
-            api: SpotifyAPI,
-            api_mock: SpotifyMock
-    ):
-        api_mock.reset_mock()  # test checks the number of requests made
-
-        unit = collection.__class__.__name__.removeprefix("Spotify")
-        kind = RemoteObjectType.from_name(unit)[0]
-        key = api.collection_item_map[kind].name.lower() + "s"
-
-        test = collection.__class__.load(response_valid["href"], api=api, extend_tracks=True)
-
-        assert test.name == response_valid["name"]
-        assert test.id == response_valid["id"]
-        assert test.url == response_valid["href"]
-
-        requests = api_mock.get_requests(test.url)
-        requests += api_mock.get_requests(f"{test.url}/{key}")
-        requests += api_mock.get_requests(f"{collection.api.url}/audio-features")
-
-        # 1 call for initial collection + (pages - 1) for tracks + (pages) for audio-features
-        assert len(requests) == 2 * api_mock.calculate_pages_from_response(test.response)
-
-        # input items given, but no key to search on still loads
-        test = collection.__class__.load(response_valid, api=api, items=response_valid.pop(key), extend_tracks=True)
-
-        assert test.name == response_valid["name"]
-        assert test.id == response_valid["id"]
-        assert test.url == response_valid["href"]
-
-    @staticmethod
-    def assert_load_with_tracks(
-            cls: type[SpotifyCollectionLoader],
-            items: list[SpotifyTrack],
+    def assert_load_with_items_requests[T: SpotifyObject](
             response: dict[str, Any],
-            api: SpotifyAPI,
+            result: SpotifyCollectionLoader[T],
+            items: list[T],
+            key: str,
             api_mock: SpotifyMock,
     ):
-        """Run test with assertions on load method with given ``items``"""
-        unit = cls.__name__.removeprefix("Spotify")
-        kind = RemoteObjectType.from_name(unit)[0]
-        key = api.collection_item_map[kind].name.lower() + "s"
+        """Run assertions on the requests from load method with given ``items``"""
+        assert len(result.response[key][result.api.items_key]) == response[key]["total"]
+        assert len(result.items) == response[key]["total"]
+        assert not api_mock.get_requests(result.url)  # main collection URL was not called
 
-        test = cls.load(response, api=api, items=items, extend_tracks=True)
-        assert len(test.response[key]["items"]) == response[key]["total"]
-        assert len(test.items) == response[key]["total"]
-        assert not api_mock.get_requests(test.url)  # playlist URL was not called
-
-        # requests to extend album start from page 2 onward
-        requests = api_mock.get_requests(test.url)
-        requests += api_mock.get_requests(f"{test.url}/{key}")
-        requests += api_mock.get_requests(f"{api.url}/audio-features")
-
-        # 0 calls for initial collection + (extend_pages - 1) for tracks + (extend_pages) for audio-features
-        # + (get_pages) for audio-features get on response items not in input items
-        if kind == RemoteObjectType.PLAYLIST:
-            input_ids = {item["track"]["id"] for item in response["tracks"]["items"]} - {item.id for item in items}
-        else:
-            input_ids = {item["id"] for item in response["tracks"]["items"]} - {item.id for item in items}
-        get_pages = api_mock.calculate_pages(limit=test.response[key]["limit"], total=len(input_ids))
-        extend_pages = api_mock.calculate_pages_from_response(test.response)
-        assert len(requests) == 2 * extend_pages - 1 + get_pages
-
-        # ensure none of the items ids were requested
+        # ensure none of the input_ids were requested
         input_ids = {item.id for item in items}
-        for request in api_mock.get_requests(f"{test.url}/{key}"):
+        for request in api_mock.get_requests(f"{result.url}/{key}"):
             params = parse_qs(request.query)
             if "ids" not in params:
                 continue
 
             assert not input_ids.intersection(params["ids"][0].split(","))
+
+    @staticmethod
+    def assert_load_with_items_extended[T: SpotifyObject](
+            response: dict[str, Any],
+            result: SpotifyCollectionLoader[T],
+            items: list[T],
+            kind: RemoteObjectType,
+            key: str,
+            api_mock: SpotifyMock,
+    ):
+        """Run assertions on the requests for missing data from load method with given ``items``"""
+        requests_missing = api_mock.get_requests(f"{result.api.url}/{key}")
+        limit = response[key]["limit"]
+        input_ids = {item.id for item in items}
+        response_item_ids = {
+            item[key.rstrip("s")]["id"] if kind == RemoteObjectType.PLAYLIST else item["id"]
+            for item in response[key][result.api.items_key]
+        }
+        assert len(requests_missing) == api_mock.calculate_pages(limit=limit, total=len(response_item_ids - input_ids))
+
+    ###########################################################################
+    ## Tests
+    ###########################################################################
+    @staticmethod
+    @abstractmethod
+    def get_load_without_items(
+            loader: SpotifyCollectionLoader,
+            response_valid: dict[str, Any],
+            api: SpotifyAPI,
+            api_mock: SpotifyMock
+    ):
+        """Yields the results from 'load' where no items are given as a pytest.fixture"""
+        raise NotImplementedError
+
+    def test_load_without_items(
+            self,
+            collection: SpotifyCollectionLoader,
+            response_valid: dict[str, Any],
+            item_key: str,
+            api: SpotifyAPI,
+            api_mock: SpotifyMock
+    ):
+        api_mock.reset_mock()  # test checks the number of requests made
+
+        result = self.get_load_without_items(
+            loader=collection, response_valid=response_valid, api=api, api_mock=api_mock
+        )
+
+        assert result.name == response_valid["name"]
+        assert result.id == response_valid["id"]
+        assert result.url == response_valid["href"]
+
+        expected = api_mock.calculate_pages_from_response(result.response, item_key=item_key)
+        if not isinstance(result, SpotifyArtist):
+            expected -= 1  # -1 for not calling initial page
+
+        assert len(api_mock.get_requests(result.url)) == 1
+        assert len(api_mock.get_requests(f"{result.url}/{item_key}")) == expected
+        assert not api_mock.get_requests(f"{api.url}/audio-features")
+        assert not api_mock.get_requests(f"{api.url}/audio-analysis")
+
+        # input items given, but no key to search on still loads
+        result = collection.load(response_valid, api=api, items=response_valid.pop(item_key), extend_tracks=True)
+
+        assert result.name == response_valid["name"]
+        assert result.id == response_valid["id"]
+        assert result.url == response_valid["href"]

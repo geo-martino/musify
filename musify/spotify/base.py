@@ -13,7 +13,7 @@ from musify.shared.remote.exception import RemoteObjectTypeError, RemoteError
 from musify.spotify.api import SpotifyAPI
 
 
-class SpotifyObject(RemoteObject, metaclass=ABCMeta):
+class SpotifyObject(RemoteObject[SpotifyAPI], metaclass=ABCMeta):
     """Generic base class for Spotify-stored objects. Extracts key data from a Spotify API JSON response."""
 
     _url_pad = 71

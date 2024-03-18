@@ -24,9 +24,10 @@ class RemoteResponse(MusifyObject, metaclass=ABCMeta):
         """The ID of this item/collection."""
         raise NotImplementedError
 
+    # noinspection PyPropertyDefinition,PyMethodParameters
     @property
     @abstractmethod
-    def kind(self) -> RemoteObjectType:
+    def kind(cls) -> RemoteObjectType:
         """The type of remote object this python object represents"""
         raise NotImplementedError
 

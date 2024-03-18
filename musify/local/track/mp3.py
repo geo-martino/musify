@@ -88,8 +88,6 @@ class MP3TagWriter(TagWriter[mutagen.mp3.MP3]):
     def _write_images(self, track: LocalTrack, dry_run: bool = True) -> bool:
         tag_id_prefix = next(iter(self.tag_map.images), None)
 
-        print(self.file.tags.keys())
-
         updated = False
         for image_kind, image_link in track.image_links.items():
             image = open_image(image_link)
@@ -112,7 +110,6 @@ class MP3TagWriter(TagWriter[mutagen.mp3.MP3]):
             track.has_image = tag_id_prefix is not None or track.has_image
             updated = tag_id_prefix is not None
 
-        print(self.file.tags.keys())
         return updated
 
     def _write_comments(self, track: LocalTrack, dry_run: bool = True) -> bool:

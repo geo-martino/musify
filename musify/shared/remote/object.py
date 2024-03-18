@@ -29,8 +29,10 @@ class RemoteTrack(RemoteItem, Track, metaclass=ABCMeta):
 
     __attributes_classes__ = (Track, RemoteItem)
 
+    # noinspection PyPropertyDefinition
+    @classmethod
     @property
-    def kind(self):
+    def kind(cls):
         return RemoteObjectType.TRACK
 
 
@@ -77,6 +79,9 @@ class RemoteCollectionLoader[T: RemoteObject](RemoteObject, RemoteCollection[T],
             * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
             * An object of the same type as this collection.
               The remote API JSON response will be used to load a new object.
+
+        You may also provide a set of kwargs relating that will extend aspects of the response
+        before using it to initialise a new object. See :py:meth:`reload` for possible extensions.
 
         :param value: The value representing some remote collection. See description for allowed value types.
         :param api: An authorised API object to load the object from.
@@ -125,8 +130,10 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
 
     __attributes_classes__ = (Playlist, RemoteCollectionLoader)
 
+    # noinspection PyPropertyDefinition
+    @classmethod
     @property
-    def kind(self):
+    def kind(cls):
         return RemoteObjectType.PLAYLIST
 
     @property
@@ -241,7 +248,7 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
         if not dry_run:
             added = self.api.add_to_playlist(self.url, items=uri_add, skip_dupes=kind != "refresh")
             if reload:  # reload the current playlist object from remote
-                self.reload(use_cache=False)
+                self.reload(use_cache=False, extend_tracks=True)
 
         return SyncResultRemotePlaylist(
             start=len(uri_remote),
@@ -269,8 +276,10 @@ class RemoteAlbum[T: RemoteTrack](RemoteCollectionLoader[T], Album[T], metaclass
 
     __attributes_classes__ = (Album, RemoteCollectionLoader)
 
+    # noinspection PyPropertyDefinition
+    @classmethod
     @property
-    def kind(self):
+    def kind(cls):
         return RemoteObjectType.ALBUM
 
     @property
@@ -288,8 +297,10 @@ class RemoteArtist[T: RemoteTrack](Artist[T], RemoteCollectionLoader[T], metacla
 
     __attributes_classes__ = (Artist, RemoteCollectionLoader)
 
+    # noinspection PyPropertyDefinition
+    @classmethod
     @property
-    def kind(self):
+    def kind(cls):
         return RemoteObjectType.ARTIST
 
     @property

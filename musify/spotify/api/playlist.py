@@ -48,6 +48,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
                 return self.wrangler.convert(
                     playlist["uri"], kind=RemoteObjectType.PLAYLIST, type_in=RemoteIDType.URI, type_out=RemoteIDType.URL
                 )
+
         try:
             return self.wrangler.convert(playlist, kind=RemoteObjectType.PLAYLIST, type_out=RemoteIDType.URL)
         except RemoteIDTypeError:

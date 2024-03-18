@@ -66,11 +66,13 @@ class SpotifyMock(RemoteMock):
             ObjectType.AUDIOBOOK: self.user_audiobooks,
         }
 
-    def calculate_pages_from_response(self, response: Mapping[str, Any]) -> int:
-        kind = ObjectType.from_name(response["type"])[0]
-        key = SpotifyAPI.collection_item_map[kind].name.lower() + "s"
+    def calculate_pages_from_response(self, response: Mapping[str, Any], item_key: str | None = None) -> int:
+        item_kind = ObjectType.from_name(response["type"])[0]
+        if not item_key:
+            item_key = SpotifyAPI.collection_item_map[item_kind].name.lower() + "s"
 
-        return self.calculate_pages(limit=response[key]["limit"], total=response[key]["total"])
+        items_block = response.get(item_key, {})
+        return self.calculate_pages(limit=items_block.get("limit", 0), total=items_block.get("total", 0))
 
     def __init__(self, **kwargs):
         super().__init__(case_sensitive=True, **{k: v for k, v in kwargs.items() if k != "case_sensitive"})

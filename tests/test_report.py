@@ -110,7 +110,7 @@ def test_report_missing_tags(local_library: LocalLibrary):
         if choice([True, False]):
             track.bpm = None
         if choice([True, False]):
-            track.key = None
+            track.item_key = None
         if choice([True, False]):
             track.disc_total = None
 

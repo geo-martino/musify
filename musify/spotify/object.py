@@ -4,8 +4,8 @@ Implements all :py:mod:`Remote` object types for Spotify.
 
 from __future__ import annotations
 
-from abc import ABCMeta
-from collections.abc import Iterable, MutableMapping, Mapping
+from abc import ABCMeta, abstractmethod
+from collections.abc import Iterable, MutableMapping, Mapping, Collection
 from copy import copy, deepcopy
 from datetime import datetime
 from typing import Any, Self
@@ -237,11 +237,11 @@ class SpotifyTrack(SpotifyItem, RemoteTrack):
 
     def reload(
             self,
+            use_cache: bool = True,
             features: bool = False,
             analysis: bool = False,
             extend_album: bool = False,
             extend_artists: bool = False,
-            use_cache: bool = True,
             *_,
             **__
     ) -> None:
@@ -259,97 +259,138 @@ class SpotifyTrack(SpotifyItem, RemoteTrack):
         self.__init__(response=response, api=self.api)
 
 
-class SpotifyCollectionLoader[T: SpotifyItem](RemoteCollectionLoader[T], SpotifyObject, metaclass=ABCMeta):
+class SpotifyCollectionLoader[T: SpotifyObject](RemoteCollectionLoader[T], SpotifyObject, metaclass=ABCMeta):
     """Generic class for storing a collection of Spotify objects that can be loaded from an API response."""
+
+    @classmethod
+    def _get_item_kind(cls, api: SpotifyAPI) -> RemoteObjectType:
+        """Returns the :py:class:`RemoteObjectType` for the items in this collection"""
+        return api.collection_item_map[cls.kind]
+
+    @classmethod
+    @abstractmethod
+    def _get_items(
+            cls, items: Collection[str] | MutableMapping[str, Any], api: SpotifyAPI, use_cache: bool = True
+    ) -> list[dict[str, Any]]:
+        """Call the ``api`` to get values for the given ``items`` URIs"""
+        raise NotImplementedError
+
+    @classmethod
+    def _filter_items(cls, items: Iterable[T], response: Mapping[str, Any]) -> Iterable[T]:
+        """
+        Filter down and return only ``items`` associated with the given ``response``.
+        The default implementation of this will just return the given ``items``.
+        Override for object-specific filtering.
+        """
+        return items
+
+    @classmethod
+    def _extend_response(
+            cls, response: MutableMapping[str, Any], api: SpotifyAPI, use_cache: bool = True, *_, **__
+    ) -> bool:
+        """
+        Apply extensions to specific aspects of the given ``response``.
+        Does nothing by default. Override to implement object-specific extensions.
+
+        :return: True if checks should be skipped when initialising the object.
+        """
+        pass
+
+    @classmethod
+    def _merge_items_to_response(
+            cls,
+            items: Iterable[T | Mapping[str, Any]],
+            response: Iterable[MutableMapping[str, Any]],
+            skip: Collection[str] = ()
+    ) -> tuple[set[str], set[str]]:
+        """
+        Find items in the ``response`` that match from the given ``items`` and replace them in the response.
+        Optionally, provide a list of URIs to ``skip``.
+
+        :return: Two sets of URIs for items that could and could not be found in response.
+        """
+        items_mapped: dict[str, T | Mapping[str, Any]] = {
+            item.uri if isinstance(item, SpotifyObject) else item["uri"]: item for item in items
+        }
+        uri_matched: set[str] = set()
+        uri_missing: set[str] = set()
+
+        # find items in the response that match from the given items
+        for source_item in response:
+            if cls.kind == RemoteObjectType.PLAYLIST:
+                source_item = source_item["track"]
+
+            if source_item["uri"] in skip:
+                continue
+            elif source_item["uri"] in items_mapped:
+                # replace the skeleton response with the response from the given items
+                replacement_item = items_mapped.pop(source_item["uri"])
+                if isinstance(replacement_item, SpotifyObject):
+                    replacement_item = replacement_item.response
+
+                source_item.clear()
+                source_item |= replacement_item
+                uri_matched.add(source_item["uri"])
+            elif not source_item.get("is_local"):  # add to missing list
+                uri_missing.add(source_item["uri"])
+
+        return uri_matched, uri_missing
+
+    @classmethod
+    def _load_new(cls, value: str | Mapping[str, Any] | RemoteResponse, api: SpotifyAPI, *args, **kwargs) -> Self:
+        """
+        Sets up a new object of the current class for the given ``value`` by calling ``__new__``
+        and adding just enough attributes to the object to get :py:meth:`reload` to run.
+        """
+        # noinspection PyTypeChecker
+        id_ = next(iter(api.wrangler.extract_ids(values=value, kind=cls.kind)))
+        # noinspection PyTypeChecker
+        url = api.wrangler.convert(id_, kind=cls.kind, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
+
+        self = cls.__new__(cls)
+        self.api = api
+        self._response = {"href": url}
+
+        self.reload(*args, **kwargs)
+        return self
 
     @classmethod
     def load(
             cls,
             value: str | Mapping[str, Any] | RemoteResponse,
             api: SpotifyAPI,
-            items: Iterable[SpotifyTrack] = (),
-            extend_tracks: bool = False,
             use_cache: bool = True,
+            items: Iterable[T] = (),
             leave_bar: bool = True,
             *args,
             **kwargs
     ) -> Self:
-        unit = cls.__name__.removeprefix("Spotify").lower()
-        kind = RemoteObjectType.from_name(unit)[0]
-        key = api.collection_item_map[kind].name.lower() + "s"
+        item_kind = cls._get_item_kind(api=api)
+        item_key = item_kind.name.lower() + "s"
+
+        if isinstance(value, RemoteResponse):
+            value = value.response
 
         # no items given, regenerate API response from the URL
-        if any({
-            not items,
-            isinstance(value, Mapping | RemoteResponse) and (key not in value or api.items_key not in value[key])
-        }):
-            if kind == RemoteObjectType.PLAYLIST:
-                value = api.get_playlist_url(value)
+        if any({not items, isinstance(value, Mapping) and api.items_key not in value.get(item_key, [])}):
+            return cls._load_new(value=value, api=api, use_cache=use_cache, *args, **kwargs)
 
-            self = cls.__new__(cls)
-            self.api = api
-            self._response = {"href": value}
-            self.reload(*args, **kwargs, extend_tracks=extend_tracks, use_cache=use_cache)
-            return self
-
-        # get response
-        if isinstance(value, MutableMapping) and api.wrangler.get_item_type(value) == kind:
+        if isinstance(value, MutableMapping) and api.wrangler.get_item_type(value) == cls.kind:  # input is response
             response = deepcopy(value)
-        else:  # reload response from the API
-            response = cls.api.get_items(value, kind=kind, use_cache=use_cache)[0]
+        else:  # load fresh response from the API
+            response = cls.api.get_items(value, kind=cls.kind, use_cache=use_cache)[0]
 
-        # attempt to find items for this track collection in the given items
-        if kind == RemoteObjectType.ALBUM:
-            uri_tracks_input: dict[str, SpotifyTrack] = {
-                track.uri: track for track in items if track.response.get("album", {}).get("id") == response["id"]
-            }
-        else:
-            uri_tracks_input: dict[str, SpotifyTrack] = {track.uri: track for track in items}
-        uri_get: list[str] = []
+        # filter down input items to those that match the response
+        items = cls._filter_items(items=items, response=response)
+        matched, missing = cls._merge_items_to_response(items=items, response=response[item_key][api.items_key])
 
-        # loop through the skeleton response for this album, find items that match from the given items
-        for track_response in response[key][api.items_key]:
-            if kind == RemoteObjectType.PLAYLIST:
-                track_response = track_response["track"]
+        if missing:
+            print(missing)
+            items_missing = cls._get_items(items=missing, api=api, use_cache=use_cache)
+            cls._merge_items_to_response(items=items_missing, response=response[item_key][api.items_key], skip=matched)
 
-            if track_response["uri"] in uri_tracks_input:
-                # replace the skeleton response with the response from the track
-                track = uri_tracks_input.pop(track_response["uri"])
-                track_response.clear()
-                track_response |= track.response
-            elif not track_response["is_local"]:  # add to get from API list
-                uri_get.append(track_response["uri"])
-
-        if len(uri_get) > 0:  # get remaining items from API
-            uri_tracks_get = {r["uri"]: r for r in api.get_tracks(uri_get, features=True, use_cache=use_cache)}
-
-            for track_response in response[key][api.items_key]:
-                if kind == RemoteObjectType.PLAYLIST:
-                    track_response = track_response["track"]
-
-                track_new: dict[str, Any] = uri_tracks_get.pop(track_response["uri"], None)
-                if track_new:  # replace the skeleton response with the new response
-                    track_response.clear()
-                    track_response |= track_new
-
-        if kind == RemoteObjectType.ALBUM:
-            if len(response[key][api.items_key]) < response["total_tracks"]:
-                response[key][api.items_key].extend([track.response for track in uri_tracks_input.values()])
-            response[key][api.items_key].sort(key=lambda x: x["track_number"])
-
-        extend_response = api.extend_items(
-            response[key],
-            kind=kind,
-            key=api.collection_item_map[kind],
-            use_cache=use_cache,
-            leave_bar=leave_bar
-        )
-        if extend_tracks:
-            if kind == RemoteObjectType.PLAYLIST:
-                extend_response = [item["track"] for item in extend_response]
-            api.extend_tracks(extend_response, limit=response[key]["limit"], features=True, use_cache=use_cache)
-
-        return cls(response=response, api=api, skip_checks=False)
+        skip_checks = cls._extend_response(response=response, api=api, use_cache=use_cache, *args, **kwargs)
+        return cls(response=response, api=api, skip_checks=skip_checks)
 
 
 class SpotifyPlaylist(SpotifyCollectionLoader[SpotifyTrack], RemotePlaylist[SpotifyTrack]):
@@ -464,15 +505,57 @@ class SpotifyPlaylist(SpotifyCollectionLoader[SpotifyTrack], RemotePlaylist[Spot
         if not skip_checks:
             self._check_total()
 
-    def reload(self, extend_tracks: bool = False, use_cache: bool = True, *_, **__) -> None:
-        self._check_for_api()
+    @classmethod
+    def _get_items(
+            cls, items: Collection[str] | MutableMapping[str, Any], api: SpotifyAPI, use_cache: bool = True
+    ) -> list[dict[str, Any]]:
+        return api.get_tracks(items, use_cache=use_cache)
 
-        response = self.api.get_items(self.url, kind=RemoteObjectType.PLAYLIST, use_cache=use_cache)[0]
+    @classmethod
+    def _extend_response(
+            cls,
+            response: MutableMapping[str, Any],
+            api: SpotifyAPI,
+            use_cache: bool = True,
+            leave_bar: bool = True,
+            extend_tracks: bool = False,
+            extend_features: bool = False,
+            *_,
+            **__
+    ) -> bool:
+        item_kind = api.collection_item_map[cls.kind]
+
         if extend_tracks:
-            tracks = [track["track"] for track in response["tracks"]["items"]]
-            self.api.extend_tracks(tracks, limit=response["tracks"]["limit"], features=True, use_cache=use_cache)
+            # noinspection PyTypeChecker
+            api.extend_items(response, kind=cls.kind, key=item_kind, use_cache=use_cache, leave_bar=leave_bar)
 
-        self.__init__(response=response, api=self.api, skip_checks=not extend_tracks)
+        item_key = item_kind.name.lower() + "s"
+        tracks = [item["track"] for item in response.get(item_key, {}).get(api.items_key, [])]
+        if tracks and extend_features:
+            api.extend_tracks(tracks, limit=response[item_key]["limit"], features=True, use_cache=use_cache)
+
+        return not extend_tracks
+
+    def reload(
+            self,
+            use_cache: bool = True,
+            extend_tracks: bool = False,
+            extend_features: bool = False,
+            *_,
+            **__
+    ) -> None:
+        self._check_for_api()
+        response = self.api.get_items(self.url, kind=RemoteObjectType.PLAYLIST, extend=False, use_cache=use_cache)[0]
+
+        skip_checks = self._extend_response(
+            response=response,
+            api=self.api,
+            use_cache=use_cache,
+            extend_tracks=extend_tracks,
+            extend_features=extend_features
+        )
+
+        self.__init__(response=response, api=self.api, skip_checks=skip_checks)
 
     def _get_track_uris_from_api_response(self) -> list[str]:
         return [track["track"]["uri"] for track in self.response["tracks"]["items"]]
@@ -593,19 +676,68 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTra
         for track in self.tracks:
             track.disc_total = self.disc_total
 
+    @classmethod
+    def _get_items(
+            cls, items: Collection[str] | MutableMapping[str, Any], api: SpotifyAPI, use_cache: bool = True
+    ) -> list[dict[str, Any]]:
+        return api.get_tracks(items, use_cache=use_cache)
+
+    @classmethod
+    def _filter_items(cls, items: Iterable[SpotifyTrack], response: Mapping[str, Any]) -> Iterable[SpotifyTrack]:
+        """Filter down and return only ``items`` the items associated with the given ``response``"""
+        return [item for item in items if item.response.get("album", {}).get("id") == response["id"]]
+
+    @classmethod
+    def _extend_response(
+            cls,
+            response: MutableMapping[str, Any],
+            api: SpotifyAPI,
+            use_cache: bool = True,
+            leave_bar: bool = True,
+            extend_tracks: bool = False,
+            extend_artists: bool = False,
+            extend_features: bool = False,
+            *_,
+            **__
+    ) -> bool:
+        item_kind = api.collection_item_map[cls.kind]
+
+        if extend_artists:
+            api.get_items(response["artists"], kind=RemoteObjectType.ARTIST, use_cache=use_cache)
+
+        if extend_tracks:
+            # noinspection PyTypeChecker
+            api.extend_items(response, kind=cls.kind, key=item_kind, use_cache=use_cache, leave_bar=leave_bar)
+
+        item_key = item_kind.name.lower() + "s"
+        tracks = response.get(item_key, {}).get(api.items_key)
+        if tracks and extend_features:
+            api.extend_tracks(tracks, limit=response[item_key]["limit"], features=True, use_cache=use_cache)
+
+        return not extend_tracks
+
     def reload(
-            self, extend_artists: bool = True, extend_tracks: bool = True, use_cache: bool = True, *_, **__
+            self,
+            use_cache: bool = True,
+            extend_artists: bool = False,
+            extend_tracks: bool = False,
+            extend_features: bool = False,
+            *_,
+            **__
     ) -> None:
         self._check_for_api()
+        response = self.api.get_items(self.url, kind=RemoteObjectType.ALBUM, extend=False, use_cache=use_cache)[0]
 
-        response = self.api.get_items(self.url, kind=RemoteObjectType.ALBUM, use_cache=use_cache)[0]
-        if extend_artists:
-            self.api.get_items(response["artists"], kind=RemoteObjectType.ARTIST, use_cache=use_cache)
-        if extend_tracks:
-            tracks = response["tracks"]
-            self.api.extend_tracks(tracks["items"], limit=tracks["limit"], features=True, use_cache=use_cache)
+        skip_checks = self._extend_response(
+            response=response,
+            api=self.api,
+            use_cache=use_cache,
+            extend_tracks=extend_tracks,
+            extend_artists=extend_artists,
+            extend_features=extend_features,
+        )
 
-        self.__init__(response=response, api=self.api, skip_checks=not extend_tracks)
+        self.__init__(response=response, api=self.api, skip_checks=skip_checks)
 
 
 class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyAlbum]):
@@ -670,44 +802,78 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
             for album in self.response.get("albums", {}).get("items", [])
         ]
 
-    # TODO: this currently overrides parent loader because parent loader is too 'tracks' specific
-    #  see if this can be modified to take advantage of the item filtering logic in the parent loader
     @classmethod
-    def load(
+    def _get_item_kind(cls, api: SpotifyAPI) -> RemoteObjectType:
+        return RemoteObjectType.ALBUM
+
+    @classmethod
+    def _get_items(
+            cls, items: Collection[str] | MutableMapping[str, Any], api: SpotifyAPI, use_cache: bool = True
+    ) -> list[dict[str, Any]]:
+        return api.get_items(items, extend=False, use_cache=use_cache)
+
+    @classmethod
+    def _filter_items(cls, items: Iterable[SpotifyAlbum], response: dict[str, Any]) -> Iterable[SpotifyAlbum]:
+        """Filter down and return only ``items`` the items associated with the given ``response``"""
+        return [
+            item for item in items
+            if any(artist["id"] == response["id"] for artist in item.response.get("artists", []))
+        ]
+
+    @classmethod
+    def _extend_response(
             cls,
-            value: str | Mapping[str, Any] | RemoteResponse,
+            response: MutableMapping[str, Any],
             api: SpotifyAPI,
+            use_cache: bool = True,
+            leave_bar: bool = True,
             extend_albums: bool = False,
             extend_tracks: bool = False,
-            use_cache: bool = True,
+            extend_features: bool = False,
             *_,
             **__
-    ) -> Self:
-        self = cls.__new__(cls)
-        self.api = api
+    ) -> bool:
+        item_kind = RemoteObjectType.ALBUM
+        item_key = item_kind.name.lower() + "s"
 
-        # set a mock response with URL to load from
-        id_ = api.wrangler.extract_ids(value)[0]
-        self._response = {
-            "href": api.wrangler.convert(
-                id_, kind=RemoteObjectType.ARTIST, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL
-            )
-        }
-        self.reload(extend_albums=extend_albums, extend_tracks=extend_tracks, use_cache=use_cache)
-        return self
+        response_items = response.get(item_key, {})
+        has_all_albums = item_key in response and len(response_items[api.items_key]) == response_items["total"]
+        if extend_albums and not has_all_albums:
+            api.get_artist_albums(response, limit=response.get(item_key, {}).get("limit", 50), use_cache=use_cache)
+
+        album_item_kind = api.collection_item_map[item_kind]
+        album_item_key = album_item_kind.name.lower() + "s"
+        albums = response.get(item_key, {}).get(api.items_key)
+
+        if albums and extend_tracks:
+            for album in albums:
+                api.extend_items(album[album_item_key], kind=item_kind, key=album_item_kind, use_cache=use_cache)
+
+        if albums and extend_features:
+            tracks = [track for album in albums for track in album[album_item_key]["items"]]
+            api.extend_tracks(tracks, limit=response[item_key]["limit"], features=True, use_cache=use_cache)
+
+        return not extend_albums or not extend_tracks
 
     def reload(
-            self, extend_albums: bool = False, extend_tracks: bool = False, use_cache: bool = True, *_, **__
+            self,
+            use_cache: bool = True,
+            extend_albums: bool = False,
+            extend_tracks: bool = False,
+            extend_features: bool = False,
+            *_,
+            **__
     ) -> None:
         self._check_for_api()
-
         response = self.api.handler.get(url=self.url, use_cache=use_cache, log_pad=self._url_pad)
-        if extend_albums:
-            self.api.get_artist_albums(response, use_cache=use_cache)
-        if extend_albums and extend_tracks:
-            kind = RemoteObjectType.ALBUM
-            key = self.api.collection_item_map[kind]
-            for album in response["albums"]["items"]:
-                self.api.extend_items(album["tracks"], kind=kind, key=key, use_cache=use_cache)
 
-        self.__init__(response=response, api=self.api, skip_checks=extend_albums and not extend_tracks)
+        skip_checks = self._extend_response(
+            response=response,
+            api=self.api,
+            use_cache=use_cache,
+            extend_albums=extend_albums,
+            extend_tracks=extend_tracks,
+            extend_features=extend_features,
+        )
+
+        self.__init__(response=response, api=self.api, skip_checks=skip_checks)

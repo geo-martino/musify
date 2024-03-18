@@ -71,8 +71,6 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
     :param scopes: The scopes to request access to.
     """
 
-    items_key = "items"
-
     @property
     def user_id(self) -> str | None:
         """ID of the currently authenticated user"""

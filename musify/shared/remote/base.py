@@ -114,7 +114,7 @@ class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, metaclass=ABCMeta):
     def reload(self, use_cache: bool = True, *args, **kwargs) -> None:
         """
         Reload this object from the API, calling all required endpoints
-        to get a complete set of data for this item type
+        to get a complete set of data for this item type.
 
         :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
         """

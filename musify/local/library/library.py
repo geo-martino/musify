@@ -60,12 +60,12 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     )
     __attributes_classes__ = (Library, LocalCollection)
 
-    # noinspection PyTypeChecker,PyPropertyDefinition
+    # noinspection PyPropertyDefinition
     @classmethod
     @property
     def name(cls) -> str:
         """The type of library loaded"""
-        return cls.source
+        return str(cls.source)
 
     # noinspection PyPropertyDefinition
     @classmethod
