@@ -33,6 +33,11 @@ class TestSpotifyAPIItems(RemoteAPITester):
         """Yield the object factory for Spotify objects as a pytest.fixture"""
         return SpotifyObjectFactory()
 
+    # noinspection PyMethodOverriding
+    @pytest.fixture
+    def responses(self, _responses: dict[str, dict[str, Any]], key: str) -> dict[str, dict[str, Any]]:
+        return {id_: response for id_, response in _responses.items() if key is None or response[key]["total"] > 3}
+
     @staticmethod
     def reduce_items(response: dict[str, Any], key: str, api: SpotifyAPI, api_mock: SpotifyMock, pages: int = 3) -> int:
         """
@@ -554,16 +559,8 @@ class TestSpotifyAPIItems(RemoteAPITester):
             object_factory: SpotifyObjectFactory,
     ):
         if object_type in api.collection_item_map:
-            valid_responses = {}
             for id_, response in responses.items():
-                try:
-                    self.reduce_items(response=response, key=key, api=api, api_mock=api_mock)
-                    valid_responses[id_] = response
-                except AssertionError:  # filter out invalid collections i.e. those with too few items
-                    continue
-
-            responses = valid_responses
-            assert len(responses) > 3
+                self.reduce_items(response=response, key=key, api=api, api_mock=api_mock)
 
         factory = object_factory[object_type]
         original = [factory(deepcopy(response), skip_checks=True) for response in responses.values()]

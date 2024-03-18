@@ -48,6 +48,10 @@ Changed
 * Made :py:func:`.load_tracks` and :py:func:`.load_playlists` utility functions more DRY
 * Move :py:meth:`.TagReader.load` from :py:class:`.LocalTrack` to super class :py:class:`.TagReader`
 * Major refactoring and restructuring to local and remote modules to add composition
+* :py:meth:`.SpotifyAPI.extend_items` now skips on responses that are already fully extended
+* :py:meth:`.SpotifyArtist.load` now uses the base `load` method from :py:class:`.SpotifyCollectionLoader`
+  meaning it now takes full advantage of the item filtering this method offers.
+  As part of this, the base method was made more generic to accommodate all :py:class:`.SpotifyObject` types
 
 0.8.1
 =====

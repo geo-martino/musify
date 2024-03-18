@@ -29,7 +29,7 @@ class RemoteAPITester(ABC):
         raise NotImplementedError
 
     @pytest.fixture
-    def responses(self, object_type: RemoteObjectType, api_mock: RemoteMock) -> dict[str, dict[str, Any]]:
+    def _responses(self, object_type: RemoteObjectType, api_mock: RemoteMock) -> dict[str, dict[str, Any]]:
         """Yields valid responses mapped by ID for a given ``object_type`` as a pytest.fixture"""
         api_mock.reset_mock()  # tests check the number of requests made
         source = api_mock.item_type_map[object_type]
@@ -37,6 +37,15 @@ class RemoteAPITester(ABC):
             source = sample(source, k=api_mock.limit_lower)
 
         return {response[self.id_key]: deepcopy(response) for response in source}
+
+    @pytest.fixture
+    def responses(self, _responses: dict[str, dict[str, Any]], key: str) -> dict[str, dict[str, Any]]:
+        """
+        Yields valid responses mapped by ID for a given ``object_type`` as a pytest.fixture.
+        This method can be overridden to provide finer-grained filtering
+        on the initial response provided by ``_responses``.
+        """
+        return _responses
 
     @pytest.fixture
     def response(self, responses: dict[str, dict[str, Any]]) -> dict[str, Any]:
