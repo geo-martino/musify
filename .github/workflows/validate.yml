@@ -1,4 +1,4 @@
-name: "✅ Validate package deployment  "
+name: "✅ Validate package deployment   "
 
 on:
   pull_request_target:
