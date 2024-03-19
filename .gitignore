@@ -142,3 +142,11 @@ cython_debug/
 # large data & log folders
 _data/
 _logs/
+
+# Jekyll
+_site
+.sass-cache
+.jekyll-cache
+.jekyll-metadata
+vendor
+
