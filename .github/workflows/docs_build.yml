@@ -1,4 +1,4 @@
-name: 🏗️ Build documentation
+name: "🏗️ Build documentation  "
 
 on:
   pull_request_target:

@@ -9,6 +9,7 @@
 [![Contributors](https://img.shields.io/github/contributors/{program_owner_user}/{program_name_lower}?logo=github&label=Contributors)](https://github.com/{program_owner_user}/{program_name_lower}/graphs/contributors)
 [![License](https://img.shields.io/github/license/{program_owner_user}/{program_name_lower}?label=License)](https://github.com/geo-martino/musify/blob/master/LICENSE)
 </br>
+[![GitHub - Validate](https://github.com/geo-martino/musify/actions/workflows/validate.yml/badge.svg?branch=master)](https://github.com/{program_owner_user}/{program_name_lower}/actions/workflows/validate.yml)
 [![GitHub - Deployment](https://github.com/{program_owner_user}/{program_name_lower}/actions/workflows/deploy.yml/badge.svg?event=release)](https://github.com/{program_owner_user}/{program_name_lower}/actions/workflows/deploy.yml)
 [![GitHub - Documentation](https://github.com/{program_owner_user}/{program_name_lower}/actions/workflows/docs_publish.yml/badge.svg)](https://github.com/{program_owner_user}/{program_name_lower}/actions/workflows/docs_publish.yml)
 

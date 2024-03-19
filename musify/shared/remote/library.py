@@ -196,7 +196,7 @@ class RemoteLibrary[
     def log_playlists(self) -> None:
         max_width = get_max_width(self.playlists)
 
-        self.logger.stat(f"\33[1;96m{self.api.source} PLAYLISTS: \33[0m")
+        self.logger.stat(f"\33[1;96m{self.api.source.upper()} PLAYLISTS: \33[0m")
         for name, playlist in self.playlists.items():
             name = align_string(playlist.name, max_width=max_width)
             self.logger.stat(f"\33[97m{name} \33[0m| \33[92m{len(playlist):>6} total tracks \33[0m")
