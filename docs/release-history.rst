@@ -39,7 +39,6 @@ Added
 -----
 
 * :py:class:`.RemoteAPI` methods now accept :py:class:`.RemoteResponse` objects as input, refreshing them automatically
-* :py:class:`.RemoteAPI` and :py:class:`.RemoteHandler` are now context managers
 
 Changed
 -------
