@@ -1,4 +1,4 @@
-from musify.spotify.api import SpotifyAPI
+from musify.libraries.remote.spotify.api import SpotifyAPI
 
 api = SpotifyAPI(
     client_id="<YOUR CLIENT ID>",
@@ -19,5 +19,5 @@ api = SpotifyAPI(
 # authorise the program to access your Spotify data in your web browser
 api.authorise()
 
-from musify.spotify.library import SpotifyLibrary
+from musify.libraries.remote.spotify.library import SpotifyLibrary
 library = SpotifyLibrary(api=api)

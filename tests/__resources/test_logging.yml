@@ -16,10 +16,10 @@ formatters:
 
 filters:
   console:
-    (): "musify.shared.logger.LogConsoleFilter"
+    (): "musify.log.filter.LogConsoleFilter"
     module_width: 40
   file:
-    (): "musify.shared.logger.LogFileFilter"
+    (): "musify.log.filter.LogFileFilter"
     module_width: 40
 
 handlers:
@@ -43,7 +43,7 @@ handlers:
     level: INFO_EXTRA
 
   file:
-    class: musify.shared.handlers.CurrentTimeRotatingFileHandler
+    class: musify.log.handlers.CurrentTimeRotatingFileHandler
     level: DEBUG
     formatter: extended
     filters: ["file"]

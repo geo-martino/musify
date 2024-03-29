@@ -1,18 +1,17 @@
 """
 Processor that sorts the given collection of items based on given configuration.
 """
-
 from collections.abc import Callable, Mapping, MutableMapping, Sequence, MutableSequence, Iterable
 from copy import copy
 from datetime import datetime
 from random import shuffle
 from typing import Any, Self
 
+from musify.core.base import MusifyItem
+from musify.core.enum import MusifyEnum, Field, Fields
 from musify.processors.base import MusicBeeProcessor
-from musify.shared.core.base import MusifyItem
-from musify.shared.core.enum import MusifyEnum, Field, Fields
-from musify.shared.types import UnitSequence, UnitIterable
-from musify.shared.utils import flatten_nested, strip_ignore_words, to_collection, limit_value
+from musify.types import UnitSequence, UnitIterable
+from musify.utils import flatten_nested, strip_ignore_words, to_collection, limit_value
 
 
 class ShuffleMode(MusifyEnum):
@@ -183,8 +182,8 @@ class ItemSorter(MusicBeeProcessor):
         self.shuffle_by: ShuffleBy | None = shuffle_by
         self.shuffle_weight = limit_value(shuffle_weight, floor=-1, ceil=1)
 
-    def __call__(self, items: MutableSequence[MusifyItem]) -> None:
-        return self.sort(items=items)
+    def __call__(self, *args, **kwargs) -> None:
+        return self.sort(*args, **kwargs)
 
     def sort(self, items: MutableSequence[MusifyItem]) -> None:
         """Sorts a list of ``items`` in-place."""

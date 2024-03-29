@@ -1,18 +1,18 @@
 """
 Meta-functions for providing reports to the user based on comparisons between objects implemented in this package.
 """
-
 import logging
 from collections.abc import Iterable
 
-from musify.local.library import LocalLibrary
-from musify.shared.core.base import MusifyItem
-from musify.shared.core.collection import MusifyCollection
-from musify.shared.core.enum import TagField, Fields, ALL_FIELDS, TagFields
-from musify.shared.core.object import Library, Playlist
-from musify.shared.logger import MusifyLogger, REPORT
-from musify.shared.types import UnitIterable
-from musify.shared.utils import align_string, get_max_width, to_collection
+from musify.core.base import MusifyItem
+from musify.core.enum import TagField, Fields, ALL_FIELDS, TagFields
+from musify.libraries.core.collection import MusifyCollection
+from musify.libraries.core.object import Library, Playlist
+from musify.libraries.local.library import LocalLibrary
+from musify.log import REPORT
+from musify.log.logger import MusifyLogger
+from musify.types import UnitIterable
+from musify.utils import align_string, get_max_width, to_collection
 
 
 def report_playlist_differences(

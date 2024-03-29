@@ -13,13 +13,13 @@ import yaml
 from _pytest.fixtures import SubRequest
 
 from musify import MODULE_ROOT
-from musify.shared.api.request import RequestHandler
-from musify.shared.logger import MusifyLogger
-from musify.shared.remote.enum import RemoteObjectType
-from musify.spotify.api import SpotifyAPI
-from musify.spotify.processors import SpotifyDataWrangler
-from tests.shared.remote.utils import ALL_ITEM_TYPES
-from tests.spotify.api.mock import SpotifyMock
+from musify.api.request import RequestHandler
+from musify.log.logger import MusifyLogger
+from musify.libraries.remote.core.enum import RemoteObjectType
+from musify.libraries.remote.spotify.api import SpotifyAPI
+from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
+from tests.libraries.remote.core.utils import ALL_ITEM_TYPES
+from tests.libraries.remote.spotify.api.mock import SpotifyMock
 from tests.utils import idfn
 
 

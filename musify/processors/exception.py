@@ -1,8 +1,7 @@
 """
 Exceptions relating to processor operations.
 """
-
-from musify.shared.exception import MusifyError
+from musify.exception import MusifyError
 
 
 class ProcessorError(MusifyError):

@@ -59,7 +59,8 @@ For more detailed guides, check out the [documentation](https://geo-martino.gith
 > Libraries log info about loaded objects to the custom `STAT` level.
 > ```python
 > import logging
-> from musify.shared.logger import STAT
+> from musify.log import STAT
+> 
 > logging.basicConfig(format="%(message)s", level=STAT)
 > ```
 
@@ -80,7 +81,7 @@ For more detailed guides, check out the [documentation](https://geo-martino.gith
    > The scopes listed in this example will allow access to read your library data and write to your playlists.
    > See Spotify Web API documentation for more information about [scopes](https://developer.spotify.com/documentation/web-api/concepts/scopes)
    ```python
-   from musify.spotify.api import SpotifyAPI
+   from musify.libraries.remote.spotify.api import SpotifyAPI
    
    api = SpotifyAPI(
        client_id="<YOUR CLIENT ID>",
@@ -103,7 +104,7 @@ For more detailed guides, check out the [documentation](https://geo-martino.gith
    ```
 4. Create a `SpotifyLibrary` object and load your library data as follows:
    ```python
-   from musify.spotify.library import SpotifyLibrary
+   from musify.libraries.remote.spotify.library import SpotifyLibrary
    
    library = SpotifyLibrary(api=api)
    
@@ -133,7 +134,7 @@ For more detailed guides, check out the [documentation](https://geo-martino.gith
    ```
 5. Load some Spotify objects using any of the supported identifiers as follows:
    ```python
-   from musify.spotify.object import SpotifyTrack, SpotifyAlbum, SpotifyPlaylist, SpotifyArtist
+   from musify.libraries.remote.spotify.object import SpotifyTrack, SpotifyAlbum, SpotifyPlaylist, SpotifyArtist
    
    # load by ID
    track1 = SpotifyTrack.load("6fWoFduMpBem73DMLCOh1Z", api=api)
@@ -181,7 +182,7 @@ For more detailed guides, check out the [documentation](https://geo-martino.gith
 
    #### Generic local library
    ```python
-   from musify.local.library import LocalLibrary
+   from musify.libraries.local.library import LocalLibrary
    
    library = LocalLibrary(
        library_folders=["<PATH TO YOUR LIBRARY FOLDER>", ...],
@@ -191,7 +192,7 @@ For more detailed guides, check out the [documentation](https://geo-martino.gith
    
    #### MusicBee
    ```python
-   from musify.local.library import MusicBee
+   from musify.libraries.local.library import MusicBee
    
    library = MusicBee(musicbee_folder="<PATH TO YOUR MUSICBEE FOLDER>")
    ```
@@ -228,7 +229,8 @@ For more detailed guides, check out the [documentation](https://geo-martino.gith
 4. Get a track from your library using any of the following identifiers:
    ```python
    # get a track via its title
-   track = library["<TRACK TITLE>"]  # if multiple tracks have the same title, the first matching one if returned
+   # if multiple tracks have the same title, the first matching one if returned
+   track = library["<TRACK TITLE>"]
    
    # get a track via its path
    track = library["<PATH TO YOUR TRACK>"]  # must be an absolute path
@@ -265,7 +267,7 @@ For more detailed guides, check out the [documentation](https://geo-martino.gith
 
 6. Save the tags to the file:
    ```python
-   from musify.local.track.field import LocalTrackField
+   from musify.libraries.local.track.field import LocalTrackField
    
    # you don't have to save all the tags you just modified
    # select which you wish to save first like so

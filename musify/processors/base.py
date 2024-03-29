@@ -1,17 +1,16 @@
 """
 Base classes for all processors in this module. Also contains decorators for use in implementations.
 """
-
 import logging
 from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Callable, Collection, Iterable, MutableSequence
 from functools import partial, update_wrapper
 from typing import Any, Self, Optional
 
+from musify.core.printer import PrettyPrinter
+from musify.log.logger import MusifyLogger
 from musify.processors.exception import ProcessorLookupError
-from musify.shared.core.misc import PrettyPrinter
-from musify.shared.logger import MusifyLogger
-from musify.shared.utils import get_user_input, get_max_width, align_string
+from musify.utils import get_user_input, get_max_width, align_string
 
 
 class Processor(PrettyPrinter, metaclass=ABCMeta):
@@ -51,11 +50,11 @@ class InputProcessor(Processor, metaclass=ABCMeta):
 
 
 class ItemProcessor(Processor, metaclass=ABCMeta):
-    """Base object for processing :py:class:`Item` objects"""
+    """Base object for processing :py:class:`MusifyItem` objects"""
 
 
 class MusicBeeProcessor(ItemProcessor):
-    """Base object for processing :py:class:`Item` objects on MusicBee settings"""
+    """Base object for processing :py:class:`MusifyItem` objects on MusicBee settings"""
 
     @classmethod
     def _processor_method_fmt(cls, name: str) -> str:
@@ -203,7 +202,7 @@ class Filter[T](Processor, metaclass=ABCMeta):
     def transform(self) -> Callable[[Any], Any]:
         """
         Transform the input ``value`` to the value that should be used when comparing against this filter's settings
-        Simply returns the given ``value`` at baseline unless overriden.
+        Simply returns the given ``value`` at baseline unless overridden.
         """
         return self._transform
 

@@ -1,4 +1,4 @@
-from musify.local.track import FLAC, MP3, M4A, WMA
+from musify.libraries.local.track import FLAC, MP3, M4A, WMA
 
 track = FLAC("<PATH TO A FLAC TRACK>")
 track = MP3("<PATH TO AN MP3 TRACK>")
@@ -8,11 +8,11 @@ track = WMA("<PATH TO A WMA TRACK>")
 # pretty print information about this track
 print(track)
 
-from musify.local.track import load_track
+from musify.libraries.local.track import load_track
 
 track = load_track("<PATH TO AN MP3 TRACK>")
 
-from musify.spotify.processors import SpotifyDataWrangler
+from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
 
 track = MP3("<PATH TO AN MP3 TRACK>", remote_wrangler=SpotifyDataWrangler())
 
@@ -39,7 +39,7 @@ print(track)
 results = track.save(replace=True, dry_run=False)
 
 # ...or select which tags you wish to save like so
-from musify.local.track.field import LocalTrackField
+from musify.libraries.local.track.field import LocalTrackField
 
 tags = [
     LocalTrackField.TITLE,

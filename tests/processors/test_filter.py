@@ -6,18 +6,18 @@ from random import sample, shuffle, randrange
 import pytest
 import xmltodict
 
-from musify.local.track import LocalTrack
-from musify.local.track.field import LocalTrackField
+from musify.libraries.local.track import LocalTrack
+from musify.libraries.local.track.field import LocalTrackField
 from musify.processors.compare import Comparer
 from musify.processors.filter import FilterDefinedList, FilterComparers, FilterIncludeExclude
 from musify.processors.filter_matcher import FilterMatcher
-from musify.shared.core.enum import Fields
-from musify.shared.file import PathStemMapper, PathMapper
-from tests.local.track.utils import random_tracks
-from tests.local.utils import path_playlist_resources
-from tests.local.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra, path_playlist_xautopf_cm
-from tests.local.utils import path_track_all, path_track_wma, path_track_flac, path_track_mp3
-from tests.shared.core.misc import PrettyPrinterTester
+from musify.core.enum import Fields
+from musify.file.path_mapper import PathStemMapper, PathMapper
+from tests.libraries.local.track.utils import random_tracks
+from tests.libraries.local.utils import path_playlist_resources
+from tests.libraries.local.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra, path_playlist_xautopf_cm
+from tests.libraries.local.utils import path_track_all, path_track_wma, path_track_flac, path_track_mp3
+from tests.core.printer import PrettyPrinterTester
 from tests.utils import random_str, path_resources
 
 

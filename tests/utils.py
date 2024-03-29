@@ -9,7 +9,7 @@ from uuid import uuid4
 
 import pytest
 
-from musify.shared.core.enum import MusifyEnum
+from musify.core.enum import MusifyEnum
 
 path_root = dirname(dirname(__file__))
 path_tests = dirname(__file__)

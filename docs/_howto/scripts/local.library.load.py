@@ -1,11 +1,11 @@
-from musify.local.library import LocalLibrary
+from musify.libraries.local.library import LocalLibrary
 
 library = LocalLibrary(
     library_folders=["<PATH TO YOUR LIBRARY FOLDER>", ...],
     playlist_folder="<PATH TO YOUR PLAYLIST FOLDER>",
 )
 
-from musify.local.library import MusicBee
+from musify.libraries.local.library import MusicBee
 
 library = MusicBee(musicbee_folder="<PATH TO YOUR MUSICBEE FOLDER>")
 

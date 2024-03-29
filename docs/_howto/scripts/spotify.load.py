@@ -1,7 +1,7 @@
-from musify.spotify.api import SpotifyAPI
+from musify.libraries.remote.spotify.api import SpotifyAPI
 api = SpotifyAPI()
 
-from musify.spotify.library import SpotifyLibrary
+from musify.libraries.remote.spotify.library import SpotifyLibrary
 
 library = SpotifyLibrary(api=api)
 
@@ -29,7 +29,7 @@ library.log_artists()
 # pretty print an overview of your library
 print(library)
 
-from musify.spotify.object import SpotifyTrack, SpotifyAlbum, SpotifyPlaylist, SpotifyArtist
+from musify.libraries.remote.spotify.object import SpotifyTrack, SpotifyAlbum, SpotifyPlaylist, SpotifyArtist
 
 # load by ID
 track1 = SpotifyTrack.load("6fWoFduMpBem73DMLCOh1Z", api=api)

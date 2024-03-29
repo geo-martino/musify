@@ -5,17 +5,17 @@ from random import choice, randrange
 
 import pytest
 
-from musify.local.library import LocalLibrary
-from musify.local.playlist import M3U
-from musify.local.track.field import LocalTrackField
+from musify.libraries.local.library import LocalLibrary
+from musify.libraries.local.playlist import M3U
+from musify.libraries.local.track.field import LocalTrackField
 from musify.report import report_playlist_differences, report_missing_tags
-from musify.spotify.api import SpotifyAPI
-from musify.spotify.library import SpotifyLibrary
-from musify.spotify.object import SpotifyPlaylist
-from musify.spotify.processors import SpotifyDataWrangler
-from tests.local.track.utils import random_track
-from tests.spotify.api.mock import SpotifyMock
-from tests.spotify.utils import random_uri
+from musify.libraries.remote.spotify.api import SpotifyAPI
+from musify.libraries.remote.spotify.library import SpotifyLibrary
+from musify.libraries.remote.spotify.object import SpotifyPlaylist
+from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
+from tests.libraries.local.track.utils import random_track
+from tests.libraries.remote.spotify.api.mock import SpotifyMock
+from tests.libraries.remote.spotify.utils import random_uri
 
 
 @pytest.fixture

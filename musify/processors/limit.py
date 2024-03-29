@@ -1,20 +1,19 @@
 """
 Processor that limits the items in a given collection of items
 """
-
 from collections.abc import Collection, Mapping
 from functools import reduce
 from operator import mul
 from random import shuffle
 from typing import Any, Self
 
+from musify.core.base import MusifyItem
+from musify.core.enum import MusifyEnum, Fields
+from musify.file.base import File
+from musify.libraries.core.object import Track
 from musify.processors.base import DynamicProcessor, MusicBeeProcessor, dynamicprocessormethod
 from musify.processors.exception import ItemLimiterError
 from musify.processors.sort import ItemSorter
-from musify.shared.core.base import MusifyItem
-from musify.shared.core.enum import MusifyEnum, Fields
-from musify.shared.core.object import Track
-from musify.shared.file import File
 
 
 class LimitType(MusifyEnum):
@@ -96,8 +95,8 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
 
         self._set_processor_name(sorted_by, fail_on_empty=False)
 
-    def __call__[T: MusifyItem](self, items: list[T], ignore: Collection[T] = ()) -> None:
-        return self.limit(items=items, ignore=ignore)
+    def __call__(self, *args, **kwargs) -> None:
+        return self.limit(*args, **kwargs)
 
     def limit[T: MusifyItem](self, items: list[T], ignore: Collection[T] = ()) -> None:
         """
