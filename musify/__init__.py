@@ -1,5 +1,4 @@
 """Welcome to Musify"""
-
 from os.path import basename, dirname
 
 PROGRAM_NAME = "Musify"

@@ -1,15 +1,14 @@
 """
 Processors that filter down objects and data types based on some given configuration.
 """
-
 from __future__ import annotations
 
 from collections.abc import Collection, Sequence, Mapping
 from typing import Any, Self
 
+from musify.core.base import MusifyObject
 from musify.processors.base import Filter, FilterComposite
 from musify.processors.compare import Comparer
-from musify.shared.core.base import MusifyObject
 
 
 class FilterDefinedList[T: str | MusifyObject](Filter[T], Collection[T]):
@@ -25,8 +24,8 @@ class FilterDefinedList[T: str | MusifyObject](Filter[T], Collection[T]):
         #: The values to include when processing for this filter
         self.values: Collection[T] = values
 
-    def __call__(self, values: Collection[T] | None = None, *_, **__) -> Collection[T]:
-        return self.process(values=values)
+    def __call__(self, *args, **kwargs) -> Collection[T]:
+        return self.process(*args, **kwargs)
 
     def process(self, values: Collection[T] | None = None, *_, **__) -> Collection[T]:
         """Returns all ``values`` that match this filter's settings"""
@@ -77,8 +76,8 @@ class FilterComparers[T: str | MusifyObject](Filter[T]):
         #: When true, only include those items that match on all comparers
         self.match_all: bool = match_all
 
-    def __call__(self, values: Collection[T], reference: T | None = None, *_, **__) -> Collection[T]:
-        return self.process(values=values, reference=reference)
+    def __call__(self, *args, **kwargs) -> Collection[T]:
+        return self.process(*args, **kwargs)
 
     def process(self, values: Collection[T], reference: T | None = None, *_, **__) -> Collection[T]:
         if not self.ready:
@@ -130,8 +129,8 @@ class FilterIncludeExclude[T: Any, U: Filter, V: Filter](FilterComposite[T]):
         #: The filter that, when processed, returns items to exclude
         self.exclude: V = exclude
 
-    def __call__(self, values: Collection[T], *_, **__) -> list[T]:
-        return self.process(values=values)
+    def __call__(self, *args, **kwargs) -> list[T]:
+        return self.process(*args, **kwargs)
 
     def process(self, values: Collection[T], *_, **__) -> list[T]:
         """Filter down ``values`` that match this filter's settings from"""

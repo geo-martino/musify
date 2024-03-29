@@ -1,4 +1,4 @@
-from musify.local.library import LocalLibrary
+from musify.libraries.local.library import LocalLibrary
 library = LocalLibrary()
 
 import json
@@ -13,7 +13,7 @@ tracks = {track["path"]: track for track in backup["tracks"]}
 
 library.restore_tracks(tracks)
 
-from musify.local.track.field import LocalTrackField
+from musify.libraries.local.track.field import LocalTrackField
 
 tags = [
     LocalTrackField.TITLE,

@@ -1,5 +1,5 @@
-from musify.spotify.api import SpotifyAPI
-from musify.spotify.library import SpotifyLibrary
+from musify.libraries.remote.spotify.api import SpotifyAPI
+from musify.libraries.remote.spotify.library import SpotifyLibrary
 api = SpotifyAPI()
 library = SpotifyLibrary(api=api)
 

@@ -1,7 +1,6 @@
 """
 Processors that filter down objects and data types based on some given configuration.
 """
-
 from __future__ import annotations
 
 import logging
@@ -9,16 +8,17 @@ from collections.abc import Collection, Mapping, Callable
 from dataclasses import field, dataclass
 from typing import Any
 
-from musify.local.track import LocalTrack
+from musify.core.base import MusifyItem
+from musify.core.enum import Fields
+from musify.core.result import Result
+from musify.file.base import File
+from musify.file.path_mapper import PathMapper
+from musify.log.logger import MusifyLogger
 from musify.processors.base import Filter, MusicBeeProcessor, FilterComposite
 from musify.processors.compare import Comparer
 from musify.processors.filter import FilterComparers, FilterDefinedList
 from musify.processors.sort import ItemSorter
-from musify.shared.core.enum import Fields
-from musify.shared.core.misc import Result
-from musify.shared.file import File, PathMapper
-from musify.shared.logger import MusifyLogger
-from musify.shared.utils import to_collection
+from musify.utils import to_collection
 
 
 @dataclass(frozen=True)
@@ -104,8 +104,8 @@ class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](MusicBeePr
 
     def to_xml(
             self,
-            items: list[LocalTrack],
-            original: list[LocalTrack],
+            items: list[File],
+            original: list[File | MusifyItem],
             path_mapper: Callable[[Collection[str | File]], Collection[str]] = lambda x: x,
             **__
     ) -> Mapping[str, Any]:
@@ -123,7 +123,7 @@ class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](MusicBeePr
             )
             return {}
 
-        output_path_map: Mapping[str, LocalTrack] = {item.path.casefold(): item for item in items}
+        output_path_map: Mapping[str, File] = {item.path.casefold(): item for item in items}
 
         if self.comparers:
             # match again on current conditions to check for differences from original list
@@ -176,8 +176,8 @@ class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](MusicBeePr
         #: The filter that, when processed, returns items to exclude
         self.exclude = exclude
 
-    def __call__(self, values: Collection[T], reference: T | None = None, *_, **__) -> list[T]:
-        return self.process(values=values, reference=reference)
+    def __call__(self, *args, **kwargs) -> list[T]:
+        return self.process(*args, **kwargs)
 
     def process(self, values: Collection[T], reference: T | None = None, *_, **__) -> list[T]:
         """

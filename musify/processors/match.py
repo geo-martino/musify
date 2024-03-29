@@ -1,7 +1,6 @@
 """
 Processor that matches objects and data types based on given configuration.
 """
-
 import inspect
 import logging
 import re
@@ -9,15 +8,15 @@ from collections.abc import Iterable, Callable, MutableSequence
 from dataclasses import dataclass, field
 from typing import Any
 
+from musify.core.base import MusifyObject
+from musify.core.enum import TagField, TagFields as Tag, ALL_TAG_FIELDS
+from musify.core.printer import PrettyPrinter
+from musify.libraries.core.collection import MusifyCollection
+from musify.libraries.core.object import Track, Album
+from musify.log.logger import MusifyLogger
 from musify.processors.base import ItemProcessor
-from musify.shared.core.base import MusifyObject
-from musify.shared.core.collection import MusifyCollection
-from musify.shared.core.enum import TagField, TagFields as Tag, ALL_TAG_FIELDS
-from musify.shared.core.misc import PrettyPrinter
-from musify.shared.core.object import Track, Album
-from musify.shared.logger import MusifyLogger
-from musify.shared.types import UnitIterable
-from musify.shared.utils import limit_value, to_collection
+from musify.types import UnitIterable
+from musify.utils import limit_value, to_collection
 
 
 @dataclass
@@ -71,11 +70,11 @@ class ItemMatcher(ItemProcessor):
     #: A set of words to check for when applying name score reduction logic.
     #:
     #: If a word from this list is present in the name of the result to score against
-    #: but not in the source :py:class:`Item`, apply the ``reduce_name_score_factor`` to reduce its score.
+    #: but not in the source :py:class:`MusifyItem`, apply the ``reduce_name_score_factor`` to reduce its score.
     #: This set is always combined with the ``karaoke_tags``.
     reduce_name_score_on = {"live", "demo", "acoustic"}
     #: The factor to apply to a name score when a word from ``reduce_name_score_on``
-    #: is found in the result but not in the source :py:class:`Item`.
+    #: is found in the result but not in the source :py:class:`MusifyItem`.
     reduce_name_score_factor = 0.5
 
     def __init__(self):
@@ -263,23 +262,8 @@ class ItemMatcher(ItemProcessor):
     ###########################################################################
     ## Score match
     ###########################################################################
-    def __call__[T: (Track, Album)](
-            self,
-            source: T,
-            results: Iterable[T],
-            min_score: float = 0.1,
-            max_score: float = 0.8,
-            match_on: UnitIterable[TagField] = ALL_TAG_FIELDS,
-            allow_karaoke: bool = False,
-    ) -> T | None:
-        return self.match(
-            source=source,
-            results=results,
-            min_score=min_score,
-            max_score=max_score,
-            match_on=match_on,
-            allow_karaoke=allow_karaoke
-        )
+    def __call__[T: (Track, Album)](self, *args, **kwargs) -> T | None:
+        return self.match(*args, **kwargs)
 
     def match[T: (Track, Album)](
             self,
@@ -387,7 +371,8 @@ class ItemMatcher(ItemProcessor):
     ) -> dict[TagField, float]:
         """
         Gets the scores from a cleaned source and result to match on.
-        When an ItemCollection is given to match on, scores are also calculated for each of the items in the collection.
+        When an MusifyCollection is given to match on,
+        scores are also calculated for each of the items in the collection.
         Scores are always between 0-1.
 
         :param source: Source item to compare against and find a match for with assigned ``clean_tags``.

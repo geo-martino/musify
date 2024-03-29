@@ -1,8 +1,8 @@
-from musify.spotify.api import SpotifyAPI
+from musify.libraries.remote.spotify.api import SpotifyAPI
 api = SpotifyAPI()
 
-from musify.local.library import LocalLibrary
-from musify.spotify.processors import SpotifyDataWrangler
+from musify.libraries.local.library import LocalLibrary
+from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
 
 local_library = LocalLibrary(
     library_folders=["<PATH TO YOUR LIBRARY FOLDER>", ...],
@@ -12,9 +12,9 @@ local_library = LocalLibrary(
 )
 local_library.load()
 
-from musify.shared.remote.processors.search import RemoteItemSearcher
-from musify.shared.remote.processors.check import RemoteItemChecker
-from musify.spotify.factory import SpotifyObjectFactory
+from musify.libraries.remote.core.processors.search import RemoteItemSearcher
+from musify.libraries.remote.core.processors.check import RemoteItemChecker
+from musify.libraries.remote.spotify.factory import SpotifyObjectFactory
 
 albums = local_library.albums[:3]
 factory = SpotifyObjectFactory(api=api)
@@ -25,7 +25,7 @@ searcher.search(albums)
 checker = RemoteItemChecker(object_factory=factory)
 checker.check(albums)
 
-from musify.spotify.object import SpotifyTrack
+from musify.libraries.remote.spotify.object import SpotifyTrack
 
 for album in albums:
     for local_track in album:
@@ -46,7 +46,7 @@ for album in albums:
     # ...save all tracks on the album at once here
     album.save_tracks(replace=True, dry_run=False)
 
-from musify.spotify.library import SpotifyLibrary
+from musify.libraries.remote.spotify.library import SpotifyLibrary
 
 remote_library = SpotifyLibrary(api=api)
 remote_library.load_playlists()

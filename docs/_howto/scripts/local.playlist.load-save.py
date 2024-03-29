@@ -1,5 +1,5 @@
-from musify.local.playlist import M3U, XAutoPF
-from musify.local.track import load_track
+from musify.libraries.local.playlist import M3U, XAutoPF
+from musify.libraries.local.track import load_track
 
 tracks = [
     load_track("<PATH TO A TRACK>"),
@@ -16,11 +16,11 @@ playlist = XAutoPF("<PATH TO AN XAUTOPF PLAYLIST>")
 # pretty print information about this playlist
 print(playlist)
 
-from musify.local.playlist import load_playlist
+from musify.libraries.local.playlist import load_playlist
 
 playlist = load_playlist("<PATH TO A PLAYLIST>")
 
-from musify.local.track import load_track
+from musify.libraries.local.track import load_track
 
 tracks = [
     load_track("<PATH TO A TRACK>"),
@@ -31,11 +31,11 @@ tracks = [
 
 playlist = M3U("<PATH TO AN M3U PLAYLIST>", tracks=tracks)
 
-from musify.shared.file import PathMapper
+from musify.file.path_mapper import PathMapper
 
 playlist = M3U("<PATH TO AN M3U PLAYLIST>", path_mapper=PathMapper())
 
-from musify.spotify.processors import SpotifyDataWrangler
+from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
 
 playlist = M3U("<PATH TO AN M3U PLAYLIST>", remote_wrangler=SpotifyDataWrangler())
 

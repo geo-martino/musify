@@ -1,8 +1,8 @@
-from musify.local.library import LocalLibrary
+from musify.libraries.local.library import LocalLibrary
 local_library = LocalLibrary()
 
-from musify.spotify.api import SpotifyAPI
-from musify.spotify.library import SpotifyLibrary
+from musify.libraries.remote.spotify.api import SpotifyAPI
+from musify.libraries.remote.spotify.library import SpotifyLibrary
 api = SpotifyAPI()
 remote_library = SpotifyLibrary(api=api)
 
@@ -10,7 +10,7 @@ from musify.report import report_playlist_differences
 
 report_playlist_differences(source=local_library, reference=remote_library)
 
-from musify.local.track.field import LocalTrackField
+from musify.libraries.local.track.field import LocalTrackField
 from musify.report import report_missing_tags
 
 tags = [

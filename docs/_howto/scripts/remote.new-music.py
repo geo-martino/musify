@@ -1,5 +1,5 @@
-from musify.spotify.api import SpotifyAPI
-from musify.spotify.library import SpotifyLibrary
+from musify.libraries.remote.spotify.api import SpotifyAPI
+from musify.libraries.remote.spotify.library import SpotifyLibrary
 api = SpotifyAPI()
 library = SpotifyLibrary(api=api)
 
@@ -23,7 +23,7 @@ def match_date(alb) -> bool:
     return False
 
 
-from musify.shared.remote.enum import RemoteObjectType
+from musify.libraries.remote.core.enum import RemoteObjectType
 
 albums = [album for artist in library.artists for album in artist.albums if match_date(album)]
 albums_need_extend = [album for album in albums if len(album.tracks) < album.track_total]
@@ -39,7 +39,7 @@ if albums_need_extend:
 # log stats about the loaded artists
 library.log_artists()
 
-from musify.spotify.object import SpotifyPlaylist
+from musify.libraries.remote.spotify.object import SpotifyPlaylist
 
 name = "New Music Playlist"
 playlist = SpotifyPlaylist.create(api=api, name=name)

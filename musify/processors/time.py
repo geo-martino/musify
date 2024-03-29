@@ -1,14 +1,13 @@
 """
 Processor that converts representations of time units to python time objects.
 """
-
 from datetime import timedelta
 from typing import Any
 
 from dateutil.relativedelta import relativedelta
 
+from musify.core.printer import PrettyPrinter
 from musify.processors.base import DynamicProcessor, dynamicprocessormethod
-from musify.shared.core.misc import PrettyPrinter
 
 
 class TimeMapper(DynamicProcessor, PrettyPrinter):
@@ -22,8 +21,8 @@ class TimeMapper(DynamicProcessor, PrettyPrinter):
         super().__init__()
         self._set_processor_name(func)
 
-    def __call__(self, value: Any):
-        return self.map(value)
+    def __call__(self, *args, **kwargs):
+        return self.map(*args, **kwargs)
 
     def map(self, value: Any):
         """Run the mapping function"""

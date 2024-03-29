@@ -1,7 +1,6 @@
 """
 Processor making comparisons between objects and data types.
 """
-
 import re
 from collections.abc import Mapping, Sequence
 from datetime import datetime, date
@@ -9,15 +8,15 @@ from functools import reduce
 from operator import mul
 from typing import Any, Self
 
+from musify.core.base import MusifyItem
+from musify.core.enum import Field
+from musify.exception import FieldError
+from musify.field import Fields
 from musify.processors.base import DynamicProcessor, MusicBeeProcessor, dynamicprocessormethod
 from musify.processors.exception import ComparerError
 from musify.processors.time import TimeMapper
-from musify.shared.core.base import MusifyItem
-from musify.shared.core.enum import Field
-from musify.shared.exception import FieldError
-from musify.shared.field import Fields
-from musify.shared.types import UnitSequence
-from musify.shared.utils import to_collection
+from musify.types import UnitSequence
+from musify.utils import to_collection
 
 # Map of MusicBee field name to Field enum
 # noinspection SpellCheckingInspection
@@ -115,14 +114,14 @@ class Comparer(MusicBeeProcessor, DynamicProcessor):
         self._converted = False
 
         #: The :py:class:`Field` representing the property to extract the comparison value from
-        #: when an :py:class:`Item` is given
+        #: when an :py:class:`MusifyItem` is given
         self.field: Field | None = field.map(field)[0] if field else None
         self.expected: list[Any] | None = to_collection(expected, list)
 
         self._set_processor_name(condition)
 
-    def __call__[T: Any](self, item: T, reference: UnitSequence[T] | None = None) -> bool:
-        return self.compare(item=item, reference=reference)
+    def __call__(self, *args, **kwargs) -> bool:
+        return self.compare(*args, **kwargs)
 
     def compare[T: Any](self, item: T, reference: T | None = None) -> bool:
         """

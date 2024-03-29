@@ -1,16 +1,19 @@
+"""
+Processor that helps user download songs from collections based on given configuration.
+"""
 import re
 from collections.abc import Iterable, Collection
 from itertools import batched
 from typing import Any
 from webbrowser import open as webopen
 
+from musify.core.base import MusifyItem
+from musify.core.enum import Field, Fields
+from musify.exception import MusifyEnumError
+from musify.libraries.core.collection import MusifyCollection
 from musify.processors.base import InputProcessor, ItemProcessor
-from musify.shared.core.base import MusifyItem
-from musify.shared.core.collection import MusifyCollection
-from musify.shared.core.enum import Field, Fields
-from musify.shared.exception import MusifyEnumError
-from musify.shared.types import UnitIterable
-from musify.shared.utils import to_collection
+from musify.types import UnitIterable
+from musify.utils import to_collection
 
 
 class ItemDownloadHelper(InputProcessor, ItemProcessor):
@@ -33,8 +36,8 @@ class ItemDownloadHelper(InputProcessor, ItemProcessor):
         self.fields: list[Field] = to_collection(fields, list)
         self.interval = interval
 
-    def __call__(self, collections: UnitIterable[MusifyCollection]) -> None:
-        self.open_sites(collections=collections)
+    def __call__(self, *args, **kwargs) -> None:
+        return self.open_sites(*args, **kwargs)
 
     def open_sites(self, collections: UnitIterable[MusifyCollection]) -> None:
         """

@@ -1,4 +1,4 @@
 import logging
-from musify.shared.logger import STAT
+from musify.log import STAT
 
 logging.basicConfig(format="%(message)s", level=STAT)

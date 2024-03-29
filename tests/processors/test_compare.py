@@ -3,15 +3,15 @@ from datetime import datetime, date, timedelta
 import pytest
 import xmltodict
 
-from musify.local.track import MP3, M4A, FLAC
-from musify.local.track.field import LocalTrackField
+from musify.libraries.local.track import MP3, M4A, FLAC
+from musify.libraries.local.track.field import LocalTrackField
 from musify.processors.compare import Comparer
 from musify.processors.exception import ComparerError, ProcessorLookupError
-from musify.shared.field import TrackField
-from musify.shared.utils import to_collection
-from tests.local.track.utils import random_track
-from tests.local.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
-from tests.shared.core.misc import PrettyPrinterTester
+from musify.field import TrackField
+from musify.utils import to_collection
+from tests.libraries.local.track.utils import random_track
+from tests.libraries.local.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
+from tests.core.printer import PrettyPrinterTester
 
 
 class TestComparer(PrettyPrinterTester):

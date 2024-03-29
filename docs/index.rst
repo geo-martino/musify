@@ -61,9 +61,15 @@ Install through pip using one of the following commands:
    :maxdepth: 1
    :caption: 📖 Reference
 
-   musify.local
+   musify.api
+   musify.core
+   musify.file
+   musify.libraries
+   musify.log
    musify.processors
-   musify.shared
-   musify.spotify
+   musify.exception
+   musify.field
    musify.report
+   musify.types
+   musify.utils
    genindex
