@@ -50,7 +50,7 @@ handlers:
     stream: ext://sys.stdout
 
   file:
-    class: musify.shared.handlers.CurrentTimeRotatingFileHandler
+    class: musify.log.handlers.CurrentTimeRotatingFileHandler
     level: DEBUG
     formatter: extended
     filters: ["file"]
