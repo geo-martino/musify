@@ -58,6 +58,11 @@ Changed
 * :py:class:`.ItemMatcher`, :py:class:`.RemoteItemChecker`, and :py:class:`.RemoteItemSearcher` now accept
   all MusifyItem types that may have their URI property set manually.
 
+Fixed
+-----
+
+* :py:class:`.Comparer` dynamic processor methods which process string values now cast expected types before processing
+
 0.8.1
 =====
 
