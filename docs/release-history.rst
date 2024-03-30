@@ -39,6 +39,9 @@ Added
 -----
 
 * :py:class:`.RemoteAPI` methods now accept :py:class:`.RemoteResponse` objects as input, refreshing them automatically
+* Property 'kind' to all objects which have an associated :py:class:`.RemoteObjectType`
+* Introduced :py:class:`.MusifyItemSettable` class to allow distinction
+  between items that can have their properties set and those that can't
 
 Changed
 -------
@@ -51,6 +54,9 @@ Changed
 * :py:meth:`.SpotifyArtist.load` now uses the base `load` method from :py:class:`.SpotifyCollectionLoader`
   meaning it now takes full advantage of the item filtering this method offers.
   As part of this, the base method was made more generic to accommodate all :py:class:`.SpotifyObject` types
+* Renamed 'kind' property on :py:class:`.LocalTrack` to 'type' to avoid clashing property names
+* :py:class:`.ItemMatcher`, :py:class:`.RemoteItemChecker`, and :py:class:`.RemoteItemSearcher` now accept
+  all MusifyItem types that may have their URI property set manually.
 
 0.8.1
 =====

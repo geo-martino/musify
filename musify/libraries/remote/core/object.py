@@ -18,21 +18,14 @@ from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.core.object import Track, Album, Playlist, Artist
 from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.base import RemoteObject, RemoteItem
-from musify.libraries.remote.core.enum import RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteError
 from musify.utils import get_most_common_values
 
 
-class RemoteTrack(RemoteItem, Track, metaclass=ABCMeta):
+class RemoteTrack(Track, RemoteItem, metaclass=ABCMeta):
     """Extracts key ``track`` data from a remote API JSON response."""
 
     __attributes_classes__ = (Track, RemoteItem)
-
-    # noinspection PyPropertyDefinition
-    @classmethod
-    @property
-    def kind(cls):
-        return RemoteObjectType.TRACK
 
 
 class RemoteCollection[T: RemoteObject](MusifyCollection[T], metaclass=ABCMeta):
@@ -128,12 +121,6 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
     """Extracts key ``playlist`` data from a remote API JSON response."""
 
     __attributes_classes__ = (Playlist, RemoteCollectionLoader)
-
-    # noinspection PyPropertyDefinition
-    @classmethod
-    @property
-    def kind(cls):
-        return RemoteObjectType.PLAYLIST
 
     @property
     @abstractmethod
@@ -270,16 +257,10 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
         raise NotImplementedError
 
 
-class RemoteAlbum[T: RemoteTrack](RemoteCollectionLoader[T], Album[T], metaclass=ABCMeta):
+class RemoteAlbum[T: RemoteTrack](Album[T], RemoteCollectionLoader[T], metaclass=ABCMeta):
     """Extracts key ``album`` data from a remote API JSON response."""
 
     __attributes_classes__ = (Album, RemoteCollectionLoader)
-
-    # noinspection PyPropertyDefinition
-    @classmethod
-    @property
-    def kind(cls):
-        return RemoteObjectType.ALBUM
 
     @property
     def _total(self):
@@ -295,12 +276,6 @@ class RemoteArtist[T: RemoteTrack](Artist[T], RemoteCollectionLoader[T], metacla
     """Extracts key ``artist`` data from a remote API JSON response."""
 
     __attributes_classes__ = (Artist, RemoteCollectionLoader)
-
-    # noinspection PyPropertyDefinition
-    @classmethod
-    @property
-    def kind(cls):
-        return RemoteObjectType.ARTIST
 
     @property
     def _total(self):

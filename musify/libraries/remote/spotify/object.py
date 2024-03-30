@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Any, Self
 
 from musify.libraries.remote.core import RemoteResponse
-from musify.libraries.remote.core.enum import RemoteObjectType, RemoteIDType
+from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.object import RemoteCollectionLoader, RemoteTrack
 from musify.libraries.remote.core.object import RemotePlaylist, RemoteAlbum, RemoteArtist
 from musify.libraries.remote.spotify.api import SpotifyAPI

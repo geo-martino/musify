@@ -6,9 +6,9 @@ import xmltodict
 
 from musify.libraries.local.track import LocalTrack
 from musify.processors.limit import ItemLimiter, LimitType
+from tests.core.printer import PrettyPrinterTester
 from tests.libraries.local.track.utils import random_tracks
 from tests.libraries.local.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
-from tests.core.printer import PrettyPrinterTester
 from tests.utils import random_file
 
 

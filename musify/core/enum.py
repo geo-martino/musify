@@ -127,7 +127,7 @@ class Fields(Field):
     FILENAME = 3
     EXT = 100
     SIZE = 7
-    KIND = 4
+    TYPE = 4
     CHANNELS = 8
     BIT_RATE = 10
     BIT_DEPTH = 183
@@ -262,7 +262,7 @@ class TagFields(TagField):
     FILENAME = Fields.FILENAME.value
     EXT = Fields.EXT.value
     SIZE = Fields.SIZE.value
-    KIND = Fields.KIND.value
+    TYPE = Fields.TYPE.value
     CHANNELS = Fields.CHANNELS.value
     BIT_RATE = Fields.BIT_RATE.value
     BIT_DEPTH = Fields.BIT_DEPTH.value

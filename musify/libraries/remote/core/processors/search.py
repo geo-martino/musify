@@ -8,11 +8,12 @@ from collections.abc import Mapping, Sequence, Iterable, Collection
 from dataclasses import dataclass, field
 from typing import Any
 
-from musify.core.base import MusifyObject, MusifyItem
+from musify.core.base import MusifyObject, MusifyItemSettable
 from musify.core.enum import TagField, TagFields as Tag
 from musify.core.result import Result
+from musify.exception import MusifyAttributeError
 from musify.libraries.core.collection import MusifyCollection
-from musify.libraries.core.object import Track
+from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.enum import RemoteObjectType
 from musify.libraries.remote.core.factory import RemoteObjectFactory
 from musify.log import REPORT
@@ -24,38 +25,37 @@ from musify.utils import align_string, get_max_width
 class ItemSearchResult(Result):
     """Stores the results of the searching process."""
     #: Sequence of Items for which matches were found from the search.
-    matched: Sequence[MusifyItem] = field(default=tuple())
+    matched: Sequence[MusifyItemSettable] = field(default=tuple())
     #: Sequence of Items for which matches were not found from the search.
-    unmatched: Sequence[MusifyItem] = field(default=tuple())
+    unmatched: Sequence[MusifyItemSettable] = field(default=tuple())
     #: Sequence of Items which were skipped during the search.
-    skipped: Sequence[MusifyItem] = field(default=tuple())
+    skipped: Sequence[MusifyItemSettable] = field(default=tuple())
 
 
 @dataclass(frozen=True)
-class SearchSettings:
+class SearchConfig:
     """Key settings related to a search algorithm."""
-    #: A sequence of the tag names to use as search fields in the 1st pass.
-    search_fields_1: Sequence[TagField]
     #: The fields to match results on.
     match_fields: TagField | Iterable[TagField]
-    #: The number of the results to request when querying the API.
-    result_count: int
-    #: When True, items determined to be karaoke are allowed when matching added items.
-    #: Skip karaoke results otherwise.
-    allow_karaoke: bool = False
-
-    #: The minimum acceptable score for an item to be considered a match.
-    min_score: float = 0.1
-    #: The maximum score for an item to be considered a perfect match.
-    #: After this score is reached by an item, any other items are disregarded as potential matches.
-    max_score: float = 0.8
-
+    #: A sequence of the tag names to use as search fields in the 1st pass.
+    search_fields_1: Sequence[TagField] = (Tag.NAME,)
     #: If no results are found from the tag names in ``search_fields_1`` on the 1st pass,
     #: an optional sequence of the tag names to use as search fields in the 2nd pass.
     search_fields_2: Iterable[TagField] = ()
     #: If no results are found from the tag names in ``search_fields_2`` on the 2nd pass,
     #: an optional sequence of the tag names to use as search fields in the 3rd pass.
     search_fields_3: Iterable[TagField] = ()
+
+    #: The number of the results to request when querying the API.
+    result_count: int = 10
+    #: The minimum acceptable score for an item to be considered a match.
+    min_score: float = 0.1
+    #: The maximum score for an item to be considered a perfect match.
+    #: After this score is reached by an item, any other items are disregarded as potential matches.
+    max_score: float = 0.8
+    #: When True, items determined to be karaoke are allowed when matching added items.
+    #: Skip karaoke results otherwise.
+    allow_karaoke: bool = False
 
 
 class RemoteItemSearcher(ItemMatcher):
@@ -67,42 +67,46 @@ class RemoteItemSearcher(ItemMatcher):
     :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
     """
 
-    __slots__ = ("api", "use_cache")
+    __slots__ = ("factory", "use_cache")
 
-    #: The :py:class:`SearchSettings` to use when running item searches
-    settings_items = SearchSettings(
-        search_fields_1=[Tag.NAME, Tag.ARTIST],
-        search_fields_2=[Tag.NAME, Tag.ALBUM],
-        search_fields_3=[Tag.NAME],
-        match_fields={Tag.TITLE, Tag.ARTIST, Tag.ALBUM, Tag.LENGTH},
-        result_count=10,
-        allow_karaoke=False,
-        min_score=0.1,
-        max_score=0.8
-    )
-    #: The :py:class:`SearchSettings` to use when running album searches
-    settings_albums = SearchSettings(
-        search_fields_1=[Tag.NAME, Tag.ARTIST],
-        search_fields_2=[Tag.NAME],
-        match_fields={Tag.ARTIST, Tag.ALBUM, Tag.LENGTH},
-        result_count=5,
-        allow_karaoke=False,
-        min_score=0.1,
-        max_score=0.7
-    )
+    #: The :py:class:`SearchSettings` for each :py:class:`RemoteObjectType`
+    search_settings: dict[RemoteObjectType, SearchConfig] = {
+        RemoteObjectType.TRACK: SearchConfig(
+            match_fields={Tag.TITLE, Tag.ARTIST, Tag.ALBUM, Tag.LENGTH},
+            search_fields_1=[Tag.NAME, Tag.ARTIST],
+            search_fields_2=[Tag.NAME, Tag.ALBUM],
+            search_fields_3=[Tag.NAME],
+            result_count=10,
+            min_score=0.1,
+            max_score=0.8,
+            allow_karaoke=False,
+        ),
+        RemoteObjectType.ALBUM: SearchConfig(
+            match_fields={Tag.ARTIST, Tag.ALBUM, Tag.LENGTH},
+            search_fields_1=[Tag.NAME, Tag.ARTIST],
+            search_fields_2=[Tag.NAME],
+            result_count=5,
+            min_score=0.1,
+            max_score=0.7,
+            allow_karaoke=False,
+        )
+    }
+
+    @property
+    def api(self) -> RemoteAPI:
+        """The :py:class:`RemoteAPI` to call"""
+        return self.factory.api
 
     def __init__(self, object_factory: RemoteObjectFactory, use_cache: bool = False):
         super().__init__()
 
-        #: The :py:class:`RemoteAPI` to call
-        self.api = object_factory.api
         #: The :py:class:`RemoteObjectFactory` to use when creating new remote objects.
         self.factory = object_factory
         #: When true, use the cache when calling the API endpoint
         self.use_cache = use_cache
 
     def _get_results(
-            self, item: MusifyObject, kind: RemoteObjectType, settings: SearchSettings
+            self, item: MusifyObject, kind: RemoteObjectType, settings: SearchConfig
     ) -> list[dict[str, Any]] | None:
         """Query the API to get results for the current item based on algorithm settings"""
         self.clean_tags(item)
@@ -168,6 +172,12 @@ class RemoteItemSearcher(ItemMatcher):
         )
         self.logger.print(REPORT)
 
+    @staticmethod
+    def _determine_remote_object_type(obj: MusifyObject) -> RemoteObjectType:
+        if hasattr(obj, "kind"):
+            return obj.kind
+        raise MusifyAttributeError(f"Given object does not specify a RemoteObjectType: {obj.__class__.__name__}")
+
     def __call__(self, *args, **kwargs) -> dict[str, ItemSearchResult]:
         return self.search(*args, **kwargs)
 
@@ -202,18 +212,18 @@ class RemoteItemSearcher(ItemMatcher):
 
         skipped = tuple(item for item in collection if item.has_uri is not None)
         if len(skipped) == len(collection):
-            self._log_padded([collection.name, "Skipping search, no tracks to search"], pad='<')
+            self._log_padded([collection.name, "Skipping search, no items to search"], pad='<')
 
         if getattr(collection, "compilation", True) is False:
-            self._log_padded([collection.name, "Searching with album algorithm"], pad='>')
-            self._search_album(collection=collection)
+            self._log_padded([collection.name, "Searching for collection as a unit"], pad='>')
+            self._search_collection_unit(collection=collection)
 
             missing = [item for item in collection.items if item.has_uri is None]
             if missing:
                 self._log_padded([collection.name, f"Searching for {len(missing)} unmatched items in this {kind}"])
                 self._search_items(collection=collection)
         else:
-            self._log_padded([collection.name, "Searching with item algorithm"], pad='>')
+            self._log_padded([collection.name, "Searching for distinct items in collection"], pad='>')
             self._search_items(collection=collection)
 
         return ItemSearchResult(
@@ -222,69 +232,74 @@ class RemoteItemSearcher(ItemMatcher):
             skipped=skipped
         )
 
-    def _search_items(self, collection: Iterable[MusifyItem]) -> None:
+    def _search_items(self, collection: Iterable[MusifyItemSettable]) -> None:
         """Search for matches on individual items in an item collection that have ``None`` on ``has_uri`` attribute"""
         for item in filter(lambda i: i.has_uri is None, collection):
-            if not isinstance(item, Track):
-                # TODO: expand search logic to include all item types (low priority)
-                raise NotImplementedError(
-                    f"Currently only able to search for Track items, not {item.__class__.__name__}"
-                )
+            kind = self._determine_remote_object_type(item)
+            search_config = self.search_settings[kind]
 
-            results = self._get_results(item, kind=RemoteObjectType.TRACK, settings=self.settings_items)
+            results = self._get_results(item, kind=kind, settings=search_config)
             if not results:
                 continue
 
             result = self.match(
                 item,
-                results=map(self.factory.track, results),
-                match_on=self.settings_items.match_fields,
-                min_score=self.settings_items.min_score,
-                max_score=self.settings_items.max_score,
-                allow_karaoke=self.settings_items.allow_karaoke,
+                results=map(self.factory[kind], results),
+                match_on=search_config.match_fields,
+                min_score=search_config.min_score,
+                max_score=search_config.max_score,
+                allow_karaoke=search_config.allow_karaoke,
             )
 
             if result and result.has_uri:
                 item.uri = result.uri
 
-    def _search_album(self, collection: MusifyCollection) -> None:
-        """Search for matches on an entire album"""
+    def _search_collection_unit(self, collection: MusifyCollection[MusifyItemSettable]) -> None:
+        """
+        Search for matches on an entire collection as a whole
+        i.e. search for just the collection and not its distinct items.
+        """
         if all(item.has_uri for item in collection):
             return
 
-        results = self._get_results(collection, kind=RemoteObjectType.ALBUM, settings=self.settings_albums)
+        kind = self._determine_remote_object_type(collection)
+        search_config = self.search_settings[kind]
 
-        # convert to RemoteAlbum objects and extend items on each response
-        albums = list(map(lambda response: self.factory.album(response=response, skip_checks=True), results))
-        kind = RemoteObjectType.ALBUM
+        results = self._get_results(collection, kind=kind, settings=search_config)
         key = self.api.collection_item_map[kind]
-        for album in albums:  # extend album's tracks
-            self.api.extend_items(album.response, kind=kind, key=key, use_cache=self.use_cache)
+        for result in results:
+            self.api.extend_items(result, kind=kind, key=key, use_cache=self.use_cache)
 
+        # noinspection PyProtectedMember
         # order to prioritise results that are closer to the item count of the input collection
-        albums.sort(key=lambda x: abs(x.track_total - len(collection)))
+        results_mapped = sorted(map(self.factory[kind], results), key=lambda x: abs(x._total - len(collection)))
+
         # noinspection PyTypeChecker
         result = self.match(
             collection,
-            results=albums,
-            match_on=self.settings_albums.match_fields,
-            min_score=self.settings_albums.min_score,
-            max_score=self.settings_albums.max_score,
-            allow_karaoke=self.settings_albums.allow_karaoke,
+            results=results_mapped,
+            match_on=search_config.match_fields,
+            min_score=search_config.min_score,
+            max_score=search_config.max_score,
+            allow_karaoke=search_config.allow_karaoke,
         )
 
         if not result:
             return
 
         for item in filter(lambda i: i.has_uri is None, collection):
+            item: MusifyItemSettable
+            item_kind = self._determine_remote_object_type(collection)
+            item_search_config = self.search_settings[item_kind]
+
             # match items back onto the result to discern which URI matches which
             item_result = self.match(
                 item,
                 results=result.items,
                 match_on=[Tag.TITLE],
-                min_score=self.settings_items.min_score,
-                max_score=self.settings_items.max_score,
-                allow_karaoke=self.settings_items.allow_karaoke,
+                min_score=item_search_config.min_score,
+                max_score=item_search_config.max_score,
+                allow_karaoke=item_search_config.allow_karaoke,
             )
             if item_result:
                 item.uri = item_result.uri

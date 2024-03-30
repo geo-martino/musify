@@ -14,10 +14,10 @@ from _pytest.fixtures import SubRequest
 
 from musify import MODULE_ROOT
 from musify.api.request import RequestHandler
-from musify.log.logger import MusifyLogger
 from musify.libraries.remote.core.enum import RemoteObjectType
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
+from musify.log.logger import MusifyLogger
 from tests.libraries.remote.core.utils import ALL_ITEM_TYPES
 from tests.libraries.remote.spotify.api.mock import SpotifyMock
 from tests.utils import idfn

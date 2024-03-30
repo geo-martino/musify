@@ -103,7 +103,6 @@ class TestSpotifyAPIArtists:
             assert reduced == expected[id_]
             self.assert_artist_albums_enriched(source[id_]["albums"]["items"])
 
-    # TODO: add assertions/tests for RemoteResponses input
     def test_get_artist_albums_single_string(
             self,
             artist_albums: list[dict[str, Any]],

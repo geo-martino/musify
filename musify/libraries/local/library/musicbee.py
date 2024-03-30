@@ -270,7 +270,7 @@ class MusicBee(LocalLibrary, File):
             # "Publisher": track.publisher,  # currently not supported by this program
             # "Encoder": track.encoder,  # currently not supported by this program
             "Size": track.size,
-            "Kind": track.kind,
+            "Kind": track.type,
             # "": track.channels,  # unknown MusicBee mapping
             "Bit Rate": int(track.bit_rate),
             # "": track.bit_depth,  # unknown MusicBee mapping

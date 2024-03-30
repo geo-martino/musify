@@ -4,18 +4,17 @@ Processor operations that help a user to check whether the currently matched ID 
 Provides the user the ability to modify associated IDs using a Remote player as an interface for
 reviewing matches through temporary playlist creation.
 """
-import traceback
 from collections import Counter
 from collections.abc import Sequence, Collection
 from dataclasses import dataclass, field
 
 from musify import PROGRAM_NAME
-from musify.core.base import MusifyItem
+from musify.core.base import MusifyItemSettable
 from musify.core.enum import Fields
 from musify.core.result import Result
 from musify.libraries.core.collection import MusifyCollection
-from musify.libraries.core.object import Track
-from musify.libraries.remote.core.enum import RemoteObjectType, RemoteIDType
+from musify.libraries.remote.core.api import RemoteAPI
+from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.factory import RemoteObjectFactory
 from musify.libraries.remote.core.processors.search import RemoteItemSearcher
 from musify.log import REPORT
@@ -23,18 +22,18 @@ from musify.processors.base import InputProcessor
 from musify.processors.match import ItemMatcher
 from musify.utils import get_max_width, align_string
 
-ALLOW_KARAOKE_DEFAULT = RemoteItemSearcher.settings_items.allow_karaoke
+ALLOW_KARAOKE_DEFAULT = RemoteItemSearcher.search_settings[RemoteObjectType.TRACK].allow_karaoke
 
 
 @dataclass(frozen=True)
 class ItemCheckResult(Result):
     """Stores the results of the checking process."""
     #: Sequence of Items that had URIs switched during the check.
-    switched: Sequence[MusifyItem] = field(default=tuple())
+    switched: Sequence[MusifyItemSettable] = field(default=tuple())
     #: Sequence of Items that were marked as unavailable.
-    unavailable: Sequence[MusifyItem] = field(default=tuple())
+    unavailable: Sequence[MusifyItemSettable] = field(default=tuple())
     #: Sequence of Items that were skipped from the check.
-    skipped: Sequence[MusifyItem] = field(default=tuple())
+    skipped: Sequence[MusifyItemSettable] = field(default=tuple())
 
 
 class RemoteItemChecker(ItemMatcher, InputProcessor):
@@ -61,7 +60,7 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
     __slots__ = (
         "interval",
         "allow_karaoke",
-        "api",
+        "factory",
         "_playlist_name_urls",
         "_playlist_name_collection",
         "_skip",
@@ -73,6 +72,11 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
         "_final_skipped",
     )
 
+    @property
+    def api(self) -> RemoteAPI:
+        """The :py:class:`RemoteAPI` to call"""
+        return self.factory.api
+
     def __init__(
             self, object_factory: RemoteObjectFactory, interval: int = 10, allow_karaoke: bool = ALLOW_KARAOKE_DEFAULT
     ):
@@ -83,8 +87,6 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
         #: Allow karaoke items when matching on switched items
         self.allow_karaoke = allow_karaoke
 
-        #: The :py:class:`RemoteAPI` to call
-        self.api = object_factory.api
         #: The :py:class:`RemoteObjectFactory` to use when creating new remote objects.
         self.factory = object_factory
 
@@ -99,16 +101,16 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
         self._quit = False
 
         #: The currently remaining items that the user needs to manually check
-        self._remaining: list[Track] = []
+        self._remaining: list[MusifyItemSettable] = []
         #: The list of items with switched URIs currently processed by the checker
-        self._switched: list[Track] = []
+        self._switched: list[MusifyItemSettable] = []
 
         #: The final list of items with switched URIs as processed by the checker
-        self._final_switched: list[Track] = []
+        self._final_switched: list[MusifyItemSettable] = []
         #: The final list of items marked as unavailable for this remote source
-        self._final_unavailable: list[Track] = []
+        self._final_unavailable: list[MusifyItemSettable] = []
         #: The final list of items skipped by the checker
-        self._final_skipped: list[Track] = []
+        self._final_skipped: list[MusifyItemSettable] = []
 
     def _check_api(self):
         """Check if the API token has expired and refresh as necessary"""
@@ -116,7 +118,7 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
             self.logger.info_extra("\33[93mAPI token has expired, re-authorising... \33[0m")
             self.api.authorise()
 
-    def _create_playlist(self, collection: MusifyCollection) -> None:
+    def _create_playlist(self, collection: MusifyCollection[MusifyItemSettable]) -> None:
         """Create a temporary playlist, store its URL for later unfollowing, and add all given URIs."""
         self._check_api()
 
@@ -144,7 +146,7 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
     def __call__(self, *args, **kwargs) -> ItemCheckResult | None:
         return self.check(*args, **kwargs)
 
-    def check(self, collections: Collection[MusifyCollection]) -> ItemCheckResult | None:
+    def check(self, collections: Collection[MusifyCollection[MusifyItemSettable]]) -> ItemCheckResult | None:
         """
         Run the checker for the given ``collections``.
 
@@ -171,7 +173,6 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
 
         collections_iter = (collection for collection in collections)
         for page in range(1, pages_total + 1):
-            # noinspection PyBroadException
             try:
                 for count, collection in enumerate(collections_iter, 1):
                     self._create_playlist(collection=collection)
@@ -185,12 +186,9 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
             except KeyboardInterrupt:
                 self.logger.error("User triggered exit with KeyboardInterrupt")
                 self._quit = True
-            except BaseException as ex:  # delete playlists first before raising error
-                self.logger.error(traceback.format_exc())
+            finally:
                 self._delete_playlists()
-                raise ex
 
-            self._delete_playlists()
             if self._quit or self._skip:  # quit check
                 break
 
@@ -336,7 +334,7 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
         source_valid = [item for item in source if item.has_uri]
 
         remote_response = self.api.get_items(self._playlist_name_urls[name], extend=True, use_cache=False)[0]
-        remote = self.factory.playlist(response=remote_response).tracks
+        remote = self.factory.playlist(response=remote_response).items
         remote_valid = [item for item in remote if item.has_uri]
 
         added = [item for item in remote_valid if item not in source]
@@ -394,7 +392,7 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
             "u": f"Mark item as 'Unavailable on {self.api.source}'",
             "n": f"Leave item with no URI. ({PROGRAM_NAME} will still attempt to find this item at the next run)",
             "a": "Add in addition to 'u' or 'n' options to apply this setting to all items in this playlist",
-            "r": "Recheck playlist for all items in the album",
+            "r": "Recheck playlist for all items in the collection",
             "p": "Print the local path of the current item if available",
             "s": "Skip checking process for all current playlists",
             "q": "Skip checking process for all current playlists and quit check",

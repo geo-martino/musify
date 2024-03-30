@@ -12,7 +12,6 @@ from musify.core.base import MusifyObject
 from musify.core.enum import TagField, TagFields as Tag, ALL_TAG_FIELDS
 from musify.core.printer import PrettyPrinter
 from musify.libraries.core.collection import MusifyCollection
-from musify.libraries.core.object import Track, Album
 from musify.log.logger import MusifyLogger
 from musify.processors.base import ItemProcessor
 from musify.types import UnitIterable
@@ -70,11 +69,11 @@ class ItemMatcher(ItemProcessor):
     #: A set of words to check for when applying name score reduction logic.
     #:
     #: If a word from this list is present in the name of the result to score against
-    #: but not in the source :py:class:`MusifyItem`, apply the ``reduce_name_score_factor`` to reduce its score.
+    #: but not in the source :py:class:`MusifyObject`, apply the ``reduce_name_score_factor`` to reduce its score.
     #: This set is always combined with the ``karaoke_tags``.
     reduce_name_score_on = {"live", "demo", "acoustic"}
     #: The factor to apply to a name score when a word from ``reduce_name_score_on``
-    #: is found in the result but not in the source :py:class:`MusifyItem`.
+    #: is found in the result but not in the source :py:class:`MusifyObject`.
     reduce_name_score_factor = 0.5
 
     def __init__(self):
@@ -97,9 +96,7 @@ class ItemMatcher(ItemProcessor):
             log.extend(extra)
         self._log_padded(log, pad='>')
 
-    def _log_test[T: (Track, Album)](
-            self, source: MusifyObject, result: T, test: Any, extra: Iterable[str] = ()
-    ) -> None:
+    def _log_test[T: MusifyObject](self, source: T, result: T, test: Any, extra: Iterable[str] = ()) -> None:
         """Wrapper for initially logging a test result in a correctly aligned format"""
         algorithm = inspect.stack()[1][0].f_code.co_name.replace("match", "").upper().lstrip("_").replace("_", " ")
         log_result = f"> Testing URI: {result.uri}" if hasattr(result, "uri") else "> Test failed"
@@ -108,7 +105,7 @@ class ItemMatcher(ItemProcessor):
             log.extend(extra)
         self._log_padded(log)
 
-    def _log_match[T: (Track, Album)](self, source: MusifyObject, result: T, extra: Iterable[str] = ()) -> None:
+    def _log_match[T: MusifyObject](self, source: T, result: T, extra: Iterable[str] = ()) -> None:
         """Wrapper for initially logging a match in a correctly aligned format"""
         log = [source.name, f"< Matched URI: {result.uri}"]
         if extra:
@@ -159,7 +156,7 @@ class ItemMatcher(ItemProcessor):
     ###########################################################################
     ## Conditions
     ###########################################################################
-    def match_not_karaoke[T: (Track, Album)](self, source: T, result: T) -> int:
+    def match_not_karaoke[T: MusifyObject](self, source: T, result: T) -> int:
         """Checks if a result is not a karaoke item that is either 0 when item is karaoke or 1 when not karaoke."""
         def is_karaoke(*values: str) -> bool:
             """Check if the words in the given ``values`` match any word in ``karaoke_tags``"""
@@ -168,15 +165,15 @@ class ItemMatcher(ItemProcessor):
             self._log_test(source=source, result=result, test=karaoke, extra=[f"{self.karaoke_tags} -> {values}"])
             return karaoke
 
-        if is_karaoke(result.name):  # title/album name
+        if is_karaoke(result.name):
             return 0
-        if is_karaoke(result.artist):  # artists
+        if is_karaoke(result.artist):
             return 0
-        if is_karaoke(result.album):  # album
+        if is_karaoke(result.album):
             return 0
         return 1
 
-    def match_name[T: (Track, Album)](self, source: T, result: T) -> float:
+    def match_name[T: MusifyObject](self, source: T, result: T) -> float:
         """Match on names and return a score between 0-1. Score=0 when either value is None."""
         score = 0
         source_val = source.clean_tags[Tag.NAME]
@@ -194,7 +191,7 @@ class ItemMatcher(ItemProcessor):
         self._log_test(source=source, result=result, test=round(score, 2), extra=[f"{source_val} -> {result_val}"])
         return score
 
-    def match_artist[T: (Track, Album)](self, source: T, result: T) -> float:
+    def match_artist[T: MusifyObject](self, source: T, result: T) -> float:
         """
         Match on artists and return a score between 0-1. Score=0 when either value is None.
         When many artists are present, a scale factor is applied to the score of matches on subsequent artists.
@@ -217,7 +214,7 @@ class ItemMatcher(ItemProcessor):
         self._log_test(source=source, result=result, test=round(score, 2), extra=[f"{source_val} -> {result_val}"])
         return score
 
-    def match_album[T: (Track, Album)](self, source: T, result: T) -> float:
+    def match_album[T: MusifyObject](self, source: T, result: T) -> float:
         """Match on album and return a score between 0-1. Score=0 when either value is None."""
         score = 0
         source_val = source.clean_tags[Tag.ALBUM]
@@ -229,7 +226,7 @@ class ItemMatcher(ItemProcessor):
         self._log_test(source=source, result=result, test=round(score, 2), extra=[f"{source_val} -> {result_val}"])
         return score
 
-    def match_length[T: (Track, Album)](self, source: T, result: T) -> float:
+    def match_length[T: MusifyObject](self, source: T, result: T) -> float:
         """Match on length and return a score between 0-1. Score=0 when either value is None."""
         score = 0
         source_val = source.clean_tags[Tag.LENGTH]
@@ -242,7 +239,7 @@ class ItemMatcher(ItemProcessor):
         self._log_test(source=source, result=result, test=round(score, 2), extra=extra)
         return score
 
-    def match_year[T: (Track, Album)](self, source: T, result: T) -> float:
+    def match_year[T: MusifyObject](self, source: T, result: T) -> float:
         """
         Match on year and return a score between 0-1. Score=0 when either value is None.
         Matches within ``year_range`` years on a 0-1 scale where 1 is the exact same year
@@ -262,10 +259,10 @@ class ItemMatcher(ItemProcessor):
     ###########################################################################
     ## Score match
     ###########################################################################
-    def __call__[T: (Track, Album)](self, *args, **kwargs) -> T | None:
+    def __call__[T: MusifyObject](self, *args, **kwargs) -> T | None:
         return self.match(*args, **kwargs)
 
-    def match[T: (Track, Album)](
+    def match[T: MusifyObject](
             self,
             source: T,
             results: Iterable[T],
@@ -316,7 +313,7 @@ class ItemMatcher(ItemProcessor):
         else:
             self._log_test(source=source, result=result, test=score, extra=[f"NO MATCH: {score}<{min_score}"])
 
-    def _score[T: (Track, Album)](
+    def _score[T: MusifyObject](
             self,
             source: T,
             results: Iterable[T],
@@ -366,7 +363,7 @@ class ItemMatcher(ItemProcessor):
 
         return best_score, best_result
 
-    def _get_scores[T: (Track, Album)](
+    def _get_scores[T: MusifyObject](
             self, source: T, result: T, match_on: set[TagField] = ALL_TAG_FIELDS, allow_karaoke: bool = False
     ) -> dict[TagField, float]:
         """
@@ -400,12 +397,6 @@ class ItemMatcher(ItemProcessor):
             scores_current[Tag.YEAR] = self.match_year(source=source, result=result)
 
         if isinstance(source, MusifyCollection) and isinstance(result, MusifyCollection):
-            # skip this if not a collection of items
-            if not all(isinstance(i, Track) for i in source.items):
-                return scores_current
-            if not all(isinstance(i, Track) for i in result.items):
-                return scores_current
-
             # also score all the items individually in the collection
             scores_current[Tag.ALL] = 0
             for item in source.items:

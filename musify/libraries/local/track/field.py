@@ -38,7 +38,7 @@ class LocalTrackField(TrackFieldMixin):
     FILENAME = TagFields.FILENAME.value
     EXT = TagFields.EXT.value
     SIZE = TagFields.SIZE.value
-    KIND = TagFields.KIND.value
+    TYPE = TagFields.TYPE.value
     CHANNELS = TagFields.CHANNELS.value
     BIT_RATE = TagFields.BIT_RATE.value
     BIT_DEPTH = TagFields.BIT_DEPTH.value

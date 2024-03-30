@@ -45,7 +45,7 @@ field_name_map = {
     "FileName": Fields.FILENAME,
     "FileExtension": Fields.EXT,
     # "": Fields.SIZE,  # unmapped for compare
-    "FileKind": Fields.KIND,
+    "FileKind": Fields.TYPE,
     "FileBitrate": Fields.BIT_RATE,
     "BitDepth": Fields.BIT_DEPTH,
     "FileSampleRate": Fields.SAMPLE_RATE,
@@ -284,15 +284,15 @@ class Comparer(MusicBeeProcessor, DynamicProcessor):
 
     @dynamicprocessormethod
     def _starts_with(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
-        return value.startswith(expected[0]) if value is not None and expected[0] is not None else False
+        return value.startswith(str(expected[0])) if value is not None and expected[0] is not None else False
 
     @dynamicprocessormethod
     def _ends_with(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
-        return value.endswith(expected[0]) if value is not None and expected[0] is not None else False
+        return value.endswith(str(expected[0])) if value is not None and expected[0] is not None else False
 
     @dynamicprocessormethod
     def _contains(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
-        return expected[0] in value if value is not None and expected[0] is not None else False
+        return str(expected[0]) in value if value is not None and expected[0] is not None else False
 
     @dynamicprocessormethod
     def _does_not_contain(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
@@ -300,7 +300,7 @@ class Comparer(MusicBeeProcessor, DynamicProcessor):
 
     @dynamicprocessormethod
     def _matches_reg_ex(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
-        return bool(re.search(expected[0], value)) if value is not None and expected[0] is not None else False
+        return bool(re.search(str(expected[0]), value)) if value is not None and expected[0] is not None else False
 
     @dynamicprocessormethod
     def _matches_reg_ex_ignore_case(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
