@@ -231,13 +231,10 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
     def comments(self, value: UnitIterable[str] | None):
         self._comments = [value] if isinstance(value, str) else to_collection(value, list)
 
-    @property
-    def uri(self):
+    def _uri_getter(self):
         return self._uri
 
-    @uri.setter
-    def uri(self, value: str | None):
-        """Set both the ``uri`` property and the ``has_uri`` property ."""
+    def _uri_setter(self, value: str | None):
         if value is None:
             self._uri = None
             self._has_uri = None
@@ -288,8 +285,8 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         return self._reader.file.filename
 
     @property
-    def kind(self):
-        """The kind of audio file of this track"""
+    def type(self):
+        """The type of audio file of this track"""
         return self.__class__.__name__
 
     @property

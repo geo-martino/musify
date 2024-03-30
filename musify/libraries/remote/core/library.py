@@ -361,7 +361,6 @@ class RemoteLibrary[
         :param dry_run: When True, do not create playlists
             and just skip any playlists that are not already currently loaded.
         """
-        # TODO: expand this function to support all RemoteItem types + update input type
         if isinstance(playlists, Library):  # get URIs from playlists in library
             playlists = {name: [track.uri for track in pl] for name, pl in playlists.playlists.items()}
         elif (

@@ -1,10 +1,10 @@
 import pytest
 
+from musify.core.enum import TagFields as Tag
 from musify.libraries.local.track import LocalTrack
 from musify.processors.match import ItemMatcher, CleanTagConfig
-from musify.core.enum import TagFields as Tag
-from tests.libraries.local.track.utils import random_track
 from tests.core.printer import PrettyPrinterTester
+from tests.libraries.local.track.utils import random_track
 
 
 class TestItemMatcher(PrettyPrinterTester):

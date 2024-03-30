@@ -7,9 +7,9 @@ import pytest
 
 from musify.api.exception import APIError
 from musify.libraries.remote.core.exception import RemoteObjectTypeError
-from musify.types import Number
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.object import SpotifyTrack
+from musify.types import Number
 from tests.core.base import MusifyItemTester
 from tests.libraries.remote.spotify.api.mock import SpotifyMock
 from tests.libraries.remote.spotify.utils import assert_id_attributes

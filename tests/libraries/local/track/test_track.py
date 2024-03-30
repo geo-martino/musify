@@ -183,7 +183,7 @@ def test_loaded_attributes_common(track: LocalTrack):
     # file properties
     assert track.folder == basename(dirname(track.path))
     assert track.filename == splitext(basename(track.path))[0]
-    assert track.kind == track.__class__.__name__
+    assert track.type == track.__class__.__name__
     assert track.date_modified == datetime.fromtimestamp(getmtime(track.path))
 
     # library properties

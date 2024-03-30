@@ -1,10 +1,10 @@
 import pytest
 
-from musify.libraries.local.track import LocalTrack
-from musify.libraries.local.track.field import LocalTrackField
-from musify.libraries.core.object import Track, Playlist, Folder, Artist, Album
 from musify.field import FolderField, PlaylistField, AlbumField, ArtistField
 from musify.field import TrackField
+from musify.libraries.core.object import Track, Playlist, Folder, Artist, Album
+from musify.libraries.local.track import LocalTrack
+from musify.libraries.local.track.field import LocalTrackField
 from tests.core.enum import FieldTester, TagFieldTester
 
 

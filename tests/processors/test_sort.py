@@ -5,14 +5,14 @@ from random import choice, randrange
 import pytest
 import xmltodict
 
+from musify.field import TrackField
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.local.track.field import LocalTrackField
 from musify.processors.sort import ItemSorter, ShuffleMode, ShuffleBy
-from musify.field import TrackField
 from musify.utils import strip_ignore_words
+from tests.core.printer import PrettyPrinterTester
 from tests.libraries.local.track.utils import random_tracks
 from tests.libraries.local.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
-from tests.core.printer import PrettyPrinterTester
 
 
 class TestItemSorter(PrettyPrinterTester):

@@ -71,3 +71,20 @@ class MusifyItem(MusifyObject, Hashable, metaclass=ABCMeta):
     def __getitem__(self, key: str) -> Any:
         """Get the value of a given attribute key"""
         return getattr(self, key)
+
+
+# noinspection PyPropertyDefinition
+class MusifyItemSettable(MusifyItem, metaclass=ABCMeta):
+    """Generic class for storing an item that can have select properties modified."""
+
+    @abstractmethod
+    def _uri_getter(self) -> str | None:
+        """URI (Uniform Resource Indicator) is the unique identifier for this item."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def _uri_setter(self, value: str | None):
+        """Set both the ``uri`` property and the ``has_uri`` property ."""
+        raise NotImplementedError
+
+    uri = property(lambda self: self._uri_getter(), lambda self, v: self._uri_setter(v))

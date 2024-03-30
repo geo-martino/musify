@@ -5,7 +5,7 @@ from urllib.parse import parse_qs
 
 import pytest
 
-from musify.core.base import MusifyItem
+from musify.core.base import MusifyItemSettable
 from musify.core.enum import TagFields as Tag
 from musify.libraries.collection import BasicCollection
 from musify.libraries.core.collection import MusifyCollection
@@ -13,7 +13,7 @@ from musify.libraries.core.object import Album
 from musify.libraries.local.collection import LocalAlbum
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.remote.core.enum import RemoteObjectType
-from musify.libraries.remote.core.processors.search import RemoteItemSearcher, SearchSettings
+from musify.libraries.remote.core.processors.search import RemoteItemSearcher, SearchConfig
 from tests.core.printer import PrettyPrinterTester
 from tests.libraries.local.track.utils import random_track, random_tracks
 from tests.libraries.remote.core.utils import RemoteMock
@@ -71,7 +71,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
     def test_get_results(searcher: RemoteItemSearcher, api_mock: RemoteMock):
         api_mock.reset_mock()  # test checks the number of requests made
 
-        settings = SearchSettings(
+        settings = SearchConfig(
             search_fields_1=[Tag.NAME, Tag.ARTIST],  # query mock always returns match on name
             search_fields_2=[Tag.NAME, Tag.ALBUM],
             search_fields_3=[Tag.NAME, Tag.YEAR],
@@ -119,10 +119,10 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
     ###########################################################################
     @staticmethod
     def assert_search(
-            search_function: Callable[[Iterable[MusifyItem] | MusifyCollection], None],
-            collection: Iterable[MusifyItem],
-            search_items: Iterable[MusifyItem],
-            unmatchable_items: Iterable[MusifyItem],
+            search_function: Callable[[Iterable[MusifyItemSettable] | MusifyCollection[MusifyItemSettable]], None],
+            collection: Iterable[MusifyItemSettable],
+            search_items: Iterable[MusifyItemSettable],
+            unmatchable_items: Iterable[MusifyItemSettable],
     ):
         """Run search on given ``collection`` type against the ``search_function`` and assert the results"""
         for item in collection:
@@ -152,7 +152,10 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
             assert item.uri is None
 
     def test_search_items(
-            self, searcher: RemoteItemSearcher, search_items: list[MusifyItem], unmatchable_items: list[LocalTrack]
+            self,
+            searcher: RemoteItemSearcher,
+            search_items: list[MusifyItemSettable],
+            unmatchable_items: list[LocalTrack]
     ):
         self.assert_search(
             searcher._search_items,
@@ -169,7 +172,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         collection.tracks.extend(unmatchable_items)
 
         self.assert_search(
-            searcher._search_album,
+            searcher._search_collection_unit,
             collection=collection,
             search_items=search_items,
             unmatchable_items=unmatchable_items

@@ -5,20 +5,20 @@ from random import sample, choice
 
 import pytest
 
-from musify.libraries.local.collection import LocalAlbum
-from musify.libraries.local.track import LocalTrack
-from musify.processors.match import CleanTagConfig
 from musify.core.enum import TagFields as Tag
 from musify.exception import MusifyEnumError
+from musify.libraries.local.collection import LocalAlbum
+from musify.libraries.local.track import LocalTrack
 from musify.libraries.remote.core.base import RemoteResponse
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
 from musify.libraries.remote.core.processors.check import RemoteItemChecker
-from musify.libraries.remote.core.processors.search import SearchSettings, RemoteItemSearcher
+from musify.libraries.remote.core.processors.search import SearchConfig, RemoteItemSearcher
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.factory import SpotifyObjectFactory
 from musify.libraries.remote.spotify.object import SpotifyTrack, SpotifyAlbum
 from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
+from musify.processors.match import CleanTagConfig
 from tests.libraries.local.track.utils import random_track
 from tests.libraries.remote.core.processors.check import RemoteItemCheckerTester
 from tests.libraries.remote.core.processors.search import RemoteItemSearcherTester
@@ -259,22 +259,24 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
         RemoteItemSearcher.reduce_name_score_on = {"live", "demo", "acoustic"}
         RemoteItemSearcher.reduce_name_score_factor = 0.5
 
-        RemoteItemSearcher.settings_items = SearchSettings(
-            search_fields_1=[Tag.TITLE],  # query mock always returns match on name
-            match_fields={Tag.TITLE},
-            result_count=10,
-            allow_karaoke=True,
-            min_score=0.1,
-            max_score=0.5
-        )
-        RemoteItemSearcher.settings_albums = SearchSettings(
-            search_fields_1=[Tag.ALBUM],  # query mock always returns match on name
-            match_fields={Tag.ALBUM},
-            result_count=5,
-            allow_karaoke=True,
-            min_score=0.1,
-            max_score=0.5
-        )
+        RemoteItemSearcher.search_settings = {
+            RemoteObjectType.TRACK: SearchConfig(
+                search_fields_1=[Tag.TITLE],  # query mock always returns match on name
+                match_fields={Tag.TITLE},
+                result_count=10,
+                allow_karaoke=True,
+                min_score=0.1,
+                max_score=0.5
+            ),
+            RemoteObjectType.ALBUM: SearchConfig(
+                search_fields_1=[Tag.ALBUM],  # query mock always returns match on name
+                match_fields={Tag.ALBUM},
+                result_count=5,
+                allow_karaoke=True,
+                min_score=0.1,
+                max_score=0.5
+            )
+        }
 
         return RemoteItemSearcher(object_factory=SpotifyObjectFactory(api=api))
 
@@ -283,7 +285,9 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
             self, searcher: RemoteItemSearcher, api_mock: SpotifyMock, wrangler: SpotifyDataWrangler
     ) -> list[LocalTrack]:
         items = []
-        for remote_track in map(SpotifyTrack, sample(api_mock.tracks, k=searcher.settings_items.result_count)):
+        limit = searcher.search_settings[RemoteObjectType.TRACK].result_count
+
+        for remote_track in map(SpotifyTrack, sample(api_mock.tracks, k=limit)):
             local_track = random_track()
             local_track.uri = None
             local_track.remote_wrangler = wrangler
@@ -307,7 +311,7 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
             api_mock: SpotifyMock,
             wrangler: SpotifyDataWrangler
     ) -> list[LocalAlbum]:
-        limit = searcher.settings_items.result_count
+        limit = searcher.search_settings[RemoteObjectType.TRACK].result_count
         albums = [album for album in api_mock.albums if 2 < album["tracks"]["total"] <= api_mock.limit_lower]
         responses = deepcopy(sample(albums, k=min(len(albums), limit)))
         assert len(responses) > 4

@@ -13,6 +13,7 @@ from typing import Any
 from musify.core.base import MusifyItem
 from musify.exception import MusifyTypeError
 from musify.libraries.core.collection import MusifyCollection
+from musify.libraries.remote.core.enum import RemoteObjectType
 from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
 from musify.log.logger import MusifyLogger
 from musify.processors.base import Filter
@@ -24,6 +25,12 @@ class Track(MusifyItem, metaclass=ABCMeta):
     """Represents a track including its metadata/tags/properties."""
 
     __attributes_ignore__ = "name"
+
+    # noinspection PyPropertyDefinition
+    @classmethod
+    @property
+    def kind(cls):
+        return RemoteObjectType.TRACK
 
     @property
     def name(self) -> str:
@@ -169,6 +176,12 @@ class Playlist[T: Track](MusifyCollection[T], metaclass=ABCMeta):
 
     __attributes_classes__ = MusifyCollection
     __attributes_ignore__ = "items"
+
+    # noinspection PyPropertyDefinition
+    @classmethod
+    @property
+    def kind(cls):
+        return RemoteObjectType.PLAYLIST
 
     @property
     @abstractmethod
@@ -461,6 +474,12 @@ class Album[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     __attributes_classes__ = MusifyCollection
     __attributes_ignore__ = ("name", "items")
 
+    # noinspection PyPropertyDefinition
+    @classmethod
+    @property
+    def kind(cls):
+        return RemoteObjectType.ALBUM
+
     @property
     @abstractmethod
     def name(self) -> str:
@@ -576,6 +595,12 @@ class Artist[T: Track](MusifyCollection[T], metaclass=ABCMeta):
 
     __attributes_classes__ = MusifyCollection
     __attributes_ignore__ = ("name", "items")
+
+    # noinspection PyPropertyDefinition
+    @classmethod
+    @property
+    def kind(cls):
+        return RemoteObjectType.ARTIST
 
     @property
     @abstractmethod
