@@ -42,6 +42,7 @@ Added
 * Property 'kind' to all objects which have an associated :py:class:`.RemoteObjectType`
 * Introduced :py:class:`.MusifyItemSettable` class to allow distinction
   between items that can have their properties set and those that can't
+* Extend :py:class:`.FilterMatcher` with group_by tag functionality
 
 Changed
 -------
@@ -57,11 +58,23 @@ Changed
 * Renamed 'kind' property on :py:class:`.LocalTrack` to 'type' to avoid clashing property names
 * :py:class:`.ItemMatcher`, :py:class:`.RemoteItemChecker`, and :py:class:`.RemoteItemSearcher` now accept
   all MusifyItem types that may have their URI property set manually.
+* :py:class:`.ItemSorter` now shuffles randomly on unsupported types
+  + prioritises fields settings over shuffle settings
 
 Fixed
 -----
 
 * :py:class:`.Comparer` dynamic processor methods which process string values now cast expected types before processing
+
+Removed
+-------
+
+* Redundant ShuffleBy enum and related arguments from :py:class:`.ItemSorter`
+
+Documentation
+-------------
+
+* Added info on lint checking for the contributing page
 
 0.8.1
 =====

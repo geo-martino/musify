@@ -27,7 +27,7 @@ class RemoteResponse(MusifyObject, metaclass=ABCMeta):
     @property
     @abstractmethod
     def kind(cls) -> RemoteObjectType:
-        """The type of remote object this python object represents"""
+        """The type of remote object this class represents"""
         raise NotImplementedError
 
     @abstractmethod

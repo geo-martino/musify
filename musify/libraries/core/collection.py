@@ -15,7 +15,7 @@ from musify.file.base import File
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.base import RemoteObject
 from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
-from musify.processors.sort import ShuffleMode, ShuffleBy, ItemSorter
+from musify.processors.sort import ShuffleMode, ItemSorter
 from musify.types import UnitSequence
 
 
@@ -195,8 +195,7 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], metaclas
     def sort(
             self,
             fields: UnitSequence[Field | None] | Mapping[Field | None, bool] = (),
-            shuffle_mode: ShuffleMode = ShuffleMode.NONE,
-            shuffle_by: ShuffleBy = ShuffleBy.TRACK,
+            shuffle_mode: ShuffleMode | None = None,
             shuffle_weight: float = 1.0,
             key: Field | None = None,
             reverse: bool = False,
@@ -210,7 +209,6 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], metaclas
             * List of tags/properties to sort by.
             * Map of `{<tag/property>: <reversed>}`. If reversed is true, sort the ``tag/property`` in reverse.
         :param shuffle_mode: The mode to use for shuffling.
-        :param shuffle_by: The field to shuffle by when shuffling.
         :param shuffle_weight: The weights (between 0 and 1) to apply to shuffling modes that can use it.
             This value will automatically be limited to within the accepted range 0 and 1.
         :param key: Tag or property to sort on. Can be given instead of ``fields`` for a simple sort.
@@ -221,9 +219,7 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], metaclas
         if key is not None:
             ItemSorter.sort_by_field(self.items, field=key)
         else:
-            ItemSorter(
-                fields=fields, shuffle_mode=shuffle_mode, shuffle_by=shuffle_by, shuffle_weight=shuffle_weight
-            )(self.items)
+            ItemSorter(fields=fields, shuffle_mode=shuffle_mode, shuffle_weight=shuffle_weight)(self.items)
 
         if reverse:
             self.items.reverse()

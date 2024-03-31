@@ -29,7 +29,8 @@ class Track(MusifyItem, metaclass=ABCMeta):
     # noinspection PyPropertyDefinition
     @classmethod
     @property
-    def kind(cls):
+    def kind(cls) -> RemoteObjectType:
+        """The type of remote object associated with this class"""
         return RemoteObjectType.TRACK
 
     @property
@@ -180,7 +181,8 @@ class Playlist[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     # noinspection PyPropertyDefinition
     @classmethod
     @property
-    def kind(cls):
+    def kind(cls) -> RemoteObjectType:
+        """The type of remote object associated with this class"""
         return RemoteObjectType.PLAYLIST
 
     @property
@@ -477,7 +479,8 @@ class Album[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     # noinspection PyPropertyDefinition
     @classmethod
     @property
-    def kind(cls):
+    def kind(cls) -> RemoteObjectType:
+        """The type of remote object associated with this class"""
         return RemoteObjectType.ALBUM
 
     @property
@@ -599,7 +602,8 @@ class Artist[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     # noinspection PyPropertyDefinition
     @classmethod
     @property
-    def kind(cls):
+    def kind(cls) -> RemoteObjectType:
+        """The type of remote object associated with this class"""
         return RemoteObjectType.ARTIST
 
     @property
