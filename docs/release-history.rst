@@ -58,6 +58,8 @@ Changed
 * Renamed 'kind' property on :py:class:`.LocalTrack` to 'type' to avoid clashing property names
 * :py:class:`.ItemMatcher`, :py:class:`.RemoteItemChecker`, and :py:class:`.RemoteItemSearcher` now accept
   all MusifyItem types that may have their URI property set manually.
+* :py:class:`.ItemSorter` now shuffles randomly on unsupported types
+  + prioritises fields settings over shuffle settings
 
 Fixed
 -----
