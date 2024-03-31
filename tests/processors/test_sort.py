@@ -5,6 +5,7 @@ from random import choice, randrange
 import pytest
 import xmltodict
 
+from musify.core.enum import Fields
 from musify.field import TrackField
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.local.track.field import LocalTrackField
@@ -19,7 +20,7 @@ class TestItemSorter(PrettyPrinterTester):
 
     @pytest.fixture
     def obj(self) -> ItemSorter:
-        return ItemSorter(fields=[TrackField.ALBUM, TrackField.DISC, TrackField.TRACK], shuffle_mode=ShuffleMode.NONE)
+        return ItemSorter(fields=[TrackField.ALBUM, TrackField.DISC, TrackField.TRACK])
 
     @pytest.fixture(scope="class")
     def tracks(self) -> list[LocalTrack]:
@@ -77,12 +78,14 @@ class TestItemSorter(PrettyPrinterTester):
         assert tracks == tracks_original
         ItemSorter(shuffle_mode=ShuffleMode.RANDOM).sort(tracks)
         assert tracks != tracks_original
+
+        # shuffle settings ignored when ``fields`` are defined
         ItemSorter(fields=TrackField.TITLE, shuffle_mode=ShuffleMode.RANDOM).sort(tracks)
-        assert tracks != sorted(tracks, key=lambda t: strip_ignore_words(t.title))
+        assert tracks == sorted(tracks, key=lambda t: strip_ignore_words(t.title))
 
     def test_multi_sort(self, tracks: list[LocalTrack]):
         tracks_sorted = sorted(tracks, key=lambda t: (t.album, t.disc_number, t.track_number))
-        sorter = ItemSorter(fields=[TrackField.ALBUM, TrackField.DISC, TrackField.TRACK], shuffle_mode=ShuffleMode.NONE)
+        sorter = ItemSorter(fields=[TrackField.ALBUM, TrackField.DISC, TrackField.TRACK])
         sorter(tracks)
         assert tracks == tracks_sorted
 
@@ -97,7 +100,7 @@ class TestItemSorter(PrettyPrinterTester):
                     tracks_sorted.extend(list(group_3))
 
         fields = {TrackField.ALBUM: True, TrackField.DISC: False, TrackField.TRACK: True}
-        sorter = ItemSorter(fields=fields, shuffle_mode=ShuffleMode.NONE)
+        sorter = ItemSorter(fields=fields)
         sorter(tracks)
         assert tracks == tracks_sorted
 
@@ -107,19 +110,35 @@ class TestItemSorter(PrettyPrinterTester):
     def test_from_xml_bp(self):
         with open(path_playlist_xautopf_bp, "r", encoding="utf-8") as f:
             xml = xmltodict.parse(f.read())
-        sorter = ItemSorter.from_xml(xml=xml)
 
-        assert sorter.sort_fields == {LocalTrackField.TRACK_NUMBER: False}
-        assert sorter.shuffle_mode == ShuffleMode.NONE  # switch to ShuffleMode.RECENT_ADDED once implemented
+        # shuffle settings not set as automatic order defined
+        sorter = ItemSorter.from_xml(xml=xml)
+        assert sorter.sort_fields == {Fields.TRACK_NUMBER: False}
+        assert sorter.shuffle_mode is None
+        assert sorter.shuffle_weight == 0.0
+
+        # flip sorting to manual order to force function to set shuffle settings
+        xml["SmartPlaylist"]["Source"]["SortBy"]["@Field"] = "78"
+        sorter = ItemSorter.from_xml(xml=xml)
+        assert sorter.sort_fields == {}
+        assert sorter.shuffle_mode == ShuffleMode.RECENT_ADDED
         assert sorter.shuffle_weight == 0.5
 
     def test_from_xml_ra(self):
         with open(path_playlist_xautopf_ra, "r", encoding="utf-8") as f:
             xml = xmltodict.parse(f.read())
-        sorter = ItemSorter.from_xml(xml=xml)
 
-        assert sorter.sort_fields == {LocalTrackField.DATE_ADDED: True}
-        assert sorter.shuffle_mode == ShuffleMode.NONE
+        # shuffle settings not set as automatic order defined
+        sorter = ItemSorter.from_xml(xml=xml)
+        assert sorter.sort_fields == {Fields.DATE_ADDED: True}
+        assert sorter.shuffle_mode is None
+        assert sorter.shuffle_weight == 0.0
+
+        # flip sorting to manual order to force function to set shuffle settings
+        xml["SmartPlaylist"]["Source"]["SortBy"]["@Field"] = "78"
+        sorter = ItemSorter.from_xml(xml=xml)
+        assert sorter.sort_fields == {}
+        assert sorter.shuffle_mode == ShuffleMode.DIFFERENT_ARTIST
         assert sorter.shuffle_weight == -0.2
 
     @pytest.mark.skip(reason="not implemented yet")

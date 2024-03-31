@@ -195,7 +195,7 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], metaclas
     def sort(
             self,
             fields: UnitSequence[Field | None] | Mapping[Field | None, bool] = (),
-            shuffle_mode: ShuffleMode = ShuffleMode.NONE,
+            shuffle_mode: ShuffleMode | None = None,
             shuffle_weight: float = 1.0,
             key: Field | None = None,
             reverse: bool = False,

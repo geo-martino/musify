@@ -16,10 +16,9 @@ from musify.utils import flatten_nested, strip_ignore_words, to_collection, limi
 
 class ShuffleMode(MusifyEnum):
     """Represents the possible shuffle modes to use when shuffling items using :py:class:`ItemSorter`."""
-    NONE = 0
-    RANDOM = 1
-    HIGHER_RATING = 2
-    RECENT_ADDED = 3
+    RANDOM = 0
+    HIGHER_RATING = 1
+    RECENT_ADDED = 2
     DIFFERENT_ARTIST = 3
 
 
@@ -27,13 +26,16 @@ class ItemSorter(MusicBeeProcessor):
     """
     Sort items in-place based on given conditions.
 
-    :param fields:
-        * When None and ShuffleMode is RANDOM, shuffle the items. Otherwise, do nothing.
+    :param fields: Fields to sort by. If defined, this value will always take priority over any shuffle settings
+        i.e. shuffle settings will be ignored.
         * List of tags/properties to sort by.
         * Map of ``{<tag/property>: <reversed>}``. If reversed is true, sort the ``tag/property`` in reverse.
-    :param shuffle_mode: The mode to use for shuffling.
-    :param shuffle_weight: The weights (between -1 and 1) to apply to shuffling modes that can use it.
-        This value will automatically be limited to within the accepted range 0 and 1.
+    :param shuffle_mode: The mode to use for shuffling. Only used when no ``fields`` are given.
+        WARNING: Currently only ``RANDOM`` shuffle mode has been implemented.
+        Any other given value will default to ``RANDOM`` shuffling.
+    :param shuffle_weight: The weights (between -1 and 1) to apply to certain shuffling modes.
+        This value will automatically be limited to within the valid range -1 and 1.
+        Only used when no ``fields`` are given and shuffle_mode is not None or ``RANDOM``.
     """
 
     __slots__ = ("sort_fields", "shuffle_mode", "shuffle_weight")
@@ -46,9 +48,9 @@ class ItemSorter(MusicBeeProcessor):
             Fields.TRACK_NUMBER: False,
             Fields.FILENAME: False
         }
+        # TODO: implement field_code 78 - manual order according to the order of tracks found
+        #  in the MusicBee library file for a given playlist.
     }
-    # TODO: implement field_code 78 - manual order according to MusicBee library file. This is a workaround
-    _custom_sort[78] = _custom_sort[6]
 
     @classmethod
     def sort_by_field(cls, items: list[MusifyItem], field: Field | None = None, reverse: bool = False) -> None:
@@ -122,7 +124,7 @@ class ItemSorter(MusicBeeProcessor):
 
     @classmethod
     def from_xml(cls, xml: Mapping[str, Any], **__) -> Self:
-        fields: Sequence[Field] | Mapping[Field | bool]
+        fields: Sequence[Field] | Mapping[Field | bool] = ()
         source = xml["SmartPlaylist"]["Source"]
 
         if "SortBy" in source:
@@ -135,22 +137,23 @@ class ItemSorter(MusicBeeProcessor):
         if field_code in cls._custom_sort:
             fields = cls._custom_sort[field_code]
             return cls(fields=fields)
-        else:
+        elif field_code != 78:
             field = Fields.from_value(field_code)[0]
 
-        if field is None:
-            return cls()
-        elif "SortBy" in source:
-            fields = {field: source["SortBy"]["@Order"] == "Descending"}
-        elif "DefinedSort" in source:
-            fields = [field]
-        else:
-            raise NotImplementedError("Sort type in XML not recognised")
+            if "SortBy" in source:
+                fields = {field: source["SortBy"]["@Order"] == "Descending"}
+            elif "DefinedSort" in source:
+                fields = [field]
+            else:
+                raise NotImplementedError("Sort type in XML not recognised")
 
-        shuffle_mode = ShuffleMode.from_name(cls._pascal_to_snake(xml["SmartPlaylist"]["@ShuffleMode"]))[0]
-        shuffle_weight = float(xml["SmartPlaylist"].get("@ShuffleSameArtistWeight", 0))
+        shuffle_mode_value = cls._pascal_to_snake(xml["SmartPlaylist"]["@ShuffleMode"])
+        if not fields and shuffle_mode_value != "none":
+            shuffle_mode = ShuffleMode.from_name(shuffle_mode_value)[0]
+            shuffle_weight = float(xml["SmartPlaylist"].get("@ShuffleSameArtistWeight", 0))
 
-        return cls(fields=fields, shuffle_mode=shuffle_mode, shuffle_weight=shuffle_weight)
+            return cls(fields=fields, shuffle_mode=shuffle_mode, shuffle_weight=shuffle_weight)
+        return cls(fields=fields or cls._custom_sort[6])  # TODO: workaround - see cls._custom_sort
 
     def to_xml(self, **kwargs) -> Mapping[str, Any]:
         raise NotImplementedError
@@ -158,7 +161,7 @@ class ItemSorter(MusicBeeProcessor):
     def __init__(
             self,
             fields: UnitSequence[Field | None] | Mapping[Field | None, bool] = (),
-            shuffle_mode: ShuffleMode = ShuffleMode.NONE,
+            shuffle_mode: ShuffleMode | None = None,
             shuffle_weight: float = 0.0
     ):
         super().__init__()
@@ -166,9 +169,7 @@ class ItemSorter(MusicBeeProcessor):
         self.sort_fields: Mapping[Field | None, bool]
         self.sort_fields = {field: False for field in fields} if isinstance(fields, Sequence) else fields
 
-        # TODO: implement all shuffle modes
-        self.shuffle_mode: ShuffleMode | None = shuffle_mode \
-            if shuffle_mode in [ShuffleMode.NONE, ShuffleMode.RANDOM] else ShuffleMode.NONE
+        self.shuffle_mode = shuffle_mode
         self.shuffle_weight = limit_value(shuffle_weight, floor=-1, ceil=1)
 
     def __call__(self, *args, **kwargs) -> None:
@@ -179,17 +180,18 @@ class ItemSorter(MusicBeeProcessor):
         if len(items) == 0:
             return
 
-        if self.shuffle_mode == ShuffleMode.RANDOM:  # random
-            shuffle(items)
-        elif self.shuffle_mode == ShuffleMode.NONE and self.sort_fields:  # sort by fields
+        if self.sort_fields:
             items_nested = self._sort_by_fields({None: items}, fields=self.sort_fields)
             items.clear()
             items.extend(flatten_nested(items_nested))
-        elif not self.sort_fields:  # no sort
-            return
-        else:
-            # TODO: implement all shuffle modes
-            raise NotImplementedError(f"Shuffle mode not yet implemented: {self.shuffle_mode}")
+        elif self.shuffle_mode == ShuffleMode.RANDOM:  # random
+            shuffle(items)
+        elif self.shuffle_mode == ShuffleMode.HIGHER_RATING:
+            shuffle(items)  # TODO: implement this shuffle mode correctly
+        elif self.shuffle_mode == ShuffleMode.RECENT_ADDED:
+            shuffle(items)  # TODO: implement this shuffle mode correctly
+        elif self.shuffle_mode == ShuffleMode.DIFFERENT_ARTIST:
+            shuffle(items)  # TODO: implement this shuffle mode correctly
 
     @classmethod
     def _sort_by_fields(cls, items_grouped: MutableMapping, fields: MutableMapping[Field, bool]) -> MutableMapping:
