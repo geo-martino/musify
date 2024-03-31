@@ -98,26 +98,11 @@ def report_missing_tags(
     logger: MusifyLogger = logging.getLogger(__name__)
     logger.debug("Report missing tags: START")
 
-    tags = to_collection(tags, set)
-    tag_order = [field.name.lower() for field in ALL_FIELDS]
-    # noinspection PyTypeChecker
-    tag_names = set(TagField.__tags__) if Fields.ALL in tags else TagField.to_tags(tags)
-    tag_names: list[str] = list(sorted(tag_names, key=lambda x: tag_order.index(x)))
-
     if isinstance(collections, LocalLibrary):
         collections = collections.albums
-    items_total = sum(len(collection) for collection in collections)
 
-    logger.info(
-        f"\33[1;95m ->\33[1;97m "
-        f"Checking {items_total} items for {'all' if match_all else 'any'} missing tags: \n"
-        f"    \33[90m{', '.join(tag_names)}\33[0m"
-    )
-
-    if Fields.URI in tags or Fields.ALL in tags:
-        tag_names[tag_names.index(Fields.URI.name.lower())] = "has_uri"
-    if Fields.IMAGES in tags or Fields.ALL in tags:
-        tag_names[tag_names.index(Fields.IMAGES.name.lower())] = "has_image"
+    item_total = sum(len(collection) for collection in collections)
+    tag_names = _get_tag_names(logger=logger, tags=tags, item_total=item_total, match_all=match_all)
 
     missing: dict[str, dict[MusifyItem, tuple[str, ...]]] = {}
     for collection in collections:
@@ -138,26 +123,53 @@ def report_missing_tags(
         logger.debug("Report missing tags: DONE\n")
         return missing
 
-    all_keys = {item.name for items in missing.values() for item in items}
-    max_width = get_max_width(all_keys)
-
-    # log the report
-    logger.print(REPORT)
-    logger.report("\33[1;94mFound the following missing items by collection: \33[0m")
-    logger.print(REPORT)
-    for name, result in missing.items():
-        logger.report(f"\33[1;91m -> {name} \33[0m")
-        for item, tags in result.items():
-            n = align_string(item.name, max_width=max_width)
-            logger.report(f"\33[96m{n} \33[0m| \33[93m{', '.join(tags)} \33[0m")
-        logger.print(REPORT)
+    _log_missing_tags(logger=logger, missing=missing)
 
     missing_tags_all = {tag for items in missing.values() for tags in items.values() for tag in tags}
+    tag_order = [field.name.lower() for field in ALL_FIELDS]
     logger.info(
-        f"    \33[94mFound {len(all_keys)} items with "
+        f"    \33[94mFound {len({item for items in missing.values() for item in items})} items with "
         f"{'all' if match_all else 'any'} missing tags\33[0m: \n"
         f"    \33[90m{', '.join(sorted(missing_tags_all, key=lambda x: tag_order.index(x)))}\33[0m"
     )
     logger.print()
     logger.debug("Report missing tags: DONE\n")
     return missing
+
+
+def _get_tag_names(logger: MusifyLogger, tags: UnitIterable[TagField], item_total: int, match_all: bool) -> list[str]:
+    tags = to_collection(tags, set)
+    tag_order = [field.name.lower() for field in ALL_FIELDS]
+    # noinspection PyTypeChecker
+    tag_names_set = set(TagField.__tags__) if Fields.ALL in tags else TagField.to_tags(tags)
+    tag_names: list[str] = list(sorted(tag_names_set, key=lambda x: tag_order.index(x)))
+
+    logger.info(
+        f"\33[1;95m ->\33[1;97m "
+        f"Checking {item_total} items for {'all' if match_all else 'any'} missing tags: \n"
+        f"    \33[90m{', '.join(tag_names)}\33[0m"
+    )
+
+    # switch out tag names with expected attribute names to check on
+    if Fields.URI in tags or Fields.ALL in tags:
+        tag_names[tag_names.index(Fields.URI.name.lower())] = "has_uri"
+    if Fields.IMAGES in tags or Fields.ALL in tags:
+        tag_names[tag_names.index(Fields.IMAGES.name.lower())] = "has_image"
+
+    return tag_names
+
+
+def _log_missing_tags(logger: MusifyLogger, missing: dict[str, dict[MusifyItem, tuple[str, ...]]]) -> None:
+    all_keys = {item.name for items in missing.values() for item in items}
+    max_width = get_max_width(all_keys)
+
+    logger.print(REPORT)
+    logger.report("\33[1;94mFound the following missing items by collection: \33[0m")
+    logger.print(REPORT)
+
+    for name, result in missing.items():
+        logger.report(f"\33[1;91m -> {name} \33[0m")
+        for item, tags in result.items():
+            n = align_string(item.name, max_width=max_width)
+            logger.report(f"\33[96m{n} \33[0m| \33[93m{', '.join(tags)} \33[0m")
+        logger.print(REPORT)

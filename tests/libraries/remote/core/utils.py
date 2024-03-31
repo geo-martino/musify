@@ -65,33 +65,55 @@ class RemoteMock(Mocker):
         """Get a get request from the history from the given URL and params"""
         requests = []
         for request in self.request_history:
-            match_url = url is None
-            if not match_url:
-                if isinstance(url, str):
-                    match_url = url.strip("/").endswith(request.path.strip("/"))
-                elif isinstance(url, re.Pattern):
-                    match_url = bool(url.search(request.url))
-
-            match_method = method is None
-            if not match_method:
-                # noinspection PyProtectedMember
-                match_method = request._request.method.upper() == method.upper()
-
-            match_params = params is None
-            if not match_params and request.query:
-                for k, v in parse_qs(request.query).items():
-                    if k in params and str(params[k]) != v[0]:
-                        break
-                    match_params = True
-
-            match_response = response is None
-            if not match_response and request.body:
-                for k, v in request.json().items():
-                    if k in response and str(response[k]) != str(v):
-                        break
-                    match_response = True
-
-            if match_url and match_method and match_params and match_response:
+            matches = [
+                self._get_match_from_url(request=request, url=url),
+                self._get_match_from_method(request=request, method=method),
+                self._get_match_from_params(request=request, params=params),
+                self._get_match_from_response(request=request, response=response),
+            ]
+            if all(matches):
                 requests.append(request)
 
         return requests
+
+    @staticmethod
+    def _get_match_from_url(request: _RequestObjectProxy, url: str | re.Pattern[str] | None = None) -> bool:
+        match = url is None
+        if not match:
+            if isinstance(url, str):
+                match = url.strip("/").endswith(request.path.strip("/"))
+            elif isinstance(url, re.Pattern):
+                match = bool(url.search(request.url))
+
+        return match
+
+    @staticmethod
+    def _get_match_from_method(request: _RequestObjectProxy, method: str | None = None) -> bool:
+        match = method is None
+        if not match:
+            # noinspection PyProtectedMember
+            match = request._request.method.upper() == method.upper()
+
+        return match
+
+    @staticmethod
+    def _get_match_from_params(request: _RequestObjectProxy, params: dict[str, Any] | None = None) -> bool:
+        match = params is None
+        if not match and request.query:
+            for k, v in parse_qs(request.query).items():
+                if k in params and str(params[k]) != v[0]:
+                    break
+                match = True
+
+        return match
+
+    @staticmethod
+    def _get_match_from_response(request: _RequestObjectProxy, response: dict[str, Any] | None = None) -> bool:
+        match = response is None
+        if not match and request.body:
+            for k, v in request.json().items():
+                if k in response and str(response[k]) != str(v):
+                    break
+                match = True
+
+        return match

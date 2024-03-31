@@ -311,43 +311,44 @@ class TestLocalTrack(MusifyItemTester):
 class TestLocalTrackWriter:
 
     @staticmethod
-    def assert_track_tags_equal(actual: LocalTrack, expected: LocalTrack, check_tag_exists: bool = False):
-        """
-        Assert the tags of the givens tracks equal.
-        ``check_tag_exists`` checks that a mapping for that tag exists before comparing, skipping any that don't
-        """
-        if not check_tag_exists or actual.tag_map.title:
-            assert actual.title == expected.title, "title"
-        if not check_tag_exists or actual.tag_map.artist:
-            assert actual.artist == expected.artist, "artist"
-        if not check_tag_exists or actual.tag_map.album:
-            assert actual.album == expected.album, "album"
-        if not check_tag_exists or actual.tag_map.album_artist:
-            assert actual.album_artist == expected.album_artist, "album_artist"
-        if not check_tag_exists or actual.tag_map.track_number:
-            assert actual.track_number == expected.track_number, "track_number"
-        if not check_tag_exists or actual.tag_map.track_total:
-            assert actual.track_total == expected.track_total, "track_total"
-        if not check_tag_exists or actual.tag_map.genres:
-            assert actual.genres == expected.genres, "genres"
-        if not check_tag_exists or actual.tag_map.date:
-            assert actual.date == expected.date, "date"
-        if not check_tag_exists or actual.tag_map.year:
-            assert actual.year == expected.year, "year"
-        if not check_tag_exists or actual.tag_map.month:
-            assert actual.month == expected.month, "month"
-        if not check_tag_exists or actual.tag_map.day:
-            assert actual.day == expected.day, "day"
-        if not check_tag_exists or actual.tag_map.bpm:
-            assert actual.bpm == expected.bpm, "bpm"
-        if not check_tag_exists or actual.tag_map.key:
-            assert actual.key == expected.key, "key"
-        if not check_tag_exists or actual.tag_map.disc_number:
-            assert actual.disc_number == expected.disc_number, "disc_number"
-        if not check_tag_exists or actual.tag_map.disc_total:
-            assert actual.disc_total == expected.disc_total, "disc_total"
-        if not check_tag_exists or actual.tag_map.compilation:
-            assert actual.compilation == expected.compilation, "compilation"
+    def assert_track_tags_equal(actual: LocalTrack, expected: LocalTrack):
+        """Assert the tags of the givens tracks equal."""
+        assert actual.title == expected.title, "title"
+        assert actual.artist == expected.artist, "artist"
+        assert actual.album == expected.album, "album"
+        assert actual.album_artist == expected.album_artist, "album_artist"
+        assert actual.track_number == expected.track_number, "track_number"
+        assert actual.track_total == expected.track_total, "track_total"
+        assert actual.genres == expected.genres, "genres"
+        assert actual.date == expected.date, "date"
+        assert actual.year == expected.year, "year"
+        assert actual.month == expected.month, "month"
+        assert actual.day == expected.day, "day"
+        assert actual.bpm == expected.bpm, "bpm"
+        assert actual.key == expected.key, "key"
+        assert actual.disc_number == expected.disc_number, "disc_number"
+        assert actual.disc_total == expected.disc_total, "disc_total"
+        assert actual.compilation == expected.compilation, "compilation"
+
+    @staticmethod
+    def assert_track_tags_equal_on_existing(actual: LocalTrack, expected: LocalTrack):
+        """Assert the tags of the givens tracks equal only when a mapping for that tag exists."""
+        assert not actual.tag_map.title or actual.title == expected.title, "title"
+        assert not actual.tag_map.artist or actual.artist == expected.artist, "artist"
+        assert not actual.tag_map.album or actual.album == expected.album, "album"
+        assert not actual.tag_map.album_artist or actual.album_artist == expected.album_artist, "album_artist"
+        assert not actual.tag_map.track_number or actual.track_number == expected.track_number, "track_number"
+        assert not actual.tag_map.track_total or actual.track_total == expected.track_total, "track_total"
+        assert not actual.tag_map.genres or actual.genres == expected.genres, "genres"
+        assert not actual.tag_map.date or actual.date == expected.date, "date"
+        assert not actual.tag_map.year or actual.year == expected.year, "year"
+        assert not actual.tag_map.month or actual.month == expected.month, "month"
+        assert not actual.tag_map.day or actual.day == expected.day, "day"
+        assert not actual.tag_map.bpm or actual.bpm == expected.bpm, "bpm"
+        assert not actual.tag_map.key or actual.key == expected.key, "key"
+        assert not actual.tag_map.disc_number or actual.disc_number == expected.disc_number, "disc_number"
+        assert not actual.tag_map.disc_total or actual.disc_total == expected.disc_total, "disc_total"
+        assert not actual.tag_map.compilation or actual.compilation == expected.compilation, "compilation"
 
     def test_clear_tags_dry_run(self, track: LocalTrack):
         track_update = track
@@ -467,7 +468,7 @@ class TestLocalTrackWriter:
         assert result.saved
         track_update_replace = deepcopy(track_update)
 
-        self.assert_track_tags_equal(track_update_replace, track_update, check_tag_exists=True)
+        self.assert_track_tags_equal_on_existing(track_update_replace, track_update)
         assert track_update_replace.comments == [new_uri]
 
         if new_uri == track._reader.unavailable_uri_dummy:

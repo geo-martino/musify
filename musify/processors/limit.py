@@ -120,28 +120,42 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
             items_limit = [t for t in items]
             items.clear()
 
-        if self.kind == LimitType.ITEMS:  # limit on items
+        if self.kind == LimitType.ITEMS:
             items.extend(items_limit[:self.limit_max])
-        elif self.kind == LimitType.ALBUMS:  # limit on albums
-            seen_albums = []
-            for item in items_limit:
-                if not isinstance(item, Track):
-                    ItemLimiterError("In order to limit on Album, all items must be of type 'Track'")
+        elif self.kind == LimitType.ALBUMS:
+            items.extend(self._limit_on_albums(items_limit))
+        else:
+            items.extend(self._limit_on_numeric(items_limit))
 
-                if len(seen_albums) < self.limit_max and item.album not in seen_albums:
-                    # album limit not yet reached
-                    seen_albums.append(item.album)
-                if item.album in seen_albums:
-                    items.append(item)
-        else:  # limit on duration or size
-            count = 0
-            for item in items_limit:
-                value = self._convert(item)
-                if count + value <= self.limit_max * self.allowance:  # limit not yet reached
-                    items.append(item)
-                    count += value
-                if count > self.limit_max:  # limit reached
-                    break
+    def _limit_on_albums[T: MusifyItem](self, items: list[T]) -> list[T]:
+        seen_albums = []
+        result = []
+
+        for item in items:
+            if not isinstance(item, Track):
+                ItemLimiterError("In order to limit on Album, all items must be of type 'Track'")
+
+            if len(seen_albums) < self.limit_max and item.album not in seen_albums:
+                # album limit not yet reached
+                seen_albums.append(item.album)
+            if item.album in seen_albums:
+                result.append(item)
+
+        return result
+
+    def _limit_on_numeric[T: MusifyItem](self, items: list[T]) -> list[T]:
+        count = 0
+        result = []
+
+        for item in items:
+            value = self._convert(item)
+            if count + value <= self.limit_max * self.allowance:  # limit not yet reached
+                result.append(item)
+                count += value
+            if count > self.limit_max:  # limit reached
+                break
+
+        return result
 
     def _convert(self, item: MusifyItem) -> float:
         """
