@@ -297,6 +297,22 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], metaclas
         if isinstance(__key, int) or isinstance(__key, slice):  # simply index the list or items
             return self.items[__key]
 
+        getters = self.__get_item_getters(__key)
+        if not getters:
+            raise MusifyKeyError(f"Unrecognised key type | {__key=} | type={type(__key).__name__}")
+
+        caught_exceptions = []
+        for getter in getters:
+            try:
+                return getter.get_item(self)
+            except (MusifyAttributeError, MusifyKeyError) as ex:
+                caught_exceptions.append(ex)
+
+        raise MusifyKeyError(
+            f"Key is invalid. The following errors were thrown: {[str(ex) for ex in caught_exceptions]}"
+        )
+
+    def __get_item_getters(self, __key: str) -> list[ItemGetterStrategy]:
         getters = []
         if isinstance(__key, File):
             getters.append(PathGetter(__key.path))
@@ -316,19 +332,7 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], metaclas
                 NameGetter(__key),
             ])
 
-        if not getters:
-            raise MusifyKeyError(f"Unrecognised key type | {__key=} | type={type(__key).__name__}")
-
-        caught_exceptions = []
-        for getter in getters:
-            try:
-                return getter.get_item(self)
-            except (MusifyAttributeError, MusifyKeyError) as ex:
-                caught_exceptions.append(ex)
-
-        raise MusifyKeyError(
-            f"Key is invalid. The following errors were thrown: {[str(ex) for ex in caught_exceptions]}"
-        )
+        return getters
 
     def __setitem__(self, __key: str | int | T, __value: T):
         """Replace the item at a given ``__key`` with the given ``__value``."""

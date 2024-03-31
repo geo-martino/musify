@@ -408,53 +408,58 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
 
         print("\n" + help_text)
         for item in self._remaining.copy():
-            while item in self._remaining:  # while item not matched or skipped
+            while current_input is not None and item in self._remaining:  # while item not matched or skipped
                 self._log_padded([name, f"{len(self._remaining):>6} remaining items"])
                 if 'a' not in current_input:
                     current_input = self._get_user_input(align_string(item.name, max_width=max_width))
 
                 if current_input.casefold() == 'h':  # print help
                     print("\n" + help_text)
+                else:
+                    current_input = self._match_item_to_input(name=name, item=item, current_input=current_input)
 
-                elif current_input.casefold() == 's' or current_input.casefold() == 'q':  # quit/skip
-                    self._log_padded([name, "Skipping all loops"], pad="<")
-                    self._quit = current_input.casefold() == 'q' or self._quit
-                    self._skip = current_input.casefold() == 's' or self._skip
-                    self._remaining.clear()
-                    return
-
-                elif current_input.casefold().replace('a', '') == 'u':  # mark item as unavailable
-                    self._log_padded([name, "Marking as unavailable"], pad="<")
-                    item.uri = self.api.wrangler.unavailable_uri_dummy
-                    self._remaining.remove(item)
-
-                elif current_input.casefold().replace('a', '') == 'n':  # leave item without URI and unprocessed
-                    self._log_padded([name, "Skipping"], pad="<")
-                    item.uri = None
-                    self._remaining.remove(item)
-
-                elif current_input.casefold() == 'r':  # return to former 'while' loop
-                    self._log_padded([name, "Refreshing playlist metadata and restarting loop"])
-                    return
-
-                elif current_input.casefold() == 'p' and hasattr(item, "path"):  # print item path
-                    print(f"\33[96m{item.path}\33[0m")
-
-                elif self.api.wrangler.validate_id_type(current_input):  # update URI and add item to switched list
-                    uri = self.api.wrangler.convert(
-                        current_input, kind=RemoteObjectType.TRACK, type_out=RemoteIDType.URI
-                    )
-
-                    self._log_padded([name, f"Updating URI: {item.uri} -> {uri}"], pad="<")
-                    item.uri = uri
-
-                    self._switched.append(item)
-                    self._remaining.remove(item)
-                    current_input = ""
-
-                elif current_input:  # invalid input
-                    self.logger.warning("Input not recognised.")
-                    current_input = ""
-
-            if not self._remaining:
+            if current_input is None or not self._remaining:
                 break
+
+    def _match_item_to_input(self, name: str, item: MusifyItemSettable, current_input: str) -> str | None:
+        if current_input.casefold() == 's' or current_input.casefold() == 'q':  # quit/skip
+            self._log_padded([name, "Skipping all loops"], pad="<")
+            self._quit = current_input.casefold() == 'q' or self._quit
+            self._skip = current_input.casefold() == 's' or self._skip
+            self._remaining.clear()
+            return
+
+        elif current_input.casefold().replace('a', '') == 'u':  # mark item as unavailable
+            self._log_padded([name, "Marking as unavailable"], pad="<")
+            item.uri = self.api.wrangler.unavailable_uri_dummy
+            self._remaining.remove(item)
+
+        elif current_input.casefold().replace('a', '') == 'n':  # leave item without URI and unprocessed
+            self._log_padded([name, "Skipping"], pad="<")
+            item.uri = None
+            self._remaining.remove(item)
+
+        elif current_input.casefold() == 'r':  # return to former 'while' loop
+            self._log_padded([name, "Refreshing playlist metadata and restarting loop"])
+            return
+
+        elif current_input.casefold() == 'p' and hasattr(item, "path"):  # print item path
+            print(f"\33[96m{item.path}\33[0m")
+
+        elif self.api.wrangler.validate_id_type(current_input):  # update URI and add item to switched list
+            uri = self.api.wrangler.convert(
+                current_input, kind=RemoteObjectType.TRACK, type_out=RemoteIDType.URI
+            )
+
+            self._log_padded([name, f"Updating URI: {item.uri} -> {uri}"], pad="<")
+            item.uri = uri
+
+            self._switched.append(item)
+            self._remaining.remove(item)
+            current_input = ""
+
+        elif current_input:  # invalid input
+            self.logger.warning("Input not recognised.")
+            current_input = ""
+
+        return current_input

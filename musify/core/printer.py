@@ -106,30 +106,21 @@ class PrettyPrinter(ABC):
             elif isinstance(attr_val, (datetime, date)):
                 attr_val_str = str(attr_val)
             elif isinstance(attr_val, (list, tuple, set)) and len(attr_val) > 0:
-                pp_repr = "[{}]"
-                if isinstance(attr_val, set):
-                    pp_repr = "{{}}"
-                elif isinstance(attr_val, tuple):
-                    pp_repr = "({})"
-
-                attr_val_str = str(attr_val)
-
-                if len(attr_val_str) > max_val_width:
-                    pp_repr = pp_repr.format("\n" + " " * indent + "{}\n" + " " * indent_prev)
-                    attr_val_pp = []
-                    for val in attr_val:
-                        if isinstance(val, PrettyPrinter):
-                            attr_val_pp.append(val.__str__(indent=indent + increment, increment=increment))
-                        else:
-                            attr_val_pp.append(str(val))
-                    attr_val_str = pp_repr.format((",\n" + " " * indent).join(attr_val_pp))
+                attr_val_str = cls._get_attribute_value_from_collection(
+                    attr_val=attr_val,
+                    max_val_width=max_val_width,
+                    indent=indent,
+                    indent_prev=indent_prev,
+                    increment=increment
+                )
             elif isinstance(attr_val, Mapping) and len(attr_val) > 0:
-                attr_val_pp = cls._to_str(attr_val, indent=indent, increment=increment)
-                attr_val_str = "{" + ", ".join(attr_val_pp) + "}"
-
-                if len(attr_val_str) > max_val_width:
-                    pp_repr = "\n" + " " * indent + "{}\n" + " " * indent_prev
-                    attr_val_str = "{" + pp_repr.format((",\n" + " " * indent).join(attr_val_pp)) + "}"
+                attr_val_str = cls._get_attribute_value_from_mapping(
+                    attr_val=attr_val,
+                    max_val_width=max_val_width,
+                    indent=indent,
+                    indent_prev=indent_prev,
+                    increment=increment
+                )
             else:
                 attr_val_str = repr(attr_val)
 
@@ -140,6 +131,43 @@ class PrettyPrinter(ABC):
             attributes_repr.append(attr_val_repr)
 
         return attributes_repr
+
+    @staticmethod
+    def _get_attribute_value_from_collection(
+            attr_val: list | tuple | set, max_val_width: int, indent: int, indent_prev: int, increment: int
+    ) -> str:
+        pp_repr = "[{}]"
+        if isinstance(attr_val, set):
+            pp_repr = "{{}}"
+        elif isinstance(attr_val, tuple):
+            pp_repr = "({})"
+
+        attr_val_str = str(attr_val)
+
+        if len(attr_val_str) > max_val_width:
+            pp_repr = pp_repr.format("\n" + " " * indent + "{}\n" + " " * indent_prev)
+            attr_val_pp = []
+            for val in attr_val:
+                if isinstance(val, PrettyPrinter):
+                    attr_val_pp.append(val.__str__(indent=indent + increment, increment=increment))
+                else:
+                    attr_val_pp.append(str(val))
+            attr_val_str = pp_repr.format((",\n" + " " * indent).join(attr_val_pp))
+
+        return attr_val_str
+
+    @classmethod
+    def _get_attribute_value_from_mapping(
+            cls, attr_val: Mapping, max_val_width: int, indent: int, indent_prev: int, increment: int
+    ) -> str:
+        attr_val_pp = cls._to_str(attr_val, indent=indent, increment=increment)
+        attr_val_str = "{" + ", ".join(attr_val_pp) + "}"
+
+        if len(attr_val_str) > max_val_width:
+            pp_repr = "\n" + " " * indent + "{}\n" + " " * indent_prev
+            attr_val_str = "{" + pp_repr.format((",\n" + " " * indent).join(attr_val_pp)) + "}"
+
+        return attr_val_str
 
     def __repr__(self):
         return f"{self.__class__.__name__}({repr(self.as_dict())})"

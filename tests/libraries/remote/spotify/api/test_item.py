@@ -631,34 +631,42 @@ class TestSpotifyAPIItems(RemoteAPITester):
             assert len(results) == len(test)
 
         for result in results:
-            if features:
-                expected = features[result[self.id_key]]
-                if features_in_results:
-                    assert result["audio_features"] == expected
-                else:
-                    assert "audio_features" not in result
+            self._assert_extend_tracks_result(
+                result=result,
+                key="audio_features",
+                test=test,
+                extension=features[result[self.id_key]] if features else None,
+                extension_in_results=features_in_results
+            )
 
-                if test:
-                    assert test[result[self.id_key]]["audio_features"] == expected
+            self._assert_extend_tracks_result(
+                result=result,
+                key="audio_analysis",
+                test=test,
+                extension=analysis[result[self.id_key]] | {self.id_key: result[self.id_key]} if analysis else None,
+                extension_in_results=analysis_in_results
+            )
+
+    def _assert_extend_tracks_result(
+            self,
+            result: dict[str, Any],
+            key: str,
+            test: dict[str, dict[str, Any]] | None = None,
+            extension: dict[str, Any] | None = None,
+            extension_in_results: bool = True,
+    ):
+        if extension:
+            if extension_in_results:
+                assert result[key] == extension
             else:
-                assert "audio_features" not in result
-                if test:
-                    assert "audio_features" not in test[result[self.id_key]]
+                assert key not in result
 
-            if analysis:
-                expected = analysis[result[self.id_key]] | {self.id_key: result[self.id_key]}
-                assert result["audio_analysis"] == expected
-                if analysis_in_results:
-                    assert result["audio_analysis"] == expected
-                else:
-                    assert "audio_analysis" not in result
-
-                if test:
-                    assert test[result[self.id_key]]["audio_analysis"] == expected
-            else:
-                assert "audio_analysis" not in result
-                if test:
-                    assert "audio_analysis" not in test[result[self.id_key]]
+            if test:
+                assert test[result[self.id_key]][key] == extension
+        else:
+            assert key not in result
+            if test:
+                assert key not in test[result[self.id_key]]
 
     def assert_extend_tracks_calls(
             self,
