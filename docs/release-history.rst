@@ -42,6 +42,7 @@ Added
 * Property 'kind' to all objects which have an associated :py:class:`.RemoteObjectType`
 * Introduced :py:class:`.MusifyItemSettable` class to allow distinction
   between items that can have their properties set and those that can't
+* Extend :py:class:`.FilterMatcher` with group_by tag functionality
 
 Changed
 -------
@@ -62,6 +63,11 @@ Fixed
 -----
 
 * :py:class:`.Comparer` dynamic processor methods which process string values now cast expected types before processing
+
+Removed
+-------
+
+* Redundant ShuffleBy enum and related arguments from :py:class:`.ItemSorter`
 
 0.8.1
 =====

@@ -17,7 +17,7 @@ class MusifyEnum(IntEnum):
     @classmethod
     def map(cls, enum: Self) -> list[Self]:
         """
-        "Optional mapper to apply to the enum found during :py:meth:`all`, :py:meth:`from_name`,
+        Optional mapper to apply to the enum found during :py:meth:`all`, :py:meth:`from_name`,
         and :py:meth:`from_value` calls
         """
         return [enum]

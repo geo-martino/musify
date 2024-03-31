@@ -6,7 +6,7 @@ from random import sample, shuffle, randrange
 import pytest
 import xmltodict
 
-from musify.core.enum import Fields
+from musify.core.enum import Fields, TagFields
 from musify.file.path_mapper import PathStemMapper, PathMapper
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.local.track.field import LocalTrackField
@@ -293,6 +293,54 @@ class TestFilterMatcher(FilterTester):
         matches = sorted(matcher(values=tracks), key=self.sort_key)
         assert matches == sorted(tracks_artist_reduced + tracks_include_reduced, key=self.sort_key)
 
+    def test_extend_result_on_group_by_album(
+            self,
+            tracks: list[LocalTrack],
+            tracks_include: list[LocalTrack],
+            tracks_album: list[LocalTrack],
+            path_mapper: PathMapper
+    ):
+        tracks_include = tracks_include.copy() + [tracks_album[0]]
+        matcher = FilterMatcher(
+            include=FilterDefinedList([track.path.casefold() for track in tracks_include]),
+            group_by=TagFields.ALBUM
+        )
+        matcher.include.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
+
+        result = matcher.process_to_result(values=tracks)
+        assert sorted(result.included, key=self.sort_key) == sorted(tracks_include, key=self.sort_key)
+        assert not result.excluded
+        assert not result.compared
+        assert result.grouped
+        assert sorted(result.grouped, key=self.sort_key) == sorted(tracks_album[1:], key=self.sort_key)
+
+        combined_expected = sorted(tracks_include + tracks_album[1:], key=self.sort_key)
+        assert sorted(result.combined, key=self.sort_key) == combined_expected
+
+    def test_extend_result_on_group_by_artist(
+            self,
+            tracks: list[LocalTrack],
+            tracks_include: list[LocalTrack],
+            tracks_artist: list[LocalTrack],
+            path_mapper: PathMapper
+    ):
+        tracks_include = tracks_include.copy() + [tracks_artist[0]]
+        matcher = FilterMatcher(
+            include=FilterDefinedList([track.path.casefold() for track in tracks_include]),
+            group_by=TagFields.ARTIST
+        )
+        matcher.include.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
+
+        result = matcher.process_to_result(values=tracks)
+        assert sorted(result.included, key=self.sort_key) == sorted(tracks_include, key=self.sort_key)
+        assert not result.excluded
+        assert not result.compared
+        assert result.grouped
+        assert sorted(result.grouped, key=self.sort_key) == sorted(tracks_artist[1:], key=self.sort_key)
+
+        combined_expected = sorted(tracks_include + tracks_artist[1:], key=self.sort_key)
+        assert sorted(result.combined, key=self.sort_key) == combined_expected
+
     ###########################################################################
     ## XML I/O
     ###########################################################################
@@ -315,6 +363,8 @@ class TestFilterMatcher(FilterTester):
         assert matcher.comparers.match_all
         assert all(not m[1].ready for m in matcher.comparers.comparers.values())
 
+        assert matcher.group_by == Fields.ALBUM
+
     def test_from_xml_ra(self, path_mapper: PathStemMapper):
         with open(path_playlist_xautopf_ra, "r", encoding="utf-8") as f:
             xml = xmltodict.parse(f.read())
@@ -327,6 +377,8 @@ class TestFilterMatcher(FilterTester):
         assert len(matcher.comparers.comparers) == 0
         assert not matcher.comparers.match_all
         assert all(not m[1].ready for m in matcher.comparers.comparers.values())
+
+        assert matcher.group_by is None
 
     def test_from_xml_cm(self, path_mapper: PathStemMapper):
         with open(path_playlist_xautopf_cm, "r", encoding="utf-8") as f:
@@ -383,6 +435,8 @@ class TestFilterMatcher(FilterTester):
         assert sub_comparers_2[1].field == Fields.LAST_PLAYED
         assert sub_comparers_2[1].condition == "in_the_last"
         assert sub_comparers_2[1].expected == ["7d"]
+
+        assert matcher.group_by == Fields.ALBUM
 
     @pytest.mark.skip(reason="not implemented yet")
     def test_to_xml(self):

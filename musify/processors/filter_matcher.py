@@ -9,7 +9,7 @@ from dataclasses import field, dataclass
 from typing import Any
 
 from musify.core.base import MusifyItem
-from musify.core.enum import Fields
+from musify.core.enum import Fields, TagField, TagFields
 from musify.core.result import Result
 from musify.file.base import File
 from musify.file.path_mapper import PathMapper
@@ -30,11 +30,13 @@ class MatchResult[T: Any](Result):
     excluded: Collection[T] = field(default=tuple())
     #: Objects that matched :py:class:`Comparer` settings
     compared: Collection[T] = field(default=tuple())
+    #: Objects that matched on any group_by settings
+    grouped: Collection[T] = field(default=tuple())
 
     @property
     def combined(self) -> list[T]:
         """Combine the individual results to one combined list"""
-        return [track for results in [self.compared, self.included] for track in results if track not in self.excluded]
+        return [track for track in [*self.compared, *self.included, *self.grouped] if track not in self.excluded]
 
 
 class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](MusicBeeProcessor, FilterComposite[T]):
@@ -44,11 +46,13 @@ class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](MusicBeePr
     :param include: A Filter for simple include comparisons to use when matching.
     :param exclude: A Filter for simple exclude comparisons to use when matching.
     :param comparers: A Filter for fine-grained comparisons to use when matching.
-        When not given or the given Filter if not ready,
+        When not given or the given Filter is not ready,
         returns all given values on match unless include or exclude are defined and ready.
+    :param group_by: Once all other filters are applied, also include all other items that match this tag type
+        from the matched items for any remaining unmatched items.
     """
 
-    __slots__ = ("include", "exclude", "comparers")
+    __slots__ = ("include", "exclude", "comparers", "group_by")
 
     @classmethod
     def from_xml(
@@ -100,7 +104,10 @@ class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](MusicBeePr
         filter_include.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
         filter_exclude.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
 
-        return cls(include=filter_include, exclude=filter_exclude, comparers=filter_compare)
+        group_by_value = cls._pascal_to_snake(xml["SmartPlaylist"]["@GroupBy"])
+        group_by = None if group_by_value == "track" else TagFields.from_name(group_by_value)[0]
+
+        return cls(include=filter_include, exclude=filter_exclude, comparers=filter_compare, group_by=group_by)
 
     def to_xml(
             self,
@@ -123,44 +130,53 @@ class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](MusicBeePr
             )
             return {}
 
-        output_path_map: Mapping[str, File] = {item.path.casefold(): item for item in items}
+        items_mapped: Mapping[str, File] = {item.path.casefold(): item for item in items}
 
         if self.comparers:
             # match again on current conditions to check for differences from original list
-            # this ensures that the paths included in the XML output
-            # do not include paths that match any of the conditions in the comparers
+            # which ensures that the paths included in the XML output
+            # do not include paths that match any of the comparer or group_by conditions
 
             # copy the list of tracks as the sorter will modify the list order
             original = original.copy()
             # get the last played track as reference in case comparer is looking for the playing tracks as reference
             ItemSorter.sort_by_field(original, field=Fields.LAST_PLAYED, reverse=True)
 
-            compared_path_map = {
+            matched_mapped = {
                 item.path.casefold(): item for item in self.comparers(original, reference=original[0])
             } if self.comparers.ready else {}
+            matched_mapped |= {
+                item.path.casefold(): item for item in self._get_group_by_results(original, matched_mapped.values())
+            }
 
-            # get new include/exclude paths based on the leftovers after matching on comparers
-            self.exclude.values = list(compared_path_map.keys() - output_path_map)
-            self.include.values = [v for v in list(output_path_map - compared_path_map.keys()) if v not in self.exclude]
+            # get new include/exclude paths based on the leftovers after matching on comparers and group_by settings
+            self.exclude.values = list(matched_mapped.keys() - items_mapped)
+            self.include.values = [v for v in list(items_mapped - matched_mapped.keys()) if v not in self.exclude]
         else:
-            compared_path_map = output_path_map
+            matched_mapped = items_mapped
 
-        include_items = tuple(output_path_map[path] for path in self.include if path in output_path_map)
-        exclude_items = tuple(compared_path_map[path] for path in self.exclude if path in compared_path_map)
+        include_items = tuple(items_mapped[path] for path in self.include if path in items_mapped)
+        exclude_items = tuple(matched_mapped[path] for path in self.exclude if path in matched_mapped)
 
-        xml = {}
+        source = {}
         if len(include_items) > 0:  # assign include paths to XML object
-            xml["ExceptionsInclude"] = "|".join(path_mapper(include_items)).replace("&", "&amp;")
+            source["ExceptionsInclude"] = "|".join(path_mapper(include_items)).replace("&", "&amp;")
         if len(exclude_items) > 0:  # assign exclude paths to XML object
-            xml["Exceptions"] = "|".join(path_mapper(exclude_items)).replace("&", "&amp;")
+            source["Exceptions"] = "|".join(path_mapper(exclude_items)).replace("&", "&amp;")
 
-        return xml
+        return {
+            "SmartPlaylist": {
+                "@GroupBy": self.group_by.name.lower() if self.group_by else "track",
+                "Source": source,
+            }
+        }
 
     def __init__(
             self,
             include: U = FilterDefinedList(),
             exclude: V = FilterDefinedList(),
             comparers: X = FilterComparers(),
+            group_by: TagField | None = None,
             *_,
             **__
     ):
@@ -169,12 +185,15 @@ class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](MusicBeePr
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
 
-        #: The comparers to use when processing for this filter
-        self.comparers = comparers
         #: The filter that, when processed, returns items to include
         self.include = include
         #: The filter that, when processed, returns items to exclude
         self.exclude = exclude
+        #: The comparers to use when processing for this filter
+        self.comparers = comparers
+        #: Once all other filters are applied, also include all other items that match this tag type
+        #: from the matched items for the remaining items given
+        self.group_by = group_by
 
     def __call__(self, *args, **kwargs) -> list[T]:
         return self.process(*args, **kwargs)
@@ -200,7 +219,29 @@ class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](MusicBeePr
         tracks_reduced = {track for track in values if track not in included}
         compared = self.comparers(tracks_reduced, reference=reference) if self.comparers.ready else ()
 
-        return MatchResult(included=included, excluded=excluded, compared=compared)
+        result = MatchResult(included=included, excluded=excluded, compared=compared)
+        grouped = self._get_group_by_results(values, matched=result.combined)
+
+        if not grouped:
+            return result
+        return MatchResult(included=included, excluded=excluded, compared=compared, grouped=grouped)
+
+    def _get_group_by_results(self, values: Collection[T], matched: Collection[T]) -> tuple[T, ...]:
+        if not self.group_by or len(values) == len(matched):
+            return ()
+        tag_names = self.group_by.to_tag()
+        tag_values = {item[tag_name] for item in matched for tag_name in tag_names if hasattr(item, tag_name)}
+
+        return tuple(
+            item for item in values
+            if item not in matched
+            and any(item[tag_name] in tag_values for tag_name in tag_names if hasattr(item, tag_name))
+        )
 
     def as_dict(self):
-        return {"include": self.include, "exclude": self.exclude, "comparers": self.comparers}
+        return {
+            "include": self.include,
+            "exclude": self.exclude,
+            "comparers": self.comparers,
+            "group_by": self.group_by.name.lower() if self.group_by else None
+        }

@@ -8,7 +8,7 @@ import xmltodict
 from musify.field import TrackField
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.local.track.field import LocalTrackField
-from musify.processors.sort import ItemSorter, ShuffleMode, ShuffleBy
+from musify.processors.sort import ItemSorter, ShuffleMode
 from musify.utils import strip_ignore_words
 from tests.core.printer import PrettyPrinterTester
 from tests.libraries.local.track.utils import random_tracks
@@ -111,7 +111,6 @@ class TestItemSorter(PrettyPrinterTester):
 
         assert sorter.sort_fields == {LocalTrackField.TRACK_NUMBER: False}
         assert sorter.shuffle_mode == ShuffleMode.NONE  # switch to ShuffleMode.RECENT_ADDED once implemented
-        assert sorter.shuffle_by == ShuffleBy.ALBUM
         assert sorter.shuffle_weight == 0.5
 
     def test_from_xml_ra(self):
@@ -121,7 +120,6 @@ class TestItemSorter(PrettyPrinterTester):
 
         assert sorter.sort_fields == {LocalTrackField.DATE_ADDED: True}
         assert sorter.shuffle_mode == ShuffleMode.NONE
-        assert sorter.shuffle_by == ShuffleBy.TRACK
         assert sorter.shuffle_weight == -0.2
 
     @pytest.mark.skip(reason="not implemented yet")

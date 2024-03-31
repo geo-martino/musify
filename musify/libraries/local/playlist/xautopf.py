@@ -18,6 +18,7 @@ from musify.processors.filter import FilterDefinedList, FilterComparers
 from musify.processors.filter_matcher import FilterMatcher
 from musify.processors.limit import ItemLimiter
 from musify.processors.sort import ItemSorter
+from musify.utils import merge_maps
 
 
 @dataclass(frozen=True)
@@ -169,18 +170,12 @@ class XAutoPF(LocalPlaylist[FilterMatcher[
 
     def _update_xml_paths(self, xml: dict[str, Any]) -> None:
         """Update the stored, parsed XML object with valid include and exclude paths"""
-        source = xml["SmartPlaylist"]["Source"]
         output = self.matcher.to_xml(
             items=self.tracks,
             original=self._original,
             path_mapper=lambda paths: self.path_mapper.unmap_many(paths, check_existence=False)
         )
-
-        # assign values to stored, parsed XML map
-        for k, v in output.items():
-            source.pop(k, None)
-            if output.get(k):
-                source[k] = v
+        merge_maps(source=xml, new=output, extend=False, overwrite=True)
 
     def _update_comparers(self, xml: dict[str, Any]) -> None:
         """Update the stored, parsed XML object with appropriately formatted comparer settings"""

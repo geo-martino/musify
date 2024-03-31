@@ -15,19 +15,12 @@ from musify.utils import flatten_nested, strip_ignore_words, to_collection, limi
 
 
 class ShuffleMode(MusifyEnum):
-    """Represents the possible shuffle modes to use when shuffling items in a playlist."""
+    """Represents the possible shuffle modes to use when shuffling items using :py:class:`ItemSorter`."""
     NONE = 0
     RANDOM = 1
     HIGHER_RATING = 2
     RECENT_ADDED = 3
     DIFFERENT_ARTIST = 3
-
-
-class ShuffleBy(MusifyEnum):
-    """Represents the possible items/properties to shuffle by when shuffling items in a playlist."""
-    TRACK = 0
-    ALBUM = 1
-    ARTIST = 2
 
 
 class ItemSorter(MusicBeeProcessor):
@@ -39,12 +32,11 @@ class ItemSorter(MusicBeeProcessor):
         * List of tags/properties to sort by.
         * Map of ``{<tag/property>: <reversed>}``. If reversed is true, sort the ``tag/property`` in reverse.
     :param shuffle_mode: The mode to use for shuffling.
-    :param shuffle_by: The field to shuffle by when shuffling.
     :param shuffle_weight: The weights (between -1 and 1) to apply to shuffling modes that can use it.
         This value will automatically be limited to within the accepted range 0 and 1.
     """
 
-    __slots__ = ("sort_fields", "shuffle_mode", "shuffle_by", "shuffle_weight")
+    __slots__ = ("sort_fields", "shuffle_mode", "shuffle_weight")
 
     #: Settings for custom sort codes.
     _custom_sort: dict[int, Mapping[Field, bool]] = {
@@ -55,8 +47,7 @@ class ItemSorter(MusicBeeProcessor):
             Fields.FILENAME: False
         }
     }
-    # TODO: implement field_code 78 - manual order according to MusicBee library file.
-    #  This is a workaround
+    # TODO: implement field_code 78 - manual order according to MusicBee library file. This is a workaround
     _custom_sort[78] = _custom_sort[6]
 
     @classmethod
@@ -157,10 +148,9 @@ class ItemSorter(MusicBeeProcessor):
             raise NotImplementedError("Sort type in XML not recognised")
 
         shuffle_mode = ShuffleMode.from_name(cls._pascal_to_snake(xml["SmartPlaylist"]["@ShuffleMode"]))[0]
-        shuffle_by = ShuffleBy.from_name(cls._pascal_to_snake(xml["SmartPlaylist"]["@GroupBy"]))[0]
-        shuffle_weight = float(xml["SmartPlaylist"].get("@ShuffleSameArtistWeight", 1))
+        shuffle_weight = float(xml["SmartPlaylist"].get("@ShuffleSameArtistWeight", 0))
 
-        return cls(fields=fields, shuffle_mode=shuffle_mode, shuffle_by=shuffle_by, shuffle_weight=shuffle_weight)
+        return cls(fields=fields, shuffle_mode=shuffle_mode, shuffle_weight=shuffle_weight)
 
     def to_xml(self, **kwargs) -> Mapping[str, Any]:
         raise NotImplementedError
@@ -169,17 +159,16 @@ class ItemSorter(MusicBeeProcessor):
             self,
             fields: UnitSequence[Field | None] | Mapping[Field | None, bool] = (),
             shuffle_mode: ShuffleMode = ShuffleMode.NONE,
-            shuffle_by: ShuffleBy = ShuffleBy.TRACK,
-            shuffle_weight: float = 1.0
+            shuffle_weight: float = 0.0
     ):
         super().__init__()
         fields = to_collection(fields, list) if isinstance(fields, Field) else fields
         self.sort_fields: Mapping[Field | None, bool]
         self.sort_fields = {field: False for field in fields} if isinstance(fields, Sequence) else fields
 
-        self.shuffle_mode: ShuffleMode | None
-        self.shuffle_mode = shuffle_mode if shuffle_mode in [ShuffleMode.NONE, ShuffleMode.RANDOM] else ShuffleMode.NONE
-        self.shuffle_by: ShuffleBy | None = shuffle_by
+        # TODO: implement all shuffle modes
+        self.shuffle_mode: ShuffleMode | None = shuffle_mode \
+            if shuffle_mode in [ShuffleMode.NONE, ShuffleMode.RANDOM] else ShuffleMode.NONE
         self.shuffle_weight = limit_value(shuffle_weight, floor=-1, ceil=1)
 
     def __call__(self, *args, **kwargs) -> None:
@@ -234,5 +223,5 @@ class ItemSorter(MusicBeeProcessor):
         return {
             "sort_fields": fields,
             "shuffle_mode": self.shuffle_mode,
-            "shuffle_by": self.shuffle_by
+            "shuffle_weight": self.shuffle_weight
         }
