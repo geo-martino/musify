@@ -69,6 +69,11 @@ Removed
 
 * Redundant ShuffleBy enum and related arguments from :py:class:`.ItemSorter`
 
+Documentation
+-------------
+
+* Added info on lint checking for the contributing page
+
 0.8.1
 =====
 
