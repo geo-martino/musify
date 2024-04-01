@@ -73,7 +73,7 @@ class File(Hashable, metaclass=ABCMeta):
     @classmethod
     def get_filepaths(cls, folder: str) -> set[str]:
         """Get all files in a given folder that match this File object's valid filetypes recursively."""
-        paths = set()
+        paths: set[str] = set()
 
         for ext in cls.valid_extensions:
             paths |= set(glob(join(folder, "**", f"*{ext}"), recursive=True, include_hidden=True))

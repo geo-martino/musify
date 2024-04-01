@@ -268,7 +268,7 @@ class Comparer(MusicBeeProcessor, DynamicProcessor):
 
     @dynamicprocessormethod
     def _in_range(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
-        return expected[0] < value < expected[1] if value is not None and expected[0] is not None else False
+        return expected[0] <= value <= expected[1] if value is not None and expected[0] is not None else False
 
     @dynamicprocessormethod
     def _not_in_range(self, value: Any | None, expected: Sequence[Any] | None) -> bool:

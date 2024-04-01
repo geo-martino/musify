@@ -10,8 +10,8 @@ import pytest
 
 from musify.file.exception import InvalidFileType
 from musify.file.path_mapper import PathMapper, PathStemMapper
-from musify.libraries.local.library import MusicBee
-from musify.libraries.local.playlist import XAutoPF, load_playlist
+from musify.libraries.local.library import MusicBee, LocalLibrary
+from musify.libraries.local.playlist import XAutoPF
 from musify.libraries.local.track import LocalTrack
 from tests.libraries.local.playlist.testers import LocalPlaylistTester
 from tests.libraries.local.track.utils import random_track, random_tracks
@@ -176,31 +176,36 @@ class TestXAutoPF(LocalPlaylistTester):
             assert path.startswith("../")
 
 
+@pytest.mark.manual
+@pytest.fixture(scope="module")
+def library() -> LocalLibrary:
+    mapper = PathStemMapper({"../..": os.getenv("TEST_PL_LIBRARY", "")})
+    library = MusicBee(musicbee_folder=join(os.getenv("TEST_PL_LIBRARY"), "MusicBee"), path_mapper=mapper)
+    library.load_tracks()
+    return library
+
+
 # noinspection PyTestUnpassedFixture, SpellCheckingInspection
 @pytest.mark.manual
 @pytest.mark.skipif(
     "not config.getoption('-m') and not config.getoption('-k')",
     reason="Only runs when the test or marker is specified explicitly by the user",
 )
-@pytest.mark.parametrize("source,expected,mapper", [
+@pytest.mark.parametrize("source,expected", [
     (
         join(os.getenv("TEST_PL_SOURCE", ""), f"{splitext(basename(name))[0]}.xautopf"),
         join(os.getenv("TEST_PL_COMPARISON", ""), f"{splitext(basename(name))[0]}.m3u"),
-        PathStemMapper({"../..": os.getenv("TEST_PL_LIBRARY", "")})
     )
     for name in glob(join(os.getenv("TEST_PL_SOURCE", ""), "**", "*.xautopf"), recursive=True)
 ])
-def test_playlist_paths_manual(source: str, expected: str, mapper: PathMapper):
+def test_playlist_paths_manual(library: LocalLibrary, source: str, expected: str):
     assert exists(source)
     assert exists(expected)
 
-    library = MusicBee(musicbee_folder=join(os.getenv("TEST_PL_LIBRARY"), "MusicBee"), path_mapper=mapper)
-    library.load_tracks()
+    pl = library.load_playlist(source)
 
-    pl = load_playlist(source, tracks=library.tracks, path_mapper=mapper)
-    paths_source = [track.path for track in pl]
+    with open(expected, "r", encoding="utf-8") as f:
+        paths_expected = [library.path_mapper.map(line.strip()) for line in f]
 
-    with open(expected, "r") as f:
-        paths_expected = [mapper.map(line.strip()) for line in f]
-
-    assert paths_source == paths_expected
+    assert sorted(track.path for track in pl) == sorted(paths_expected)
+    assert [track.path for track in pl] == paths_expected
