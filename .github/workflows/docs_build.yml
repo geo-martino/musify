@@ -32,7 +32,7 @@ jobs:
           python-version: ${{ env.python-version }}
 
       - name: ⚙️ Setup - Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5
 
       - name: ⚙️ Setup - Install dependencies
         run: |
