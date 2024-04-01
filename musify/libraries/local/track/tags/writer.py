@@ -2,7 +2,7 @@
 Implements all functionality pertaining to writing and deleting metadata/tags/properties for a :py:class:`LocalTrack`.
 """
 from abc import ABCMeta, abstractmethod
-from collections.abc import Mapping, Collection
+from collections.abc import Mapping, Collection, Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -115,8 +115,11 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
 
         updated = {}
         for tag in tags:
-            method = getattr(self, f"write_{tag.name.lower()}")
+            method: Callable[Any, Mapping[Tags, int] | int | None] = getattr(self, f"write_{tag.name.lower()}")
             result = method(source=source, target=target, replace=replace, dry_run=dry_run)
+            if result is None:
+                continue
+
             if isinstance(result, Mapping):
                 updated |= result
             else:
@@ -329,7 +332,9 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         """
         return self.write_tag(next(iter(self.tag_map.genres), None), track.genres, dry_run)
 
-    def write_date(self, source: Track, target: Track, replace: bool = False, dry_run: bool = True) -> dict[Tags, int]:
+    def write_date(
+            self, source: Track, target: Track, replace: bool = False, dry_run: bool = True
+    ) -> dict[Tags, int] | None:
         """
         Write the track date and/or year/month/day tags to file if appropriate related conditions are met.
 
@@ -348,7 +353,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         }
 
         if not any(conditionals):
-            return {}
+            return
 
         date, year, month, day = self._write_date(track=target, dry_run=dry_run)
 
@@ -363,7 +368,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         if day:
             updated[Tags.DAY] = condition
 
-        return updated
+        return updated if updated else None
 
     def _write_date(self, track: Track, dry_run: bool = True) -> tuple[bool, bool, bool, bool]:
         """

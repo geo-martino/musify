@@ -478,6 +478,44 @@ class TestLocalTrackWriter:
         assert track_update_replace.image_links == track_update.image_links
         assert track_update_replace.has_image == track_update.has_image
 
+    def test_update_tags_results(self, track: LocalTrack):
+        track_original = copy(track)
+
+        track.title = "new title"
+        track.album = "new album artist"
+        track.track_number += 2
+        track.genres = ["Big Band", "Swing"]
+        track.year += 10
+        track.bpm += 10
+        track.key = "F#"
+        track.disc_number += 5
+
+        result = track.save(tags=LocalTrackField.ALL, replace=True, dry_run=False)
+        assert result.saved
+
+        expected_tags = {
+            LocalTrackField.TITLE,
+            LocalTrackField.ALBUM,
+            LocalTrackField.TRACK,
+            LocalTrackField.GENRES,
+            (LocalTrackField.DATE if track.tag_map.date else LocalTrackField.YEAR),
+            LocalTrackField.BPM,
+            LocalTrackField.KEY,
+            LocalTrackField.DISC,
+        }
+        assert set(result.updated) == expected_tags
+
+        self.assert_track_tags_equal(track, deepcopy(track_original))
+
+        track.artist = "new artist"
+        track.album_artist = "new various"
+        track.compilation = not track.compilation
+
+        tags_to_update = {LocalTrackField.ARTIST, LocalTrackField.COMPILATION}
+        result = track.save(tags=tags_to_update, replace=True, dry_run=False)
+        assert result.saved
+        assert set(result.updated) == tags_to_update
+
     @staticmethod
     def get_update_image_test_track(track: LocalTrack) -> tuple[LocalTrack, LocalTrack]:
         """Load track and modify its tags for update tags tests"""
