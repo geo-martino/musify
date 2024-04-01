@@ -60,6 +60,8 @@ Changed
   all MusifyItem types that may have their URI property set manually.
 * :py:class:`.ItemSorter` now shuffles randomly on unsupported types
   + prioritises fields settings over shuffle settings
+* :py:meth:`.ItemComparer._in_range` now uses inclusive range i.e. ``a <= x <= b`` where ``x`` is the value to compare
+  and ``a`` and ``b`` are the limits. Previously used exclusive range i.e. ``a < x < b``
 
 Fixed
 -----
