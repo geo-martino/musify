@@ -444,7 +444,7 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         current = deepcopy(self)
         current.refresh()
 
-        return self._writer.write(source=current, target=self, replace=replace, dry_run=dry_run)
+        return self._writer.write(source=current, target=self, tags=tags, replace=replace, dry_run=dry_run)
 
     def delete_tags(self, tags: UnitIterable[Tags] = (), dry_run: bool = True) -> SyncResultTrack:
         """

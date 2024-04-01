@@ -384,7 +384,6 @@ class SpotifyCollectionLoader[T: SpotifyObject](RemoteCollectionLoader[T], Spoti
         matched, missing = cls._merge_items_to_response(items=items, response=response[item_key][api.items_key])
 
         if missing:
-            print(missing)
             items_missing = cls._get_items(items=missing, api=api, use_cache=use_cache)
             cls._merge_items_to_response(items=items_missing, response=response[item_key][api.items_key], skip=matched)
 
