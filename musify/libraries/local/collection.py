@@ -119,7 +119,7 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
 
         :param tags: Tags to be updated.
         :param replace: Destructively replace tags in each file.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: A map of the :py:class:`LocalTrack` saved to its result as a :py:class:`SyncResultTrack` object
         """
         bar = self.logger.get_progress_bar(iterable=self.tracks, desc="Updating tracks", unit="tracks")

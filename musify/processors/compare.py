@@ -25,6 +25,8 @@ class Comparer(MusicBeeProcessor, DynamicProcessor):
     :param expected: Optional list of expected values to match on.
         Types of the values in this list are automatically converted to the type of the item field's value.
     :param field: The field to match on.
+    :param reference_required: When True, a reference object of type ``T`` must be passed to the ``compare`` method.
+        An exception will be raised if this is True and reference object is not passed.
     """
 
     __slots__ = ("_expected", "_converted", "field")
@@ -45,15 +47,23 @@ class Comparer(MusicBeeProcessor, DynamicProcessor):
         self._converted = False
         self._expected = to_collection(value, list)
 
-    def __init__(self, condition: str, expected: UnitSequence[Any] | None = None, field: Field | None = None):
+    def __init__(
+            self,
+            condition: str,
+            expected: UnitSequence[Any] | None = None,
+            field: Field | None = None,
+            reference_required: bool = False,
+    ):
         super().__init__()
         self._expected: list[Any] | None = None
         self._converted = False
 
+        self.expected: list[Any] | None = to_collection(expected, list)
         #: The :py:class:`Field` representing the property to extract the comparison value from
         #: when an :py:class:`MusifyItem` is given
         self.field: Field | None = field.map(field)[0] if field else None
-        self.expected: list[Any] | None = to_collection(expected, list)
+        #: Whether to raise an exception when :py:meth:`compare` is called and a reference object is not provided.
+        self.reference_required = reference_required
 
         self._set_processor_name(condition)
 
@@ -71,6 +81,8 @@ class Comparer(MusicBeeProcessor, DynamicProcessor):
         if self.condition is None:
             return False
 
+        if reference is None and self.reference_required:
+            raise ComparerError("A reference is required for this instance of Comparer")
         if reference is None and not self.expected:
             raise ComparerError("No comparative item given and no expected values set")
 

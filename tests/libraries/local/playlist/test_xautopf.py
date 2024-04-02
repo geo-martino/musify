@@ -137,10 +137,9 @@ class TestXAutoPF(LocalPlaylistTester):
         assert len(pl.tracks) == 32
         original_dt_modified = pl.date_modified
         original_dt_created = pl.date_created
-        original_xml = deepcopy(pl.xml)
+        original_parser = deepcopy(pl._parser)
 
         # perform some operations on the playlist
-        pl.description = "new description"
         tracks_added = random_tracks(3)
         pl.tracks += tracks_added
         pl.tracks.pop(5)
@@ -151,14 +150,12 @@ class TestXAutoPF(LocalPlaylistTester):
         result = pl.save(dry_run=True)
 
         assert result.start == 32
-        assert result.start_description == "I am a description"
         assert result.start_included == 3
         assert result.start_excluded == 3
         assert result.start_compared == 3
         assert not result.start_limiter
         assert result.start_sorter
         assert result.final == len(pl.tracks)
-        assert result.final_description == pl.description
         assert result.final_included == 4
         assert result.final_excluded == 2
         assert result.final_compared == 3
@@ -167,8 +164,9 @@ class TestXAutoPF(LocalPlaylistTester):
 
         assert pl.date_modified == original_dt_modified
         assert pl.date_created == original_dt_created
-        assert pl.xml == original_xml
+        assert pl._parser.xml == original_parser.xml
 
+        pl.description = "new description"
         pl.save(dry_run=False)
 
         if not os.getenv("GITHUB_ACTIONS"):
@@ -176,12 +174,12 @@ class TestXAutoPF(LocalPlaylistTester):
             assert pl.date_modified > original_dt_modified
             assert pl.date_created == original_dt_created
 
-        assert pl.xml != original_xml
-        assert pl.xml["SmartPlaylist"]["@GroupBy"] == original_xml["SmartPlaylist"]["@GroupBy"]
-        assert pl.xml["SmartPlaylist"]["Source"]["Conditions"] == original_xml["SmartPlaylist"]["Source"]["Conditions"]
+        assert pl._parser.xml != original_parser
+        assert pl._parser.xml_smart_playlist["@GroupBy"] == original_parser.xml_smart_playlist["@GroupBy"]
+        assert pl._parser.xml_source["Conditions"] == original_parser.xml_source["Conditions"]
 
         # assert file has reported path count and paths in the file have been mapped to relative paths
-        paths = pl.xml["SmartPlaylist"]["Source"]["ExceptionsInclude"].split("|")
+        paths = pl._parser.xml_source["ExceptionsInclude"].split("|")
         assert len(paths) == result.final_included
         for path in paths:
             assert path.startswith("../")

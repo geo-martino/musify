@@ -23,7 +23,7 @@ from musify.processors.filter import FilterDefinedList, FilterComparers
 from musify.processors.filter_matcher import FilterMatcher
 from musify.processors.limit import ItemLimiter, LimitType
 from musify.processors.sort import ItemSorter, ShuffleMode
-from musify.utils import merge_maps, to_collection
+from musify.utils import to_collection
 
 AutoMatcher = FilterMatcher[
     LocalTrack, FilterDefinedList[LocalTrack], FilterDefinedList[LocalTrack], FilterComparers[LocalTrack]
@@ -35,8 +35,6 @@ class SyncResultXAutoPF(Result):
     """Stores the results of a sync with a local XAutoPF playlist."""
     #: The total number of tracks in the playlist before the sync.
     start: int
-    #: The description of the playlist before sync.
-    start_description: str
     #: The number of tracks that matched the include settings before the sync.
     start_included: int
     #: The number of tracks that matched the exclude settings before the sync.
@@ -50,8 +48,6 @@ class SyncResultXAutoPF(Result):
 
     #: The total number of tracks in the playlist after the sync.
     final: int
-    #: The description of the playlist after sync.
-    final_description: str
     #: The number of tracks that matched the include settings after the sync.
     final_included: int
     #: The number of tracks that matched the exclude settings after the sync.
@@ -78,17 +74,17 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
         mapped to absolute, system-specific paths to be loaded and back again when saved.
     """
 
-    __slots__ = ("_parser", "_description",)
+    __slots__ = ("_parser",)
 
     valid_extensions = frozenset({".xautopf"})
 
     @property
     def description(self):
-        return self._description
+        return self._parser.description
 
     @description.setter
     def description(self, value: str | None):
-        self._description = value
+        self._parser.description = value
 
     @property
     def image_links(self):
@@ -106,7 +102,6 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
             )
 
         self._parser = XMLPlaylistParser(path=path, path_mapper=path_mapper)
-        self._description = self._parser.xml_source["Description"]
 
         super().__init__(
             path=path,
@@ -133,83 +128,45 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
         """
         Write the tracks in this Playlist and its settings (if applicable) to file.
 
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: The results of the sync as a :py:class:`SyncResultXAutoPF` object.
         """
-        xml_start = deepcopy(self.xml)
-        xml_final = deepcopy(self.xml)
+        initial = deepcopy(self._parser)
+        initial_count = len(self._original)
 
-        count_start = len(self._original)
-        source_start: dict[str, Any] = xml_start["SmartPlaylist"]["Source"]
-        source_final: dict[str, Any] = xml_final["SmartPlaylist"]["Source"]
+        parser = self._parser if not dry_run else deepcopy(self._parser)
+        parser.parse_matcher(self.matcher)
+        parser.parse_exception_paths(self.matcher, items=self.tracks, original=self._original)
+        parser.parse_limiter(self.limiter)
+        parser.parse_sorter(self.sorter)
+        parser.save(dry_run=dry_run)
 
-        # update the stored XML object
-        source_final["Description"] = self.description
-        self._update_xml_paths(xml_final)
-        # self._update_comparers(xml_final)
-        # self._update_limiter(xml_final)
-        # self._update_sorter(xml_final)
-
-        if not dry_run:  # save the modified XML object to file and update stored values
-            self.xml = xml_final
-            self._save_xml()
+        if not dry_run:
             self._original = self.tracks.copy()
 
         return SyncResultXAutoPF(
-            start=count_start,
-            start_description=source_start["Description"],
-            start_included=len([p for p in source_start.get("ExceptionsInclude", "").split("|") if p]),
-            start_excluded=len([p for p in source_start.get("Exceptions", "").split("|") if p]),
-            start_compared=len(source_start["Conditions"].get("Condition", [])),
-            start_limiter=source_start["Limit"].get("@Enabled", "False") == "True",
-            start_sorter=len(source_start.get("SortBy", source_start.get("DefinedSort", []))) > 0,
+            start=initial_count,
+            start_included=len([p for p in initial.xml_source.get("ExceptionsInclude", "").split("|") if p]),
+            start_excluded=len([p for p in initial.xml_source.get("Exceptions", "").split("|") if p]),
+            start_compared=len(initial.xml_source["Conditions"].get("Condition", [])),
+            start_limiter=initial.xml_source["Limit"].get("@Enabled", "False") == "True",
+            start_sorter=len(initial.xml_source.get("SortBy", initial.xml_source.get("DefinedSort", []))) > 0,
             final=len(self.tracks),
-            final_description=source_final["Description"],
-            final_included=len([p for p in source_final.get("ExceptionsInclude", "").split("|") if p]),
-            final_excluded=len([p for p in source_final.get("Exceptions", "").split("|") if p]),
-            final_compared=len(source_final["Conditions"].get("Condition", [])),
-            final_limiter=source_final["Limit"].get("@Enabled", "False") == "True",
-            final_sorter=len(source_final.get("SortBy", source_final.get("DefinedSort", []))) > 0,
+            final_included=len([p for p in parser.xml_source.get("ExceptionsInclude", "").split("|") if p]),
+            final_excluded=len([p for p in parser.xml_source.get("Exceptions", "").split("|") if p]),
+            final_compared=len(parser.xml_source["Conditions"].get("Condition", [])),
+            final_limiter=parser.xml_source["Limit"].get("@Enabled", "False") == "True",
+            final_sorter=len(parser.xml_source.get("SortBy", parser.xml_source.get("DefinedSort", []))) > 0,
         )
 
-    def _update_xml_paths(self, xml: dict[str, Any]) -> None:
-        """Update the stored, parsed XML object with valid include and exclude paths"""
-        output = self.matcher.to_xml(
-            items=self.tracks,
-            original=self._original,
-            path_mapper=""
-        )
-        merge_maps(source=xml, new=output, extend=False, overwrite=True)
 
-    def _update_comparers(self, xml: dict[str, Any]) -> None:
-        """Update the stored, parsed XML object with appropriately formatted comparer settings"""
-        # TODO: implement comparison XML part updater (low priority)
-        raise NotImplementedError
+class XMLPlaylistParser(File, PrettyPrinter):
 
-    def _update_limiter(self, xml: dict[str, Any]) -> None:
-        """Update the stored, parsed XML object with appropriately formatted limiter settings"""
-        # TODO: implement limit XML part updater (low priority)
-        raise NotImplementedError
-
-    def _update_sorter(self, xml: dict[str, Any]) -> None:
-        """Update the stored, parsed XML object with appropriately formatted sorter settings"""
-        # TODO: implement sort XML part updater (low priority)
-        raise NotImplementedError
-
-    def _save_xml(self) -> None:
-        """Save XML representation of the playlist"""
-        with open(self.path, 'w', encoding="utf-8") as file:
-            xml_str = xmltodict.unparse(self.xml, pretty=True, short_empty_elements=True)
-            file.write(xml_str.replace("/>", " />").replace('\t', '  '))
-
-
-class XMLPlaylistParser(PrettyPrinter):
-
-    __slots__ = ("path", "path_mapper",)
+    __slots__ = ("_path", "path_mapper", "xml",)
 
     # noinspection SpellCheckingInspection
     #: Map of MusicBee field name to Field enum
-    field_name_map = {
+    name_field_map = {
         "None": None,
         "Title": Fields.TITLE,
         "ArtistPeople": Fields.ARTIST,
@@ -245,6 +202,7 @@ class XMLPlaylistParser(PrettyPrinter):
         "FileLastPlayed": Fields.LAST_PLAYED,
         "FilePlayCount": Fields.PLAY_COUNT,
     }
+    field_name_map = {field: name for name, field in name_field_map.items()}
 
     #: Settings for custom sort codes.
     custom_sort: dict[int, Mapping[Field, bool]] = {
@@ -259,6 +217,10 @@ class XMLPlaylistParser(PrettyPrinter):
     }
 
     @property
+    def path(self) -> str:
+        return self._path
+
+    @property
     def xml_smart_playlist(self) -> dict[str, Any]:
         """The smart playlist data part of the loaded XML playlist data"""
         return self.xml["SmartPlaylist"]
@@ -268,13 +230,39 @@ class XMLPlaylistParser(PrettyPrinter):
         """The source data part of the loaded XML playlist data"""
         return self.xml_smart_playlist["Source"]
 
+    @property
+    def description(self):
+        """The description value of the XML playlist data"""
+        return self.xml_source["Description"]
+
+    @description.setter
+    def description(self, value: str | None):
+        """The description value of the XML playlist data"""
+        if value:
+            self.xml_source["Description"] = value
+        else:
+            self.xml_source.pop("Description", None)
+
     def __init__(self, path: str, path_mapper: PathMapper = PathMapper()):
-        self.path = path
+        self._path = path
+        self.path_mapper = path_mapper
+
+        #: A map representation of the loaded XML playlist data
+        self.xml: dict[str, Any] = {}
+        self.load()
+
+    def load(self) -> None:
+        """Load ``xml`` object from the disk"""
         with open(self.path, "r", encoding="utf-8") as file:
-            #: A map representation of the loaded XML playlist data
             self.xml: dict[str, Any] = xmltodict.parse(file.read())
 
-        self.path_mapper = path_mapper
+    def save(self, dry_run: bool = True, *_, **__) -> None:
+        """Save ``xml`` object to the disk"""
+        if dry_run:
+            return
+        with open(self.path, 'w', encoding="utf-8") as file:
+            xml_str = xmltodict.unparse(self.xml, pretty=True, short_empty_elements=True)
+            file.write(xml_str.replace("/>", " />").replace('\t', '  '))
 
     def _get_comparer(self, xml: Mapping[str, Any]) -> Comparer:
         """
@@ -285,19 +273,41 @@ class XMLPlaylistParser(PrettyPrinter):
             This function expects to be given only the XML part related to one Comparer condition.
         :return: The initialised :py:class:`Comparer`.
         """
-        field_str = xml.get("@Field", "None")
-        field: Field = self.field_name_map.get(field_str)
+        field_name = xml.get("@Field", "None")
+        field: Field = self.name_field_map.get(field_name)
         if field is None:
-            raise FieldError("Unrecognised field name", field=field_str)
+            raise FieldError("Unrecognised field name", field=field_name)
 
         expected: tuple[str, ...] | None = tuple(v for k, v in xml.items() if k.startswith("@Value"))
+        reference_required = next(iter(expected), None) == "[playing track]"
         if len(expected) == 0 or expected[0] == "[playing track]":
             expected = None
 
-        return Comparer(condition=xml["@Comparison"], expected=expected, field=field)
+        return Comparer(
+            condition=xml["@Comparison"], expected=expected, field=field, reference_required=reference_required
+        )
 
     def _get_xml_from_comparer(self, comparer: Comparer) -> dict[str, Any]:
         """Parse the given ``comparer`` to its XML playlist representation."""
+        field_name = self.field_name_map.get(comparer.field)
+        if field_name is None:
+            raise FieldError("Unrecognised field", field=comparer.field)
+
+        condition = "[playing track]" if comparer.reference_required else self._snake_to_pascal(comparer.condition)
+
+        xml: dict[str, Any] = {"@Field": field_name, "@Comparison": condition}
+
+        if comparer.expected is None:
+            pass
+        elif len(comparer.expected) == 0:
+            xml["Value"] = ""
+        elif len(comparer.expected) == 1:
+            xml["Value"] = str(comparer.expected[0])
+        else:
+            for i, value in enumerate(comparer.expected):
+                xml[f"Value{i}"] = str(value)
+
+        return xml
 
     def get_matcher(self) -> AutoMatcher:
         """Initialise and return a :py:class:`FilterMatcher` object from loaded XML playlist data."""
@@ -345,21 +355,30 @@ class XMLPlaylistParser(PrettyPrinter):
             include=filter_include, exclude=filter_exclude, comparers=filter_compare, group_by=group_by
         )
 
-    def _get_xml_from_matcher(
-            self, matcher: FilterMatcher, items: list[File], original: list[File | MusifyItem]
-    ) -> Mapping[str, Any]:
+    def parse_matcher(self, matcher: FilterMatcher) -> None:
         """
-        Parse the given ``matcher`` to its XML playlist representation.
+        Update the loaded ``xml`` object by parsing the given ``matcher`` to its XML playlist representation.
+        Does not extract exception paths (i.e. include/exclude attributes).
+        """
+        group_by = matcher.group_by.name.lower() if matcher.group_by else "track"
+        self.xml_smart_playlist["@GroupBy"] = self._snake_to_pascal(group_by)
 
+    def parse_exception_paths(
+            self, matcher: FilterMatcher, items: list[File], original: list[File | MusifyItem]
+    ) -> None:
+        """
+        Parse the exception paths (i.e. include/exclude attributes) for the given ``matcher``
+        to its XML playlist representation. Does not extract any other attributes from the ``matcher``.
+
+        :param matcher: The :py:class:`FilterMatcher` to parse.
         :param items: The items to export.
         :param original: The original items matched from the settings in the original file.
-        :return: A map representing the values to be exported to the XML playlist file.
         """
         if not isinstance(matcher.include, FilterDefinedList) and not isinstance(matcher.exclude, FilterDefinedList):
             matcher.logger.warning(
                 "Cannot export this filter to XML: Include and Exclude settings must both be list filters"
             )
-            return {}
+            return
 
         items_mapped: Mapping[str, File] = {item.path.casefold(): item for item in items}
 
@@ -390,20 +409,12 @@ class XMLPlaylistParser(PrettyPrinter):
         include_items = tuple(items_mapped[path] for path in matcher.include if path in items_mapped)
         exclude_items = tuple(matched_mapped[path] for path in matcher.exclude if path in matched_mapped)
 
-        source = {}
-        if len(include_items) > 0:  # assign include paths to XML object
+        if len(include_items) > 0:
             include_paths = self.path_mapper.unmap_many(include_items, check_existence=False)
-            source["ExceptionsInclude"] = "|".join(include_paths).replace("&", "&amp;")
-        if len(exclude_items) > 0:  # assign exclude paths to XML object
+            self.xml_source["ExceptionsInclude"] = "|".join(include_paths).replace("&", "&amp;")
+        if len(exclude_items) > 0:
             exclude_paths = self.path_mapper.unmap_many(exclude_items, check_existence=False)
-            source["Exceptions"] = "|".join(exclude_paths).replace("&", "&amp;")
-
-        return {
-            "SmartPlaylist": {
-                "@GroupBy": matcher.group_by.name.lower() if matcher.group_by else "track",
-                "Source": source,
-            }
-        }
+            self.xml_source["Exceptions"] = "|".join(exclude_paths).replace("&", "&amp;")
 
     def get_limiter(self) -> ItemLimiter | None:
         """Initialise and return a :py:class:`ItemLimiter` object from loaded XML playlist data."""
@@ -420,8 +431,8 @@ class XMLPlaylistParser(PrettyPrinter):
             allowance=1.25
         )
 
-    def _get_xml_from_limiter(self, limiter: ItemLimiter) -> dict[str, Any]:
-        """Parse the given ``limiter`` to its XML playlist representation."""
+    def parse_limiter(self, limiter: ItemLimiter) -> dict[str, Any]:
+        """Update the loaded ``xml`` object by parsing the given ``limiter`` to its XML playlist representation."""
 
     def get_sorter(self) -> ItemSorter | None:
         """Initialise and return a :py:class:`ItemLimiter` object from loaded XML playlist data."""
@@ -455,8 +466,8 @@ class XMLPlaylistParser(PrettyPrinter):
             return ItemSorter(fields=fields, shuffle_mode=shuffle_mode, shuffle_weight=shuffle_weight)
         return ItemSorter(fields=fields or self.custom_sort[6])  # TODO: workaround - see cls.custom_sort
 
-    def _get_xml_from_sorter(self, sorter: ItemSorter) -> dict[str, Any]:
-        """Parse the given ``sorter`` to its XML playlist representation."""
+    def parse_sorter(self, sorter: ItemSorter) -> None:
+        """Update the loaded ``xml`` object by parsing the given ``sorter`` to its XML playlist representation."""
 
     def as_dict(self):
         return {"path": self.path, "path_mapper": self.path_mapper}

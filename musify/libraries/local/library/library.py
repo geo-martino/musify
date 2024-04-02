@@ -379,7 +379,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         """
         For each Playlist in this Library, saves its associate tracks and its settings (if applicable) to file.
 
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: A map of the playlist name to the results of its sync as a :py:class:`Result` object.
         """
         return {name: pl.save(dry_run=dry_run) for name, pl in self.playlists.items()}
