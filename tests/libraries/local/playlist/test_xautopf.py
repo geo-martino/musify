@@ -196,6 +196,21 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         """Yields a :py:class:`PathMapper` that can map paths from the test playlist files"""
         yield PathStemMapper(stem_map={"../": path_resources}, available_paths=path_track_all)
 
+    @pytest.mark.parametrize("path", [path_playlist_xautopf_bp], indirect=["path"])
+    def test_save(self, path: str):
+        parser = XMLPlaylistParser(path=path)
+
+        description = "i am a brand new description"
+        parser.description = description
+        parser.save()
+        parser.load()
+        assert parser.description != description
+
+        parser.description = description
+        parser.save(dry_run=False)
+        parser.load()
+        assert parser.description == description
+
     ###########################################################################
     ## Comparer parsing
     ###########################################################################
