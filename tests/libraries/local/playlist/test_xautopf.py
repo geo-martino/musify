@@ -1,4 +1,5 @@
 import os
+from collections.abc import Mapping
 from copy import deepcopy
 from datetime import datetime
 from glob import glob
@@ -8,16 +9,26 @@ from random import randrange
 
 import pytest
 
+from core.printer import PrettyPrinterTester
+from musify.core.enum import Fields
 from musify.file.exception import InvalidFileType
 from musify.file.path_mapper import PathMapper, PathStemMapper
 from musify.libraries.local.library import MusicBee, LocalLibrary
 from musify.libraries.local.playlist import XAutoPF
+from musify.libraries.local.playlist.xautopf import XMLPlaylistParser
 from musify.libraries.local.track import LocalTrack
+from musify.libraries.local.track.field import LocalTrackField
+from musify.processors.compare import Comparer
+from musify.processors.filter import FilterComparers
+from musify.processors.limit import LimitType
+from musify.processors.sort import ShuffleMode
+from musify.utils import to_collection
 from tests.libraries.local.playlist.testers import LocalPlaylistTester
 from tests.libraries.local.track.utils import random_track, random_tracks
-from tests.libraries.local.utils import path_playlist_xautopf_ra, path_playlist_xautopf_bp
-from tests.libraries.local.utils import path_track_flac, path_track_wma
-from tests.utils import path_txt
+from tests.libraries.local.utils import path_playlist_resources
+from tests.libraries.local.utils import path_playlist_xautopf_ra, path_playlist_xautopf_bp, path_playlist_xautopf_cm
+from tests.libraries.local.utils import path_track_all, path_track_mp3, path_track_flac, path_track_wma
+from tests.utils import path_txt, path_resources
 
 
 class TestXAutoPF(LocalPlaylistTester):
@@ -176,9 +187,197 @@ class TestXAutoPF(LocalPlaylistTester):
             assert path.startswith("../")
 
 
+class TestXMLPlaylistParser(PrettyPrinterTester):
+
+    @pytest.fixture
+    def obj(self) -> XMLPlaylistParser:
+        return XMLPlaylistParser(path=path_playlist_xautopf_ra)
+
+    @pytest.fixture(scope="class")
+    def path_mapper(self) -> PathStemMapper:
+        """Yields a :py:class:`PathMapper` that can map paths from the test playlist files"""
+        yield PathStemMapper(stem_map={"../": path_resources}, available_paths=path_track_all)
+
+    def test_get_comparer_bp(self):
+        parser = XMLPlaylistParser(path=path_playlist_xautopf_bp)
+        conditions = parser.xml_source["Conditions"]
+        comparers = [parser._get_comparer(xml=condition) for condition in to_collection(conditions["Condition"])]
+
+        assert len(comparers) == 3
+
+        assert comparers[0].field == Fields.ALBUM
+        assert not comparers[0]._converted
+        assert comparers[0].expected == ["an album"]
+        assert comparers[0].condition == "contains"
+        assert comparers[0]._processor_method == comparers[0]._contains
+
+        assert comparers[1].field == Fields.ARTIST
+        assert not comparers[1]._converted
+        assert comparers[1].expected is None
+        assert comparers[1].condition == "is_null"
+        assert comparers[1]._processor_method == comparers[1]._is_null
+
+        assert comparers[2].field == Fields.TRACK_NUMBER
+        assert not comparers[2]._converted
+        assert comparers[2].expected == ["30"]
+        assert comparers[2].condition == "less_than"
+        assert comparers[2]._processor_method == comparers[2]._is_before
+
+    def test_get_comparer_ra(self):
+        parser = XMLPlaylistParser(path=path_playlist_xautopf_ra)
+        conditions = parser.xml_source["Conditions"]
+        comparers = [parser._get_comparer(xml=condition) for condition in to_collection(conditions["Condition"])]
+
+        assert len(comparers) == 1
+        comparer = comparers[0]
+
+        assert comparer.field == LocalTrackField.ALBUM
+        assert not comparer._converted
+        assert comparer.expected == [""]
+        assert comparer.condition == "contains"
+        assert comparer._processor_method == comparer._contains
+
+    def test_get_matcher_bp(self, path_mapper: PathStemMapper):
+        parser = XMLPlaylistParser(path=path_playlist_xautopf_bp, path_mapper=path_mapper)
+        matcher = parser.get_matcher()
+
+        assert set(matcher.include) == {
+            path_track_wma.casefold(), path_track_mp3.casefold(), path_track_flac.casefold()
+        }
+        assert set(matcher.exclude) == {
+            join(path_playlist_resources,  "exclude_me_2.mp3").casefold(),
+            path_track_mp3.casefold(),
+            join(path_playlist_resources, "exclude_me.flac").casefold(),
+        }
+
+        assert isinstance(matcher.comparers.comparers, dict)
+        assert len(matcher.comparers.comparers) == 3  # loaded Comparer settings are tested in class-specific tests
+        assert matcher.comparers.match_all
+        assert all(not m[1].ready for m in matcher.comparers.comparers.values())
+
+        assert matcher.group_by == Fields.ALBUM
+
+    def test_get_matcher_ra(self, path_mapper: PathStemMapper):
+        parser = XMLPlaylistParser(path=path_playlist_xautopf_ra, path_mapper=path_mapper)
+        matcher = parser.get_matcher()
+
+        assert len(matcher.include) == 0
+        assert len(matcher.exclude) == 0
+
+        assert isinstance(matcher.comparers.comparers, dict)
+        assert len(matcher.comparers.comparers) == 0
+        assert not matcher.comparers.match_all
+        assert all(not m[1].ready for m in matcher.comparers.comparers.values())
+
+        assert matcher.group_by is None
+
+    def test_get_matcher_cm(self, path_mapper: PathStemMapper):
+        parser = XMLPlaylistParser(path=path_playlist_xautopf_cm, path_mapper=path_mapper)
+        matcher = parser.get_matcher()
+
+        assert isinstance(matcher.comparers.comparers, Mapping)
+        assert len(matcher.comparers.comparers) == 3
+        assert not matcher.comparers.match_all
+
+        # assertions on parent comparers
+        comparers: list[Comparer] = list(matcher.comparers.comparers)
+        assert comparers[0].field == Fields.ALBUM
+        assert comparers[0].condition == "contains"
+        assert comparers[0].expected == ["an album"]
+        assert comparers[1].field == Fields.RATING
+        assert comparers[1].condition == "in_range"
+        assert comparers[1].expected == ["40", "80"]
+        assert comparers[2].field == Fields.YEAR
+        assert comparers[2].condition == "is"
+        assert comparers[2].expected == ["2024"]
+
+        # assertions on child comparers
+        sub_filters: list[tuple[bool, FilterComparers]] = list(matcher.comparers.comparers.values())
+        assert not sub_filters[0][1].ready
+        assert not sub_filters[0][0]  # And/Or condition
+
+        sub_filter_1 = sub_filters[1][1]
+        assert sub_filter_1.ready
+        assert not sub_filter_1.match_all
+        assert isinstance(sub_filter_1.comparers, Mapping)
+        assert all(not m[1].ready for m in sub_filter_1.comparers.values())
+        assert sub_filters[1][0]  # And/Or condition
+
+        sub_comparers_1: list[Comparer] = list(sub_filters[1][1].comparers)
+        assert sub_comparers_1[0].field == Fields.GENRES
+        assert sub_comparers_1[0].condition == "is_in"
+        assert sub_comparers_1[0].expected == ["Jazz", "Rock", "Pop"]
+        assert sub_comparers_1[1].field == Fields.TRACK_NUMBER
+        assert sub_comparers_1[1].condition == "less_than"
+        assert sub_comparers_1[1].expected == ["50"]
+
+        sub_filter_2 = sub_filters[2][1]
+        assert sub_filter_2.ready
+        assert sub_filter_2.match_all
+        assert isinstance(sub_filter_2.comparers, Mapping)
+        assert all(not m[1].ready for m in sub_filter_2.comparers.values())
+        assert not sub_filters[2][0]  # And/Or condition
+
+        sub_comparers_2: list[Comparer] = list(sub_filter_2.comparers)
+        assert sub_comparers_2[0].field == Fields.ARTIST
+        assert sub_comparers_2[0].condition == "starts_with"
+        assert sub_comparers_2[0].expected == ["an artist"]
+        assert sub_comparers_2[1].field == Fields.LAST_PLAYED
+        assert sub_comparers_2[1].condition == "in_the_last"
+        assert sub_comparers_2[1].expected == ["7d"]
+
+        assert matcher.group_by == Fields.ALBUM
+
+    def test_get_limiter_bp(self):
+        parser = XMLPlaylistParser(path=path_playlist_xautopf_bp)
+        assert parser.get_limiter() is None
+
+    def test_get_limiter_ra(self):
+        parser = XMLPlaylistParser(path=path_playlist_xautopf_ra)
+        limiter = parser.get_limiter()
+
+        assert limiter.limit_max == 20
+        assert limiter.kind == LimitType.ITEMS
+        assert limiter.allowance == 1.25
+        assert limiter._processor_method == limiter._most_recently_added
+
+    def test_get_sorter_bp(self):
+        parser = XMLPlaylistParser(path=path_playlist_xautopf_bp)
+
+        # shuffle settings not set as automatic order defined
+        sorter = parser.get_sorter()
+        assert sorter.sort_fields == {Fields.TRACK_NUMBER: False}
+        assert sorter.shuffle_mode is None
+        assert sorter.shuffle_weight == 0.0
+
+        # flip sorting to manual order to force function to set shuffle settings
+        parser.xml_source["SortBy"]["@Field"] = "78"
+        sorter = parser.get_sorter()
+        assert sorter.sort_fields == {}
+        assert sorter.shuffle_mode == ShuffleMode.RECENT_ADDED
+        assert sorter.shuffle_weight == 0.5
+
+    def test_get_sorter_ra(self):
+        parser = XMLPlaylistParser(path=path_playlist_xautopf_ra)
+
+        # shuffle settings not set as automatic order defined
+        sorter = parser.get_sorter()
+        assert sorter.sort_fields == {Fields.DATE_ADDED: True}
+        assert sorter.shuffle_mode is None
+        assert sorter.shuffle_weight == 0.0
+
+        # flip sorting to manual order to force function to set shuffle settings
+        parser.xml_source["SortBy"]["@Field"] = "78"
+        sorter = parser.get_sorter()
+        assert sorter.sort_fields == {}
+        assert sorter.shuffle_mode == ShuffleMode.DIFFERENT_ARTIST
+        assert sorter.shuffle_weight == -0.2
+
+
 @pytest.mark.manual
 @pytest.fixture(scope="module")
 def library() -> LocalLibrary:
+    """Yields a loaded :py:class:`LocalLibrary` to supply tracks for manual checking of custom playlist files"""
     mapper = PathStemMapper({"../..": os.getenv("TEST_PL_LIBRARY", "")})
     library = MusicBee(musicbee_folder=join(os.getenv("TEST_PL_LIBRARY"), "MusicBee"), path_mapper=mapper)
     library.load_tracks()

@@ -2,60 +2,19 @@
 Processor making comparisons between objects and data types.
 """
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from datetime import datetime, date
 from functools import reduce
 from operator import mul
-from typing import Any, Self
+from typing import Any
 
 from musify.core.base import MusifyItem
 from musify.core.enum import Field
-from musify.exception import FieldError
-from musify.field import Fields
 from musify.processors.base import DynamicProcessor, MusicBeeProcessor, dynamicprocessormethod
 from musify.processors.exception import ComparerError
 from musify.processors.time import TimeMapper
 from musify.types import UnitSequence
 from musify.utils import to_collection
-
-# Map of MusicBee field name to Field enum
-# noinspection SpellCheckingInspection
-field_name_map = {
-    "None": None,
-    "Title": Fields.TITLE,
-    "ArtistPeople": Fields.ARTIST,
-    "Album": Fields.ALBUM,  # album ignoring articles like 'the' and 'a' etc.
-    "Album Artist": Fields.ALBUM_ARTIST,
-    "TrackNo": Fields.TRACK_NUMBER,
-    "TrackCount": Fields.TRACK_TOTAL,
-    "GenreSplits": Fields.GENRES,
-    "Year": Fields.YEAR,  # could also be 'YearOnly'?
-    "BeatsPerMin": Fields.BPM,
-    "DiscNo": Fields.DISC_NUMBER,
-    "DiscCount": Fields.DISC_TOTAL,
-    # "": Fields.COMPILATION,  # unmapped for compare
-    "Comment": Fields.COMMENTS,
-    "FileDuration": Fields.LENGTH,
-    "Rating": Fields.RATING,
-    # "ComposerPeople": Fields.COMPOSER,  # currently not supported by this program
-    # "Conductor": Fields.CONDUCTOR,  # currently not supported by this program
-    # "Publisher": Fields.PUBLISHER,  # currently not supported by this program
-    "FilePath": Fields.PATH,
-    "FolderName": Fields.FOLDER,
-    "FileName": Fields.FILENAME,
-    "FileExtension": Fields.EXT,
-    # "": Fields.SIZE,  # unmapped for compare
-    "FileKind": Fields.TYPE,
-    "FileBitrate": Fields.BIT_RATE,
-    "BitDepth": Fields.BIT_DEPTH,
-    "FileSampleRate": Fields.SAMPLE_RATE,
-    "FileChannels": Fields.CHANNELS,
-    # "": Fields.DATE_CREATED,  # unmapped for compare
-    "FileDateModified": Fields.DATE_MODIFIED,
-    "FileDateAdded": Fields.DATE_ADDED,
-    "FileLastPlayed": Fields.LAST_PLAYED,
-    "FilePlayCount": Fields.PLAY_COUNT,
-}
 
 
 class Comparer(MusicBeeProcessor, DynamicProcessor):
@@ -85,28 +44,6 @@ class Comparer(MusicBeeProcessor, DynamicProcessor):
         """Set the list of expected values and reset the ``_converted`` attribute to False"""
         self._converted = False
         self._expected = to_collection(value, list)
-
-    @classmethod
-    def from_xml(cls, xml: Mapping[str, Any], **__) -> Self:
-        """
-        Initialise object from XML playlist data.
-
-        :param xml: The loaded XML object for this playlist.
-            This function expects to be given only the XML part related to one Comparer condition.
-        """
-        field_str = xml.get("@Field", "None")
-        field: Field = field_name_map.get(field_str)
-        if field is None:
-            raise FieldError("Unrecognised field name", field=field_str)
-
-        expected: tuple[str, ...] | None = tuple(v for k, v in xml.items() if k.startswith("@Value"))
-        if len(expected) == 0 or expected[0] == "[playing track]":
-            expected = None
-
-        return cls(condition=xml["@Comparison"], expected=expected, field=field)
-
-    def to_xml(self, **kwargs) -> Mapping[str, Any]:
-        raise NotImplementedError
 
     def __init__(self, condition: str, expected: UnitSequence[Any] | None = None, field: Field | None = None):
         super().__init__()

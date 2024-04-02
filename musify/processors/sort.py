@@ -5,10 +5,10 @@ from collections.abc import Callable, Mapping, MutableMapping, Sequence, Mutable
 from copy import copy
 from datetime import datetime
 from random import shuffle
-from typing import Any, Self
+from typing import Any
 
 from musify.core.base import MusifyItem
-from musify.core.enum import MusifyEnum, Field, Fields
+from musify.core.enum import MusifyEnum, Field
 from musify.processors.base import MusicBeeProcessor
 from musify.types import UnitSequence, UnitIterable
 from musify.utils import flatten_nested, strip_ignore_words, to_collection, limit_value
@@ -39,18 +39,6 @@ class ItemSorter(MusicBeeProcessor):
     """
 
     __slots__ = ("sort_fields", "shuffle_mode", "shuffle_weight")
-
-    #: Settings for custom sort codes.
-    _custom_sort: dict[int, Mapping[Field, bool]] = {
-        6: {
-            Fields.ALBUM: False,
-            Fields.DISC_NUMBER: False,
-            Fields.TRACK_NUMBER: False,
-            Fields.FILENAME: False
-        }
-        # TODO: implement field_code 78 - manual order according to the order of tracks found
-        #  in the MusicBee library file for a given playlist.
-    }
 
     @classmethod
     def sort_by_field(cls, items: list[MusifyItem], field: Field | None = None, reverse: bool = False) -> None:
@@ -121,42 +109,6 @@ class ItemSorter(MusicBeeProcessor):
                 group(value)
 
         return grouped
-
-    @classmethod
-    def from_xml(cls, xml: Mapping[str, Any], **__) -> Self:
-        fields: Sequence[Field] | Mapping[Field | bool] = ()
-        source = xml["SmartPlaylist"]["Source"]
-
-        if "SortBy" in source:
-            field_code = int(source["SortBy"].get("@Field", 0))
-        elif "DefinedSort" in source:
-            field_code = int(source["DefinedSort"]["@Id"])
-        else:
-            return
-
-        if field_code in cls._custom_sort:
-            fields = cls._custom_sort[field_code]
-            return cls(fields=fields)
-        elif field_code != 78:
-            field = Fields.from_value(field_code)[0]
-
-            if "SortBy" in source:
-                fields = {field: source["SortBy"]["@Order"] == "Descending"}
-            elif "DefinedSort" in source:
-                fields = [field]
-            else:
-                raise NotImplementedError("Sort type in XML not recognised")
-
-        shuffle_mode_value = cls._pascal_to_snake(xml["SmartPlaylist"]["@ShuffleMode"])
-        if not fields and shuffle_mode_value != "none":
-            shuffle_mode = ShuffleMode.from_name(shuffle_mode_value)[0]
-            shuffle_weight = float(xml["SmartPlaylist"].get("@ShuffleSameArtistWeight", 0))
-
-            return cls(fields=fields, shuffle_mode=shuffle_mode, shuffle_weight=shuffle_weight)
-        return cls(fields=fields or cls._custom_sort[6])  # TODO: workaround - see cls._custom_sort
-
-    def to_xml(self, **kwargs) -> Mapping[str, Any]:
-        raise NotImplementedError
 
     def __init__(
             self,

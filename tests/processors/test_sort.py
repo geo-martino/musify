@@ -3,9 +3,7 @@ from itertools import groupby
 from random import choice, randrange
 
 import pytest
-import xmltodict
 
-from musify.core.enum import Fields
 from musify.field import TrackField
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.local.track.field import LocalTrackField
@@ -13,7 +11,6 @@ from musify.processors.sort import ItemSorter, ShuffleMode
 from musify.utils import strip_ignore_words
 from tests.core.printer import PrettyPrinterTester
 from tests.libraries.local.track.utils import random_tracks
-from tests.libraries.local.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
 
 
 class TestItemSorter(PrettyPrinterTester):
@@ -103,44 +100,3 @@ class TestItemSorter(PrettyPrinterTester):
         sorter = ItemSorter(fields=fields)
         sorter(tracks)
         assert tracks == tracks_sorted
-
-    ###########################################################################
-    ## XML I/O
-    ###########################################################################
-    def test_from_xml_bp(self):
-        with open(path_playlist_xautopf_bp, "r", encoding="utf-8") as f:
-            xml = xmltodict.parse(f.read())
-
-        # shuffle settings not set as automatic order defined
-        sorter = ItemSorter.from_xml(xml=xml)
-        assert sorter.sort_fields == {Fields.TRACK_NUMBER: False}
-        assert sorter.shuffle_mode is None
-        assert sorter.shuffle_weight == 0.0
-
-        # flip sorting to manual order to force function to set shuffle settings
-        xml["SmartPlaylist"]["Source"]["SortBy"]["@Field"] = "78"
-        sorter = ItemSorter.from_xml(xml=xml)
-        assert sorter.sort_fields == {}
-        assert sorter.shuffle_mode == ShuffleMode.RECENT_ADDED
-        assert sorter.shuffle_weight == 0.5
-
-    def test_from_xml_ra(self):
-        with open(path_playlist_xautopf_ra, "r", encoding="utf-8") as f:
-            xml = xmltodict.parse(f.read())
-
-        # shuffle settings not set as automatic order defined
-        sorter = ItemSorter.from_xml(xml=xml)
-        assert sorter.sort_fields == {Fields.DATE_ADDED: True}
-        assert sorter.shuffle_mode is None
-        assert sorter.shuffle_weight == 0.0
-
-        # flip sorting to manual order to force function to set shuffle settings
-        xml["SmartPlaylist"]["Source"]["SortBy"]["@Field"] = "78"
-        sorter = ItemSorter.from_xml(xml=xml)
-        assert sorter.sort_fields == {}
-        assert sorter.shuffle_mode == ShuffleMode.DIFFERENT_ARTIST
-        assert sorter.shuffle_weight == -0.2
-
-    @pytest.mark.skip(reason="not implemented yet")
-    def test_to_xml(self):
-        pass

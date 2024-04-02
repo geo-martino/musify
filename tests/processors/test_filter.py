@@ -1,12 +1,9 @@
 from abc import ABCMeta
-from collections.abc import Mapping
-from os.path import join
 from random import sample, shuffle, randrange
 
 import pytest
-import xmltodict
 
-from musify.core.enum import Fields, TagFields
+from musify.core.enum import TagFields
 from musify.file.path_mapper import PathStemMapper, PathMapper
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.local.track.field import LocalTrackField
@@ -15,9 +12,7 @@ from musify.processors.filter import FilterDefinedList, FilterComparers, FilterI
 from musify.processors.filter_matcher import FilterMatcher
 from tests.core.printer import PrettyPrinterTester
 from tests.libraries.local.track.utils import random_tracks
-from tests.libraries.local.utils import path_playlist_resources
-from tests.libraries.local.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra, path_playlist_xautopf_cm
-from tests.libraries.local.utils import path_track_all, path_track_wma, path_track_flac, path_track_mp3
+from tests.libraries.local.utils import path_track_all
 from tests.utils import random_str, path_resources
 
 
@@ -340,104 +335,3 @@ class TestFilterMatcher(FilterTester):
 
         combined_expected = sorted(tracks_include + tracks_artist[1:], key=self.sort_key)
         assert sorted(result.combined, key=self.sort_key) == combined_expected
-
-    ###########################################################################
-    ## XML I/O
-    ###########################################################################
-    def test_from_xml_bp(self, path_mapper: PathStemMapper):
-        with open(path_playlist_xautopf_bp, "r", encoding="utf-8") as f:
-            xml = xmltodict.parse(f.read())
-        matcher = FilterMatcher.from_xml(xml=xml, path_mapper=path_mapper)
-
-        assert set(matcher.include) == {
-            path_track_wma.casefold(), path_track_mp3.casefold(), path_track_flac.casefold()
-        }
-        assert set(matcher.exclude) == {
-            join(path_playlist_resources,  "exclude_me_2.mp3").casefold(),
-            path_track_mp3.casefold(),
-            join(path_playlist_resources, "exclude_me.flac").casefold(),
-        }
-
-        assert isinstance(matcher.comparers.comparers, dict)
-        assert len(matcher.comparers.comparers) == 3  # loaded Comparer settings are tested in class-specific tests
-        assert matcher.comparers.match_all
-        assert all(not m[1].ready for m in matcher.comparers.comparers.values())
-
-        assert matcher.group_by == Fields.ALBUM
-
-    def test_from_xml_ra(self, path_mapper: PathStemMapper):
-        with open(path_playlist_xautopf_ra, "r", encoding="utf-8") as f:
-            xml = xmltodict.parse(f.read())
-        matcher = FilterMatcher.from_xml(xml=xml, path_mapper=path_mapper)
-
-        assert len(matcher.include) == 0
-        assert len(matcher.exclude) == 0
-
-        assert isinstance(matcher.comparers.comparers, dict)
-        assert len(matcher.comparers.comparers) == 0
-        assert not matcher.comparers.match_all
-        assert all(not m[1].ready for m in matcher.comparers.comparers.values())
-
-        assert matcher.group_by is None
-
-    def test_from_xml_cm(self, path_mapper: PathStemMapper):
-        with open(path_playlist_xautopf_cm, "r", encoding="utf-8") as f:
-            xml = xmltodict.parse(f.read())
-        matcher = FilterMatcher.from_xml(xml=xml, path_mapper=path_mapper)
-
-        assert isinstance(matcher.comparers.comparers, Mapping)
-        assert len(matcher.comparers.comparers) == 3
-        assert not matcher.comparers.match_all
-
-        # assertions on parent comparers
-        comparers: list[Comparer] = list(matcher.comparers.comparers)
-        assert comparers[0].field == Fields.ALBUM
-        assert comparers[0].condition == "contains"
-        assert comparers[0].expected == ["an album"]
-        assert comparers[1].field == Fields.RATING
-        assert comparers[1].condition == "in_range"
-        assert comparers[1].expected == ["40", "80"]
-        assert comparers[2].field == Fields.YEAR
-        assert comparers[2].condition == "is"
-        assert comparers[2].expected == ["2024"]
-
-        # assertions on child comparers
-        sub_filters: list[tuple[bool, FilterComparers]] = list(matcher.comparers.comparers.values())
-        assert not sub_filters[0][1].ready
-        assert not sub_filters[0][0]  # And/Or condition
-
-        sub_filter_1 = sub_filters[1][1]
-        assert sub_filter_1.ready
-        assert not sub_filter_1.match_all
-        assert isinstance(sub_filter_1.comparers, Mapping)
-        assert all(not m[1].ready for m in sub_filter_1.comparers.values())
-        assert sub_filters[1][0]  # And/Or condition
-
-        sub_comparers_1: list[Comparer] = list(sub_filters[1][1].comparers)
-        assert sub_comparers_1[0].field == Fields.GENRES
-        assert sub_comparers_1[0].condition == "is_in"
-        assert sub_comparers_1[0].expected == ["Jazz", "Rock", "Pop"]
-        assert sub_comparers_1[1].field == Fields.TRACK_NUMBER
-        assert sub_comparers_1[1].condition == "less_than"
-        assert sub_comparers_1[1].expected == ["50"]
-
-        sub_filter_2 = sub_filters[2][1]
-        assert sub_filter_2.ready
-        assert sub_filter_2.match_all
-        assert isinstance(sub_filter_2.comparers, Mapping)
-        assert all(not m[1].ready for m in sub_filter_2.comparers.values())
-        assert not sub_filters[2][0]  # And/Or condition
-
-        sub_comparers_2: list[Comparer] = list(sub_filter_2.comparers)
-        assert sub_comparers_2[0].field == Fields.ARTIST
-        assert sub_comparers_2[0].condition == "starts_with"
-        assert sub_comparers_2[0].expected == ["an artist"]
-        assert sub_comparers_2[1].field == Fields.LAST_PLAYED
-        assert sub_comparers_2[1].condition == "in_the_last"
-        assert sub_comparers_2[1].expected == ["7d"]
-
-        assert matcher.group_by == Fields.ALBUM
-
-    @pytest.mark.skip(reason="not implemented yet")
-    def test_to_xml(self):
-        pass

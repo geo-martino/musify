@@ -1,11 +1,10 @@
 """
 Processor that limits the items in a given collection of items
 """
-from collections.abc import Collection, Mapping
+from collections.abc import Collection
 from functools import reduce
 from operator import mul
 from random import shuffle
-from typing import Any, Self
 
 from musify.core.base import MusifyItem
 from musify.core.enum import MusifyEnum, Fields
@@ -57,24 +56,6 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
     def limit_sort(self) -> str | None:
         """String representation of the sorting method to use before limiting"""
         return self._processor_name.lstrip("_")
-
-    @classmethod
-    def from_xml(cls, xml: Mapping[str, Any], **__) -> Self | None:
-        conditions: Mapping[str, str] = xml["SmartPlaylist"]["Source"]["Limit"]
-        if conditions["@Enabled"] != "True":
-            return
-        # filter_duplicates = conditions["@FilterDuplicates"] == "True"
-
-        # MusicBee appears to have some extra allowance on time and byte limits of ~1.25
-        return cls(
-            limit=int(conditions["@Count"]),
-            on=LimitType.from_name(conditions["@Type"])[0],
-            sorted_by=conditions["@SelectedBy"],
-            allowance=1.25
-        )
-
-    def to_xml(self, **kwargs) -> Mapping[str, Any]:
-        raise NotImplementedError
 
     def __init__(
             self,
