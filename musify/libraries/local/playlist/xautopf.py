@@ -78,6 +78,17 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
     __slots__ = ("_parser",)
 
     valid_extensions = frozenset({".xautopf"})
+    default_xml = {
+        "SmartPlaylist": {
+            "@SaveStaticCopy": "False",
+            "@LiveUpdating": "True",
+            "@Layout": "4",
+            "@LayoutGroupBy": "0",
+            "@ConsolidateAlbums": "False",
+            "@MusicLibraryPath": "",
+            "Source": {"@Type": "1", "Description": None}
+        }
+    }
 
     @property
     def description(self):
@@ -92,17 +103,23 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
         return {}
 
     def __init__(
-            self, path: str, tracks: Collection[LocalTrack] = (), path_mapper: PathMapper = PathMapper(), *_, **__
+            self,
+            path: str,
+            tracks: Collection[LocalTrack] = (),
+            path_mapper: PathMapper = PathMapper(),
+            *_,
+            **__
     ):
         self._validate_type(path)
-        if not exists(path):
-            # TODO: implement creation of auto-playlist from scratch (very low priority)
-            raise NotImplementedError(
-                f"No playlist at given path: {path}. "
-                "This program is not yet able to create this playlist type from scratch."
-            )
 
         self._parser = XMLPlaylistParser(path=path, path_mapper=path_mapper)
+        if exists(path):
+            self._parser.load()
+        else:  # this is a new playlist, assign default values to parser
+            self._parser.xml = deepcopy(self.default_xml)
+            self._parser.parse_matcher()
+            self._parser.parse_limiter()
+            self._parser.parse_sorter()
 
         super().__init__(
             path=path,
@@ -252,7 +269,6 @@ class XMLPlaylistParser(File, PrettyPrinter):
 
         #: A map representation of the loaded XML playlist data
         self.xml: dict[str, Any] = {}
-        self.load()
 
     def load(self) -> None:
         """Load ``xml`` object from the disk"""
@@ -293,7 +309,7 @@ class XMLPlaylistParser(File, PrettyPrinter):
     def _get_xml_from_comparer(self, comparer: Comparer | None = None) -> dict[str, Any]:
         """Parse the given ``comparer`` to its XML playlist representation."""
         if comparer is None:  # default value
-            return {"@Field": "Album", "@Comparison": "Contains", "@Value": ""}
+            return {"@Field": "ArtistPeople", "@Comparison": "StartsWith", "@Value": ""}
 
         field_name = self.field_name_map.get(comparer.field)
         if field_name is None:
@@ -338,11 +354,13 @@ class XMLPlaylistParser(File, PrettyPrinter):
 
             comparers[self._get_comparer(xml=condition)] = (combine, sub_filter)
 
+        dummy_conditions = {"starts_with", "contains"}
         if len(comparers) == 1 and not next(iter(comparers.values()))[1].ready:
             # when user has not set an explicit comparer, a single empty 'allow all' comparer is assigned
             # check for this 'allow all' comparer and remove it if present to speed up comparisons
             c = next(iter(comparers))
-            if "contains" in c.condition.casefold() and len(c.expected) == 1 and not c.expected[0]:
+            is_dummy_condition = any(cond in c.condition.casefold() for cond in dummy_conditions)
+            if is_dummy_condition and len(c.expected) == 1 and not c.expected[0]:
                 comparers = {}
 
         filter_include = FilterDefinedList[LocalTrack](values=[path.casefold() for path in include])
@@ -368,7 +386,7 @@ class XMLPlaylistParser(File, PrettyPrinter):
         """
         if matcher is None or not matcher.ready:
             self.xml_smart_playlist["@GroupBy"] = self.default_group_by
-            self.xml_smart_playlist["Conditions"] = {"@CombineMethod": "Any"} | self._get_xml_from_comparer()
+            self.xml_source["Conditions"] = {"@CombineMethod": "All"} | {"Condition": self._get_xml_from_comparer()}
             return
 
         group_by = matcher.group_by.name.lower() if matcher.group_by else self.default_group_by

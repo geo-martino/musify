@@ -3,7 +3,7 @@ from collections.abc import Mapping
 from copy import deepcopy
 from datetime import datetime
 from glob import glob
-from os.path import dirname, join, splitext, basename, exists
+from os.path import join, splitext, basename, exists
 from pathlib import Path
 from random import randrange
 
@@ -28,7 +28,7 @@ from tests.libraries.local.track.utils import random_track, random_tracks
 from tests.libraries.local.utils import path_playlist_resources, path_playlist_all
 from tests.libraries.local.utils import path_playlist_xautopf_ra, path_playlist_xautopf_bp, path_playlist_xautopf_cm
 from tests.libraries.local.utils import path_track_all, path_track_mp3, path_track_flac, path_track_wma
-from tests.utils import path_txt, path_resources
+from tests.utils import path_txt, path_resources, random_str
 
 
 class TestXAutoPF(LocalPlaylistTester):
@@ -41,15 +41,9 @@ class TestXAutoPF(LocalPlaylistTester):
         playlist = XAutoPF(path=path_playlist_xautopf_ra, tracks=tracks)
         return playlist
 
-    def test_init_fails(self):
-        tracks = random_tracks(20)
-
-        # raises error on non-existent file, remove this once supported
-        with pytest.raises(NotImplementedError):
-            XAutoPF(path=join(dirname(path_playlist_xautopf_bp), "does_not_exist.xautopf"), tracks=tracks)
-
+    def test_does_not_load_unsupported_files(self):
         with pytest.raises(InvalidFileType):
-            XAutoPF(path=path_txt, tracks=tracks)
+            XAutoPF(path=path_txt)
 
     def test_load_playlist_bp_settings(self, tracks: list[LocalTrack], path_mapper: PathMapper):
         pl = XAutoPF(path=path_playlist_xautopf_bp, path_mapper=path_mapper)
@@ -118,8 +112,34 @@ class TestXAutoPF(LocalPlaylistTester):
         tracks_expected = sorted(tracks, key=lambda t: t.date_added, reverse=True)[:limit]
         assert pl.tracks == sorted(tracks_expected, key=lambda t: t.date_added, reverse=True)
 
+    def test_save_new_file(self, tmp_path: str):
+        path = join(tmp_path, random_str() + ".xautopf")
+        pl = XAutoPF(path=path)
+        assert not exists(path)
+
+        # default values were assigned according to class attribute defaults
+        for key, default in pl.default_xml["SmartPlaylist"].items():
+            if key == "Source":
+                continue
+            assert pl._parser.xml_smart_playlist[key] == default
+        assert pl._parser.xml_source["@Type"] == pl.default_xml["SmartPlaylist"]["Source"]["@Type"]
+        assert pl.description is None
+
+        # default processor settings were applied
+        assert not pl.matcher.ready
+        assert not pl.limiter
+        assert pl.sorter.sort_fields == pl._parser.defined_sort[6]
+        assert pl.sorter.shuffle_mode is None
+
+        assert not pl.tracks  # no tracks given so no tracks loaded
+
+        pl.save(dry_run=True)
+        assert not exists(path)
+        pl.save(dry_run=False)
+        assert exists(path)
+
     @pytest.mark.parametrize("path", [path_playlist_xautopf_bp], indirect=["path"])
-    def test_save_playlist(self, tracks: list[LocalTrack], path: str, path_mapper: PathMapper, tmp_path: Path):
+    def test_save_existing_file(self, tracks: list[LocalTrack], path: str, path_mapper: PathMapper, tmp_path: Path):
         # prepare tracks to search through
         tracks_actual = [track for track in tracks if track.path in [path_track_flac, path_track_wma]]
         tracks = random_tracks(50)
@@ -199,6 +219,7 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
     @pytest.mark.parametrize("path", [path_playlist_xautopf_bp], indirect=["path"])
     def test_save(self, path: str):
         parser = XMLPlaylistParser(path=path)
+        parser.load()
 
         description = "i am a brand new description"
         parser.description = description
@@ -222,6 +243,7 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
 
     def test_get_comparer_bp(self):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_bp)
+        parser.load()
         comparers = self.parse_comparers(parser)
 
         assert len(comparers) == 3
@@ -246,6 +268,7 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
 
     def test_get_comparer_ra(self):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_ra)
+        parser.load()
         comparers = self.parse_comparers(parser)
 
         assert len(comparers) == 1
@@ -260,6 +283,7 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
     @pytest.mark.parametrize("path", [path for path in path_playlist_all if path.endswith(".xautopf")])
     def test_parse_comparer(self, path: str):
         parser = XMLPlaylistParser(path=path)
+        parser.load()
         comparers = self.parse_comparers(parser)
         conditions = to_collection(parser.xml_source["Conditions"]["Condition"], list)
 
@@ -282,6 +306,7 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
     ###########################################################################
     def test_get_matcher_bp(self, path_mapper: PathStemMapper):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_bp, path_mapper=path_mapper)
+        parser.load()
         matcher = parser.get_matcher()
 
         assert set(matcher.include) == {
@@ -302,6 +327,7 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
 
     def test_get_matcher_ra(self, path_mapper: PathStemMapper):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_ra, path_mapper=path_mapper)
+        parser.load()
         matcher = parser.get_matcher()
 
         assert len(matcher.include) == 0
@@ -316,6 +342,7 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
 
     def test_get_matcher_cm(self, path_mapper: PathStemMapper):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_cm, path_mapper=path_mapper)
+        parser.load()
         matcher = parser.get_matcher()
 
         assert isinstance(matcher.comparers.comparers, Mapping)
@@ -374,6 +401,9 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
     def test_parse_matcher(self):
         parser_initial = XMLPlaylistParser(path=path_playlist_xautopf_ra)
         parser_final = XMLPlaylistParser(path=path_playlist_xautopf_cm)
+        parser_initial.load()
+        parser_final.load()
+
         initial = parser_initial.get_matcher()
         final = parser_final.get_matcher()
 
@@ -399,10 +429,12 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
     ###########################################################################
     def test_get_limiter_bp(self):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_bp)
+        parser.load()
         assert parser.get_limiter() is None
 
     def test_get_limiter_ra(self):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_ra)
+        parser.load()
         limiter = parser.get_limiter()
 
         assert limiter.limit_max == 20
@@ -413,6 +445,9 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
     def test_parse_limiter(self):
         parser_initial = XMLPlaylistParser(path=path_playlist_xautopf_bp)
         parser_final = XMLPlaylistParser(path=path_playlist_xautopf_ra)
+        parser_initial.load()
+        parser_final.load()
+
         initial = parser_initial.get_limiter()
         final = parser_final.get_limiter()
 
@@ -437,6 +472,7 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
     ###########################################################################
     def test_get_sorter_bp(self):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_bp)
+        parser.load()
 
         # shuffle settings not set as automatic order defined
         sorter = parser.get_sorter()
@@ -453,6 +489,7 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
 
     def test_get_sorter_ra(self):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_ra)
+        parser.load()
 
         # shuffle settings not set as automatic order defined
         sorter = parser.get_sorter()
@@ -470,6 +507,9 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
     def test_parse_sorter_defined(self):
         parser_initial = XMLPlaylistParser(path=path_playlist_xautopf_bp)
         parser_final = XMLPlaylistParser(path=path_playlist_xautopf_cm)
+        parser_initial.load()
+        parser_final.load()
+
         initial = parser_initial.get_sorter()
         final = parser_final.get_sorter()
 
@@ -487,6 +527,9 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
     def test_parse_sorter_fields(self):
         parser_initial = XMLPlaylistParser(path=path_playlist_xautopf_bp)
         parser_final = XMLPlaylistParser(path=path_playlist_xautopf_ra)
+        parser_initial.load()
+        parser_final.load()
+
         initial = parser_initial.get_sorter()
         final = parser_final.get_sorter()
 
@@ -507,6 +550,9 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
     def test_parse_sorter_shuffle(self):
         parser_initial = XMLPlaylistParser(path=path_playlist_xautopf_bp)
         parser_final = XMLPlaylistParser(path=path_playlist_xautopf_ra)
+        parser_initial.load()
+        parser_final.load()
+
         # flip sorting to manual order to force function to set shuffle settings
         parser_initial.xml_source["SortBy"]["@Field"] = str(parser_initial.default_sort)
         parser_final.xml_source["SortBy"]["@Field"] = str(parser_final.default_sort)
