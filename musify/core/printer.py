@@ -19,15 +19,16 @@ class PrettyPrinter(ABC):
 
     @staticmethod
     def _pascal_to_snake(value: str) -> str:
-        """Convert snake_case to CamelCase."""
+        """Convert PascalCase to snake_case."""
         value = re.sub(r"([A-Z])", lambda m: f"_{m.group(1).lower()}", value.strip("_ "))
         value = re.sub(r"[_ ]+", "_", value).strip("_ ")
         return value.lower()
 
     @staticmethod
     def _snake_to_pascal(value: str) -> str:
-        """Convert snake_case to CamelCase."""
-        return re.sub(r"_(.)", lambda m: m.group(1).upper(), value.strip())
+        """Convert snake_case to PascalCase."""
+        value = re.sub(r"_(.)", lambda m: m.group(1).upper(), value.strip().lower())
+        return re.sub(r"^(.)", lambda m: m.group(1).upper(), value.strip())
 
     @abstractmethod
     def as_dict(self) -> dict[str, Any]:

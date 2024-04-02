@@ -18,7 +18,7 @@
       </Condition>
     </Conditions>
     <Limit FilterDuplicates="False" Enabled="True" Count="1" Type="Seconds" SelectedBy="MostRecentlyAdded" />
-    <SortBy Field="86" Order="Ascending" />
+    <DefinedSort Id="6" />
     <Fields>
       <Group Id="TrackDetail">
         <Field Code="20" Width="24" />

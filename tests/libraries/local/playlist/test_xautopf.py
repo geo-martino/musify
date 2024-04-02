@@ -25,7 +25,7 @@ from musify.processors.sort import ShuffleMode
 from musify.utils import to_collection
 from tests.libraries.local.playlist.testers import LocalPlaylistTester
 from tests.libraries.local.track.utils import random_track, random_tracks
-from tests.libraries.local.utils import path_playlist_resources
+from tests.libraries.local.utils import path_playlist_resources, path_playlist_all
 from tests.libraries.local.utils import path_playlist_xautopf_ra, path_playlist_xautopf_bp, path_playlist_xautopf_cm
 from tests.libraries.local.utils import path_track_all, path_track_mp3, path_track_flac, path_track_wma
 from tests.utils import path_txt, path_resources
@@ -196,10 +196,18 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         """Yields a :py:class:`PathMapper` that can map paths from the test playlist files"""
         yield PathStemMapper(stem_map={"../": path_resources}, available_paths=path_track_all)
 
+    ###########################################################################
+    ## Comparer parsing
+    ###########################################################################
+    @staticmethod
+    def parse_comparers(parser: XMLPlaylistParser) -> list[Comparer]:
+        """Extract all comparers from a given ``parser``"""
+        conditions = parser.xml_source["Conditions"]
+        return [parser._get_comparer(condition) for condition in to_collection(conditions["Condition"])]
+
     def test_get_comparer_bp(self):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_bp)
-        conditions = parser.xml_source["Conditions"]
-        comparers = [parser._get_comparer(xml=condition) for condition in to_collection(conditions["Condition"])]
+        comparers = self.parse_comparers(parser)
 
         assert len(comparers) == 3
 
@@ -223,8 +231,7 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
 
     def test_get_comparer_ra(self):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_ra)
-        conditions = parser.xml_source["Conditions"]
-        comparers = [parser._get_comparer(xml=condition) for condition in to_collection(conditions["Condition"])]
+        comparers = self.parse_comparers(parser)
 
         assert len(comparers) == 1
         comparer = comparers[0]
@@ -235,6 +242,29 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         assert comparer.condition == "contains"
         assert comparer._processor_method == comparer._contains
 
+    @pytest.mark.parametrize("path", [path for path in path_playlist_all if path.endswith(".xautopf")])
+    def test_parse_comparer(self, path: str):
+        parser = XMLPlaylistParser(path=path)
+        comparers = self.parse_comparers(parser)
+        conditions = to_collection(parser.xml_source["Conditions"]["Condition"], list)
+
+        for condition in conditions.copy():  # extract all sub conditions as well
+            sub_key = "And" if "And" in condition else "Or"
+            sub_conditions = to_collection(condition.get(sub_key, {}).get("Condition"))
+            if sub_conditions:
+                conditions.extend(sub_conditions)
+                condition.pop(sub_key)
+                comparers.extend([parser._get_comparer(condition) for condition in sub_conditions])
+
+        assert parser._get_xml_from_comparer() is not None  # default value is given
+
+        assert len(comparers) == len(conditions)
+        for comparer, condition in zip(comparers, conditions):
+            assert parser._get_xml_from_comparer(comparer) == condition
+
+    ###########################################################################
+    ## FilterMatcher parsing
+    ###########################################################################
     def test_get_matcher_bp(self, path_mapper: PathStemMapper):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_bp, path_mapper=path_mapper)
         matcher = parser.get_matcher()
@@ -326,6 +356,9 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
 
         assert matcher.group_by == Fields.ALBUM
 
+    ###########################################################################
+    ## ItemLimiter parsing
+    ###########################################################################
     def test_get_limiter_bp(self):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_bp)
         assert parser.get_limiter() is None
@@ -339,6 +372,32 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         assert limiter.allowance == 1.25
         assert limiter._processor_method == limiter._most_recently_added
 
+    def test_parse_limiter(self):
+        parser_initial = XMLPlaylistParser(path=path_playlist_xautopf_bp)
+        parser_final = XMLPlaylistParser(path=path_playlist_xautopf_ra)
+        initial = parser_initial.get_limiter()
+        final = parser_final.get_limiter()
+
+        assert initial is None
+        assert parser_initial.xml_source["Limit"] != parser_final.xml_source["Limit"]
+
+        # default values cause getter to not return any processor
+        parser_initial.parse_limiter()
+        assert parser_initial.get_limiter() is None
+
+        parser_initial.parse_limiter(final)
+
+        new = parser_initial.get_limiter()
+        assert new is not None
+        assert new.limit_max == final.limit_max
+        assert new.kind == final.kind
+        assert new.limit_sort == final.limit_sort
+
+        assert parser_initial.xml_source["Limit"] == parser_final.xml_source["Limit"]
+
+    ###########################################################################
+    ## ItemSorter parsing
+    ###########################################################################
     def test_get_sorter_bp(self):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_bp)
 
@@ -349,7 +408,7 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         assert sorter.shuffle_weight == 0.0
 
         # flip sorting to manual order to force function to set shuffle settings
-        parser.xml_source["SortBy"]["@Field"] = "78"
+        parser.xml_source["SortBy"]["@Field"] = str(parser.default_sort)
         sorter = parser.get_sorter()
         assert sorter.sort_fields == {}
         assert sorter.shuffle_mode == ShuffleMode.RECENT_ADDED
@@ -365,11 +424,76 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         assert sorter.shuffle_weight == 0.0
 
         # flip sorting to manual order to force function to set shuffle settings
-        parser.xml_source["SortBy"]["@Field"] = "78"
+        parser.xml_source["SortBy"]["@Field"] = str(parser.default_sort)
         sorter = parser.get_sorter()
         assert sorter.sort_fields == {}
         assert sorter.shuffle_mode == ShuffleMode.DIFFERENT_ARTIST
         assert sorter.shuffle_weight == -0.2
+
+    def test_parse_sorter_defined(self):
+        parser_initial = XMLPlaylistParser(path=path_playlist_xautopf_bp)
+        parser_final = XMLPlaylistParser(path=path_playlist_xautopf_cm)
+        initial = parser_initial.get_sorter()
+        final = parser_final.get_sorter()
+
+        assert initial.sort_fields != final.sort_fields
+        assert "DefinedSort" not in parser_initial.xml_source
+        assert final.sort_fields == parser_final.defined_sort[6]
+
+        parser_initial.parse_sorter(final)
+
+        new = parser_initial.get_sorter()
+        assert initial.sort_fields != new.sort_fields == final.sort_fields
+
+        assert parser_initial.xml_source["DefinedSort"] == parser_final.xml_source["DefinedSort"]
+        assert parser_initial.xml_source["DefinedSort"]["@Id"] == "6"
+
+    def test_parse_sorter_fields(self):
+        parser_initial = XMLPlaylistParser(path=path_playlist_xautopf_bp)
+        parser_final = XMLPlaylistParser(path=path_playlist_xautopf_ra)
+        initial = parser_initial.get_sorter()
+        final = parser_final.get_sorter()
+
+        assert initial.sort_fields != final.sort_fields
+        assert parser_initial.xml_source["SortBy"] != parser_final.xml_source["SortBy"]
+
+        # default values assigned on no input
+        parser_initial.parse_sorter()
+        assert parser_initial.xml_source["SortBy"]["@Field"] == str(parser_initial.default_sort)
+        assert parser_initial.get_sorter().shuffle_mode is None
+
+        parser_initial.parse_sorter(final)
+
+        new = parser_initial.get_sorter()
+        assert initial.sort_fields != new.sort_fields == final.sort_fields
+
+        assert parser_initial.xml_source["SortBy"] == parser_final.xml_source["SortBy"]
+
+    def test_parse_sorter_shuffle(self):
+        parser_initial = XMLPlaylistParser(path=path_playlist_xautopf_bp)
+        parser_final = XMLPlaylistParser(path=path_playlist_xautopf_ra)
+        # flip sorting to manual order to force function to set shuffle settings
+        parser_initial.xml_source["SortBy"]["@Field"] = str(parser_initial.default_sort)
+        parser_final.xml_source["SortBy"]["@Field"] = str(parser_final.default_sort)
+
+        initial = parser_initial.get_sorter()
+        final = parser_final.get_sorter()
+
+        assert initial.shuffle_mode != final.shuffle_mode
+        assert initial.shuffle_weight != final.shuffle_weight
+        assert parser_initial.xml_smart_playlist["@ShuffleMode"] != parser_final.xml_smart_playlist["@ShuffleMode"]
+        actual_weight = parser_initial.xml_smart_playlist["@ShuffleSameArtistWeight"]
+        assert actual_weight != parser_final.xml_smart_playlist["@ShuffleSameArtistWeight"]
+
+        parser_initial.parse_sorter(final)
+
+        new = parser_initial.get_sorter()
+        assert initial.shuffle_mode != new.shuffle_mode == final.shuffle_mode
+        assert initial.shuffle_weight != new.shuffle_weight == final.shuffle_weight
+
+        assert parser_initial.xml_smart_playlist["@ShuffleMode"] == parser_final.xml_smart_playlist["@ShuffleMode"]
+        actual_weight = parser_initial.xml_smart_playlist["@ShuffleSameArtistWeight"]
+        assert actual_weight == parser_final.xml_smart_playlist["@ShuffleSameArtistWeight"]
 
 
 @pytest.mark.manual

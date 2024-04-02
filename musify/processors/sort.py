@@ -118,8 +118,8 @@ class ItemSorter(MusicBeeProcessor):
     ):
         super().__init__()
         fields = to_collection(fields, list) if isinstance(fields, Field) else fields
-        self.sort_fields: Mapping[Field | None, bool]
-        self.sort_fields = {field: False for field in fields} if isinstance(fields, Sequence) else fields
+        self.sort_fields: Mapping[Field | None, bool] = {field: False for field in fields} \
+            if isinstance(fields, Sequence) else fields
 
         self.shuffle_mode = shuffle_mode
         self.shuffle_weight = limit_value(shuffle_weight, floor=-1, ceil=1)

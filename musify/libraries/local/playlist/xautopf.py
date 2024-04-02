@@ -19,6 +19,7 @@ from musify.file.path_mapper import PathMapper
 from musify.libraries.local.playlist.base import LocalPlaylist
 from musify.libraries.local.track import LocalTrack
 from musify.processors.compare import Comparer
+from musify.processors.exception import ItemSorterError
 from musify.processors.filter import FilterDefinedList, FilterComparers
 from musify.processors.filter_matcher import FilterMatcher
 from musify.processors.limit import ItemLimiter, LimitType
@@ -205,7 +206,7 @@ class XMLPlaylistParser(File, PrettyPrinter):
     field_name_map = {field: name for name, field in name_field_map.items()}
 
     #: Settings for custom sort codes.
-    custom_sort: dict[int, Mapping[Field, bool]] = {
+    defined_sort: dict[int, Mapping[Field, bool]] = {
         6: {
             Fields.ALBUM: False,
             Fields.DISC_NUMBER: False,
@@ -215,6 +216,7 @@ class XMLPlaylistParser(File, PrettyPrinter):
         # TODO: implement field_code 78 - manual order according to the order of tracks found
         #  in the MusicBee library file for a given playlist.
     }
+    default_sort = 78
 
     @property
     def path(self) -> str:
@@ -273,6 +275,7 @@ class XMLPlaylistParser(File, PrettyPrinter):
             This function expects to be given only the XML part related to one Comparer condition.
         :return: The initialised :py:class:`Comparer`.
         """
+        print(xml)
         field_name = xml.get("@Field", "None")
         field: Field = self.name_field_map.get(field_name)
         if field is None:
@@ -287,8 +290,11 @@ class XMLPlaylistParser(File, PrettyPrinter):
             condition=xml["@Comparison"], expected=expected, field=field, reference_required=reference_required
         )
 
-    def _get_xml_from_comparer(self, comparer: Comparer) -> dict[str, Any]:
+    def _get_xml_from_comparer(self, comparer: Comparer | None = None) -> dict[str, Any]:
         """Parse the given ``comparer`` to its XML playlist representation."""
+        if comparer is None:  # default value
+            return {"Field": "Album", "Comparison": "Contains", "Value": ""}
+
         field_name = self.field_name_map.get(comparer.field)
         if field_name is None:
             raise FieldError("Unrecognised field", field=comparer.field)
@@ -300,12 +306,12 @@ class XMLPlaylistParser(File, PrettyPrinter):
         if comparer.expected is None:
             pass
         elif len(comparer.expected) == 0:
-            xml["Value"] = ""
+            xml["@Value"] = ""
         elif len(comparer.expected) == 1:
-            xml["Value"] = str(comparer.expected[0])
+            xml["@Value"] = str(comparer.expected[0])
         else:
-            for i, value in enumerate(comparer.expected):
-                xml[f"Value{i}"] = str(value)
+            for i, value in enumerate(comparer.expected, 1):
+                xml[f"@Value{i}"] = str(value)
 
         return xml
 
@@ -355,16 +361,16 @@ class XMLPlaylistParser(File, PrettyPrinter):
             include=filter_include, exclude=filter_exclude, comparers=filter_compare, group_by=group_by
         )
 
-    def parse_matcher(self, matcher: FilterMatcher) -> None:
+    def parse_matcher(self, matcher: FilterMatcher | None = None) -> None:
         """
         Update the loaded ``xml`` object by parsing the given ``matcher`` to its XML playlist representation.
         Does not extract exception paths (i.e. include/exclude attributes).
         """
         group_by = matcher.group_by.name.lower() if matcher.group_by else "track"
-        self.xml_smart_playlist["@GroupBy"] = self._snake_to_pascal(group_by)
+        self.xml_smart_playlist["@GroupBy"] = group_by.lower()
 
     def parse_exception_paths(
-            self, matcher: FilterMatcher, items: list[File], original: list[File | MusifyItem]
+            self, matcher: FilterMatcher | None, items: list[File], original: list[File | MusifyItem]
     ) -> None:
         """
         Parse the exception paths (i.e. include/exclude attributes) for the given ``matcher``
@@ -374,6 +380,11 @@ class XMLPlaylistParser(File, PrettyPrinter):
         :param items: The items to export.
         :param original: The original items matched from the settings in the original file.
         """
+        if matcher is None:
+            self.xml_source.pop("ExceptionsInclude", None)
+            self.xml_source.pop("Exceptions", None)
+            return
+
         if not isinstance(matcher.include, FilterDefinedList) and not isinstance(matcher.exclude, FilterDefinedList):
             matcher.logger.warning(
                 "Cannot export this filter to XML: Include and Exclude settings must both be list filters"
@@ -431,8 +442,27 @@ class XMLPlaylistParser(File, PrettyPrinter):
             allowance=1.25
         )
 
-    def parse_limiter(self, limiter: ItemLimiter) -> dict[str, Any]:
+    def parse_limiter(self, limiter: ItemLimiter | None = None) -> None:
         """Update the loaded ``xml`` object by parsing the given ``limiter`` to its XML playlist representation."""
+        xml: dict[str, str]
+        if limiter is None:  # default value
+            xml = {
+                "@FilterDuplicates": "True",
+                "@Enabled": "False",
+                "@Count": "25",
+                "@Type": "Items",
+                "@SelectedBy": "Random"
+            }
+        else:
+            xml = {
+                "@FilterDuplicates": "False",
+                "@Enabled": "True",
+                "@Count": str(limiter.limit_max),
+                "@Type": limiter.kind.name.title(),
+                "@SelectedBy": self._snake_to_pascal(limiter.limit_sort)
+            }
+
+        self.xml_source["Limit"] = xml
 
     def get_sorter(self) -> ItemSorter | None:
         """Initialise and return a :py:class:`ItemLimiter` object from loaded XML playlist data."""
@@ -445,10 +475,10 @@ class XMLPlaylistParser(File, PrettyPrinter):
         else:
             return
 
-        if field_code in self.custom_sort:
-            fields = self.custom_sort[field_code]
+        if field_code in self.defined_sort:
+            fields = self.defined_sort[field_code]
             return ItemSorter(fields=fields)
-        elif field_code != 78:
+        elif field_code != self.default_sort:
             field = Fields.from_value(field_code)[0]
 
             if "SortBy" in self.xml_source:
@@ -464,10 +494,40 @@ class XMLPlaylistParser(File, PrettyPrinter):
             shuffle_weight = float(self.xml_smart_playlist.get("@ShuffleSameArtistWeight", 0))
 
             return ItemSorter(fields=fields, shuffle_mode=shuffle_mode, shuffle_weight=shuffle_weight)
-        return ItemSorter(fields=fields or self.custom_sort[6])  # TODO: workaround - see cls.custom_sort
+        return ItemSorter(fields=fields or self.defined_sort[6])  # TODO: workaround - see cls.custom_sort
 
-    def parse_sorter(self, sorter: ItemSorter) -> None:
+    def parse_sorter(self, sorter: ItemSorter | None = None) -> None:
         """Update the loaded ``xml`` object by parsing the given ``sorter`` to its XML playlist representation."""
+        self.xml_source.pop("SortBy", None)
+        self.xml_source.pop("DefinedSort", None)
+
+        if sorter is None:  # default value
+            self.xml_smart_playlist["@ShuffleMode"] = "None"
+            self.xml_smart_playlist["@ShuffleSameArtistWeight"] = "0.5"
+            self.xml_source["SortBy"] = {"@Field": str(self.default_sort), "@Order": "Ascending"}
+            return
+
+        shuffle_mode = "None" if sorter.shuffle_mode is None else self._snake_to_pascal(sorter.shuffle_mode.name)
+        self.xml_smart_playlist["@ShuffleMode"] = shuffle_mode
+        self.xml_smart_playlist["@ShuffleSameArtistWeight"] = str(sorter.shuffle_weight)
+
+        defined_sort_key = next((key for key, value in self.defined_sort.items() if value == sorter.sort_fields), None)
+        if defined_sort_key is not None:
+            self.xml_source["DefinedSort"] = {"@Id": str(defined_sort_key)}
+            return
+
+        if len(sorter.sort_fields) > 1:
+            raise ItemSorterError(
+                "Cannot generate an XML representation of a mapping of many sort fields unless they have "
+                "a defined sort ID. To parse these fields to XML, define this map in the 'defined_sort' "
+                f"class attribute of this parser | {sorter.sort_fields}"
+            )
+
+        field, reverse_sort = next(iter(sorter.sort_fields.items()), (None, False))
+        self.xml_source["SortBy"] = {
+            "@Field": str(field.value if field is not None else self.default_sort),
+            "@Order": "Descending" if reverse_sort else "Ascending"
+        }
 
     def as_dict(self):
         return {"path": self.path, "path_mapper": self.path_mapper}
