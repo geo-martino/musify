@@ -217,6 +217,7 @@ class XMLPlaylistParser(File, PrettyPrinter):
         #  in the MusicBee library file for a given playlist.
     }
     default_sort = 78
+    default_group_by = "track"
 
     @property
     def path(self) -> str:
@@ -275,7 +276,6 @@ class XMLPlaylistParser(File, PrettyPrinter):
             This function expects to be given only the XML part related to one Comparer condition.
         :return: The initialised :py:class:`Comparer`.
         """
-        print(xml)
         field_name = xml.get("@Field", "None")
         field: Field = self.name_field_map.get(field_name)
         if field is None:
@@ -293,7 +293,7 @@ class XMLPlaylistParser(File, PrettyPrinter):
     def _get_xml_from_comparer(self, comparer: Comparer | None = None) -> dict[str, Any]:
         """Parse the given ``comparer`` to its XML playlist representation."""
         if comparer is None:  # default value
-            return {"Field": "Album", "Comparison": "Contains", "Value": ""}
+            return {"@Field": "Album", "@Comparison": "Contains", "@Value": ""}
 
         field_name = self.field_name_map.get(comparer.field)
         if field_name is None:
@@ -355,7 +355,7 @@ class XMLPlaylistParser(File, PrettyPrinter):
         filter_exclude.transform = lambda x: self.path_mapper.map(x, check_existence=False).casefold()
 
         group_by_value = self._pascal_to_snake(self.xml_smart_playlist["@GroupBy"])
-        group_by = None if group_by_value == "track" else TagFields.from_name(group_by_value)[0]
+        group_by = None if group_by_value == self.default_group_by else TagFields.from_name(group_by_value)[0]
 
         return FilterMatcher(
             include=filter_include, exclude=filter_exclude, comparers=filter_compare, group_by=group_by
@@ -366,8 +366,33 @@ class XMLPlaylistParser(File, PrettyPrinter):
         Update the loaded ``xml`` object by parsing the given ``matcher`` to its XML playlist representation.
         Does not extract exception paths (i.e. include/exclude attributes).
         """
-        group_by = matcher.group_by.name.lower() if matcher.group_by else "track"
+        if matcher is None or not matcher.ready:
+            self.xml_smart_playlist["@GroupBy"] = self.default_group_by
+            self.xml_smart_playlist["Conditions"] = {"@CombineMethod": "Any"} | self._get_xml_from_comparer()
+            return
+
+        group_by = matcher.group_by.name.lower() if matcher.group_by else self.default_group_by
         self.xml_smart_playlist["@GroupBy"] = group_by.lower()
+        self.xml_source["Conditions"] = self._parse_filter_comparer(matcher.comparers)
+
+    def _parse_filter_comparer(self, filter_: FilterComparers) -> dict[str, Any]:
+        combine_method = "All" if filter_.match_all else "Any"
+        conditions: list[dict[str, Any]] = []
+        for comparer, (combine, sub_filter) in filter_.comparers.items():
+            condition = self._get_xml_from_comparer(comparer)
+            if sub_filter.ready:
+                combine_key = "And" if combine else "Or"
+                condition[combine_key] = self._parse_filter_comparer(sub_filter)
+
+            conditions.append(condition)
+
+        if len(conditions) == 0:  # assign the default value when no comparers present
+            conditions.append(self._get_xml_from_comparer())
+
+        return {
+            "@CombineMethod": combine_method,
+            "Condition": conditions[0] if len(conditions) == 1 else conditions
+        }
 
     def parse_exception_paths(
             self, matcher: FilterMatcher | None, items: list[File], original: list[File | MusifyItem]
@@ -486,7 +511,7 @@ class XMLPlaylistParser(File, PrettyPrinter):
             elif "DefinedSort" in self.xml_source:
                 fields = [field]
             else:
-                raise NotImplementedError("Sort type in XML not recognised")
+                raise ItemSorterError("Sort type in XML not recognised")
 
         shuffle_mode_value = self._pascal_to_snake(self.xml_smart_playlist["@ShuffleMode"])
         if not fields and shuffle_mode_value != "none":

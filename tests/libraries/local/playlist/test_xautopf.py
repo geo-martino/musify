@@ -356,6 +356,29 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
 
         assert matcher.group_by == Fields.ALBUM
 
+    def test_parse_matcher(self):
+        parser_initial = XMLPlaylistParser(path=path_playlist_xautopf_ra)
+        parser_final = XMLPlaylistParser(path=path_playlist_xautopf_cm)
+        initial = parser_initial.get_matcher()
+        final = parser_final.get_matcher()
+
+        assert initial.group_by != final.group_by
+        assert initial.comparers.ready != final.comparers.ready
+        assert len(initial.comparers.comparers) != len(final.comparers.comparers)
+
+        # default values cause getter to return default, non-ready processor
+        parser_initial.parse_matcher()
+        assert not parser_initial.get_matcher().ready
+
+        parser_initial.parse_matcher(final)
+        new = parser_initial.get_matcher()
+        assert new.group_by == final.group_by
+        assert new.comparers.ready == final.comparers.ready
+        assert len(new.comparers.comparers) == len(final.comparers.comparers)
+
+        assert parser_initial.xml_smart_playlist["@GroupBy"] == parser_final.xml_smart_playlist["@GroupBy"]
+        assert parser_initial.xml_source["Conditions"] == parser_final.xml_source["Conditions"]
+
     ###########################################################################
     ## ItemLimiter parsing
     ###########################################################################
@@ -386,7 +409,6 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         assert parser_initial.get_limiter() is None
 
         parser_initial.parse_limiter(final)
-
         new = parser_initial.get_limiter()
         assert new is not None
         assert new.limit_max == final.limit_max
@@ -441,7 +463,6 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         assert final.sort_fields == parser_final.defined_sort[6]
 
         parser_initial.parse_sorter(final)
-
         new = parser_initial.get_sorter()
         assert initial.sort_fields != new.sort_fields == final.sort_fields
 
@@ -463,7 +484,6 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         assert parser_initial.get_sorter().shuffle_mode is None
 
         parser_initial.parse_sorter(final)
-
         new = parser_initial.get_sorter()
         assert initial.sort_fields != new.sort_fields == final.sort_fields
 
@@ -486,7 +506,6 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         assert actual_weight != parser_final.xml_smart_playlist["@ShuffleSameArtistWeight"]
 
         parser_initial.parse_sorter(final)
-
         new = parser_initial.get_sorter()
         assert initial.shuffle_mode != new.shuffle_mode == final.shuffle_mode
         assert initial.shuffle_weight != new.shuffle_weight == final.shuffle_weight
