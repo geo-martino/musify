@@ -12,6 +12,7 @@ from PIL import Image
 
 from musify.core.enum import TagMap
 from musify.file.image import open_image, get_image_bytes
+from musify.libraries.local.exception import TagError
 from musify.libraries.local.track.field import LocalTrackField
 from musify.libraries.local.track.tags.reader import TagReader
 from musify.libraries.local.track.tags.writer import TagWriter
@@ -37,7 +38,7 @@ class MP3TagReader(TagReader[mutagen.mp3.MP3]):
             elif isinstance(value, mutagen.id3.APIC):
                 values.append(value)
             else:
-                raise NotImplementedError(f"Unrecognised id3 type: {value} ({type(value)})")
+                raise TagError(f"Unrecognised id3 type: {value} ({type(value)})")
 
         return values if len(values) > 0 else None
 

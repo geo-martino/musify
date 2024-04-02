@@ -43,8 +43,11 @@ class LocalCollectionError(LocalError):
         super().__init__(formatted)
 
 
-class LocalProcessorError(LocalError):
-    """Exception raised for errors related to track processors."""
+###########################################################################
+## Track errors
+###########################################################################
+class TagError(LocalError):
+    """Exception raised for errors related to track tag errors."""
 
 
 ###########################################################################

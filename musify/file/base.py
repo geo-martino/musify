@@ -91,7 +91,7 @@ class File(Hashable, metaclass=ABCMeta):
         """
         Save this object to file.
 
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         """
         raise NotImplementedError
 

@@ -139,7 +139,7 @@ class LocalPlaylist[T: Filter[LocalTrack]](LocalCollection[LocalTrack], Playlist
         """
         Write the tracks in this Playlist and its settings (if applicable) to file.
 
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: :py:class:`Result` object with stats on the changes to the playlist.
         """
         raise NotImplementedError

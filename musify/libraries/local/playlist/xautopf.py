@@ -1,7 +1,7 @@
 """
 The XAutoPF implementation of a :py:class:`LocalPlaylist`.
 """
-from collections.abc import Collection
+from collections.abc import Collection, Mapping, Sequence
 from copy import deepcopy
 from dataclasses import dataclass
 from os.path import exists
@@ -9,16 +9,26 @@ from typing import Any
 
 import xmltodict
 
-from musify.core.enum import Fields
+from musify.core.base import MusifyItem
+from musify.core.enum import Fields, Field, TagFields
+from musify.core.printer import PrettyPrinter
 from musify.core.result import Result
+from musify.exception import FieldError
+from musify.file.base import File
 from musify.file.path_mapper import PathMapper
 from musify.libraries.local.playlist.base import LocalPlaylist
 from musify.libraries.local.track import LocalTrack
+from musify.processors.compare import Comparer
+from musify.processors.exception import ItemSorterError
 from musify.processors.filter import FilterDefinedList, FilterComparers
 from musify.processors.filter_matcher import FilterMatcher
-from musify.processors.limit import ItemLimiter
-from musify.processors.sort import ItemSorter
-from musify.utils import merge_maps
+from musify.processors.limit import ItemLimiter, LimitType
+from musify.processors.sort import ItemSorter, ShuffleMode
+from musify.utils import to_collection
+
+AutoMatcher = FilterMatcher[
+    LocalTrack, FilterDefinedList[LocalTrack], FilterDefinedList[LocalTrack], FilterComparers[LocalTrack]
+]
 
 
 @dataclass(frozen=True)
@@ -26,8 +36,6 @@ class SyncResultXAutoPF(Result):
     """Stores the results of a sync with a local XAutoPF playlist."""
     #: The total number of tracks in the playlist before the sync.
     start: int
-    #: The description of the playlist before sync.
-    start_description: str
     #: The number of tracks that matched the include settings before the sync.
     start_included: int
     #: The number of tracks that matched the exclude settings before the sync.
@@ -41,8 +49,6 @@ class SyncResultXAutoPF(Result):
 
     #: The total number of tracks in the playlist after the sync.
     final: int
-    #: The description of the playlist after sync.
-    final_description: str
     #: The number of tracks that matched the include settings after the sync.
     final_included: int
     #: The number of tracks that matched the exclude settings after the sync.
@@ -55,9 +61,7 @@ class SyncResultXAutoPF(Result):
     final_sorter: bool
 
 
-class XAutoPF(LocalPlaylist[FilterMatcher[
-    LocalTrack, FilterDefinedList[LocalTrack], FilterDefinedList[LocalTrack], FilterComparers[LocalTrack]
-]]):
+class XAutoPF(LocalPlaylist[AutoMatcher]):
     """
     For reading and writing data from MusicBee's auto-playlist format.
 
@@ -71,45 +75,58 @@ class XAutoPF(LocalPlaylist[FilterMatcher[
         mapped to absolute, system-specific paths to be loaded and back again when saved.
     """
 
-    __slots__ = ("_description", "xml",)
+    __slots__ = ("_parser",)
 
     valid_extensions = frozenset({".xautopf"})
+    default_xml = {
+        "SmartPlaylist": {
+            "@SaveStaticCopy": "False",
+            "@LiveUpdating": "True",
+            "@Layout": "4",
+            "@LayoutGroupBy": "0",
+            "@ConsolidateAlbums": "False",
+            "@MusicLibraryPath": "",
+            "Source": {"@Type": "1", "Description": None}
+        }
+    }
 
     @property
     def description(self):
-        return self._description
+        return self._parser.description
 
     @description.setter
     def description(self, value: str | None):
-        self._description = value
+        self._parser.description = value
 
     @property
     def image_links(self):
         return {}
 
     def __init__(
-            self, path: str, tracks: Collection[LocalTrack] = (), path_mapper: PathMapper = PathMapper(), *_, **__
+            self,
+            path: str,
+            tracks: Collection[LocalTrack] = (),
+            path_mapper: PathMapper = PathMapper(),
+            *_,
+            **__
     ):
         self._validate_type(path)
-        if not exists(path):
-            # TODO: implement creation of auto-playlist from scratch (very low priority)
-            raise NotImplementedError(
-                f"No playlist at given path: {path}. "
-                "This program is not yet able to create this playlist type from scratch."
-            )
 
-        with open(path, "r", encoding="utf-8") as file:
-            #: A map representation of the loaded XML playlist data
-            self.xml: dict[str, Any] = xmltodict.parse(file.read())
-
-        self._description = self.xml["SmartPlaylist"]["Source"]["Description"]
+        self._parser = XMLPlaylistParser(path=path, path_mapper=path_mapper)
+        if exists(path):
+            self._parser.load()
+        else:  # this is a new playlist, assign default values to parser
+            self._parser.xml = deepcopy(self.default_xml)
+            self._parser.parse_matcher()
+            self._parser.parse_limiter()
+            self._parser.parse_sorter()
 
         super().__init__(
             path=path,
-            matcher=FilterMatcher.from_xml(xml=self.xml, path_mapper=path_mapper),
-            limiter=ItemLimiter.from_xml(xml=self.xml),
-            sorter=ItemSorter.from_xml(xml=self.xml),
-            path_mapper=path_mapper,
+            matcher=self._parser.get_matcher(),
+            limiter=self._parser.get_limiter(),
+            sorter=self._parser.get_sorter(),
+            path_mapper=self._parser.path_mapper,
         )
 
         self.load(tracks=tracks)
@@ -129,71 +146,431 @@ class XAutoPF(LocalPlaylist[FilterMatcher[
         """
         Write the tracks in this Playlist and its settings (if applicable) to file.
 
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: The results of the sync as a :py:class:`SyncResultXAutoPF` object.
         """
-        xml_start = deepcopy(self.xml)
-        xml_final = deepcopy(self.xml)
+        initial = deepcopy(self._parser)
+        initial_count = len(self._original)
 
-        count_start = len(self._original)
-        source_start: dict[str, Any] = xml_start["SmartPlaylist"]["Source"]
-        source_final: dict[str, Any] = xml_final["SmartPlaylist"]["Source"]
+        parser = self._parser if not dry_run else deepcopy(self._parser)
+        parser.parse_matcher(self.matcher)
+        parser.parse_exception_paths(self.matcher, items=self.tracks, original=self._original)
+        parser.parse_limiter(self.limiter)
+        parser.parse_sorter(self.sorter)
+        parser.save(dry_run=dry_run)
 
-        # update the stored XML object
-        source_final["Description"] = self.description
-        self._update_xml_paths(xml_final)
-        # self._update_comparers(xml_final)
-        # self._update_limiter(xml_final)
-        # self._update_sorter(xml_final)
-
-        if not dry_run:  # save the modified XML object to file and update stored values
-            self.xml = xml_final
-            self._save_xml()
+        if not dry_run:
             self._original = self.tracks.copy()
 
         return SyncResultXAutoPF(
-            start=count_start,
-            start_description=source_start["Description"],
-            start_included=len([p for p in source_start.get("ExceptionsInclude", "").split("|") if p]),
-            start_excluded=len([p for p in source_start.get("Exceptions", "").split("|") if p]),
-            start_compared=len(source_start["Conditions"].get("Condition", [])),
-            start_limiter=source_start["Limit"].get("@Enabled", "False") == "True",
-            start_sorter=len(source_start.get("SortBy", source_start.get("DefinedSort", []))) > 0,
+            start=initial_count,
+            start_included=len([p for p in initial.xml_source.get("ExceptionsInclude", "").split("|") if p]),
+            start_excluded=len([p for p in initial.xml_source.get("Exceptions", "").split("|") if p]),
+            start_compared=len(initial.xml_source["Conditions"].get("Condition", [])),
+            start_limiter=initial.xml_source["Limit"].get("@Enabled", "False") == "True",
+            start_sorter=len(initial.xml_source.get("SortBy", initial.xml_source.get("DefinedSort", []))) > 0,
             final=len(self.tracks),
-            final_description=source_final["Description"],
-            final_included=len([p for p in source_final.get("ExceptionsInclude", "").split("|") if p]),
-            final_excluded=len([p for p in source_final.get("Exceptions", "").split("|") if p]),
-            final_compared=len(source_final["Conditions"].get("Condition", [])),
-            final_limiter=source_final["Limit"].get("@Enabled", "False") == "True",
-            final_sorter=len(source_final.get("SortBy", source_final.get("DefinedSort", []))) > 0,
+            final_included=len([p for p in parser.xml_source.get("ExceptionsInclude", "").split("|") if p]),
+            final_excluded=len([p for p in parser.xml_source.get("Exceptions", "").split("|") if p]),
+            final_compared=len(parser.xml_source["Conditions"].get("Condition", [])),
+            final_limiter=parser.xml_source["Limit"].get("@Enabled", "False") == "True",
+            final_sorter=len(parser.xml_source.get("SortBy", parser.xml_source.get("DefinedSort", []))) > 0,
         )
 
-    def _update_xml_paths(self, xml: dict[str, Any]) -> None:
-        """Update the stored, parsed XML object with valid include and exclude paths"""
-        output = self.matcher.to_xml(
-            items=self.tracks,
-            original=self._original,
-            path_mapper=lambda paths: self.path_mapper.unmap_many(paths, check_existence=False)
-        )
-        merge_maps(source=xml, new=output, extend=False, overwrite=True)
 
-    def _update_comparers(self, xml: dict[str, Any]) -> None:
-        """Update the stored, parsed XML object with appropriately formatted comparer settings"""
-        # TODO: implement comparison XML part updater (low priority)
-        raise NotImplementedError
+class XMLPlaylistParser(File, PrettyPrinter):
 
-    def _update_limiter(self, xml: dict[str, Any]) -> None:
-        """Update the stored, parsed XML object with appropriately formatted limiter settings"""
-        # TODO: implement limit XML part updater (low priority)
-        raise NotImplementedError
+    __slots__ = ("_path", "path_mapper", "xml",)
 
-    def _update_sorter(self, xml: dict[str, Any]) -> None:
-        """Update the stored, parsed XML object with appropriately formatted sorter settings"""
-        # TODO: implement sort XML part updater (low priority)
-        raise NotImplementedError
+    # noinspection SpellCheckingInspection
+    #: Map of MusicBee field name to Field enum
+    name_field_map = {
+        "None": None,
+        "Title": Fields.TITLE,
+        "ArtistPeople": Fields.ARTIST,
+        "Album": Fields.ALBUM,  # album ignoring articles like 'the' and 'a' etc.
+        "Album Artist": Fields.ALBUM_ARTIST,
+        "TrackNo": Fields.TRACK_NUMBER,
+        "TrackCount": Fields.TRACK_TOTAL,
+        "GenreSplits": Fields.GENRES,
+        "Year": Fields.YEAR,  # could also be 'YearOnly'?
+        "BeatsPerMin": Fields.BPM,
+        "DiscNo": Fields.DISC_NUMBER,
+        "DiscCount": Fields.DISC_TOTAL,
+        # "": Fields.COMPILATION,  # unmapped for compare
+        "Comment": Fields.COMMENTS,
+        "FileDuration": Fields.LENGTH,
+        "Rating": Fields.RATING,
+        # "ComposerPeople": Fields.COMPOSER,  # currently not supported by this program
+        # "Conductor": Fields.CONDUCTOR,  # currently not supported by this program
+        # "Publisher": Fields.PUBLISHER,  # currently not supported by this program
+        "FilePath": Fields.PATH,
+        "FolderName": Fields.FOLDER,
+        "FileName": Fields.FILENAME,
+        "FileExtension": Fields.EXT,
+        # "": Fields.SIZE,  # unmapped for compare
+        "FileKind": Fields.TYPE,
+        "FileBitrate": Fields.BIT_RATE,
+        "BitDepth": Fields.BIT_DEPTH,
+        "FileSampleRate": Fields.SAMPLE_RATE,
+        "FileChannels": Fields.CHANNELS,
+        # "": Fields.DATE_CREATED,  # unmapped for compare
+        "FileDateModified": Fields.DATE_MODIFIED,
+        "FileDateAdded": Fields.DATE_ADDED,
+        "FileLastPlayed": Fields.LAST_PLAYED,
+        "FilePlayCount": Fields.PLAY_COUNT,
+    }
+    field_name_map = {field: name for name, field in name_field_map.items()}
 
-    def _save_xml(self) -> None:
-        """Save XML representation of the playlist"""
+    #: Settings for custom sort codes.
+    defined_sort: dict[int, Mapping[Field, bool]] = {
+        6: {
+            Fields.ALBUM: False,
+            Fields.DISC_NUMBER: False,
+            Fields.TRACK_NUMBER: False,
+            Fields.FILENAME: False
+        }
+        # TODO: implement field_code 78 - manual order according to the order of tracks found
+        #  in the MusicBee library file for a given playlist.
+    }
+    default_sort = 78
+    default_group_by = "track"
+
+    @property
+    def path(self) -> str:
+        return self._path
+
+    @property
+    def xml_smart_playlist(self) -> dict[str, Any]:
+        """The smart playlist data part of the loaded XML playlist data"""
+        return self.xml["SmartPlaylist"]
+
+    @property
+    def xml_source(self) -> dict[str, Any]:
+        """The source data part of the loaded XML playlist data"""
+        return self.xml_smart_playlist["Source"]
+
+    @property
+    def description(self):
+        """The description value of the XML playlist data"""
+        return self.xml_source["Description"]
+
+    @description.setter
+    def description(self, value: str | None):
+        """The description value of the XML playlist data"""
+        if value:
+            self.xml_source["Description"] = value
+        else:
+            self.xml_source.pop("Description", None)
+
+    def __init__(self, path: str, path_mapper: PathMapper = PathMapper()):
+        self._path = path
+        self.path_mapper = path_mapper
+
+        #: A map representation of the loaded XML playlist data
+        self.xml: dict[str, Any] = {}
+
+    def load(self) -> None:
+        """Load ``xml`` object from the disk"""
+        with open(self.path, "r", encoding="utf-8") as file:
+            self.xml: dict[str, Any] = xmltodict.parse(file.read())
+
+    def save(self, dry_run: bool = True, *_, **__) -> None:
+        """Save ``xml`` object to the disk"""
+        if dry_run:
+            return
         with open(self.path, 'w', encoding="utf-8") as file:
             xml_str = xmltodict.unparse(self.xml, pretty=True, short_empty_elements=True)
             file.write(xml_str.replace("/>", " />").replace('\t', '  '))
+
+    def _get_comparer(self, xml: Mapping[str, Any]) -> Comparer:
+        """
+        Initialise and return a :py:class:`Comparer` from the relevant chunk of settings in ``xml`` playlist data.
+
+        :param xml: The relevant chunk to generate a single :py:class:`Comparer` as found in
+            the loaded XML object for this playlist.
+            This function expects to be given only the XML part related to one Comparer condition.
+        :return: The initialised :py:class:`Comparer`.
+        """
+        field_name = xml.get("@Field", "None")
+        field: Field = self.name_field_map.get(field_name)
+        if field is None:
+            raise FieldError("Unrecognised field name", field=field_name)
+
+        expected: tuple[str, ...] | None = tuple(v for k, v in xml.items() if k.startswith("@Value"))
+        reference_required = next(iter(expected), None) == "[playing track]"
+        if len(expected) == 0 or expected[0] == "[playing track]":
+            expected = None
+
+        return Comparer(
+            condition=xml["@Comparison"], expected=expected, field=field, reference_required=reference_required
+        )
+
+    def _get_xml_from_comparer(self, comparer: Comparer | None = None) -> dict[str, Any]:
+        """Parse the given ``comparer`` to its XML playlist representation."""
+        if comparer is None:  # default value
+            return {"@Field": "ArtistPeople", "@Comparison": "StartsWith", "@Value": ""}
+
+        field_name = self.field_name_map.get(comparer.field)
+        if field_name is None:
+            raise FieldError("Unrecognised field", field=comparer.field)
+
+        condition = "[playing track]" if comparer.reference_required else self._snake_to_pascal(comparer.condition)
+
+        xml: dict[str, Any] = {"@Field": field_name, "@Comparison": condition}
+
+        if comparer.expected is None:
+            pass
+        elif len(comparer.expected) == 0:
+            xml["@Value"] = ""
+        elif len(comparer.expected) == 1:
+            xml["@Value"] = str(comparer.expected[0])
+        else:
+            for i, value in enumerate(comparer.expected, 1):
+                xml[f"@Value{i}"] = str(value)
+
+        return xml
+
+    def get_matcher(self) -> AutoMatcher:
+        """Initialise and return a :py:class:`FilterMatcher` object from loaded XML playlist data."""
+        # tracks to include/exclude even if they meet/don't meet match compare conditions
+        include_str: str = self.xml_source.get("ExceptionsInclude") or ""
+        include = self.path_mapper.map_many(set(include_str.split("|")), check_existence=True)
+        exclude_str: str = self.xml_source.get("Exceptions") or ""
+        exclude = self.path_mapper.map_many(set(exclude_str.split("|")), check_existence=True)
+
+        comparers: dict[Comparer, tuple[bool, FilterComparers]] = {}
+        for condition in to_collection(self.xml_source["Conditions"]["Condition"]):
+            if any(key in condition for key in {"And", "Or"}):
+                combine = "And" in condition
+                conditions = condition["And" if combine else "Or"]
+                sub_filter = FilterComparers(
+                    comparers=[self._get_comparer(sub) for sub in to_collection(conditions["Condition"])],
+                    match_all=conditions["@CombineMethod"] == "All"
+                )
+            else:
+                combine = False
+                sub_filter = FilterComparers()
+
+            comparers[self._get_comparer(xml=condition)] = (combine, sub_filter)
+
+        dummy_conditions = {"starts_with", "contains"}
+        if len(comparers) == 1 and not next(iter(comparers.values()))[1].ready:
+            # when user has not set an explicit comparer, a single empty 'allow all' comparer is assigned
+            # check for this 'allow all' comparer and remove it if present to speed up comparisons
+            c = next(iter(comparers))
+            is_dummy_condition = any(cond in c.condition.casefold() for cond in dummy_conditions)
+            if is_dummy_condition and len(c.expected) == 1 and not c.expected[0]:
+                comparers = {}
+
+        filter_include = FilterDefinedList[LocalTrack](values=[path.casefold() for path in include])
+        filter_exclude = FilterDefinedList[LocalTrack](values=[path.casefold() for path in exclude])
+        filter_compare = FilterComparers[LocalTrack](
+            comparers, match_all=self.xml_source["Conditions"]["@CombineMethod"] == "All"
+        )
+
+        filter_include.transform = lambda x: self.path_mapper.map(x, check_existence=False).casefold()
+        filter_exclude.transform = lambda x: self.path_mapper.map(x, check_existence=False).casefold()
+
+        group_by_value = self._pascal_to_snake(self.xml_smart_playlist["@GroupBy"])
+        group_by = None if group_by_value == self.default_group_by else TagFields.from_name(group_by_value)[0]
+
+        return FilterMatcher(
+            include=filter_include, exclude=filter_exclude, comparers=filter_compare, group_by=group_by
+        )
+
+    def parse_matcher(self, matcher: FilterMatcher | None = None) -> None:
+        """
+        Update the loaded ``xml`` object by parsing the given ``matcher`` to its XML playlist representation.
+        Does not extract exception paths (i.e. include/exclude attributes).
+        """
+        if matcher is None or not matcher.ready:
+            self.xml_smart_playlist["@GroupBy"] = self.default_group_by
+            self.xml_source["Conditions"] = {"@CombineMethod": "All"} | {"Condition": self._get_xml_from_comparer()}
+            return
+
+        group_by = matcher.group_by.name.lower() if matcher.group_by else self.default_group_by
+        self.xml_smart_playlist["@GroupBy"] = group_by.lower()
+        self.xml_source["Conditions"] = self._parse_filter_comparer(matcher.comparers)
+
+    def _parse_filter_comparer(self, filter_: FilterComparers) -> dict[str, Any]:
+        combine_method = "All" if filter_.match_all else "Any"
+        conditions: list[dict[str, Any]] = []
+        for comparer, (combine, sub_filter) in filter_.comparers.items():
+            condition = self._get_xml_from_comparer(comparer)
+            if sub_filter.ready:
+                combine_key = "And" if combine else "Or"
+                condition[combine_key] = self._parse_filter_comparer(sub_filter)
+
+            conditions.append(condition)
+
+        if len(conditions) == 0:  # assign the default value when no comparers present
+            conditions.append(self._get_xml_from_comparer())
+
+        return {
+            "@CombineMethod": combine_method,
+            "Condition": conditions[0] if len(conditions) == 1 else conditions
+        }
+
+    def parse_exception_paths(
+            self, matcher: FilterMatcher | None, items: list[File], original: list[File | MusifyItem]
+    ) -> None:
+        """
+        Parse the exception paths (i.e. include/exclude attributes) for the given ``matcher``
+        to its XML playlist representation. Does not extract any other attributes from the ``matcher``.
+
+        :param matcher: The :py:class:`FilterMatcher` to parse.
+        :param items: The items to export.
+        :param original: The original items matched from the settings in the original file.
+        """
+        if matcher is None:
+            self.xml_source.pop("ExceptionsInclude", None)
+            self.xml_source.pop("Exceptions", None)
+            return
+
+        if not isinstance(matcher.include, FilterDefinedList) and not isinstance(matcher.exclude, FilterDefinedList):
+            matcher.logger.warning(
+                "Cannot export this filter to XML: Include and Exclude settings must both be list filters"
+            )
+            return
+
+        items_mapped: Mapping[str, File] = {item.path.casefold(): item for item in items}
+
+        if matcher.comparers:
+            # match again on current conditions to check for differences from original list
+            # which ensures that the paths included in the XML output
+            # do not include paths that match any of the comparer or group_by conditions
+
+            # copy the list of tracks as the sorter will modify the list order
+            original = original.copy()
+            # get the last played track as reference in case comparer is looking for the playing tracks as reference
+            ItemSorter.sort_by_field(original, field=Fields.LAST_PLAYED, reverse=True)
+
+            matched_mapped = {
+                item.path.casefold(): item for item in matcher.comparers(original, reference=original[0])
+            } if matcher.comparers.ready else {}
+            # noinspection PyProtectedMember
+            matched_mapped |= {
+                item.path.casefold(): item for item in matcher._get_group_by_results(original, matched_mapped.values())
+            }
+
+            # get new include/exclude paths based on the leftovers after matching on comparers and group_by settings
+            matcher.exclude.values = list(matched_mapped.keys() - items_mapped)
+            matcher.include.values = [v for v in list(items_mapped - matched_mapped.keys()) if v not in matcher.exclude]
+        else:
+            matched_mapped = items_mapped
+
+        include_items = tuple(items_mapped[path] for path in matcher.include if path in items_mapped)
+        exclude_items = tuple(matched_mapped[path] for path in matcher.exclude if path in matched_mapped)
+
+        if len(include_items) > 0:
+            include_paths = self.path_mapper.unmap_many(include_items, check_existence=False)
+            self.xml_source["ExceptionsInclude"] = "|".join(include_paths).replace("&", "&amp;")
+        if len(exclude_items) > 0:
+            exclude_paths = self.path_mapper.unmap_many(exclude_items, check_existence=False)
+            self.xml_source["Exceptions"] = "|".join(exclude_paths).replace("&", "&amp;")
+
+    def get_limiter(self) -> ItemLimiter | None:
+        """Initialise and return a :py:class:`ItemLimiter` object from loaded XML playlist data."""
+        conditions: Mapping[str, str] = self.xml_source["Limit"]
+        if conditions["@Enabled"] != "True":
+            return
+        # filter_duplicates = conditions["@FilterDuplicates"] == "True"
+
+        # MusicBee appears to have some extra allowance on time and byte limits of ~1.25
+        return ItemLimiter(
+            limit=int(conditions["@Count"]),
+            on=LimitType.from_name(conditions["@Type"])[0],
+            sorted_by=conditions["@SelectedBy"],
+            allowance=1.25
+        )
+
+    def parse_limiter(self, limiter: ItemLimiter | None = None) -> None:
+        """Update the loaded ``xml`` object by parsing the given ``limiter`` to its XML playlist representation."""
+        xml: dict[str, str]
+        if limiter is None:  # default value
+            xml = {
+                "@FilterDuplicates": "True",
+                "@Enabled": "False",
+                "@Count": "25",
+                "@Type": "Items",
+                "@SelectedBy": "Random"
+            }
+        else:
+            xml = {
+                "@FilterDuplicates": "False",
+                "@Enabled": "True",
+                "@Count": str(limiter.limit_max),
+                "@Type": limiter.kind.name.title(),
+                "@SelectedBy": self._snake_to_pascal(limiter.limit_sort)
+            }
+
+        self.xml_source["Limit"] = xml
+
+    def get_sorter(self) -> ItemSorter | None:
+        """Initialise and return a :py:class:`ItemLimiter` object from loaded XML playlist data."""
+        fields: Sequence[Field] | Mapping[Field | bool] = ()
+
+        if "SortBy" in self.xml_source:
+            field_code = int(self.xml_source["SortBy"].get("@Field", 0))
+        elif "DefinedSort" in self.xml_source:
+            field_code = int(self.xml_source["DefinedSort"]["@Id"])
+        else:
+            return
+
+        if field_code in self.defined_sort:
+            fields = self.defined_sort[field_code]
+            return ItemSorter(fields=fields)
+        elif field_code != self.default_sort:
+            field = Fields.from_value(field_code)[0]
+
+            if "SortBy" in self.xml_source:
+                fields = {field: self.xml_source["SortBy"]["@Order"] == "Descending"}
+            elif "DefinedSort" in self.xml_source:
+                fields = [field]
+            else:
+                raise ItemSorterError("Sort type in XML not recognised")
+
+        shuffle_mode_value = self._pascal_to_snake(self.xml_smart_playlist["@ShuffleMode"])
+        if not fields and shuffle_mode_value != "none":
+            shuffle_mode = ShuffleMode.from_name(shuffle_mode_value)[0]
+            shuffle_weight = float(self.xml_smart_playlist.get("@ShuffleSameArtistWeight", 0))
+
+            return ItemSorter(fields=fields, shuffle_mode=shuffle_mode, shuffle_weight=shuffle_weight)
+        return ItemSorter(fields=fields or self.defined_sort[6])  # TODO: workaround - see cls.custom_sort
+
+    def parse_sorter(self, sorter: ItemSorter | None = None) -> None:
+        """Update the loaded ``xml`` object by parsing the given ``sorter`` to its XML playlist representation."""
+        self.xml_source.pop("SortBy", None)
+        self.xml_source.pop("DefinedSort", None)
+
+        if sorter is None:  # default value
+            self.xml_smart_playlist["@ShuffleMode"] = "None"
+            self.xml_smart_playlist["@ShuffleSameArtistWeight"] = "0.5"
+            self.xml_source["SortBy"] = {"@Field": str(self.default_sort), "@Order": "Ascending"}
+            return
+
+        shuffle_mode = "None" if sorter.shuffle_mode is None else self._snake_to_pascal(sorter.shuffle_mode.name)
+        self.xml_smart_playlist["@ShuffleMode"] = shuffle_mode
+        self.xml_smart_playlist["@ShuffleSameArtistWeight"] = str(sorter.shuffle_weight)
+
+        defined_sort_key = next((key for key, value in self.defined_sort.items() if value == sorter.sort_fields), None)
+        if defined_sort_key is not None:
+            self.xml_source["DefinedSort"] = {"@Id": str(defined_sort_key)}
+            return
+
+        if len(sorter.sort_fields) > 1:
+            raise ItemSorterError(
+                "Cannot generate an XML representation of a mapping of many sort fields unless they have "
+                "a defined sort ID. To parse these fields to XML, define this map in the 'defined_sort' "
+                f"class attribute of this parser | {sorter.sort_fields}"
+            )
+
+        field, reverse_sort = next(iter(sorter.sort_fields.items()), (None, False))
+        self.xml_source["SortBy"] = {
+            "@Field": str(field.value if field is not None else self.default_sort),
+            "@Order": "Descending" if reverse_sort else "Ascending"
+        }
+
+    def as_dict(self):
+        return {"path": self.path, "path_mapper": self.path_mapper}

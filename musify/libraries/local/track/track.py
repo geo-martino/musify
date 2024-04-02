@@ -435,7 +435,7 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
 
         :param tags: Tags to be updated.
         :param replace: Destructively replace tags in each file.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: List of tags that have been updated.
         """
         # reload the mutagen object in place to ensure comparison are being made against current data
@@ -451,7 +451,7 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         Remove tags from file.
 
         :param tags: Tags to remove.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: List of tags that have been removed.
         """
         result = self._writer.delete_tags(tags=tags, dry_run=dry_run)

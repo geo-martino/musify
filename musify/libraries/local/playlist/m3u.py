@@ -114,7 +114,7 @@ class M3U(LocalPlaylist[FilterDefinedList[str | File]]):
         """
         Write the tracks in this Playlist and its settings (if applicable) to file.
 
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: The results of the sync as a :py:class:`SyncResultM3U` object.
         """
         start_paths = {path.casefold() for path in self.path_mapper.unmap_many(self._original, check_existence=False)}

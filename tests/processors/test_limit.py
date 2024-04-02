@@ -2,13 +2,11 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
-import xmltodict
 
 from musify.libraries.local.track import LocalTrack
 from musify.processors.limit import ItemLimiter, LimitType
 from tests.core.printer import PrettyPrinterTester
 from tests.libraries.local.track.utils import random_tracks
-from tests.libraries.local.utils import path_playlist_xautopf_bp, path_playlist_xautopf_ra
 from tests.utils import random_file
 
 
@@ -119,25 +117,3 @@ class TestItemLimiter(PrettyPrinterTester):
         limiter = ItemLimiter(limit=30, on=LimitType.KILOBYTES, allowance=2)
         limiter.limit(tracks)
         assert len(tracks) == 21
-
-    ###########################################################################
-    ## XML I/O
-    ###########################################################################
-    def test_from_xml_bp(self):
-        with open(path_playlist_xautopf_bp, "r", encoding="utf-8") as f:
-            xml = xmltodict.parse(f.read())
-        assert ItemLimiter.from_xml(xml=xml) is None
-
-    def test_from_xml_ra(self):
-        with open(path_playlist_xautopf_ra, "r", encoding="utf-8") as f:
-            xml = xmltodict.parse(f.read())
-        limiter = ItemLimiter.from_xml(xml=xml)
-
-        assert limiter.limit_max == 20
-        assert limiter.kind == LimitType.ITEMS
-        assert limiter.allowance == 1.25
-        assert limiter._processor_method == limiter._most_recently_added
-
-    @pytest.mark.skip(reason="not implemented yet")
-    def test_to_xml(self):
-        pass

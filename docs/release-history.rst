@@ -43,6 +43,11 @@ Added
 * Introduced :py:class:`.MusifyItemSettable` class to allow distinction
   between items that can have their properties set and those that can't
 * Extend :py:class:`.FilterMatcher` with group_by tag functionality
+* Now fully supports parsing of processors relating to XAutoPF objects with full I/O of settings
+  to/from their related XML files on disk.
+* Now supports creating new XAutoPF files from scratch without the file needing to already exist.
+  For XML values not directly controlled by Musify, users can use the 'default_xml' class attribute
+  to control the initial default values applied in this scenario.
 
 Changed
 -------
@@ -62,6 +67,10 @@ Changed
   + prioritises fields settings over shuffle settings
 * :py:meth:`.Comparer._in_range` now uses inclusive range i.e. ``a <= x <= b`` where ``x`` is the value to compare
   and ``a`` and ``b`` are the limits. Previously used exclusive range i.e. ``a < x < b``
+* Removed ``from_xml`` and ``to_xml`` methods from all :py:class:`.MusicBeeProcessor` subclasses.
+  Moved this logic to :py:class:`.XMLPlaylistParser` as distinct 'get' methods for each processor type.
+* Moved loading of XML file logic from :py:class:`.XAutoPF` to :py:class:`.XMLPlaylistParser`.
+  :py:class:`.XMLPlaylistParser` is now solely responsible for all XML parsing and handling for XAutoPF files
 
 Fixed
 -----

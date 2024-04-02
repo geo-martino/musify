@@ -5,7 +5,7 @@ import logging
 from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Callable, Collection, Iterable, MutableSequence
 from functools import partial, update_wrapper
-from typing import Any, Self, Optional
+from typing import Any, Optional
 
 from musify.core.printer import PrettyPrinter
 from musify.log.logger import MusifyLogger
@@ -53,28 +53,13 @@ class ItemProcessor(Processor, metaclass=ABCMeta):
     """Base object for processing :py:class:`MusifyItem` objects"""
 
 
-class MusicBeeProcessor(ItemProcessor):
+class MusicBeeProcessor(ItemProcessor, metaclass=ABCMeta):
     """Base object for processing :py:class:`MusifyItem` objects on MusicBee settings"""
 
     @classmethod
     def _processor_method_fmt(cls, name: str) -> str:
         """A custom formatter to apply to the dynamic processor name"""
         return "_" + cls._pascal_to_snake(name)
-
-    @classmethod
-    @abstractmethod
-    def from_xml(cls, xml: Mapping[str, Any], **kwargs) -> Self:
-        """
-        Initialise object from XML playlist data.
-
-        :param xml: The loaded XML object for this playlist.
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def to_xml(self, **kwargs) -> Mapping[str, Any]:
-        """Export this object's settings to a map ready for export to an XML playlist file."""
-        raise NotImplementedError
 
 
 # noinspection PyPep8Naming,SpellCheckingInspection

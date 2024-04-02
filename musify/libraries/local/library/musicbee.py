@@ -151,7 +151,7 @@ class MusicBee(LocalLibrary, File):
         """
         Generate and save the XML library file for this MusicBee library.
 
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: Map representation of the saved XML file.
         """
         self.logger.debug(f"Save {self.name} library file: START")
@@ -509,7 +509,7 @@ class XMLLibraryParser:
         Un-parse a map of XML data to XML and save to file.
 
         :param data: Map of XML data to export.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         """
         et: etree._ElementTree = etree.parse(self.path)
         parsed: dict[str, Any] = xmltodict.parse(etree.tostring(et.getroot(), encoding='utf-8', method='xml'))

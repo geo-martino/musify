@@ -36,7 +36,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         Remove tags from file.
 
         :param tags: Tags to remove.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: List of tags that have been removed.
         """
         if tags is None or (isinstance(tags, Collection) and len(tags) == 0):
@@ -60,7 +60,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         Remove a tag by its tag name.
 
         :param tag_name: Tag name as found in :py:class:`TagMap` to remove.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: True if tag has been remove, False otherwise.
         """
         removed = False
@@ -93,7 +93,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :param target: The target track i.e. the track object containing new tags with which to update the file.
         :param tags: The tags to be updated.
         :param replace: Destructively overwrite the tag on the file if the ``source`` and ``target`` tags differ.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
@@ -138,7 +138,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
 
         :param tag_id: ID of the tag for this file type.
         :param tag_value: New value to assign.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
@@ -159,7 +159,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :param target: The target track i.e. the track object containing new tags with which to update the file.
         :param replace: Destructively overwrite the tag on the file if the ``source`` and ``target`` tags differ.
         :param replace: Destructively overwrite the tag on the file if the ``source`` and ``target`` tags differ.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
@@ -175,7 +175,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         Write the title tag from ``track`` to the stored file.
 
         :param track: The track with the tag to be written.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: True if the file has been updated or would have been written when ``dry_run`` is True.
         """
         return self.write_tag(next(iter(self.tag_map.title), None), track.title, dry_run)
@@ -187,7 +187,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :param source: The source track i.e. the track object representing the currently saved file on the drive.
         :param target: The target track i.e. the track object containing new tags with which to update the file.
         :param replace: Destructively overwrite the tag on the file if the ``source`` and ``target`` tags differ.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
@@ -203,7 +203,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         Write the artist tag from ``track`` to the stored file.
 
         :param track: The track with the tag to be written.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: True if the file has been updated or would have been written when ``dry_run`` is True.
         """
         return self.write_tag(next(iter(self.tag_map.artist), None), track.artist, dry_run)
@@ -215,7 +215,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :param source: The source track i.e. the track object representing the currently saved file on the drive.
         :param target: The target track i.e. the track object containing new tags with which to update the file.
         :param replace: Destructively overwrite the tag on the file if the ``source`` and ``target`` tags differ.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
@@ -231,7 +231,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         Write the album tag from ``track`` to the stored file.
 
         :param track: The track with the tag to be written.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: True if the file has been updated or would have been written when ``dry_run`` is True.
         """
         return self.write_tag(next(iter(self.tag_map.album), None), track.album, dry_run)
@@ -245,7 +245,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :param source: The source track i.e. the track object representing the currently saved file on the drive.
         :param target: The target track i.e. the track object containing new tags with which to update the file.
         :param replace: Destructively overwrite the tag on the file if the ``source`` and ``target`` tags differ.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
@@ -261,7 +261,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         Write the album artist tag from ``track`` to the stored file.
 
         :param track: The track with the tag to be written.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: True if the file has been updated or would have been written when ``dry_run`` is True.
         """
         return self.write_tag(next(iter(self.tag_map.album_artist), None), track.album_artist, dry_run)
@@ -273,7 +273,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :param source: The source track i.e. the track object representing the currently saved file on the drive.
         :param target: The target track i.e. the track object containing new tags with which to update the file.
         :param replace: Destructively overwrite the tag on the file if the ``source`` and ``target`` tags differ.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
@@ -290,7 +290,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         Write the track number and track total tags from ``track`` to the stored file.
 
         :param track: The track with the tag to be written.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: True if the file has been updated or would have been written when ``dry_run`` is True.
         """
         tag_id_number = next(iter(self.tag_map.track_number), None)
@@ -314,7 +314,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :param source: The source track i.e. the track object representing the currently saved file on the drive.
         :param target: The target track i.e. the track object containing new tags with which to update the file.
         :param replace: Destructively overwrite the tag on the file if the ``source`` and ``target`` tags differ.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
@@ -327,7 +327,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         Write the genre tags from ``track`` to the stored file.
 
         :param track: The track with the tag to be written.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: True if the file has been updated or would have been written when ``dry_run`` is True.
         """
         return self.write_tag(next(iter(self.tag_map.genres), None), track.genres, dry_run)
@@ -341,7 +341,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :param source: The source track i.e. the track object representing the currently saved file on the drive.
         :param target: The target track i.e. the track object containing new tags with which to update the file.
         :param replace: Destructively overwrite the tag on the file if the ``source`` and ``target`` tags differ.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
@@ -375,7 +375,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         Write the date, year, month, and/or day tags from ``track`` to the stored file.
 
         :param track: The track with the tag to be written.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: True for each updated tag in the order (date, year, month, day)
             if the file has been updated or would have been written when ``dry_run`` is True.
         """
@@ -399,7 +399,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :param source: The source track i.e. the track object representing the currently saved file on the drive.
         :param target: The target track i.e. the track object containing new tags with which to update the file.
         :param replace: Destructively overwrite the tag on the file if the ``source`` and ``target`` tags differ.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
@@ -419,7 +419,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         Write the bpm tag from ``track`` to the stored file.
 
         :param track: The track with the tag to be written.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: True if the file has been updated or would have been written when ``dry_run`` is True.
         """
         return self.write_tag(next(iter(self.tag_map.bpm), None), track.bpm, dry_run)
@@ -431,7 +431,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :param source: The source track i.e. the track object representing the currently saved file on the drive.
         :param target: The target track i.e. the track object containing new tags with which to update the file.
         :param replace: Destructively overwrite the tag on the file if the ``source`` and ``target`` tags differ.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
@@ -445,7 +445,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         Write the key tag from ``track`` to the stored file.
 
         :param track: The track with the tag to be written.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: True if the file has been updated or would have been written when ``dry_run`` is True.
         """
         return self.write_tag(next(iter(self.tag_map.key), None), track.key, dry_run)
@@ -457,7 +457,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :param source: The source track i.e. the track object representing the currently saved file on the drive.
         :param target: The target track i.e. the track object containing new tags with which to update the file.
         :param replace: Destructively overwrite the tag on the file if the ``source`` and ``target`` tags differ.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
@@ -474,7 +474,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         Write the disc number and disc total tags from ``track`` to the stored file.
 
         :param track: The track with the tag to be written.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: True if the file has been updated or would have been written when ``dry_run`` is True.
         """
         tag_id_number = next(iter(self.tag_map.disc_number), None)
@@ -501,7 +501,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :param source: The source track i.e. the track object representing the currently saved file on the drive.
         :param target: The target track i.e. the track object containing new tags with which to update the file.
         :param replace: Destructively overwrite the tag on the file if the ``source`` and ``target`` tags differ.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
@@ -517,7 +517,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         Write the compilation tag from ``track`` to the stored file.
 
         :param track: The track with the tag to be written.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: True if the file has been updated or would have been written when ``dry_run`` is True.
         """
         return self.write_tag(next(iter(self.tag_map.compilation), None), int(track.compilation), dry_run)
@@ -529,7 +529,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :param source: The source track i.e. the track object representing the currently saved file on the drive.
         :param target: The target track i.e. the track object containing new tags with which to update the file.
         :param replace: Destructively overwrite the tag on the file if the ``source`` and ``target`` tags differ.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
@@ -545,7 +545,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         Write the comments tags from ``track`` to the stored file.
 
         :param track: The track with the tag to be written.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: True if the file has been updated or would have been written when ``dry_run`` is True.
         """
         return self.write_tag(next(iter(self.tag_map.comments), None), track.comments, dry_run)
@@ -558,7 +558,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :param source: The source track i.e. the track object representing the currently saved file on the drive.
         :param target: The target track i.e. the track object containing new tags with which to update the file.
         :param replace: Ignored.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
@@ -575,7 +575,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         Write the URI tag from ``track`` to the stored file.
 
         :param track: The track with the tag to be written.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: True if the file has been updated or would have been written when ``dry_run`` is True.
         """
         tag_id = next(iter(self.tag_map[self.uri_tag.name.lower()]), None)
@@ -589,7 +589,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :param source: The source track i.e. the track object representing the currently saved file on the drive.
         :param target: The target track i.e. the track object containing new tags with which to update the file.
         :param replace: Destructively overwrite the tag on the file if the ``source`` and ``target`` tags differ.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
@@ -604,7 +604,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         Write the images from the ``image_links`` in ``track`` to the stored file.
 
         :param track: The track with the tag to be written.
-        :param dry_run: Run function, but do not modify file at all.
+        :param dry_run: Run function, but do not modify the file on the disk.
         :return: True if the file has been updated or would have been written when ``dry_run`` is True.
         """
         raise NotImplementedError
