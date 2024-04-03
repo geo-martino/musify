@@ -159,6 +159,7 @@ class TestItemMatcher(PrettyPrinterTester):
         track2.clean_tags[Tag.YEAR] = 2005
         assert matcher.match_year(track1, track2) == 0
 
+    # TODO: can this test run faster? runs ~5s on local
     def test_match_all(self, matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):
         sep = track1.tag_sep
 

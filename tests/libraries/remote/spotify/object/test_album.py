@@ -44,15 +44,14 @@ class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
         return response
 
     @pytest.fixture(scope="class")
-    def _response_valid(self, api: SpotifyAPI, api_mock: SpotifyMock) -> dict[str, Any]:
+    def _response_valid(self, api: SpotifyAPI, _api_mock: SpotifyMock) -> dict[str, Any]:
         response = next(
-            deepcopy(album) for album in api_mock.albums
+            deepcopy(album) for album in _api_mock.albums
             if album["tracks"]["total"] > len(album["tracks"]["items"]) > 5 and album["genres"]
             and album["artists"]
         )
         api.extend_items(response=response, key=RemoteObjectType.TRACK)
 
-        api_mock.reset_mock()  # tests check the number of requests made
         return response
 
     @pytest.fixture
@@ -231,7 +230,6 @@ class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
 
         :return: The extracted response as SpotifyTracks.
         """
-        api_mock.reset_mock()  # tests check the number of requests made
 
         # ensure extension of items can be made by reducing available items
         limit = response_valid[item_key]["limit"]
@@ -265,8 +263,6 @@ class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
     def test_load_with_all_items(
             self, response_valid: dict[str, Any], item_key: str, api: SpotifyAPI, api_mock: SpotifyMock
     ):
-        api_mock.reset_mock()  # test checks the number of requests made
-
         load_items = [SpotifyTrack(response) for response in response_valid[item_key][api.items_key]]
         SpotifyAlbum.load(
             response_valid, api=api, items=load_items, extend_albums=True, extend_tracks=False, extend_features=False
@@ -312,7 +308,7 @@ class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
             api_mock: SpotifyMock
     ):
         api.extend_items(response_valid, kind=RemoteObjectType.ALBUM, key=item_kind)
-        api_mock.reset_mock()
+        api_mock.reset_mock()  # reset for new requests checks to work correctly
 
         assert len(response_valid[item_key][api.items_key]) == response_valid[item_key]["total"]
         assert not api_mock.get_requests(response_valid[item_key]["href"])

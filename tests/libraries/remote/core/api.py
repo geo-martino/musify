@@ -31,7 +31,6 @@ class RemoteAPITester(ABC):
     @pytest.fixture
     def _responses(self, object_type: RemoteObjectType, api_mock: RemoteMock) -> dict[str, dict[str, Any]]:
         """Yields valid responses mapped by ID for a given ``object_type`` as a pytest.fixture"""
-        api_mock.reset_mock()  # tests check the number of requests made
         source = api_mock.item_type_map[object_type]
         if len(source) > api_mock.limit_lower:
             source = sample(source, k=api_mock.limit_lower)
