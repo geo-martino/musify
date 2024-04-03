@@ -9,7 +9,6 @@ from random import randrange
 
 import pytest
 
-from core.printer import PrettyPrinterTester
 from musify.core.enum import Fields
 from musify.file.exception import InvalidFileType
 from musify.file.path_mapper import PathMapper, PathStemMapper
@@ -23,6 +22,7 @@ from musify.processors.filter import FilterComparers
 from musify.processors.limit import LimitType
 from musify.processors.sort import ShuffleMode
 from musify.utils import to_collection
+from tests.core.printer import PrettyPrinterTester
 from tests.libraries.local.playlist.testers import LocalPlaylistTester
 from tests.libraries.local.track.utils import random_track, random_tracks
 from tests.libraries.local.utils import path_playlist_resources, path_playlist_all

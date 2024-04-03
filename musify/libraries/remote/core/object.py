@@ -253,9 +253,6 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
         """
         raise NotImplementedError
 
-    def merge(self, playlist: Playlist[T]) -> None:
-        raise NotImplementedError
-
 
 class RemoteAlbum[T: RemoteTrack](Album[T], RemoteCollectionLoader[T], metaclass=ABCMeta):
     """Extracts key ``album`` data from a remote API JSON response."""

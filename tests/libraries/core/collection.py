@@ -1,6 +1,8 @@
 from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable
 from copy import deepcopy
+from random import sample
+from typing import Any
 
 import pytest
 
@@ -9,7 +11,7 @@ from musify.core.printer import PrettyPrinter
 from musify.exception import MusifyTypeError
 from musify.libraries.collection import BasicCollection
 from musify.libraries.core.collection import MusifyCollection
-from musify.libraries.core.object import Library, Playlist
+from musify.libraries.core.object import Library, Playlist, Track
 from musify.libraries.remote.core.library import RemoteLibrary
 from musify.libraries.remote.core.object import RemoteCollectionLoader
 from musify.processors.filter import FilterDefinedList, FilterIncludeExclude
@@ -198,6 +200,16 @@ class MusifyCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
         collection.sort(reverse=True)
         assert collection == items
 
+    @staticmethod
+    def test_collection_difference_and_intersection(
+            collection: MusifyCollection, collection_merge_items: Iterable[MusifyItem]
+    ):
+        difference = [item for item in collection_merge_items]
+        other = collection.items + difference
+
+        assert collection.difference(other) == difference
+        assert collection.intersection(other) == collection.items
+
 
 class PlaylistTester(MusifyCollectionTester, metaclass=ABCMeta):
 
@@ -210,13 +222,75 @@ class PlaylistTester(MusifyCollectionTester, metaclass=ABCMeta):
     def collection(self, playlist: Playlist) -> MusifyCollection:
         return playlist
 
-    @pytest.mark.skip(reason="not implemented yet")
-    def test_merge(self, playlist: Playlist):
-        pass
+    # noinspection PyTypeChecker
+    @staticmethod
+    def test_merge_input_validation(playlist: Playlist, collection_merge_invalid: Iterable[MusifyItem]):
+        with pytest.raises(MusifyTypeError):
+            playlist.merge(collection_merge_invalid)
 
-    @pytest.mark.skip(reason="not implemented yet")
-    def test_merge_dunder_methods(self, playlist: Playlist):
-        pass
+    @staticmethod
+    def test_merge[T: Track](playlist: Playlist[T], collection_merge_items: Iterable[T]):
+        initial_count = len(playlist)
+        items = [item for item in collection_merge_items]
+
+        playlist.merge([items[0]])
+        assert len(playlist) == initial_count + 1
+        assert playlist[-1] == items[0]
+
+        playlist.merge(playlist.items + items[:-1])
+        assert len(playlist) == initial_count + len(items) - 1
+
+        playlist.merge(playlist.items + items)
+        assert len(playlist) == initial_count + len(items)
+
+    @staticmethod
+    def test_merge_with_reference[T: Track](playlist: Playlist[T], collection_merge_items: Iterable[T]):
+        # setup collections so 2 items are always removed and many items are always added
+        reference = deepcopy(playlist)
+        reference_items = sample(reference.items, k=(len(reference.items) // 2) + 1)
+        reference.clear()
+        reference.extend(reference_items)
+        assert len(reference) >= 3
+
+        other = [item for item in collection_merge_items]
+        other.extend(reference[:2])  # both other and playlist have item 0, playlist does not have item 1
+        other.extend(reference[3:])  # both other and playlist has items 3+
+
+        playlist_items = [item for item in playlist if item not in reference]
+        playlist.clear()
+        playlist.extend(playlist_items)
+        playlist.append(reference[0])  # both other and playlist have item 0
+        playlist.extend(reference[2:])  # playlist has item 2, both other and playlist has items 3+
+        playlist.append(next(item for item in other if item not in reference and item not in playlist))
+
+        removed = [item for item in reference if item not in other or item not in playlist]
+        assert len(removed) >= 2
+
+        added = [item for item in other if item not in reference]
+        added += [item for item in playlist if item not in reference and item not in added]
+        assert added
+
+        playlist.merge(other=other, reference=reference)
+        assert all(item not in playlist for item in removed)
+        assert all(item in playlist for item in added)
+        print(len(playlist), len(reference), len(removed), len(added))
+        assert len(playlist) == len(reference) - len(removed) + len(added)
+
+    @staticmethod
+    def test_merge_dunder_methods[T: Track](playlist: Playlist[T], collection_merge_items: Iterable[T]):
+        initial_count = len(playlist)
+        other = deepcopy(playlist)
+        other.tracks.clear()
+        other.tracks.extend(collection_merge_items)
+
+        new_pl = playlist | other
+        assert len(new_pl) == initial_count + len(other)
+        assert new_pl[initial_count:] == other.items
+        assert len(playlist) == initial_count
+
+        playlist |= other
+        assert len(playlist) == initial_count + len(other)
+        assert playlist[initial_count:] == other.items
 
 
 class LibraryTester(MusifyCollectionTester, metaclass=ABCMeta):
@@ -269,6 +343,38 @@ class LibraryTester(MusifyCollectionTester, metaclass=ABCMeta):
                 continue
             assert len(pl) == expected_counts[name]
 
-    @abstractmethod
-    def test_merge_playlists(self, library: Library):
-        raise NotImplementedError
+    @staticmethod
+    def assert_merge_playlists(source: Library, test_values: Any):
+        """Run merge playlists function on ``source`` library against ``test_values`` and assert expected results"""
+        # fine-grained merge functionality is tested in the playlist tester
+        # we just need to assert the playlist was modified in some way
+        test_library = deepcopy(source)
+        test_library.merge_playlists(test_values)
+
+        unchanged = next(iter(test_library.playlists.values()))
+        assert len(source.playlists[unchanged.name]) == len(unchanged)
+
+        for name, playlist in list(test_library.playlists.items())[1:]:
+            assert len(source.playlists[name]) < len(playlist)
+
+    def test_merge_playlists(self, library: Library, collection_merge_items: Iterable[MusifyItem]):
+        merge_playlists = deepcopy(list(library.playlists.values())[:5])  # don't over test with too many playlists
+        for playlist in merge_playlists[1:]:  # first playlist to remain unchanged
+            playlist.extend(collection_merge_items)
+
+        names = [pl.name for pl in merge_playlists]
+        for name in list(library.playlists):
+            if name not in names:
+                library.playlists.pop(name)
+
+        # Collection[Playlist]
+        self.assert_merge_playlists(source=library, test_values=merge_playlists)
+
+        # Mapping[str, Playlist]
+        self.assert_merge_playlists(source=library, test_values={pl.name: pl for pl in merge_playlists})
+
+        # Library
+        test = deepcopy(library)
+        test.playlists.clear()
+        test.playlists.update({pl.name: pl for pl in merge_playlists})
+        self.assert_merge_playlists(source=library, test_values=test)

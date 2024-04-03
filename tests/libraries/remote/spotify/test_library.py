@@ -215,7 +215,3 @@ class TestSpotifyLibrary(RemoteLibraryTester):
 
         req_urls = set(req.url.split("?")[0] for req in api_mock.request_history)
         assert all(album.url + "/tracks" in req_urls for artist in library.artists for album in artist.albums)
-
-    @pytest.mark.skip(reason="not implemented yet")
-    def test_merge_playlists(self, library: SpotifyLibrary):
-        pass

@@ -19,6 +19,7 @@ from musify.log.logger import MusifyLogger
 
 
 class APIAuthoriser:
+    # noinspection GrazieInspection
     """
     Authorises and validates an API token for given input parameters.
     Functions for returning formatted headers for future, authorised requests.

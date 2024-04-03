@@ -56,6 +56,7 @@ def pytest_configure(config: pytest.Config):
 
 # This is a fork of the pytest-lazy-fixture package
 # Fixes applied for issues with pytest >8.0: https://github.com/TvoroG/pytest-lazy-fixture/issues/65
+# noinspection PyProtectedMember
 @pytest.hookimpl(tryfirst=True)
 def pytest_runtest_setup(item):
     if hasattr(item, '_request'):
@@ -65,6 +66,7 @@ def pytest_runtest_setup(item):
 
 
 def fillfixtures(_fillfixtures):
+    # noinspection PyProtectedMember
     def fill(request):
         item = request._pyfuncitem
         fixturenames = getattr(item, "fixturenames", None)
@@ -82,6 +84,7 @@ def fillfixtures(_fillfixtures):
     return fill
 
 
+# noinspection PyUnusedLocal
 @pytest.hookimpl(tryfirst=True)
 def pytest_fixture_setup(fixturedef, request):
     val = getattr(request, 'param', None)
@@ -89,6 +92,7 @@ def pytest_fixture_setup(fixturedef, request):
         request.param = request.getfixturevalue(val.name)
 
 
+# noinspection PyProtectedMember
 def pytest_runtest_call(item):
     if hasattr(item, 'funcargs'):
         for arg, val in item.funcargs.items():
@@ -96,14 +100,17 @@ def pytest_runtest_call(item):
                 item.funcargs[arg] = item._request.getfixturevalue(val.name)
 
 
+# noinspection PyUnusedLocal
 @pytest.hookimpl(hookwrapper=True)
 def pytest_pycollect_makeitem(collector, name, obj):
+    # noinspection PyGlobalUndefined
     global current_node
     current_node = collector
     yield
     current_node = None
 
 
+# noinspection PyUnusedLocal
 def pytest_make_parametrize_id(config, val, argname):
     if is_lazy_fixture(val):
         return val.name
@@ -116,6 +123,7 @@ def pytest_generate_tests(metafunc):
     normalize_metafunc_calls(metafunc)
 
 
+# noinspection PyProtectedMember
 def normalize_metafunc_calls(metafunc, used_keys=None):
     newcalls = []
     for callspec in metafunc._calls:
@@ -124,6 +132,7 @@ def normalize_metafunc_calls(metafunc, used_keys=None):
     metafunc._calls = newcalls
 
 
+# noinspection PyProtectedMember
 def copy_metafunc(metafunc):
     copied = copy.copy(metafunc)
     copied.fixturenames = copy.copy(metafunc.fixturenames)
@@ -139,6 +148,7 @@ def copy_metafunc(metafunc):
     return copied
 
 
+# noinspection PyProtectedMember
 def normalize_call(callspec, metafunc, used_keys):
     fm = metafunc.config.pluginmanager.get_plugin('funcmanage')
 

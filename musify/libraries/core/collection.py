@@ -224,6 +224,22 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], metaclas
         if reverse:
             self.items.reverse()
 
+    def difference(self, other: Iterable[T]) -> list[T]:
+        """
+        Return the difference between the items in this collection and an ``other`` collection as a new list.
+
+        (i.e. all items that are in this collection but not the ``other`` collection).
+        """
+        return [item for item in other if item not in self]
+
+    def intersection(self, other: Iterable[T]) -> list[T]:
+        """
+        Return the difference between the items in this collection and an ``other`` collection as a new list.
+
+        (i.e. all items that are in both this collection and the ``other`` collection).
+        """
+        return [item for item in other if item in self]
+
     @staticmethod
     def _condense_attributes(attributes: dict[str, Any]) -> dict[str, Any]:
         """Condense the attributes of the given map for cleaner attribute displaying"""
@@ -312,7 +328,7 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], metaclas
             f"Key is invalid. The following errors were thrown: {[str(ex) for ex in caught_exceptions]}"
         )
 
-    def __get_item_getters(self, __key: str) -> list[ItemGetterStrategy]:
+    def __get_item_getters(self, __key: str | MusifyItem | File | RemoteResponse) -> list[ItemGetterStrategy]:
         getters = []
         if isinstance(__key, File):
             getters.append(PathGetter(__key.path))

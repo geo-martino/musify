@@ -544,7 +544,9 @@ class XMLPlaylistParser(File, PrettyPrinter):
             shuffle_weight = float(self.xml_smart_playlist.get("@ShuffleSameArtistWeight", 0))
 
             return ItemSorter(fields=fields, shuffle_mode=shuffle_mode, shuffle_weight=shuffle_weight)
-        return ItemSorter(fields=fields or self.defined_sort[6])  # TODO: workaround - see cls.custom_sort
+
+        # TODO: remove defined_sort workaround here - see cls.custom_sort
+        return ItemSorter(fields=fields or next(iter(self.defined_sort.values())))
 
     def parse_sorter(self, sorter: ItemSorter | None = None) -> None:
         """Update the loaded ``xml`` object by parsing the given ``sorter`` to its XML playlist representation."""

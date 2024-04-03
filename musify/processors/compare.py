@@ -265,5 +265,6 @@ class Comparer(DynamicProcessor):
         return {
             "condition": self.condition,
             "expected": self.expected,
-            "field": self.field.name if self.field else None
+            "field": self.field.name if self.field else None,
+            "reference_required": self.reference_required,
         }

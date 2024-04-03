@@ -118,7 +118,7 @@ class ItemSorter(Processor):
     ):
         super().__init__()
         fields = to_collection(fields, list) if isinstance(fields, Field) else fields
-        self.sort_fields: Mapping[Field | None, bool] = {field: False for field in fields} \
+        self.sort_fields: dict[Field | None, bool] = {field: False for field in fields} \
             if isinstance(fields, Sequence) else fields
 
         self.shuffle_mode = shuffle_mode
@@ -138,15 +138,18 @@ class ItemSorter(Processor):
             items.extend(flatten_nested(items_nested))
         elif self.shuffle_mode == ShuffleMode.RANDOM:  # random
             shuffle(items)
+        # TODO: implement below shuffle modes correctly, currently defaulting to random
         elif self.shuffle_mode == ShuffleMode.HIGHER_RATING:
-            shuffle(items)  # TODO: implement this shuffle mode correctly
+            shuffle(items)
         elif self.shuffle_mode == ShuffleMode.RECENT_ADDED:
-            shuffle(items)  # TODO: implement this shuffle mode correctly
+            shuffle(items)
         elif self.shuffle_mode == ShuffleMode.DIFFERENT_ARTIST:
-            shuffle(items)  # TODO: implement this shuffle mode correctly
+            shuffle(items)
 
     @classmethod
-    def _sort_by_fields(cls, items_grouped: MutableMapping, fields: MutableMapping[Field, bool]) -> MutableMapping:
+    def _sort_by_fields(
+            cls, items_grouped: MutableMapping, fields: MutableMapping[Field | None, bool]
+    ) -> MutableMapping:
         """
         Sort items by the given fields recursively in the order given.
 

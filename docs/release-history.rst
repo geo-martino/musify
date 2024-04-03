@@ -133,6 +133,8 @@ Added
 -----
 
 * Add debug log for error failure reason when loading tracks
+* :py:meth:`.MusifyCollection.intersection` and :py:meth:`.MusifyCollection.difference` methods
+* :py:meth:`.Playlist.merge` and :py:meth:`.Library.merge_playlists` methods
 
 Changed
 -------
