@@ -23,7 +23,6 @@ class TestItemLimiter(PrettyPrinterTester):
         for i in range(1, 6):
             random_file_path = random_file(tmp_path=tmp_path, size=i * 1000)
             for track in tracks[(i-1)*10:i*10]:
-
                 track.album = f"album {i}"
                 track._reader.file.info.length = i * 60
                 track._reader.file.filename = random_file_path

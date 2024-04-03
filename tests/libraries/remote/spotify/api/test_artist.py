@@ -39,7 +39,6 @@ class TestSpotifyAPIArtists:
                 and album["album_type"] in artist_album_types
             ]
 
-        api_mock.reset_mock()  # tests check the number of requests made
         artists_albums = {artist["id"]: get_artist_albums(artist["id"]) for artist in api_mock.artists}
         return {artist_id: deepcopy(albums) for artist_id, albums in artists_albums.items() if albums}
 

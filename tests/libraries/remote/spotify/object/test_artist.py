@@ -191,7 +191,6 @@ class TestSpotifyArtist(SpotifyCollectionLoaderTester):
 
         :return: The extracted response as SpotifyTracks.
         """
-        api_mock.reset_mock()  # tests check the number of requests made
 
         # ensure extension of items can be made by reducing available items
         limit = response_valid[item_key]["limit"]
@@ -220,8 +219,6 @@ class TestSpotifyArtist(SpotifyCollectionLoaderTester):
     def test_load_with_all_items(
             self, response_valid: dict[str, Any], item_key: str, api: SpotifyAPI, api_mock: SpotifyMock
     ):
-        api_mock.reset_mock()  # test checks the number of requests made
-
         load_items = [SpotifyAlbum(response, skip_checks=True) for response in response_valid[item_key][api.items_key]]
         SpotifyArtist.load(
             response_valid, api=api, items=load_items, extend_albums=True, extend_tracks=False, extend_features=False
@@ -273,7 +270,7 @@ class TestSpotifyArtist(SpotifyCollectionLoaderTester):
             api_mock: SpotifyMock
     ):
         api.extend_items(response_valid, kind=RemoteObjectType.ARTIST, key=item_kind)
-        api_mock.reset_mock()
+        api_mock.reset_mock()  # reset for new requests checks to work correctly
 
         assert len(response_valid[item_key][api.items_key]) == response_valid[item_key]["total"]
         assert not api_mock.get_requests(response_valid[item_key]["href"])

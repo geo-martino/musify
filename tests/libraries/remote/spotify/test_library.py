@@ -28,8 +28,8 @@ class TestSpotifyLibrary(RemoteLibraryTester):
         return SpotifyLibrary(api=api, use_cache=False, playlist_filter=include)
 
     @pytest.fixture(scope="class")
-    def _library(self, api: SpotifyAPI, api_mock: SpotifyMock) -> SpotifyLibrary:
-        include = FilterDefinedList([pl["name"] for pl in sample(api_mock.user_playlists, k=10)])
+    def _library(self, api: SpotifyAPI, _api_mock: SpotifyMock) -> SpotifyLibrary:
+        include = FilterDefinedList([pl["name"] for pl in sample(_api_mock.user_playlists, k=10)])
         library = SpotifyLibrary(api=api, use_cache=False, playlist_filter=include)
         library.load()
         return library
@@ -84,6 +84,7 @@ class TestSpotifyLibrary(RemoteLibraryTester):
     ###########################################################################
     ## Enrich tests
     ###########################################################################
+    # TODO: can this test run faster? runs ~5s on local machine
     # noinspection PyMethodOverriding,PyTestUnpassedFixture
     def test_enrich_tracks(self, library: SpotifyLibrary, api_mock: SpotifyMock, **kwargs):
         def validate_track_extras_not_enriched(t: SpotifyTrack) -> None:
@@ -103,8 +104,6 @@ class TestSpotifyLibrary(RemoteLibraryTester):
                 assert "followers" not in art
                 assert "images" not in art
                 assert "popularity" not in art
-
-        api_mock.reset_mock()  # test checks the number of requests made
 
         # ensure tracks are not enriched already
         artist_ids = {artist["id"] for track in library.tracks for artist in track.response["artists"]}
@@ -136,7 +135,7 @@ class TestSpotifyLibrary(RemoteLibraryTester):
         req_album_ids = {id_ for req in req_albums for id_ in parse_qs(req.query)["ids"][0].split(",")}
         assert req_album_ids == album_ids
 
-        api_mock.reset_mock()  # test checks the number of requests made
+        api_mock.reset_mock()  # reset for new requests checks to work correctly
 
         # enriches artists without replacing previous enrichment
         library.enrich_tracks(albums=False, artists=True)
@@ -186,8 +185,6 @@ class TestSpotifyLibrary(RemoteLibraryTester):
             assert "albums" not in artist.response
             assert len(artist.albums) == 0
 
-        api_mock.reset_mock()  # test checks the number of requests made
-
         # gets albums but does not extend them
         library.enrich_saved_artists(tracks=False)
         assert any(len(artist.response["albums"]["items"]) > 0 for artist in library.artists)
@@ -203,8 +200,6 @@ class TestSpotifyLibrary(RemoteLibraryTester):
         # only album URLs were called
         req_urls = [req.url.split("?")[0] for req in api_mock.request_history]
         assert req_urls == [artist.url + "/albums" for artist in library.artists]
-
-        api_mock.reset_mock()  # test checks the number of requests made
 
         library.enrich_saved_artists(tracks=True)
         for artist in library.artists:

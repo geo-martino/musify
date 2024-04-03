@@ -103,8 +103,6 @@ class TestSpotifyAPICore:
     def test_pretty_print_uris(
             self, kind: ObjectType, api: SpotifyAPI, api_mock: SpotifyMock, capfd: pytest.CaptureFixture
     ):
-        api_mock.reset_mock()  # test checks the number of requests made
-
         key = api.collection_item_map.get(kind, kind).name.lower() + "s"
         source = deepcopy(next(item for item in api_mock.item_type_map[kind] if item[key]["total"] > 50))
 

@@ -88,8 +88,6 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
 
     @staticmethod
     def test_extend(library: RemoteLibrary, collection_merge_items: list[RemoteTrack], api_mock: RemoteMock):
-        api_mock.reset_mock()  # test checks the number of requests made
-
         # extend on already existing tracks with duplicates not allowed
         library_tracks_start = copy(library.tracks)
         tracks_existing = library.tracks[:10]
@@ -206,7 +204,6 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         name_actual = next(name for name in playlists_check if name in library.playlists)
         name_new = next(name for name in playlists_check if name not in library.playlists)
 
-        api_mock.reset_mock()  # test checks the number of requests made
         library_test = deepcopy(library)
         results = library_test.sync(playlists=playlists, dry_run=False)
 

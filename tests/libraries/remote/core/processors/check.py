@@ -46,7 +46,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
     @staticmethod
     @pytest.fixture
     def setup_playlist_collection(
-            checker: RemoteItemChecker, playlist_urls: list[str], api_mock: RemoteMock
+            checker: RemoteItemChecker, playlist_urls: list[str]
     ) -> tuple[RemotePlaylist, BasicCollection]:
         """Setups up checker, playlist, and collection for testing match_to_remote functionality"""
         url = choice(playlist_urls)
@@ -58,7 +58,6 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         checker._playlist_name_urls = {collection.name: url}
         checker._playlist_name_collection = {collection.name: collection}
 
-        api_mock.reset_mock()  # tests check the number of requests made
         return pl, collection
 
     ###########################################################################
@@ -71,8 +70,6 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
 
     @staticmethod
     def test_make_temp_playlist(checker: RemoteItemChecker, api_mock: RemoteMock, token_file_path: str):
-        api_mock.reset_mock()  # test checks the number of requests made
-
         # force auth test to fail and reload from token
         checker.api.handler.token = None
         checker.api.handler.token_file_path = token_file_path
@@ -151,7 +148,6 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             api_mock: RemoteMock,
             capfd: pytest.CaptureFixture,
     ):
-        api_mock.reset_mock()  # test checks the number of requests made
         pl, collection = setup_playlist_collection
         patch_input(["h", collection.name, pl.uri], mocker=mocker)
 
@@ -178,7 +174,6 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             api_mock: RemoteMock,
             capfd: pytest.CaptureFixture,
     ):
-        api_mock.reset_mock()  # test checks the number of requests made
         patch_input([random_str(10, 20), "u", "s"], mocker=mocker)
 
         checker._pause(page=1, total=1)
@@ -203,7 +198,6 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             api_mock: RemoteMock,
             capfd: pytest.CaptureFixture,
     ):
-        api_mock.reset_mock()  # test checks the number of requests made
         patch_input(["q"], mocker=mocker)
 
         checker._pause(page=1, total=1)
@@ -462,6 +456,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert checker._switched == collection[:5]
         assert not checker._remaining
 
+    # TODO: can this test run faster? runs ~5-10s on local machine
     @staticmethod
     def test_match_to_remote_complex(
             checker: RemoteItemChecker, setup_playlist_collection: tuple[RemotePlaylist, BasicCollection],
@@ -490,6 +485,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
     ###########################################################################
     ## ``check_uri`` meta-step
     ###########################################################################
+    # TODO: can this test run faster? runs ~5s on local machine
     @staticmethod
     def test_check_uri(
             checker: RemoteItemChecker,
@@ -546,6 +542,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
     ###########################################################################
     ## Main ``check`` function
     ###########################################################################
+    # TODO: can this test run faster? runs ~30s on local machine
     @staticmethod
     def test_check(
             checker: RemoteItemChecker,
@@ -569,7 +566,6 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         # initially skip at pause, then mark all items in all processed collections in the first batch as unavailable
         patch_input(["s", *["ua" for _ in batch]], mocker=mocker)
 
-        api_mock.reset_mock()  # test checks the number of requests made
         result = checker.check(collections)
         mocker.stopall()
 

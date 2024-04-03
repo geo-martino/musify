@@ -69,8 +69,6 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
 
     @staticmethod
     def test_get_results(searcher: RemoteItemSearcher, api_mock: RemoteMock):
-        api_mock.reset_mock()  # test checks the number of requests made
-
         settings = SearchConfig(
             search_fields_1=[Tag.NAME, Tag.ARTIST],  # query mock always returns match on name
             search_fields_2=[Tag.NAME, Tag.ALBUM],
@@ -97,7 +95,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         # make these tags too long to query forcing them to return on results
         item.artist = 'b' * 200
         item.album = 'c' * 200
-        api_mock.reset_mock()  # test checks the number of requests made
+        api_mock.reset_mock()  # reset for new requests checks to work correctly
 
         results = searcher._get_results(item=item, kind=RemoteObjectType.TRACK, settings=settings)
         requests = api_mock.get_requests(method="GET")
@@ -151,6 +149,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
             assert item.has_uri is None
             assert item.uri is None
 
+    # TODO: can this test run faster? runs ~5-10s on local machine
     def test_search_items(
             self,
             searcher: RemoteItemSearcher,
@@ -164,6 +163,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
             unmatchable_items=unmatchable_items
         )
 
+    # TODO: can this test run faster? runs ~10-15s on local machine
     def test_search_album(
             self, searcher: RemoteItemSearcher, search_albums: list[Album], unmatchable_items: list[LocalTrack]
     ):
@@ -196,6 +196,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
 
         return collection
 
+    # TODO: can this test run faster? runs ~5-10s on local machine
     @staticmethod
     def test_search_result_items(
             searcher: RemoteItemSearcher, search_items: list[LocalTrack], unmatchable_items: list[LocalTrack]
@@ -215,6 +216,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert len(result.unmatched) == len(unmatchable_items)
         assert len(result.skipped) == len(search_items)
 
+    # TODO: can this test run faster? runs ~5-10s on local machine
     @staticmethod
     def test_search_result_album(searcher: RemoteItemSearcher, search_album: LocalAlbum):
         skip = len([item for item in search_album if item.has_uri is not None])
@@ -232,6 +234,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert len(result.unmatched) == 0
         assert len(result.skipped) == len(search_album)
 
+    # TODO: can this test run faster? runs ~1:30 on local. This is currently the longest running test
     @staticmethod
     def test_search_result_combined(
             searcher: RemoteItemSearcher,
@@ -261,6 +264,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
     ###########################################################################
     ## main search tests
     ###########################################################################
+    # TODO: can this test run faster? runs ~5-15s on local machine
     @staticmethod
     def test_search(
             searcher: RemoteItemSearcher,
@@ -287,7 +291,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert len(result.skipped) == skip_album
 
         # check nothing happens on matched collections
-        api_mock.reset_mock()  # test checks the number of requests made
+        api_mock.reset_mock()  # reset for new requests checks to work correctly
         search_matched = BasicCollection(name="test", items=search_items)
         assert len(searcher.search([search_matched, search_album])) == 0
         assert len(api_mock.request_history) == 0

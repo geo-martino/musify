@@ -30,10 +30,10 @@ from tests.utils import random_str
 @pytest.fixture(scope="class", params=[
     f for f in asdict(SpotifyObjectFactory()).values() if inspect.isclass(f) and issubclass(f, RemoteResponse)
 ])
-def response(request, api_mock: SpotifyMock) -> RemoteResponse:
+def response(request, _api_mock: SpotifyMock) -> RemoteResponse:
     """Yields a :py:class:`RemoteResponse` for each of the :py:class:`SpotifyObjectFactory` remote response items"""
     factory = request.param
-    response = choice(api_mock.item_type_map[factory.__new__(factory).kind])
+    response = choice(_api_mock.item_type_map[factory.__new__(factory).kind])
     return factory(response, skip_checks=True)
 
 
@@ -244,7 +244,7 @@ def test_extract_ids_fails(wrangler: SpotifyDataWrangler):
 class TestSpotifyItemSearcher(RemoteItemSearcherTester):
 
     @pytest.fixture(scope="class")
-    def searcher(self, api: SpotifyAPI, api_mock: SpotifyMock) -> RemoteItemSearcher:
+    def searcher(self, api: SpotifyAPI) -> RemoteItemSearcher:
         RemoteItemSearcher.karaoke_tags = {"karaoke", "backing", "instrumental"}
         RemoteItemSearcher.year_range = 10
 
@@ -345,8 +345,8 @@ class TestSpotifyItemChecker(RemoteItemCheckerTester):
         return RemoteItemChecker(object_factory=SpotifyObjectFactory(api=api))
 
     @pytest.fixture(scope="class")
-    def playlist_urls(self, api_mock: SpotifyMock) -> list[str]:
+    def playlist_urls(self, _api_mock: SpotifyMock) -> list[str]:
         return [
-            pl["href"] for pl in api_mock.user_playlists
-            if api_mock.limit_lower < pl["tracks"]["total"] <= 60
+            pl["href"] for pl in _api_mock.user_playlists
+            if _api_mock.limit_lower < pl["tracks"]["total"] <= 60
         ]

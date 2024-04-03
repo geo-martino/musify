@@ -95,8 +95,6 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
             api: SpotifyAPI,
             api_mock: SpotifyMock
     ):
-        api_mock.reset_mock()  # test checks the number of requests made
-
         result = self.get_load_without_items(
             loader=collection, response_valid=response_valid, api=api, api_mock=api_mock
         )

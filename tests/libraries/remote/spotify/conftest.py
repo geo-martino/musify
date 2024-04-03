@@ -1,3 +1,5 @@
+from copy import copy
+
 import pytest
 
 from musify.libraries.remote.spotify.api import SpotifyAPI
@@ -12,12 +14,27 @@ def wrangler(spotify_wrangler: SpotifyDataWrangler):
 
 
 @pytest.fixture(scope="module")
-def api(spotify_api: SpotifyAPI, api_mock: SpotifyMock) -> SpotifyAPI:
+def api(spotify_api: SpotifyAPI) -> SpotifyAPI:
     """Yield an authorised :py:class:`SpotifyAPI` object"""
     return spotify_api
 
 
 @pytest.fixture(scope="module")
-def api_mock(spotify_mock: SpotifyMock) -> SpotifyMock:
-    """Yield a :py:class:`SpotifyMock` object with valid mock data ready to be called via HTTP requests"""
+def _api_mock(spotify_mock: SpotifyMock) -> SpotifyMock:
+    """
+    Yield an authorised and configured :py:class:`SpotifyMock` object with
+    valid mock data ready to be called via HTTP requests.
+    """
     return spotify_mock
+
+
+@pytest.fixture
+def api_mock(_api_mock: SpotifyMock) -> SpotifyMock:
+    """
+    Yield an authorised and configured :py:class:`SpotifyMock` object with
+    valid mock data ready to be called via HTTP requests.
+    Creates a copy of ``_api_mock`` to allow for successful requests history assertions.
+    """
+    mock = copy(_api_mock)
+    mock.reset_mock()
+    return mock

@@ -82,8 +82,6 @@ class TestSpotifyAPIPlaylists:
             api.add_to_playlist(playlist="does not exist", items=random_ids())
 
     def test_add_to_playlist_batches_limited(self, playlist: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
-        api_mock.reset_mock()  # test checks the number of requests made
-
         id_list = random_ids(200, 300)
         valid_limit = 80
 
@@ -99,8 +97,6 @@ class TestSpotifyAPIPlaylists:
             assert count <= 100
 
     def test_add_to_playlist(self, playlist: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
-        api_mock.reset_mock()  # test checks the number of requests made
-
         total = playlist["tracks"]["total"]
         limit = total // 3
         assert total > limit  # ensure ranges are valid for test to work
@@ -133,7 +129,6 @@ class TestSpotifyAPIPlaylists:
 
     def test_add_to_playlist_with_skip(self, playlist: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
         api.extend_items(playlist["tracks"])
-        api_mock.reset_mock()  # test checks the number of requests made
 
         initial = len(playlist["tracks"]["items"])
         total = playlist["tracks"]["total"]
@@ -198,8 +193,6 @@ class TestSpotifyAPIPlaylists:
     def test_clear_from_playlist_batches_limited(
             self, playlist: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock
     ):
-        api_mock.reset_mock()  # test checks the number of requests made
-
         id_list = random_ids(200, 300)
         valid_limit = 80
 
@@ -214,8 +207,6 @@ class TestSpotifyAPIPlaylists:
             assert count <= 100
 
     def test_clear_from_playlist_items(self, playlist: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
-        api_mock.reset_mock()  # test checks the number of requests made
-
         total = playlist["tracks"]["total"]
         limit = total // 3
         assert total > limit  # ensure ranges are valid for test to work
@@ -241,8 +232,6 @@ class TestSpotifyAPIPlaylists:
         assert result == len(id_list)
 
     def test_clear_from_playlist_all(self, playlist: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
-        api_mock.reset_mock()  # test checks the number of requests made
-
         total = playlist["tracks"]["total"]
         limit = total // 4
         assert total > limit  # ensure ranges are valid for test to work

@@ -280,7 +280,7 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         assert comparer.condition == "contains"
         assert comparer._processor_method == comparer._contains
 
-    @pytest.mark.parametrize("path", [path for path in path_playlist_all if path.endswith(".xautopf")])
+    @pytest.mark.parametrize("path", [path for path in sorted(path_playlist_all) if path.endswith(".xautopf")])
     def test_parse_comparer(self, path: str):
         parser = XMLPlaylistParser(path=path)
         parser.load()

@@ -175,8 +175,6 @@ class TestSpotifyAPIItems(RemoteAPITester):
         assert api._get_unit(key="audio-features") == "audio features"
 
     def test_get_items_batches_limited(self, api: SpotifyAPI, api_mock: SpotifyMock):
-        api_mock.reset_mock()  # test checks the number of requests made
-
         key = RemoteObjectType.TRACK.name.lower() + "s"
         url = f"{api.url}/{key}"
         id_list = [track[self.id_key] for track in api_mock.tracks]
@@ -372,8 +370,6 @@ class TestSpotifyAPIItems(RemoteAPITester):
             api: SpotifyAPI,
             api_mock: SpotifyMock
     ):
-        api_mock.reset_mock()  # test checks the number of requests made
-
         test = None
         if user:
             test = random_id_type(id_=api_mock.user_id, wrangler=api.wrangler, kind=RemoteObjectType.USER)

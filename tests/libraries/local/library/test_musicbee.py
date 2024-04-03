@@ -140,6 +140,7 @@ class TestMusicBee(LocalLibraryTester):
             splitext(basename(path_playlist_xautopf_bp))[0],
         }
 
+    # TODO: can this test run faster? runs ~5s on local machine
     def test_init_exclude(self, musicbee_folder: str):
         library = MusicBee(
             musicbee_folder=musicbee_folder,
