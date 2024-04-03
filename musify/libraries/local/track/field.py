@@ -6,7 +6,7 @@ from musify.field import TrackFieldMixin
 
 
 class LocalTrackField(TrackFieldMixin):
-    """Represent all currently supported fields for objects of type :py:class:`LocalTrack`"""
+    """Represents all currently supported fields for objects of type :py:class:`LocalTrack`"""
     ALL = TagFields.ALL.value
 
     TITLE = TagFields.TITLE.value

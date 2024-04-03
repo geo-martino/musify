@@ -21,7 +21,7 @@ class TrackFieldMixin(TagField):
 
 
 class TrackField(TrackFieldMixin):
-    """Represent all currently supported fields for objects of type :py:class:`Track`"""
+    """Represents all currently supported fields for objects of type :py:class:`Track`"""
     ALL = TagFields.ALL.value
 
     TITLE = TagFields.TITLE.value
@@ -49,7 +49,7 @@ class TrackField(TrackFieldMixin):
 
 
 class PlaylistField(Field):
-    """Represent all currently supported fields for objects of type :py:class:`Playlist`"""
+    """Represents all currently supported fields for objects of type :py:class:`Playlist`"""
     ALL = Fields.ALL.value
 
     # tags/core properties
@@ -66,7 +66,7 @@ class PlaylistField(Field):
 
 
 class FolderField(Field):
-    """Represent all currently supported fields for objects of type :py:class:`Folder`"""
+    """Represents all currently supported fields for objects of type :py:class:`Folder`"""
     ALL = Fields.ALL.value
 
     # tags/core properties
@@ -81,7 +81,7 @@ class FolderField(Field):
 
 
 class AlbumField(Field):
-    """Represent all currently supported fields for objects of type :py:class:`Album`"""
+    """Represents all currently supported fields for objects of type :py:class:`Album`"""
     ALL = Fields.ALL.value
 
     # tags/core properties
@@ -102,7 +102,7 @@ class AlbumField(Field):
 
 
 class ArtistField(Field):
-    """Represent all currently supported fields for objects of type :py:class:`Artist`"""
+    """Represents all currently supported fields for objects of type :py:class:`Artist`"""
     ALL = Fields.ALL.value
 
     # tags/core properties

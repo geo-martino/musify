@@ -19,7 +19,7 @@ from musify.file.path_mapper import PathMapper
 from musify.libraries.local.playlist.base import LocalPlaylist
 from musify.libraries.local.track import LocalTrack
 from musify.processors.compare import Comparer
-from musify.processors.exception import ItemSorterError
+from musify.processors.exception import SorterProcessorError
 from musify.processors.filter import FilterDefinedList, FilterComparers
 from musify.processors.filter_matcher import FilterMatcher
 from musify.processors.limit import ItemLimiter, LimitType
@@ -78,6 +78,10 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
     __slots__ = ("_parser",)
 
     valid_extensions = frozenset({".xautopf"})
+
+    #: The initial values to use as the base XML when creating a new XAutoPF file from scratch.
+    #: Certain settings in the 'Source' key relating to processors that this program recognises
+    #: will be set on initialisation. Hence, any default values assigned to these keys will be overridden.
     default_xml = {
         "SmartPlaylist": {
             "@SaveStaticCopy": "False",
@@ -183,7 +187,7 @@ class XMLPlaylistParser(File, PrettyPrinter):
     __slots__ = ("_path", "path_mapper", "xml",)
 
     # noinspection SpellCheckingInspection
-    #: Map of MusicBee field name to Field enum
+    #: Map of MusicBee field key name to Field enum
     name_field_map = {
         "None": None,
         "Title": Fields.TITLE,
@@ -220,6 +224,7 @@ class XMLPlaylistParser(File, PrettyPrinter):
         "FileLastPlayed": Fields.LAST_PLAYED,
         "FilePlayCount": Fields.PLAY_COUNT,
     }
+    #: Map of Field enum to MusicBee field key name
     field_name_map = {field: name for name, field in name_field_map.items()}
 
     #: Settings for custom sort codes.
@@ -233,7 +238,9 @@ class XMLPlaylistParser(File, PrettyPrinter):
         # TODO: implement field_code 78 - manual order according to the order of tracks found
         #  in the MusicBee library file for a given playlist.
     }
+    #: The default/manual sort code
     default_sort = 78
+    #: The default setting to use for the GroupBy setting
     default_group_by = "track"
 
     @property
@@ -265,8 +272,8 @@ class XMLPlaylistParser(File, PrettyPrinter):
 
     def __init__(self, path: str, path_mapper: PathMapper = PathMapper()):
         self._path = path
+        #: Maps paths stored in the playlist file.
         self.path_mapper = path_mapper
-
         #: A map representation of the loaded XML playlist data
         self.xml: dict[str, Any] = {}
 
@@ -529,7 +536,7 @@ class XMLPlaylistParser(File, PrettyPrinter):
             elif "DefinedSort" in self.xml_source:
                 fields = [field]
             else:
-                raise ItemSorterError("Sort type in XML not recognised")
+                raise SorterProcessorError("Sort type in XML not recognised")
 
         shuffle_mode_value = self._pascal_to_snake(self.xml_smart_playlist["@ShuffleMode"])
         if not fields and shuffle_mode_value != "none":
@@ -560,7 +567,7 @@ class XMLPlaylistParser(File, PrettyPrinter):
             return
 
         if len(sorter.sort_fields) > 1:
-            raise ItemSorterError(
+            raise SorterProcessorError(
                 "Cannot generate an XML representation of a mapping of many sort fields unless they have "
                 "a defined sort ID. To parse these fields to XML, define this map in the 'defined_sort' "
                 f"class attribute of this parser | {sorter.sort_fields}"

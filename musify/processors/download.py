@@ -11,12 +11,12 @@ from musify.core.base import MusifyItem
 from musify.core.enum import Field, Fields
 from musify.exception import MusifyEnumError
 from musify.libraries.core.collection import MusifyCollection
-from musify.processors.base import InputProcessor, ItemProcessor
+from musify.processors.base import InputProcessor
 from musify.types import UnitIterable
 from musify.utils import to_collection
 
 
-class ItemDownloadHelper(InputProcessor, ItemProcessor):
+class ItemDownloadHelper(InputProcessor):
     """
     Runs operations for helping the user to download items from given collections.
 

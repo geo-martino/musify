@@ -13,7 +13,7 @@ from musify.core.enum import TagField, TagFields as Tag, ALL_TAG_FIELDS
 from musify.core.printer import PrettyPrinter
 from musify.libraries.core.collection import MusifyCollection
 from musify.log.logger import MusifyLogger
-from musify.processors.base import ItemProcessor
+from musify.processors.base import Processor
 from musify.types import UnitIterable
 from musify.utils import limit_value, to_collection
 
@@ -39,7 +39,7 @@ class CleanTagConfig(PrettyPrinter):
         }
 
 
-class ItemMatcher(ItemProcessor):
+class ItemMatcher(Processor):
     """Matches source items/collections to given result(s)."""
 
     __slots__ = ("logger",)

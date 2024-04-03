@@ -11,7 +11,7 @@ from typing import Any
 from musify.core.enum import TagField
 from musify.core.result import Result
 from musify.log.logger import MusifyLogger
-from musify.processors.base import Filter, MusicBeeProcessor, FilterComposite
+from musify.processors.base import Filter, FilterComposite
 from musify.processors.filter import FilterComparers, FilterDefinedList
 
 
@@ -24,7 +24,7 @@ class MatchResult[T: Any](Result):
     excluded: Collection[T] = field(default=tuple())
     #: Objects that matched :py:class:`Comparer` settings
     compared: Collection[T] = field(default=tuple())
-    #: Objects that matched on any group_by settings
+    #: Objects that matched on any ``group_by`` settings
     grouped: Collection[T] = field(default=tuple())
 
     @property
@@ -33,7 +33,7 @@ class MatchResult[T: Any](Result):
         return [track for track in [*self.compared, *self.included, *self.grouped] if track not in self.excluded]
 
 
-class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](MusicBeeProcessor, FilterComposite[T]):
+class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](FilterComposite[T]):
     """
     Get matches for items based on given filters.
 

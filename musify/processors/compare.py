@@ -10,14 +10,14 @@ from typing import Any
 
 from musify.core.base import MusifyItem
 from musify.core.enum import Field
-from musify.processors.base import DynamicProcessor, MusicBeeProcessor, dynamicprocessormethod
+from musify.processors.base import DynamicProcessor, dynamicprocessormethod
 from musify.processors.exception import ComparerError
 from musify.processors.time import TimeMapper
 from musify.types import UnitSequence
 from musify.utils import to_collection
 
 
-class Comparer(MusicBeeProcessor, DynamicProcessor):
+class Comparer(DynamicProcessor):
     """
     Compares an item or object with another item, object or a given set of expected values to find a match.
 
@@ -30,6 +30,10 @@ class Comparer(MusicBeeProcessor, DynamicProcessor):
     """
 
     __slots__ = ("_expected", "_converted", "field")
+
+    @classmethod
+    def _processor_method_fmt(cls, name: str) -> str:
+        return "_" + cls._pascal_to_snake(name)
 
     @property
     def condition(self) -> str:
