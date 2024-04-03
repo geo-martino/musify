@@ -6,9 +6,9 @@ from __future__ import annotations
 import datetime
 import logging
 from abc import ABCMeta, abstractmethod
-from collections.abc import Collection, Mapping
+from collections.abc import Collection, Mapping, Iterable
 from copy import deepcopy
-from typing import Any
+from typing import Self
 
 from musify.core.base import MusifyItem
 from musify.exception import MusifyTypeError
@@ -242,31 +242,54 @@ class Playlist[T: Track](MusifyCollection[T], metaclass=ABCMeta):
         """:py:class:`datetime.datetime` object representing when the playlist was last modified"""
         raise NotImplementedError
 
-    @abstractmethod
-    def merge(self, playlist: Playlist[T]) -> None:
+    def merge(self, other: Iterable[T], reference: Self | None = None) -> None:
         """
-        **WARNING: NOT IMPLEMENTED YET**
-        Merge tracks in this playlist with another playlist synchronising tracks between the two.
+        Merge tracks in this playlist with another collection, synchronising tracks between the two.
         Only modifies this playlist.
+
+        Sort order is not preserved when merging.
+        Any items that need to be added to this playlist will be added at the end of the playlist.
+        Duplicates that are present in the ``other`` collection are filtered out by default.
+
+        :param other: The collection of items to merge onto this playlist.
+        :param reference: Optionally, provide a reference playlist to compare both the current playlist
+            and the ``other`` items to. The function will determine tracks to remove from
+            this playlist based on the reference. Useful for using this function as a synchronizer
+            where the reference refers to the playlist at the previous sync.
         """
-        # TODO: merge playlists adding/removing tracks as needed.
-        raise NotImplementedError
+        if not self._validate_item_type(other):
+            raise MusifyTypeError([type(i).__name__ for i in other])
 
-    def __or__(self, other: Playlist[T]):
+        if reference is None:
+            self.extend(self.difference(other), allow_duplicates=False)
+            return
+
+        for item in reference:
+            if item not in other and item in self:
+                self.remove(item)
+
+        self.extend(reference.difference(other), allow_duplicates=False)
+
+    def __or__(self, other: Playlist[T]) -> Self:
         if not isinstance(other, self.__class__):
             raise MusifyTypeError(
                 f"Incorrect item given. Cannot merge with {other.__class__.__name__} "
                 f"as it is not a {self.__class__.__name__}"
             )
-        raise NotImplementedError
 
-    def __ior__(self, other: Playlist[T]):
+        self_copy = deepcopy(self)
+        self_copy.merge(other)
+        return self_copy
+
+    def __ior__(self, other: Playlist[T]) -> Self:
         if not isinstance(other, self.__class__):
             raise MusifyTypeError(
                 f"Incorrect item given. Cannot merge with {other.__class__.__name__} "
                 f"as it is not a {self.__class__.__name__}"
             )
-        raise NotImplementedError
+
+        self.merge(other)
+        return self
 
 
 class Library[T: Track](MusifyCollection[T], metaclass=ABCMeta):
@@ -393,15 +416,44 @@ class Library[T: Track](MusifyCollection[T], metaclass=ABCMeta):
         """Log stats on currently loaded playlists"""
         raise NotImplementedError
 
-    @abstractmethod
-    def merge_playlists(self, playlists: Library[T] | Collection[Playlist[T]] | Mapping[Any, Playlist[T]]) -> None:
+    def merge_playlists(
+            self,
+            playlists: Library[T] | Collection[Playlist[T]] | Mapping[str, Playlist[T]],
+            reference: Library[T] | Collection[Playlist[T]] | Mapping[str, Playlist[T]] | None = None,
+    ) -> None:
         """
-        **WARNING: NOT IMPLEMENTED YET**
-        Merge playlists from given list/map/library to this library
+        Merge playlists from given list/map/library to this library.
+
+        See :py:meth:`.Playlist.merge` for more info.
+
+        :param playlists: The playlists to merge onto this library's playlists.
+            If a given playlist is not found in this library, simply add the playlist to this library.
+        :param reference: Optionally, provide a reference playlist to compare both the current playlist
+            and the ``other`` items to. The function will determine tracks to remove from
+            this playlist based on the reference. Useful for using this function as a synchronizer
+            where the reference refers to the playlist at the previous sync.
         """
-        # TODO: merge playlists adding/removing tracks as needed.
-        #  Most likely will need to implement some method on playlist class too
-        raise NotImplementedError
+        def get_playlists_map(
+                value: Library[T] | Collection[Playlist[T]] | Mapping[str, Playlist[T]]
+        ) -> Mapping[str, Playlist[T]]:
+            """Reformat the input playlist values to map"""
+            if isinstance(value, Mapping):
+                return value
+            elif isinstance(value, Library):
+                return value.playlists
+            elif isinstance(value, Collection):
+                return {pl.name: pl for pl in value}
+            raise MusifyTypeError(f"Unrecognised input type: {value.__class__.__name__}")
+
+        playlists = get_playlists_map(playlists)
+        reference = get_playlists_map(reference) if reference is not None else {}
+
+        for name, playlist in playlists.items():
+            if name not in self.playlists:
+                self.playlists[name] = playlist
+                continue
+
+            self.playlists[name].merge(playlist, reference=reference.get(name))
 
 
 class Folder[T: Track](MusifyCollection[T], metaclass=ABCMeta):

@@ -11,7 +11,7 @@ from typing import Any
 from musify.core.result import Result
 from musify.exception import MusifyError
 from musify.file.path_mapper import PathMapper, PathStemMapper
-from musify.libraries.core.object import Playlist, Library
+from musify.libraries.core.object import Library
 from musify.libraries.local.collection import LocalCollection, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from musify.libraries.local.playlist import PLAYLIST_CLASSES, LocalPlaylist, load_playlist
 from musify.libraries.local.track import TRACK_CLASSES, LocalTrack, load_track
@@ -383,11 +383,6 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         :return: A map of the playlist name to the results of its sync as a :py:class:`Result` object.
         """
         return {name: pl.save(dry_run=dry_run) for name, pl in self.playlists.items()}
-
-    def merge_playlists(
-            self, playlists: Library[LocalTrack] | Collection[Playlist[LocalTrack]] | Mapping[Any, Playlist[LocalTrack]]
-    ) -> None:
-        raise NotImplementedError
 
     ###########################################################################
     ## Backup/restore

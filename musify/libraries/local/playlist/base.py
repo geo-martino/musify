@@ -143,6 +143,3 @@ class LocalPlaylist[T: Filter[LocalTrack]](LocalCollection[LocalTrack], Playlist
         :return: :py:class:`Result` object with stats on the changes to the playlist.
         """
         raise NotImplementedError
-
-    def merge(self, playlist: Playlist[LocalTrack]) -> None:
-        raise NotImplementedError

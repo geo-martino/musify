@@ -1,13 +1,11 @@
 """
 Implements a :py:class:`RemoteLibrary` for Spotify.
 """
-from collections.abc import Collection, Mapping, Iterable
+from collections.abc import Collection, Iterable
 from typing import Any
 
-from musify.libraries.core.object import Playlist, Library
 from musify.libraries.remote.core.enum import RemoteObjectType
 from musify.libraries.remote.core.library import RemoteLibrary
-from musify.libraries.remote.core.object import RemoteTrack
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.factory import SpotifyObjectFactory
 from musify.libraries.remote.spotify.object import SpotifyTrack, SpotifyAlbum, SpotifyArtist, SpotifyPlaylist
@@ -145,9 +143,3 @@ class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, Sp
                 album.refresh(skip_checks=False)
 
         self.logger.debug(f"Enrich {self.api.source} artists: DONE\n")
-
-    def merge_playlists(
-            self,
-            playlists: Library[RemoteTrack] | Collection[Playlist[RemoteTrack]] | Mapping[Any, Playlist[RemoteTrack]]
-    ) -> None:
-        raise NotImplementedError

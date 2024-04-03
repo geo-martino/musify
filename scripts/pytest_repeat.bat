@@ -1,14 +1,17 @@
 set COUNTER=0
 
-echo "Executing %2 repetitions for tests: %1"
+set COUNTER_MAX=%1
+for /F "Tokens=1*" %%A in ("%*") do set "PYTEST_ARGS=%%B"
+
+echo "Executing %COUNTER_MAX% repetitions for tests: %PYTEST_ARGS%"
 
 :repeat
 set /A COUNTER=COUNTER+1
 echo "Executing repetition: %COUNTER%"
 
-pytest %1 || goto :fail
+pytest %PYTEST_ARGS% || goto :fail
 
-if %COUNTER% == %2 (
+if %COUNTER% == %COUNTER_MAX% (
    goto :pass
 ) else (
    goto :repeat
