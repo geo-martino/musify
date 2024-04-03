@@ -9,7 +9,7 @@ from typing import Any
 
 from musify.core.base import MusifyItem
 from musify.core.enum import MusifyEnum, Field
-from musify.processors.base import MusicBeeProcessor
+from musify.processors.base import Processor
 from musify.types import UnitSequence, UnitIterable
 from musify.utils import flatten_nested, strip_ignore_words, to_collection, limit_value
 
@@ -22,7 +22,7 @@ class ShuffleMode(MusifyEnum):
     DIFFERENT_ARTIST = 3
 
 
-class ItemSorter(MusicBeeProcessor):
+class ItemSorter(Processor):
     """
     Sort items in-place based on given conditions.
 

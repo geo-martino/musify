@@ -43,34 +43,35 @@ Added
 * Introduced :py:class:`.MusifyItemSettable` class to allow distinction
   between items that can have their properties set and those that can't
 * Extend :py:class:`.FilterMatcher` with group_by tag functionality
-* Now fully supports parsing of processors relating to XAutoPF objects with full I/O of settings
-  to/from their related XML files on disk.
-* Now supports creating new XAutoPF files from scratch without the file needing to already exist.
+* Now fully supports parsing of processors relating to :py:class:`.XAutoPF` objects with full I/O of settings
+  to/from their related XML files on disk
+* Now supports creating new :py:class:`.XAutoPF` files from scratch without the file needing to already exist
   For XML values not directly controlled by Musify, users can use the 'default_xml' class attribute
-  to control the initial default values applied in this scenario.
+  to control the initial default values applied in this scenario
 
 Changed
 -------
 
 * Major refactoring and restructuring to all modules to improve modularity and add composition
-* :py:meth:`.LocalLibrary.load_tracks` and :py:meth:`.LocalLibrary.load_playlists` now run concurrently.
+* :py:meth:`.LocalLibrary.load_tracks` and :py:meth:`.LocalLibrary.load_playlists` now run concurrently
 * Made :py:func:`.load_tracks` and :py:func:`.load_playlists` utility functions more DRY
 * Move :py:meth:`.TagReader.load` from :py:class:`.LocalTrack` to super class :py:class:`.TagReader`
 * :py:meth:`.SpotifyAPI.extend_items` now skips on responses that are already fully extended
 * :py:meth:`.SpotifyArtist.load` now uses the base `load` method from :py:class:`.SpotifyCollectionLoader`
-  meaning it now takes full advantage of the item filtering this method offers.
+  meaning it now takes full advantage of the item filtering this method offers
   As part of this, the base method was made more generic to accommodate all :py:class:`.SpotifyObject` types
 * Renamed 'kind' property on :py:class:`.LocalTrack` to 'type' to avoid clashing property names
 * :py:class:`.ItemMatcher`, :py:class:`.RemoteItemChecker`, and :py:class:`.RemoteItemSearcher` now accept
-  all MusifyItem types that may have their URI property set manually.
+  all MusifyItem types that may have their URI property set manually
 * :py:class:`.ItemSorter` now shuffles randomly on unsupported types
   + prioritises fields settings over shuffle settings
 * :py:meth:`.Comparer._in_range` now uses inclusive range i.e. ``a <= x <= b`` where ``x`` is the value to compare
   and ``a`` and ``b`` are the limits. Previously used exclusive range i.e. ``a < x < b``
 * Removed ``from_xml`` and ``to_xml`` methods from all :py:class:`.MusicBeeProcessor` subclasses.
-  Moved this logic to :py:class:`.XMLPlaylistParser` as distinct 'get' methods for each processor type.
+  Moved this logic to :py:class:`.XMLPlaylistParser` as distinct 'get' methods for each processor type
 * Moved loading of XML file logic from :py:class:`.XAutoPF` to :py:class:`.XMLPlaylistParser`.
-  :py:class:`.XMLPlaylistParser` is now solely responsible for all XML parsing and handling for XAutoPF files
+  :py:class:`.XMLPlaylistParser` is now solely responsible for all XML parsing and handling
+  for :py:class:`.XAutoPF` files
 
 Fixed
 -----
@@ -81,6 +82,7 @@ Removed
 -------
 
 * Redundant ShuffleBy enum and related arguments from :py:class:`.ItemSorter`
+* `ItemProcessor` and `MusicBeeProcessor` abstraction layers. No longer needed after some refactoring
 
 Documentation
 -------------
@@ -94,7 +96,7 @@ Changed
 -------
 
 * :py:class:`.ItemSorter` now accepts ``shuffle_weight`` between -1 and 1 instead of 0 and 1.
-  This parameter's logic has not yet been implemented so no changes to functionality have been made yet.
+  This parameter's logic has not yet been implemented so no changes to functionality have been made yet
 * Move :py:meth:`.get_filepaths` from :py:class:`.LocalTrack` to super class :py:class:`.File`
 
 Documentation
@@ -109,13 +111,13 @@ Fixed
 * Tweaked assignment of description of IDv3 comment tags for :py:class:`.MP3`
 * :py:func:`.align_string` function now handles combining unicode characters properly for fixed-width fonts
 * :py:meth:`.LocalTrack.get_filepaths` on LocalTrack no longer returns paths from ``$RECYCLE.BIN`` folders.
-  These are deleted files and were causing the package to crash when trying to load them.
+  These are deleted files and were causing the package to crash when trying to load them
 * :py:meth:`.PrettyPrinter.json` and :py:meth:`.PrettyPrinter._to_str` converts attribute keys to string
   to ensure safe json/str/repr output
 * :py:class:`.FilterMatcher` and :py:class:`.FilterComparers` now correctly import conditions from XML playlist files.
   Previously, these filters could not import nested match conditions from files.
-  Changes to logic also made to :py:meth:`.Comparer.from_xml` to accommodate.
-* :py:class:`.XMLLibraryParser` now handles empty arrays correctly. Previously would crash.
+  Changes to logic also made to :py:meth:`.Comparer.from_xml` to accommodate
+* :py:class:`.XMLLibraryParser` now handles empty arrays correctly. Previously would crash
 * Fixed :py:class:`.Comparer` dynamic process method alternate names for ``in_the_last`` and ``not_in_the_last``
 
 Removed
@@ -137,29 +139,29 @@ Changed
 
 * Generating folders for a :py:class:`.LocalLibrary` now uses folder names
   as relative to the library folders of the :py:class:`.LocalLibrary`.
-  This now supports nested folder structures better.
-* Writing date tags to :py:class:`.LocalTrack` now supports partial dates of only YYYY-MM.
-* Writing date tags to :py:class:`.LocalTrack` skips writing year, month, day tags if date tag already written.
+  This now supports nested folder structures better
+* Writing date tags to :py:class:`.LocalTrack` now supports partial dates of only YYYY-MM
+* Writing date tags to :py:class:`.LocalTrack` skips writing year, month, day tags if date tag already written
 
 Removed
 -------
 
 * set_compilation_tags method removed from :py:class:`.LocalFolder`.
-  This contained author specific logic and was not appropriate for general use.
+  This contained author specific logic and was not appropriate for general use
 
 Fixed
 -----
 
 * ConnectionError catch in :py:class:`.RequestHandler` now handles correctly
 * Added safe characters and replacements for path conversion in MusicBee :py:class:`.XMLLibraryParser`.
-  Now converts path to expected XML format correctly.
-* :py:class:`.FilterMatcher` now handles '&' character correctly.
+  Now converts path to expected XML format correctly
+* :py:class:`.FilterMatcher` now handles '&' character correctly
 * :py:class:`.SpotifyAPI` now only requests batches of up to 20 items when getting albums.
-  Now matches Spotify Web API specifications better.
+  Now matches Spotify Web API specifications better
 * Loading of logging yaml config uses UTF-8 encoding now
 * Removed dependency on pytest-lazy-fixture.
   Package is `broken for pytest >8.0 <https://github.com/TvoroG/pytest-lazy-fixture/issues/65>`_.
-  Replaced functionality with forked version of code.
+  Replaced functionality with forked version of code
 
 
 0.7.6

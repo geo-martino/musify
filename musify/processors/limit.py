@@ -10,8 +10,8 @@ from musify.core.base import MusifyItem
 from musify.core.enum import MusifyEnum, Fields
 from musify.file.base import File
 from musify.libraries.core.object import Track
-from musify.processors.base import DynamicProcessor, MusicBeeProcessor, dynamicprocessormethod
-from musify.processors.exception import ItemLimiterError
+from musify.processors.base import DynamicProcessor, dynamicprocessormethod
+from musify.processors.exception import LimiterProcessorError
 from musify.processors.sort import ItemSorter
 
 
@@ -33,7 +33,7 @@ class LimitType(MusifyEnum):
     TERABYTES = 24
 
 
-class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
+class ItemLimiter(DynamicProcessor):
     """
     Sort items in-place based on given conditions.
 
@@ -51,6 +51,10 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
     """
 
     __slots__ = ("limit_max", "kind", "allowance")
+
+    @classmethod
+    def _processor_method_fmt(cls, name: str) -> str:
+        return "_" + cls._pascal_to_snake(name)
 
     @property
     def limit_sort(self) -> str | None:
@@ -114,7 +118,7 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
 
         for item in items:
             if not isinstance(item, Track):
-                ItemLimiterError("In order to limit on Album, all items must be of type 'Track'")
+                LimiterProcessorError("In order to limit on Album, all items must be of type 'Track'")
 
             if len(seen_albums) < self.limit_max and item.album not in seen_albums:
                 # album limit not yet reached
@@ -146,7 +150,7 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
         """
         if 10 < self.kind.value < 20:
             if not hasattr(item, "length"):
-                raise ItemLimiterError("The given item cannot be limited on length as it does not have a length.")
+                raise LimiterProcessorError("The given item cannot be limited on length as it does not have a length.")
 
             factors = (1, 60, 60, 24, 7)[:self.kind.value % 10]
             # noinspection PyUnresolvedReferences
@@ -154,13 +158,13 @@ class ItemLimiter(MusicBeeProcessor, DynamicProcessor):
 
         elif 20 <= self.kind.value < 30:
             if not isinstance(item, File):
-                raise ItemLimiterError("The given item cannot be limited on bytes as it is not a file.")
+                raise LimiterProcessorError("The given item cannot be limited on bytes as it is not a file.")
 
             bytes_scale = 1000
             return item.size / (bytes_scale ** (self.kind.value % 10))
 
         else:
-            raise ItemLimiterError(f"Unrecognised LimitType: {self.kind}")
+            raise LimiterProcessorError(f"Unrecognised LimitType: {self.kind}")
 
     @dynamicprocessormethod
     def _random(self, items: list[MusifyItem]) -> None:

@@ -72,4 +72,5 @@ Install through pip using one of the following commands:
    musify.report
    musify.types
    musify.utils
+
    genindex

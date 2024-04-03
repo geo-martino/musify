@@ -42,18 +42,21 @@ class APIAuthoriser:
         }
 
     :param name: The name of the API service being accessed.
-    :param auth_args: The parameters to be passed to the requests.post() function for initial token authorisation.
-        See description for possible example values.
-    :param user_args: Parameters to be passed to the requests.post() function
-        for requesting user authorised access to API services.
+    :param auth_args: The parameters to be passed to the
+        `requests.post() <https://requests.readthedocs.io/en/latest/api/#requests.post>`_
+        function for initial token authorisation. See description for possible example values.
+    :param user_args: The parameters to be passed to the
+        `requests.post() <https://requests.readthedocs.io/en/latest/api/#requests.post>`_
+        function for requesting user authorised access to API services.
         The code response from this request is then added to the authorisation request args
-        to grant user authorisation to the API.
+        to grant user authorisation to the API. See description for possible example values.
+    :param refresh_args: The parameters to be passed to the
+        `requests.post() <https://requests.readthedocs.io/en/latest/api/#requests.post>`_
+        function for refreshing an expired token when a refresh_token is present.
         See description for possible example values.
-    :param refresh_args: Parameters to be passed to the requests.post() function
-        for refreshing an expired token when a refresh_token is present.
-        See description for possible example values.
-    :param test_args: Parameters to be passed to the requests.get() function for testing validity of the token.
-        Must be set in conjunction with test_condition to work.
+    :param test_args: The parameters to be passed to the
+        `requests.get() <https://requests.readthedocs.io/en/latest/api/#requests.get>`_
+        function for testing validity of the token. Must be set in conjunction with test_condition to work.
         See description for possible example values.
     :param test_condition: Callable function for testing the response from the given
         test_args. e.g. ``lambda r: "error" not in r``

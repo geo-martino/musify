@@ -310,7 +310,7 @@ class RemoteAPI(ABC):
             use_cache: bool = True,
     ) -> list[dict[str, Any]]:
         """
-        ``GET: /{kind}s`` - Get information for given ``values``.
+        ``GET`` - Get information for given ``values``.
 
         ``values`` may be:
             * A string representing a URL/URI/ID.

@@ -16,6 +16,18 @@ class ComparerError(ProcessorError):
     """Exception raised for errors related to :py:class:`Comparer` settings."""
 
 
+class LimiterProcessorError(ProcessorError):
+    """Exception raised for errors related to :py:class:`ItemLimiter` logic."""
+
+
+class MatcherProcessorError(ProcessorError):
+    """Exception raised for errors related to :py:class:`ItemMatcher` logic."""
+
+
+class SorterProcessorError(ProcessorError):
+    """Exception raised for errors related to :py:class:`ItemSorter` logic."""
+
+
 class TimeMapperError(ProcessorError):
     """Exception raised for errors related to :py:class:`TimeMapper` logic."""
 
@@ -25,22 +37,3 @@ class TimeMapperError(ProcessorError):
 ###########################################################################
 class FilterError(ProcessorError):
     """Exception raised for errors related to :py:class:`Filter` logic."""
-
-
-###########################################################################
-## Item processor errors
-###########################################################################
-class ItemProcessorError(ProcessorError):
-    """Exception raised for errors related to :py:class:`ItemProcessor` logic."""
-
-
-class ItemLimiterError(ItemProcessorError):
-    """Exception raised for errors related to :py:class:`ItemLimiter` logic."""
-
-
-class ItemMatcherError(ItemProcessorError):
-    """Exception raised for errors related to :py:class:`ItemMatcher` logic."""
-
-
-class ItemSorterError(ItemProcessorError):
-    """Exception raised for errors related to :py:class:`ItemSorter` logic."""

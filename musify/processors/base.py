@@ -49,19 +49,6 @@ class InputProcessor(Processor, metaclass=ABCMeta):
         return "\n\t".join(help_text) + '\n'
 
 
-class ItemProcessor(Processor, metaclass=ABCMeta):
-    """Base object for processing :py:class:`MusifyItem` objects"""
-
-
-class MusicBeeProcessor(ItemProcessor, metaclass=ABCMeta):
-    """Base object for processing :py:class:`MusifyItem` objects on MusicBee settings"""
-
-    @classmethod
-    def _processor_method_fmt(cls, name: str) -> str:
-        """A custom formatter to apply to the dynamic processor name"""
-        return "_" + cls._pascal_to_snake(name)
-
-
 # noinspection PyPep8Naming,SpellCheckingInspection
 class dynamicprocessormethod:
     """
@@ -115,6 +102,11 @@ class DynamicProcessor(Processor, metaclass=ABCMeta):
         """String representation of the current processor name of this object"""
         return frozenset(self._processor_method_fmt(name) for name in self.__processormethods__)
 
+    @classmethod
+    def _processor_method_fmt(cls, name: str) -> str:
+        """A custom formatter to apply to the dynamic processor name"""
+        return name
+
     def __new__(cls, *_, **__):
         processor_methods = list(cls.__processormethods__)
 
@@ -137,11 +129,6 @@ class DynamicProcessor(Processor, metaclass=ABCMeta):
 
     def __init__(self):
         self._processor_name: str | None = None
-
-    @classmethod
-    def _processor_method_fmt(cls, name: str) -> str:
-        """A custom formatter to apply to the dynamic processor name"""
-        return name
 
     def _set_processor_name(self, value: str | None, fail_on_empty: bool = True):
         """Verifies and sets the condition name"""
