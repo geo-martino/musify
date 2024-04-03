@@ -149,7 +149,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
             assert item.has_uri is None
             assert item.uri is None
 
-    # TODO: can this test run faster? runs ~5-10s on local
+    # TODO: can this test run faster? runs ~5-10s on local machine
     def test_search_items(
             self,
             searcher: RemoteItemSearcher,
@@ -163,7 +163,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
             unmatchable_items=unmatchable_items
         )
 
-    # TODO: can this test run faster? runs ~10-15s on local
+    # TODO: can this test run faster? runs ~10-15s on local machine
     def test_search_album(
             self, searcher: RemoteItemSearcher, search_albums: list[Album], unmatchable_items: list[LocalTrack]
     ):
@@ -196,7 +196,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
 
         return collection
 
-    # TODO: can this test run faster? runs ~5-10s on local
+    # TODO: can this test run faster? runs ~5-10s on local machine
     @staticmethod
     def test_search_result_items(
             searcher: RemoteItemSearcher, search_items: list[LocalTrack], unmatchable_items: list[LocalTrack]
@@ -216,7 +216,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert len(result.unmatched) == len(unmatchable_items)
         assert len(result.skipped) == len(search_items)
 
-    # TODO: can this test run faster? runs ~5-10s on local
+    # TODO: can this test run faster? runs ~5-10s on local machine
     @staticmethod
     def test_search_result_album(searcher: RemoteItemSearcher, search_album: LocalAlbum):
         skip = len([item for item in search_album if item.has_uri is not None])
@@ -234,7 +234,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert len(result.unmatched) == 0
         assert len(result.skipped) == len(search_album)
 
-    # TODO: can this test run faster? (runs ~1:30 on local)
+    # TODO: can this test run faster? runs ~1:30 on local
     #  this is the longest running test
     @staticmethod
     def test_search_result_combined(
@@ -265,7 +265,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
     ###########################################################################
     ## main search tests
     ###########################################################################
-    # TODO: can this test run faster? runs ~5-15s on local
+    # TODO: can this test run faster? runs ~5-15s on local machine
     @staticmethod
     def test_search(
             searcher: RemoteItemSearcher,

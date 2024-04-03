@@ -91,7 +91,7 @@ class TestLocalLibrary(LocalLibraryTester):
             splitext(basename(path))[0]: path for path in path_playlist_all
         }
 
-    # TODO: can this test run faster? (runs ~5s on local)
+    # TODO: can this test run faster? runs ~5s on local machine
     def test_load(self, path_mapper: PathMapper):
         library = LocalLibrary(
             library_folders=path_track_resources, playlist_folder=path_playlist_resources, path_mapper=path_mapper
