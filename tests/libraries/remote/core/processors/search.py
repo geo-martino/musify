@@ -234,8 +234,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert len(result.unmatched) == 0
         assert len(result.skipped) == len(search_album)
 
-    # TODO: can this test run faster? runs ~1:30 on local
-    #  this is the longest running test
+    # TODO: can this test run faster? runs ~1:30 on local. This is currently the longest running test
     @staticmethod
     def test_search_result_combined(
             searcher: RemoteItemSearcher,
