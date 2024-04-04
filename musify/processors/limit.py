@@ -1,7 +1,7 @@
 """
 Processor that limits the items in a given collection of items
 """
-from collections.abc import Collection
+from collections.abc import Collection, MutableSequence
 from functools import reduce
 from operator import mul
 from random import shuffle
@@ -112,7 +112,7 @@ class ItemLimiter(DynamicProcessor):
         else:
             items.extend(self._limit_on_numeric(items_limit))
 
-    def _limit_on_albums[T: MusifyItem](self, items: list[T]) -> list[T]:
+    def _limit_on_albums[T: MusifyItem](self, items: MutableSequence[T]) -> list[T]:
         seen_albums = []
         result = []
 
@@ -128,7 +128,7 @@ class ItemLimiter(DynamicProcessor):
 
         return result
 
-    def _limit_on_numeric[T: MusifyItem](self, items: list[T]) -> list[T]:
+    def _limit_on_numeric[T: MusifyItem](self, items: MutableSequence[T]) -> list[T]:
         count = 0
         result = []
 
@@ -149,7 +149,7 @@ class ItemLimiter(DynamicProcessor):
         :raise ItemLimiterError: When the given limit type cannot be found
         """
         if 10 < self.kind.value < 20:
-            if not hasattr(item, "length"):
+            if getattr(item, "length", None) is None:  # TODO: there should be a better way of handling this...
                 raise LimiterProcessorError("The given item cannot be limited on length as it does not have a length.")
 
             factors = (1, 60, 60, 24, 7)[:self.kind.value % 10]
@@ -167,7 +167,7 @@ class ItemLimiter(DynamicProcessor):
             raise LimiterProcessorError(f"Unrecognised LimitType: {self.kind}")
 
     @dynamicprocessormethod
-    def _random(self, items: list[MusifyItem]) -> None:
+    def _random(self, items: MutableSequence[MusifyItem]) -> None:
         shuffle(items)
 
     @dynamicprocessormethod

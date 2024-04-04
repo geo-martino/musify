@@ -640,11 +640,6 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTra
         return len(self.response["images"]) > 0
 
     @property
-    def length(self):
-        lengths = {track.length for track in self.tracks}
-        return sum(lengths) if lengths else None
-
-    @property
     def rating(self):
         return self.response.get("popularity")
 
