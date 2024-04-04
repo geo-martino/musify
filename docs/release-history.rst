@@ -48,6 +48,7 @@ Added
 * Now supports creating new :py:class:`.XAutoPF` files from scratch without the file needing to already exist
   For XML values not directly controlled by Musify, users can use the 'default_xml' class attribute
   to control the initial default values applied in this scenario
+* 'length' property on :py:class:`.MusifyCollection` and implementation on all subclasses
 
 Changed
 -------
