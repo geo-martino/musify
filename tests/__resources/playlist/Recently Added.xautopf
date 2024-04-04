@@ -5,7 +5,7 @@
     <Conditions CombineMethod="Any">
       <Condition Field="Album" Comparison="Contains" Value="" />
     </Conditions>
-    <Limit FilterDuplicates="False" Enabled="True" Count="20" Type="Items" SelectedBy="MostRecentlyAdded" />
+    <Limit FilterDuplicates="True" Enabled="True" Count="20" Type="Items" SelectedBy="MostRecentlyAdded" />
     <SortBy Field="12" Order="Descending" />
     <Fields>
       <Group Id="TrackDetail">

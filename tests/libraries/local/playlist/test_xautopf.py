@@ -58,6 +58,7 @@ class TestXAutoPF(LocalPlaylistTester):
         assert pl.matcher.ready
         assert len(pl.matcher.comparers.comparers) == 3
         assert not pl.limiter
+        assert not pl.limiter_deduplication
         assert pl.sorter
 
         pl.load(tracks)
@@ -97,6 +98,7 @@ class TestXAutoPF(LocalPlaylistTester):
         assert not pl.matcher.ready
         assert not pl.matcher.comparers
         assert pl.limiter
+        assert pl.limiter_deduplication
         assert pl.sorter
 
     def test_load_playlist_ra_tracks(self, path_mapper: PathMapper):
@@ -111,6 +113,19 @@ class TestXAutoPF(LocalPlaylistTester):
         assert len(pl.tracks) == limit
         tracks_expected = sorted(tracks, key=lambda t: t.date_added, reverse=True)[:limit]
         assert pl.tracks == sorted(tracks_expected, key=lambda t: t.date_added, reverse=True)
+
+    def test_limiter_deduplication(self):
+        tracks = random_tracks(10)
+
+        pl = XAutoPF(path=path_playlist_xautopf_ra, tracks=tracks)
+        limit = pl.limiter.limit_max
+        tracks_expected = sorted(tracks, key=lambda t: t.date_added, reverse=True)[:limit]
+        assert pl.limiter_deduplication
+        assert pl.tracks == tracks_expected
+
+        pl = XAutoPF(path=path_playlist_xautopf_ra, tracks=tracks + tracks)
+        assert pl.limiter_deduplication
+        assert pl.tracks == tracks_expected
 
     def test_save_new_file(self, tmp_path: str):
         path = join(tmp_path, random_str() + ".xautopf")
@@ -457,8 +472,9 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         # default values cause getter to not return any processor
         parser_initial.parse_limiter()
         assert parser_initial.get_limiter() is None
+        assert not parser_initial.limiter_deduplication  # always False by default
 
-        parser_initial.parse_limiter(final)
+        parser_initial.parse_limiter(final, deduplicate=True)
         new = parser_initial.get_limiter()
         assert new is not None
         assert new.limit_max == final.limit_max

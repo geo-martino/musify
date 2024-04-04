@@ -103,6 +103,15 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
         self._parser.description = value
 
     @property
+    def limiter_deduplication(self) -> bool:
+        """This setting controls whether duplicates should be filtered out before running limiter operations."""
+        return self._limiter_deduplication
+
+    @limiter_deduplication.setter
+    def limiter_deduplication(self, value: bool):
+        self._limiter_deduplication = value
+
+    @property
     def image_links(self):
         return {}
 
@@ -125,6 +134,8 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
             self._parser.parse_limiter()
             self._parser.parse_sorter()
 
+        self._limiter_deduplication: bool = self._parser.limiter_deduplication
+
         super().__init__(
             path=path,
             matcher=self._parser.get_matcher(),
@@ -146,6 +157,21 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
         self._original = self.tracks.copy()
         return self.tracks
 
+    def _limit(self, ignore: Collection[LocalTrack]) -> None:
+        if self.limiter is not None and self.tracks is not None and self.limiter_deduplication:
+            # preprocess tracks by applying deduplication first before sending to the actual limiter
+            tracks_keys_seen = set()
+            tracks_deduplicated: list[LocalTrack] = []
+
+            for track in self.tracks:
+                track_key = "_".join([track.title, track.artist])
+                if track in ignore or track_key not in tracks_keys_seen:
+                    tracks_keys_seen.add(track_key)
+                    tracks_deduplicated.append(track)
+
+            self.tracks = tracks_deduplicated
+        super()._limit(ignore=ignore)
+
     def save(self, dry_run: bool = True, *_, **__) -> SyncResultXAutoPF:
         """
         Write the tracks in this Playlist and its settings (if applicable) to file.
@@ -159,7 +185,7 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
         parser = self._parser if not dry_run else deepcopy(self._parser)
         parser.parse_matcher(self.matcher)
         parser.parse_exception_paths(self.matcher, items=self.tracks, original=self._original)
-        parser.parse_limiter(self.limiter)
+        parser.parse_limiter(self.limiter, deduplicate=self.limiter_deduplication)
         parser.parse_sorter(self.sorter)
         parser.save(dry_run=dry_run)
 
@@ -482,7 +508,6 @@ class XMLPlaylistParser(File, PrettyPrinter):
         conditions: Mapping[str, str] = self.xml_source["Limit"]
         if conditions["@Enabled"] != "True":
             return
-        # filter_duplicates = conditions["@FilterDuplicates"] == "True"
 
         # MusicBee appears to have some extra allowance on time and byte limits of ~1.25
         return ItemLimiter(
@@ -492,12 +517,16 @@ class XMLPlaylistParser(File, PrettyPrinter):
             allowance=1.25
         )
 
-    def parse_limiter(self, limiter: ItemLimiter | None = None) -> None:
+    @property
+    def limiter_deduplication(self) -> bool:
+        """This setting controls whether duplicates should be filtered out before running limiter operations."""
+        return self.xml_source["Limit"]["@FilterDuplicates"] == "True"
+
+    def parse_limiter(self, limiter: ItemLimiter | None = None, deduplicate: bool = False) -> None:
         """Update the loaded ``xml`` object by parsing the given ``limiter`` to its XML playlist representation."""
-        xml: dict[str, str]
         if limiter is None:  # default value
             xml = {
-                "@FilterDuplicates": "True",
+                "@FilterDuplicates": str(deduplicate).title(),
                 "@Enabled": "False",
                 "@Count": "25",
                 "@Type": "Items",
@@ -505,7 +534,7 @@ class XMLPlaylistParser(File, PrettyPrinter):
             }
         else:
             xml = {
-                "@FilterDuplicates": "False",
+                "@FilterDuplicates": str(deduplicate).title(),
                 "@Enabled": "True",
                 "@Count": str(limiter.limit_max),
                 "@Type": limiter.kind.name.title(),

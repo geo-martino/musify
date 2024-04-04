@@ -103,7 +103,6 @@ class LocalPlaylist[T: Filter[LocalTrack]](LocalCollection[LocalTrack], Playlist
         self._original: list[LocalTrack] = []
 
     def _match(self, tracks: Collection[LocalTrack] = (), reference: LocalTrack | None = None) -> None:
-        """Wrapper for matcher operations"""
         if self.matcher is None or not tracks:
             return
 
@@ -113,14 +112,12 @@ class LocalPlaylist[T: Filter[LocalTrack]](LocalCollection[LocalTrack], Playlist
             self.tracks: list[LocalTrack] = list(self.matcher(values=tracks, reference=reference))
 
     def _limit(self, ignore: Collection[str | LocalTrack]) -> None:
-        """Wrapper for limiter operations"""
         if self.limiter is not None and self.tracks is not None:
             track_path_map = {track.path: track for track in self.tracks}
             ignore: set[LocalTrack] = {i if isinstance(i, LocalTrack) else track_path_map.get(i) for i in ignore}
             self.limiter(items=self.tracks, ignore=ignore)
 
     def _sort(self) -> None:
-        """Wrapper for sorter operations"""
         if self.sorter is not None and self.tracks is not None:
             self.sorter(items=self.tracks)
 
