@@ -269,7 +269,7 @@ class RemoteAlbum[T: RemoteTrack](Album[T], RemoteCollectionLoader[T], metaclass
         raise NotImplementedError
 
 
-class RemoteArtist[T: RemoteTrack](Artist[T], RemoteCollectionLoader[T], metaclass=ABCMeta):
+class RemoteArtist[T: (RemoteTrack, RemoteAlbum)](Artist[T], RemoteCollectionLoader[T], metaclass=ABCMeta):
     """Extracts key ``artist`` data from a remote API JSON response."""
 
     __attributes_classes__ = (Artist, RemoteCollectionLoader)

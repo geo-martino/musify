@@ -109,6 +109,12 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], metaclas
         """The items in this collection"""
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def length(self) -> float | None:
+        """Total duration of all items in this collection in seconds"""
+        raise NotImplementedError
+
     @staticmethod
     @abstractmethod
     def _validate_item_type(items: Any | Iterable[Any]) -> bool:

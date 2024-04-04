@@ -161,7 +161,7 @@ class Track(MusifyItem, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def length(self) -> float:
+    def length(self) -> float | None:
         """Total duration of this track in seconds"""
         raise NotImplementedError
 
@@ -225,7 +225,7 @@ class Playlist[T: Track](MusifyCollection[T], metaclass=ABCMeta):
         return len(self.image_links) > 0
 
     @property
-    def length(self) -> float | None:
+    def length(self):
         """Total duration of all tracks in this playlist in seconds"""
         lengths = {track.length for track in self.tracks}
         return sum(lengths) if lengths else None
@@ -308,6 +308,12 @@ class Library[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     def items(self):
         """The tracks in this collection"""
         return self.tracks
+
+    @property
+    def length(self):
+        """Total duration of all tracks in this library in seconds"""
+        lengths = {track.length for track in self.tracks}
+        return sum(lengths) if lengths else None
 
     @property
     @abstractmethod
@@ -516,10 +522,10 @@ class Folder[T: Track](MusifyCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
     @property
-    @abstractmethod
-    def length(self) -> float | None:
-        """Total duration of all tracks in this folder"""
-        raise NotImplementedError
+    def length(self):
+        """Total duration of all tracks in this folder in seconds"""
+        lengths = {track.length for track in self.tracks}
+        return sum(lengths) if lengths else None
 
 
 class Album[T: Track](MusifyCollection[T], metaclass=ABCMeta):
@@ -633,10 +639,10 @@ class Album[T: Track](MusifyCollection[T], metaclass=ABCMeta):
         return len(self.image_links) > 0
 
     @property
-    @abstractmethod
-    def length(self) -> float | None:
+    def length(self):
         """Total duration of all tracks on this album in seconds"""
-        raise NotImplementedError
+        lengths = {track.length for track in self.tracks}
+        return sum(lengths) if lengths else None
 
     @property
     @abstractmethod
@@ -645,7 +651,7 @@ class Album[T: Track](MusifyCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class Artist[T: Track](MusifyCollection[T], metaclass=ABCMeta):
+class Artist[T: (Track, Album)](MusifyCollection[T], metaclass=ABCMeta):
     """An artist of items and their derived properties/objects."""
 
     __attributes_classes__ = MusifyCollection
@@ -704,10 +710,10 @@ class Artist[T: Track](MusifyCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
     @property
-    @abstractmethod
-    def length(self) -> float | None:
-        """Total duration of all tracks by this artist"""
-        raise NotImplementedError
+    def length(self):
+        """Total duration of all tracks by this artist in seconds"""
+        lengths = {track.length for track in self.tracks}
+        return sum(lengths) if lengths else None
 
     @property
     @abstractmethod
@@ -761,3 +767,9 @@ class Genre[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     def genres(self) -> list[str]:
         """List of genres ordered by frequency of appearance on the tracks for this genre"""
         raise NotImplementedError
+
+    @property
+    def length(self):
+        """Total duration of all tracks with this genre in seconds"""
+        lengths = {track.length for track in self.tracks}
+        return sum(lengths) if lengths else None

@@ -72,12 +72,6 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
         return get_most_common_values(genres)
 
     @property
-    def length(self) -> float | None:
-        """Total duration of all tracks in this collection in seconds"""
-        lengths = {track.length for track in self.tracks}
-        return sum(lengths) if lengths else None
-
-    @property
     def last_modified(self) -> datetime:
         """Timestamp of the last modified track in this collection"""
         sort = sorted(filter(lambda t: t.date_modified, self.tracks), key=lambda t: t.date_modified, reverse=True)
