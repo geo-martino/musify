@@ -59,7 +59,7 @@ Changed
 * Move :py:meth:`.TagReader.load` from :py:class:`.LocalTrack` to super class :py:class:`.TagReader`
 * :py:meth:`.SpotifyAPI.extend_items` now skips on responses that are already fully extended
 * :py:meth:`.SpotifyArtist.load` now uses the base `load` method from :py:class:`.SpotifyCollectionLoader`
-  meaning it now takes full advantage of the item filtering this method offers
+  meaning it now takes full advantage of the item filtering this method offers.
   As part of this, the base method was made more generic to accommodate all :py:class:`.SpotifyObject` types
 * Renamed 'kind' property on :py:class:`.LocalTrack` to 'type' to avoid clashing property names
 * :py:class:`.ItemMatcher`, :py:class:`.RemoteItemChecker`, and :py:class:`.RemoteItemSearcher` now accept
