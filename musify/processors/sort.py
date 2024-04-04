@@ -1,7 +1,8 @@
 """
 Processor that sorts the given collection of items based on given configuration.
 """
-from collections.abc import Callable, Mapping, MutableMapping, Sequence, MutableSequence, Iterable
+import random
+from collections.abc import Callable, Mapping, MutableMapping, Sequence, Iterable
 from copy import copy
 from datetime import datetime
 from random import shuffle
@@ -10,7 +11,8 @@ from typing import Any
 from musify.core.base import MusifyItem
 from musify.core.enum import MusifyEnum, Field
 from musify.processors.base import Processor
-from musify.types import UnitSequence, UnitIterable
+from musify.processors.exception import SorterProcessorError
+from musify.types import UnitSequence, UnitIterable, Number
 from musify.utils import flatten_nested, strip_ignore_words, to_collection, limit_value
 
 
@@ -26,10 +28,22 @@ class ItemSorter(Processor):
     """
     Sort items in-place based on given conditions.
 
-    :param fields: Fields to sort by. If defined, this value will always take priority over any shuffle settings
-        i.e. shuffle settings will be ignored.
+    ``fields`` may be:
         * List of tags/properties to sort by.
         * Map of ``{<tag/property>: <reversed>}``. If reversed is true, sort the ``tag/property`` in reverse.
+
+    When ``shuffle_mode`` == ``HIGHER_RATING`` or ``RECENT_ADDED``:
+        * A ``shuffle_weight`` of 0 will sort the tracks in order according to the desired ``shuffle_mode``.
+        * A positive ``shuffle_weight`` shuffles according to the desired ``shuffle_mode``.
+          The ``shuffle_weight`` will determine how much randomness is applied to lower ranking items.
+        * A negative ``shuffle_weight`` works as above but reverses the final sort order.
+
+    When ``shuffle_mode`` == ``DIFFERENT_ARTIST``:
+        * A ``shuffle_weight`` of 1 will group the tracks by artist, shuffling artists randomly.
+        * A ``shuffle_weight`` of -1 will shuffle the items randomly.
+
+    :param fields: Fields to sort by. If defined, this value will always take priority over any shuffle settings
+        i.e. shuffle settings will be ignored.
     :param shuffle_mode: The mode to use for shuffling. Only used when no ``fields`` are given.
         WARNING: Currently only ``RANDOM`` shuffle mode has been implemented.
         Any other given value will default to ``RANDOM`` shuffling.
@@ -127,7 +141,7 @@ class ItemSorter(Processor):
     def __call__(self, *args, **kwargs) -> None:
         return self.sort(*args, **kwargs)
 
-    def sort(self, items: MutableSequence[MusifyItem]) -> None:
+    def sort(self, items: list[MusifyItem]) -> None:
         """Sorts a list of ``items`` in-place."""
         if len(items) == 0:
             return
@@ -136,15 +150,62 @@ class ItemSorter(Processor):
             items_nested = self._sort_by_fields({None: items}, fields=self.sort_fields)
             items.clear()
             items.extend(flatten_nested(items_nested))
-        elif self.shuffle_mode == ShuffleMode.RANDOM:  # random
+        elif self.shuffle_mode == ShuffleMode.RANDOM:
             shuffle(items)
-        # TODO: implement below shuffle modes correctly, currently defaulting to random
         elif self.shuffle_mode == ShuffleMode.HIGHER_RATING:
-            shuffle(items)
+            self._shuffle_on_rating(items)
         elif self.shuffle_mode == ShuffleMode.RECENT_ADDED:
-            shuffle(items)
+            self._shuffle_on_date_added(items)
         elif self.shuffle_mode == ShuffleMode.DIFFERENT_ARTIST:
-            shuffle(items)
+            self._shuffle_on_artist(items)
+
+    def _get_weighted_shuffle_value(self, value: Number, max_value: Number) -> float:
+        weight_factor = random.uniform(-1, 1) * self.shuffle_weight
+        return abs(value - weight_factor * (value - max_value))
+
+    # noinspection PyUnresolvedReferences
+    def _shuffle_on_rating(self, items: list[MusifyItem]) -> None:
+        if not all(hasattr(item, "rating") for item in items):
+            raise SorterProcessorError(
+                "Cannot shuffle sort on rating as the given items do not all have a 'rating' property"
+            )
+
+        max_value: float = max(item.rating for item in items)
+        items.sort(
+            key=lambda item: self._get_weighted_shuffle_value(item.rating, max_value),
+            reverse=self.shuffle_weight >= 0
+        )
+
+    # noinspection PyUnresolvedReferences
+    def _shuffle_on_date_added(self, items: list[MusifyItem]) -> None:
+        if not all(hasattr(item, "date_added") for item in items):
+            raise SorterProcessorError(
+                "Cannot shuffle sort on date added as the given items do not all have a 'date_added' property"
+            )
+
+        max_value: float = max(item.date_added.timestamp() for item in items)
+        items.sort(
+            key=lambda item: self._get_weighted_shuffle_value(item.date_added.timestamp(), max_value),
+            reverse=self.shuffle_weight >= 0
+        )
+
+    # noinspection PyUnresolvedReferences
+    def _shuffle_on_artist(self, items: list[MusifyItem]) -> None:
+        if not all(hasattr(item, "artist") for item in items):
+            raise SorterProcessorError(
+                "Cannot shuffle sort on artist as the given items do not all have an 'artist' property"
+            )
+
+        shuffle_weight = (self.shuffle_weight + 1) / 2
+        artists: list[str] = list({item.artist for item in items})
+        shuffle(artists)
+
+        def sort_key(artist: str) -> int:
+            """Get sort key for a given ``artist``"""
+            return artists.index(artist) if random.random() <= shuffle_weight else random.randrange(0, len(artists))
+
+        shuffle(items)
+        items.sort(key=lambda item: sort_key(item.artist))
 
     @classmethod
     def _sort_by_fields(
