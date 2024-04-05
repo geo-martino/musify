@@ -303,8 +303,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             bar = self.logger.get_progress_bar(
                 tasks, desc="Loading tracks", unit="tracks", total=len(self._track_paths)
             )
-
-        self._tracks = list(bar)
+            self._tracks = list(bar)
 
         self._log_errors("Could not load the following tracks")
         self.logger.debug(f"Load {self.name} tracks: DONE\n")
@@ -358,8 +357,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             bar = self.logger.get_progress_bar(
                 tasks, desc="Loading playlists", unit="playlists", total=len(self._playlist_paths)
             )
-
-        self._playlists = {pl.name: pl for pl in sorted(bar, key=lambda x: x.name.casefold())}
+            self._playlists = {pl.name: pl for pl in sorted(bar, key=lambda x: x.name.casefold())}
 
         self._log_errors("Could not load the following playlists")
         self.logger.debug(f"Load {self.name} playlists: DONE\n")
