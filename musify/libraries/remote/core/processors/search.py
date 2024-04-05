@@ -24,14 +24,14 @@ from musify.utils import align_string, get_max_width
 
 
 @dataclass(frozen=True)
-class ItemSearchResult(Result):
+class ItemSearchResult[T: MusifyItemSettable](Result):
     """Stores the results of the searching process."""
     #: Sequence of Items for which matches were found from the search.
-    matched: Sequence[MusifyItemSettable] = field(default=tuple())
+    matched: Sequence[T] = field(default=tuple())
     #: Sequence of Items for which matches were not found from the search.
-    unmatched: Sequence[MusifyItemSettable] = field(default=tuple())
+    unmatched: Sequence[T] = field(default=tuple())
     #: Sequence of Items which were skipped during the search.
-    skipped: Sequence[MusifyItemSettable] = field(default=tuple())
+    skipped: Sequence[T] = field(default=tuple())
 
 
 @dataclass(frozen=True)
@@ -183,7 +183,9 @@ class RemoteItemSearcher(ItemMatcher):
     def __call__(self, *args, **kwargs) -> dict[str, ItemSearchResult]:
         return self.search(*args, **kwargs)
 
-    def search(self, collections: Collection[MusifyCollection]) -> dict[str, ItemSearchResult]:
+    def search[T: MusifyItemSettable](
+            self, collections: Collection[MusifyCollection[T]]
+    ) -> dict[str, ItemSearchResult[T]]:
         """
         Searches for remote matches for the given list of item collections.
 
@@ -210,7 +212,7 @@ class RemoteItemSearcher(ItemMatcher):
         self.logger.debug("Searching: DONE\n")
         return search_results
 
-    def _search_collection(self, collection: MusifyCollection) -> ItemSearchResult:
+    def _search_collection[T: MusifyItemSettable](self, collection: MusifyCollection) -> ItemSearchResult[T]:
         kind = collection.__class__.__name__
 
         skipped = tuple(item for item in collection if item.has_uri is not None)

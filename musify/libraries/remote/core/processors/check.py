@@ -27,14 +27,14 @@ ALLOW_KARAOKE_DEFAULT = RemoteItemSearcher.search_settings[RemoteObjectType.TRAC
 
 
 @dataclass(frozen=True)
-class ItemCheckResult(Result):
+class ItemCheckResult[T: MusifyItemSettable](Result):
     """Stores the results of the checking process."""
     #: Sequence of Items that had URIs switched during the check.
-    switched: Sequence[MusifyItemSettable] = field(default=tuple())
+    switched: Sequence[T] = field(default=tuple())
     #: Sequence of Items that were marked as unavailable.
-    unavailable: Sequence[MusifyItemSettable] = field(default=tuple())
+    unavailable: Sequence[T] = field(default=tuple())
     #: Sequence of Items that were skipped from the check.
-    skipped: Sequence[MusifyItemSettable] = field(default=tuple())
+    skipped: Sequence[T] = field(default=tuple())
 
 
 class RemoteItemChecker(ItemMatcher, InputProcessor):
@@ -147,7 +147,7 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
     def __call__(self, *args, **kwargs) -> ItemCheckResult | None:
         return self.check(*args, **kwargs)
 
-    def check(self, collections: Collection[MusifyCollection[MusifyItemSettable]]) -> ItemCheckResult | None:
+    def check[T: MusifyItemSettable](self, collections: Collection[MusifyCollection[T]]) -> ItemCheckResult[T] | None:
         """
         Run the checker for the given ``collections``.
 
