@@ -58,6 +58,7 @@ html_theme_options = dict(
     includehidden=True,
     titles_only=False,
 )
+# html_logo = "_images/musify-logo.png"
 html_css_files = [
     "style.css",
 ]
