@@ -233,7 +233,6 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         checker._remaining.extend(tracks)
         return tracks.copy()
 
-    # TODO: can this test run faster? runs ~5s on local machine
     @staticmethod
     @pytest.mark.slow
     def test_match_to_input_unavailable_all(
@@ -287,6 +286,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             assert not item.has_uri
 
     @staticmethod
+    @pytest.mark.slow
     def test_match_to_input_skip_all(
             checker: RemoteItemChecker,
             remaining: list[LocalTrack],
@@ -486,7 +486,6 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
     ###########################################################################
     ## ``check_uri`` meta-step
     ###########################################################################
-    # TODO: can this test run faster? runs ~5s on local machine
     @staticmethod
     @pytest.mark.slow
     def test_check_uri(
@@ -544,7 +543,6 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
     ###########################################################################
     ## Main ``check`` function
     ###########################################################################
-    # TODO: can this test run faster? runs ~30s on local machine
     @staticmethod
     @pytest.mark.slow
     def test_check(

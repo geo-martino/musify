@@ -312,10 +312,11 @@ class ItemMatcher(Processor):
             )
 
         result = None
-        score = 0
+        best_score = 0
 
-        def sum_nested_scores(scores: list[list[Future[float]]]) -> float:
-            scores_summed = [sum(sc.result() for sc in score) / len(score) for score in scores]
+        def sum_nested_scores(futures: list[list[Future[float]]]) -> float:
+            """Sum the scores from a given list of nested Futures"""
+            scores_summed = [sum(score.result() for score in nested) / len(nested) for nested in futures]
             return sum(scores_summed) / len(scores_summed)
 
         for result, result_scores in scores:
@@ -323,21 +324,21 @@ class ItemMatcher(Processor):
                 sum_nested_scores(score) if isinstance(score, list) else score.result()
                 for score in result_scores.values()
             ]
-            score = sum(result_scores) / len(result_scores)
-            if score > max_score:
+            best_score = sum(result_scores) / len(result_scores)
+            if best_score > max_score:
                 break
 
         min_score = limit_value(min_score, floor=0.01, ceil=1.0)
-        if score > min_score:
+        if best_score > min_score:
             extra = [
-                f"best score: {'%.2f' % round(score, 2)} > {'%.2f' % round(min_score, 2)}"
-                if score < max_score else
-                f"max score reached: {'%.2f' % round(score, 2)} > {'%.2f' % round(max_score, 2)}"
+                f"best score: {'%.2f' % round(best_score, 2)} > {'%.2f' % round(min_score, 2)}"
+                if best_score < max_score else
+                f"max score reached: {'%.2f' % round(best_score, 2)} > {'%.2f' % round(max_score, 2)}"
             ]
             self._log_match(source=source, result=result, extra=extra)
             return result
         else:
-            self._log_test(source=source, result=result, test=score, extra=[f"NO MATCH: {score}<{min_score}"])
+            self._log_test(source=source, result=result, test=best_score, extra=[f"NO MATCH: {best_score}<{min_score}"])
 
     def _score[T: MusifyObject](
             self,
@@ -348,10 +349,11 @@ class ItemMatcher(Processor):
             allow_karaoke: bool = False,
     ) -> list[tuple[T, dict[TagField, Future[float] | list[list[Future[float]]]]]]:
         """
-        Gets the score and result from a cleaned source and a given list of results.
+        Gets the scores for all given ``results`` against a cleaned ``source``.
 
         :param source: Source item to compare against and find a match for with assigned ``clean_tags``.
         :param results: Result items for comparisons.
+        :param executor: The executor to submit tasks to.
         :param match_on: List of tags to match on. Currently only the following fields are supported:
             ``title``, ``artist``, ``album``, ``year``, ``length``.
         :param allow_karaoke: When True, items determined to be karaoke are allowed when matching added items.
@@ -372,16 +374,6 @@ class ItemMatcher(Processor):
                 continue
             scores.append((result, result_scores))
 
-            # current_score = sum(scores.values()) / len(scores)
-            # log_extra = [f"BEST={round(best_score, 2)}"]
-            # self._log_test(source=source, result=current_result, test=round(current_score, 2), extra=log_extra)
-            #
-            # if current_score > best_score:
-            #     best_result = current_result
-            #     best_score = sum(scores.values()) / len(scores)
-            # if best_score >= max_score:  # max threshold reached, match found
-            #     break
-
         return scores
 
     def _get_scores[T: MusifyObject](
@@ -400,6 +392,7 @@ class ItemMatcher(Processor):
 
         :param source: Source item to compare against and find a match for with assigned ``clean_tags``.
         :param result: Result item to compare against with assigned ``clean_tags``.
+        :param executor: The executor to submit tasks to.
         :param match_on: List of tags to match on. Currently only the following fields are supported:
             ``title``, ``artist``, ``album``, ``year``, ``length``.
         :param allow_karaoke: When True, items determined to be karaoke are allowed when matching added items.

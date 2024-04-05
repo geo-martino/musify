@@ -57,6 +57,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         raise NotImplementedError
 
     @staticmethod
+    @pytest.mark.slow
     def test_load(library_unloaded: RemoteLibrary):
         assert not library_unloaded.playlists
         assert not library_unloaded.tracks
