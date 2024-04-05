@@ -51,8 +51,9 @@ class TestItemDownloadHelper(PrettyPrinterTester):
 
         assert sum(len(coll.items) for coll in collections) > 3
 
-    # TODO: can this test run faster? runs ~5s on local machine
+    # TODO: can this test run faster? runs ~5-10s on local machine
     @staticmethod
+    @pytest.mark.slow
     def test_opened_urls(
             download_helper: ItemDownloadHelper,
             collections: list[BasicCollection],
@@ -75,6 +76,7 @@ class TestItemDownloadHelper(PrettyPrinterTester):
 
     # TODO: can this test run faster? runs ~5-10s on local machine
     @staticmethod
+    @pytest.mark.slow
     def test_pause_1(
             download_helper: ItemDownloadHelper,
             collections: list[BasicCollection],

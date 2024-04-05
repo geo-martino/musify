@@ -5,7 +5,8 @@ Provides the user the ability to modify associated IDs using a Remote player as 
 reviewing matches through temporary playlist creation.
 """
 from collections import Counter
-from collections.abc import Sequence, Collection
+from collections.abc import Sequence, Collection, Iterator
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
 from musify import PROGRAM_NAME
@@ -360,19 +361,23 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
 
         remaining = removed + missing
         count_start = len(remaining)
-        for item in remaining:
-            if not added:
-                break
+        with ThreadPoolExecutor(thread_name_prefix="checker") as executor:
+            tasks: Iterator[tuple[MusifyItemSettable, MusifyItemSettable | None]] = executor.map(
+                lambda item: (
+                    item, self.match(item, results=added, match_on=[Fields.TITLE], allow_karaoke=self.allow_karaoke)
+                ),
+                remaining if added else ()
+            )
 
-            result = self.match(item, results=added, match_on=[Fields.TITLE], allow_karaoke=self.allow_karaoke)
-            if not result:
+        for item, match in list(tasks):
+            if not match:
                 continue
 
-            item.uri = result.uri
+            item.uri = match.uri
 
-            added.remove(result)
+            added.remove(match)
             removed.remove(item) if item in removed else missing.remove(item)
-            self._switched.append(result)
+            self._switched.append(match)
 
         self._remaining = removed + missing
         count_final = len(self._remaining)

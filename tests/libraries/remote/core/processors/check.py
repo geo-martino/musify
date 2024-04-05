@@ -233,7 +233,9 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         checker._remaining.extend(tracks)
         return tracks.copy()
 
+    # TODO: can this test run faster? runs ~5s on local machine
     @staticmethod
+    @pytest.mark.slow
     def test_match_to_input_unavailable_all(
             checker: RemoteItemChecker,
             remaining: list[LocalTrack],
@@ -456,7 +458,6 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert checker._switched == collection[:5]
         assert not checker._remaining
 
-    # TODO: can this test run faster? runs ~5-10s on local machine
     @staticmethod
     def test_match_to_remote_complex(
             checker: RemoteItemChecker, setup_playlist_collection: tuple[RemotePlaylist, BasicCollection],
@@ -487,6 +488,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
     ###########################################################################
     # TODO: can this test run faster? runs ~5s on local machine
     @staticmethod
+    @pytest.mark.slow
     def test_check_uri(
             checker: RemoteItemChecker,
             setup_playlist_collection: tuple[RemotePlaylist, BasicCollection],
@@ -544,6 +546,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
     ###########################################################################
     # TODO: can this test run faster? runs ~30s on local machine
     @staticmethod
+    @pytest.mark.slow
     def test_check(
             checker: RemoteItemChecker,
             collections: list[BasicCollection],

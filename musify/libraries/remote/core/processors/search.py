@@ -5,6 +5,7 @@ Searches for matches on remote APIs, matches the item to the best matching resul
 and assigns the ID of the matched object back to the item.
 """
 from collections.abc import Mapping, Sequence, Iterable, Collection
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -18,6 +19,7 @@ from musify.libraries.remote.core.enum import RemoteObjectType
 from musify.libraries.remote.core.factory import RemoteObjectFactory
 from musify.log import REPORT
 from musify.processors.match import ItemMatcher
+from musify.types import UnitIterable
 from musify.utils import align_string, get_max_width
 
 
@@ -200,7 +202,8 @@ class RemoteItemSearcher(ItemMatcher):
         )
 
         bar = self.logger.get_progress_bar(iterable=collections, desc="Searching", unit=f"{kind}s")
-        search_results = {coll.name: self._search_collection(collection=coll) for coll in bar}
+        with ThreadPoolExecutor(thread_name_prefix="searcher-main") as executor:
+            search_results = dict(executor.map(lambda coll: (coll.name, self._search_collection(coll)), bar))
 
         self.logger.print()
         self._log_results(search_results)
@@ -232,29 +235,38 @@ class RemoteItemSearcher(ItemMatcher):
             skipped=skipped
         )
 
-    def _search_items(self, collection: Iterable[MusifyItemSettable]) -> None:
+    def _get_item_match[T: MusifyItemSettable](
+            self, item: T, match_on: UnitIterable[TagField] | None = None, results: Iterable[T] = None
+    ) -> tuple[T, T | None]:
+        kind = self._determine_remote_object_type(item)
+        search_config = self.search_settings[kind]
+
+        if results is None:
+            responses = self._get_results(item, kind=kind, settings=search_config)
+            # noinspection PyTypeChecker
+            results: Iterable[T] = map(self.factory[kind], responses or ())
+
+        result = self.match(
+            item,
+            results=results,
+            match_on=match_on if match_on is not None else search_config.match_fields,
+            min_score=search_config.min_score,
+            max_score=search_config.max_score,
+            allow_karaoke=search_config.allow_karaoke,
+        ) if results else None
+
+        return item, result
+
+    def _search_items[T: MusifyItemSettable](self, collection: Iterable[T]) -> None:
         """Search for matches on individual items in an item collection that have ``None`` on ``has_uri`` attribute"""
-        for item in filter(lambda i: i.has_uri is None, collection):
-            kind = self._determine_remote_object_type(item)
-            search_config = self.search_settings[kind]
+        with ThreadPoolExecutor(thread_name_prefix="searcher-items") as executor:
+            matches = executor.map(self._get_item_match, filter(lambda i: i.has_uri is None, collection))
 
-            results = self._get_results(item, kind=kind, settings=search_config)
-            if not results:
-                continue
+        for item, match in matches:
+            if match and match.has_uri:
+                item.uri = match.uri
 
-            result = self.match(
-                item,
-                results=map(self.factory[kind], results),
-                match_on=search_config.match_fields,
-                min_score=search_config.min_score,
-                max_score=search_config.max_score,
-                allow_karaoke=search_config.allow_karaoke,
-            )
-
-            if result and result.has_uri:
-                item.uri = result.uri
-
-    def _search_collection_unit(self, collection: MusifyCollection[MusifyItemSettable]) -> None:
+    def _search_collection_unit[T: MusifyItemSettable](self, collection: MusifyCollection[T]) -> None:
         """
         Search for matches on an entire collection as a whole
         i.e. search for just the collection and not its distinct items.
@@ -265,19 +277,18 @@ class RemoteItemSearcher(ItemMatcher):
         kind = self._determine_remote_object_type(collection)
         search_config = self.search_settings[kind]
 
-        results = self._get_results(collection, kind=kind, settings=search_config)
+        responses = self._get_results(collection, kind=kind, settings=search_config)
         key = self.api.collection_item_map[kind]
-        for result in results:
-            self.api.extend_items(result, kind=kind, key=key, use_cache=self.use_cache)
+        for response in responses:
+            self.api.extend_items(response, kind=kind, key=key, use_cache=self.use_cache)
 
-        # noinspection PyProtectedMember
+        # noinspection PyProtectedMember,PyTypeChecker
         # order to prioritise results that are closer to the item count of the input collection
-        results_mapped = sorted(map(self.factory[kind], results), key=lambda x: abs(x._total - len(collection)))
+        results: list[T] = sorted(map(self.factory[kind], responses), key=lambda x: abs(x._total - len(collection)))
 
-        # noinspection PyTypeChecker
         result = self.match(
             collection,
-            results=results_mapped,
+            results=results,
             match_on=search_config.match_fields,
             min_score=search_config.min_score,
             max_score=search_config.max_score,
@@ -287,19 +298,12 @@ class RemoteItemSearcher(ItemMatcher):
         if not result:
             return
 
-        for item in filter(lambda i: i.has_uri is None, collection):
-            item: MusifyItemSettable
-            item_kind = self._determine_remote_object_type(collection)
-            item_search_config = self.search_settings[item_kind]
-
-            # match items back onto the result to discern which URI matches which
-            item_result = self.match(
-                item,
-                results=result.items,
-                match_on=[Tag.TITLE],
-                min_score=item_search_config.min_score,
-                max_score=item_search_config.max_score,
-                allow_karaoke=item_search_config.allow_karaoke,
+        with ThreadPoolExecutor(thread_name_prefix="searcher-collection") as executor:
+            matches = executor.map(
+                lambda item: self._get_item_match(item, match_on=[Tag.TITLE], results=result.items),
+                filter(lambda i: i.has_uri is None, collection)
             )
-            if item_result:
-                item.uri = item_result.uri
+
+        for item, match in matches:
+            if match and match.has_uri:
+                item.uri = match.uri

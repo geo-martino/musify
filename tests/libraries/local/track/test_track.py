@@ -537,6 +537,7 @@ class TestLocalTrackWriter:
         assert images[0].size == image.size
 
     # TODO: can this test run faster? runs ~5s on local machine for WMA files ONLY
+    @pytest.mark.slow
     def test_update_image_dry_run(self, track: LocalTrack):
         track_update, track_original = self.get_update_image_test_track(track)
 
@@ -554,6 +555,7 @@ class TestLocalTrackWriter:
         assert images[0].size == image_original.size
 
     # TODO: can this test run faster? runs ~5s on local machine for WMA files ONLY
+    @pytest.mark.slow
     def test_update_image_no_replace(self, track: LocalTrack):
         track_update, track_original = self.get_update_image_test_track(track)
 
@@ -565,6 +567,7 @@ class TestLocalTrackWriter:
         self.assert_update_image_result(track=track_update, image=open_image(path_track_img), result=result)
 
     # TODO: can this test run faster? runs ~5s on local machine for WMA files ONLY
+    @pytest.mark.slow
     def test_update_image_with_replace(self, track: LocalTrack):
         track_update, track_original = self.get_update_image_test_track(track)
 

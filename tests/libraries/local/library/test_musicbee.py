@@ -141,6 +141,7 @@ class TestMusicBee(LocalLibraryTester):
         }
 
     # TODO: can this test run faster? runs ~5s on local machine
+    @pytest.mark.slow
     def test_init_exclude(self, musicbee_folder: str):
         library = MusicBee(
             musicbee_folder=musicbee_folder,

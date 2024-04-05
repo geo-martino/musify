@@ -4,6 +4,8 @@ from copy import copy, deepcopy
 from random import choice
 from typing import Any
 
+import pytest
+
 from musify.core.base import MusifyItem
 from musify.libraries.core.object import Playlist
 from musify.libraries.remote.core.library import RemoteLibrary
@@ -24,7 +26,9 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         """
         raise NotImplementedError
 
+    # TODO: can this test run faster? runs ~5-10s on local machine
     @staticmethod
+    @pytest.mark.slow
     def test_load_playlists(library_unloaded: RemoteLibrary):
         library_unloaded.load_playlists()
 
@@ -149,6 +153,8 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         assert len(pl_new) == len(backup_check[name_new])
         assert library.api.handler.get(pl_new.url)  # new playlist was created and is callable
 
+    # TODO: can this test run faster? runs ~5s on local machine
+    @pytest.mark.slow
     def test_restore(self, library: RemoteLibrary, collection_merge_items: list[RemoteTrack]):
         name_actual, pl_actual = choice([(name, pl) for name, pl in library.playlists.items() if len(pl) > 10])
         name_new = "new playlist"
@@ -227,6 +233,8 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         requests = [req for req in api_mock.get_requests(method="POST") if req.url.startswith(url)]
         assert len(requests) > 0
 
+    # TODO: can this test run faster? runs ~5s on local machine
+    @pytest.mark.slow
     def test_sync(self, library: RemoteLibrary, collection_merge_items: list[RemoteTrack], api_mock: RemoteMock):
         name_actual, pl_actual = choice([(name, pl) for name, pl in library.playlists.items() if len(pl) > 10])
         name_new = "new playlist"
