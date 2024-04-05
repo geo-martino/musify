@@ -92,6 +92,7 @@ class TestLocalLibrary(LocalLibraryTester):
         }
 
     # TODO: can this test run faster? runs ~5s on local machine
+    @pytest.mark.slow
     def test_load(self, path_mapper: PathMapper):
         library = LocalLibrary(
             library_folders=path_track_resources, playlist_folder=path_playlist_resources, path_mapper=path_mapper

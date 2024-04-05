@@ -5,7 +5,8 @@ Provides the user the ability to modify associated IDs using a Remote player as 
 reviewing matches through temporary playlist creation.
 """
 from collections import Counter
-from collections.abc import Sequence, Collection
+from collections.abc import Sequence, Collection, Iterator
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
 from musify import PROGRAM_NAME
@@ -26,14 +27,14 @@ ALLOW_KARAOKE_DEFAULT = RemoteItemSearcher.search_settings[RemoteObjectType.TRAC
 
 
 @dataclass(frozen=True)
-class ItemCheckResult(Result):
+class ItemCheckResult[T: MusifyItemSettable](Result):
     """Stores the results of the checking process."""
     #: Sequence of Items that had URIs switched during the check.
-    switched: Sequence[MusifyItemSettable] = field(default=tuple())
+    switched: Sequence[T] = field(default=tuple())
     #: Sequence of Items that were marked as unavailable.
-    unavailable: Sequence[MusifyItemSettable] = field(default=tuple())
+    unavailable: Sequence[T] = field(default=tuple())
     #: Sequence of Items that were skipped from the check.
-    skipped: Sequence[MusifyItemSettable] = field(default=tuple())
+    skipped: Sequence[T] = field(default=tuple())
 
 
 class RemoteItemChecker(ItemMatcher, InputProcessor):
@@ -146,7 +147,7 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
     def __call__(self, *args, **kwargs) -> ItemCheckResult | None:
         return self.check(*args, **kwargs)
 
-    def check(self, collections: Collection[MusifyCollection[MusifyItemSettable]]) -> ItemCheckResult | None:
+    def check[T: MusifyItemSettable](self, collections: Collection[MusifyCollection[T]]) -> ItemCheckResult[T] | None:
         """
         Run the checker for the given ``collections``.
 
@@ -360,19 +361,23 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
 
         remaining = removed + missing
         count_start = len(remaining)
-        for item in remaining:
-            if not added:
-                break
+        with ThreadPoolExecutor(thread_name_prefix="checker") as executor:
+            tasks: Iterator[tuple[MusifyItemSettable, MusifyItemSettable | None]] = executor.map(
+                lambda item: (
+                    item, self.match(item, results=added, match_on=[Fields.TITLE], allow_karaoke=self.allow_karaoke)
+                ),
+                remaining if added else ()
+            )
 
-            result = self.match(item, results=added, match_on=[Fields.TITLE], allow_karaoke=self.allow_karaoke)
-            if not result:
+        for item, match in list(tasks):
+            if not match:
                 continue
 
-            item.uri = result.uri
+            item.uri = match.uri
 
-            added.remove(result)
+            added.remove(match)
             removed.remove(item) if item in removed else missing.remove(item)
-            self._switched.append(result)
+            self._switched.append(match)
 
         self._remaining = removed + missing
         count_final = len(self._remaining)

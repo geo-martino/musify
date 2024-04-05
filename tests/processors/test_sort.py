@@ -90,11 +90,11 @@ class TestItemSorter(PrettyPrinterTester):
         # positive shuffle weights should give the highest rated track first always
         ItemSorter(shuffle_mode=ShuffleMode.HIGHER_RATING, shuffle_weight=1).sort(tracks)
         max_rating = max(track.rating for track in tracks)
-        assert tracks[0] == next(track for track in tracks if track.rating == max_rating)
+        assert tracks[0].rating == max_rating
 
         # negative shuffle weights reverse the order
         ItemSorter(shuffle_mode=ShuffleMode.HIGHER_RATING, shuffle_weight=-1).sort(tracks)
-        assert tracks[-1] == next(track for track in tracks if track.rating == max_rating)
+        assert tracks[-1].rating == max_rating
 
         # as shuffle operations are random and therefore difficult to accurately test,
         # just check that the sorted list is not ordered by rating
@@ -111,11 +111,11 @@ class TestItemSorter(PrettyPrinterTester):
         # positive shuffle weights should give the most recently added track first always
         ItemSorter(shuffle_mode=ShuffleMode.RECENT_ADDED, shuffle_weight=1).sort(tracks)
         max_date_added = max(track.date_added for track in tracks)
-        assert tracks[0] == next(track for track in tracks if track.date_added == max_date_added)
+        assert tracks[0].date_added == max_date_added
 
         # negative shuffle weights reverse the order
         ItemSorter(shuffle_mode=ShuffleMode.RECENT_ADDED, shuffle_weight=-1).sort(tracks)
-        assert tracks[-1] == next(track for track in tracks if track.date_added == max_date_added)
+        assert tracks[-1].date_added == max_date_added
 
         # as shuffle operations are random and therefore difficult to accurately test,
         # just check that the sorted list is not ordered by date added

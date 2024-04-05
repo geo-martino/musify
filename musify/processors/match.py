@@ -5,6 +5,7 @@ import inspect
 import logging
 import re
 from collections.abc import Iterable, Callable, MutableSequence
+from concurrent.futures import ThreadPoolExecutor, Future
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -176,8 +177,8 @@ class ItemMatcher(Processor):
     def match_name[T: MusifyObject](self, source: T, result: T) -> float:
         """Match on names and return a score between 0-1. Score=0 when either value is None."""
         score = 0
-        source_val = source.clean_tags[Tag.NAME]
-        result_val = result.clean_tags[Tag.NAME]
+        source_val = source.clean_tags.get(Tag.NAME)
+        result_val = result.clean_tags.get(Tag.NAME)
 
         if source_val and result_val:
             score = sum(word in result_val for word in source_val.split()) / len(source_val.split())
@@ -199,8 +200,8 @@ class ItemMatcher(Processor):
         match on artist 3 is scaled by 1/3 etc.
         """
         score = 0
-        source_val = source.clean_tags[Tag.ARTIST]
-        result_val = result.clean_tags[Tag.ARTIST]
+        source_val = source.clean_tags.get(Tag.ARTIST)
+        result_val = result.clean_tags.get(Tag.ARTIST)
 
         if not source_val or not result_val:
             self._log_test(source=source, result=result, test=score, extra=[f"{source_val} -> {result_val}"])
@@ -217,8 +218,9 @@ class ItemMatcher(Processor):
     def match_album[T: MusifyObject](self, source: T, result: T) -> float:
         """Match on album and return a score between 0-1. Score=0 when either value is None."""
         score = 0
-        source_val = source.clean_tags[Tag.ALBUM]
-        result_val = result.clean_tags[Tag.ALBUM]
+
+        source_val = source.clean_tags.get(Tag.ALBUM)
+        result_val = result.clean_tags.get(Tag.ALBUM)
 
         if source_val and result_val:
             score = sum(word in result_val for word in source_val.split()) / len(source_val.split())
@@ -229,8 +231,8 @@ class ItemMatcher(Processor):
     def match_length[T: MusifyObject](self, source: T, result: T) -> float:
         """Match on length and return a score between 0-1. Score=0 when either value is None."""
         score = 0
-        source_val = source.clean_tags[Tag.LENGTH]
-        result_val = result.clean_tags[Tag.LENGTH]
+        source_val = source.clean_tags.get(Tag.LENGTH)
+        result_val = result.clean_tags.get(Tag.LENGTH)
 
         if source_val and result_val:
             score = max((source_val - abs(source_val - result_val)), 0) / source_val
@@ -247,8 +249,8 @@ class ItemMatcher(Processor):
         User may modify this max range via the ``year_range`` class attribute.
         """
         score = 0
-        source_val = source.clean_tags[Tag.YEAR]
-        result_val = result.clean_tags[Tag.YEAR]
+        source_val = source.clean_tags.get(Tag.YEAR)
+        result_val = result.clean_tags.get(Tag.YEAR)
 
         if source_val and result_val:
             score = max((self.year_range - abs(source_val - result_val)), 0) / self.year_range
@@ -297,75 +299,91 @@ class ItemMatcher(Processor):
             else:
                 match_on_filtered.add(match_field)
 
-        score, result = self._score(
-            source=source, results=results, max_score=max_score, match_on=match_on_filtered, allow_karaoke=allow_karaoke
-        )
+        max_score = limit_value(max_score, floor=0.01, ceil=1.0)
+        self._log_algorithm(source=source, extra=[f"max_score={max_score}"])
+
+        with ThreadPoolExecutor(thread_name_prefix="matcher") as executor:
+            scores = self._score(
+                source=source,
+                results=results,
+                executor=executor,
+                match_on=match_on_filtered,
+                allow_karaoke=allow_karaoke
+            )
+
+        result = None
+        best_score = 0
+
+        def sum_nested_scores(futures: list[list[Future[float]]]) -> float:
+            """Sum the scores from a given list of nested Futures"""
+            scores_summed = [sum(score.result() for score in nested) / len(nested) for nested in futures]
+            return sum(scores_summed) / len(scores_summed)
+
+        for result, result_scores in scores:
+            result_scores = [
+                sum_nested_scores(score) if isinstance(score, list) else score.result()
+                for score in result_scores.values()
+            ]
+            best_score = sum(result_scores) / len(result_scores)
+            if best_score > max_score:
+                break
 
         min_score = limit_value(min_score, floor=0.01, ceil=1.0)
-        if score > min_score:
+        if best_score > min_score:
             extra = [
-                f"best score: {'%.2f' % round(score, 2)} > {'%.2f' % round(min_score, 2)}"
-                if score < max_score else
-                f"max score reached: {'%.2f' % round(score, 2)} > {'%.2f' % round(max_score, 2)}"
+                f"best score: {'%.2f' % round(best_score, 2)} > {'%.2f' % round(min_score, 2)}"
+                if best_score < max_score else
+                f"max score reached: {'%.2f' % round(best_score, 2)} > {'%.2f' % round(max_score, 2)}"
             ]
             self._log_match(source=source, result=result, extra=extra)
             return result
         else:
-            self._log_test(source=source, result=result, test=score, extra=[f"NO MATCH: {score}<{min_score}"])
+            self._log_test(source=source, result=result, test=best_score, extra=[f"NO MATCH: {best_score}<{min_score}"])
 
     def _score[T: MusifyObject](
             self,
             source: T,
             results: Iterable[T],
-            max_score: float = 0.8,
+            executor: ThreadPoolExecutor,
             match_on: set[TagField] = ALL_TAG_FIELDS,
             allow_karaoke: bool = False,
-    ) -> tuple[float, T | None]:
+    ) -> list[tuple[T, dict[TagField, Future[float] | list[list[Future[float]]]]]]:
         """
-        Gets the score and result from a cleaned source and a given list of results.
+        Gets the scores for all given ``results`` against a cleaned ``source``.
 
         :param source: Source item to compare against and find a match for with assigned ``clean_tags``.
         :param results: Result items for comparisons.
-        :param max_score: Stop matching once this score has been reached.
-            Value will be limited to between 0.01 and 1.0.
+        :param executor: The executor to submit tasks to.
         :param match_on: List of tags to match on. Currently only the following fields are supported:
             ``title``, ``artist``, ``album``, ``year``, ``length``.
         :param allow_karaoke: When True, items determined to be karaoke are allowed when matching added items.
             Skip karaoke results otherwise. Karaoke items are identified using the ``karaoke_tags`` attribute.
         :return: Tuple of (the score between 0-1, the item that had the best score)
         """
+        scores: list[tuple[T, dict[TagField, Future[float] | list[Future[float]]]]] = []
         if not results:
             self._log_algorithm(source=source, extra=["NO RESULTS GIVEN, SKIPPING"])
-            return 0, None
-        max_score = limit_value(max_score, floor=0.01, ceil=1.0)
-        self._log_algorithm(source=source, extra=[f"max_score={max_score}"])
+            return scores
 
-        best_score = 0
-        best_result = None
-
-        for current_result in results:
-            self.clean_tags(current_result)
-            scores = self._get_scores(
-                source=source, result=current_result, match_on=match_on, allow_karaoke=allow_karaoke
+        for result in results:
+            self.clean_tags(result)
+            result_scores = self._get_scores(
+                source=source, result=result, executor=executor, match_on=match_on, allow_karaoke=allow_karaoke
             )
-            if not scores:
+            if not result_scores:
                 continue
+            scores.append((result, result_scores))
 
-            current_score = sum(scores.values()) / len(scores)
-            log_extra = [f"BEST={round(best_score, 2)}"]
-            self._log_test(source=source, result=current_result, test=round(current_score, 2), extra=log_extra)
-
-            if current_score > best_score:
-                best_result = current_result
-                best_score = sum(scores.values()) / len(scores)
-            if best_score >= max_score:  # max threshold reached, match found
-                break
-
-        return best_score, best_result
+        return scores
 
     def _get_scores[T: MusifyObject](
-            self, source: T, result: T, match_on: set[TagField] = ALL_TAG_FIELDS, allow_karaoke: bool = False
-    ) -> dict[TagField, float]:
+            self,
+            source: T,
+            result: T,
+            executor: ThreadPoolExecutor,
+            match_on: set[TagField] = ALL_TAG_FIELDS,
+            allow_karaoke: bool = False,
+    ) -> dict[TagField, Future[float] | list[list[Future[float]]]]:
         """
         Gets the scores from a cleaned source and result to match on.
         When an MusifyCollection is given to match on,
@@ -374,37 +392,40 @@ class ItemMatcher(Processor):
 
         :param source: Source item to compare against and find a match for with assigned ``clean_tags``.
         :param result: Result item to compare against with assigned ``clean_tags``.
+        :param executor: The executor to submit tasks to.
         :param match_on: List of tags to match on. Currently only the following fields are supported:
             ``title``, ``artist``, ``album``, ``year``, ``length``.
         :param allow_karaoke: When True, items determined to be karaoke are allowed when matching added items.
             Skip karaoke results otherwise. Karaoke items are identified using the ``karaoke_tags`` attribute.
         :return: Map of score type name to score.
         """
+        scores: dict[TagField, Future[float] | list[list[Future[float]]]] = {}
         if not allow_karaoke and self.match_not_karaoke(source, result) < 1:
-            return {}
-
-        scores_current: dict[TagField, float] = {}
+            return scores
 
         if Tag.TITLE in match_on:
-            scores_current[Tag.TITLE] = self.match_name(source=source, result=result)
+            scores[Tag.TITLE] = executor.submit(self.match_name, source=source, result=result)
         if Tag.ARTIST in match_on:
-            scores_current[Tag.ARTIST] = self.match_artist(source=source, result=result)
+            scores[Tag.ARTIST] = executor.submit(self.match_artist, source=source, result=result)
         if Tag.ALBUM in match_on:
-            scores_current[Tag.ALBUM] = self.match_album(source=source, result=result)
+            scores[Tag.ALBUM] = executor.submit(self.match_album, source=source, result=result)
         if Tag.LENGTH in match_on:
-            scores_current[Tag.LENGTH] = self.match_length(source=source, result=result)
+            scores[Tag.LENGTH] = executor.submit(self.match_length, source=source, result=result)
         if Tag.YEAR in match_on:
-            scores_current[Tag.YEAR] = self.match_year(source=source, result=result)
+            scores[Tag.YEAR] = executor.submit(self.match_year, source=source, result=result)
 
         if isinstance(source, MusifyCollection) and isinstance(result, MusifyCollection):
             # also score all the items individually in the collection
-            scores_current[Tag.ALL] = 0
+            scores[Tag.ALL] = []
             for item in source.items:
                 self.clean_tags(item)
-                score, _ = self._score(source=item, results=result.items, match_on=match_on)
-                scores_current[Tag.ALL] += score / len(source.items)
+                item_scores = self._score(
+                    source=item, results=result.items, match_on=match_on, allow_karaoke=allow_karaoke, executor=executor
+                )
+                for _, item_score in item_scores:
+                    scores[Tag.ALL].append([score for score in item_score.values() if not isinstance(score, list)])
 
-        return scores_current
+        return scores
 
     def as_dict(self) -> dict[str, Any]:
         return {
