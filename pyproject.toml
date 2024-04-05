@@ -25,7 +25,6 @@ classifiers = [
 ]
 dependencies = [
     "mutagen~=1.47",
-    "pyyaml~=6.0",
     "requests~=2.31",
     "requests-cache~=1.1",
     "Pillow~=10.1",
@@ -45,6 +44,7 @@ test = [
     "pytest-xdist~=3.5",
     "pytest-mock~=3.12",
     "requests-mock~=1.11",
+    "pyyaml~=6.0",
     "pycountry~=23.12",
 ]
 docs = [
