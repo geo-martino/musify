@@ -85,8 +85,8 @@ class TestSpotifyLibrary(RemoteLibraryTester):
     ## Enrich tests
     ###########################################################################
     # TODO: can this test run faster? runs ~5s on local machine
-    @pytest.mark.slow
     # noinspection PyMethodOverriding,PyTestUnpassedFixture
+    @pytest.mark.slow
     def test_enrich_tracks(self, library: SpotifyLibrary, api_mock: SpotifyMock, **kwargs):
         def validate_track_extras_not_enriched(t: SpotifyTrack) -> None:
             """Check track does not contain audio features or analysis fields"""
