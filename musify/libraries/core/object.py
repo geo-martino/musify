@@ -369,6 +369,7 @@ class Library[T: Track](MusifyCollection[T], metaclass=ABCMeta):
             pl for name, pl in self.playlists.items() if not playlist_filter or name in playlist_filter(self.playlists)
         ]
 
+        # TODO: this runs very slowly in production. Add ThreadPoolExecutor here?
         max_width = get_max_width(self.playlists)
         filtered: dict[str, Playlist[T]] = {}
         for pl in self.logger.get_progress_bar(iterable=pl_filtered, desc="Filtering playlists", unit="playlists"):

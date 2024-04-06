@@ -46,6 +46,7 @@ class PrettyPrinter(ABC):
         """Return a dictionary representation of the key attributes of this object that is safe to output to JSON"""
         return self._to_json(self.as_dict())
 
+    # TODO: this runs very slowly when getting library JSON. Add ThreadPoolExecutor here?
     @classmethod
     def _to_json(cls, attributes: JSON) -> DictJSON:
         result: DictJSON = {}

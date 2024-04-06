@@ -102,6 +102,7 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
 
+    # TODO: Add ThreadPoolExecutor here?
     def save_tracks(
             self,
             tags: UnitIterable[LocalTrackField] = LocalTrackField.ALL,
