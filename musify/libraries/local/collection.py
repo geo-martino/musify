@@ -113,7 +113,7 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
             }
             bar = self.logger.get_progress_bar(futures, desc="Updating tracks", unit="tracks", total=len(self.tracks))
 
-            return {track: future.result() for track, future in bar if future.result().updated}
+            return {track: future.result() for track, future in dict(bar).items() if future.result().updated}
 
     def log_save_tracks_result(self, results: Mapping[LocalTrack, SyncResultTrack]) -> None:
         """Log stats from the results of a ``save_tracks`` operation"""

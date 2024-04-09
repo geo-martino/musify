@@ -361,7 +361,7 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
 
         remaining = removed + missing
         count_start = len(remaining)
-        with ThreadPoolExecutor() as executor:
+        with ThreadPoolExecutor(thread_name_prefix="checker") as executor:
             tasks: Iterator[tuple[MusifyItemSettable, MusifyItemSettable | None]] = executor.map(
                 lambda item: (
                     item, self.match(item, results=added, match_on=[Fields.TITLE], allow_karaoke=self.allow_karaoke)
