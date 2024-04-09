@@ -4,6 +4,7 @@ Processor operations that search for and match given items with remote items.
 Searches for matches on remote APIs, matches the item to the best matching result from the query,
 and assigns the ID of the matched object back to the item.
 """
+import logging
 from collections.abc import Mapping, Sequence, Iterable, Collection
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -18,6 +19,8 @@ from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.enum import RemoteObjectType
 from musify.libraries.remote.core.factory import RemoteObjectFactory
 from musify.log import REPORT
+from musify.log.logger import MusifyLogger
+from musify.processors.base import Processor
 from musify.processors.match import ItemMatcher
 from musify.types import UnitIterable
 from musify.utils import align_string, get_max_width
@@ -60,10 +63,12 @@ class SearchConfig:
     allow_karaoke: bool = False
 
 
-class RemoteItemSearcher(ItemMatcher):
+class RemoteItemSearcher(Processor):
     """
     Searches for remote matches for a list of item collections.
 
+    :param matcher: The :py:class:`ItemMatcher` to use when comparing any changes made by the user in remote playlists
+        during the checking operation
     :param object_factory: The :py:class:`RemoteObjectFactory` to use when creating new remote objects.
         This must have a :py:class:`RemoteAPI` assigned for this processor to work as expected.
     :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
@@ -99,9 +104,16 @@ class RemoteItemSearcher(ItemMatcher):
         """The :py:class:`RemoteAPI` to call"""
         return self.factory.api
 
-    def __init__(self, object_factory: RemoteObjectFactory, use_cache: bool = False):
+    def __init__(self, matcher: ItemMatcher, object_factory: RemoteObjectFactory, use_cache: bool = False):
         super().__init__()
 
+        # noinspection PyTypeChecker
+        #: The :py:class:`MusifyLogger` for this  object
+        self.logger: MusifyLogger = logging.getLogger(__name__)
+
+        #: The :py:class:`ItemMatcher` to use when comparing any changes made by the user in remote playlists
+        #: during the checking operation
+        self.matcher = matcher
         #: The :py:class:`RemoteObjectFactory` to use when creating new remote objects.
         self.factory = object_factory
         #: When true, use the cache when calling the API endpoint
@@ -111,7 +123,7 @@ class RemoteItemSearcher(ItemMatcher):
             self, item: MusifyObject, kind: RemoteObjectType, settings: SearchConfig
     ) -> list[dict[str, Any]] | None:
         """Query the API to get results for the current item based on algorithm settings"""
-        self.clean_tags(item)
+        self.matcher.clean_tags(item)
 
         def execute_query(keys: Iterable[TagField]) -> tuple[list[dict[str, Any]], str]:
             """Generate and execute the query against the API for the given item's cleaned ``keys``"""
@@ -126,9 +138,9 @@ class RemoteItemSearcher(ItemMatcher):
             results, query = execute_query(settings.search_fields_3)
 
         if results:
-            self._log_padded([item.name, f"Query: {query}", f"{len(results)} results"])
+            self.matcher.log_messages([item.name, f"Query: {query}", f"{len(results)} results"])
             return results
-        self._log_padded([item.name, f"Query: {query}", "Match failed: No results."], pad="<")
+        self.matcher.log_messages([item.name, f"Query: {query}", "Match failed: No results."], pad="<")
 
     def _log_results(self, results: Mapping[str, ItemSearchResult]) -> None:
         """Logs the final results of the ItemSearcher"""
@@ -217,18 +229,20 @@ class RemoteItemSearcher(ItemMatcher):
 
         skipped = tuple(item for item in collection if item.has_uri is not None)
         if len(skipped) == len(collection):
-            self._log_padded([collection.name, "Skipping search, no items to search"], pad='<')
+            self.matcher.log_messages([collection.name, "Skipping search, no items to search"], pad='<')
 
         if getattr(collection, "compilation", True) is False:
-            self._log_padded([collection.name, "Searching for collection as a unit"], pad='>')
+            self.matcher.log_messages([collection.name, "Searching for collection as a unit"], pad='>')
             self._search_collection_unit(collection=collection)
 
             missing = [item for item in collection.items if item.has_uri is None]
             if missing:
-                self._log_padded([collection.name, f"Searching for {len(missing)} unmatched items in this {kind}"])
+                self.matcher.log_messages(
+                    [collection.name, f"Searching for {len(missing)} unmatched items in this {kind}"]
+                )
                 self._search_items(collection=collection)
         else:
-            self._log_padded([collection.name, "Searching for distinct items in collection"], pad='>')
+            self.matcher.log_messages([collection.name, "Searching for distinct items in collection"], pad='>')
             self._search_items(collection=collection)
 
         return ItemSearchResult(
@@ -248,7 +262,7 @@ class RemoteItemSearcher(ItemMatcher):
             # noinspection PyTypeChecker
             results: Iterable[T] = map(self.factory[kind], responses or ())
 
-        result = self.match(
+        result = self.matcher(
             item,
             results=results,
             match_on=match_on if match_on is not None else search_config.match_fields,
@@ -288,7 +302,7 @@ class RemoteItemSearcher(ItemMatcher):
         # order to prioritise results that are closer to the item count of the input collection
         results: list[T] = sorted(map(self.factory[kind], responses), key=lambda x: abs(x._total - len(collection)))
 
-        result = self.match(
+        result = self.matcher(
             collection,
             results=results,
             match_on=search_config.match_fields,
@@ -309,3 +323,10 @@ class RemoteItemSearcher(ItemMatcher):
         for item, match in matches:
             if match and match.has_uri:
                 item.uri = match.uri
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "matcher": self.matcher,
+            "remote_source": self.factory.api.source,
+            "interval": self.use_cache,
+        }
