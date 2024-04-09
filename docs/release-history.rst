@@ -54,7 +54,15 @@ Changed
 -------
 
 * Major refactoring and restructuring to all modules to improve modularity and add composition
-* :py:meth:`.LocalLibrary.load_tracks` and :py:meth:`.LocalLibrary.load_playlists` now run concurrently
+* The following classes and methods have been modified to implement concurrency to improve performance:
+   * :py:meth:`.LocalLibrary.load_tracks`
+   * :py:meth:`.LocalLibrary.save_tracks`
+   * :py:meth:`.LocalLibrary.load_playlists`
+   * :py:meth:`.LocalLibrary.save_playlists`
+   * :py:meth:`.LocalLibrary.json` + optimisation for extracting JSON data from tracks
+   * :py:class:`.ItemMatcher`
+   * :py:class:`.RemoteItemChecker`
+   * :py:class:`.RemoteItemSearcher`
 * Made :py:func:`.load_tracks` and :py:func:`.load_playlists` utility functions more DRY
 * Move :py:meth:`.TagReader.load` from :py:class:`.LocalTrack` to super class :py:class:`.TagReader`
 * :py:meth:`.SpotifyAPI.extend_items` now skips on responses that are already fully extended
@@ -83,7 +91,9 @@ Removed
 -------
 
 * Redundant ShuffleBy enum and related arguments from :py:class:`.ItemSorter`
-* `ItemProcessor` and `MusicBeeProcessor` abstraction layers. No longer needed after some refactoring
+* ``ItemProcessor`` and ``MusicBeeProcessor`` abstraction layers. No longer needed after some refactoring
+* ``get_filtered_playlists`` method from :py:class:`.Library`.
+  This contained author specific logic and was not appropriate for general use
 
 Documentation
 -------------

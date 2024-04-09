@@ -4,10 +4,11 @@ The fundamental core printer classes for the entire package.
 import re
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
+from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, date
 from typing import Any
 
-from musify.types import UnitIterable, JSON, DictJSON
+from musify.types import UnitIterable, JSON, DictJSON, JSON_VALUE
 from musify.utils import to_collection
 
 
@@ -42,38 +43,47 @@ class PrettyPrinter(ABC):
         """
         raise NotImplementedError
 
+    def _json_attributes(self):
+        return self.as_dict()
+
     def json(self) -> DictJSON:
         """Return a dictionary representation of the key attributes of this object that is safe to output to JSON"""
-        return self._to_json(self.as_dict())
+        return self._to_json(self._json_attributes())
 
     @classmethod
-    def _to_json(cls, attributes: JSON) -> DictJSON:
-        result: DictJSON = {}
+    def _to_json(cls, attributes: JSON, pool: bool = False) -> dict[str, JSON_VALUE]:
+        def _get_json_key_value(attribute: tuple[Any, Any]) -> tuple[str, JSON_VALUE | list[Future[JSON_VALUE]]]:
+            key, value = attribute
+            return str(key), cls._get_json_value(value=value)
 
-        for attr_key, attr_val in attributes.items():
-            attr_key = str(attr_key)
-            if isinstance(attr_val, set):
-                attr_val = to_collection(attr_val)
+        if not pool:
+            tasks = map(_get_json_key_value, attributes.items())
+        else:
+            with ThreadPoolExecutor(thread_name_prefix="to-json") as executor:
+                tasks = executor.map(_get_json_key_value, attributes.items())
 
-            if isinstance(attr_val, (list, tuple)):
-                result[attr_key] = []
-                for item in attr_val:
-                    if isinstance(item, PrettyPrinter):
-                        result[attr_key].append(item.json())
-                    elif isinstance(item, (datetime, date)):
-                        result[attr_key].append(str(item))
-                    else:
-                        result[attr_key].append(item)
-            elif isinstance(attr_val, Mapping):
-                result[attr_key] = cls._to_json(attr_val)
-            elif isinstance(attr_val, PrettyPrinter):
-                result[attr_key] = attr_val.json()
-            elif isinstance(attr_val, (datetime, date)):
-                result[attr_key] = str(attr_val)
+        return dict(tasks)
+
+    @classmethod
+    def _get_json_value(cls, value: Any, pool: bool = False) -> JSON_VALUE | list[Future[JSON_VALUE]]:
+        if isinstance(value, set):
+            value = to_collection(value)
+
+        if isinstance(value, (list, tuple)):
+            if not pool:
+                tasks = map(cls._get_json_value, value)
             else:
-                result[attr_key] = attr_val
+                with ThreadPoolExecutor(thread_name_prefix="to-json-value") as executor:
+                    tasks = executor.map(cls._get_json_value, value)
+            return list(tasks)
+        elif isinstance(value, Mapping):
+            return cls._to_json(value, pool=pool)
+        elif isinstance(value, PrettyPrinter):
+            return value._to_json(value._json_attributes(), pool=pool)
+        elif isinstance(value, (datetime, date)):
+            return str(value)
 
-        return result
+        return value
 
     def __str__(self, indent: int = 2, increment: int = 2):
         obj_dict = self.as_dict()

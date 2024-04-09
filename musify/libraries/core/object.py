@@ -16,9 +16,6 @@ from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.remote.core.enum import RemoteObjectType
 from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
 from musify.log.logger import MusifyLogger
-from musify.processors.base import Filter
-from musify.processors.filter import FilterDefinedList
-from musify.utils import align_string, get_max_width
 
 
 class Track(MusifyItem, metaclass=ABCMeta):
@@ -343,53 +340,6 @@ class Library[T: Track](MusifyCollection[T], metaclass=ABCMeta):
         # noinspection PyTypeChecker
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
-
-    def get_filtered_playlists(
-            self, playlist_filter: Collection[str] | Filter[str] = (), **tag_filter: dict[str, tuple[str, ...]]
-    ) -> dict[str, Playlist[T]]:
-        """
-        Returns a filtered set of playlists in this library.
-        The playlists returned are deep copies of the playlists in the library.
-
-        :param playlist_filter: An optional :py:class:`Filter` to apply or collection of playlist names.
-            Playlist names will be passed to this filter to limit which playlists are processed.
-        :param tag_filter: Provide optional kwargs of the tags and values of items to filter out of every playlist.
-            Parse a tag name as a parameter, any item matching the values given for this tag will be filtered out.
-            NOTE: Only `string` value types are currently supported.
-        :return: Filtered playlists.
-        """
-        self.logger.info(
-            f"\33[1;95m ->\33[1;97m Filtering playlists and tracks from {len(self.playlists)} playlists\n"
-            f"\33[0;90m    Filter out tags: {tag_filter} \33[0m"
-        )
-
-        if not isinstance(playlist_filter, Filter):
-            playlist_filter = FilterDefinedList(playlist_filter)
-        pl_filtered = [
-            pl for name, pl in self.playlists.items() if not playlist_filter or name in playlist_filter(self.playlists)
-        ]
-
-        max_width = get_max_width(self.playlists)
-        filtered: dict[str, Playlist[T]] = {}
-        for pl in self.logger.get_progress_bar(iterable=pl_filtered, desc="Filtering playlists", unit="playlists"):
-            filtered[pl.name] = deepcopy(pl)
-            for track in pl.tracks:
-                for tag, values in tag_filter.items():
-                    item_val = track[tag]
-                    if not isinstance(item_val, str):
-                        continue
-
-                    if any(v.strip().casefold() in item_val.strip().casefold() for v in values):
-                        filtered[pl.name].remove(track)
-                        break
-
-            self.logger.debug(
-                f"{align_string(pl.name, max_width=max_width)} | "
-                f"Filtered out {len(pl) - len(filtered[pl.name]):>3} items"
-            )
-
-        self.logger.print()
-        return filtered
 
     @abstractmethod
     def load(self):

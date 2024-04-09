@@ -369,7 +369,7 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
                 remaining if added else ()
             )
 
-        for item, match in list(tasks):
+        for item, match in tasks:
             if not match:
                 continue
 

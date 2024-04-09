@@ -7,6 +7,7 @@ import logging
 import sys
 from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Collection, Iterable, Container
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from glob import glob
 from os.path import splitext, join, basename, exists, isdir
@@ -56,20 +57,9 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
     @property
-    def artists(self) -> list[str]:
-        """List of artists ordered by frequency of appearance on the tracks in this collection"""
-        return get_most_common_values(track.artist for track in self.tracks if track.artist)
-
-    @property
     def track_total(self) -> int:
         """The total number of tracks in this collection"""
         return len(self)
-
-    @property
-    def genres(self) -> list[str]:
-        """List of genres ordered by frequency of appearance on the tracks in this collection"""
-        genres = (genre for track in self.tracks for genre in (track.genres if track.genres else []))
-        return get_most_common_values(genres)
 
     @property
     def last_modified(self) -> datetime:
@@ -116,11 +106,16 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
         :param dry_run: Run function, but do not modify the file on the disk.
         :return: A map of the :py:class:`LocalTrack` saved to its result as a :py:class:`SyncResultTrack` object
         """
-        bar = self.logger.get_progress_bar(iterable=self.tracks, desc="Updating tracks", unit="tracks")
-        results = {track: track.save(tags=tags, replace=replace, dry_run=dry_run) for track in bar}
-        return {track: result for track, result in results.items() if result.updated}
+        with ThreadPoolExecutor(thread_name_prefix="track-saver") as executor:
+            futures = {
+                track: executor.submit(track.save, tags=tags, replace=replace, dry_run=dry_run)
+                for track in self.tracks
+            }
+            bar = self.logger.get_progress_bar(futures.items(), desc="Updating tracks", unit="tracks")
 
-    def log_sync_result(self, results: Mapping[LocalTrack, SyncResultTrack]) -> None:
+            return {track: future.result() for track, future in bar if future.result().updated}
+
+    def log_save_tracks_result(self, results: Mapping[LocalTrack, SyncResultTrack]) -> None:
         """Log stats from the results of a ``save_tracks`` operation"""
         if not results:
             return
@@ -196,6 +191,17 @@ class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], metaclass=ABCMet
     @property
     def tracks(self):
         return self._tracks
+
+    @property
+    def artists(self) -> list[str]:
+        """List of artists ordered by frequency of appearance on the tracks in this collection"""
+        return get_most_common_values(track.artist for track in self.tracks if track.artist)
+
+    @property
+    def genres(self) -> list[str]:
+        """List of genres ordered by frequency of appearance on the tracks in this collection"""
+        genres = (genre for track in self.tracks for genre in (track.genres if track.genres else []))
+        return get_most_common_values(genres)
 
     def __init__(
             self, tracks: Collection[LocalTrack], name: str | None = None, remote_wrangler: RemoteDataWrangler = None

@@ -261,8 +261,8 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], metaclas
     def as_dict(self):
         return self._condense_attributes(self._get_attributes())
 
-    def json(self):
-        return self._to_json(self._get_attributes())
+    def _json_attributes(self):
+        return self._get_attributes()
 
     def __eq__(self, __collection: MusifyCollection | Iterable[T]):
         """Names equal and all items equal in order"""

@@ -149,7 +149,7 @@ class RemoteAPI(ABC):
         valid_types_responses = all(isinstance(item, MutableMapping) for item in responses)
         valid_lengths = len(original) == len(responses)
         if not all((valid_types_input, valid_types_responses, valid_lengths)):
-            self.logger.warning(
+            self.logger.debug(
                 "Could not merge responses to given user input | "
                 "Reason: assertions failed | "
                 f"{valid_types_input=} {valid_types_responses=} {valid_lengths=} | "
@@ -160,7 +160,7 @@ class RemoteAPI(ABC):
             expected_keys_input = all(self.id_key in item for item in original)
             expected_keys_responses = all(self.id_key in item for item in responses)
             if not all((expected_keys_input, expected_keys_responses)):
-                self.logger.warning(
+                self.logger.debug(
                     "Could not merge responses to given user input | "
                     f"Reason: unordered and cannot order on {self.id_key=} | "
                     f"{expected_keys_input=} {expected_keys_responses=}"
@@ -456,8 +456,8 @@ class RemoteAPI(ABC):
         raise NotImplementedError
 
     def __enter__(self):
-        self.authorise()
+        self.handler.__enter__()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
+        self.handler.__exit__(exc_type, exc_val, exc_tb)

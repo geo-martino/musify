@@ -5,7 +5,7 @@ import inspect
 import logging
 import re
 from collections.abc import Iterable, Callable, MutableSequence
-from concurrent.futures import ThreadPoolExecutor, Future
+from concurrent.futures import ThreadPoolExecutor, Future, Executor
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -344,7 +344,7 @@ class ItemMatcher(Processor):
             self,
             source: T,
             results: Iterable[T],
-            executor: ThreadPoolExecutor,
+            executor: Executor,
             match_on: set[TagField] = ALL_TAG_FIELDS,
             allow_karaoke: bool = False,
     ) -> list[tuple[T, dict[TagField, Future[float] | list[list[Future[float]]]]]]:
@@ -380,7 +380,7 @@ class ItemMatcher(Processor):
             self,
             source: T,
             result: T,
-            executor: ThreadPoolExecutor,
+            executor: Executor,
             match_on: set[TagField] = ALL_TAG_FIELDS,
             allow_karaoke: bool = False,
     ) -> dict[TagField, Future[float] | list[list[Future[float]]]]:
