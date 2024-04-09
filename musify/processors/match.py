@@ -84,34 +84,39 @@ class ItemMatcher(Processor):
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
 
-    def _log_padded(self, log: MutableSequence[str], pad: str = ' ') -> None:
-        """Wrapper for logging lists in a correctly aligned format"""
-        log[0] = pad * 3 + ' ' + (log[0] if log[0] else "unknown")
-        self.logger.debug(" | ".join(log))
+    def log_messages(self, messages: MutableSequence[str], pad: str = ' ') -> None:
+        """
+        Log lists of ``messages`` in a uniform aligned format with a given ``pad`` character.
+
+        Convenience function for ensuring consistent log format for results of operations of this class
+        and any other classes which use this class.
+        """
+        messages[0] = pad * 3 + ' ' + (messages[0] if messages[0] else "unknown")
+        self.logger.debug(" | ".join(messages))
 
     def _log_algorithm(self, source: MusifyObject, extra: Iterable[str] = ()) -> None:
-        """Wrapper for initially logging an algorithm in a correctly aligned format"""
+        """Wrapper for initially logging an algorithm in a uniform aligned format"""
         algorithm = inspect.stack()[1][0].f_code.co_name.upper().lstrip("_").replace("_", " ")
         log = [source.name, algorithm]
         if extra:
             log.extend(extra)
-        self._log_padded(log, pad='>')
+        self.log_messages(log, pad='>')
 
     def _log_test[T: MusifyObject](self, source: T, result: T, test: Any, extra: Iterable[str] = ()) -> None:
-        """Wrapper for initially logging a test result in a correctly aligned format"""
+        """Wrapper for initially logging a test result in a uniform aligned format"""
         algorithm = inspect.stack()[1][0].f_code.co_name.replace("match", "").upper().lstrip("_").replace("_", " ")
         log_result = f"> Testing URI: {result.uri}" if hasattr(result, "uri") else "> Test failed"
         log = [source.name, log_result, f"{algorithm:<10}={test:<5}"]
         if extra:
             log.extend(extra)
-        self._log_padded(log)
+        self.log_messages(log)
 
     def _log_match[T: MusifyObject](self, source: T, result: T, extra: Iterable[str] = ()) -> None:
         """Wrapper for initially logging a match in a correctly aligned format"""
         log = [source.name, f"< Matched URI: {result.uri}"]
         if extra:
             log.extend(extra)
-        self._log_padded(log, pad='<')
+        self.log_messages(log, pad='<')
 
     def clean_tags(self, source: MusifyObject) -> None:
         """

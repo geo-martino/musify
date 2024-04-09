@@ -4,10 +4,12 @@ Processor operations that help a user to check whether the currently matched ID 
 Provides the user the ability to modify associated IDs using a Remote player as an interface for
 reviewing matches through temporary playlist creation.
 """
+import logging
 from collections import Counter
 from collections.abc import Sequence, Collection, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
+from typing import Any
 
 from musify import PROGRAM_NAME
 from musify.core.base import MusifyItemSettable
@@ -19,6 +21,7 @@ from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.factory import RemoteObjectFactory
 from musify.libraries.remote.core.processors.search import RemoteItemSearcher
 from musify.log import REPORT
+from musify.log.logger import MusifyLogger
 from musify.processors.base import InputProcessor
 from musify.processors.match import ItemMatcher
 from musify.utils import get_max_width, align_string
@@ -37,7 +40,7 @@ class ItemCheckResult[T: MusifyItemSettable](Result):
     skipped: Sequence[T] = field(default=tuple())
 
 
-class RemoteItemChecker(ItemMatcher, InputProcessor):
+class RemoteItemChecker(InputProcessor):
     """
     Runs operations for checking the URIs associated with a collection of items.
 
@@ -51,6 +54,8 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
           to determine how they wish to deal with these items.
         * Operation completes once user exists or all items have an associated URI.
 
+    :param matcher: The :py:class:`ItemMatcher` to use when comparing any changes made by the user in remote playlists
+        during the checking operation
     :param object_factory: The :py:class:`RemoteObjectFactory` to use when creating new remote objects.
         This must have a :py:class:`RemoteAPI` assigned for this processor to work as expected.
     :param interval: Stop creating playlists after this many playlists have been created and pause for user input.
@@ -79,17 +84,27 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
         return self.factory.api
 
     def __init__(
-            self, object_factory: RemoteObjectFactory, interval: int = 10, allow_karaoke: bool = ALLOW_KARAOKE_DEFAULT
+            self,
+            matcher: ItemMatcher,
+            object_factory: RemoteObjectFactory,
+            interval: int = 10,
+            allow_karaoke: bool = ALLOW_KARAOKE_DEFAULT
     ):
         super().__init__()
 
+        # noinspection PyTypeChecker
+        #: The :py:class:`MusifyLogger` for this  object
+        self.logger: MusifyLogger = logging.getLogger(__name__)
+
+        #: The :py:class:`ItemMatcher` to use when comparing any changes made by the user in remote playlists
+        #: during the checking operation
+        self.matcher = matcher
+        #: The :py:class:`RemoteObjectFactory` to use when creating new remote objects.
+        self.factory = object_factory
         #: Stop creating playlists after this many playlists have been created and pause for user input
         self.interval = interval
         #: Allow karaoke items when matching on switched items
         self.allow_karaoke = allow_karaoke
-
-        #: The :py:class:`RemoteObjectFactory` to use when creating new remote objects.
-        self.factory = object_factory
 
         #: Map of playlist names to their URLs for created temporary playlists
         self._playlist_name_urls = {}
@@ -294,7 +309,7 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
         skip_hold = self._skip
         self._skip = False
         for name, collection in self._playlist_name_collection.items():
-            self._log_padded([name, f"{len(collection):>6} total items"], pad='>')
+            self.matcher.log_messages([name, f"{len(collection):>6} total items"], pad='>')
 
             while True:
                 self._match_to_remote(name=name)
@@ -305,9 +320,9 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
             unavailable = tuple(item for item in collection if item.has_uri is False)
             skipped = tuple(item for item in collection if item.has_uri is None)
 
-            self._log_padded([name, f"{len(self._switched):>6} items switched"], pad='<')
-            self._log_padded([name, f"{len(unavailable):>6} items unavailable"])
-            self._log_padded([name, f"{len(skipped):>6} items skipped"])
+            self.matcher.log_messages([name, f"{len(self._switched):>6} items switched"], pad='<')
+            self.matcher.log_messages([name, f"{len(unavailable):>6} items unavailable"])
+            self.matcher.log_messages([name, f"{len(skipped):>6} items skipped"])
 
             self._final_switched += self._switched
             self._final_unavailable += unavailable
@@ -344,7 +359,7 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
 
         if len(added) + len(removed) + len(missing) == 0:
             if len(source_valid) == len(remote_valid):
-                self._log_padded([name, "Playlist unchanged and no missing URIs, skipping match"])
+                self.matcher.log_messages([name, "Playlist unchanged and no missing URIs, skipping match"])
                 return
 
             # if item collection originally contained duplicate URIS and one or more of the duplicates were removed,
@@ -354,17 +369,17 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
                 if remote_counts.get(uri) != count:
                     missing.extend([item for item in source_valid if item.uri == uri])
 
-        self._log_padded([name, f"{len(added):>6} items added"])
-        self._log_padded([name, f"{len(removed):>6} items removed"])
-        self._log_padded([name, f"{len(missing):>6} items in source missing URI"])
-        self._log_padded([name, f"{len(source_valid) - len(remote_valid):>6} total difference"])
+        self.matcher.log_messages([name, f"{len(added):>6} items added"])
+        self.matcher.log_messages([name, f"{len(removed):>6} items removed"])
+        self.matcher.log_messages([name, f"{len(missing):>6} items in source missing URI"])
+        self.matcher.log_messages([name, f"{len(source_valid) - len(remote_valid):>6} total difference"])
 
         remaining = removed + missing
         count_start = len(remaining)
         with ThreadPoolExecutor(thread_name_prefix="checker") as executor:
             tasks: Iterator[tuple[MusifyItemSettable, MusifyItemSettable | None]] = executor.map(
                 lambda item: (
-                    item, self.match(item, results=added, match_on=[Fields.TITLE], allow_karaoke=self.allow_karaoke)
+                    item, self.matcher(item, results=added, match_on=[Fields.TITLE], allow_karaoke=self.allow_karaoke)
                 ),
                 remaining if added else ()
             )
@@ -381,8 +396,8 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
 
         self._remaining = removed + missing
         count_final = len(self._remaining)
-        self._log_padded([name, f"{count_start - count_final:>6} items switched"])
-        self._log_padded([name, f"{count_final:>6} items still not found"])
+        self.matcher.log_messages([name, f"{count_start - count_final:>6} items switched"])
+        self.matcher.log_messages([name, f"{count_final:>6} items still not found"])
 
     def _match_to_input(self, name: str) -> None:
         """
@@ -408,13 +423,13 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
         help_text = self._format_help_text(options=options, header=header)
         help_text += "OR enter a custom URI/URL/ID for this item\n"
 
-        self._log_padded([name, f"Getting user input for {len(self._remaining)} items"])
+        self.matcher.log_messages([name, f"Getting user input for {len(self._remaining)} items"])
         max_width = get_max_width({item.name for item in self._remaining})
 
         print("\n" + help_text)
         for item in self._remaining.copy():
             while current_input is not None and item in self._remaining:  # while item not matched or skipped
-                self._log_padded([name, f"{len(self._remaining):>6} remaining items"])
+                self.matcher.log_messages([name, f"{len(self._remaining):>6} remaining items"])
                 if 'a' not in current_input:
                     current_input = self._get_user_input(align_string(item.name, max_width=max_width))
 
@@ -428,24 +443,24 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
 
     def _match_item_to_input(self, name: str, item: MusifyItemSettable, current_input: str) -> str | None:
         if current_input.casefold() == 's' or current_input.casefold() == 'q':  # quit/skip
-            self._log_padded([name, "Skipping all loops"], pad="<")
+            self.matcher.log_messages([name, "Skipping all loops"], pad="<")
             self._quit = current_input.casefold() == 'q' or self._quit
             self._skip = current_input.casefold() == 's' or self._skip
             self._remaining.clear()
             return
 
         elif current_input.casefold().replace('a', '') == 'u':  # mark item as unavailable
-            self._log_padded([name, "Marking as unavailable"], pad="<")
+            self.matcher.log_messages([name, "Marking as unavailable"], pad="<")
             item.uri = self.api.wrangler.unavailable_uri_dummy
             self._remaining.remove(item)
 
         elif current_input.casefold().replace('a', '') == 'n':  # leave item without URI and unprocessed
-            self._log_padded([name, "Skipping"], pad="<")
+            self.matcher.log_messages([name, "Skipping"], pad="<")
             item.uri = None
             self._remaining.remove(item)
 
         elif current_input.casefold() == 'r':  # return to former 'while' loop
-            self._log_padded([name, "Refreshing playlist metadata and restarting loop"])
+            self.matcher.log_messages([name, "Refreshing playlist metadata and restarting loop"])
             return
 
         elif current_input.casefold() == 'p' and hasattr(item, "path"):  # print item path
@@ -456,7 +471,7 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
                 current_input, kind=RemoteObjectType.TRACK, type_out=RemoteIDType.URI
             )
 
-            self._log_padded([name, f"Updating URI: {item.uri} -> {uri}"], pad="<")
+            self.matcher.log_messages([name, f"Updating URI: {item.uri} -> {uri}"], pad="<")
             item.uri = uri
 
             self._switched.append(item)
@@ -468,3 +483,11 @@ class RemoteItemChecker(ItemMatcher, InputProcessor):
             current_input = ""
 
         return current_input
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "matcher": self.matcher,
+            "remote_source": self.factory.api.source,
+            "interval": self.interval,
+            "allow_karaoke": self.allow_karaoke,
+        }

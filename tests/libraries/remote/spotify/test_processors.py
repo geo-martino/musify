@@ -18,7 +18,7 @@ from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.factory import SpotifyObjectFactory
 from musify.libraries.remote.spotify.object import SpotifyTrack, SpotifyAlbum
 from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
-from musify.processors.match import CleanTagConfig
+from musify.processors.match import CleanTagConfig, ItemMatcher
 from tests.libraries.local.track.utils import random_track
 from tests.libraries.remote.core.processors.check import RemoteItemCheckerTester
 from tests.libraries.remote.core.processors.search import RemoteItemSearcherTester
@@ -244,21 +244,26 @@ def test_extract_ids_fails(wrangler: SpotifyDataWrangler):
 class TestSpotifyItemSearcher(RemoteItemSearcherTester):
 
     @pytest.fixture(scope="class")
-    def searcher(self, api: SpotifyAPI) -> RemoteItemSearcher:
-        RemoteItemSearcher.karaoke_tags = {"karaoke", "backing", "instrumental"}
-        RemoteItemSearcher.year_range = 10
+    def matcher(self) -> ItemMatcher:
+        """Yields a valid :py:class:`ItemMatcher` as a pytest.fixture"""
+        ItemMatcher.karaoke_tags = {"karaoke", "backing", "instrumental"}
+        ItemMatcher.year_range = 10
 
-        RemoteItemSearcher.clean_tags_remove_all = {"the", "a", "&", "and"}
-        RemoteItemSearcher.clean_tags_split_all = set()
-        RemoteItemSearcher.clean_tags_config = (
+        ItemMatcher.clean_tags_remove_all = {"the", "a", "&", "and"}
+        ItemMatcher.clean_tags_split_all = set()
+        ItemMatcher.clean_tags_config = (
             CleanTagConfig(tag=Tag.TITLE, remove={"part"}, split={"featuring", "feat.", "ft.", "/"}),
             CleanTagConfig(tag=Tag.ARTIST, split={"featuring", "feat.", "ft.", "vs"}),
             CleanTagConfig(tag=Tag.ALBUM, remove={"ep"}, preprocess=lambda x: x.split('-')[0])
         )
 
-        RemoteItemSearcher.reduce_name_score_on = {"live", "demo", "acoustic"}
-        RemoteItemSearcher.reduce_name_score_factor = 0.5
+        ItemMatcher.reduce_name_score_on = {"live", "demo", "acoustic"}
+        ItemMatcher.reduce_name_score_factor = 0.5
 
+        return ItemMatcher()
+
+    @pytest.fixture(scope="class")
+    def searcher(self, matcher: ItemMatcher, api: SpotifyAPI) -> RemoteItemSearcher:
         RemoteItemSearcher.search_settings = {
             RemoteObjectType.TRACK: SearchConfig(
                 search_fields_1=[Tag.TITLE],  # query mock always returns match on name
@@ -278,7 +283,7 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
             )
         }
 
-        return RemoteItemSearcher(object_factory=SpotifyObjectFactory(api=api))
+        return RemoteItemSearcher(matcher=matcher, object_factory=SpotifyObjectFactory(api=api))
 
     @pytest.fixture
     def search_items(
@@ -340,9 +345,14 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
 
 class TestSpotifyItemChecker(RemoteItemCheckerTester):
 
+    @pytest.fixture(scope="class")
+    def matcher(self) -> ItemMatcher:
+        """Yields a valid :py:class:`ItemMatcher` as a pytest.fixture"""
+        return ItemMatcher()
+
     @pytest.fixture
-    def checker(self, api: SpotifyAPI) -> RemoteItemChecker:
-        return RemoteItemChecker(object_factory=SpotifyObjectFactory(api=api))
+    def checker(self, matcher: ItemMatcher, api: SpotifyAPI) -> RemoteItemChecker:
+        return RemoteItemChecker(matcher=matcher, object_factory=SpotifyObjectFactory(api=api))
 
     @pytest.fixture(scope="class")
     def playlist_urls(self, _api_mock: SpotifyMock) -> list[str]:
