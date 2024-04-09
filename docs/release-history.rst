@@ -83,7 +83,6 @@ Changed
 * Moved loading of XML file logic from :py:class:`.XAutoPF` to :py:class:`.XMLPlaylistParser`.
   :py:class:`.XMLPlaylistParser` is now solely responsible for all XML parsing and handling
   for :py:class:`.XAutoPF` files
-* :
 
 Fixed
 -----
