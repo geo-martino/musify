@@ -59,6 +59,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         "_tracks",
     )
     __attributes_classes__ = (Library, LocalCollection)
+    __attributes_ignore__ = ("tracks_in_playlists",)
 
     # noinspection PyPropertyDefinition
     @classmethod
@@ -382,7 +383,11 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         :param dry_run: Run function, but do not modify the file on the disk.
         :return: A map of the playlist name to the results of its sync as a :py:class:`Result` object.
         """
-        return {name: pl.save(dry_run=dry_run) for name, pl in self.playlists.items()}
+        with ThreadPoolExecutor(thread_name_prefix="playlist-saver") as executor:
+            futures = {name: executor.submit(pl.save, dry_run=dry_run) for name, pl in self.playlists.items()}
+            bar = self.logger.get_progress_bar(futures, desc="Updating playlists", unit="playlists")
+
+        return dict(bar)
 
     ###########################################################################
     ## Backup/restore
@@ -416,3 +421,37 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     def _get_attributes(self) -> dict[str, Any]:
         attributes_extra = {"remote_source": self.remote_wrangler.source if self.remote_wrangler else None}
         return super()._get_attributes() | attributes_extra
+
+    def json(self):
+        self.logger.info(
+            f"\33[1;95m ->\33[1;97m Extracting JSON data for library of "
+            f"{len(self.tracks)} tracks and {len(self.playlists)} playlists\n"
+        )
+
+        attributes = self._get_attributes()
+
+        playlists: dict[str, LocalPlaylist] | None = None
+        if "playlists" in attributes and "tracks" in attributes:
+            playlists = attributes["playlists"]
+            attributes["playlists"] = {}
+
+        self_json = self._to_json(attributes, pool=True)
+
+        if playlists is not None:
+            tracks: Mapping[str, Mapping[str, Any]] = {track["path"]: track for track in self_json["tracks"]}
+
+            def _get_playlist_json(pl: LocalPlaylist) -> tuple[str, dict[str, Any]]:
+                pl_attributes = pl._get_attributes()
+                pl_attributes["tracks"] = []
+
+                pl_json = pl._to_json(pl_attributes, pool=True)
+                pl_json["tracks"] = [tracks.get(track.path) for track in pl]
+
+                return pl.name, pl_json
+
+            with ThreadPoolExecutor(thread_name_prefix="to-json-playlists") as executor:
+                tasks = executor.map(_get_playlist_json, playlists.values())
+
+            self_json["playlists"] = dict(sorted(tasks, key=lambda x: x[0]))
+
+        return self_json

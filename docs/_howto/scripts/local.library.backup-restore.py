@@ -28,4 +28,4 @@ tags = [
 library.restore_tracks(tracks, tags=tags)
 
 results = library.save_tracks(tags=tags, replace=True, dry_run=False)
-library.log_sync_result(results)
+library.log_save_tracks_result(results)
