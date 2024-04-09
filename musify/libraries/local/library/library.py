@@ -385,9 +385,9 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         """
         with ThreadPoolExecutor(thread_name_prefix="playlist-saver") as executor:
             futures = {name: executor.submit(pl.save, dry_run=dry_run) for name, pl in self.playlists.items()}
-            bar = self.logger.get_progress_bar(futures, desc="Updating playlists", unit="playlists")
+            bar = self.logger.get_progress_bar(futures.items(), desc="Updating playlists", unit="playlists")
 
-        return dict(bar)
+            return dict(bar)
 
     ###########################################################################
     ## Backup/restore
