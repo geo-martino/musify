@@ -445,6 +445,12 @@ class RemoteLibrary[
         results = {}
         for name, pl in bar:  # synchronise playlists
             if name not in self.playlists:  # new playlist given, create it on remote first
+                if dry_run:
+                    results[name] = SyncResultRemotePlaylist(
+                        start=0, added=len(pl), removed=0, unchanged=0, difference=len(pl), final=len(pl)
+                    )
+                    continue
+
                 # noinspection PyArgumentList
                 self.playlists[name] = self.factory.playlist.create(name=name)
             results[name] = self.playlists[name].sync(items=pl, kind=kind, reload=reload, dry_run=dry_run)
@@ -460,7 +466,7 @@ class RemoteLibrary[
         if not isinstance(results, Mapping):
             results = {"": results}
 
-        max_width = get_max_width(self.playlists)
+        max_width = get_max_width(results)
 
         self.logger.stat(f"\33[1;96mSync {self.api.source} playlists' stats: \33[0m")
         for name, result in results.items():
