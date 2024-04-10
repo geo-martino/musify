@@ -79,6 +79,7 @@ target/
 
 # Jupyter Notebook
 jupyter/
+notebooks/
 .ipynb_checkpoints
 
 # IPython
@@ -149,4 +150,3 @@ _site
 .jekyll-cache
 .jekyll-metadata
 vendor
-
