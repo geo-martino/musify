@@ -234,6 +234,15 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         requests = [req for req in api_mock.get_requests(method="POST") if req.url.startswith(url)]
         assert len(requests) > 0
 
+    @staticmethod
+    def test_sync_dry_run(library: RemoteLibrary, api_mock: RemoteMock):
+        new_playlists = copy(list(library.playlists.values()))
+        for i, pl in enumerate(new_playlists, 1):
+            pl.name = f"this is a new playlist name {i}"
+
+        library.sync(list(library.playlists.values()) + new_playlists, reload=True)
+        assert not api_mock.get_requests(method="POST")
+
     # TODO: can this test run faster? runs ~5s on local machine
     @pytest.mark.slow
     def test_sync(self, library: RemoteLibrary, collection_merge_items: list[RemoteTrack], api_mock: RemoteMock):
