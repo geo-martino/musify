@@ -30,15 +30,5 @@ jobs:
           name: ${{ needs.validate.outputs.artifact-name }}
           path: dist/
 
-      # workaround for hatch-vcs: keeps defaulting to next increment version in 'dev' format
-      # even when deploying into production
-      - name: 🔢 Fix version (workaround)
-        run: |
-          VERSION_PATTERN='(dist/musify-)([0-9]+\.[0-9]+\.[0-9]+\.[^-\.]+\.[^-\.]+)(.*)'
-          VERSION=$(echo ${{ github.event.release.tag_name }} | tr -d v)
-          find dist -regextype posix-egrep -regex "$VERSION_PATTERN" \
-            | sed -r "s|$VERSION_PATTERN|\1\2\3 \1$VERSION\3|g" \
-            | xargs -n2 mv
-
       - name: 🚀 Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
