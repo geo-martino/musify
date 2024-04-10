@@ -112,7 +112,6 @@ jobs:
 
       - name: 🏗️ Build package
         run: |
-          SETUPTOOLS_SCM_DEBUG=1 hatch version
           echo "Building artifacts for v$(hatch version)"
           hatch build
 

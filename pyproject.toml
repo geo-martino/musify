@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
+requires = ["hatchling", "versioningit"]
 build-backend = "hatchling.build"
 
 [project]
@@ -37,7 +37,7 @@ dependencies = [
 [project.optional-dependencies]
 build = [
     "hatch",
-    "hatch-vcs",
+    "versioningit",
 ]
 test = [
     "pytest~=8.0",
@@ -70,8 +70,13 @@ dev = [
 Issues = "https://github.com/geo-martino/musify/issues"
 
 [tool.hatch.version]
-source = "vcs"
-fallback-version = "0.0.0"
+source = "versioningit"
+
+[tool.versioningit.format]
+# WORKAROUND: actual production releases keep getting identified with distance and dirty
+#  Delete this config when fixed. It should be the commented line below it (i.e. the default format)
+distance-dirty = "{base_version}"
+#distance-dirty = "{next_version}.dev{distance}+{vcs}{rev}.d{build_date:%Y%m%d}"
 
 [tool.hatch.build.targets.sdist]
 include = ["musify"]
