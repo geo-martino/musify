@@ -73,8 +73,10 @@ Issues = "https://github.com/geo-martino/musify/issues"
 source = "versioningit"
 
 [tool.versioningit.format]
-# WORKAROUND: actual production releases keep getting identified with distance and dirty
-#  Delete this config when fixed. It should be the commented line below it (i.e. the default format)
+# WORKAROUND: commits for actual production releases keep getting identified as dirty and/or with distance
+#  Delete this config when fixed. It should be the commented lines below each (i.e. the default formats)
+dirty = "{base_version}"
+#dirty = "{base_version}+d{build_date:%Y%m%d}"
 distance-dirty = "{base_version}"
 #distance-dirty = "{next_version}.dev{distance}+{vcs}{rev}.d{build_date:%Y%m%d}"
 
