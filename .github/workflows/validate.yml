@@ -110,7 +110,6 @@ jobs:
 
       - name: 🏗️ Build package
         run: |
-          hatch version $(echo ${{ github.event.release.tag_name }} | tr -d v)
           echo "Building artifacts for v$(hatch version)"
           hatch build
 
