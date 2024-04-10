@@ -68,11 +68,6 @@ instance/
 # Scrapy stuff:
 .scrapy
 
-# Sphinx/other documentation
-docs/_build/
-docs/musify*.rst
-.grip/
-
 # PyBuilder
 .pybuilder/
 target/
@@ -143,6 +138,11 @@ cython_debug/
 # large data & log folders
 _data/
 _logs/
+
+# Sphinx/other documentation
+docs/_build/
+docs/musify*.rst
+.grip/
 
 # Jekyll
 _site
