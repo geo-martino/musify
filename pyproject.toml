@@ -75,6 +75,7 @@ source = "versioningit"
 [tool.versioningit.format]
 # WORKAROUND: commits for actual production releases keep getting identified as dirty and/or with distance
 #  Delete this config when fixed. It should be the commented lines below each (i.e. the default formats)
+#distance = "{next_version}.dev{distance}+{vcs}{rev}"
 dirty = "{base_version}"
 #dirty = "{base_version}+d{build_date:%Y%m%d}"
 distance-dirty = "{base_version}"
