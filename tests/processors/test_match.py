@@ -184,7 +184,7 @@ class TestItemMatcher(PrettyPrinterTester):
         track3.artist = f"artist{sep}nope{sep}other"
         track3.year = 2015
         assert matcher.match(track1, [track2, track3], min_score=0.2, max_score=0.8) == track3
-        assert matcher(track1, [track2, track3], min_score=0.2, max_score=0.8) == track3
+        assert matcher(track1, [track3, track2], min_score=0.2, max_score=0.8) == track3
 
         # track4 score is above max_score causing an early stop
         track4 = random_track()
@@ -193,7 +193,7 @@ class TestItemMatcher(PrettyPrinterTester):
         track4.album = "album"
         track4._reader.file.info.length = 100
         track4.year = 2015
-        assert matcher.match(track1, [track2, track4, track3], min_score=0.2, max_score=0.8) == track4
+        assert matcher.match(track1, [track4, track2, track3], min_score=0.2, max_score=0.8) == track4
         assert matcher(track1, [track2, track4, track3], min_score=0.2, max_score=0.8) == track4
 
     def test_allows_karaoke(self, matcher: ItemMatcher, track1: LocalTrack, track2: LocalTrack):

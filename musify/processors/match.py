@@ -304,6 +304,7 @@ class ItemMatcher(Processor):
             else:
                 match_on_filtered.add(match_field)
 
+        min_score = limit_value(min_score, floor=0.01, ceil=1.0)
         max_score = limit_value(max_score, floor=0.01, ceil=1.0)
         self._log_algorithm(source=source, extra=[f"max_score={max_score}"])
 
@@ -316,34 +317,20 @@ class ItemMatcher(Processor):
                 allow_karaoke=allow_karaoke
             )
 
-        result = None
-        best_score = 0
+        result, score = self._get_match_from_scores(scores, max_score=max_score)
 
-        def sum_nested_scores(futures: list[list[Future[float]]]) -> float:
-            """Sum the scores from a given list of nested Futures"""
-            scores_summed = [sum(score.result() for score in nested) / len(nested) for nested in futures]
-            return sum(scores_summed) / len(scores_summed)
-
-        for result, result_scores in scores:
-            result_scores = [
-                sum_nested_scores(score) if isinstance(score, list) else score.result()
-                for score in result_scores.values()
-            ]
-            best_score = sum(result_scores) / len(result_scores)
-            if best_score > max_score:
-                break
-
-        min_score = limit_value(min_score, floor=0.01, ceil=1.0)
-        if best_score > min_score:
+        if result is not None and score > min_score:
             extra = [
-                f"best score: {'%.2f' % round(best_score, 2)} > {'%.2f' % round(min_score, 2)}"
-                if best_score < max_score else
-                f"max score reached: {'%.2f' % round(best_score, 2)} > {'%.2f' % round(max_score, 2)}"
+                f"best score: {score:.2f} > {min_score:.2f}"
+                if score < max_score else
+                f"max score reached: {score:.2f} > {max_score:.2f}"
             ]
             self._log_match(source=source, result=result, extra=extra)
             return result
         else:
-            self._log_test(source=source, result=result, test=best_score, extra=[f"NO MATCH: {best_score}<{min_score}"])
+            self._log_test(
+                source=source, result=result, test=score, extra=[f"NO MATCH: {score:.2f}<{min_score:.2f}"]
+            )
 
     def _score[T: MusifyObject](
             self,
@@ -431,6 +418,34 @@ class ItemMatcher(Processor):
                     scores[Tag.ALL].append([score for score in item_score.values() if not isinstance(score, list)])
 
         return scores
+
+    def _get_match_from_scores[T: MusifyObject](
+            self,
+            scores: Iterable[tuple[T, dict[TagField, Future[float] | list[list[Future[float]]]]]],
+            max_score: float,
+    ) -> tuple[T | None, float]:
+        best_result = None
+        best_score = 0
+
+        def sum_nested_scores(futures: list[list[Future[float]]]) -> float:
+            """Sum the scores from a given list of nested Futures"""
+            scores_summed = [sum(score.result() for score in nested) / len(nested) for nested in futures]
+            return sum(scores_summed) / len(scores_summed)
+
+        for result, result_scores in scores:
+            result_scores = [
+                sum_nested_scores(score) if isinstance(score, list) else score.result()
+                for score in result_scores.values()
+            ]
+            score = sum(result_scores) / len(result_scores)
+            if score > best_score:
+                best_score = score
+                best_result = result
+
+            if best_score > max_score:
+                break
+
+        return best_result, best_score
 
     def as_dict(self) -> dict[str, Any]:
         return {

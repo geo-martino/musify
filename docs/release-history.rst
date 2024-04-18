@@ -31,6 +31,14 @@ Release History
 The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
+0.9.1
+=====
+
+Fixed
+-----
+
+* Bug in :py:meth:`.ItemMatcher.match` where operations always returned the last item in the given list of ``results``
+
 
 0.9.0
 =====
