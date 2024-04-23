@@ -28,7 +28,8 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
             - a RemoteResponse object representing a remote playlist.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
+            Set as False to refresh the cached response of the CachedSession.
         :return: The playlist URL.
         :raise RemoteIDTypeError: Raised when the function cannot determine the item type of
             the input ``playlist``. Or when it does not recognise the type of the input ``playlist`` parameter.

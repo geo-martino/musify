@@ -105,7 +105,8 @@ class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, metaclass=ABCMeta):
 
         :param value: The value representing some remote object. See description for allowed value types.
         :param api: An authorised API object to load the object from.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
+            Set as False to refresh the cached response of the CachedSession.
         """
         raise NotImplementedError
 
@@ -115,7 +116,8 @@ class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, metaclass=ABCMeta):
         Reload this object from the API, calling all required endpoints
         to get a complete set of data for this item type.
 
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
+            Set as False to refresh the cached response of the CachedSession.
         """
         raise NotImplementedError
 

@@ -31,6 +31,21 @@ Release History
 The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
+0.9.2
+=====
+
+Added
+-----
+
+* ``REMOTE_SOURCES`` global variable in the ``libraries.remote`` module which lists the
+  names of all the fully supported remote sources.
+  Also, added the ``SOURCE_NAME`` global variable for the Spotify module.
+
+Changed
+-------
+
+* :py:class:`.FilterComparers` now accepts a single :py:class:`.Comparer` on the ``comparers`` argument.
+
 0.9.1
 =====
 

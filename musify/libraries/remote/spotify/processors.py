@@ -12,12 +12,13 @@ from musify.libraries.remote.core.api import APIInputValue
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
 from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
+from musify.libraries.remote.spotify import SOURCE_NAME
 from musify.utils import to_collection
 
 
 class SpotifyDataWrangler(RemoteDataWrangler):
 
-    source = "Spotify"
+    source = SOURCE_NAME
     unavailable_uri_dummy = "spotify:track:unavailable"
     url_api = "https://api.spotify.com/v1"
     url_ext = "https://open.spotify.com"

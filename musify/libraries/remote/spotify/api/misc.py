@@ -80,7 +80,8 @@ class SpotifyAPIMisc(SpotifyAPIBase, metaclass=ABCMeta):
         :param query: Search query.
         :param kind: The remote object type to search for.
         :param limit: Number of results to get and return.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
+            Set as False to refresh the cached response of the CachedSession.
         :return: The response from the endpoint.
         """
         if not query or len(query) > 150:  # query is too short or too long, skip

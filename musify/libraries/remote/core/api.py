@@ -226,7 +226,8 @@ class RemoteAPI(ABC):
             If None and ID is given, user will be prompted to give the kind anyway.
         :param limit: The number of results to call per request and,
             therefore, the number of items in each printed block.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
+            Set as False to refresh the cached response of the CachedSession.
         """
         raise NotImplementedError
 
@@ -238,7 +239,8 @@ class RemoteAPI(ABC):
         list of the currently authenticated user's playlists.
 
         :param playlist: In URL/URI/ID form, or the name of one of the currently authenticated user's playlists.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
+            Set as False to refresh the cached response of the CachedSession.
         :return: The playlist URL.
         :raise RemoteIDTypeError: Raised when the function cannot determine the item type of
             the input ``playlist``. Or when it does not recognise the type of the input ``playlist`` parameter.
@@ -266,7 +268,8 @@ class RemoteAPI(ABC):
         :param query: Search query.
         :param kind: The remote object type to search for.
         :param limit: Number of results to get and return.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
+            Set as False to refresh the cached response of the CachedSession.
         :return: The response from the endpoint.
         """
         raise NotImplementedError
@@ -295,7 +298,8 @@ class RemoteAPI(ABC):
         :param response: A remote API JSON response for an items type endpoint.
         :param kind: The type of response being extended. Optional, used only for logging.
         :param key: The type of response of the child objects.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
+            Set as False to refresh the cached response of the CachedSession.
         :return: API JSON responses for each item
         """
         raise NotImplementedError
@@ -332,7 +336,8 @@ class RemoteAPI(ABC):
             This value will be limited to be between ``1`` and ``50``.
         :param extend: When True and the given ``kind`` is a collection of items,
             extend the response to include all items in this collection.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
+            Set as False to refresh the cached response of the CachedSession.
         :return: API JSON responses for each item.
         :raise RemoteObjectTypeError: Raised when the function cannot determine the item type
             of the input ``values``. Or when it does not recognise the type of the input ``values`` parameter.
@@ -364,7 +369,8 @@ class RemoteAPI(ABC):
         :param kind: Item type to retrieve for the user.
         :param limit: Size of each batch of items to request in the collection items request.
             This value will be limited to be between ``1`` and ``50``.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
+            Set as False to refresh the cached response of the CachedSession.
         :return: API JSON responses for each collection.
         :raise RemoteIDTypeError: Raised when the input ``user`` does not represent a user URL/URI/ID.
         :raise RemoteObjectTypeError: When the given ``kind`` is not a valid user item/collection.

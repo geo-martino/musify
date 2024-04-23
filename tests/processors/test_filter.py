@@ -86,9 +86,7 @@ class TestFilterComparers(FilterTester):
             match_all=False
         )
         sub_filter_2 = FilterComparers(
-            comparers=[
-                Comparer(condition="greater than", expected=20, field=LocalTrackField.TRACK_NUMBER)
-            ],
+            comparers=Comparer(condition="greater than", expected=20, field=LocalTrackField.TRACK_NUMBER),
             match_all=True
         )
 

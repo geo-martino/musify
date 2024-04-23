@@ -53,7 +53,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         :param params: Extra parameters to add to each request.
         :param kind: The unit to use for logging. If None, determine from ``key`` or default to ``items``.
         :param key: The key to reference from each response to get the list of required values.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
+            Set as False to refresh the cached response of the CachedSession.
         :return: API JSON responses for each item at the given ``key``.
         :raise APIError: When the given ``key`` is not in the API response.
         """
@@ -101,7 +102,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         :param params: Extra parameters to add to each request.
         :param kind: The unit to use for logging. If None, determine from ``key`` or default to ``items``.
         :param key: The key to reference from each response to get the list of required values.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
+            Set as False to refresh the cached response of the CachedSession.
         :param limit: Size of each batch of IDs to get. This value will be limited to be between ``1`` and ``50``.
         :return: API JSON responses for each item at the given ``key``.
         :raise APIError: When the given ``key`` is not in the API response.
@@ -160,7 +162,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         :param kind: The type of response being extended. Optional, used only for logging.
         :param key: The type of response of the child objects. Used when selecting nested data for certain responses
             (e.g. user's followed artists).
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
+            Set as False to refresh the cached response of the CachedSession.
         :param leave_bar: When a progress bar is displayed,
             toggle whether this bar should continue to be displayed after the operation is finished.
             When None, allow the logger to decide this setting.
@@ -252,7 +255,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             This value will be limited to be between ``1`` and ``50`` or ``20`` if getting albums.
         :param extend: When True and the given ``kind`` is a collection of items,
             extend the response to include all items in this collection.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
+            Set as False to refresh the cached response of the CachedSession.
         :return: API JSON responses for each item.
         :raise RemoteObjectTypeError: Raised when the function cannot determine the item type
             of the input ``values``. Or when it does not recognise the type of the input ``values`` parameter.
@@ -319,7 +323,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             Spotify only supports ``PLAYLIST`` types for non-authenticated users.
         :param limit: Size of each batch of items to request in the collection items request.
             This value will be limited to be between ``1`` and ``50``.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
+            Set as False to refresh the cached response of the CachedSession.
         :return: API JSON responses for each collection.
         :raise RemoteIDTypeError: Raised when the input ``user`` does not represent a user URL/URI/ID.
         :raise RemoteObjectTypeError: Raised a user is given and the ``kind`` is not ``PLAYLIST``.
@@ -387,7 +392,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         :param analysis: When True, get audio analysis.
         :param limit: Size of batches to request when getting audio features.
             This value will be limited to be between ``1`` and ``50``.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
+            Set as False to refresh the cached response of the CachedSession.
         :return: API JSON responses for each item.
             Mapped to ``audio_features`` and ``audio_analysis`` keys as appropriate.
         :raise RemoteObjectTypeError: Raised when the item types of the input ``values`` are not all tracks or IDs.
@@ -483,7 +489,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         :param analysis: When True, get audio analysis.
         :param limit: Size of batches to request when getting audio features.
             This value will be limited to be between ``1`` and ``50``.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
+            Set as False to refresh the cached response of the CachedSession.
         :return: API JSON responses for each item, or the original response if the input ``values`` are API responses.
         :raise RemoteObjectTypeError: Raised when the item types of the input ``values`` are not all tracks or IDs.
         """
@@ -525,7 +532,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         :param types: The types of albums to return. Select from ``{"album", "single", "compilation", "appears_on"}``.
         :param limit: Size of batches to request.
             This value will be limited to be between ``1`` and ``50``.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
+            Set as False to refresh the cached response of the CachedSession.
         :return: A map of the Artist ID to a list of the API JSON responses for each album.
         :raise RemoteObjectTypeError: Raised when the item types of the input ``values`` are not all artists or IDs.
         """

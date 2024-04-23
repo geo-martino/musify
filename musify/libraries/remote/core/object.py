@@ -77,7 +77,8 @@ class RemoteCollectionLoader[T: RemoteObject](RemoteObject, RemoteCollection[T],
 
         :param value: The value representing some remote collection. See description for allowed value types.
         :param api: An authorised API object to load the object from.
-        :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
+            Set as False to refresh the cached response of the CachedSession.
         :param items: Optionally, give a list of available items to build a response for this collection.
             In doing so, the method will first try to find the API responses for the items of this collection
             in the given list before calling the API for any items not found there.

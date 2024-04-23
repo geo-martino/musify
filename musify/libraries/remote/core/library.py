@@ -28,7 +28,8 @@ class RemoteLibrary[
     :param api: The instantiated and authorised API object for this source type.
     :param playlist_filter: An optional :py:class:`Filter` to apply or collection of playlist names to include when
         loading playlists. Playlist names will be passed to this filter to limit which playlists are loaded.
-    :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+    :param use_cache: Use the cache when calling the API endpoint.
+        When using a CachedSession, set as False to refresh the cached response.
     """
 
     __slots__ = ("_factory", "_tracks", "_playlists", "playlist_filter")

@@ -71,7 +71,8 @@ class RemoteItemSearcher(Processor):
         during the checking operation
     :param object_factory: The :py:class:`RemoteObjectFactory` to use when creating new remote objects.
         This must have a :py:class:`RemoteAPI` assigned for this processor to work as expected.
-    :param use_cache: Use the cache when calling the API endpoint. Set as False to refresh the cached response.
+    :param use_cache: Use the cache when calling the API endpoint.
+        When using a CachedSession, set as False to refresh the cached response.
     """
 
     __slots__ = ("factory", "use_cache")

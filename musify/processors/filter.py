@@ -9,6 +9,7 @@ from typing import Any, Self
 from musify.core.base import MusifyObject
 from musify.processors.base import Filter, FilterComposite
 from musify.processors.compare import Comparer
+from musify.types import UnitCollection
 
 
 class FilterDefinedList[T: str | MusifyObject](Filter[T], Collection[T]):
@@ -60,12 +61,14 @@ class FilterComparers[T: str | MusifyObject](Filter[T]):
 
     def __init__(
             self,
-            comparers: Collection[Comparer] | Mapping[Comparer, tuple[bool, Self]] = (),
+            comparers: UnitCollection[Comparer] | Mapping[Comparer, tuple[bool, Self]] = (),
             match_all: bool = True,
             *_,
             **__
     ):
         super().__init__()
+        if isinstance(comparers, Comparer):
+            comparers = [comparers]
         if not isinstance(comparers, Mapping):
             comparers = {comparer: (False, FilterComparers()) for comparer in comparers}
 

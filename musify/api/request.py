@@ -23,7 +23,7 @@ class RequestHandler(APIAuthoriser):
     Handles error responses and backoff on failed requests.
     See :py:class:`APIAuthoriser` for more info on which params to pass to authorise requests.
 
-    :param cache_path: The path to store the requests session's sqlite cache.
+    :param cache_path: Path to use to store the requests session's sqlite cache.
     :param cache_expiry: The expiry time to apply to cached responses after which responses are invalidated.
     :param auth_kwargs: The authorisation kwargs to be passed to :py:class:`APIAuthoriser`.
     """
