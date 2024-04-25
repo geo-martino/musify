@@ -71,7 +71,7 @@ class dynamicprocessormethod:
         self.instance_ = instance
         return self.__call__
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> Any:
         return self.func(self.instance_, *args, **kwargs) if self.instance_ else self.func(*args, **kwargs)
 
 

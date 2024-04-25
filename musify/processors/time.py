@@ -21,7 +21,7 @@ class TimeMapper(DynamicProcessor, PrettyPrinter):
         super().__init__()
         self._set_processor_name(func)
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> timedelta | relativedelta:
         return self.map(*args, **kwargs)
 
     def map(self, value: Any):
