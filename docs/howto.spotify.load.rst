@@ -11,8 +11,8 @@ In this example, you will:
 .. include:: _howto/setup.logging.txt
 
 
-Setup the Spotify API
----------------------
+Set up the Spotify API
+----------------------
 
 1. If you don't already have one, create a `Spotify for Developers <https://developer.spotify.com/dashboard>`_ account.
 

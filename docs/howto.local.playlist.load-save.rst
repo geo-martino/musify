@@ -34,8 +34,8 @@ You can also just have Musify automatically determine the playlist type to load 
    :language: Python
    :lines: 19-21
 
-If you already have some tracks loaded and you want the playlist to only use those tracks instead of loading
-the tracks itself, you can pass these pre-loaded tracks to the playlist too.
+If you already have some tracks loaded, and you want the playlist to only use those tracks instead of loading
+the tracks itself, you can pass these preloaded tracks to the playlist too.
 
 .. literalinclude:: _howto/scripts/local.playlist.load-save.py
    :language: Python

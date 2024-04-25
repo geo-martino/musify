@@ -102,10 +102,15 @@ class ItemMatcher(Processor):
             log.extend(extra)
         self.log_messages(log, pad='>')
 
-    def _log_test[T: MusifyObject](self, source: T, result: T, test: Any, extra: Iterable[str] = ()) -> None:
+    def _log_test[T: MusifyObject](self, source: T, result: T | None, test: Any, extra: Iterable[str] = ()) -> None:
         """Wrapper for initially logging a test result in a uniform aligned format"""
         algorithm = inspect.stack()[1][0].f_code.co_name.replace("match", "").upper().lstrip("_").replace("_", " ")
-        log_result = f"> Testing URI: {result.uri}" if hasattr(result, "uri") else "> Test failed"
+
+        if result is not None and hasattr(result, "uri"):
+            log_result = f"> Testing URI: {result.uri}"
+        else:
+            log_result = "> Test failed"
+
         log = [source.name, log_result, f"{algorithm:<10}={test:<5}"]
         if extra:
             log.extend(extra)
@@ -327,10 +332,10 @@ class ItemMatcher(Processor):
             ]
             self._log_match(source=source, result=result, extra=extra)
             return result
-        else:
-            self._log_test(
-                source=source, result=result, test=score, extra=[f"NO MATCH: {score:.2f}<{min_score:.2f}"]
-            )
+
+        self._log_test(
+            source=source, result=result, test=score, extra=[f"NO MATCH: {score:.2f}<{min_score:.2f}"]
+        )
 
     def _score[T: MusifyObject](
             self,
@@ -419,8 +424,8 @@ class ItemMatcher(Processor):
 
         return scores
 
+    @staticmethod
     def _get_match_from_scores[T: MusifyObject](
-            self,
             scores: Iterable[tuple[T, dict[TagField, Future[float] | list[list[Future[float]]]]]],
             max_score: float,
     ) -> tuple[T | None, float]:
