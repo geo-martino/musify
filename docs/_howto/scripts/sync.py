@@ -1,4 +1,5 @@
 from musify.libraries.remote.spotify.api import SpotifyAPI
+from musify.processors.match import ItemMatcher
 api = SpotifyAPI()
 
 from musify.libraries.local.library import LocalLibrary
@@ -19,10 +20,10 @@ from musify.libraries.remote.spotify.factory import SpotifyObjectFactory
 albums = local_library.albums[:3]
 factory = SpotifyObjectFactory(api=api)
 
-searcher = RemoteItemSearcher(object_factory=factory)
+searcher = RemoteItemSearcher(matcher=ItemMatcher(), object_factory=factory)
 searcher.search(albums)
 
-checker = RemoteItemChecker(object_factory=factory)
+checker = RemoteItemChecker(matcher=ItemMatcher(), object_factory=factory)
 checker.check(albums)
 
 from musify.libraries.remote.spotify.object import SpotifyTrack

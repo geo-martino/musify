@@ -46,6 +46,11 @@ Changed
 
 * :py:class:`.FilterComparers` now accepts a single :py:class:`.Comparer` on the ``comparers`` argument.
 
+Documentation
+-------------
+
+* Fixed error in 'sync data' how-to
+
 0.9.1
 =====
 
