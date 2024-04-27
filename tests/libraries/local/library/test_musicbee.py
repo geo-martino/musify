@@ -56,10 +56,10 @@ class TestMusicBee(LocalLibraryTester):
         with open(trg_path, "w") as f:
             f.write(data)
 
-        shutil.copytree(path_playlist_resources, join(tmp_library_path, MusicBee.musicbee_playlist_folder))
+        shutil.copytree(path_playlist_resources, join(tmp_library_path, MusicBee.playlists_path))
 
-        MusicBee.xml_library_filename = library_xml_filename
-        MusicBee.xml_settings_filename = settings_xml_filename
+        MusicBee.xml_library_path = library_xml_filename
+        MusicBee.xml_settings_path = settings_xml_filename
         yield tmp_library_path
 
         shutil.rmtree(tmp_library_path)
@@ -67,8 +67,8 @@ class TestMusicBee(LocalLibraryTester):
     @pytest.fixture
     def library(self, musicbee_folder: str, path_mapper: PathMapper) -> LocalLibrary:
         library = MusicBee(musicbee_folder=musicbee_folder, path_mapper=path_mapper)
-        assert library._library_xml_path == join(musicbee_folder, MusicBee.xml_library_filename)
-        assert library._settings_xml_path == join(musicbee_folder, MusicBee.xml_settings_filename)
+        assert library._library_xml_path == join(musicbee_folder, MusicBee.xml_library_path)
+        assert library._settings_xml_path == join(musicbee_folder, MusicBee.xml_settings_path)
 
         library.load()
         # needed to ensure __setitem__ check passes
@@ -76,7 +76,7 @@ class TestMusicBee(LocalLibraryTester):
         return library
 
     def test_parser_library(self, musicbee_folder: str):
-        path = join(musicbee_folder, MusicBee.xml_library_filename)
+        path = join(musicbee_folder, MusicBee.xml_library_path)
         parser = XMLLibraryParser(path=path, path_keys=MusicBee.xml_library_path_keys)
 
         xml = parser.parse()
@@ -104,19 +104,19 @@ class TestMusicBee(LocalLibraryTester):
 
     def test_init_fails(self, musicbee_folder: str):
         # should load files in certain order, remove each file in reverse load order and test related exception
-        settings_path_error = join(musicbee_folder, MusicBee.xml_settings_filename)
+        settings_path_error = join(musicbee_folder, MusicBee.xml_settings_path)
         os.remove(settings_path_error)
         with pytest.raises(FileDoesNotExistError, match=f".*{settings_path_error.replace('\\', '\\\\')}"):
             MusicBee(musicbee_folder=musicbee_folder)
 
-        library_path_error = join(musicbee_folder, MusicBee.xml_library_filename)
+        library_path_error = join(musicbee_folder, MusicBee.xml_library_path)
         os.remove(library_path_error)
         with pytest.raises(FileDoesNotExistError, match=f".*{library_path_error.replace('\\', '\\\\')}"):
             MusicBee(musicbee_folder=musicbee_folder)
 
     def test_init_no_playlists(self, musicbee_folder: str):
         # delete all playlists in tmp folder for this run
-        shutil.rmtree(join(musicbee_folder, MusicBee.musicbee_playlist_folder))
+        shutil.rmtree(join(musicbee_folder, MusicBee.playlists_path))
         library = MusicBee(musicbee_folder=musicbee_folder)
 
         assert library.library_folders == [path_track_resources, path_playlist_resources]
@@ -134,7 +134,7 @@ class TestMusicBee(LocalLibraryTester):
                 [splitext(basename(path_playlist_m3u))[0], splitext(basename(path_playlist_xautopf_bp))[0]]
             ),
         )
-        assert library.playlist_folder == join(musicbee_folder, MusicBee.musicbee_playlist_folder)
+        assert library.playlist_folder == join(musicbee_folder, MusicBee.playlists_path)
         assert set(library._playlist_paths) == {
             splitext(basename(path_playlist_m3u))[0],
             splitext(basename(path_playlist_xautopf_bp))[0],
@@ -150,7 +150,7 @@ class TestMusicBee(LocalLibraryTester):
                 exclude=FilterDefinedList([splitext(basename(path_playlist_xautopf_bp))[0]])
             ),
         )
-        assert library.playlist_folder == join(musicbee_folder, MusicBee.musicbee_playlist_folder)
+        assert library.playlist_folder == join(musicbee_folder, MusicBee.playlists_path)
         assert set(library._playlist_paths) == {
             splitext(basename(path))[0] for path in path_playlist_all if path != path_playlist_xautopf_bp
         }

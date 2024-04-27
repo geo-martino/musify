@@ -55,14 +55,14 @@ class MusicBee(LocalLibrary, File):
     )
 
     valid_extensions = frozenset({".xml"})
-    #: The relative path of the playlist folder within the MusicBee folder.
-    xml_library_filename = "iTunes Music Library.xml"
-    #: The filename of the MusicBee library file.
-    xml_library_path_keys = {"Location", "Music Folder"}
+    #: The path of the MusicBee library file relative the ``musicbee_folder`` provided on initialisation.
+    xml_library_path = "iTunes Music Library.xml"
     #: A list of keys for the XML library that need to be processed as system paths.
-    xml_settings_filename = "MusicBeeLibrarySettings.ini"
-    #: The filename of the MusicBee settings file.
-    musicbee_playlist_folder = "Playlists"
+    xml_library_path_keys = {"Location", "Music Folder"}
+    #: The path of the MusicBee settings file relative the ``musicbee_folder`` provided on initialisation.
+    xml_settings_path = "MusicBeeLibrarySettings.ini"
+    #: The path to the playlists folder relative the ``musicbee_folder`` provided on initialisation.
+    playlists_path = "Playlists"
 
     @property
     def path(self) -> str:
@@ -78,7 +78,7 @@ class MusicBee(LocalLibrary, File):
         #: The absolute path of the musicbee folder containing settings and library files.
         self.musicbee_folder = musicbee_folder
 
-        self._library_xml_path: str = join(musicbee_folder, self.xml_library_filename)
+        self._library_xml_path: str = join(musicbee_folder, self.xml_library_path)
         if not exists(self._library_xml_path):
             raise FileDoesNotExistError(f"Cannot find MusicBee library at given path: {self._library_xml_path}")
 
@@ -86,7 +86,7 @@ class MusicBee(LocalLibrary, File):
         #: A map representation of the loaded XML library data
         self.library_xml: dict[str, Any] = self._library_xml_parser.parse()
 
-        self._settings_xml_path: str = join(musicbee_folder, self.xml_settings_filename)
+        self._settings_xml_path: str = join(musicbee_folder, self.xml_settings_path)
         if not exists(self._settings_xml_path):
             raise FileDoesNotExistError(f"Cannot find MusicBee settings at given path: {self._settings_xml_path}")
 
@@ -100,7 +100,7 @@ class MusicBee(LocalLibrary, File):
 
         super().__init__(
             library_folders=library_folders,
-            playlist_folder=join(self.musicbee_folder, self.musicbee_playlist_folder),
+            playlist_folder=join(self.musicbee_folder, self.playlists_path),
             playlist_filter=playlist_filter,
             path_mapper=path_mapper,
             remote_wrangler=remote_wrangler,

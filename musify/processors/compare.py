@@ -124,11 +124,13 @@ class Comparer(DynamicProcessor):
         elif isinstance(value, float):
             self._convert_expected_to_float()
             self._converted = True
-        elif isinstance(value, date):
+        elif isinstance(value, datetime):
             self._convert_expected_to_datetime()
             self._converted = True
         elif isinstance(value, bool):
             self._expected.clear()
+            self._converted = True
+        elif isinstance(value, str):
             self._converted = True
 
     def _convert_expected_to_int(self) -> None:

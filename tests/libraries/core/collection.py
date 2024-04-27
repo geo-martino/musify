@@ -272,7 +272,6 @@ class PlaylistTester(MusifyCollectionTester, metaclass=ABCMeta):
         playlist.merge(other=other, reference=reference)
         assert all(item not in playlist for item in removed)
         assert all(item in playlist for item in added)
-        print(len(playlist), len(reference), len(removed), len(added))
         assert len(playlist) == len(reference) - len(removed) + len(added)
 
     @staticmethod

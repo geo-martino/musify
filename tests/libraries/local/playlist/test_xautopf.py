@@ -127,7 +127,7 @@ class TestXAutoPF(LocalPlaylistTester):
         assert pl.limiter_deduplication
         assert pl.tracks == tracks_expected
 
-    def test_save_new_file(self, tmp_path: str):
+    def test_save_new_file(self, tmp_path: Path):
         path = join(tmp_path, random_str() + ".xautopf")
         pl = XAutoPF(path=path)
         assert not exists(path)

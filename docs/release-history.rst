@@ -45,11 +45,17 @@ Changed
 -------
 
 * :py:class:`.FilterComparers` now accepts a single :py:class:`.Comparer` on the ``comparers`` argument.
+* :py:class:`.MusicBee` class attributes were renamed to classify that full paths are also valid, not just filenames.
 
 Documentation
 -------------
 
-* Fixed error in 'sync data' how-to
+* Fixed error in 'sync data' how-to.
+
+Fixed
+-----
+
+* :py:class:`.Comparer` now considers strings as converted on first pass when converting expected values.
 
 0.9.1
 =====
