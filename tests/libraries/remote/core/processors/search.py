@@ -231,6 +231,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert len(result.skipped) == len(search_album)
 
     @staticmethod
+    @pytest.mark.slow
     def test_search_result_combined(
             searcher: RemoteItemSearcher,
             search_items: list[LocalTrack],

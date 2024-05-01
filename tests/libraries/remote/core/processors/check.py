@@ -459,6 +459,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert not checker._remaining
 
     @staticmethod
+    @pytest.mark.slow
     def test_match_to_remote_complex(
             checker: RemoteItemChecker, setup_playlist_collection: tuple[RemotePlaylist, BasicCollection],
     ):

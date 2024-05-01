@@ -84,7 +84,6 @@ class TestSpotifyLibrary(RemoteLibraryTester):
     ###########################################################################
     ## Enrich tests
     ###########################################################################
-    # TODO: can this test run faster? runs ~5s on local machine
     # noinspection PyMethodOverriding,PyTestUnpassedFixture
     @pytest.mark.slow
     def test_enrich_tracks(self, library: SpotifyLibrary, api_mock: SpotifyMock, **kwargs):
@@ -169,7 +168,6 @@ class TestSpotifyLibrary(RemoteLibraryTester):
             assert "audio_features" in track.response
             assert "audio_analysis" in track.response
 
-    # TODO: can this test run faster? runs ~5s on local machine
     @pytest.mark.slow
     def test_enrich_saved_albums(self, library: SpotifyLibrary, **kwargs):
         # ensure at least some albums are not enriched already
@@ -182,6 +180,7 @@ class TestSpotifyLibrary(RemoteLibraryTester):
             assert len(album.tracks) == album.track_total
 
     # noinspection PyMethodOverriding
+    @pytest.mark.slow
     def test_enrich_saved_artists(self, library: SpotifyLibrary, api_mock: SpotifyMock, **kwargs):
         # ensure artists are not enriched already
         for artist in library.artists:

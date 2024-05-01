@@ -27,7 +27,7 @@ class ItemDownloadHelper(InputProcessor):
     :param interval: The number of items to open sites for before pausing for user input.
     """
 
-    def __init__(self, urls: UnitIterable[str], fields: UnitIterable[Field] = Fields.ALL, interval: int = 1):
+    def __init__(self, urls: UnitIterable[str] = (), fields: UnitIterable[Field] = Fields.ALL, interval: int = 1):
         super().__init__()
 
         self.urls: list[str] = to_collection(urls, list)

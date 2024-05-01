@@ -46,6 +46,7 @@ Changed
 
 * :py:class:`.FilterComparers` now accepts a single :py:class:`.Comparer` on the ``comparers`` argument.
 * :py:class:`.MusicBee` class attributes were renamed to classify that full paths are also valid, not just filenames.
+* :py:class:`.ItemDownloadHelper` ``urls`` init arg now has default arg of empty tuple.
 
 Documentation
 -------------
@@ -56,6 +57,7 @@ Fixed
 -----
 
 * :py:class:`.Comparer` now considers strings as converted on first pass when converting expected values.
+* Printing of new line at the end of :py:meth:`.RemoteLibrary.extend`
 
 0.9.1
 =====

@@ -26,7 +26,6 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         """
         raise NotImplementedError
 
-    # TODO: can this test run faster? runs ~5-10s on local machine
     @staticmethod
     @pytest.mark.slow
     def test_load_playlists(library_unloaded: RemoteLibrary):
@@ -154,7 +153,6 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         assert len(pl_new) == len(backup_check[name_new])
         assert library.api.handler.get(pl_new.url)  # new playlist was created and is callable
 
-    # TODO: can this test run faster? runs ~5s on local machine
     @pytest.mark.slow
     def test_restore(self, library: RemoteLibrary, collection_merge_items: list[RemoteTrack]):
         name_actual, pl_actual = choice([(name, pl) for name, pl in library.playlists.items() if len(pl) > 10])
@@ -243,7 +241,6 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         library.sync(list(library.playlists.values()) + new_playlists, reload=True)
         assert not api_mock.get_requests(method="POST")
 
-    # TODO: can this test run faster? runs ~5s on local machine
     @pytest.mark.slow
     def test_sync(self, library: RemoteLibrary, collection_merge_items: list[RemoteTrack], api_mock: RemoteMock):
         name_actual, pl_actual = choice([(name, pl) for name, pl in library.playlists.items() if len(pl) > 10])

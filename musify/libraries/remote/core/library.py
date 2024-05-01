@@ -124,10 +124,11 @@ class RemoteLibrary[
         )
 
         load_tracks = self.api.get_tracks(load_uris, features=True, use_cache=self.use_cache)
-        self.items.extend(self.factory.track(response=response) for response in load_tracks)
+        self.items.extend(map(self.factory.track, load_tracks))
 
-        self.logger.print()
+        self.logger.print(STAT)
         self.log_tracks()
+        self.logger.print()
         self.logger.debug(f"Extend {self.api.source} tracks data: DONE\n")
 
     def load(self) -> None:

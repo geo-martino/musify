@@ -98,7 +98,7 @@ def test_report_playlist_differences(local_library: LocalLibrary, spotify_librar
     assert sum(len(items) for items in report["Items unavailable (no URI)"].values()) == unavailable_total
 
 
-# TODO: can this test run faster? runs ~15s on local machine
+@pytest.mark.slow
 def test_report_missing_tags(local_library: LocalLibrary):
     albums = {album.name: album for album in local_library.albums}
 

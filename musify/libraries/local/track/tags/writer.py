@@ -403,11 +403,11 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
-        source_bpm = int(source["bpm"] if source["bpm"] is not None else 0)
-        target_bpm = int(target["bpm"] if target["bpm"] is not None else 0)
+        source_bpm = int(source.bpm if source.bpm is not None else 0)
+        target_bpm = int(target.bpm if target.bpm is not None else 0)
 
         conditionals = {
-            source.bpm is None and target.bpm is not None and target.bpm > 30,
+            source.bpm is None and target.bpm is not None and target_bpm > 30,
             source_bpm < 30 < target_bpm,
             replace and source_bpm != target_bpm
         }

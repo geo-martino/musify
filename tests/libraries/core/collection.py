@@ -320,6 +320,7 @@ class LibraryTester(MusifyCollectionTester, metaclass=ABCMeta):
         for name, playlist in list(test_library.playlists.items())[1:]:
             assert len(source.playlists[name]) < len(playlist)
 
+    @pytest.mark.slow
     def test_merge_playlists(self, library: Library, collection_merge_items: Iterable[MusifyItem]):
         merge_playlists = deepcopy(list(library.playlists.values())[:5])  # don't over test with too many playlists
         for playlist in merge_playlists[1:]:  # first playlist to remain unchanged
