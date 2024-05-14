@@ -57,6 +57,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         "_playlists",
         "_track_paths",
         "_tracks",
+        "errors",
     )
     __attributes_classes__ = (Library, LocalCollection)
     __attributes_ignore__ = ("tracks_in_playlists",)

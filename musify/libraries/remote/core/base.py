@@ -86,12 +86,7 @@ class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, metaclass=ABCMeta):
     @classmethod
     @abstractmethod
     def load(
-            cls,
-            value: str | Mapping[str, Any] | RemoteResponse,
-            api: RemoteAPI,
-            use_cache: bool = True,
-            *args,
-            **kwargs
+            cls, value: str | Mapping[str, Any] | RemoteResponse, api: RemoteAPI, *args, **kwargs
     ) -> Self:
         """
         Generate a new object of this class,
@@ -105,19 +100,14 @@ class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, metaclass=ABCMeta):
 
         :param value: The value representing some remote object. See description for allowed value types.
         :param api: An authorised API object to load the object from.
-        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
-            Set as False to refresh the cached response of the CachedSession.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def reload(self, use_cache: bool = True, *args, **kwargs) -> None:
+    def reload(self, *args, **kwargs) -> None:
         """
         Reload this object from the API, calling all required endpoints
         to get a complete set of data for this item type.
-
-        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
-            Set as False to refresh the cached response of the CachedSession.
         """
         raise NotImplementedError
 

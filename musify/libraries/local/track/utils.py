@@ -23,7 +23,7 @@ def load_track(path: str, remote_wrangler: RemoteDataWrangler = None) -> LocalTr
     Attempt to load a file from a given path, returning the appropriate :py:class:`LocalTrack` object
 
     :param path: The path of the file to load.
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs.
+    :param remote_wrangler: Optionally, provide a :py:class:`RemoteDataWrangler` object for processing URIs.
         This object will be used to check for and validate a URI tag on the file.
         The tag that is used for reading and writing is set by the ``uri_tag`` class attribute on the track object.
         If no ``remote_wrangler`` is given, no URI processing will occur.

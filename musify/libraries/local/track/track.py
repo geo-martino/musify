@@ -30,7 +30,7 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
     Generic track object for extracting, modifying, and saving metadata/tags/properties for a given file.
 
     :param file: The path or Mutagen object of the file to load.
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs.
+    :param remote_wrangler: Optionally, provide a :py:class:`RemoteDataWrangler` object for processing URIs.
         This object will be used to check for and validate a URI tag on the file.
         The tag that is used for reading and writing is set by the ``uri_tag`` class attribute.
         If no ``remote_wrangler`` is given, no URI processing will occur.

@@ -64,9 +64,11 @@ class RemoteItemChecker(InputProcessor):
     """
 
     __slots__ = (
+        "logger",
+        "matcher",
+        "factory",
         "interval",
         "allow_karaoke",
-        "factory",
         "_playlist_name_urls",
         "_playlist_name_collection",
         "_skip",
@@ -130,7 +132,7 @@ class RemoteItemChecker(InputProcessor):
 
     def _check_api(self):
         """Check if the API token has expired and refresh as necessary"""
-        if not self.api.handler.test_token():  # check if token has expired
+        if not self.api.handler.authoriser.test_token():  # check if token has expired
             self.logger.info_extra("\33[93mAPI token has expired, re-authorising... \33[0m")
             self.api.authorise()
 
@@ -349,7 +351,7 @@ class RemoteItemChecker(InputProcessor):
         source = self._playlist_name_collection[name]
         source_valid = [item for item in source if item.has_uri]
 
-        remote_response = self.api.get_items(self._playlist_name_urls[name], extend=True, use_cache=False)[0]
+        remote_response = self.api.get_items(self._playlist_name_urls[name], extend=True)[0]
         remote = self.factory.playlist(response=remote_response).items
         remote_valid = [item for item in remote if item.has_uri]
 

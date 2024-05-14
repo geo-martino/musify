@@ -29,7 +29,7 @@ class Comparer(DynamicProcessor):
         An exception will be raised if this is True and reference object is not passed.
     """
 
-    __slots__ = ("_expected", "_converted", "field")
+    __slots__ = ("_expected", "_converted", "field", "reference_required")
 
     @classmethod
     def _processor_method_fmt(cls, name: str) -> str:

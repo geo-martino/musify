@@ -217,7 +217,7 @@ class TestAPIAuthoriser:
         response = {"access_token": "valid token", "expires_in": 3000, "refresh_token": "new_refresh"}
         requests_mock.post(authoriser.auth_args["url"], json=response)
 
-        authoriser.authorise()
+        authoriser()
         expected_header = {"Authorization": "Bearer valid token"}
         assert authoriser.headers == expected_header
         assert authoriser.token["refresh_token"] == "new_refresh"
@@ -233,7 +233,7 @@ class TestAPIAuthoriser:
         requests_mock.get(authoriser.test_args["url"], json={"test": "valid"})
 
         # loads token, token is valid, no refresh needed
-        authoriser.authorise()
+        authoriser()
         expected_header = {"Authorization": f"Bearer {authoriser.token["access_token"]}"}
         assert authoriser.headers == expected_header
 
@@ -248,7 +248,7 @@ class TestAPIAuthoriser:
         )
 
         # force load from json despite being given token
-        authoriser.authorise(force_load=True)
+        authoriser(force_load=True)
         expected_header = {"new_key": f"prefix - {authoriser.token["access_token"]}"}
 
         assert authoriser.headers == expected_header | authoriser.header_extra
@@ -258,7 +258,7 @@ class TestAPIAuthoriser:
 
         # force new despite being given token and token file path
         with pytest.raises(APIError):
-            authoriser.authorise(force_new=True)
+            authoriser(force_new=True)
 
     def test_auth_new_token_and_no_refresh(self, token: dict[str, Any], token_file_path: str, requests_mock: Mocker):
         authoriser = APIAuthoriser(
@@ -269,7 +269,7 @@ class TestAPIAuthoriser:
 
         requests_mock.post(authoriser.auth_args["url"], json={"1": {"2": {"code": "token"}}})
 
-        authoriser.authorise()
+        authoriser()
         expected_header = {"Authorization": "Bearer token"}
         assert authoriser.headers == expected_header
 
@@ -285,7 +285,7 @@ class TestAPIAuthoriser:
         response = {"get_token": "valid token", "expires_in": 3000, "refresh_token": "new_refresh"}
         requests_mock.post(authoriser.refresh_args["url"], json=response)
 
-        authoriser.authorise()
+        authoriser()
         expected_header = {"Authorization": "Bearer valid token"}
         assert authoriser.headers == expected_header
         assert authoriser.token["refresh_token"] == "new_refresh"
@@ -305,19 +305,19 @@ class TestAPIAuthoriser:
         requests_mock.post(authoriser.refresh_args["url"], json=response)
 
         with pytest.raises(APIError):
-            authoriser.authorise()
+            authoriser()
 
         authoriser.auth_args = {"url": "http://localhost/auth"}
         response = {"get_token": "valid token", "expires_in": 20, "refresh_token": "new_refresh"}
         requests_mock.post(authoriser.auth_args["url"], json=response)
 
         with pytest.raises(APIError):
-            authoriser.authorise()
+            authoriser()
 
         response = {"get_token": "valid token", "expires_in": 3000, "refresh_token": "new_refresh"}
         requests_mock.post(authoriser.auth_args["url"], json=response)
 
-        authoriser.authorise()
+        authoriser()
         expected_header = {"Authorization": "Bearer valid token"}
         assert authoriser.headers == expected_header
         assert authoriser.token["refresh_token"] == "new_refresh"

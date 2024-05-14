@@ -297,8 +297,11 @@ def spotify_wrangler():
 def spotify_api() -> SpotifyAPI:
     """Yield an authorised :py:class:`SpotifyAPI` object"""
     token = {"access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"}
-    api = SpotifyAPI(cache_path=None)
-    api.handler = RequestHandler(name=api.source, token=token, cache_path=None)
+    api = SpotifyAPI(token=token)
+    # blocks any token tests
+    api.handler.authoriser.test_args = None
+    api.handler.authoriser.test_expiry = 0
+    api.handler.authoriser.test_condition = None
     with api as a:
         yield a
 

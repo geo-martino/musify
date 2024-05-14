@@ -22,4 +22,8 @@ class APIError(MusifyError):
 
 
 class RequestError(APIError):
-    """Exception raised for errors raised when making requests to an API."""
+    """Exception raised for errors relating to requests to an API."""
+
+
+class CacheError(APIError):
+    """Exception raised for errors relating to the cache as part of API operations."""

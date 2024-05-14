@@ -25,12 +25,12 @@ class TestSpotifyLibrary(RemoteLibraryTester):
     def library_unloaded(self, api: SpotifyAPI, api_mock: SpotifyMock) -> SpotifyLibrary:
         """Yields an unloaded Library object to be tested as pytest.fixture"""
         include = FilterDefinedList([pl["name"] for pl in sample(api_mock.user_playlists, k=10)])
-        return SpotifyLibrary(api=api, use_cache=False, playlist_filter=include)
+        return SpotifyLibrary(api=api, playlist_filter=include)
 
     @pytest.fixture(scope="class")
     def _library(self, api: SpotifyAPI, _api_mock: SpotifyMock) -> SpotifyLibrary:
         include = FilterDefinedList([pl["name"] for pl in sample(_api_mock.user_playlists, k=10)])
-        library = SpotifyLibrary(api=api, use_cache=False, playlist_filter=include)
+        library = SpotifyLibrary(api=api, playlist_filter=include)
         library.load()
         return library
 
@@ -40,7 +40,7 @@ class TestSpotifyLibrary(RemoteLibraryTester):
 
     def test_filter_playlists(self, api: SpotifyAPI, api_mock: SpotifyMock):
         # keep all when no include or exclude settings defined
-        library = SpotifyLibrary(api=api, use_cache=False)
+        library = SpotifyLibrary(api=api)
 
         responses = api.get_user_items(kind=RemoteObjectType.PLAYLIST)
         filtered = library._filter_playlists(responses)

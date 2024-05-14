@@ -27,7 +27,7 @@ class SpotifyTrack(SpotifyItem, RemoteTrack):
     :param response: The Spotify API JSON response.
     """
 
-    __slots__ = ("_artists", "_disc_total", "_comments")
+    __slots__ = ("_disc_total", "_comments", "_artists")
 
     _song_keys = ("C", "C#/Db", "D", "D#/Eb", "E", "F", "F#/Gb", "G", "G#/Ab", "A", "A#/Bb", "B")
 
@@ -188,6 +188,7 @@ class SpotifyTrack(SpotifyItem, RemoteTrack):
     def __init__(self, response: dict[str, Any], api: SpotifyAPI | None = None, skip_checks: bool = False):
         self._disc_total = None
         self._comments = None
+
         self._artists: list[SpotifyArtist] | None = None
 
         if "track" in response and isinstance(response["track"], dict):
@@ -211,7 +212,6 @@ class SpotifyTrack(SpotifyItem, RemoteTrack):
             analysis: bool = False,
             extend_album: bool = False,
             extend_artists: bool = False,
-            use_cache: bool = True,
             *_,
             **__
     ) -> Self:
@@ -225,18 +225,11 @@ class SpotifyTrack(SpotifyItem, RemoteTrack):
                 id_, kind=RemoteObjectType.TRACK, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL
             )
         }
-        self.reload(
-            features=features,
-            analysis=analysis,
-            extend_album=extend_album,
-            extend_artists=extend_artists,
-            use_cache=use_cache
-        )
+        self.reload(features=features, analysis=analysis, extend_album=extend_album, extend_artists=extend_artists)
         return self
 
     def reload(
             self,
-            use_cache: bool = True,
             features: bool = False,
             analysis: bool = False,
             extend_album: bool = False,
@@ -247,13 +240,13 @@ class SpotifyTrack(SpotifyItem, RemoteTrack):
         self._check_for_api()
 
         # reload with enriched data
-        response = self.api.handler.get(self.url, use_cache=use_cache, log_pad=self._url_pad)
+        response = self.api.handler.get(self.url, log_pad=self._url_pad)
         if extend_album:
-            self.api.get_items(response["album"], kind=RemoteObjectType.ALBUM, extend=False, use_cache=use_cache)
+            self.api.get_items(response["album"], kind=RemoteObjectType.ALBUM, extend=False)
         if extend_artists:
-            self.api.get_items(response["artists"], kind=RemoteObjectType.ARTIST, use_cache=use_cache)
+            self.api.get_items(response["artists"], kind=RemoteObjectType.ARTIST)
         if features or analysis:
-            self.api.extend_tracks(response, features=features, analysis=analysis, use_cache=use_cache)
+            self.api.extend_tracks(response, features=features, analysis=analysis)
 
         self.__init__(response=response, api=self.api)
 
@@ -268,9 +261,7 @@ class SpotifyCollectionLoader[T: SpotifyObject](RemoteCollectionLoader[T], Spoti
 
     @classmethod
     @abstractmethod
-    def _get_items(
-            cls, items: Collection[str] | MutableMapping[str, Any], api: SpotifyAPI, use_cache: bool = True
-    ) -> list[dict[str, Any]]:
+    def _get_items(cls, items: Collection[str] | MutableMapping[str, Any], api: SpotifyAPI) -> list[dict[str, Any]]:
         """Call the ``api`` to get values for the given ``items`` URIs"""
         raise NotImplementedError
 
@@ -284,9 +275,7 @@ class SpotifyCollectionLoader[T: SpotifyObject](RemoteCollectionLoader[T], Spoti
         return items
 
     @classmethod
-    def _extend_response(
-            cls, response: MutableMapping[str, Any], api: SpotifyAPI, use_cache: bool = True, *_, **__
-    ) -> bool:
+    def _extend_response(cls, response: MutableMapping[str, Any], api: SpotifyAPI, *_, **__) -> bool:
         """
         Apply extensions to specific aspects of the given ``response``.
         Does nothing by default. Override to implement object-specific extensions.
@@ -358,7 +347,6 @@ class SpotifyCollectionLoader[T: SpotifyObject](RemoteCollectionLoader[T], Spoti
             cls,
             value: str | Mapping[str, Any] | RemoteResponse,
             api: SpotifyAPI,
-            use_cache: bool = True,
             items: Iterable[T] = (),
             leave_bar: bool = True,
             *args,
@@ -372,22 +360,22 @@ class SpotifyCollectionLoader[T: SpotifyObject](RemoteCollectionLoader[T], Spoti
 
         # no items given, regenerate API response from the URL
         if any({not items, isinstance(value, Mapping) and api.items_key not in value.get(item_key, [])}):
-            return cls._load_new(value=value, api=api, use_cache=use_cache, *args, **kwargs)
+            return cls._load_new(value=value, api=api, *args, **kwargs)
 
         if isinstance(value, MutableMapping) and api.wrangler.get_item_type(value) == cls.kind:  # input is response
             response = deepcopy(value)
         else:  # load fresh response from the API
-            response = cls.api.get_items(value, kind=cls.kind, use_cache=use_cache)[0]
+            response = cls.api.get_items(value, kind=cls.kind)[0]
 
         # filter down input items to those that match the response
         items = cls._filter_items(items=items, response=response)
         matched, missing = cls._merge_items_to_response(items=items, response=response[item_key][api.items_key])
 
         if missing:
-            items_missing = cls._get_items(items=missing, api=api, use_cache=use_cache)
+            items_missing = cls._get_items(items=missing, api=api)
             cls._merge_items_to_response(items=items_missing, response=response[item_key][api.items_key], skip=matched)
 
-        skip_checks = cls._extend_response(response=response, api=api, use_cache=use_cache, *args, **kwargs)
+        skip_checks = cls._extend_response(response=response, api=api, *args, **kwargs)
         return cls(response=response, api=api, skip_checks=skip_checks)
 
 
@@ -504,17 +492,14 @@ class SpotifyPlaylist(SpotifyCollectionLoader[SpotifyTrack], RemotePlaylist[Spot
             self._check_total()
 
     @classmethod
-    def _get_items(
-            cls, items: Collection[str] | MutableMapping[str, Any], api: SpotifyAPI, use_cache: bool = True
-    ) -> list[dict[str, Any]]:
-        return api.get_tracks(items, use_cache=use_cache)
+    def _get_items(cls, items: Collection[str] | MutableMapping[str, Any], api: SpotifyAPI) -> list[dict[str, Any]]:
+        return api.get_tracks(items)
 
     @classmethod
     def _extend_response(
             cls,
             response: MutableMapping[str, Any],
             api: SpotifyAPI,
-            use_cache: bool = True,
             leave_bar: bool = True,
             extend_tracks: bool = False,
             extend_features: bool = False,
@@ -525,32 +510,21 @@ class SpotifyPlaylist(SpotifyCollectionLoader[SpotifyTrack], RemotePlaylist[Spot
 
         if extend_tracks:
             # noinspection PyTypeChecker
-            api.extend_items(response, kind=cls.kind, key=item_kind, use_cache=use_cache, leave_bar=leave_bar)
+            api.extend_items(response, kind=cls.kind, key=item_kind, leave_bar=leave_bar)
 
         item_key = item_kind.name.lower() + "s"
         tracks = [item["track"] for item in response.get(item_key, {}).get(api.items_key, [])]
         if tracks and extend_features:
-            api.extend_tracks(tracks, limit=response[item_key]["limit"], features=True, use_cache=use_cache)
+            api.extend_tracks(tracks, limit=response[item_key]["limit"], features=True)
 
         return not extend_tracks
 
-    def reload(
-            self,
-            use_cache: bool = True,
-            extend_tracks: bool = False,
-            extend_features: bool = False,
-            *_,
-            **__
-    ) -> None:
+    def reload(self, extend_tracks: bool = False, extend_features: bool = False, *_, **__) -> None:
         self._check_for_api()
-        response = self.api.get_items(self.url, kind=RemoteObjectType.PLAYLIST, extend=False, use_cache=use_cache)[0]
+        response = self.api.get_items(self.url, kind=RemoteObjectType.PLAYLIST, extend=False)[0]
 
         skip_checks = self._extend_response(
-            response=response,
-            api=self.api,
-            use_cache=use_cache,
-            extend_tracks=extend_tracks,
-            extend_features=extend_features
+            response=response, api=self.api, extend_tracks=extend_tracks, extend_features=extend_features
         )
 
         self.__init__(response=response, api=self.api, skip_checks=skip_checks)
@@ -644,8 +618,8 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTra
         return self.response.get("popularity")
 
     def __init__(self, response: dict[str, Any], api: SpotifyAPI | None = None, skip_checks: bool = False):
-        self._artists: list[SpotifyArtist] | None = None
         self._tracks: list[SpotifyTrack] | None = None
+        self._artists: list[SpotifyArtist] | None = None
 
         if "album" in response and isinstance(response["album"], dict):
             # happens in 'user's saved ...' or playlist responses
@@ -670,10 +644,8 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTra
             track.disc_total = self.disc_total
 
     @classmethod
-    def _get_items(
-            cls, items: Collection[str] | MutableMapping[str, Any], api: SpotifyAPI, use_cache: bool = True
-    ) -> list[dict[str, Any]]:
-        return api.get_tracks(items, use_cache=use_cache)
+    def _get_items(cls, items: Collection[str] | MutableMapping[str, Any], api: SpotifyAPI) -> list[dict[str, Any]]:
+        return api.get_tracks(items)
 
     @classmethod
     def _filter_items(cls, items: Iterable[SpotifyTrack], response: Mapping[str, Any]) -> Iterable[SpotifyTrack]:
@@ -685,7 +657,6 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTra
             cls,
             response: MutableMapping[str, Any],
             api: SpotifyAPI,
-            use_cache: bool = True,
             leave_bar: bool = True,
             extend_tracks: bool = False,
             extend_artists: bool = False,
@@ -696,35 +667,28 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTra
         item_kind = api.collection_item_map[cls.kind]
 
         if extend_artists:
-            api.get_items(response["artists"], kind=RemoteObjectType.ARTIST, use_cache=use_cache)
+            api.get_items(response["artists"], kind=RemoteObjectType.ARTIST)
 
         if extend_tracks:
             # noinspection PyTypeChecker
-            api.extend_items(response, kind=cls.kind, key=item_kind, use_cache=use_cache, leave_bar=leave_bar)
+            api.extend_items(response, kind=cls.kind, key=item_kind, leave_bar=leave_bar)
 
         item_key = item_kind.name.lower() + "s"
         tracks = response.get(item_key, {}).get(api.items_key)
         if tracks and extend_features:
-            api.extend_tracks(tracks, limit=response[item_key]["limit"], features=True, use_cache=use_cache)
+            api.extend_tracks(tracks, limit=response[item_key]["limit"], features=True)
 
         return not extend_tracks
 
     def reload(
-            self,
-            use_cache: bool = True,
-            extend_artists: bool = False,
-            extend_tracks: bool = False,
-            extend_features: bool = False,
-            *_,
-            **__
+            self, extend_artists: bool = False, extend_tracks: bool = False, extend_features: bool = False, *_, **__
     ) -> None:
         self._check_for_api()
-        response = self.api.get_items(self.url, kind=RemoteObjectType.ALBUM, extend=False, use_cache=use_cache)[0]
+        response = self.api.get_items(self.url, kind=RemoteObjectType.ALBUM, extend=False)[0]
 
         skip_checks = self._extend_response(
             response=response,
             api=self.api,
-            use_cache=use_cache,
             extend_tracks=extend_tracks,
             extend_artists=extend_artists,
             extend_features=extend_features,
@@ -800,10 +764,8 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
         return RemoteObjectType.ALBUM
 
     @classmethod
-    def _get_items(
-            cls, items: Collection[str] | MutableMapping[str, Any], api: SpotifyAPI, use_cache: bool = True
-    ) -> list[dict[str, Any]]:
-        return api.get_items(items, extend=False, use_cache=use_cache)
+    def _get_items(cls, items: Collection[str] | MutableMapping[str, Any], api: SpotifyAPI) -> list[dict[str, Any]]:
+        return api.get_items(items, extend=False)
 
     @classmethod
     def _filter_items(cls, items: Iterable[SpotifyAlbum], response: dict[str, Any]) -> Iterable[SpotifyAlbum]:
@@ -818,7 +780,6 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
             cls,
             response: MutableMapping[str, Any],
             api: SpotifyAPI,
-            use_cache: bool = True,
             leave_bar: bool = True,
             extend_albums: bool = False,
             extend_tracks: bool = False,
@@ -832,7 +793,7 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
         response_items = response.get(item_key, {})
         has_all_albums = item_key in response and len(response_items[api.items_key]) == response_items["total"]
         if extend_albums and not has_all_albums:
-            api.get_artist_albums(response, limit=response.get(item_key, {}).get("limit", 50), use_cache=use_cache)
+            api.get_artist_albums(response, limit=response.get(item_key, {}).get("limit", 50))
 
         album_item_kind = api.collection_item_map[item_kind]
         album_item_key = album_item_kind.name.lower() + "s"
@@ -840,30 +801,23 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
 
         if albums and extend_tracks:
             for album in albums:
-                api.extend_items(album[album_item_key], kind=item_kind, key=album_item_kind, use_cache=use_cache)
+                api.extend_items(album[album_item_key], kind=item_kind, key=album_item_kind)
 
         if albums and extend_features:
             tracks = [track for album in albums for track in album[album_item_key]["items"]]
-            api.extend_tracks(tracks, limit=response[item_key]["limit"], features=True, use_cache=use_cache)
+            api.extend_tracks(tracks, limit=response[item_key]["limit"], features=True)
 
         return not extend_albums or not extend_tracks
 
     def reload(
-            self,
-            use_cache: bool = True,
-            extend_albums: bool = False,
-            extend_tracks: bool = False,
-            extend_features: bool = False,
-            *_,
-            **__
+            self, extend_albums: bool = False, extend_tracks: bool = False, extend_features: bool = False, *_, **__
     ) -> None:
         self._check_for_api()
-        response = self.api.handler.get(url=self.url, use_cache=use_cache, log_pad=self._url_pad)
+        response = self.api.handler.get(url=self.url, log_pad=self._url_pad)
 
         skip_checks = self._extend_response(
             response=response,
             api=self.api,
-            use_cache=use_cache,
             extend_albums=extend_albums,
             extend_tracks=extend_tracks,
             extend_features=extend_features,

@@ -26,7 +26,6 @@ classifiers = [
 dependencies = [
     "mutagen~=1.47",
     "requests~=2.31",
-    "requests-cache~=1.1",
     "Pillow~=10.1",
     "python-dateutil>=2.8.2,<2.10.0",
     "xmltodict~=0.13",

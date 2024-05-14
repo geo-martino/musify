@@ -2,6 +2,7 @@
 All operations relating to handling of requests to an API.
 """
 import json
+import logging
 from collections.abc import Mapping, Iterable
 from datetime import datetime, timedelta
 from http import HTTPStatus
@@ -10,32 +11,27 @@ from typing import Any
 
 import requests
 from requests import Response, Session
-from requests_cache import CachedSession, ExpirationTime
 
 from musify.api.authorise import APIAuthoriser
+from musify.api.cache.backend.base import ResponseCache
+from musify.api.cache.session import CachedSession
 from musify.api.exception import APIError
+from musify.log.logger import MusifyLogger
 
 
-class RequestHandler(APIAuthoriser):
+class RequestHandler:
     """
     Generic API request handler using cached responses for GET requests only.
     Caches GET responses for a maximum of 4 weeks by default.
     Handles error responses and backoff on failed requests.
     See :py:class:`APIAuthoriser` for more info on which params to pass to authorise requests.
 
-    :param cache_path: Path to use to store the requests session's sqlite cache.
-    :param cache_expiry: The expiry time to apply to cached responses after which responses are invalidated.
-    :param auth_kwargs: The authorisation kwargs to be passed to :py:class:`APIAuthoriser`.
+    :param authoriser: The authoriser to use when authorising requests to the API.
+    :param cache: When given, set up a :py:class:`CachedSession` and attempt to use the cache
+        for certain request types before calling the API.
     """
 
-    __slots__ = ("session", "__dict__")
-
-    #: The initial backoff time for failed requests
-    backoff_start = 0.5
-    #: The factor by which to increase backoff time for failed requests i.e. backoff_start ** backoff_factor
-    backoff_factor = 2
-    #: The maximum number of request attempts to make before giving up and raising an exception
-    backoff_count = 10
+    __slots__ = ("logger", "authoriser", "cache", "session", "backoff_start", "backoff_factor", "backoff_count")
 
     @property
     def backoff_final(self) -> int:
@@ -53,19 +49,27 @@ class RequestHandler(APIAuthoriser):
         """
         return sum(self.backoff_start * self.backoff_factor ** i for i in range(self.backoff_count + 1))
 
-    def __init__(self, cache_path: str | None = None, cache_expiry: ExpirationTime = timedelta(weeks=4), **auth_kwargs):
-        super().__init__(**auth_kwargs)
+    def __init__(self, authoriser: APIAuthoriser, cache: ResponseCache | None = None):
+        # noinspection PyTypeChecker
+        #: The :py:class:`MusifyLogger` for this  object
+        self.logger: MusifyLogger = logging.getLogger(__name__)
 
-        #: The :py:class:`Session` or :py:class:`CachedSession` object
-        self.session: CachedSession | Session
-        if cache_path:
-            self.logger.debug(f"Setting up requests cache: {cache_path}")
-            self.session = CachedSession(cache_path, expire_after=cache_expiry, allowable_methods=["GET"])
-        else:
-            self.session = Session()
+        #: The :py:class:`APIAuthoriser` object
+        self.authoriser = authoriser
+        #: The cache to use when attempting to return a cached response.
+        self.cache = cache
+        #: The :py:class:`Session` object
+        self.session = Session() if cache is None else CachedSession(cache=cache)
+
+        #: The initial backoff time for failed requests
+        self.backoff_start = 0.5
+        #: The factor by which to increase backoff time for failed requests i.e. backoff_start ** backoff_factor
+        self.backoff_factor = 2
+        #: The maximum number of request attempts to make before giving up and raising an exception
+        self.backoff_count = 10
 
     def authorise(self, force_load: bool = False, force_new: bool = False) -> dict[str, str]:
-        headers = super().authorise(force_load=force_load, force_new=force_new)
+        headers = self.authoriser(force_load=force_load, force_new=force_new)
         self.session.headers.update(headers)
         return headers
 
@@ -104,13 +108,14 @@ class RequestHandler(APIAuthoriser):
 
             response = self._request(method=method, url=url, *args, **kwargs)
 
+        if self.cache is not None:
+            self.cache.save_response(response)
         return self._response_as_json(response)
 
     def _request(
             self,
             method: str,
             url: str,
-            use_cache: bool = True,
             log_pad: int = 43,
             log_extra: Iterable[str] = (),
             *args,
@@ -125,9 +130,6 @@ class RequestHandler(APIAuthoriser):
             log.append(f"Args: ({', '.join(args)})")
         if len(kwargs) > 0:
             log.extend(f"{k.title()}: {v}" for k, v in kwargs.items())
-        if use_cache and isinstance(self.session, CachedSession):
-            if method.upper() in self.session.settings.allowable_methods:
-                log.append("Cached")
 
         headers = self.session.headers
         if "headers" in kwargs:
@@ -135,11 +137,7 @@ class RequestHandler(APIAuthoriser):
 
         self.logger.debug(" | ".join(log))
         try:
-            if not isinstance(self.session, CachedSession):
-                return self.session.request(method=method.upper(), url=url, headers=headers, *args, **kwargs)
-            return self.session.request(
-                method=method.upper(), force_refresh=not use_cache, url=url, headers=headers, *args, **kwargs
-            )
+            return self.session.request(method=method.upper(), url=url, headers=headers, *args, **kwargs)
         except requests.exceptions.ConnectionError as ex:
             self.logger.warning(str(ex))
             return
