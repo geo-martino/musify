@@ -1,8 +1,5 @@
 import json
 from dataclasses import dataclass
-from datetime import timedelta
-from os.path import join
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -119,14 +116,14 @@ class TestRequestHandler:
             def get_id(self, url: str):
                 return url.split("/")[-1]
 
-        url = "http://localhost/test"
+        test_url = "http://localhost/test"
         expected_json = {"key": "value"}
-        requests_mock.get(url, json=expected_json)
+        requests_mock.get(test_url, json=expected_json)
 
         storage = request_handler.cache.create_storage(MockRequestSettings(name="test"))
         request_handler.cache.storage_getter = lambda _, __: storage
 
-        response = request_handler._request(method="GET", url=url)
+        response = request_handler._request(method="GET", url=test_url)
         assert response.json() == expected_json
         assert requests_mock.call_count == 1
 
@@ -134,12 +131,12 @@ class TestRequestHandler:
         keys = storage.get_key_from_request(response.request)
         assert storage.get_response(keys)
 
-        response = request_handler._request(method="GET", url=url)
+        response = request_handler._request(method="GET", url=test_url)
         assert response.json() == expected_json
         assert requests_mock.call_count == 1
 
         storage.clear()
-        response = request_handler._request(method="GET", url=url)
+        response = request_handler._request(method="GET", url=test_url)
         assert response.json() == expected_json
         assert requests_mock.call_count == 2
 

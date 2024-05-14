@@ -14,7 +14,7 @@ from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteObjectTypeError
 from musify.libraries.remote.core.types import APIInputValue
 from musify.libraries.remote.spotify.api.base import SpotifyAPIBase
-from musify.utils import limit_value
+from musify.utils import limit_value, to_collection
 
 ARTIST_ALBUM_TYPES = {"album", "single", "compilation", "appears_on"}
 
@@ -32,7 +32,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
     ###########################################################################
     ## GET helpers: Generic methods for getting items
     ###########################################################################
-    def _get_items_from_cache(self, url: str, id_list: list[str]) -> tuple[list[dict[str, Any]], list[str]]:
+    def _get_items_from_cache(self, url: str, id_list: Collection[str]) -> tuple[list[dict[str, Any]], Collection[str]]:
         """
         Attempt to find the given ``id_list`` in the cache of the request handler and return results.
 
@@ -58,7 +58,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
     def _get_items_multi(
             self,
             url: str,
-            id_list: list[str],
+            id_list: Collection[str],
             params: Mapping[str, Any] | None = None,
             key: str | None = None,
             kind: str | None = None,
@@ -101,13 +101,14 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             results.extend(response[key]) if key else results.append(response)
 
         if len(id_list_reduced) != len(id_list):  # cache was used, sort the results to same order as input IDs
+            id_list = to_collection(id_list)
             results.sort(key=lambda result: id_list.index(result["id"]))
         return results
 
     def _get_items_batched(
             self,
             url: str,
-            id_list: list[str],
+            id_list: Collection[str],
             params: Mapping[str, Any] | None = None,
             key: str | None = None,
             kind: str | None = None,
@@ -157,6 +158,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             results.extend(response[key]) if key else results.append(response)
 
         if len(id_list_reduced) != len(id_list):  # cache was used, sort the results to same order as input IDs
+            id_list = to_collection(id_list)
             results.sort(key=lambda result: id_list.index(result["id"]))
         return results
 

@@ -13,7 +13,6 @@ import yaml
 from _pytest.fixtures import SubRequest
 
 from musify import MODULE_ROOT
-from musify.api.request import RequestHandler
 from musify.libraries.remote.core.enum import RemoteObjectType
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
