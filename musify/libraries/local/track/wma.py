@@ -120,7 +120,7 @@ class WMATagWriter(TagWriter[mutagen.asf.ASF]):
 
 class WMA(LocalTrack[mutagen.asf.ASF, WMATagReader, WMATagWriter]):
 
-    __slots__ = LocalTrack.__slots__  # TODO: This shouldn't be needed? Breaks tests without it
+    __slots__ = ()
 
     valid_extensions = frozenset({".wma"})
 

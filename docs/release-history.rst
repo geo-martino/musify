@@ -59,6 +59,7 @@ Fixed
 
 * Added missing variables to __slots__ definitions
 * Correctly applied __slots__ pattern to child classes. Now works as expected.
+* :py:class:`.LocalTrack` now copies tags as expected when calling ``copy.copy()``
 
 Removed
 -------

@@ -94,7 +94,7 @@ class FLACTagWriter(TagWriter[mutagen.flac.FLAC]):
 
 class FLAC(LocalTrack[mutagen.flac.FLAC, FLACTagReader, FLACTagWriter]):
 
-    __slots__ = LocalTrack.__slots__  # TODO: This shouldn't be needed? Breaks tests without it
+    __slots__ = ()
 
     valid_extensions = frozenset({".flac"})
 

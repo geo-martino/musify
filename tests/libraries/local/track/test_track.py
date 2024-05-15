@@ -247,7 +247,6 @@ class TestLocalTrack(MusifyItemTester):
         track_copy = copy(track)
         assert id(track._reader.file) == id(track_copy._reader.file)
         for key in keys:
-            print(key)
             assert getattr(track, key) == getattr(track_copy, key)
 
         track_deepcopy = deepcopy(track)

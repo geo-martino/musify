@@ -160,10 +160,7 @@ class TestM3U(LocalPlaylistTester):
         assert result.difference == 5
         assert result.final == 35
 
-        if not os.getenv("GITHUB_ACTIONS"):
-            # TODO: these assertions always fail on GitHub actions but not locally, why?
-            assert pl.date_modified > original_dt_modified
-            assert pl.date_created == original_dt_created
+        assert pl.date_modified > original_dt_modified
 
         with open(path_new, 'r') as f:
             paths = [line.strip() for line in f]
@@ -202,11 +199,8 @@ class TestM3U(LocalPlaylistTester):
         assert result.difference == 9
         assert result.final == 12
 
-        if not os.getenv("GITHUB_ACTIONS"):
-            # TODO: these assertions always fail on GitHub actions but not locally, why?
-            assert pl.date_modified > original_dt_modified
-            assert pl.date_created == original_dt_created
         new_dt_modified = pl.date_modified
+        assert new_dt_modified > original_dt_modified
 
         # assert file has reported path count and paths in the file have been mapped to relative paths
         with open(path, "r") as f:
@@ -220,10 +214,8 @@ class TestM3U(LocalPlaylistTester):
         assert pl.path == join(tmp_path, "New Playlist" + pl.ext)
         pl.save(dry_run=False)
 
-        if not os.getenv("GITHUB_ACTIONS"):
-            # TODO: these assertions always fail on GitHub actions but not locally, why?
-            assert pl.date_modified > new_dt_modified
-            assert pl.date_created > original_dt_created
+        assert pl.date_modified > new_dt_modified
+        assert pl.date_created > original_dt_created
 
         with open(pl.path, 'r') as f:
             paths = [line.strip() for line in f]

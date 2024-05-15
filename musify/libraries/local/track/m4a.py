@@ -141,7 +141,7 @@ class M4ATagWriter(TagWriter[mutagen.mp4.MP4]):
 
 class M4A(LocalTrack[mutagen.mp4.MP4, M4ATagReader, M4ATagWriter]):
 
-    __slots__ = LocalTrack.__slots__  # TODO: This shouldn't be needed? Breaks tests without it
+    __slots__ = ()
 
     valid_extensions = frozenset({".m4a"})
 

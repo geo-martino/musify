@@ -158,7 +158,7 @@ class MP3TagWriter(TagWriter[mutagen.mp3.MP3]):
 
 class MP3(LocalTrack[mutagen.mp3.MP3, MP3TagReader, MP3TagWriter]):
 
-    __slots__ = LocalTrack.__slots__  # TODO: This shouldn't be needed? Breaks tests without it
+    __slots__ = ()
 
     valid_extensions = frozenset({".mp3"})
 
