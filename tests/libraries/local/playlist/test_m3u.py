@@ -1,4 +1,3 @@
-import os
 from os.path import join, splitext, basename, exists
 from pathlib import Path
 from random import randrange
@@ -146,7 +145,6 @@ class TestM3U(LocalPlaylistTester):
         assert paths == [track.path for track in pl.tracks]
 
         original_dt_modified = pl.date_modified
-        original_dt_created = pl.date_created
 
         # ...remove some tracks and add some new ones
         tracks_random_new = random_tracks(15)
