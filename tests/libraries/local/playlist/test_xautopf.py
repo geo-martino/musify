@@ -588,7 +588,6 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         assert actual_weight == parser_final.xml_smart_playlist["@ShuffleSameArtistWeight"]
 
 
-@pytest.mark.manual
 @pytest.fixture(scope="module")
 def library() -> LocalLibrary:
     """Yields a loaded :py:class:`LocalLibrary` to supply tracks for manual checking of custom playlist files"""

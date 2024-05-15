@@ -88,5 +88,6 @@ minversion = "7.0"
 testpaths = ["tests"]
 addopts = "-color=yes"
 markers = [
+    "slow: marks test as slow (deselect with '-m \"not slow\"')",
     "manual: marks tests to be run only when manually directed to by the developer",
 ]

@@ -94,7 +94,7 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
             f"\tAND {"\n\tAND ".join(f"{key} = ?" for key in self._primary_key_columns)}",
         ))
 
-        cur = self.connection.execute(query, (datetime.now(), *__key))
+        cur = self.connection.execute(query, (datetime.now().isoformat(), *__key))
         row = cur.fetchone()
         cur.close()
         if not row:
@@ -111,7 +111,7 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
         ))
 
         data = self.serialise(__value)
-        self.connection.execute(query, (*__key, self.expire, data))
+        self.connection.execute(query, (*__key, self.expire.isoformat(), data))
 
     def __delitem__(self, __key):
         query = "\n".join((
