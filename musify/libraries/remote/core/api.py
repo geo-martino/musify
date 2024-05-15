@@ -72,8 +72,6 @@ class RemoteAPI(ABC):
         return self.wrangler.source
 
     def __init__(self, authoriser: APIAuthoriser, wrangler: RemoteDataWrangler, cache: ResponseCache | None = None):
-        super().__init__()
-
         # noinspection PyTypeChecker
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)

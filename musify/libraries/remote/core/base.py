@@ -3,7 +3,7 @@ Core abstract classes for the :py:mod:`Remote` module.
 
 These define the foundations of any remote object or item.
 """
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from typing import Any, Self
 
@@ -13,7 +13,7 @@ from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.api import RemoteAPI
 
 
-class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, metaclass=ABCMeta):
+class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, ABC):
     """
     Generic base class for remote objects. Extracts key data from a remote API JSON response.
 
@@ -116,7 +116,7 @@ class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, metaclass=ABCMeta):
         return hash(self.uri)
 
 
-class RemoteItem(RemoteObject, MusifyItem, metaclass=ABCMeta):
+class RemoteItem(RemoteObject, MusifyItem, ABC):
     """Generic base class for remote items. Extracts key data from a remote API JSON response."""
 
     __attributes_classes__ = (RemoteObject, MusifyItem)

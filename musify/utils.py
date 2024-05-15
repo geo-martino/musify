@@ -14,6 +14,9 @@ from musify.types import Number
 
 class SafeDict(dict):
     """Extends dict to ignore missing keys when using format_map operations"""
+
+    __slots__ = ()
+
     def __missing__(self, key):
         return "{" + key + "}"
 

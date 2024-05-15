@@ -1,7 +1,7 @@
 """
 Implements all functionality pertaining to writing and deleting metadata/tags/properties for a :py:class:`LocalTrack`.
 """
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Mapping, Collection, Callable
 from dataclasses import dataclass
 from typing import Any
@@ -25,8 +25,10 @@ class SyncResultTrack(Result):
     updated: Mapping[Tags, int]
 
 
-class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
+class TagWriter[T: mutagen.FileType](TagProcessor, ABC):
     """Functionality for updating and removing tags/metadata/properties from a mutagen object."""
+
+    __slots__ = ()
 
     #: The date format to use when saving string representations of dates to tag values
     date_format = "%Y-%m-%d"

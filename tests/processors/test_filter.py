@@ -200,7 +200,7 @@ class TestFilterMatcher(FilterTester):
         tracks_include = sample([track for track in tracks if track not in tracks_album], 7)
 
         for i, track in enumerate(tracks_include):
-            track._path = include_paths[i]
+            track._reader.file.filename = include_paths[i]
         return tracks_include
 
     @pytest.fixture(scope="class")
@@ -210,7 +210,7 @@ class TestFilterMatcher(FilterTester):
         tracks_exclude = sample(tracks_artist, 3) + sample(tracks_include, 2)
 
         for i, track in enumerate(tracks_exclude):
-            track._path = exclude_paths[i]
+            track._reader.file.filename = exclude_paths[i]
         return tracks_exclude
 
     @pytest.fixture(scope="class")

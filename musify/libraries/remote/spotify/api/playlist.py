@@ -1,7 +1,7 @@
 """
 Implements endpoints for manipulating playlists with the Spotify API.
 """
-from abc import ABCMeta
+from abc import ABC
 from collections.abc import Collection, Mapping
 from itertools import batched
 from typing import Any
@@ -14,8 +14,10 @@ from musify.libraries.remote.spotify.api.base import SpotifyAPIBase
 from musify.utils import limit_value
 
 
-class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
+class SpotifyAPIPlaylists(SpotifyAPIBase, ABC):
     """API endpoints for processing collections i.e. playlists, albums, shows, and audiobooks"""
+
+    __slots__ = ()
 
     def get_playlist_url(self, playlist: str | Mapping[str, Any] | RemoteResponse) -> str:
         """

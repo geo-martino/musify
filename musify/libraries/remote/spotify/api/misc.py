@@ -1,7 +1,7 @@
 """
 Implements all required non-items and non-playlist endpoints from the Spotify API.
 """
-from abc import ABCMeta
+from abc import ABC
 from collections.abc import MutableMapping
 from typing import Any
 
@@ -11,7 +11,9 @@ from musify.types import Number
 from musify.utils import limit_value
 
 
-class SpotifyAPIMisc(SpotifyAPIBase, metaclass=ABCMeta):
+class SpotifyAPIMisc(SpotifyAPIBase, ABC):
+
+    __slots__ = ()
 
     def print_collection(
             self,

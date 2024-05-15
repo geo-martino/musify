@@ -1,7 +1,7 @@
 """
 Base implementation for the functionality of a local playlist.
 """
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Collection
 from datetime import datetime
 from os.path import dirname, join, getmtime, getctime, exists
@@ -18,7 +18,7 @@ from musify.processors.limit import ItemLimiter
 from musify.processors.sort import ItemSorter
 
 
-class LocalPlaylist[T: Filter[LocalTrack]](LocalCollection[LocalTrack], Playlist[LocalTrack], File, metaclass=ABCMeta):
+class LocalPlaylist[T: Filter[LocalTrack]](LocalCollection[LocalTrack], Playlist[LocalTrack], File, ABC):
     """
     Generic class for loading and manipulating local playlists.
 

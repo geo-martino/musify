@@ -18,6 +18,8 @@ from musify.utils import to_collection
 
 class SpotifyDataWrangler(RemoteDataWrangler):
 
+    __slots__ = ()
+
     source = SOURCE_NAME
     unavailable_uri_dummy = "spotify:track:unavailable"
     url_api = "https://api.spotify.com/v1"

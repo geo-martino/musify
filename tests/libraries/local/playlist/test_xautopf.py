@@ -609,11 +609,8 @@ def library() -> LocalLibrary:
     reason="Only runs when the test or marker is specified explicitly by the user",
 )
 @pytest.mark.parametrize("source,expected", [
-    (
-        join(os.getenv("TEST_PL_SOURCE", ""), f"{splitext(basename(name))[0]}.xautopf"),
-        join(os.getenv("TEST_PL_COMPARISON", ""), f"{splitext(basename(name))[0]}.m3u"),
-    )
-    for name in glob(join(os.getenv("TEST_PL_SOURCE", ""), "**", "*.xautopf"), recursive=True)
+    (path, join(os.getenv("TEST_PL_COMPARISON", ""), f"{splitext(basename(path))[0]}.m3u"))
+    for path in glob(join(os.getenv("TEST_PL_SOURCE", path_txt), "**", "*.xautopf"), recursive=True)
 ])
 def test_playlist_paths_manual(library: LocalLibrary, source: str, expected: str):
     assert exists(source)

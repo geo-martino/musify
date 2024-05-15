@@ -104,8 +104,6 @@ class RemoteItemSearcher(Processor):
         return self.factory.api
 
     def __init__(self, matcher: ItemMatcher, object_factory: RemoteObjectFactory):
-        super().__init__()
-
         # noinspection PyTypeChecker
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)

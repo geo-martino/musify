@@ -34,15 +34,11 @@ def random_track[T: LocalTrack](cls: type[T] | None = None) -> T:
     track = cls.__new__(cls)
     super(LocalTrack, track).__init__()
 
-    track._available_paths = set()
-    track._available_paths_lower = set()
-
     file = MutagenMock()
     file.info.length = randint(30, 600)
 
     track._reader = track._create_reader(file=file, tag_map=track.tag_map, remote_wrangler=remote_wrangler)
     track._writer = track._create_writer(file=file, tag_map=track.tag_map, remote_wrangler=remote_wrangler)
-    track.remote_wrangler = remote_wrangler
 
     track._loaded = True
 

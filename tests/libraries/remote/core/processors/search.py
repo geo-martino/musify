@@ -179,6 +179,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
     ###########################################################################
     ## _search_collection tests
     ###########################################################################
+    # noinspection PyProtectedMember
     @staticmethod
     @pytest.fixture
     def search_album(search_albums: list[LocalAlbum]):
@@ -188,7 +189,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
 
         skip = 0
         for skip, item in enumerate(collection[:len(collection) // 2], 1):
-            item.uri = item.remote_wrangler.unavailable_uri_dummy
+            item.uri = item._reader.remote_wrangler.unavailable_uri_dummy
             assert item.has_uri is False
         assert skip > 0  # check test input is valid
 

@@ -19,6 +19,8 @@ from musify.libraries.local.track.track import LocalTrack
 
 class FLACTagReader(TagReader[mutagen.flac.FLAC]):
 
+    __slots__ = ()
+
     def read_images(self) -> list[Image.Image] | None:
         values = self.file.pictures
         return [Image.open(BytesIO(value.data)) for value in values] if len(values) > 0 else None
@@ -28,6 +30,8 @@ class FLACTagReader(TagReader[mutagen.flac.FLAC]):
 
 
 class FLACTagWriter(TagWriter[mutagen.flac.FLAC]):
+
+    __slots__ = ()
 
     def write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
         result = super().write_tag(tag_id=tag_id, tag_value=tag_value, dry_run=dry_run)
@@ -89,6 +93,8 @@ class FLACTagWriter(TagWriter[mutagen.flac.FLAC]):
 
 
 class FLAC(LocalTrack[mutagen.flac.FLAC, FLACTagReader, FLACTagWriter]):
+
+    __slots__ = LocalTrack.__slots__  # TODO: This shouldn't be needed? Breaks tests without it
 
     valid_extensions = frozenset({".flac"})
 

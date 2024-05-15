@@ -2,7 +2,7 @@
 Implements all functionality pertaining to reading metadata/tags/properties for a :py:class:`LocalTrack`.
 """
 import re
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from typing import Any
 
@@ -14,8 +14,10 @@ from musify.libraries.remote.core.enum import RemoteIDType
 from musify.utils import to_collection
 
 
-class TagReader[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
+class TagReader[T: mutagen.FileType](TagProcessor, ABC):
     """Functionality for reading tags/metadata/properties from a mutagen object."""
+
+    __slots__ = ()
 
     def read_tag(self, tag_ids: Iterable[str]) -> list[Any] | None:
         """Extract all tag values from file for a given list of tag IDs"""

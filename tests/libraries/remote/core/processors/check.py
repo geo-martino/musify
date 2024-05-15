@@ -553,13 +553,13 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             mocker: MockerFixture,
             api_mock: RemoteMock,
     ):
-        def add_collection(collection: BasicCollection):
+        def add_collection(self, collection: BasicCollection):
             """Just simply add the collection and associated URL to the ItemChecker without calling API"""
-            checker._playlist_name_urls[collection.name] = playlist_name_urls[collection.name]
-            checker._playlist_name_collection[collection.name] = collection
+            self._playlist_name_urls[collection.name] = playlist_name_urls[collection.name]
+            self._playlist_name_collection[collection.name] = collection
 
         playlist_name_urls = {collection.name: url for collection, url in zip(collections, playlist_urls)}
-        mocker.patch.object(checker, "_create_playlist", new=add_collection)
+        mocker.patch.object(RemoteItemChecker, "_create_playlist", new=add_collection)
 
         interval = len(collections) // 3
         checker.interval = interval

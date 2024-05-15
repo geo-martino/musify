@@ -3,7 +3,7 @@ Compositely combine reader and writer classes for metadata/tags/properties opera
 """
 import datetime
 import os
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from copy import deepcopy
 from os.path import join, exists, dirname
 from typing import Any, Self
@@ -25,7 +25,7 @@ from musify.types import UnitIterable
 from musify.utils import to_collection
 
 
-class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Track, metaclass=ABCMeta):
+class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Track, ABC):
     """
     Generic track object for extracting, modifying, and saving metadata/tags/properties for a given file.
 

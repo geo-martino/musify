@@ -295,7 +295,8 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
         for remote_track in map(SpotifyTrack, sample(api_mock.tracks, k=limit)):
             local_track = random_track()
             local_track.uri = None
-            local_track.remote_wrangler = wrangler
+            local_track._reader.remote_wrangler = wrangler
+            local_track._writer.remote_wrangler = wrangler
 
             local_track.title = remote_track.title
             local_track.album = remote_track.album
@@ -327,7 +328,8 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
             for remote_track in album:
                 local_track = random_track()
                 local_track.uri = None
-                local_track.remote_wrangler = wrangler
+                local_track._reader.remote_wrangler = wrangler
+                local_track._writer.remote_wrangler = wrangler
                 local_track.compilation = False
 
                 local_track.title = remote_track.title

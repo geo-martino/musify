@@ -5,7 +5,7 @@ Implements core :py:class:`MusifyItem` and :py:class:`MusifyCollection` classes 
 """
 from __future__ import annotations
 
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
@@ -22,22 +22,25 @@ from musify.libraries.remote.core.exception import RemoteError
 from musify.utils import get_most_common_values
 
 
-class RemoteTrack(Track, RemoteItem, metaclass=ABCMeta):
+class RemoteTrack(Track, RemoteItem, ABC):
     """Extracts key ``track`` data from a remote API JSON response."""
 
+    __slots__ = ()
     __attributes_classes__ = (Track, RemoteItem)
 
 
-class RemoteCollection[T: RemoteObject](MusifyCollection[T], metaclass=ABCMeta):
+class RemoteCollection[T: RemoteObject](MusifyCollection[T], ABC):
     """Generic class for storing a collection of remote objects."""
 
+    __slots__ = ()
     __attributes_classes__ = MusifyCollection
     __attributes_ignore__ = ("items", "track_total")
 
 
-class RemoteCollectionLoader[T: RemoteObject](RemoteObject, RemoteCollection[T], metaclass=ABCMeta):
+class RemoteCollectionLoader[T: RemoteObject](RemoteObject, RemoteCollection[T], ABC):
     """Generic class for storing a collection of remote objects that can be loaded from an API response."""
 
+    __slots__ = ()
     __attributes_classes__ = (RemoteObject, RemoteCollection)
     __attributes_ignore__ = "_total"
 
@@ -110,9 +113,10 @@ class SyncResultRemotePlaylist(Result):
 PLAYLIST_SYNC_KINDS = Literal["new", "refresh", "sync"]
 
 
-class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], metaclass=ABCMeta):
+class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], ABC):
     """Extracts key ``playlist`` data from a remote API JSON response."""
 
+    __slots__ = ()
     __attributes_classes__ = (Playlist, RemoteCollectionLoader)
 
     @property
@@ -247,9 +251,10 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
         raise NotImplementedError
 
 
-class RemoteAlbum[T: RemoteTrack](Album[T], RemoteCollectionLoader[T], metaclass=ABCMeta):
+class RemoteAlbum[T: RemoteTrack](Album[T], RemoteCollectionLoader[T], ABC):
     """Extracts key ``album`` data from a remote API JSON response."""
 
+    __slots__ = ()
     __attributes_classes__ = (Album, RemoteCollectionLoader)
 
     @property
@@ -262,9 +267,10 @@ class RemoteAlbum[T: RemoteTrack](Album[T], RemoteCollectionLoader[T], metaclass
         raise NotImplementedError
 
 
-class RemoteArtist[T: (RemoteTrack, RemoteAlbum)](Artist[T], RemoteCollectionLoader[T], metaclass=ABCMeta):
+class RemoteArtist[T: (RemoteTrack, RemoteAlbum)](Artist[T], RemoteCollectionLoader[T], ABC):
     """Extracts key ``artist`` data from a remote API JSON response."""
 
+    __slots__ = ()
     __attributes_classes__ = (Artist, RemoteCollectionLoader)
 
     @property

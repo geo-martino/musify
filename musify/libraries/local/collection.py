@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Mapping, Collection, Iterable, Container
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -28,7 +28,7 @@ from musify.utils import get_most_common_values, to_collection, align_string, ge
 _max_str = "z" * 50
 
 
-class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
+class LocalCollection[T: LocalTrack](MusifyCollection[T], ABC):
     """
     Generic class for storing a collection of local tracks.
 
@@ -36,7 +36,7 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
     """
 
-    __slots__ = ("logger",)
+    __slots__ = ("logger", "remote_wrangler")
     __attributes_ignore__ = ("track_paths", "track_total")
 
     @staticmethod
@@ -86,11 +86,13 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
         return sum(track.play_count for track in self.tracks if track.play_count)
 
     def __init__(self, remote_wrangler: RemoteDataWrangler = None):
-        super().__init__(remote_wrangler=remote_wrangler)
+        super().__init__()
 
         # noinspection PyTypeChecker
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
+        #: A :py:class:`RemoteDataWrangler` object for processing remote data
+        self.remote_wrangler = remote_wrangler
 
     def save_tracks(
             self,
@@ -143,7 +145,7 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
         tag_order = [tag for field in TagFields.all(only_tags=True) for tag in field.to_tag()]
         tag_names = sorted(tag_names, key=lambda x: tag_order.index(x))
 
-        if isinstance(self, Library):  # log status message and use progress bar for libraries
+        if isinstance(self, Library | LocalCollection):  # log status message and use progress bar for libraries
             self.logger.info(
                 f"\33[1;95m  >\33[1;97m "
                 f"Merging library of {len(self)} items with {len(tracks)} items on tags: "
@@ -164,11 +166,11 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
                 if hasattr(track, tag):
                     track_in_collection[tag] = track[tag]
 
-        if isinstance(self, Library):
+        if isinstance(self, Library | LocalCollection):
             self.logger.print()
 
 
-class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], metaclass=ABCMeta):
+class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], ABC):
     """
     Generic class for storing and filtering on a collection of local tracks
     with methods for enriching the attributes of this object from the attributes of the collection of tracks
@@ -182,6 +184,8 @@ class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], metaclass=ABCMet
     :param remote_wrangler: Optionally, provide a :py:class:`RemoteDataWrangler` object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
     """
+
+    __slots__ = ("_tag_key", "_name", "_tracks")
 
     @property
     def name(self):
@@ -258,6 +262,7 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
         ``folder`` when name is None.
     """
 
+    __slots__ = ()
     __attributes_classes__ = (Folder, LocalCollection)
 
     @property
@@ -297,6 +302,7 @@ class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):
         ``album`` when name is None.
     """
 
+    __slots__ = ("_image_links",)
     __attributes_classes__ = (Album, LocalCollection)
 
     @property
@@ -379,6 +385,7 @@ class LocalArtist(LocalCollectionFiltered[LocalTrack], Artist[LocalTrack]):
         ``artist`` when name is None.
     """
 
+    __slots__ = ()
     __attributes_classes__ = (Artist, LocalCollection)
 
     @property
@@ -417,6 +424,7 @@ class LocalGenres(LocalCollectionFiltered[LocalTrack], Genre[LocalTrack]):
         ``genre`` when name is None.
     """
 
+    __slots__ = ()
     __attributes_classes__ = (Genre, LocalCollection)
 
     @property

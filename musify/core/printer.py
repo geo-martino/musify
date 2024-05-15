@@ -15,6 +15,8 @@ from musify.utils import to_collection
 class PrettyPrinter(ABC):
     """Generic base class for pretty printing. Classes can inherit this class to gain pretty print functionality."""
 
+    __slots__ = ()
+
     _upper_key_words = {"id", "uri", "url", "bpm"}
     _max_val_width = 120
 
@@ -192,6 +194,7 @@ class AttributePrinter(PrettyPrinter):
     and uses these for printer representations.
     """
 
+    __slots__ = ()
     __attributes_classes__: UnitIterable[type] = ()
     __attributes_ignore__: UnitIterable[str] = ()
 

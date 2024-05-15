@@ -16,6 +16,8 @@ class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, Sp
     Represents a Spotify library. Provides various methods for manipulating
     tracks and playlists across an entire Spotify library collection.
     """
+
+    __slots__ = ()
     __attributes_classes__ = RemoteLibrary
 
     @staticmethod

@@ -16,6 +16,8 @@ class PathMapper(PrettyPrinter):
     Can be extended by child classes for more complex mapping operations.
     """
 
+    __slots__ = ()
+
     def map(self, value: str | File | None, check_existence: bool = False) -> str | None:
         """
         Map the given ``value`` by either extracting the path from a :py:class:`File` object,

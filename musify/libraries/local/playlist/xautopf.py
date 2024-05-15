@@ -75,7 +75,7 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
         mapped to absolute, system-specific paths to be loaded and back again when saved.
     """
 
-    __slots__ = ("_parser",)
+    __slots__ = ("_parser", "_limiter_deduplication")
 
     valid_extensions = frozenset({".xautopf"})
 
@@ -210,7 +210,7 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
 
 class XMLPlaylistParser(File, PrettyPrinter):
 
-    __slots__ = ("_path", "path_mapper", "xml",)
+    __slots__ = ("_path", "path_mapper", "xml")
 
     # noinspection SpellCheckingInspection
     #: Map of MusicBee field key name to Field enum

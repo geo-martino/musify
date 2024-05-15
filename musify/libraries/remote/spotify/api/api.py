@@ -75,6 +75,8 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
     :param auth_kwargs: Optionally, provide kwargs to use when instantiating the :py:class:`APIAuthoriser`.
     """
 
+    __slots__ = ()
+
     @property
     def user_id(self) -> str | None:
         """ID of the currently authenticated user"""

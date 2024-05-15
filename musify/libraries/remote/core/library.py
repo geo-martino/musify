@@ -1,7 +1,8 @@
 """
 Functionality relating to a generic remote library.
 """
-from abc import ABCMeta, abstractmethod
+import logging
+from abc import ABC, abstractmethod
 from collections.abc import Collection, Mapping, Iterable
 from typing import Any, Literal
 
@@ -13,6 +14,7 @@ from musify.libraries.remote.core.factory import RemoteObjectFactory
 from musify.libraries.remote.core.object import RemoteCollection, SyncResultRemotePlaylist
 from musify.libraries.remote.core.object import RemoteTrack, RemotePlaylist, RemoteArtist, RemoteAlbum
 from musify.log import STAT
+from musify.log.logger import MusifyLogger
 from musify.processors.base import Filter
 from musify.processors.filter import FilterDefinedList
 from musify.utils import align_string, get_max_width
@@ -20,7 +22,7 @@ from musify.utils import align_string, get_max_width
 
 class RemoteLibrary[
     A: RemoteAPI, PL: RemotePlaylist, TR: RemoteTrack, AL: RemoteAlbum, AR: RemoteArtist
-](RemoteCollection[TR], Library[TR], metaclass=ABCMeta):
+](RemoteCollection[TR], Library[TR], ABC):
     """
     Represents a remote library, providing various methods for manipulating
     tracks and playlists across an entire remote library collection.
@@ -30,7 +32,7 @@ class RemoteLibrary[
         loading playlists. Playlist names will be passed to this filter to limit which playlists are loaded.
     """
 
-    __slots__ = ("_factory", "_playlists", "_tracks", "_albums", "_artists", "playlist_filter")
+    __slots__ = ("logger", "_factory", "_playlists", "_tracks", "_albums", "_artists", "playlist_filter")
     __attributes_classes__ = (Library, RemoteCollection)
     __attributes_ignore__ = ("api", "factory")
 
@@ -79,7 +81,11 @@ class RemoteLibrary[
         return self._albums
 
     def __init__(self, api: A, playlist_filter: Collection[str] | Filter[str] = ()):
-        super().__init__(remote_wrangler=api.wrangler)
+        super().__init__()
+
+        # noinspection PyTypeChecker
+        #: The :py:class:`MusifyLogger` for this  object
+        self.logger: MusifyLogger = logging.getLogger(__name__)
 
         if not isinstance(playlist_filter, Filter):
             playlist_filter = FilterDefinedList(playlist_filter)

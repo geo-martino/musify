@@ -63,6 +63,8 @@ def format_full_func_name(record: logging.LogRecord, width: int = 40) -> None:
 class LogConsoleFilter(logging.Filter):
     """Filter for logging to the console."""
 
+    __slots__ = ("module_width",)
+
     def __init__(self, name: str = "", module_width: int = 40):
         super().__init__(name)
         self.module_width = module_width
@@ -75,6 +77,8 @@ class LogConsoleFilter(logging.Filter):
 
 class LogFileFilter(logging.Filter):
     """Filter for logging to a file."""
+
+    __slots__ = ("module_width",)
 
     def __init__(self, name: str = "", module_width: int = 40):
         super().__init__(name)

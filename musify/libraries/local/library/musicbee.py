@@ -49,7 +49,7 @@ class MusicBee(LocalLibrary, File):
         "library_xml",
         "_library_xml_path",
         "_library_xml_parser",
-        "settings_xml"
+        "settings_xml",
         "_settings_xml_path",
         "_settings_xml_parser",
     )

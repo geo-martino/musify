@@ -50,11 +50,15 @@ Changed
   Now takes :py:class:`.APIAuthoriser` and :py:class:`.ResponseCache` objects for instantiation
   instead of kwargs for :py:class:`.APIAuthoriser`.
 * :py:class:`.APIAuthoriser` kwargs given to :py:class:`.SpotifyAPI` now merge with default kwargs.
+* Moved ``remote_wrangler`` attribute from :py:class:`.MusifyCollection` to :py:class:`.LocalCollection`.
+  This attribute was only needed by :py:class:`.LocalCollection` branch of child classes.
+* Moved ``logger`` attribute from :py:class:`.Library` to :py:class:`.RemoteLibrary`.
 
 Fixed
 -----
 
 * Added missing variables to __slots__ definitions
+* Correctly applied __slots__ pattern to child classes. Now works as expected.
 
 Removed
 -------

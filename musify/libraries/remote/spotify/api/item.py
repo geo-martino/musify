@@ -2,7 +2,7 @@
 Implements endpoints for getting items from the Spotify API.
 """
 import re
-from abc import ABCMeta
+from abc import ABC
 from collections.abc import Collection, Mapping, MutableMapping
 from itertools import batched
 from typing import Any
@@ -19,7 +19,9 @@ from musify.utils import limit_value, to_collection
 ARTIST_ALBUM_TYPES = {"album", "single", "compilation", "appears_on"}
 
 
-class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
+class SpotifyAPIItems(SpotifyAPIBase, ABC):
+
+    __slots__ = ()
 
     _bar_threshold = 5
 

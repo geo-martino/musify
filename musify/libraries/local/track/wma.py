@@ -20,6 +20,8 @@ from musify.libraries.local.track.track import LocalTrack
 
 class WMATagReader(TagReader[mutagen.asf.ASF]):
 
+    __slots__ = ()
+
     def read_tag(self, tag_ids: Iterable[str]) -> list[Any] | None:
         # WMA tag values are returned as mutagen.asf._attrs.ASFUnicodeAttribute
         values = []
@@ -73,6 +75,8 @@ class WMATagReader(TagReader[mutagen.asf.ASF]):
 
 class WMATagWriter(TagWriter[mutagen.asf.ASF]):
 
+    __slots__ = ()
+
     def write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
         result = super().write_tag(tag_id=tag_id, tag_value=tag_value, dry_run=dry_run)
         if result is not None:
@@ -115,6 +119,8 @@ class WMATagWriter(TagWriter[mutagen.asf.ASF]):
 
 
 class WMA(LocalTrack[mutagen.asf.ASF, WMATagReader, WMATagWriter]):
+
+    __slots__ = LocalTrack.__slots__  # TODO: This shouldn't be needed? Breaks tests without it
 
     valid_extensions = frozenset({".wma"})
 

@@ -3,8 +3,7 @@ Core abstract classes for the :py:mod:`Spotify` module.
 
 These define the foundations of any Spotify object or item.
 """
-from abc import ABCMeta
-from typing import Any
+from abc import ABC
 
 from musify.libraries.remote.core.base import RemoteObject, RemoteItem
 from musify.libraries.remote.core.enum import RemoteObjectType
@@ -12,8 +11,10 @@ from musify.libraries.remote.core.exception import RemoteObjectTypeError, Remote
 from musify.libraries.remote.spotify.api import SpotifyAPI
 
 
-class SpotifyObject(RemoteObject[SpotifyAPI], metaclass=ABCMeta):
+class SpotifyObject(RemoteObject[SpotifyAPI], ABC):
     """Generic base class for Spotify-stored objects. Extracts key data from a Spotify API JSON response."""
+
+    __slots__ = ()
 
     _url_pad = 71
 
@@ -37,9 +38,6 @@ class SpotifyObject(RemoteObject[SpotifyAPI], metaclass=ABCMeta):
     def url_ext(self):
         return self.response["external_urls"].get("spotify")
 
-    def __init__(self, response: dict[str, Any], api: SpotifyAPI | None = None, skip_checks: bool = False):
-        super().__init__(response=response, api=api, skip_checks=skip_checks)
-
     def _check_type(self) -> None:
         """
         Checks the given response is compatible with this object type, raises an exception if not.
@@ -57,6 +55,7 @@ class SpotifyObject(RemoteObject[SpotifyAPI], metaclass=ABCMeta):
             raise RemoteObjectTypeError("Response type invalid", kind=kind, value=self.response.get("type"))
 
 
-class SpotifyItem(SpotifyObject, RemoteItem, metaclass=ABCMeta):
+class SpotifyItem(SpotifyObject, RemoteItem, ABC):
     """Generic base class for Spotify-stored items. Extracts key data from a Spotify API JSON response."""
-    pass
+
+    __slots__ = ()

@@ -29,6 +29,9 @@ class CurrentTimeRotatingFileHandler(logging.handlers.BaseRotatingHandler):
     :param delay: When True, the file opening is deferred until the first call to emit().
     :param errors: Used to determine how encoding errors are handled.
     """
+
+    __slots__ = ("dt", "filename", "delta", "count", "removed")
+
     def __init__(
             self,
             filename: str | None = None,

@@ -130,7 +130,6 @@ class ItemSorter(Processor):
             shuffle_mode: ShuffleMode | None = None,
             shuffle_weight: float = 0.0
     ):
-        super().__init__()
         fields = to_collection(fields, list) if isinstance(fields, Field) else fields
         self.sort_fields: dict[Field | None, bool] = {field: False for field in fields} \
             if isinstance(fields, Sequence) else fields

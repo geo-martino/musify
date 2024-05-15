@@ -14,6 +14,8 @@ from musify.libraries.remote.core.types import APIInputValue
 class RemoteDataWrangler(ABC):
     """Convert and validate remote ID and item types according to specific remote implementations."""
 
+    __slots__ = ()
+
     @property
     @abstractmethod
     def source(self) -> str:
