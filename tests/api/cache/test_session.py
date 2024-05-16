@@ -33,7 +33,7 @@ class TestCachedSession:
         """
         return CachedSession(cache=cache)
 
-    def test_request(
+    def test_request_cached(
             self,
             session: CachedSession,
             cache: ResponseCache,
@@ -49,15 +49,32 @@ class TestCachedSession:
 
         response = session.request(method=request.method, url=request.url)
         assert response.text == expected.text
-        assert not requests_mock.request_history
+        assert len(requests_mock.request_history) == 0
 
+    def test_request_not_cached(
+            self,
+            session: CachedSession,
+            cache: ResponseCache,
+            tester: ResponseCacheTester,
+            requests_mock: Mocker
+    ):
+        repository = choice(list(cache.values()))
         expected = tester.generate_response(repository.settings)
         request = expected.request
         key = repository.get_key_from_request(request)
         assert key not in repository
         requests_mock.get(request.url, json=expected.json())
 
-        response = session.request(method=request.method, url=request.url)
+        response = session.request(method=request.method, url=request.url, persist=False)
         assert response.text == expected.text
         assert len(requests_mock.request_history) == 1
+        assert key not in repository
+
+        response = session.request(method=request.method, url=request.url, persist=True)
+        assert response.text == expected.text
+        assert len(requests_mock.request_history) == 2
         assert key in repository
+
+        response = session.request(method=request.method, url=request.url)
+        assert response.text == expected.text
+        assert len(requests_mock.request_history) == 2

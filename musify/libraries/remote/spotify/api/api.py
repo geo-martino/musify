@@ -6,10 +6,11 @@ Also includes the default arguments to be used when requesting authorisation fro
 import base64
 from collections.abc import Iterable
 from copy import deepcopy
+from urllib.parse import urlparse
 
 from musify import PROGRAM_NAME
 from musify.api.authorise import APIAuthoriser
-from musify.api.cache.backend.base import ResponseCache
+from musify.api.cache.backend.base import ResponseCache, ResponseRepository
 from musify.api.exception import APIError
 from musify.libraries.remote.spotify.api.cache import SpotifyRequestSettings, SpotifyPaginatedRequestSettings
 from musify.libraries.remote.spotify.api.item import SpotifyAPIItems
@@ -119,13 +120,32 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
         auth_kwargs.pop("name", None)
         authoriser = APIAuthoriser(name=wrangler.source, **auth_kwargs)
 
-        if cache is not None:  # TODO: implement and set repository_getter function on cache
-            cache.create_repository(SpotifyRequestSettings(name="tracks"))
-            cache.create_repository(SpotifyRequestSettings(name="artists"))
-            cache.create_repository(SpotifyRequestSettings(name="albums"))
-            cache.create_repository(SpotifyRequestSettings(name="playlists"))
-            cache.create_repository(SpotifyPaginatedRequestSettings(name="artist_albums"))
-            cache.create_repository(SpotifyPaginatedRequestSettings(name="album_tracks"))
-            cache.create_repository(SpotifyPaginatedRequestSettings(name="playlist_tracks"))
-
         super().__init__(authoriser=authoriser, wrangler=wrangler, cache=cache)
+
+    def _setup_cache(self, cache: ResponseCache) -> None:
+        if cache is None:
+            return
+
+        cache.repository_getter = self._get_cache_repository
+
+        cache.create_repository(SpotifyRequestSettings(name="playlists"))
+        cache.create_repository(SpotifyRequestSettings(name="tracks"))
+        cache.create_repository(SpotifyRequestSettings(name="artists"))
+        cache.create_repository(SpotifyRequestSettings(name="albums"))
+        cache.create_repository(SpotifyRequestSettings(name="audio_features"))
+        cache.create_repository(SpotifyRequestSettings(name="audio_analysis"))
+        cache.create_repository(SpotifyPaginatedRequestSettings(name="playlist_tracks"))
+        cache.create_repository(SpotifyPaginatedRequestSettings(name="album_tracks"))
+        cache.create_repository(SpotifyPaginatedRequestSettings(name="artist_albums"))
+
+    @staticmethod
+    def _get_cache_repository(cache: ResponseCache, url: str) -> ResponseRepository | None:
+        path = urlparse(url).path
+        path_split = [part.replace("-", "_") for part in path.split("/")[2:]]
+
+        if len(path_split) < 3:
+            name = path_split[0]
+        else:
+            name = "_".join([path_split[0].rstrip("s"), path_split[2].rstrip("s") + "s"])
+
+        return cache.get(name)

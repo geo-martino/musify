@@ -1,6 +1,7 @@
 """
 All operations relating to handling of requests to an API.
 """
+import inspect
 import json
 import logging
 from collections.abc import Mapping, Iterable
@@ -17,6 +18,7 @@ from musify.api.cache.backend.base import ResponseCache
 from musify.api.cache.session import CachedSession
 from musify.api.exception import APIError
 from musify.log.logger import MusifyLogger
+from musify.utils import clean_kwargs
 
 
 class RequestHandler:
@@ -122,7 +124,6 @@ class RequestHandler:
             **kwargs
     ) -> Response | None:
         """Handle logging a request, send the request, and return the response"""
-        # format logs
         log = [f"{method.upper():<7}: {url:<{log_pad}}"]
         if log_extra:
             log.extend(log_extra)
@@ -130,14 +131,17 @@ class RequestHandler:
             log.append(f"Args: ({', '.join(args)})")
         if len(kwargs) > 0:
             log.extend(f"{k.title()}: {v}" for k, v in kwargs.items())
+        if isinstance(self.session, CachedSession):
+            log.extend("Cached Request")
 
-        headers = self.session.headers
+        if not isinstance(self.session, CachedSession):
+            clean_kwargs(self.session.request, kwargs)
         if "headers" in kwargs:
-            headers = kwargs.pop("headers") | self.session.headers
+            kwargs["headers"].update(self.session.headers)
 
         self.logger.debug(" | ".join(log))
         try:
-            return self.session.request(method=method.upper(), url=url, headers=headers, *args, **kwargs)
+            return self.session.request(method=method.upper(), url=url, *args, **kwargs)
         except requests.exceptions.ConnectionError as ex:
             self.logger.warning(str(ex))
             return

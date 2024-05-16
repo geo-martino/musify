@@ -40,9 +40,9 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, ABC):
         if isinstance(playlist, Mapping):
             if "href" in playlist:
                 return playlist["href"]
-            elif "id" in playlist:
+            elif self.id_key in playlist:
                 return self.wrangler.convert(
-                    playlist["id"], kind=RemoteObjectType.PLAYLIST, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL
+                    playlist[self.id_key], kind=RemoteObjectType.PLAYLIST, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL
                 )
             elif "uri" in playlist:
                 return self.wrangler.convert(

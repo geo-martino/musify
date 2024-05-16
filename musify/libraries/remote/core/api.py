@@ -76,6 +76,8 @@ class RemoteAPI(ABC):
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
 
+        self._setup_cache(cache)
+
         #: A :py:class:`RemoteDataWrangler` object for processing URIs
         self.wrangler = wrangler
         #: The :py:class:`RequestHandler` for handling authorised requests to the API
@@ -83,6 +85,11 @@ class RemoteAPI(ABC):
 
         #: Stores the loaded user data for the currently authorised user
         self.user_data: dict[str, Any] = {}
+
+    @abstractmethod
+    def _setup_cache(self, cache: ResponseCache) -> None:
+        """Set up the repositories and repository getter on the given ``cache``."""
+        raise NotImplementedError
 
     def authorise(self, force_load: bool = False, force_new: bool = False) -> Self:
         """

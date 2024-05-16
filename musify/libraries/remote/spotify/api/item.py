@@ -34,28 +34,55 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
     ###########################################################################
     ## GET helpers: Generic methods for getting items
     ###########################################################################
-    def _get_items_from_cache(self, url: str, id_list: Collection[str]) -> tuple[list[dict[str, Any]], Collection[str]]:
+    def _cache_results(self, method: str, url: str, results: list[dict[str, Any]]) -> None:
+        """Persist ``results`` from a given base ``url`` to the cache."""
+        if self.handler.cache is None:
+            return
+
+        results_mapped = {(method.upper(), result[self.id_key]): result for result in results}
+        repository = self.handler.cache.get_repository_from_url(url)
+        repository.update(results_mapped)
+
+    def _sort_results(
+            self, results: list[dict[str, Any]], results_cache: list[dict[str, Any]], id_list: Collection[str]
+    ) -> None:
+        """Extend ``results`` with ``results_cache`` and sort by order of ``id_list``."""
+        if not results_cache:  # cache was not used
+            return
+
+        results += results_cache
+        id_list = to_collection(id_list)
+        results.sort(key=lambda result: id_list.index(result[self.id_key]))
+
+    def _get_items_from_cache(
+            self, method: str, url: str, id_list: Collection[str]
+    ) -> tuple[list[dict[str, Any]], Collection[str], Collection[str]]:
         """
         Attempt to find the given ``id_list`` in the cache of the request handler and return results.
 
         :param url: The base API URL endpoint for the required requests.
         :param id_list: List of IDs to append to the given URL.
+        :return: (Results from the cache, IDs found in the cache, IDs not found in the cache)
         """
         if self.handler.cache is None:
             self.logger.debug(f"{'CACHE':<7}: {url:<43} | No cache configured, skipping...")
-            return [], id_list
+            return [], [], id_list
 
         repository = self.handler.cache.get_repository_from_url(url=url)
-        results = repository.get_responses([(id_,) for id_ in id_list])
+        if repository is None:
+            self.logger.debug(f"{'CACHE':<7}: {url:<43} | No repository for this endpoint, skipping...")
+            return [], [], id_list
 
-        id_list_found = {result["id"] for result in results}
-        id_list_not_found = [id_ for id_ in id_list if id_ not in id_list_found]
+        results = repository.get_responses([(method.upper(), id_,) for id_ in id_list])
+        ids_found = {result[self.id_key] for result in results}
+        ids_not_found = {id_ for id_ in id_list if id_ not in ids_found}
+
         self.logger.debug(
             f"{'CACHE':<7}: {url:<43} | "
             f"Retrieved {len(results):>6} cached responses | "
-            f"{len(id_list_not_found):>6} not found"
+            f"{len(ids_not_found):>6} not found in cache"
         )
-        return results, id_list_not_found
+        return results, ids_found, ids_not_found
 
     def _get_items_multi(
             self,
@@ -80,31 +107,35 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         :return: API JSON responses for each item at the given ``key``.
         :raise APIError: When the given ``key`` is not in the API response.
         """
+        method = "GET"
         url = url.rstrip("/")
         kind = self._get_unit(key=key, kind=kind)
 
-        results, id_list_reduced = self._get_items_from_cache(url=url, id_list=id_list)
+        results_cache, ids_cached, ids_not_cached = self._get_items_from_cache(method=method, url=url, id_list=id_list)
 
         bar = self.logger.get_progress_bar(
-            iterable=id_list_reduced,
+            iterable=ids_not_cached,
             desc=f"Getting {kind}",
             unit=kind,
-            disable=len(id_list_reduced) < self._bar_threshold
+            disable=len(ids_not_cached) < self._bar_threshold
         )
 
-        log = [f"{kind.title()}:{len(id_list_reduced):>5}"]
+        results: list[dict[str, Any]] = []
+        log = [f"{kind.title()}:{len(ids_not_cached):>5}"]
         for id_ in bar:
-            response = self.handler.get(f"{url}/{id_}", params=params, log_pad=43, log_extra=log)
-            if "id" not in response:
-                response["id"] = id_
+            response = self.handler.request(
+                method=method, url=f"{url}/{id_}", params=params, persist=False, log_pad=43, log_extra=log
+            )
+            if self.id_key not in response:
+                response[self.id_key] = id_
             if key and key not in response:
                 raise APIError(f"Given key '{key}' not found in response keys: {list(response.keys())}")
 
             results.extend(response[key]) if key else results.append(response)
 
-        if len(id_list_reduced) != len(id_list):  # cache was used, sort the results to same order as input IDs
-            id_list = to_collection(id_list)
-            results.sort(key=lambda result: id_list.index(result["id"]))
+        self._cache_results(method=method, url=url, results=results)
+        self._sort_results(results=results, results_cache=results_cache, id_list=id_list)
+
         return results
 
     def _get_items_batched(
@@ -134,12 +165,13 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         :return: API JSON responses for each item at the given ``key``.
         :raise APIError: When the given ``key`` is not in the API response.
         """
+        method = "GET"
         url = url.rstrip("/")
         kind = self._get_unit(key=key, kind=kind)
 
-        results, id_list_reduced = self._get_items_from_cache(url=url, id_list=id_list)
+        results_cache, ids_cached, ids_not_cached = self._get_items_from_cache(method=method, url=url, id_list=id_list)
 
-        id_chunks = list(batched(id_list_reduced, limit_value(limit, floor=1, ceil=50)))
+        id_chunks = list(batched(ids_not_cached, limit_value(limit, floor=1, ceil=50)))
         bar = self.logger.get_progress_bar(
             iterable=range(len(id_chunks)),
             desc=f"Getting {kind}",
@@ -147,21 +179,24 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
             disable=len(id_chunks) < self._bar_threshold
         )
 
+        results: list[dict[str, Any]] = []
         params = params if params is not None else {}
         for idx in bar:  # get responses in batches
             id_chunk = id_chunks[idx]
             params_chunk = params | {"ids": ",".join(id_chunk)}
-            log = [f"{kind.title() + ':':<11} {len(results) + len(id_chunk):>6}/{len(id_list_reduced):<6}"]
+            log = [f"{kind.title() + ':':<11} {len(results) + len(id_chunk):>6}/{len(ids_not_cached):<6}"]
 
-            response = self.handler.get(url, params=params_chunk, log_pad=43, log_extra=log)
+            response = self.handler.request(
+                method=method, url=url, params=params_chunk, persist=False, log_pad=43, log_extra=log
+            )
             if key and key not in response:
                 raise APIError(f"Given key '{key}' not found in response keys: {list(response.keys())}")
 
             results.extend(response[key]) if key else results.append(response)
 
-        if len(id_list_reduced) != len(id_list):  # cache was used, sort the results to same order as input IDs
-            id_list = to_collection(id_list)
-            results.sort(key=lambda result: id_list.index(result["id"]))
+        self._cache_results(method=method, url=url, results=results)
+        self._sort_results(results=results, results_cache=results_cache, id_list=id_list)
+
         return results
 
     ###########################################################################
@@ -572,13 +607,13 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
             results[id_] = self.handler.get(url=url.format(id=id_), params=params)
             self.extend_items(results[id_], kind="artist albums", key=key, leave_bar=False)
 
-            for album in results[id_]["items"]:  # add skeleton items block to album responses
+            for album in results[id_][self.items_key]:  # add skeleton items block to album responses
                 album["tracks"] = {
                     "href": self.format_next_url(url=album["href"].split("?")[0] + "/tracks", offset=0, limit=50),
                     "total": album["total_tracks"]
                 }
 
-        results_remapped = [{"id": id_, "albums": result} for id_, result in results.items()]
+        results_remapped = [{self.id_key: id_, "albums": result} for id_, result in results.items()]
         self._merge_results_to_input(original=values, responses=results_remapped, ordered=False, clear=False)
         self._refresh_responses(responses=values, skip_checks=True)
 
@@ -588,4 +623,4 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
             f"Retrieved {item_count:>6} albums across {len(results):>5} artists"
         )
 
-        return {k: v["items"] for k, v in results.items()}
+        return {k: v[self.items_key] for k, v in results.items()}

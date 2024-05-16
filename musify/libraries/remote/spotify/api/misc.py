@@ -92,7 +92,7 @@ class SpotifyAPIMisc(SpotifyAPIBase, ABC):
             self.logger.error(f"{'ERROR':<7}: {url:<43} | Query: {query} | {response['error']}")
             return []
 
-        results = response[f"{kind.name.lower()}s"]["items"]
+        results = response[f"{kind.name.lower()}s"][self.items_key]
         if kind not in self.collection_item_map:
             return results
 

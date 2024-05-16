@@ -36,8 +36,8 @@ class CachedSession(Session):
             verify=None,
             cert=None,
             json=None,
+            persist: bool = True
     ):
-
         """
         Constructs a :class:`Request <Request>` and prepares it.
         First attempts to find the response for the request in the cache and, if not found, sends it.
@@ -81,6 +81,7 @@ class CachedSession(Session):
             may be useful during local development or testing.
         :param cert: (optional) if String, path to ssl client cert file (.pem).
             If Tuple, ('cert', 'key') pair.
+        :param persist: Whether to persist responses returned from sending network requests i.e. non-cached responses.
         :rtype: requests.Response
         """
         req = Request(
@@ -100,7 +101,7 @@ class CachedSession(Session):
         repository = self.cache.get_repository_from_requests(prep)
         response = self._get_cached_response(prep, repository=repository)
 
-        if not response:
+        if response is None:
             response = super().request(
                 method,
                 url,
@@ -120,29 +121,29 @@ class CachedSession(Session):
                 json=json,
             )
 
-            if repository:
+            if persist and repository is not None:
                 repository.save_response(response)
 
         return response
 
-    def _get_cached_response(self, request: PreparedRequest, repository: ResponseRepository) -> Response | None:
-        if not repository:
+    def _get_cached_response(self, request: PreparedRequest, repository: ResponseRepository | None) -> Response | None:
+        if repository is None:
             return
 
         cached_data = repository.get_response(request)
-        if not cached_data:
+        if cached_data is None:
             return
 
-        if cached_data:  # emulate a response object and return it
-            if not isinstance(cached_data, str):
-                repository = self.cache.get_repository_from_url(request.url)
-                cached_data = repository.serialize(cached_data)
+        # emulate a response object and return it
+        if not isinstance(cached_data, str):
+            repository = self.cache.get_repository_from_url(request.url)
+            cached_data = repository.serialize(cached_data)
 
-            response = Response()
-            response.encoding = "utf-8"
-            response._content = cached_data.encode(response.encoding)
-            response.status_code = 200
-            response.url = request.url
-            response.request = request
+        response = Response()
+        response.encoding = "utf-8"
+        response._content = cached_data.encode(response.encoding)
+        response.status_code = 200
+        response.url = request.url
+        response.request = request
 
-            return response
+        return response
