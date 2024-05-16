@@ -9,12 +9,14 @@ from requests import Request, PreparedRequest, Response
 
 from musify.api.exception import CacheError
 from musify.log.logger import MusifyLogger
-
+from musify.types import UnitCollection
+from musify.utils import to_collection
 
 DEFAULT_EXPIRE: timedelta = timedelta(weeks=1)
 
 
 class Connection(Protocol):
+    """The expected protocol for a backend connection"""
 
     def close(self) -> None:
         """Close the connection to the repository."""
@@ -23,6 +25,7 @@ class Connection(Protocol):
 @dataclass
 class RequestSettings(ABC):
     """Settings for a request type for a given endpoint to be used to configure a repository in the cache backend."""
+    #: That name of the repository in the backend
     name: str
 
     @abstractmethod
@@ -44,6 +47,16 @@ class PaginatedRequestSettings(RequestSettings, ABC):
 
 
 class ResponseRepository[T: Connection, KT, VT](MutableMapping[KT, VT], Hashable, ABC):
+    """
+    Represents a repository in the backend cache, providing a dict-like interface
+    for interacting with this repository.
+
+    A repository is a data store within the backend e.g. a table in a database.
+
+    :param connection: The connection to the backend cache.
+    :param settings: The settings to use to identify and interact with the repository in the backend.
+    :param expire: The expiry time to apply to cached responses after which responses are invalidated.
+    """
 
     __slots__ = ("logger", "connection", "settings", "_expire")
 
@@ -85,27 +98,25 @@ class ResponseRepository[T: Connection, KT, VT](MutableMapping[KT, VT], Hashable
         raise NotImplementedError
 
     @abstractmethod
-    def serialise(self, value: Any) -> VT:
+    def serialize(self, value: Any) -> VT:
         """Serialize a given ``value`` to a type that can be persisted to the repository."""
         raise NotImplementedError
 
     @abstractmethod
-    def deserialise(self, value: VT) -> Any:
+    def deserialize(self, value: VT) -> Any:
         """Deserialize a value from the repository to the expected response value type."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_key_from_request(self, request: Request | PreparedRequest) -> KT:
+    def get_key_from_request(self, request: Request | PreparedRequest | Response) -> KT:
         """Extract the keys to use when persisting responses for a given ``request``"""
         raise NotImplementedError
 
     def get_response(self, request: KT | Request | PreparedRequest | Response) -> VT | None:
         """Get the response relating to the given ``request`` from this repository if it exists."""
-        if isinstance(request, Response):
-            request = request.request
-
-        keys = self.get_key_from_request(request) if isinstance(request, Request | PreparedRequest) else request
-        return self.get(keys, None)
+        if isinstance(request, Request | PreparedRequest | Response):
+            request = self.get_key_from_request(request)
+        return self.get(request, None)
 
     def get_responses(self, requests: Collection[KT | Request | PreparedRequest | Response]) -> list[VT]:
         """
@@ -117,7 +128,7 @@ class ResponseRepository[T: Connection, KT, VT](MutableMapping[KT, VT], Hashable
 
     def save_response(self, response: Response) -> None:
         """Save the given ``response`` to this repository."""
-        keys = self.get_key_from_request(response.request)
+        keys = self.get_key_from_request(response)
         self[keys] = response.text
 
     def save_responses(self, responses: Collection[Response]) -> None:
@@ -127,10 +138,9 @@ class ResponseRepository[T: Connection, KT, VT](MutableMapping[KT, VT], Hashable
 
     def delete_response(self, request: KT | Request | PreparedRequest | Response) -> None:
         """Delete the given ``request`` from this repository if it exists."""
-        if isinstance(request, Response):
-            request = request.request
-        keys = self.get_key_from_request(request) if isinstance(request, Request | PreparedRequest) else request
-        self.pop(keys, None)
+        if isinstance(request, Request | PreparedRequest | Response):
+            request = self.get_key_from_request(request)
+        self.pop(request, None)
 
     def delete_responses(self, requests: Collection[KT | Request | PreparedRequest | Response]) -> None:
         """Delete the given ``requests`` from this repository if they exist."""
@@ -139,6 +149,15 @@ class ResponseRepository[T: Connection, KT, VT](MutableMapping[KT, VT], Hashable
 
 
 class ResponseCache[CT: Connection, ST: ResponseRepository](MutableMapping[str, ST], ABC):
+    """
+    Represents a backend cache of many repositories, providing a dict-like interface for interacting with them.
+
+    :param cache_name: The name to give to this cache.
+    :param connection: The connection to the backend cache.
+    :param repository_getter: A function that can be used to identify the repository in this cache
+        that matches a given URL.
+    :param expire: The expiry time to apply to cached responses after which responses are invalidated.
+    """
 
     __slots__ = ("cache_name", "connection", "repository_getter", "expire", "_repositories")
 
@@ -193,13 +212,14 @@ class ResponseCache[CT: Connection, ST: ResponseRepository](MutableMapping[str, 
         raise NotImplementedError
 
     def get_repository_from_url(self, url: str) -> ST | None:
-        """Returns the repository to use from the stored repositories in this cache for the given URL."""
+        """Returns the repository to use from the stored repositories in this cache for the given ``url``."""
         if self.repository_getter is not None:
             return self.repository_getter(self, url)
 
-    def _get_repository_from_requests(self, requests: Collection[Request | PreparedRequest | Response]) -> ST | None:
+    def get_repository_from_requests(self, requests: UnitCollection[Request | PreparedRequest | Response]) -> ST | None:
+        """Returns the repository to use from the stored repositories in this cache for the given ``requests``."""
+        requests = to_collection(requests)
         results = {self.get_repository_from_url(request.url) for request in requests}
-        print(results)
         if len(results) > 1:
             raise CacheError(
                 "Too many different types of requests given. Given requests must relate to the same repository type"
@@ -208,7 +228,7 @@ class ResponseCache[CT: Connection, ST: ResponseRepository](MutableMapping[str, 
 
     def get_response(self, request: Request | PreparedRequest | Response) -> Any:
         """Get the response relating to the given ``request`` from the appropriate repository if it exists."""
-        repository = self._get_repository_from_requests([request])
+        repository = self.get_repository_from_requests([request])
         if repository is not None:
             return repository.get_response(request)
 
@@ -217,30 +237,30 @@ class ResponseCache[CT: Connection, ST: ResponseRepository](MutableMapping[str, 
         Get the responses relating to the given ``requests`` from the appropriate repository if they exist.
         Returns results unordered.
         """
-        repository = self._get_repository_from_requests(requests)
+        repository = self.get_repository_from_requests(requests)
         if repository is not None:
             return repository.get_responses(requests)
 
     def save_response(self, response: Response) -> None:
         """Save the given ``response`` to the appropriate repository."""
-        repository = self._get_repository_from_requests([response])
+        repository = self.get_repository_from_requests([response])
         if repository is not None:
             return repository.save_response(response)
 
     def save_responses(self, responses: Collection[Response]) -> None:
         """Save the given ``responses`` to the appropriate repository."""
-        repository = self._get_repository_from_requests(responses)
+        repository = self.get_repository_from_requests(responses)
         if repository is not None:
             return repository.save_responses(responses)
 
     def delete_response(self, request: Request | PreparedRequest | Response) -> None:
         """Delete the given ``request`` from the appropriate repository if it exists."""
-        repository = self._get_repository_from_requests([request])
+        repository = self.get_repository_from_requests([request])
         if repository is not None:
             return repository.delete_response(request)
 
     def delete_responses(self, requests: Collection[Request | PreparedRequest | Response]) -> None:
         """Delete the given ``requests`` from the appropriate repository."""
-        repository = self._get_repository_from_requests(requests)
+        repository = self.get_repository_from_requests(requests)
         if repository is not None:
             return repository.delete_responses(requests)

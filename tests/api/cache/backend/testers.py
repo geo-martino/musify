@@ -17,7 +17,19 @@ REQUEST_SETTINGS = [
 ]
 
 
-class ResponseRepositoryTester(ABC):
+class BaseResponseTester(ABC):
+    """Base functionality for all test suites related to `api.cache` package."""
+
+    @staticmethod
+    @abstractmethod
+    def generate_connection() -> Connection:
+        """Generates a :py:class:`Connection` for this backend type."""
+        raise NotImplementedError
+
+    @pytest.fixture
+    def connection(self) -> Connection:
+        """Yields a valid :py:class:`Connection` to use throughout tests in this suite as a pytest.fixture."""
+        return self.generate_connection()
 
     @staticmethod
     @abstractmethod
@@ -36,6 +48,10 @@ class ResponseRepositoryTester(ABC):
         that can be persisted to the repository.
         """
         raise NotImplementedError
+
+
+class ResponseRepositoryTester(BaseResponseTester, ABC):
+    """Run generic tests for :py:class:`ResponseRepository` implementations."""
 
     # noinspection PyArgumentList
     @pytest.fixture(scope="class", params=REQUEST_SETTINGS)
@@ -61,12 +77,6 @@ class ResponseRepositoryTester(ABC):
     def items(self, valid_items: dict, invalid_items: dict) -> dict:
         """Yields all expected items to be found in the repository as a pytest.fixture."""
         return valid_items | invalid_items
-
-    @staticmethod
-    @abstractmethod
-    def connection() -> Connection:
-        """Yields a valid :py:class:`Connection` to use throughout tests in this suite as a pytest.fixture."""
-        raise NotImplementedError
 
     @abstractmethod
     def repository(self, request, connection: Connection, valid_items: dict, invalid_items: dict) -> ResponseRepository:
@@ -97,11 +107,11 @@ class ResponseRepositoryTester(ABC):
         assert repository.count(False) == len(valid_items)
 
     @abstractmethod
-    def test_serialise(self, repository: ResponseRepository):
+    def test_serialize(self, repository: ResponseRepository):
         raise NotImplementedError
 
     @abstractmethod
-    def test_deserialise(self, repository: ResponseRepository):
+    def test_deserialize(self, repository: ResponseRepository):
         raise NotImplementedError
 
     def test_get_key_from_request(self, repository: ResponseRepository):
@@ -248,21 +258,27 @@ class ResponseRepositoryTester(ABC):
         for key in valid_items:
             assert key not in repository
 
-    @staticmethod
-    def test_mapping_functionality(repository: ResponseRepository, items: dict):
+    def test_mapping_functionality(self, repository: ResponseRepository, valid_items: dict):
         key, value = choice(list(repository.items()))
-        assert key in items
-        assert items[key] == value
+        assert key in repository
+        assert all(key in valid_items for key in repository)
+
+        repository.pop(key)
+        assert key not in repository
+
+        items = dict(self.generate_item(repository.settings) for _ in range(randrange(3, 6)))
+        assert all(key not in repository for key in items)
+        repository.update(items)
+        assert all(key in repository for key in items)
 
         repository.clear()
         assert key not in repository
         with pytest.raises(MusifyKeyError):
             assert repository[key]
 
-        # TODO: add more here
 
-
-class ResponseCacheTester:
+class ResponseCacheTester(BaseResponseTester, ABC):
+    """Run generic tests for :py:class:`ResponseCache` implementations."""
 
     # noinspection PyArgumentList
     @staticmethod
@@ -281,17 +297,13 @@ class ResponseCacheTester:
         raise NotImplementedError
 
     @classmethod
+    @abstractmethod
     def generate_cache(cls, connection: Connection) -> ResponseCache:
         """
         Generates a :py:class:`ResponseCache` for this backend type
         with many randomly generated :py:class:`ResponseRepository` objects assigned
         and a ``response_getter`` assigned to get these repositories.
         """
-        raise NotImplementedError
-
-    @abstractmethod
-    def connection(self) -> Connection:
-        """Yields a valid :py:class:`Connection` to use throughout tests in this suite as a pytest.fixture."""
         raise NotImplementedError
 
     @pytest.fixture
@@ -326,38 +338,44 @@ class ResponseCacheTester:
         with pytest.raises(CacheError):
             cache.create_repository(repository.settings)
 
-    @staticmethod
-    def test_get_repository_for_url(cache: ResponseCache):
-        name, repository = choice(list(cache.items()))
-        url = f"http://www.test.com/{name}/{random_str()}"
+    def test_get_repository_for_url(self, cache: ResponseCache):
+        repository = choice(list(cache.values()))
+        url = self.generate_response(repository.settings).request.url
 
         assert cache.get_repository_from_url(url).settings.name == repository.settings.name
-        assert cache.get_repository_from_url(f"http://www.test.com/{random_str()}/{random_str()}") is None
+        assert cache.get_repository_from_url(f"http://www.does-not-exist.com/{random_str()}/{random_str()}") is None
         cache.repository_getter = None
         assert cache.get_repository_from_url(url) is None
 
     def test_get_repository_for_requests(self, cache: ResponseCache):
-        name, repository = choice(list(cache.items()))
+        repository = choice(list(cache.values()))
         requests = [self.generate_response(repository.settings).request for _ in range(3, 6)]
-        cache._get_repository_from_requests(requests)
+        cache.get_repository_from_requests(requests)
 
     def test_get_repository_for_responses(self, cache: ResponseCache):
-        name, repository = choice(list(cache.items()))
+        repository = choice(list(cache.values()))
         responses = [self.generate_response(repository.settings) for _ in range(3, 6)]
-        for response in responses:
-            print(response.url)
-        assert cache._get_repository_from_requests(responses).settings.name == repository.settings.name
+        assert cache.get_repository_from_requests(responses).settings.name == repository.settings.name
 
         new_settings = self.generate_settings()
         new_responses = [self.generate_response(new_settings) for _ in range(3, 6)]
-        assert cache._get_repository_from_requests(new_responses) is None
+        assert cache.get_repository_from_requests(new_responses) is None
 
         with pytest.raises(CacheError):  # multiple types given
-            cache._get_repository_from_requests(responses + new_responses)
+            cache.get_repository_from_requests(responses + new_responses)
 
         cache.repository_getter = None
-        assert cache._get_repository_from_requests(responses) is None
+        assert cache.get_repository_from_requests(responses) is None
 
-    @pytest.mark.skip(reason="Not yet implemented")
     def test_repository_operations(self, cache: ResponseCache):
-        pass  # TODO
+        repository = choice(list(cache.values()))
+
+        response = self.generate_response(repository.settings)
+        key = repository.get_key_from_request(response.request)
+        cache.save_response(response)
+        assert key in repository
+
+        assert cache.get_response(response) == repository.deserialize(response.text)
+
+        cache.delete_response(response)
+        assert key not in repository

@@ -7,7 +7,7 @@ from os.path import splitext, dirname, join
 from tempfile import gettempdir
 from typing import Any, Self
 
-from requests import Request, PreparedRequest
+from requests import Request, PreparedRequest, Response
 
 from musify import PROGRAM_NAME
 from musify.api.cache.backend.base import ResponseCache, ResponseRepository, RequestSettings, PaginatedRequestSettings
@@ -17,10 +17,6 @@ from musify.exception import MusifyKeyError
 
 
 class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Connection, KT, VT]):
-    """
-
-    :param expire: The expiry time to apply to cached responses after which responses are invalidated.
-    """
 
     __slots__ = ()
 
@@ -37,7 +33,10 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
 
         return keys
 
-    def get_key_from_request(self, request: Request | PreparedRequest) -> KT:
+    def get_key_from_request(self, request: Request | PreparedRequest | Response) -> KT:
+        if isinstance(request, Response):
+            request = request.request
+
         keys = [str(request.method), self.settings.get_id(request.url)]
         if isinstance(self.settings, PaginatedRequestSettings):
             keys.append(self.settings.get_offset(request.url))
@@ -115,7 +114,7 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
         if not row:
             raise MusifyKeyError(__key)
 
-        return self.deserialise(row[0])
+        return self.deserialize(row[0])
 
     def __setitem__(self, __key, __value):
         query = "\n".join((
@@ -125,7 +124,7 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
             f"VALUES({",".join("?" * len(self._primary_key_columns))},?,?);",
         ))
 
-        data = self.serialise(__value)
+        data = self.serialize(__value)
         self.connection.execute(query, (*__key, self.expire.isoformat(), data))
 
     def __delitem__(self, __key):
@@ -138,12 +137,12 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
         if not cur.rowcount:
             raise MusifyKeyError(__key)
 
-    def serialise(self, value: Any) -> VT:
+    def serialize(self, value: Any) -> VT:
         if isinstance(value, str):
             return value
         return json.dumps(value)
 
-    def deserialise(self, value: VT | dict) -> dict[str, Any]:
+    def deserialize(self, value: VT | dict) -> dict[str, Any]:
         if isinstance(value, dict):
             return value
         return json.loads(value)
@@ -186,7 +185,7 @@ class SQLiteCache(ResponseCache[sqlite3.Connection, SQLiteTable]):
         path = cls._get_sqlite_path(join(gettempdir(), name))
 
         connection = sqlite3.Connection(database=path)
-        return cls(cache_name=path, connection=connection, **cls._clean_kwargs(kwargs))
+        return cls(cache_name=name, connection=connection, **cls._clean_kwargs(kwargs))
 
     def create_repository(self, settings: RequestSettings) -> SQLiteTable:
         if settings.name in self:
