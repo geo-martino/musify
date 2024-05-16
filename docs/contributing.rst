@@ -32,7 +32,7 @@ Setup your development environment
       pip install -e '.[docs]'  # installs just the core package + the required dependencies for building documentation
 
 6. Optionally, to ensure inhreitance diagrams in the documentation render correctly, install graphviz.
-   More info on how to install graphviz for you platform can be found `here <https://graphviz.org/download/>`_
+   See `here <https://graphviz.org/download/>`_ for platform-specific info on how to install graphviz.
 
 Making changes and testing
 ==========================
