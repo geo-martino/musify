@@ -118,22 +118,26 @@ class TestRequestHandler:
         repository = request_handler.cache.create_repository(MockRequestSettings(name="test"))
         request_handler.cache.repository_getter = lambda _, __: repository
 
-        response = request_handler._request(method="GET", url=test_url)
+        response = request_handler._request(method="GET", url=test_url, persist=False)
         assert response.json() == expected_json
         assert requests_mock.call_count == 1
 
-        repository.save_response(response)
-        keys = repository.get_key_from_request(response.request)
-        assert repository.get_response(keys)
+        key = repository.get_key_from_request(response.request)
+        assert repository.get_response(key) is None
+
+        response = request_handler._request(method="GET", url=test_url, persist=True)
+        assert response.json() == expected_json
+        assert requests_mock.call_count == 2
+        assert repository.get_response(key)
 
         response = request_handler._request(method="GET", url=test_url)
         assert response.json() == expected_json
-        assert requests_mock.call_count == 1
+        assert requests_mock.call_count == 2
 
         repository.clear()
         response = request_handler._request(method="GET", url=test_url)
         assert response.json() == expected_json
-        assert requests_mock.call_count == 2
+        assert requests_mock.call_count == 3
 
     def test_request(self, request_handler: RequestHandler, requests_mock: Mocker):
         def raise_error(*_, **__):
