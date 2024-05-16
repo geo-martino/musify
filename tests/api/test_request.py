@@ -1,5 +1,4 @@
 import json
-from dataclasses import dataclass
 from typing import Any
 
 import pytest
@@ -12,7 +11,7 @@ from requests_mock.request import _RequestObjectProxy as Request
 from requests_mock.response import _Context as Context
 
 from musify.api.authorise import APIAuthoriser
-from musify.api.cache.backend.base import ResponseCache, RequestSettings
+from musify.api.cache.backend.base import ResponseCache
 from musify.api.cache.backend.sqlite import SQLiteCache
 from musify.api.cache.session import CachedSession
 from musify.api.exception import APIError

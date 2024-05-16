@@ -18,6 +18,7 @@ REQUEST_SETTINGS = [
     MockPaginatedRequestSettings,
 ]
 
+
 class SQLiteTester:
     @staticmethod
     @pytest.fixture
