@@ -45,8 +45,8 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
             self.logger.debug(f"{'CACHE':<7}: {url:<43} | No cache configured, skipping...")
             return [], id_list
 
-        storage = self.handler.cache.get_storage_for_url(url=url)
-        results = storage.get_responses([(id_,) for id_ in id_list])
+        repository = self.handler.cache.get_repository_for_url(url=url)
+        results = repository.get_responses([(id_,) for id_ in id_list])
 
         id_list_found = {result["id"] for result in results}
         id_list_not_found = [id_ for id_ in id_list if id_ not in id_list_found]

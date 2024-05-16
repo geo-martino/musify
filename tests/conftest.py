@@ -282,7 +282,7 @@ def path(request: pytest.FixtureRequest | SubRequest, tmp_path: Path) -> str:
 
 @pytest.fixture(scope="session", params=ALL_ITEM_TYPES, ids=idfn)
 def object_type(request) -> RemoteObjectType:
-    """Yields the valid :py:class:`RemoteObjectTypes` to use throughout tests in this suite as a pytest.fixture"""
+    """Yields the valid :py:class:`RemoteObjectTypes` to use throughout tests in this suite as a pytest.fixture."""
     return request.param
 
 

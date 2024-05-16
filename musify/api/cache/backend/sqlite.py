@@ -12,6 +12,7 @@ from requests import Request, PreparedRequest
 from musify import PROGRAM_NAME
 from musify.api.cache.backend.base import ResponseCache, ResponseRepository, RequestSettings, PaginatedRequestSettings
 from musify.api.cache.backend.base import DEFAULT_EXPIRE
+from musify.exception import MusifyKeyError
 
 
 class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Connection, KT, VT]):
@@ -27,11 +28,11 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
 
     @property
     def _primary_key_columns(self) -> Mapping[str, str]:
-        """A map of column names to column data types for the primary keys of this storage."""
+        """A map of column names to column data types for the primary keys of this repository."""
         keys = {"method": "VARCHAR(10)", "id": "TEXT"}
         if isinstance(self.settings, PaginatedRequestSettings):
             keys["offset"] = "INT4"
-            keys["limit"] = "INT4"
+            keys["page_count"] = "INT2"
 
         return keys
 
@@ -51,7 +52,7 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
         self.create_table()
 
     def create_table(self):
-        """Create the table for this storage kind in the backend database if it doesn't already exist."""
+        """Create the table for this repository type in the backend database if it doesn't already exist."""
         ddl_sep = "\t, "
 
         ddl = "\n".join((
@@ -61,7 +62,7 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
             ),
             f"{ddl_sep}{self.expiry_key} TIMESTAMP",
             f"{ddl_sep}{self.data_key} TEXT",
-            f"{ddl_sep}PRIMARY KEY ({", ".join(self._primary_key_columns)})"
+            f"{ddl_sep}PRIMARY KEY ({", ".join(self._primary_key_columns)})",
             ");\n"
             f"CREATE INDEX IF NOT EXISTS idx_{self.expiry_key} ON {self.settings.name}({self.expiry_key});"
         ))
@@ -74,14 +75,27 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
 
     def count(self, expired: bool = True) -> int:
         query = f"SELECT COUNT(*) FROM {self.settings.name}"
-        if not expired:
-            query += f"\nWHERE {self.expiry_key} IS NULL OR {self.expiry_key} > {datetime.now()}"
+        if expired:
+            cur = self.connection.execute(query)
+        else:
+            query += f"\nWHERE {self.expiry_key} IS NULL OR {self.expiry_key} > ?"
+            cur = self.connection.execute(query, (datetime.now().isoformat(),))
 
-        return self.connection.execute(query).fetchone()[0]
+        return cur.fetchone()[0]
+
+    def __repr__(self):
+        return repr(dict(self.items()))
+
+    def __str__(self):
+        return str(dict(self.items()))
 
     def __iter__(self):
-        query = f"SELECT {", ".join(self._primary_key_columns)}, {self.data_key} FROM {self.settings.name}"
-        for row in self.connection.execute(query):
+        query = "\n".join((
+            f"SELECT {", ".join(self._primary_key_columns)}, {self.data_key} ",
+            f"FROM {self.settings.name}",
+            f"WHERE {self.expiry_key} > ?",
+        ))
+        for row in self.connection.execute(query, (datetime.now().isoformat(),)):
             yield row[:-1]
 
     def __len__(self):
@@ -90,7 +104,7 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
     def __getitem__(self, __key):
         query = "\n".join((
             f"SELECT {self.data_key} FROM {self.settings.name}",
-            f"WHERE {self.expiry_key} < ?",
+            f"WHERE {self.expiry_key} > ?",
             f"\tAND {"\n\tAND ".join(f"{key} = ?" for key in self._primary_key_columns)}",
         ))
 
@@ -98,17 +112,19 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
         row = cur.fetchone()
         cur.close()
         if not row:
-            raise KeyError(__key)
+            raise MusifyKeyError(__key)
 
         return self.deserialise(row[0])
 
     def __setitem__(self, __key, __value):
         query = "\n".join((
             f"INSERT OR REPLACE INTO {self.settings.name} (",
-            f"\t{", ".join(self._primary_key_columns)}, {self.expiry_key}, {self.data_key}"
+            f"\t{", ".join(self._primary_key_columns)}, {self.expiry_key}, {self.data_key}",
             ") ",
-            f"VALUES ({",".join("?" * len(self._primary_key_columns))},?,?);",
+            f"VALUES({",".join("?" * len(self._primary_key_columns))},?,?);",
         ))
+
+        print(__key, __value)
 
         data = self.serialise(__value)
         self.connection.execute(query, (*__key, self.expire.isoformat(), data))
@@ -121,14 +137,14 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
 
         cur = self.connection.execute(query, __key)
         if not cur.rowcount:
-            raise KeyError(__key)
+            raise MusifyKeyError(__key)
 
     def serialise(self, value: Any) -> VT:
         if isinstance(value, str):
             return value
         return json.dumps(value)
 
-    def deserialise(self, value: VT) -> dict[str, Any]:
+    def deserialise(self, value: VT | dict) -> dict[str, Any]:
         if isinstance(value, dict):
             return value
         return json.loads(value)
@@ -173,7 +189,7 @@ class SQLiteCache(ResponseCache[sqlite3.Connection, SQLiteTable]):
         connection = sqlite3.Connection(database=path)
         return cls(cache_name=path, connection=connection, **cls._clean_kwargs(kwargs))
 
-    def create_storage(self, settings: RequestSettings) -> SQLiteTable:
-        storage = SQLiteTable(connection=self.connection, settings=settings, expire=self.expire)
-        self.storage[settings.name] = storage
-        return storage
+    def create_repository(self, settings: RequestSettings) -> SQLiteTable:
+        repository = SQLiteTable(connection=self.connection, settings=settings, expire=self.expire)
+        self._repositories[settings.name] = repository
+        return repository

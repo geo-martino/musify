@@ -245,7 +245,7 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
 
     @pytest.fixture(scope="class")
     def matcher(self) -> ItemMatcher:
-        """Yields a valid :py:class:`ItemMatcher` as a pytest.fixture"""
+        """Yields a valid :py:class:`ItemMatcher` as a pytest.fixture."""
         ItemMatcher.karaoke_tags = {"karaoke", "backing", "instrumental"}
         ItemMatcher.year_range = 10
 
@@ -349,7 +349,7 @@ class TestSpotifyItemChecker(RemoteItemCheckerTester):
 
     @pytest.fixture(scope="class")
     def matcher(self) -> ItemMatcher:
-        """Yields a valid :py:class:`ItemMatcher` as a pytest.fixture"""
+        """Yields a valid :py:class:`ItemMatcher` as a pytest.fixture."""
         return ItemMatcher()
 
     @pytest.fixture

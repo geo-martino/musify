@@ -29,7 +29,7 @@ class MusifyCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
 
     @abstractmethod
     def collection(self, *args, **kwargs) -> MusifyCollection:
-        """Yields an :py:class:`MusifyCollection` object to be tested as pytest.fixture"""
+        """Yields an :py:class:`MusifyCollection` object to be tested as pytest.fixture."""
         raise NotImplementedError
 
     @abstractmethod
@@ -214,7 +214,7 @@ class PlaylistTester(MusifyCollectionTester, metaclass=ABCMeta):
 
     @abstractmethod
     def playlist(self, *args, **kwargs) -> Playlist:
-        """Yields an :py:class:`Playlist` object to be tested as pytest.fixture"""
+        """Yields an :py:class:`Playlist` object to be tested as pytest.fixture."""
         raise NotImplementedError
 
     @pytest.fixture
@@ -299,7 +299,7 @@ class LibraryTester(MusifyCollectionTester, metaclass=ABCMeta):
 
     @abstractmethod
     def library(self, *args, **kwargs) -> Library:
-        """Yields a loaded :py:class:`Library` object to be tested as pytest.fixture"""
+        """Yields a loaded :py:class:`Library` object to be tested as pytest.fixture."""
         raise NotImplementedError
 
     @pytest.fixture

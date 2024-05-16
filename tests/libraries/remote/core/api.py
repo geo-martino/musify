@@ -25,12 +25,12 @@ class RemoteAPITester(ABC):
 
     @abstractmethod
     def object_factory(self) -> RemoteObjectFactory:
-        """Yield the object factory for objects of this remote service type as a pytest.fixture"""
+        """Yield the object factory for objects of this remote service type as a pytest.fixture."""
         raise NotImplementedError
 
     @pytest.fixture
     def _responses(self, object_type: RemoteObjectType, api_mock: RemoteMock) -> dict[str, dict[str, Any]]:
-        """Yields valid responses mapped by ID for a given ``object_type`` as a pytest.fixture"""
+        """Yields valid responses mapped by ID for a given ``object_type`` as a pytest.fixture."""
         source = api_mock.item_type_map[object_type]
         if len(source) > api_mock.limit_lower:
             source = sample(source, k=api_mock.limit_lower)
@@ -48,7 +48,7 @@ class RemoteAPITester(ABC):
 
     @pytest.fixture
     def response(self, responses: dict[str, dict[str, Any]]) -> dict[str, Any]:
-        """Yields a random valid response from a given set of ``responses`` as a pytest.fixture"""
+        """Yields a random valid response from a given set of ``responses`` as a pytest.fixture."""
         return choice(list(responses.values()))
 
     @pytest.fixture

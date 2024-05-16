@@ -42,7 +42,7 @@ class TestFilterComparers(FilterTester):
 
     @pytest.fixture(scope="class")
     def comparers(self) -> list[Comparer]:
-        """Yields a list of :py:class:`Comparer` objects to be used as pytest.fixture"""
+        """Yields a list of :py:class:`Comparer` objects to be used as pytest.fixture."""
         return [
             Comparer(condition="is", expected="album name", field=LocalTrackField.ALBUM),
             Comparer(condition="starts with", expected="artist", field=LocalTrackField.ARTIST)
@@ -148,7 +148,7 @@ class TestFilterMatcher(FilterTester):
 
     @pytest.fixture(scope="class")
     def comparers(self) -> list[Comparer]:
-        """Yields a list :py:class:`Comparer` objects to be used as pytest.fixture"""
+        """Yields a list :py:class:`Comparer` objects to be used as pytest.fixture."""
         return [
             Comparer(condition="is", expected="album name", field=LocalTrackField.ALBUM),
             Comparer(condition="starts with", expected="artist", field=LocalTrackField.ARTIST)

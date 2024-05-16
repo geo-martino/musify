@@ -28,7 +28,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
 
     @abstractmethod
     def searcher(self, *args, **kwargs) -> RemoteItemSearcher:
-        """Yields a valid :py:class:`RemoteItemSearcher` for the current remote source as a pytest.fixture"""
+        """Yields a valid :py:class:`RemoteItemSearcher` for the current remote source as a pytest.fixture."""
         raise NotImplementedError
 
     @abstractmethod

@@ -29,17 +29,17 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
 
     @abstractmethod
     def checker(self, *args, **kwargs) -> RemoteItemChecker:
-        """Yields a valid :py:class:`RemoteItemChecker` for the current remote source as a pytest.fixture"""
+        """Yields a valid :py:class:`RemoteItemChecker` for the current remote source as a pytest.fixture."""
         raise NotImplementedError
 
     @abstractmethod
     def playlist_urls(self, *args, **kwargs) -> list[str]:
-        """Yields a list of URLs that will return valid responses from the api_mock as a pytest.fixture"""
+        """Yields a list of URLs that will return valid responses from the api_mock as a pytest.fixture."""
         raise NotImplementedError
 
     @pytest.fixture
     def collections(self, playlist_urls: list[str]) -> list[BasicCollection]:
-        """Yields many valid :py:class:`BasicCollection` of :py:class:`LocalTrack` as a pytest.fixture"""
+        """Yields many valid :py:class:`BasicCollection` of :py:class:`LocalTrack` as a pytest.fixture."""
         count = randrange(6, len(playlist_urls))
         return [BasicCollection(name=random_str(30, 50), items=random_tracks()) for _ in range(count)]
 

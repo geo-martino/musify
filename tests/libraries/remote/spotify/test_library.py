@@ -23,7 +23,7 @@ class TestSpotifyLibrary(RemoteLibraryTester):
 
     @pytest.fixture
     def library_unloaded(self, api: SpotifyAPI, api_mock: SpotifyMock) -> SpotifyLibrary:
-        """Yields an unloaded Library object to be tested as pytest.fixture"""
+        """Yields an unloaded Library object to be tested as pytest.fixture."""
         include = FilterDefinedList([pl["name"] for pl in sample(api_mock.user_playlists, k=10)])
         return SpotifyLibrary(api=api, playlist_filter=include)
 

@@ -29,7 +29,7 @@ class RemoteAPI(ABC):
     :param wrangler: The :py:class:`RemoteDataWrangler` for this API type.
     :param authoriser: The authoriser to use when authorising requests to the API.
     :param cache: When given, attempt to use this cache for certain request types before calling the API.
-        Cache storage and cachable request types can be set up by child classes.
+        Repository and cachable request types can be set up by child classes.
     """
 
     __slots__ = ("logger", "handler", "wrangler", "user_data")

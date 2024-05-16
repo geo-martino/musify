@@ -17,6 +17,7 @@ from musify.api.cache.backend.sqlite import SQLiteCache
 from musify.api.cache.session import CachedSession
 from musify.api.exception import APIError
 from musify.api.request import RequestHandler
+from tests.api.cache.backend.utils import MockRequestSettings
 
 
 class TestRequestHandler:
@@ -111,31 +112,26 @@ class TestRequestHandler:
         assert request_handler._response_as_json(response) == expected
 
     def test_cache_usage(self, request_handler: RequestHandler, requests_mock: Mocker):
-        @dataclass
-        class MockRequestSettings(RequestSettings):
-            def get_id(self, url: str):
-                return url.split("/")[-1]
-
         test_url = "http://localhost/test"
         expected_json = {"key": "value"}
         requests_mock.get(test_url, json=expected_json)
 
-        storage = request_handler.cache.create_storage(MockRequestSettings(name="test"))
-        request_handler.cache.storage_getter = lambda _, __: storage
+        repository = request_handler.cache.create_repository(MockRequestSettings(name="test"))
+        request_handler.cache.repository_getter = lambda _, __: repository
 
         response = request_handler._request(method="GET", url=test_url)
         assert response.json() == expected_json
         assert requests_mock.call_count == 1
 
-        storage.save_response(response)
-        keys = storage.get_key_from_request(response.request)
-        assert storage.get_response(keys)
+        repository.save_response(response)
+        keys = repository.get_key_from_request(response.request)
+        assert repository.get_response(keys)
 
         response = request_handler._request(method="GET", url=test_url)
         assert response.json() == expected_json
         assert requests_mock.call_count == 1
 
-        storage.clear()
+        repository.clear()
         response = request_handler._request(method="GET", url=test_url)
         assert response.json() == expected_json
         assert requests_mock.call_count == 2

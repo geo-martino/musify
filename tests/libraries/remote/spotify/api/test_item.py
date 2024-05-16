@@ -30,7 +30,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
 
     @pytest.fixture(scope="class")
     def object_factory(self) -> SpotifyObjectFactory:
-        """Yield the object factory for Spotify objects as a pytest.fixture"""
+        """Yield the object factory for Spotify objects as a pytest.fixture."""
         return SpotifyObjectFactory()
 
     @pytest.fixture
@@ -244,9 +244,19 @@ class TestSpotifyAPIItems(RemoteAPITester):
             api.get_artist_albums(values=random_id(), types=("unknown", "invalid"))
 
     ###########################################################################
-    ## Multi-, Batched-, and Extend tests for each supported item type
+    ## Cached-, Multi-, Batched-, and Extend tests for each supported item type
     ###########################################################################
-    def test_get_item_multi(
+    @pytest.mark.skip(reason="Not yet implemented")
+    def test_get_items_from_cache(
+            self,
+            object_type: RemoteObjectType,
+            responses: dict[str, dict[str, Any]],
+            api: SpotifyAPI,
+            api_mock: SpotifyMock
+    ):
+        pass  # TODO
+
+    def test_get_items_multi(
             self,
             object_type: RemoteObjectType,
             responses: dict[str, dict[str, Any]],
@@ -276,7 +286,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         RemoteObjectType.AUDIOBOOK,
         RemoteObjectType.CHAPTER,
     ], ids=idfn)
-    def test_get_item_batched(
+    def test_get_items_batched(
             self,
             object_type: RemoteObjectType,
             responses: dict[str, dict[str, Any]],
@@ -587,27 +597,27 @@ class TestSpotifyAPIItems(RemoteAPITester):
     ###########################################################################
     @pytest.fixture
     def features_all(self, responses: dict[str, dict[str, Any]], api_mock: SpotifyMock) -> dict[str, dict[str, Any]]:
-        """Yield all audio features responses for the given ``responses`` as a pytest.fixture"""
+        """Yield all audio features responses for the given ``responses`` as a pytest.fixture."""
         for response in responses:
             assert "audio_features" not in response
         return {id_: deepcopy(api_mock.audio_features[id_]) for id_ in responses if id_ in api_mock.audio_features}
 
     @pytest.fixture
     def features(self, response: dict[str, Any], features_all: dict[str, dict[str, Any]]) -> dict[str, Any]:
-        """Yield the audio features  response for the given ``response`` as a pytest.fixture"""
+        """Yield the audio features  response for the given ``response`` as a pytest.fixture."""
         assert "audio_features" not in response
         return features_all[response[self.id_key]]
 
     @pytest.fixture
     def analysis_all(self, responses: dict[str, dict[str, Any]], api_mock: SpotifyMock) -> dict[str, dict[str, Any]]:
-        """Yield all audio analyses responses for the given ``responses`` as a pytest.fixture"""
+        """Yield all audio analyses responses for the given ``responses`` as a pytest.fixture."""
         for response in responses:
             assert "audio_analysis" not in response
         return {id_: deepcopy(api_mock.audio_analysis[id_]) for id_ in responses if id_ in api_mock.audio_analysis}
 
     @pytest.fixture
     def analysis(self, response: dict[str, Any], analysis_all: dict[str, dict[str, Any]]) -> dict[str, Any]:
-        """Yield all audio analysis response for the given ``response`` as a pytest.fixture"""
+        """Yield all audio analysis response for the given ``response`` as a pytest.fixture."""
         assert "audio_analysis" not in response
         return analysis_all[response[self.id_key]]
 

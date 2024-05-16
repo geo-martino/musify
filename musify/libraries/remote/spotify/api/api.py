@@ -119,13 +119,13 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
         auth_kwargs.pop("name", None)
         authoriser = APIAuthoriser(name=wrangler.source, **auth_kwargs)
 
-        if cache is not None:  # TODO: implement and set storage getter function on cache
-            cache.create_storage(SpotifyRequestSettings(name="tracks"))
-            cache.create_storage(SpotifyRequestSettings(name="artists"))
-            cache.create_storage(SpotifyRequestSettings(name="albums"))
-            cache.create_storage(SpotifyRequestSettings(name="playlists"))
-            cache.create_storage(SpotifyPaginatedRequestSettings(name="artist_albums"))
-            cache.create_storage(SpotifyPaginatedRequestSettings(name="album_tracks"))
-            cache.create_storage(SpotifyPaginatedRequestSettings(name="playlist_tracks"))
+        if cache is not None:  # TODO: implement and set repository_getter function on cache
+            cache.create_repository(SpotifyRequestSettings(name="tracks"))
+            cache.create_repository(SpotifyRequestSettings(name="artists"))
+            cache.create_repository(SpotifyRequestSettings(name="albums"))
+            cache.create_repository(SpotifyRequestSettings(name="playlists"))
+            cache.create_repository(SpotifyPaginatedRequestSettings(name="artist_albums"))
+            cache.create_repository(SpotifyPaginatedRequestSettings(name="album_tracks"))
+            cache.create_repository(SpotifyPaginatedRequestSettings(name="playlist_tracks"))
 
         super().__init__(authoriser=authoriser, wrangler=wrangler, cache=cache)

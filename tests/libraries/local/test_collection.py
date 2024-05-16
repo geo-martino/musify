@@ -23,7 +23,7 @@ class TestLocalFolder(LocalCollectionTester):
 
     @pytest.fixture
     def folder(self, tracks: list[LocalTrack]) -> LocalFolder:
-        """Yields a :py:class:`LocalFolder` object to be tested as pytest.fixture"""
+        """Yields a :py:class:`LocalFolder` object to be tested as pytest.fixture."""
         return LocalFolder(tracks=[copy(track) for track in tracks if track.folder == self.name])
 
     @pytest.fixture(scope="class")
@@ -89,7 +89,7 @@ class TestLocalAlbum(LocalCollectionTester):
 
     @pytest.fixture
     def album(self, tracks: list[LocalTrack]) -> LocalAlbum:
-        """Yields a :py:class:`LocalAlbum` object to be tested as pytest.fixture"""
+        """Yields a :py:class:`LocalAlbum` object to be tested as pytest.fixture."""
         return LocalAlbum(tracks=[copy(track) for track in tracks], name=self.name)
 
     @pytest.fixture(scope="class")
@@ -156,7 +156,7 @@ class TestLocalArtist(LocalCollectionTester):
 
     @pytest.fixture
     def artist(self, tracks: list[LocalTrack]) -> LocalArtist:
-        """Yields a :py:class:`LocalArtist` object to be tested as pytest.fixture"""
+        """Yields a :py:class:`LocalArtist` object to be tested as pytest.fixture."""
         return LocalArtist(tracks=[copy(track) for track in tracks], name=self.name)
 
     @pytest.fixture(scope="class")
@@ -218,7 +218,7 @@ class TestLocalGenres(LocalCollectionTester):
 
     @pytest.fixture
     def genre(self, tracks: list[LocalTrack]) -> LocalGenres:
-        """Yields a :py:class:`LocalGenres` object to be tested as pytest.fixture"""
+        """Yields a :py:class:`LocalGenres` object to be tested as pytest.fixture."""
         return LocalGenres(tracks=[copy(track) for track in tracks], name=self.name)
 
     @pytest.fixture(scope="class")

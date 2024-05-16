@@ -19,7 +19,7 @@ class TestComparer(PrettyPrinterTester):
 
     @pytest.fixture
     def track(self) -> MP3:
-        """Yields a :py:class:`MP3` object to be tested as pytest.fixture"""
+        """Yields a :py:class:`MP3` object to be tested as pytest.fixture."""
         return random_track(MP3)
 
     def test_init_fails(self):

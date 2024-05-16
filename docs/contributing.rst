@@ -31,6 +31,8 @@ Setup your development environment
       pip install -e '.[dev]'  # installs the `test` dependencies + dependencies for linting and other development uses
       pip install -e '.[docs]'  # installs just the core package + the required dependencies for building documentation
 
+6. Optionally, to ensure inhreitance diagrams in the documentation render correctly, install graphviz.
+   More info on how to install graphviz for you platform can be found `here <https://graphviz.org/download/>`_
 
 Making changes and testing
 ==========================
