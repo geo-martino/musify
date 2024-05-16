@@ -41,7 +41,8 @@ class CachedSession(Session):
         """
         Constructs a :class:`Request <Request>` and prepares it.
         First attempts to find the response for the request in the cache and, if not found, sends it.
-        If sent and matching cache repository was found, persist the response to the repository.
+        If ``persist`` is True request was sent and matching cache repository was found and ,
+        persist the response to the repository.
         Returns :class:`Response <Response>` object.
 
         :param method: method for the new :class:`Request` object.

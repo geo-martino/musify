@@ -110,8 +110,6 @@ class RequestHandler:
 
             response = self._request(method=method, url=url, *args, **kwargs)
 
-        if self.cache is not None:
-            self.cache.save_response(response)
         return self._response_as_json(response)
 
     def _request(
