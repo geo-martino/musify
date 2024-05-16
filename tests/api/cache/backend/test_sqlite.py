@@ -1,8 +1,9 @@
 import json
 import sqlite3
 from datetime import datetime, timedelta
-from random import randrange, choice
+from random import randrange
 from typing import Any
+from urllib.parse import urlparse
 
 import pytest
 from requests import Response, Request
@@ -10,13 +11,7 @@ from requests import Response, Request
 from musify.api.cache.backend.base import RequestSettings, PaginatedRequestSettings
 from musify.api.cache.backend.sqlite import SQLiteTable, SQLiteCache
 from tests.api.cache.backend.testers import ResponseRepositoryTester, ResponseCacheTester
-from tests.api.cache.backend.utils import MockRequestSettings, MockPaginatedRequestSettings
 from tests.utils import random_str
-
-REQUEST_SETTINGS = [
-    MockRequestSettings,
-    MockPaginatedRequestSettings,
-]
 
 
 class SQLiteTester:
@@ -28,11 +23,6 @@ class SQLiteTester:
 
 
 class TestSQLiteTable(SQLiteTester, ResponseRepositoryTester):
-
-    @pytest.fixture(scope="class", params=REQUEST_SETTINGS)
-    def settings(self, request) -> RequestSettings:
-        cls: type[RequestSettings] = request.param
-        return cls(name="test")
 
     @pytest.fixture
     def repository(
@@ -80,8 +70,8 @@ class TestSQLiteTable(SQLiteTester, ResponseRepositoryTester):
         return key, value
 
     @staticmethod
-    def generate_response_from_item(key: tuple, value: dict[str, Any]) -> Response:
-        url = f"http://test.com/{key[1]}"
+    def generate_response_from_item(settings: RequestSettings, key: tuple, value: dict[str, Any]) -> Response:
+        url = f"http://test.com/{settings.name}/{key[1]}"
         params = {}
         if len(key) == 4:
             params["offset"] = key[2]
@@ -98,8 +88,7 @@ class TestSQLiteTable(SQLiteTester, ResponseRepositoryTester):
 
         return response
 
-    def test_init(self, connection: sqlite3.Connection):
-        settings = MockRequestSettings(name="test")
+    def test_init(self, connection: sqlite3.Connection, settings: RequestSettings):
         SQLiteTable(connection=connection, settings=settings)
 
         cur = connection.execute(
@@ -128,13 +117,18 @@ class TestSQLiteTable(SQLiteTester, ResponseRepositoryTester):
 
 class TestSQLiteCache(SQLiteTester, ResponseCacheTester):
 
-    @pytest.fixture
-    def cache(self, connection: sqlite3.Connection) -> SQLiteCache:
+    @staticmethod
+    def generate_response(settings: RequestSettings) -> Response:
+        key, value = TestSQLiteTable.generate_item(settings)
+        return TestSQLiteTable.generate_response_from_item(settings, key, value)
+
+    @classmethod
+    def generate_cache(cls, connection: sqlite3.Connection) -> SQLiteCache:
         cache = SQLiteCache(cache_name="test", connection=connection)
-        cache.repository_getter = self.get_repository_for_url
+        cache.repository_getter = cls.get_repository_from_url
 
         for _ in range(randrange(5, 10)):
-            settings = choice(REQUEST_SETTINGS)(name=random_str(20, 30))
+            settings = cls.generate_settings()
             items = dict(TestSQLiteTable.generate_item(settings) for _ in range(randrange(3, 6)))
 
             repository = SQLiteTable(settings=settings, connection=connection)
@@ -144,9 +138,9 @@ class TestSQLiteCache(SQLiteTester, ResponseCacheTester):
         return cache
 
     @staticmethod
-    def get_repository_for_url(cache: SQLiteCache, url: str) -> SQLiteCache | None:
+    def get_repository_from_url(cache: SQLiteCache, url: str) -> SQLiteCache | None:
         for name, repository in cache.items():
-            if name == repository.settings.get_id(url):
+            if name == urlparse(url).path.split("/")[-2]:
                 return repository
 
     @pytest.mark.skip(reason="Not yet implemented")

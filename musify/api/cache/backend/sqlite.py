@@ -12,6 +12,7 @@ from requests import Request, PreparedRequest
 from musify import PROGRAM_NAME
 from musify.api.cache.backend.base import ResponseCache, ResponseRepository, RequestSettings, PaginatedRequestSettings
 from musify.api.cache.backend.base import DEFAULT_EXPIRE
+from musify.api.exception import CacheError
 from musify.exception import MusifyKeyError
 
 
@@ -124,8 +125,6 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
             f"VALUES({",".join("?" * len(self._primary_key_columns))},?,?);",
         ))
 
-        print(__key, __value)
-
         data = self.serialise(__value)
         self.connection.execute(query, (*__key, self.expire.isoformat(), data))
 
@@ -190,6 +189,9 @@ class SQLiteCache(ResponseCache[sqlite3.Connection, SQLiteTable]):
         return cls(cache_name=path, connection=connection, **cls._clean_kwargs(kwargs))
 
     def create_repository(self, settings: RequestSettings) -> SQLiteTable:
+        if settings.name in self:
+            raise CacheError(f"Repository already exists: {settings.name}")
+
         repository = SQLiteTable(connection=self.connection, settings=settings, expire=self.expire)
         self._repositories[settings.name] = repository
         return repository

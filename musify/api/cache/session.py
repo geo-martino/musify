@@ -49,7 +49,7 @@ class CachedSession(Session):
 
         if cached_data:  # emulate a response object and return it
             if not isinstance(cached_data, str):
-                repository = self.cache.get_repository_for_url(url)
+                repository = self.cache.get_repository_from_url(url)
                 cached_data = repository.serialise(cached_data)
 
             response = Response()

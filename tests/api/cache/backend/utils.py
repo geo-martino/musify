@@ -4,7 +4,6 @@ from musify.api.cache.backend.base import RequestSettings, PaginatedRequestSetti
 
 
 class MockRequestSettings(RequestSettings):
-
     def get_id(self, url: str) -> str:
         return urlparse(url).path.split("/")[-1]
 
