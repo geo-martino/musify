@@ -102,7 +102,7 @@ class ResponseRepositoryTester(BaseResponseTester, ABC):
 
     @staticmethod
     def test_count(repository: ResponseRepository, items: dict, valid_items: dict):
-        assert len(repository) == len(items)
+        assert len(repository) == len(valid_items)
         assert repository.count() == len(items)
         assert repository.count(False) == len(valid_items)
 

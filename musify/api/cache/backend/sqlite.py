@@ -99,7 +99,7 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
             yield row[:-1]
 
     def __len__(self):
-        return self.count()
+        return self.count(expired=False)
 
     def __getitem__(self, __key):
         query = "\n".join((
