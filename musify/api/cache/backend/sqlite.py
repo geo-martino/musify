@@ -4,6 +4,7 @@ import sqlite3
 from collections.abc import Mapping
 from datetime import datetime, timedelta
 from os.path import splitext, dirname, join
+from pathlib import Path
 from tempfile import gettempdir
 from typing import Any, Self
 
@@ -181,9 +182,9 @@ class SQLiteCache(ResponseCache[sqlite3.Connection, SQLiteTable]):
         return cls.connect_with_path(path=value, **kwargs)
 
     @classmethod
-    def connect_with_path(cls, path: str, **kwargs) -> Self:
+    def connect_with_path(cls, path: str | Path, **kwargs) -> Self:
         """Connect with an SQLite DB at the given ``path`` and return an instantiated :py:class:`SQLiteResponseCache`"""
-        path = cls._get_sqlite_path(path)
+        path = cls._get_sqlite_path(str(path))
         if dirname(path):
             os.makedirs(dirname(path), exist_ok=True)
 

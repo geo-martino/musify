@@ -138,7 +138,7 @@ class RequestHandler:
         if len(kwargs) > 0:
             log.extend(f"{k.title()}: {v}" for k, v in kwargs.items())
         if isinstance(self.session, CachedSession):
-            log.extend("Cached Request")
+            log.append("Cached Request")
 
         if not isinstance(self.session, CachedSession):
             clean_kwargs(self.session.request, kwargs)
