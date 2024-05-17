@@ -1,7 +1,6 @@
 """
 All operations relating to handling of requests to an API.
 """
-import inspect
 import json
 import logging
 from collections.abc import Mapping, Iterable

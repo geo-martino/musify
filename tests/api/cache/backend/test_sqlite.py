@@ -22,7 +22,7 @@ class SQLiteTester(BaseResponseTester):
 
     @staticmethod
     def generate_connection() -> sqlite3.Connection:
-        return sqlite3.Connection(database="file::memory:")
+        return sqlite3.Connection(database=":memory:")
 
     @staticmethod
     def generate_item(settings: RequestSettings) -> tuple[tuple, dict[str, Any]]:

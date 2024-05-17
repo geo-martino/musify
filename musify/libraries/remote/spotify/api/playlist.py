@@ -42,11 +42,17 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, ABC):
                 return playlist["href"]
             elif self.id_key in playlist:
                 return self.wrangler.convert(
-                    playlist[self.id_key], kind=RemoteObjectType.PLAYLIST, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL
+                    playlist[self.id_key],
+                    kind=RemoteObjectType.PLAYLIST,
+                    type_in=RemoteIDType.ID,
+                    type_out=RemoteIDType.URL
                 )
             elif "uri" in playlist:
                 return self.wrangler.convert(
-                    playlist["uri"], kind=RemoteObjectType.PLAYLIST, type_in=RemoteIDType.URI, type_out=RemoteIDType.URL
+                    playlist["uri"],
+                    kind=RemoteObjectType.PLAYLIST,
+                    type_in=RemoteIDType.URI,
+                    type_out=RemoteIDType.URL
                 )
 
         try:

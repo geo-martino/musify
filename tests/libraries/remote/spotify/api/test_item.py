@@ -8,7 +8,6 @@ from urllib.parse import parse_qs
 import pytest
 
 from musify.api.cache.backend.sqlite import SQLiteCache
-from musify.api.cache.session import CachedSession
 from musify.api.exception import APIError
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType

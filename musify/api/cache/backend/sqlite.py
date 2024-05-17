@@ -187,7 +187,7 @@ class SQLiteCache(ResponseCache[sqlite3.Connection, SQLiteTable]):
     @classmethod
     def connect_with_in_memory_db(cls, **kwargs) -> Self:
         """Connect with an in-memory SQLite DB and return an instantiated :py:class:`SQLiteResponseCache`"""
-        connection = sqlite3.Connection(database="file::memory:?cache=shared")
+        connection = sqlite3.Connection(database="file::memory:?cache=shared", uri=True)
         return cls(cache_name="__IN_MEMORY__", connection=connection, **cls._clean_kwargs(kwargs))
 
     @classmethod
