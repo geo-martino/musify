@@ -152,6 +152,12 @@ class SQLiteCache(ResponseCache[sqlite3.Connection, SQLiteTable]):
 
     __slots__ = ()
 
+    # noinspection PyPropertyDefinition
+    @classmethod
+    @property
+    def type(cls):
+        return "sqlite"
+
     @staticmethod
     def _get_sqlite_path(path: str) -> str:
         if not splitext(path)[1] == ".sqlite":  # add/replace extension if not given
@@ -165,10 +171,15 @@ class SQLiteCache(ResponseCache[sqlite3.Connection, SQLiteTable]):
         return kwargs
 
     @classmethod
+    def connect(cls, value: Any, **kwargs) -> Self:
+        return cls.connect_with_path(path=value, **kwargs)
+
+    @classmethod
     def connect_with_path(cls, path: str, **kwargs) -> Self:
         """Connect with an SQLite DB at the given ``path`` and return an instantiated :py:class:`SQLiteResponseCache`"""
         path = cls._get_sqlite_path(path)
-        os.makedirs(dirname(path), exist_ok=True)
+        if dirname(path):
+            os.makedirs(dirname(path), exist_ok=True)
 
         connection = sqlite3.Connection(database=path)
         return cls(cache_name=path, connection=connection, **cls._clean_kwargs(kwargs))

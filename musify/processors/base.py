@@ -104,7 +104,7 @@ class DynamicProcessor(Processor, metaclass=ABCMeta):
 
     @property
     def processor_methods(self) -> frozenset[str]:
-        """String representation of the current processor name of this object"""
+        """String representation of all available processor names of this object"""
         return frozenset(self._processor_method_fmt(name) for name in self.__processormethods__)
 
     @classmethod

@@ -161,6 +161,20 @@ class ResponseCache[CT: Connection, ST: ResponseRepository](MutableMapping[str, 
 
     __slots__ = ("cache_name", "connection", "repository_getter", "expire", "_repositories")
 
+    # noinspection PyPropertyDefinition
+    @classmethod
+    @property
+    @abstractmethod
+    def type(cls) -> str:
+        """A string representing the type of the backend this class represents."""
+        raise NotImplementedError
+
+    @classmethod
+    @abstractmethod
+    def connect(cls, value: Any, **kwargs) -> Self:
+        """Connect to the backend from a given generic ``value``."""
+        raise NotImplementedError
+
     def __init__(
             self,
             cache_name: str,
