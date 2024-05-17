@@ -54,6 +54,7 @@ docs = [
     "sphinx-autodoc-typehints~=2.1",
     "autodocsumm~=0.2",
     "sphinxext-opengraph~=0.9",
+    "matplotlib~=3.9",
 ]
 dev = [
     "musify[build,test,docs]",

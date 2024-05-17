@@ -7,6 +7,7 @@ from os.path import splitext, dirname, join
 from tempfile import gettempdir
 from typing import Any, Self
 
+from dateutil.relativedelta import relativedelta
 from requests import Request, PreparedRequest, Response
 
 from musify import PROGRAM_NAME
@@ -20,8 +21,10 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
 
     __slots__ = ()
 
-    data_key = "data"
-    expiry_key = "expires_at"
+    #: The column under which response data is stored in the table
+    data_column = "data"
+    #: The column under which response expiry time is stored in the table
+    expiry_column = "expires_at"
 
     @property
     def _primary_key_columns(self) -> Mapping[str, str]:
@@ -45,7 +48,10 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
         return tuple(keys)
 
     def __init__(
-            self, connection: sqlite3.Connection, settings: RequestSettings, expire: timedelta = DEFAULT_EXPIRE
+            self,
+            connection: sqlite3.Connection,
+            settings: RequestSettings,
+            expire: timedelta | relativedelta = DEFAULT_EXPIRE
     ):
         super().__init__(connection=connection, settings=settings, expire=expire)
 
@@ -60,11 +66,11 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
             "\t" + f"\n{ddl_sep}".join(
                 f"{key} {data_type} NOT NULL" for key, data_type in self._primary_key_columns.items()
             ),
-            f"{ddl_sep}{self.expiry_key} TIMESTAMP",
-            f"{ddl_sep}{self.data_key} TEXT",
+            f"{ddl_sep}{self.expiry_column} TIMESTAMP",
+            f"{ddl_sep}{self.data_column} TEXT",
             f"{ddl_sep}PRIMARY KEY ({", ".join(self._primary_key_columns)})",
             ");\n"
-            f"CREATE INDEX IF NOT EXISTS idx_{self.expiry_key} ON {self.settings.name}({self.expiry_key});"
+            f"CREATE INDEX IF NOT EXISTS idx_{self.expiry_column} ON {self.settings.name}({self.expiry_column});"
         ))
 
         self.logger.debug(f"Creating {self.settings.name!r} table with the following DDL:\n{ddl}")
@@ -78,7 +84,7 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
         if expired:
             cur = self.connection.execute(query)
         else:
-            query += f"\nWHERE {self.expiry_key} IS NULL OR {self.expiry_key} > ?"
+            query += f"\nWHERE {self.expiry_column} IS NULL OR {self.expiry_column} > ?"
             cur = self.connection.execute(query, (datetime.now().isoformat(),))
 
         return cur.fetchone()[0]
@@ -91,9 +97,9 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
 
     def __iter__(self):
         query = "\n".join((
-            f"SELECT {", ".join(self._primary_key_columns)}, {self.data_key} ",
+            f"SELECT {", ".join(self._primary_key_columns)}, {self.data_column} ",
             f"FROM {self.settings.name}",
-            f"WHERE {self.expiry_key} > ?",
+            f"WHERE {self.expiry_column} > ?",
         ))
         for row in self.connection.execute(query, (datetime.now().isoformat(),)):
             yield row[:-1]
@@ -103,8 +109,8 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
 
     def __getitem__(self, __key):
         query = "\n".join((
-            f"SELECT {self.data_key} FROM {self.settings.name}",
-            f"WHERE {self.expiry_key} > ?",
+            f"SELECT {self.data_column} FROM {self.settings.name}",
+            f"WHERE {self.expiry_column} > ?",
             f"\tAND {"\n\tAND ".join(f"{key} = ?" for key in self._primary_key_columns)}",
         ))
 
@@ -119,7 +125,7 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
     def __setitem__(self, __key, __value):
         query = "\n".join((
             f"INSERT OR REPLACE INTO {self.settings.name} (",
-            f"\t{", ".join(self._primary_key_columns)}, {self.expiry_key}, {self.data_key}",
+            f"\t{", ".join(self._primary_key_columns)}, {self.expiry_column}, {self.data_column}",
             ") ",
             f"VALUES({",".join("?" * len(self._primary_key_columns))},?,?);",
         ))

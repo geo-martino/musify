@@ -70,7 +70,7 @@ class TestSQLiteTable(SQLiteTester, ResponseRepositoryTester):
 
         query = "\n".join((
             f"INSERT OR REPLACE INTO {settings.name} (",
-            f"\t{", ".join(repository._primary_key_columns)}, {repository.expiry_key}, {repository.data_key}",
+            f"\t{", ".join(repository._primary_key_columns)}, {repository.expiry_column}, {repository.data_column}",
             ") ",
             f"VALUES ({",".join("?" * len(repository._primary_key_columns))},?,?);",
         ))

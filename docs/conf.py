@@ -43,6 +43,12 @@ typehints_use_rtype = False
 templates_path = ["_templates"]
 exclude_patterns = ["_build"]
 
+suppress_warnings = [
+    # TODO: figure out how to suppress warnings for the following warnings:
+    #  - WARNING: No classes found for inheritance diagram
+    #  - WARNING: Cannot resolve forward reference in type annotations of ...: name 'T' is not defined
+]
+
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

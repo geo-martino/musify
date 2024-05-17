@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Protocol, Self
 
+from dateutil.relativedelta import relativedelta
 from requests import Request, PreparedRequest, Response
 
 from musify.api.exception import CacheError
@@ -35,6 +36,11 @@ class RequestSettings(ABC):
 
 
 class PaginatedRequestSettings(RequestSettings, ABC):
+    """
+    Settings for a request type for a given endpoint which returns a paginated response
+    to be used to configure a repository in the cache backend.
+    """
+
     @abstractmethod
     def get_offset(self, url: str) -> int:
         """Extracts the offset for a paginated request from the given ``url``."""
@@ -65,7 +71,7 @@ class ResponseRepository[T: Connection, KT, VT](MutableMapping[KT, VT], Hashable
         """The datetime representing the maximum allowed expiry time from now."""
         return datetime.now() + self._expire
 
-    def __init__(self, connection: T, settings: RequestSettings, expire: timedelta = DEFAULT_EXPIRE):
+    def __init__(self, connection: T, settings: RequestSettings, expire: timedelta | relativedelta = DEFAULT_EXPIRE):
         # noinspection PyTypeChecker
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
@@ -167,7 +173,7 @@ class ResponseCache[CT: Connection, ST: ResponseRepository](MutableMapping[str, 
     @abstractmethod
     def type(cls) -> str:
         """A string representing the type of the backend this class represents."""
-        raise NotImplementedError
+        # raise NotImplementedError - omitted here as it causes docs build to fail
 
     @classmethod
     @abstractmethod
@@ -180,7 +186,7 @@ class ResponseCache[CT: Connection, ST: ResponseRepository](MutableMapping[str, 
             cache_name: str,
             connection: CT,
             repository_getter: Callable[[Self, str], ST] = None,
-            expire: timedelta = DEFAULT_EXPIRE,
+            expire: timedelta | relativedelta = DEFAULT_EXPIRE,
     ):
         super().__init__()
 
