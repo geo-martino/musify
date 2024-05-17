@@ -179,7 +179,9 @@ class SQLiteCache(ResponseCache[sqlite3.Connection, SQLiteTable]):
 
     @classmethod
     def connect(cls, value: Any, **kwargs) -> Self:
-        return cls.connect_with_path(path=value, **kwargs)
+        cache = cls.connect_with_path(path=value, **kwargs)
+        cache.connection.autocommit = True
+        return cache
 
     @classmethod
     def connect_with_path(cls, path: str | Path, **kwargs) -> Self:
