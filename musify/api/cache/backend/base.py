@@ -29,8 +29,15 @@ class RequestSettings(ABC):
     #: That name of the repository in the backend
     name: str
 
+    @staticmethod
     @abstractmethod
-    def get_id(self, url: str) -> str:
+    def get_name(value: Any) -> str | None:
+        """Extracts the name to assign to a cache entry in the repository from a given ``value``."""
+        raise NotImplementedError
+
+    @staticmethod
+    @abstractmethod
+    def get_id(url: str) -> str | None:
         """Extracts the ID for a request from the given ``url``."""
         raise NotImplementedError
 
@@ -41,13 +48,15 @@ class PaginatedRequestSettings(RequestSettings, ABC):
     to be used to configure a repository in the cache backend.
     """
 
+    @staticmethod
     @abstractmethod
-    def get_offset(self, url: str) -> int:
+    def get_offset(url: str) -> int:
         """Extracts the offset for a paginated request from the given ``url``."""
         raise NotImplementedError
 
+    @staticmethod
     @abstractmethod
-    def get_limit(self, url: str) -> int:
+    def get_limit(url: str) -> int:
         """Extracts the limit for a paginated request from the given ``url``."""
         raise NotImplementedError
 
@@ -122,6 +131,9 @@ class ResponseRepository[T: Connection, KT, VT](MutableMapping[KT, VT], Hashable
         """Get the response relating to the given ``request`` from this repository if it exists."""
         if isinstance(request, Request | PreparedRequest | Response):
             request = self.get_key_from_request(request)
+        if not request:
+            return
+
         return self.get(request, None)
 
     def get_responses(self, requests: Collection[KT | Request | PreparedRequest | Response]) -> list[VT]:
@@ -133,12 +145,17 @@ class ResponseRepository[T: Connection, KT, VT](MutableMapping[KT, VT], Hashable
         return [result for result in results if result is not None]
 
     def save_response(self, response: Response) -> None:
-        """Save the given ``response`` to this repository."""
+        """Save the given ``response`` to this repository if a key can be extracted from it. Safely fail if not"""
         keys = self.get_key_from_request(response)
+        if not keys:
+            return
         self[keys] = response.text
 
     def save_responses(self, responses: Collection[Response]) -> None:
-        """Save the given ``responses`` to this repository."""
+        """
+        Save the given ``responses`` to this repository if keys can be extracted from them.
+        Safely fail on those that can't.
+        """
         for response in responses:
             self.save_response(response)
 
@@ -146,6 +163,8 @@ class ResponseRepository[T: Connection, KT, VT](MutableMapping[KT, VT], Hashable
         """Delete the given ``request`` from this repository if it exists."""
         if isinstance(request, Request | PreparedRequest | Response):
             request = self.get_key_from_request(request)
+        if not request:
+            return
         self.pop(request, None)
 
     def delete_responses(self, requests: Collection[KT | Request | PreparedRequest | Response]) -> None:
@@ -262,13 +281,16 @@ class ResponseCache[CT: Connection, ST: ResponseRepository](MutableMapping[str, 
             return repository.get_responses(requests)
 
     def save_response(self, response: Response) -> None:
-        """Save the given ``response`` to the appropriate repository."""
+        """Save the given ``response`` to the appropriate repository if a key can be extracted from it."""
         repository = self.get_repository_from_requests([response])
         if repository is not None:
             return repository.save_response(response)
 
     def save_responses(self, responses: Collection[Response]) -> None:
-        """Save the given ``responses`` to the appropriate repository."""
+        """
+        Save the given ``responses`` to the appropriate repository if keys can be extracted from them.
+        Safely fail on those that can't.
+        """
         repository = self.get_repository_from_requests(responses)
         if repository is not None:
             return repository.save_responses(responses)

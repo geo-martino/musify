@@ -168,6 +168,8 @@ class RemoteDataWrangler(ABC):
         :return: Formatted string.
         :raise RemoteIDTypeError: Raised when the function cannot determine the item type
             of the input ``value``.
+        :raise RemoteObjectTypeError: Raised when the function cannot process the input ``value``
+            as a type of the given ``type_in`` i.e. the ``type_in`` does not match the actual type of the ``value``.
         """
         raise NotImplementedError
 

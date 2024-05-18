@@ -605,7 +605,7 @@ def library() -> LocalLibrary:
 )
 @pytest.mark.parametrize("source,expected", [
     (path, join(os.getenv("TEST_PL_COMPARISON", ""), f"{splitext(basename(path))[0]}.m3u"))
-    for path in glob(join(os.getenv("TEST_PL_SOURCE", path_txt), "**", "*.xautopf"), recursive=True)
+    for path in glob(join(os.getenv("TEST_PL_SOURCE", ""), "**", "*.xautopf"), recursive=True)
 ])
 def test_playlist_paths_manual(library: LocalLibrary, source: str, expected: str):
     assert exists(source)

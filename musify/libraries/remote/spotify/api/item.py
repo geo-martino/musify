@@ -41,7 +41,8 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
 
         results_mapped = {(method.upper(), result[self.id_key]): result for result in results}
         repository = self.handler.cache.get_repository_from_url(url)
-        repository.update(results_mapped)
+        if repository is not None:
+            repository.update(results_mapped)
 
     def _sort_results(
             self, results: list[dict[str, Any]], results_cache: list[dict[str, Any]], id_list: Collection[str]
@@ -216,6 +217,8 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
 
         Updates the value of the ``items`` key in-place by extending the value of the ``items`` key with new results.
 
+        If a cache has been configured for this API, will also persist the items in any collection to the cache.
+
         If a :py:class:`RemoteResponse`, this function will not refresh itself with the new response.
         The user must call `refresh` manually after execution.
 
@@ -234,9 +237,10 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         if isinstance(response, RemoteResponse):
             response = response.response
 
-        key = key.name.lower() + "s" if key else None
-        if key and key in response:
-            response = response[key]
+        method = "GET"
+
+        key = self._get_key(key)
+        response = response.get(key, response)
         if self.items_key not in response:
             response[self.items_key] = []
 
@@ -253,7 +257,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         if "limit" not in response:
             response["limit"] = int(parse_qs(urlparse(response["next"]).query).get("limit", [50])[0])
 
-        kind = kind.name.lower() + "s" if isinstance(kind, RemoteObjectType) else kind or self.items_key
+        kind = self._get_key(kind) or self.items_key
         pages = (response["total"] - len(response[self.items_key])) / (response["limit"] or 1)
         bar = self.logger.get_progress_bar(
             initial=len(response[self.items_key]),
@@ -268,9 +272,8 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
             log_count = min(len(response[self.items_key]) + response["limit"], response["total"])
             log = [f"{log_count:>6}/{response["total"]:<6} {key or self.items_key}"]
 
-            response_next = self.handler.get(response["next"], log_pad=95, log_extra=log)
-            if key and key in response_next:
-                response_next = response_next[key]
+            response_next = self.handler.request(method=method, url=response["next"], log_pad=95, log_extra=log)
+            response_next = response_next.get(key, response_next)
 
             response[self.items_key].extend(response_next[self.items_key])
             response["href"] = response_next["href"]
@@ -278,6 +281,14 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
             response["previous"] = response_next.get("previous")
 
             bar.update(len(response_next[self.items_key]))
+
+        # cache child items
+        item_key = key.rstrip("s") if key else key
+        results_to_cache = [
+            result[item_key] if item_key and item_key in result else result for result in response[self.items_key]
+        ]
+        if "href" in results_to_cache[0]:
+            self._cache_results(method, url=results_to_cache[0]["href"], results=results_to_cache)
 
         bar.close()
         return response[self.items_key]
@@ -322,7 +333,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         """
         # input validation
         if not isinstance(values, RemoteResponse) and not values:  # skip on empty
-            url = f"{self.url}/{kind.name.lower() + "s"}" if kind else self.url
+            url = f"{self.url}/{self._get_key(kind)}" if kind else self.url
             self.logger.debug(f"{'SKIP':<7}: {url:<43} | No data given")
             return []
         if kind is None:  # determine the item type
@@ -330,7 +341,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         else:
             self.wrangler.validate_item_type(values, kind=kind)
 
-        unit = kind.name.lower() + "s"
+        unit = self._get_key(kind)
         url = f"{self.url}/{unit}"
         id_list = self.wrangler.extract_ids(values, kind=kind)
 
@@ -342,7 +353,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
             results = self._get_items_batched(url=url, id_list=id_list, key=unit, limit=limit)
 
         key = self.collection_item_map.get(kind, kind)
-        key_name = key.name.lower() + "s"
+        key_name = self._get_key(key)
         if len(results) == 0 or any(key_name not in result for result in results) or not extend:
             self._merge_results_to_input(original=values, responses=results, ordered=True)
             self._refresh_responses(responses=values, skip_checks=False)

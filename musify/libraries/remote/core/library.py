@@ -100,15 +100,9 @@ class RemoteLibrary[
 
     def extend(self, __items: Iterable[MusifyItem], allow_duplicates: bool = True) -> None:
         self.logger.debug(f"Extend {self.api.source} tracks data: START")
-        if not allow_duplicates:
-            self.logger.info(
-                "\33[1;95m ->\33[1;97m Extending library: "
-                "checking if the given items are already in this library \33[0m"
-            )
 
         load_uris = []
-        bar = self.logger.get_progress_bar(iterable=__items, desc="Checking items", unit="items")
-        for item in bar:
+        for item in __items:
             if not allow_duplicates and item in self.items:
                 continue
             elif isinstance(item, RemoteTrack):

@@ -22,9 +22,11 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
 
     __slots__ = ()
 
+    #: The column under which a response's name is stored in the table
+    name_column = "name"
     #: The column under which response data is stored in the table
     data_column = "data"
-    #: The column under which response expiry time is stored in the table
+    #: The column under which the response expiry time is stored in the table
     expiry_column = "expires_at"
 
     @property
@@ -37,11 +39,15 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
 
         return keys
 
-    def get_key_from_request(self, request: Request | PreparedRequest | Response) -> KT:
+    def get_key_from_request(self, request: Request | PreparedRequest | Response) -> KT | None:
         if isinstance(request, Response):
             request = request.request
 
-        keys = [str(request.method), self.settings.get_id(request.url)]
+        id_ = self.settings.get_id(request.url)
+        if not id_:
+            return
+
+        keys = [str(request.method), id_]
         if isinstance(self.settings, PaginatedRequestSettings):
             keys.append(self.settings.get_offset(request.url))
             keys.append(self.settings.get_limit(request.url))
@@ -67,7 +73,8 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
             "\t" + f"\n{ddl_sep}".join(
                 f"{key} {data_type} NOT NULL" for key, data_type in self._primary_key_columns.items()
             ),
-            f"{ddl_sep}{self.expiry_column} TIMESTAMP",
+            f"{ddl_sep}{self.name_column} TEXT",
+            f"{ddl_sep}{self.expiry_column} TIMESTAMP NOT NULL",
             f"{ddl_sep}{self.data_column} TEXT",
             f"{ddl_sep}PRIMARY KEY ({", ".join(self._primary_key_columns)})",
             ");\n"
@@ -111,7 +118,8 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
     def __getitem__(self, __key):
         query = "\n".join((
             f"SELECT {self.data_column} FROM {self.settings.name}",
-            f"WHERE {self.expiry_column} > ?",
+            f"WHERE {self.data_column} IS NOT NULL",
+            f"\tAND {self.expiry_column} > ?",
             f"\tAND {"\n\tAND ".join(f"{key} = ?" for key in self._primary_key_columns)}",
         ))
 
@@ -126,13 +134,15 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
     def __setitem__(self, __key, __value):
         query = "\n".join((
             f"INSERT OR REPLACE INTO {self.settings.name} (",
-            f"\t{", ".join(self._primary_key_columns)}, {self.expiry_column}, {self.data_column}",
+            f"\t{", ".join(self._primary_key_columns)}, {self.name_column}, {self.expiry_column}, {self.data_column}",
             ") ",
-            f"VALUES({",".join("?" * len(self._primary_key_columns))},?,?);",
+            f"VALUES({",".join("?" * len(self._primary_key_columns))},?,?,?);",
         ))
 
         data = self.serialize(__value)
-        self.connection.execute(query, (*__key, self.expire.isoformat(), data))
+        self.connection.execute(
+            query, (*__key, self.settings.get_name(__value), self.expire.isoformat(), data)
+        )
 
     def __delitem__(self, __key):
         query = "\n".join((
@@ -144,15 +154,24 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
         if not cur.rowcount:
             raise MusifyKeyError(__key)
 
-    def serialize(self, value: Any) -> VT:
+    def serialize(self, value: Any) -> VT | None:
         if isinstance(value, str):
+            try:
+                json.loads(value)  # check it is a valid json value
+            except json.decoder.JSONDecodeError:
+                return
             return value
-        return json.dumps(value)
 
-    def deserialize(self, value: VT | dict) -> dict[str, Any]:
+        return json.dumps(value, indent=2)
+
+    def deserialize(self, value: VT | dict) -> dict[str, Any] | None:
         if isinstance(value, dict):
             return value
-        return json.loads(value)
+
+        try:
+            return json.loads(value)
+        except (json.decoder.JSONDecodeError, TypeError):
+            return
 
 
 class SQLiteCache(ResponseCache[sqlite3.Connection, SQLiteTable]):

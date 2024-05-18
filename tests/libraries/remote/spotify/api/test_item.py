@@ -38,6 +38,12 @@ class TestSpotifyAPIItems(RemoteAPITester):
     def responses(self, _responses: dict[str, dict[str, Any]], key: str) -> dict[str, dict[str, Any]]:
         return {id_: response for id_, response in _responses.items() if key is None or response[key]["total"] > 3}
 
+    @pytest.fixture(scope="class")
+    def api_cache(self, api: SpotifyAPI) -> SpotifyAPI:
+        """Yield an authorised :py:class:`SpotifyAPI` object with a :py:class:`ResponseCache` configured."""
+        cache = SQLiteCache.connect_with_in_memory_db()
+        return SpotifyAPI(cache=cache, token=api.handler.authoriser.token)
+
     @staticmethod
     def reduce_items(response: dict[str, Any], key: str, api: SpotifyAPI, api_mock: SpotifyMock, pages: int = 3) -> int:
         """
@@ -246,11 +252,6 @@ class TestSpotifyAPIItems(RemoteAPITester):
     ###########################################################################
     ## Cached-, Multi-, Batched-, and Extend tests for each supported item type
     ###########################################################################
-    @pytest.fixture(scope="class")
-    def api_cache(self, api: SpotifyAPI) -> SpotifyAPI:
-        """Yield an authorised :py:class:`SpotifyAPI` object with a :py:class:`ResponseCache` configured."""
-        cache = SQLiteCache.connect_with_in_memory_db()
-        return SpotifyAPI(cache=cache, token=api.handler.authoriser.token)
 
     # noinspection PyTestUnpassedFixture
     @pytest.mark.parametrize("object_type", [
@@ -280,7 +281,6 @@ class TestSpotifyAPIItems(RemoteAPITester):
 
     # noinspection PyTestUnpassedFixture
     @pytest.mark.parametrize("object_type", [
-        RemoteObjectType.PLAYLIST,
         RemoteObjectType.TRACK,
         RemoteObjectType.ALBUM,
         RemoteObjectType.ARTIST,
@@ -411,6 +411,35 @@ class TestSpotifyAPIItems(RemoteAPITester):
         test.refresh()
 
         self.assert_response_extended(actual=test, expected=original)
+
+    # noinspection PyTestUnpassedFixture
+    @pytest.mark.parametrize("object_type", [
+        RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM,
+        # RemoteObjectType.SHOW, RemoteObjectType.AUDIOBOOK,  RemoteResponse types not yet implemented for these
+    ], ids=idfn)
+    def test_extend_items_cache(
+            self,
+            object_type: RemoteObjectType,
+            response: dict[str, Any],
+            key: str,
+            api_cache: SpotifyAPI,
+            api_mock: SpotifyMock
+    ):
+        self.reduce_items(response=response, key=key, api=api_cache, api_mock=api_mock)
+
+        method = "GET"
+        items = [
+            item if object_type != RemoteObjectType.PLAYLIST else item[key.rstrip("s")]
+            for item in response[key][api_cache.items_key]
+        ]
+
+        url = items[0]["href"]
+        repository = api_cache.handler.cache.get_repository_from_url(url=url)
+        id_list = [item[self.id_key] for item in items]
+        assert any((method, id_) not in repository for id_ in id_list)
+
+        api_cache.extend_items(response=response, key=api_cache.collection_item_map.get(object_type, object_type))
+        assert all((method, id_) in repository for id_ in id_list)
 
     ###########################################################################
     ## ``get_user_items``

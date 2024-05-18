@@ -48,7 +48,7 @@ class TestCachedSession:
         assert key in repository
 
         response = session.request(method=request.method, url=request.url)
-        assert response.text == expected.text
+        assert response.json() == expected.json()
         assert len(requests_mock.request_history) == 0
 
     def test_request_not_cached(
@@ -66,7 +66,7 @@ class TestCachedSession:
         requests_mock.get(request.url, json=expected.json())
 
         response = session.request(method=request.method, url=request.url, persist=False)
-        assert response.text == expected.text
+        assert response.json() == expected.json()
         assert len(requests_mock.request_history) == 1
         assert key not in repository
 
@@ -76,5 +76,5 @@ class TestCachedSession:
         assert key in repository
 
         response = session.request(method=request.method, url=request.url)
-        assert response.text == expected.text
+        assert response.json() == expected.json()
         assert len(requests_mock.request_history) == 2

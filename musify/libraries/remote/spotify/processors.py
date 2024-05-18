@@ -124,17 +124,7 @@ class SpotifyDataWrangler(RemoteDataWrangler):
             type_in = cls.get_id_type(value, kind=kind)
 
         value = value.strip()
-
-        if type_in == RemoteIDType.URL_EXT or type_in == RemoteIDType.URL:
-            kind, id_ = cls._get_id_from_url(value=value, kind=kind)
-        elif type_in == RemoteIDType.URI:
-            kind, id_ = cls._get_id_from_uri(value=value)
-        elif type_in == RemoteIDType.ID:
-            if kind is None:
-                raise RemoteIDTypeError("Input value is an ID and no defined 'kind' has been given.", RemoteIDType.ID)
-            id_ = value
-        else:
-            raise RemoteIDTypeError(f"Could not determine item type: {value}")
+        kind, id_ = cls._get_id(value=value, kind=kind, type_in=type_in)
 
         # reformat
         item = kind.name.lower().rstrip('s')
@@ -144,8 +134,30 @@ class SpotifyDataWrangler(RemoteDataWrangler):
             return f'{cls.url_ext}/{item}/{id_}'
         elif type_out == RemoteIDType.URI:
             return f"spotify:{item}:{id_}"
+        return id_
+
+    @classmethod
+    def _get_id(
+            cls, value: str, kind: RemoteObjectType | None = None, type_in: RemoteIDType = RemoteIDType.ALL
+    ) -> tuple[RemoteObjectType, str]:
+        if type_in == RemoteIDType.URL_EXT or type_in == RemoteIDType.URL:
+            try:
+                kind, id_ = cls._get_id_from_url(value=value, kind=kind)
+            except StopIteration:
+                raise RemoteObjectTypeError(f"Could not get ID from given URL: {value}")
+        elif type_in == RemoteIDType.URI:
+            try:
+                kind, id_ = cls._get_id_from_uri(value=value)
+            except StopIteration:
+                raise RemoteObjectTypeError(f"Could not get ID from given URI: {value}")
+        elif type_in == RemoteIDType.ID:
+            if kind is None:
+                raise RemoteIDTypeError("Input value is an ID and no defined 'kind' has been given.", RemoteIDType.ID)
+            id_ = value
         else:
-            return id_
+            raise RemoteIDTypeError(f"Could not determine item type: {value}")
+
+        return kind, id_
 
     @classmethod
     def _get_id_from_url(cls, value: str, kind: RemoteObjectType | None = None) -> tuple[RemoteObjectType, str]:

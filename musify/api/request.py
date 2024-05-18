@@ -65,7 +65,7 @@ class RequestHandler:
         #: The initial backoff time for failed requests
         self.backoff_start = 0.5
         #: The factor by which to increase backoff time for failed requests i.e. backoff_start ** backoff_factor
-        self.backoff_factor = 2
+        self.backoff_factor = 1.5
         #: The maximum number of request attempts to make before giving up and raising an exception
         self.backoff_count = 10
 

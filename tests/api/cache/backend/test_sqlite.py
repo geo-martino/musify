@@ -92,15 +92,19 @@ class TestSQLiteTable(SQLiteTester, ResponseRepositoryTester):
         return sqlite3.DatabaseError
 
     def test_init(self, connection: sqlite3.Connection, settings: RequestSettings):
-        SQLiteTable(connection=connection, settings=settings)
+        repository = SQLiteTable(connection=connection, settings=settings)
 
         cur = connection.execute(
             f"SELECT name FROM sqlite_master WHERE type='table' AND name='{settings.name}'"
         )
         rows = cur.fetchall()
-
         assert len(rows) == 1
         assert rows[0][0] == settings.name
+
+        cur = connection.execute(f"SELECT name FROM pragma_table_info('{settings.name}');")
+        columns = {row[0] for row in cur}
+        assert {repository.name_column, repository.data_column, repository.expiry_column}.issubset(columns)
+        assert set(repository._primary_key_columns).issubset(columns)
 
     def test_serialize(self, repository: SQLiteTable):
         _, value = self.generate_item(repository.settings)
@@ -109,6 +113,9 @@ class TestSQLiteTable(SQLiteTester, ResponseRepositoryTester):
         assert isinstance(value_serialized, str)
         assert repository.serialize(value_serialized) == value_serialized
 
+        assert repository.serialize("I am not a valid JSON") is None
+
+    # noinspection PyTypeChecker
     def test_deserialize(self, repository: SQLiteTable):
         _, value = self.generate_item(repository.settings)
         value_str = json.dumps(value)
@@ -116,6 +123,9 @@ class TestSQLiteTable(SQLiteTester, ResponseRepositoryTester):
 
         assert isinstance(value_deserialized, dict)
         assert repository.deserialize(value_deserialized) == value
+
+        assert repository.deserialize(None) is None
+        assert repository.deserialize(123) is None
 
 
 class TestSQLiteCache(SQLiteTester, ResponseCacheTester):

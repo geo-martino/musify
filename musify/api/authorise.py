@@ -352,7 +352,7 @@ class APIAuthoriser:
         response = requests.get(headers=self.headers, **self.test_args)
         try:
             response = response.json()
-        except json.JSONDecodeError:
+        except json.decoder.JSONDecodeError:
             response = response.text
 
         result = self.test_condition(response)

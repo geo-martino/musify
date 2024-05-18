@@ -1,27 +1,36 @@
 from urllib.parse import urlparse, parse_qs
 
 from musify.api.cache.backend.base import RequestSettings, PaginatedRequestSettings
-from musify.api.exception import CacheError
 from musify.libraries.remote.core.enum import RemoteIDType
+from musify.libraries.remote.core.exception import RemoteObjectTypeError
 from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
 
 
 class SpotifyRequestSettings(RequestSettings):
 
-    wrangler = SpotifyDataWrangler()
+    @staticmethod
+    def get_name(value: dict) -> str | None:
+        if isinstance(value, dict):
+            if value.get("type") == "user":
+                return value["display_name"]
+            return value.get("name")
 
-    def get_id(self, url: str) -> str:
-        if "/me" in url.rstrip("/"):
-            raise CacheError("Cannot get IDs for 'me' endpoints")
-        return self.wrangler.convert(url, type_in=RemoteIDType.URL, type_out=RemoteIDType.ID)
+    @staticmethod
+    def get_id(url: str) -> str | None:
+        try:
+            return SpotifyDataWrangler.convert(url, type_in=RemoteIDType.URL, type_out=RemoteIDType.ID)
+        except RemoteObjectTypeError:
+            pass
 
 
 class SpotifyPaginatedRequestSettings(PaginatedRequestSettings, SpotifyRequestSettings):
 
-    def get_offset(self, url: str) -> int:
+    @staticmethod
+    def get_offset(url: str) -> int:
         params = parse_qs(urlparse(url).query)
         return int(params.get("offset", [0])[0])
 
-    def get_limit(self, url: str) -> int:
+    @staticmethod
+    def get_limit(url: str) -> int:
         params = parse_qs(urlparse(url).query)
         return int(params.get("limit", [50])[0])

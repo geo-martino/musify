@@ -53,6 +53,8 @@ class BaseResponseTester(ABC):
 class ResponseRepositoryTester(BaseResponseTester, ABC):
     """Run generic tests for :py:class:`ResponseRepository` implementations."""
 
+    bad_url = "test.com"
+
     # noinspection PyArgumentList
     @pytest.fixture(scope="class", params=REQUEST_SETTINGS)
     def settings(self, request) -> RequestSettings:
@@ -119,6 +121,12 @@ class ResponseRepositoryTester(BaseResponseTester, ABC):
         request = self.generate_response_from_item(repository.settings, key, value).request
         assert repository.get_key_from_request(request) == key
 
+    def test_get_key_from_invalid_request(self, repository: ResponseRepository):
+        key, value = self.generate_item(repository.settings)
+        request = self.generate_response_from_item(repository.settings, key, value).request
+        request.url = self.bad_url  # should not return an ID for this URL format
+        assert repository.get_key_from_request(request) is None
+
     def test_get_response_on_missing(self, repository: ResponseRepository, valid_items: dict):
         key, value = self.generate_item(repository.settings)
         assert key not in repository
@@ -159,11 +167,27 @@ class ResponseRepositoryTester(BaseResponseTester, ABC):
         response = self.generate_response_from_item(repository.settings, key, value)
         assert repository.get_response(response) == value
 
+    def test_get_response_from_response_on_missing(self, repository: ResponseRepository, valid_items: dict):
+        key, value = choice(list(valid_items.items()))
+        response = self.generate_response_from_item(repository.settings, key, value)
+        response.url = self.bad_url
+        response.request.url = self.bad_url
+        assert repository.get_response(response) is None
+
     def test_get_responses_from_responses(self, repository: ResponseRepository, valid_items: dict):
         responses = [
             self.generate_response_from_item(repository.settings, key, value) for key, value in valid_items.items()
         ]
         assert repository.get_responses(responses) == list(valid_items.values())
+
+    def test_get_responses_from_responses_on_missing(self, repository: ResponseRepository, valid_items: dict):
+        responses = [
+            self.generate_response_from_item(repository.settings, key, value) for key, value in valid_items.items()
+        ]
+        for response in responses:
+            response.url = self.bad_url
+            response.request.url = self.bad_url
+        assert repository.get_responses(responses) == []
 
     def test_save_response_from_key(self, repository: ResponseRepository):
         key, value = self.generate_item(repository.settings)
@@ -191,6 +215,17 @@ class ResponseRepositoryTester(BaseResponseTester, ABC):
         assert key in repository
         assert repository[key] == value
 
+    def test_save_response_fails_silently(self, repository: ResponseRepository):
+        key, value = self.generate_item(repository.settings)
+        response = self.generate_response_from_item(repository.settings, key, value)
+        assert key not in repository
+
+        response.url = self.bad_url  # should not return an ID for this URL format
+        response.request.url = response.url
+
+        repository.save_response(response)
+        assert key not in repository
+
     def test_save_responses(self, repository: ResponseRepository):
         items = dict(self.generate_item(repository.settings) for _ in range(randrange(3, 6)))
         responses = [self.generate_response_from_item(repository.settings, key, value) for key, value in items.items()]
@@ -200,6 +235,18 @@ class ResponseRepositoryTester(BaseResponseTester, ABC):
         assert all(key in repository for key in items)
         for key, value in items.items():
             assert repository[key] == value
+
+    def test_save_responses_fails_silently(self, repository: ResponseRepository):
+        items = dict(self.generate_item(repository.settings) for _ in range(randrange(3, 6)))
+        responses = [self.generate_response_from_item(repository.settings, key, value) for key, value in items.items()]
+        assert all(key not in repository for key in items)
+
+        for response in responses:
+            response.url = self.bad_url  # should not return an ID for this URL format
+            response.request.url = response.url
+
+        repository.save_responses(responses)
+        assert all(key not in repository for key in items)
 
     def test_delete_response_on_missing(self, repository: ResponseRepository):
         key, value = self.generate_item(repository.settings)

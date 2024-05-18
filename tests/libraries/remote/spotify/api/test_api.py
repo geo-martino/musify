@@ -39,8 +39,8 @@ class TestSpotifyAPI:
     def test_init_cache(self, cache: ResponseCache):
         SpotifyAPI(cache=cache)
 
-        expected_names_normal = ["tracks", "artists", "albums", "playlists", "audio_features", "audio_analysis"]
-        expected_names_paginated = ["artist_albums", "album_tracks", "playlist_tracks"]
+        expected_names_normal = ["tracks", "artists", "albums", "audio_features", "audio_analysis"]
+        expected_names_paginated = ["artist_albums", "album_tracks"]
 
         assert all(name in cache for name in expected_names_normal)
         assert all(name in cache for name in expected_names_paginated)
@@ -55,9 +55,8 @@ class TestSpotifyAPI:
             "tracks": f"{api.wrangler.url_api}/tracks/{random_id()}",
             "artists": f"{api.wrangler.url_api}/artists?ids={",".join(random_id() for _ in range(10))}",
             "albums": f"{api.wrangler.url_api}/albums?ids={",".join(random_id() for _ in range(50))}",
-            "playlists": f"{api.wrangler.url_api}/playlists",
         }
-        names_paginated = ["artist_albums", "album_tracks", "playlist_tracks"]
+        names_paginated = ["artist_albums", "album_tracks"]
         for name in names_paginated:
             parent, child = name.split("_")
             parent = parent.rstrip("s") + "s"
