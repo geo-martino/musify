@@ -26,6 +26,8 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
     name_column = "name"
     #: The column under which response data is stored in the table
     data_column = "data"
+    #: The column under which the response cache time is stored in the table
+    cached_column = "cached_at"
     #: The column under which the response expiry time is stored in the table
     expiry_column = "expires_at"
 
@@ -74,6 +76,7 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
                 f"{key} {data_type} NOT NULL" for key, data_type in self._primary_key_columns.items()
             ),
             f"{ddl_sep}{self.name_column} TEXT",
+            f"{ddl_sep}{self.cached_column} TIMESTAMP NOT NULL",
             f"{ddl_sep}{self.expiry_column} TIMESTAMP NOT NULL",
             f"{ddl_sep}{self.data_column} TEXT",
             f"{ddl_sep}PRIMARY KEY ({", ".join(self._primary_key_columns)})",
@@ -132,17 +135,28 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
         return self.deserialize(row[0])
 
     def __setitem__(self, __key, __value):
+        columns = (
+            *self._primary_key_columns,
+            self.name_column,
+            self.cached_column,
+            self.expiry_column,
+            self.data_column
+        )
         query = "\n".join((
             f"INSERT OR REPLACE INTO {self.settings.name} (",
-            f"\t{", ".join(self._primary_key_columns)}, {self.name_column}, {self.expiry_column}, {self.data_column}",
+            f"\t{", ".join(columns)}",
             ") ",
-            f"VALUES({",".join("?" * len(self._primary_key_columns))},?,?,?);",
+            f"VALUES({",".join("?" * len(columns))});",
         ))
 
-        data = self.serialize(__value)
-        self.connection.execute(
-            query, (*__key, self.settings.get_name(__value), self.expire.isoformat(), data)
+        params = (
+            *__key,
+            self.settings.get_name(__value),
+            datetime.now().isoformat(),
+            self.expire.isoformat(),
+            self.serialize(__value)
         )
+        self.connection.execute(query, params)
 
     def __delitem__(self, __key):
         query = "\n".join((
@@ -164,7 +178,7 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
 
         return json.dumps(value, indent=2)
 
-    def deserialize(self, value: VT | dict) -> dict[str, Any] | None:
+    def deserialize(self, value: VT | dict) -> Any:
         if isinstance(value, dict):
             return value
 

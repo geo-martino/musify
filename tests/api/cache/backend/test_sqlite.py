@@ -67,20 +67,25 @@ class TestSQLiteTable(SQLiteTester, ResponseRepositoryTester):
     ) -> SQLiteTable:
         expire = timedelta(days=2)
         repository = SQLiteTable(connection=connection, settings=settings, expire=expire)
-
+        columns = (
+            *repository._primary_key_columns,
+            repository.cached_column,
+            repository.expiry_column,
+            repository.data_column
+        )
         query = "\n".join((
             f"INSERT OR REPLACE INTO {settings.name} (",
-            f"\t{", ".join(repository._primary_key_columns)}, {repository.expiry_column}, {repository.data_column}",
+            f"\t{", ".join(columns)}",
             ") ",
-            f"VALUES ({",".join("?" * len(repository._primary_key_columns))},?,?);",
+            f"VALUES ({",".join("?" * len(columns))});",
         ))
         parameters = [
-            (*key, repository.expire.isoformat(), repository.serialize(value))
+            (*key, datetime.now().isoformat(), repository.expire.isoformat(), repository.serialize(value))
             for key, value in valid_items.items()
         ]
         invalid_expire_dt = datetime.now() - expire  # expiry time in the past, response cache has expired
         parameters.extend(
-            (*key, invalid_expire_dt.isoformat(), repository.serialize(value))
+            (*key, datetime.now().isoformat(), invalid_expire_dt.isoformat(), repository.serialize(value))
             for key, value in invalid_items.items()
         )
         connection.executemany(query, parameters)
