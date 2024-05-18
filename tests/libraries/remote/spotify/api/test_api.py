@@ -39,8 +39,16 @@ class TestSpotifyAPI:
     def test_init_cache(self, cache: ResponseCache):
         SpotifyAPI(cache=cache)
 
-        expected_names_normal = ["tracks", "artists", "albums", "audio_features", "audio_analysis"]
-        expected_names_paginated = ["artist_albums", "album_tracks"]
+        expected_names_normal = [
+            "tracks",
+            "audio_features",
+            "audio_analysis",
+            "albums",
+            "artists",
+            "episodes",
+            "chapters",
+        ]
+        expected_names_paginated = ["album_tracks", "artist_albums", "show_episodes", "audiobook_chapters"]
 
         assert all(name in cache for name in expected_names_normal)
         assert all(name in cache for name in expected_names_paginated)

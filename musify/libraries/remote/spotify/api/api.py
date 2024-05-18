@@ -129,12 +129,22 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
         cache.repository_getter = self._get_cache_repository
 
         cache.create_repository(SpotifyRequestSettings(name="tracks"))
-        cache.create_repository(SpotifyRequestSettings(name="artists"))
-        cache.create_repository(SpotifyRequestSettings(name="albums"))
         cache.create_repository(SpotifyRequestSettings(name="audio_features"))
         cache.create_repository(SpotifyRequestSettings(name="audio_analysis"))
+
+        cache.create_repository(SpotifyRequestSettings(name="albums"))
         cache.create_repository(SpotifyPaginatedRequestSettings(name="album_tracks"))
+
+        cache.create_repository(SpotifyRequestSettings(name="artists"))
         cache.create_repository(SpotifyPaginatedRequestSettings(name="artist_albums"))
+
+        cache.create_repository(SpotifyRequestSettings(name="shows"))
+        cache.create_repository(SpotifyRequestSettings(name="episodes"))
+        cache.create_repository(SpotifyPaginatedRequestSettings(name="show_episodes"))
+
+        cache.create_repository(SpotifyRequestSettings(name="audiobooks"))
+        cache.create_repository(SpotifyRequestSettings(name="chapters"))
+        cache.create_repository(SpotifyPaginatedRequestSettings(name="audiobook_chapters"))
 
     @staticmethod
     def _get_cache_repository(cache: ResponseCache, url: str) -> ResponseRepository | None:

@@ -8,7 +8,7 @@ from itertools import batched
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from musify.api.exception import APIError
+from musify.api.exception import APIError, CacheError
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteObjectTypeError
@@ -34,13 +34,20 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
     ###########################################################################
     ## GET helpers: Generic methods for getting items
     ###########################################################################
-    def _cache_results(self, method: str, url: str, results: list[dict[str, Any]]) -> None:
-        """Persist ``results`` from a given base ``url`` to the cache."""
+    def _cache_results(self, method: str, results: list[dict[str, Any]]) -> None:
+        """Persist ``results`` of a given ``method`` to the cache."""
         if self.handler.cache is None:
             return
 
+        # take all parts of href path, excluding ID
+        possible_urls = {"/".join(result["href"].split("/")[:-1]) for result in results}
+        if len(possible_urls) > 1:
+            raise CacheError(
+                "Too many different types of results given. Given results must relate to the same repository type."
+            )
+
         results_mapped = {(method.upper(), result[self.id_key]): result for result in results}
-        repository = self.handler.cache.get_repository_from_url(url)
+        repository = self.handler.cache.get_repository_from_url(next(iter(possible_urls)))
         if repository is not None:
             repository.update(results_mapped)
 
@@ -134,7 +141,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
 
             results.extend(response[key]) if key else results.append(response)
 
-        self._cache_results(method=method, url=url, results=results)
+        self._cache_results(method=method, results=results)
         self._sort_results(results=results, results_cache=results_cache, id_list=id_list)
 
         return results
@@ -195,7 +202,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
 
             results.extend(response[key]) if key else results.append(response)
 
-        self._cache_results(method=method, url=url, results=results)
+        self._cache_results(method=method, results=results)
         self._sort_results(results=results, results_cache=results_cache, id_list=id_list)
 
         return results
@@ -287,8 +294,8 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         results_to_cache = [
             result[item_key] if item_key and item_key in result else result for result in response[self.items_key]
         ]
-        if "href" in results_to_cache[0]:
-            self._cache_results(method, url=results_to_cache[0]["href"], results=results_to_cache)
+        if all("href" in result for result in results_to_cache):
+            self._cache_results(method=method, results=results_to_cache)
 
         bar.close()
         return response[self.items_key]

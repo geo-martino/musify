@@ -255,11 +255,8 @@ class TestSpotifyAPIItems(RemoteAPITester):
 
     # noinspection PyTestUnpassedFixture
     @pytest.mark.parametrize("object_type", [
+        RemoteObjectType.PLAYLIST,
         RemoteObjectType.USER,
-        RemoteObjectType.SHOW,
-        RemoteObjectType.EPISODE,
-        RemoteObjectType.AUDIOBOOK,
-        RemoteObjectType.CHAPTER,
     ], ids=idfn)
     def test_get_items_from_cache_skips(
             self,
@@ -284,6 +281,10 @@ class TestSpotifyAPIItems(RemoteAPITester):
         RemoteObjectType.TRACK,
         RemoteObjectType.ALBUM,
         RemoteObjectType.ARTIST,
+        RemoteObjectType.SHOW,
+        RemoteObjectType.EPISODE,
+        RemoteObjectType.AUDIOBOOK,
+        RemoteObjectType.CHAPTER,
     ], ids=idfn)
     def test_get_items_from_cache(
             self,
