@@ -45,7 +45,7 @@ class SQLiteTester(BaseResponseTester):
         params = {}
         if len(key) == 4:
             params["offset"] = key[2]
-            params["page_count"] = key[3]
+            params["size"] = key[3]
 
         request = Request(method=key[0], url=url, params=params).prepare()
 

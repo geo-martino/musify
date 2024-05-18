@@ -34,10 +34,10 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
     @property
     def _primary_key_columns(self) -> Mapping[str, str]:
         """A map of column names to column data types for the primary keys of this repository."""
-        keys = {"method": "VARCHAR(10)", "id": "TEXT"}
+        keys = {"method": "VARCHAR(10)", "id": "VARCHAR(50)"}
         if isinstance(self.settings, PaginatedRequestSettings):
-            keys["offset"] = "INT4"
-            keys["page_count"] = "INT2"
+            keys["offset"] = "INT2"
+            keys["size"] = "INT2"
 
         return keys
 

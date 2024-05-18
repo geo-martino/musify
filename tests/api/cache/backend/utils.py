@@ -35,4 +35,4 @@ class MockPaginatedRequestSettings(MockRequestSettings, PaginatedRequestSettings
     @staticmethod
     def get_limit(url: str) -> int:
         params = parse_qs(urlparse(url).query)
-        return int(params.get("page_count", [0])[0])
+        return int(params.get("size", [0])[0])
