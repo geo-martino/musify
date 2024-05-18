@@ -415,30 +415,35 @@ class TestSpotifyAPIItems(RemoteAPITester):
 
     # noinspection PyTestUnpassedFixture
     @pytest.mark.parametrize("object_type", [
-        RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM,
-        # RemoteObjectType.SHOW, RemoteObjectType.AUDIOBOOK,  RemoteResponse types not yet implemented for these
+        RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM, RemoteObjectType.SHOW, RemoteObjectType.AUDIOBOOK
     ], ids=idfn)
     def test_extend_items_cache(
             self,
             object_type: RemoteObjectType,
-            response: dict[str, Any],
+            responses: dict[str, dict[str, Any]],
             key: str,
             api_cache: SpotifyAPI,
             api_mock: SpotifyMock
     ):
-        self.reduce_items(response=response, key=key, api=api_cache, api_mock=api_mock)
-
         method = "GET"
-        items = [
-            item if object_type != RemoteObjectType.PLAYLIST else item[key.rstrip("s")]
-            for item in response[key][api_cache.items_key]
-        ]
-
-        url = items[0]["href"]
+        response = list(responses.values())[0][key][api_cache.items_key][0]
+        url = response["href"] if object_type != RemoteObjectType.PLAYLIST else response[key.rstrip("s")]["href"]
         repository = api_cache.handler.cache.get_repository_from_url(url=url)
-        id_list = [item[self.id_key] for item in items]
-        assert any((method, id_) not in repository for id_ in id_list)
+        id_list = None
 
+        # get a response that has not already had its items persisted to the cache by a previous test
+        for response in responses.values():
+            self.reduce_items(response=response, key=key, api=api_cache, api_mock=api_mock)
+            items = [
+                item if object_type != RemoteObjectType.PLAYLIST else item[key.rstrip("s")]
+                for item in response[key][api_cache.items_key]
+            ]
+
+            id_list = [item[self.id_key] for item in items]
+            if any((method, id_) not in repository for id_ in id_list):
+                break
+
+        assert any((method, id_) not in repository for id_ in id_list)
         api_cache.extend_items(response=response, key=api_cache.collection_item_map.get(object_type, object_type))
         assert all((method, id_) in repository for id_ in id_list)
 
