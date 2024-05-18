@@ -8,6 +8,8 @@ from abc import ABC, abstractmethod
 from collections.abc import Collection, MutableMapping, Mapping, Sequence
 from typing import Any, Self
 
+from musify.api.authorise import APIAuthoriser
+from musify.api.cache.backend.base import ResponseCache
 from musify.api.request import RequestHandler
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
@@ -24,10 +26,13 @@ class RemoteAPI(ABC):
     See :py:class:`RequestHandler` and :py:class:`APIAuthoriser`
     for more info on which params to pass to authorise and execute requests.
 
-    :param handler_kwargs: The authorisation kwargs to be passed to :py:class:`APIAuthoriser`.
+    :param wrangler: The :py:class:`RemoteDataWrangler` for this API type.
+    :param authoriser: The authoriser to use when authorising requests to the API.
+    :param cache: When given, attempt to use this cache for certain request types before calling the API.
+        Repository and cachable request types can be set up by child classes.
     """
 
-    __slots__ = ("logger", "handler", "user_data", "wrangler")
+    __slots__ = ("logger", "handler", "wrangler", "user_data")
 
     #: Map of :py:class:`RemoteObjectType` for remote collections
     #: to the  :py:class:`RemoteObjectType` of the items they hold
@@ -66,22 +71,25 @@ class RemoteAPI(ABC):
         """The name of the API service"""
         return self.wrangler.source
 
-    def __init__(self, wrangler: RemoteDataWrangler, **handler_kwargs):
-        super().__init__()
-        #: A :py:class:`RemoteDataWrangler` object for processing URIs
-        self.wrangler = wrangler
-
+    def __init__(self, authoriser: APIAuthoriser, wrangler: RemoteDataWrangler, cache: ResponseCache | None = None):
         # noinspection PyTypeChecker
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
 
+        self._setup_cache(cache)
+
+        #: A :py:class:`RemoteDataWrangler` object for processing URIs
+        self.wrangler = wrangler
         #: The :py:class:`RequestHandler` for handling authorised requests to the API
-        self.handler = RequestHandler(
-            name=self.wrangler.source, **{k: v for k, v in handler_kwargs.items() if k != "name"}
-        )
+        self.handler = RequestHandler(authoriser=authoriser, cache=cache)
 
         #: Stores the loaded user data for the currently authorised user
         self.user_data: dict[str, Any] = {}
+
+    @abstractmethod
+    def _setup_cache(self, cache: ResponseCache) -> None:
+        """Set up the repositories and repository getter on the given ``cache``."""
+        raise NotImplementedError
 
     def authorise(self, force_load: bool = False, force_new: bool = False) -> Self:
         """
@@ -210,7 +218,6 @@ class RemoteAPI(ABC):
             value: str | Mapping[str, Any] | RemoteResponse | None = None,
             kind: RemoteIDType | None = None,
             limit: int = 20,
-            use_cache: bool = True
     ) -> None:
         """
         Pretty print collection data for displaying to the user.
@@ -226,21 +233,17 @@ class RemoteAPI(ABC):
             If None and ID is given, user will be prompted to give the kind anyway.
         :param limit: The number of results to call per request and,
             therefore, the number of items in each printed block.
-        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
-            Set as False to refresh the cached response of the CachedSession.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def get_playlist_url(self, playlist: str | Mapping[str, Any] | RemoteResponse, use_cache: bool = True) -> str:
+    def get_playlist_url(self, playlist: str | Mapping[str, Any] | RemoteResponse) -> str:
         """
         Determine the type of the given ``playlist`` and return its API URL.
         If type cannot be determined, attempt to find the playlist in the
         list of the currently authenticated user's playlists.
 
         :param playlist: In URL/URI/ID form, or the name of one of the currently authenticated user's playlists.
-        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
-            Set as False to refresh the cached response of the CachedSession.
         :return: The playlist URL.
         :raise RemoteIDTypeError: Raised when the function cannot determine the item type of
             the input ``playlist``. Or when it does not recognise the type of the input ``playlist`` parameter.
@@ -259,17 +262,13 @@ class RemoteAPI(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def query(
-            self, query: str, kind: RemoteObjectType, limit: int = 10, use_cache: bool = True
-    ) -> list[dict[str, Any]]:
+    def query(self, query: str, kind: RemoteObjectType, limit: int = 10) -> list[dict[str, Any]]:
         """
         ``GET`` - Query for items. Modify result types returned with kind parameter
 
         :param query: Search query.
         :param kind: The remote object type to search for.
         :param limit: Number of results to get and return.
-        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
-            Set as False to refresh the cached response of the CachedSession.
         :return: The response from the endpoint.
         """
         raise NotImplementedError
@@ -283,7 +282,6 @@ class RemoteAPI(ABC):
             response: MutableMapping[str, Any] | RemoteResponse,
             kind: RemoteObjectType | str | None = None,
             key: RemoteObjectType | None = None,
-            use_cache: bool = True,
     ) -> list[dict[str, Any]]:
         """
         Extend the items for a given API ``response``.
@@ -298,8 +296,6 @@ class RemoteAPI(ABC):
         :param response: A remote API JSON response for an items type endpoint.
         :param kind: The type of response being extended. Optional, used only for logging.
         :param key: The type of response of the child objects.
-        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
-            Set as False to refresh the cached response of the CachedSession.
         :return: API JSON responses for each item
         """
         raise NotImplementedError
@@ -311,7 +307,6 @@ class RemoteAPI(ABC):
             kind: RemoteObjectType | None = None,
             limit: int = 50,
             extend: bool = True,
-            use_cache: bool = True,
     ) -> list[dict[str, Any]]:
         """
         ``GET`` - Get information for given ``values``.
@@ -336,8 +331,6 @@ class RemoteAPI(ABC):
             This value will be limited to be between ``1`` and ``50``.
         :param extend: When True and the given ``kind`` is a collection of items,
             extend the response to include all items in this collection.
-        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
-            Set as False to refresh the cached response of the CachedSession.
         :return: API JSON responses for each item.
         :raise RemoteObjectTypeError: Raised when the function cannot determine the item type
             of the input ``values``. Or when it does not recognise the type of the input ``values`` parameter.
@@ -345,9 +338,7 @@ class RemoteAPI(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_tracks(
-            self, values: APIInputValue, limit: int = 50, use_cache: bool = True, *args, **kwargs,
-    ) -> list[dict[str, Any]]:
+    def get_tracks(self, values: APIInputValue, limit: int = 50, *args, **kwargs) -> list[dict[str, Any]]:
         """
         Wrapper for :py:meth:`get_items` which only returns Track type responses.
         See :py:meth:`get_items` for more info.
@@ -356,11 +347,7 @@ class RemoteAPI(ABC):
 
     @abstractmethod
     def get_user_items(
-            self,
-            user: str | None = None,
-            kind: RemoteObjectType = RemoteObjectType.PLAYLIST,
-            limit: int = 50,
-            use_cache: bool = True,
+            self, user: str | None = None, kind: RemoteObjectType = RemoteObjectType.PLAYLIST, limit: int = 50,
     ) -> list[dict[str, Any]]:
         """
         ``GET`` - Get saved items for a given user.
@@ -369,8 +356,6 @@ class RemoteAPI(ABC):
         :param kind: Item type to retrieve for the user.
         :param limit: Size of each batch of items to request in the collection items request.
             This value will be limited to be between ``1`` and ``50``.
-        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
-            Set as False to refresh the cached response of the CachedSession.
         :return: API JSON responses for each collection.
         :raise RemoteIDTypeError: Raised when the input ``user`` does not represent a user URL/URI/ID.
         :raise RemoteObjectTypeError: When the given ``kind`` is not a valid user item/collection.

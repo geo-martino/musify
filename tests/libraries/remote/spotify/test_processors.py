@@ -245,7 +245,7 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
 
     @pytest.fixture(scope="class")
     def matcher(self) -> ItemMatcher:
-        """Yields a valid :py:class:`ItemMatcher` as a pytest.fixture"""
+        """Yields a valid :py:class:`ItemMatcher` as a pytest.fixture."""
         ItemMatcher.karaoke_tags = {"karaoke", "backing", "instrumental"}
         ItemMatcher.year_range = 10
 
@@ -295,7 +295,8 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
         for remote_track in map(SpotifyTrack, sample(api_mock.tracks, k=limit)):
             local_track = random_track()
             local_track.uri = None
-            local_track.remote_wrangler = wrangler
+            local_track._reader.remote_wrangler = wrangler
+            local_track._writer.remote_wrangler = wrangler
 
             local_track.title = remote_track.title
             local_track.album = remote_track.album
@@ -327,7 +328,8 @@ class TestSpotifyItemSearcher(RemoteItemSearcherTester):
             for remote_track in album:
                 local_track = random_track()
                 local_track.uri = None
-                local_track.remote_wrangler = wrangler
+                local_track._reader.remote_wrangler = wrangler
+                local_track._writer.remote_wrangler = wrangler
                 local_track.compilation = False
 
                 local_track.title = remote_track.title
@@ -347,7 +349,7 @@ class TestSpotifyItemChecker(RemoteItemCheckerTester):
 
     @pytest.fixture(scope="class")
     def matcher(self) -> ItemMatcher:
-        """Yields a valid :py:class:`ItemMatcher` as a pytest.fixture"""
+        """Yields a valid :py:class:`ItemMatcher` as a pytest.fixture."""
         return ItemMatcher()
 
     @pytest.fixture

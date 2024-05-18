@@ -38,7 +38,7 @@ class MusicBee(LocalLibrary, File):
     :param path_mapper: Optionally, provide a :py:class:`PathMapper` for paths stored in the playlist files.
         Useful if the playlist files contain relative paths and/or paths for other systems that need to be
         mapped to absolute, system-specific paths to be loaded and back again when saved.
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
+    :param remote_wrangler: Optionally, provide a :py:class:`RemoteDataWrangler` object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
         The wrangler is also used when loading tracks to allow them to process URI tags.
         For more info on this, see :py:class:`LocalTrack`.
@@ -49,7 +49,7 @@ class MusicBee(LocalLibrary, File):
         "library_xml",
         "_library_xml_path",
         "_library_xml_parser",
-        "settings_xml"
+        "settings_xml",
         "_settings_xml_path",
         "_settings_xml_parser",
     )

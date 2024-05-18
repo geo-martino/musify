@@ -16,6 +16,8 @@ from musify.utils import get_user_input, get_max_width, align_string
 class Processor(PrettyPrinter, metaclass=ABCMeta):
     """Generic base class for processors"""
 
+    __slots__ = ()
+
 
 class InputProcessor(Processor, metaclass=ABCMeta):
     """
@@ -23,6 +25,8 @@ class InputProcessor(Processor, metaclass=ABCMeta):
 
     Contains methods for getting user input and printing formatted options text to the terminal.
     """
+
+    __slots__ = ("logger",)
 
     def __init__(self):
         # noinspection PyTypeChecker
@@ -57,6 +61,7 @@ class dynamicprocessormethod:
     This assigns the method a processor method which can be dynamically called by the processor class.
     Optionally, provide a list of alternative names from which this processor method can also be called.
     """
+
     def __new__(cls, *args, **__):
         func: Optional[Callable] = next((a for a in args if callable(a)), None)
         self = partial(cls, *args) if func is None else super().__new__(cls)
@@ -99,7 +104,7 @@ class DynamicProcessor(Processor, metaclass=ABCMeta):
 
     @property
     def processor_methods(self) -> frozenset[str]:
-        """String representation of the current processor name of this object"""
+        """String representation of all available processor names of this object"""
         return frozenset(self._processor_method_fmt(name) for name in self.__processormethods__)
 
     @classmethod

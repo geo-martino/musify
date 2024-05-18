@@ -1,7 +1,8 @@
 """
 Functionality relating to a generic remote library.
 """
-from abc import ABCMeta, abstractmethod
+import logging
+from abc import ABC, abstractmethod
 from collections.abc import Collection, Mapping, Iterable
 from typing import Any, Literal
 
@@ -13,6 +14,7 @@ from musify.libraries.remote.core.factory import RemoteObjectFactory
 from musify.libraries.remote.core.object import RemoteCollection, SyncResultRemotePlaylist
 from musify.libraries.remote.core.object import RemoteTrack, RemotePlaylist, RemoteArtist, RemoteAlbum
 from musify.log import STAT
+from musify.log.logger import MusifyLogger
 from musify.processors.base import Filter
 from musify.processors.filter import FilterDefinedList
 from musify.utils import align_string, get_max_width
@@ -20,7 +22,7 @@ from musify.utils import align_string, get_max_width
 
 class RemoteLibrary[
     A: RemoteAPI, PL: RemotePlaylist, TR: RemoteTrack, AL: RemoteAlbum, AR: RemoteArtist
-](RemoteCollection[TR], Library[TR], metaclass=ABCMeta):
+](RemoteCollection[TR], Library[TR], ABC):
     """
     Represents a remote library, providing various methods for manipulating
     tracks and playlists across an entire remote library collection.
@@ -28,11 +30,9 @@ class RemoteLibrary[
     :param api: The instantiated and authorised API object for this source type.
     :param playlist_filter: An optional :py:class:`Filter` to apply or collection of playlist names to include when
         loading playlists. Playlist names will be passed to this filter to limit which playlists are loaded.
-    :param use_cache: Use the cache when calling the API endpoint.
-        When using a CachedSession, set as False to refresh the cached response.
     """
 
-    __slots__ = ("_factory", "_tracks", "_playlists", "playlist_filter")
+    __slots__ = ("logger", "_factory", "_playlists", "_tracks", "_albums", "_artists", "playlist_filter")
     __attributes_classes__ = (Library, RemoteCollection)
     __attributes_ignore__ = ("api", "factory")
 
@@ -80,11 +80,12 @@ class RemoteLibrary[
         """All user's saved albums"""
         return self._albums
 
-    def __init__(self, api: A, use_cache: bool = True, playlist_filter: Collection[str] | Filter[str] = ()):
-        super().__init__(remote_wrangler=api.wrangler)
+    def __init__(self, api: A, playlist_filter: Collection[str] | Filter[str] = ()):
+        super().__init__()
 
-        #: When true, use the cache when calling the API endpoint
-        self.use_cache = use_cache
+        # noinspection PyTypeChecker
+        #: The :py:class:`MusifyLogger` for this  object
+        self.logger: MusifyLogger = logging.getLogger(__name__)
 
         if not isinstance(playlist_filter, Filter):
             playlist_filter = FilterDefinedList(playlist_filter)
@@ -99,15 +100,9 @@ class RemoteLibrary[
 
     def extend(self, __items: Iterable[MusifyItem], allow_duplicates: bool = True) -> None:
         self.logger.debug(f"Extend {self.api.source} tracks data: START")
-        if not allow_duplicates:
-            self.logger.info(
-                "\33[1;95m ->\33[1;97m Extending library: "
-                "checking if the given items are already in this library \33[0m"
-            )
 
         load_uris = []
-        bar = self.logger.get_progress_bar(iterable=__items, desc="Checking items", unit="items")
-        for item in bar:
+        for item in __items:
             if not allow_duplicates and item in self.items:
                 continue
             elif isinstance(item, RemoteTrack):
@@ -123,7 +118,7 @@ class RemoteLibrary[
             f"with {len(load_uris)} additional tracks \33[0m"
         )
 
-        load_tracks = self.api.get_tracks(load_uris, features=True, use_cache=self.use_cache)
+        load_tracks = self.api.get_tracks(load_uris, features=True)
         self.items.extend(map(self.factory.track, load_tracks))
 
         self.logger.print(STAT)
@@ -161,14 +156,14 @@ class RemoteLibrary[
         self.logger.debug(f"Load {self.api.source} playlists: START")
         self.api.load_user_data()
 
-        responses = self.api.get_user_items(kind=RemoteObjectType.PLAYLIST, use_cache=self.use_cache)
+        responses = self.api.get_user_items(kind=RemoteObjectType.PLAYLIST)
         responses = self._filter_playlists(responses)
 
         self.logger.info(
             f"\33[1;95m  >\33[1;97m Getting {self._get_total_tracks(responses=responses)} "
             f"{self.api.source} tracks from {len(responses)} playlists \33[0m"
         )
-        self.api.get_items(responses, kind=RemoteObjectType.PLAYLIST, use_cache=self.use_cache)
+        self.api.get_items(responses, kind=RemoteObjectType.PLAYLIST)
 
         playlists = [
             self.factory.playlist(response=r, skip_checks=False)
@@ -213,7 +208,7 @@ class RemoteLibrary[
         self.logger.debug(f"Load user's saved {self.api.source} tracks: START")
         self.api.load_user_data()
 
-        responses = self.api.get_user_items(kind=RemoteObjectType.TRACK, use_cache=self.use_cache)
+        responses = self.api.get_user_items(kind=RemoteObjectType.TRACK)
         for response in self.logger.get_progress_bar(iterable=responses, desc="Processing tracks", unit="tracks"):
             track = self.factory.track(response=response, skip_checks=True)
 
@@ -261,7 +256,7 @@ class RemoteLibrary[
         self.logger.debug(f"Load user's saved {self.api.source} albums: START")
         self.api.load_user_data()
 
-        responses = self.api.get_user_items(kind=RemoteObjectType.ALBUM, use_cache=self.use_cache)
+        responses = self.api.get_user_items(kind=RemoteObjectType.ALBUM)
         for response in self.logger.get_progress_bar(iterable=responses, desc="Processing albums", unit="albums"):
             album = self.factory.album(response=response, skip_checks=True)
 
@@ -306,7 +301,7 @@ class RemoteLibrary[
         self.logger.debug(f"Load user's saved {self.api.source} artists: START")
         self.api.load_user_data()
 
-        responses = self.api.get_user_items(kind=RemoteObjectType.ARTIST, use_cache=self.use_cache)
+        responses = self.api.get_user_items(kind=RemoteObjectType.ARTIST)
         for response in self.logger.get_progress_bar(iterable=responses, desc="Processing artists", unit="artists"):
             artist = self.factory.artist(response=response, skip_checks=True)
 
@@ -380,7 +375,7 @@ class RemoteLibrary[
         uri_get = [uri for uri_list in playlists.values() for uri in uri_list if uri not in uri_tracks]
 
         if uri_get:
-            tracks_data = self.api.get_tracks(uri_get, features=False, use_cache=self.use_cache)
+            tracks_data = self.api.get_tracks(uri_get, features=False)
             tracks = list(map(self.factory.track, tracks_data))
             uri_tracks |= {track.uri: track for track in tracks}
 

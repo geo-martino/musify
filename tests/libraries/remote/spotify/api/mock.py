@@ -237,8 +237,10 @@ class SpotifyMock(RemoteMock):
     ###########################################################################
     def setup_requests_mock(self):
         """Driver to setup requests_mock responses for all endpoints"""
+        url_api = SpotifyDataWrangler.url_api
+
         self.setup_search_mock()
-        self.get(url=f"{SpotifyDataWrangler.url_api}/me", json=lambda _, __: deepcopy(self.user))
+        self.get(url=f"{url_api}/me", json=lambda _, __: deepcopy(self.user))
 
         # setup responses as needed for each item type
         self.setup_items_mock(kind=ObjectType.TRACK, id_map={item["id"]: item for item in self.tracks})
@@ -277,7 +279,7 @@ class SpotifyMock(RemoteMock):
         for i, artist in enumerate(self.artists):
             id_ = artist["id"]
             items = [album for album in self.artist_albums if any(art["id"] == id_ for art in album["artists"])]
-            url = f"{SpotifyDataWrangler.url_api}/artists/{id_}/albums"
+            url = f"{url_api}/artists/{id_}/albums"
             self.setup_items_block_mock(url=url, items=items)
 
         # when getting a user's playlists, individual tracks are not returned
@@ -286,7 +288,6 @@ class SpotifyMock(RemoteMock):
             playlist["tracks"] = {"href": playlist["tracks"]["href"], "total": playlist["tracks"]["total"]}
 
         # setup responses as needed for each 'user's saved' type
-        url_api = SpotifyDataWrangler.url_api
         self.setup_items_block_mock(url=f"{url_api}/me/tracks", items=self.user_tracks)
         self.setup_items_block_mock(url=f"{url_api}/me/following", items=self.user_artists)
         self.setup_items_block_mock(url=f"{url_api}/me/episodes", items=self.user_episodes)
@@ -356,8 +357,8 @@ class SpotifyMock(RemoteMock):
             id_list = req_params["ids"][0].split(",")
             return {req_kind: [deepcopy(id_map[i]) for i in id_list]}
 
-        url_base = SpotifyDataWrangler.url_api
-        url = f"{url_base}/{kind.name.lower()}s" if isinstance(kind, ObjectType) else f"{url_base}/{kind}"
+        url_api = SpotifyDataWrangler.url_api
+        url = f"{url_api}/{kind.name.lower()}s" if isinstance(kind, ObjectType) else f"{url_api}/{kind}"
         if batchable:
             self.get(url=re.compile(url + r"\?"), json=response_getter)  # item batched calls
 

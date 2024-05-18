@@ -11,8 +11,8 @@ from tests.libraries.remote.spotify.api.mock import SpotifyMock
 from tests.utils import idfn, get_stdout, random_str
 
 
-class TestSpotifyAPICore:
-    """Tester for core endpoints of :py:class:`SpotifyAPI`"""
+class TestSpotifyAPIMisc:
+    """Tester for miscellaneous endpoints of :py:class:`SpotifyAPI`"""
 
     @pytest.mark.parametrize("method_name,kwargs,floor,ceil", [
         ("query", {"query": "valid query", "kind": ObjectType.TRACK}, 1, 50),

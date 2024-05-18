@@ -133,7 +133,6 @@ cython_debug/
 
 # binary/cache files
 **.sql*
-**cache*
 
 # large data & log folders
 _data/

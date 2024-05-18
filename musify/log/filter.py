@@ -61,7 +61,14 @@ def format_full_func_name(record: logging.LogRecord, width: int = 40) -> None:
 
 
 class LogConsoleFilter(logging.Filter):
-    """Filter for logging to the console."""
+    """
+    Filter for logging to the console.
+
+    :param module_width: The maximum width a module string can be in the log record.
+        Truncates module string if longer that this length.
+    """
+
+    __slots__ = ("module_width",)
 
     def __init__(self, name: str = "", module_width: int = 40):
         super().__init__(name)
@@ -74,7 +81,14 @@ class LogConsoleFilter(logging.Filter):
 
 
 class LogFileFilter(logging.Filter):
-    """Filter for logging to a file."""
+    """
+    Filter for logging to a file.
+
+    :param module_width: The maximum width a module string can be in the log record.
+        Truncates module string if longer that this length.
+    """
+
+    __slots__ = ("module_width",)
 
     def __init__(self, name: str = "", module_width: int = 40):
         super().__init__(name)

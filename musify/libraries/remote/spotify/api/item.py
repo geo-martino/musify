@@ -2,24 +2,26 @@
 Implements endpoints for getting items from the Spotify API.
 """
 import re
-from abc import ABCMeta
+from abc import ABC
 from collections.abc import Collection, Mapping, MutableMapping
 from itertools import batched
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from musify.api.exception import APIError
+from musify.api.exception import APIError, CacheError
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteObjectTypeError
 from musify.libraries.remote.core.types import APIInputValue
 from musify.libraries.remote.spotify.api.base import SpotifyAPIBase
-from musify.utils import limit_value
+from musify.utils import limit_value, to_collection
 
 ARTIST_ALBUM_TYPES = {"album", "single", "compilation", "appears_on"}
 
 
-class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
+class SpotifyAPIItems(SpotifyAPIBase, ABC):
+
+    __slots__ = ()
 
     _bar_threshold = 5
 
@@ -32,6 +34,64 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
     ###########################################################################
     ## GET helpers: Generic methods for getting items
     ###########################################################################
+    def _cache_results(self, method: str, results: list[dict[str, Any]]) -> None:
+        """Persist ``results`` of a given ``method`` to the cache."""
+        if self.handler.cache is None:
+            return
+
+        # take all parts of href path, excluding ID
+        possible_urls = {"/".join(result["href"].split("/")[:-1]) for result in results}
+        if len(possible_urls) > 1:
+            raise CacheError(
+                "Too many different types of results given. Given results must relate to the same repository type."
+            )
+
+        results_mapped = {(method.upper(), result[self.id_key]): result for result in results}
+        repository = self.handler.cache.get_repository_from_url(next(iter(possible_urls)))
+        if repository is not None:
+            repository.update(results_mapped)
+
+    def _sort_results(
+            self, results: list[dict[str, Any]], results_cache: list[dict[str, Any]], id_list: Collection[str]
+    ) -> None:
+        """Extend ``results`` with ``results_cache`` and sort by order of ``id_list``."""
+        if not results_cache:  # cache was not used
+            return
+
+        results += results_cache
+        id_list = to_collection(id_list)
+        results.sort(key=lambda result: id_list.index(result[self.id_key]))
+
+    def _get_items_from_cache(
+            self, method: str, url: str, id_list: Collection[str]
+    ) -> tuple[list[dict[str, Any]], Collection[str], Collection[str]]:
+        """
+        Attempt to find the given ``id_list`` in the cache of the request handler and return results.
+
+        :param url: The base API URL endpoint for the required requests.
+        :param id_list: List of IDs to append to the given URL.
+        :return: (Results from the cache, IDs found in the cache, IDs not found in the cache)
+        """
+        if self.handler.cache is None:
+            self.logger.debug(f"{'CACHE':<7}: {url:<43} | No cache configured, skipping...")
+            return [], [], id_list
+
+        repository = self.handler.cache.get_repository_from_url(url=url)
+        if repository is None:
+            self.logger.debug(f"{'CACHE':<7}: {url:<43} | No repository for this endpoint, skipping...")
+            return [], [], id_list
+
+        results = repository.get_responses([(method.upper(), id_,) for id_ in id_list])
+        ids_found = {result[self.id_key] for result in results}
+        ids_not_found = {id_ for id_ in id_list if id_ not in ids_found}
+
+        self.logger.debug(
+            f"{'CACHE':<7}: {url:<43} | "
+            f"Retrieved {len(results):>6} cached responses | "
+            f"{len(ids_not_found):>6} not found in cache"
+        )
+        return results, ids_found, ids_not_found
+
     def _get_items_multi(
             self,
             url: str,
@@ -39,7 +99,6 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             params: Mapping[str, Any] | None = None,
             key: str | None = None,
             kind: str | None = None,
-            use_cache: bool = True,
             *_,
             **__,
     ) -> list[dict[str, Any]]:
@@ -53,28 +112,37 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         :param params: Extra parameters to add to each request.
         :param kind: The unit to use for logging. If None, determine from ``key`` or default to ``items``.
         :param key: The key to reference from each response to get the list of required values.
-        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
-            Set as False to refresh the cached response of the CachedSession.
         :return: API JSON responses for each item at the given ``key``.
         :raise APIError: When the given ``key`` is not in the API response.
         """
+        method = "GET"
         url = url.rstrip("/")
         kind = self._get_unit(key=key, kind=kind)
 
+        results_cache, ids_cached, ids_not_cached = self._get_items_from_cache(method=method, url=url, id_list=id_list)
+
         bar = self.logger.get_progress_bar(
-            iterable=id_list, desc=f"Getting {kind}", unit=kind, disable=len(id_list) < self._bar_threshold
+            iterable=ids_not_cached,
+            desc=f"Getting {kind}",
+            unit=kind,
+            disable=len(ids_not_cached) < self._bar_threshold
         )
 
         results: list[dict[str, Any]] = []
-        log = [f"{kind.title()}:{len(id_list):>5}"]
+        log = [f"{kind.title()}:{len(ids_not_cached):>5}"]
         for id_ in bar:
-            response = self.handler.get(f"{url}/{id_}", params=params, use_cache=use_cache, log_pad=43, log_extra=log)
-            if "id" not in response:
-                response["id"] = id_
+            response = self.handler.request(
+                method=method, url=f"{url}/{id_}", params=params, persist=False, log_pad=43, log_extra=log
+            )
+            if self.id_key not in response:
+                response[self.id_key] = id_
             if key and key not in response:
                 raise APIError(f"Given key '{key}' not found in response keys: {list(response.keys())}")
 
             results.extend(response[key]) if key else results.append(response)
+
+        self._cache_results(method=method, results=results)
+        self._sort_results(results=results, results_cache=results_cache, id_list=id_list)
 
         return results
 
@@ -86,7 +154,6 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             key: str | None = None,
             kind: str | None = None,
             limit: int = 50,
-            use_cache: bool = True,
             *_,
             **__,
     ) -> list[dict[str, Any]]:
@@ -102,16 +169,17 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         :param params: Extra parameters to add to each request.
         :param kind: The unit to use for logging. If None, determine from ``key`` or default to ``items``.
         :param key: The key to reference from each response to get the list of required values.
-        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
-            Set as False to refresh the cached response of the CachedSession.
         :param limit: Size of each batch of IDs to get. This value will be limited to be between ``1`` and ``50``.
         :return: API JSON responses for each item at the given ``key``.
         :raise APIError: When the given ``key`` is not in the API response.
         """
+        method = "GET"
         url = url.rstrip("/")
         kind = self._get_unit(key=key, kind=kind)
 
-        id_chunks = list(batched(id_list, limit_value(limit, floor=1, ceil=50)))
+        results_cache, ids_cached, ids_not_cached = self._get_items_from_cache(method=method, url=url, id_list=id_list)
+
+        id_chunks = list(batched(ids_not_cached, limit_value(limit, floor=1, ceil=50)))
         bar = self.logger.get_progress_bar(
             iterable=range(len(id_chunks)),
             desc=f"Getting {kind}",
@@ -124,13 +192,18 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         for idx in bar:  # get responses in batches
             id_chunk = id_chunks[idx]
             params_chunk = params | {"ids": ",".join(id_chunk)}
-            log = [f"{kind.title() + ':':<11} {len(results) + len(id_chunk):>6}/{len(id_list):<6}"]
+            log = [f"{kind.title() + ':':<11} {len(results) + len(id_chunk):>6}/{len(ids_not_cached):<6}"]
 
-            response = self.handler.get(url, params=params_chunk, use_cache=use_cache, log_pad=43, log_extra=log)
+            response = self.handler.request(
+                method=method, url=url, params=params_chunk, persist=False, log_pad=43, log_extra=log
+            )
             if key and key not in response:
                 raise APIError(f"Given key '{key}' not found in response keys: {list(response.keys())}")
 
             results.extend(response[key]) if key else results.append(response)
+
+        self._cache_results(method=method, results=results)
+        self._sort_results(results=results, results_cache=results_cache, id_list=id_list)
 
         return results
 
@@ -142,7 +215,6 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             response: MutableMapping[str, Any] | RemoteResponse,
             kind: RemoteObjectType | str | None = None,
             key: RemoteObjectType | None = None,
-            use_cache: bool = True,
             leave_bar: bool | None = None,
     ) -> list[dict[str, Any]]:
         """
@@ -151,6 +223,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         found across all pages for this URL.
 
         Updates the value of the ``items`` key in-place by extending the value of the ``items`` key with new results.
+
+        If a cache has been configured for this API, will also persist the items in any collection to the cache.
 
         If a :py:class:`RemoteResponse`, this function will not refresh itself with the new response.
         The user must call `refresh` manually after execution.
@@ -162,8 +236,6 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         :param kind: The type of response being extended. Optional, used only for logging.
         :param key: The type of response of the child objects. Used when selecting nested data for certain responses
             (e.g. user's followed artists).
-        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
-            Set as False to refresh the cached response of the CachedSession.
         :param leave_bar: When a progress bar is displayed,
             toggle whether this bar should continue to be displayed after the operation is finished.
             When None, allow the logger to decide this setting.
@@ -172,9 +244,10 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         if isinstance(response, RemoteResponse):
             response = response.response
 
-        key = key.name.lower() + "s" if key else None
-        if key and key in response:
-            response = response[key]
+        method = "GET"
+
+        key = self._get_key(key)
+        response = response.get(key, response)
         if self.items_key not in response:
             response[self.items_key] = []
 
@@ -191,7 +264,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         if "limit" not in response:
             response["limit"] = int(parse_qs(urlparse(response["next"]).query).get("limit", [50])[0])
 
-        kind = kind.name.lower() + "s" if isinstance(kind, RemoteObjectType) else kind or self.items_key
+        kind = self._get_key(kind) or self.items_key
         pages = (response["total"] - len(response[self.items_key])) / (response["limit"] or 1)
         bar = self.logger.get_progress_bar(
             initial=len(response[self.items_key]),
@@ -206,9 +279,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             log_count = min(len(response[self.items_key]) + response["limit"], response["total"])
             log = [f"{log_count:>6}/{response["total"]:<6} {key or self.items_key}"]
 
-            response_next = self.handler.get(response["next"], use_cache=use_cache, log_pad=95, log_extra=log)
-            if key and key in response_next:
-                response_next = response_next[key]
+            response_next = self.handler.request(method=method, url=response["next"], log_pad=95, log_extra=log)
+            response_next = response_next.get(key, response_next)
 
             response[self.items_key].extend(response_next[self.items_key])
             response["href"] = response_next["href"]
@@ -216,6 +288,14 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             response["previous"] = response_next.get("previous")
 
             bar.update(len(response_next[self.items_key]))
+
+        # cache child items
+        item_key = key.rstrip("s") if key else key
+        results_to_cache = [
+            result[item_key] if item_key and item_key in result else result for result in response[self.items_key]
+        ]
+        if all("href" in result for result in results_to_cache):
+            self._cache_results(method=method, results=results_to_cache)
 
         bar.close()
         return response[self.items_key]
@@ -226,7 +306,6 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             kind: RemoteObjectType | None = None,
             limit: int = 50,
             extend: bool = True,
-            use_cache: bool = True,
     ) -> list[dict[str, Any]]:
         """
         ``GET: /{kind}s`` - Get information for given ``values``.
@@ -255,15 +334,13 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             This value will be limited to be between ``1`` and ``50`` or ``20`` if getting albums.
         :param extend: When True and the given ``kind`` is a collection of items,
             extend the response to include all items in this collection.
-        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
-            Set as False to refresh the cached response of the CachedSession.
         :return: API JSON responses for each item.
         :raise RemoteObjectTypeError: Raised when the function cannot determine the item type
             of the input ``values``. Or when it does not recognise the type of the input ``values`` parameter.
         """
         # input validation
         if not isinstance(values, RemoteResponse) and not values:  # skip on empty
-            url = f"{self.url}/{kind.name.lower() + "s"}" if kind else self.url
+            url = f"{self.url}/{self._get_key(kind)}" if kind else self.url
             self.logger.debug(f"{'SKIP':<7}: {url:<43} | No data given")
             return []
         if kind is None:  # determine the item type
@@ -271,19 +348,19 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         else:
             self.wrangler.validate_item_type(values, kind=kind)
 
-        unit = kind.name.lower() + "s"
+        unit = self._get_key(kind)
         url = f"{self.url}/{unit}"
         id_list = self.wrangler.extract_ids(values, kind=kind)
 
         if kind in {RemoteObjectType.USER, RemoteObjectType.PLAYLIST} or len(id_list) <= 1:
-            results = self._get_items_multi(url=url, id_list=id_list, kind=unit, use_cache=use_cache)
+            results = self._get_items_multi(url=url, id_list=id_list, kind=unit)
         else:
             if kind == RemoteObjectType.ALBUM:
                 limit = limit_value(limit, floor=1, ceil=20)
-            results = self._get_items_batched(url=url, id_list=id_list, key=unit, use_cache=use_cache, limit=limit)
+            results = self._get_items_batched(url=url, id_list=id_list, key=unit, limit=limit)
 
         key = self.collection_item_map.get(kind, kind)
-        key_name = key.name.lower() + "s"
+        key_name = self._get_key(key)
         if len(results) == 0 or any(key_name not in result for result in results) or not extend:
             self._merge_results_to_input(original=values, responses=results, ordered=True)
             self._refresh_responses(responses=values, skip_checks=False)
@@ -296,7 +373,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
 
         for result in bar:
             if result[key_name].get("next") or ("next" not in result[key_name] and result[key_name].get("href")):
-                self.extend_items(result[key_name], kind=kind, key=key, use_cache=use_cache, leave_bar=False)
+                self.extend_items(result[key_name], kind=kind, key=key, leave_bar=False)
 
         self._merge_results_to_input(original=values, responses=results, ordered=True)
         self._refresh_responses(responses=values, skip_checks=False)
@@ -313,7 +390,6 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             user: str | None = None,
             kind: RemoteObjectType = RemoteObjectType.PLAYLIST,
             limit: int = 50,
-            use_cache: bool = True,
     ) -> list[dict[str, Any]]:
         """
         ``GET: /{kind}s`` - Get saved items for a given user.
@@ -323,8 +399,6 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             Spotify only supports ``PLAYLIST`` types for non-authenticated users.
         :param limit: Size of each batch of items to request in the collection items request.
             This value will be limited to be between ``1`` and ``50``.
-        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
-            Set as False to refresh the cached response of the CachedSession.
         :return: API JSON responses for each collection.
         :raise RemoteIDTypeError: Raised when the input ``user`` does not represent a user URL/URI/ID.
         :raise RemoteObjectTypeError: Raised a user is given and the ``kind`` is not ``PLAYLIST``.
@@ -353,8 +427,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             desc_qualifier = "current user's" if kind == RemoteObjectType.PLAYLIST else "current user's saved"
 
         desc = f"Getting {desc_qualifier} {kind.name.lower()}s"
-        initial = self.handler.get(url, params=params, use_cache=use_cache, log_pad=71)
-        results = self.extend_items(initial, kind=desc, key=kind, use_cache=use_cache)
+        initial = self.handler.get(url, params=params, log_pad=71)
+        results = self.extend_items(initial, kind=desc, key=kind)
 
         self.logger.debug(f"{'DONE':<7}: {url:<43} | Retrieved {len(results):>6} {kind.name.lower()}s")
 
@@ -366,7 +440,6 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             features: bool = False,
             analysis: bool = False,
             limit: int = 50,
-            use_cache: bool = True,
     ) -> list[dict[str, Any]]:
         """
         ``GET: /audio-features`` and/or ``GET: /audio-analysis`` - Get audio features/analysis for given track/s.
@@ -392,8 +465,6 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         :param analysis: When True, get audio analysis.
         :param limit: Size of batches to request when getting audio features.
             This value will be limited to be between ``1`` and ``50``.
-        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
-            Set as False to refresh the cached response of the CachedSession.
         :return: API JSON responses for each item.
             Mapped to ``audio_features`` and ``audio_analysis`` keys as appropriate.
         :raise RemoteObjectTypeError: Raised when the item types of the input ``values`` are not all tracks or IDs.
@@ -422,15 +493,13 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
 
             result = id_map.copy()
             for (url, key, _) in config.values():
-                result[key] = self.handler.get(f"{url}/{id_}", use_cache=use_cache, log_pad=43) | id_map.copy()
+                result[key] = self.handler.get(f"{url}/{id_}", log_pad=43) | id_map.copy()
             results = [result]
         else:
             results = []
             for kind, (url, key, batch) in config.items():
                 method = self._get_items_batched if batch else self._get_items_multi
-                responses = method(
-                    url=url, id_list=id_list, kind=kind, key=key if batch else None, limit=limit, use_cache=use_cache
-                )
+                responses = method(url=url, id_list=id_list, kind=kind, key=key if batch else None, limit=limit)
                 responses.sort(key=lambda response: id_list.index(response[self.id_key]))
                 responses = [{self.id_key: response[self.id_key], key: response} for response in responses]
 
@@ -460,7 +529,6 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             features: bool = False,
             analysis: bool = False,
             limit: int = 50,
-            use_cache: bool = True,
             *_,
             **__,
     ) -> list[dict[str, Any]]:
@@ -489,12 +557,10 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         :param analysis: When True, get audio analysis.
         :param limit: Size of batches to request when getting audio features.
             This value will be limited to be between ``1`` and ``50``.
-        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
-            Set as False to refresh the cached response of the CachedSession.
         :return: API JSON responses for each item, or the original response if the input ``values`` are API responses.
         :raise RemoteObjectTypeError: Raised when the item types of the input ``values`` are not all tracks or IDs.
         """
-        tracks = self.get_items(values=values, kind=RemoteObjectType.TRACK, limit=limit, use_cache=use_cache)
+        tracks = self.get_items(values=values, kind=RemoteObjectType.TRACK, limit=limit)
 
         # ensure that response are being assigned back to the original values if API response(s) given
         if isinstance(values, Mapping | RemoteResponse):
@@ -502,15 +568,11 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         elif isinstance(values, Collection) and all(isinstance(v, Mapping | RemoteResponse) for v in values):
             tracks = values
 
-        self.extend_tracks(values=tracks, features=features, analysis=analysis, limit=limit, use_cache=use_cache)
+        self.extend_tracks(values=tracks, features=features, analysis=analysis, limit=limit)
         return tracks
 
     def get_artist_albums(
-            self,
-            values: APIInputValue,
-            types: Collection[str] = (),
-            limit: int = 50,
-            use_cache: bool = True,
+            self, values: APIInputValue, types: Collection[str] = (), limit: int = 50,
     ) -> dict[str, list[dict[str, Any]]]:
         """
         ``GET: /artists/{ID}/albums`` - Get all albums associated with the given artist/s.
@@ -532,8 +594,6 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         :param types: The types of albums to return. Select from ``{"album", "single", "compilation", "appears_on"}``.
         :param limit: Size of batches to request.
             This value will be limited to be between ``1`` and ``50``.
-        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
-            Set as False to refresh the cached response of the CachedSession.
         :return: A map of the Artist ID to a list of the API JSON responses for each album.
         :raise RemoteObjectTypeError: Raised when the item types of the input ``values`` are not all artists or IDs.
         """
@@ -562,16 +622,16 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         key = RemoteObjectType.ALBUM
         results: dict[str, dict[str, Any]] = {}
         for id_ in bar:
-            results[id_] = self.handler.get(url=url.format(id=id_), params=params, use_cache=use_cache)
-            self.extend_items(results[id_], kind="artist albums", key=key, use_cache=use_cache, leave_bar=False)
+            results[id_] = self.handler.get(url=url.format(id=id_), params=params)
+            self.extend_items(results[id_], kind="artist albums", key=key, leave_bar=False)
 
-            for album in results[id_]["items"]:  # add skeleton items block to album responses
+            for album in results[id_][self.items_key]:  # add skeleton items block to album responses
                 album["tracks"] = {
                     "href": self.format_next_url(url=album["href"].split("?")[0] + "/tracks", offset=0, limit=50),
                     "total": album["total_tracks"]
                 }
 
-        results_remapped = [{"id": id_, "albums": result} for id_, result in results.items()]
+        results_remapped = [{self.id_key: id_, "albums": result} for id_, result in results.items()]
         self._merge_results_to_input(original=values, responses=results_remapped, ordered=False, clear=False)
         self._refresh_responses(responses=values, skip_checks=True)
 
@@ -581,4 +641,4 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             f"Retrieved {item_count:>6} albums across {len(results):>5} artists"
         )
 
-        return {k: v["items"] for k, v in results.items()}
+        return {k: v[self.items_key] for k, v in results.items()}

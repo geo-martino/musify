@@ -14,6 +14,8 @@ from musify.libraries.remote.core.types import APIInputValue
 class RemoteDataWrangler(ABC):
     """Convert and validate remote ID and item types according to specific remote implementations."""
 
+    __slots__ = ()
+
     @property
     @abstractmethod
     def source(self) -> str:
@@ -166,6 +168,8 @@ class RemoteDataWrangler(ABC):
         :return: Formatted string.
         :raise RemoteIDTypeError: Raised when the function cannot determine the item type
             of the input ``value``.
+        :raise RemoteObjectTypeError: Raised when the function cannot process the input ``value``
+            as a type of the given ``type_in`` i.e. the ``type_in`` does not match the actual type of the ``value``.
         """
         raise NotImplementedError
 

@@ -1,9 +1,10 @@
 """
 Generic utility functions and classes which can be used throughout the entire package.
 """
+import inspect
 import re
 from collections import Counter
-from collections.abc import Iterable, Collection, MutableSequence, Mapping, MutableMapping
+from collections.abc import Iterable, Collection, MutableSequence, Mapping, MutableMapping, Callable
 from typing import Any
 
 import unicodedata
@@ -14,6 +15,9 @@ from musify.types import Number
 
 class SafeDict(dict):
     """Extends dict to ignore missing keys when using format_map operations"""
+
+    __slots__ = ()
+
     def __missing__(self, key):
         return "{" + key + "}"
 
@@ -250,3 +254,11 @@ def get_most_common_values(values: Iterable[Any]) -> list[Any]:
 def get_user_input(text: str | None = None) -> str:
     """Print formatted dialog with optional text and get the user's input."""
     return input(f"\33[93m{text}\33[0m | ").strip()
+
+
+def clean_kwargs(func: Callable, kwargs: dict[str, Any]) -> None:
+    """Clean ``kwargs`` by removing any kwarg not in the signature of the given ``func``."""
+    signature = inspect.signature(func).parameters
+    for key in list(kwargs):
+        if key not in signature:
+            kwargs.pop(key)

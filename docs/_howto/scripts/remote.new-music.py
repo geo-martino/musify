@@ -33,7 +33,7 @@ if albums_need_extend:
 
     bar = library.logger.get_progress_bar(iterable=albums_need_extend, desc="Getting album tracks", unit="albums")
     for album in bar:
-        api.extend_items(album.response, kind=kind, key=key, use_cache=False)
+        api.extend_items(album.response, kind=kind, key=key)
         album.refresh(skip_checks=False)
 
 # log stats about the loaded artists

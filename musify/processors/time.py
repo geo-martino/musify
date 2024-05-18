@@ -13,6 +13,8 @@ from musify.processors.base import DynamicProcessor, dynamicprocessormethod
 class TimeMapper(DynamicProcessor, PrettyPrinter):
     """Map of time character representation to it unit conversion from seconds"""
 
+    __slots__ = ()
+
     @classmethod
     def _processor_method_fmt(cls, name: str) -> str:
         return name.casefold().strip()[0] if not name.startswith("min") else name

@@ -31,6 +31,42 @@ Release History
 The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
+1.0.0
+=====
+
+Added
+-----
+
+* Custom API caching backend to replace dependency on `requests-cache` package.
+  Currently only supports SQLite backend. More backends can be implemented in future if desired.
+* Cache settings for specific `GET` request endpoints on :py:class:`.SpotifyAPI` replacing need
+  for per method ``use_cache`` parameter.
+
+Changed
+-------
+
+* Replaced ``authorise`` method from :py:class:`.APIAuthoriser` with __call__ method for class.
+* Dependency injection pattern for :py:class:`.RequestHandler` and :py:class:`.RemoteAPI`.
+  Now takes :py:class:`.APIAuthoriser` and :py:class:`.ResponseCache` objects for instantiation
+  instead of kwargs for :py:class:`.APIAuthoriser`.
+* :py:class:`.APIAuthoriser` kwargs given to :py:class:`.SpotifyAPI` now merge with default kwargs.
+* Moved ``remote_wrangler`` attribute from :py:class:`.MusifyCollection` to :py:class:`.LocalCollection`.
+  This attribute was only needed by :py:class:`.LocalCollection` branch of child classes.
+* Moved ``logger`` attribute from :py:class:`.Library` to :py:class:`.RemoteLibrary`.
+
+Fixed
+-----
+
+* Added missing variables to __slots__ definitions
+* Correctly applied __slots__ pattern to child classes. Now works as expected.
+* :py:class:`.LocalTrack` now copies tags as expected when calling ``copy.copy()``
+
+Removed
+-------
+
+* ``use_cache`` parameter from all :py:class:`.RemoteAPI` related methods.
+  Cache settings now handled by :py:class:`.ResponseCache`
+
 0.9.2
 =====
 

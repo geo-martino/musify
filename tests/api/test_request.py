@@ -1,29 +1,40 @@
 import json
-from datetime import timedelta
-from os.path import join
-from pathlib import Path
 from typing import Any
 
 import pytest
 import requests
 from requests import Response
-from requests_cache import OriginalResponse, CachedResponse, CachedSession
 from requests_mock import Mocker
 # noinspection PyProtectedMember,PyUnresolvedReferences
 from requests_mock.request import _RequestObjectProxy as Request
 # noinspection PyProtectedMember,PyUnresolvedReferences
 from requests_mock.response import _Context as Context
 
+from musify.api.authorise import APIAuthoriser
+from musify.api.cache.backend.base import ResponseCache
+from musify.api.cache.backend.sqlite import SQLiteCache
+from musify.api.cache.session import CachedSession
 from musify.api.exception import APIError
 from musify.api.request import RequestHandler
+from tests.api.cache.backend.utils import MockRequestSettings
 
 
 class TestRequestHandler:
 
     @pytest.fixture
-    def request_handler(self, token: dict[str, Any], tmp_path: Path) -> RequestHandler:
+    def authoriser(self, token: dict[str, Any]) -> APIAuthoriser:
+        """Yield a simple :py:class:`APIAuthoriser` object"""
+        return APIAuthoriser(name="test", token=token)
+
+    @pytest.fixture
+    def cache(self) -> ResponseCache:
+        """Yield a simple :py:class:`ResponseCache` object"""
+        return SQLiteCache.connect_with_in_memory_db()
+
+    @pytest.fixture
+    def request_handler(self, authoriser: APIAuthoriser, cache: ResponseCache) -> RequestHandler:
         """Yield a simple :py:class:`RequestHandler` object"""
-        return RequestHandler(name="test", token=token, cache_path=join(tmp_path, "api_cache"))
+        return RequestHandler(authoriser=authoriser, cache=cache)
 
     @pytest.fixture
     def token(self) -> dict[str, Any]:
@@ -35,25 +46,21 @@ class TestRequestHandler:
         }
 
     # noinspection PyTestUnpassedFixture
-    def test_init(self, token: dict[str, Any], tmp_path: Path):
-        request_handler = RequestHandler(name="test", token=token, cache_path=None)
+    def test_init(self, token: dict[str, Any], authoriser: APIAuthoriser, cache: ResponseCache):
+        request_handler = RequestHandler(authoriser=authoriser)
+        assert request_handler.authoriser.token == token
         assert not isinstance(request_handler.session, CachedSession)
 
-        cache_path = join(tmp_path, "test")
-        cache_expiry = timedelta(days=6)
-        request_handler = RequestHandler(name="test", token=token, cache_expiry=cache_expiry, cache_path=cache_path)
+        request_handler = RequestHandler(authoriser=authoriser, cache=cache)
         assert isinstance(request_handler.session, CachedSession)
-        assert request_handler.token == token
-        assert request_handler.session.cache.cache_name == cache_path
-        assert request_handler.session.expire_after == cache_expiry
 
         request_handler.authorise()
-        for k, v in request_handler.headers.items():
+        for k, v in request_handler.authoriser.headers.items():
             assert request_handler.session.headers.get(k) == v
 
-    def test_context_management(self, token: dict[str, Any], tmp_path: Path):
-        with RequestHandler(name="test", token=token, cache_path=None) as handler:
-            for k, v in handler.headers.items():
+    def test_context_management(self, authoriser: APIAuthoriser):
+        with RequestHandler(authoriser=authoriser) as handler:
+            for k, v in handler.authoriser.headers.items():
                 assert handler.session.headers.get(k) == v
 
     def test_check_response_codes(self, request_handler: RequestHandler):
@@ -104,24 +111,33 @@ class TestRequestHandler:
         assert request_handler._response_as_json(response) == expected
 
     def test_cache_usage(self, request_handler: RequestHandler, requests_mock: Mocker):
-        url = "http://localhost/test"
+        test_url = "http://localhost/test"
         expected_json = {"key": "value"}
-        requests_mock.get(url, json=expected_json)
+        requests_mock.get(test_url, json=expected_json)
 
-        response = request_handler._request(method="GET", url=url, use_cache=True)
-        assert isinstance(response, OriginalResponse)
+        repository = request_handler.cache.create_repository(MockRequestSettings(name="test"))
+        request_handler.cache.repository_getter = lambda _, __: repository
+
+        response = request_handler._request(method="GET", url=test_url, persist=False)
         assert response.json() == expected_json
         assert requests_mock.call_count == 1
 
-        response = request_handler._request(method="GET", url=url, use_cache=True)
-        assert isinstance(response, CachedResponse)
-        assert response.json() == expected_json
-        assert requests_mock.call_count == 1
+        key = repository.get_key_from_request(response.request)
+        assert repository.get_response(key) is None
 
-        response = request_handler._request(method="GET", url=url, use_cache=False)
-        assert isinstance(response, OriginalResponse)
+        response = request_handler._request(method="GET", url=test_url, persist=True)
         assert response.json() == expected_json
         assert requests_mock.call_count == 2
+        assert repository.get_response(key)
+
+        response = request_handler._request(method="GET", url=test_url)
+        assert response.json() == expected_json
+        assert requests_mock.call_count == 2
+
+        repository.clear()
+        response = request_handler._request(method="GET", url=test_url)
+        assert response.json() == expected_json
+        assert requests_mock.call_count == 3
 
     def test_request(self, request_handler: RequestHandler, requests_mock: Mocker):
         def raise_error(*_, **__):
@@ -137,23 +153,23 @@ class TestRequestHandler:
         expected_json = {"key": "value"}
 
         requests_mock.get(url, json=expected_json)
-        assert request_handler.request(method="GET", url=url, use_cache=False) == expected_json
+        assert request_handler.request(method="GET", url=url) == expected_json
 
         # ignore headers on good status code
         requests_mock.post(url, status_code=200, headers={"retry-after": "2000"}, json=expected_json)
-        assert request_handler.request(method="POST", url=url, use_cache=False) == expected_json
+        assert request_handler.request(method="POST", url=url) == expected_json
 
         # fail on long wait time
         requests_mock.put(url, status_code=429, headers={"retry-after": "2000"})
         assert request_handler.timeout < 2000
         with pytest.raises(APIError):
-            request_handler.put(url=url, use_cache=False)
+            request_handler.put(url=url)
 
         # fail on breaking status code
         requests_mock.delete(url, status_code=400)
         assert request_handler.timeout < 2000
         with pytest.raises(APIError):
-            request_handler.delete(method="GET", url=url, use_cache=False)
+            request_handler.delete(method="GET", url=url)
 
     def test_backoff(self, request_handler: RequestHandler, requests_mock: Mocker):
         url = "http://localhost/test"
@@ -175,5 +191,5 @@ class TestRequestHandler:
             return expected_json
 
         requests_mock.patch(url, json=backoff)
-        assert request_handler.patch(url=url, use_cache=False) == expected_json
+        assert request_handler.patch(url=url) == expected_json
         assert requests_mock.call_count == backoff_limit

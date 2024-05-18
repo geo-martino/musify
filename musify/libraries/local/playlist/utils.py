@@ -36,7 +36,7 @@ def load_playlist(
     :param path_mapper: Optionally, provide a :py:class:`PathMapper` for paths stored in the playlist file.
         Useful if the playlist file contains relative paths and/or paths for other systems that need to be
         mapped to absolute, system-specific paths to be loaded and back again when saved.
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
+    :param remote_wrangler: Optionally, provide a :py:class:`RemoteDataWrangler` object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
         The wrangler is also used when loading tracks to allow them to process URI tags.
         For more info on this, see :py:class:`LocalTrack`.

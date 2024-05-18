@@ -21,6 +21,8 @@ from musify.libraries.local.track.track import LocalTrack
 
 class MP3TagReader(TagReader[mutagen.mp3.MP3]):
 
+    __slots__ = ()
+
     def read_tag(self, tag_ids: Iterable[str]) -> list[Any] | None:
         # MP3 tag ids come in parts separated by : i.e. 'COMM:ID3v1 Comment:eng'
         # need to search all actual MP3 tag ids to check if the first part equals any of the given base tag ids
@@ -55,6 +57,8 @@ class MP3TagReader(TagReader[mutagen.mp3.MP3]):
 
 
 class MP3TagWriter(TagWriter[mutagen.mp3.MP3]):
+
+    __slots__ = ()
 
     def delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:
         removed = False
@@ -153,6 +157,8 @@ class MP3TagWriter(TagWriter[mutagen.mp3.MP3]):
 
 
 class MP3(LocalTrack[mutagen.mp3.MP3, MP3TagReader, MP3TagWriter]):
+
+    __slots__ = ()
 
     valid_extensions = frozenset({".mp3"})
 

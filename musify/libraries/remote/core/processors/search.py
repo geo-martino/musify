@@ -71,11 +71,9 @@ class RemoteItemSearcher(Processor):
         during the checking operation
     :param object_factory: The :py:class:`RemoteObjectFactory` to use when creating new remote objects.
         This must have a :py:class:`RemoteAPI` assigned for this processor to work as expected.
-    :param use_cache: Use the cache when calling the API endpoint.
-        When using a CachedSession, set as False to refresh the cached response.
     """
 
-    __slots__ = ("factory", "use_cache")
+    __slots__ = ("logger", "matcher", "factory")
 
     #: The :py:class:`SearchSettings` for each :py:class:`RemoteObjectType`
     search_settings: dict[RemoteObjectType, SearchConfig] = {
@@ -105,9 +103,7 @@ class RemoteItemSearcher(Processor):
         """The :py:class:`RemoteAPI` to call"""
         return self.factory.api
 
-    def __init__(self, matcher: ItemMatcher, object_factory: RemoteObjectFactory, use_cache: bool = False):
-        super().__init__()
-
+    def __init__(self, matcher: ItemMatcher, object_factory: RemoteObjectFactory):
         # noinspection PyTypeChecker
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
@@ -117,8 +113,6 @@ class RemoteItemSearcher(Processor):
         self.matcher = matcher
         #: The :py:class:`RemoteObjectFactory` to use when creating new remote objects.
         self.factory = object_factory
-        #: When true, use the cache when calling the API endpoint
-        self.use_cache = use_cache
 
     def _get_results(
             self, item: MusifyObject, kind: RemoteObjectType, settings: SearchConfig
@@ -297,7 +291,7 @@ class RemoteItemSearcher(Processor):
         responses = self._get_results(collection, kind=kind, settings=search_config)
         key = self.api.collection_item_map[kind]
         for response in responses:
-            self.api.extend_items(response, kind=kind, key=key, use_cache=self.use_cache)
+            self.api.extend_items(response, kind=kind, key=key)
 
         # noinspection PyProtectedMember,PyTypeChecker
         # order to prioritise results that are closer to the item count of the input collection
@@ -329,5 +323,4 @@ class RemoteItemSearcher(Processor):
         return {
             "matcher": self.matcher,
             "remote_source": self.factory.api.source,
-            "interval": self.use_cache,
         }

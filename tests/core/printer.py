@@ -11,7 +11,7 @@ class PrettyPrinterTester(ABC):
 
     @abstractmethod
     def obj(self, *args, **kwargs) -> PrettyPrinter:
-        """Yields a :py:class:`PrettyPrinter` object to be tested as pytest.fixture"""
+        """Yields a :py:class:`PrettyPrinter` object to be tested as pytest.fixture."""
         raise NotImplementedError
 
     @staticmethod

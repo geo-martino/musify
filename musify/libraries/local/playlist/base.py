@@ -1,7 +1,7 @@
 """
 Base implementation for the functionality of a local playlist.
 """
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Collection
 from datetime import datetime
 from os.path import dirname, join, getmtime, getctime, exists
@@ -18,7 +18,7 @@ from musify.processors.limit import ItemLimiter
 from musify.processors.sort import ItemSorter
 
 
-class LocalPlaylist[T: Filter[LocalTrack]](LocalCollection[LocalTrack], Playlist[LocalTrack], File, metaclass=ABCMeta):
+class LocalPlaylist[T: Filter[LocalTrack]](LocalCollection[LocalTrack], Playlist[LocalTrack], File, ABC):
     """
     Generic class for loading and manipulating local playlists.
 
@@ -29,7 +29,7 @@ class LocalPlaylist[T: Filter[LocalTrack]](LocalCollection[LocalTrack], Playlist
     :param path_mapper: Optionally, provide a :py:class:`PathMapper` for paths stored in the playlist file.
         Useful if the playlist file contains relative paths and/or paths for other systems that need to be
         mapped to absolute, system-specific paths to be loaded and back again when saved.
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
+    :param remote_wrangler: Optionally, provide a :py:class:`RemoteDataWrangler` object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
         The wrangler is also used when loading tracks to allow them to process URI tags.
         For more info on this, see :py:class:`LocalTrack`.

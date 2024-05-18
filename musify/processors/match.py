@@ -78,8 +78,6 @@ class ItemMatcher(Processor):
     reduce_name_score_factor = 0.5
 
     def __init__(self):
-        super().__init__()
-
         # noinspection PyTypeChecker
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)

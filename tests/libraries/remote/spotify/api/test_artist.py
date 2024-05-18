@@ -19,7 +19,7 @@ class TestSpotifyAPIArtists:
 
     @pytest.fixture
     def artist_album_types(self) -> tuple[str, ...]:
-        """Yields the artist album types to get for a given artist as a pytest.fixture"""
+        """Yields the artist album types to get for a given artist as a pytest.fixture."""
         return tuple(sample(sorted(ARTIST_ALBUM_TYPES), k=randrange(2, len(ARTIST_ALBUM_TYPES))))
 
     # noinspection PyTestUnpassedFixture
@@ -46,7 +46,7 @@ class TestSpotifyAPIArtists:
     def artist_albums(
             self, artist: dict[str, Any], artists_albums: dict[str, list[dict[str, Any]]]
     ) -> list[dict[str, Any]]:
-        """Yields the albums for a given ``artist`` as a pytest.fixture"""
+        """Yields the albums for a given ``artist`` as a pytest.fixture."""
         return deepcopy(artists_albums[artist["id"]])
 
     # noinspection PyTestUnpassedFixture
@@ -60,7 +60,7 @@ class TestSpotifyAPIArtists:
 
     @pytest.fixture
     def artist(self, artists: dict[Any, dict[str, Any]]) -> dict[str, Any]:
-        """Yields a randomly selected artist from a given set of ``artists`` as a pytest.fixture"""
+        """Yields a randomly selected artist from a given set of ``artists`` as a pytest.fixture."""
         return choice(list(artists.values()))
 
     @staticmethod

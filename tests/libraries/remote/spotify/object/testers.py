@@ -21,12 +21,12 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
 
     @abstractmethod
     def item_kind(self, api: SpotifyAPI) -> RemoteObjectType:
-        """Yields the RemoteObjectType of items in this collection as a pytest.fixture"""
+        """Yields the RemoteObjectType of items in this collection as a pytest.fixture."""
         raise NotImplementedError
 
     @pytest.fixture
     def item_key(self, item_kind: RemoteObjectType) -> str:
-        """Yields the key of items in this collection as a pytest.fixture"""
+        """Yields the key of items in this collection as a pytest.fixture."""
         return item_kind.name.lower() + "s"
 
     ###########################################################################
@@ -84,7 +84,7 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
             api: SpotifyAPI,
             api_mock: SpotifyMock
     ):
-        """Yields the results from 'load' where no items are given as a pytest.fixture"""
+        """Yields the results from 'load' where no items are given as a pytest.fixture."""
         raise NotImplementedError
 
     def test_load_without_items(

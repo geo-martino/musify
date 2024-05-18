@@ -242,15 +242,17 @@ class TestLocalTrack(MusifyItemTester):
         track_from_file = track.__class__(file=track._reader.file)
         assert id(track._reader.file) == id(track_from_file._reader.file)
 
+        keys = [key for key in track.__slots__ if key.lstrip("_") in dir(track)]
+
         track_copy = copy(track)
         assert id(track._reader.file) == id(track_copy._reader.file)
-        for key, value in vars(track).items():
-            assert value == track_copy[key]
+        for key in keys:
+            assert getattr(track, key) == getattr(track_copy, key)
 
         track_deepcopy = deepcopy(track)
         assert id(track._reader.file) != id(track_deepcopy._reader.file)
-        for key, value in vars(track).items():
-            assert value == track_deepcopy[key]
+        for key in keys:
+            assert getattr(track, key) == getattr(track_deepcopy, key)
 
     def test_set_and_find_file_paths(self, track: LocalTrack, tmp_path: Path):
         paths = track.__class__.get_filepaths(str(tmp_path))

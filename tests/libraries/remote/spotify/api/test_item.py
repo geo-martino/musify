@@ -7,6 +7,7 @@ from urllib.parse import parse_qs
 
 import pytest
 
+from musify.api.cache.backend.sqlite import SQLiteCache
 from musify.api.exception import APIError
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
@@ -30,12 +31,18 @@ class TestSpotifyAPIItems(RemoteAPITester):
 
     @pytest.fixture(scope="class")
     def object_factory(self) -> SpotifyObjectFactory:
-        """Yield the object factory for Spotify objects as a pytest.fixture"""
+        """Yield the object factory for Spotify objects as a pytest.fixture."""
         return SpotifyObjectFactory()
 
     @pytest.fixture
     def responses(self, _responses: dict[str, dict[str, Any]], key: str) -> dict[str, dict[str, Any]]:
         return {id_: response for id_, response in _responses.items() if key is None or response[key]["total"] > 3}
+
+    @pytest.fixture(scope="class")
+    def api_cache(self, api: SpotifyAPI) -> SpotifyAPI:
+        """Yield an authorised :py:class:`SpotifyAPI` object with a :py:class:`ResponseCache` configured."""
+        cache = SQLiteCache.connect_with_in_memory_db()
+        return SpotifyAPI(cache=cache, token=api.handler.authoriser.token)
 
     @staticmethod
     def reduce_items(response: dict[str, Any], key: str, api: SpotifyAPI, api_mock: SpotifyMock, pages: int = 3) -> int:
@@ -74,7 +81,6 @@ class TestSpotifyAPIItems(RemoteAPITester):
     ###########################################################################
     ## Assertions
     ###########################################################################
-
     @staticmethod
     def assert_item_types(results: list[dict[str, Any]], key: str, object_type: RemoteObjectType | None = None):
         """
@@ -244,9 +250,66 @@ class TestSpotifyAPIItems(RemoteAPITester):
             api.get_artist_albums(values=random_id(), types=("unknown", "invalid"))
 
     ###########################################################################
-    ## Multi-, Batched-, and Extend tests for each supported item type
+    ## Cached-, Multi-, Batched-, and Extend tests for each supported item type
     ###########################################################################
-    def test_get_item_multi(
+
+    # noinspection PyTestUnpassedFixture
+    @pytest.mark.parametrize("object_type", [
+        RemoteObjectType.PLAYLIST,
+        RemoteObjectType.USER,
+    ], ids=idfn)
+    def test_get_items_from_cache_skips(
+            self,
+            object_type: RemoteObjectType,
+            responses: dict[str, dict[str, Any]],
+            api: SpotifyAPI,
+            api_cache: SpotifyAPI,
+            api_mock: SpotifyMock
+    ):
+        url = f"{api.url}/{object_type.name.lower()}s"
+        id_list = list(responses.keys())
+
+        # skip when no cache present
+        assert api.handler.cache is None
+        assert api._get_items_from_cache(method="GET", url=url, id_list=id_list) == ([], [], id_list)
+
+        # skip when no repository found
+        assert api_cache._get_items_from_cache(method="GET", url=url, id_list=id_list) == ([], [], id_list)
+
+    # noinspection PyTestUnpassedFixture
+    @pytest.mark.parametrize("object_type", [
+        RemoteObjectType.TRACK,
+        RemoteObjectType.ALBUM,
+        RemoteObjectType.ARTIST,
+        RemoteObjectType.SHOW,
+        RemoteObjectType.EPISODE,
+        RemoteObjectType.AUDIOBOOK,
+        RemoteObjectType.CHAPTER,
+    ], ids=idfn)
+    def test_get_items_from_cache(
+            self,
+            object_type: RemoteObjectType,
+            responses: dict[str, dict[str, Any]],
+            api_cache: SpotifyAPI,
+            api_mock: SpotifyMock
+    ):
+        url = f"{api_cache.url}/{object_type.name.lower()}s"
+        id_list = list(responses)
+        limit = len(responses) - 3
+        method = "GET"
+
+        responses_remapped = {(method, id_): response for id_, response in list(responses.items())[:limit]}
+        repository = api_cache.handler.cache.get_repository_from_url(url=url)
+        repository.update(responses_remapped)
+        assert all((method, id_) in repository for id_ in id_list[:limit])
+
+        results, ids_found, ids_not_found = api_cache._get_items_from_cache(method=method, url=url, id_list=id_list)
+        assert len(results) == len(ids_found) == limit
+        assert len(ids_not_found) == len(responses) - limit
+        assert results == list(responses.values())[:limit]
+        assert not api_mock.request_history
+
+    def test_get_items_multi(
             self,
             object_type: RemoteObjectType,
             responses: dict[str, dict[str, Any]],
@@ -276,7 +339,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         RemoteObjectType.AUDIOBOOK,
         RemoteObjectType.CHAPTER,
     ], ids=idfn)
-    def test_get_item_batched(
+    def test_get_items_batched(
             self,
             object_type: RemoteObjectType,
             responses: dict[str, dict[str, Any]],
@@ -349,6 +412,35 @@ class TestSpotifyAPIItems(RemoteAPITester):
         test.refresh()
 
         self.assert_response_extended(actual=test, expected=original)
+
+    # noinspection PyTestUnpassedFixture
+    @pytest.mark.parametrize("object_type", [
+        RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM,
+        # RemoteObjectType.SHOW, RemoteObjectType.AUDIOBOOK,  RemoteResponse types not yet implemented for these
+    ], ids=idfn)
+    def test_extend_items_cache(
+            self,
+            object_type: RemoteObjectType,
+            response: dict[str, Any],
+            key: str,
+            api_cache: SpotifyAPI,
+            api_mock: SpotifyMock
+    ):
+        self.reduce_items(response=response, key=key, api=api_cache, api_mock=api_mock)
+
+        method = "GET"
+        items = [
+            item if object_type != RemoteObjectType.PLAYLIST else item[key.rstrip("s")]
+            for item in response[key][api_cache.items_key]
+        ]
+
+        url = items[0]["href"]
+        repository = api_cache.handler.cache.get_repository_from_url(url=url)
+        id_list = [item[self.id_key] for item in items]
+        assert any((method, id_) not in repository for id_ in id_list)
+
+        api_cache.extend_items(response=response, key=api_cache.collection_item_map.get(object_type, object_type))
+        assert all((method, id_) in repository for id_ in id_list)
 
     ###########################################################################
     ## ``get_user_items``
@@ -587,27 +679,27 @@ class TestSpotifyAPIItems(RemoteAPITester):
     ###########################################################################
     @pytest.fixture
     def features_all(self, responses: dict[str, dict[str, Any]], api_mock: SpotifyMock) -> dict[str, dict[str, Any]]:
-        """Yield all audio features responses for the given ``responses`` as a pytest.fixture"""
+        """Yield all audio features responses for the given ``responses`` as a pytest.fixture."""
         for response in responses:
             assert "audio_features" not in response
         return {id_: deepcopy(api_mock.audio_features[id_]) for id_ in responses if id_ in api_mock.audio_features}
 
     @pytest.fixture
     def features(self, response: dict[str, Any], features_all: dict[str, dict[str, Any]]) -> dict[str, Any]:
-        """Yield the audio features  response for the given ``response`` as a pytest.fixture"""
+        """Yield the audio features  response for the given ``response`` as a pytest.fixture."""
         assert "audio_features" not in response
         return features_all[response[self.id_key]]
 
     @pytest.fixture
     def analysis_all(self, responses: dict[str, dict[str, Any]], api_mock: SpotifyMock) -> dict[str, dict[str, Any]]:
-        """Yield all audio analyses responses for the given ``responses`` as a pytest.fixture"""
+        """Yield all audio analyses responses for the given ``responses`` as a pytest.fixture."""
         for response in responses:
             assert "audio_analysis" not in response
         return {id_: deepcopy(api_mock.audio_analysis[id_]) for id_ in responses if id_ in api_mock.audio_analysis}
 
     @pytest.fixture
     def analysis(self, response: dict[str, Any], analysis_all: dict[str, dict[str, Any]]) -> dict[str, Any]:
-        """Yield all audio analysis response for the given ``response`` as a pytest.fixture"""
+        """Yield all audio analysis response for the given ``response`` as a pytest.fixture."""
         assert "audio_analysis" not in response
         return analysis_all[response[self.id_key]]
 

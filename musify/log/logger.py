@@ -17,6 +17,8 @@ from musify.log import INFO_EXTRA, REPORT, STAT
 class MusifyLogger(logging.Logger):
     """The logger for all logging operations in Musify."""
 
+    __slots__ = ()
+
     #: When true, never print a new line in the console when :py:meth:`print()` is called
     compact: bool = False
     #: When true, all bars returned by :py:meth:`get_progress_bar()` will be disabled by default
@@ -49,9 +51,6 @@ class MusifyLogger(logging.Logger):
             if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stdout:
                 console_handlers.append(handler)
         return console_handlers
-
-    def __init__(self, name: str, level: int | str = logging.NOTSET):
-        super().__init__(name=name, level=level)
 
     def info_extra(self, msg, *args, **kwargs) -> None:
         """Log 'msg % args' with severity 'INFO_EXTRA'."""

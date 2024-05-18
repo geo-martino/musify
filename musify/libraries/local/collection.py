@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Mapping, Collection, Iterable, Container
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -28,11 +28,11 @@ from musify.utils import get_most_common_values, to_collection, align_string, ge
 _max_str = "z" * 50
 
 
-class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
+class LocalCollection[T: LocalTrack](MusifyCollection[T], ABC):
     """
     Generic class for storing a collection of local tracks.
 
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on items.
+    :param remote_wrangler: Optionally, provide a :py:class:`RemoteDataWrangler` object for processing URIs on items.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
     """
 
@@ -86,11 +86,13 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
         return sum(track.play_count for track in self.tracks if track.play_count)
 
     def __init__(self, remote_wrangler: RemoteDataWrangler = None):
-        super().__init__(remote_wrangler=remote_wrangler)
+        super().__init__()
 
         # noinspection PyTypeChecker
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
+        #: A :py:class:`RemoteDataWrangler` object for processing remote data
+        self.remote_wrangler = remote_wrangler
 
     def save_tracks(
             self,
@@ -143,7 +145,7 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
         tag_order = [tag for field in TagFields.all(only_tags=True) for tag in field.to_tag()]
         tag_names = sorted(tag_names, key=lambda x: tag_order.index(x))
 
-        if isinstance(self, Library):  # log status message and use progress bar for libraries
+        if isinstance(self, Library | LocalCollection):  # log status message and use progress bar for libraries
             self.logger.info(
                 f"\33[1;95m  >\33[1;97m "
                 f"Merging library of {len(self)} items with {len(tracks)} items on tags: "
@@ -164,11 +166,11 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
                 if hasattr(track, tag):
                     track_in_collection[tag] = track[tag]
 
-        if isinstance(self, Library):
+        if isinstance(self, Library | LocalCollection):
             self.logger.print()
 
 
-class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], metaclass=ABCMeta):
+class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], ABC):
     """
     Generic class for storing and filtering on a collection of local tracks
     with methods for enriching the attributes of this object from the attributes of the collection of tracks
@@ -179,9 +181,11 @@ class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], metaclass=ABCMet
         If None, the list of tracks given are taken to be all the tracks contained in this collection.
     :raise LocalCollectionError: If the given tracks contain more than one unique value
         for the attribute of this collection when name is None.
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
+    :param remote_wrangler: Optionally, provide a :py:class:`RemoteDataWrangler` object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
     """
+
+    __slots__ = ("_tag_key", "_name", "_tracks")
 
     @property
     def name(self):
@@ -252,12 +256,13 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
     :param name: The name of this folder.
         If given, the object only stores tracks that match the folder ``name`` given.
         If None, the list of tracks given are taken to be all the tracks contained in this folder.
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
+    :param remote_wrangler: Optionally, provide a :py:class:`RemoteDataWrangler` object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
     :raise LocalCollectionError: If the given tracks contain more than one unique value for
         ``folder`` when name is None.
     """
 
+    __slots__ = ()
     __attributes_classes__ = (Folder, LocalCollection)
 
     @property
@@ -291,12 +296,13 @@ class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):
     :param name: The name of this album.
         If given, the object only stores tracks that match the album ``name`` given.
         If None, the list of tracks given are taken to be all the tracks for this album.
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
+    :param remote_wrangler: Optionally, provide a :py:class:`RemoteDataWrangler` object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
     :raise LocalCollectionError: If the given tracks contain more than one unique value for
         ``album`` when name is None.
     """
 
+    __slots__ = ("_image_links",)
     __attributes_classes__ = (Album, LocalCollection)
 
     @property
@@ -373,12 +379,13 @@ class LocalArtist(LocalCollectionFiltered[LocalTrack], Artist[LocalTrack]):
     :param name: The name of this artist.
         If given, the object only stores tracks that match the artist ``name`` given.
         If None, the list of tracks given are taken to be all the tracks by this artist.
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
+    :param remote_wrangler: Optionally, provide a :py:class:`RemoteDataWrangler` object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
     :raise LocalCollectionError: If the given tracks contain more than one unique value for
         ``artist`` when name is None.
     """
 
+    __slots__ = ()
     __attributes_classes__ = (Artist, LocalCollection)
 
     @property
@@ -411,12 +418,13 @@ class LocalGenres(LocalCollectionFiltered[LocalTrack], Genre[LocalTrack]):
     :param name: The name of this genre.
         If given, the object only stores tracks that match the genre ``name`` given.
         If None, the list of tracks given are taken to be all the tracks within this genre.
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs on tracks.
+    :param remote_wrangler: Optionally, provide a :py:class:`RemoteDataWrangler` object for processing URIs on tracks.
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
     :raise LocalCollectionError: If the given tracks contain more than one unique value for
         ``genre`` when name is None.
     """
 
+    __slots__ = ()
     __attributes_classes__ = (Genre, LocalCollection)
 
     @property

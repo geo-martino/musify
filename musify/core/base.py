@@ -43,6 +43,8 @@ class MusifyObject(AttributePrinter):
 class MusifyItem(MusifyObject, Hashable, metaclass=ABCMeta):
     """Generic class for storing an item."""
 
+    __slots__ = ()
+
     @property
     @abstractmethod
     def uri(self) -> str | None:
@@ -76,6 +78,8 @@ class MusifyItem(MusifyObject, Hashable, metaclass=ABCMeta):
 # noinspection PyPropertyDefinition
 class MusifyItemSettable(MusifyItem, metaclass=ABCMeta):
     """Generic class for storing an item that can have select properties modified."""
+
+    __slots__ = ()
 
     @abstractmethod
     def _uri_getter(self) -> str | None:

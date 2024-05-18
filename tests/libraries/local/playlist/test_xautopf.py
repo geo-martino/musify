@@ -204,11 +204,7 @@ class TestXAutoPF(LocalPlaylistTester):
         pl.description = "new description"
         pl.save(dry_run=False)
 
-        if not os.getenv("GITHUB_ACTIONS"):
-            # TODO: these assertions always fail on GitHub actions but not locally, why?
-            assert pl.date_modified > original_dt_modified
-            assert pl.date_created == original_dt_created
-
+        assert pl.date_modified > original_dt_modified
         assert pl._parser.xml != original_parser
         assert pl._parser.xml_smart_playlist["@GroupBy"] == original_parser.xml_smart_playlist["@GroupBy"]
         assert pl._parser.xml_source["Conditions"] == original_parser.xml_source["Conditions"]
@@ -592,7 +588,6 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         assert actual_weight == parser_final.xml_smart_playlist["@ShuffleSameArtistWeight"]
 
 
-@pytest.mark.manual
 @pytest.fixture(scope="module")
 def library() -> LocalLibrary:
     """Yields a loaded :py:class:`LocalLibrary` to supply tracks for manual checking of custom playlist files"""
@@ -609,11 +604,8 @@ def library() -> LocalLibrary:
     reason="Only runs when the test or marker is specified explicitly by the user",
 )
 @pytest.mark.parametrize("source,expected", [
-    (
-        join(os.getenv("TEST_PL_SOURCE", ""), f"{splitext(basename(name))[0]}.xautopf"),
-        join(os.getenv("TEST_PL_COMPARISON", ""), f"{splitext(basename(name))[0]}.m3u"),
-    )
-    for name in glob(join(os.getenv("TEST_PL_SOURCE", ""), "**", "*.xautopf"), recursive=True)
+    (path, join(os.getenv("TEST_PL_COMPARISON", ""), f"{splitext(basename(path))[0]}.m3u"))
+    for path in glob(join(os.getenv("TEST_PL_SOURCE", ""), "**", "*.xautopf"), recursive=True)
 ])
 def test_playlist_paths_manual(library: LocalLibrary, source: str, expected: str):
     assert exists(source)

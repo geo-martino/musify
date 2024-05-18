@@ -22,6 +22,8 @@ class TagProcessor[T: mutagen.FileType](ABC):
         If no ``remote_wrangler`` is given, no URI processing will occur.
     """
 
+    __slots__ = ("file", "tag_map", "remote_wrangler")
+
     #: The tag field to use as the URI tag in the file's metadata
     uri_tag: LocalTrackField = LocalTrackField.COMMENTS
     #: The separator to use when representing separated tag values as a combined string.

@@ -4,8 +4,7 @@ The core abstract implementations of :py:class:`MusifyItem` and :py:class:`Musif
 from __future__ import annotations
 
 import datetime
-import logging
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Collection, Mapping, Iterable
 from copy import deepcopy
 from typing import Self
@@ -14,13 +13,12 @@ from musify.core.base import MusifyItem
 from musify.exception import MusifyTypeError
 from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.remote.core.enum import RemoteObjectType
-from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
-from musify.log.logger import MusifyLogger
 
 
-class Track(MusifyItem, metaclass=ABCMeta):
+class Track(MusifyItem, ABC):
     """Represents a track including its metadata/tags/properties."""
 
+    __slots__ = ()
     __attributes_ignore__ = "name"
 
     # noinspection PyPropertyDefinition
@@ -169,9 +167,10 @@ class Track(MusifyItem, metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class Playlist[T: Track](MusifyCollection[T], metaclass=ABCMeta):
+class Playlist[T: Track](MusifyCollection[T], ABC):
     """A playlist of items and their derived properties/objects."""
 
+    __slots__ = ()
     __attributes_classes__ = MusifyCollection
     __attributes_ignore__ = "items"
 
@@ -289,9 +288,10 @@ class Playlist[T: Track](MusifyCollection[T], metaclass=ABCMeta):
         return self
 
 
-class Library[T: Track](MusifyCollection[T], metaclass=ABCMeta):
+class Library[T: Track](MusifyCollection[T], ABC):
     """A library of items and playlists and other object types."""
 
+    __slots__ = ()
     __attributes_classes__ = MusifyCollection
     __attributes_ignore__ = "items"
 
@@ -333,13 +333,6 @@ class Library[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     def playlists(self) -> dict[str, Playlist[T]]:
         """The playlists in this library"""
         raise NotImplementedError
-
-    def __init__(self, remote_wrangler: RemoteDataWrangler()):
-        super().__init__(remote_wrangler=remote_wrangler)
-
-        # noinspection PyTypeChecker
-        #: The :py:class:`MusifyLogger` for this  object
-        self.logger: MusifyLogger = logging.getLogger(__name__)
 
     @abstractmethod
     def load(self):
@@ -412,11 +405,12 @@ class Library[T: Track](MusifyCollection[T], metaclass=ABCMeta):
             self.playlists[name].merge(playlist, reference=reference.get(name))
 
 
-class Folder[T: Track](MusifyCollection[T], metaclass=ABCMeta):
+class Folder[T: Track](MusifyCollection[T], ABC):
     """
     A folder of items and their derived properties/objects
     """
 
+    __slots__ = ()
     __attributes_classes__ = MusifyCollection
     __attributes_ignore__ = ("name", "items")
 
@@ -478,9 +472,10 @@ class Folder[T: Track](MusifyCollection[T], metaclass=ABCMeta):
         return sum(lengths) if lengths else None
 
 
-class Album[T: Track](MusifyCollection[T], metaclass=ABCMeta):
+class Album[T: Track](MusifyCollection[T], ABC):
     """An album of items and their derived properties/objects."""
 
+    __slots__ = ()
     __attributes_classes__ = MusifyCollection
     __attributes_ignore__ = ("name", "items")
 
@@ -601,9 +596,10 @@ class Album[T: Track](MusifyCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class Artist[T: (Track, Album)](MusifyCollection[T], metaclass=ABCMeta):
+class Artist[T: (Track, Album)](MusifyCollection[T], ABC):
     """An artist of items and their derived properties/objects."""
 
+    __slots__ = ()
     __attributes_classes__ = MusifyCollection
     __attributes_ignore__ = ("name", "items")
 
@@ -672,9 +668,10 @@ class Artist[T: (Track, Album)](MusifyCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class Genre[T: Track](MusifyCollection[T], metaclass=ABCMeta):
+class Genre[T: Track](MusifyCollection[T], ABC):
     """A genre of items and their derived properties/objects."""
 
+    __slots__ = ()
     __attributes_classes__ = MusifyCollection
     __attributes_ignore__ = ("name", "items")
 

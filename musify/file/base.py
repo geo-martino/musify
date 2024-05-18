@@ -14,6 +14,8 @@ from musify.file.exception import InvalidFileType, FileDoesNotExistError
 class File(Hashable, metaclass=ABCMeta):
     """Generic class for representing a file on a system."""
 
+    __slots__ = ()
+
     #: Extensions of files that can be loaded by this class.
     valid_extensions: frozenset[str]
 

@@ -12,7 +12,7 @@ class MusifyItemTester(PrettyPrinterTester, metaclass=ABCMeta):
 
     @abstractmethod
     def item(self, *args, **kwargs) -> MusifyItem:
-        """Yields an :py:class:`MusifyItem` object to be tested as pytest.fixture"""
+        """Yields an :py:class:`MusifyItem` object to be tested as pytest.fixture."""
         raise NotImplementedError
 
     @abstractmethod

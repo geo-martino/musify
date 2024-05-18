@@ -13,7 +13,6 @@ import yaml
 from _pytest.fixtures import SubRequest
 
 from musify import MODULE_ROOT
-from musify.api.request import RequestHandler
 from musify.libraries.remote.core.enum import RemoteObjectType
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
@@ -283,7 +282,7 @@ def path(request: pytest.FixtureRequest | SubRequest, tmp_path: Path) -> str:
 
 @pytest.fixture(scope="session", params=ALL_ITEM_TYPES, ids=idfn)
 def object_type(request) -> RemoteObjectType:
-    """Yields the valid :py:class:`RemoteObjectTypes` to use throughout tests in this suite as a pytest.fixture"""
+    """Yields the valid :py:class:`RemoteObjectTypes` to use throughout tests in this suite as a pytest.fixture."""
     return request.param
 
 
@@ -297,8 +296,11 @@ def spotify_wrangler():
 def spotify_api() -> SpotifyAPI:
     """Yield an authorised :py:class:`SpotifyAPI` object"""
     token = {"access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"}
-    api = SpotifyAPI(cache_path=None)
-    api.handler = RequestHandler(name=api.source, token=token, cache_path=None)
+    api = SpotifyAPI(token=token)
+    # blocks any token tests
+    api.handler.authoriser.test_args = None
+    api.handler.authoriser.test_expiry = 0
+    api.handler.authoriser.test_condition = None
     with api as a:
         yield a
 

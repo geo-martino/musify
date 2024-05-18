@@ -46,7 +46,7 @@ class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](FilterComp
         from the matched items for any remaining unmatched items.
     """
 
-    __slots__ = ("include", "exclude", "comparers", "group_by")
+    __slots__ = ("logger", "include", "exclude", "comparers", "group_by")
 
     def __init__(
             self,

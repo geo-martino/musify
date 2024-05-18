@@ -3,7 +3,7 @@ The fundamental core collection classes for the entire package.
 """
 from __future__ import annotations
 
-from abc import ABCMeta, abstractmethod, ABC
+from abc import ABC, abstractmethod
 from collections.abc import MutableSequence, Iterable, Mapping, Collection
 from dataclasses import dataclass
 from typing import Any, SupportsIndex, Self
@@ -14,7 +14,6 @@ from musify.exception import MusifyTypeError, MusifyKeyError, MusifyAttributeErr
 from musify.file.base import File
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.base import RemoteObject
-from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
 from musify.processors.sort import ShuffleMode, ItemSorter
 from musify.types import UnitSequence
 
@@ -100,8 +99,10 @@ class RemoteURLEXTGetter(ItemGetterStrategy):
         return item.url_ext
 
 
-class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], metaclass=ABCMeta):
+class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], ABC):
     """Generic class for storing a collection of musify items."""
+
+    __slots__ = ()
 
     @property
     @abstractmethod
@@ -127,11 +128,6 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], metaclas
         :return: True if valid, False if not.
         """
         raise NotImplementedError
-
-    def __init__(self, remote_wrangler: RemoteDataWrangler | None = None):
-        super().__init__()
-        #: A :py:class:`RemoteDataWrangler` object for processing remote data
-        self.remote_wrangler = remote_wrangler
 
     def count(self, __item: T) -> int:
         """Return the number of occurrences of the given :py:class:`MusifyItem` in this collection"""
@@ -334,11 +330,12 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], metaclas
             f"Key is invalid. The following errors were thrown: {[str(ex) for ex in caught_exceptions]}"
         )
 
-    def __get_item_getters(self, __key: str | MusifyItem | File | RemoteResponse) -> list[ItemGetterStrategy]:
+    @staticmethod
+    def __get_item_getters(__key: str | MusifyItem | File | RemoteResponse) -> list[ItemGetterStrategy]:
         getters = []
         if isinstance(__key, File):
             getters.append(PathGetter(__key.path))
-        if isinstance(__key, RemoteResponse) and self.remote_wrangler:
+        if isinstance(__key, RemoteResponse):
             getters.append(RemoteIDGetter(__key.id))
         if isinstance(__key, MusifyItem) and __key.has_uri:
             getters.append(RemoteURIGetter(__key.uri))

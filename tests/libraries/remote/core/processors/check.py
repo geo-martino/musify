@@ -29,17 +29,17 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
 
     @abstractmethod
     def checker(self, *args, **kwargs) -> RemoteItemChecker:
-        """Yields a valid :py:class:`RemoteItemChecker` for the current remote source as a pytest.fixture"""
+        """Yields a valid :py:class:`RemoteItemChecker` for the current remote source as a pytest.fixture."""
         raise NotImplementedError
 
     @abstractmethod
     def playlist_urls(self, *args, **kwargs) -> list[str]:
-        """Yields a list of URLs that will return valid responses from the api_mock as a pytest.fixture"""
+        """Yields a list of URLs that will return valid responses from the api_mock as a pytest.fixture."""
         raise NotImplementedError
 
     @pytest.fixture
     def collections(self, playlist_urls: list[str]) -> list[BasicCollection]:
-        """Yields many valid :py:class:`BasicCollection` of :py:class:`LocalTrack` as a pytest.fixture"""
+        """Yields many valid :py:class:`BasicCollection` of :py:class:`LocalTrack` as a pytest.fixture."""
         count = randrange(6, len(playlist_urls))
         return [BasicCollection(name=random_str(30, 50), items=random_tracks()) for _ in range(count)]
 
@@ -50,7 +50,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
     ) -> tuple[RemotePlaylist, BasicCollection]:
         """Setups up checker, playlist, and collection for testing match_to_remote functionality"""
         url = choice(playlist_urls)
-        pl = checker.factory.playlist(checker.api.get_items(url, extend=True, use_cache=False)[0])
+        pl = checker.factory.playlist(checker.api.get_items(url, extend=True)[0])
         assert len(pl) > 10
         assert len({item.uri for item in pl}) == len(pl)  # all unique tracks
 
@@ -71,8 +71,8 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
     @staticmethod
     def test_make_temp_playlist(checker: RemoteItemChecker, api_mock: RemoteMock, token_file_path: str):
         # force auth test to fail and reload from token
-        checker.api.handler.token = None
-        checker.api.handler.token_file_path = token_file_path
+        checker.api.handler.authoriser.token = None
+        checker.api.handler.authoriser.token_file_path = token_file_path
 
         collection = BasicCollection(name=random_str(30, 50), items=random_tracks())
         for item in collection:
@@ -88,7 +88,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             item.uri = random_uri()
 
         checker._create_playlist(collection=collection)
-        assert checker.api.handler.token is not None
+        assert checker.api.handler.authoriser.token is not None
         assert collection.name in checker._playlist_name_urls
         assert checker._playlist_name_collection[collection.name] == collection
         assert len(api_mock.request_history) >= 2
@@ -102,14 +102,14 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             token_file_path: str
     ):
         # force auth test to fail and reload from token
-        checker.api.handler.token = None
-        checker.api.handler.token_file_path = token_file_path
+        checker.api.handler.authoriser.token = None
+        checker.api.handler.authoriser.token_file_path = token_file_path
 
         checker._playlist_name_urls = {collection.name: url for collection, url in zip(collections, playlist_urls)}
         checker._playlist_name_collection = {collection.name: collection for collection in collections}
 
         checker._delete_playlists()
-        assert checker.api.handler.token is not None
+        assert checker.api.handler.authoriser.token is not None
         assert not checker._playlist_name_urls
         assert not checker._playlist_name_collection
         assert len(api_mock.get_requests(method="DELETE")) == min(len(playlist_urls), len(collections))
@@ -553,13 +553,13 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             mocker: MockerFixture,
             api_mock: RemoteMock,
     ):
-        def add_collection(collection: BasicCollection):
+        def add_collection(self, collection: BasicCollection):
             """Just simply add the collection and associated URL to the ItemChecker without calling API"""
-            checker._playlist_name_urls[collection.name] = playlist_name_urls[collection.name]
-            checker._playlist_name_collection[collection.name] = collection
+            self._playlist_name_urls[collection.name] = playlist_name_urls[collection.name]
+            self._playlist_name_collection[collection.name] = collection
 
         playlist_name_urls = {collection.name: url for collection, url in zip(collections, playlist_urls)}
-        mocker.patch.object(checker, "_create_playlist", new=add_collection)
+        mocker.patch.object(RemoteItemChecker, "_create_playlist", new=add_collection)
 
         interval = len(collections) // 3
         checker.interval = interval

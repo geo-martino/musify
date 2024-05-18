@@ -188,7 +188,7 @@ class APIAuthoriser:
         with open(self.token_file_path, "w") as file:
             json.dump(self.token, file, indent=2)
 
-    def authorise(self, force_load: bool = False, force_new: bool = False) -> dict[str, str]:
+    def __call__(self, force_load: bool = False, force_new: bool = False) -> dict[str, str]:
         """
         Main method for authorisation which tests/refreshes/reauthorises as needed.
 
@@ -352,7 +352,7 @@ class APIAuthoriser:
         response = requests.get(headers=self.headers, **self.test_args)
         try:
             response = response.json()
-        except json.JSONDecodeError:
+        except json.decoder.JSONDecodeError:
             response = response.text
 
         result = self.test_condition(response)

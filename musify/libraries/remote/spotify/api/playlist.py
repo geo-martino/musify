@@ -1,7 +1,7 @@
 """
 Implements endpoints for manipulating playlists with the Spotify API.
 """
-from abc import ABCMeta
+from abc import ABC
 from collections.abc import Collection, Mapping
 from itertools import batched
 from typing import Any
@@ -14,10 +14,12 @@ from musify.libraries.remote.spotify.api.base import SpotifyAPIBase
 from musify.utils import limit_value
 
 
-class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
+class SpotifyAPIPlaylists(SpotifyAPIBase, ABC):
     """API endpoints for processing collections i.e. playlists, albums, shows, and audiobooks"""
 
-    def get_playlist_url(self, playlist: str | Mapping[str, Any] | RemoteResponse, use_cache: bool = True) -> str:
+    __slots__ = ()
+
+    def get_playlist_url(self, playlist: str | Mapping[str, Any] | RemoteResponse) -> str:
         """
         Determine the type of the given ``playlist`` and return its API URL.
         If type cannot be determined, attempt to find the playlist in the
@@ -28,8 +30,6 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
             - a RemoteResponse object representing a remote playlist.
-        :param use_cache: When a CachedSession is available, use the cache when calling the API endpoint.
-            Set as False to refresh the cached response of the CachedSession.
         :return: The playlist URL.
         :raise RemoteIDTypeError: Raised when the function cannot determine the item type of
             the input ``playlist``. Or when it does not recognise the type of the input ``playlist`` parameter.
@@ -40,19 +40,25 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
         if isinstance(playlist, Mapping):
             if "href" in playlist:
                 return playlist["href"]
-            elif "id" in playlist:
+            elif self.id_key in playlist:
                 return self.wrangler.convert(
-                    playlist["id"], kind=RemoteObjectType.PLAYLIST, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL
+                    playlist[self.id_key],
+                    kind=RemoteObjectType.PLAYLIST,
+                    type_in=RemoteIDType.ID,
+                    type_out=RemoteIDType.URL
                 )
             elif "uri" in playlist:
                 return self.wrangler.convert(
-                    playlist["uri"], kind=RemoteObjectType.PLAYLIST, type_in=RemoteIDType.URI, type_out=RemoteIDType.URL
+                    playlist["uri"],
+                    kind=RemoteObjectType.PLAYLIST,
+                    type_in=RemoteIDType.URI,
+                    type_out=RemoteIDType.URL
                 )
 
         try:
             return self.wrangler.convert(playlist, kind=RemoteObjectType.PLAYLIST, type_out=RemoteIDType.URL)
         except RemoteIDTypeError:
-            playlists = self.get_user_items(kind=RemoteObjectType.PLAYLIST, use_cache=use_cache)
+            playlists = self.get_user_items(kind=RemoteObjectType.PLAYLIST)
             playlists = {pl["name"]: pl["href"] for pl in playlists}
             if playlist not in playlists:
                 raise RemoteIDTypeError(
@@ -110,7 +116,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
         :raise RemoteObjectTypeError: Raised when the item types of the input ``items``
             are not all tracks or IDs.
         """
-        url = f"{self.get_playlist_url(playlist, use_cache=False)}/tracks"
+        url = f"{self.get_playlist_url(playlist)}/tracks"
 
         if len(items) == 0:
             self.logger.debug(f"{'SKIP':<7}: {url:<43} | No data given")
@@ -122,7 +128,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             self.wrangler.convert(item, kind=RemoteObjectType.TRACK, type_out=RemoteIDType.URI) for item in items
         ]
         if skip_dupes:  # skip tracks currently in playlist
-            pl_current = self.get_items(url, kind=RemoteObjectType.PLAYLIST, use_cache=False)[0]
+            pl_current = self.get_items(url, kind=RemoteObjectType.PLAYLIST)[0]
             tracks_key = self.collection_item_map[RemoteObjectType.PLAYLIST].name.lower() + "s"
             tracks = pl_current[tracks_key][self.items_key]
 
@@ -152,7 +158,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             - a RemoteResponse object representing a remote playlist.
         :return: API URL for playlist.
         """
-        url = f"{self.get_playlist_url(playlist, use_cache=False)}/followers"
+        url = f"{self.get_playlist_url(playlist)}/followers"
         self.handler.delete(url, log_pad=43)
         return url
 
@@ -180,13 +186,13 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
         :raise RemoteObjectTypeError: Raised when the item types of the input ``items``
             are not all tracks or IDs.
         """
-        url = f"{self.get_playlist_url(playlist, use_cache=False)}/tracks"
+        url = f"{self.get_playlist_url(playlist)}/tracks"
         if items is not None and len(items) == 0:
             self.logger.debug(f"{'SKIP':<7}: {url:<43} | No data given")
             return 0
 
         if items is None:  # clear everything
-            pl_current = self.get_items(url, kind=RemoteObjectType.PLAYLIST, extend=True, use_cache=False)[0]
+            pl_current = self.get_items(url, kind=RemoteObjectType.PLAYLIST, extend=True)[0]
 
             tracks_key = self.collection_item_map[RemoteObjectType.PLAYLIST].name.lower() + "s"
             tracks = pl_current[tracks_key][self.items_key]

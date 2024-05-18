@@ -73,7 +73,7 @@ jobs:
 
       - name: 🧪 Run tests
         run: |
-          pytest -n auto --junit-xml=test-results.xml
+          pytest -n auto -m "not manual" --junit-xml=test-results.xml
 
       - name: 📃 Publish test results report
         uses: pmeier/pytest-results-action@main

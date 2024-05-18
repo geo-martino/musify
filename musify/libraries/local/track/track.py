@@ -3,7 +3,7 @@ Compositely combine reader and writer classes for metadata/tags/properties opera
 """
 import datetime
 import os
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from copy import deepcopy
 from os.path import join, exists, dirname
 from typing import Any, Self
@@ -25,12 +25,12 @@ from musify.types import UnitIterable
 from musify.utils import to_collection
 
 
-class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Track, metaclass=ABCMeta):
+class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Track, ABC):
     """
     Generic track object for extracting, modifying, and saving metadata/tags/properties for a given file.
 
     :param file: The path or Mutagen object of the file to load.
-    :param remote_wrangler: Optionally, provide a RemoteDataWrangler object for processing URIs.
+    :param remote_wrangler: Optionally, provide a :py:class:`RemoteDataWrangler` object for processing URIs.
         This object will be used to check for and validate a URI tag on the file.
         The tag that is used for reading and writing is set by the ``uri_tag`` class attribute.
         If no ``remote_wrangler`` is given, no URI processing will occur.
@@ -67,6 +67,8 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
     )
     __attributes_classes__ = (Track, LocalItem)
     __attributes_ignore__ = "tag_map"
+
+    _load_on_init = True
 
     @property
     def name(self):
@@ -386,7 +388,9 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         file: T = self.load(file) if isinstance(file, str) else file
         self._reader = self._create_reader(file=file, tag_map=self.tag_map, remote_wrangler=remote_wrangler)
         self._writer = self._create_writer(file=file, tag_map=self.tag_map, remote_wrangler=remote_wrangler)
-        self.refresh()
+
+        if self._load_on_init:
+            self.refresh()
 
     def load(self, path: str | None = None) -> T:
         """
@@ -408,7 +412,6 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
 
     def refresh(self) -> None:
         """Extract update tags for this object from the loaded mutagen object."""
-
         self.title = self._reader.read_title()
         self.artist = self._reader.read_artist()
         self.album = self._reader.read_album()
@@ -488,7 +491,7 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         return self._get_attributes() | attributes_extra
 
     def __hash__(self):
-        # TODO: why doesn't this get inherited correctly from File.
+        # TODO: why doesn't this get inherited correctly from File superclass.
         #  If you remove this, tests will fail with error 'un-hashable type' for all subclasses of LocalTrack.
         #  LocalTrack should be inheriting __hash__ from File superclass
         return super().__hash__()
@@ -501,13 +504,14 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
 
     def __copy__(self):
         """Copy object by reloading from the file object in memory"""
-        if not self._reader.file.tags:  # file is not a real file, used in testing
-            new = self.__class__.__new__(self.__class__)
-            for key in self.__slots__:
-                setattr(new, key, getattr(self, key))
-            return new
+        new = self.__class__(file=self._reader.file, remote_wrangler=self._reader.remote_wrangler)
 
-        return self.__class__(file=self._reader.file, remote_wrangler=self._reader.remote_wrangler)
+        if not self._reader.file.tags:  # file is not a real file, used in testing
+            keys = [key for key in LocalTrack.__slots__ if key.lstrip("_") in dir(self)]
+            for key in keys:
+                setattr(new, key, getattr(self, key))
+
+        return new
 
     def __deepcopy__(self, _: dict = None):
         """Deepcopy object by reloading from the disk"""

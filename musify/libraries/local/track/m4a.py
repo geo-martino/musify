@@ -19,6 +19,8 @@ from musify.utils import to_collection
 
 class M4ATagReader(TagReader[mutagen.mp4.MP4]):
 
+    __slots__ = ()
+
     def read_tag(self, tag_ids: Iterable[str]) -> list[Any] | None:
         """Extract all tag values for a given list of tag IDs"""
         values = []
@@ -63,6 +65,8 @@ class M4ATagReader(TagReader[mutagen.mp4.MP4]):
 
 
 class M4ATagWriter(TagWriter[mutagen.mp4.MP4]):
+
+    __slots__ = ()
 
     def write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
         result = super().write_tag(tag_id=tag_id, tag_value=tag_value, dry_run=dry_run)
@@ -136,6 +140,8 @@ class M4ATagWriter(TagWriter[mutagen.mp4.MP4]):
 
 
 class M4A(LocalTrack[mutagen.mp4.MP4, M4ATagReader, M4ATagWriter]):
+
+    __slots__ = ()
 
     valid_extensions = frozenset({".m4a"})
 
