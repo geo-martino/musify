@@ -26,7 +26,7 @@ classifiers = [
 dependencies = [
     "mutagen~=1.47",
     "requests~=2.31",
-    "python-dateutil>=2.8.2,<2.10.0",
+    "python-dateutil~=2.9",
 ]
 
 [project.optional-dependencies]
@@ -38,11 +38,11 @@ bars = [
     "tqdm~=4.66",
 ]
 images = [
-    "Pillow~=10.1",
+    "Pillow~=10.3",
 ]
 musicbee = [
     "xmltodict~=0.13",
-    "lxml~=5.1",
+    "lxml~=5.2",
 ]
 
 # dev dependencies
@@ -51,17 +51,17 @@ build = [
     "versioningit",
 ]
 test = [
-    "musify[all]",
-    "pytest~=8.0",
-    "pytest-xdist~=3.5",
-    "pytest-mock~=3.12",
-    "requests-mock~=1.11",
+    #"musify[all]",
+    "pytest~=8.2",
+    "pytest-xdist~=3.6",
+    "pytest-mock~=3.14",
+    "requests-mock~=1.12",
     "pyyaml~=6.0",
     "pycountry~=23.12",
 ]
 docs = [
     "musify[all,build]",
-    "sphinx~=7.2",
+    "sphinx~=7.3",
     "renku_sphinx_theme",
     "graphviz~=0.20",
     "sphinx-autodoc-typehints~=2.1",
@@ -72,7 +72,7 @@ docs = [
 dev = [
     "musify[test,docs]",
     "flake8",
-    "grip~=4.6",
+    "grip",
 ]
 
 [project.urls]
