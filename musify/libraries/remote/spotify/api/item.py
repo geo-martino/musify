@@ -16,6 +16,11 @@ from musify.libraries.remote.core.types import APIInputValue
 from musify.libraries.remote.spotify.api.base import SpotifyAPIBase
 from musify.utils import limit_value, to_collection
 
+try:
+    import tqdm
+except ImportError:
+    tqdm = None
+
 ARTIST_ALBUM_TYPES = {"album", "single", "compilation", "appears_on"}
 
 
@@ -121,7 +126,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
 
         results_cache, ids_cached, ids_not_cached = self._get_items_from_cache(method=method, url=url, id_list=id_list)
 
-        bar = self.logger.get_progress_bar(
+        bar = self.logger.get_iterator(
             iterable=ids_not_cached,
             desc=f"Getting {kind}",
             unit=kind,
@@ -180,7 +185,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         results_cache, ids_cached, ids_not_cached = self._get_items_from_cache(method=method, url=url, id_list=id_list)
 
         id_chunks = list(batched(ids_not_cached, limit_value(limit, floor=1, ceil=50)))
-        bar = self.logger.get_progress_bar(
+        bar = self.logger.get_iterator(
             iterable=range(len(id_chunks)),
             desc=f"Getting {kind}",
             unit="pages",
@@ -266,7 +271,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
 
         kind = self._get_key(kind) or self.items_key
         pages = (response["total"] - len(response[self.items_key])) / (response["limit"] or 1)
-        bar = self.logger.get_progress_bar(
+        bar = self.logger.get_iterator(
             initial=len(response[self.items_key]),
             total=response["total"],
             desc=f"Extending {kind}".rstrip("s") if kind[0].islower() else kind,
@@ -287,7 +292,8 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
             response["next"] = response_next.get("next")
             response["previous"] = response_next.get("previous")
 
-            bar.update(len(response_next[self.items_key]))
+            if tqdm is not None:
+                bar.update(len(response_next[self.items_key]))
 
         # cache child items
         item_key = key.rstrip("s") if key else key
@@ -297,7 +303,9 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         if all("href" in result for result in results_to_cache):
             self._cache_results(method=method, results=results_to_cache)
 
-        bar.close()
+        if tqdm is not None:
+            bar.close()
+
         return response[self.items_key]
 
     def get_items(
@@ -367,7 +375,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
             self.logger.debug(f"{'DONE':<7}: {url:<43} | Retrieved {len(results):>6} {unit}")
             return results
 
-        bar = self.logger.get_progress_bar(
+        bar = self.logger.get_iterator(
             iterable=results, desc=f"Extending {unit}", unit=unit, disable=len(id_list) < self._bar_threshold
         )
 
@@ -611,7 +619,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         self.wrangler.validate_item_type(values, kind=RemoteObjectType.ARTIST)
 
         id_list = self.wrangler.extract_ids(values, kind=RemoteObjectType.ARTIST)
-        bar = self.logger.get_progress_bar(
+        bar = self.logger.get_iterator(
             iterable=id_list, desc="Getting artist albums", unit="artist", disable=len(id_list) < self._bar_threshold
         )
 

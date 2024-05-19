@@ -9,7 +9,7 @@ from typing import Any
 
 import unicodedata
 
-from musify.exception import MusifyTypeError
+from musify.exception import MusifyTypeError, MusifyImportError
 from musify.types import Number
 
 
@@ -262,3 +262,19 @@ def clean_kwargs(func: Callable, kwargs: dict[str, Any]) -> None:
     for key in list(kwargs):
         if key not in signature:
             kwargs.pop(key)
+
+
+def required_modules_installed(modules: list, this: Any = None) -> bool:
+    """Check the required modules are installed, raise :py:class:`MusifyImportError` if not."""
+    modules_installed = all(module is not None for module in modules)
+    if not modules_installed and this is not None:
+        names = [name for name, obj in globals().items() if obj in modules and not name.startswith("_")]
+        if isinstance(this, str):
+            message = f"Cannot run {this}. Required modules: {", ".join(names)}"
+        else:
+            # noinspection PyUnresolvedReferences
+            message = f"Cannot create {this.__class__.__name__} object. Required modules: {", ".join(names)}"
+
+        raise MusifyImportError(message)
+
+    return modules_installed

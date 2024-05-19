@@ -7,11 +7,18 @@ import logging.handlers
 import os
 import sys
 from collections.abc import Iterable
-from typing import Any
-
-from tqdm.auto import tqdm
+from typing import Any, TypeVar
 
 from musify.log import INFO_EXTRA, REPORT, STAT
+
+T = TypeVar("T")
+
+try:
+    from tqdm.auto import tqdm
+    ProgressBarType = tqdm | Iterable[T]
+except ImportError:
+    tqdm = None
+    ProgressBarType = Iterable[T]
 
 
 class MusifyLogger(logging.Logger):
@@ -72,13 +79,20 @@ class MusifyLogger(logging.Logger):
         if not self.compact and all(logging.DEBUG < h.level <= level for h in self.stdout_handlers):
             print()
 
-    def get_progress_bar[T: Any](
+    def get_iterator[T: Any](
             self,
             iterable: Iterable[T] | None = None,
             total: T | int | None = None,
             **kwargs
-    ) -> tqdm | Iterable[T]:
-        """Wrapper for tqdm progress bar. For kwargs, see :py:class:`tqdm_std`"""
+    ) -> ProgressBarType:
+        """
+        Returns an appropriately configured tqdm progress bar if installed.
+        If not, returns the given ``iterable`` if given, or simply `range(total)`.
+        For tqdm kwargs, see :py:class:`tqdm_std`
+        """
+        if tqdm is None:
+            return iterable if iterable is not None else range(total)
+
         # noinspection SpellCheckingInspection
         preset_keys = ("leave", "disable", "file", "ncols", "colour", "smoothing", "position")
 

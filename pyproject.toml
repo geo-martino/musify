@@ -26,19 +26,32 @@ classifiers = [
 dependencies = [
     "mutagen~=1.47",
     "requests~=2.31",
-    "Pillow~=10.1",
     "python-dateutil>=2.8.2,<2.10.0",
-    "xmltodict~=0.13",
-    "lxml~=5.1",
-    "tqdm~=4.66",
 ]
 
 [project.optional-dependencies]
+# optional functionality
+all = [
+    "musify[bars,musicbee]",
+]
+bars = [
+    "tqdm~=4.66",
+]
+musicbee = [
+    "xmltodict~=0.13",
+    "lxml~=5.1",
+]
+images = [
+    "Pillow~=10.1",
+]
+
+# dev dependencies
 build = [
     "hatch",
     "versioningit",
 ]
 test = [
+    #"musify[all]",
     "pytest~=8.0",
     "pytest-xdist~=3.5",
     "pytest-mock~=3.12",
@@ -47,6 +60,7 @@ test = [
     "pycountry~=23.12",
 ]
 docs = [
+    #"musify[all,build]",
     "musify[build]",
     "sphinx~=7.2",
     "renku_sphinx_theme",
@@ -57,7 +71,7 @@ docs = [
     "matplotlib~=3.9",
 ]
 dev = [
-    "musify[build,test,docs]",
+    "musify[test,docs]",
     "flake8",
     "grip~=4.6",
 ]

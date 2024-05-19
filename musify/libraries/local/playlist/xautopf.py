@@ -7,13 +7,11 @@ from dataclasses import dataclass
 from os.path import exists
 from typing import Any
 
-import xmltodict
-
 from musify.core.base import MusifyItem
 from musify.core.enum import Fields, Field, TagFields
 from musify.core.printer import PrettyPrinter
 from musify.core.result import Result
-from musify.exception import FieldError
+from musify.exception import FieldError, MusifyImportError
 from musify.file.base import File
 from musify.file.path_mapper import PathMapper
 from musify.libraries.local.playlist.base import LocalPlaylist
@@ -25,6 +23,13 @@ from musify.processors.filter_matcher import FilterMatcher
 from musify.processors.limit import ItemLimiter, LimitType
 from musify.processors.sort import ItemSorter, ShuffleMode
 from musify.utils import to_collection
+
+try:
+    import xmltodict
+except ImportError:
+    xmltodict = None
+
+REQUIRED_MODULES = [xmltodict]
 
 AutoMatcher = FilterMatcher[
     LocalTrack, FilterDefinedList[LocalTrack], FilterDefinedList[LocalTrack], FilterComparers[LocalTrack]
@@ -123,6 +128,9 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
             *_,
             **__
     ):
+        if xmltodict is None:
+            raise MusifyImportError(f"Cannot create {self.__class__.__name__} object. Required modules: xmltodict")
+
         self._validate_type(path)
 
         self._parser = XMLPlaylistParser(path=path, path_mapper=path_mapper)
@@ -297,6 +305,9 @@ class XMLPlaylistParser(File, PrettyPrinter):
             self.xml_source.pop("Description", None)
 
     def __init__(self, path: str, path_mapper: PathMapper = PathMapper()):
+        if xmltodict is None:
+            raise MusifyImportError(f"Cannot create {self.__class__.__name__} object. Required modules: xmltodict")
+
         self._path = path
         #: Maps paths stored in the playlist file.
         self.path_mapper = path_mapper

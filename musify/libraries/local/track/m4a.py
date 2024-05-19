@@ -7,7 +7,6 @@ from typing import Any
 
 import mutagen
 import mutagen.mp4
-from PIL import Image
 
 from musify.core.enum import TagMap
 from musify.file.image import open_image, get_image_bytes
@@ -15,6 +14,11 @@ from musify.libraries.local.track.tags.reader import TagReader
 from musify.libraries.local.track.tags.writer import TagWriter
 from musify.libraries.local.track.track import LocalTrack
 from musify.utils import to_collection
+
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
 
 
 class M4ATagReader(TagReader[mutagen.mp4.MP4]):
@@ -59,7 +63,10 @@ class M4ATagReader(TagReader[mutagen.mp4.MP4]):
         values = self.read_tag(self.tag_map.disc_total)
         return int(values[0][1]) if values is not None else None
 
-    def read_images(self) -> list[Image.Image] | None:
+    def read_images(self):
+        if Image is None:
+            return
+
         values = self.read_tag(self.tag_map.images)
         return [Image.open(BytesIO(bytes(value))) for value in values] if values is not None else None
 

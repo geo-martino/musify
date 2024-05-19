@@ -4,20 +4,25 @@ from os.path import basename, dirname, splitext, getmtime
 from pathlib import Path
 
 import pytest
-from PIL.Image import Image
 
 from musify.core.base import MusifyItem
 from musify.exception import MusifyKeyError
 from musify.file.exception import InvalidFileType, FileDoesNotExistError
-from musify.file.image import open_image
+from musify.file.image import open_image, REQUIRED_MODULES as REQUIRED_IMAGE_MODULES
 from musify.libraries.core.object import Track
 from musify.libraries.local.track import LocalTrack, load_track, FLAC, M4A, MP3, WMA, SyncResultTrack
 from musify.libraries.local.track.field import LocalTrackField
 from musify.libraries.remote.core.enum import RemoteObjectType
+from musify.utils import required_modules_installed
 from tests.core.base import MusifyItemTester
 from tests.libraries.local.utils import path_track_all, path_track_img, path_track_resources
 from tests.libraries.remote.spotify.utils import random_uri
 from tests.utils import path_txt
+
+try:
+    from PIL.Image import Image
+except ImportError:
+    Image = None
 
 
 def test_does_not_load_invalid_track():
@@ -538,6 +543,7 @@ class TestLocalTrackWriter:
             assert len(images) == 1
         assert images[0].size == image.size
 
+    @pytest.mark.skipif(not required_modules_installed(REQUIRED_IMAGE_MODULES), reason="required modules not installed")
     def test_update_image_dry_run(self, track: LocalTrack):
         track_update, track_original = self.get_update_image_test_track(track)
 
@@ -554,6 +560,7 @@ class TestLocalTrackWriter:
         assert len(images) == 1
         assert images[0].size == image_original.size
 
+    @pytest.mark.skipif(not required_modules_installed(REQUIRED_IMAGE_MODULES), reason="required modules not installed")
     def test_update_image_no_replace(self, track: LocalTrack):
         track_update, track_original = self.get_update_image_test_track(track)
 
@@ -564,6 +571,7 @@ class TestLocalTrackWriter:
         result = track_update.save(tags=LocalTrackField.IMAGES, replace=False, dry_run=False)
         self.assert_update_image_result(track=track_update, image=open_image(path_track_img), result=result)
 
+    @pytest.mark.skipif(not required_modules_installed(REQUIRED_IMAGE_MODULES), reason="required modules not installed")
     def test_update_image_with_replace(self, track: LocalTrack):
         track_update, track_original = self.get_update_image_test_track(track)
 

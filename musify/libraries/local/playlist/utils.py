@@ -11,11 +11,16 @@ from musify.file.exception import InvalidFileType
 from musify.file.path_mapper import PathMapper
 from musify.libraries.local.playlist.base import LocalPlaylist
 from musify.libraries.local.playlist.m3u import M3U
-from musify.libraries.local.playlist.xautopf import XAutoPF
+from musify.libraries.local.playlist.xautopf import XAutoPF, REQUIRED_MODULES as REQUIRED_XAUTOPF_MODULES
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
+from musify.utils import required_modules_installed
 
-PLAYLIST_CLASSES = frozenset({M3U, XAutoPF})
+if required_modules_installed(REQUIRED_XAUTOPF_MODULES):
+    PLAYLIST_CLASSES = frozenset({M3U, XAutoPF})
+else:
+    PLAYLIST_CLASSES = frozenset({M3U})
+
 PLAYLIST_FILETYPES = frozenset(filetype for c in PLAYLIST_CLASSES for filetype in c.valid_extensions)
 
 

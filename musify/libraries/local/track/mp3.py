@@ -8,7 +8,6 @@ from typing import Any
 import mutagen
 import mutagen.id3
 import mutagen.mp3
-from PIL import Image
 
 from musify.core.enum import TagMap
 from musify.file.image import open_image, get_image_bytes
@@ -17,6 +16,11 @@ from musify.libraries.local.track.field import LocalTrackField
 from musify.libraries.local.track.tags.reader import TagReader
 from musify.libraries.local.track.tags.writer import TagWriter
 from musify.libraries.local.track.track import LocalTrack
+
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
 
 
 class MP3TagReader(TagReader[mutagen.mp3.MP3]):
@@ -51,7 +55,10 @@ class MP3TagReader(TagReader[mutagen.mp3.MP3]):
             return
         return [genre for value in values for genre in value.split(";")]
 
-    def read_images(self) -> list[Image.Image] | None:
+    def read_images(self):
+        if Image is None:
+            return
+
         values = self.read_tag(self.tag_map.images)
         return [Image.open(BytesIO(value.data)) for value in values] if values is not None else None
 

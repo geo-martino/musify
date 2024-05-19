@@ -9,13 +9,18 @@ from typing import Any
 import mutagen
 import mutagen.asf
 import mutagen.id3
-from PIL import Image, UnidentifiedImageError
 
 from musify.core.enum import TagMap
 from musify.file.image import open_image, get_image_bytes
 from musify.libraries.local.track.tags.reader import TagReader
 from musify.libraries.local.track.tags.writer import TagWriter
 from musify.libraries.local.track.track import LocalTrack
+
+try:
+    from PIL import Image, UnidentifiedImageError
+except ImportError:
+    Image = None
+    UnidentifiedImageError = None
 
 
 class WMATagReader(TagReader[mutagen.asf.ASF]):
@@ -35,7 +40,10 @@ class WMATagReader(TagReader[mutagen.asf.ASF]):
 
         return values if len(values) > 0 else None
 
-    def read_images(self) -> list[Image.Image] | None:
+    def read_images(self):
+        if Image is None:
+            return
+
         values = self.read_tag(self.tag_map.images)
         if values is None:
             return

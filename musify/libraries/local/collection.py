@@ -113,7 +113,7 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], ABC):
                 track: executor.submit(track.save, tags=tags, replace=replace, dry_run=dry_run)
                 for track in self.tracks
             }
-            bar = self.logger.get_progress_bar(futures.items(), desc="Updating tracks", unit="tracks")
+            bar = self.logger.get_iterator(futures.items(), desc="Updating tracks", unit="tracks")
 
             return {track: future.result() for track, future in bar if future.result().updated}
 
@@ -151,7 +151,7 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], ABC):
                 f"Merging library of {len(self)} items with {len(tracks)} items on tags: "
                 f"{', '.join(tag_names)} \33[0m"
             )
-            tracks = self.logger.get_progress_bar(iterable=tracks, desc="Merging library", unit="tracks")
+            tracks = self.logger.get_iterator(iterable=tracks, desc="Merging library", unit="tracks")
 
         tags = to_collection(tags)
         if Fields.IMAGES in tags or Fields.ALL in tags:

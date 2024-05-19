@@ -9,6 +9,11 @@ from musify.log import INFO_EXTRA, REPORT, STAT
 from musify.log.filter import format_full_func_name, LogFileFilter
 from musify.log.logger import MusifyLogger
 
+try:
+    from tqdm.auto import tqdm
+except ImportError:
+    tqdm = None
+
 
 ###########################################################################
 ## MusifyLogger tests
@@ -67,13 +72,14 @@ def test_file_paths(logger: MusifyLogger):
     assert [basename(path) for path in logger.file_paths] == ["test1.log", "test2.log"]
 
 
-def test_get_progress_bar(logger: MusifyLogger):
+@pytest.mark.skipif(tqdm is None, reason="required modules not installed")
+def test_getting_iterator_as_progress_bar(logger: MusifyLogger):
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.DEBUG)  # forces leave to be False
     logger.addHandler(handler)
     logger._bars.clear()
 
-    bar = logger.get_progress_bar(iterable=range(0, 50), initial=10, disable=True, file=sys.stderr)
+    bar = logger.get_iterator(iterable=range(0, 50), initial=10, disable=True, file=sys.stderr)
 
     assert bar.iterable == range(0, 50)
     assert bar.n == 10
@@ -84,7 +90,7 @@ def test_get_progress_bar(logger: MusifyLogger):
 
     handler.setLevel(logging.WARNING)
     logger.disable_bars = False
-    bar = logger.get_progress_bar(
+    bar = logger.get_iterator(
         iterable=range(0, 50),
         initial=10,
         disable=False,
@@ -103,14 +109,14 @@ def test_get_progress_bar(logger: MusifyLogger):
     assert bar.pos == -3
 
     # takes next available position
-    bar = logger.get_progress_bar(iterable=range(0, 50))
+    bar = logger.get_iterator(iterable=range(0, 50))
     assert bar.pos == -4
 
     for bar in logger._bars:
         bar.n = bar.total
         bar.close()
 
-    bar = logger.get_progress_bar(
+    bar = logger.get_iterator(
         total=50,
         disable=False,
         file=sys.stderr,

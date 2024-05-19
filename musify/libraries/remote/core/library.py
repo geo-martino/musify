@@ -167,7 +167,7 @@ class RemoteLibrary[
 
         playlists = [
             self.factory.playlist(response=r, skip_checks=False)
-            for r in self.logger.get_progress_bar(iterable=responses, desc="Processing playlists", unit="playlists")
+            for r in self.logger.get_iterator(iterable=responses, desc="Processing playlists", unit="playlists")
         ]
 
         self._playlists = {pl.name: pl for pl in sorted(playlists, key=lambda x: x.name.casefold())}
@@ -209,7 +209,7 @@ class RemoteLibrary[
         self.api.load_user_data()
 
         responses = self.api.get_user_items(kind=RemoteObjectType.TRACK)
-        for response in self.logger.get_progress_bar(iterable=responses, desc="Processing tracks", unit="tracks"):
+        for response in self.logger.get_iterator(iterable=responses, desc="Processing tracks", unit="tracks"):
             track = self.factory.track(response=response, skip_checks=True)
 
             if not track.has_uri:  # skip any invalid non-remote responses
@@ -257,7 +257,7 @@ class RemoteLibrary[
         self.api.load_user_data()
 
         responses = self.api.get_user_items(kind=RemoteObjectType.ALBUM)
-        for response in self.logger.get_progress_bar(iterable=responses, desc="Processing albums", unit="albums"):
+        for response in self.logger.get_iterator(iterable=responses, desc="Processing albums", unit="albums"):
             album = self.factory.album(response=response, skip_checks=True)
 
             current = next((item for item in self._albums if item == album), None)
@@ -302,7 +302,7 @@ class RemoteLibrary[
         self.api.load_user_data()
 
         responses = self.api.get_user_items(kind=RemoteObjectType.ARTIST)
-        for response in self.logger.get_progress_bar(iterable=responses, desc="Processing artists", unit="artists"):
+        for response in self.logger.get_iterator(iterable=responses, desc="Processing artists", unit="artists"):
             artist = self.factory.artist(response=response, skip_checks=True)
 
             current = next((item for item in self._artists if item == artist), None)
@@ -436,7 +436,7 @@ class RemoteLibrary[
             f"{f' and reloading stored playlists' if reload else ''} \33[0m"
         )
 
-        bar = self.logger.get_progress_bar(
+        bar = self.logger.get_iterator(
             iterable=playlists.items(), desc=f"Synchronising {self.api.source}", unit="playlists"
         )
         results = {}

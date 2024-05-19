@@ -7,11 +7,17 @@ from collections.abc import Iterable
 from typing import Any
 
 import mutagen
-from PIL import Image
 
 from musify.libraries.local.track.tags.base import TagProcessor
 from musify.libraries.remote.core.enum import RemoteIDType
 from musify.utils import to_collection
+
+try:
+    from PIL import Image
+    ImageType = list[Image.Image] | None
+except ImportError:
+    Image = None
+    ImageType = None
 
 
 class TagReader[T: mutagen.FileType](TagProcessor, ABC):
@@ -180,7 +186,7 @@ class TagReader[T: mutagen.FileType](TagProcessor, ABC):
         return None
 
     @abstractmethod
-    def read_images(self) -> list[Image.Image] | None:
+    def read_images(self) -> ImageType:
         """Extract image from file"""
         raise NotImplementedError
 

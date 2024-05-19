@@ -302,7 +302,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
         with ThreadPoolExecutor(thread_name_prefix="track-loader") as executor:
             tasks = executor.map(self.load_track, self._track_paths)
-            bar = self.logger.get_progress_bar(
+            bar = self.logger.get_iterator(
                 tasks, desc="Loading tracks", unit="tracks", total=len(self._track_paths)
             )
             self._tracks = list(bar)
@@ -356,7 +356,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
         with ThreadPoolExecutor(thread_name_prefix="playlist-loader") as executor:
             tasks = executor.map(self.load_playlist, self._playlist_paths.values())
-            bar = self.logger.get_progress_bar(
+            bar = self.logger.get_iterator(
                 tasks, desc="Loading playlists", unit="playlists", total=len(self._playlist_paths)
             )
             self._playlists = {pl.name: pl for pl in sorted(bar, key=lambda x: x.name.casefold())}
@@ -386,7 +386,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         """
         with ThreadPoolExecutor(thread_name_prefix="playlist-saver") as executor:
             futures = {name: executor.submit(pl.save, dry_run=dry_run) for name, pl in self.playlists.items()}
-            bar = self.logger.get_progress_bar(futures.items(), desc="Updating playlists", unit="playlists")
+            bar = self.logger.get_iterator(futures.items(), desc="Updating playlists", unit="playlists")
 
             return dict(bar)
 
