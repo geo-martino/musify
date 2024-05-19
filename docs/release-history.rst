@@ -53,6 +53,7 @@ Changed
 * Moved ``remote_wrangler`` attribute from :py:class:`.MusifyCollection` to :py:class:`.LocalCollection`.
   This attribute was only needed by :py:class:`.LocalCollection` branch of child classes.
 * Moved ``logger`` attribute from :py:class:`.Library` to :py:class:`.RemoteLibrary`.
+* Switch some dependencies to be optional for groups of operation: progress bars, images, musicbee
 
 Fixed
 -----
