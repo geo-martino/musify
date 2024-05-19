@@ -60,7 +60,7 @@ test = [
     "pycountry~=23.12",
 ]
 docs = [
-    "musify[all,build]",
+    "musify[build]",
     "sphinx~=7.3",
     "renku_sphinx_theme",
     "graphviz~=0.20",
