@@ -26,7 +26,7 @@ try:
     import xmltodict
     from lxml import etree
     # noinspection PyProtectedMember
-    from etree import _Element as Element
+    from lxml.etree import _Element as Element
 except ImportError:
     xmltodict = None
     etree = None

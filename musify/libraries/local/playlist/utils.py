@@ -16,11 +16,11 @@ from musify.libraries.local.track import LocalTrack
 from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
 from musify.utils import required_modules_installed
 
+_playlist_classes = {M3U}
 if required_modules_installed(REQUIRED_XAUTOPF_MODULES):
-    PLAYLIST_CLASSES = frozenset({M3U, XAutoPF})
-else:
-    PLAYLIST_CLASSES = frozenset({M3U})
+    _playlist_classes.add(XAutoPF)
 
+PLAYLIST_CLASSES = frozenset(_playlist_classes)
 PLAYLIST_FILETYPES = frozenset(filetype for c in PLAYLIST_CLASSES for filetype in c.valid_extensions)
 
 

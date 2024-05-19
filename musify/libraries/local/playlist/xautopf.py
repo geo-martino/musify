@@ -585,7 +585,7 @@ class XMLPlaylistParser(File, PrettyPrinter):
 
             return ItemSorter(fields=fields, shuffle_mode=shuffle_mode, shuffle_weight=shuffle_weight)
 
-        # TODO: remove defined_sort workaround here - see cls.custom_sort
+        # TODO: remove defined_sort workaround here - see self.defined_sort
         return ItemSorter(fields=fields or next(iter(self.defined_sort.values())))
 
     def parse_sorter(self, sorter: ItemSorter | None = None) -> None:
