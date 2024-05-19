@@ -37,6 +37,10 @@ The following is an example for doing this with Spotify as the data source:
 Modify the track's tags
 -----------------------
 
+.. note::
+   To be able to modify a track's images, you will need to have installed the ``images`` optional dependencies.
+   See :ref:`installation` for more details.
+
 1. Change some tags:
 
    .. literalinclude:: _howto/scripts/local.track.load-save.py

@@ -26,6 +26,8 @@ What's in this documentation
 * How to get started with contributing to Musify
 * Reference documentation
 
+.. _installation:
+
 Installation
 ------------
 
@@ -36,6 +38,20 @@ Install through pip using one of the following commands:
    pip install musify
    # or
    python -m pip install musify
+
+This package has various optional dependencies for optional functionality.
+Should you wish to take advantage of some or all of this functionality, install the optional dependencies as follows:
+
+.. code-block:: bash
+
+   pip install musify[all]  # installs all optional dependencies
+
+   pip install musify[bars]  # dependencies for displaying progress bars on longer running processes
+   pip install musify[images]  # dependencies for processing images
+   pip install musify[musicbee]  # dependencies for working with a local MusicBee library and its playlist types
+
+   # or you may install any combination of these e.g.
+   pip install musify[bars,images,musicbee]
 
 .. toctree::
    :maxdepth: 1

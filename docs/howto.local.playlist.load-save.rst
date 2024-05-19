@@ -24,6 +24,10 @@ Load a playlist
 
 You can load a playlist as follows:
 
+.. note::
+   To be able to use the XAutoPF playlist type, you will need to have installed the ``musicbee`` optional dependencies.
+   See :ref:`installation` for more details.
+
 .. literalinclude:: _howto/scripts/local.playlist.load-save.py
    :language: Python
    :lines: 13-17

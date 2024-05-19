@@ -9,10 +9,11 @@ import pytest
 from musify.file.exception import FileDoesNotExistError
 from musify.file.path_mapper import PathMapper
 from musify.libraries.local.library import LocalLibrary, MusicBee
-from musify.libraries.local.library.musicbee import XMLLibraryParser
+from musify.libraries.local.library.musicbee import XMLLibraryParser, REQUIRED_MODULES
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
 from musify.processors.filter import FilterIncludeExclude, FilterDefinedList
+from musify.utils import required_modules_installed
 from tests.libraries.local.library.testers import LocalLibraryTester
 from tests.libraries.local.track.utils import random_track
 from tests.libraries.local.utils import path_library_resources
@@ -28,6 +29,7 @@ settings_xml_filename = "musicbee_settings.ini"
 settings_xml_filepath = join(path_library_resources, settings_xml_filename)
 
 
+@pytest.mark.skipif(not required_modules_installed(REQUIRED_MODULES), reason="required modules not installed.")
 class TestMusicBee(LocalLibraryTester):
 
     @pytest.fixture

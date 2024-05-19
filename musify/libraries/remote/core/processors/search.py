@@ -210,7 +210,7 @@ class RemoteItemSearcher(Processor):
             f"Searching for matches on {self.api.source} for {len(collections)} {kind}s\33[0m"
         )
 
-        bar = self.logger.get_progress_bar(iterable=collections, desc="Searching", unit=f"{kind}s")
+        bar = self.logger.get_iterator(iterable=collections, desc="Searching", unit=f"{kind}s")
         with ThreadPoolExecutor(thread_name_prefix="searcher-main") as executor:
             search_results = dict(executor.map(lambda coll: (coll.name, self._search_collection(coll)), bar))
 

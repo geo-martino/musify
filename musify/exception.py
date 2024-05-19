@@ -27,6 +27,10 @@ class MusifyAttributeError(MusifyError, AttributeError):
     """Exception raised for invalid attributes."""
 
 
+class MusifyImportError(MusifyError, ImportError):
+    """Exception raised for import errors, usually from missing modules."""
+
+
 ###########################################################################
 ## Enum errors
 ###########################################################################

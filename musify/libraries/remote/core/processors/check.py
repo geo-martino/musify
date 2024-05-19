@@ -26,6 +26,11 @@ from musify.processors.base import InputProcessor
 from musify.processors.match import ItemMatcher
 from musify.utils import get_max_width, align_string
 
+try:
+    import tqdm
+except ImportError:
+    tqdm = None
+
 ALLOW_KARAOKE_DEFAULT = RemoteItemSearcher.search_settings[RemoteObjectType.TRACK].allow_karaoke
 
 
@@ -184,7 +189,7 @@ class RemoteItemChecker(InputProcessor):
 
         total = len(collections)
         pages_total = (total // self.interval) + (total % self.interval > 0)
-        bar = self.logger.get_progress_bar(total=total, desc="Creating temp playlists", unit="playlists")
+        bar = self.logger.get_iterator(total=total, desc="Creating temp playlists", unit="playlists")
 
         self._skip = False
         self._quit = False
@@ -194,7 +199,8 @@ class RemoteItemChecker(InputProcessor):
             try:
                 for count, collection in enumerate(collections_iter, 1):
                     self._create_playlist(collection=collection)
-                    bar.update(1)
+                    if tqdm is not None:
+                        bar.update(1)
                     if count >= self.interval:
                         break
 
@@ -210,7 +216,9 @@ class RemoteItemChecker(InputProcessor):
             if self._quit or self._skip:  # quit check
                 break
 
-        bar.close()
+        if tqdm is not None:
+            bar.close()
+
         result = self._finalise() if not self._quit else None
         self.logger.debug("Checking items: DONE\n")
         return result

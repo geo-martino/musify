@@ -6,6 +6,7 @@ import pytest
 
 from musify.file.path_mapper import PathMapper, PathStemMapper
 from musify.libraries.local.library import LocalLibrary
+from musify.libraries.local.playlist import PLAYLIST_CLASSES
 from musify.libraries.local.track import LocalTrack
 from musify.processors.filter import FilterDefinedList, FilterIncludeExclude
 from tests.libraries.local.library.testers import LocalLibraryTester
@@ -58,10 +59,12 @@ class TestLocalLibrary(LocalLibraryTester):
         assert library.library_folders == [path_track_resources]
         assert library._track_paths == path_track_all
         assert library.playlist_folder == path_playlist_resources
-        assert library._playlist_paths == {
-            splitext(basename(path_playlist_m3u))[0]: path_playlist_m3u,
-            splitext(basename(path_playlist_xautopf_bp))[0]: path_playlist_xautopf_bp,
+
+        expected_playlists = {
+            splitext(basename(pl))[0]: pl for pl in [path_playlist_m3u, path_playlist_xautopf_bp]
+            if any(pl.endswith(ext) for cls in PLAYLIST_CLASSES for ext in cls.valid_extensions)
         }
+        assert library._playlist_paths == expected_playlists
 
     def test_init_exclude(self, path_mapper: PathStemMapper):
         library = LocalLibrary(

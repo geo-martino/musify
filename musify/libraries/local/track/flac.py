@@ -7,7 +7,6 @@ from typing import Any
 import mutagen
 import mutagen.flac
 import mutagen.id3
-from PIL import Image
 
 from musify.core.enum import TagMap
 from musify.file.image import open_image, get_image_bytes
@@ -16,12 +15,20 @@ from musify.libraries.local.track.tags.reader import TagReader
 from musify.libraries.local.track.tags.writer import TagWriter
 from musify.libraries.local.track.track import LocalTrack
 
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
+
 
 class FLACTagReader(TagReader[mutagen.flac.FLAC]):
 
     __slots__ = ()
 
-    def read_images(self) -> list[Image.Image] | None:
+    def read_images(self):
+        if Image is None:
+            return
+
         values = self.file.pictures
         return [Image.open(BytesIO(value.data)) for value in values] if len(values) > 0 else None
 

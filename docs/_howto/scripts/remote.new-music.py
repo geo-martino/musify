@@ -31,7 +31,7 @@ if albums_need_extend:
     kind = RemoteObjectType.ALBUM
     key = api.collection_item_map[kind]
 
-    bar = library.logger.get_progress_bar(iterable=albums_need_extend, desc="Getting album tracks", unit="albums")
+    bar = library.logger.get_iterator(iterable=albums_need_extend, desc="Getting album tracks", unit="albums")
     for album in bar:
         api.extend_items(album.response, kind=kind, key=key)
         album.refresh(skip_checks=False)

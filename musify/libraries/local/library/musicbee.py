@@ -10,10 +10,6 @@ from datetime import datetime
 from os.path import join, exists, normpath
 from typing import Any
 
-import xmltodict
-from lxml import etree
-from lxml.etree import iterparse
-
 from musify.file.base import File
 from musify.file.exception import FileDoesNotExistError
 from musify.file.path_mapper import PathMapper, PathStemMapper
@@ -24,7 +20,21 @@ from musify.libraries.local.track import LocalTrack
 from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
 from musify.processors.base import Filter
 from musify.types import Number
-from musify.utils import to_collection
+from musify.utils import to_collection, required_modules_installed
+
+try:
+    import xmltodict
+    from lxml import etree
+    # noinspection PyProtectedMember
+    from lxml.etree import _Element as Element
+except ImportError:
+    xmltodict = None
+    etree = None
+
+    from typing import Never
+    Element = Never
+
+REQUIRED_MODULES = [xmltodict, etree]
 
 
 class MusicBee(LocalLibrary, File):
@@ -75,6 +85,8 @@ class MusicBee(LocalLibrary, File):
             path_mapper: PathMapper = PathMapper(),
             remote_wrangler: RemoteDataWrangler = None,
     ):
+        required_modules_installed(REQUIRED_MODULES, self)
+
         #: The absolute path of the musicbee folder containing settings and library files.
         self.musicbee_folder = musicbee_folder
 
@@ -340,12 +352,14 @@ class XMLLibraryParser:
     timestamp_format = "%Y-%m-%dT%H:%M:%SZ"
 
     def __init__(self, path: str, path_keys: Iterable[str] | None = None):
+        required_modules_installed(REQUIRED_MODULES, self)
+
         #: Path to the XML file.
         self.path: str = path
         #: A list of keys in the XML file that need to be processed as system paths.
         self.path_keys: frozenset[str] = frozenset(path_keys) if path_keys else frozenset()
         #: Stores the iterparse operator for parsing XML file
-        self._iterparse: iterparse | None = None
+        self._iterparse: etree.iterparse | None = None
 
     @classmethod
     def to_xml_timestamp(cls, timestamp: datetime | None) -> str | None:
@@ -371,7 +385,7 @@ class XMLLibraryParser:
         """Clean the file paths as found in the MusicBee XML library file to a standard system path"""
         return normpath(urllib.parse.unquote(path.removeprefix("file://localhost/")))
 
-    def _iter_elements(self) -> Iterator[etree.Element]:
+    def _iter_elements(self) -> Iterator[Element]:
         for event, element in self._iterparse:
             yield element
 
@@ -391,7 +405,7 @@ class XMLLibraryParser:
         elif tag in ['true', 'false']:
             return tag == 'true'
 
-    def _parse_element(self, element: etree._Element | None = None) -> Any:
+    def _parse_element(self, element: Element | None = None) -> Any:
         elem = next(self._iter_elements())
         peek = element.getnext() if element is not None else None
 
@@ -410,7 +424,7 @@ class XMLLibraryParser:
         else:
             raise XMLReaderError(f"Unrecognised element: {element.tag}, {element.text}")
 
-    def _parse_array(self, element: etree._Element | None = None) -> list[Any]:
+    def _parse_array(self, element: Element | None = None) -> list[Any]:
         array = []
 
         if element is not None and element.tag == "array" and element.text is None:
@@ -479,7 +493,7 @@ class XMLLibraryParser:
 
         return results
 
-    def _unparse_dict(self, element: etree._Element, data: Mapping[str, Any]):
+    def _unparse_dict(self, element: Element, data: Mapping[str, Any]):
         sub_element: etree._Element = etree.SubElement(element, "dict")
         for key, value in data.items():
             etree.SubElement(sub_element, "key").text = str(key)

@@ -9,11 +9,12 @@ from typing import Any
 import mutagen
 
 from musify.core.result import Result
+from musify.file.image import REQUIRED_MODULES as REQUIRED_IMAGE_MODULES
 from musify.libraries.core.object import Track
 from musify.libraries.local.track.field import LocalTrackField as Tags
 from musify.libraries.local.track.tags.base import TagProcessor
 from musify.types import UnitIterable
-from musify.utils import to_collection
+from musify.utils import to_collection, required_modules_installed
 
 
 @dataclass(frozen=True)
@@ -595,6 +596,9 @@ class TagWriter[T: mutagen.FileType](TagProcessor, ABC):
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
+        if not required_modules_installed(REQUIRED_IMAGE_MODULES):
+            return
+
         conditionals = {source.has_image is False and bool(target.image_links), replace and bool(target.image_links)}
 
         if any(conditionals) and self._write_images(track=target, dry_run=dry_run):

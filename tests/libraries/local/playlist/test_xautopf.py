@@ -13,6 +13,7 @@ from musify.core.enum import Fields
 from musify.file.exception import InvalidFileType
 from musify.file.path_mapper import PathMapper, PathStemMapper
 from musify.libraries.local.library import MusicBee, LocalLibrary
+from musify.libraries.local.library.musicbee import REQUIRED_MODULES
 from musify.libraries.local.playlist import XAutoPF
 from musify.libraries.local.playlist.xautopf import XMLPlaylistParser
 from musify.libraries.local.track import LocalTrack
@@ -21,7 +22,7 @@ from musify.processors.compare import Comparer
 from musify.processors.filter import FilterComparers
 from musify.processors.limit import LimitType
 from musify.processors.sort import ShuffleMode
-from musify.utils import to_collection
+from musify.utils import to_collection, required_modules_installed
 from tests.core.printer import PrettyPrinterTester
 from tests.libraries.local.playlist.testers import LocalPlaylistTester
 from tests.libraries.local.track.utils import random_track, random_tracks
@@ -31,6 +32,7 @@ from tests.libraries.local.utils import path_track_all, path_track_mp3, path_tra
 from tests.utils import path_txt, path_resources, random_str
 
 
+@pytest.mark.skipif(not required_modules_installed(REQUIRED_MODULES), reason="required modules not installed.")
 class TestXAutoPF(LocalPlaylistTester):
 
     @pytest.fixture
@@ -219,6 +221,7 @@ class TestXAutoPF(LocalPlaylistTester):
             assert path.startswith("../")
 
 
+@pytest.mark.skipif(not required_modules_installed(REQUIRED_MODULES), reason="required modules not installed.")
 class TestXMLPlaylistParser(PrettyPrinterTester):
 
     @pytest.fixture
