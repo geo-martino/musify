@@ -51,7 +51,7 @@ build = [
     "versioningit",
 ]
 test = [
-    #"musify[all]",
+    "musify[all]",
     "pytest~=8.2",
     "pytest-xdist~=3.6",
     "pytest-mock~=3.14",
