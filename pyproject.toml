@@ -32,17 +32,17 @@ dependencies = [
 [project.optional-dependencies]
 # optional functionality
 all = [
-    "musify[bars,musicbee]",
+    "musify[bars,images,musicbee]",
 ]
 bars = [
     "tqdm~=4.66",
 ]
+images = [
+    "Pillow~=10.1",
+]
 musicbee = [
     "xmltodict~=0.13",
     "lxml~=5.1",
-]
-images = [
-    "Pillow~=10.1",
 ]
 
 # dev dependencies

@@ -23,6 +23,10 @@ You can create one of any of the supported local library types for this guide as
 
 * MusicBee
 
+   .. note::
+      To be able to use a MusicBee library, you will need to have installed the ``musicbee`` optional dependencies.
+      See :ref:`installation` for more details.
+
    .. literalinclude:: _howto/scripts/local.library.load.py
       :language: Python
       :lines: 8-10
