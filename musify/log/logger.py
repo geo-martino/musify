@@ -12,7 +12,6 @@ from typing import Any, TypeVar
 from musify.log import INFO_EXTRA, REPORT, STAT
 
 T = TypeVar("T")
-
 try:
     from tqdm.auto import tqdm
     ProgressBarType = tqdm | Iterable[T]

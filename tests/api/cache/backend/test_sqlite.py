@@ -1,3 +1,4 @@
+import contextlib
 import json
 import sqlite3
 from datetime import datetime, timedelta
@@ -8,6 +9,7 @@ from tempfile import gettempdir
 from typing import Any
 from urllib.parse import urlparse
 
+import aiosqlite
 import pytest
 from requests import Response, Request
 
@@ -22,7 +24,7 @@ class SQLiteTester(BaseResponseTester):
 
     @staticmethod
     def generate_connection() -> sqlite3.Connection:
-        return sqlite3.Connection(database=":memory:")
+        return aiosqlite.connect(":memory:")
 
     @staticmethod
     def generate_item(settings: RequestSettings) -> tuple[tuple, dict[str, Any]]:
@@ -62,54 +64,52 @@ class SQLiteTester(BaseResponseTester):
 class TestSQLiteTable(SQLiteTester, ResponseRepositoryTester):
 
     @pytest.fixture
-    def repository(
-            self, settings: RequestSettings, connection: sqlite3.Connection, valid_items: dict, invalid_items: dict
+    async def repository(
+            self, connection: aiosqlite.Connection, settings: RequestSettings, valid_items: dict, invalid_items: dict
     ) -> SQLiteTable:
         expire = timedelta(days=2)
-        repository = SQLiteTable(connection=connection, settings=settings, expire=expire)
-        columns = (
-            *repository._primary_key_columns,
-            repository.cached_column,
-            repository.expiry_column,
-            repository.data_column
-        )
-        query = "\n".join((
-            f"INSERT OR REPLACE INTO {settings.name} (",
-            f"\t{", ".join(columns)}",
-            ") ",
-            f"VALUES ({",".join("?" * len(columns))});",
-        ))
-        parameters = [
-            (*key, datetime.now().isoformat(), repository.expire.isoformat(), repository.serialize(value))
-            for key, value in valid_items.items()
-        ]
-        invalid_expire_dt = datetime.now() - expire  # expiry time in the past, response cache has expired
-        parameters.extend(
-            (*key, datetime.now().isoformat(), invalid_expire_dt.isoformat(), repository.serialize(value))
-            for key, value in invalid_items.items()
-        )
-        connection.executemany(query, parameters)
 
-        return repository
+        async with await SQLiteTable.create(connection, settings=settings, expire=expire) as repository:
+            columns = (
+                *repository._primary_key_columns,
+                repository.cached_column,
+                repository.expiry_column,
+                repository.data_column
+            )
+            query = "\n".join((
+                f"INSERT OR REPLACE INTO {settings.name} (",
+                f"\t{", ".join(columns)}",
+                ") ",
+                f"VALUES ({",".join("?" * len(columns))});",
+            ))
+            parameters = [
+                (*key, datetime.now().isoformat(), repository.expire.isoformat(), repository.serialize(value))
+                for key, value in valid_items.items()
+            ]
+            invalid_expire_dt = datetime.now() - expire  # expiry time in the past, response cache has expired
+            parameters.extend(
+                (*key, datetime.now().isoformat(), invalid_expire_dt.isoformat(), repository.serialize(value))
+                for key, value in invalid_items.items()
+            )
 
-    @property
-    def connection_closed_exception(self) -> type[Exception]:
-        return sqlite3.DatabaseError
+            await connection.executemany(query, parameters)
+            await connection.commit()
 
-    def test_init(self, connection: sqlite3.Connection, settings: RequestSettings):
-        repository = SQLiteTable(connection=connection, settings=settings)
+            yield repository
 
-        cur = connection.execute(
-            f"SELECT name FROM sqlite_master WHERE type='table' AND name='{settings.name}'"
-        )
-        rows = cur.fetchall()
-        assert len(rows) == 1
-        assert rows[0][0] == settings.name
+    async def test_init(self, connection: aiosqlite.Connection, settings: RequestSettings):
+        async with await SQLiteTable.create(connection, settings=settings) as repository:
+            async with connection.execute(
+                f"SELECT name FROM sqlite_master WHERE type='table' AND name='{settings.name}'"
+            ) as cur:
+                rows = await cur.fetchall()
+            assert len(rows) == 1
+            assert rows[0][0] == settings.name
 
-        cur = connection.execute(f"SELECT name FROM pragma_table_info('{settings.name}');")
-        columns = {row[0] for row in cur}
-        assert {repository.name_column, repository.data_column, repository.expiry_column}.issubset(columns)
-        assert set(repository._primary_key_columns).issubset(columns)
+            async with connection.execute(f"SELECT name FROM pragma_table_info('{settings.name}');") as cur:
+                columns = {row[0] async for row in cur}
+            assert {repository.name_column, repository.data_column, repository.expiry_column}.issubset(columns)
+            assert set(repository._primary_key_columns).issubset(columns)
 
     def test_serialize(self, repository: SQLiteTable):
         _, value = self.generate_item(repository.settings)
@@ -141,19 +141,21 @@ class TestSQLiteCache(SQLiteTester, ResponseCacheTester):
         return TestSQLiteTable.generate_response_from_item(settings, key, value)
 
     @classmethod
-    def generate_cache(cls, connection: sqlite3.Connection) -> SQLiteCache:
-        cache = SQLiteCache(cache_name="test", connection=connection)
-        cache.repository_getter = cls.get_repository_from_url
+    @contextlib.asynccontextmanager
+    async def generate_cache(cls, connection: aiosqlite.Connection) -> SQLiteCache:
+        async with SQLiteCache(cache_name="test", connection=connection) as cache:
+            cache.repository_getter = cls.get_repository_from_url
 
-        for _ in range(randrange(5, 10)):
-            settings = cls.generate_settings()
-            items = dict(TestSQLiteTable.generate_item(settings) for _ in range(randrange(3, 6)))
+            for _ in range(randrange(5, 10)):
+                settings = cls.generate_settings()
+                items = dict(TestSQLiteTable.generate_item(settings) for _ in range(randrange(3, 6)))
 
-            repository = SQLiteTable(settings=settings, connection=connection)
-            repository.update(items)
-            cache[settings.name] = repository
+                repository = await SQLiteTable.create(settings=settings, connection=connection)
+                for k, v in items.items():
+                    await repository._set_item_from_key_value_pair(k, v)
+                cache[settings.name] = repository
 
-        return cache
+            yield cache
 
     @staticmethod
     def get_repository_from_url(cache: SQLiteCache, url: str) -> SQLiteCache | None:
@@ -161,43 +163,45 @@ class TestSQLiteCache(SQLiteTester, ResponseCacheTester):
             if name == urlparse(url).path.split("/")[-2]:
                 return repository
 
+    # noinspection PyTestUnpassedFixture
     @staticmethod
-    def get_db_path(cache: SQLiteCache) -> str:
+    async def get_db_path(cache: SQLiteCache) -> str:
         """Get the DB path from the connection associated with the given ``cache``."""
-        cur = cache.connection.execute("PRAGMA database_list")
-        rows = cur.fetchall()
+        async with cache.connection.execute("PRAGMA database_list") as cur:
+            rows = await cur.fetchall()
+
         assert len(rows) == 1
         db_seq, db_name, db_path = rows[0]
         return db_path
 
-    def test_connect_with_path(self, tmp_path: Path):
+    # noinspection PyTestUnpassedFixture
+    async def test_connect_with_path(self, tmp_path: Path):
         fake_name = "not my real name"
         path = join(tmp_path, "test")
         expire = timedelta(weeks=42)
 
-        cache = SQLiteCache.connect_with_path(path, cache_name=fake_name, expire=expire)
+        async with SQLiteCache.connect_with_path(path, cache_name=fake_name, expire=expire) as cache:
+            assert await self.get_db_path(cache) == path + ".sqlite"
+            assert cache.cache_name != fake_name
+            assert cache.expire == expire
 
-        assert self.get_db_path(cache) == path + ".sqlite"
-        assert cache.cache_name != fake_name
-        assert cache.expire == expire
-
-    def test_connect_with_in_memory_db(self):
+    # noinspection PyTestUnpassedFixture
+    async def test_connect_with_in_memory_db(self):
         fake_name = "not my real name"
         expire = timedelta(weeks=42)
 
-        cache = SQLiteCache.connect_with_in_memory_db(cache_name=fake_name, expire=expire)
+        async with SQLiteCache.connect_with_in_memory_db(cache_name=fake_name, expire=expire) as cache:
+            assert await self.get_db_path(cache) == ""
+            assert cache.cache_name != fake_name
+            assert cache.expire == expire
 
-        assert self.get_db_path(cache) == ""
-        assert cache.cache_name != fake_name
-        assert cache.expire == expire
-
-    def test_connect_with_temp_db(self):
+    # noinspection PyTestUnpassedFixture
+    async def test_connect_with_temp_db(self):
         name = "this is my real name"
         path = join(gettempdir(), name)
         expire = timedelta(weeks=42)
 
-        cache = SQLiteCache.connect_with_temp_db(name, expire=expire)
-
-        assert self.get_db_path(cache).endswith(path + ".sqlite")
-        assert cache.cache_name == name
-        assert cache.expire == expire
+        async with SQLiteCache.connect_with_temp_db(name, expire=expire) as cache:
+            assert (await self.get_db_path(cache)).endswith(path + ".sqlite")
+            assert cache.cache_name == name
+            assert cache.expire == expire

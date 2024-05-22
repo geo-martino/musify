@@ -1,3 +1,4 @@
+import contextlib
 from abc import ABC, abstractmethod
 from random import choice, randrange
 from typing import Any
@@ -5,9 +6,8 @@ from typing import Any
 import pytest
 from requests import Response
 
-from musify.api.cache.backend.base import ResponseRepository, Connection, ResponseCache, RequestSettings
+from musify.api.cache.backend.base import ResponseRepository, ResponseCache, RequestSettings
 from musify.api.exception import CacheError
-from musify.exception import MusifyKeyError
 from tests.api.cache.backend.utils import MockRequestSettings, MockPaginatedRequestSettings
 from tests.utils import random_str
 
@@ -22,13 +22,13 @@ class BaseResponseTester(ABC):
 
     @staticmethod
     @abstractmethod
-    def generate_connection() -> Connection:
-        """Generates a :py:class:`Connection` for this backend type."""
+    def generate_connection() -> Any:
+        """Generates and yields a :py:class:`Connection` for this backend type."""
         raise NotImplementedError
 
     @pytest.fixture
-    def connection(self) -> Connection:
-        """Yields a valid :py:class:`Connection` to use throughout tests in this suite as a pytest.fixture."""
+    def connection(self) -> Any:
+        """Yields a valid :py:class:`Connection` to use throughout tests in this suite as a pytest_asyncio.fixture."""
         return self.generate_connection()
 
     @staticmethod
@@ -81,32 +81,28 @@ class ResponseRepositoryTester(BaseResponseTester, ABC):
         return valid_items | invalid_items
 
     @abstractmethod
-    def repository(self, request, connection: Connection, valid_items: dict, invalid_items: dict) -> ResponseRepository:
+    async def repository(
+            self, connection: Any, settings: RequestSettings, valid_items: dict, invalid_items: dict
+    ) -> ResponseRepository:
         """
-        Yields a valid :py:class:`ResponseRepository` to use throughout tests in this suite as a pytest.fixture.
+        Yields a valid :py:class:`ResponseRepository` to use throughout tests in this suite as a pytest_asyncio.fixture.
         Should produce a repository for each type of :py:class:`RequestSettings` type
         as given by the request fixture.
         """
         raise NotImplementedError
 
-    @property
-    @abstractmethod
-    def connection_closed_exception(self) -> type[Exception]:
-        """Returns the exception class to expect when executing against a closed connection."""
-        raise NotImplementedError
+    @staticmethod
+    async def test_close(repository: ResponseRepository):
+        key, _ = await anext(aiter(repository))
+        await repository.close()
 
-    def test_close(self, repository: ResponseRepository):
-        key = next(iter(repository))
-        repository.close()
-
-        with pytest.raises(self.connection_closed_exception):
-            repository.get_response(key)
+        with pytest.raises(ValueError):
+            await repository.get_response(key)
 
     @staticmethod
-    def test_count(repository: ResponseRepository, items: dict, valid_items: dict):
-        assert len(repository) == len(valid_items)
-        assert repository.count() == len(items)
-        assert repository.count(False) == len(valid_items)
+    async def test_count(repository: ResponseRepository, items: dict, valid_items: dict):
+        assert await repository.count() == len(items)
+        assert await repository.count(False) == len(valid_items)
 
     @abstractmethod
     def test_serialize(self, repository: ResponseRepository):
@@ -127,201 +123,160 @@ class ResponseRepositoryTester(BaseResponseTester, ABC):
         request.url = self.bad_url  # should not return an ID for this URL format
         assert repository.get_key_from_request(request) is None
 
-    def test_get_response_on_missing(self, repository: ResponseRepository, valid_items: dict):
-        key, value = self.generate_item(repository.settings)
-        assert key not in repository
-
-        with pytest.raises(MusifyKeyError):
-            assert repository[key]
-
-        assert repository.get(key) is None
-        assert repository.get_response(key) is None
-        assert repository.get_responses(list(valid_items) + [key]) == list(valid_items.values())
-
     @staticmethod
-    def test_get_response_from_key(repository: ResponseRepository, valid_items: dict):
+    async def test_get_responses_from_keys(repository: ResponseRepository, valid_items: dict):
         key, value = choice(list(valid_items.items()))
+        assert await repository.get_response(key) == value
+        assert await repository.get_responses(valid_items.keys()) == list(valid_items.values())
 
-        assert repository[key] == value
-        assert repository.get(key) == value
-        assert repository.get_response(key) == value
+    async def test_get_response_on_missing(self, repository: ResponseRepository, valid_items: dict):
+        key, value = self.generate_item(repository.settings)
+        assert not await repository.contains(key)
 
-    @staticmethod
-    def test_get_responses_from_keys(repository: ResponseRepository, valid_items: dict):
-        assert repository.get_responses(valid_items.keys()) == list(valid_items.values())
+        assert await repository.get_response(key) is None
+        assert await repository.get_responses(list(valid_items) + [key]) == list(valid_items.values())
 
-    def test_get_response_from_request(self, repository: ResponseRepository, valid_items: dict):
+    async def test_get_responses_from_requests(self, repository: ResponseRepository, valid_items: dict):
         key, value = choice(list(valid_items.items()))
         request = self.generate_response_from_item(repository.settings, key, value).request
-        assert repository.get_response(request) == value
+        assert await repository.get_response(request) == value
 
-    def test_get_responses_from_requests(self, repository: ResponseRepository, valid_items: dict):
         requests = [
             self.generate_response_from_item(repository.settings, key, value).request
             for key, value in valid_items.items()
         ]
-        assert repository.get_responses(requests) == list(valid_items.values())
+        assert await repository.get_responses(requests) == list(valid_items.values())
 
-    def test_get_response_from_response(self, repository: ResponseRepository, valid_items: dict):
+    async def test_get_response_from_responses(self, repository: ResponseRepository, valid_items: dict):
         key, value = choice(list(valid_items.items()))
         response = self.generate_response_from_item(repository.settings, key, value)
-        assert repository.get_response(response) == value
+        assert await repository.get_response(response) == value
 
-    def test_get_response_from_response_on_missing(self, repository: ResponseRepository, valid_items: dict):
+        responses = [
+            self.generate_response_from_item(repository.settings, key, value) for key, value in valid_items.items()
+        ]
+        assert await repository.get_responses(responses) == list(valid_items.values())
+
+    async def test_get_response_from_responses_on_missing(self, repository: ResponseRepository, valid_items: dict):
         key, value = choice(list(valid_items.items()))
         response = self.generate_response_from_item(repository.settings, key, value)
         response.url = self.bad_url
         response.request.url = self.bad_url
-        assert repository.get_response(response) is None
+        assert await repository.get_response(response) is None
 
-    def test_get_responses_from_responses(self, repository: ResponseRepository, valid_items: dict):
-        responses = [
-            self.generate_response_from_item(repository.settings, key, value) for key, value in valid_items.items()
-        ]
-        assert repository.get_responses(responses) == list(valid_items.values())
-
-    def test_get_responses_from_responses_on_missing(self, repository: ResponseRepository, valid_items: dict):
         responses = [
             self.generate_response_from_item(repository.settings, key, value) for key, value in valid_items.items()
         ]
         for response in responses:
             response.url = self.bad_url
             response.request.url = self.bad_url
-        assert repository.get_responses(responses) == []
+        assert await repository.get_responses(responses) == []
 
-    def test_save_response_from_key(self, repository: ResponseRepository):
-        key, value = self.generate_item(repository.settings)
-        assert key not in repository
+    async def test_set_item_from_key_value_pair(self, repository: ResponseRepository):
+        items = [self.generate_item(repository.settings) for _ in range(randrange(3, 6))]
+        assert all([not await repository.contains(key) for key, _ in items])
 
-        repository[key] = value
-        assert key in repository
-        assert repository[key] == value
+        for key, value in items:
+            await repository._set_item_from_key_value_pair(key, value)
 
-    def test_save_responses_from_dict(self, repository: ResponseRepository):
-        items = dict(self.generate_item(repository.settings) for _ in range(randrange(3, 6)))
-        assert all(key not in repository for key in items)
+        assert all([await repository.contains(key) for key, _ in items])
+        for key, value in items:
+            assert await repository.get_response(key) == value
 
-        repository.update(items)
-        assert all(key in repository for key in items)
-        for key, value in items.items():
-            assert repository[key] == value
-
-    def test_save_response(self, repository: ResponseRepository):
+    async def test_save_response(self, repository: ResponseRepository):
         key, value = self.generate_item(repository.settings)
         response = self.generate_response_from_item(repository.settings, key, value)
-        assert key not in repository
+        assert not await repository.contains(key)
 
-        repository.save_response(response)
-        assert key in repository
-        assert repository[key] == value
+        await repository.save_response(response)
+        assert repository.contains(key)
+        assert await repository.get_response(key) == value
 
-    def test_save_response_fails_silently(self, repository: ResponseRepository):
+    async def test_save_response_fails_silently(self, repository: ResponseRepository):
         key, value = self.generate_item(repository.settings)
         response = self.generate_response_from_item(repository.settings, key, value)
-        assert key not in repository
+        assert not await repository.contains(key)
 
         response.url = self.bad_url  # should not return an ID for this URL format
         response.request.url = response.url
 
-        repository.save_response(response)
-        assert key not in repository
+        await repository.save_response(response)
+        assert not await repository.contains(key)
 
-    def test_save_responses(self, repository: ResponseRepository):
+    async def test_save_responses(self, repository: ResponseRepository):
         items = dict(self.generate_item(repository.settings) for _ in range(randrange(3, 6)))
         responses = [self.generate_response_from_item(repository.settings, key, value) for key, value in items.items()]
-        assert all(key not in repository for key in items)
+        assert all([not await repository.contains(key) for key in items])
 
-        repository.save_responses(responses)
-        assert all(key in repository for key in items)
+        await repository.save_responses(responses)
+        assert all([await repository.contains(key) for key in items])
         for key, value in items.items():
-            assert repository[key] == value
+            assert await repository.get_response(key) == value
 
-    def test_save_responses_fails_silently(self, repository: ResponseRepository):
+    async def test_save_responses_fails_silently(self, repository: ResponseRepository):
         items = dict(self.generate_item(repository.settings) for _ in range(randrange(3, 6)))
         responses = [self.generate_response_from_item(repository.settings, key, value) for key, value in items.items()]
-        assert all(key not in repository for key in items)
+        assert all([not await repository.contains(key) for key in items])
 
         for response in responses:
             response.url = self.bad_url  # should not return an ID for this URL format
             response.request.url = response.url
 
-        repository.save_responses(responses)
-        assert all(key not in repository for key in items)
+        await repository.save_responses(responses)
+        assert all([not await repository.contains(key) for key in items])
 
-    def test_delete_response_on_missing(self, repository: ResponseRepository):
+    async def test_delete_response_on_missing(self, repository: ResponseRepository):
         key, value = self.generate_item(repository.settings)
-        assert key not in repository
-
-        with pytest.raises(MusifyKeyError):
-            del repository[key]
-
-        repository.delete_response(key)
+        assert not await repository.contains(key)
+        assert not await repository.delete_response(key)
 
     @staticmethod
-    def test_delete_response_from_key(repository: ResponseRepository, valid_items: dict):
+    async def test_delete_response_from_key(repository: ResponseRepository, valid_items: dict):
         key, value = choice(list(valid_items.items()))
-        assert key in repository
+        assert await repository.contains(key)
 
-        del repository[key]
-        assert key not in repository
+        assert await repository.delete_response(key)
+        assert not await repository.contains(key)
 
-    def test_delete_response_from_request(self, repository: ResponseRepository, valid_items: dict):
+    async def test_delete_response_from_request(self, repository: ResponseRepository, valid_items: dict):
         key, value = choice(list(valid_items.items()))
         request = self.generate_response_from_item(repository.settings, key, value).request
-        assert key in repository
+        assert await repository.contains(key)
 
-        repository.delete_response(request)
-        assert key not in repository
+        assert await repository.delete_response(request)
+        assert not await repository.contains(key)
 
-    def test_delete_responses_from_requests(self, repository: ResponseRepository, valid_items: dict):
+    async def test_delete_responses_from_requests(self, repository: ResponseRepository, valid_items: dict):
         requests = [
             self.generate_response_from_item(repository.settings, key, value).request
             for key, value in valid_items.items()
         ]
         for key in valid_items:
-            assert key in repository
+            assert await repository.contains(key)
 
-        repository.delete_responses(requests)
+        assert await repository.delete_responses(requests) == len(requests)
         for key in valid_items:
-            assert key not in repository
+            assert not await repository.contains(key)
 
-    def test_delete_response_from_response(self, repository: ResponseRepository, valid_items: dict):
+    async def test_delete_response_from_response(self, repository: ResponseRepository, valid_items: dict):
         key, value = choice(list(valid_items.items()))
         response = self.generate_response_from_item(repository.settings, key, value)
-        assert key in repository
+        assert await repository.contains(key)
 
-        repository.delete_response(response)
-        assert key not in repository
+        assert await repository.delete_response(response)
+        assert not await repository.contains(key)
 
-    def test_delete_responses_from_responses(self, repository: ResponseRepository, valid_items: dict):
+    async def test_delete_responses_from_responses(self, repository: ResponseRepository, valid_items: dict):
         responses = [
             self.generate_response_from_item(repository.settings, key, value)
             for key, value in valid_items.items()
         ]
         for key in valid_items:
-            assert key in repository
+            assert await repository.contains(key)
 
-        repository.delete_responses(responses)
+        assert await repository.delete_responses(responses) == len(responses)
         for key in valid_items:
-            assert key not in repository
-
-    def test_mapping_functionality(self, repository: ResponseRepository, valid_items: dict):
-        key, value = choice(list(repository.items()))
-        assert key in repository
-        assert all(key in valid_items for key in repository)
-
-        repository.pop(key)
-        assert key not in repository
-
-        items = dict(self.generate_item(repository.settings) for _ in range(randrange(3, 6)))
-        assert all(key not in repository for key in items)
-        repository.update(items)
-        assert all(key in repository for key in items)
-
-        repository.clear()
-        assert key not in repository
-        with pytest.raises(MusifyKeyError):
-            assert repository[key]
+            assert not await repository.contains(key)
 
 
 class ResponseCacheTester(BaseResponseTester, ABC):
@@ -345,7 +300,8 @@ class ResponseCacheTester(BaseResponseTester, ABC):
 
     @classmethod
     @abstractmethod
-    def generate_cache(cls, connection: Connection) -> ResponseCache:
+    @contextlib.asynccontextmanager
+    async def generate_cache(cls, connection: Any) -> ResponseCache:
         """
         Generates a :py:class:`ResponseCache` for this backend type
         with many randomly generated :py:class:`ResponseRepository` objects assigned
@@ -353,10 +309,12 @@ class ResponseCacheTester(BaseResponseTester, ABC):
         """
         raise NotImplementedError
 
+    # noinspection PyTestUnpassedFixture
     @pytest.fixture
-    def cache(self, connection: Connection) -> ResponseCache:
+    async def cache(self, connection: Any) -> ResponseCache:
         """Yields a valid :py:class:`ResponseCache` to use throughout tests in this suite as a pytest.fixture."""
-        return self.generate_cache(connection)
+        async with self.generate_cache(connection) as cache:
+            yield cache
 
     @staticmethod
     @abstractmethod
@@ -365,25 +323,25 @@ class ResponseCacheTester(BaseResponseTester, ABC):
         raise NotImplementedError
 
     @staticmethod
-    def test_close(cache: ResponseCache):
+    async def test_close(cache: ResponseCache):
         key = choice(list(cache.values()))
-        cache.close()
+        await cache.close()
 
         with pytest.raises(Exception):
-            cache.get_response(key)
+            await cache.get_response(key)
 
-    def test_create_repository(self, cache: ResponseCache):
+    async def test_create_repository(self, cache: ResponseCache):
         settings = self.generate_settings()
         assert settings.name not in cache
 
-        cache.create_repository(settings)
+        await cache.create_repository(settings)
         assert settings.name in cache
         assert cache[settings.name].settings == settings
 
         # does not create a repository that already exists
         repository = choice(list(cache.values()))
         with pytest.raises(CacheError):
-            cache.create_repository(repository.settings)
+            await cache.create_repository(repository.settings)
 
     def test_get_repository_for_url(self, cache: ResponseCache):
         repository = choice(list(cache.values()))
@@ -414,15 +372,15 @@ class ResponseCacheTester(BaseResponseTester, ABC):
         cache.repository_getter = None
         assert cache.get_repository_from_requests(responses) is None
 
-    def test_repository_operations(self, cache: ResponseCache):
+    async def test_repository_operations(self, cache: ResponseCache):
         repository = choice(list(cache.values()))
 
         response = self.generate_response(repository.settings)
         key = repository.get_key_from_request(response.request)
-        cache.save_response(response)
-        assert key in repository
+        await cache.save_response(response)
+        assert await repository.contains(key)
 
-        assert cache.get_response(response) == repository.deserialize(response.text)
+        assert await cache.get_response(response) == repository.deserialize(response.text)
 
-        cache.delete_response(response)
-        assert key not in repository
+        assert await cache.delete_response(response)
+        assert not await repository.contains(key)

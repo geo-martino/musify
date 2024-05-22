@@ -1,24 +1,33 @@
+from __future__ import annotations
+
+import contextlib
 import json
 import os
-import sqlite3
-from collections.abc import Mapping
+from collections.abc import Mapping, Callable
 from datetime import datetime, timedelta
 from os.path import splitext, dirname, join
 from pathlib import Path
 from tempfile import gettempdir
-from typing import Any, Self
+from typing import Any, Self, AsyncContextManager
 
 from dateutil.relativedelta import relativedelta
 from requests import Request, PreparedRequest, Response
 
 from musify import PROGRAM_NAME
-from musify.api.cache.backend.base import ResponseCache, ResponseRepository, RequestSettings, PaginatedRequestSettings
-from musify.api.cache.backend.base import DEFAULT_EXPIRE
+from musify.api.cache.backend.base import DEFAULT_EXPIRE, ResponseCache, ResponseRepository, RepositoryRequestType
+from musify.api.cache.backend.base import RequestSettings, PaginatedRequestSettings
 from musify.api.exception import CacheError
-from musify.exception import MusifyKeyError
+from musify.utils import required_modules_installed
+
+try:
+    import aiosqlite
+except ImportError:
+    aiosqlite = None
+
+REQUIRED_MODULES = [aiosqlite]
 
 
-class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Connection, KT, VT]):
+class SQLiteTable[K: tuple[Any, ...], V: str](ResponseRepository[K, V], AsyncContextManager[aiosqlite.Connection]):
 
     __slots__ = ()
 
@@ -31,6 +40,67 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
     #: The column under which the response expiry time is stored in the table
     expiry_column = "expires_at"
 
+    @classmethod
+    async def create(
+            cls,
+            connection: aiosqlite.Connection,
+            settings: RequestSettings,
+            expire: timedelta | relativedelta = DEFAULT_EXPIRE,
+    ) -> SQLiteTable:
+        if not connection.is_alive():
+            await connection
+
+        repository = cls(connection=connection, settings=settings, expire=expire)
+
+        ddl_sep = "\t, "
+        ddl = "\n".join((
+            f"CREATE TABLE IF NOT EXISTS {repository.settings.name} (",
+            "\t" + f"\n{ddl_sep}".join(
+                f"{key} {data_type} NOT NULL" for key, data_type in repository._primary_key_columns.items()
+            ),
+            f"{ddl_sep}{repository.name_column} TEXT",
+            f"{ddl_sep}{repository.cached_column} TIMESTAMP NOT NULL",
+            f"{ddl_sep}{repository.expiry_column} TIMESTAMP NOT NULL",
+            f"{ddl_sep}{repository.data_column} TEXT",
+            f"{ddl_sep}PRIMARY KEY ({", ".join(repository._primary_key_columns)})",
+            ");",
+            f"CREATE INDEX IF NOT EXISTS idx_{repository.expiry_column} "
+            f"ON {repository.settings.name}({repository.expiry_column});"
+        ))
+
+        repository.logger.debug(f"Creating {repository.settings.name!r} table with the following DDL:\n{ddl}")
+        await repository.connection.executescript(ddl)
+        await repository.commit()
+
+        return repository
+
+    def __init__(
+            self,
+            connection: aiosqlite.Connection,
+            settings: RequestSettings,
+            expire: timedelta | relativedelta = DEFAULT_EXPIRE,
+    ):
+        required_modules_installed(REQUIRED_MODULES, self)
+
+        super().__init__(settings=settings, expire=expire)
+
+        self.connection = connection
+
+    async def __aenter__(self) -> Self:
+        if not self.connection.is_alive():
+            await self.connection.__aenter__()
+        return self
+
+    async def __aexit__(self, __exc_type, __exc_value, __traceback) -> None:
+        await self.connection.__aexit__(__exc_type, __exc_value, __traceback)
+
+    async def commit(self) -> None:
+        await self.connection.commit()
+
+    async def close(self) -> None:
+        await self.commit()
+        await self.connection.close()
+
     @property
     def _primary_key_columns(self) -> Mapping[str, str]:
         """A map of column names to column data types for the primary keys of this repository."""
@@ -41,84 +111,62 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
 
         return keys
 
-    def get_key_from_request(self, request: Request | PreparedRequest | Response) -> KT | None:
+    def get_key_from_request(self, request: RepositoryRequestType[K]) -> K | None:
         if isinstance(request, Response):
             request = request.request
+        if not isinstance(request, Request | PreparedRequest):
+            return request  # `request` is the key
 
         id_ = self.settings.get_id(request.url)
         if not id_:
             return
 
-        keys = [str(request.method), id_]
+        key = [str(request.method), id_]
         if isinstance(self.settings, PaginatedRequestSettings):
-            keys.append(self.settings.get_offset(request.url))
-            keys.append(self.settings.get_limit(request.url))
+            key.append(self.settings.get_offset(request.url))
+            key.append(self.settings.get_limit(request.url))
 
-        return tuple(keys)
+        return tuple(key)
 
-    def __init__(
-            self,
-            connection: sqlite3.Connection,
-            settings: RequestSettings,
-            expire: timedelta | relativedelta = DEFAULT_EXPIRE
-    ):
-        super().__init__(connection=connection, settings=settings, expire=expire)
-
-        self.create_table()
-
-    def create_table(self):
-        """Create the table for this repository type in the backend database if it doesn't already exist."""
-        ddl_sep = "\t, "
-
-        ddl = "\n".join((
-            f"CREATE TABLE IF NOT EXISTS {self.settings.name} (",
-            "\t" + f"\n{ddl_sep}".join(
-                f"{key} {data_type} NOT NULL" for key, data_type in self._primary_key_columns.items()
-            ),
-            f"{ddl_sep}{self.name_column} TEXT",
-            f"{ddl_sep}{self.cached_column} TIMESTAMP NOT NULL",
-            f"{ddl_sep}{self.expiry_column} TIMESTAMP NOT NULL",
-            f"{ddl_sep}{self.data_column} TEXT",
-            f"{ddl_sep}PRIMARY KEY ({", ".join(self._primary_key_columns)})",
-            ");\n"
-            f"CREATE INDEX IF NOT EXISTS idx_{self.expiry_column} ON {self.settings.name}({self.expiry_column});"
-        ))
-
-        self.logger.debug(f"Creating {self.settings.name!r} table with the following DDL:\n{ddl}")
-        self.connection.executescript(ddl)
-
-    def commit(self) -> None:
-        self.connection.commit()
-
-    def count(self, expired: bool = True) -> int:
+    async def count(self, expired: bool = True) -> int:
         query = f"SELECT COUNT(*) FROM {self.settings.name}"
-        if expired:
-            cur = self.connection.execute(query)
-        else:
-            query += f"\nWHERE {self.expiry_column} IS NULL OR {self.expiry_column} > ?"
-            cur = self.connection.execute(query, (datetime.now().isoformat(),))
+        params = []
 
-        return cur.fetchone()[0]
+        if not expired:
+            query += f"\nWHERE {self.expiry_column} > ?"
+            params.append(datetime.now().isoformat())
 
-    def __repr__(self):
-        return repr(dict(self.items()))
+        async with self.connection.execute(query, params) as cur:
+            row = await cur.fetchone()
 
-    def __str__(self):
-        return str(dict(self.items()))
+        return row[0]
 
-    def __iter__(self):
+    async def contains(self, request: RepositoryRequestType[K]) -> bool:
+        key = self.get_key_from_request(request)
+        query = "\n".join((
+            f"SELECT COUNT(*) FROM {self.settings.name}",
+            f"WHERE {self.expiry_column} > ?",
+            f"\tAND {"\n\tAND ".join(f"{key} = ?" for key in self._primary_key_columns)}",
+        ))
+        async with self.connection.execute(query, (datetime.now().isoformat(), *key)) as cur:
+            rows = await cur.fetchone()
+        return rows[0] > 0
+
+    async def __aiter__(self):
         query = "\n".join((
             f"SELECT {", ".join(self._primary_key_columns)}, {self.data_column} ",
             f"FROM {self.settings.name}",
             f"WHERE {self.expiry_column} > ?",
         ))
-        for row in self.connection.execute(query, (datetime.now().isoformat(),)):
-            yield row[:-1]
+        async with self.connection.execute(query, (datetime.now().isoformat(),)) as cur:
+            async for row in cur:
+                yield row[:-1], row[-1]
 
-    def __len__(self):
-        return self.count(expired=False)
+    async def get_response(self, request: RepositoryRequestType[K]) -> V | None:
+        key = self.get_key_from_request(request)
+        if not key:
+            return
 
-    def __getitem__(self, __key):
         query = "\n".join((
             f"SELECT {self.data_column} FROM {self.settings.name}",
             f"WHERE {self.data_column} IS NOT NULL",
@@ -126,15 +174,14 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
             f"\tAND {"\n\tAND ".join(f"{key} = ?" for key in self._primary_key_columns)}",
         ))
 
-        cur = self.connection.execute(query, (datetime.now().isoformat(), *__key))
-        row = cur.fetchone()
-        cur.close()
-        if not row:
-            raise MusifyKeyError(__key)
+        async with self.connection.execute(query, (datetime.now().isoformat(), *key)) as cur:
+            row = await cur.fetchone()
 
+        if not row:
+            return
         return self.deserialize(row[0])
 
-    def __setitem__(self, __key, __value):
+    async def _set_item_from_key_value_pair(self, __key: K, __value: Any) -> None:
         columns = (
             *self._primary_key_columns,
             self.name_column,
@@ -148,7 +195,6 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
             ") ",
             f"VALUES({",".join("?" * len(columns))});",
         ))
-
         params = (
             *__key,
             self.settings.get_name(__value),
@@ -156,19 +202,21 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
             self.expire.isoformat(),
             self.serialize(__value)
         )
-        self.connection.execute(query, params)
 
-    def __delitem__(self, __key):
+        await self.connection.execute(query, params)
+
+    async def delete_response(self, request: RepositoryRequestType[K]) -> bool:
+        key = self.get_key_from_request(request)
         query = "\n".join((
             f"DELETE FROM {self.settings.name}",
             f"WHERE {"\n\tAND ".join(f"{key} = ?" for key in self._primary_key_columns)}",
         ))
 
-        cur = self.connection.execute(query, __key)
-        if not cur.rowcount:
-            raise MusifyKeyError(__key)
+        async with self.connection.execute(query, key) as cur:
+            count = cur.rowcount
+        return count > 0
 
-    def serialize(self, value: Any) -> VT | None:
+    def serialize(self, value: Any) -> V | None:
         if isinstance(value, str):
             try:
                 json.loads(value)  # check it is a valid json value
@@ -178,7 +226,7 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
 
         return json.dumps(value, indent=2)
 
-    def deserialize(self, value: VT | dict) -> Any:
+    def deserialize(self, value: V | dict) -> Any:
         if isinstance(value, dict):
             return value
 
@@ -188,7 +236,7 @@ class SQLiteTable[KT: tuple[Any, ...], VT: str](ResponseRepository[sqlite3.Conne
             return
 
 
-class SQLiteCache(ResponseCache[sqlite3.Connection, SQLiteTable]):
+class SQLiteCache(ResponseCache[SQLiteTable], AsyncContextManager):
 
     __slots__ = ()
 
@@ -211,39 +259,66 @@ class SQLiteCache(ResponseCache[sqlite3.Connection, SQLiteTable]):
         return kwargs
 
     @classmethod
-    def connect(cls, value: Any, **kwargs) -> Self:
-        cache = cls.connect_with_path(path=value, **kwargs)
-        cache.connection.autocommit = True
-        return cache
+    @contextlib.asynccontextmanager
+    async def connect(cls, value: Any, **kwargs) -> Self:
+        yield cls.connect_with_path(path=value, **kwargs)
 
     @classmethod
-    def connect_with_path(cls, path: str | Path, **kwargs) -> Self:
+    @contextlib.asynccontextmanager
+    async def connect_with_path(cls, path: str | Path, **kwargs) -> Self:
         """Connect with an SQLite DB at the given ``path`` and return an instantiated :py:class:`SQLiteResponseCache`"""
         path = cls._get_sqlite_path(str(path))
         if dirname(path):
             os.makedirs(dirname(path), exist_ok=True)
 
-        connection = sqlite3.Connection(database=path)
-        return cls(cache_name=path, connection=connection, **cls._clean_kwargs(kwargs))
+        async with aiosqlite.connect(database=path) as connection:
+            yield cls(cache_name=path, connection=connection, **cls._clean_kwargs(kwargs))
 
     @classmethod
-    def connect_with_in_memory_db(cls, **kwargs) -> Self:
+    @contextlib.asynccontextmanager
+    async def connect_with_in_memory_db(cls, **kwargs) -> Self:
         """Connect with an in-memory SQLite DB and return an instantiated :py:class:`SQLiteResponseCache`"""
-        connection = sqlite3.Connection(database="file::memory:?cache=shared", uri=True)
-        return cls(cache_name="__IN_MEMORY__", connection=connection, **cls._clean_kwargs(kwargs))
+        async with aiosqlite.connect(database="file::memory:?cache=shared", uri=True) as connection:
+            yield cls(cache_name="__IN_MEMORY__", connection=connection, **cls._clean_kwargs(kwargs))
 
     @classmethod
-    def connect_with_temp_db(cls, name: str = f"{PROGRAM_NAME.lower()}_db.tmp", **kwargs) -> Self:
+    @contextlib.asynccontextmanager
+    async def connect_with_temp_db(cls, name: str = f"{PROGRAM_NAME.lower()}_db.tmp", **kwargs) -> Self:
         """Connect with a temporary SQLite DB and return an instantiated :py:class:`SQLiteResponseCache`"""
         path = cls._get_sqlite_path(join(gettempdir(), name))
 
-        connection = sqlite3.Connection(database=path)
-        return cls(cache_name=name, connection=connection, **cls._clean_kwargs(kwargs))
+        async with aiosqlite.connect(database=path) as connection:
+            yield cls(cache_name=name, connection=connection, **cls._clean_kwargs(kwargs))
 
-    def create_repository(self, settings: RequestSettings) -> SQLiteTable:
+    def __init__(
+            self,
+            cache_name: str,
+            connection: aiosqlite.Connection,
+            repository_getter: Callable[[Self, str], SQLiteTable] = None,
+            expire: timedelta | relativedelta = DEFAULT_EXPIRE,
+    ):
+        required_modules_installed(REQUIRED_MODULES, self)
+
+        super().__init__(cache_name=cache_name, repository_getter=repository_getter, expire=expire)
+
+        self.connection = connection
+
+    async def __aenter__(self) -> Self:
+        if not self.connection.is_alive():
+            await self.connection.__aenter__()
+        return self
+
+    async def __aexit__(self, __exc_type, __exc_value, __traceback) -> None:
+        await self.connection.__aexit__(__exc_type, __exc_value, __traceback)
+
+    async def close(self):
+        await self.connection.commit()
+        await self.connection.close()
+
+    async def create_repository(self, settings: RequestSettings) -> SQLiteTable:
         if settings.name in self:
             raise CacheError(f"Repository already exists: {settings.name}")
 
-        repository = SQLiteTable(connection=self.connection, settings=settings, expire=self.expire)
+        repository = await SQLiteTable.create(connection=self.connection, settings=settings, expire=self.expire)
         self._repositories[settings.name] = repository
         return repository

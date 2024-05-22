@@ -1,9 +1,10 @@
 from random import choice
+from typing import Any
 
 import pytest
 from requests_mock import Mocker
 
-from musify.api.cache.backend.base import ResponseCache, Connection
+from musify.api.cache.backend.base import ResponseCache
 from musify.api.cache.session import CachedSession
 from tests.api.cache.backend.test_sqlite import TestSQLiteCache as SQLiteCacheTester
 from tests.api.cache.backend.testers import ResponseCacheTester
@@ -16,14 +17,16 @@ class TestCachedSession:
         return request.param
 
     @pytest.fixture(scope="class")
-    def connection(self, tester: ResponseCacheTester) -> Connection:
+    def connection(self, tester: ResponseCacheTester) -> Any:
         """Yields a valid :py:class:`Connection` to use throughout tests in this suite as a pytest.fixture."""
         return tester.generate_connection()
 
+    # noinspection PyTestUnpassedFixture
     @pytest.fixture(scope="class")
-    def cache(self, tester: ResponseCacheTester, connection: Connection) -> ResponseCache:
+    async def cache(self, tester: ResponseCacheTester, connection: Any) -> ResponseCache:
         """Yields a valid :py:class:`ResponseCache` to use throughout tests in this suite as a pytest.fixture."""
-        return tester.generate_cache(connection=connection)
+        async with tester.generate_cache(connection=connection) as cache:
+            yield cache
 
     @pytest.fixture(scope="class")
     def session(self, cache: ResponseCache) -> CachedSession:
@@ -33,7 +36,7 @@ class TestCachedSession:
         """
         return CachedSession(cache=cache)
 
-    def test_request_cached(
+    async def test_request_cached(
             self,
             session: CachedSession,
             cache: ResponseCache,
@@ -42,10 +45,10 @@ class TestCachedSession:
     ):
         repository = choice(list(cache.values()))
 
-        key, value = choice(list(repository.items()))
+        key, value = choice([(k, v) async for k, v in repository])
         expected = tester.generate_response_from_item(repository.settings, key, value)
         request = expected.request
-        assert key in repository
+        assert repository.contains(key)
 
         response = session.request(method=request.method, url=request.url)
         assert response.json() == expected.json()

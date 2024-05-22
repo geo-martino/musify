@@ -32,7 +32,7 @@ dependencies = [
 [project.optional-dependencies]
 # optional functionality
 all = [
-    "musify[bars,images,musicbee]",
+    "musify[bars,images,musicbee,sqlite]",
 ]
 bars = [
     "tqdm~=4.66",
@@ -44,6 +44,9 @@ musicbee = [
     "xmltodict~=0.13",
     "lxml~=5.2",
 ]
+sqlite = [
+    "aiosqlite~=0.20",
+]
 
 # dev dependencies
 build = [
@@ -53,6 +56,7 @@ build = [
 test = [
     "musify[all]",
     "pytest~=8.2",
+    "pytest-asyncio~=0.23",
     "pytest-xdist~=3.6",
     "pytest-mock~=3.14",
     "requests-mock~=1.12",
@@ -104,3 +108,4 @@ markers = [
     "slow: marks test as slow (deselect with '-m \"not slow\"')",
     "manual: marks tests to be run only when manually directed to by the developer",
 ]
+asyncio_mode = "auto"
