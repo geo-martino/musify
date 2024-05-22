@@ -11,10 +11,13 @@ from urllib.parse import urlparse
 
 import aiosqlite
 import pytest
-from requests import Response, Request
+from aiohttp import ClientRequest, ClientResponse, ClientSession
+from aiohttp.typedefs import StrOrURL
+from yarl import URL
 
 from musify.api.cache.backend.base import RequestSettings, PaginatedRequestSettings
 from musify.api.cache.backend.sqlite import SQLiteTable, SQLiteCache
+from musify.api.cache.response import CachedResponse
 from tests.api.cache.backend.testers import ResponseRepositoryTester, ResponseCacheTester, BaseResponseTester
 from tests.utils import random_str
 
@@ -41,24 +44,47 @@ class SQLiteTester(BaseResponseTester):
 
         return key, value
 
-    @staticmethod
-    def generate_response_from_item(settings: RequestSettings, key: tuple, value: dict[str, Any]) -> Response:
+    # noinspection PyProtectedMember
+    @classmethod
+    def generate_response_from_item(
+            cls, settings: RequestSettings, key: Any, value: Any, session: ClientSession = None
+    ) -> ClientResponse:
         url = f"http://test.com/{settings.name}/{key[1]}"
+        return cls._generate_response_from_item(url=url, key=key, value=value, session=session)
+
+    # noinspection PyProtectedMember
+    @classmethod
+    def generate_bad_response_from_item(
+            cls, settings: RequestSettings, key: Any, value: Any, session: ClientSession = None
+    ) -> ClientResponse:
+        url = "http://test.com"
+        return cls._generate_response_from_item(url=url, key=key, value=value, session=session)
+
+    @staticmethod
+    def _generate_response_from_item(url: str, key: Any, value: Any, session: ClientSession = None) -> ClientResponse:
         params = {}
         if len(key) == 4:
             params["offset"] = key[2]
-            params["size"] = key[3]
+            params["limit"] = key[3]
 
-        request = Request(method=key[0], url=url, params=params).prepare()
-
-        response = Response()
-        response.encoding = "utf-8"
-        response._content = json.dumps(value).encode(response.encoding)
-        response.status_code = 200
-        response.url = request.url
-        response.request = request
-
-        return response
+        if session is not None:
+            # noinspection PyProtectedMember
+            request = ClientRequest(
+                method=key[0],
+                url=URL(url),
+                params=params,
+                headers={"Content-Type": "application/json"},
+                loop=session._loop,
+                session=session
+            )
+        else:
+            request = ClientRequest(
+                method=key[0],
+                url=URL(url),
+                params=params,
+                headers={"Content-Type": "application/json"},
+            )
+        return CachedResponse(request=request, data=json.dumps(value))
 
 
 class TestSQLiteTable(SQLiteTester, ResponseRepositoryTester):
@@ -136,9 +162,9 @@ class TestSQLiteTable(SQLiteTester, ResponseRepositoryTester):
 class TestSQLiteCache(SQLiteTester, ResponseCacheTester):
 
     @staticmethod
-    def generate_response(settings: RequestSettings) -> Response:
+    def generate_response(settings: RequestSettings, session: ClientSession = None) -> ClientResponse:
         key, value = TestSQLiteTable.generate_item(settings)
-        return TestSQLiteTable.generate_response_from_item(settings, key, value)
+        return TestSQLiteTable.generate_response_from_item(settings, key, value, session=session)
 
     @classmethod
     @contextlib.asynccontextmanager
@@ -158,9 +184,10 @@ class TestSQLiteCache(SQLiteTester, ResponseCacheTester):
             yield cache
 
     @staticmethod
-    def get_repository_from_url(cache: SQLiteCache, url: str) -> SQLiteCache | None:
+    def get_repository_from_url(cache: SQLiteCache, url: StrOrURL) -> SQLiteCache | None:
         for name, repository in cache.items():
-            if name == urlparse(url).path.split("/")[-2]:
+            path = url.path if isinstance(url, URL) else urlparse(url).path
+            if name == path.split("/")[-2]:
                 return repository
 
     # noinspection PyTestUnpassedFixture

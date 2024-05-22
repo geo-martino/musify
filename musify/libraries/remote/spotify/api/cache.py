@@ -1,5 +1,8 @@
 from urllib.parse import urlparse, parse_qs
 
+from aiohttp.typedefs import StrOrURL
+from yarl import URL
+
 from musify.api.cache.backend.base import RequestSettings, PaginatedRequestSettings
 from musify.libraries.remote.core.enum import RemoteIDType
 from musify.libraries.remote.core.exception import RemoteObjectTypeError
@@ -16,9 +19,9 @@ class SpotifyRequestSettings(RequestSettings):
             return value.get("name")
 
     @staticmethod
-    def get_id(url: str) -> str | None:
+    def get_id(url: StrOrURL) -> str | None:
         try:
-            return SpotifyDataWrangler.convert(url, type_in=RemoteIDType.URL, type_out=RemoteIDType.ID)
+            return SpotifyDataWrangler.convert(str(url), type_in=RemoteIDType.URL, type_out=RemoteIDType.ID)
         except RemoteObjectTypeError:
             pass
 
@@ -26,11 +29,11 @@ class SpotifyRequestSettings(RequestSettings):
 class SpotifyPaginatedRequestSettings(PaginatedRequestSettings, SpotifyRequestSettings):
 
     @staticmethod
-    def get_offset(url: str) -> int:
-        params = parse_qs(urlparse(url).query)
+    def get_offset(url: StrOrURL) -> int:
+        params = url.query if isinstance(url, URL) else parse_qs(urlparse(str(url)).query)
         return int(params.get("offset", [0])[0])
 
     @staticmethod
-    def get_limit(url: str) -> int:
-        params = parse_qs(urlparse(url).query)
+    def get_limit(url: StrOrURL) -> int:
+        params = url.query if isinstance(url, URL) else parse_qs(urlparse(str(url)).query)
         return int(params.get("limit", [50])[0])

@@ -6,14 +6,15 @@ from datetime import datetime, timedelta
 from typing import Any, Self
 
 from dateutil.relativedelta import relativedelta
-from requests import Request, PreparedRequest, Response
+from aiohttp import RequestInfo, ClientRequest, ClientResponse
+from aiohttp.typedefs import StrOrURL
 
 from musify.api.exception import CacheError
 from musify.log.logger import MusifyLogger
 from musify.types import UnitCollection
 from musify.utils import to_collection
 
-type CacheRequestType = Request | PreparedRequest | Response
+type CacheRequestType = RequestInfo | ClientRequest | ClientResponse
 type RepositoryRequestType[K] = K | CacheRequestType
 
 DEFAULT_EXPIRE: timedelta = timedelta(weeks=1)
@@ -33,7 +34,7 @@ class RequestSettings(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_id(url: str) -> str | None:
+    def get_id(url: StrOrURL) -> str | None:
         """Extracts the ID for a request from the given ``url``."""
         raise NotImplementedError
 
@@ -46,13 +47,13 @@ class PaginatedRequestSettings(RequestSettings, ABC):
 
     @staticmethod
     @abstractmethod
-    def get_offset(url: str) -> int:
+    def get_offset(url: StrOrURL) -> int:
         """Extracts the offset for a paginated request from the given ``url``."""
         raise NotImplementedError
 
     @staticmethod
     @abstractmethod
-    def get_limit(url: str) -> int:
+    def get_limit(url: StrOrURL) -> int:
         """Extracts the limit for a paginated request from the given ``url``."""
         raise NotImplementedError
 
@@ -147,18 +148,18 @@ class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], Hashable, ABC):
         results = [await self.get_response(request) for request in requests]
         return [result for result in results if result is not None]
 
-    async def save_response(self, response: Response) -> None:
+    async def save_response(self, response: ClientResponse) -> None:
         """Save the given ``response`` to this repository if a key can be extracted from it. Safely fail if not"""
         key = self.get_key_from_request(response)
         if not key:
             return
-        await self._set_item_from_key_value_pair(key, response.text)
+        await self._set_item_from_key_value_pair(key, await response.text())
 
     @abstractmethod
     async def _set_item_from_key_value_pair(self, __key: K, __value: Any) -> None:
         raise NotImplementedError
 
-    async def save_responses(self, responses: Collection[Response]) -> None:
+    async def save_responses(self, responses: Collection[ClientResponse]) -> None:
         """
         Save the given ``responses`` to this repository if a key can be extracted from them.
         Safely fail on those that can't.
@@ -211,7 +212,7 @@ class ResponseCache[ST: ResponseRepository](MutableMapping[str, ST], ABC):
     def __init__(
             self,
             cache_name: str,
-            repository_getter: Callable[[Self, str], ST] = None,
+            repository_getter: Callable[[Self, StrOrURL], ST] = None,
             expire: timedelta | relativedelta = DEFAULT_EXPIRE,
     ):
         super().__init__()
@@ -257,7 +258,7 @@ class ResponseCache[ST: ResponseRepository](MutableMapping[str, ST], ABC):
         """
         raise NotImplementedError
 
-    def get_repository_from_url(self, url: str) -> ST | None:
+    def get_repository_from_url(self, url: StrOrURL) -> ST | None:
         """Returns the repository to use from the stored repositories in this cache for the given ``url``."""
         if self.repository_getter is not None:
             return self.repository_getter(self, url)
@@ -287,13 +288,13 @@ class ResponseCache[ST: ResponseRepository](MutableMapping[str, ST], ABC):
         if repository is not None:
             return await repository.get_responses(requests)
 
-    async def save_response(self, response: Response) -> None:
+    async def save_response(self, response: ClientResponse) -> None:
         """Save the given ``response`` to the appropriate repository if a key can be extracted from it."""
         repository = self.get_repository_from_requests([response])
         if repository is not None:
             return await repository.save_response(response)
 
-    async def save_responses(self, responses: Collection[Response]) -> None:
+    async def save_responses(self, responses: Collection[ClientResponse]) -> None:
         """
         Save the given ``responses`` to the appropriate repository if a key can be extracted from them.
         Safely fail on those that can't.

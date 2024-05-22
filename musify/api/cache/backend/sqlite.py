@@ -11,7 +11,7 @@ from tempfile import gettempdir
 from typing import Any, Self, AsyncContextManager
 
 from dateutil.relativedelta import relativedelta
-from requests import Request, PreparedRequest, Response
+from aiohttp import RequestInfo, ClientRequest, ClientResponse
 
 from musify import PROGRAM_NAME
 from musify.api.cache.backend.base import DEFAULT_EXPIRE, ResponseCache, ResponseRepository, RepositoryRequestType
@@ -112,16 +112,16 @@ class SQLiteTable[K: tuple[Any, ...], V: str](ResponseRepository[K, V], AsyncCon
         return keys
 
     def get_key_from_request(self, request: RepositoryRequestType[K]) -> K | None:
-        if isinstance(request, Response):
-            request = request.request
-        if not isinstance(request, Request | PreparedRequest):
+        if isinstance(request, ClientRequest | ClientResponse):
+            request = request.request_info
+        if not isinstance(request, RequestInfo):
             return request  # `request` is the key
 
         id_ = self.settings.get_id(request.url)
         if not id_:
             return
 
-        key = [str(request.method), id_]
+        key = [str(request.method).upper(), id_]
         if isinstance(self.settings, PaginatedRequestSettings):
             key.append(self.settings.get_offset(request.url))
             key.append(self.settings.get_limit(request.url))
@@ -160,7 +160,7 @@ class SQLiteTable[K: tuple[Any, ...], V: str](ResponseRepository[K, V], AsyncCon
         ))
         async with self.connection.execute(query, (datetime.now().isoformat(),)) as cur:
             async for row in cur:
-                yield row[:-1], row[-1]
+                yield row[:-1], self.deserialize(row[-1])
 
     async def get_response(self, request: RepositoryRequestType[K]) -> V | None:
         key = self.get_key_from_request(request)

@@ -4,7 +4,7 @@ from random import choice, randrange
 from typing import Any
 
 import pytest
-from requests import Response
+from aiohttp import ClientResponse, ClientSession
 
 from musify.api.cache.backend.base import ResponseRepository, ResponseCache, RequestSettings
 from musify.api.exception import CacheError
@@ -40,20 +40,31 @@ class BaseResponseTester(ABC):
         """
         raise NotImplementedError
 
-    @staticmethod
+    @classmethod
     @abstractmethod
-    def generate_response_from_item(settings: RequestSettings, key: Any, value: Any) -> Response:
+    def generate_response_from_item(
+            cls, settings: RequestSettings, key: Any, value: Any, session: ClientSession = None
+    ) -> ClientResponse:
         """
-        Generates a :py:class:`Response` appropriate for the given ``settings`` from the given ``key`` and ``value``
-        that can be persisted to the repository.
+        Generates a :py:class:`ClientResponse` appropriate for the given ``settings``
+        from the given ``key`` and ``value`` that can be persisted to the repository.
+        """
+        raise NotImplementedError
+
+    @classmethod
+    @abstractmethod
+    def generate_bad_response_from_item(
+            cls, settings: RequestSettings, key: Any, value: Any, session: ClientSession = None
+    ) -> ClientResponse:
+        """
+        Generates a bad :py:class:`ClientResponse` appropriate for the given ``settings``
+        from the given ``key`` and ``value`` that can be persisted to the repository.
         """
         raise NotImplementedError
 
 
 class ResponseRepositoryTester(BaseResponseTester, ABC):
     """Run generic tests for :py:class:`ResponseRepository` implementations."""
-
-    bad_url = "test.com"
 
     # noinspection PyArgumentList
     @pytest.fixture(scope="class", params=REQUEST_SETTINGS)
@@ -114,13 +125,12 @@ class ResponseRepositoryTester(BaseResponseTester, ABC):
 
     def test_get_key_from_request(self, repository: ResponseRepository):
         key, value = self.generate_item(repository.settings)
-        request = self.generate_response_from_item(repository.settings, key, value).request
+        request = self.generate_response_from_item(repository.settings, key, value).request_info
         assert repository.get_key_from_request(request) == key
 
     def test_get_key_from_invalid_request(self, repository: ResponseRepository):
         key, value = self.generate_item(repository.settings)
-        request = self.generate_response_from_item(repository.settings, key, value).request
-        request.url = self.bad_url  # should not return an ID for this URL format
+        request = self.generate_bad_response_from_item(repository.settings, key, value).request_info
         assert repository.get_key_from_request(request) is None
 
     @staticmethod
@@ -138,11 +148,11 @@ class ResponseRepositoryTester(BaseResponseTester, ABC):
 
     async def test_get_responses_from_requests(self, repository: ResponseRepository, valid_items: dict):
         key, value = choice(list(valid_items.items()))
-        request = self.generate_response_from_item(repository.settings, key, value).request
+        request = self.generate_response_from_item(repository.settings, key, value).request_info
         assert await repository.get_response(request) == value
 
         requests = [
-            self.generate_response_from_item(repository.settings, key, value).request
+            self.generate_response_from_item(repository.settings, key, value).request_info
             for key, value in valid_items.items()
         ]
         assert await repository.get_responses(requests) == list(valid_items.values())
@@ -159,17 +169,12 @@ class ResponseRepositoryTester(BaseResponseTester, ABC):
 
     async def test_get_response_from_responses_on_missing(self, repository: ResponseRepository, valid_items: dict):
         key, value = choice(list(valid_items.items()))
-        response = self.generate_response_from_item(repository.settings, key, value)
-        response.url = self.bad_url
-        response.request.url = self.bad_url
+        response = self.generate_bad_response_from_item(repository.settings, key, value)
         assert await repository.get_response(response) is None
 
         responses = [
-            self.generate_response_from_item(repository.settings, key, value) for key, value in valid_items.items()
+            self.generate_bad_response_from_item(repository.settings, key, value) for key, value in valid_items.items()
         ]
-        for response in responses:
-            response.url = self.bad_url
-            response.request.url = self.bad_url
         assert await repository.get_responses(responses) == []
 
     async def test_set_item_from_key_value_pair(self, repository: ResponseRepository):
@@ -194,12 +199,9 @@ class ResponseRepositoryTester(BaseResponseTester, ABC):
 
     async def test_save_response_fails_silently(self, repository: ResponseRepository):
         key, value = self.generate_item(repository.settings)
-        response = self.generate_response_from_item(repository.settings, key, value)
         assert not await repository.contains(key)
 
-        response.url = self.bad_url  # should not return an ID for this URL format
-        response.request.url = response.url
-
+        response = self.generate_bad_response_from_item(repository.settings, key, value)
         await repository.save_response(response)
         assert not await repository.contains(key)
 
@@ -215,13 +217,11 @@ class ResponseRepositoryTester(BaseResponseTester, ABC):
 
     async def test_save_responses_fails_silently(self, repository: ResponseRepository):
         items = dict(self.generate_item(repository.settings) for _ in range(randrange(3, 6)))
-        responses = [self.generate_response_from_item(repository.settings, key, value) for key, value in items.items()]
         assert all([not await repository.contains(key) for key in items])
 
-        for response in responses:
-            response.url = self.bad_url  # should not return an ID for this URL format
-            response.request.url = response.url
-
+        responses = [
+            self.generate_bad_response_from_item(repository.settings, key, value) for key, value in items.items()
+        ]
         await repository.save_responses(responses)
         assert all([not await repository.contains(key) for key in items])
 
@@ -240,7 +240,7 @@ class ResponseRepositoryTester(BaseResponseTester, ABC):
 
     async def test_delete_response_from_request(self, repository: ResponseRepository, valid_items: dict):
         key, value = choice(list(valid_items.items()))
-        request = self.generate_response_from_item(repository.settings, key, value).request
+        request = self.generate_response_from_item(repository.settings, key, value).request_info
         assert await repository.contains(key)
 
         assert await repository.delete_response(request)
@@ -248,7 +248,7 @@ class ResponseRepositoryTester(BaseResponseTester, ABC):
 
     async def test_delete_responses_from_requests(self, repository: ResponseRepository, valid_items: dict):
         requests = [
-            self.generate_response_from_item(repository.settings, key, value).request
+            self.generate_response_from_item(repository.settings, key, value).request_info
             for key, value in valid_items.items()
         ]
         for key in valid_items:
@@ -291,9 +291,9 @@ class ResponseCacheTester(BaseResponseTester, ABC):
 
     @staticmethod
     @abstractmethod
-    def generate_response(settings: RequestSettings) -> Response:
+    def generate_response(settings: RequestSettings, session: ClientSession = None) -> ClientResponse:
         """
-        Randomly generates a :py:class:`Response` appropriate for the given ``settings``
+        Randomly generates a :py:class:`ClientResponse` appropriate for the given ``settings``
         that can be persisted to the repository.
         """
         raise NotImplementedError
@@ -345,7 +345,7 @@ class ResponseCacheTester(BaseResponseTester, ABC):
 
     def test_get_repository_for_url(self, cache: ResponseCache):
         repository = choice(list(cache.values()))
-        url = self.generate_response(repository.settings).request.url
+        url = self.generate_response(repository.settings).request_info.url
 
         assert cache.get_repository_from_url(url).settings.name == repository.settings.name
         assert cache.get_repository_from_url(f"http://www.does-not-exist.com/{random_str()}/{random_str()}") is None
@@ -354,7 +354,7 @@ class ResponseCacheTester(BaseResponseTester, ABC):
 
     def test_get_repository_for_requests(self, cache: ResponseCache):
         repository = choice(list(cache.values()))
-        requests = [self.generate_response(repository.settings).request for _ in range(3, 6)]
+        requests = [self.generate_response(repository.settings).request_info for _ in range(3, 6)]
         cache.get_repository_from_requests(requests)
 
     def test_get_repository_for_responses(self, cache: ResponseCache):
@@ -376,11 +376,11 @@ class ResponseCacheTester(BaseResponseTester, ABC):
         repository = choice(list(cache.values()))
 
         response = self.generate_response(repository.settings)
-        key = repository.get_key_from_request(response.request)
+        key = repository.get_key_from_request(response.request_info)
         await cache.save_response(response)
         assert await repository.contains(key)
 
-        assert await cache.get_response(response) == repository.deserialize(response.text)
+        assert await cache.get_response(response) == repository.deserialize(await response.text())
 
         assert await cache.delete_response(response)
         assert not await repository.contains(key)

@@ -11,7 +11,7 @@ class APIError(MusifyError):
     Exception raised for API errors.
 
     :param message: Explanation of the error.
-    :param response: The :py:class:`Response` related to the error.
+    :param response: The :py:class:`ClientResponse` related to the error.
     """
 
     def __init__(self, message: str | None = None, response: Response | None = None):

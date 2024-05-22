@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 import yaml
 from _pytest.fixtures import SubRequest
+from aioresponses import aioresponses
 
 from musify import MODULE_ROOT
 from musify.libraries.remote.core.enum import RemoteObjectType
@@ -256,6 +257,13 @@ class LazyFixture(object):
 
     def __eq__(self, other):
         return self.name == other.name
+
+
+@pytest.fixture
+def requests_mock():
+    """Yields an initialised :py:class:`aioresponses` object for mocking aiohttp requests as a pytest.fixture."""
+    with aioresponses() as m:
+        yield m
 
 
 @pytest.fixture

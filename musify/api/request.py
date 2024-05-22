@@ -59,7 +59,7 @@ class RequestHandler:
         self.authoriser = authoriser
         #: The cache to use when attempting to return a cached response.
         self.cache = cache
-        #: The :py:class:`Session` object
+        #: The :py:class:`ClientSession` object
         self.session = Session() if cache is None else CachedSession(cache=cache)
 
         #: The initial backoff time for failed requests
