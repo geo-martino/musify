@@ -37,7 +37,7 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 Added
 -----
 
-* Custom API caching backend to replace dependency on `requests-cache` package.
+* Custom API caching backend to replace dependency on ``requests-cache`` package.
   Currently only supports SQLite backend. More backends can be implemented in future if desired.
 * Cache settings for specific `GET` request endpoints on :py:class:`.SpotifyAPI` replacing need
   for per method ``use_cache`` parameter.
@@ -45,15 +45,16 @@ Added
 Changed
 -------
 
-* Replaced ``authorise`` method from :py:class:`.APIAuthoriser` with __call__ method for class.
+* :py:class:`.RequestHandler` now handles requests asynchronously. These changes to async calls have
+  been implemented all the way on :py:class:`.RemoteAPI` and all other objects that depend on it.
 * Dependency injection pattern for :py:class:`.RequestHandler` and :py:class:`.RemoteAPI`.
-  Now takes :py:class:`.APIAuthoriser` and :py:class:`.ResponseCache` objects for instantiation
+  Now takes :py:class:`.APIAuthoriser` and :py:class:`.ClientSession` objects for instantiation
   instead of kwargs for :py:class:`.APIAuthoriser`.
 * :py:class:`.APIAuthoriser` kwargs given to :py:class:`.SpotifyAPI` now merge with default kwargs.
 * Moved ``remote_wrangler`` attribute from :py:class:`.MusifyCollection` to :py:class:`.LocalCollection`.
   This attribute was only needed by :py:class:`.LocalCollection` branch of child classes.
 * Moved ``logger`` attribute from :py:class:`.Library` to :py:class:`.RemoteLibrary`.
-* Switch some dependencies to be optional for groups of operation: progress bars, images, musicbee
+* Switch some dependencies to be optional for groups of operation: progress bars, images, musicbee, sqlite
 
 Fixed
 -----
@@ -65,6 +66,8 @@ Fixed
 Removed
 -------
 
+* Dependency on ``requests`` package in favour of ``aiohttp`` for async requests.
+* Dependency on ``requests-cache`` package in favour of custom cache implementation.
 * ``use_cache`` parameter from all :py:class:`.RemoteAPI` related methods.
   Cache settings now handled by :py:class:`.ResponseCache`
 

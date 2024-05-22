@@ -1,18 +1,16 @@
 import json
 from typing import Any
 
+import aiohttp
 import pytest
-import requests
-from requests import Response
-from requests_mock import Mocker
-# noinspection PyProtectedMember,PyUnresolvedReferences
-from requests_mock.request import _RequestObjectProxy as Request
-# noinspection PyProtectedMember,PyUnresolvedReferences
-from requests_mock.response import _Context as Context
+from aiohttp import ClientRequest, ClientSession
+from aioresponses import aioresponses, CallbackResult
+from yarl import URL
 
 from musify.api.authorise import APIAuthoriser
 from musify.api.cache.backend.base import ResponseCache
 from musify.api.cache.backend.sqlite import SQLiteCache
+from musify.api.cache.response import CachedResponse
 from musify.api.cache.session import CachedSession
 from musify.api.exception import APIError
 from musify.api.request import RequestHandler
@@ -22,9 +20,9 @@ from tests.api.cache.backend.utils import MockRequestSettings
 class TestRequestHandler:
 
     @pytest.fixture
-    def authoriser(self, token: dict[str, Any]) -> APIAuthoriser:
-        """Yield a simple :py:class:`APIAuthoriser` object"""
-        return APIAuthoriser(name="test", token=token)
+    def url(self) -> URL:
+        """Yield a simple :py:class:`URL` object"""
+        return URL("http://test.com")
 
     @pytest.fixture
     def cache(self) -> ResponseCache:
@@ -32,9 +30,19 @@ class TestRequestHandler:
         return SQLiteCache.connect_with_in_memory_db()
 
     @pytest.fixture
-    def request_handler(self, authoriser: APIAuthoriser, cache: ResponseCache) -> RequestHandler:
+    def session(self, cache: ResponseCache) -> ClientSession:
+        """Yield a simple :py:class:`APIAuthoriser` object"""
+        return CachedSession(cache=cache, headers={"Content-Type": "application/json"})
+
+    @pytest.fixture
+    def authoriser(self, token: dict[str, Any]) -> APIAuthoriser:
+        """Yield a simple :py:class:`APIAuthoriser` object"""
+        return APIAuthoriser(name="test", token=token)
+
+    @pytest.fixture
+    def request_handler(self, session: ClientSession, authoriser: APIAuthoriser) -> RequestHandler:
         """Yield a simple :py:class:`RequestHandler` object"""
-        return RequestHandler(authoriser=authoriser, cache=cache)
+        return RequestHandler(authoriser=authoriser, session=session)
 
     @pytest.fixture
     def token(self) -> dict[str, Any]:
@@ -46,132 +54,144 @@ class TestRequestHandler:
         }
 
     # noinspection PyTestUnpassedFixture
-    def test_init(self, token: dict[str, Any], authoriser: APIAuthoriser, cache: ResponseCache):
+    async def test_init(self, token: dict[str, Any], session: ClientSession, authoriser: APIAuthoriser):
         request_handler = RequestHandler(authoriser=authoriser)
         assert request_handler.authoriser.token == token
         assert not isinstance(request_handler.session, CachedSession)
 
-        request_handler = RequestHandler(authoriser=authoriser, cache=cache)
+        request_handler = RequestHandler(authoriser=authoriser, session=session)
         assert isinstance(request_handler.session, CachedSession)
 
-        request_handler.authorise()
+        await request_handler.authorise()
         for k, v in request_handler.authoriser.headers.items():
             assert request_handler.session.headers.get(k) == v
 
-    def test_context_management(self, authoriser: APIAuthoriser):
-        with RequestHandler(authoriser=authoriser) as handler:
+    # noinspection PyTestUnpassedFixture
+    async def test_context_management(self, authoriser: APIAuthoriser):
+        async with RequestHandler(authoriser=authoriser) as handler:
             for k, v in handler.authoriser.headers.items():
                 assert handler.session.headers.get(k) == v
 
-    def test_check_response_codes(self, request_handler: RequestHandler):
-        response = Response()
+    async def test_check_response_codes(self, request_handler: RequestHandler, url: URL):
+        headers = {"Content-Type": "application/json"}
+        request = ClientRequest(method="GET", url=url, headers=headers)
 
         # error message not found, no fail
-        response.status_code = 201
-        assert not request_handler._handle_unexpected_response(response=response)
+        response = CachedResponse(request=request, data="")
+        response.status = 201
+        assert not await request_handler._handle_unexpected_response(response=response)
 
         # error message found, no fail
         expected = {"error": {"message": "request failed"}}
-        response._content = json.dumps(expected).encode()
-        assert request_handler._handle_unexpected_response(response=response)
+        response = CachedResponse(request=request, data=json.dumps(expected))
+        assert await request_handler._handle_unexpected_response(response=response)
 
         # error message not found, raises exception
-        response.status_code = 400
+        response.status = 400
         with pytest.raises(APIError):
-            request_handler._handle_unexpected_response(response=response)
+            await request_handler._handle_unexpected_response(response=response)
 
-    def test_check_for_wait_time(self, request_handler: RequestHandler):
-        response = Response()
-
+    async def test_check_for_wait_time(self, request_handler: RequestHandler, url: URL):
         # no header
-        assert not request_handler._handle_wait_time(response=response)
+        request = ClientRequest(method="GET", url=URL("http://test.com"))
+        response = CachedResponse(request, data="")
+        assert not await request_handler._handle_wait_time(response=response)
 
         # expected key not in headers
-        response.headers = {"header key": "header value"}
-        assert not request_handler._handle_wait_time(response=response)
+        headers = {"header key": "header value"}
+        request = ClientRequest(method="GET", url=url, headers=headers)
+        response = CachedResponse(request, data="")
+        assert not await request_handler._handle_wait_time(response=response)
 
         # expected key in headers and time is short
-        response.headers = {"retry-after": "1"}
+        headers = {"retry-after": "1"}
+        request = ClientRequest(method="GET", url=url, headers=headers)
+        response = CachedResponse(request, data="")
         assert request_handler.timeout >= 1
-        assert request_handler._handle_wait_time(response=response)
+        assert await request_handler._handle_wait_time(response=response)
 
         # expected key in headers and time too long
-        response.headers = {"retry-after": "2000"}
+        headers = {"retry-after": "2000"}
+        request = ClientRequest(method="GET", url=url, headers=headers)
+        response = CachedResponse(request, data="")
         assert request_handler.timeout < 2000
         with pytest.raises(APIError):
-            request_handler._handle_wait_time(response=response)
+            await request_handler._handle_wait_time(response=response)
 
-    def test_response_as_json(self, request_handler: RequestHandler):
-        response = Response()
-        response._content = "simple text should not be returned".encode()
-        assert request_handler._response_as_json(response) == {}
+    async def test_response_as_json(self, request_handler: RequestHandler, url: URL):
+        request = ClientRequest(method="GET", url=url, headers={"Content-Type": "application/json"})
+        response = CachedResponse(request=request, data="simple text should not be returned")
+        assert await request_handler._response_as_json(response) == {}
 
         expected = {"key": "valid json"}
-        response._content = json.dumps(expected).encode()
-        assert request_handler._response_as_json(response) == expected
+        response = CachedResponse(request=request, data=json.dumps(expected))
+        assert await request_handler._response_as_json(response) == expected
 
-    def test_cache_usage(self, request_handler: RequestHandler, requests_mock: Mocker):
-        test_url = "http://localhost/test"
+    # noinspection PyTestUnpassedFixture
+    async def test_cache_usage(self, request_handler: RequestHandler, requests_mock: aioresponses):
+        url = "http://localhost/test"
         expected_json = {"key": "value"}
-        requests_mock.get(test_url, json=expected_json)
+        requests_mock.get(url, payload=expected_json, headers=request_handler.session.headers, repeat=True)
 
-        repository = request_handler.cache.create_repository(MockRequestSettings(name="test"))
-        request_handler.cache.repository_getter = lambda _, __: repository
+        async with request_handler as handler:
+            repository = await handler.session.cache.create_repository(MockRequestSettings(name="test"))
+            handler.session.cache.repository_getter = lambda _, __: repository
 
-        response = request_handler._request(method="GET", url=test_url, persist=False)
-        assert response.json() == expected_json
-        assert requests_mock.call_count == 1
+            response = await handler._request(method="GET", url=url, persist=False)
+            assert await response.json() == expected_json
+            requests_mock.assert_called_once()
 
-        key = repository.get_key_from_request(response.request)
-        assert repository.get_response(key) is None
+            key = repository.get_key_from_request(response.request_info)
+            assert await repository.get_response(key) is None
 
-        response = request_handler._request(method="GET", url=test_url, persist=True)
-        assert response.json() == expected_json
-        assert requests_mock.call_count == 2
-        assert repository.get_response(key)
+            response = await handler._request(method="GET", url=url, persist=True)
+            assert await response.json() == expected_json
+            assert sum(len(reqs) for reqs in requests_mock.requests.values()) == 2
+            assert await repository.get_response(key)
 
-        response = request_handler._request(method="GET", url=test_url)
-        assert response.json() == expected_json
-        assert requests_mock.call_count == 2
+            response = await handler._request(method="GET", url=url)
+            assert await response.json() == expected_json
+            assert sum(len(reqs) for reqs in requests_mock.requests.values()) == 2
 
-        repository.clear()
-        response = request_handler._request(method="GET", url=test_url)
-        assert response.json() == expected_json
-        assert requests_mock.call_count == 3
+            await repository.clear()
+            response = await handler._request(method="GET", url=url)
+            assert await response.json() == expected_json
+            assert sum(len(reqs) for reqs in requests_mock.requests.values()) == 3
 
-    def test_request(self, request_handler: RequestHandler, requests_mock: Mocker):
+    async def test_request(self, request_handler: RequestHandler, requests_mock: aioresponses):
         def raise_error(*_, **__):
             """Just raise a ConnectionError"""
-            raise requests.exceptions.ConnectionError()
+            raise aiohttp.ClientConnectionError()
 
         # handles connection errors safely
         url = "http://localhost/text_response"
-        requests_mock.get(url, text=raise_error)
-        assert request_handler._request(method="GET", url=url) is None
+        requests_mock.get(url, callback=raise_error, repeat=True)
+        async with request_handler as handler:
+            assert await handler._request(method="GET", url=url) is None
 
-        url = "http://localhost/test"
-        expected_json = {"key": "value"}
+            url = "http://localhost/test"
+            expected_json = {"key": "value"}
 
-        requests_mock.get(url, json=expected_json)
-        assert request_handler.request(method="GET", url=url) == expected_json
+            requests_mock.get(url, payload=expected_json)
+            assert await handler.request(method="GET", url=url) == expected_json
 
-        # ignore headers on good status code
-        requests_mock.post(url, status_code=200, headers={"retry-after": "2000"}, json=expected_json)
-        assert request_handler.request(method="POST", url=url) == expected_json
+            # ignore headers on good status code
+            requests_mock.post(url, status=200, headers={"retry-after": "2000"}, payload=expected_json)
+            assert await handler.request(method="POST", url=url) == expected_json
 
-        # fail on long wait time
-        requests_mock.put(url, status_code=429, headers={"retry-after": "2000"})
-        assert request_handler.timeout < 2000
-        with pytest.raises(APIError):
-            request_handler.put(url=url)
+            # fail on long wait time
+            requests_mock.put(url, status=429, headers={"retry-after": "2000"})
+            assert handler.timeout < 2000
+            with pytest.raises(APIError):
+                await handler.put(url=url)
 
-        # fail on breaking status code
-        requests_mock.delete(url, status_code=400)
-        assert request_handler.timeout < 2000
-        with pytest.raises(APIError):
-            request_handler.delete(method="GET", url=url)
+            # fail on breaking status code
+            requests_mock.delete(url, status=400)
+            assert handler.timeout < 2000
+            with pytest.raises(APIError):
+                await handler.delete(method="GET", url=url)
 
-    def test_backoff(self, request_handler: RequestHandler, requests_mock: Mocker):
+    async def test_backoff(self, request_handler: RequestHandler, requests_mock: aioresponses):
         url = "http://localhost/test"
         expected_json = {"key": "value"}
         backoff_limit = 3
@@ -181,15 +201,15 @@ class TestRequestHandler:
         request_handler.backoff_factor = 2
         request_handler.backoff_count = backoff_limit + 2
 
-        def backoff(_: Request, context: Context) -> dict[str, Any]:
-            """Return response based on how many times backoff process has happened"""
-            if requests_mock.call_count < backoff_limit:
-                context.status_code = 408
-                return {"error": {"message": "fail"}}
+        def callback(method: str, *_, **__) -> CallbackResult:
+            """Modify mock response based on how many times backoff process has happened"""
+            if sum(len(reqs) for reqs in requests_mock.requests.values()) < backoff_limit:
+                payload = {"error": {"message": "fail"}}
+                return CallbackResult(method=method, status=408, payload=payload)
 
-            context.status_code = 200
-            return expected_json
+            return CallbackResult(method=method, status=200, payload=expected_json)
 
-        requests_mock.patch(url, json=backoff)
-        assert request_handler.patch(url=url) == expected_json
-        assert requests_mock.call_count == backoff_limit
+        requests_mock.patch(url, callback=callback, repeat=True)
+        async with request_handler as handler:
+            assert await handler.patch(url=url) == expected_json
+        assert sum(len(reqs) for reqs in requests_mock.requests.values()) == backoff_limit

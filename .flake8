@@ -6,4 +6,4 @@ per-file-ignores =
     docs/_howto/scripts/*:E402
     tests/**/test_*.py:F811
 max-line-length = 120
-max-complexity = 12
+max-complexity = 11

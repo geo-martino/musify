@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections.abc import MutableMapping, Callable, Collection, Hashable, AsyncIterable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Self
+from typing import Any, Self, AsyncContextManager
 
 from dateutil.relativedelta import relativedelta
 from aiohttp import RequestInfo, ClientRequest, ClientResponse
@@ -58,7 +58,7 @@ class PaginatedRequestSettings(RequestSettings, ABC):
         raise NotImplementedError
 
 
-class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], Hashable, ABC):
+class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], AsyncContextManager, Hashable, ABC):
     """
     Represents a repository in the backend cache, providing a dict-like interface
     for interacting with this repository.
@@ -107,17 +107,28 @@ class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], Hashable, ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def count(self, expired: bool = True) -> int:
+    async def count(self, include_expired: bool = True) -> int:
         """
         Get the number of responses in this repository.
 
-        :param expired: Whether to include expired responses in the final count.
+        :param include_expired: Whether to include expired responses in the final count.
         :return: The number of responses in this repository.
         """
         raise NotImplementedError
 
+    @abstractmethod
     async def contains(self, request: CacheRequestType) -> bool:
         """Check whether the repository contains a given ``request``"""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def clear(self, expired_only: bool = False) -> int:
+        """
+        Clear the repository of all entries.
+
+        :param expired_only: Whether to only remove responses that have expired.
+        :return: The number of responses cleared from the repository.
+        """
         raise NotImplementedError
 
     @abstractmethod
@@ -183,7 +194,7 @@ class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], Hashable, ABC):
         return sum([await self.delete_response(request) for request in requests])
 
 
-class ResponseCache[ST: ResponseRepository](MutableMapping[str, ST], ABC):
+class ResponseCache[ST: ResponseRepository](MutableMapping[str, ST], AsyncContextManager, ABC):
     """
     Represents a backend cache of many repositories, providing a dict-like interface for interacting with them.
 
@@ -193,7 +204,7 @@ class ResponseCache[ST: ResponseRepository](MutableMapping[str, ST], ABC):
     :param expire: The expiry time to apply to cached responses after which responses are invalidated.
     """
 
-    __slots__ = ("cache_name", "connection", "repository_getter", "expire", "_repositories")
+    __slots__ = ("cache_name", "repository_getter", "expire", "_repositories")
 
     # noinspection PyPropertyDefinition
     @classmethod

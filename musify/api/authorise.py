@@ -11,7 +11,7 @@ from typing import Any
 from urllib.parse import urlparse, parse_qs
 from webbrowser import open as webopen
 
-import requests
+import aiohttp
 
 from musify import PROGRAM_NAME
 from musify.api.exception import APIError
@@ -188,7 +188,7 @@ class APIAuthoriser:
         with open(self.token_file_path, "w") as file:
             json.dump(self.token, file, indent=2)
 
-    def __call__(self, force_load: bool = False, force_new: bool = False) -> dict[str, str]:
+    async def authorise(self, force_load: bool = False, force_new: bool = False) -> dict[str, str]:
         """
         Main method for authorisation which tests/refreshes/reauthorises as needed.
 
@@ -208,11 +208,11 @@ class APIAuthoriser:
         if self.auth_args and self.token is None:
             log = "Saved access token not found" if self.token is None else "New token generation forced"
             self.logger.debug(f"{log}. Generating new token...")
-            self._authorise_user()
-            self._request_token(**self.auth_args)
+            await self._authorise_user()
+            await self._request_token(**self.auth_args)
 
         # test current token
-        valid = self.test_token()
+        valid = await self.test_token()
         refreshed = False
 
         # if invalid, first attempt to re-authorise via refresh_token
@@ -222,9 +222,9 @@ class APIAuthoriser:
             if "data" not in self.refresh_args:
                 self.refresh_args["data"] = {}
             self.refresh_args["data"]["refresh_token"] = self.token["refresh_token"]
-            self._request_token(**self.refresh_args)
+            await self._request_token(**self.refresh_args)
 
-            valid = self.test_token()
+            valid = await self.test_token()
             refreshed = True
 
         if not valid and self.auth_args:  # generate new token
@@ -234,9 +234,9 @@ class APIAuthoriser:
                 log = "Access token is not valid and and no refresh data found"
             self.logger.debug(f"{log}. Generating new token...")
 
-            self._authorise_user()
-            self._request_token(**self.auth_args)
-            valid = self.test_token()
+            await self._authorise_user()
+            await self._request_token(**self.auth_args)
+            valid = await self.test_token()
 
         if not self.token:
             raise APIError("Token not generated")
@@ -248,7 +248,7 @@ class APIAuthoriser:
 
         return self.headers
 
-    def _authorise_user(self) -> None:
+    async def _authorise_user(self) -> None:
         """
         Get user authentication code by authorising through user's browser.
 
@@ -281,8 +281,8 @@ class APIAuthoriser:
         self.user_args["params"]["redirect_uri"] = redirect_uri
 
         # open authorise webpage and wait for the redirect
-        auth_response = requests.post(**self.user_args)
-        webopen(auth_response.url)
+        async with aiohttp.request(method="POST", **self.user_args) as resp:
+            webopen(str(resp.url))
         request, _ = socket_listener.accept()
 
         request.send(f"Code received! You may now close this window and return to {PROGRAM_NAME}...".encode("utf-8"))
@@ -297,7 +297,7 @@ class APIAuthoriser:
             self.auth_args["data"] = {}
         self.auth_args["data"]["code"] = code
 
-    def _request_token(self, **requests_args) -> dict[str, Any]:
+    async def _request_token(self, **requests_args) -> dict[str, Any]:
         """
         Authenticates/refreshes basic API access and returns token.
 
@@ -305,7 +305,8 @@ class APIAuthoriser:
         :param data: requests.post() ``data`` parameter to send as a request for authorisation.
         :param requests_args: Other requests.post() parameters to send as a request for authorisation.
         """
-        auth_response = requests.post(**requests_args).json()
+        async with aiohttp.request(method="POST", **requests_args) as resp:
+            auth_response = await resp.json()
 
         # add granted and expiry times to token
         auth_response["granted_at"] = datetime.now().timestamp()
@@ -322,7 +323,7 @@ class APIAuthoriser:
         self.logger.debug(f"New token successfully generated: {self.token_safe}")
         return auth_response
 
-    def test_token(self) -> bool:
+    async def test_token(self) -> bool:
         """Test validity of token and given headers. Returns True if all tests pass, False otherwise"""
         if not self.token:
             return False
@@ -333,7 +334,7 @@ class APIAuthoriser:
         if not token_has_no_error:  # skip other tests if error
             return False
 
-        valid_response = self._test_valid_response()
+        valid_response = await self._test_valid_response()
         not_expired = self._test_expiry()
 
         return token_has_no_error and valid_response and not_expired
@@ -344,16 +345,16 @@ class APIAuthoriser:
         self.logger.debug(f"Token contains no error test: {result}")
         return result
 
-    def _test_valid_response(self) -> bool:
+    async def _test_valid_response(self) -> bool:
         """Check for expected response"""
         if self.test_args is None or self.test_condition is None:
             return True
 
-        response = requests.get(headers=self.headers, **self.test_args)
-        try:
-            response = response.json()
-        except json.decoder.JSONDecodeError:
-            response = response.text
+        async with aiohttp.request(method="GET", headers=self.headers, **self.test_args) as response:
+            try:
+                response = await response.json()
+            except json.decoder.JSONDecodeError:
+                response = await response.text()
 
         result = self.test_condition(response)
         self.logger.debug(f"Valid response test: {result}")

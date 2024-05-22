@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from os.path import splitext, dirname, join
 from pathlib import Path
 from tempfile import gettempdir
-from typing import Any, Self, AsyncContextManager
+from typing import Any, Self
 
 from dateutil.relativedelta import relativedelta
 from aiohttp import RequestInfo, ClientRequest, ClientResponse
@@ -27,7 +27,7 @@ except ImportError:
 REQUIRED_MODULES = [aiosqlite]
 
 
-class SQLiteTable[K: tuple[Any, ...], V: str](ResponseRepository[K, V], AsyncContextManager[aiosqlite.Connection]):
+class SQLiteTable[K: tuple[Any, ...], V: str](ResponseRepository[K, V]):
 
     __slots__ = ()
 
@@ -128,11 +128,11 @@ class SQLiteTable[K: tuple[Any, ...], V: str](ResponseRepository[K, V], AsyncCon
 
         return tuple(key)
 
-    async def count(self, expired: bool = True) -> int:
+    async def count(self, include_expired: bool = True) -> int:
         query = f"SELECT COUNT(*) FROM {self.settings.name}"
         params = []
 
-        if not expired:
+        if not include_expired:
             query += f"\nWHERE {self.expiry_column} > ?"
             params.append(datetime.now().isoformat())
 
@@ -151,6 +151,18 @@ class SQLiteTable[K: tuple[Any, ...], V: str](ResponseRepository[K, V], AsyncCon
         async with self.connection.execute(query, (datetime.now().isoformat(), *key)) as cur:
             rows = await cur.fetchone()
         return rows[0] > 0
+
+    async def clear(self, expired_only: bool = False) -> int:
+        query = f"DELETE FROM {self.settings.name}"
+        params = []
+
+        if expired_only:
+            query += f"\nWHERE {self.expiry_column} > ?"
+            params.append(datetime.now().isoformat())
+
+        async with self.connection.execute(query, params) as cur:
+            count = cur.rowcount
+        return count
 
     async def __aiter__(self):
         query = "\n".join((
@@ -236,9 +248,9 @@ class SQLiteTable[K: tuple[Any, ...], V: str](ResponseRepository[K, V], AsyncCon
             return
 
 
-class SQLiteCache(ResponseCache[SQLiteTable], AsyncContextManager):
+class SQLiteCache(ResponseCache[SQLiteTable]):
 
-    __slots__ = ()
+    __slots__ = ("connection",)
 
     # noinspection PyPropertyDefinition
     @classmethod

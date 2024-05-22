@@ -1,5 +1,6 @@
 import contextlib
 from http.client import InvalidURL
+from typing import Self
 
 from aiohttp import ClientSession, ClientRequest
 from aiohttp.typedefs import StrOrURL
@@ -23,6 +24,15 @@ class CachedSession(ClientSession):
         #: The cache to use when attempting to return a cached response.
         self.cache = cache
 
+    async def __aenter__(self) -> Self:
+        self.cache = await self.cache.__aenter__()
+        await super().__aenter__()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await super().__aexit__(exc_type, exc_val, exc_tb)
+        await self.cache.__aexit__(exc_type, exc_val, exc_tb)
+
     @contextlib.asynccontextmanager
     async def request(self, method: str, url: StrOrURL, persist: bool = True, **kwargs):
         """
@@ -39,6 +49,7 @@ class CachedSession(ClientSession):
         except ValueError as e:
             raise InvalidURL(url) from e
 
+        kwargs["headers"] = kwargs.get("headers", {}) | dict(self.headers)
         req = ClientRequest(
             method=method,
             url=url,
@@ -56,7 +67,7 @@ class CachedSession(ClientSession):
 
         yield response
 
-        if persist and not isinstance(response, CachedResponse):
+        if persist and repository is not None and not isinstance(response, CachedResponse):
             await repository.save_response(response)
 
     async def _get_cached_response(

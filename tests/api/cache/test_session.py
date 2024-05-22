@@ -78,16 +78,16 @@ class TestCachedSession:
         async with session.request(method=request.method, url=request.url, headers=headers, persist=False) as response:
             assert await response.json() == await expected.json()
         assert len(requests_mock.requests) == 1
-        assert sum(len(requests) for requests in requests_mock.requests.values()) == 1
+        assert sum(len(reqs) for reqs in requests_mock.requests.values()) == 1
         assert not await repository.contains(key)
 
         async with session.request(method=request.method, url=request.url, headers=headers, persist=True) as response:
             assert await response.text() == await expected.text()
         assert len(requests_mock.requests) == 1
-        assert sum(len(requests) for requests in requests_mock.requests.values()) == 2
+        assert sum(len(reqs) for reqs in requests_mock.requests.values()) == 2
         assert await repository.contains(key)
 
         async with session.request(method=request.method, url=request.url, headers=headers) as response:
             assert await response.json() == await expected.json()
         assert len(requests_mock.requests) == 1
-        assert sum(len(requests) for requests in requests_mock.requests.values()) == 2
+        assert sum(len(reqs) for reqs in requests_mock.requests.values()) == 2
