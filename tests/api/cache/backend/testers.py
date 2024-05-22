@@ -115,6 +115,16 @@ class ResponseRepositoryTester(BaseResponseTester, ABC):
         assert await repository.count() == len(items)
         assert await repository.count(False) == len(valid_items)
 
+    @staticmethod
+    async def test_contains_and_clear(repository: ResponseRepository):
+        key, _ = await anext(aiter(repository))
+        assert await repository.count() > 0
+        assert await repository.contains(key)
+
+        await repository.clear()
+        assert await repository.count() == 0
+        assert not await repository.contains(key)
+
     @abstractmethod
     def test_serialize(self, repository: ResponseRepository):
         raise NotImplementedError
