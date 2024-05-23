@@ -3,7 +3,6 @@ from typing import Any
 from urllib.parse import urlparse
 
 from aiohttp import ClientResponse
-from aiohttp.typedefs import StrOrURL
 from yarl import URL
 
 from musify.api.cache.backend.base import RequestSettings, PaginatedRequestSettings
@@ -22,7 +21,7 @@ class MockRequestSettings(RequestSettings):
                 pass
 
     @staticmethod
-    def get_id(url: StrOrURL) -> str | None:
+    def get_id(url: str | URL) -> str | None:
         if str(url).endswith(".com"):
             return
         path = url.path if isinstance(url, URL) else urlparse(url).path
@@ -31,11 +30,11 @@ class MockRequestSettings(RequestSettings):
 
 class MockPaginatedRequestSettings(MockRequestSettings, PaginatedRequestSettings):
     @classmethod
-    def get_offset(cls, url: StrOrURL) -> int:
+    def get_offset(cls, url: str | URL) -> int:
         params = cls._get_params(url)
         return int(params.get("offset", 0))
 
     @classmethod
-    def get_limit(cls, url: StrOrURL) -> int:
+    def get_limit(cls, url: str | URL) -> int:
         params = cls._get_params(url)
         return int(params.get("limit", 0))

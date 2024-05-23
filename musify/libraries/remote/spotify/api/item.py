@@ -79,22 +79,22 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         :return: (Results from the cache, IDs found in the cache, IDs not found in the cache)
         """
         if not isinstance(self.handler.session, CachedSession):
-            self.logger.debug(f"{'CACHE':<7}: {url:<43} | Cache not configured, skipping...")
+            self.handler.log("CACHE", url, message="Cache not configured, skipping...")
             return [], [], id_list
 
         repository = self.handler.session.cache.get_repository_from_url(url=url)
         if repository is None:
-            self.logger.debug(f"{'CACHE':<7}: {url:<43} | No repository for this endpoint, skipping...")
+            self.handler.log("CACHE", url, message="No repository for this endpoint, skipping...")
             return [], [], id_list
 
         results = await repository.get_responses([(method.upper(), id_,) for id_ in id_list])
         ids_found = {result[self.id_key] for result in results}
         ids_not_found = {id_ for id_ in id_list if id_ not in ids_found}
 
-        self.logger.debug(
-            f"{'CACHE':<7}: {url:<43} | "
-            f"Retrieved {len(results):>6} cached responses | "
-            f"{len(ids_not_found):>6} not found in cache"
+        self.handler.log(
+            method="CACHE",
+            url=url,
+            message=[f"Retrieved {len(results):>6} cached responses", f"{len(ids_not_found):>6} not found in cache"]
         )
         return results, ids_found, ids_not_found
 
@@ -140,7 +140,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         log = [f"{kind.title()}:{len(ids_not_cached):>5}"]
         for id_ in bar:
             response = await self.handler.request(
-                method=method, url=f"{url}/{id_}", params=params, persist=False, log_pad=43, log_extra=log
+                method=method, url=f"{url}/{id_}", params=params, persist=False, log_message=log
             )
             if self.id_key not in response:
                 response[self.id_key] = id_
@@ -205,7 +205,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
             log = [f"{kind.title() + ':':<11} {len(results) + len(id_chunk):>6}/{len(ids_not_cached):<6}"]
 
             response = await self.handler.request(
-                method=method, url=url, params=params_chunk, persist=False, log_pad=43, log_extra=log
+                method=method, url=url, params=params_chunk, persist=False, log_message=log
             )
             if key and key not in response:
                 raise APIError(f"Given key '{key}' not found in response keys: {list(response.keys())}")
@@ -263,7 +263,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
 
         if len(response[self.items_key]) == response["total"]:  # skip on fully extended response
             url = response["href"].split("?")[0]
-            self.logger.debug(f"{'SKIP':<7}: {url:<43} | Response already extended")
+            self.handler.log("SKIP", url, message="Response already extended")
             return response[self.items_key]
 
         # this usually happens on the items block of a current user's playlist
@@ -289,7 +289,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
             log_count = min(len(response[self.items_key]) + response["limit"], response["total"])
             log = [f"{log_count:>6}/{response["total"]:<6} {key or self.items_key}"]
 
-            response_next = await self.handler.request(method=method, url=response["next"], log_pad=95, log_extra=log)
+            response_next = await self.handler.request(method=method, url=response["next"], log_message=log)
             response_next = response_next.get(key, response_next)
 
             response[self.items_key].extend(response_next[self.items_key])
@@ -354,7 +354,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         # input validation
         if not isinstance(values, RemoteResponse) and not values:  # skip on empty
             url = f"{self.url}/{self._get_key(kind)}" if kind else self.url
-            self.logger.debug(f"{'SKIP':<7}: {url:<43} | No data given")
+            self.handler.log("SKIP", url, message="No data given")
             return []
         if kind is None:  # determine the item type
             kind = self.wrangler.get_item_type(values)
@@ -377,7 +377,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         if len(results) == 0 or any(key_name not in result for result in results) or not extend:
             self._merge_results_to_input(original=values, responses=results, ordered=True)
             self._refresh_responses(responses=values, skip_checks=False)
-            self.logger.debug(f"{'DONE':<7}: {url:<43} | Retrieved {len(results):>6} {unit}")
+            self.handler.log("DONE", url, message=f"Retrieved {len(results):>6} {unit}")
             return results
 
         bar = self.logger.get_iterator(
@@ -386,16 +386,14 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
 
         for result in bar:
             if result[key_name].get("next") or ("next" not in result[key_name] and result[key_name].get("href")):
-                self.logger.debug(f"{'INFO':<7}: {url:<43} | Extending {key_name} on {unit}")
+                self.handler.log("INFO", url, message=f"Extending {key_name} on {unit}")
                 await self.extend_items(result[key_name], kind=kind, key=key, leave_bar=False)
 
         self._merge_results_to_input(original=values, responses=results, ordered=True)
         self._refresh_responses(responses=values, skip_checks=False)
 
         item_count = sum(len(result[key_name][self.items_key]) for result in results)
-        self.logger.debug(
-            f"{'DONE':<7}: {url:<71} | Retrieved {item_count:>6} {key_name} across {len(results):>5} {unit}"
-        )
+        self.handler.log("DONE", url, message=f"Retrieved {item_count:>6} {key_name} across {len(results):>5} {unit}")
 
         return results
 
@@ -441,10 +439,10 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
             desc_qualifier = "current user's" if kind == RemoteObjectType.PLAYLIST else "current user's saved"
 
         desc = f"Getting {desc_qualifier} {kind.name.lower()}s"
-        initial = await self.handler.get(url, params=params, log_pad=71)
+        initial = await self.handler.get(url, params=params)
         results = await self.extend_items(initial, kind=desc, key=kind)
 
-        self.logger.debug(f"{'DONE':<7}: {url:<43} | Retrieved {len(results):>6} {kind.name.lower()}s")
+        self.handler.log("DONE", url, message=f"Retrieved {len(results):>6} {kind.name.lower()}s")
 
         return results
 
@@ -487,7 +485,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         if not features and not analysis:  # skip on all False
             return []
         if not values:  # skip on empty
-            self.logger.debug(f"{'SKIP':<7}: {self.url:<43} | No data given")
+            self.handler.log("SKIP", self.url, message="No data given")
             return []
         self.wrangler.validate_item_type(values, kind=RemoteObjectType.TRACK)
 
@@ -507,7 +505,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
 
             result = id_map.copy()
             for (url, key, _) in config.values():
-                result[key] = await self.handler.get(f"{url}/{id_}", log_pad=43) | id_map.copy()
+                result[key] = await self.handler.get(f"{url}/{id_}") | id_map.copy()
             results = [result]
         else:
             results = []
@@ -529,10 +527,11 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
             """Map the given ``value`` to logging appropriate string"""
             return value.replace("_", " ").replace("analysis", "analyses")
 
-        log_url = f"{self.url}/{"+".join(c[0].split("/")[-1] for c in config.values())}"
-        self.logger.debug(
-            f"{'DONE':<7}: {log_url:<71} | "
-            f"Retrieved {" and ".join(map_key(key) for _, key, _ in config.values())} for {len(id_list):>5} tracks"
+        log_types = " and ".join(map_key(key) for _, key, _ in config.values())
+        self.handler.log(
+            method="DONE",
+            url=f"{self.url}/{"+".join(c[0].split("/")[-1] for c in config.values())}",
+            message=f"Retrieved {log_types} for {len(id_list):>5} tracks"
         )
 
         return results
@@ -615,7 +614,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
 
         # input validation
         if not isinstance(values, RemoteResponse) and not values:  # skip on empty
-            self.logger.debug(f"{'SKIP':<7}: {url:<43} | No data given")
+            self.handler.log("SKIP", url, message="No data given")
             return {}
 
         if types and not all(t in ARTIST_ALBUM_TYPES for t in types):
@@ -650,9 +649,10 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         self._refresh_responses(responses=values, skip_checks=True)
 
         item_count = sum(len(result) for result in results.values())
-        self.logger.debug(
-            f"{'DONE':<7}: {url.format(id="..."):<71} | "
-            f"Retrieved {item_count:>6} albums across {len(results):>5} artists"
+        self.handler.log(
+            method="DONE",
+            url=url.format(id="..."),
+            message=f"Retrieved {item_count:>6} albums across {len(results):>5} artists",
         )
 
         return {k: v[self.items_key] for k, v in results.items()}

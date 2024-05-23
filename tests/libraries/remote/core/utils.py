@@ -5,7 +5,6 @@ from typing import Any, ContextManager
 from urllib.parse import parse_qsl
 
 from aiohttp import ClientResponse
-from aiohttp.typedefs import StrOrURL
 from aioresponses import aioresponses
 from aioresponses.core import RequestCall
 from yarl import URL
@@ -86,7 +85,7 @@ class RemoteMock(aioresponses, ContextManager, ABC):
     async def get_requests(
             self,
             method: str | None = None,
-            url: StrOrURL | re.Pattern[str] | None = None,  # matches given after params have been stripped
+            url: str | URL | re.Pattern[str] | None = None,  # matches given after params have been stripped
             params: dict[str, Any] | None = None,
             response: dict[str, Any] | None = None
     ) -> list[tuple[URL, RequestCall, ClientResponse | None]]:
@@ -115,14 +114,14 @@ class RemoteMock(aioresponses, ContextManager, ABC):
         return match
 
     @staticmethod
-    def _get_match_from_url(request_url: StrOrURL, url: StrOrURL | re.Pattern[str] | None = None) -> bool:
+    def _get_match_from_url(request_url: str | URL, url: str | URL | re.Pattern[str] | None = None) -> bool:
         match = url is None
         if not match:
             request_url = str(request_url).rstrip("/").split("?")[0]
             if isinstance(url, str):
                 match = request_url == url.split("?")[0]
             elif isinstance(url, URL):
-                match = request_url == url.origin()
+                match = request_url == str(url.with_query(None))
             elif isinstance(url, re.Pattern):
                 match = bool(url.search(request_url))
 
@@ -140,7 +139,7 @@ class RemoteMock(aioresponses, ContextManager, ABC):
         return match
 
     async def _get_match_from_expected_response(
-            self, request_url: StrOrURL, response: dict[str, Any] | None = None
+            self, request_url: str | URL, response: dict[str, Any] | None = None
     ) -> bool:
         match = response is None
         if not match:
@@ -156,7 +155,7 @@ class RemoteMock(aioresponses, ContextManager, ABC):
 
         return match
 
-    def _get_response_from_url(self, url: StrOrURL) -> ClientResponse | None:
+    def _get_response_from_url(self, url: str | URL) -> ClientResponse | None:
         response = None
         for response in self._responses:
             if str(response.url) == url:

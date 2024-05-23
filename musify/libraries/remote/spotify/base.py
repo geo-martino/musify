@@ -16,8 +16,6 @@ class SpotifyObject(RemoteObject[SpotifyAPI], ABC):
 
     __slots__ = ()
 
-    _url_pad = 71
-
     @property
     def id(self):
         return self.response["id"]

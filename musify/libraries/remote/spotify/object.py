@@ -240,7 +240,7 @@ class SpotifyTrack(SpotifyItem, RemoteTrack):
         self._check_for_api()
 
         # reload with enriched data
-        response = self.api.handler.get(self.url, log_pad=self._url_pad)
+        response = self.api.handler.get(self.url)
         if extend_album:
             self.api.get_items(response["album"], kind=RemoteObjectType.ALBUM, extend=False)
         if extend_artists:
@@ -815,7 +815,7 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
             self, extend_albums: bool = False, extend_tracks: bool = False, extend_features: bool = False, *_, **__
     ) -> None:
         self._check_for_api()
-        response = self.api.handler.get(url=self.url, log_pad=self._url_pad)
+        response = self.api.handler.get(url=self.url)
 
         skip_checks = self._extend_response(
             response=response,

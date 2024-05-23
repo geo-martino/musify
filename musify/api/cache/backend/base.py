@@ -8,7 +8,6 @@ from urllib.parse import parse_qsl, urlparse
 
 from dateutil.relativedelta import relativedelta
 from aiohttp import RequestInfo, ClientRequest, ClientResponse
-from aiohttp.typedefs import StrOrURL
 from yarl import URL
 
 from musify.api.exception import CacheError
@@ -29,7 +28,7 @@ class RequestSettings(ABC):
     name: str
 
     @staticmethod
-    def _get_params(url: StrOrURL) -> dict[str, Any]:
+    def _get_params(url: str | URL) -> dict[str, Any]:
         return url.query if isinstance(url, URL) else dict(parse_qsl(urlparse(str(url)).query))
 
     @staticmethod
@@ -40,7 +39,7 @@ class RequestSettings(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_id(url: StrOrURL) -> str | None:
+    def get_id(url: str | URL) -> str | None:
         """Extracts the ID for a request from the given ``url``."""
         raise NotImplementedError
 
@@ -53,13 +52,13 @@ class PaginatedRequestSettings(RequestSettings, ABC):
 
     @classmethod
     @abstractmethod
-    def get_offset(cls, url: StrOrURL) -> int:
+    def get_offset(cls, url: str | URL) -> int:
         """Extracts the offset for a paginated request from the given ``url``."""
         raise NotImplementedError
 
     @classmethod
     @abstractmethod
-    def get_limit(cls, url: StrOrURL) -> int:
+    def get_limit(cls, url: str | URL) -> int:
         """Extracts the limit for a paginated request from the given ``url``."""
         raise NotImplementedError
 
@@ -239,7 +238,7 @@ class ResponseCache[ST: ResponseRepository](MutableMapping[str, ST], AsyncContex
     def __init__(
             self,
             cache_name: str,
-            repository_getter: Callable[[Self, StrOrURL], ST] = None,
+            repository_getter: Callable[[Self, str | URL], ST] = None,
             expire: timedelta | relativedelta = DEFAULT_EXPIRE,
     ):
         super().__init__()
@@ -285,7 +284,7 @@ class ResponseCache[ST: ResponseRepository](MutableMapping[str, ST], AsyncContex
         """
         raise NotImplementedError
 
-    def get_repository_from_url(self, url: StrOrURL) -> ST | None:
+    def get_repository_from_url(self, url: str | URL) -> ST | None:
         """Returns the repository to use from the stored repositories in this cache for the given ``url``."""
         if self.repository_getter is not None:
             return self.repository_getter(self, url)

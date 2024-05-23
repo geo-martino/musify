@@ -3,7 +3,7 @@ from http.client import InvalidURL
 from typing import Self
 
 from aiohttp import ClientSession, ClientRequest
-from aiohttp.typedefs import StrOrURL
+from yarl import URL
 
 from musify.api.cache.backend.base import ResponseCache, ResponseRepository
 from musify.api.cache.response import CachedResponse
@@ -36,7 +36,7 @@ class CachedSession(ClientSession):
         await self.cache.__aexit__(exc_type, exc_val, exc_tb)
 
     @contextlib.asynccontextmanager
-    async def request(self, method: str, url: StrOrURL, persist: bool = True, **kwargs):
+    async def request(self, method: str, url: str | URL, persist: bool = True, **kwargs):
         """
         Perform HTTP request.
 

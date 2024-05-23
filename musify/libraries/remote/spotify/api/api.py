@@ -8,7 +8,7 @@ from collections.abc import Iterable
 from copy import deepcopy
 from urllib.parse import urlparse
 
-from aiohttp.typedefs import StrOrURL
+from yarl import URL
 
 from musify import PROGRAM_NAME
 from musify.api.authorise import APIAuthoriser
@@ -151,7 +151,7 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
         await cache.create_repository(SpotifyPaginatedRequestSettings(name="audiobook_chapters"))
 
     @staticmethod
-    def _get_cache_repository(cache: ResponseCache, url: StrOrURL) -> ResponseRepository | None:
+    def _get_cache_repository(cache: ResponseCache, url: str | URL) -> ResponseRepository | None:
         path = urlparse(url).path if isinstance(url, str) else url.path
         path_split = [part.replace("-", "_") for part in path.split("/")[2:]]
 

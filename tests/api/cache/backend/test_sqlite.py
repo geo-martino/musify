@@ -12,7 +12,6 @@ from urllib.parse import urlparse
 import aiosqlite
 import pytest
 from aiohttp import ClientRequest, ClientResponse, ClientSession
-from aiohttp.typedefs import StrOrURL
 from yarl import URL
 
 from musify.api.cache.backend.base import RequestSettings, PaginatedRequestSettings
@@ -184,7 +183,7 @@ class TestSQLiteCache(SQLiteTester, ResponseCacheTester):
             yield cache
 
     @staticmethod
-    def get_repository_from_url(cache: SQLiteCache, url: StrOrURL) -> SQLiteCache | None:
+    def get_repository_from_url(cache: SQLiteCache, url: str | URL) -> SQLiteCache | None:
         for name, repository in cache.items():
             path = url.path if isinstance(url, URL) else urlparse(url).path
             if name == path.split("/")[-2]:

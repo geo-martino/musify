@@ -24,8 +24,6 @@ class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, ABC):
     __slots__ = ("_response", "api")
     __attributes_ignore__ = ("response", "api")
 
-    _url_pad = 71
-
     @property
     @abstractmethod
     def uri(self) -> str:

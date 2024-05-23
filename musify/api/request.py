@@ -4,15 +4,16 @@ All operations relating to handling of requests to an API.
 import contextlib
 import json
 import logging
-from collections.abc import Mapping, Iterable
+from collections.abc import Mapping
 from datetime import datetime, timedelta
 from http import HTTPStatus
 from time import sleep
 from typing import Any, AsyncContextManager, Self
+from urllib.parse import unquote
 
 import aiohttp
 from aiohttp import ClientResponse, ClientSession
-from aiohttp.typedefs import StrOrURL
+from yarl import URL
 
 from musify.api.authorise import APIAuthoriser
 from musify.api.cache.session import CachedSession
@@ -136,35 +137,54 @@ class RequestHandler(AsyncContextManager):
     async def _request(
             self,
             method: str,
-            url: StrOrURL,
-            log_pad: int = 43,
-            log_extra: Iterable[str] = (),
+            url: str | URL,
+            log_message: list[str] = None,
             *args,
             **kwargs
     ) -> ClientResponse | None:
         """Handle logging a request, send the request, and return the response"""
-        log = [f"{method.upper():<7}: {str(url):<{log_pad}}"]
-        if log_extra:
-            log.extend(log_extra)
-        if len(args) > 0:
-            log.append(f"Args: ({', '.join(args)})")
-        if len(kwargs) > 0:
-            log.extend(f"{k.title()}: {v}" for k, v in kwargs.items())
+        log_message = log_message if log_message is not None else []
         if isinstance(self.session, CachedSession):
-            log.append("Cached Request")
+            log_message.append("Cached Request")
+        self.log(method=method, url=url, message=log_message, *args, **kwargs)
 
         if not isinstance(self.session, CachedSession):
             clean_kwargs(aiohttp.request, kwargs)
         if "headers" in kwargs:
             kwargs["headers"].update(self.session.headers)
 
-        self.logger.debug(" | ".join(log))
         try:
             async with self.session.request(method=method.upper(), url=url, *args, **kwargs) as response:
                 yield response
         except aiohttp.ClientError as ex:
             self.logger.warning(str(ex))
             yield
+
+    def log(
+            self, method: str, url: str | URL, message: str | list = None, level: int = logging.DEBUG, *args, **kwargs
+    ) -> None:
+        """Format and log a request or request adjacent message to the given ``level``."""
+        log: list[Any] = []
+
+        url = URL(url)
+        if url.query:
+            log.extend(f"{k}: {unquote(v):<4}" for k, v in sorted(url.query.items()))
+        if kwargs.get("params"):
+            log.extend(f"{k}: {v:<4}" for k, v in sorted(kwargs.pop("params").items()))
+        if len(args) > 0:
+            log.append(f"Args: ({', '.join(args)})")
+        if len(kwargs) > 0:
+            log.extend(f"{k.title()}: {v:<4}" for k, v in kwargs.items() if v)
+        if message:
+            log.append(message) if isinstance(message, str) else log.extend(message)
+
+        url = str(url.with_query(None))
+        url_pad_map = [30, 40, 70, 100]
+        url_pad = next((pad for pad in url_pad_map if len(url) < pad), url_pad_map[-1])
+
+        self.logger.log(
+            level=level, msg=f"{method.upper():<7}: {url:<{url_pad}} | {" | ".join(str(part) for part in log)}"
+        )
 
     async def _log_response(self, response: ClientResponse, method: str, url: str) -> None:
         """Log the method, URL, response text, and response headers."""

@@ -49,7 +49,7 @@ class TestSpotifyAPIMisc:
     ###########################################################################
     ## /me + /search endpoints
     ###########################################################################
-    def test_get_self(self, api: SpotifyAPI, api_mock: SpotifyMock):
+    async def test_get_self(self, api: SpotifyAPI, api_mock: SpotifyMock):
         api.user_data = {}
         assert api.get_self(update_user_data=False) == api_mock.user
         assert api.user_data == {}
