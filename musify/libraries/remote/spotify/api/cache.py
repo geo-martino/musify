@@ -1,7 +1,4 @@
-from urllib.parse import urlparse, parse_qs
-
 from aiohttp.typedefs import StrOrURL
-from yarl import URL
 
 from musify.api.cache.backend.base import RequestSettings, PaginatedRequestSettings
 from musify.libraries.remote.core.enum import RemoteIDType
@@ -28,12 +25,12 @@ class SpotifyRequestSettings(RequestSettings):
 
 class SpotifyPaginatedRequestSettings(PaginatedRequestSettings, SpotifyRequestSettings):
 
-    @staticmethod
-    def get_offset(url: StrOrURL) -> int:
-        params = url.query if isinstance(url, URL) else parse_qs(urlparse(str(url)).query)
-        return int(params.get("offset", [0])[0])
+    @classmethod
+    def get_offset(cls, url: StrOrURL) -> int:
+        params = cls._get_params(url)
+        return int(params.get("offset", 0))
 
-    @staticmethod
-    def get_limit(url: StrOrURL) -> int:
-        params = url.query if isinstance(url, URL) else parse_qs(urlparse(str(url)).query)
+    @classmethod
+    def get_limit(cls, url: StrOrURL) -> int:
+        params = cls._get_params(url)
         return int(params.get("limit", [50])[0])

@@ -49,12 +49,13 @@ class TestSpotifyAPIPlaylists:
     ###########################################################################
     ## POST playlist operations
     ###########################################################################
-    def test_create_playlist(self, api: SpotifyAPI, api_mock: SpotifyMock):
+    async def test_create_playlist(self, api: SpotifyAPI, api_mock: SpotifyMock):
         name = "test playlist"
         url = f"{api.url}/users/{api_mock.user_id}/playlists"
         result = api.create_playlist(name=name, public=False, collaborative=True)
 
-        body = api_mock.get_requests(url=url, response={"name": name})[0].json()
+        _, _, response = next(iter(await api_mock.get_requests(url=url, response={"name": name})))
+        body = await response.json()
         assert body["name"] == name
         assert PROGRAM_NAME in body["description"]
         assert not body["public"]
@@ -81,7 +82,9 @@ class TestSpotifyAPIPlaylists:
         with pytest.raises(RemoteIDTypeError):
             api.add_to_playlist(playlist="does not exist", items=random_ids())
 
-    def test_add_to_playlist_batches_limited(self, playlist: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
+    async def test_add_to_playlist_batches_limited(
+            self, playlist: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock
+    ):
         id_list = random_ids(200, 300)
         valid_limit = 80
 
@@ -89,14 +92,15 @@ class TestSpotifyAPIPlaylists:
         api.add_to_playlist(playlist=playlist["href"], items=id_list, limit=200, skip_dupes=False)
         api.add_to_playlist(playlist=playlist["href"], items=id_list, limit=valid_limit, skip_dupes=False)
 
-        requests = api_mock.get_requests(url=playlist["href"] + "/tracks")
+        requests = await api_mock.get_requests(url=playlist["href"] + "/tracks")
 
-        for i, request in enumerate(requests, 1):
-            count = len(request.json()["uris"])
+        for i, (_, request, _) in enumerate(requests, 1):
+            payload = request.kwargs["body"]
+            count = len(payload["uris"])
             assert count >= 1
             assert count <= 100
 
-    def test_add_to_playlist(self, playlist: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
+    async def test_add_to_playlist(self, playlist: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
         total = playlist["tracks"]["total"]
         limit = total // 3
         assert total > limit  # ensure ranges are valid for test to work
@@ -110,13 +114,10 @@ class TestSpotifyAPIPlaylists:
         assert result == len(id_list)
 
         uris = []
-        for request in api_mock.get_requests(url=playlist["href"] + "/tracks"):
-            if not request.body:
-                continue
-
-            request_body = request.json()
-            if "uris" in request_body:
-                uris.extend(request_body["uris"])
+        for _, request, _ in await api_mock.get_requests(url=playlist["href"] + "/tracks"):
+            payload = request.kwargs.get("body", {})
+            if "uris" in payload:
+                uris.extend(payload["uris"])
         assert len(uris) == len(id_list)
 
         # check same results for other input types
@@ -127,7 +128,7 @@ class TestSpotifyAPIPlaylists:
         result = api.add_to_playlist(playlist=pl, items=id_list, limit=limit, skip_dupes=False)
         assert result == len(id_list)
 
-    def test_add_to_playlist_with_skip(self, playlist: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
+    async def test_add_to_playlist_with_skip(self, playlist: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
         api.extend_items(playlist["tracks"])
 
         initial = len(playlist["tracks"]["items"])
@@ -145,13 +146,10 @@ class TestSpotifyAPIPlaylists:
         assert result == len(id_list_new)
 
         uris = []
-        for request in api_mock.get_requests(url=playlist["href"] + "/tracks"):
-            if not request.body:
-                continue
-
-            request_body = request.json()
-            if "uris" in request_body:
-                uris.extend(request_body["uris"])
+        for _, request, _ in await api_mock.get_requests(url=playlist["href"] + "/tracks"):
+            payload = request.kwargs.get("body", {})
+            if "uris" in payload:
+                uris.extend(payload["uris"])
         assert len(uris) == len(id_list_new)
 
     ###########################################################################
@@ -190,7 +188,7 @@ class TestSpotifyAPIPlaylists:
         with pytest.raises(RemoteIDTypeError):
             api.add_to_playlist(playlist="does not exist", items=random_ids())
 
-    def test_clear_from_playlist_batches_limited(
+    async def test_clear_from_playlist_batches_limited(
             self, playlist: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock
     ):
         id_list = random_ids(200, 300)
@@ -200,13 +198,16 @@ class TestSpotifyAPIPlaylists:
         api.clear_from_playlist(playlist=playlist["href"], items=id_list, limit=valid_limit)
         api.clear_from_playlist(playlist=playlist["href"], items=id_list, limit=200)
 
-        requests = [req.json() for req in api_mock.get_requests(url=playlist["href"] + "/tracks") if req.body]
-        for i, body in enumerate(requests, 1):
-            count = len(body["tracks"])
+        requests = [
+            req.kwargs["body"] for _, req, _ in await api_mock.get_requests(url=playlist["href"] + "/tracks")
+            if req.kwargs.get("body")
+        ]
+        for i, payload in enumerate(requests, 1):
+            count = len(payload["tracks"])
             assert count >= 1
             assert count <= 100
 
-    def test_clear_from_playlist_items(self, playlist: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
+    async def test_clear_from_playlist_items(self, playlist: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
         total = playlist["tracks"]["total"]
         limit = total // 3
         assert total > limit  # ensure ranges are valid for test to work
@@ -219,7 +220,10 @@ class TestSpotifyAPIPlaylists:
         result = api.clear_from_playlist(playlist=playlist["uri"], items=id_list, limit=limit)
         assert result == len(id_list)
 
-        requests = [req.json() for req in api_mock.get_requests(url=playlist["href"] + "/tracks") if req.body]
+        requests = [
+            req.kwargs["body"] for _, req, _ in await api_mock.get_requests(url=playlist["href"] + "/tracks")
+            if req.kwargs.get("body")
+        ]
         assert all("tracks" in body for body in requests)
         assert len([uri["uri"] for req in requests for uri in req["tracks"]]) == len(id_list)
 
@@ -231,7 +235,7 @@ class TestSpotifyAPIPlaylists:
         result = api.clear_from_playlist(playlist=pl, items=id_list, limit=limit)
         assert result == len(id_list)
 
-    def test_clear_from_playlist_all(self, playlist: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
+    async def test_clear_from_playlist_all(self, playlist: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
         total = playlist["tracks"]["total"]
         limit = total // 4
         assert total > limit  # ensure ranges are valid for test to work
@@ -239,6 +243,9 @@ class TestSpotifyAPIPlaylists:
         result = api.clear_from_playlist(playlist=playlist, limit=limit)
         assert result == total
 
-        requests = [req.json() for req in api_mock.get_requests(url=playlist["href"] + "/tracks") if req.body]
+        requests = [
+            req.kwargs["body"] for _, req, _ in await api_mock.get_requests(url=playlist["href"] + "/tracks")
+            if req.kwargs.get("body")
+        ]
         assert all("tracks" in body for body in requests)
         assert len([uri["uri"] for body in requests for uri in body["tracks"]]) == total

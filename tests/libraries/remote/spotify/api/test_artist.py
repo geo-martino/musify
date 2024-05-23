@@ -71,7 +71,7 @@ class TestSpotifyAPIArtists:
             assert album["tracks"]["total"] == album["total_tracks"]
             assert album["id"] in album["tracks"]["href"]
 
-    def assert_artist_albums_results(
+    async def assert_artist_albums_results(
             self,
             results: dict[str, list[dict[str, Any]]],
             source: dict[str, dict[str, Any]],
@@ -90,7 +90,7 @@ class TestSpotifyAPIArtists:
 
             # appropriate number of requests made
             url = f"{api.url}/artists/{id_}/albums"
-            requests = api_mock.get_requests(url=url)
+            requests = await api_mock.get_requests(url=url)
             assert_calls(expected=expected[id_], requests=requests, limit=limit, api_mock=api_mock)
 
             if not update:

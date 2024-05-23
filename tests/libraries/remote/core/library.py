@@ -99,15 +99,15 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
 
         library.extend(tracks_existing, allow_duplicates=False)
         assert len(library) == len(library_tracks_start)  # no change
-        assert len(api_mock.request_history) == 0  # no requests made
+        api_mock.assert_not_called()  # no requests made
 
         library.extend(collection_merge_items + tracks_existing, allow_duplicates=False)
         assert len(library) == len(library_tracks_start) + len(collection_merge_items)
-        assert len(api_mock.request_history) == 0  # no requests made
+        api_mock.assert_not_called()  # no requests made
 
         library.extend(tracks_existing, allow_duplicates=True)
         assert len(library) == len(library_tracks_start) + len(collection_merge_items) + len(tracks_existing)
-        assert len(api_mock.request_history) == 0  # no requests made
+        api_mock.assert_not_called()  # no requests made
 
         library._tracks = copy(library_tracks_start)
         local_tracks = random_tracks(len(collection_merge_items))
@@ -118,7 +118,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
 
         library.extend(local_tracks)
         assert len(library) == len(library_tracks_start) + len(local_tracks)
-        assert len(api_mock.request_history) > 0  # new requests were made
+        api_mock.assert_called()  # new requests were made
 
     @staticmethod
     def test_backup(library: RemoteLibrary):
@@ -195,7 +195,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         self.assert_restore(library=library, backup=backup_pl)
 
     @staticmethod
-    def assert_sync(library: RemoteLibrary, playlists: Any, api_mock: RemoteMock):
+    async def assert_sync(library: RemoteLibrary, playlists: Any, api_mock: RemoteMock):
         """Run test and assertions on library sync functionality for given input playlists data type"""
         playlists_check: Mapping[str, Collection[MusifyItem]]
         if isinstance(playlists, RemoteLibrary):  # get map of playlists from the given library
@@ -218,7 +218,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         assert results[name_actual].unchanged == len(library.playlists[name_actual])
 
         url = library_test.playlists[name_actual].url
-        requests = [req for req in api_mock.get_requests(method="POST") if req.url.startswith(url)]
+        requests = await api_mock.get_requests(method="POST", url=url)
         assert len(requests) > 0
 
         # new playlist assertions
@@ -229,20 +229,20 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         assert library.api.handler.get(library_test.playlists[name_new].url)  # new playlist was created and is callable
 
         url = library_test.playlists[name_new].url
-        requests = [req for req in api_mock.get_requests(method="POST") if req.url.startswith(url)]
+        requests = await api_mock.get_requests(method="POST", url=url)
         assert len(requests) > 0
 
     @staticmethod
-    def test_sync_dry_run(library: RemoteLibrary, api_mock: RemoteMock):
+    async def test_sync_dry_run(library: RemoteLibrary, api_mock: RemoteMock):
         new_playlists = copy(list(library.playlists.values()))
         for i, pl in enumerate(new_playlists, 1):
             pl.name = f"this is a new playlist name {i}"
 
         library.sync(list(library.playlists.values()) + new_playlists, reload=True)
-        assert not api_mock.get_requests(method="POST")
+        assert not await api_mock.get_requests(method="POST")
 
     @pytest.mark.slow
-    def test_sync(self, library: RemoteLibrary, collection_merge_items: list[RemoteTrack], api_mock: RemoteMock):
+    async def test_sync(self, library: RemoteLibrary, collection_merge_items: list[RemoteTrack], api_mock: RemoteMock):
         name_actual, pl_actual = choice([(name, pl) for name, pl in library.playlists.items() if len(pl) > 10])
         name_new = "new playlist"
 
@@ -256,7 +256,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
             name_actual: pl_actual[:5] + collection_merge_items,
             name_new: collection_merge_items,
         }
-        self.assert_sync(library=library, playlists=playlists_tracks, api_mock=api_mock)
+        await self.assert_sync(library=library, playlists=playlists_tracks, api_mock=api_mock)
 
         # Library
         playlists_library = deepcopy(library)
@@ -264,8 +264,8 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         for name in list(playlists_library.playlists.keys()):
             if name not in playlists_tracks:
                 playlists_library.playlists.pop(name)
-        self.assert_sync(library=library, playlists=playlists_library, api_mock=api_mock)
+        await self.assert_sync(library=library, playlists=playlists_library, api_mock=api_mock)
 
         # Collection[Playlist]
         playlists_coll = [playlists_library.playlists[name_actual], playlists_library.playlists[name_new]]
-        self.assert_sync(library=library, playlists=playlists_coll, api_mock=api_mock)
+        await self.assert_sync(library=library, playlists=playlists_coll, api_mock=api_mock)

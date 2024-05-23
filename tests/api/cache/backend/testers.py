@@ -198,7 +198,15 @@ class ResponseRepositoryTester(BaseResponseTester, ABC):
         for key, value in items:
             assert await repository.get_response(key) == value
 
-    async def test_save_response(self, repository: ResponseRepository):
+    async def test_save_response_from_collection(self, repository: ResponseRepository):
+        key, value = self.generate_item(repository.settings)
+        assert not await repository.contains(key)
+
+        await repository.save_response((key, value))
+        assert repository.contains(key)
+        assert await repository.get_response(key) == value
+
+    async def test_save_response_from_response(self, repository: ResponseRepository):
         key, value = self.generate_item(repository.settings)
         response = self.generate_response_from_item(repository.settings, key, value)
         assert not await repository.contains(key)
@@ -215,7 +223,16 @@ class ResponseRepositoryTester(BaseResponseTester, ABC):
         await repository.save_response(response)
         assert not await repository.contains(key)
 
-    async def test_save_responses(self, repository: ResponseRepository):
+    async def test_save_responses_from_mapping(self, repository: ResponseRepository):
+        items = dict(self.generate_item(repository.settings) for _ in range(randrange(3, 6)))
+        assert all([not await repository.contains(key) for key in items])
+
+        await repository.save_responses(items)
+        assert all([await repository.contains(key) for key in items])
+        for key, value in items.items():
+            assert await repository.get_response(key) == value
+
+    async def test_save_responses_from_responses(self, repository: ResponseRepository):
         items = dict(self.generate_item(repository.settings) for _ in range(randrange(3, 6)))
         responses = [self.generate_response_from_item(repository.settings, key, value) for key, value in items.items()]
         assert all([not await repository.contains(key) for key in items])

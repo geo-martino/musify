@@ -1,6 +1,5 @@
 from copy import deepcopy
 from random import sample
-from urllib.parse import parse_qs
 
 import pytest
 
@@ -86,7 +85,7 @@ class TestSpotifyLibrary(RemoteLibraryTester):
     ###########################################################################
     # noinspection PyMethodOverriding,PyTestUnpassedFixture
     @pytest.mark.slow
-    def test_enrich_tracks(self, library: SpotifyLibrary, api_mock: SpotifyMock, **kwargs):
+    async def test_enrich_tracks(self, library: SpotifyLibrary, api_mock: SpotifyMock, **kwargs):
         def validate_track_extras_not_enriched(t: SpotifyTrack) -> None:
             """Check track does not contain audio features or analysis fields"""
             assert "audio_features" not in t.response
@@ -127,15 +126,15 @@ class TestSpotifyLibrary(RemoteLibraryTester):
             validate_track_extras_not_enriched(track)
             validate_artists_not_enriched(track)
 
-            assert len(api_mock.get_requests(url=track.response["album"]["href"] + "/tracks")) == 0
+            assert len(await api_mock.get_requests(url=track.response["album"]["href"] + "/tracks")) == 0
 
         # check requests
-        assert len(api_mock.get_requests(url=library.api.url + "/artists")) == 0
-        req_albums = api_mock.get_requests(url=library.api.url + "/albums")
-        req_album_ids = {id_ for req in req_albums for id_ in parse_qs(req.query)["ids"][0].split(",")}
+        assert len(await api_mock.get_requests(url=library.api.url + "/artists")) == 0
+        req_albums = await api_mock.get_requests(url=library.api.url + "/albums")
+        req_album_ids = {id_ for url, _, _ in req_albums for id_ in url.query["ids"].split(",")}
         assert req_album_ids == album_ids
 
-        api_mock.reset_mock()  # reset for new requests checks to work correctly
+        api_mock.reset()  # reset for new requests checks to work correctly
 
         # enriches artists without replacing previous enrichment
         library.enrich_tracks(albums=False, artists=True)
@@ -146,7 +145,7 @@ class TestSpotifyLibrary(RemoteLibraryTester):
             assert "popularity" in track.response["album"]
             assert "tracks" not in track.response["album"]
 
-            assert len(api_mock.get_requests(url=track.response["album"]["href"] + "/tracks")) == 0
+            assert len(await api_mock.get_requests(url=track.response["album"]["href"] + "/tracks")) == 0
 
             assert [a.name for a in track.artists] == track_artists_map[track.uri]
             for artist in track.response["artists"]:
@@ -157,9 +156,9 @@ class TestSpotifyLibrary(RemoteLibraryTester):
             validate_track_extras_not_enriched(track)
 
         # check requests
-        assert len(api_mock.get_requests(url=library.api.url + "/albums")) == 0
-        req_artists = api_mock.get_requests(url=library.api.url + "/artists")
-        req_artist_ids = {id_ for req in req_artists for id_ in parse_qs(req.query)["ids"][0].split(",")}
+        assert len(await api_mock.get_requests(url=library.api.url + "/albums")) == 0
+        req_artists = await api_mock.get_requests(url=library.api.url + "/artists")
+        req_artist_ids = {id_ for url, _, _ in req_artists for id_ in url.query["ids"].split(",")}
         assert req_artist_ids == artist_ids
 
         # just check these fields were now added
@@ -200,7 +199,7 @@ class TestSpotifyLibrary(RemoteLibraryTester):
                 assert len(album.tracks) == len(album.response["tracks"].get("items", [])) == 0
 
         # only album URLs were called
-        req_urls = [req.url.split("?")[0] for req in api_mock.request_history]
+        req_urls = [url.split("?")[0] for _, url in api_mock.requests]
         assert req_urls == [artist.url + "/albums" for artist in library.artists]
 
         library.enrich_saved_artists(tracks=True)
@@ -210,5 +209,5 @@ class TestSpotifyLibrary(RemoteLibraryTester):
             for album in artist.albums:
                 assert len(album.tracks) == len(album.response["tracks"].get("items", [])) == album.track_total > 0
 
-        req_urls = set(req.url.split("?")[0] for req in api_mock.request_history)
+        req_urls = set(url.split("?")[0] for _, url in api_mock.requests)
         assert all(album.url + "/tracks" in req_urls for artist in library.artists for album in artist.albums)

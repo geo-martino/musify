@@ -1,6 +1,7 @@
 """
 All operations relating to handling of requests to an API.
 """
+import contextlib
 import json
 import logging
 from collections.abc import Mapping, Iterable
@@ -57,7 +58,7 @@ class RequestHandler(AsyncContextManager):
         #: The :py:class:`APIAuthoriser` object
         self.authoriser = authoriser
         #: The :py:class:`ClientSession` object
-        self.session = session if session is not None else ClientSession()
+        self.session: ClientSession | CachedSession = session if session is not None else ClientSession()
 
         #: The initial backoff time for failed requests
         self.backoff_start = 0.5
@@ -91,9 +92,9 @@ class RequestHandler(AsyncContextManager):
 
         return headers
 
-    def close(self) -> None:
+    async def close(self) -> None:
         """Close the current session. No more requests will be possible once this has been called."""
-        self.session.close()
+        await self.session.close()
 
     async def request(self, method: str, url: str, *args, **kwargs) -> dict[str, Any]:
         """
@@ -106,28 +107,32 @@ class RequestHandler(AsyncContextManager):
         :return: The JSON formatted response or, if JSON formatting not possible, the text response.
         :raise APIError: On any logic breaking error/response.
         """
-        kwargs.pop("headers", None)
-        response = await self._request(method=method, url=url, *args, **kwargs)
         backoff = self.backoff_start
 
-        while response is None or response.status >= 400:  # error response code received
-            waited = False
-            if response is not None:
-                await self._log_response(response=response, method=method, url=url)
-                await self._handle_unexpected_response(response=response)
-                waited = await self._handle_wait_time(response=response)
+        while True:
+            async with self._request(method=method, url=url, *args, **kwargs) as response:
+                if response is not None and response.status < 400:
+                    data = await self._response_as_json(response)
+                    break
 
-            if not waited and backoff < self.backoff_final:  # exponential backoff
-                self.logger.warning(f"Request failed: retrying in {backoff} seconds...")
-                sleep(backoff)
-                backoff *= self.backoff_factor
-            elif not waited:  # max backoff exceeded
-                raise APIError("Max retries exceeded")
+                waited = None
+                if response is not None:
+                    await self._log_response(response=response, method=method, url=url)
+                    await self._handle_unexpected_response(response=response)
+                    waited = await self._handle_wait_time(response=response)
 
-            response = await self._request(method=method, url=url, *args, **kwargs)
+                if not waited and backoff < self.backoff_final:  # exponential backoff
+                    self.logger.warning(f"Request failed: retrying in {backoff} seconds...")
+                    sleep(backoff)
+                    backoff *= self.backoff_factor
+                elif waited is False:  # max backoff exceeded
+                    raise APIError("Max retries exceeded")
+                elif waited is None:  # max backoff exceeded
+                    raise APIError("No response received")
 
-        return await self._response_as_json(response)
+        return data
 
+    @contextlib.asynccontextmanager
     async def _request(
             self,
             method: str,
@@ -149,17 +154,17 @@ class RequestHandler(AsyncContextManager):
             log.append("Cached Request")
 
         if not isinstance(self.session, CachedSession):
-            clean_kwargs(self.session.request, kwargs)
+            clean_kwargs(aiohttp.request, kwargs)
         if "headers" in kwargs:
             kwargs["headers"].update(self.session.headers)
 
         self.logger.debug(" | ".join(log))
         try:
             async with self.session.request(method=method.upper(), url=url, *args, **kwargs) as response:
-                return response
+                yield response
         except aiohttp.ClientError as ex:
             self.logger.warning(str(ex))
-            return
+            yield
 
     async def _log_response(self, response: ClientResponse, method: str, url: str) -> None:
         """Log the method, URL, response text, and response headers."""

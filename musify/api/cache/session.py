@@ -8,6 +8,8 @@ from aiohttp.typedefs import StrOrURL
 from musify.api.cache.backend.base import ResponseCache, ResponseRepository
 from musify.api.cache.response import CachedResponse
 
+ClientSession.__init_subclass__ = lambda *_, **__: _  # WORKAROUND: disables inheritance warning
+
 
 class CachedSession(ClientSession):
     """

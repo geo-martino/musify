@@ -8,7 +8,7 @@ import socket
 from collections.abc import Callable, Mapping, Sequence, MutableMapping
 from datetime import datetime
 from typing import Any
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qsl
 from webbrowser import open as webopen
 
 import aiohttp
@@ -150,8 +150,19 @@ class APIAuthoriser:
         self.name = name
 
         # maps of requests parameters to be passed to `requests` functions
+        if auth_args:
+            self._sanitise_params(auth_args.get("params"))
+            self._sanitise_params(auth_args.get("data"))
         self.auth_args: MutableMapping[str, Any] | None = auth_args
+
+        if user_args:
+            self._sanitise_params(user_args.get("params"))
+            self._sanitise_params(user_args.get("data"))
         self.user_args: dict[str, Any] | None = user_args
+
+        if refresh_args:
+            self._sanitise_params(refresh_args.get("params"))
+            self._sanitise_params(refresh_args.get("data"))
         self.refresh_args: dict[str, Any] | None = refresh_args
 
         # test params and conditions
@@ -168,6 +179,16 @@ class APIAuthoriser:
         self.header_key: str = header_key
         self.header_prefix: str = header_prefix or ""
         self.header_extra: dict[str, str] = header_extra or {}
+
+    def _sanitise_params(self, params: MutableMapping[str, Any] | None) -> None:
+        if not params:
+            return
+
+        for k, v in params.items():
+            if isinstance(v, MutableMapping):
+                self._sanitise_params(v)
+            elif not isinstance(v, str | int | float):
+                params[k] = json.dumps(v)
 
     def load_token(self) -> dict[str, Any] | None:
         """Load stored token from given path"""
@@ -291,7 +312,7 @@ class APIAuthoriser:
 
         # format out the access code from the returned response
         path_raw = next(line for line in request.recv(8196).decode("utf-8").split('\n') if line.startswith("GET"))
-        code = parse_qs(urlparse(path_raw).query)["code"][0]
+        code = dict(parse_qsl(urlparse(path_raw).query))["code"]
 
         if "data" not in self.auth_args:
             self.auth_args["data"] = {}

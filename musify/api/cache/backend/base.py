@@ -1,13 +1,15 @@
 import logging
 from abc import ABC, abstractmethod
-from collections.abc import MutableMapping, Callable, Collection, Hashable, AsyncIterable
+from collections.abc import MutableMapping, Callable, Collection, Hashable, AsyncIterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Self, AsyncContextManager
+from urllib.parse import parse_qsl, urlparse
 
 from dateutil.relativedelta import relativedelta
 from aiohttp import RequestInfo, ClientRequest, ClientResponse
 from aiohttp.typedefs import StrOrURL
+from yarl import URL
 
 from musify.api.exception import CacheError
 from musify.log.logger import MusifyLogger
@@ -25,6 +27,10 @@ class RequestSettings(ABC):
     """Settings for a request type for a given endpoint to be used to configure a repository in the cache backend."""
     #: That name of the repository in the backend
     name: str
+
+    @staticmethod
+    def _get_params(url: StrOrURL) -> dict[str, Any]:
+        return url.query if isinstance(url, URL) else dict(parse_qsl(urlparse(str(url)).query))
 
     @staticmethod
     @abstractmethod
@@ -45,15 +51,15 @@ class PaginatedRequestSettings(RequestSettings, ABC):
     to be used to configure a repository in the cache backend.
     """
 
-    @staticmethod
+    @classmethod
     @abstractmethod
-    def get_offset(url: StrOrURL) -> int:
+    def get_offset(cls, url: StrOrURL) -> int:
         """Extracts the offset for a paginated request from the given ``url``."""
         raise NotImplementedError
 
-    @staticmethod
+    @classmethod
     @abstractmethod
-    def get_limit(url: StrOrURL) -> int:
+    def get_limit(cls, url: StrOrURL) -> int:
         """Extracts the limit for a paginated request from the given ``url``."""
         raise NotImplementedError
 
@@ -117,7 +123,7 @@ class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], AsyncContextManager, 
         raise NotImplementedError
 
     @abstractmethod
-    async def contains(self, request: CacheRequestType) -> bool:
+    async def contains(self, request: RepositoryRequestType[K]) -> bool:
         """Check whether the repository contains a given ``request``"""
         raise NotImplementedError
 
@@ -142,16 +148,16 @@ class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], AsyncContextManager, 
         raise NotImplementedError
 
     @abstractmethod
-    def get_key_from_request(self, request: CacheRequestType) -> K:
+    def get_key_from_request(self, request: RepositoryRequestType[K]) -> K:
         """Extract the key to use when persisting responses for a given ``request``"""
         raise NotImplementedError
 
     @abstractmethod
-    async def get_response(self, request: CacheRequestType) -> V | None:
+    async def get_response(self, request: RepositoryRequestType[K]) -> V | None:
         """Get the response relating to the given ``request`` from this repository if it exists."""
         raise NotImplementedError
 
-    async def get_responses(self, requests: Collection[CacheRequestType]) -> list[V]:
+    async def get_responses(self, requests: Collection[RepositoryRequestType[K]]) -> list[V]:
         """
         Get the responses relating to the given ``requests`` from this repository if they exist.
         Returns results unordered.
@@ -159,8 +165,13 @@ class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], AsyncContextManager, 
         results = [await self.get_response(request) for request in requests]
         return [result for result in results if result is not None]
 
-    async def save_response(self, response: ClientResponse) -> None:
+    async def save_response(self, response: Collection[K, V] | ClientResponse) -> None:
         """Save the given ``response`` to this repository if a key can be extracted from it. Safely fail if not"""
+        if isinstance(response, Collection):
+            key, value = response
+            await self._set_item_from_key_value_pair(key, value)
+            return
+
         key = self.get_key_from_request(response)
         if not key:
             return
@@ -170,23 +181,28 @@ class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], AsyncContextManager, 
     async def _set_item_from_key_value_pair(self, __key: K, __value: Any) -> None:
         raise NotImplementedError
 
-    async def save_responses(self, responses: Collection[ClientResponse]) -> None:
+    async def save_responses(self, responses: Mapping[K, V] | Collection[ClientResponse]) -> None:
         """
         Save the given ``responses`` to this repository if a key can be extracted from them.
         Safely fail on those that can't.
         """
+        if isinstance(responses, Mapping):
+            for key, value in responses.items():
+                await self._set_item_from_key_value_pair(key, value)
+            return
+
         for response in responses:
             await self.save_response(response)
 
     @abstractmethod
-    async def delete_response(self, request: CacheRequestType) -> bool:
+    async def delete_response(self, request: RepositoryRequestType[K]) -> bool:
         """
         Delete the given ``request`` from this repository if it exists.
         Returns True if deleted in the repository and False if ``request`` was not found in the repository.
         """
         raise NotImplementedError
 
-    async def delete_responses(self, requests: Collection[CacheRequestType]) -> int:
+    async def delete_responses(self, requests: Collection[RepositoryRequestType[K]]) -> int:
         """
         Delete the given ``requests`` from this repository if they exist.
         Returns the number of the given ``requests`` deleted in the repository.

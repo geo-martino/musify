@@ -82,7 +82,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         checker._create_playlist(collection=collection)
         assert not checker._playlist_name_urls
         assert not checker._playlist_name_collection
-        assert not api_mock.request_history
+        api_mock.assert_not_called()
 
         for item in collection:
             item.uri = random_uri()
@@ -91,10 +91,10 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert checker.api.handler.authoriser.token is not None
         assert collection.name in checker._playlist_name_urls
         assert checker._playlist_name_collection[collection.name] == collection
-        assert len(api_mock.request_history) >= 2
+        assert api_mock.total_requests >= 2
 
     @staticmethod
-    def test_delete_temp_playlists(
+    async def test_delete_temp_playlists(
             checker: RemoteItemChecker,
             collections: list[BasicCollection],
             playlist_urls: list[str],
@@ -112,7 +112,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert checker.api.handler.authoriser.token is not None
         assert not checker._playlist_name_urls
         assert not checker._playlist_name_collection
-        assert len(api_mock.get_requests(method="DELETE")) == min(len(playlist_urls), len(collections))
+        assert len(await api_mock.get_requests(method="DELETE")) == min(len(playlist_urls), len(collections))
 
     @staticmethod
     def test_finalise(checker: RemoteItemChecker):
@@ -141,7 +141,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
     ## ``pause`` step
     ###########################################################################
     @staticmethod
-    def test_pause_1(
+    async def test_pause_1(
             checker: RemoteItemChecker,
             setup_playlist_collection: tuple[RemotePlaylist, BasicCollection],
             mocker: MockerFixture,
@@ -162,7 +162,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert f"Showing tracks for playlist: {pl.name}" in stdout  # <URL/URI> entered
 
         pl_pages = api_mock.calculate_pages(limit=20, total=len(pl))
-        assert len(api_mock.get_requests(url=re.compile(pl.url + ".*"), method="GET")) == pl_pages + 1
+        assert len(await api_mock.get_requests(method="GET", url=re.compile(pl.url + ".*"))) == pl_pages + 1
 
         assert not checker._skip
         assert not checker._quit
@@ -186,7 +186,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert "Showing items originally added to" not in stdout
         assert "Showing tracks for playlist" not in stdout
 
-        assert not api_mock.request_history
+        api_mock.assert_not_called()
 
         assert checker._skip
         assert not checker._quit
@@ -209,7 +209,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert "Input not recognised" not in stdout
         assert "Showing items originally added to" not in stdout
         assert "Showing tracks for playlist" not in stdout
-        assert not api_mock.request_history
+        api_mock.assert_not_called()
 
         assert not checker._skip
         assert checker._quit
@@ -398,7 +398,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
     ## ``match_to_remote`` step
     ###########################################################################
     @staticmethod
-    def test_match_to_remote_no_changes(
+    async def test_match_to_remote_no_changes(
             checker: RemoteItemChecker,
             setup_playlist_collection: tuple[RemotePlaylist, BasicCollection],
             api_mock: RemoteMock
@@ -411,7 +411,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert not checker._remaining
 
         pl_pages = api_mock.calculate_pages_from_response(pl.response)
-        assert len(api_mock.get_requests(url=re.compile(pl.url + ".*"), method="GET")) == pl_pages
+        assert len(await api_mock.get_requests(method="GET", url=re.compile(pl.url + ".*"))) == pl_pages
 
     @staticmethod
     def test_match_to_remote_removed(
@@ -489,7 +489,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
     ###########################################################################
     @staticmethod
     @pytest.mark.slow
-    def test_check_uri(
+    async def test_check_uri(
             checker: RemoteItemChecker,
             setup_playlist_collection: tuple[RemotePlaylist, BasicCollection],
             remaining: list[LocalTrack],
@@ -535,7 +535,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
 
         # called 2x: 1 initial, 1 after user inputs 'r'
         pl_pages = api_mock.calculate_pages_from_response(pl.response)
-        assert len(api_mock.get_requests(url=re.compile(pl.url + ".*"), method="GET")) == 2 * pl_pages
+        assert len(await api_mock.get_requests(method="GET", url=re.compile(pl.url + ".*"))) == 2 * pl_pages
 
         assert checker._final_switched == collection[:5] + remaining[:len(uri_list)]
         assert checker._final_unavailable == remaining[len(uri_list):len(uri_list) + 3]
@@ -546,7 +546,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
     ###########################################################################
     @staticmethod
     @pytest.mark.slow
-    def test_check(
+    async def test_check(
             checker: RemoteItemChecker,
             collections: list[BasicCollection],
             playlist_urls: list[str],
@@ -591,5 +591,5 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         # deleted only the playlists in the first batch
         requests = []
         for url in (playlist_name_urls[collection.name] for collection in batch):
-            requests.append(api_mock.get_requests(url=url, method="DELETE"))
+            requests += await api_mock.get_requests(method="DELETE", url=url)
         assert len(requests) == len(batch)

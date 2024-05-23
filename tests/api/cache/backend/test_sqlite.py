@@ -190,7 +190,6 @@ class TestSQLiteCache(SQLiteTester, ResponseCacheTester):
             if name == path.split("/")[-2]:
                 return repository
 
-    # noinspection PyTestUnpassedFixture
     @staticmethod
     async def get_db_path(cache: SQLiteCache) -> str:
         """Get the DB path from the connection associated with the given ``cache``."""
@@ -201,7 +200,6 @@ class TestSQLiteCache(SQLiteTester, ResponseCacheTester):
         db_seq, db_name, db_path = rows[0]
         return db_path
 
-    # noinspection PyTestUnpassedFixture
     async def test_connect_with_path(self, tmp_path: Path):
         fake_name = "not my real name"
         path = join(tmp_path, "test")
@@ -212,7 +210,6 @@ class TestSQLiteCache(SQLiteTester, ResponseCacheTester):
             assert cache.cache_name != fake_name
             assert cache.expire == expire
 
-    # noinspection PyTestUnpassedFixture
     async def test_connect_with_in_memory_db(self):
         fake_name = "not my real name"
         expire = timedelta(weeks=42)
@@ -222,7 +219,6 @@ class TestSQLiteCache(SQLiteTester, ResponseCacheTester):
             assert cache.cache_name != fake_name
             assert cache.expire == expire
 
-    # noinspection PyTestUnpassedFixture
     async def test_connect_with_temp_db(self):
         name = "this is my real name"
         path = join(gettempdir(), name)

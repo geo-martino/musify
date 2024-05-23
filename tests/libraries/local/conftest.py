@@ -44,6 +44,7 @@ def track_wma(path: str, remote_wrangler: RemoteDataWrangler) -> WMA:
     return WMA(file=path, remote_wrangler=remote_wrangler)
 
 
+# noinspection PyUnresolvedReferences
 @pytest.fixture(params=[
     pytest.lazy_fixture("track_flac"),
     pytest.lazy_fixture("track_mp3"),

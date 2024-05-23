@@ -7,6 +7,7 @@ from multidict import CIMultiDictProxy
 
 
 class CachedResponse(ClientResponse):
+    """Emulates :py:class:`ClientResponse` for a response found in a cache backed."""
 
     def __init__(self, request: ClientRequest, data: str | bytes):
         # noinspection PyTypeChecker,PyProtectedMember

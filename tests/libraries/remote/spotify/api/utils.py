@@ -2,9 +2,6 @@ from collections.abc import Collection, Mapping
 from itertools import batched
 from typing import Any
 
-# noinspection PyProtectedMember,PyUnresolvedReferences
-from requests_mock.request import _RequestObjectProxy as Request
-
 from tests.libraries.remote.spotify.api.mock import SpotifyMock
 
 
@@ -22,7 +19,7 @@ def get_limit(values: Collection | int, max_limit: int, pages: int = 3) -> int:
 
 def assert_calls(
         expected: Collection[Mapping[str, Any]],
-        requests: list[Request],
+        requests: Collection,
         api_mock: SpotifyMock,
         key: str | None = None,
         limit: int | None = None,

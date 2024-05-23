@@ -1,9 +1,9 @@
 import json
 from typing import Any
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import urlparse
 
+from aiohttp import ClientResponse
 from aiohttp.typedefs import StrOrURL
-from requests import Response
 from yarl import URL
 
 from musify.api.cache.backend.base import RequestSettings, PaginatedRequestSettings
@@ -15,7 +15,7 @@ class MockRequestSettings(RequestSettings):
     def get_name(value: Any) -> str | None:
         if isinstance(value, dict):
             return value.get("name")
-        elif isinstance(value, Response):
+        elif isinstance(value, ClientResponse):
             try:
                 return value.json().get("name")
             except json.decoder.JSONDecodeError:
@@ -30,14 +30,12 @@ class MockRequestSettings(RequestSettings):
 
 
 class MockPaginatedRequestSettings(MockRequestSettings, PaginatedRequestSettings):
-    @staticmethod
-    def get_offset(url: StrOrURL) -> int:
-        params = url.query if isinstance(url, URL) else parse_qs(urlparse(url).query)
-        offset = params.get("offset", [0])
-        return int(offset[0] if isinstance(offset, list) else offset)
+    @classmethod
+    def get_offset(cls, url: StrOrURL) -> int:
+        params = cls._get_params(url)
+        return int(params.get("offset", 0))
 
-    @staticmethod
-    def get_limit(url: StrOrURL) -> int:
-        params = url.query if isinstance(url, URL) else parse_qs(urlparse(url).query)
-        limit = params.get("limit", 50)
-        return int(limit[0] if isinstance(limit, list) else limit)
+    @classmethod
+    def get_limit(cls, url: StrOrURL) -> int:
+        params = cls._get_params(url)
+        return int(params.get("limit", 0))

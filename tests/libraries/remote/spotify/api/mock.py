@@ -4,14 +4,11 @@ from copy import deepcopy
 from datetime import datetime
 from random import choice, randrange, sample, random, shuffle
 from typing import Any
-from urllib.parse import parse_qs
 from uuid import uuid4
 
+from aioresponses import CallbackResult
 from pycountry import countries, languages
-# noinspection PyProtectedMember,PyUnresolvedReferences
-from requests_mock.request import _RequestObjectProxy as Request
-# noinspection PyProtectedMember,PyUnresolvedReferences
-from requests_mock.response import _Context as Context
+from yarl import URL
 
 from musify.libraries.remote.core.enum import RemoteObjectType as ObjectType
 from musify.libraries.remote.spotify.api import SpotifyAPI
@@ -140,12 +137,6 @@ class SpotifyMock(RemoteMock):
         self.user_audiobooks = [self.format_user_item(deepcopy(item), ObjectType.AUDIOBOOK) for item in self.audiobooks]
 
         self.setup_specific_conditions_user()
-        self.setup_requests_mock()
-
-        track_ids = {track["id"] for track in self.tracks}
-        for album in self.albums:
-            for track in album["tracks"]["items"]:
-                assert track["id"] in track_ids
 
     ###########################################################################
     ## Setup - cross-reference
@@ -235,12 +226,11 @@ class SpotifyMock(RemoteMock):
     ###########################################################################
     ## Setup - requests
     ###########################################################################
-    def setup_requests_mock(self):
-        """Driver to setup requests_mock responses for all endpoints"""
+    def setup_mock(self):
         url_api = SpotifyDataWrangler.url_api
 
         self.setup_search_mock()
-        self.get(url=f"{url_api}/me", json=lambda _, __: deepcopy(self.user))
+        self.get(url=f"{url_api}/me", callback=lambda *_, **__: deepcopy(self.user), repeat=True)
 
         # setup responses as needed for each item type
         self.setup_items_mock(kind=ObjectType.TRACK, id_map={item["id"]: item for item in self.tracks})
@@ -273,14 +263,14 @@ class SpotifyMock(RemoteMock):
                 items += generator(collection, count)
 
                 url = f"{collection["href"]}/{key}"
-                self.setup_items_block_mock(url=url, items=items, total=collection[key]["total"])
+                self.setup_items_block_mock(url_items=url, items=items, total=collection[key]["total"])
 
         # artist's albums
         for i, artist in enumerate(self.artists):
             id_ = artist["id"]
             items = [album for album in self.artist_albums if any(art["id"] == id_ for art in album["artists"])]
             url = f"{url_api}/artists/{id_}/albums"
-            self.setup_items_block_mock(url=url, items=items)
+            self.setup_items_block_mock(url_items=url, items=items)
 
         # when getting a user's playlists, individual tracks are not returned
         user_playlists_reduced = deepcopy(self.user_playlists)
@@ -288,27 +278,29 @@ class SpotifyMock(RemoteMock):
             playlist["tracks"] = {"href": playlist["tracks"]["href"], "total": playlist["tracks"]["total"]}
 
         # setup responses as needed for each 'user's saved' type
-        self.setup_items_block_mock(url=f"{url_api}/me/tracks", items=self.user_tracks)
-        self.setup_items_block_mock(url=f"{url_api}/me/following", items=self.user_artists)
-        self.setup_items_block_mock(url=f"{url_api}/me/episodes", items=self.user_episodes)
+        self.setup_items_block_mock(url_items=f"{url_api}/me/tracks", items=self.user_tracks)
+        self.setup_items_block_mock(url_items=f"{url_api}/me/following", items=self.user_artists)
+        self.setup_items_block_mock(url_items=f"{url_api}/me/episodes", items=self.user_episodes)
 
-        self.setup_items_block_mock(url=f"{url_api}/me/playlists", items=user_playlists_reduced)
-        self.setup_items_block_mock(url=f"{url_api}/users/{self.user_id}/playlists", items=user_playlists_reduced)
-        self.setup_items_block_mock(url=f"{url_api}/me/albums", items=self.user_albums)
-        self.setup_items_block_mock(url=f"{url_api}/me/shows", items=self.user_shows)
-        self.setup_items_block_mock(url=f"{url_api}/me/audiobooks", items=self.user_audiobooks)
+        self.setup_items_block_mock(url_items=f"{url_api}/me/playlists", items=user_playlists_reduced)
+        self.setup_items_block_mock(url_items=f"{url_api}/users/{self.user_id}/playlists", items=user_playlists_reduced)
+        self.setup_items_block_mock(url_items=f"{url_api}/me/albums", items=self.user_albums)
+        self.setup_items_block_mock(url_items=f"{url_api}/me/shows", items=self.user_shows)
+        self.setup_items_block_mock(url_items=f"{url_api}/me/audiobooks", items=self.user_audiobooks)
 
         self.setup_playlist_operations_mock()
 
     def setup_search_mock(self):
         """Setup requests mock for getting responses from the ``/search`` endpoint"""
-        def response_getter(req: Request, _: Context) -> dict[str, Any]:
+        def callback(url: URL, params: dict[str, Any], **_) -> CallbackResult:
             """Dynamically generate expected batched response from a request with an 'ids' param"""
-            req_params = parse_qs(req.query)
-            limit = int(req_params["limit"][0])
-            offset = int(req_params.get("offset", [0])[0])
-            query = req_params["q"][0]
-            kinds = req_params["type"][0].split(",")
+            if params is None:
+                params = url.query
+
+            limit = int(params["limit"])
+            offset = int(params.get("offset", 0))
+            query = params["q"]
+            kinds = params["type"].split(",")
 
             count = 0
             total = 0
@@ -333,13 +325,14 @@ class SpotifyMock(RemoteMock):
                 shuffle(results[kind + "s"])
                 count += len(results[kind + "s"])
 
-            return {
-                kind: self.format_items_block(url=url, items=items, offset=offset, limit=limit, total=total)
+            payload = {
+                kind: self.format_items_block(url=str(url), items=items, offset=offset, limit=limit, total=total)
                 for kind, items in results.items()
             }
+            return CallbackResult(method="GET", payload=payload)
 
-        url = f"{SpotifyDataWrangler.url_api}/search"
-        self.get(url=re.compile(url + r"\?"), json=response_getter)
+        url_search = f"{SpotifyDataWrangler.url_api}/search"
+        self.get(url=re.compile(url_search + r"\?"), callback=callback, repeat=True)
 
     def setup_items_mock(
             self, kind: ObjectType | str, id_map: dict[str, dict[str, Any]], batchable: bool = True
@@ -349,44 +342,49 @@ class SpotifyMock(RemoteMock):
         Sets up mocks for /{``kind``}/{ID} endpoints for multi-calls and,
         when ``batchable`` is True, /{``kind``}?... for batchable-calls.
         """
-        def response_getter(req: Request, _: Context) -> dict[str, Any]:
+        def callback(url: URL, params: dict[str, Any] = None, **_) -> CallbackResult:
             """Dynamically generate expected batched response from a request with an 'ids' param"""
-            req_params = parse_qs(req.query)
-            req_kind = req.path.split("/")[-1].replace("-", "_")
+            if params is None:
+                params = url.query
 
-            id_list = req_params["ids"][0].split(",")
-            return {req_kind: [deepcopy(id_map[i]) for i in id_list]}
+            req_kind = url.path.split("/")[-1].replace("-", "_")
+
+            id_list = params["ids"].split(",")
+            payload = {req_kind: [deepcopy(id_map[i]) for i in id_list]}
+            return CallbackResult(method="GET", payload=payload)
 
         url_api = SpotifyDataWrangler.url_api
-        url = f"{url_api}/{kind.name.lower()}s" if isinstance(kind, ObjectType) else f"{url_api}/{kind}"
-        if batchable:
-            self.get(url=re.compile(url + r"\?"), json=response_getter)  # item batched calls
+        url_items = f"{url_api}/{kind.name.lower()}s" if isinstance(kind, ObjectType) else f"{url_api}/{kind}"
 
-        for id_, item in id_map.items():
-            self.get(url=f"{url}/{id_}", json=deepcopy(item))  # item multi calls
+        if batchable:  # item batched calls
+            self.get(url=re.compile(url_items + r"\?"), callback=callback, repeat=True)
+        for id_, item in id_map.items():  # item multi calls
+            self.get(url=re.compile(f"{url_items}/{id_}" + r"(\?|$)"), payload=deepcopy(item), repeat=True)
 
-    def setup_items_block_mock(self, url: str, items: list[dict[str, Any]], total: int | None = None) -> None:
+    def setup_items_block_mock(self, url_items: str, items: list[dict[str, Any]], total: int | None = None) -> None:
         """Setup requests mock for returning preset responses from the given ``items`` in an 'items block' format."""
-        def response_getter(req: Request, _: Context) -> dict[str, Any]:
+        def callback(url: URL, params: dict[str, Any] = None, **__) -> CallbackResult:
             """Dynamically generate expected response for an items block from the given ``generator``"""
-            req_params = parse_qs(req.query)
-            limit = int(req_params["limit"][0])
-            offset = int(req_params.get("offset", [0])[0])
+            if params is None:
+                params = url.query
+
+            limit = int(params["limit"])
+            offset = int(params.get("offset", 0))
 
             available = items
             available_total = total
-            if re.match(r".*/artists/\w+/albums$", url) and "include_groups" in req_params:
+            if re.match(r".*/artists/\w+/albums$", url.path) and "include_groups" in params:
                 # special case for artist's albums
-                types = req_params["include_groups"][0].split(",")
+                types = params["include_groups"].split(",")
                 available = [i for i in items if i["album_type"] in types]
                 available_total = len(available)
 
             it = deepcopy(available[offset: offset + limit])
             items_block = self.format_items_block(
-                url=req.url, items=it, offset=offset, limit=limit, total=available_total
+                url=str(url), items=it, offset=offset, limit=limit, total=available_total
             )
 
-            if url.endswith("me/following"):  # special case for following artists
+            if url.path.endswith("me/following"):  # special case for following artists
                 items_block["cursors"] = {}
                 if offset < available_total:
                     items_block["cursors"]["after"] = it[-1]["id"]
@@ -395,40 +393,43 @@ class SpotifyMock(RemoteMock):
 
                 items_block = {"artists": items_block}
 
-            return items_block
+            return CallbackResult(method="GET", payload=items_block)
 
         total = total or len(items)
-        self.get(url=re.compile(url + r"\?"), json=response_getter)
+        self.get(url=re.compile(url_items + r"\?"), callback=callback, repeat=True)
 
     def setup_playlist_operations_mock(self) -> None:
         """Generate playlist and setup ``requests_mock`` for playlist operations tests"""
         for playlist in self.user_playlists:
-            self.post(url=re.compile(playlist["href"] + "/tracks"), json={"snapshot_id": str(uuid4())})
-            self.delete(url=re.compile(playlist["href"] + "/tracks"), json={"snapshot_id": str(uuid4())})
-            self.delete(url=re.compile(playlist["href"]), json={"snapshot_id": str(uuid4())})
+            self.post(
+                url=re.compile(playlist["href"] + "/tracks"), payload={"snapshot_id": str(uuid4())}, repeat=True
+            )
+            self.delete(
+                url=re.compile(playlist["href"] + "/tracks"), payload={"snapshot_id": str(uuid4())}, repeat=True
+            )
+            self.delete(url=re.compile(playlist["href"]), payload={"snapshot_id": str(uuid4())}, repeat=True)
 
-        def create_response_getter(req: Request, _: Context) -> dict[str, Any]:
+        def callback(_: str, json: dict[str, Any], **__) -> CallbackResult:
             """Process body and generate playlist response data"""
-            data = req.json()
-
             playlist_ids = {pl["id"] for pl in self.playlists}
-            response = self.generate_playlist(owner=self.user, item_count=0)
-            while response["id"] in playlist_ids:
-                response = self.generate_playlist(owner=self.user, item_count=0)
+            payload = self.generate_playlist(owner=self.user, item_count=0)
+            while payload["id"] in playlist_ids:
+                payload = self.generate_playlist(owner=self.user, item_count=0)
 
-            response["name"] = data["name"]
-            response["description"] = data["description"]
-            response["public"] = data["public"]
-            response["collaborative"] = data["collaborative"]
-            response["owner"] = self.user_playlists[0]["owner"]
+            payload["name"] = json["name"]
+            payload["description"] = json["description"]
+            payload["public"] = json["public"]
+            payload["collaborative"] = json["collaborative"]
+            payload["owner"] = self.user_playlists[0]["owner"]
 
-            self.get(url=response["href"], json=response)
-            self.post(url=re.compile(response["href"] + "/tracks"), json={"snapshot_id": str(uuid4())})
-            self.delete(url=re.compile(response["href"] + "/tracks"), json={"snapshot_id": str(uuid4())})
-            return response
+            self.get(url=re.compile(payload["href"] + r"\?"), payload=payload, repeat=True)
+            self.post(url=re.compile(payload["href"] + "/tracks"), payload={"snapshot_id": str(uuid4())}, repeat=True)
+            self.delete(url=re.compile(payload["href"] + "/tracks"), payload={"snapshot_id": str(uuid4())}, repeat=True)
+
+            return CallbackResult(method="POST", payload=payload)
 
         url = f"{SpotifyDataWrangler.url_api}/users/{self.user_id}/playlists"
-        self.post(url=url, json=create_response_getter)
+        self.post(url=url, callback=callback, repeat=True)
 
     ###########################################################################
     ## Formatters

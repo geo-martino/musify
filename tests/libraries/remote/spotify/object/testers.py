@@ -1,7 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable
 from typing import Any
-from urllib.parse import parse_qs
 
 import pytest
 
@@ -33,7 +32,7 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
     ## Assertions
     ###########################################################################
     @staticmethod
-    def assert_load_with_items_requests[T: SpotifyObject](
+    async def assert_load_with_items_requests[T: SpotifyObject](
             response: dict[str, Any],
             result: SpotifyCollectionLoader[T],
             items: list[T],
@@ -43,19 +42,18 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
         """Run assertions on the requests from load method with given ``items``"""
         assert len(result.response[key][result.api.items_key]) == response[key]["total"]
         assert len(result.items) == response[key]["total"]
-        assert not api_mock.get_requests(result.url)  # main collection URL was not called
+        assert not await api_mock.get_requests(url=result.url)  # main collection URL was not called
 
         # ensure none of the input_ids were requested
         input_ids = {item.id for item in items}
-        for request in api_mock.get_requests(f"{result.url}/{key}"):
-            params = parse_qs(request.query)
-            if "ids" not in params:
+        for url, _, _ in await api_mock.get_requests(url=f"{result.url}/{key}"):
+            if "ids" not in url.query:
                 continue
 
-            assert not input_ids.intersection(params["ids"][0].split(","))
+            assert not input_ids.intersection(url.query["ids"].split(","))
 
     @staticmethod
-    def assert_load_with_items_extended[T: SpotifyObject](
+    async def assert_load_with_items_extended[T: SpotifyObject](
             response: dict[str, Any],
             result: SpotifyCollectionLoader[T],
             items: list[T],
@@ -64,7 +62,7 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
             api_mock: SpotifyMock,
     ):
         """Run assertions on the requests for missing data from load method with given ``items``"""
-        requests_missing = api_mock.get_requests(f"{result.api.url}/{key}")
+        requests_missing = await api_mock.get_requests(url=f"{result.api.url}/{key}")
         limit = response[key]["limit"]
         input_ids = {item.id for item in items}
         response_item_ids = {
@@ -87,7 +85,7 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
         """Yields the results from 'load' where no items are given as a pytest.fixture."""
         raise NotImplementedError
 
-    def test_load_without_items(
+    async def test_load_without_items(
             self,
             collection: SpotifyCollectionLoader,
             response_valid: dict[str, Any],
@@ -107,10 +105,10 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
         if not isinstance(result, SpotifyArtist):
             expected -= 1  # -1 for not calling initial page
 
-        assert len(api_mock.get_requests(result.url)) == 1
-        assert len(api_mock.get_requests(f"{result.url}/{item_key}")) == expected
-        assert not api_mock.get_requests(f"{api.url}/audio-features")
-        assert not api_mock.get_requests(f"{api.url}/audio-analysis")
+        assert len(await api_mock.get_requests(url=result.url)) == 1
+        assert len(await api_mock.get_requests(url=f"{result.url}/{item_key}")) == expected
+        assert not await api_mock.get_requests(url=f"{api.url}/audio-features")
+        assert not await api_mock.get_requests(url=f"{api.url}/audio-analysis")
 
         # input items given, but no key to search on still loads
         result = collection.load(response_valid, api=api, items=response_valid.pop(item_key), extend_tracks=True)

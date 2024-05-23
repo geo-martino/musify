@@ -3,7 +3,7 @@ Base functionality to be shared by all classes that implement :py:class:`RemoteA
 """
 from abc import ABC
 from typing import Any
-from urllib.parse import parse_qs, urlparse, urlencode, quote, urlunparse
+from urllib.parse import parse_qsl, urlparse, urlencode, quote, urlunparse
 
 from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.enum import RemoteObjectType
@@ -29,10 +29,12 @@ class SpotifyAPIBase(RemoteAPI, ABC):
     def format_next_url(url: str, offset: int = 0, limit: int = 20) -> str:
         """Format a `next` style URL for looping through API pages"""
         url_parsed = urlparse(url)
-        params: dict[str, Any] = parse_qs(url_parsed.query)
+
+        params: dict[str, Any] = dict(parse_qsl(url_parsed.query))
         params["offset"] = offset
         params["limit"] = limit
 
         url_parts = list(url_parsed[:])
         url_parts[4] = urlencode(params, doseq=True, quote_via=quote)
+
         return str(urlunparse(url_parts))

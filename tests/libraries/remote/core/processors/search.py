@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from collections.abc import Callable, Iterable
 from copy import copy
-from urllib.parse import parse_qs
+from urllib.parse import unquote
 
 import pytest
 
@@ -68,7 +68,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         return unmatchable_items
 
     @staticmethod
-    def test_get_results(searcher: RemoteItemSearcher, api_mock: RemoteMock):
+    async def test_get_results(searcher: RemoteItemSearcher, api_mock: RemoteMock):
         settings = SearchConfig(
             search_fields_1=[Tag.NAME, Tag.ARTIST],  # query mock always returns match on name
             search_fields_2=[Tag.NAME, Tag.ALBUM],
@@ -78,14 +78,15 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         )
         item = random_track()
         results = searcher._get_results(item=item, kind=RemoteObjectType.TRACK, settings=settings)
-        requests = api_mock.get_requests(method="GET")
+        requests = await api_mock.get_requests(method="GET")
         assert len(results) == settings.result_count
         assert len(requests) == 1
 
         expected = [str(item.clean_tags.get(key)) for key in settings.search_fields_1]
         found = False
-        for k, v in parse_qs(requests[0].query).items():
-            if expected == v[0].split():
+        url, _, _ = next(iter(requests))
+        for k, v in url.query.items():
+            if expected == unquote(v[0]).split():
                 found = True
                 break
 
@@ -95,16 +96,17 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         # make these tags too long to query forcing them to return on results
         item.artist = 'b' * 200
         item.album = 'c' * 200
-        api_mock.reset_mock()  # reset for new requests checks to work correctly
+        api_mock.reset()  # reset for new requests checks to work correctly
 
         results = searcher._get_results(item=item, kind=RemoteObjectType.TRACK, settings=settings)
-        requests = api_mock.get_requests(method="GET")
+        requests = await api_mock.get_requests(method="GET")
         assert len(results) == settings.result_count
         assert len(requests) == 1
 
         expected = [str(item.clean_tags.get(key)) for key in settings.search_fields_3]
         found = False
-        for k, v in parse_qs(requests[0].query).items():
+        url, _, _ = next(iter(requests))
+        for k, v in url.query.items():
             if expected == v[0].split():
                 found = True
                 break
@@ -287,7 +289,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert len(result.skipped) == skip_album
 
         # check nothing happens on matched collections
-        api_mock.reset_mock()  # reset for new requests checks to work correctly
+        api_mock.reset()  # reset for new requests checks to work correctly
         search_matched = BasicCollection(name="test", items=search_items)
         assert len(searcher.search([search_matched, search_album])) == 0
-        assert len(api_mock.request_history) == 0
+        api_mock.assert_not_called()

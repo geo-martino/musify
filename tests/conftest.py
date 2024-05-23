@@ -301,15 +301,14 @@ def spotify_wrangler():
 
 
 @pytest.fixture(scope="session")
-def spotify_api() -> SpotifyAPI:
+async def spotify_api() -> SpotifyAPI:
     """Yield an authorised :py:class:`SpotifyAPI` object"""
     token = {"access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"}
-    api = SpotifyAPI(token=token)
-    # blocks any token tests
-    api.handler.authoriser.test_args = None
-    api.handler.authoriser.test_expiry = 0
-    api.handler.authoriser.test_condition = None
-    with api as a:
+    # disable any token tests by settings test_* kwargs as appropriate
+    api = SpotifyAPI(token=token, test_args=None, test_expiry=0, test_condition=None)
+    api.handler.backoff_count = 1  # TODO: remove me
+
+    async with api as a:
         yield a
 
 

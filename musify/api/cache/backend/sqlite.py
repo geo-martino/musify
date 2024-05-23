@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import contextlib
 import json
 import os
 from collections.abc import Mapping, Callable
@@ -271,36 +270,32 @@ class SQLiteCache(ResponseCache[SQLiteTable]):
         return kwargs
 
     @classmethod
-    @contextlib.asynccontextmanager
-    async def connect(cls, value: Any, **kwargs) -> Self:
-        yield cls.connect_with_path(path=value, **kwargs)
+    def connect(cls, value: Any, **kwargs) -> Self:
+        return cls.connect_with_path(path=value, **kwargs)
 
     @classmethod
-    @contextlib.asynccontextmanager
-    async def connect_with_path(cls, path: str | Path, **kwargs) -> Self:
+    def connect_with_path(cls, path: str | Path, **kwargs) -> Self:
         """Connect with an SQLite DB at the given ``path`` and return an instantiated :py:class:`SQLiteResponseCache`"""
         path = cls._get_sqlite_path(str(path))
         if dirname(path):
             os.makedirs(dirname(path), exist_ok=True)
 
-        async with aiosqlite.connect(database=path) as connection:
-            yield cls(cache_name=path, connection=connection, **cls._clean_kwargs(kwargs))
+        connection = aiosqlite.connect(database=path)
+        return cls(cache_name=path, connection=connection, **cls._clean_kwargs(kwargs))
 
     @classmethod
-    @contextlib.asynccontextmanager
-    async def connect_with_in_memory_db(cls, **kwargs) -> Self:
+    def connect_with_in_memory_db(cls, **kwargs) -> Self:
         """Connect with an in-memory SQLite DB and return an instantiated :py:class:`SQLiteResponseCache`"""
-        async with aiosqlite.connect(database="file::memory:?cache=shared", uri=True) as connection:
-            yield cls(cache_name="__IN_MEMORY__", connection=connection, **cls._clean_kwargs(kwargs))
+        connection = aiosqlite.connect(database="file::memory:?cache=shared", uri=True)
+        return cls(cache_name="__IN_MEMORY__", connection=connection, **cls._clean_kwargs(kwargs))
 
     @classmethod
-    @contextlib.asynccontextmanager
-    async def connect_with_temp_db(cls, name: str = f"{PROGRAM_NAME.lower()}_db.tmp", **kwargs) -> Self:
+    def connect_with_temp_db(cls, name: str = f"{PROGRAM_NAME.lower()}_db.tmp", **kwargs) -> Self:
         """Connect with a temporary SQLite DB and return an instantiated :py:class:`SQLiteResponseCache`"""
         path = cls._get_sqlite_path(join(gettempdir(), name))
 
-        async with aiosqlite.connect(database=path) as connection:
-            yield cls(cache_name=name, connection=connection, **cls._clean_kwargs(kwargs))
+        connection = aiosqlite.connect(database=path)
+        return cls(cache_name=name, connection=connection, **cls._clean_kwargs(kwargs))
 
     def __init__(
             self,

@@ -8,9 +8,12 @@ from collections.abc import Iterable
 from copy import deepcopy
 from urllib.parse import urlparse
 
+from aiohttp.typedefs import StrOrURL
+
 from musify import PROGRAM_NAME
 from musify.api.authorise import APIAuthoriser
 from musify.api.cache.backend.base import ResponseCache, ResponseRepository
+from musify.api.cache.session import CachedSession
 from musify.api.exception import APIError
 from musify.libraries.remote.spotify.api.cache import SpotifyRequestSettings, SpotifyPaginatedRequestSettings
 from musify.libraries.remote.spotify.api.item import SpotifyAPIItems
@@ -114,7 +117,7 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
             "scopes": " ".join(scopes),
             "url": wrangler.url_api
         }
-        auth_kwargs = merge_maps(deepcopy(SPOTIFY_API_AUTH_ARGS), auth_kwargs)
+        auth_kwargs = merge_maps(deepcopy(SPOTIFY_API_AUTH_ARGS), auth_kwargs, extend=False, overwrite=True)
         safe_format_map(auth_kwargs, format_map=format_map)
 
         auth_kwargs.pop("name", None)
@@ -122,33 +125,34 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
 
         super().__init__(authoriser=authoriser, wrangler=wrangler, cache=cache)
 
-    def _setup_cache(self, cache: ResponseCache) -> None:
-        if cache is None:
+    async def _setup_cache(self) -> None:
+        if not isinstance(self.handler.session, CachedSession):
             return
 
+        cache = self.handler.session.cache
         cache.repository_getter = self._get_cache_repository
 
-        cache.create_repository(SpotifyRequestSettings(name="tracks"))
-        cache.create_repository(SpotifyRequestSettings(name="audio_features"))
-        cache.create_repository(SpotifyRequestSettings(name="audio_analysis"))
+        await cache.create_repository(SpotifyRequestSettings(name="tracks"))
+        await cache.create_repository(SpotifyRequestSettings(name="audio_features"))
+        await cache.create_repository(SpotifyRequestSettings(name="audio_analysis"))
 
-        cache.create_repository(SpotifyRequestSettings(name="albums"))
-        cache.create_repository(SpotifyPaginatedRequestSettings(name="album_tracks"))
+        await cache.create_repository(SpotifyRequestSettings(name="albums"))
+        await cache.create_repository(SpotifyPaginatedRequestSettings(name="album_tracks"))
 
-        cache.create_repository(SpotifyRequestSettings(name="artists"))
-        cache.create_repository(SpotifyPaginatedRequestSettings(name="artist_albums"))
+        await cache.create_repository(SpotifyRequestSettings(name="artists"))
+        await cache.create_repository(SpotifyPaginatedRequestSettings(name="artist_albums"))
 
-        cache.create_repository(SpotifyRequestSettings(name="shows"))
-        cache.create_repository(SpotifyRequestSettings(name="episodes"))
-        cache.create_repository(SpotifyPaginatedRequestSettings(name="show_episodes"))
+        await cache.create_repository(SpotifyRequestSettings(name="shows"))
+        await cache.create_repository(SpotifyRequestSettings(name="episodes"))
+        await cache.create_repository(SpotifyPaginatedRequestSettings(name="show_episodes"))
 
-        cache.create_repository(SpotifyRequestSettings(name="audiobooks"))
-        cache.create_repository(SpotifyRequestSettings(name="chapters"))
-        cache.create_repository(SpotifyPaginatedRequestSettings(name="audiobook_chapters"))
+        await cache.create_repository(SpotifyRequestSettings(name="audiobooks"))
+        await cache.create_repository(SpotifyRequestSettings(name="chapters"))
+        await cache.create_repository(SpotifyPaginatedRequestSettings(name="audiobook_chapters"))
 
     @staticmethod
-    def _get_cache_repository(cache: ResponseCache, url: str) -> ResponseRepository | None:
-        path = urlparse(url).path
+    def _get_cache_repository(cache: ResponseCache, url: StrOrURL) -> ResponseRepository | None:
+        path = urlparse(url).path if isinstance(url, str) else url.path
         path_split = [part.replace("-", "_") for part in path.split("/")[2:]]
 
         if len(path_split) < 3:

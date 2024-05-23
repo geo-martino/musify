@@ -1,4 +1,3 @@
-import re
 from collections.abc import Iterable
 from copy import deepcopy
 from random import randrange
@@ -224,9 +223,9 @@ class TestSpotifyArtist(SpotifyCollectionLoaderTester):
             response_valid, api=api, items=load_items, extend_albums=True, extend_tracks=False, extend_features=False
         )
 
-        assert not api_mock.request_history
+        api_mock.assert_not_called()
 
-    def test_load_with_some_items(
+    async def test_load_with_some_items(
             self,
             response_valid: dict[str, Any],
             item_key: str,
@@ -240,27 +239,27 @@ class TestSpotifyArtist(SpotifyCollectionLoaderTester):
             response_valid, api=api, items=load_items, extend_albums=True, extend_tracks=True, extend_features=True
         )
 
-        self.assert_load_with_items_requests(
+        await self.assert_load_with_items_requests(
             response=response_valid, result=result, items=load_items, key=item_key, api_mock=api_mock
         )
-        self.assert_load_with_items_extended(
+        await self.assert_load_with_items_extended(
             response=response_valid, result=result, items=load_items, kind=kind, key=item_key, api_mock=api_mock
         )
 
         # requests for extension data
         expected = api_mock.calculate_pages_from_response(response_valid, item_key=item_key)
-        assert len(api_mock.get_requests(re.compile(f"{result.url}/{item_key}"))) == expected
+        assert len(await api_mock.get_requests(url=f"{result.url}/{item_key}")) == expected
 
         for album in result.response[item_key][api.items_key]:
             url = album["tracks"]["href"].split("?")[0]
             expected = api_mock.calculate_pages_from_response(album)
-            assert len(api_mock.get_requests(re.compile(url))) == expected
+            assert len(await api_mock.get_requests(url=url)) == expected
 
         assert result.tracks
         expected_features = api_mock.calculate_pages(limit=response_valid[item_key]["limit"], total=len(result.tracks))
-        assert len(api_mock.get_requests(re.compile(f"{api.url}/audio-features"))) == expected_features
+        assert len(await api_mock.get_requests(url=f"{api.url}/audio-features")) == expected_features
 
-    def test_load_with_some_items_and_no_extension(
+    async def test_load_with_some_items_and_no_extension(
             self,
             response_valid: dict[str, Any],
             item_kind: RemoteObjectType,
@@ -270,18 +269,18 @@ class TestSpotifyArtist(SpotifyCollectionLoaderTester):
             api_mock: SpotifyMock
     ):
         api.extend_items(response_valid, kind=RemoteObjectType.ARTIST, key=item_kind)
-        api_mock.reset_mock()  # reset for new requests checks to work correctly
+        api_mock.reset()  # reset for new requests checks to work correctly
 
         assert len(response_valid[item_key][api.items_key]) == response_valid[item_key]["total"]
-        assert not api_mock.get_requests(response_valid[item_key]["href"])
+        assert not await api_mock.get_requests(url=response_valid[item_key]["href"])
 
         result: SpotifyArtist = SpotifyArtist.load(response_valid, api=api, items=load_items, extend_albums=True)
 
-        self.assert_load_with_items_requests(
+        await self.assert_load_with_items_requests(
             response=response_valid, result=result, items=load_items, key=item_key, api_mock=api_mock
         )
 
         # requests for extension data
-        assert not api_mock.get_requests(re.compile(f"{result.url}/{item_key}"))
-        assert not api_mock.get_requests(re.compile(f"{api.url}/audio-features"))
-        assert not api_mock.get_requests(re.compile(f"{api.url}/artists"))
+        assert not await api_mock.get_requests(url=f"{result.url}/{item_key}")
+        assert not await api_mock.get_requests(url=f"{api.url}/audio-features")
+        assert not await api_mock.get_requests(url=f"{api.url}/artists")

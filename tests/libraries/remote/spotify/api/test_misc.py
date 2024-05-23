@@ -1,6 +1,6 @@
 from copy import deepcopy
 from typing import Any
-from urllib.parse import parse_qs
+from urllib.parse import parse_qsl, unquote
 
 import pytest
 
@@ -18,7 +18,7 @@ class TestSpotifyAPIMisc:
         ("query", {"query": "valid query", "kind": ObjectType.TRACK}, 1, 50),
         ("get_user_items", {"kind": ObjectType.PLAYLIST}, 1, 50)
     ], ids=idfn)
-    def test_limit_param_limited(
+    async def test_limit_param_limited(
             self,
             method_name: str,
             kwargs: dict[str, Any],
@@ -29,22 +29,22 @@ class TestSpotifyAPIMisc:
     ):
         # too small
         getattr(api, method_name)(limit=floor - 20, **kwargs)
-        params = parse_qs(api_mock.last_request.query)
-        assert "limit" in params
-        assert int(params["limit"][0]) == floor
+        url, _, _ = next(reversed(await api_mock.get_requests()))
+        assert "limit" in url.query
+        assert int(url.query["limit"]) == floor
 
         # good value
         limit = floor + (ceil // 2)
         getattr(api, method_name)(limit=limit, **kwargs)
-        params = parse_qs(api_mock.last_request.query)
-        assert "limit" in params
-        assert int(params["limit"][0]) == limit
+        url, _, _ = next(reversed(await api_mock.get_requests()))
+        assert "limit" in url.query
+        assert int(url.query["limit"]) == limit
 
         # too big
         getattr(api, method_name)(limit=ceil + 100, **kwargs)
-        params = parse_qs(api_mock.last_request.query)
-        assert "limit" in params
-        assert int(params["limit"][0]) == ceil
+        url, _, _ = next(reversed(await api_mock.get_requests()))
+        assert "limit" in url.query
+        assert int(url.query["limit"]) == ceil
 
     ###########################################################################
     ## /me + /search endpoints
@@ -72,7 +72,7 @@ class TestSpotifyAPIMisc:
         (ObjectType.EPISODE, "incredible episode", 25),
         (ObjectType.AUDIOBOOK, "i love this audiobook", 6),
     ], ids=idfn)
-    def test_query(
+    async def test_query(
             self,
             kind: ObjectType,
             query: str,
@@ -87,12 +87,10 @@ class TestSpotifyAPIMisc:
         for result in results:
             assert result["type"] == kind.name.lower()
 
-        request = api_mock.get_requests(url=f"{api.url}/search", params={"q": query})[0]
-        params = parse_qs(request.query)
-
-        assert params["q"][0] == query
-        assert int(params["limit"][0]) == limit
-        assert params["type"][0] == kind.name.lower()
+        url, _, _ = next(iter(await api_mock.get_requests(url=f"{api.url}/search", params={"q": query})))
+        assert dict(parse_qsl(url.raw_query_string)) == query
+        assert int(url.query["limit"]) == limit
+        assert unquote(url.query["type"]) == kind.name.lower()
 
     ###########################################################################
     ## Utilities
@@ -111,7 +109,7 @@ class TestSpotifyAPIMisc:
 
         # printed in blocks
         blocks = [block for block in stdout.strip().split("\n\n") if SpotifyDataWrangler.url_ext in block]
-        assert len(blocks) == len(api_mock.request_history)
+        assert len(blocks) == api_mock.total_requests
 
         # lines printed = total tracks + 1 extra for title
         lines = [line for line in stdout.strip().split("\n") if SpotifyDataWrangler.url_ext in line]
