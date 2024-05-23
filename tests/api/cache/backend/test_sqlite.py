@@ -7,7 +7,6 @@ from pathlib import Path
 from random import randrange
 from tempfile import gettempdir
 from typing import Any
-from urllib.parse import urlparse
 
 import aiosqlite
 import pytest
@@ -184,9 +183,9 @@ class TestSQLiteCache(SQLiteTester, ResponseCacheTester):
 
     @staticmethod
     def get_repository_from_url(cache: SQLiteCache, url: str | URL) -> SQLiteCache | None:
+        url = URL(url)
         for name, repository in cache.items():
-            path = url.path if isinstance(url, URL) else urlparse(url).path
-            if name == path.split("/")[-2]:
+            if name == url.path.split("/")[-2]:
                 return repository
 
     @staticmethod

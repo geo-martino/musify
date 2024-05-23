@@ -3,7 +3,9 @@ import pytest
 from musify.api.cache.backend.base import ResponseCache, PaginatedRequestSettings
 from musify.api.cache.backend.sqlite import SQLiteCache
 from musify.api.cache.session import CachedSession
+from musify.api.exception import APIError
 from musify.libraries.remote.spotify.api import SpotifyAPI
+from tests.libraries.remote.spotify.api.mock import SpotifyMock
 from tests.libraries.remote.spotify.utils import random_id
 from tests.utils import random_str
 
@@ -39,7 +41,22 @@ class TestSpotifyAPI:
         assert isinstance(api.handler.session, CachedSession)
         assert api.handler.session.cache.cache_name == cache.cache_name
 
-    async def test_cache_setup(self, cache: ResponseCache):
+    async def test_context_management(self, cache: ResponseCache, api_mock: SpotifyMock):
+        api_not_entered = SpotifyAPI(
+            cache=cache,
+            token={"access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"},
+            test_args=None,
+            test_expiry=0,
+            test_condition=None,
+        )
+
+        with pytest.raises(APIError):
+            assert api_not_entered.user_id
+
+        async with api_not_entered as api:
+            assert api.user_id == api_mock.user_id
+
+    async def test_cache_setup(self, cache: ResponseCache, api_mock: SpotifyMock):
         async with SpotifyAPI(
                 cache=cache,
                 token={"access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"},
@@ -65,7 +82,7 @@ class TestSpotifyAPI:
             assert all(isinstance(cache[name].settings, PaginatedRequestSettings) for name in expected_names_paginated)
 
     # noinspection PyTestUnpassedFixture
-    async def test_cache_repository_getter(self, cache: ResponseCache):
+    async def test_cache_repository_getter(self, cache: ResponseCache, api_mock: SpotifyMock):
         async with SpotifyAPI(
                 cache=cache,
                 token={"access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"},

@@ -3,6 +3,8 @@ from random import randrange, sample
 from typing import Any
 
 import pytest
+from aioresponses.core import RequestCall
+from yarl import URL
 
 from musify import PROGRAM_NAME
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
@@ -33,6 +35,17 @@ class TestSpotifyAPIPlaylists:
             deepcopy(pl) for pl in api_mock.user_playlists
             if names.count(pl["name"]) == 1 and len(pl["name"]) != RemoteIDType.ID.value
         )
+
+    @staticmethod
+    def _get_payload_from_request(request: RequestCall) -> dict[str, Any] | None:
+        return request.kwargs.get("body", request.kwargs.get("json"))
+
+    @classmethod
+    async def _get_payloads_from_url_base(cls, url: str | URL, api_mock: SpotifyMock) -> list[dict[str, Any]]:
+        return [
+            cls._get_payload_from_request(req) for _, req, _ in await api_mock.get_requests(url=url)
+            if cls._get_payload_from_request(req)
+        ]
 
     ###########################################################################
     ## Basic functionality
@@ -95,7 +108,7 @@ class TestSpotifyAPIPlaylists:
         requests = await api_mock.get_requests(url=playlist["href"] + "/tracks")
 
         for i, (_, request, _) in enumerate(requests, 1):
-            payload = request.kwargs["body"]
+            payload = self._get_payload_from_request(request)
             count = len(payload["uris"])
             assert count >= 1
             assert count <= 100
@@ -115,7 +128,7 @@ class TestSpotifyAPIPlaylists:
 
         uris = []
         for _, request, _ in await api_mock.get_requests(url=playlist["href"] + "/tracks"):
-            payload = request.kwargs.get("body", {})
+            payload = self._get_payload_from_request(request)
             if "uris" in payload:
                 uris.extend(payload["uris"])
         assert len(uris) == len(id_list)
@@ -147,8 +160,8 @@ class TestSpotifyAPIPlaylists:
 
         uris = []
         for _, request, _ in await api_mock.get_requests(url=playlist["href"] + "/tracks"):
-            payload = request.kwargs.get("body", {})
-            if "uris" in payload:
+            payload = self._get_payload_from_request(request)
+            if payload and "uris" in payload:
                 uris.extend(payload["uris"])
         assert len(uris) == len(id_list_new)
 
@@ -198,10 +211,7 @@ class TestSpotifyAPIPlaylists:
         await api.clear_from_playlist(playlist=playlist["href"], items=id_list, limit=valid_limit)
         await api.clear_from_playlist(playlist=playlist["href"], items=id_list, limit=200)
 
-        requests = [
-            req.kwargs["body"] for _, req, _ in await api_mock.get_requests(url=playlist["href"] + "/tracks")
-            if req.kwargs.get("body")
-        ]
+        requests = await self._get_payloads_from_url_base(url=playlist["href"] + "/tracks", api_mock=api_mock)
         for i, payload in enumerate(requests, 1):
             count = len(payload["tracks"])
             assert count >= 1
@@ -220,10 +230,7 @@ class TestSpotifyAPIPlaylists:
         result = await api.clear_from_playlist(playlist=playlist["uri"], items=id_list, limit=limit)
         assert result == len(id_list)
 
-        requests = [
-            req.kwargs["body"] for _, req, _ in await api_mock.get_requests(url=playlist["href"] + "/tracks")
-            if req.kwargs.get("body")
-        ]
+        requests = await self._get_payloads_from_url_base(url=playlist["href"] + "/tracks", api_mock=api_mock)
         assert all("tracks" in body for body in requests)
         assert len([uri["uri"] for req in requests for uri in req["tracks"]]) == len(id_list)
 
@@ -243,9 +250,6 @@ class TestSpotifyAPIPlaylists:
         result = await api.clear_from_playlist(playlist=playlist, limit=limit)
         assert result == total
 
-        requests = [
-            req.kwargs["body"] for _, req, _ in await api_mock.get_requests(url=playlist["href"] + "/tracks")
-            if req.kwargs.get("body")
-        ]
+        requests = await self._get_payloads_from_url_base(url=playlist["href"] + "/tracks", api_mock=api_mock)
         assert all("tracks" in body for body in requests)
         assert len([uri["uri"] for body in requests for uri in body["tracks"]]) == total

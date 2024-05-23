@@ -6,7 +6,6 @@ Also includes the default arguments to be used when requesting authorisation fro
 import base64
 from collections.abc import Iterable
 from copy import deepcopy
-from urllib.parse import urlparse
 
 from yarl import URL
 
@@ -85,20 +84,20 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
     def user_id(self) -> str | None:
         """ID of the currently authenticated user"""
         if not self.user_data:
-            try:
-                self.user_data = self.get_self()
-            except APIError:
-                return None
+            raise APIError(
+                "User data not set. Either set explicitly or enter the "
+                f"{self.__class__.__name__} context to set automatically."
+            )
         return self.user_data["id"]
 
     @property
     def user_name(self) -> str | None:
         """Name of the currently authenticated user"""
         if not self.user_data:
-            try:
-                self.user_data = self.get_self()
-            except APIError:
-                return None
+            raise APIError(
+                "User data not set. Either set explicitly or enter the "
+                f"{self.__class__.__name__} context to set automatically."
+            )
         return self.user_data["display_name"]
 
     def __init__(
@@ -152,7 +151,7 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
 
     @staticmethod
     def _get_cache_repository(cache: ResponseCache, url: str | URL) -> ResponseRepository | None:
-        path = urlparse(url).path if isinstance(url, str) else url.path
+        path = URL(url).path
         path_split = [part.replace("-", "_") for part in path.split("/")[2:]]
 
         if len(path_split) < 3:

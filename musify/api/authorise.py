@@ -8,10 +8,10 @@ import socket
 from collections.abc import Callable, Mapping, Sequence, MutableMapping
 from datetime import datetime
 from typing import Any
-from urllib.parse import urlparse, parse_qsl
 from webbrowser import open as webopen
 
 import aiohttp
+from yarl import URL
 
 from musify import PROGRAM_NAME
 from musify.api.exception import APIError
@@ -312,7 +312,7 @@ class APIAuthoriser:
 
         # format out the access code from the returned response
         path_raw = next(line for line in request.recv(8196).decode("utf-8").split('\n') if line.startswith("GET"))
-        code = dict(parse_qsl(urlparse(path_raw).query))["code"]
+        code = URL(path_raw).query["code"]
 
         if "data" not in self.auth_args:
             self.auth_args["data"] = {}

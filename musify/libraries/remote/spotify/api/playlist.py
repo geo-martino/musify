@@ -137,8 +137,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, ABC):
 
         limit = limit_value(limit, floor=1, ceil=100)
         for uris in batched(uri_list, limit):  # add tracks in batches
-            log = [f"Adding {len(uris):>6} items"]
-            await self.handler.post(url, json={"uris": uris}, message=log)
+            await self.handler.post(url, json={"uris": uris}, log_message=f"Adding {len(uris):>6} items")
 
         self.handler.log("DONE", url, message=f"Added {len(uri_list):>6} items to playlist: {url}")
         return len(uri_list)
@@ -210,8 +209,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, ABC):
         limit = limit_value(limit, floor=1, ceil=100)
         for uris in batched(uri_list, limit):  # clear in batches
             body = {"tracks": [{"uri": uri} for uri in uris]}
-            log = [f"Clearing {len(uri_list):>3} tracks"]
-            await self.handler.delete(url, json=body, log_message=log)
+            await self.handler.delete(url, json=body, log_message=f"Clearing {len(uri_list):>3} tracks")
 
         self.handler.log("DONE", url, message=f"Cleared {len(uri_list):>3} tracks")
         return len(uri_list)

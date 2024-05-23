@@ -4,7 +4,6 @@ from collections.abc import MutableMapping, Callable, Collection, Hashable, Asyn
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Self, AsyncContextManager
-from urllib.parse import parse_qsl, urlparse
 
 from dateutil.relativedelta import relativedelta
 from aiohttp import RequestInfo, ClientRequest, ClientResponse
@@ -28,10 +27,6 @@ class RequestSettings(ABC):
     name: str
 
     @staticmethod
-    def _get_params(url: str | URL) -> dict[str, Any]:
-        return url.query if isinstance(url, URL) else dict(parse_qsl(urlparse(str(url)).query))
-
-    @staticmethod
     @abstractmethod
     def get_name(value: Any) -> str | None:
         """Extracts the name to assign to a cache entry in the repository from a given ``value``."""
@@ -50,15 +45,15 @@ class PaginatedRequestSettings(RequestSettings, ABC):
     to be used to configure a repository in the cache backend.
     """
 
-    @classmethod
+    @staticmethod
     @abstractmethod
-    def get_offset(cls, url: str | URL) -> int:
+    def get_offset(url: str | URL) -> int:
         """Extracts the offset for a paginated request from the given ``url``."""
         raise NotImplementedError
 
-    @classmethod
+    @staticmethod
     @abstractmethod
-    def get_limit(cls, url: str | URL) -> int:
+    def get_limit(url: str | URL) -> int:
         """Extracts the limit for a paginated request from the given ``url``."""
         raise NotImplementedError
 

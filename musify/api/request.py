@@ -138,12 +138,16 @@ class RequestHandler(AsyncContextManager):
             self,
             method: str,
             url: str | URL,
-            log_message: list[str] = None,
+            log_message: str | list[str] = None,
             *args,
             **kwargs
     ) -> ClientResponse | None:
         """Handle logging a request, send the request, and return the response"""
-        log_message = log_message if log_message is not None else []
+        if isinstance(log_message, str):
+            log_message = [log_message]
+        elif log_message is None:
+            log_message = []
+
         if isinstance(self.session, CachedSession):
             log_message.append("Cached Request")
         self.log(method=method, url=url, message=log_message, *args, **kwargs)
@@ -171,10 +175,12 @@ class RequestHandler(AsyncContextManager):
             log.extend(f"{k}: {unquote(v):<4}" for k, v in sorted(url.query.items()))
         if kwargs.get("params"):
             log.extend(f"{k}: {v:<4}" for k, v in sorted(kwargs.pop("params").items()))
+        if kwargs.get("json"):
+            log.extend(f"{k}: {str(v):<4}" for k, v in sorted(kwargs.pop("json").items()))
         if len(args) > 0:
             log.append(f"Args: ({', '.join(args)})")
         if len(kwargs) > 0:
-            log.extend(f"{k.title()}: {v:<4}" for k, v in kwargs.items() if v)
+            log.extend(f"{k.title()}: {str(v):<4}" for k, v in kwargs.items() if v)
         if message:
             log.append(message) if isinstance(message, str) else log.extend(message)
 

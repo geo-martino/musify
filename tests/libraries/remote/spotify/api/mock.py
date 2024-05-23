@@ -4,6 +4,7 @@ from copy import deepcopy
 from datetime import datetime
 from random import choice, randrange, sample, random, shuffle
 from typing import Any
+from urllib.parse import unquote
 from uuid import uuid4
 
 from aioresponses import CallbackResult
@@ -230,7 +231,11 @@ class SpotifyMock(RemoteMock):
         url_api = SpotifyDataWrangler.url_api
 
         self.setup_search_mock()
-        self.get(url=f"{url_api}/me", callback=lambda *_, **__: deepcopy(self.user), repeat=True)
+        self.get(
+            url=f"{url_api}/me",
+            callback=lambda *_, **__: CallbackResult(method="GET", payload=deepcopy(self.user)),
+            repeat=True
+        )
 
         # setup responses as needed for each item type
         self.setup_items_mock(kind=ObjectType.TRACK, id_map={item["id"]: item for item in self.tracks})
@@ -294,13 +299,13 @@ class SpotifyMock(RemoteMock):
         """Setup requests mock for getting responses from the ``/search`` endpoint"""
         def callback(url: URL, params: dict[str, Any], **_) -> CallbackResult:
             """Dynamically generate expected batched response from a request with an 'ids' param"""
-            if params is None:
-                params = url.query
+            params = params if params is not None else {}
+            params |= url.query
 
             limit = int(params["limit"])
             offset = int(params.get("offset", 0))
-            query = params["q"]
-            kinds = params["type"].split(",")
+            query = unquote(params["q"])
+            kinds = unquote(params["type"]).split(",")
 
             count = 0
             total = 0
@@ -344,12 +349,11 @@ class SpotifyMock(RemoteMock):
         """
         def callback(url: URL, params: dict[str, Any] = None, **_) -> CallbackResult:
             """Dynamically generate expected batched response from a request with an 'ids' param"""
-            if params is None:
-                params = url.query
-
+            params = params if params is not None else {}
+            params |= url.query
             req_kind = url.path.split("/")[-1].replace("-", "_")
 
-            id_list = params["ids"].split(",")
+            id_list = unquote(params["ids"]).split(",")
             payload = {req_kind: [deepcopy(id_map[i]) for i in id_list]}
             return CallbackResult(method="GET", payload=payload)
 
@@ -365,9 +369,8 @@ class SpotifyMock(RemoteMock):
         """Setup requests mock for returning preset responses from the given ``items`` in an 'items block' format."""
         def callback(url: URL, params: dict[str, Any] = None, **__) -> CallbackResult:
             """Dynamically generate expected response for an items block from the given ``generator``"""
-            if params is None:
-                params = url.query
-
+            params = params if params is not None else {}
+            params |= url.query
             limit = int(params["limit"])
             offset = int(params.get("offset", 0))
 
@@ -375,7 +378,7 @@ class SpotifyMock(RemoteMock):
             available_total = total
             if re.match(r".*/artists/\w+/albums$", url.path) and "include_groups" in params:
                 # special case for artist's albums
-                types = params["include_groups"].split(",")
+                types = unquote(params["include_groups"]).split(",")
                 available = [i for i in items if i["album_type"] in types]
                 available_total = len(available)
 

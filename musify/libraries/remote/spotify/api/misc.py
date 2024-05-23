@@ -35,7 +35,7 @@ class SpotifyAPIMisc(SpotifyAPIBase, ABC):
         url = self.wrangler.convert(id_, kind=kind, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
         limit = limit_value(limit, floor=1, ceil=50)
 
-        name = await self.handler.get(url, params={"limit": limit})["name"]
+        name = (await self.handler.get(url, params={"limit": limit}))["name"]
         response = await self.handler.get(f"{url}/{key}s", params={"limit": limit})
 
         i = 0

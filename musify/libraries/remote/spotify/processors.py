@@ -3,7 +3,8 @@ Convert and validate Spotify ID and item types.
 """
 from collections.abc import Mapping
 from typing import Any
-from urllib.parse import urlparse
+
+from yarl import URL
 
 from musify.exception import MusifyEnumError
 from musify.libraries.core.collection import MusifyCollection
@@ -80,7 +81,7 @@ class SpotifyDataWrangler(RemoteDataWrangler):
 
         if value.startswith(cls.url_api) or value.startswith(cls.url_ext):  # open/API URL
             value = value.removeprefix(cls.url_api if value.startswith(cls.url_api) else cls.url_ext)
-            url_path = urlparse(value).path.split("/")
+            url_path = URL(value).path.split("/")
             for chunk in url_path:
                 try:
                     return RemoteObjectType.from_name(chunk.casefold().rstrip('s'))[0]
@@ -161,7 +162,7 @@ class SpotifyDataWrangler(RemoteDataWrangler):
 
     @classmethod
     def _get_id_from_url(cls, value: str, kind: RemoteObjectType | None = None) -> tuple[RemoteObjectType, str]:
-        url_path = urlparse(value).path.split("/")
+        url_path = URL(value).path.split("/")
         for chunk in url_path:
             try:
                 kind = RemoteObjectType.from_name(chunk.rstrip('s'))[0]

@@ -1,6 +1,5 @@
 import json
 from typing import Any
-from urllib.parse import urlparse
 
 from aiohttp import ClientResponse
 from yarl import URL
@@ -24,17 +23,16 @@ class MockRequestSettings(RequestSettings):
     def get_id(url: str | URL) -> str | None:
         if str(url).endswith(".com"):
             return
-        path = url.path if isinstance(url, URL) else urlparse(url).path
-        return path.split("/")[-1]
+        return URL(url).path.split("/")[-1]
 
 
 class MockPaginatedRequestSettings(MockRequestSettings, PaginatedRequestSettings):
-    @classmethod
-    def get_offset(cls, url: str | URL) -> int:
-        params = cls._get_params(url)
+    @staticmethod
+    def get_offset(url: str | URL) -> int:
+        params = URL(url).query
         return int(params.get("offset", 0))
 
-    @classmethod
-    def get_limit(cls, url: str | URL) -> int:
-        params = cls._get_params(url)
+    @staticmethod
+    def get_limit(url: str | URL) -> int:
+        params = URL(url).query
         return int(params.get("limit", 0))

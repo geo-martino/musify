@@ -6,11 +6,12 @@ from datetime import datetime, timedelta
 from os.path import join
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse, parse_qsl, unquote
+from urllib.parse import unquote
 
 import pytest
 from aioresponses import aioresponses
 from pytest_mock import MockerFixture
+from yarl import URL
 
 from musify import MODULE_ROOT
 from musify.api.authorise import APIAuthoriser
@@ -107,7 +108,7 @@ class TestAPIAuthoriser:
         def check_url(url: str):
             """Check the URL given to the webopen call"""
             assert url.startswith(user_url)
-            assert unquote(dict(parse_qsl(urlparse(url).query))["redirect_uri"]) == redirect_uri
+            assert unquote(URL(url).query["redirect_uri"]) == redirect_uri
 
         socket_listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 

@@ -2,7 +2,6 @@ import re
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from typing import Any, ContextManager
-from urllib.parse import parse_qsl
 
 from aiohttp import ClientResponse
 from aioresponses import aioresponses
@@ -131,8 +130,8 @@ class RemoteMock(aioresponses, ContextManager, ABC):
     def _get_match_from_params(request: RequestCall, params: dict[str, Any] | None = None) -> bool:
         match = params is None
         if not match and (request_params := request.kwargs.get("params")):
-            for k, v in parse_qsl(request_params):
-                if k in params and str(params[k]) != v[0]:
+            for k, v in request_params.items():
+                if k in params and str(params[k]) != v:
                     break
                 match = True
 
@@ -147,9 +146,9 @@ class RemoteMock(aioresponses, ContextManager, ABC):
             if response is None:
                 return match
 
-            request_body = await response.json()
-            for k, v in request_body.items():
-                if k in response and str(request_body[k]) != str(v):
+            payload = await response.json()
+            for k, v in payload.items():
+                if k in payload and str(payload[k]) != str(v):
                     break
                 match = True
 

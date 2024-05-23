@@ -301,7 +301,14 @@ def spotify_wrangler():
 
 
 @pytest.fixture(scope="session")
-async def spotify_api() -> SpotifyAPI:
+def spotify_mock() -> SpotifyMock:
+    """Yield an authorised and configured :py:class:`SpotifyMock` object"""
+    with SpotifyMock() as m:
+        yield m
+
+
+@pytest.fixture(scope="session")
+async def spotify_api(spotify_mock: SpotifyMock) -> SpotifyAPI:
     """Yield an authorised :py:class:`SpotifyAPI` object"""
     token = {"access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"}
     # disable any token tests by settings test_* kwargs as appropriate
@@ -310,10 +317,3 @@ async def spotify_api() -> SpotifyAPI:
 
     async with api as a:
         yield a
-
-
-@pytest.fixture(scope="session")
-def spotify_mock() -> SpotifyMock:
-    """Yield an authorised and configured :py:class:`SpotifyMock` object"""
-    with SpotifyMock() as m:
-        yield m

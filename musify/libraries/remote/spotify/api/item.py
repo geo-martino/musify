@@ -6,7 +6,8 @@ from abc import ABC
 from collections.abc import Collection, Mapping, MutableMapping
 from itertools import batched
 from typing import Any
-from urllib.parse import parse_qsl, urlparse
+
+from yarl import URL
 
 from musify.api.cache.session import CachedSession
 from musify.api.exception import APIError, CacheError
@@ -137,7 +138,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         )
 
         results: list[dict[str, Any]] = []
-        log = [f"{kind.title()}:{len(ids_not_cached):>5}"]
+        log = f"{kind.title()}: {len(ids_not_cached):>5}"
         for id_ in bar:
             response = await self.handler.request(
                 method=method, url=f"{url}/{id_}", params=params, persist=False, log_message=log
@@ -202,7 +203,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         for idx in bar:  # get responses in batches
             id_chunk = id_chunks[idx]
             params_chunk = params | {"ids": ",".join(id_chunk)}
-            log = [f"{kind.title() + ':':<11} {len(results) + len(id_chunk):>6}/{len(ids_not_cached):<6}"]
+            log = f"{kind.title() + ':':<11} {len(results) + len(id_chunk):>6}/{len(ids_not_cached):<6}"
 
             response = await self.handler.request(
                 method=method, url=url, params=params_chunk, persist=False, log_message=log
@@ -272,7 +273,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         if "previous" not in response:
             response["previous"] = None
         if "limit" not in response:
-            response["limit"] = int(dict(parse_qsl(urlparse(response["next"]).query)).get("limit", 50))
+            response["limit"] = int(URL(response["next"]).query.get("limit", 50))
 
         kind = self._get_key(kind) or self.items_key
         pages = (response["total"] - len(response[self.items_key])) / (response["limit"] or 1)
@@ -287,7 +288,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
 
         while response.get("next"):  # loop through each page
             log_count = min(len(response[self.items_key]) + response["limit"], response["total"])
-            log = [f"{log_count:>6}/{response["total"]:<6} {key or self.items_key}"]
+            log = f"{log_count:>6}/{response["total"]:<6} {key or self.items_key}"
 
             response_next = await self.handler.request(method=method, url=response["next"], log_message=log)
             response_next = response_next.get(key, response_next)
