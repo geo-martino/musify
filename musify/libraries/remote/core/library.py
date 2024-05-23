@@ -126,7 +126,7 @@ class RemoteLibrary[
         self.logger.print()
         self.logger.debug(f"Extend {self.api.source} tracks data: DONE\n")
 
-    def load(self) -> None:
+    async def load(self) -> None:
         """Loads all data from the remote API for this library and log results."""
         self.logger.debug(f"Load {self.api.source} library: START")
         self.logger.info(f"\33[1;95m ->\33[1;97m Loading {self.api.source} library \33[0m")

@@ -162,7 +162,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert f"Showing tracks for playlist: {pl.name}" in stdout  # <URL/URI> entered
 
         pl_pages = api_mock.calculate_pages(limit=20, total=len(pl))
-        assert len(await api_mock.get_requests(method="GET", url=re.compile(pl.url + ".*"))) == pl_pages + 1
+        assert len(await api_mock.get_requests(method="GET", url=re.compile(pl.url))) == pl_pages + 1
 
         assert not checker._skip
         assert not checker._quit
@@ -411,7 +411,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert not checker._remaining
 
         pl_pages = api_mock.calculate_pages_from_response(pl.response)
-        assert len(await api_mock.get_requests(method="GET", url=re.compile(pl.url + ".*"))) == pl_pages
+        assert len(await api_mock.get_requests(method="GET", url=re.compile(pl.url))) == pl_pages
 
     @staticmethod
     def test_match_to_remote_removed(
@@ -535,7 +535,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
 
         # called 2x: 1 initial, 1 after user inputs 'r'
         pl_pages = api_mock.calculate_pages_from_response(pl.response)
-        assert len(await api_mock.get_requests(method="GET", url=re.compile(pl.url + ".*"))) == 2 * pl_pages
+        assert len(await api_mock.get_requests(method="GET", url=re.compile(pl.url))) == 2 * pl_pages
 
         assert checker._final_switched == collection[:5] + remaining[:len(uri_list)]
         assert checker._final_unavailable == remaining[len(uri_list):len(uri_list) + 3]

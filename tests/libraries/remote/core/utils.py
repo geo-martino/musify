@@ -93,10 +93,10 @@ class RemoteMock(aioresponses, ContextManager, ABC):
         for (request_method, request_url), requests in self.requests.items():
             for request in requests:
                 matches = [
-                    self._get_match_from_method(request_method=request_method, method=method),
-                    self._get_match_from_url(request_url=request_url, url=url),
-                    self._get_match_from_params(request=request, params=params),
-                    await self._get_match_from_expected_response(request_url=request_url, response=response),
+                    self._get_match_from_method(actual=request_method, expected=method),
+                    self._get_match_from_url(actual=request_url, expected=url),
+                    self._get_match_from_params(actual=request, expected=params),
+                    await self._get_match_from_expected_response(actual=request_url, expected=response),
                 ]
                 if all(matches):
                     results.append((request_url, request))
@@ -104,51 +104,53 @@ class RemoteMock(aioresponses, ContextManager, ABC):
         return [(url, request, self._get_response_from_url(url=url)) for url, request in results]
 
     @staticmethod
-    def _get_match_from_method(request_method: str, method: str | None = None) -> bool:
-        match = method is None
+    def _get_match_from_method(actual: str, expected: str | None = None) -> bool:
+        match = expected is None
         if not match:
             # noinspection PyProtectedMember
-            match = request_method.upper() == method.upper()
+            match = actual.upper() == expected.upper()
 
         return match
 
     @staticmethod
-    def _get_match_from_url(request_url: str | URL, url: str | URL | re.Pattern[str] | None = None) -> bool:
-        match = url is None
+    def _get_match_from_url(actual: str | URL, expected: str | URL | re.Pattern[str] | None = None) -> bool:
+        match = expected is None
         if not match:
-            request_url = str(request_url).rstrip("/").split("?")[0]
-            if isinstance(url, str):
-                match = request_url == url.split("?")[0]
-            elif isinstance(url, URL):
-                match = request_url == str(url.with_query(None))
-            elif isinstance(url, re.Pattern):
-                match = bool(url.search(request_url))
+            actual = str(actual).rstrip("/").split("?")[0]
+            if isinstance(expected, str):
+                match = actual == expected.split("?")[0]
+            elif isinstance(expected, URL):
+                match = actual == str(expected.with_query(None))
+            elif isinstance(expected, re.Pattern):
+                match = bool(expected.search(actual))
 
         return match
 
     @staticmethod
-    def _get_match_from_params(request: RequestCall, params: dict[str, Any] | None = None) -> bool:
-        match = params is None
-        if not match and (request_params := request.kwargs.get("params")):
+    def _get_match_from_params(actual: RequestCall, expected: dict[str, Any] | None = None) -> bool:
+        match = expected is None
+        if not match and (request_params := actual.kwargs.get("params")):
             for k, v in request_params.items():
-                if k in params and str(params[k]) != v:
+                if k in expected and str(expected[k]) != v:
                     break
                 match = True
 
         return match
 
     async def _get_match_from_expected_response(
-            self, request_url: str | URL, response: dict[str, Any] | None = None
+            self, actual: str | URL, expected: dict[str, Any] | None = None
     ) -> bool:
-        match = response is None
+        match = expected is None
         if not match:
-            response = self._get_response_from_url(url=request_url)
+            response = self._get_response_from_url(url=actual)
+            print(match, actual, response)
             if response is None:
                 return match
 
             payload = await response.json()
+            print(payload, expected)
             for k, v in payload.items():
-                if k in payload and str(payload[k]) != str(v):
+                if k in expected and str(expected[k]) != str(v):
                     break
                 match = True
 

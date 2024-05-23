@@ -76,7 +76,7 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
     ###########################################################################
     @staticmethod
     @abstractmethod
-    def get_load_without_items(
+    async def get_load_without_items(
             loader: SpotifyCollectionLoader,
             response_valid: dict[str, Any],
             api: SpotifyAPI,
@@ -93,7 +93,7 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
             api: SpotifyAPI,
             api_mock: SpotifyMock
     ):
-        result = self.get_load_without_items(
+        result = await self.get_load_without_items(
             loader=collection, response_valid=response_valid, api=api, api_mock=api_mock
         )
 
@@ -111,7 +111,7 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
         assert not await api_mock.get_requests(url=f"{api.url}/audio-analysis")
 
         # input items given, but no key to search on still loads
-        result = collection.load(response_valid, api=api, items=response_valid.pop(item_key), extend_tracks=True)
+        result = await collection.load(response_valid, api=api, items=response_valid.pop(item_key), extend_tracks=True)
 
         assert result.name == response_valid["name"]
         assert result.id == response_valid["id"]

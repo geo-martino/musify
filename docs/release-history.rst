@@ -55,6 +55,7 @@ Changed
   This attribute was only needed by :py:class:`.LocalCollection` branch of child classes.
 * Moved ``logger`` attribute from :py:class:`.Library` to :py:class:`.RemoteLibrary`.
 * Switch some dependencies to be optional for groups of operation: progress bars, images, musicbee, sqlite
+* Replace urllib usages with ``yarl`` package
 
 Fixed
 -----

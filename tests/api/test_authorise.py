@@ -112,7 +112,7 @@ class TestAPIAuthoriser:
 
         socket_listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        requests_mock.post(re.compile(user_url + ".*"))
+        requests_mock.post(re.compile(user_url))
         mocker.patch(f"{MODULE_ROOT}.api.authorise.webopen", new=check_url)
         mocker.patch.object(socket.socket, attribute="accept", return_value=(socket_listener, None))
         mocker.patch.object(socket.socket, attribute="send")

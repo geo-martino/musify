@@ -83,7 +83,7 @@ class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, ABC):
 
     @classmethod
     @abstractmethod
-    def load(
+    async def load(
             cls, value: str | Mapping[str, Any] | RemoteResponse, api: RemoteAPI, *args, **kwargs
     ) -> Self:
         """
@@ -102,7 +102,7 @@ class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def reload(self, *args, **kwargs) -> None:
+    async def reload(self, *args, **kwargs) -> None:
         """
         Reload this object from the API, calling all required endpoints
         to get a complete set of data for this item type.

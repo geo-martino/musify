@@ -47,11 +47,11 @@ class TestSpotifyTrack(MusifyItemTester):
         """
         return deepcopy(next(track for track in api_mock.tracks))
 
-    def test_input_validation(self, response_random: dict[str, Any], api_mock: SpotifyMock):
+    async def test_input_validation(self, response_random: dict[str, Any], api_mock: SpotifyMock):
         with pytest.raises(RemoteObjectTypeError):
             SpotifyTrack(api_mock.generate_artist(properties=False))
         with pytest.raises(APIError):
-            SpotifyTrack(response_random).reload()
+            await SpotifyTrack(response_random).reload()
 
     def test_attributes(self, response_random: dict[str, Any]):
         track = SpotifyTrack(response_random)
@@ -183,7 +183,7 @@ class TestSpotifyTrack(MusifyItemTester):
         track.refresh(skip_checks=True)
         assert len(track.artists) == 1
 
-    def test_reload(self, response_valid: dict[str, Any], api: SpotifyAPI):
+    async def test_reload(self, response_valid: dict[str, Any], api: SpotifyAPI):
         response_valid["album"].pop("name", None)
         response_valid.pop("audio_features", None)
 
@@ -193,7 +193,7 @@ class TestSpotifyTrack(MusifyItemTester):
         assert not track.bpm
 
         track.api = api
-        track.reload(features=True)
+        await track.reload(features=True)
         assert track.album
         if track.response["audio_features"]["key"] > -1:
             assert track.key
@@ -201,8 +201,8 @@ class TestSpotifyTrack(MusifyItemTester):
             assert track.key is None
         assert track.bpm
 
-    def test_load(self, response_valid: dict[str, Any], api: SpotifyAPI):
-        track = SpotifyTrack.load(response_valid["href"], api=api)
+    async def test_load(self, response_valid: dict[str, Any], api: SpotifyAPI):
+        track = await SpotifyTrack.load(response_valid["href"], api=api)
 
         assert track.name == response_valid["name"]
         assert track.id == response_valid["id"]

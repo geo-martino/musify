@@ -78,11 +78,11 @@ class TestSpotifyArtist(SpotifyCollectionLoaderTester):
         )
         return artist | {"albums": items_block}
 
-    def test_input_validation(self, response_random: dict[str, Any], api_mock: SpotifyMock):
+    async def test_input_validation(self, response_random: dict[str, Any], api_mock: SpotifyMock):
         with pytest.raises(RemoteObjectTypeError):
             SpotifyArtist(api_mock.generate_track(artists=False, album=False))
         with pytest.raises(APIError):
-            SpotifyArtist(response_random).reload()
+            await SpotifyArtist(response_random).reload()
 
     def test_attributes(self, response_random: dict[str, Any]):
         artist = SpotifyArtist(response_random)
@@ -131,7 +131,7 @@ class TestSpotifyArtist(SpotifyCollectionLoaderTester):
         artist.refresh(skip_checks=True)
         assert len(artist.albums) == original_album_count // 2
 
-    def test_reload(self, response_valid: dict[str, Any], api: SpotifyAPI):
+    async def test_reload(self, response_valid: dict[str, Any], api: SpotifyAPI):
         genres = response_valid.pop("genres", None)
         response_valid.pop("popularity", None)
         response_valid.pop("followers", None)
@@ -149,7 +149,7 @@ class TestSpotifyArtist(SpotifyCollectionLoaderTester):
         assert not artist.tracks
 
         artist.api = api
-        artist.reload(extend_albums=False, extend_tracks=True)
+        await artist.reload(extend_albums=False, extend_tracks=True)
         if genres:
             assert artist.genres
         assert artist.rating is not None
@@ -158,26 +158,26 @@ class TestSpotifyArtist(SpotifyCollectionLoaderTester):
         assert not artist.artists
         assert not artist.tracks
 
-        artist.reload(extend_albums=True, extend_tracks=False)
+        await artist.reload(extend_albums=True, extend_tracks=False)
         assert {album.id for album in artist._albums} == album_ids
         assert len(artist.artists) == len(artist_names)
         assert set(artist.artists) == artist_names
         assert not artist.tracks
 
-        artist.reload(extend_albums=True, extend_tracks=True)
+        await artist.reload(extend_albums=True, extend_tracks=True)
         assert artist.tracks
 
     ###########################################################################
     ## Load method tests
     ###########################################################################
     @staticmethod
-    def get_load_without_items(
+    async def get_load_without_items(
             loader: SpotifyArtist,
             response_valid: dict[str, Any],
             api: SpotifyAPI,
             api_mock: SpotifyMock
     ):
-        return loader.load(response_valid["href"], api=api, extend_albums=True, extend_tracks=True)
+        return await loader.load(response_valid["href"], api=api, extend_albums=True, extend_tracks=True)
 
     @pytest.fixture
     def load_items(
@@ -215,11 +215,11 @@ class TestSpotifyArtist(SpotifyCollectionLoaderTester):
 
         return items
 
-    def test_load_with_all_items(
+    async def test_load_with_all_items(
             self, response_valid: dict[str, Any], item_key: str, api: SpotifyAPI, api_mock: SpotifyMock
     ):
         load_items = [SpotifyAlbum(response, skip_checks=True) for response in response_valid[item_key][api.items_key]]
-        SpotifyArtist.load(
+        await SpotifyArtist.load(
             response_valid, api=api, items=load_items, extend_albums=True, extend_tracks=False, extend_features=False
         )
 
@@ -235,7 +235,7 @@ class TestSpotifyArtist(SpotifyCollectionLoaderTester):
     ):
         kind = RemoteObjectType.ARTIST
 
-        result: SpotifyArtist = SpotifyArtist.load(
+        result: SpotifyArtist = await SpotifyArtist.load(
             response_valid, api=api, items=load_items, extend_albums=True, extend_tracks=True, extend_features=True
         )
 
@@ -268,13 +268,13 @@ class TestSpotifyArtist(SpotifyCollectionLoaderTester):
             api: SpotifyAPI,
             api_mock: SpotifyMock
     ):
-        api.extend_items(response_valid, kind=RemoteObjectType.ARTIST, key=item_kind)
+        await api.extend_items(response_valid, kind=RemoteObjectType.ARTIST, key=item_kind)
         api_mock.reset()  # reset for new requests checks to work correctly
 
         assert len(response_valid[item_key][api.items_key]) == response_valid[item_key]["total"]
         assert not await api_mock.get_requests(url=response_valid[item_key]["href"])
 
-        result: SpotifyArtist = SpotifyArtist.load(response_valid, api=api, items=load_items, extend_albums=True)
+        result: SpotifyArtist = await SpotifyArtist.load(response_valid, api=api, items=load_items, extend_albums=True)
 
         await self.assert_load_with_items_requests(
             response=response_valid, result=result, items=load_items, key=item_key, api_mock=api_mock

@@ -425,7 +425,7 @@ class SpotifyMock(RemoteMock):
             payload["collaborative"] = json["collaborative"]
             payload["owner"] = self.user_playlists[0]["owner"]
 
-            self.get(url=re.compile(payload["href"] + r"\?"), payload=payload, repeat=True)
+            self.get(url=re.compile(payload["href"]), payload=payload, repeat=True)
             self.post(url=re.compile(payload["href"] + "/tracks"), payload={"snapshot_id": str(uuid4())}, repeat=True)
             self.delete(url=re.compile(payload["href"] + "/tracks"), payload={"snapshot_id": str(uuid4())}, repeat=True)
 
