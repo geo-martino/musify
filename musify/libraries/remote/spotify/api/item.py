@@ -221,6 +221,16 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
     ###########################################################################
     ## GET endpoints
     ###########################################################################
+    @staticmethod
+    def _reformat_user_items_block(response: MutableMapping[str, Any]) -> None:
+        """this usually happens on the items block of a current user's playlist"""
+        if "next" not in response:
+            response["next"] = response["href"]
+        if "previous" not in response:
+            response["previous"] = None
+        if "limit" not in response:
+            response["limit"] = int(URL(response["next"]).query.get("limit", 50))
+
     async def extend_items(
             self,
             response: MutableMapping[str, Any] | RemoteResponse,
@@ -267,13 +277,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
             self.handler.log("SKIP", url, message="Response already extended")
             return response[self.items_key]
 
-        # this usually happens on the items block of a current user's playlist
-        if "next" not in response:
-            response["next"] = response["href"]
-        if "previous" not in response:
-            response["previous"] = None
-        if "limit" not in response:
-            response["limit"] = int(URL(response["next"]).query.get("limit", 50))
+        self._reformat_user_items_block(response)
 
         kind = self._get_key(kind) or self.items_key
         pages = (response["total"] - len(response[self.items_key])) / (response["limit"] or 1)
