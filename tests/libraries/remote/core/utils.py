@@ -143,12 +143,10 @@ class RemoteMock(aioresponses, ContextManager, ABC):
         match = expected is None
         if not match:
             response = self._get_response_from_url(url=actual)
-            print(match, actual, response)
             if response is None:
                 return match
 
             payload = await response.json()
-            print(payload, expected)
             for k, v in payload.items():
                 if k in expected and str(expected[k]) != str(v):
                     break

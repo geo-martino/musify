@@ -54,6 +54,20 @@ def pytest_configure(config: pytest.Config):
     logging.config.dictConfig(log_config)
 
 
+def pytest_collection_modifyitems(items: list[pytest.Function]):
+    """Modifies test items in-place, ordering them based on assigned marks."""
+    marker_name_order = ["slow"]
+
+    def _get_item_order_index(item: pytest.Function) -> int:
+        try:
+            marker_name = next(marker.name for marker in item.own_markers if marker.name in marker_name_order)
+            return marker_name_order.index(marker_name)
+        except (StopIteration, ValueError):
+            return len(marker_name_order)
+
+    items.sort(key=_get_item_order_index)
+
+
 # This is a fork of the pytest-lazy-fixture package
 # Fixes applied for issues with pytest >8.0: https://github.com/TvoroG/pytest-lazy-fixture/issues/65
 # noinspection PyProtectedMember

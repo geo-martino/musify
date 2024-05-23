@@ -86,7 +86,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         found = False
         url, _, _ = next(iter(requests))
         for k, v in url.query.items():
-            if expected == unquote(v[0]).split():
+            if expected == unquote(v).split():
                 found = True
                 break
 
@@ -107,7 +107,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         found = False
         url, _, _ = next(iter(requests))
         for k, v in url.query.items():
-            if expected == v[0].split():
+            if expected == unquote(v).split():
                 found = True
                 break
 
