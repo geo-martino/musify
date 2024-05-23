@@ -102,9 +102,9 @@ class RequestHandler(AsyncContextManager):
         Generic method for handling API requests with back-off on failed requests.
         See :py:func:`request` for more arguments.
 
-        :param method: method for the new :class:`Request` object:
+        :param method: method for the request:
             ``GET``, ``OPTIONS``, ``HEAD``, ``POST``, ``PUT``, ``PATCH``, or ``DELETE``.
-        :param url: URL for the new :class:`Request` object.
+        :param url: URL to call.
         :return: The JSON formatted response or, if JSON formatting not possible, the text response.
         :raise APIError: On any logic breaking error/response.
         """

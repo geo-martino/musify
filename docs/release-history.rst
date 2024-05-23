@@ -41,6 +41,11 @@ Added
   Currently only supports SQLite backend. More backends can be implemented in future if desired.
 * Cache settings for specific `GET` request endpoints on :py:class:`.SpotifyAPI` replacing need
   for per method ``use_cache`` parameter.
+* The following classes should now be run as AsyncContextManagers to function correctly:
+   * :py:class:`.SQLiteRepository` & :py:class:`.SQLiteCache`
+   * :py:class:`.RequestHandler`
+   * :py:class:`.CachedSession`
+   * :py:class:`.RemoteAPI` & :py:class:`.SpotifyAPI`
 
 Changed
 -------
@@ -55,7 +60,12 @@ Changed
   This attribute was only needed by :py:class:`.LocalCollection` branch of child classes.
 * Moved ``logger`` attribute from :py:class:`.Library` to :py:class:`.RemoteLibrary`.
 * Switch some dependencies to be optional for groups of operation: progress bars, images, musicbee, sqlite
-* Replace urllib usages with ``yarl`` package
+* Replace urllib usages with ``yarl`` package.
+* :py:class:`.SpotifyAPI` now logs to the new central :py:meth:`.RequestHandler.log` method
+  to help unify log formatting.
+* ``user_id`` and ``user_name`` now raise an error when called before setting ``user_data`` attribute.
+  This is due to avoiding asynchronous calls in a property.
+  It is therefore best to now enter the async context of the api to set these automatically.
 
 Fixed
 -----
@@ -71,7 +81,11 @@ Removed
 * Dependency on ``requests-cache`` package in favour of custom cache implementation.
 * ``use_cache`` parameter from all :py:class:`.RemoteAPI` related methods.
   Cache settings now handled by :py:class:`.ResponseCache`
-* Ability to call RemoteItemProcessors directly due to their need to now by asynchronous.
+* Ability to call the following classes directly due to their need to now by asynchronous:
+   * :py:class:`.APIAuthoriser`
+   * :py:class:`.RemoteItemChecker`
+   * :py:class:`.RemoteItemSearcher`
+* ThreadPoolExecutor use on :py:class:`.RemoteItemSearcher`. Now uses asynchronous logic instead.
 
 0.9.2
 =====
