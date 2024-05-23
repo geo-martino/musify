@@ -6,7 +6,6 @@ and assigns the ID of the matched object back to the item.
 """
 import logging
 from collections.abc import Mapping, Sequence, Iterable, Collection
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -114,28 +113,28 @@ class RemoteItemSearcher(Processor):
         #: The :py:class:`RemoteObjectFactory` to use when creating new remote objects.
         self.factory = object_factory
 
-    def _get_results(
+    async def _get_results(
             self, item: MusifyObject, kind: RemoteObjectType, settings: SearchConfig
     ) -> list[dict[str, Any]] | None:
         """Query the API to get results for the current item based on algorithm settings"""
         self.matcher.clean_tags(item)
 
-        def execute_query(keys: Iterable[TagField]) -> tuple[list[dict[str, Any]], str]:
+        async def execute_query(keys: Iterable[TagField]) -> tuple[list[dict[str, Any]], str]:
             """Generate and execute the query against the API for the given item's cleaned ``keys``"""
             attributes = [item.clean_tags.get(key) for key in keys]
             q = " ".join(str(attr) for attr in attributes if attr)
-            return self.api.query(q, kind=kind, limit=settings.result_count), q
+            return await self.api.query(q, kind=kind, limit=settings.result_count), q
 
-        results, query = execute_query(settings.search_fields_1)
+        results, query = await execute_query(settings.search_fields_1)
         if not results and settings.search_fields_2:
-            results, query = execute_query(settings.search_fields_2)
+            results, query = await execute_query(settings.search_fields_2)
         if not results and settings.search_fields_3:
-            results, query = execute_query(settings.search_fields_3)
+            results, query = await execute_query(settings.search_fields_3)
 
         if results:
-            self.matcher.log_messages([item.name, f"Query: {query}", f"{len(results)} results"])
+            self.matcher.log([item.name, f"Query: {query}", f"{len(results)} results"])
             return results
-        self.matcher.log_messages([item.name, f"Query: {query}", "Match failed: No results."], pad="<")
+        self.matcher.log([item.name, f"Query: {query}", "Match failed: No results."], pad="<")
 
     def _log_results(self, results: Mapping[str, ItemSearchResult]) -> None:
         """Logs the final results of the ItemSearcher"""
@@ -187,10 +186,7 @@ class RemoteItemSearcher(Processor):
             return obj.kind
         raise MusifyAttributeError(f"Given object does not specify a RemoteObjectType: {obj.__class__.__name__}")
 
-    def __call__(self, *args, **kwargs) -> dict[str, ItemSearchResult]:
-        return self.search(*args, **kwargs)
-
-    def search[T: MusifyItemSettable](
+    async def search[T: MusifyItemSettable](
             self, collections: Collection[MusifyCollection[T]]
     ) -> dict[str, ItemSearchResult[T]]:
         """
@@ -211,34 +207,33 @@ class RemoteItemSearcher(Processor):
         )
 
         bar = self.logger.get_iterator(iterable=collections, desc="Searching", unit=f"{kind}s")
-        with ThreadPoolExecutor(thread_name_prefix="searcher-main") as executor:
-            search_results = dict(executor.map(lambda coll: (coll.name, self._search_collection(coll)), bar))
+        search_results = {coll.name: await self._search_collection(coll) for coll in bar}
 
         self.logger.print()
         self._log_results(search_results)
         self.logger.debug("Searching: DONE\n")
         return search_results
 
-    def _search_collection[T: MusifyItemSettable](self, collection: MusifyCollection) -> ItemSearchResult[T]:
+    async def _search_collection[T: MusifyItemSettable](self, collection: MusifyCollection) -> ItemSearchResult[T]:
         kind = collection.__class__.__name__
 
         skipped = tuple(item for item in collection if item.has_uri is not None)
         if len(skipped) == len(collection):
-            self.matcher.log_messages([collection.name, "Skipping search, no items to search"], pad='<')
+            self.matcher.log([collection.name, "Skipping search, no items to search"], pad='<')
 
         if getattr(collection, "compilation", True) is False:
-            self.matcher.log_messages([collection.name, "Searching for collection as a unit"], pad='>')
-            self._search_collection_unit(collection=collection)
+            self.matcher.log([collection.name, "Searching for collection as a unit"], pad='>')
+            await self._search_collection_unit(collection=collection)
 
             missing = [item for item in collection.items if item.has_uri is None]
             if missing:
-                self.matcher.log_messages(
+                self.matcher.log(
                     [collection.name, f"Searching for {len(missing)} unmatched items in this {kind}"]
                 )
-                self._search_items(collection=collection)
+                await self._search_items(collection=collection)
         else:
-            self.matcher.log_messages([collection.name, "Searching for distinct items in collection"], pad='>')
-            self._search_items(collection=collection)
+            self.matcher.log([collection.name, "Searching for distinct items in collection"], pad='>')
+            await self._search_items(collection=collection)
 
         return ItemSearchResult(
             matched=tuple(item for item in collection if item.has_uri and item not in skipped),
@@ -246,14 +241,14 @@ class RemoteItemSearcher(Processor):
             skipped=skipped
         )
 
-    def _get_item_match[T: MusifyItemSettable](
+    async def _get_item_match[T: MusifyItemSettable](
             self, item: T, match_on: UnitIterable[TagField] | None = None, results: Iterable[T] = None
     ) -> tuple[T, T | None]:
         kind = self._determine_remote_object_type(item)
         search_config = self.search_settings[kind]
 
         if results is None:
-            responses = self._get_results(item, kind=kind, settings=search_config)
+            responses = await self._get_results(item, kind=kind, settings=search_config)
             # noinspection PyTypeChecker
             results: Iterable[T] = map(self.factory[kind], responses or ())
 
@@ -268,16 +263,17 @@ class RemoteItemSearcher(Processor):
 
         return item, result
 
-    def _search_items[T: MusifyItemSettable](self, collection: Iterable[T]) -> None:
+    async def _search_items[T: MusifyItemSettable](self, collection: Iterable[T]) -> None:
         """Search for matches on individual items in an item collection that have ``None`` on ``has_uri`` attribute"""
-        with ThreadPoolExecutor(thread_name_prefix="searcher-items") as executor:
-            matches = executor.map(self._get_item_match, filter(lambda i: i.has_uri is None, collection))
+        for item in collection:
+            if item.has_uri is not None:
+                continue
 
-        for item, match in matches:
+            item, match = await self._get_item_match(item)
             if match and match.has_uri:
                 item.uri = match.uri
 
-    def _search_collection_unit[T: MusifyItemSettable](self, collection: MusifyCollection[T]) -> None:
+    async def _search_collection_unit[T: MusifyItemSettable](self, collection: MusifyCollection[T]) -> None:
         """
         Search for matches on an entire collection as a whole
         i.e. search for just the collection and not its distinct items.
@@ -288,10 +284,10 @@ class RemoteItemSearcher(Processor):
         kind = self._determine_remote_object_type(collection)
         search_config = self.search_settings[kind]
 
-        responses = self._get_results(collection, kind=kind, settings=search_config)
+        responses = await self._get_results(collection, kind=kind, settings=search_config)
         key = self.api.collection_item_map[kind]
         for response in responses:
-            self.api.extend_items(response, kind=kind, key=key)
+            await self.api.extend_items(response, kind=kind, key=key)
 
         # noinspection PyProtectedMember,PyTypeChecker
         # order to prioritise results that are closer to the item count of the input collection
@@ -309,13 +305,13 @@ class RemoteItemSearcher(Processor):
         if not result:
             return
 
-        with ThreadPoolExecutor(thread_name_prefix="searcher-collection") as executor:
-            matches = executor.map(
-                lambda item: self._get_item_match(item, match_on=[Tag.TITLE], results=result.items),
-                filter(lambda i: i.has_uri is None, collection)
-            )
+        # check all items in the collection have been matched
+        # get matches on those that are still missing matches
+        for item in collection:
+            if item.has_uri is not None:
+                continue
 
-        for item, match in matches:
+            item, match = await self._get_item_match(item, match_on=[Tag.TITLE], results=result.items)
             if match and match.has_uri:
                 item.uri = match.uri
 

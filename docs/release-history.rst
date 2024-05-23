@@ -71,6 +71,7 @@ Removed
 * Dependency on ``requests-cache`` package in favour of custom cache implementation.
 * ``use_cache`` parameter from all :py:class:`.RemoteAPI` related methods.
   Cache settings now handled by :py:class:`.ResponseCache`
+* Ability to call RemoteItemProcessors directly due to their need to now by asynchronous.
 
 0.9.2
 =====

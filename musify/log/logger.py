@@ -90,7 +90,7 @@ class MusifyLogger(logging.Logger):
         For tqdm kwargs, see :py:class:`tqdm_std`
         """
         if tqdm is None:
-            return iterable if iterable is not None else range(total)
+            return iter(iterable) if iterable is not None else range(total)
 
         # noinspection SpellCheckingInspection
         preset_keys = ("leave", "disable", "file", "ncols", "colour", "smoothing", "position")
