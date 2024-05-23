@@ -349,7 +349,6 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
     def sync_items(
             response_valid: dict[str, Any], response_random: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock,
     ) -> list[SpotifyTrack]:
-        api.load_user_data()
         api_mock.reset()  # reset for new requests checks to work correctly
 
         uri_valid = [track["track"]["uri"] for track in response_valid["tracks"]["items"]]

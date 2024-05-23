@@ -3,6 +3,7 @@ from copy import deepcopy
 from itertools import batched
 from random import sample, randrange, choice
 from typing import Any
+from urllib.parse import unquote
 
 import pytest
 
@@ -199,7 +200,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         await api._get_items_batched(url=url, id_list=id_list, key=key, limit=valid_limit)
 
         for url, _, _ in await api_mock.get_requests(url=url):
-            count = len(url.query["ids"].split(","))
+            count = len(unquote(url.query["ids"]).split(","))
             assert count >= 1
             assert count <= api_mock.limit_max
 

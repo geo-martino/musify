@@ -452,7 +452,7 @@ class RemoteAPI(AsyncContextManager, ABC):
     async def __aenter__(self) -> Self:
         await self.handler.__aenter__()
         await self._setup_cache()
-        self.user_data = await self.get_self()
+        await self.load_user_data()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:

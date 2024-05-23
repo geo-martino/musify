@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable
 from typing import Any
+from urllib.parse import unquote
 
 import pytest
 
@@ -50,7 +51,7 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
             if "ids" not in url.query:
                 continue
 
-            assert not input_ids.intersection(url.query["ids"].split(","))
+            assert not input_ids.intersection(unquote(url.query["ids"]).split(","))
 
     @staticmethod
     async def assert_load_with_items_extended[T: SpotifyObject](

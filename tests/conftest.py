@@ -56,12 +56,12 @@ def pytest_configure(config: pytest.Config):
 
 def pytest_collection_modifyitems(items: list[pytest.Function]):
     """Modifies test items in-place, ordering them based on assigned marks."""
-    marker_name_order = ["slow"]
+    marker_name_order = []  # currently not implemented
 
     def _get_item_order_index(item: pytest.Function) -> int:
         try:
-            marker_name = next(marker.name for marker in item.own_markers if marker.name in marker_name_order)
-            return marker_name_order.index(marker_name)
+            name = next(marker.name for marker in item.own_markers if marker.name.casefold() in marker_name_order)
+            return marker_name_order.index(name.casefold())
         except (StopIteration, ValueError):
             return len(marker_name_order)
 
