@@ -219,7 +219,7 @@ class TestAPIAuthoriser:
         response = {"access_token": "valid token", "expires_in": 3000, "refresh_token": "new_refresh"}
         requests_mock.post(authoriser.auth_args["url"], payload=response)
 
-        await authoriser.authorise()
+        await authoriser()
         expected_header = {"Authorization": "Bearer valid token"}
         assert authoriser.headers == expected_header
         assert authoriser.token["refresh_token"] == "new_refresh"
@@ -235,7 +235,7 @@ class TestAPIAuthoriser:
         requests_mock.get(authoriser.test_args["url"], payload={"test": "valid"})
 
         # loads token, token is valid, no refresh needed
-        await authoriser.authorise()
+        await authoriser()
         expected_header = {"Authorization": f"Bearer {authoriser.token["access_token"]}"}
         assert authoriser.headers == expected_header
 
@@ -273,7 +273,7 @@ class TestAPIAuthoriser:
 
         requests_mock.post(authoriser.auth_args["url"], payload={"1": {"2": {"code": "token"}}})
 
-        await authoriser.authorise()
+        await authoriser()
         expected_header = {"Authorization": "Bearer token"}
         assert authoriser.headers == expected_header
 

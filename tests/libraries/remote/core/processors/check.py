@@ -576,7 +576,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         values = ["", *["ua" for _ in batch_1], "s", *["ua" for _ in batch_2]]
         patch_input(values, mocker=mocker)
 
-        result = await checker.check(collections)
+        result = await checker(collections)
         mocker.stopall()
 
         assert count == len(batch_1) + len(batch_2)  # only 2 batches executed

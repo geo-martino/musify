@@ -277,7 +277,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         search_collection = BasicCollection(name="test", items=search_items + unmatchable_items)
         skip_album = len([item for item in search_album if item.has_uri is not None])
 
-        results = await searcher.search([search_collection, search_album])
+        results = await searcher([search_collection, search_album])
 
         result = results[search_collection.name]
         assert len(result.matched) + len(result.unmatched) + len(result.skipped) == len(search_collection)

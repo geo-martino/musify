@@ -118,7 +118,7 @@ class RequestHandler(AsyncContextManager):
 
         headers = {}
         if self.authoriser is not None:
-            headers = await self.authoriser.authorise(force_load=force_load, force_new=force_new)
+            headers = await self.authoriser(force_load=force_load, force_new=force_new)
             self.session.headers.update(headers)
 
         return headers

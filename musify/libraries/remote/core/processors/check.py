@@ -6,7 +6,7 @@ reviewing matches through temporary playlist creation.
 """
 import logging
 from collections import Counter
-from collections.abc import Sequence, Collection, Iterator
+from collections.abc import Sequence, Collection, Iterator, Awaitable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, Self
@@ -172,6 +172,11 @@ class RemoteItemChecker(InputProcessor):
 
         self._playlist_name_urls.clear()
         self._playlist_name_collection.clear()
+
+    def __call__[T: MusifyItemSettable](
+            self, collections: Collection[MusifyCollection[T]]
+    ) -> Awaitable[ItemCheckResult[T] | None]:
+        return self.check(collections)
 
     async def check[T: MusifyItemSettable](
             self, collections: Collection[MusifyCollection[T]]

@@ -15,8 +15,8 @@ async def match_albums_to_remote(albums: Collection[MusifyCollection], factory: 
 
     searcher = RemoteItemSearcher(matcher=matcher, object_factory=factory)
     async with searcher:
-        await searcher.search(albums)
+        await searcher(albums)
 
     checker = RemoteItemChecker(matcher=matcher, object_factory=factory)
     async with checker:
-        await checker.check(albums)
+        await checker(albums)

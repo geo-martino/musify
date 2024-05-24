@@ -5,7 +5,7 @@ Searches for matches on remote APIs, matches the item to the best matching resul
 and assigns the ID of the matched object back to the item.
 """
 import logging
-from collections.abc import Mapping, Sequence, Iterable, Collection
+from collections.abc import Mapping, Sequence, Iterable, Collection, Awaitable
 from dataclasses import dataclass, field
 from typing import Any, Self
 
@@ -192,6 +192,11 @@ class RemoteItemSearcher(Processor):
         if hasattr(obj, "kind"):
             return obj.kind
         raise MusifyAttributeError(f"Given object does not specify a RemoteObjectType: {obj.__class__.__name__}")
+
+    def __call__[T: MusifyItemSettable](
+            self, collections: Collection[MusifyCollection[T]]
+    ) -> Awaitable[dict[str, ItemSearchResult[T]]]:
+        return self.search(collections)
 
     async def search[T: MusifyItemSettable](
             self, collections: Collection[MusifyCollection[T]]

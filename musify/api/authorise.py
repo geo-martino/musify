@@ -5,7 +5,7 @@ import json
 import logging
 import os
 import socket
-from collections.abc import Callable, Mapping, Sequence, MutableMapping
+from collections.abc import Callable, Mapping, Sequence, MutableMapping, Awaitable
 from datetime import datetime
 from typing import Any
 from urllib.parse import unquote
@@ -203,6 +203,9 @@ class APIAuthoriser:
         self.logger.debug(f"Saving token: {self.token_safe}")
         with open(self.token_file_path, "w") as file:
             json.dump(self.token, file, indent=2)
+
+    def __call__(self, force_load: bool = False, force_new: bool = False) -> Awaitable[dict[str, str]]:
+        return self.authorise(force_load=force_load, force_new=force_new)
 
     async def authorise(self, force_load: bool = False, force_new: bool = False) -> dict[str, str]:
         """

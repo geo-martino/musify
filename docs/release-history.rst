@@ -88,10 +88,6 @@ Removed
 * Dependency on ``requests-cache`` package in favour of custom cache implementation.
 * ``use_cache`` parameter from all :py:class:`.RemoteAPI` related methods.
   Cache settings now handled by :py:class:`.ResponseCache`
-* Ability to call the following classes directly due to their need to now by asynchronous:
-   * :py:class:`.APIAuthoriser`
-   * :py:class:`.RemoteItemChecker`
-   * :py:class:`.RemoteItemSearcher`
 * ThreadPoolExecutor use on :py:class:`.RemoteItemSearcher`. Now uses asynchronous logic instead.
 
 Documentation
