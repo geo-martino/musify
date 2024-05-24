@@ -1,0 +1,53 @@
+from p0 import *
+
+from musify.libraries.remote.spotify.object import SpotifyTrack, SpotifyAlbum, SpotifyPlaylist, SpotifyArtist
+
+
+async def load_playlist(spotify_api: SpotifyAPI) -> SpotifyPlaylist:
+    # authorise the program to access your Spotify data in your web browser
+    async with api as a:
+        playlist = await SpotifyPlaylist.load("spotify:playlist:37i9dQZF1E4zg1xOOORiP1", api=a, extend_tracks=True)
+    return playlist
+
+
+async def load_tracks(spotify_api: SpotifyAPI) -> list[SpotifyTrack]:
+    tracks = []
+
+    # authorise the program to access your Spotify data in your web browser
+    async with api as a:
+        # load by ID
+        tracks.append(await SpotifyTrack.load("6fWoFduMpBem73DMLCOh1Z", api=a))
+        # load by URI
+        tracks.append(await SpotifyTrack.load("spotify:track:4npv0xZO9fVLBmDS2XP9Bw", api=a))
+        # load by open/external style URL
+        tracks.append(await SpotifyTrack.load("https://open.spotify.com/track/1TjVbzJUAuOvas1bL00TiH", api=a))
+        # load by API style URI
+        tracks.append(await SpotifyTrack.load("https://api.spotify.com/v1/tracks/6pmSweeisgfxxsiLINILdJ", api=api))
+
+    return tracks
+
+
+async def load_album(spotify_api: SpotifyAPI) -> SpotifyAlbum:
+    # authorise the program to access your Spotify data in your web browser
+    async with api as a:
+        album = await SpotifyAlbum.load(
+            "https://open.spotify.com/album/0rAWaAAMfzHzCbYESj4mfx", api=a, extend_tracks=True
+        )
+    return album
+
+
+async def load_artist(spotify_api: SpotifyAPI) -> SpotifyArtist:
+    # authorise the program to access your Spotify data in your web browser
+    async with api as a:
+        artist = await SpotifyArtist.load("1odSzdzUpm3ZEEb74GdyiS", api=a, extend_tracks=True)
+    return artist
+
+
+async def load_objects(spotify_api: SpotifyAPI) -> None:
+    playlist = await load_playlist(spotify_api)
+    tracks = await load_tracks(spotify_api)
+    album = await load_album(spotify_api)
+    artist = await load_artist(spotify_api)
+
+    # pretty print information about the loaded objects
+    print(playlist, *tracks, album, artist, sep="\n")

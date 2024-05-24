@@ -23,9 +23,9 @@ class TestCachedSession:
 
     # noinspection PyTestUnpassedFixture
     @pytest.fixture
-    async def cache(self, tester: ResponseCacheTester, connection: Any) -> ResponseCache:
+    async def cache(self, tester: ResponseCacheTester) -> ResponseCache:
         """Yields a valid :py:class:`ResponseCache` to use throughout tests in this suite as a pytest.fixture."""
-        async with tester.generate_cache(connection=connection) as cache:
+        async with tester.generate_cache() as cache:
             yield cache
 
     @pytest.fixture

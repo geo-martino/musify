@@ -3,7 +3,7 @@ from typing import Any
 
 import aiohttp
 import pytest
-from aiohttp import ClientRequest, ClientSession
+from aiohttp import ClientRequest
 from aioresponses import aioresponses, CallbackResult
 from yarl import URL
 
@@ -12,7 +12,7 @@ from musify.api.cache.backend.base import ResponseCache
 from musify.api.cache.backend.sqlite import SQLiteCache
 from musify.api.cache.response import CachedResponse
 from musify.api.cache.session import CachedSession
-from musify.api.exception import APIError
+from musify.api.exception import APIError, RequestError
 from musify.api.request import RequestHandler
 from tests.api.cache.backend.utils import MockRequestSettings
 
@@ -30,19 +30,16 @@ class TestRequestHandler:
         return SQLiteCache.connect_with_in_memory_db()
 
     @pytest.fixture
-    def session(self, cache: ResponseCache) -> ClientSession:
-        """Yield a simple :py:class:`APIAuthoriser` object"""
-        return CachedSession(cache=cache, headers={"Content-Type": "application/json"})
-
-    @pytest.fixture
     def authoriser(self, token: dict[str, Any]) -> APIAuthoriser:
         """Yield a simple :py:class:`APIAuthoriser` object"""
         return APIAuthoriser(name="test", token=token)
 
     @pytest.fixture
-    def request_handler(self, session: ClientSession, authoriser: APIAuthoriser) -> RequestHandler:
+    def request_handler(self, authoriser: APIAuthoriser, cache: ResponseCache) -> RequestHandler:
         """Yield a simple :py:class:`RequestHandler` object"""
-        return RequestHandler(authoriser=authoriser, session=session)
+        return RequestHandler.create(
+            authoriser=authoriser, cache=cache, headers={"Content-Type": "application/json"}
+        )
 
     @pytest.fixture
     def token(self) -> dict[str, Any]:
@@ -53,21 +50,21 @@ class TestRequestHandler:
             "scope": "test-read"
         }
 
-    async def test_init(self, token: dict[str, Any], session: ClientSession, authoriser: APIAuthoriser):
-        request_handler = RequestHandler(authoriser=authoriser)
-        assert request_handler.authoriser.token == token
-        assert not isinstance(request_handler.session, CachedSession)
+    async def test_init(self, token: dict[str, Any], authoriser: APIAuthoriser, cache: ResponseCache):
+        handler = RequestHandler.create(authoriser=authoriser, cache=cache)
+        assert handler.authoriser.token == token
+        assert not isinstance(handler.session, CachedSession)
 
-        request_handler = RequestHandler(authoriser=authoriser, session=session)
-        assert isinstance(request_handler.session, CachedSession)
+        handler = RequestHandler.create(authoriser=authoriser, cache=cache)
+        assert handler.closed
 
-        await request_handler.authorise()
-        for k, v in request_handler.authoriser.headers.items():
-            assert request_handler.session.headers.get(k) == v
+    async def test_context_management(self, request_handler: RequestHandler):
+        with pytest.raises(RequestError):
+            await request_handler.authorise()
 
-    # noinspection PyTestUnpassedFixture
-    async def test_context_management(self, authoriser: APIAuthoriser):
-        async with RequestHandler(authoriser=authoriser) as handler:
+        async with request_handler as handler:
+            assert isinstance(handler.session, CachedSession)
+
             for k, v in handler.authoriser.headers.items():
                 assert handler.session.headers.get(k) == v
 
@@ -130,7 +127,7 @@ class TestRequestHandler:
     async def test_cache_usage(self, request_handler: RequestHandler, requests_mock: aioresponses):
         url = "http://localhost/test"
         expected_json = {"key": "value"}
-        requests_mock.get(url, payload=expected_json, headers=request_handler.session.headers, repeat=True)
+        requests_mock.get(url, payload=expected_json, repeat=True)
 
         async with request_handler as handler:
             repository = await handler.session.cache.create_repository(MockRequestSettings(name="test"))

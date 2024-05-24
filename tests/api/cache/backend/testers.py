@@ -1,4 +1,3 @@
-import contextlib
 from abc import ABC, abstractmethod
 from random import choice, randrange
 from typing import Any
@@ -97,8 +96,7 @@ class ResponseRepositoryTester(BaseResponseTester, ABC):
     ) -> ResponseRepository:
         """
         Yields a valid :py:class:`ResponseRepository` to use throughout tests in this suite as a pytest_asyncio.fixture.
-        Should produce a repository for each type of :py:class:`RequestSettings` type
-        as given by the request fixture.
+        Populates this repository with ``valid_items`` and ``invalid_items``.
         """
         raise NotImplementedError
 
@@ -327,8 +325,7 @@ class ResponseCacheTester(BaseResponseTester, ABC):
 
     @classmethod
     @abstractmethod
-    @contextlib.asynccontextmanager
-    async def generate_cache(cls, connection: Any) -> ResponseCache:
+    async def generate_cache(cls) -> ResponseCache:
         """
         Generates a :py:class:`ResponseCache` for this backend type
         with many randomly generated :py:class:`ResponseRepository` objects assigned
@@ -338,9 +335,9 @@ class ResponseCacheTester(BaseResponseTester, ABC):
 
     # noinspection PyTestUnpassedFixture
     @pytest.fixture
-    async def cache(self, connection: Any) -> ResponseCache:
+    async def cache(self) -> ResponseCache:
         """Yields a valid :py:class:`ResponseCache` to use throughout tests in this suite as a pytest.fixture."""
-        async with self.generate_cache(connection) as cache:
+        async with self.generate_cache() as cache:
             yield cache
 
     @staticmethod
@@ -349,26 +346,23 @@ class ResponseCacheTester(BaseResponseTester, ABC):
         """Returns a repository for the given ``url`` from the given ``cache``."""
         raise NotImplementedError
 
-    @staticmethod
-    async def test_close(cache: ResponseCache):
-        key = choice(list(cache.values()))
-        await cache.close()
-
-        with pytest.raises(Exception):
-            await cache.get_response(key)
+    async def test_init_await(self, cache: ResponseCache):
+        assert cache.values()
+        for repository in cache.values():
+            assert await repository.count()
 
     async def test_create_repository(self, cache: ResponseCache):
         settings = self.generate_settings()
         assert settings.name not in cache
 
-        await cache.create_repository(settings)
+        cache.create_repository(settings)
         assert settings.name in cache
         assert cache[settings.name].settings == settings
 
         # does not create a repository that already exists
         repository = choice(list(cache.values()))
         with pytest.raises(CacheError):
-            await cache.create_repository(repository.settings)
+            cache.create_repository(repository.settings)
 
     def test_get_repository_for_url(self, cache: ResponseCache):
         repository = choice(list(cache.values()))

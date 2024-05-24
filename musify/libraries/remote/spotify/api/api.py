@@ -29,8 +29,6 @@ SPOTIFY_API_AUTH_ARGS = {
         "url": f"{URL_AUTH}/api/token",
         "data": {
             "grant_type": "authorization_code",
-            "code": None,
-            "redirect_uri": None,
         },
         "headers": {
             "content-type": "application/x-www-form-urlencoded",
@@ -42,7 +40,6 @@ SPOTIFY_API_AUTH_ARGS = {
         "params": {
             "client_id": "{client_id}",
             "response_type": "code",
-            "redirect_uri": None,
             "state": PROGRAM_NAME,
             "scope": "{scopes}",
             "show_dialog": False,
@@ -52,7 +49,6 @@ SPOTIFY_API_AUTH_ARGS = {
         "url": f"{URL_AUTH}/api/token",
         "data": {
             "grant_type": "refresh_token",
-            "refresh_token": None,
         },
         "headers": {
             "content-type": "application/x-www-form-urlencoded",
@@ -131,23 +127,25 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
         cache = self.handler.session.cache
         cache.repository_getter = self._get_cache_repository
 
-        await cache.create_repository(SpotifyRequestSettings(name="tracks"))
-        await cache.create_repository(SpotifyRequestSettings(name="audio_features"))
-        await cache.create_repository(SpotifyRequestSettings(name="audio_analysis"))
+        cache.create_repository(SpotifyRequestSettings(name="tracks"))
+        cache.create_repository(SpotifyRequestSettings(name="audio_features"))
+        cache.create_repository(SpotifyRequestSettings(name="audio_analysis"))
 
-        await cache.create_repository(SpotifyRequestSettings(name="albums"))
-        await cache.create_repository(SpotifyPaginatedRequestSettings(name="album_tracks"))
+        cache.create_repository(SpotifyRequestSettings(name="albums"))
+        cache.create_repository(SpotifyPaginatedRequestSettings(name="album_tracks"))
 
-        await cache.create_repository(SpotifyRequestSettings(name="artists"))
-        await cache.create_repository(SpotifyPaginatedRequestSettings(name="artist_albums"))
+        cache.create_repository(SpotifyRequestSettings(name="artists"))
+        cache.create_repository(SpotifyPaginatedRequestSettings(name="artist_albums"))
 
-        await cache.create_repository(SpotifyRequestSettings(name="shows"))
-        await cache.create_repository(SpotifyRequestSettings(name="episodes"))
-        await cache.create_repository(SpotifyPaginatedRequestSettings(name="show_episodes"))
+        cache.create_repository(SpotifyRequestSettings(name="shows"))
+        cache.create_repository(SpotifyRequestSettings(name="episodes"))
+        cache.create_repository(SpotifyPaginatedRequestSettings(name="show_episodes"))
 
-        await cache.create_repository(SpotifyRequestSettings(name="audiobooks"))
-        await cache.create_repository(SpotifyRequestSettings(name="chapters"))
-        await cache.create_repository(SpotifyPaginatedRequestSettings(name="audiobook_chapters"))
+        cache.create_repository(SpotifyRequestSettings(name="audiobooks"))
+        cache.create_repository(SpotifyRequestSettings(name="chapters"))
+        cache.create_repository(SpotifyPaginatedRequestSettings(name="audiobook_chapters"))
+
+        await cache
 
     @staticmethod
     def _get_cache_repository(cache: ResponseCache, url: str | URL) -> ResponseRepository | None:

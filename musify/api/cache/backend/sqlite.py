@@ -11,6 +11,7 @@ from typing import Any, Self
 
 from dateutil.relativedelta import relativedelta
 from aiohttp import RequestInfo, ClientRequest, ClientResponse
+from yarl import URL
 
 from musify import PROGRAM_NAME
 from musify.api.cache.backend.base import DEFAULT_EXPIRE, ResponseCache, ResponseRepository, RepositoryRequestType
@@ -39,39 +40,28 @@ class SQLiteTable[K: tuple[Any, ...], V: str](ResponseRepository[K, V]):
     #: The column under which the response expiry time is stored in the table
     expiry_column = "expires_at"
 
-    @classmethod
-    async def create(
-            cls,
-            connection: aiosqlite.Connection,
-            settings: RequestSettings,
-            expire: timedelta | relativedelta = DEFAULT_EXPIRE,
-    ) -> SQLiteTable:
-        if not connection.is_alive():
-            await connection
-
-        repository = cls(connection=connection, settings=settings, expire=expire)
-
+    async def create(self) -> Self:
         ddl_sep = "\t, "
         ddl = "\n".join((
-            f"CREATE TABLE IF NOT EXISTS {repository.settings.name} (",
+            f"CREATE TABLE IF NOT EXISTS {self.settings.name} (",
             "\t" + f"\n{ddl_sep}".join(
-                f"{key} {data_type} NOT NULL" for key, data_type in repository._primary_key_columns.items()
+                f"{key} {data_type} NOT NULL" for key, data_type in self._primary_key_columns.items()
             ),
-            f"{ddl_sep}{repository.name_column} TEXT",
-            f"{ddl_sep}{repository.cached_column} TIMESTAMP NOT NULL",
-            f"{ddl_sep}{repository.expiry_column} TIMESTAMP NOT NULL",
-            f"{ddl_sep}{repository.data_column} TEXT",
-            f"{ddl_sep}PRIMARY KEY ({", ".join(repository._primary_key_columns)})",
+            f"{ddl_sep}{self.name_column} TEXT",
+            f"{ddl_sep}{self.cached_column} TIMESTAMP NOT NULL",
+            f"{ddl_sep}{self.expiry_column} TIMESTAMP NOT NULL",
+            f"{ddl_sep}{self.data_column} TEXT",
+            f"{ddl_sep}PRIMARY KEY ({", ".join(self._primary_key_columns)})",
             ");",
-            f"CREATE INDEX IF NOT EXISTS idx_{repository.expiry_column} "
-            f"ON {repository.settings.name}({repository.expiry_column});"
+            f"CREATE INDEX IF NOT EXISTS idx_{self.expiry_column} "
+            f"ON {self.settings.name}({self.expiry_column});"
         ))
 
-        repository.logger.debug(f"Creating {repository.settings.name!r} table with the following DDL:\n{ddl}")
-        await repository.connection.executescript(ddl)
-        await repository.commit()
+        self.logger.debug(f"Creating {self.settings.name!r} table with the following DDL:\n{ddl}")
+        await self.connection.executescript(ddl)
+        await self.commit()
 
-        return repository
+        return self
 
     def __init__(
             self,
@@ -85,13 +75,17 @@ class SQLiteTable[K: tuple[Any, ...], V: str](ResponseRepository[K, V]):
 
         self.connection = connection
 
+    def __await__(self):
+        return self.create().__await__()
+
     async def __aenter__(self) -> Self:
         if not self.connection.is_alive():
-            await self.connection.__aenter__()
-        return self
+            await self.connection
+        return await self
 
     async def __aexit__(self, __exc_type, __exc_value, __traceback) -> None:
-        await self.connection.__aexit__(__exc_type, __exc_value, __traceback)
+        if self.connection.is_alive():
+            await self.connection.__aexit__(__exc_type, __exc_value, __traceback)
 
     async def commit(self) -> None:
         await self.connection.commit()
@@ -257,6 +251,11 @@ class SQLiteCache(ResponseCache[SQLiteTable]):
     def type(cls):
         return "sqlite"
 
+    @property
+    def closed(self):
+        """Is the stored client session closed."""
+        return self.connection is None or not self.connection.is_alive()
+
     @staticmethod
     def _get_sqlite_path(path: str) -> str:
         if not splitext(path)[1] == ".sqlite":  # add/replace extension if not given
@@ -280,52 +279,76 @@ class SQLiteCache(ResponseCache[SQLiteTable]):
         if dirname(path):
             os.makedirs(dirname(path), exist_ok=True)
 
-        connection = aiosqlite.connect(database=path)
-        return cls(cache_name=path, connection=connection, **cls._clean_kwargs(kwargs))
+        return cls(
+            cache_name=path,
+            connector=lambda: aiosqlite.connect(database=path),
+            **cls._clean_kwargs(kwargs)
+        )
 
     @classmethod
     def connect_with_in_memory_db(cls, **kwargs) -> Self:
         """Connect with an in-memory SQLite DB and return an instantiated :py:class:`SQLiteResponseCache`"""
-        connection = aiosqlite.connect(database="file::memory:?cache=shared", uri=True)
-        return cls(cache_name="__IN_MEMORY__", connection=connection, **cls._clean_kwargs(kwargs))
+        return cls(
+            cache_name="__IN_MEMORY__",
+            connector=lambda: aiosqlite.connect(database="file::memory:?cache=shared", uri=True),
+            **cls._clean_kwargs(kwargs)
+        )
 
     @classmethod
     def connect_with_temp_db(cls, name: str = f"{PROGRAM_NAME.lower()}_db.tmp", **kwargs) -> Self:
         """Connect with a temporary SQLite DB and return an instantiated :py:class:`SQLiteResponseCache`"""
         path = cls._get_sqlite_path(join(gettempdir(), name))
-
-        connection = aiosqlite.connect(database=path)
-        return cls(cache_name=name, connection=connection, **cls._clean_kwargs(kwargs))
+        return cls(
+            cache_name=name,
+            connector=lambda: aiosqlite.connect(database=path),
+            **cls._clean_kwargs(kwargs)
+        )
 
     def __init__(
             self,
             cache_name: str,
-            connection: aiosqlite.Connection,
-            repository_getter: Callable[[Self, str], SQLiteTable] = None,
+            connector: Callable[[], aiosqlite.Connection],
+            repository_getter: Callable[[Self, str | URL], SQLiteTable] = None,
             expire: timedelta | relativedelta = DEFAULT_EXPIRE,
     ):
         required_modules_installed(REQUIRED_MODULES, self)
 
         super().__init__(cache_name=cache_name, repository_getter=repository_getter, expire=expire)
 
-        self.connection = connection
+        self._connector = connector
+        self.connection: aiosqlite.Connection | None = None
 
-    async def __aenter__(self) -> Self:
-        if not self.connection.is_alive():
-            await self.connection.__aenter__()
+    async def _connect(self) -> Self:
+        if self.closed:
+            self.connection = self._connector()
+            await self.connection
+
+        for repository in self._repositories.values():
+            repository.connection = self.connection
+            await repository.create()
+
         return self
 
+    def __await__(self) -> Self:
+        return self._connect().__await__()
+
     async def __aexit__(self, __exc_type, __exc_value, __traceback) -> None:
-        await self.connection.__aexit__(__exc_type, __exc_value, __traceback)
+        if not self.closed:  # TODO: this shouldn't be needed?
+            await self.connection.__aexit__(__exc_type, __exc_value, __traceback)
+            self.connection = None
+
+    async def commit(self):
+        """Commit the transactions to the database."""
+        await self.connection.commit()
 
     async def close(self):
-        await self.connection.commit()
+        await self.commit()
         await self.connection.close()
 
-    async def create_repository(self, settings: RequestSettings) -> SQLiteTable:
+    def create_repository(self, settings: RequestSettings) -> SQLiteTable:
         if settings.name in self:
             raise CacheError(f"Repository already exists: {settings.name}")
 
-        repository = await SQLiteTable.create(connection=self.connection, settings=settings, expire=self.expire)
+        repository = SQLiteTable(connection=self.connection, settings=settings, expire=self.expire)
         self._repositories[settings.name] = repository
         return repository

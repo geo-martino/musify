@@ -8,6 +8,7 @@ import socket
 from collections.abc import Callable, Mapping, Sequence, MutableMapping
 from datetime import datetime
 from typing import Any
+from urllib.parse import unquote
 from webbrowser import open as webopen
 
 import aiohttp
@@ -132,9 +133,9 @@ class APIAuthoriser:
         self,
         name: str,
         auth_args: MutableMapping[str, Any] | None = None,
-        user_args: Mapping[str, Any] | None = None,
-        refresh_args: Mapping[str, Any] | None = None,
-        test_args: Mapping[str, Any] | None = None,
+        user_args: MutableMapping[str, Any] | None = None,
+        refresh_args: MutableMapping[str, Any] | None = None,
+        test_args: MutableMapping[str, Any] | None = None,
         test_condition: Callable[[str | Mapping[str, Any]], bool] | None = None,
         test_expiry: int = 0,
         token: Mapping[str, Any] | None = None,
@@ -150,23 +151,12 @@ class APIAuthoriser:
         self.name = name
 
         # maps of requests parameters to be passed to `requests` functions
-        if auth_args:
-            self._sanitise_params(auth_args.get("params"))
-            self._sanitise_params(auth_args.get("data"))
         self.auth_args: MutableMapping[str, Any] | None = auth_args
-
-        if user_args:
-            self._sanitise_params(user_args.get("params"))
-            self._sanitise_params(user_args.get("data"))
-        self.user_args: dict[str, Any] | None = user_args
-
-        if refresh_args:
-            self._sanitise_params(refresh_args.get("params"))
-            self._sanitise_params(refresh_args.get("data"))
-        self.refresh_args: dict[str, Any] | None = refresh_args
+        self.user_args: MutableMapping[str, Any] | None = user_args
+        self.refresh_args: MutableMapping[str, Any] | None = refresh_args
 
         # test params and conditions
-        self.test_args: Mapping[str, Any] | None = test_args
+        self.test_args: MutableMapping[str, Any] | None = test_args
         self.test_condition: Callable[[str | Mapping[str, Any]], bool] | None = test_condition
         self.test_expiry: int = test_expiry
 
@@ -180,6 +170,11 @@ class APIAuthoriser:
         self.header_prefix: str = header_prefix or ""
         self.header_extra: dict[str, str] = header_extra or {}
 
+    def _sanitise_kwargs[T: MutableMapping[str, Any] | None](self, kwargs: T) -> T:
+        self._sanitise_params(kwargs.get("params"))
+        self._sanitise_params(kwargs.get("data"))
+        return kwargs
+
     def _sanitise_params(self, params: MutableMapping[str, Any] | None) -> None:
         if not params:
             return
@@ -187,7 +182,7 @@ class APIAuthoriser:
         for k, v in params.items():
             if isinstance(v, MutableMapping):
                 self._sanitise_params(v)
-            elif not isinstance(v, str | int | float):
+            elif isinstance(v, bool) or not isinstance(v, str | int | float):
                 params[k] = json.dumps(v)
 
     def load_token(self) -> dict[str, Any] | None:
@@ -293,16 +288,12 @@ class APIAuthoriser:
         print(f"\33[1mWaiting for code, timeout in {socket_listener.timeout} seconds... \33[0m")
 
         # add redirect URI to auth_args and user_args
-        if not self.auth_args.get("data"):
-            self.auth_args["data"] = {}
-        if not self.user_args.get("params"):
-            self.user_args["params"] = {}
         redirect_uri = f"http://{self._user_auth_socket_address}:{self._user_auth_socket_port}/"
-        self.auth_args["data"]["redirect_uri"] = redirect_uri
-        self.user_args["params"]["redirect_uri"] = redirect_uri
+        self.auth_args.setdefault("data", {}).setdefault("redirect_uri", redirect_uri)
+        self.user_args.setdefault("params", {}).setdefault("redirect_uri", redirect_uri)
 
         # open authorise webpage and wait for the redirect
-        async with aiohttp.request(method="POST", **self.user_args) as resp:
+        async with aiohttp.request(method="POST", **self._sanitise_kwargs(self.user_args)) as resp:
             webopen(str(resp.url))
         request, _ = socket_listener.accept()
 
@@ -312,11 +303,8 @@ class APIAuthoriser:
 
         # format out the access code from the returned response
         path_raw = next(line for line in request.recv(8196).decode("utf-8").split('\n') if line.startswith("GET"))
-        code = URL(path_raw).query["code"]
-
-        if "data" not in self.auth_args:
-            self.auth_args["data"] = {}
-        self.auth_args["data"]["code"] = code
+        code = unquote(URL(path_raw).query["code"])
+        self.auth_args.setdefault("data", {}).setdefault("code", code)
 
     async def _request_token(self, **requests_args) -> dict[str, Any]:
         """
@@ -326,7 +314,7 @@ class APIAuthoriser:
         :param data: requests.post() ``data`` parameter to send as a request for authorisation.
         :param requests_args: Other requests.post() parameters to send as a request for authorisation.
         """
-        async with aiohttp.request(method="POST", **requests_args) as resp:
+        async with aiohttp.request(method="POST", **self._sanitise_kwargs(requests_args)) as resp:
             auth_response = await resp.json()
 
         # add granted and expiry times to token
@@ -371,7 +359,9 @@ class APIAuthoriser:
         if self.test_args is None or self.test_condition is None:
             return True
 
-        async with aiohttp.request(method="GET", headers=self.headers, **self.test_args) as response:
+        async with aiohttp.request(
+                method="GET", headers=self.headers, **self._sanitise_kwargs(self.test_args)
+        ) as response:
             try:
                 response = await response.json()
             except json.decoder.JSONDecodeError:

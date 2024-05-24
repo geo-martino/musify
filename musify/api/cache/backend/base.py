@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from collections.abc import MutableMapping, Callable, Collection, Hashable, AsyncIterable, Mapping
+from collections.abc import MutableMapping, Callable, Collection, Hashable, AsyncIterable, Mapping, Awaitable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Self, AsyncContextManager
@@ -58,7 +58,7 @@ class PaginatedRequestSettings(RequestSettings, ABC):
         raise NotImplementedError
 
 
-class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], AsyncContextManager, Hashable, ABC):
+class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], Awaitable, AsyncContextManager, Hashable, ABC):
     """
     Represents a repository in the backend cache, providing a dict-like interface
     for interacting with this repository.
@@ -204,7 +204,7 @@ class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], AsyncContextManager, 
         return sum([await self.delete_response(request) for request in requests])
 
 
-class ResponseCache[ST: ResponseRepository](MutableMapping[str, ST], AsyncContextManager, ABC):
+class ResponseCache[ST: ResponseRepository](MutableMapping[str, ST], Awaitable, AsyncContextManager):
     """
     Represents a backend cache of many repositories, providing a dict-like interface for interacting with them.
 
@@ -244,7 +244,11 @@ class ResponseCache[ST: ResponseRepository](MutableMapping[str, ST], AsyncContex
 
         self._repositories: dict[str, ST] = {}
 
+    async def __aenter__(self) -> Self:
+        return await self
+
     def __repr__(self):
+        self.__aenter__()
         return repr(self._repositories)
 
     def __str__(self):
@@ -266,12 +270,17 @@ class ResponseCache[ST: ResponseRepository](MutableMapping[str, ST], AsyncContex
         del self._repositories[key]
 
     @abstractmethod
+    async def commit(self) -> None:
+        """Commit the changes to the data"""
+        raise NotImplementedError
+
+    @abstractmethod
     async def close(self):
         """Close the connection to the repository."""
         raise NotImplementedError
 
     @abstractmethod
-    async def create_repository(self, settings: RequestSettings) -> ResponseRepository:
+    def create_repository(self, settings: RequestSettings) -> ResponseRepository:
         """
         Create and return a :py:class:`SQLiteResponseStorage` and store this object in this cache.
 

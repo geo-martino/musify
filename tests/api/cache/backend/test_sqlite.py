@@ -93,7 +93,7 @@ class TestSQLiteTable(SQLiteTester, ResponseRepositoryTester):
     ) -> SQLiteTable:
         expire = timedelta(days=2)
 
-        async with await SQLiteTable.create(connection, settings=settings, expire=expire) as repository:
+        async with SQLiteTable(connection, settings=settings, expire=expire) as repository:
             columns = (
                 *repository._primary_key_columns,
                 repository.cached_column,
@@ -121,10 +121,25 @@ class TestSQLiteTable(SQLiteTester, ResponseRepositoryTester):
 
             yield repository
 
-    async def test_init(self, connection: aiosqlite.Connection, settings: RequestSettings):
-        async with await SQLiteTable.create(connection, settings=settings) as repository:
+    async def test_init_fails(self, connection: aiosqlite.Connection, settings: RequestSettings):
+        repository = SQLiteTable(connection, settings=settings)
+        with pytest.raises(ValueError):
+            assert await repository.count()
+
+        with pytest.raises(ValueError):
+            await repository
+
+        async with connection:
             async with connection.execute(
-                f"SELECT name FROM sqlite_master WHERE type='table' AND name='{settings.name}'"
+                    f"SELECT name FROM sqlite_master WHERE type='table' AND name='{settings.name}'"
+            ) as cur:
+                rows = await cur.fetchall()
+        assert len(rows) == 0
+
+    async def test_init(self, connection: aiosqlite.Connection, settings: RequestSettings):
+        async with SQLiteTable(connection, settings=settings) as repository:
+            async with connection.execute(
+                    f"SELECT name FROM sqlite_master WHERE type='table' AND name='{settings.name}'"
             ) as cur:
                 rows = await cur.fetchall()
             assert len(rows) == 1
@@ -134,6 +149,11 @@ class TestSQLiteTable(SQLiteTester, ResponseRepositoryTester):
                 columns = {row[0] async for row in cur}
             assert {repository.name_column, repository.data_column, repository.expiry_column}.issubset(columns)
             assert set(repository._primary_key_columns).issubset(columns)
+
+            assert await repository.count() == 0
+
+        with pytest.raises(ValueError):
+            assert await repository.count()
 
     def test_serialize(self, repository: SQLiteTable):
         _, value = self.generate_item(repository.settings)
@@ -166,23 +186,28 @@ class TestSQLiteCache(SQLiteTester, ResponseCacheTester):
 
     @classmethod
     @contextlib.asynccontextmanager
-    async def generate_cache(cls, connection: aiosqlite.Connection) -> SQLiteCache:
-        async with SQLiteCache(cache_name="test", connection=connection) as cache:
-            cache.repository_getter = cls.get_repository_from_url
-
+    async def generate_cache(cls) -> SQLiteCache:
+        async with SQLiteCache(
+                cache_name="test",
+                connector=cls.generate_connection,
+                repository_getter=cls.get_repository_from_url,
+        ) as cache:
             for _ in range(randrange(5, 10)):
                 settings = cls.generate_settings()
                 items = dict(TestSQLiteTable.generate_item(settings) for _ in range(randrange(3, 6)))
 
-                repository = await SQLiteTable.create(settings=settings, connection=connection)
+                repository = await SQLiteTable(settings=settings, connection=cache.connection)
                 for k, v in items.items():
                     await repository._set_item_from_key_value_pair(k, v)
                 cache[settings.name] = repository
 
+            await cache.commit()
+            assert await repository.count() == len(items)
+
             yield cache
 
     @staticmethod
-    def get_repository_from_url(cache: SQLiteCache, url: str | URL) -> SQLiteCache | None:
+    def get_repository_from_url(cache: SQLiteCache, url: str | URL) -> SQLiteTable | None:
         url = URL(url)
         for name, repository in cache.items():
             if name == url.path.split("/")[-2]:

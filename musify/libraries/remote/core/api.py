@@ -8,11 +8,9 @@ from abc import ABC, abstractmethod
 from collections.abc import Collection, MutableMapping, Mapping, Sequence
 from typing import Any, Self, AsyncContextManager
 
-from aiohttp import ClientSession
 
 from musify.api.authorise import APIAuthoriser
 from musify.api.cache.backend.base import ResponseCache
-from musify.api.cache.session import CachedSession
 from musify.api.request import RequestHandler
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
@@ -82,12 +80,22 @@ class RemoteAPI(AsyncContextManager, ABC):
         #: A :py:class:`RemoteDataWrangler` object for processing URIs
         self.wrangler = wrangler
 
-        session = ClientSession() if cache is None else CachedSession(cache=cache)
         #: The :py:class:`RequestHandler` for handling authorised requests to the API
-        self.handler = RequestHandler(session=session, authoriser=authoriser)
+        self.handler = RequestHandler.create(authoriser=authoriser, cache=cache)
 
         #: Stores the loaded user data for the currently authorised user
         self.user_data: dict[str, Any] = {}
+
+    async def __aenter__(self) -> Self:
+        await self.handler.__aenter__()
+
+        await self._setup_cache()
+        await self.load_user_data()
+
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await self.handler.__aexit__(exc_type, exc_val, exc_tb)
 
     @abstractmethod
     async def _setup_cache(self) -> None:
@@ -448,12 +456,3 @@ class RemoteAPI(AsyncContextManager, ABC):
             are not all tracks or IDs.
         """
         raise NotImplementedError
-
-    async def __aenter__(self) -> Self:
-        await self.handler.__aenter__()
-        await self._setup_cache()
-        await self.load_user_data()
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        await self.handler.__aexit__(exc_type, exc_val, exc_tb)

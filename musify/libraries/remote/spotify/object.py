@@ -166,14 +166,11 @@ class SpotifyTrack(SpotifyItem, RemoteTrack):
     @property
     def image_links(self):
         album = self.response.get("album", {})
-        images = {image["height"]: image["url"] for image in album.get("images", [])}
-        if not images:
+        if not (images := album.get("images", [])):
             return {}
-        return {"cover_front": next(url for height, url in images.items() if height == max(images))}
 
-    @property
-    def has_image(self):
-        return len(self.response.get("album", {}).get("images", [])) > 0
+        images = {image["height"]: image["url"] for image in images}
+        return {"cover_front": next(url for height, url in images.items() if height == max(images))}
 
     @property
     def length(self):
@@ -462,12 +459,11 @@ class SpotifyPlaylist(SpotifyCollectionLoader[SpotifyTrack], RemotePlaylist[Spot
 
     @property
     def image_links(self):
-        images = {image["height"]: image["url"] for image in self.response["images"]}
-        return {"cover_front": url for height, url in images.items() if height == max(images)}
+        if not (images := self.response.get("images")):
+            return {}
 
-    @property
-    def has_image(self):
-        return len(self.response["images"]) > 0
+        images = {image["height"]: image["url"] for image in images}
+        return {"cover_front": url for height, url in images.items() if height == max(images)}
 
     @property
     def date_created(self):
@@ -615,12 +611,11 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTra
 
     @property
     def image_links(self):
-        images = {image["height"]: image["url"] for image in self.response["images"]}
-        return {"cover_front": url for height, url in images.items() if height == max(images)}
+        if not (images := self.response.get("images")):
+            return {}
 
-    @property
-    def has_image(self):
-        return len(self.response["images"]) > 0
+        images = {image["height"]: image["url"] for image in images}
+        return {"cover_front": url for height, url in images.items() if height == max(images)}
 
     @property
     def rating(self):
@@ -746,7 +741,10 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
 
     @property
     def image_links(self):
-        images = {image["height"]: image["url"] for image in self.response.get("images", [])}
+        if not (images := self.response.get("images")):
+            return {}
+
+        images = {image["height"]: image["url"] for image in images}
         return {"cover_front": url for height, url in images.items() if height == max(images)}
 
     @property

@@ -302,7 +302,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
             response["next"] = response_next.get("next")
             response["previous"] = response_next.get("previous")
 
-            if tqdm is not None:
+            if tqdm is not None:  # TODO: drop me
                 bar.update(len(response_next[self.items_key]))
 
         # cache child items
@@ -313,7 +313,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         if all("href" in result for result in results_to_cache):
             await self._cache_results(method=method, results=results_to_cache)
 
-        if tqdm is not None:
+        if tqdm is not None:  # TODO: drop me
             bar.close()
 
         return response[self.items_key]

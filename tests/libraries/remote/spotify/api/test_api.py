@@ -38,11 +38,8 @@ class TestSpotifyAPI:
         assert api.handler.authoriser.user_args["params"]["scope"] == " ".join(scopes)
         assert api.handler.authoriser.token_file_path == token_file_path
 
-        assert isinstance(api.handler.session, CachedSession)
-        assert api.handler.session.cache.cache_name == cache.cache_name
-
     async def test_context_management(self, cache: ResponseCache, api_mock: SpotifyMock):
-        api_not_entered = SpotifyAPI(
+        api = SpotifyAPI(
             cache=cache,
             token={"access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"},
             test_args=None,
@@ -51,10 +48,13 @@ class TestSpotifyAPI:
         )
 
         with pytest.raises(APIError):
-            assert api_not_entered.user_id
+            assert api.user_id
 
-        async with api_not_entered as api:
-            assert api.user_id == api_mock.user_id
+        async with api as a:
+            assert isinstance(api.handler.session, CachedSession)
+            assert api.handler.session.cache.cache_name == cache.cache_name
+
+            assert a.user_id == api_mock.user_id
 
     async def test_cache_setup(self, cache: ResponseCache, api_mock: SpotifyMock):
         async with SpotifyAPI(

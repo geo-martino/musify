@@ -4,7 +4,7 @@ All operations relating to handling of requests to an API.
 import contextlib
 import json
 import logging
-from collections.abc import Mapping
+from collections.abc import Mapping, Callable
 from datetime import datetime, timedelta
 from http import HTTPStatus
 from time import sleep
@@ -16,8 +16,9 @@ from aiohttp import ClientResponse, ClientSession
 from yarl import URL
 
 from musify.api.authorise import APIAuthoriser
+from musify.api.cache.backend import ResponseCache
 from musify.api.cache.session import CachedSession
-from musify.api.exception import APIError
+from musify.api.exception import APIError, RequestError
 from musify.log.logger import MusifyLogger
 from musify.utils import clean_kwargs
 
@@ -33,7 +34,7 @@ class RequestHandler(AsyncContextManager):
     :param session: The session to use when making requests.
     """
 
-    __slots__ = ("logger", "authoriser", "cache", "session", "backoff_start", "backoff_factor", "backoff_count")
+    __slots__ = ("logger", "_connector", "_session", "authoriser", "backoff_start", "backoff_factor", "backoff_count")
 
     @property
     def backoff_final(self) -> float:
@@ -51,15 +52,36 @@ class RequestHandler(AsyncContextManager):
         """
         return sum(self.backoff_start * self.backoff_factor ** i for i in range(self.backoff_count + 1))
 
-    def __init__(self, session: ClientSession | None = None, authoriser: APIAuthoriser | None = None):
+    @property
+    def closed(self):
+        """Is the stored client session closed."""
+        return self._session is None or self._session.closed
+
+    @property
+    def session(self) -> ClientSession:
+        """The :py:class:`ClientSession` object if exist and it is open."""
+        if not self.closed:
+            return self._session
+
+    @classmethod
+    def create(cls, authoriser: APIAuthoriser | None = None, cache: ResponseCache | None = None, **session_kwargs):
+        def connector() -> ClientSession:
+            if cache is not None:
+                return CachedSession(cache=cache, **session_kwargs)
+            return ClientSession(**session_kwargs)
+
+        return cls(connector=connector, authoriser=authoriser)
+
+    def __init__(self, connector: Callable[[], ClientSession], authoriser: APIAuthoriser | None = None):
         # noinspection PyTypeChecker
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
 
+        self._connector = connector
+        self._session: ClientSession | CachedSession | None = None
+
         #: The :py:class:`APIAuthoriser` object
         self.authoriser = authoriser
-        #: The :py:class:`ClientSession` object
-        self.session: ClientSession | CachedSession = session if session is not None else ClientSession()
 
         #: The initial backoff time for failed requests
         self.backoff_start = 0.5
@@ -69,12 +91,17 @@ class RequestHandler(AsyncContextManager):
         self.backoff_count = 10
 
     async def __aenter__(self) -> Self:
+        if self.closed:
+            self._session = self._connector()
+
         await self.session.__aenter__()
         await self.authorise()
+
         return self
 
     async def __aexit__(self, __exc_type, __exc_value, __traceback) -> None:
         await self.session.__aexit__(__exc_type, __exc_value, __traceback)
+        self._session = None
 
     async def authorise(self, force_load: bool = False, force_new: bool = False) -> dict[str, str]:
         """
@@ -86,6 +113,9 @@ class RequestHandler(AsyncContextManager):
         :return: Headers for request authorisation.
         :raise APIError: If the token cannot be validated.
         """
+        if self.closed:
+            raise RequestError("Session is closed. Enter the API context to start a new session.")
+
         headers = {}
         if self.authoriser is not None:
             headers = await self.authoriser.authorise(force_load=force_load, force_new=force_new)
@@ -240,7 +270,7 @@ class RequestHandler(AsyncContextManager):
         try:
             data = await response.json()
             return data if isinstance(data, dict) else {}
-        except json.decoder.JSONDecodeError:
+        except (aiohttp.ContentTypeError, json.decoder.JSONDecodeError):
             return {}
 
     async def get(self, url: str, **kwargs) -> dict[str, Any]:

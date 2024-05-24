@@ -42,9 +42,8 @@ class TestSpotifyAPIItems(RemoteAPITester):
     @pytest.fixture(scope="class")
     async def api_cache(self, api: SpotifyAPI) -> SpotifyAPI:
         """Yield an authorised :py:class:`SpotifyAPI` object with a :py:class:`ResponseCache` configured."""
-        cache = SQLiteCache.connect_with_in_memory_db()
         async with SpotifyAPI(
-                cache=cache,
+                cache=SQLiteCache.connect_with_in_memory_db(),
                 token=api.handler.authoriser.token,
                 test_args=api.handler.authoriser.test_args,
                 test_expiry=api.handler.authoriser.test_expiry,
