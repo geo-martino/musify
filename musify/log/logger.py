@@ -53,7 +53,8 @@ class MusifyLogger(logging.Logger):
     def stdout_handlers(self) -> list[logging.StreamHandler]:
         """Get a list of all :py:class:`logging.StreamHandler` handlers that log to stdout"""
         console_handlers = []
-        for handler in self.handlers:
+        for name in logging.getHandlerNames():
+            handler = logging.getHandlerByName(name)
             if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stdout:
                 console_handlers.append(handler)
         return console_handlers
@@ -75,10 +76,9 @@ class MusifyLogger(logging.Logger):
 
     def print(self, level: int = logging.CRITICAL + 1) -> None:
         """Print a new line only when DEBUG < ``logger level`` <= ``level`` for all console handlers"""
-        if not self.compact and self.stdout_handlers and all(
-                logging.DEBUG < h.level <= level for h in self.stdout_handlers
-        ):
-            print()
+        if not self.compact:
+            if self.stdout_handlers and any(logging.DEBUG < h.level <= level for h in self.stdout_handlers):
+                print()
 
     def get_iterator[T: Any](
             self,
