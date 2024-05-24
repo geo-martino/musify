@@ -127,7 +127,7 @@ class RequestHandler(AsyncContextManager):
         """Close the current session. No more requests will be possible once this has been called."""
         await self.session.close()
 
-    async def request(self, method: str, url: str, **kwargs) -> dict[str, Any]:
+    async def request(self, method: str, url: str | URL, **kwargs) -> dict[str, Any]:
         """
         Generic method for handling API requests with back-off on failed requests.
         See :py:func:`request` for more arguments.
@@ -219,7 +219,7 @@ class RequestHandler(AsyncContextManager):
             level=level, msg=f"{method.upper():<7}: {url:<{url_pad}} | {" | ".join(str(part) for part in log)}"
         )
 
-    async def _log_response(self, response: ClientResponse, method: str, url: str) -> None:
+    async def _log_response(self, response: ClientResponse, method: str, url: str | URL) -> None:
         """Log the method, URL, response text, and response headers."""
         response_headers = response.headers
         if isinstance(response.headers, Mapping):  # format headers if JSON
@@ -270,38 +270,38 @@ class RequestHandler(AsyncContextManager):
         except (aiohttp.ContentTypeError, json.decoder.JSONDecodeError):
             return {}
 
-    async def get(self, url: str, **kwargs) -> dict[str, Any]:
+    async def get(self, url: str | URL, **kwargs) -> dict[str, Any]:
         """Sends a GET request."""
         kwargs.pop("method", None)
         return await self.request("get", url=url, **kwargs)
 
-    async def post(self, url: str, **kwargs) -> dict[str, Any]:
+    async def post(self, url: str | URL, **kwargs) -> dict[str, Any]:
         """Sends a POST request."""
         kwargs.pop("method", None)
         return await self.request("post", url=url, **kwargs)
 
-    async def put(self, url: str, **kwargs) -> dict[str, Any]:
+    async def put(self, url: str | URL, **kwargs) -> dict[str, Any]:
         """Sends a PUT request."""
         kwargs.pop("method", None)
         return await self.request("put", url=url, **kwargs)
 
-    async def delete(self, url: str, **kwargs) -> dict[str, Any]:
+    async def delete(self, url: str | URL, **kwargs) -> dict[str, Any]:
         """Sends a DELETE request."""
         kwargs.pop("method", None)
         return await self.request("delete", url, **kwargs)
 
-    async def options(self, url: str, **kwargs) -> dict[str, Any]:
+    async def options(self, url: str | URL, **kwargs) -> dict[str, Any]:
         """Sends an OPTIONS request."""
         kwargs.pop("method", None)
         return await self.request("options", url=url, **kwargs)
 
-    async def head(self, url: str, **kwargs) -> dict[str, Any]:
+    async def head(self, url: str | URL, **kwargs) -> dict[str, Any]:
         """Sends a HEAD request."""
         kwargs.pop("method", None)
         kwargs.setdefault("allow_redirects", False)
         return await self.request("head", url=url, **kwargs)
 
-    async def patch(self, url: str, **kwargs) -> dict[str, Any]:
+    async def patch(self, url: str | URL, **kwargs) -> dict[str, Any]:
         """Sends a PATCH request."""
         kwargs.pop("method", None)
         return await self.request("patch", url=url, **kwargs)

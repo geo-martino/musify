@@ -70,7 +70,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         results.sort(key=lambda result: id_list.index(result[self.id_key]))
 
     async def _get_items_from_cache(
-            self, method: str, url: str, id_list: Collection[str]
+            self, method: str, url: str | URL, id_list: Collection[str]
     ) -> tuple[list[dict[str, Any]], Collection[str], Collection[str]]:
         """
         Attempt to find the given ``id_list`` in the cache of the request handler and return results.
@@ -101,7 +101,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
 
     async def _get_items_multi(
             self,
-            url: str,
+            url: str | URL,
             id_list: Collection[str],
             params: Mapping[str, Any] | None = None,
             key: str | None = None,
@@ -157,7 +157,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
 
     async def _get_items_batched(
             self,
-            url: str,
+            url: str | URL,
             id_list: Collection[str],
             params: Mapping[str, Any] | None = None,
             key: str | None = None,

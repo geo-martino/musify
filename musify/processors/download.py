@@ -149,7 +149,7 @@ class ItemDownloadHelper(InputProcessor):
 
     def as_dict(self) -> dict[str, Any]:
         return {
-            "urls": self.urls,
+            "urls": [str(url) for url in self.urls],
             "fields": [field.name.lower() for field in self.fields],
             "interval": self.interval,
         }
