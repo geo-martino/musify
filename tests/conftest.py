@@ -4,7 +4,7 @@ import os
 import shutil
 import types
 from collections import defaultdict
-from os.path import join, basename, dirname
+from os.path import join, basename, dirname, exists
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +28,9 @@ from tests.utils import idfn
 def pytest_configure(config: pytest.Config):
     """Loads logging config"""
     config_file = join(dirname(dirname(__file__)), "logging.yml")
+    if not exists(config_file):
+        return
+
     with open(config_file, "r", encoding="utf-8") as file:
         log_config = yaml.full_load(file)
 
