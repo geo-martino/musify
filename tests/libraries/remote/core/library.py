@@ -135,7 +135,15 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         elif isinstance(backup, Mapping) and all(isinstance(v, MusifyItem) for vals in backup.values() for v in vals):
             # get URIs from playlists in map values
             backup_check = {name: [track.uri for track in pl] for name, pl in backup.items()}
-        elif not isinstance(backup, Mapping) and isinstance(backup, Collection):
+        elif isinstance(backup, Mapping):
+            # get URIs from playlists in collection
+            backup_check = {
+                name:
+                    [t["uri"] if isinstance(t, Mapping) else t for t in tracks["tracks"]]
+                    if isinstance(tracks, Mapping) else tracks
+                for name, tracks in backup.items()
+            }
+        elif isinstance(backup, Collection):
             # get URIs from playlists in collection
             backup_check = {pl.name: [track.uri for track in pl] for pl in backup}
         else:
@@ -184,6 +192,15 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
             name_new: collection_merge_items,
         }
         await self.assert_restore(library=library, backup=backup_tracks)
+
+        # Mapping[str, Mapping[str, Iterable[Mapping[str, Any]]]]
+        backup_nested = {
+            name_actual: {
+                "tracks": [{"uri": track.uri} for track in pl_actual[:5]] + [{"uri": uri} for uri in new_uri_list]
+            },
+            name_new: {"tracks": [{"uri": uri} for uri in new_uri_list]},
+        }
+        await self.assert_restore(library=library, backup=backup_nested)
 
         # Library
         backup_library = deepcopy(library)

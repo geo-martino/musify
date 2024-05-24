@@ -17,33 +17,40 @@ In this example, you will:
 Sync data
 ---------
 
-1. Set up and load at least one local library with a remote wrangler attached, and one remote API object:
+1. Define a helper function to search for tracks and check the results:
 
-   .. literalinclude:: _howto/scripts/sync.py
+   .. literalinclude:: _howto/scripts/sync/p1.py
       :language: Python
-      :lines: 5-14
+      :lines: 3-
 
-   .. literalinclude:: _howto/scripts/spotify.api.py
-      :language: Python
-      :lines: 1-20
-
-2. Search for tracks and check the results:
-
-   .. literalinclude:: _howto/scripts/sync.py
-      :language: Python
-      :lines: 16-27
-
-3. Load the matched tracks, get tags from the music streaming service, and save the tags to the file:
+2. Define a helper function to load the matched tracks, get tags from the music streaming service,
+   and save the tags to the file:
 
    .. note::
       By default, URIs are saved to the ``comments`` tag.
 
-   .. literalinclude:: _howto/scripts/sync.py
+   .. literalinclude:: _howto/scripts/sync/p2.py
       :language: Python
-      :lines: 29-48
+      :lines: 3-
 
-4. Once all tracks in a playlist have URIs assigned, sync the local playlist with a remote playlist:
+3. Define a helper function to sync the local playlist with a remote playlist
+   once all tracks in a playlist have URIs assigned:
 
-   .. literalinclude:: _howto/scripts/sync.py
+   .. literalinclude:: _howto/scripts/sync/p3.py
       :language: Python
-      :lines: 50-60
+      :lines: 3-
+
+4. Set up and load a remote API object and local library with a wrangler attached:
+
+   .. literalinclude:: _howto/scripts/spotify.api.py
+      :language: Python
+
+   .. literalinclude:: _howto/scripts/sync/p4.py
+      :language: Python
+      :lines: 3-
+
+4. Set up the remote library and run the program:
+
+   .. literalinclude:: _howto/scripts/sync/p99.py
+      :language: Python
+      :lines: 3-

@@ -27,7 +27,7 @@ class ItemGetterStrategy(ABC):
     @property
     @abstractmethod
     def name(self) -> str:
-        """The name of the name to assign to this ItemGetter when logging"""
+        """The name to assign to this ItemGetter when logging"""
         raise NotImplementedError
 
     @abstractmethod
@@ -47,6 +47,7 @@ class ItemGetterStrategy(ABC):
 
 class NameGetter(ItemGetterStrategy):
     """Get an item via its name for a :py:class:`MusifyCollection`"""
+    @property
     def name(self) -> str:
         return "name"
 
@@ -56,6 +57,7 @@ class NameGetter(ItemGetterStrategy):
 
 class PathGetter(ItemGetterStrategy):
     """Get an item via its path for a :py:class:`MusifyCollection`"""
+    @property
     def name(self) -> str:
         return "path"
 
@@ -65,6 +67,7 @@ class PathGetter(ItemGetterStrategy):
 
 class RemoteIDGetter(ItemGetterStrategy):
     """Get an item via its remote ID for a :py:class:`MusifyCollection`"""
+    @property
     def name(self) -> str:
         return "remote ID"
 
@@ -74,6 +77,7 @@ class RemoteIDGetter(ItemGetterStrategy):
 
 class RemoteURIGetter(ItemGetterStrategy):
     """Get an item via its remote URI for a :py:class:`MusifyCollection`"""
+    @property
     def name(self) -> str:
         return "URI"
 
@@ -83,6 +87,7 @@ class RemoteURIGetter(ItemGetterStrategy):
 
 class RemoteURLAPIGetter(ItemGetterStrategy):
     """Get an item via its remote API URL for a :py:class:`MusifyCollection`"""
+    @property
     def name(self) -> str:
         return "API URL"
 
@@ -92,6 +97,7 @@ class RemoteURLAPIGetter(ItemGetterStrategy):
 
 class RemoteURLEXTGetter(ItemGetterStrategy):
     """Get an item via its remote external URL for a :py:class:`MusifyCollection`"""
+    @property
     def name(self) -> str:
         return "external URL"
 
@@ -327,7 +333,7 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], ABC):
                 caught_exceptions.append(ex)
 
         raise MusifyKeyError(
-            f"Key is invalid. The following errors were thrown: {[str(ex) for ex in caught_exceptions]}"
+            f"Key is invalid. The following errors were thrown: {", ".join(str(ex) for ex in caught_exceptions)}"
         )
 
     @staticmethod

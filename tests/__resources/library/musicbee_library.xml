@@ -38,7 +38,7 @@
 			<key>Play Date UTC</key><date>2023-07-20T06:12:26Z</date>
 			<key>Play Count</key><integer>5</integer>
 			<key>Track Type</key><string>File</string>
-			<key>Location</key><string>file://localhost/{path_resources}/track/noise_mp3.mp3</string>
+			<key>Location</key><string>file://localhost/{path_resources}/track/noiSE_mP3.mp3</string>
 		</dict>
 		<key>2</key>
 		<dict>
@@ -70,7 +70,7 @@
 			<key>Play Date UTC</key><date>2023-09-02T08:21:22Z</date>
 			<key>Play Count</key><integer>10</integer>
 			<key>Track Type</key><string>File</string>
-			<key>Location</key><string>file://localhost/{path_resources}/track/noise_flac.flac</string>
+			<key>Location</key><string>file://localhost/{path_resources}/track/NOISE_FLaC.flac</string>
 		</dict>
 		<key>3</key>
 		<dict>

@@ -1,12 +1,13 @@
-from p2 import *
+from p1 import *
 
 
-async def update_playlist(spotify_api: SpotifyAPI) -> None:
-    tracks = await load_tracks(spotify_api)
-    album = await load_album(spotify_api)
-    library = await load_library(spotify_api)
+async def update_playlist(name: str, library: SpotifyLibrary) -> None:
+    """Update a playlist with the given ``name`` in the given ``library``"""
+    tracks = await load_tracks(library.api)
+    album = await load_album(library.api)
+    await load_library(library)
 
-    my_playlist = library.playlists["test"]  # case sensitive
+    my_playlist = library.playlists[name]
 
     # add a track to the playlist
     my_playlist.append(tracks[0])
@@ -16,6 +17,6 @@ async def update_playlist(spotify_api: SpotifyAPI) -> None:
     my_playlist += album
 
     # sync the object with Spotify and log the results
-    async with spotify_api:
+    async with library:
         result = await my_playlist.sync(dry_run=False)
     library.log_sync(result)

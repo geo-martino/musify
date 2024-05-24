@@ -7,7 +7,7 @@ and assigns the ID of the matched object back to the item.
 import logging
 from collections.abc import Mapping, Sequence, Iterable, Collection
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Self
 
 from musify.core.base import MusifyObject, MusifyItemSettable
 from musify.core.enum import TagField, TagFields as Tag
@@ -112,6 +112,13 @@ class RemoteItemSearcher(Processor):
         self.matcher = matcher
         #: The :py:class:`RemoteObjectFactory` to use when creating new remote objects.
         self.factory = object_factory
+
+    async def __aenter__(self) -> Self:
+        await self.api.__aenter__()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await self.api.__aexit__(exc_type, exc_val, exc_tb)
 
     async def _get_results(
             self, item: MusifyObject, kind: RemoteObjectType, settings: SearchConfig

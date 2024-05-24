@@ -13,7 +13,7 @@ In this example, you will:
 Create the playlist
 -------------------
 
-1. Create a remote library object:
+1. Create a :py:class:`.RemoteAPI` object:
 
    .. note::
       This step uses the :py:class:`.SpotifyLibrary`, but any supported music streaming service
@@ -22,26 +22,33 @@ Create the playlist
    .. literalinclude:: _howto/scripts/spotify.api.py
       :language: Python
 
-2. Load data about your followed artists:
+2. If you haven't already, you will need to load and enrich data about your followed artists.
+   You may use this helper function to help do so:
 
-   .. literalinclude:: _howto/scripts/remote.new-music.py
+   .. literalinclude:: _howto/scripts/remote.new-music/p2.py
       :language: Python
-      :lines: 6-7
+      :lines: 3-
 
-3. Define the date range you wish to get track for and define this helper function for filtering albums:
+3. Define helper function for filtering albums:
 
-   .. literalinclude:: _howto/scripts/remote.new-music.py
+   .. literalinclude:: _howto/scripts/remote.new-music/p3.py
       :language: Python
-      :lines: 9-23
+      :lines: 3-
 
-4. Filter the albums and load the tracks for only these albums:
+4. Define helper function for filtering the albums and loading the tracks for only these albums:
 
-   .. literalinclude:: _howto/scripts/remote.new-music.py
+   .. literalinclude:: _howto/scripts/remote.new-music/p4.py
       :language: Python
-      :lines: 26-39
+      :lines: 3-
 
-5. Create a new playlist and add these tracks:
+5. Define driver function for creating the playlist:
 
-   .. literalinclude:: _howto/scripts/remote.new-music.py
+   .. literalinclude:: _howto/scripts/remote.new-music/p5.py
       :language: Python
-      :lines: 41-51
+      :lines: 3-
+
+5. Define the required parameters and run the operation:
+
+   .. literalinclude:: _howto/scripts/remote.new-music/p99.py
+      :language: Python
+      :lines: 3-

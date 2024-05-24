@@ -127,7 +127,7 @@ class RequestHandler(AsyncContextManager):
         """Close the current session. No more requests will be possible once this has been called."""
         await self.session.close()
 
-    async def request(self, method: str, url: str, *args, **kwargs) -> dict[str, Any]:
+    async def request(self, method: str, url: str, **kwargs) -> dict[str, Any]:
         """
         Generic method for handling API requests with back-off on failed requests.
         See :py:func:`request` for more arguments.
@@ -141,7 +141,7 @@ class RequestHandler(AsyncContextManager):
         backoff = self.backoff_start
 
         while True:
-            async with self._request(method=method, url=url, *args, **kwargs) as response:
+            async with self._request(method=method, url=url, **kwargs) as response:
                 if response is not None and response.status < 400:
                     data = await self._response_as_json(response)
                     break
@@ -169,7 +169,6 @@ class RequestHandler(AsyncContextManager):
             method: str,
             url: str | URL,
             log_message: str | list[str] = None,
-            *args,
             **kwargs
     ) -> ClientResponse | None:
         """Handle logging a request, send the request, and return the response"""
@@ -180,7 +179,7 @@ class RequestHandler(AsyncContextManager):
 
         if isinstance(self.session, CachedSession):
             log_message.append("Cached Request")
-        self.log(method=method, url=url, message=log_message, *args, **kwargs)
+        self.log(method=method, url=url, message=log_message, **kwargs)
 
         if not isinstance(self.session, CachedSession):
             clean_kwargs(aiohttp.request, kwargs)
@@ -188,14 +187,14 @@ class RequestHandler(AsyncContextManager):
             kwargs["headers"].update(self.session.headers)
 
         try:
-            async with self.session.request(method=method.upper(), url=url, *args, **kwargs) as response:
+            async with self.session.request(method=method.upper(), url=url, **kwargs) as response:
                 yield response
         except aiohttp.ClientError as ex:
             self.logger.warning(str(ex))
             yield
 
     def log(
-            self, method: str, url: str | URL, message: str | list = None, level: int = logging.DEBUG, *args, **kwargs
+            self, method: str, url: str | URL, message: str | list = None, level: int = logging.DEBUG, **kwargs
     ) -> None:
         """Format and log a request or request adjacent message to the given ``level``."""
         log: list[Any] = []
@@ -207,8 +206,6 @@ class RequestHandler(AsyncContextManager):
             log.extend(f"{k}: {v:<4}" for k, v in sorted(kwargs.pop("params").items()))
         if kwargs.get("json"):
             log.extend(f"{k}: {str(v):<4}" for k, v in sorted(kwargs.pop("json").items()))
-        if len(args) > 0:
-            log.append(f"Args: ({', '.join(args)})")
         if len(kwargs) > 0:
             log.extend(f"{k.title()}: {str(v):<4}" for k, v in kwargs.items() if v)
         if message:

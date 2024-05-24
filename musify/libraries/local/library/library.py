@@ -2,7 +2,7 @@
 The core, basic library implementation which is just a simple set of folders.
 """
 import itertools
-from collections.abc import Collection, Mapping
+from collections.abc import Collection, Mapping, Iterable
 from concurrent.futures import ThreadPoolExecutor
 from functools import reduce
 from os.path import splitext, join, exists, basename, dirname
@@ -394,7 +394,9 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     ## Backup/restore
     ###########################################################################
     def restore_tracks(
-            self, backup: Mapping[str, Mapping[str, Any]], tags: UnitIterable[LocalTrackField] = LocalTrackField.ALL
+            self,
+            backup: Iterable[Mapping[str, Any]] | Mapping[str, Mapping[str, Any]],
+            tags: UnitIterable[LocalTrackField] = LocalTrackField.ALL
     ) -> int:
         """
         Restore track tags from a backup to loaded track objects. This does not save the updated tags.
@@ -404,7 +406,11 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         :return: The number of tracks restored
         """
         tag_names = set(LocalTrackField.to_tags(tags))
-        backup = {path.casefold(): track_map for path, track_map in backup.items()}
+        if isinstance(backup, Mapping):
+            backup = {path.casefold(): track_map for path, track_map in backup.items()}
+        else:
+            backup = {track_map["path"].casefold(): track_map for track_map in backup}
+        backup: Mapping[str, Mapping[str, Any]]
 
         count = 0
         for track in self.tracks:
@@ -413,8 +419,8 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
                 continue
 
             for tag in tag_names:
-                if tag in track.__dict__:
-                    track[tag] = track_map.get(tag)
+                if tag in track_map:
+                    track[tag] = track_map[tag]
             count += 1
 
         return count

@@ -53,7 +53,7 @@ class M3U(LocalPlaylist[FilterDefinedList[str | File]]):
         For more info on this, see :py:class:`LocalTrack`.
     """
 
-    __slots__ = ("_description",)
+    __slots__ = ("_original_paths", "_description")
 
     valid_extensions = frozenset({".m3u"})
 
@@ -80,14 +80,14 @@ class M3U(LocalPlaylist[FilterDefinedList[str | File]]):
 
         if exists(path):  # load from file
             with open(path, "r", encoding="utf-8") as file:
-                paths = path_mapper.map_many([line.strip() for line in file], check_existence=True)
+                self._original_paths = path_mapper.map_many([line.strip() for line in file], check_existence=True)
         else:  # generating a new M3U
-            paths = [track.path for track in tracks]
+            self._original_paths = [track.path for track in tracks]
 
         self._description = None
         super().__init__(
             path=path,
-            matcher=FilterDefinedList(values=[path.casefold() for path in paths]),
+            matcher=FilterDefinedList(values=[path.casefold() for path in self._original_paths]),
             path_mapper=path_mapper,
             remote_wrangler=remote_wrangler
         )
@@ -102,7 +102,7 @@ class M3U(LocalPlaylist[FilterDefinedList[str | File]]):
         if tracks:  # match paths from given tracks using the matcher
             self._match(tracks)
         else:  # use the paths in the matcher to load tracks from scratch
-            self.tracks = [self._load_track(path) for path in self.matcher.values if path is not None]
+            self.tracks = [self._load_track(path) for path in self._original_paths if path is not None]
 
         self._limit(ignore=self.matcher.values)
         self._sort()
@@ -118,7 +118,8 @@ class M3U(LocalPlaylist[FilterDefinedList[str | File]]):
         :return: The results of the sync as a :py:class:`SyncResultM3U` object.
         """
         start_paths = {path.casefold() for path in self.path_mapper.unmap_many(self._original, check_existence=False)}
-        os.makedirs(dirname(self.path), exist_ok=True)
+        if dirname(self.path):
+            os.makedirs(dirname(self.path), exist_ok=True)
 
         if not dry_run:
             with open(self.path, "w", encoding="utf-8") as file:

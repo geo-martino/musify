@@ -5,7 +5,7 @@ These define the foundations of any remote object or item.
 """
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
-from typing import Any, Self
+from typing import Any, Self, AsyncContextManager
 
 from musify.api.exception import APIError
 from musify.core.base import MusifyItem
@@ -13,7 +13,7 @@ from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.api import RemoteAPI
 
 
-class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, ABC):
+class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, AsyncContextManager, ABC):
     """
     Generic base class for remote objects. Extracts key data from a remote API JSON response.
 
@@ -62,6 +62,13 @@ class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, ABC):
 
         self._check_type()
         self.refresh(skip_checks=skip_checks)
+
+    async def __aenter__(self) -> Self:
+        await self.api.__aenter__()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await self.api.__aexit__(exc_type, exc_val, exc_tb)
 
     @abstractmethod
     def _check_type(self) -> None:

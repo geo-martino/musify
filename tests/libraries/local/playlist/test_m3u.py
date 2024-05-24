@@ -12,7 +12,7 @@ from musify.libraries.local.track import LocalTrack
 from tests.libraries.local.playlist.testers import LocalPlaylistTester
 from tests.libraries.local.track.utils import random_track, random_tracks
 from tests.libraries.local.utils import path_playlist_m3u
-from tests.utils import path_txt
+from tests.utils import path_txt, path_resources
 
 
 class TestM3U(LocalPlaylistTester):
@@ -64,16 +64,17 @@ class TestM3U(LocalPlaylistTester):
         pl.load(tracks + tracks_random[:4])
         assert pl.tracks == tracks_random[:4]
 
-    def test_load_file_with_no_tracks(
-            self, tracks_actual: list[LocalTrack], tracks_limited: list[LocalTrack], path_mapper: PathMapper
-    ):
-        pl = M3U(path=path_playlist_m3u, path_mapper=path_mapper)
+    # noinspection PyTestUnpassedFixture
+    def test_load_file_with_no_tracks(self, tracks_actual: list[LocalTrack], tracks_limited: list[LocalTrack]):
+        pl = M3U(path=path_playlist_m3u, path_mapper=PathStemMapper(stem_map={"../": path_resources}))
 
         assert pl.path == path_playlist_m3u
         assert pl.tracks == tracks_actual
+        assert [track.path for track in pl] == [track.path for track in tracks_actual]
 
         # reloads only with given tracks that match conditions i.e. paths to include
         pl.load(tracks_limited)
+        assert [track.path for track in pl] == [track.path for track in tracks_limited if track in tracks_actual]
         assert pl.tracks == [track for track in tracks_limited if track in tracks_actual]
 
         # ...and then reloads all tracks from disk that match conditions when no tracks are given

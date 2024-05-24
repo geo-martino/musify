@@ -4,7 +4,7 @@ Functionality relating to a generic remote library.
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Mapping, Iterable
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
 from musify.core.base import MusifyItem
 from musify.libraries.core.object import Track, Library, Playlist
@@ -18,6 +18,14 @@ from musify.log.logger import MusifyLogger
 from musify.processors.base import Filter
 from musify.processors.filter import FilterDefinedList
 from musify.utils import align_string, get_max_width
+
+type RestorePlaylistsType = (
+        Library |
+        Collection[Playlist] |
+        Mapping[str, Iterable[Track]] |
+        Mapping[str, Iterable[str]] |
+        Mapping[str, Iterable[Mapping[str, Any]]]
+)
 
 
 class RemoteLibrary[
@@ -35,6 +43,11 @@ class RemoteLibrary[
     __slots__ = ("logger", "_factory", "_playlists", "_tracks", "_albums", "_artists", "playlist_filter")
     __attributes_classes__ = (Library, RemoteCollection)
     __attributes_ignore__ = ("api", "factory")
+
+    @property
+    def _log_min_width(self) -> int:
+        max_type_width = max(len(str(enum.name)) for enum in RemoteObjectType.all())
+        return len(f"USER'S {self.api.source.upper()} ") + max_type_width
 
     @property
     def factory(self) -> RemoteObjectFactory[A, PL, TR, AL, AR]:
@@ -97,6 +110,13 @@ class RemoteLibrary[
         self._tracks: list[TR] = []
         self._albums: list[AL] = []
         self._artists: list[AR] = []
+
+    async def __aenter__(self) -> Self:
+        await self.api.__aenter__()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await self.api.__aexit__(exc_type, exc_val, exc_tb)
 
     async def extend(self, __items: Iterable[MusifyItem], allow_duplicates: bool = True) -> None:
         self.logger.debug(f"Extend {self.api.source} tracks data: START")
@@ -189,7 +209,7 @@ class RemoteLibrary[
         raise NotImplementedError
 
     def log_playlists(self) -> None:
-        max_width = get_max_width(self.playlists)
+        max_width = get_max_width(self.playlists, min_width=self._log_min_width)
 
         self.logger.stat(f"\33[1;96m{self.api.source.upper()} PLAYLISTS: \33[0m")
         for name, playlist in self.playlists.items():
@@ -236,7 +256,7 @@ class RemoteLibrary[
         album_tracks = [track.uri for tracks in self.albums for track in tracks]
         in_albums = len([track for track in self.tracks if track.uri in album_tracks])
 
-        width = get_max_width(self.playlists)
+        width = get_max_width(self.playlists, min_width=self._log_min_width)
         self.logger.stat(
             f"\33[1;96m{"USER'S " + self.api.source.upper() + " TRACKS":<{width}}\33[1;0m |"
             f"\33[92m{in_playlists:>7} in playlists  \33[0m|"
@@ -280,7 +300,7 @@ class RemoteLibrary[
 
     def log_albums(self) -> None:
         """Log stats on currently loaded albums"""
-        width = get_max_width(self.playlists)
+        width = get_max_width(self.playlists, min_width=self._log_min_width)
         self.logger.stat(
             f"\33[1;96m{"USER'S " + self.api.source.upper() + " ALBUMS":<{width}}\33[1;0m |"
             f"\33[92m{sum(len(album.tracks) for album in self.albums):>7} album tracks  \33[0m|"
@@ -321,7 +341,7 @@ class RemoteLibrary[
 
     def log_artists(self) -> None:
         """Log stats on currently loaded artists"""
-        width = get_max_width(self.playlists)
+        width = get_max_width(self.playlists, min_width=self._log_min_width)
         self.logger.stat(
             f"\33[1;96m{"USER'S " + self.api.source.upper() + " ARTISTS":<{width}}\33[1;0m |"
             f"\33[92m{sum(len(artist.tracks) for artist in self.artists):>7} artist tracks \33[0m|"
@@ -339,11 +359,7 @@ class RemoteLibrary[
         """
         return {name: [track.uri for track in pl] for name, pl in self.playlists.items()}
 
-    async def restore_playlists(
-            self,
-            playlists: Library | Collection[Playlist] | Mapping[str, Iterable[Track]] | Mapping[str, Iterable[str]],
-            dry_run: bool = True,
-    ) -> None:
+    async def restore_playlists(self, playlists: RestorePlaylistsType, dry_run: bool = True) -> None:
         """
         Restore playlists from a backup to loaded playlist objects.
 
@@ -364,7 +380,15 @@ class RemoteLibrary[
         ):
             # get URIs from playlists in map values
             playlists = {name: [item.uri for item in pl] for name, pl in playlists.items()}
-        elif not isinstance(playlists, Mapping) and isinstance(playlists, Collection):
+        elif isinstance(playlists, Mapping):
+            # get URIs from playlists in collection
+            playlists = {
+                name:
+                    [t["uri"] if isinstance(t, Mapping) else t for t in tracks["tracks"]]
+                    if isinstance(tracks, Mapping) else tracks
+                for name, tracks in playlists.items()
+            }
+        elif isinstance(playlists, Collection):
             # get URIs from playlists in collection
             playlists = {pl.name: [track.uri for track in pl] for pl in playlists}
         playlists: Mapping[str, Iterable[str]]

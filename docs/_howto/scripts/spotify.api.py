@@ -1,6 +1,6 @@
 from musify.libraries.remote.spotify.api import SpotifyAPI
 
-spotify_api = SpotifyAPI(
+api = SpotifyAPI(
     client_id="<YOUR CLIENT ID>",
     client_secret="<YOUR CLIENT SECRET>",
     scopes=[
@@ -15,8 +15,3 @@ spotify_api = SpotifyAPI(
     # for quicker authorisations in future
     token_file_path="<PATH TO JSON TOKEN>"
 )
-
-from musify.libraries.remote.spotify.library import SpotifyLibrary
-
-with spotify_api as a:
-    library = SpotifyLibrary(api=a)

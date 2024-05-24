@@ -42,7 +42,7 @@ Added
 * Cache settings for specific `GET` request endpoints on :py:class:`.SpotifyAPI` replacing need
   for per method ``use_cache`` parameter.
 * The following classes should now be run as AsyncContextManagers to function correctly:
-   * :py:class:`.SQLiteRepository` & :py:class:`.SQLiteCache`
+   * :py:class:`.SQLiteTable` & :py:class:`.SQLiteCache`
    * :py:class:`.RequestHandler`
    * :py:class:`.CachedSession`
    * :py:class:`.RemoteAPI` & :py:class:`.SpotifyAPI`
@@ -73,6 +73,10 @@ Fixed
 * Added missing variables to __slots__ definitions
 * Correctly applied __slots__ pattern to child classes. Now works as expected.
 * :py:class:`.LocalTrack` now copies tags as expected when calling ``copy.copy()``
+* Bug where loading an M3U playlist with new track objects would force all created track objects
+  to have lower case paths
+* :py:meth:`.RemoteLibrary.restore_playlists` now correctly handles the backup
+  output from :py:meth:`.RemoteLibrary.backup_playlists`
 
 Removed
 -------
@@ -86,6 +90,11 @@ Removed
    * :py:class:`.RemoteItemChecker`
    * :py:class:`.RemoteItemSearcher`
 * ThreadPoolExecutor use on :py:class:`.RemoteItemSearcher`. Now uses asynchronous logic instead.
+
+Documentation
+-------------
+
+* Updated how-to section to reflect changes to underlying code
 
 0.9.2
 =====

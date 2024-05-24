@@ -9,7 +9,7 @@ from collections import Counter
 from collections.abc import Sequence, Collection, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Self
 
 from musify import PROGRAM_NAME
 from musify.core.base import MusifyItemSettable
@@ -134,6 +134,13 @@ class RemoteItemChecker(InputProcessor):
         self._final_unavailable: list[MusifyItemSettable] = []
         #: The final list of items skipped by the checker
         self._final_skipped: list[MusifyItemSettable] = []
+
+    async def __aenter__(self) -> Self:
+        await self.api.__aenter__()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await self.api.__aexit__(exc_type, exc_val, exc_tb)
 
     async def _check_api(self) -> None:
         """Check if the API token has expired and refresh as necessary"""

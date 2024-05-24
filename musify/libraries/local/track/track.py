@@ -150,7 +150,9 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
             return datetime.date(self._year, self._month, self._day)
 
     @date.setter
-    def date(self, value: datetime.date | None):
+    def date(self, value: str | datetime.date | None):
+        if isinstance(value, str):
+            value = datetime.datetime.strptime(value, "%Y-%m-%d")
         self._year = value.year if value else None
         self._month = value.month if value else None
         self._day = value.day if value else None

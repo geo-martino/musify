@@ -116,7 +116,6 @@ class SQLiteTable[K: tuple[Any, ...], V: str](ResponseRepository[K, V]):
             return request  # `request` is the key
 
         key = self.settings.get_key(request.url)
-        print(key)
         if any(part is None for part in key):
             return
 
@@ -170,7 +169,6 @@ class SQLiteTable[K: tuple[Any, ...], V: str](ResponseRepository[K, V]):
 
     async def get_response(self, request: RepositoryRequestType[K]) -> V | None:
         key = self.get_key_from_request(request)
-        print(key)
         if not key:
             return
 
