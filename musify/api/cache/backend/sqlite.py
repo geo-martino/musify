@@ -15,7 +15,7 @@ from yarl import URL
 
 from musify import PROGRAM_NAME
 from musify.api.cache.backend.base import DEFAULT_EXPIRE, ResponseCache, ResponseRepository, RepositoryRequestType
-from musify.api.cache.backend.base import RequestSettings, PaginatedRequestSettings
+from musify.api.cache.backend.base import RequestSettings
 from musify.api.exception import CacheError
 from musify.utils import required_modules_installed
 
@@ -97,9 +97,14 @@ class SQLiteTable[K: tuple[Any, ...], V: str](ResponseRepository[K, V]):
     @property
     def _primary_key_columns(self) -> Mapping[str, str]:
         """A map of column names to column data types for the primary keys of this repository."""
-        keys = {"method": "VARCHAR(10)", "id": "VARCHAR(50)"}
-        if isinstance(self.settings, PaginatedRequestSettings):
+        expected_columns = self.settings.fields
+
+        keys = {"method": "VARCHAR(10)"}
+        if "id" in expected_columns:
+            keys["id"] = "VARCHAR(50)"
+        if "offset" in expected_columns:
             keys["offset"] = "INT2"
+        if "size" in expected_columns:
             keys["size"] = "INT2"
 
         return keys
@@ -110,16 +115,12 @@ class SQLiteTable[K: tuple[Any, ...], V: str](ResponseRepository[K, V]):
         if not isinstance(request, RequestInfo):
             return request  # `request` is the key
 
-        id_ = self.settings.get_id(request.url)
-        if not id_:
+        key = self.settings.get_key(request.url)
+        print(key)
+        if any(part is None for part in key):
             return
 
-        key = [str(request.method).upper(), id_]
-        if isinstance(self.settings, PaginatedRequestSettings):
-            key.append(self.settings.get_offset(request.url))
-            key.append(self.settings.get_limit(request.url))
-
-        return tuple(key)
+        return str(request.method).upper(), *key
 
     async def count(self, include_expired: bool = True) -> int:
         query = f"SELECT COUNT(*) FROM {self.settings.name}"
@@ -169,6 +170,7 @@ class SQLiteTable[K: tuple[Any, ...], V: str](ResponseRepository[K, V]):
 
     async def get_response(self, request: RepositoryRequestType[K]) -> V | None:
         key = self.get_key_from_request(request)
+        print(key)
         if not key:
             return
 
@@ -202,7 +204,7 @@ class SQLiteTable[K: tuple[Any, ...], V: str](ResponseRepository[K, V]):
         ))
         params = (
             *__key,
-            self.settings.get_name(__value),
+            self.settings.get_name(self.deserialize(__value)),
             datetime.now().isoformat(),
             self.expire.isoformat(),
             self.serialize(__value)

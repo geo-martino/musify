@@ -26,35 +26,24 @@ class RequestSettings(ABC):
     #: That name of the repository in the backend
     name: str
 
-    @staticmethod
+    @property
     @abstractmethod
-    def get_name(value: Any) -> str | None:
+    def fields(self) -> tuple[str, ...]:
+        """
+        The names of the fields relating to the keys extracted by :py:meth:`get_key` in the order
+        in which they appear from the results of this method.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_key(self, *args, **kwargs) -> tuple:
         """Extracts the name to assign to a cache entry in the repository from a given ``value``."""
         raise NotImplementedError
 
     @staticmethod
     @abstractmethod
-    def get_id(url: str | URL) -> str | None:
-        """Extracts the ID for a request from the given ``url``."""
-        raise NotImplementedError
-
-
-class PaginatedRequestSettings(RequestSettings, ABC):
-    """
-    Settings for a request type for a given endpoint which returns a paginated response
-    to be used to configure a repository in the cache backend.
-    """
-
-    @staticmethod
-    @abstractmethod
-    def get_offset(url: str | URL) -> int:
-        """Extracts the offset for a paginated request from the given ``url``."""
-        raise NotImplementedError
-
-    @staticmethod
-    @abstractmethod
-    def get_limit(url: str | URL) -> int:
-        """Extracts the limit for a paginated request from the given ``url``."""
+    def get_name(response: dict[str, Any]) -> str | None:
+        """Extracts the name to assign to a cache entry in the repository from a given ``response``."""
         raise NotImplementedError
 
 

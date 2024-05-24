@@ -13,10 +13,11 @@ import pytest
 from aiohttp import ClientRequest, ClientResponse, ClientSession
 from yarl import URL
 
-from musify.api.cache.backend.base import RequestSettings, PaginatedRequestSettings
+from musify.api.cache.backend.base import RequestSettings
 from musify.api.cache.backend.sqlite import SQLiteTable, SQLiteCache
 from musify.api.cache.response import CachedResponse
 from tests.api.cache.backend.testers import ResponseRepositoryTester, ResponseCacheTester, BaseResponseTester
+from tests.api.cache.backend.utils import MockPaginatedRequestSettings
 from tests.utils import random_str
 
 
@@ -37,7 +38,7 @@ class SQLiteTester(BaseResponseTester):
             str(randrange(0, 100)): randrange(0, 100),
         }
 
-        if isinstance(settings, PaginatedRequestSettings):
+        if isinstance(settings, MockPaginatedRequestSettings):
             key = (*key, randrange(0, 100), randrange(1, 50))
 
         return key, value

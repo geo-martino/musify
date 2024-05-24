@@ -1,6 +1,8 @@
+from random import choice
+
 import pytest
 
-from musify.api.cache.backend.base import ResponseCache, PaginatedRequestSettings
+from musify.api.cache.backend.base import ResponseCache
 from musify.api.cache.backend.sqlite import SQLiteCache
 from musify.api.cache.session import CachedSession
 from musify.api.exception import APIError
@@ -51,20 +53,12 @@ class TestSpotifyAPI:
             assert api.user_id
 
         async with api as a:
-            assert isinstance(api.handler.session, CachedSession)
-            assert api.handler.session.cache.cache_name == cache.cache_name
-
             assert a.user_id == api_mock.user_id
 
-    async def test_cache_setup(self, cache: ResponseCache, api_mock: SpotifyMock):
-        async with SpotifyAPI(
-                cache=cache,
-                token={"access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"},
-                test_args=None,
-                test_expiry=0,
-                test_condition=None,
-        ):
-            expected_names_normal = [
+            assert isinstance(a.handler.session, CachedSession)
+            assert a.handler.session.cache.cache_name == cache.cache_name
+
+            expected_names = [
                 "tracks",
                 "audio_features",
                 "audio_analysis",
@@ -72,14 +66,16 @@ class TestSpotifyAPI:
                 "artists",
                 "episodes",
                 "chapters",
+                "album_tracks",
+                "artist_albums",
+                "show_episodes",
+                "audiobook_chapters"
             ]
-            expected_names_paginated = ["album_tracks", "artist_albums", "show_episodes", "audiobook_chapters"]
 
-            assert all(name in cache for name in expected_names_normal)
-            assert all(name in cache for name in expected_names_paginated)
+            assert all(name in cache for name in expected_names)
 
-            assert all(not isinstance(cache[name].settings, PaginatedRequestSettings) for name in expected_names_normal)
-            assert all(isinstance(cache[name].settings, PaginatedRequestSettings) for name in expected_names_paginated)
+            repository = choice(list(a.handler.session.cache.values()))
+            await repository.count()  # just check this doesn't fail
 
     # noinspection PyTestUnpassedFixture
     async def test_cache_repository_getter(self, cache: ResponseCache, api_mock: SpotifyMock):
