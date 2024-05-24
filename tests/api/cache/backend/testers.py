@@ -1,3 +1,4 @@
+import sqlite3
 from abc import ABC, abstractmethod
 from random import choice, randrange
 from typing import Any
@@ -346,15 +347,36 @@ class ResponseCacheTester(BaseResponseTester, ABC):
         """Returns a repository for the given ``url`` from the given ``cache``."""
         raise NotImplementedError
 
-    async def test_init_await(self, cache: ResponseCache):
+    async def test_init(self, cache: ResponseCache):
         assert cache.values()
         for repository in cache.values():
             assert await repository.count()
+
+    async def test_context_management(self, cache: ResponseCache):
+        # does not create repository backend resource until awaited or entered
+        settings = self.generate_settings()
+        assert settings.name not in cache
+        repository = cache.create_repository(settings)
+
+        with pytest.raises(sqlite3.OperationalError):
+            await repository.count()
+        await cache
+        await repository.count()
+
+        settings = self.generate_settings()
+        assert settings.name not in cache
+        repository = cache.create_repository(settings)
+
+        with pytest.raises(sqlite3.OperationalError):
+            await repository.count()
+        async with cache:
+            await repository.count()
 
     async def test_create_repository(self, cache: ResponseCache):
         settings = self.generate_settings()
         assert settings.name not in cache
 
+        # noinspection PyAsyncCall
         cache.create_repository(settings)
         assert settings.name in cache
         assert cache[settings.name].settings == settings
@@ -362,6 +384,7 @@ class ResponseCacheTester(BaseResponseTester, ABC):
         # does not create a repository that already exists
         repository = choice(list(cache.values()))
         with pytest.raises(CacheError):
+            # noinspection PyAsyncCall
             cache.create_repository(repository.settings)
 
     def test_get_repository_for_url(self, cache: ResponseCache):

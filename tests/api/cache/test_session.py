@@ -8,6 +8,8 @@ from musify.api.cache.backend.base import ResponseCache
 from musify.api.cache.session import CachedSession
 from tests.api.cache.backend.test_sqlite import TestSQLiteCache as SQLiteCacheTester
 from tests.api.cache.backend.testers import ResponseCacheTester
+from tests.api.cache.backend.utils import MockRequestSettings
+from tests.utils import random_str
 
 
 class TestCachedSession:
@@ -36,6 +38,17 @@ class TestCachedSession:
         """
         async with CachedSession(cache=cache) as session:
             yield session
+
+    async def test_context_management(self, cache: ResponseCache):
+        # does not create repository backend resource until entered
+        settings = MockRequestSettings(name=random_str(20, 30))
+        session = CachedSession(cache=cache)
+        repository = cache.create_repository(settings)
+
+        with pytest.raises(Exception):
+            await repository.count()
+        async with session:
+            await repository.count()
 
     async def test_request_cached(
             self,

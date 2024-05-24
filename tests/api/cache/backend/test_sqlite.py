@@ -185,6 +185,11 @@ class TestSQLiteCache(SQLiteTester, ResponseCacheTester):
         key, value = TestSQLiteTable.generate_item(settings)
         return TestSQLiteTable.generate_response_from_item(settings, key, value, session=session)
 
+    @staticmethod
+    def generate_repository(settings: RequestSettings, session: ClientSession = None) -> ClientResponse:
+        key, value = TestSQLiteTable.generate_item(settings)
+        return TestSQLiteTable.generate_response_from_item(settings, key, value, session=session)
+
     @classmethod
     @contextlib.asynccontextmanager
     async def generate_cache(cls) -> SQLiteCache:
