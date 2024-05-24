@@ -3,6 +3,7 @@ from collections.abc import Iterable
 from typing import Any
 
 import pytest
+from aioresponses.core import RequestCall
 
 from musify.exception import MusifyKeyError
 from musify.libraries.local.track import LocalTrack
@@ -61,10 +62,13 @@ class RemoteCollectionTester(MusifyCollectionTester, metaclass=ABCMeta):
 
 class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, metaclass=ABCMeta):
 
+    @staticmethod
+    def _get_payload_from_request(request: RequestCall) -> dict[str, Any] | None:
+        return request.kwargs.get("body", request.kwargs.get("json"))
+
     ###########################################################################
     ## Sync tests
     ###########################################################################
-
     @abstractmethod
     def sync_playlist(self, response_valid: dict[str, Any], api: RemoteAPI) -> RemotePlaylist:
         """
@@ -83,75 +87,77 @@ class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, metaclass=ABC
 
     @staticmethod
     @abstractmethod
-    def get_sync_uris(url: str, api_mock: RemoteMock) -> tuple[list[str], list[str]]:
+    async def get_sync_uris(url: str, api_mock: RemoteMock) -> tuple[list[str], list[str]]:
         """Return tuple of lists of URIs added and URIs cleared when applying sync operations"""
         raise NotImplementedError
 
     @staticmethod
-    def assert_playlist_loaded(sync_playlist: RemotePlaylist, api_mock: RemoteMock, count: int = 1) -> None:
+    async def assert_playlist_loaded(sync_playlist: RemotePlaylist, api_mock: RemoteMock, count: int = 1) -> None:
         """Assert the given playlist was fully reloaded through GET requests ``count`` number of times"""
         pages = api_mock.calculate_pages_from_response(sync_playlist.response)
 
-        requests = api_mock.get_requests(url=sync_playlist.url, method="GET")
-        requests += api_mock.get_requests(url=sync_playlist.url + "/tracks", method="GET")
+        requests = await api_mock.get_requests(method="GET", url=sync_playlist.url)
+        requests += await api_mock.get_requests(method="GET", url=sync_playlist.url + "/tracks")
 
         assert len(requests) == pages * count
 
     @staticmethod
-    def test_sync_dry_run(sync_playlist: RemotePlaylist, sync_items: list[RemoteTrack], api_mock: RemoteMock):
-        result_refresh_no_items = sync_playlist.sync(kind="refresh", reload=False)
+    async def test_sync_dry_run(sync_playlist: RemotePlaylist, sync_items: list[RemoteTrack], api_mock: RemoteMock):
+        result_refresh_no_items = await sync_playlist.sync(kind="refresh", reload=False)
         assert result_refresh_no_items.start == len(sync_playlist)
         assert result_refresh_no_items.added == result_refresh_no_items.start
         assert result_refresh_no_items.removed == result_refresh_no_items.start
         assert result_refresh_no_items.unchanged == 0
         assert result_refresh_no_items.difference == 0
         assert result_refresh_no_items.final == result_refresh_no_items.start
-        assert len(api_mock.request_history) == 0
+        api_mock.assert_not_called()
 
         sync_items_extended = sync_items + sync_playlist[:10]
-        result_refresh_with_items = sync_playlist.sync(items=sync_items_extended, kind="refresh", reload=True)
+        result_refresh_with_items = await sync_playlist.sync(items=sync_items_extended, kind="refresh", reload=True)
         assert result_refresh_with_items.start == len(sync_playlist)
         assert result_refresh_with_items.added == len(sync_items_extended)
         assert result_refresh_with_items.removed == result_refresh_with_items.start
         assert result_refresh_with_items.unchanged == 0
         assert result_refresh_with_items.difference == result_refresh_with_items.added - result_refresh_with_items.start
         assert result_refresh_with_items.final == result_refresh_with_items.added
-        assert len(api_mock.request_history) == 0  # reload does not happen on dry_run
+        api_mock.assert_not_called()  # reload does not happen on dry_run
 
-        result_new = sync_playlist.sync(items=sync_items_extended, kind="new", reload=False)
+        result_new = await sync_playlist.sync(items=sync_items_extended, kind="new", reload=False)
         assert result_new.start == len(sync_playlist)
         assert result_new.added == len(sync_items)
         assert result_new.removed == 0
         assert result_new.unchanged == result_new.start
         assert result_new.difference == result_new.added
         assert result_new.final == result_new.start + result_new.difference
-        assert len(api_mock.request_history) == 0
+        api_mock.assert_not_called()
 
         sync_uri = {track.uri for track in sync_items_extended}
-        result_sync = sync_playlist.sync(items=sync_items_extended, kind="sync", reload=False)
+        result_sync = await sync_playlist.sync(items=sync_items_extended, kind="sync", reload=False)
         assert result_sync.start == len(sync_playlist)
         assert result_sync.added == len(sync_items)
         assert result_sync.removed == len([track.uri for track in sync_playlist if track.uri not in sync_uri])
         assert result_sync.unchanged == len([track.uri for track in sync_playlist if track.uri in sync_uri])
         assert result_sync.difference == len(sync_items) - result_sync.removed
         assert result_sync.final == result_sync.start + result_sync.difference
-        assert len(api_mock.request_history) == 0
+        api_mock.assert_not_called()
 
-    def test_sync_reload(self, sync_playlist: RemotePlaylist, sync_items: list[RemoteTrack], api_mock: RemoteMock):
+    async def test_sync_reload(
+            self, sync_playlist: RemotePlaylist, sync_items: list[RemoteTrack], api_mock: RemoteMock
+    ):
         start = len(sync_playlist)
         sync_playlist.tracks.clear()
         assert len(sync_playlist) == 0
 
-        sync_playlist.sync(kind="sync", items=sync_items, reload=True, dry_run=False)
+        await sync_playlist.sync(kind="sync", items=sync_items, reload=True, dry_run=False)
         # playlist will reload from mock so, for this test, it will just get back its original items
         assert len(sync_playlist) == start
 
         # 1 for skip dupes on add to playlist, 1 for reload
-        self.assert_playlist_loaded(sync_playlist=sync_playlist, api_mock=api_mock, count=2)
+        await self.assert_playlist_loaded(sync_playlist=sync_playlist, api_mock=api_mock, count=2)
 
-    def test_sync_new(self, sync_playlist: RemotePlaylist, sync_items: list[RemoteTrack], api_mock: RemoteMock):
+    async def test_sync_new(self, sync_playlist: RemotePlaylist, sync_items: list[RemoteTrack], api_mock: RemoteMock):
         sync_items_extended = sync_items + sync_playlist.tracks[:5]
-        result = sync_playlist.sync(kind="new", items=sync_items_extended, reload=False, dry_run=False)
+        result = await sync_playlist.sync(kind="new", items=sync_items_extended, reload=False, dry_run=False)
 
         assert result.start == len(sync_playlist)
         assert result.added == len(sync_items)
@@ -160,16 +166,18 @@ class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, metaclass=ABC
         assert result.difference == result.added
         assert result.final == result.start + result.difference
 
-        uri_add, uri_clear = self.get_sync_uris(url=sync_playlist.url, api_mock=api_mock)
+        uri_add, uri_clear = await self.get_sync_uris(url=sync_playlist.url, api_mock=api_mock)
         assert uri_add == [track.uri for track in sync_items]
         assert uri_clear == []
 
         # 1 for skip dupes check on add to playlist
-        self.assert_playlist_loaded(sync_playlist=sync_playlist, api_mock=api_mock, count=1)
+        await self.assert_playlist_loaded(sync_playlist=sync_playlist, api_mock=api_mock, count=1)
 
-    def test_sync_refresh(self, sync_playlist: RemotePlaylist, sync_items: list[RemoteTrack], api_mock: RemoteMock):
+    async def test_sync_refresh(
+            self, sync_playlist: RemotePlaylist, sync_items: list[RemoteTrack], api_mock: RemoteMock
+    ):
         start = len(sync_playlist)
-        result = sync_playlist.sync(items=sync_items, kind="refresh", reload=True, dry_run=False)
+        result = await sync_playlist.sync(items=sync_items, kind="refresh", reload=True, dry_run=False)
 
         assert result.start == start
         assert result.added == len(sync_items)
@@ -178,16 +186,16 @@ class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, metaclass=ABC
         # assert result.difference == 0  # useless when mocking + reload
         # assert result.final == start  # useless when mocking + reload
 
-        uri_add, uri_clear = self.get_sync_uris(url=sync_playlist.url, api_mock=api_mock)
+        uri_add, uri_clear = await self.get_sync_uris(url=sync_playlist.url, api_mock=api_mock)
         assert uri_add == [track.uri for track in sync_items]
         assert uri_clear == [track.uri for track in sync_playlist]
 
         # 1 load current tracks on remote when clearing, 1 for reload
-        self.assert_playlist_loaded(sync_playlist=sync_playlist, api_mock=api_mock, count=2)
+        await self.assert_playlist_loaded(sync_playlist=sync_playlist, api_mock=api_mock, count=2)
 
-    def test_sync(self, sync_playlist: RemotePlaylist, sync_items: list[RemoteTrack], api_mock: RemoteMock):
+    async def test_sync(self, sync_playlist: RemotePlaylist, sync_items: list[RemoteTrack], api_mock: RemoteMock):
         sync_items_extended = sync_items + sync_playlist[:10]
-        result = sync_playlist.sync(kind="sync", items=sync_items_extended, reload=False, dry_run=False)
+        result = await sync_playlist.sync(kind="sync", items=sync_items_extended, reload=False, dry_run=False)
 
         sync_uri = {track.uri for track in sync_items_extended}
         assert result.start == len(sync_playlist)
@@ -197,9 +205,9 @@ class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, metaclass=ABC
         assert result.difference == len(sync_items) - result.removed
         assert result.final == result.start + result.difference
 
-        uri_add, uri_clear = self.get_sync_uris(url=sync_playlist.url, api_mock=api_mock)
+        uri_add, uri_clear = await self.get_sync_uris(url=sync_playlist.url, api_mock=api_mock)
         assert uri_add == [track.uri for track in sync_items]
         assert uri_clear == [track.uri for track in sync_playlist if track.uri not in sync_uri]
 
         # 1 load when clearing
-        self.assert_playlist_loaded(sync_playlist=sync_playlist, api_mock=api_mock, count=1)
+        await self.assert_playlist_loaded(sync_playlist=sync_playlist, api_mock=api_mock, count=1)

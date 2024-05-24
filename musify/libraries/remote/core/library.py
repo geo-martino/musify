@@ -4,7 +4,7 @@ Functionality relating to a generic remote library.
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Mapping, Iterable
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
 from musify.core.base import MusifyItem
 from musify.libraries.core.object import Track, Library, Playlist
@@ -18,6 +18,14 @@ from musify.log.logger import MusifyLogger
 from musify.processors.base import Filter
 from musify.processors.filter import FilterDefinedList
 from musify.utils import align_string, get_max_width
+
+type RestorePlaylistsType = (
+        Library |
+        Collection[Playlist] |
+        Mapping[str, Iterable[Track]] |
+        Mapping[str, Iterable[str]] |
+        Mapping[str, Iterable[Mapping[str, Any]]]
+)
 
 
 class RemoteLibrary[
@@ -35,6 +43,11 @@ class RemoteLibrary[
     __slots__ = ("logger", "_factory", "_playlists", "_tracks", "_albums", "_artists", "playlist_filter")
     __attributes_classes__ = (Library, RemoteCollection)
     __attributes_ignore__ = ("api", "factory")
+
+    @property
+    def _log_min_width(self) -> int:
+        max_type_width = max(len(str(enum.name)) for enum in RemoteObjectType.all())
+        return len(f"USER'S {self.api.source.upper()} ") + max_type_width
 
     @property
     def factory(self) -> RemoteObjectFactory[A, PL, TR, AL, AR]:
@@ -98,7 +111,14 @@ class RemoteLibrary[
         self._albums: list[AL] = []
         self._artists: list[AR] = []
 
-    def extend(self, __items: Iterable[MusifyItem], allow_duplicates: bool = True) -> None:
+    async def __aenter__(self) -> Self:
+        await self.api.__aenter__()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await self.api.__aexit__(exc_type, exc_val, exc_tb)
+
+    async def extend(self, __items: Iterable[MusifyItem], allow_duplicates: bool = True) -> None:
         self.logger.debug(f"Extend {self.api.source} tracks data: START")
 
         load_uris = []
@@ -118,7 +138,7 @@ class RemoteLibrary[
             f"with {len(load_uris)} additional tracks \33[0m"
         )
 
-        load_tracks = self.api.get_tracks(load_uris, features=True)
+        load_tracks = await self.api.get_tracks(load_uris, features=True)
         self.items.extend(map(self.factory.track, load_tracks))
 
         self.logger.print(STAT)
@@ -126,15 +146,15 @@ class RemoteLibrary[
         self.logger.print()
         self.logger.debug(f"Extend {self.api.source} tracks data: DONE\n")
 
-    def load(self) -> None:
+    async def load(self) -> None:
         """Loads all data from the remote API for this library and log results."""
         self.logger.debug(f"Load {self.api.source} library: START")
         self.logger.info(f"\33[1;95m ->\33[1;97m Loading {self.api.source} library \33[0m")
 
-        self.load_playlists()
-        self.load_tracks()
-        self.load_saved_albums()
-        self.load_saved_artists()
+        await self.load_playlists()
+        await self.load_tracks()
+        await self.load_saved_albums()
+        await self.load_saved_artists()
 
         self.logger.print(STAT)
         self.log_playlists()
@@ -148,22 +168,21 @@ class RemoteLibrary[
     ###########################################################################
     ## Load - playlists
     ###########################################################################
-    def load_playlists(self) -> None:
+    async def load_playlists(self) -> None:
         """
         Load all playlists from the API that match the filter rules in this library. Also loads all their tracks.
         WARNING: Overwrites any currently loaded playlists.
         """
         self.logger.debug(f"Load {self.api.source} playlists: START")
-        self.api.load_user_data()
 
-        responses = self.api.get_user_items(kind=RemoteObjectType.PLAYLIST)
+        responses = await self.api.get_user_items(kind=RemoteObjectType.PLAYLIST)
         responses = self._filter_playlists(responses)
 
         self.logger.info(
             f"\33[1;95m  >\33[1;97m Getting {self._get_total_tracks(responses=responses)} "
             f"{self.api.source} tracks from {len(responses)} playlists \33[0m"
         )
-        self.api.get_items(responses, kind=RemoteObjectType.PLAYLIST)
+        await self.api.get_items(responses, kind=RemoteObjectType.PLAYLIST)
 
         playlists = [
             self.factory.playlist(response=r, skip_checks=False)
@@ -190,7 +209,7 @@ class RemoteLibrary[
         raise NotImplementedError
 
     def log_playlists(self) -> None:
-        max_width = get_max_width(self.playlists)
+        max_width = get_max_width(self.playlists, min_width=self._log_min_width)
 
         self.logger.stat(f"\33[1;96m{self.api.source.upper()} PLAYLISTS: \33[0m")
         for name, playlist in self.playlists.items():
@@ -200,15 +219,14 @@ class RemoteLibrary[
     ###########################################################################
     ## Load - tracks
     ###########################################################################
-    def load_tracks(self) -> None:
+    async def load_tracks(self) -> None:
         """
         Load all user's saved tracks from the API.
         Updates currently loaded tracks in-place or appends if not already loaded.
         """
         self.logger.debug(f"Load user's saved {self.api.source} tracks: START")
-        self.api.load_user_data()
 
-        responses = self.api.get_user_items(kind=RemoteObjectType.TRACK)
+        responses = await self.api.get_user_items(kind=RemoteObjectType.TRACK)
         for response in self.logger.get_iterator(iterable=responses, desc="Processing tracks", unit="tracks"):
             track = self.factory.track(response=response, skip_checks=True)
 
@@ -218,13 +236,14 @@ class RemoteLibrary[
             current = next((item for item in self._tracks if item == track), None)
             if current is None:
                 self._tracks.append(track)
-            else:
-                current._response = track.response
-                current.refresh(skip_checks=False)
+                continue
+
+            current._response = track.response
+            current.refresh(skip_checks=False)
 
         self.logger.debug(f"Load user's saved {self.api.source} tracks: DONE")
 
-    def enrich_tracks(self, *_, **__) -> None:
+    async def enrich_tracks(self, *_, **__) -> None:
         """
         Call API to enrich elements of track objects improving metadata coverage.
         This is an optionally implementable method. Defaults to doing nothing.
@@ -237,7 +256,7 @@ class RemoteLibrary[
         album_tracks = [track.uri for tracks in self.albums for track in tracks]
         in_albums = len([track for track in self.tracks if track.uri in album_tracks])
 
-        width = get_max_width(self.playlists)
+        width = get_max_width(self.playlists, min_width=self._log_min_width)
         self.logger.stat(
             f"\33[1;96m{"USER'S " + self.api.source.upper() + " TRACKS":<{width}}\33[1;0m |"
             f"\33[92m{in_playlists:>7} in playlists  \33[0m|"
@@ -248,15 +267,14 @@ class RemoteLibrary[
     ###########################################################################
     ## Load - albums
     ###########################################################################
-    def load_saved_albums(self) -> None:
+    async def load_saved_albums(self) -> None:
         """
         Load all user's saved albums from the API.
         Updates currently loaded albums in-place or appends if not already loaded.
         """
         self.logger.debug(f"Load user's saved {self.api.source} albums: START")
-        self.api.load_user_data()
 
-        responses = self.api.get_user_items(kind=RemoteObjectType.ALBUM)
+        responses = await self.api.get_user_items(kind=RemoteObjectType.ALBUM)
         for response in self.logger.get_iterator(iterable=responses, desc="Processing albums", unit="albums"):
             album = self.factory.album(response=response, skip_checks=True)
 
@@ -273,7 +291,7 @@ class RemoteLibrary[
 
         self.logger.debug(f"Load user's saved {self.api.source} albums: DONE")
 
-    def enrich_saved_albums(self, *_, **__) -> None:
+    async def enrich_saved_albums(self, *_, **__) -> None:
         """
         Call API to enrich elements of user's saved album objects improving metadata coverage.
         This is an optionally implementable method. Defaults to doing nothing.
@@ -282,7 +300,7 @@ class RemoteLibrary[
 
     def log_albums(self) -> None:
         """Log stats on currently loaded albums"""
-        width = get_max_width(self.playlists)
+        width = get_max_width(self.playlists, min_width=self._log_min_width)
         self.logger.stat(
             f"\33[1;96m{"USER'S " + self.api.source.upper() + " ALBUMS":<{width}}\33[1;0m |"
             f"\33[92m{sum(len(album.tracks) for album in self.albums):>7} album tracks  \33[0m|"
@@ -293,28 +311,28 @@ class RemoteLibrary[
     ###########################################################################
     ## Load - artists
     ###########################################################################
-    def load_saved_artists(self) -> None:
+    async def load_saved_artists(self) -> None:
         """
         Load all user's saved artists from the API.
         Updates currently loaded artists in-place or appends if not already loaded.
         """
         self.logger.debug(f"Load user's saved {self.api.source} artists: START")
-        self.api.load_user_data()
 
-        responses = self.api.get_user_items(kind=RemoteObjectType.ARTIST)
+        responses = await self.api.get_user_items(kind=RemoteObjectType.ARTIST)
         for response in self.logger.get_iterator(iterable=responses, desc="Processing artists", unit="artists"):
             artist = self.factory.artist(response=response, skip_checks=True)
 
             current = next((item for item in self._artists if item == artist), None)
             if current is None:
                 self._artists.append(artist)
-            else:
-                current._response = artist.response
-                current.refresh(skip_checks=True)
+                continue
+
+            current._response = artist.response
+            current.refresh(skip_checks=True)
 
         self.logger.debug(f"Load user's saved {self.api.source} artists: DONE")
 
-    def enrich_saved_artists(self, *_, **__) -> None:
+    async def enrich_saved_artists(self, *_, **__) -> None:
         """
         Call API to enrich elements of user's saved artist objects improving metadata coverage.
         This is an optionally implementable method. Defaults to doing nothing.
@@ -323,7 +341,7 @@ class RemoteLibrary[
 
     def log_artists(self) -> None:
         """Log stats on currently loaded artists"""
-        width = get_max_width(self.playlists)
+        width = get_max_width(self.playlists, min_width=self._log_min_width)
         self.logger.stat(
             f"\33[1;96m{"USER'S " + self.api.source.upper() + " ARTISTS":<{width}}\33[1;0m |"
             f"\33[92m{sum(len(artist.tracks) for artist in self.artists):>7} artist tracks \33[0m|"
@@ -341,11 +359,7 @@ class RemoteLibrary[
         """
         return {name: [track.uri for track in pl] for name, pl in self.playlists.items()}
 
-    def restore_playlists(
-            self,
-            playlists: Library | Collection[Playlist] | Mapping[str, Iterable[Track]] | Mapping[str, Iterable[str]],
-            dry_run: bool = True,
-    ) -> None:
+    async def restore_playlists(self, playlists: RestorePlaylistsType, dry_run: bool = True) -> None:
         """
         Restore playlists from a backup to loaded playlist objects.
 
@@ -366,7 +380,15 @@ class RemoteLibrary[
         ):
             # get URIs from playlists in map values
             playlists = {name: [item.uri for item in pl] for name, pl in playlists.items()}
-        elif not isinstance(playlists, Mapping) and isinstance(playlists, Collection):
+        elif isinstance(playlists, Mapping):
+            # get URIs from playlists in collection
+            playlists = {
+                name:
+                    [t["uri"] if isinstance(t, Mapping) else t for t in tracks["tracks"]]
+                    if isinstance(tracks, Mapping) else tracks
+                for name, tracks in playlists.items()
+            }
+        elif isinstance(playlists, Collection):
             # get URIs from playlists in collection
             playlists = {pl.name: [track.uri for track in pl] for pl in playlists}
         playlists: Mapping[str, Iterable[str]]
@@ -375,7 +397,7 @@ class RemoteLibrary[
         uri_get = [uri for uri_list in playlists.values() for uri in uri_list if uri not in uri_tracks]
 
         if uri_get:
-            tracks_data = self.api.get_tracks(uri_get, features=False)
+            tracks_data = await self.api.get_tracks(uri_get, features=False)
             tracks = list(map(self.factory.track, tracks_data))
             uri_tracks |= {track.uri: track for track in tracks}
 
@@ -385,12 +407,12 @@ class RemoteLibrary[
                 continue
             if not playlist:  # new playlist given, create it on remote first
                 # noinspection PyArgumentList
-                playlist = self.factory.playlist.create(name=name)
+                playlist = await self.factory.playlist.create(name=name)
 
             playlist._tracks = [uri_tracks.get(uri) for uri in uri_list]
             self.playlists[name] = playlist
 
-    def sync(
+    async def sync(
             self,
             playlists: Library | Mapping[str, Iterable[MusifyItem]] | Collection[Playlist] | None = None,
             kind: Literal["new", "refresh", "sync"] = "new",
@@ -449,8 +471,8 @@ class RemoteLibrary[
                     continue
 
                 # noinspection PyArgumentList
-                self.playlists[name] = self.factory.playlist.create(name=name)
-            results[name] = self.playlists[name].sync(items=pl, kind=kind, reload=reload, dry_run=dry_run)
+                self.playlists[name] = await self.factory.playlist.create(name=name)
+            results[name] = await self.playlists[name].sync(items=pl, kind=kind, reload=reload, dry_run=dry_run)
 
         self.logger.print()
         self.logger.debug(f"Sync {self.api.source} playlists: DONE\n")

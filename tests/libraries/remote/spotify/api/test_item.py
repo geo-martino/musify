@@ -3,11 +3,12 @@ from copy import deepcopy
 from itertools import batched
 from random import sample, randrange, choice
 from typing import Any
-from urllib.parse import parse_qs
+from urllib.parse import unquote
 
 import pytest
 
 from musify.api.cache.backend.sqlite import SQLiteCache
+from musify.api.cache.session import CachedSession
 from musify.api.exception import APIError
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
@@ -39,10 +40,16 @@ class TestSpotifyAPIItems(RemoteAPITester):
         return {id_: response for id_, response in _responses.items() if key is None or response[key]["total"] > 3}
 
     @pytest.fixture(scope="class")
-    def api_cache(self, api: SpotifyAPI) -> SpotifyAPI:
+    async def api_cache(self, api: SpotifyAPI) -> SpotifyAPI:
         """Yield an authorised :py:class:`SpotifyAPI` object with a :py:class:`ResponseCache` configured."""
-        cache = SQLiteCache.connect_with_in_memory_db()
-        return SpotifyAPI(cache=cache, token=api.handler.authoriser.token)
+        async with SpotifyAPI(
+                cache=SQLiteCache.connect_with_in_memory_db(),
+                token=api.handler.authoriser.token,
+                test_args=api.handler.authoriser.test_args,
+                test_expiry=api.handler.authoriser.test_expiry,
+                test_condition=api.handler.authoriser.test_condition,
+        ) as api:
+            yield api
 
     @staticmethod
     def reduce_items(response: dict[str, Any], key: str, api: SpotifyAPI, api_mock: SpotifyMock, pages: int = 3) -> int:
@@ -136,7 +143,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
                 assert len(test[result[self.id_key]][key]["items"]) == expect[key]["total"]
                 self.assert_similar(expect, test[result[self.id_key]], key)
 
-    def assert_get_items_calls(
+    async def assert_get_items_calls(
             self,
             responses: Collection[dict[str, Any]],
             object_type: RemoteObjectType,
@@ -147,12 +154,12 @@ class TestSpotifyAPIItems(RemoteAPITester):
     ):
         """Assert appropriate number of requests made for get_items method calls"""
         url = f"{api.url}/{object_type.name.lower()}s"
-        requests = api_mock.get_requests(url=url)
+        requests = await api_mock.get_requests(url=url)
         for response in responses:
             if limit is None or object_type in {RemoteObjectType.USER, RemoteObjectType.PLAYLIST}:
-                requests += api_mock.get_requests(url=f"{url}/{response[self.id_key]}")
+                requests += await api_mock.get_requests(url=f"{url}/{response[self.id_key]}")
             if key:
-                requests += api_mock.get_requests(url=f"{url}/{response[self.id_key]}/{key}")
+                requests += await api_mock.get_requests(url=f"{url}/{response[self.id_key]}/{key}")
         assert_calls(expected=responses, requests=requests, key=key, limit=limit, api_mock=api_mock)
 
     @staticmethod
@@ -180,20 +187,19 @@ class TestSpotifyAPIItems(RemoteAPITester):
         assert api._get_unit(kind="Audio Features", key="tracks") == "audio features"
         assert api._get_unit(key="audio-features") == "audio features"
 
-    def test_get_items_batches_limited(self, api: SpotifyAPI, api_mock: SpotifyMock):
+    async def test_get_items_batches_limited(self, api: SpotifyAPI, api_mock: SpotifyMock):
         key = RemoteObjectType.TRACK.name.lower() + "s"
         url = f"{api.url}/{key}"
         id_list = [track[self.id_key] for track in api_mock.tracks]
         valid_limit = randrange(api_mock.limit_lower + 1, api_mock.limit_upper - 1)
 
         id_list_reduced = sample(id_list, k=api_mock.limit_lower)
-        api._get_items_batched(url=url, id_list=id_list_reduced, key=key, limit=api_mock.limit_upper - 50)
-        api._get_items_batched(url=url, id_list=id_list, key=key, limit=api_mock.limit_upper + 50)
-        api._get_items_batched(url=url, id_list=id_list, key=key, limit=valid_limit)
+        await api._get_items_batched(url=url, id_list=id_list_reduced, key=key, limit=api_mock.limit_upper - 50)
+        await api._get_items_batched(url=url, id_list=id_list, key=key, limit=api_mock.limit_upper + 50)
+        await api._get_items_batched(url=url, id_list=id_list, key=key, limit=valid_limit)
 
-        for request in api_mock.get_requests(url=url):
-            request_params = parse_qs(request.query)
-            count = len(request_params["ids"][0].split(","))
+        for url, _, _ in await api_mock.get_requests(url=url):
+            count = len(unquote(url.query["ids"]).split(","))
             assert count >= 1
             assert count <= api_mock.limit_max
 
@@ -201,7 +207,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
     ## Input validation
     ###########################################################################
     @pytest.mark.parametrize("object_type", [RemoteObjectType.ALBUM], ids=idfn)
-    def test_extend_items_input_validation(
+    async def test_extend_items_input_validation(
             self,
             object_type: RemoteObjectType,
             response: dict[str, Any],
@@ -213,41 +219,41 @@ class TestSpotifyAPIItems(RemoteAPITester):
         while len(response[key][api.items_key]) < response[key]["total"]:
             response[key][api.items_key].append(choice(response[key][api.items_key]))
 
-        api.extend_items(response, kind=object_type, key=api.collection_item_map[object_type])
-        assert not api_mock.request_history
+        await api.extend_items(response, kind=object_type, key=api.collection_item_map[object_type])
+        api_mock.assert_not_called()
 
-    def test_get_user_items_input_validation(self, api: SpotifyAPI):
+    async def test_get_user_items_input_validation(self, api: SpotifyAPI):
         # raises error when invalid item type given
         for kind in set(ALL_ITEM_TYPES) - api.user_item_types:
             with pytest.raises(RemoteObjectTypeError):
-                api.get_user_items(kind=kind)
+                await api.get_user_items(kind=kind)
 
         # may only get valid user item types that are not playlists from the currently authorised user
         for kind in api.user_item_types - {RemoteObjectType.PLAYLIST}:
             with pytest.raises(RemoteObjectTypeError):
-                api.get_user_items(user=random_str(1, RemoteIDType.ID.value - 1), kind=kind)
+                await api.get_user_items(user=random_str(1, RemoteIDType.ID.value - 1), kind=kind)
 
-    def test_extend_tracks_input_validation(self, api: SpotifyAPI):
-        assert api.extend_tracks(values=random_ids(), features=False, analysis=False) == []
-        assert api.extend_tracks(values=[], features=True, analysis=True) == []
-
-        value = api.wrangler.convert(
-            random_id(), kind=RemoteObjectType.ALBUM, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL
-        )
-        with pytest.raises(RemoteObjectTypeError):
-            api.extend_tracks(values=value, features=True)
-
-    def test_get_artist_albums_input_validation(self, api: SpotifyAPI):
-        assert api.get_artist_albums(values=[]) == {}
+    async def test_extend_tracks_input_validation(self, api: SpotifyAPI):
+        assert await api.extend_tracks(values=random_ids(), features=False, analysis=False) == []
+        assert await api.extend_tracks(values=[], features=True, analysis=True) == []
 
         value = api.wrangler.convert(
             random_id(), kind=RemoteObjectType.ALBUM, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL
         )
         with pytest.raises(RemoteObjectTypeError):
-            api.get_artist_albums(values=value)
+            await api.extend_tracks(values=value, features=True)
+
+    async def test_get_artist_albums_input_validation(self, api: SpotifyAPI):
+        assert await api.get_artist_albums(values=[]) == {}
+
+        value = api.wrangler.convert(
+            random_id(), kind=RemoteObjectType.ALBUM, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL
+        )
+        with pytest.raises(RemoteObjectTypeError):
+            await api.get_artist_albums(values=value)
 
         with pytest.raises(APIError):
-            api.get_artist_albums(values=random_id(), types=("unknown", "invalid"))
+            await api.get_artist_albums(values=random_id(), types=("unknown", "invalid"))
 
     ###########################################################################
     ## Cached-, Multi-, Batched-, and Extend tests for each supported item type
@@ -258,7 +264,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         RemoteObjectType.PLAYLIST,
         RemoteObjectType.USER,
     ], ids=idfn)
-    def test_get_items_from_cache_skips(
+    async def test_get_items_from_cache_skips(
             self,
             object_type: RemoteObjectType,
             responses: dict[str, dict[str, Any]],
@@ -270,11 +276,11 @@ class TestSpotifyAPIItems(RemoteAPITester):
         id_list = list(responses.keys())
 
         # skip when no cache present
-        assert api.handler.cache is None
-        assert api._get_items_from_cache(method="GET", url=url, id_list=id_list) == ([], [], id_list)
+        assert not isinstance(api.handler.session, CachedSession) is None
+        assert await api._get_items_from_cache(method="GET", url=url, id_list=id_list) == ([], [], id_list)
 
         # skip when no repository found
-        assert api_cache._get_items_from_cache(method="GET", url=url, id_list=id_list) == ([], [], id_list)
+        assert await api_cache._get_items_from_cache(method="GET", url=url, id_list=id_list) == ([], [], id_list)
 
     # noinspection PyTestUnpassedFixture
     @pytest.mark.parametrize("object_type", [
@@ -286,7 +292,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         RemoteObjectType.AUDIOBOOK,
         RemoteObjectType.CHAPTER,
     ], ids=idfn)
-    def test_get_items_from_cache(
+    async def test_get_items_from_cache(
             self,
             object_type: RemoteObjectType,
             responses: dict[str, dict[str, Any]],
@@ -299,17 +305,17 @@ class TestSpotifyAPIItems(RemoteAPITester):
         method = "GET"
 
         responses_remapped = {(method, id_): response for id_, response in list(responses.items())[:limit]}
-        repository = api_cache.handler.cache.get_repository_from_url(url=url)
-        repository.update(responses_remapped)
-        assert all((method, id_) in repository for id_ in id_list[:limit])
+        repository = api_cache.handler.session.cache.get_repository_from_url(url=url)
+        await repository.save_responses(responses_remapped)
+        assert all(repository.contains((method, id_)) for id_ in id_list[:limit])
 
-        results, ids_found, ids_not_found = api_cache._get_items_from_cache(method=method, url=url, id_list=id_list)
-        assert len(results) == len(ids_found) == limit
-        assert len(ids_not_found) == len(responses) - limit
+        results, found, not_found = await api_cache._get_items_from_cache(method=method, url=url, id_list=id_list)
+        assert len(results) == len(found) == limit
+        assert len(not_found) == len(responses) - limit
         assert results == list(responses.values())[:limit]
-        assert not api_mock.request_history
+        api_mock.assert_not_called()
 
-    def test_get_items_multi(
+    async def test_get_items_multi(
             self,
             object_type: RemoteObjectType,
             responses: dict[str, dict[str, Any]],
@@ -319,15 +325,15 @@ class TestSpotifyAPIItems(RemoteAPITester):
         url = f"{api.url}/{object_type.name.lower()}s"
         params = {"key": "value"}
 
-        results = api._get_items_multi(url=url, id_list=responses, params=params, key=None)
-        requests = api_mock.get_requests(url=url)
+        results = await api._get_items_multi(url=url, id_list=responses, params=params, key=None)
+        requests = [url for url, _, _ in await api_mock.get_requests(url=url)]
 
         self.assert_item_types(results=results, key=object_type.name.lower())
         self.assert_get_items_results(results=results, expected=responses, object_type=object_type)
         self.assert_params(requests=requests, params=params)
 
         # appropriate number of requests were made for multi requests
-        requests = [req for id_ in responses for req in api_mock.get_requests(url=f"{url}/{id_}")]
+        requests = [req for id_ in responses for req in await api_mock.get_requests(url=f"{url}/{id_}")]
         assert len(requests) == len(responses)
 
     @pytest.mark.parametrize("object_type", [
@@ -339,7 +345,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         RemoteObjectType.AUDIOBOOK,
         RemoteObjectType.CHAPTER,
     ], ids=idfn)
-    def test_get_items_batched(
+    async def test_get_items_batched(
             self,
             object_type: RemoteObjectType,
             responses: dict[str, dict[str, Any]],
@@ -351,8 +357,8 @@ class TestSpotifyAPIItems(RemoteAPITester):
         params = {"key": "value"}
         limit = get_limit(responses, max_limit=api_mock.limit_max, pages=3)
 
-        results = api._get_items_batched(url=url, id_list=responses, params=params, key=key, limit=limit)
-        requests = api_mock.get_requests(url=url)
+        results = await api._get_items_batched(url=url, id_list=responses, params=params, key=key, limit=limit)
+        requests = [url for url, _, _ in await api_mock.get_requests(url=url)]
 
         self.assert_item_types(results=results, key=object_type.name.lower())
         self.assert_get_items_results(results=results, expected=responses, object_type=object_type)
@@ -360,14 +366,14 @@ class TestSpotifyAPIItems(RemoteAPITester):
 
         # appropriate number of requests were made for batched requests
         id_params = [{"ids": ",".join(ids)} for ids in batched(responses, limit)]
-        requests = [req for req in requests if "ids" in parse_qs(req.query)]
+        requests = [url for url in requests if "ids" in url.query]
         assert len(requests) == len(id_params) < len(results)
         self.assert_params(requests=requests, params=id_params)
 
     @pytest.mark.parametrize("object_type", [
         RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM,  RemoteObjectType.SHOW, RemoteObjectType.AUDIOBOOK,
     ], ids=idfn)
-    def test_extend_items(
+    async def test_extend_items(
             self,
             object_type: RemoteObjectType,
             response: dict[str, Any],
@@ -379,8 +385,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         limit = self.reduce_items(response=response, key=key, api=api, api_mock=api_mock)
         test = response[key]
 
-        results = api.extend_items(response=test, key=api.collection_item_map.get(object_type, object_type))
-        requests = api_mock.get_requests(url=test["href"].split("?")[0])
+        results = await api.extend_items(response=test, key=api.collection_item_map.get(object_type, object_type))
 
         # assert extension to total
         assert len(results) == total
@@ -389,13 +394,14 @@ class TestSpotifyAPIItems(RemoteAPITester):
         self.assert_item_types(results=test[api.items_key], object_type=object_type, key=key)
 
         # appropriate number of requests made (minus 1 for initial input)
+        requests = await api_mock.get_requests(url=test["href"].split("?")[0])
         assert len(requests) == api_mock.calculate_pages(limit=limit, total=total) - 1
 
     @pytest.mark.parametrize("object_type", [
         RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM,
         # RemoteObjectType.SHOW, RemoteObjectType.AUDIOBOOK,  RemoteResponse types not yet implemented for these
     ], ids=idfn)
-    def test_extend_items(
+    async def test_extend_items(
             self,
             object_type: RemoteObjectType,
             response: dict[str, Any],
@@ -408,7 +414,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         original = object_factory[object_type](deepcopy(response), skip_checks=True)
         test = object_factory[object_type](response, skip_checks=True)
 
-        api.extend_items(response=test, key=api.collection_item_map.get(object_type, object_type))
+        await api.extend_items(response=test, key=api.collection_item_map.get(object_type, object_type))
         test.refresh()
 
         self.assert_response_extended(actual=test, expected=original)
@@ -417,35 +423,34 @@ class TestSpotifyAPIItems(RemoteAPITester):
     @pytest.mark.parametrize("object_type", [
         RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM, RemoteObjectType.SHOW, RemoteObjectType.AUDIOBOOK
     ], ids=idfn)
-    def test_extend_items_cache(
+    async def test_extend_items_cache(
             self,
             object_type: RemoteObjectType,
-            responses: dict[str, dict[str, Any]],
+            response: dict[str, Any],
             key: str,
             api_cache: SpotifyAPI,
             api_mock: SpotifyMock
     ):
+        self.reduce_items(response=response, key=key, api=api_cache, api_mock=api_mock)
         method = "GET"
-        response = list(responses.values())[0][key][api_cache.items_key][0]
-        url = response["href"] if object_type != RemoteObjectType.PLAYLIST else response[key.rstrip("s")]["href"]
-        repository = api_cache.handler.cache.get_repository_from_url(url=url)
-        id_list = None
+        response = response[key]
 
-        # get a response that has not already had its items persisted to the cache by a previous test
-        for response in responses.values():
-            self.reduce_items(response=response, key=key, api=api_cache, api_mock=api_mock)
-            items = [
-                item if object_type != RemoteObjectType.PLAYLIST else item[key.rstrip("s")]
-                for item in response[key][api_cache.items_key]
-            ]
+        if object_type == RemoteObjectType.PLAYLIST:
+            url = response[api_cache.items_key][0][key.rstrip("s")]["href"]
+        else:
+            url = response[api_cache.items_key][0]["href"]
+        repository = api_cache.handler.session.cache.get_repository_from_url(url=url)
+        await repository.clear()
 
-            id_list = [item[self.id_key] for item in items]
-            if any((method, id_) not in repository for id_ in id_list):
-                break
+        items = [
+            item if object_type != RemoteObjectType.PLAYLIST else item[key.rstrip("s")]
+            for item in response[api_cache.items_key]
+        ]
+        id_list = [item[self.id_key] for item in items]
 
-        assert any((method, id_) not in repository for id_ in id_list)
-        api_cache.extend_items(response=response, key=api_cache.collection_item_map.get(object_type, object_type))
-        assert all((method, id_) in repository for id_ in id_list)
+        assert any([not await repository.contains((method, id_)) for id_ in id_list])
+        await api_cache.extend_items(response=response, key=api_cache.collection_item_map.get(object_type, object_type))
+        assert all([await repository.contains((method, id_)) for id_ in id_list])
 
     ###########################################################################
     ## ``get_user_items``
@@ -460,7 +465,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         (RemoteObjectType.EPISODE, False),
         (RemoteObjectType.AUDIOBOOK, False),
     ], ids=idfn)
-    def test_get_user_items(
+    async def test_get_user_items(
             self,
             object_type: RemoteObjectType,
             user: bool,
@@ -488,11 +493,11 @@ class TestSpotifyAPIItems(RemoteAPITester):
         total = len(responses)
         limit = get_limit(total, max_limit=api_mock.limit_max, pages=3)
 
-        results = api.get_user_items(user=test, kind=object_type, limit=limit)
+        results = await api.get_user_items(user=test, kind=object_type, limit=limit)
         assert len(results) == total
 
         # appropriate number of requests made
-        requests = api_mock.get_requests(url=url)
+        requests = await api_mock.get_requests(url=url)
         assert len(requests) == api_mock.calculate_pages(limit=limit, total=total)
 
         for result in results:  # check results are as expected
@@ -518,7 +523,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         RemoteObjectType.CHAPTER: {"languages", "images", "chapters"},
     }
 
-    def test_get_items_single_string(
+    async def test_get_items_single_string(
             self,
             object_type: RemoteObjectType,
             response: dict[str, Any],
@@ -527,7 +532,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
             api: SpotifyAPI,
             api_mock: SpotifyMock
     ):
-        results = api.get_items(
+        results = await api.get_items(
             values=random_id_type(id_=response[self.id_key], wrangler=api.wrangler, kind=object_type),
             kind=object_type,
             extend=extend
@@ -536,14 +541,16 @@ class TestSpotifyAPIItems(RemoteAPITester):
         self.assert_get_items_results(
             results=results, expected={response[self.id_key]: response}, object_type=object_type, key=key
         )
-        self.assert_get_items_calls(responses=[response], object_type=object_type, key=key, api=api, api_mock=api_mock)
+        await self.assert_get_items_calls(
+            responses=[response], object_type=object_type, key=key, api=api, api_mock=api_mock
+        )
 
         # just check that these don't fail
-        api.get_items(values=response["uri"])
-        api.get_items(values=response["href"])
-        api.get_items(values=response["external_urls"]["spotify"])
+        await api.get_items(values=response["uri"])
+        await api.get_items(values=response["href"])
+        await api.get_items(values=response["external_urls"]["spotify"])
 
-    def test_get_items_many_string(
+    async def test_get_items_many_string(
             self,
             object_type: RemoteObjectType,
             responses: dict[str, dict[str, Any]],
@@ -557,7 +564,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
             limit = get_limit(responses, max_limit=api_mock.limit_max)
             assert len(responses) > limit
 
-        results = api.get_items(
+        results = await api.get_items(
             values=random_id_types(id_list=responses, wrangler=api.wrangler, kind=object_type),
             kind=object_type,
             limit=limit or api_mock.limit_max,
@@ -565,11 +572,11 @@ class TestSpotifyAPIItems(RemoteAPITester):
         )
         self.assert_item_types(results=results, key=object_type.name.lower())
         self.assert_get_items_results(results=results, expected=responses, object_type=object_type, key=key)
-        self.assert_get_items_calls(
+        await self.assert_get_items_calls(
             responses=responses.values(), object_type=object_type, key=key, limit=limit, api=api, api_mock=api_mock
         )
 
-    def test_get_items_single_mapping(
+    async def test_get_items_single_mapping(
             self,
             object_type: RemoteObjectType,
             response: dict[str, Any],
@@ -579,7 +586,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         test = {k: v for k, v in response.items() if k not in self.update_keys[object_type]}
         self.assert_different(response, test, key)
 
-        results = api.get_items(values=test)
+        results = await api.get_items(values=test)
         self.assert_item_types(results=results, key=object_type.name.lower())
         self.assert_get_items_results(
             results=results,
@@ -589,7 +596,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
             object_type=object_type
         )
 
-    def test_get_items_many_mapping(
+    async def test_get_items_many_mapping(
             self,
             object_type: RemoteObjectType,
             responses: dict[str, dict[str, Any]],
@@ -604,7 +611,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         for response in responses.values():
             self.assert_different(response, test[response[self.id_key]], key)
 
-        results = api.get_items(values=test.values())
+        results = await api.get_items(values=test.values())
         self.assert_item_types(results=results, key=object_type.name.lower())
         self.assert_get_items_results(results=results, expected=responses, test=test, key=key, object_type=object_type)
 
@@ -612,7 +619,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         RemoteObjectType.TRACK, RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM,
         # other RemoteResponse types not yet implemented/do not provide expected results
     ], ids=idfn)
-    def test_get_items_single_response(
+    async def test_get_items_single_response(
             self,
             object_type: RemoteObjectType,
             response: dict[str, Any],
@@ -629,7 +636,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         test = factory({k: v for k, v in response.items() if k not in self.update_keys[object_type]}, skip_checks=True)
         self.assert_different(original.response, test.response, key)
 
-        results = api.get_items(values=test)
+        results = await api.get_items(values=test)
         self.assert_get_items_results(
             results=results,
             expected={original.id: original.response},
@@ -645,7 +652,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         RemoteObjectType.TRACK, RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM,
         # other RemoteResponse types not yet implemented/do not provide expected results
     ], ids=idfn)
-    def test_get_items_many_response(
+    async def test_get_items_many_response(
             self,
             object_type: RemoteObjectType,
             responses: dict[str, dict[str, Any]],
@@ -667,7 +674,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         for orig, ts in zip(original, test):
             self.assert_different(orig.response, ts.response, key)
 
-        results = api.get_items(values=test)
+        results = await api.get_items(values=test)
         self.assert_get_items_results(
             results=results,
             expected={response.id: response.response for response in original},
@@ -761,7 +768,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
             if test:
                 assert key not in test[result[self.id_key]]
 
-    def assert_extend_tracks_calls(
+    async def assert_extend_tracks_calls(
             self,
             responses: Collection[dict[str, Any]],
             api: SpotifyAPI,
@@ -773,20 +780,20 @@ class TestSpotifyAPIItems(RemoteAPITester):
         """Assert appropriate number of requests made for extend_tracks method calls"""
         requests = []
         if features and limit > 1:
-            requests += api_mock.get_requests(url=f"{api.url}/audio-features")
+            requests += await api_mock.get_requests(url=f"{api.url}/audio-features")
         if analysis and limit > 1:
-            requests += api_mock.get_requests(url=f"{api.url}/audio-analysis")
+            requests += await api_mock.get_requests(url=f"{api.url}/audio-analysis")
 
         for response in responses:
             if features:
-                requests += api_mock.get_requests(url=f"{api.url}/audio-features/{response[self.id_key]}")
+                requests += await api_mock.get_requests(url=f"{api.url}/audio-features/{response[self.id_key]}")
             if analysis:
-                requests += api_mock.get_requests(url=f"{api.url}/audio-analysis/{response[self.id_key]}")
+                requests += await api_mock.get_requests(url=f"{api.url}/audio-analysis/{response[self.id_key]}")
 
-        assert len(api_mock.request_history) == len(list(batched(responses, limit))) + len(responses)
+        assert len(requests) == len(list(batched(responses, limit))) + len(responses)
 
     @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
-    def test_extend_tracks_single_string(
+    async def test_extend_tracks_single_string(
             self,
             object_type: RemoteObjectType,
             response: dict[str, Any],
@@ -795,7 +802,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
             api: SpotifyAPI,
             api_mock: SpotifyMock
     ):
-        results = api.extend_tracks(
+        results = await api.extend_tracks(
             values=random_id_type(id_=response[self.id_key], wrangler=api.wrangler, kind=RemoteObjectType.TRACK),
             features=True,
             analysis=True
@@ -805,15 +812,17 @@ class TestSpotifyAPIItems(RemoteAPITester):
         self.assert_extend_tracks_results(
             results=results, features={response[self.id_key]: features}, analysis={response[self.id_key]: analysis}
         )
-        self.assert_extend_tracks_calls(responses=[response], features=True, analysis=True, api=api, api_mock=api_mock)
+        await self.assert_extend_tracks_calls(
+            responses=[response], features=True, analysis=True, api=api, api_mock=api_mock
+        )
 
         # just check that these don't fail
-        api.extend_tracks(values=response["uri"])
-        api.extend_tracks(values=response["href"])
-        api.extend_tracks(values=response["external_urls"]["spotify"])
+        await api.extend_tracks(values=response["uri"])
+        await api.extend_tracks(values=response["href"])
+        await api.extend_tracks(values=response["external_urls"]["spotify"])
 
     @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
-    def test_extend_tracks_many_string(
+    async def test_extend_tracks_many_string(
             self,
             object_type: RemoteObjectType,
             responses: dict[str, Any],
@@ -825,15 +834,15 @@ class TestSpotifyAPIItems(RemoteAPITester):
         limit = get_limit(responses, max_limit=api_mock.limit_max)
         test = random_id_types(id_list=responses, wrangler=api.wrangler, kind=RemoteObjectType.TRACK)
 
-        results = api.extend_tracks(values=test, features=True, analysis=True, limit=limit)
+        results = await api.extend_tracks(values=test, features=True, analysis=True, limit=limit)
 
         self.assert_extend_tracks_results(results=results, features=features_all, analysis=analysis_all)
-        self.assert_extend_tracks_calls(
+        await self.assert_extend_tracks_calls(
             responses=responses.values(), features=True, analysis=True, api=api, api_mock=api_mock, limit=limit
         )
 
     @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
-    def test_extend_tracks_single_mapping(
+    async def test_extend_tracks_single_mapping(
             self,
             object_type: RemoteObjectType,
             response: dict[str, Any],
@@ -841,12 +850,12 @@ class TestSpotifyAPIItems(RemoteAPITester):
             analysis: dict[str, Any],
             api: SpotifyAPI,
     ):
-        results = api.extend_tracks(values=response, features=True, analysis=False)
+        results = await api.extend_tracks(values=response, features=True, analysis=False)
         self.assert_extend_tracks_results(
             results=results, test={response[self.id_key]: response}, features={response[self.id_key]: features},
         )
 
-        results = api.extend_tracks(values=response, features=False, analysis=True)
+        results = await api.extend_tracks(values=response, features=False, analysis=True)
         self.assert_extend_tracks_results(
             results=results,
             test={response[self.id_key]: response},
@@ -857,7 +866,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
 
     # noinspection PyTestUnpassedFixture
     @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
-    def test_extend_tracks_many_mapping(
+    async def test_extend_tracks_many_mapping(
             self,
             object_type: RemoteObjectType,
             responses: dict[str, Any],
@@ -866,16 +875,16 @@ class TestSpotifyAPIItems(RemoteAPITester):
             api: SpotifyAPI,
             api_mock: SpotifyMock,
     ):
-        results = api.extend_tracks(values=responses.values(), features=True, analysis=False)
+        results = await api.extend_tracks(values=responses.values(), features=True, analysis=False)
         self.assert_extend_tracks_results(results=results, test=responses, features=features_all)
 
-        results = api.extend_tracks(values=responses.values(), features=False, analysis=True)
+        results = await api.extend_tracks(values=responses.values(), features=False, analysis=True)
         self.assert_extend_tracks_results(
             results=results, test=responses, features=features_all, features_in_results=False, analysis=analysis_all,
         )
 
     @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
-    def test_extend_tracks_single_response(
+    async def test_extend_tracks_single_response(
             self,
             object_type: RemoteObjectType,
             response: dict[str, Any],
@@ -890,11 +899,11 @@ class TestSpotifyAPIItems(RemoteAPITester):
         test: SpotifyTrack = object_factory[object_type](response, skip_checks=True)
         assert test.bpm is None
 
-        results = api.extend_tracks(values=response, features=True, analysis=False)
+        results = await api.extend_tracks(values=response, features=True, analysis=False)
         self.assert_extend_tracks_results(results=results, test={test.id: test.response}, features={test.id: features})
         assert test.bpm is not None
 
-        results = api.extend_tracks(values=response, features=False, analysis=True)
+        results = await api.extend_tracks(values=response, features=False, analysis=True)
         self.assert_extend_tracks_results(
             results=results,
             test={test.id: test.response},
@@ -906,7 +915,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
 
     # noinspection PyTestUnpassedFixture
     @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
-    def test_extend_tracks_many_response(
+    async def test_extend_tracks_many_response(
             self,
             object_type: RemoteObjectType,
             responses: dict[str, dict[str, Any]],
@@ -923,18 +932,18 @@ class TestSpotifyAPIItems(RemoteAPITester):
         for t in test:
             assert t.bpm is None
 
-        results = api.extend_tracks(values=responses.values(), features=True, analysis=False)
+        results = await api.extend_tracks(values=responses.values(), features=True, analysis=False)
         self.assert_extend_tracks_results(results=results, test=responses, features=features_all)
         for t in test:
             assert t.bpm is not None
 
-        results = api.extend_tracks(values=responses.values(), features=False, analysis=True)
+        results = await api.extend_tracks(values=responses.values(), features=False, analysis=True)
         self.assert_extend_tracks_results(
             results=results, test=responses, features=features_all, features_in_results=False, analysis=analysis_all,
         )
 
     @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
-    def test_get_tracks(
+    async def test_get_tracks(
             self,
             object_type: RemoteObjectType,
             response: dict[str, Any],
@@ -942,7 +951,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
             api_mock: SpotifyMock,
             object_factory: SpotifyObjectFactory,
     ):
-        results = api.get_tracks(
+        results = await api.get_tracks(
             values=random_id_type(id_=response[self.id_key], wrangler=api.wrangler, kind=RemoteObjectType.TRACK),
             features=True,
             analysis=True
@@ -952,7 +961,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         assert "audio_analysis" not in response
 
         test_response = deepcopy(response)
-        results = api.get_tracks(values=test_response, features=True, analysis=True)
+        results = await api.get_tracks(values=test_response, features=True, analysis=True)
         assert results[0] == test_response
         assert "audio_features" in test_response
         assert "audio_analysis" in test_response
@@ -961,7 +970,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         test_object: SpotifyTrack = object_factory[object_type](response, skip_checks=True)
         assert test_object.bpm is None
 
-        api.get_tracks(values=response, features=True, analysis=True)
+        await api.get_tracks(values=response, features=True, analysis=True)
         assert "audio_features" in response
         assert "audio_analysis" in response
         assert test_object.bpm is not None

@@ -9,7 +9,7 @@ from collections import Counter
 from collections.abc import Sequence, Collection, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Self
 
 from musify import PROGRAM_NAME
 from musify.core.base import MusifyItemSettable
@@ -135,41 +135,47 @@ class RemoteItemChecker(InputProcessor):
         #: The final list of items skipped by the checker
         self._final_skipped: list[MusifyItemSettable] = []
 
-    def _check_api(self):
-        """Check if the API token has expired and refresh as necessary"""
-        if not self.api.handler.authoriser.test_token():  # check if token has expired
-            self.logger.info_extra("\33[93mAPI token has expired, re-authorising... \33[0m")
-            self.api.authorise()
+    async def __aenter__(self) -> Self:
+        await self.api.__aenter__()
+        return self
 
-    def _create_playlist(self, collection: MusifyCollection[MusifyItemSettable]) -> None:
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await self.api.__aexit__(exc_type, exc_val, exc_tb)
+
+    async def _check_api(self) -> None:
+        """Check if the API token has expired and refresh as necessary"""
+        if not await self.api.handler.authoriser.test_token():  # check if token has expired
+            self.logger.info_extra("\33[93mAPI token has expired, re-authorising... \33[0m")
+            await self.api.authorise()
+
+    async def _create_playlist(self, collection: MusifyCollection[MusifyItemSettable]) -> None:
         """Create a temporary playlist, store its URL for later unfollowing, and add all given URIs."""
-        self._check_api()
+        await self._check_api()
 
         uris = [item.uri for item in collection if item.has_uri]
         if not uris:
             return
 
-        url = self.api.create_playlist(collection.name, public=False)
+        url = await self.api.create_playlist(collection.name, public=False)
         self._playlist_name_urls[collection.name] = url
         self._playlist_name_collection[collection.name] = collection
 
-        self.api.add_to_playlist(url, items=uris, skip_dupes=False)
+        await self.api.add_to_playlist(url, items=uris, skip_dupes=False)
 
-    def _delete_playlists(self) -> None:
+    async def _delete_playlists(self) -> None:
         """Delete all temporary playlists stored and clear stored playlists and collections"""
-        self._check_api()
+        await self._check_api()
 
         self.logger.info_extra(f"\33[93mDeleting {len(self._playlist_name_urls)} temporary playlists... \33[0m")
         for url in self._playlist_name_urls.values():  # delete playlists
-            self.api.delete_playlist(url)
+            await self.api.delete_playlist(url)
 
         self._playlist_name_urls.clear()
         self._playlist_name_collection.clear()
 
-    def __call__(self, *args, **kwargs) -> ItemCheckResult | None:
-        return self.check(*args, **kwargs)
-
-    def check[T: MusifyItemSettable](self, collections: Collection[MusifyCollection[T]]) -> ItemCheckResult[T] | None:
+    async def check[T: MusifyItemSettable](
+            self, collections: Collection[MusifyCollection[T]]
+    ) -> ItemCheckResult[T] | None:
         """
         Run the checker for the given ``collections``.
 
@@ -189,35 +195,29 @@ class RemoteItemChecker(InputProcessor):
 
         total = len(collections)
         pages_total = (total // self.interval) + (total % self.interval > 0)
-        bar = self.logger.get_iterator(total=total, desc="Creating temp playlists", unit="playlists")
+        bar = self.logger.get_iterator(iter(collections), desc="Creating temp playlists", unit="playlists")
 
         self._skip = False
         self._quit = False
 
-        collections_iter = (collection for collection in collections)
         for page in range(1, pages_total + 1):
             try:
-                for count, collection in enumerate(collections_iter, 1):
-                    self._create_playlist(collection=collection)
-                    if tqdm is not None:
-                        bar.update(1)
+                for count, collection in enumerate(bar, 1):
+                    await self._create_playlist(collection=collection)
                     if count >= self.interval:
                         break
 
-                self._pause(page=page, total=pages_total)
+                await self._pause(page=page, total=pages_total)
                 if not self._quit:  # still run if skip is True
-                    self._check_uri()
+                    await self._check_uri()
             except KeyboardInterrupt:
                 self.logger.error("User triggered exit with KeyboardInterrupt")
                 self._quit = True
             finally:
-                self._delete_playlists()
+                await self._delete_playlists()
 
             if self._quit or self._skip:  # quit check
                 break
-
-        if tqdm is not None:
-            bar.close()
 
         result = self._finalise() if not self._quit else None
         self.logger.debug("Checking items: DONE\n")
@@ -250,7 +250,7 @@ class RemoteItemChecker(InputProcessor):
     ###########################################################################
     ## Pause to check items in current temp playlists
     ###########################################################################
-    def _pause(self, page: int, total: int) -> None:
+    async def _pause(self, page: int, total: int) -> None:
         """
         Initial pause after the ``interval`` limit of playlists have been created.
 
@@ -305,8 +305,8 @@ class RemoteItemChecker(InputProcessor):
                 print()
 
             elif self.api.wrangler.validate_id_type(current_input):  # print URL/URI/ID result
-                self._check_api()
-                self.api.print_collection(current_input)
+                await self._check_api()
+                await self.api.print_collection(current_input)
 
             elif current_input != "":
                 self.logger.warning("Input not recognised.")
@@ -314,15 +314,15 @@ class RemoteItemChecker(InputProcessor):
     ###########################################################################
     ## Match items user has added or removed
     ###########################################################################
-    def _check_uri(self) -> None:
+    async def _check_uri(self) -> None:
         """Run operations to check that URIs are assigned to all the items in the current list of collections."""
         skip_hold = self._skip
         self._skip = False
         for name, collection in self._playlist_name_collection.items():
-            self.matcher.log_messages([name, f"{len(collection):>6} total items"], pad='>')
+            self.matcher.log([name, f"{len(collection):>6} total items"], pad='>')
 
             while True:
-                self._match_to_remote(name=name)
+                await self._match_to_remote(name=name)
                 self._match_to_input(name=name)
                 if not self._remaining:
                     break
@@ -330,9 +330,9 @@ class RemoteItemChecker(InputProcessor):
             unavailable = tuple(item for item in collection if item.has_uri is False)
             skipped = tuple(item for item in collection if item.has_uri is None)
 
-            self.matcher.log_messages([name, f"{len(self._switched):>6} items switched"], pad='<')
-            self.matcher.log_messages([name, f"{len(unavailable):>6} items unavailable"])
-            self.matcher.log_messages([name, f"{len(skipped):>6} items skipped"])
+            self.matcher.log([name, f"{len(self._switched):>6} items switched"], pad='<')
+            self.matcher.log([name, f"{len(unavailable):>6} items unavailable"])
+            self.matcher.log([name, f"{len(skipped):>6} items skipped"])
 
             self._final_switched += self._switched
             self._final_unavailable += unavailable
@@ -344,12 +344,12 @@ class RemoteItemChecker(InputProcessor):
 
         self._skip = skip_hold
 
-    def _match_to_remote(self, name: str) -> None:
+    async def _match_to_remote(self, name: str) -> None:
         """
         Check the current temporary playlist given by ``name`` and attempt to match the source list of items
         to any modifications the user has made.
         """
-        self._check_api()
+        await self._check_api()
 
         self.logger.info(
             "\33[1;95m ->\33[1;97m Checking for changes to items in "
@@ -359,7 +359,7 @@ class RemoteItemChecker(InputProcessor):
         source = self._playlist_name_collection[name]
         source_valid = [item for item in source if item.has_uri]
 
-        remote_response = self.api.get_items(self._playlist_name_urls[name], extend=True)[0]
+        remote_response = next(iter(await self.api.get_items(self._playlist_name_urls[name], extend=True)))
         remote = self.factory.playlist(response=remote_response).items
         remote_valid = [item for item in remote if item.has_uri]
 
@@ -369,7 +369,7 @@ class RemoteItemChecker(InputProcessor):
 
         if len(added) + len(removed) + len(missing) == 0:
             if len(source_valid) == len(remote_valid):
-                self.matcher.log_messages([name, "Playlist unchanged and no missing URIs, skipping match"])
+                self.matcher.log([name, "Playlist unchanged and no missing URIs, skipping match"])
                 return
 
             # if item collection originally contained duplicate URIS and one or more of the duplicates were removed,
@@ -379,10 +379,10 @@ class RemoteItemChecker(InputProcessor):
                 if remote_counts.get(uri) != count:
                     missing.extend([item for item in source_valid if item.uri == uri])
 
-        self.matcher.log_messages([name, f"{len(added):>6} items added"])
-        self.matcher.log_messages([name, f"{len(removed):>6} items removed"])
-        self.matcher.log_messages([name, f"{len(missing):>6} items in source missing URI"])
-        self.matcher.log_messages([name, f"{len(source_valid) - len(remote_valid):>6} total difference"])
+        self.matcher.log([name, f"{len(added):>6} items added"])
+        self.matcher.log([name, f"{len(removed):>6} items removed"])
+        self.matcher.log([name, f"{len(missing):>6} items in source missing URI"])
+        self.matcher.log([name, f"{len(source_valid) - len(remote_valid):>6} total difference"])
 
         remaining = removed + missing
         count_start = len(remaining)
@@ -406,8 +406,8 @@ class RemoteItemChecker(InputProcessor):
 
         self._remaining = removed + missing
         count_final = len(self._remaining)
-        self.matcher.log_messages([name, f"{count_start - count_final:>6} items switched"])
-        self.matcher.log_messages([name, f"{count_final:>6} items still not found"])
+        self.matcher.log([name, f"{count_start - count_final:>6} items switched"])
+        self.matcher.log([name, f"{count_final:>6} items still not found"])
 
     def _match_to_input(self, name: str) -> None:
         """
@@ -419,6 +419,7 @@ class RemoteItemChecker(InputProcessor):
 
         header = [f"\t\33[1;94m{name}:\33[91m The following items were removed and/or matches were not found. \33[0m"]
         options = {
+            f"<{self.api.source} ID/URL/URI>": "Assign the given ID/URL/URI to the item",
             "u": f"Mark item as 'Unavailable on {self.api.source}'",
             "n": f"Leave item with no URI. ({PROGRAM_NAME} will still attempt to find this item at the next run)",
             "a": "Add in addition to 'u' or 'n' options to apply this setting to all items in this playlist",
@@ -433,13 +434,13 @@ class RemoteItemChecker(InputProcessor):
         help_text = self._format_help_text(options=options, header=header)
         help_text += "OR enter a custom URI/URL/ID for this item\n"
 
-        self.matcher.log_messages([name, f"Getting user input for {len(self._remaining)} items"])
+        self.matcher.log([name, f"Getting user input for {len(self._remaining)} items"])
         max_width = get_max_width({item.name for item in self._remaining})
 
         print("\n" + help_text)
         for item in self._remaining.copy():
             while current_input is not None and item in self._remaining:  # while item not matched or skipped
-                self.matcher.log_messages([name, f"{len(self._remaining):>6} remaining items"])
+                self.matcher.log([name, f"{len(self._remaining):>6} remaining items"])
                 if 'a' not in current_input:
                     current_input = self._get_user_input(align_string(item.name, max_width=max_width))
 
@@ -453,24 +454,24 @@ class RemoteItemChecker(InputProcessor):
 
     def _match_item_to_input(self, name: str, item: MusifyItemSettable, current_input: str) -> str | None:
         if current_input.casefold() == 's' or current_input.casefold() == 'q':  # quit/skip
-            self.matcher.log_messages([name, "Skipping all loops"], pad="<")
+            self.matcher.log([name, "Skipping all loops"], pad="<")
             self._quit = current_input.casefold() == 'q' or self._quit
             self._skip = current_input.casefold() == 's' or self._skip
             self._remaining.clear()
             return
 
         elif current_input.casefold().replace('a', '') == 'u':  # mark item as unavailable
-            self.matcher.log_messages([name, "Marking as unavailable"], pad="<")
+            self.matcher.log([name, "Marking as unavailable"], pad="<")
             item.uri = self.api.wrangler.unavailable_uri_dummy
             self._remaining.remove(item)
 
         elif current_input.casefold().replace('a', '') == 'n':  # leave item without URI and unprocessed
-            self.matcher.log_messages([name, "Skipping"], pad="<")
+            self.matcher.log([name, "Skipping"], pad="<")
             item.uri = None
             self._remaining.remove(item)
 
         elif current_input.casefold() == 'r':  # return to former 'while' loop
-            self.matcher.log_messages([name, "Refreshing playlist metadata and restarting loop"])
+            self.matcher.log([name, "Refreshing playlist metadata and restarting loop"])
             return
 
         elif current_input.casefold() == 'p' and hasattr(item, "path"):  # print item path
@@ -481,7 +482,7 @@ class RemoteItemChecker(InputProcessor):
                 current_input, kind=RemoteObjectType.TRACK, type_out=RemoteIDType.URI
             )
 
-            self.matcher.log_messages([name, f"Updating URI: {item.uri} -> {uri}"], pad="<")
+            self.matcher.log([name, f"Updating URI: {item.uri} -> {uri}"], pad="<")
             item.uri = uri
 
             self._switched.append(item)

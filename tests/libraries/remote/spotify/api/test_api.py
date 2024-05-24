@@ -1,8 +1,13 @@
+from random import choice
+
 import pytest
 
-from musify.api.cache.backend.base import ResponseCache, PaginatedRequestSettings
+from musify.api.cache.backend.base import ResponseCache
 from musify.api.cache.backend.sqlite import SQLiteCache
+from musify.api.cache.session import CachedSession
+from musify.api.exception import APIError
 from musify.libraries.remote.spotify.api import SpotifyAPI
+from tests.libraries.remote.spotify.api.mock import SpotifyMock
 from tests.libraries.remote.spotify.utils import random_id
 from tests.utils import random_str
 
@@ -10,11 +15,12 @@ from tests.utils import random_str
 class TestSpotifyAPI:
 
     @pytest.fixture
-    def cache(self) -> ResponseCache:
+    async def cache(self) -> ResponseCache:
         """Yields a valid :py:class:`ResponseCache` to use throughout tests in this suite as a pytest.fixture."""
-        return SQLiteCache.connect_with_in_memory_db()
+        async with SQLiteCache.connect_with_in_memory_db() as cache:
+            yield cache
 
-    def test_init_authoriser(self, cache: ResponseCache):
+    def test_init(self, cache: ResponseCache):
         client_id = "CLIENT_ID"
         client_secret = "CLIENT_SECRET"
         scopes = ["scope 1", "scope 2"]
@@ -34,51 +40,72 @@ class TestSpotifyAPI:
         assert api.handler.authoriser.user_args["params"]["scope"] == " ".join(scopes)
         assert api.handler.authoriser.token_file_path == token_file_path
 
-        assert api.handler.cache.cache_name == cache.cache_name
+    async def test_context_management(self, cache: ResponseCache, api_mock: SpotifyMock):
+        api = SpotifyAPI(
+            cache=cache,
+            token={"access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"},
+            test_args=None,
+            test_expiry=0,
+            test_condition=None,
+        )
 
-    def test_init_cache(self, cache: ResponseCache):
-        SpotifyAPI(cache=cache)
+        with pytest.raises(APIError):
+            assert api.user_id
 
-        expected_names_normal = [
-            "tracks",
-            "audio_features",
-            "audio_analysis",
-            "albums",
-            "artists",
-            "episodes",
-            "chapters",
-        ]
-        expected_names_paginated = ["album_tracks", "artist_albums", "show_episodes", "audiobook_chapters"]
+        async with api as a:
+            assert a.user_id == api_mock.user_id
 
-        assert all(name in cache for name in expected_names_normal)
-        assert all(name in cache for name in expected_names_paginated)
+            assert isinstance(a.handler.session, CachedSession)
+            assert a.handler.session.cache.cache_name == cache.cache_name
 
-        assert all(not isinstance(cache[name].settings, PaginatedRequestSettings) for name in expected_names_normal)
-        assert all(isinstance(cache[name].settings, PaginatedRequestSettings) for name in expected_names_paginated)
+            expected_names = [
+                "tracks",
+                "audio_features",
+                "audio_analysis",
+                "albums",
+                "artists",
+                "episodes",
+                "chapters",
+                "album_tracks",
+                "artist_albums",
+                "show_episodes",
+                "audiobook_chapters"
+            ]
 
-    def test_init_cache_repository_getter(self, cache: ResponseCache):
-        api = SpotifyAPI(cache=cache)
+            assert all(name in cache for name in expected_names)
 
-        name_url_map = {
-            "tracks": f"{api.wrangler.url_api}/tracks/{random_id()}",
-            "artists": f"{api.wrangler.url_api}/artists?ids={",".join(random_id() for _ in range(10))}",
-            "albums": f"{api.wrangler.url_api}/albums?ids={",".join(random_id() for _ in range(50))}",
-        }
-        names_paginated = ["artist_albums", "album_tracks"]
-        for name in names_paginated:
-            parent, child = name.split("_")
-            parent = parent.rstrip("s") + "s"
-            child = child.rstrip("s") + "s"
+            repository = choice(list(a.handler.session.cache.values()))
+            await repository.count()  # just check this doesn't fail
 
-            url = f"{api.wrangler.url_api}/{parent}/{random_id()}/{child}"
-            name_url_map[name] = url
+    # noinspection PyTestUnpassedFixture
+    async def test_cache_repository_getter(self, cache: ResponseCache, api_mock: SpotifyMock):
+        async with SpotifyAPI(
+                cache=cache,
+                token={"access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"},
+                test_args=None,
+                test_expiry=0,
+                test_condition=None,
+        ) as api:
+            name_url_map = {
+                "tracks": f"{api.wrangler.url_api}/tracks/{random_id()}",
+                "artists": f"{api.wrangler.url_api}/artists?ids={",".join(random_id() for _ in range(10))}",
+                "albums": f"{api.wrangler.url_api}/albums?ids={",".join(random_id() for _ in range(50))}",
+            }
+            names_paginated = ["artist_albums", "album_tracks"]
+            for name in names_paginated:
+                parent, child = name.split("_")
+                parent = parent.rstrip("s") + "s"
+                child = child.rstrip("s") + "s"
 
-        for name, url in name_url_map.items():
-            repository = cache.get_repository_from_url(url)
-            assert repository.settings.name == name
+                url = f"{api.wrangler.url_api}/{parent}/{random_id()}/{child}"
+                name_url_map[name] = url
 
-        # un-cached URLs
-        assert cache.get_repository_from_url(f"{api.wrangler.url_api}/me/albums") is None
-        assert cache.get_repository_from_url(f"{api.wrangler.url_api}/search") is None
-        assert cache.get_repository_from_url(f"{api.wrangler.url_api}/playlists/{random_id()}/followers") is None
-        assert cache.get_repository_from_url(f"{api.wrangler.url_api}/users/{random_str(10, 30)}/playlists") is None
+            for name, url in name_url_map.items():
+                repository = cache.get_repository_from_url(url)
+                assert repository.settings.name == name
+
+            # un-cached URLs
+            assert cache.get_repository_from_url(f"{api.wrangler.url_api}/me/albums") is None
+            assert cache.get_repository_from_url(f"{api.wrangler.url_api}/search") is None
+            assert cache.get_repository_from_url(f"{api.wrangler.url_api}/playlists/{random_id()}/followers") is None
+            assert cache.get_repository_from_url(f"{api.wrangler.url_api}/users/{random_str(10, 30)}/playlists") is None

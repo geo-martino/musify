@@ -166,14 +166,11 @@ class SpotifyTrack(SpotifyItem, RemoteTrack):
     @property
     def image_links(self):
         album = self.response.get("album", {})
-        images = {image["height"]: image["url"] for image in album.get("images", [])}
-        if not images:
+        if not (images := album.get("images", [])):
             return {}
-        return {"cover_front": next(url for height, url in images.items() if height == max(images))}
 
-    @property
-    def has_image(self):
-        return len(self.response.get("album", {}).get("images", [])) > 0
+        images = {image["height"]: image["url"] for image in images}
+        return {"cover_front": next(url for height, url in images.items() if height == max(images))}
 
     @property
     def length(self):
@@ -204,7 +201,7 @@ class SpotifyTrack(SpotifyItem, RemoteTrack):
         ]
 
     @classmethod
-    def load(
+    async def load(
             cls,
             value: str | Mapping[str, Any] | RemoteResponse,
             api: SpotifyAPI,
@@ -225,10 +222,13 @@ class SpotifyTrack(SpotifyItem, RemoteTrack):
                 id_, kind=RemoteObjectType.TRACK, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL
             )
         }
-        self.reload(features=features, analysis=analysis, extend_album=extend_album, extend_artists=extend_artists)
+        await self.reload(
+            features=features, analysis=analysis, extend_album=extend_album, extend_artists=extend_artists
+        )
+
         return self
 
-    def reload(
+    async def reload(
             self,
             features: bool = False,
             analysis: bool = False,
@@ -240,13 +240,13 @@ class SpotifyTrack(SpotifyItem, RemoteTrack):
         self._check_for_api()
 
         # reload with enriched data
-        response = self.api.handler.get(self.url, log_pad=self._url_pad)
+        response = await self.api.handler.get(self.url)
         if extend_album:
-            self.api.get_items(response["album"], kind=RemoteObjectType.ALBUM, extend=False)
+            await self.api.get_items(response["album"], kind=RemoteObjectType.ALBUM, extend=False)
         if extend_artists:
-            self.api.get_items(response["artists"], kind=RemoteObjectType.ARTIST)
+            await self.api.get_items(response["artists"], kind=RemoteObjectType.ARTIST)
         if features or analysis:
-            self.api.extend_tracks(response, features=features, analysis=analysis)
+            await self.api.extend_tracks(response, features=features, analysis=analysis)
 
         self.__init__(response=response, api=self.api)
 
@@ -263,7 +263,9 @@ class SpotifyCollectionLoader[T: SpotifyObject](RemoteCollectionLoader[T], Spoti
 
     @classmethod
     @abstractmethod
-    def _get_items(cls, items: Collection[str] | MutableMapping[str, Any], api: SpotifyAPI) -> list[dict[str, Any]]:
+    async def _get_items(
+            cls, items: Collection[str] | MutableMapping[str, Any], api: SpotifyAPI
+    ) -> list[dict[str, Any]]:
         """Call the ``api`` to get values for the given ``items`` URIs"""
         raise NotImplementedError
 
@@ -277,7 +279,7 @@ class SpotifyCollectionLoader[T: SpotifyObject](RemoteCollectionLoader[T], Spoti
         return items
 
     @classmethod
-    def _extend_response(cls, response: MutableMapping[str, Any], api: SpotifyAPI, *_, **__) -> bool:
+    async def _extend_response(cls, response: MutableMapping[str, Any], api: SpotifyAPI, *_, **__) -> bool:
         """
         Apply extensions to specific aspects of the given ``response``.
         Does nothing by default. Override to implement object-specific extensions.
@@ -327,7 +329,7 @@ class SpotifyCollectionLoader[T: SpotifyObject](RemoteCollectionLoader[T], Spoti
         return uri_matched, uri_missing
 
     @classmethod
-    def _load_new(cls, value: str | Mapping[str, Any] | RemoteResponse, api: SpotifyAPI, *args, **kwargs) -> Self:
+    async def _load_new(cls, value: str | Mapping[str, Any] | RemoteResponse, api: SpotifyAPI, *args, **kwargs) -> Self:
         """
         Sets up a new object of the current class for the given ``value`` by calling ``__new__``
         and adding just enough attributes to the object to get :py:meth:`reload` to run.
@@ -341,11 +343,11 @@ class SpotifyCollectionLoader[T: SpotifyObject](RemoteCollectionLoader[T], Spoti
         self.api = api
         self._response = {"href": url}
 
-        self.reload(*args, **kwargs)
+        await self.reload(*args, **kwargs)
         return self
 
     @classmethod
-    def load(
+    async def load(
             cls,
             value: str | Mapping[str, Any] | RemoteResponse,
             api: SpotifyAPI,
@@ -362,22 +364,22 @@ class SpotifyCollectionLoader[T: SpotifyObject](RemoteCollectionLoader[T], Spoti
 
         # no items given, regenerate API response from the URL
         if any({not items, isinstance(value, Mapping) and api.items_key not in value.get(item_key, [])}):
-            return cls._load_new(value=value, api=api, *args, **kwargs)
+            return await cls._load_new(value=value, api=api, *args, **kwargs)
 
         if isinstance(value, MutableMapping) and api.wrangler.get_item_type(value) == cls.kind:  # input is response
             response = deepcopy(value)
         else:  # load fresh response from the API
-            response = cls.api.get_items(value, kind=cls.kind)[0]
+            response = await cls.api.get_items(value, kind=cls.kind)[0]
 
         # filter down input items to those that match the response
         items = cls._filter_items(items=items, response=response)
         matched, missing = cls._merge_items_to_response(items=items, response=response[item_key][api.items_key])
 
         if missing:
-            items_missing = cls._get_items(items=missing, api=api)
+            items_missing = await cls._get_items(items=missing, api=api)
             cls._merge_items_to_response(items=items_missing, response=response[item_key][api.items_key], skip=matched)
 
-        skip_checks = cls._extend_response(response=response, api=api, *args, **kwargs)
+        skip_checks = await cls._extend_response(response=response, api=api, *args, **kwargs)
         return cls(response=response, api=api, skip_checks=skip_checks)
 
 
@@ -457,12 +459,11 @@ class SpotifyPlaylist(SpotifyCollectionLoader[SpotifyTrack], RemotePlaylist[Spot
 
     @property
     def image_links(self):
-        images = {image["height"]: image["url"] for image in self.response["images"]}
-        return {"cover_front": url for height, url in images.items() if height == max(images)}
+        if not (images := self.response.get("images")):
+            return {}
 
-    @property
-    def has_image(self):
-        return len(self.response["images"]) > 0
+        images = {image["height"]: image["url"] for image in images}
+        return {"cover_front": url for height, url in images.items() if height == max(images)}
 
     @property
     def date_created(self):
@@ -494,11 +495,13 @@ class SpotifyPlaylist(SpotifyCollectionLoader[SpotifyTrack], RemotePlaylist[Spot
             self._check_total()
 
     @classmethod
-    def _get_items(cls, items: Collection[str] | MutableMapping[str, Any], api: SpotifyAPI) -> list[dict[str, Any]]:
-        return api.get_tracks(items)
+    async def _get_items(
+            cls, items: Collection[str] | MutableMapping[str, Any], api: SpotifyAPI
+    ) -> list[dict[str, Any]]:
+        return await api.get_tracks(items)
 
     @classmethod
-    def _extend_response(
+    async def _extend_response(
             cls,
             response: MutableMapping[str, Any],
             api: SpotifyAPI,
@@ -512,20 +515,20 @@ class SpotifyPlaylist(SpotifyCollectionLoader[SpotifyTrack], RemotePlaylist[Spot
 
         if extend_tracks:
             # noinspection PyTypeChecker
-            api.extend_items(response, kind=cls.kind, key=item_kind, leave_bar=leave_bar)
+            await api.extend_items(response, kind=cls.kind, key=item_kind, leave_bar=leave_bar)
 
         item_key = item_kind.name.lower() + "s"
         tracks = [item["track"] for item in response.get(item_key, {}).get(api.items_key, [])]
         if tracks and extend_features:
-            api.extend_tracks(tracks, limit=response[item_key]["limit"], features=True)
+            await api.extend_tracks(tracks, limit=response[item_key]["limit"], features=True)
 
         return not extend_tracks
 
-    def reload(self, extend_tracks: bool = False, extend_features: bool = False, *_, **__) -> None:
+    async def reload(self, extend_tracks: bool = False, extend_features: bool = False, *_, **__) -> None:
         self._check_for_api()
-        response = self.api.get_items(self.url, kind=RemoteObjectType.PLAYLIST, extend=False)[0]
+        response = next(iter(await self.api.get_items(self.url, kind=RemoteObjectType.PLAYLIST, extend=False)))
 
-        skip_checks = self._extend_response(
+        skip_checks = await self._extend_response(
             response=response, api=self.api, extend_tracks=extend_tracks, extend_features=extend_features
         )
 
@@ -608,12 +611,11 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTra
 
     @property
     def image_links(self):
-        images = {image["height"]: image["url"] for image in self.response["images"]}
-        return {"cover_front": url for height, url in images.items() if height == max(images)}
+        if not (images := self.response.get("images")):
+            return {}
 
-    @property
-    def has_image(self):
-        return len(self.response["images"]) > 0
+        images = {image["height"]: image["url"] for image in images}
+        return {"cover_front": url for height, url in images.items() if height == max(images)}
 
     @property
     def rating(self):
@@ -646,8 +648,10 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTra
             track.disc_total = self.disc_total
 
     @classmethod
-    def _get_items(cls, items: Collection[str] | MutableMapping[str, Any], api: SpotifyAPI) -> list[dict[str, Any]]:
-        return api.get_tracks(items)
+    async def _get_items(
+            cls, items: Collection[str] | MutableMapping[str, Any], api: SpotifyAPI
+    ) -> list[dict[str, Any]]:
+        return await api.get_tracks(items)
 
     @classmethod
     def _filter_items(cls, items: Iterable[SpotifyTrack], response: Mapping[str, Any]) -> Iterable[SpotifyTrack]:
@@ -655,7 +659,7 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTra
         return [item for item in items if item.response.get("album", {}).get("id") == response["id"]]
 
     @classmethod
-    def _extend_response(
+    async def _extend_response(
             cls,
             response: MutableMapping[str, Any],
             api: SpotifyAPI,
@@ -669,26 +673,26 @@ class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTra
         item_kind = api.collection_item_map[cls.kind]
 
         if extend_artists:
-            api.get_items(response["artists"], kind=RemoteObjectType.ARTIST)
+            await api.get_items(response["artists"], kind=RemoteObjectType.ARTIST)
 
         if extend_tracks:
             # noinspection PyTypeChecker
-            api.extend_items(response, kind=cls.kind, key=item_kind, leave_bar=leave_bar)
+            await api.extend_items(response, kind=cls.kind, key=item_kind, leave_bar=leave_bar)
 
         item_key = item_kind.name.lower() + "s"
         tracks = response.get(item_key, {}).get(api.items_key)
         if tracks and extend_features:
-            api.extend_tracks(tracks, limit=response[item_key]["limit"], features=True)
+            await api.extend_tracks(tracks, limit=response[item_key]["limit"], features=True)
 
         return not extend_tracks
 
-    def reload(
+    async def reload(
             self, extend_artists: bool = False, extend_tracks: bool = False, extend_features: bool = False, *_, **__
     ) -> None:
         self._check_for_api()
-        response = self.api.get_items(self.url, kind=RemoteObjectType.ALBUM, extend=False)[0]
+        response = next(iter(await self.api.get_items(self.url, kind=RemoteObjectType.ALBUM, extend=False)))
 
-        skip_checks = self._extend_response(
+        skip_checks = await self._extend_response(
             response=response,
             api=self.api,
             extend_tracks=extend_tracks,
@@ -737,7 +741,10 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
 
     @property
     def image_links(self):
-        images = {image["height"]: image["url"] for image in self.response.get("images", [])}
+        if not (images := self.response.get("images")):
+            return {}
+
+        images = {image["height"]: image["url"] for image in images}
         return {"cover_front": url for height, url in images.items() if height == max(images)}
 
     @property
@@ -766,8 +773,10 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
         return RemoteObjectType.ALBUM
 
     @classmethod
-    def _get_items(cls, items: Collection[str] | MutableMapping[str, Any], api: SpotifyAPI) -> list[dict[str, Any]]:
-        return api.get_items(items, extend=False)
+    async def _get_items(
+            cls, items: Collection[str] | MutableMapping[str, Any], api: SpotifyAPI
+    ) -> list[dict[str, Any]]:
+        return await api.get_items(items, extend=False)
 
     @classmethod
     def _filter_items(cls, items: Iterable[SpotifyAlbum], response: dict[str, Any]) -> Iterable[SpotifyAlbum]:
@@ -778,7 +787,7 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
         ]
 
     @classmethod
-    def _extend_response(
+    async def _extend_response(
             cls,
             response: MutableMapping[str, Any],
             api: SpotifyAPI,
@@ -795,7 +804,7 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
         response_items = response.get(item_key, {})
         has_all_albums = item_key in response and len(response_items[api.items_key]) == response_items["total"]
         if extend_albums and not has_all_albums:
-            api.get_artist_albums(response, limit=response.get(item_key, {}).get("limit", 50))
+            await api.get_artist_albums(response, limit=response.get(item_key, {}).get("limit", 50))
 
         album_item_kind = api.collection_item_map[item_kind]
         album_item_key = album_item_kind.name.lower() + "s"
@@ -803,21 +812,21 @@ class SpotifyArtist(RemoteArtist[SpotifyAlbum], SpotifyCollectionLoader[SpotifyA
 
         if albums and extend_tracks:
             for album in albums:
-                api.extend_items(album[album_item_key], kind=item_kind, key=album_item_kind)
+                await api.extend_items(album[album_item_key], kind=item_kind, key=album_item_kind)
 
         if albums and extend_features:
             tracks = [track for album in albums for track in album[album_item_key]["items"]]
-            api.extend_tracks(tracks, limit=response[item_key]["limit"], features=True)
+            await api.extend_tracks(tracks, limit=response[item_key]["limit"], features=True)
 
         return not extend_albums or not extend_tracks
 
-    def reload(
+    async def reload(
             self, extend_albums: bool = False, extend_tracks: bool = False, extend_features: bool = False, *_, **__
     ) -> None:
         self._check_for_api()
-        response = self.api.handler.get(url=self.url, log_pad=self._url_pad)
+        response = await self.api.handler.get(url=self.url)
 
-        skip_checks = self._extend_response(
+        skip_checks = await self._extend_response(
             response=response,
             api=self.api,
             extend_albums=extend_albums,

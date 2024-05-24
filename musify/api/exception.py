@@ -1,7 +1,7 @@
 """
 Exceptions relating to API operations.
 """
-from requests import Response
+from aiohttp import ClientResponse
 
 from musify.exception import MusifyError
 
@@ -11,13 +11,13 @@ class APIError(MusifyError):
     Exception raised for API errors.
 
     :param message: Explanation of the error.
-    :param response: The :py:class:`Response` related to the error.
+    :param response: The :py:class:`ClientResponse` related to the error.
     """
 
-    def __init__(self, message: str | None = None, response: Response | None = None):
+    def __init__(self, message: str | None = None, response: ClientResponse | None = None):
         self.message = message
         self.response = response
-        formatted = f"Status code: {response.status_code} | {message}" if response else message
+        formatted = f"Status code: {response.status} | {message}" if response else message
         super().__init__(formatted)
 
 

@@ -20,13 +20,13 @@ class TestSpotifyRequestSettings:
             response = choice(responses)
             name = response["display_name"] if response["type"] == "user" else response["name"]
             assert settings.get_name(response) == name
-            assert settings.get_id(response["href"]) == response["id"]
+            assert settings.get_key(response["href"]) == (response["id"],)
 
         response = choice(api_mock.user_tracks)
         assert settings.get_name(response) is None
 
         url = f"{SpotifyDataWrangler.url_api}/me/tracks"
-        assert settings.get_id(url) is None
+        assert settings.get_key(url) == (None,)
 
     @pytest.fixture(scope="class")
     def settings_paginated(self) -> SpotifyPaginatedRequestSettings:

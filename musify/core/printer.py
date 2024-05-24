@@ -218,7 +218,7 @@ class AttributePrinter(PrettyPrinter):
         for cls in classes:
             attributes |= {
                 k: getattr(self, k) for k in cls.__dict__.keys()
-                if k not in ignore and isinstance(getattr(cls, k), property)
+                if k not in ignore and isinstance(getattr(cls, k), property) and not k.startswith("_")
             }
 
         return attributes

@@ -6,11 +6,13 @@ Also includes the default arguments to be used when requesting authorisation fro
 import base64
 from collections.abc import Iterable
 from copy import deepcopy
-from urllib.parse import urlparse
+
+from yarl import URL
 
 from musify import PROGRAM_NAME
 from musify.api.authorise import APIAuthoriser
 from musify.api.cache.backend.base import ResponseCache, ResponseRepository
+from musify.api.cache.session import CachedSession
 from musify.api.exception import APIError
 from musify.libraries.remote.spotify.api.cache import SpotifyRequestSettings, SpotifyPaginatedRequestSettings
 from musify.libraries.remote.spotify.api.item import SpotifyAPIItems
@@ -27,8 +29,6 @@ SPOTIFY_API_AUTH_ARGS = {
         "url": f"{URL_AUTH}/api/token",
         "data": {
             "grant_type": "authorization_code",
-            "code": None,
-            "redirect_uri": None,
         },
         "headers": {
             "content-type": "application/x-www-form-urlencoded",
@@ -40,7 +40,6 @@ SPOTIFY_API_AUTH_ARGS = {
         "params": {
             "client_id": "{client_id}",
             "response_type": "code",
-            "redirect_uri": None,
             "state": PROGRAM_NAME,
             "scope": "{scopes}",
             "show_dialog": False,
@@ -50,7 +49,6 @@ SPOTIFY_API_AUTH_ARGS = {
         "url": f"{URL_AUTH}/api/token",
         "data": {
             "grant_type": "refresh_token",
-            "refresh_token": None,
         },
         "headers": {
             "content-type": "application/x-www-form-urlencoded",
@@ -82,20 +80,20 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
     def user_id(self) -> str | None:
         """ID of the currently authenticated user"""
         if not self.user_data:
-            try:
-                self.user_data = self.get_self()
-            except APIError:
-                return None
+            raise APIError(
+                "User data not set. Either set explicitly or enter the "
+                f"{self.__class__.__name__} context to set automatically."
+            )
         return self.user_data["id"]
 
     @property
     def user_name(self) -> str | None:
         """Name of the currently authenticated user"""
         if not self.user_data:
-            try:
-                self.user_data = self.get_self()
-            except APIError:
-                return None
+            raise APIError(
+                "User data not set. Either set explicitly or enter the "
+                f"{self.__class__.__name__} context to set automatically."
+            )
         return self.user_data["display_name"]
 
     def __init__(
@@ -114,7 +112,7 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
             "scopes": " ".join(scopes),
             "url": wrangler.url_api
         }
-        auth_kwargs = merge_maps(deepcopy(SPOTIFY_API_AUTH_ARGS), auth_kwargs)
+        auth_kwargs = merge_maps(deepcopy(SPOTIFY_API_AUTH_ARGS), auth_kwargs, extend=False, overwrite=True)
         safe_format_map(auth_kwargs, format_map=format_map)
 
         auth_kwargs.pop("name", None)
@@ -122,10 +120,11 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
 
         super().__init__(authoriser=authoriser, wrangler=wrangler, cache=cache)
 
-    def _setup_cache(self, cache: ResponseCache) -> None:
-        if cache is None:
+    async def _setup_cache(self) -> None:
+        if not isinstance(self.handler.session, CachedSession):
             return
 
+        cache = self.handler.session.cache
         cache.repository_getter = self._get_cache_repository
 
         cache.create_repository(SpotifyRequestSettings(name="tracks"))
@@ -146,9 +145,11 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
         cache.create_repository(SpotifyRequestSettings(name="chapters"))
         cache.create_repository(SpotifyPaginatedRequestSettings(name="audiobook_chapters"))
 
+        await cache
+
     @staticmethod
-    def _get_cache_repository(cache: ResponseCache, url: str) -> ResponseRepository | None:
-        path = urlparse(url).path
+    def _get_cache_repository(cache: ResponseCache, url: str | URL) -> ResponseRepository | None:
+        path = URL(url).path
         path_split = [part.replace("-", "_") for part in path.split("/")[2:]]
 
         if len(path_split) < 3:

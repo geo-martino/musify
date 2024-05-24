@@ -6,7 +6,8 @@ All methods that interact with the API should return raw, unprocessed responses.
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Collection, MutableMapping, Mapping, Sequence
-from typing import Any, Self
+from typing import Any, Self, AsyncContextManager
+
 
 from musify.api.authorise import APIAuthoriser
 from musify.api.cache.backend.base import ResponseCache
@@ -20,7 +21,7 @@ from musify.types import UnitSequence, JSON, UnitList
 from musify.utils import align_string, to_collection
 
 
-class RemoteAPI(ABC):
+class RemoteAPI(AsyncContextManager, ABC):
     """
     Collection of endpoints for a remote API.
     See :py:class:`RequestHandler` and :py:class:`APIAuthoriser`
@@ -76,22 +77,32 @@ class RemoteAPI(ABC):
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
 
-        self._setup_cache(cache)
-
         #: A :py:class:`RemoteDataWrangler` object for processing URIs
         self.wrangler = wrangler
+
         #: The :py:class:`RequestHandler` for handling authorised requests to the API
-        self.handler = RequestHandler(authoriser=authoriser, cache=cache)
+        self.handler = RequestHandler.create(authoriser=authoriser, cache=cache)
 
         #: Stores the loaded user data for the currently authorised user
         self.user_data: dict[str, Any] = {}
 
+    async def __aenter__(self) -> Self:
+        await self.handler.__aenter__()
+
+        await self._setup_cache()
+        await self.load_user_data()
+
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await self.handler.__aexit__(exc_type, exc_val, exc_tb)
+
     @abstractmethod
-    def _setup_cache(self, cache: ResponseCache) -> None:
-        """Set up the repositories and repository getter on the given ``cache``."""
+    async def _setup_cache(self) -> None:
+        """Set up the repositories and repository getter on the self.handler.session's cache."""
         raise NotImplementedError
 
-    def authorise(self, force_load: bool = False, force_new: bool = False) -> Self:
+    async def authorise(self, force_load: bool = False, force_new: bool = False) -> Self:
         """
         Main method for authorisation, tests/refreshes/reauthorises as needed
 
@@ -101,19 +112,19 @@ class RemoteAPI(ABC):
         :return: Self.
         :raise APIError: If the token cannot be validated.
         """
-        self.handler.authorise(force_load=force_load, force_new=force_new)
+        await self.handler.authorise(force_load=force_load, force_new=force_new)
         return self
 
-    def close(self) -> None:
+    async def close(self) -> None:
         """Close the current session. No more requests will be possible once this has been called."""
-        self.handler.close()
+        await self.handler.close()
 
     ###########################################################################
     ## Misc helpers
     ###########################################################################
-    def load_user_data(self) -> None:
+    async def load_user_data(self) -> None:
         """Load and store user data in this API object for the currently authorised user"""
-        self.user_data = self.get_self()
+        self.user_data = await self.get_self()
 
     @staticmethod
     def _merge_results_to_input_mapping(
@@ -213,7 +224,7 @@ class RemoteAPI(ABC):
         )
 
     @abstractmethod
-    def print_collection(
+    async def print_collection(
             self,
             value: str | Mapping[str, Any] | RemoteResponse | None = None,
             kind: RemoteIDType | None = None,
@@ -237,7 +248,7 @@ class RemoteAPI(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_playlist_url(self, playlist: str | Mapping[str, Any] | RemoteResponse) -> str:
+    async def get_playlist_url(self, playlist: str | Mapping[str, Any] | RemoteResponse) -> str:
         """
         Determine the type of the given ``playlist`` and return its API URL.
         If type cannot be determined, attempt to find the playlist in the
@@ -254,7 +265,7 @@ class RemoteAPI(ABC):
     ## Core - GET endpoints
     ###########################################################################
     @abstractmethod
-    def get_self(self, update_user_data: bool = True) -> dict[str, Any]:
+    async def get_self(self, update_user_data: bool = True) -> dict[str, Any]:
         """
         ``GET`` - Get API response for information on current user
 
@@ -262,7 +273,7 @@ class RemoteAPI(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def query(self, query: str, kind: RemoteObjectType, limit: int = 10) -> list[dict[str, Any]]:
+    async def query(self, query: str, kind: RemoteObjectType, limit: int = 10) -> list[dict[str, Any]]:
         """
         ``GET`` - Query for items. Modify result types returned with kind parameter
 
@@ -277,7 +288,7 @@ class RemoteAPI(ABC):
     ## Item - GET endpoints
     ###########################################################################
     @abstractmethod
-    def extend_items(
+    async def extend_items(
             self,
             response: MutableMapping[str, Any] | RemoteResponse,
             kind: RemoteObjectType | str | None = None,
@@ -301,7 +312,7 @@ class RemoteAPI(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_items(
+    async def get_items(
             self,
             values: APIInputValue,
             kind: RemoteObjectType | None = None,
@@ -338,7 +349,7 @@ class RemoteAPI(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_tracks(self, values: APIInputValue, limit: int = 50, *args, **kwargs) -> list[dict[str, Any]]:
+    async def get_tracks(self, values: APIInputValue, limit: int = 50, *args, **kwargs) -> list[dict[str, Any]]:
         """
         Wrapper for :py:meth:`get_items` which only returns Track type responses.
         See :py:meth:`get_items` for more info.
@@ -346,7 +357,7 @@ class RemoteAPI(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_user_items(
+    async def get_user_items(
             self, user: str | None = None, kind: RemoteObjectType = RemoteObjectType.PLAYLIST, limit: int = 50,
     ) -> list[dict[str, Any]]:
         """
@@ -366,7 +377,7 @@ class RemoteAPI(ABC):
     ## Collection - POST endpoints
     ###########################################################################
     @abstractmethod
-    def create_playlist(self, name: str, *args, **kwargs) -> str:
+    async def create_playlist(self, name: str, *args, **kwargs) -> str:
         """
         ``POST`` - Create an empty playlist for the current user with the given name.
 
@@ -376,7 +387,7 @@ class RemoteAPI(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def add_to_playlist(
+    async def add_to_playlist(
             self,
             playlist: str | Mapping[str, Any] | RemoteResponse,
             items: Collection[str],
@@ -406,7 +417,7 @@ class RemoteAPI(ABC):
     ## Collection - DELETE endpoints
     ###########################################################################
     @abstractmethod
-    def delete_playlist(self, playlist: str | Mapping[str, Any] | RemoteResponse) -> str:
+    async def delete_playlist(self, playlist: str | Mapping[str, Any] | RemoteResponse) -> str:
         """
         ``DELETE`` - Unfollow/delete a given playlist.
         WARNING: This function will destructively modify your remote playlists.
@@ -421,7 +432,7 @@ class RemoteAPI(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def clear_from_playlist(
+    async def clear_from_playlist(
             self,
             playlist: str | Mapping[str, Any] | RemoteResponse,
             items: Collection[str] | None = None,
@@ -445,10 +456,3 @@ class RemoteAPI(ABC):
             are not all tracks or IDs.
         """
         raise NotImplementedError
-
-    def __enter__(self):
-        self.handler.__enter__()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.handler.__exit__(exc_type, exc_val, exc_tb)

@@ -45,7 +45,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, Sp
     def _get_total_tracks(self, responses: list[dict[str, Any]]) -> int:
         return sum(pl["tracks"]["total"] for pl in responses)
 
-    def enrich_tracks(
+    async def enrich_tracks(
             self, features: bool = False, analysis: bool = False, albums: bool = False, artists: bool = False
     ) -> None:
         """
@@ -65,12 +65,12 @@ class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, Sp
         )
 
         tracks = [track for track in self.tracks if track.has_uri]
-        self.api.extend_tracks(tracks, features=features, analysis=analysis)
+        await self.api.extend_tracks(tracks, features=features, analysis=analysis)
 
         # enrich on list of URIs to avoid duplicate calls for same items
         if albums:
             album_uris: set[str] = {track.response["album"]["uri"] for track in self.tracks}
-            album_responses = self.api.get_items(album_uris, kind=RemoteObjectType.ALBUM, extend=False)
+            album_responses = await self.api.get_items(album_uris, kind=RemoteObjectType.ALBUM, extend=False)
             for album in album_responses:
                 album.pop("tracks")
 
@@ -80,7 +80,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, Sp
 
         if artists:
             artist_uris: set[str] = {artist["uri"] for track in self.tracks for artist in track.response["artists"]}
-            artist_responses = self.api.get_items(artist_uris, kind=RemoteObjectType.ARTIST, extend=False)
+            artist_responses = await self.api.get_items(artist_uris, kind=RemoteObjectType.ARTIST, extend=False)
 
             artists = {response["uri"]: response for response in artist_responses}
             for track in self.tracks:
@@ -91,7 +91,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, Sp
 
         self.logger.debug(f"Enrich {self.api.source} tracks: DONE\n")
 
-    def enrich_saved_albums(self) -> None:
+    async def enrich_saved_albums(self) -> None:
         """Extends the tracks data for currently loaded albums, getting all available tracks data for each album"""
         if not self.albums or all(len(album) == album.track_total for album in self.albums):
             return
@@ -104,7 +104,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, Sp
         key = self.api.collection_item_map[kind]
 
         for album in self.albums:
-            self.api.extend_items(album, kind=kind, key=key)
+            await self.api.extend_items(album, kind=kind, key=key)
             album.refresh(skip_checks=False)
 
             for track in album.tracks:  # add tracks from this album to the user's saved tracks
@@ -113,7 +113,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, Sp
 
         self.logger.debug(f"Enrich {self.api.source} artists: DONE\n")
 
-    def enrich_saved_artists(self, tracks: bool = False, types: Collection[str] = ()) -> None:
+    async def enrich_saved_artists(self, tracks: bool = False, types: Collection[str] = ()) -> None:
         """
         Gets all albums for current loaded following artists.
 
@@ -128,7 +128,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, Sp
             f"\33[1;95m  >\33[1;97m Enriching {len(self.artists)} {self.api.source} artists \33[0m"
         )
 
-        self.api.get_artist_albums(self.artists, types=types)
+        await self.api.get_artist_albums(self.artists, types=types)
 
         if tracks:
             kind = RemoteObjectType.ALBUM
@@ -137,7 +137,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, Sp
             responses_albums = [album for artist in self.artists for album in artist.albums]
             bar = self.logger.get_iterator(iterable=responses_albums, desc="Getting album tracks", unit="albums")
             for album in bar:
-                self.api.extend_items(album, kind=kind, key=key)
+                await self.api.extend_items(album, kind=kind, key=key)
                 album.refresh(skip_checks=False)
 
         self.logger.debug(f"Enrich {self.api.source} artists: DONE\n")

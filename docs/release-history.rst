@@ -37,23 +37,38 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 Added
 -----
 
-* Custom API caching backend to replace dependency on `requests-cache` package.
+* Custom API caching backend to replace dependency on ``requests-cache`` package.
   Currently only supports SQLite backend. More backends can be implemented in future if desired.
 * Cache settings for specific `GET` request endpoints on :py:class:`.SpotifyAPI` replacing need
   for per method ``use_cache`` parameter.
+* The following classes should now be run as AsyncContextManagers to function correctly:
+   * :py:class:`.SQLiteTable` & :py:class:`.SQLiteCache`
+   * :py:class:`.RequestHandler`
+   * :py:class:`.CachedSession`
+   * :py:class:`.RemoteAPI` & :py:class:`.SpotifyAPI`
 
 Changed
 -------
 
-* Replaced ``authorise`` method from :py:class:`.APIAuthoriser` with __call__ method for class.
-* Dependency injection pattern for :py:class:`.RequestHandler` and :py:class:`.RemoteAPI`.
-  Now takes :py:class:`.APIAuthoriser` and :py:class:`.ResponseCache` objects for instantiation
+* :py:class:`.RequestHandler` now handles requests asynchronously. These changes to async calls have
+  been implemented all the way on :py:class:`.RemoteAPI` and all other objects that depend on it.
+* Dependency injection pattern for :py:class:`.RequestHandler`.
+  Now takes :py:class:`.APIAuthoriser` and generator for :py:class:`.ClientSession` objects for instantiation
+  instead of kwargs for :py:class:`.APIAuthoriser`.
+* Dependency injection pattern for :py:class:`.RemoteAPI`.
+  Now takes :py:class:`.APIAuthoriser` and generator for :py:class:`.ResponseCache` objects for instantiation
   instead of kwargs for :py:class:`.APIAuthoriser`.
 * :py:class:`.APIAuthoriser` kwargs given to :py:class:`.SpotifyAPI` now merge with default kwargs.
 * Moved ``remote_wrangler`` attribute from :py:class:`.MusifyCollection` to :py:class:`.LocalCollection`.
   This attribute was only needed by :py:class:`.LocalCollection` branch of child classes.
 * Moved ``logger`` attribute from :py:class:`.Library` to :py:class:`.RemoteLibrary`.
-* Switch some dependencies to be optional for groups of operation: progress bars, images, musicbee
+* Switch some dependencies to be optional for groups of operation: progress bars, images, musicbee, sqlite
+* Replace urllib usages with ``yarl`` package.
+* :py:class:`.SpotifyAPI` now logs to the new central :py:meth:`.RequestHandler.log` method
+  to help unify log formatting.
+* ``user_id`` and ``user_name`` now raise an error when called before setting ``user_data`` attribute.
+  This is due to avoiding asynchronous calls in a property.
+  It is therefore best to now enter the async context of the api to set these automatically.
 
 Fixed
 -----
@@ -61,12 +76,28 @@ Fixed
 * Added missing variables to __slots__ definitions
 * Correctly applied __slots__ pattern to child classes. Now works as expected.
 * :py:class:`.LocalTrack` now copies tags as expected when calling ``copy.copy()``
+* Bug where loading an M3U playlist with new track objects would force all created track objects
+  to have lower case paths
+* :py:meth:`.RemoteLibrary.restore_playlists` now correctly handles the backup
+  output from :py:meth:`.RemoteLibrary.backup_playlists`
 
 Removed
 -------
 
+* Dependency on ``requests`` package in favour of ``aiohttp`` for async requests.
+* Dependency on ``requests-cache`` package in favour of custom cache implementation.
 * ``use_cache`` parameter from all :py:class:`.RemoteAPI` related methods.
   Cache settings now handled by :py:class:`.ResponseCache`
+* Ability to call the following classes directly due to their need to now by asynchronous:
+   * :py:class:`.APIAuthoriser`
+   * :py:class:`.RemoteItemChecker`
+   * :py:class:`.RemoteItemSearcher`
+* ThreadPoolExecutor use on :py:class:`.RemoteItemSearcher`. Now uses asynchronous logic instead.
+
+Documentation
+-------------
+
+* Updated how-to section to reflect changes to underlying code
 
 0.9.2
 =====

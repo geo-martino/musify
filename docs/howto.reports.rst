@@ -16,18 +16,18 @@ Report on differences in playlists
 
 2. Run the report:
 
-   .. literalinclude:: _howto/scripts/reports.py
+   .. literalinclude:: _howto/scripts/reports/p1_playlist_differences.py
       :language: Python
-      :lines: 9-11
+      :lines: 3-
 
 
 Report on missing tags
 ----------------------
 
-1. Load a local library or collection of local objects. See other guides for more info on how to do this.
+1. Load a local library or collection of local objects. See :ref:`load-local` for more info on how to do this.
 
 2. Run the report:
 
-   .. literalinclude:: _howto/scripts/reports.py
+   .. literalinclude:: _howto/scripts/reports/p1_missing_tags.py
       :language: Python
-      :lines: 13-26
+      :lines: 3-

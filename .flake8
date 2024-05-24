@@ -3,7 +3,7 @@ extend-exclude = .venv* jupyter/ notebooks/
 extend-ignore = E266
 per-file-ignores =
     **/__init__.py:F401
-    docs/_howto/scripts/*:E402
+    docs/_howto/scripts/*:E402,F401,F403,F405
     tests/**/test_*.py:F811
 max-line-length = 120
-max-complexity = 12
+max-complexity = 10

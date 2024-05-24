@@ -57,7 +57,7 @@ class RemoteCollectionLoader[T: RemoteObject](RemoteObject, RemoteCollection[T],
 
     @classmethod
     @abstractmethod
-    def load(
+    async def load(
             cls, value: str | Mapping[str, Any] | Self, api: RemoteAPI, items: Iterable[T] = (), *args, **kwargs
     ) -> Self:
         """
@@ -157,7 +157,7 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], ABC
         return self.api.user_id == self.owner_id
 
     @classmethod
-    def create(cls, api: RemoteAPI, name: str, public: bool = True, collaborative: bool = False) -> Self:
+    async def create(cls, api: RemoteAPI, name: str, public: bool = True, collaborative: bool = False) -> Self:
         """
         Create an empty playlist for the current user with the given name
         and initialise and return a new RemotePlaylist object from this new playlist.
@@ -168,20 +168,19 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], ABC
         :param collaborative: Set playlist to collaborative i.e. other users may edit the playlist.
         :return: :py:class:`RemotePlaylist` object for the generated playlist.
         """
-        url = api.create_playlist(name=name, public=public, collaborative=collaborative)
-        return cls(response=api.handler.get(url), api=api)
+        url = await api.create_playlist(name=name, public=public, collaborative=collaborative)
+        return cls(response=await api.handler.get(url), api=api)
 
-    def delete(self) -> None:
+    async def delete(self) -> None:
         """
         Unfollow/delete the current playlist and clear the stored response for this object.
         WARNING: This function will destructively modify your remote playlists.
         """
         self._check_for_api()
-
-        self.api.delete_playlist(self.url)
+        await self.api.delete_playlist(self.url)
         self.response.clear()
 
-    def sync(
+    async def sync(
             self,
             items: Iterable[MusifyItem] = (),
             kind: PLAYLIST_SYNC_KINDS = "new",
@@ -219,19 +218,19 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], ABC
 
         # process the remote playlist. when dry_run, mock the results
         if kind == "refresh":  # remove all items from the remote playlist
-            removed = self.api.clear_from_playlist(self.url) if not dry_run else len(uri_remote)
+            removed = await self.api.clear_from_playlist(self.url) if not dry_run else len(uri_remote)
             uri_add = uri_initial
             uri_unchanged = []
         elif kind == "sync":  # remove items not present in the current list from the remote playlist
             uri_clear = [uri for uri in uri_remote if uri not in uri_initial]
-            removed = self.api.clear_from_playlist(self.url, items=uri_clear) if not dry_run else len(uri_clear)
+            removed = await self.api.clear_from_playlist(self.url, items=uri_clear) if not dry_run else len(uri_clear)
             uri_unchanged = [uri for uri in uri_remote if uri in uri_initial]
 
         added = len(uri_add)
         if not dry_run:
-            added = self.api.add_to_playlist(self.url, items=uri_add, skip_dupes=kind != "refresh")
+            added = await self.api.add_to_playlist(self.url, items=uri_add, skip_dupes=kind != "refresh")
             if reload:  # reload the current playlist object from remote
-                self.reload(extend_tracks=True)
+                await self.reload(extend_tracks=True)
 
         return SyncResultRemotePlaylist(
             start=len(uri_remote),

@@ -21,7 +21,7 @@
         <Field Code="14" Width="97" />
       </Group>
     </Fields>
-    <ExceptionsInclude>../track/noise_flac.flac|../track/noise_mp3.mp3|../track/noise_wma.wma</ExceptionsInclude>
-    <Exceptions>../playlist/exclude_me.flac|../playlist/exclude_me_2.mp3|../track/noise_mp3.mp3</Exceptions>
+    <ExceptionsInclude>../track/NOISE_FLaC.flac|../track/noiSE_mP3.mp3|../track/noise_wma.wma</ExceptionsInclude>
+    <Exceptions>../playlist/exclude_me.flac|../playlist/exclude_me_2.mp3|../track/noiSE_mP3.mp3</Exceptions>
   </Source>
 </SmartPlaylist>

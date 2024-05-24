@@ -82,7 +82,7 @@ class ItemMatcher(Processor):
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
 
-    def log_messages(self, messages: MutableSequence[str], pad: str = ' ') -> None:
+    def log(self, messages: MutableSequence[str], pad: str = ' ') -> None:
         """
         Log lists of ``messages`` in a uniform aligned format with a given ``pad`` character.
 
@@ -98,7 +98,7 @@ class ItemMatcher(Processor):
         log = [source.name, algorithm]
         if extra:
             log.extend(extra)
-        self.log_messages(log, pad='>')
+        self.log(log, pad='>')
 
     def _log_test[T: MusifyObject](self, source: T, result: T | None, test: Any, extra: Iterable[str] = ()) -> None:
         """Wrapper for initially logging a test result in a uniform aligned format"""
@@ -112,14 +112,14 @@ class ItemMatcher(Processor):
         log = [source.name, log_result, f"{algorithm:<10}={test:<5}"]
         if extra:
             log.extend(extra)
-        self.log_messages(log)
+        self.log(log)
 
     def _log_match[T: MusifyObject](self, source: T, result: T, extra: Iterable[str] = ()) -> None:
         """Wrapper for initially logging a match in a correctly aligned format"""
         log = [source.name, f"< Matched URI: {result.uri}"]
         if extra:
             log.extend(extra)
-        self.log_messages(log, pad='<')
+        self.log(log, pad='<')
 
     def clean_tags(self, source: MusifyObject) -> None:
         """

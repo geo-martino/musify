@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable, Callable, Awaitable
 from copy import copy
-from urllib.parse import parse_qs
+from urllib.parse import unquote
 
 import pytest
 
@@ -68,7 +68,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         return unmatchable_items
 
     @staticmethod
-    def test_get_results(searcher: RemoteItemSearcher, api_mock: RemoteMock):
+    async def test_get_results(searcher: RemoteItemSearcher, api_mock: RemoteMock):
         settings = SearchConfig(
             search_fields_1=[Tag.NAME, Tag.ARTIST],  # query mock always returns match on name
             search_fields_2=[Tag.NAME, Tag.ALBUM],
@@ -77,15 +77,16 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
             result_count=7
         )
         item = random_track()
-        results = searcher._get_results(item=item, kind=RemoteObjectType.TRACK, settings=settings)
-        requests = api_mock.get_requests(method="GET")
+        results = await searcher._get_results(item=item, kind=RemoteObjectType.TRACK, settings=settings)
+        requests = await api_mock.get_requests(method="GET")
         assert len(results) == settings.result_count
         assert len(requests) == 1
 
         expected = [str(item.clean_tags.get(key)) for key in settings.search_fields_1]
         found = False
-        for k, v in parse_qs(requests[0].query).items():
-            if expected == v[0].split():
+        url, _, _ = next(iter(requests))
+        for k, v in url.query.items():
+            if expected == unquote(v).split():
                 found = True
                 break
 
@@ -95,17 +96,18 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         # make these tags too long to query forcing them to return on results
         item.artist = 'b' * 200
         item.album = 'c' * 200
-        api_mock.reset_mock()  # reset for new requests checks to work correctly
+        api_mock.reset()  # reset for new requests checks to work correctly
 
-        results = searcher._get_results(item=item, kind=RemoteObjectType.TRACK, settings=settings)
-        requests = api_mock.get_requests(method="GET")
+        results = await searcher._get_results(item=item, kind=RemoteObjectType.TRACK, settings=settings)
+        requests = await api_mock.get_requests(method="GET")
         assert len(results) == settings.result_count
         assert len(requests) == 1
 
         expected = [str(item.clean_tags.get(key)) for key in settings.search_fields_3]
         found = False
-        for k, v in parse_qs(requests[0].query).items():
-            if expected == v[0].split():
+        url, _, _ = next(iter(requests))
+        for k, v in url.query.items():
+            if expected == unquote(v).split():
                 found = True
                 break
 
@@ -116,8 +118,11 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
     ## _search_<object type> tests
     ###########################################################################
     @staticmethod
-    def assert_search(
-            search_function: Callable[[Iterable[MusifyItemSettable] | MusifyCollection[MusifyItemSettable]], None],
+    async def assert_search(
+            search_function: Callable[
+                [Iterable[MusifyItemSettable] | MusifyCollection[MusifyItemSettable]],
+                Awaitable[None]
+            ],
             collection: Iterable[MusifyItemSettable],
             search_items: Iterable[MusifyItemSettable],
             unmatchable_items: Iterable[MusifyItemSettable],
@@ -127,7 +132,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
             assert item.has_uri is None
             assert item.uri is None
 
-        search_function(collection)
+        await search_function(collection)
         for item in search_items:
             assert item.has_uri
             assert item.uri is not None
@@ -141,7 +146,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         for item in search_items:
             item.uri = uri
 
-        search_function(collection)
+        await search_function(collection)
         for item in search_items:
             assert item.has_uri
             assert item.uri == uri
@@ -149,27 +154,27 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
             assert item.has_uri is None
             assert item.uri is None
 
-    def test_search_items(
+    async def test_search_items(
             self,
             searcher: RemoteItemSearcher,
             search_items: list[MusifyItemSettable],
             unmatchable_items: list[LocalTrack]
     ):
-        self.assert_search(
+        await self.assert_search(
             searcher._search_items,
             collection=BasicCollection(name="test", items=search_items + unmatchable_items),
             search_items=search_items,
             unmatchable_items=unmatchable_items
         )
 
-    def test_search_album(
+    async def test_search_album(
             self, searcher: RemoteItemSearcher, search_albums: list[Album], unmatchable_items: list[LocalTrack]
     ):
         collection = search_albums[0]
         search_items = copy(collection.tracks)
         collection.tracks.extend(unmatchable_items)
 
-        self.assert_search(
+        await self.assert_search(
             searcher._search_collection_unit,
             collection=collection,
             search_items=search_items,
@@ -196,36 +201,36 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         return collection
 
     @staticmethod
-    def test_search_result_items(
+    async def test_search_result_items(
             searcher: RemoteItemSearcher, search_items: list[LocalTrack], unmatchable_items: list[LocalTrack]
     ):
         collection = BasicCollection(name="test", items=search_items + unmatchable_items)
 
-        result = searcher._search_collection(collection)
+        result = await searcher._search_collection(collection)
         assert len(result.matched) + len(result.unmatched) + len(result.skipped) == len(collection)
         assert len(result.matched) == len(search_items)
         assert len(result.unmatched) == len(unmatchable_items)
         assert len(result.skipped) == 0
 
         # skips all matched on 2nd run
-        result = searcher._search_collection(collection)
+        result = await searcher._search_collection(collection)
         assert len(result.matched) + len(result.unmatched) + len(result.skipped) == len(collection)
         assert len(result.matched) == 0
         assert len(result.unmatched) == len(unmatchable_items)
         assert len(result.skipped) == len(search_items)
 
     @staticmethod
-    def test_search_result_album(searcher: RemoteItemSearcher, search_album: LocalAlbum):
+    async def test_search_result_album(searcher: RemoteItemSearcher, search_album: LocalAlbum):
         skip = len([item for item in search_album if item.has_uri is not None])
 
-        result = searcher._search_collection(search_album)
+        result = await searcher._search_collection(search_album)
         assert len(result.matched) + len(result.unmatched) + len(result.skipped) == len(search_album)
         assert len(result.matched) == len(search_album) - skip
         assert len(result.unmatched) == 0
         assert len(result.skipped) == skip
 
         # skips all matched on 2nd run
-        result = searcher._search_collection(search_album)
+        result = await searcher._search_collection(search_album)
         assert len(result.matched) + len(result.unmatched) + len(result.skipped) == len(search_album)
         assert len(result.matched) == 0
         assert len(result.unmatched) == 0
@@ -233,7 +238,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
 
     @staticmethod
     @pytest.mark.slow
-    def test_search_result_combined(
+    async def test_search_result_combined(
             searcher: RemoteItemSearcher,
             search_items: list[LocalTrack],
             search_album: LocalAlbum,
@@ -244,7 +249,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         search_album.items.extend(unmatchable_items)
         skip = len([item for item in search_album if item.has_uri is not None])
 
-        result = searcher._search_collection(search_album)
+        result = await searcher._search_collection(search_album)
         assert len(result.matched) + len(result.unmatched) + len(result.skipped) == len(search_album)
 
         assert len(result.matched) == matchable - skip
@@ -252,7 +257,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert len(result.skipped) == skip
 
         # skips all matched on 2nd run
-        result = searcher._search_collection(search_album)
+        result = await searcher._search_collection(search_album)
         assert len(result.matched) + len(result.unmatched) + len(result.skipped) == len(search_album)
         assert len(result.matched) == 0
         assert len(result.unmatched) == len(unmatchable_items)
@@ -262,7 +267,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
     ## main search tests
     ###########################################################################
     @staticmethod
-    def test_search(
+    async def test_search(
             searcher: RemoteItemSearcher,
             search_items: list[LocalTrack],
             search_album: LocalAlbum,
@@ -272,7 +277,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         search_collection = BasicCollection(name="test", items=search_items + unmatchable_items)
         skip_album = len([item for item in search_album if item.has_uri is not None])
 
-        results = searcher([search_collection, search_album])
+        results = await searcher.search([search_collection, search_album])
 
         result = results[search_collection.name]
         assert len(result.matched) + len(result.unmatched) + len(result.skipped) == len(search_collection)
@@ -287,7 +292,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert len(result.skipped) == skip_album
 
         # check nothing happens on matched collections
-        api_mock.reset_mock()  # reset for new requests checks to work correctly
+        api_mock.reset()  # reset for new requests checks to work correctly
         search_matched = BasicCollection(name="test", items=search_items)
-        assert len(searcher.search([search_matched, search_album])) == 0
-        assert len(api_mock.request_history) == 0
+        assert len(await searcher.search([search_matched, search_album])) == 0
+        api_mock.assert_not_called()

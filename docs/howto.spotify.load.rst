@@ -34,23 +34,27 @@ Set up the Spotify API
 Load your library
 -----------------
 
-1. Create a :py:class:`.SpotifyLibrary` object and load your library data as follows:
+1. Define helper functions for loading your library data:
 
-   .. literalinclude:: _howto/scripts/spotify.load.py
+   .. literalinclude:: _howto/scripts/spotify.load/p1.py
       :language: Python
-      :lines: 4-30
+      :lines: 3-
 
-2. Load some Spotify objects using any of the supported identifiers as follows:
+2. Define helper functions for loading some Spotify objects using any of the supported identifiers:
 
-   .. literalinclude:: _howto/scripts/spotify.load.py
+   .. literalinclude:: _howto/scripts/spotify.load/p2.py
       :language: Python
-      :lines: 32-49
+      :lines: 3-
 
-3. Add some tracks to a playlist in your library, synchronise with Spotify, and log the results as follows:
+3. Define helper function for adding some tracks to a playlist in your library, synchronising with Spotify,
+   and logging the results:
 
-   .. note::
-      This step will only work if you chose to load either your playlists or your entire library in step 4.
-
-   .. literalinclude:: _howto/scripts/spotify.load.py
+   .. literalinclude:: _howto/scripts/spotify.load/p3.py
       :language: Python
-      :lines: 51-62
+      :lines: 3-
+
+4. Run the program:
+
+   .. literalinclude:: _howto/scripts/spotify.load/p99.py
+      :language: Python
+      :lines: 3-

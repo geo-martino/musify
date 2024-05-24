@@ -71,7 +71,7 @@ class TestSpotifyAPIArtists:
             assert album["tracks"]["total"] == album["total_tracks"]
             assert album["id"] in album["tracks"]["href"]
 
-    def assert_artist_albums_results(
+    async def assert_artist_albums_results(
             self,
             results: dict[str, list[dict[str, Any]]],
             source: dict[str, dict[str, Any]],
@@ -90,7 +90,7 @@ class TestSpotifyAPIArtists:
 
             # appropriate number of requests made
             url = f"{api.url}/artists/{id_}/albums"
-            requests = api_mock.get_requests(url=url)
+            requests = await api_mock.get_requests(url=url)
             assert_calls(expected=expected[id_], requests=requests, limit=limit, api_mock=api_mock)
 
             if not update:
@@ -102,7 +102,7 @@ class TestSpotifyAPIArtists:
             assert reduced == expected[id_]
             self.assert_artist_albums_enriched(source[id_]["albums"]["items"])
 
-    def test_get_artist_albums_single_string(
+    async def test_get_artist_albums_single_string(
             self,
             artist_albums: list[dict[str, Any]],
             artist: dict[str, Any],
@@ -111,13 +111,13 @@ class TestSpotifyAPIArtists:
             api_mock: SpotifyMock,
     ):
         limit = get_limit(artist_albums, api_mock.limit_max)
-        results = api.get_artist_albums(
+        results = await api.get_artist_albums(
             values=random_id_type(id_=artist["id"], wrangler=api.wrangler, kind=RemoteObjectType.ARTIST),
             types=artist_album_types,
             limit=limit
         )
 
-        self.assert_artist_albums_results(
+        await self.assert_artist_albums_results(
             results=results,
             source={artist["id"]: artist},
             expected={artist["id"]: artist_albums},
@@ -127,7 +127,7 @@ class TestSpotifyAPIArtists:
             update=False
         )
 
-    def test_get_artist_albums_single_mapping(
+    async def test_get_artist_albums_single_mapping(
             self,
             artist_albums: list[dict[str, Any]],
             artist: dict[str, Any],
@@ -136,9 +136,9 @@ class TestSpotifyAPIArtists:
             api_mock: SpotifyMock,
     ):
         limit = get_limit(artist_albums, api_mock.limit_max)
-        results = api.get_artist_albums(values=artist, types=artist_album_types, limit=limit)
+        results = await api.get_artist_albums(values=artist, types=artist_album_types, limit=limit)
 
-        self.assert_artist_albums_results(
+        await self.assert_artist_albums_results(
             results=results,
             source={artist["id"]: artist},
             expected={artist["id"]: artist_albums},
@@ -148,7 +148,7 @@ class TestSpotifyAPIArtists:
             update=True
         )
 
-    def test_get_artist_albums_many_string(
+    async def test_get_artist_albums_many_string(
             self,
             artists_albums: dict[str, list[dict[str, Any]]],
             artists: dict[str, dict[str, Any]],
@@ -157,13 +157,13 @@ class TestSpotifyAPIArtists:
             api_mock: SpotifyMock,
     ):
         limit = 50
-        results = api.get_artist_albums(
+        results = await api.get_artist_albums(
             values=random_id_types(id_list=artists, wrangler=api.wrangler, kind=RemoteObjectType.ARTIST),
             types=artist_album_types,
             limit=limit,
         )
 
-        self.assert_artist_albums_results(
+        await self.assert_artist_albums_results(
             results=results,
             source=artists,
             expected=artists_albums,
@@ -173,7 +173,7 @@ class TestSpotifyAPIArtists:
             update=False
         )
 
-    def test_get_artist_albums_many_mapping(
+    async def test_get_artist_albums_many_mapping(
             self,
             artists_albums: dict[str, list[dict[str, Any]]],
             artists: dict[str, dict[str, Any]],
@@ -182,9 +182,9 @@ class TestSpotifyAPIArtists:
             api_mock: SpotifyMock,
     ):
         limit = 50
-        results = api.get_artist_albums(values=artists.values(), types=artist_album_types, limit=limit)
+        results = await api.get_artist_albums(values=artists.values(), types=artist_album_types, limit=limit)
 
-        self.assert_artist_albums_results(
+        await self.assert_artist_albums_results(
             results=results,
             source=artists,
             expected=artists_albums,
@@ -194,7 +194,7 @@ class TestSpotifyAPIArtists:
             update=True
         )
 
-    def test_artist_albums_single_response(
+    async def test_artist_albums_single_response(
             self,
             artist_albums: list[dict[str, Any]],
             artist: dict[str, Any],
@@ -205,10 +205,10 @@ class TestSpotifyAPIArtists:
         test = SpotifyArtist(artist, skip_checks=True)
         assert len(test.albums) < len(artist_albums)
 
-        api.get_artist_albums(values=test, types=artist_album_types)
+        await api.get_artist_albums(values=test, types=artist_album_types)
         assert len(test.albums) == len(artist_albums)
 
-    def test_artist_albums_many_response(
+    async def test_artist_albums_many_response(
             self,
             artists_albums: dict[str, list[dict[str, Any]]],
             artists: dict[str, dict[str, Any]],
@@ -220,6 +220,6 @@ class TestSpotifyAPIArtists:
         for artist in test:
             assert len(artist.albums) < len(artists_albums[artist.id])
 
-        api.get_artist_albums(values=test, types=artist_album_types)
+        await api.get_artist_albums(values=test, types=artist_album_types)
         for artist in test:
             assert len(artist.albums) == len(artists_albums[artist.id])

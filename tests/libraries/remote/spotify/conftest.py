@@ -36,5 +36,5 @@ def api_mock(_api_mock: SpotifyMock) -> SpotifyMock:
     Creates a copy of ``_api_mock`` to allow for successful requests history assertions.
     """
     mock = copy(_api_mock)
-    mock.reset_mock()
+    mock.reset()
     return mock

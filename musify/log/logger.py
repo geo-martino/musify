@@ -12,7 +12,6 @@ from typing import Any, TypeVar
 from musify.log import INFO_EXTRA, REPORT, STAT
 
 T = TypeVar("T")
-
 try:
     from tqdm.auto import tqdm
     ProgressBarType = tqdm | Iterable[T]
@@ -76,7 +75,9 @@ class MusifyLogger(logging.Logger):
 
     def print(self, level: int = logging.CRITICAL + 1) -> None:
         """Print a new line only when DEBUG < ``logger level`` <= ``level`` for all console handlers"""
-        if not self.compact and all(logging.DEBUG < h.level <= level for h in self.stdout_handlers):
+        if not self.compact and self.stdout_handlers and all(
+                logging.DEBUG < h.level <= level for h in self.stdout_handlers
+        ):
             print()
 
     def get_iterator[T: Any](
@@ -91,7 +92,7 @@ class MusifyLogger(logging.Logger):
         For tqdm kwargs, see :py:class:`tqdm_std`
         """
         if tqdm is None:
-            return iterable if iterable is not None else range(total)
+            return iter(iterable) if iterable is not None else range(total)
 
         # noinspection SpellCheckingInspection
         preset_keys = ("leave", "disable", "file", "ncols", "colour", "smoothing", "position")

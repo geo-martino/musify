@@ -81,94 +81,155 @@ For more detailed guides, check out the [documentation](https://geo-martino.gith
    > The scopes listed in this example will allow access to read your library data and write to your playlists.
    > See Spotify Web API documentation for more information about [scopes](https://developer.spotify.com/documentation/web-api/concepts/scopes)
    ```python
-   from musify.libraries.remote.spotify.api import SpotifyAPI
+    from musify.libraries.remote.spotify.api import SpotifyAPI
    
-   api = SpotifyAPI(
-       client_id="<YOUR CLIENT ID>",
-       client_secret="<YOUR CLIENT SECRET>",
-       scopes=[
-           "user-library-read",
-           "user-follow-read",
-           "playlist-read-collaborative",
-           "playlist-read-private",
-           "playlist-modify-public",
-           "playlist-modify-private"
-       ],
-       # providing a `token_file_path` will save the generated token to your system 
-       # for quicker authorisations in future
-       token_file_path="<PATH TO JSON TOKEN>"  
-   )
-   
-   # authorise the program to access your Spotify data in your web browser
-   api.authorise()
+    spotify_api = SpotifyAPI(
+        client_id="<YOUR CLIENT ID>",
+        client_secret="<YOUR CLIENT SECRET>",
+        scopes=[
+            "user-library-read",
+            "user-follow-read",
+            "playlist-read-collaborative",
+            "playlist-read-private",
+            "playlist-modify-public",
+            "playlist-modify-private"
+        ],
+        # providing a `token_file_path` will save the generated token to your system 
+        # for quicker authorisations in future
+        token_file_path="<PATH TO JSON TOKEN>"  
+    )
    ```
-4. Create a `SpotifyLibrary` object and load your library data as follows:
+4. Define helper functions for loading your `SpotifyLibrary` data:
    ```python
-   from musify.libraries.remote.spotify.library import SpotifyLibrary
-   
-   library = SpotifyLibrary(api=api)
-   
-   # if you have a very large library, this will take some time...
-   library.load()
-   
-   # ...or you may also just load distinct sections of your library
-   library.load_playlists()
-   library.load_tracks()
-   library.load_saved_albums()
-   library.load_saved_artists()
-   
-   # enrich the loaded objects; see each function's docstring for more info on arguments
-   # each of these will take some time depending on the size of your library
-   library.enrich_tracks(features=True, analysis=False, albums=False, artists=False)
-   library.enrich_saved_albums()
-   library.enrich_saved_artists(tracks=True, types=("album", "single"))
-   
-   # optionally log stats about these sections
-   library.log_playlists()
-   library.log_tracks()
-   library.log_albums()
-   library.log_artists()
-   
-   # pretty print an overview of your library
-   print(library)
+    from musify.libraries.remote.spotify.library import SpotifyLibrary
+
+
+    async def load_library(library: SpotifyLibrary) -> None:
+        """Load the objects for a given ``library``. Does not enrich the loaded data."""
+        # authorise the program to access your Spotify data in your web browser
+        async with library:
+            # if you have a very large library, this will take some time...
+            await library.load()
+
+
+    async def load_library_by_parts(library: SpotifyLibrary) -> None:
+        """Load the objects for a given ``library`` by each of its distinct parts.  Does not enrich the loaded data."""
+        # authorise the program to access your Spotify data in your web browser
+        async with library:
+            # load distinct sections of your library
+            await library.load_playlists()
+            await library.load_tracks()
+            await library.load_saved_albums()
+            await library.load_saved_artists()
+
+
+    async def enrich_library(library: SpotifyLibrary) -> None:
+        """Enrich the loaded objects in the given ``library``"""
+        # authorise the program to access your Spotify data in your web browser
+        async with library:
+            # enrich the loaded objects; see each function's docstring for more info on arguments
+            # each of these will take some time depending on the size of your library
+            await library.enrich_tracks(features=True, analysis=False, albums=False, artists=False)
+            await library.enrich_saved_albums()
+            await library.enrich_saved_artists(tracks=True, types=("album", "single"))
+
+
+    def log_library(library: SpotifyLibrary) -> None:
+        """Log stats about the loaded ``library``"""
+        library.log_playlists()
+        library.log_tracks()
+        library.log_albums()
+        library.log_artists()
+
+        # pretty print an overview of your library
+        print(library)
    ```
-5. Load some Spotify objects using any of the supported identifiers as follows:
+5. Define helper functions for loading some Spotify objects using any of the supported identifiers:
    ```python
-   from musify.libraries.remote.spotify.object import SpotifyTrack, SpotifyAlbum, SpotifyPlaylist, SpotifyArtist
-   
-   # load by ID
-   track1 = SpotifyTrack.load("6fWoFduMpBem73DMLCOh1Z", api=api)
-   # load by URI
-   track2 = SpotifyTrack.load("spotify:track:4npv0xZO9fVLBmDS2XP9Bw", api=api)
-   # load by open/external style URL
-   track3 = SpotifyTrack.load("https://open.spotify.com/track/1TjVbzJUAuOvas1bL00TiH", api=api)
-   # load by API style URI
-   track4 = SpotifyTrack.load("https://api.spotify.com/v1/tracks/6pmSweeisgfxxsiLINILdJ", api=api)
-   
-   # load many different kinds of supported Spotify types
-   playlist = SpotifyPlaylist.load("spotify:playlist:37i9dQZF1E4zg1xOOORiP1", api=api, extend_tracks=True)
-   album = SpotifyAlbum.load("https://open.spotify.com/album/0rAWaAAMfzHzCbYESj4mfx", api=api, extend_tracks=True)
-   artist = SpotifyArtist.load("1odSzdzUpm3ZEEb74GdyiS", api=api, extend_tracks=True) 
-   
-   # pretty print information about the loaded objects
-   print(track1, track2, track3, playlist, album, artist, sep="\n")
+    from musify.libraries.remote.spotify.object import SpotifyTrack, SpotifyAlbum, SpotifyPlaylist, SpotifyArtist
+
+
+    async def load_playlist(api: SpotifyAPI) -> SpotifyPlaylist:
+        # authorise the program to access your Spotify data in your web browser
+        async with api as a:
+            playlist = await SpotifyPlaylist.load("spotify:playlist:37i9dQZF1E4zg1xOOORiP1", api=a, extend_tracks=True)
+        return playlist
+
+
+    async def load_tracks(api: SpotifyAPI) -> list[SpotifyTrack]:
+        tracks = []
+
+        # authorise the program to access your Spotify data in your web browser
+        async with api as a:
+            # load by ID
+            tracks.append(await SpotifyTrack.load("6fWoFduMpBem73DMLCOh1Z", api=a))
+            # load by URI
+            tracks.append(await SpotifyTrack.load("spotify:track:4npv0xZO9fVLBmDS2XP9Bw", api=a))
+            # load by open/external style URL
+            tracks.append(await SpotifyTrack.load("https://open.spotify.com/track/1TjVbzJUAuOvas1bL00TiH", api=a))
+            # load by API style URI
+            tracks.append(await SpotifyTrack.load("https://api.spotify.com/v1/tracks/6pmSweeisgfxxsiLINILdJ", api=api))
+
+        return tracks
+
+
+    async def load_album(api: SpotifyAPI) -> SpotifyAlbum:
+        # authorise the program to access your Spotify data in your web browser
+        async with api as a:
+            album = await SpotifyAlbum.load(
+                "https://open.spotify.com/album/0rAWaAAMfzHzCbYESj4mfx", api=a, extend_tracks=True
+            )
+        return album
+
+
+    async def load_artist(api: SpotifyAPI) -> SpotifyArtist:
+        # authorise the program to access your Spotify data in your web browser
+        async with api as a:
+            artist = await SpotifyArtist.load("1odSzdzUpm3ZEEb74GdyiS", api=a, extend_tracks=True)
+        return artist
+
+
+    async def load_objects(api: SpotifyAPI) -> None:
+        playlist = await load_playlist(api)
+        tracks = await load_tracks(api)
+        album = await load_album(api)
+        artist = await load_artist(api)
+
+        # pretty print information about the loaded objects
+        print(playlist, *tracks, album, artist, sep="\n")
    ```
-6. Add some tracks to a playlist in your library, synchronise with Spotify, and log the results as follows:
+6. Define helper function for adding some tracks to a playlist in your library, synchronising with Spotify, and logging the results:
    
    > **NOTE**: This step will only work if you chose to load either your playlists or your entire library in step 4.
    ```python   
-   my_playlist = library.playlists["<YOUR PLAYLIST'S NAME>"]  # case sensitive
-   
-   # add a track to the playlist
-   my_playlist.append(track1)
-   
-   # add an album to the playlist using either of the following
-   my_playlist.extend(album)
-   my_playlist += album
-   
-   # sync the object with Spotify and log the results
-   result = my_playlist.sync(dry_run=False)
-   library.log_sync(result)
+    async def update_playlist(name: str, library: SpotifyLibrary) -> None:
+        """Update a playlist with the given ``name`` in the given ``library``"""
+        tracks = await load_tracks(library.api)
+        album = await load_album(library.api)
+        await load_library(library)
+
+        my_playlist = library.playlists[name]
+
+        # add a track to the playlist
+        my_playlist.append(tracks[0])
+
+        # add an album to the playlist using either of the following
+        my_playlist.extend(album)
+        my_playlist += album
+
+        # sync the object with Spotify and log the results
+        async with library:
+            result = await my_playlist.sync(dry_run=False)
+        library.log_sync(result)
+    
+    asyncio.run(update_playlist(spotify_api))
+   ```
+7. Run the program:
+   ```python
+    import asyncio
+
+    asyncio.run(load_objects(api))
+    asyncio.run(update_playlist("<YOUR PLAYLIST'S NAME>", api))  # case sensitive
    ```
 
 ### Local

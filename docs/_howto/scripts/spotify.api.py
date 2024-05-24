@@ -15,9 +15,3 @@ api = SpotifyAPI(
     # for quicker authorisations in future
     token_file_path="<PATH TO JSON TOKEN>"
 )
-
-# authorise the program to access your Spotify data in your web browser
-api.authorise()
-
-from musify.libraries.remote.spotify.library import SpotifyLibrary
-library = SpotifyLibrary(api=api)

@@ -4,11 +4,11 @@ Reads library/settings files from MusicBee to load and enrich playlist/track etc
 """
 import hashlib
 import re
-import urllib.parse
 from collections.abc import Iterable, Mapping, Sequence, Collection, Iterator
 from datetime import datetime
 from os.path import join, exists, normpath
 from typing import Any
+from urllib.parse import quote, unquote
 
 from musify.file.base import File
 from musify.file.exception import FileDoesNotExistError
@@ -376,14 +376,14 @@ class XMLLibraryParser:
     @staticmethod
     def to_xml_path(path: str) -> str:
         """Convert a standard system path to a file path as found in the MusicBee XML library file"""
-        return f"file://localhost/{urllib.parse.quote(path.replace('\\', '/'), safe=':/!(),;@[]+')}"\
+        return f"file://localhost/{quote(path.replace('\\', '/'), safe=':/!(),;@[]+')}"\
             .replace("%26", "&#38;")\
             .replace("%27", "&#39;")
 
     @staticmethod
     def from_xml_path(path: str) -> str:
         """Clean the file paths as found in the MusicBee XML library file to a standard system path"""
-        return normpath(urllib.parse.unquote(path.removeprefix("file://localhost/")))
+        return normpath(unquote(path.removeprefix("file://localhost/")))
 
     def _iter_elements(self) -> Iterator[Element]:
         for event, element in self._iterparse:

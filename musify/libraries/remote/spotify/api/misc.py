@@ -1,6 +1,7 @@
 """
 Implements all required non-items and non-playlist endpoints from the Spotify API.
 """
+import logging
 from abc import ABC
 from collections.abc import MutableMapping
 from typing import Any
@@ -15,7 +16,7 @@ class SpotifyAPIMisc(SpotifyAPIBase, ABC):
 
     __slots__ = ()
 
-    def print_collection(
+    async def print_collection(
             self,
             value: str | MutableMapping[str, Any] | None = None,
             kind: RemoteIDType | None = None,
@@ -34,8 +35,8 @@ class SpotifyAPIMisc(SpotifyAPIBase, ABC):
         url = self.wrangler.convert(id_, kind=kind, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
         limit = limit_value(limit, floor=1, ceil=50)
 
-        name = self.handler.get(url, params={"limit": limit}, log_pad=43)["name"]
-        response = self.handler.get(f"{url}/{key}s", params={"limit": limit}, log_pad=43)
+        name = (await self.handler.get(url, params={"limit": limit}))["name"]
+        response = await self.handler.get(f"{url}/{key}s", params={"limit": limit})
 
         i = 0
         while response.get("next") or i < response["total"]:  # loop through each page, printing data in blocks of 20
@@ -55,24 +56,24 @@ class SpotifyAPIMisc(SpotifyAPIBase, ABC):
                 self.print_item(i=i, name=track["name"], uri=track["uri"], length=length, total=response["total"])
 
             if response["next"]:
-                response = self.handler.get(response["next"], params={"limit": limit})
+                response = await self.handler.get(response["next"], params={"limit": limit})
             print()
 
     ###########################################################################
     ## GET endpoints
     ###########################################################################
-    def get_self(self, update_user_data: bool = True) -> dict[str, Any]:
+    async def get_self(self, update_user_data: bool = True) -> dict[str, Any]:
         """
         ``GET: /me`` - Get API response for information on current user.
 
         :param update_user_data: When True, update the ``_user_data`` stored in this API object.
         """
-        r = self.handler.get(url=f"{self.url}/me", log_pad=71)
+        r = await self.handler.get(url=f"{self.url}/me")
         if update_user_data:
             self.user_data = r
         return r
 
-    def query(self, query: str | None, kind: RemoteObjectType, limit: int = 10) -> list[dict[str, Any]]:
+    async def query(self, query: str | None, kind: RemoteObjectType, limit: int = 10) -> list[dict[str, Any]]:
         """
         ``GET: /search`` - Query for items. Modify result types returned with kind parameter
 
@@ -86,10 +87,10 @@ class SpotifyAPIMisc(SpotifyAPIBase, ABC):
 
         url = f"{self.url}/search"
         params = {'q': query, "type": kind.name.lower(), "limit": limit_value(limit, floor=1, ceil=50)}
-        response = self.handler.get(url, params=params)
+        response = await self.handler.get(url, params=params)
 
         if "error" in response:
-            self.logger.error(f"{'ERROR':<7}: {url:<43} | Query: {query} | {response['error']}")
+            self.handler.log("SKIP", url, message=[f"Query: {query}", response['error']], level=logging.ERROR)
             return []
 
         results = response[f"{kind.name.lower()}s"][self.items_key]

@@ -74,7 +74,8 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
 
     :param path: Absolute path of the playlist.
     :param tracks: Optional. Available Tracks to search through for matches.
-        If none are provided, no tracks will be loaded initially
+        If none are provided, no tracks will be loaded initially. In order to load the playlist in this case,
+        you will need to call :py:meth:`load` and provide some loaded tracks.
     :param path_mapper: Optionally, provide a :py:class:`PathMapper` for paths stored in the playlist file.
         Useful if the playlist file contains relative paths and/or paths for other systems that need to be
         mapped to absolute, system-specific paths to be loaded and back again when saved.

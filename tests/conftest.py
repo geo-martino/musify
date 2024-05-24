@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 import yaml
 from _pytest.fixtures import SubRequest
+from aioresponses import aioresponses
 
 from musify import MODULE_ROOT
 from musify.libraries.remote.core.enum import RemoteObjectType
@@ -51,6 +52,20 @@ def pytest_configure(config: pytest.Config):
 
     log_config["loggers"][MODULE_ROOT] = log_config["loggers"]["test"]
     logging.config.dictConfig(log_config)
+
+
+def pytest_collection_modifyitems(items: list[pytest.Function]):
+    """Modifies test items in-place, ordering them based on assigned marks."""
+    marker_name_order = []  # currently not implemented
+
+    def _get_item_order_index(item: pytest.Function) -> int:
+        try:
+            name = next(marker.name for marker in item.own_markers if marker.name.casefold() in marker_name_order)
+            return marker_name_order.index(name.casefold())
+        except (StopIteration, ValueError):
+            return len(marker_name_order)
+
+    items.sort(key=_get_item_order_index)
 
 
 # This is a fork of the pytest-lazy-fixture package
@@ -259,6 +274,13 @@ class LazyFixture(object):
 
 
 @pytest.fixture
+def requests_mock():
+    """Yields an initialised :py:class:`aioresponses` object for mocking aiohttp requests as a pytest.fixture."""
+    with aioresponses() as m:
+        yield m
+
+
+@pytest.fixture
 def path(request: pytest.FixtureRequest | SubRequest, tmp_path: Path) -> str:
     """
     Copy the path of the source file to the test cache for this test and return the cache path.
@@ -293,20 +315,19 @@ def spotify_wrangler():
 
 
 @pytest.fixture(scope="session")
-def spotify_api() -> SpotifyAPI:
-    """Yield an authorised :py:class:`SpotifyAPI` object"""
-    token = {"access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"}
-    api = SpotifyAPI(token=token)
-    # blocks any token tests
-    api.handler.authoriser.test_args = None
-    api.handler.authoriser.test_expiry = 0
-    api.handler.authoriser.test_condition = None
-    with api as a:
-        yield a
-
-
-@pytest.fixture(scope="session")
 def spotify_mock() -> SpotifyMock:
     """Yield an authorised and configured :py:class:`SpotifyMock` object"""
     with SpotifyMock() as m:
         yield m
+
+
+@pytest.fixture(scope="session")
+async def spotify_api(spotify_mock: SpotifyMock) -> SpotifyAPI:
+    """Yield an authorised :py:class:`SpotifyAPI` object"""
+    token = {"access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"}
+    # disable any token tests by settings test_* kwargs as appropriate
+    api = SpotifyAPI(token=token, test_args=None, test_expiry=0, test_condition=None)
+    api.handler.backoff_count = 1  # TODO: remove me
+
+    async with api as a:
+        yield a

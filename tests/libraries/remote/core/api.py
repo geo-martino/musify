@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from copy import deepcopy
 from random import sample, choice
 from typing import Any
-from urllib.parse import parse_qs
+from urllib.parse import unquote
 
 import pytest
-# noinspection PyProtectedMember,PyUnresolvedReferences
-from requests_mock.request import _RequestObjectProxy as Request
+from yarl import URL
 
 from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.enum import RemoteObjectType
@@ -77,14 +77,13 @@ class RemoteAPITester(ABC):
         assert {k: v for k, v in test.items() if k not in omit} != expected
 
     @staticmethod
-    def assert_params(requests: list[Request], params: dict[str, Any] | list[dict[str, Any]]):
+    def assert_params(requests: Iterable[URL], params: dict[str, Any] | list[dict[str, Any]]):
         """Check for expected ``params`` in the given ``requests``"""
-        for request in requests:
-            request_params = parse_qs(request.query)
+        for url in requests:
             if isinstance(params, list):
-                assert any(request_params[k][0] == param[k] for param in params for k in param)
+                assert any(unquote(url.query[k]) == param[k] for param in params for k in param)
                 continue
 
             for k, v in params.items():
-                assert k in request_params
-                assert request_params[k][0] == params[k]
+                assert k in url.query
+                assert unquote(url.query[k]) == params[k]

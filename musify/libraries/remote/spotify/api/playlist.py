@@ -19,7 +19,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, ABC):
 
     __slots__ = ()
 
-    def get_playlist_url(self, playlist: str | Mapping[str, Any] | RemoteResponse) -> str:
+    async def get_playlist_url(self, playlist: str | Mapping[str, Any] | RemoteResponse) -> str:
         """
         Determine the type of the given ``playlist`` and return its API URL.
         If type cannot be determined, attempt to find the playlist in the
@@ -58,7 +58,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, ABC):
         try:
             return self.wrangler.convert(playlist, kind=RemoteObjectType.PLAYLIST, type_out=RemoteIDType.URL)
         except RemoteIDTypeError:
-            playlists = self.get_user_items(kind=RemoteObjectType.PLAYLIST)
+            playlists = await self.get_user_items(kind=RemoteObjectType.PLAYLIST)
             playlists = {pl["name"]: pl["href"] for pl in playlists}
             if playlist not in playlists:
                 raise RemoteIDTypeError(
@@ -70,7 +70,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, ABC):
     ###########################################################################
     ## POST endpoints
     ###########################################################################
-    def create_playlist(self, name: str, public: bool = True, collaborative: bool = False, *_, **__) -> str:
+    async def create_playlist(self, name: str, public: bool = True, collaborative: bool = False, *_, **__) -> str:
         """
         ``POST: /users/{user_id}/playlists`` - Create an empty playlist for the current user with the given name.
 
@@ -87,12 +87,12 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, ABC):
             "public": public,
             "collaborative": collaborative,
         }
-        pl_url = self.handler.post(url, json=body, log_pad=71)["href"]
+        pl_url = (await self.handler.post(url, json=body))["href"]
 
-        self.logger.debug(f"{'DONE':<7}: {url:<71} | Created playlist: '{name}' -> {pl_url}")
+        self.handler.log("DONE", url, message=f"Created playlist: '{name}' -> {pl_url}")
         return pl_url
 
-    def add_to_playlist(
+    async def add_to_playlist(
             self,
             playlist: str | Mapping[str, Any] | RemoteResponse,
             items: Collection[str],
@@ -116,10 +116,10 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, ABC):
         :raise RemoteObjectTypeError: Raised when the item types of the input ``items``
             are not all tracks or IDs.
         """
-        url = f"{self.get_playlist_url(playlist)}/tracks"
+        url = f"{await self.get_playlist_url(playlist)}/tracks"
 
         if len(items) == 0:
-            self.logger.debug(f"{'SKIP':<7}: {url:<43} | No data given")
+            self.handler.log("SKIP", url, message="No data given")
             return 0
 
         self.wrangler.validate_item_type(items, kind=RemoteObjectType.TRACK)
@@ -128,7 +128,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, ABC):
             self.wrangler.convert(item, kind=RemoteObjectType.TRACK, type_out=RemoteIDType.URI) for item in items
         ]
         if skip_dupes:  # skip tracks currently in playlist
-            pl_current = self.get_items(url, kind=RemoteObjectType.PLAYLIST)[0]
+            pl_current = next(iter(await self.get_items(url, kind=RemoteObjectType.PLAYLIST)))
             tracks_key = self.collection_item_map[RemoteObjectType.PLAYLIST].name.lower() + "s"
             tracks = pl_current[tracks_key][self.items_key]
 
@@ -137,16 +137,15 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, ABC):
 
         limit = limit_value(limit, floor=1, ceil=100)
         for uris in batched(uri_list, limit):  # add tracks in batches
-            log = [f"Adding {len(uris):>6} items"]
-            self.handler.post(url, json={"uris": uris}, log_pad=71, log_extra=log)
+            await self.handler.post(url, json={"uris": uris}, log_message=f"Adding {len(uris):>6} items")
 
-        self.logger.debug(f"{'DONE':<7}: {url:<71} | Added {len(uri_list):>6} items to playlist: {url}")
+        self.handler.log("DONE", url, message=f"Added {len(uri_list):>6} items to playlist: {url}")
         return len(uri_list)
 
     ###########################################################################
     ## DELETE endpoints
     ###########################################################################
-    def delete_playlist(self, playlist: str | Mapping[str, Any] | RemoteResponse) -> str:
+    async def delete_playlist(self, playlist: str | Mapping[str, Any] | RemoteResponse) -> str:
         """
         ``DELETE: /playlists/{playlist_id}/followers`` - Unfollow a given playlist.
         WARNING: This function will destructively modify your remote playlists.
@@ -158,11 +157,11 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, ABC):
             - a RemoteResponse object representing a remote playlist.
         :return: API URL for playlist.
         """
-        url = f"{self.get_playlist_url(playlist)}/followers"
-        self.handler.delete(url, log_pad=43)
+        url = f"{await self.get_playlist_url(playlist)}/followers"
+        await self.handler.delete(url)
         return url
 
-    def clear_from_playlist(
+    async def clear_from_playlist(
             self,
             playlist: str | Mapping[str, Any] | RemoteResponse,
             items: Collection[str] | None = None,
@@ -186,13 +185,13 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, ABC):
         :raise RemoteObjectTypeError: Raised when the item types of the input ``items``
             are not all tracks or IDs.
         """
-        url = f"{self.get_playlist_url(playlist)}/tracks"
+        url = f"{await self.get_playlist_url(playlist)}/tracks"
         if items is not None and len(items) == 0:
-            self.logger.debug(f"{'SKIP':<7}: {url:<43} | No data given")
+            self.handler.log("SKIP", url, message="No data given")
             return 0
 
         if items is None:  # clear everything
-            pl_current = self.get_items(url, kind=RemoteObjectType.PLAYLIST, extend=True)[0]
+            pl_current = next(iter(await self.get_items(url, kind=RemoteObjectType.PLAYLIST, extend=True)))
 
             tracks_key = self.collection_item_map[RemoteObjectType.PLAYLIST].name.lower() + "s"
             tracks = pl_current[tracks_key][self.items_key]
@@ -204,14 +203,13 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, ABC):
             ]
 
         if not uri_list:  # skip when nothing to clear
-            self.logger.debug(f"{'SKIP':<7}: {url:<43} | No tracks to clear")
+            self.handler.log("SKIP", url, message="No tracks to clear")
             return 0
 
         limit = limit_value(limit, floor=1, ceil=100)
         for uris in batched(uri_list, limit):  # clear in batches
             body = {"tracks": [{"uri": uri} for uri in uris]}
-            log = [f"Clearing {len(uri_list):>3} tracks"]
-            self.handler.delete(url, json=body, log_pad=71, log_extra=log)
+            await self.handler.delete(url, json=body, log_message=f"Clearing {len(uri_list):>3} tracks")
 
-        self.logger.debug(f"{'DONE':<7}: {url:<71} | Cleared {len(uri_list):>3} tracks")
+        self.handler.log("DONE", url, message=f"Cleared {len(uri_list):>3} tracks")
         return len(uri_list)

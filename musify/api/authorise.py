@@ -8,10 +8,11 @@ import socket
 from collections.abc import Callable, Mapping, Sequence, MutableMapping
 from datetime import datetime
 from typing import Any
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import unquote
 from webbrowser import open as webopen
 
-import requests
+import aiohttp
+from yarl import URL
 
 from musify import PROGRAM_NAME
 from musify.api.exception import APIError
@@ -132,9 +133,9 @@ class APIAuthoriser:
         self,
         name: str,
         auth_args: MutableMapping[str, Any] | None = None,
-        user_args: Mapping[str, Any] | None = None,
-        refresh_args: Mapping[str, Any] | None = None,
-        test_args: Mapping[str, Any] | None = None,
+        user_args: MutableMapping[str, Any] | None = None,
+        refresh_args: MutableMapping[str, Any] | None = None,
+        test_args: MutableMapping[str, Any] | None = None,
         test_condition: Callable[[str | Mapping[str, Any]], bool] | None = None,
         test_expiry: int = 0,
         token: Mapping[str, Any] | None = None,
@@ -151,11 +152,11 @@ class APIAuthoriser:
 
         # maps of requests parameters to be passed to `requests` functions
         self.auth_args: MutableMapping[str, Any] | None = auth_args
-        self.user_args: dict[str, Any] | None = user_args
-        self.refresh_args: dict[str, Any] | None = refresh_args
+        self.user_args: MutableMapping[str, Any] | None = user_args
+        self.refresh_args: MutableMapping[str, Any] | None = refresh_args
 
         # test params and conditions
-        self.test_args: Mapping[str, Any] | None = test_args
+        self.test_args: MutableMapping[str, Any] | None = test_args
         self.test_condition: Callable[[str | Mapping[str, Any]], bool] | None = test_condition
         self.test_expiry: int = test_expiry
 
@@ -168,6 +169,21 @@ class APIAuthoriser:
         self.header_key: str = header_key
         self.header_prefix: str = header_prefix or ""
         self.header_extra: dict[str, str] = header_extra or {}
+
+    def _sanitise_kwargs[T: MutableMapping[str, Any] | None](self, kwargs: T) -> T:
+        self._sanitise_params(kwargs.get("params"))
+        self._sanitise_params(kwargs.get("data"))
+        return kwargs
+
+    def _sanitise_params(self, params: MutableMapping[str, Any] | None) -> None:
+        if not params:
+            return
+
+        for k, v in params.items():
+            if isinstance(v, MutableMapping):
+                self._sanitise_params(v)
+            elif isinstance(v, bool) or not isinstance(v, str | int | float):
+                params[k] = json.dumps(v)
 
     def load_token(self) -> dict[str, Any] | None:
         """Load stored token from given path"""
@@ -188,7 +204,7 @@ class APIAuthoriser:
         with open(self.token_file_path, "w") as file:
             json.dump(self.token, file, indent=2)
 
-    def __call__(self, force_load: bool = False, force_new: bool = False) -> dict[str, str]:
+    async def authorise(self, force_load: bool = False, force_new: bool = False) -> dict[str, str]:
         """
         Main method for authorisation which tests/refreshes/reauthorises as needed.
 
@@ -208,11 +224,11 @@ class APIAuthoriser:
         if self.auth_args and self.token is None:
             log = "Saved access token not found" if self.token is None else "New token generation forced"
             self.logger.debug(f"{log}. Generating new token...")
-            self._authorise_user()
-            self._request_token(**self.auth_args)
+            await self._authorise_user()
+            await self._request_token(**self.auth_args)
 
         # test current token
-        valid = self.test_token()
+        valid = await self.test_token()
         refreshed = False
 
         # if invalid, first attempt to re-authorise via refresh_token
@@ -222,9 +238,9 @@ class APIAuthoriser:
             if "data" not in self.refresh_args:
                 self.refresh_args["data"] = {}
             self.refresh_args["data"]["refresh_token"] = self.token["refresh_token"]
-            self._request_token(**self.refresh_args)
+            await self._request_token(**self.refresh_args)
 
-            valid = self.test_token()
+            valid = await self.test_token()
             refreshed = True
 
         if not valid and self.auth_args:  # generate new token
@@ -234,9 +250,9 @@ class APIAuthoriser:
                 log = "Access token is not valid and and no refresh data found"
             self.logger.debug(f"{log}. Generating new token...")
 
-            self._authorise_user()
-            self._request_token(**self.auth_args)
-            valid = self.test_token()
+            await self._authorise_user()
+            await self._request_token(**self.auth_args)
+            valid = await self.test_token()
 
         if not self.token:
             raise APIError("Token not generated")
@@ -248,7 +264,7 @@ class APIAuthoriser:
 
         return self.headers
 
-    def _authorise_user(self) -> None:
+    async def _authorise_user(self) -> None:
         """
         Get user authentication code by authorising through user's browser.
 
@@ -272,17 +288,13 @@ class APIAuthoriser:
         print(f"\33[1mWaiting for code, timeout in {socket_listener.timeout} seconds... \33[0m")
 
         # add redirect URI to auth_args and user_args
-        if not self.auth_args.get("data"):
-            self.auth_args["data"] = {}
-        if not self.user_args.get("params"):
-            self.user_args["params"] = {}
         redirect_uri = f"http://{self._user_auth_socket_address}:{self._user_auth_socket_port}/"
-        self.auth_args["data"]["redirect_uri"] = redirect_uri
-        self.user_args["params"]["redirect_uri"] = redirect_uri
+        self.auth_args.setdefault("data", {}).setdefault("redirect_uri", redirect_uri)
+        self.user_args.setdefault("params", {}).setdefault("redirect_uri", redirect_uri)
 
         # open authorise webpage and wait for the redirect
-        auth_response = requests.post(**self.user_args)
-        webopen(auth_response.url)
+        async with aiohttp.request(method="POST", **self._sanitise_kwargs(self.user_args)) as resp:
+            webopen(str(resp.url))
         request, _ = socket_listener.accept()
 
         request.send(f"Code received! You may now close this window and return to {PROGRAM_NAME}...".encode("utf-8"))
@@ -291,13 +303,10 @@ class APIAuthoriser:
 
         # format out the access code from the returned response
         path_raw = next(line for line in request.recv(8196).decode("utf-8").split('\n') if line.startswith("GET"))
-        code = parse_qs(urlparse(path_raw).query)["code"][0]
+        code = unquote(URL(path_raw).query["code"])
+        self.auth_args.setdefault("data", {}).setdefault("code", code)
 
-        if "data" not in self.auth_args:
-            self.auth_args["data"] = {}
-        self.auth_args["data"]["code"] = code
-
-    def _request_token(self, **requests_args) -> dict[str, Any]:
+    async def _request_token(self, **requests_args) -> dict[str, Any]:
         """
         Authenticates/refreshes basic API access and returns token.
 
@@ -305,7 +314,8 @@ class APIAuthoriser:
         :param data: requests.post() ``data`` parameter to send as a request for authorisation.
         :param requests_args: Other requests.post() parameters to send as a request for authorisation.
         """
-        auth_response = requests.post(**requests_args).json()
+        async with aiohttp.request(method="POST", **self._sanitise_kwargs(requests_args)) as resp:
+            auth_response = await resp.json()
 
         # add granted and expiry times to token
         auth_response["granted_at"] = datetime.now().timestamp()
@@ -322,7 +332,7 @@ class APIAuthoriser:
         self.logger.debug(f"New token successfully generated: {self.token_safe}")
         return auth_response
 
-    def test_token(self) -> bool:
+    async def test_token(self) -> bool:
         """Test validity of token and given headers. Returns True if all tests pass, False otherwise"""
         if not self.token:
             return False
@@ -333,7 +343,7 @@ class APIAuthoriser:
         if not token_has_no_error:  # skip other tests if error
             return False
 
-        valid_response = self._test_valid_response()
+        valid_response = await self._test_valid_response()
         not_expired = self._test_expiry()
 
         return token_has_no_error and valid_response and not_expired
@@ -344,16 +354,18 @@ class APIAuthoriser:
         self.logger.debug(f"Token contains no error test: {result}")
         return result
 
-    def _test_valid_response(self) -> bool:
+    async def _test_valid_response(self) -> bool:
         """Check for expected response"""
         if self.test_args is None or self.test_condition is None:
             return True
 
-        response = requests.get(headers=self.headers, **self.test_args)
-        try:
-            response = response.json()
-        except json.decoder.JSONDecodeError:
-            response = response.text
+        async with aiohttp.request(
+                method="GET", headers=self.headers, **self._sanitise_kwargs(self.test_args)
+        ) as response:
+            try:
+                response = await response.json()
+            except json.decoder.JSONDecodeError:
+                response = await response.text()
 
         result = self.test_condition(response)
         self.logger.debug(f"Valid response test: {result}")
