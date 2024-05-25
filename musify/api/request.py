@@ -229,10 +229,9 @@ class RequestHandler(AsyncContextManager):
         if isinstance(response.headers, Mapping):  # format headers if JSON
             response_headers = json.dumps(dict(response.headers), indent=2)
         self.logger.warning(
-            f"\33[91m{method.upper():<7}: {url} | Code: {response.status} | "
-            f"Response text and headers follow:\n"
-            f"Response text:\n{await response.text()}\n"
-            f"Headers:\n{response_headers}\33[0m"
+            f"\33[91m{method.upper():<7}: {url} | Code: {response.status} | Response text and headers follow:\n"
+            f"Response text:\n\t{(await response.text()).replace("\n", "\n\t")}\n"
+            f"Headers:\n\t{response_headers.replace("\n", "\n\t")}\33[0m"
         )
 
     async def _handle_unexpected_response(self, response: ClientResponse) -> bool:
