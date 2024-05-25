@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Mapping, Callable
+from collections.abc import Mapping, Callable, Generator
 from datetime import datetime, timedelta
 from os.path import splitext, dirname, join
 from pathlib import Path
@@ -75,28 +75,22 @@ class SQLiteTable[K: tuple[Any, ...], V: str](ResponseRepository[K, V]):
 
         self.connection = connection
 
-    def __await__(self):
+    def __await__(self) -> Generator[Any, None, Self]:
         return self.create().__await__()
-
-    async def __aenter__(self) -> Self:
-        if not self.connection.is_alive():
-            await self.connection
-        return await self
-
-    async def __aexit__(self, __exc_type, __exc_value, __traceback) -> None:
-        if self.connection.is_alive():
-            await self.commit()
-            await self.connection.__aexit__(__exc_type, __exc_value, __traceback)
 
     async def commit(self) -> None:
         """Commit the transactions to the database."""
-        if self.connection.is_alive():
+        try:
             await self.connection.commit()
+        except ValueError:
+            pass
 
     async def close(self) -> None:
-        if self.connection.is_alive():
+        try:
             await self.commit()
             await self.connection.close()
+        except ValueError:
+            pass
 
     @property
     def _primary_key_columns(self) -> Mapping[str, str]:
@@ -333,7 +327,7 @@ class SQLiteCache(ResponseCache[SQLiteTable]):
 
         return self
 
-    def __await__(self) -> Self:
+    def __await__(self) -> Generator[Any, None, Self]:
         return self._connect().__await__()
 
     async def __aexit__(self, __exc_type, __exc_value, __traceback) -> None:
@@ -344,13 +338,17 @@ class SQLiteCache(ResponseCache[SQLiteTable]):
 
     async def commit(self):
         """Commit the transactions to the database."""
-        if self.connection.is_alive():
+        try:
             await self.connection.commit()
+        except ValueError:
+            pass
 
     async def close(self):
-        if self.connection.is_alive():
+        try:
             await self.commit()
             await self.connection.close()
+        except ValueError:
+            pass
 
     def create_repository(self, settings: RequestSettings) -> SQLiteTable:
         if settings.name in self:

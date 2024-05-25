@@ -94,7 +94,9 @@ class TestSQLiteTable(SQLiteTester, ResponseRepositoryTester):
     ) -> SQLiteTable:
         expire = timedelta(days=2)
 
-        async with SQLiteTable(connection, settings=settings, expire=expire) as repository:
+        async with connection:
+            repository = await SQLiteTable(connection, settings=settings, expire=expire)
+
             columns = (
                 *repository._primary_key_columns,
                 repository.cached_column,
@@ -118,7 +120,7 @@ class TestSQLiteTable(SQLiteTester, ResponseRepositoryTester):
             )
 
             await connection.executemany(query, parameters)
-            await connection.commit()
+            await repository.commit()
 
             yield repository
 
@@ -138,7 +140,9 @@ class TestSQLiteTable(SQLiteTester, ResponseRepositoryTester):
         assert len(rows) == 0
 
     async def test_init(self, connection: aiosqlite.Connection, settings: RequestSettings):
-        async with SQLiteTable(connection, settings=settings) as repository:
+        async with connection:
+            repository = await SQLiteTable(connection, settings=settings)
+
             async with connection.execute(
                     f"SELECT name FROM sqlite_master WHERE type='table' AND name='{settings.name}'"
             ) as cur:

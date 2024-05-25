@@ -47,7 +47,7 @@ class RequestSettings(ABC):
         raise NotImplementedError
 
 
-class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], Awaitable, AsyncContextManager, Hashable, ABC):
+class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], Awaitable, Hashable, ABC):
     """
     Represents a repository in the backend cache, providing a dict-like interface
     for interacting with this repository.

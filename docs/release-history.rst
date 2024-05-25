@@ -42,7 +42,7 @@ Added
 * Cache settings for specific `GET` request endpoints on :py:class:`.SpotifyAPI` replacing need
   for per method ``use_cache`` parameter.
 * The following classes should now be run as AsyncContextManagers to function correctly:
-   * :py:class:`.SQLiteTable` & :py:class:`.SQLiteCache`
+   * :py:class:`.SQLiteCache`
    * :py:class:`.RequestHandler`
    * :py:class:`.CachedSession`
    * :py:class:`.RemoteAPI` & :py:class:`.SpotifyAPI`
