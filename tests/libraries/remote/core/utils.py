@@ -116,11 +116,9 @@ class RemoteMock(aioresponses, ContextManager, ABC):
     def _get_match_from_url(actual: str | URL, expected: str | URL | re.Pattern[str] | None = None) -> bool:
         match = expected is None
         if not match:
-            actual = str(actual).rstrip("/").split("?")[0]
-            if isinstance(expected, str):
-                match = actual == expected.split("?")[0]
-            elif isinstance(expected, URL):
-                match = actual == str(expected.with_query(None))
+            actual = str(URL(actual).with_query(None))
+            if isinstance(expected, str | URL):
+                match = actual == str(URL(expected).with_query(None))
             elif isinstance(expected, re.Pattern):
                 match = bool(expected.search(actual))
 

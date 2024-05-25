@@ -121,12 +121,12 @@ class ItemDownloadHelper(InputProcessor):
         help_text = self._format_help_text(options=options, header=header)
         help_text += f"\n\t\33[90mValid fields for this batch: {" ".join(valid_fields)}\33[0m\n"
 
-        print("\n" + help_text)
+        self.logger.print_message("\n" + help_text)
         while current_input != '':
             current_input = self._get_user_input(f"Enter ({page}/{total})")
 
             if current_input.casefold() == "h":  # print help text
-                print("\n" + help_text)
+                self.logger.print_message("\n" + help_text)
 
             elif current_input.casefold() == "r":
                 self._open_sites_for_items(items=items, fields=self.fields)

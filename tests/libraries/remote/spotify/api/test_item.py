@@ -6,6 +6,7 @@ from typing import Any
 from urllib.parse import unquote
 
 import pytest
+from yarl import URL
 
 from musify.api.cache.backend.sqlite import SQLiteCache
 from musify.api.cache.session import CachedSession
@@ -30,6 +31,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
 
     id_key = SpotifyAPI.id_key
     url_key = SpotifyAPI.url_key
+    items_key = SpotifyAPI.items_key
 
     @pytest.fixture(scope="class")
     def object_factory(self) -> SpotifyObjectFactory:
@@ -85,6 +87,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         assert response_reduced["total"] > len(response_reduced[api.items_key])
 
         response[key] = response_reduced
+
         return limit
 
     ###########################################################################
@@ -137,12 +140,12 @@ class TestSpotifyAPIItems(RemoteAPITester):
             # just check length of sub-items match and objet_types are correct
             # fully checking result == expected would take too long as responses are normally very large
 
-            assert len(result[key]["items"]) == expect[key]["total"]
-            self.assert_item_types(results=result[key]["items"], object_type=object_type, key=key)
+            assert len(result[key][self.items_key]) == expect[key]["total"]
+            self.assert_item_types(results=result[key][self.items_key], object_type=object_type, key=key)
             self.assert_similar(expect, result, key)
 
             if test:
-                assert len(test[result[self.id_key]][key]["items"]) == expect[key]["total"]
+                assert len(test[result[self.id_key]][key][self.items_key]) == expect[key]["total"]
                 self.assert_similar(expect, test[result[self.id_key]], key)
 
     async def assert_get_items_calls(
@@ -178,6 +181,23 @@ class TestSpotifyAPIItems(RemoteAPITester):
             assert len(actual.tracks) == actual.track_total > len(expected.tracks)
         elif isinstance(actual, SpotifyAlbum):
             assert len(actual.tracks) == actual.track_total > len(expected.tracks)
+
+    def assert_response_enriched_with_parent(self, object_type: RemoteObjectType, key: str, response: dict[str, Any]):
+        """Check that the child items in the given ``response`` have been enriched with its parent response"""
+        if object_type == RemoteObjectType.PLAYLIST:
+            return
+
+        parent_key = object_type.name.lower()
+        parent_response = {k: v for k, v in response.items() if k != key}
+
+        assert self.items_key not in parent_response
+        assert "next" not in parent_response
+        assert "previous" not in parent_response
+        assert "total" not in parent_response
+
+        for item in response[key][self.items_key]:
+            assert parent_key in item
+            assert item[parent_key] == parent_response
 
     ###########################################################################
     ## Basic functionality
@@ -385,25 +405,29 @@ class TestSpotifyAPIItems(RemoteAPITester):
     ):
         total = response[key]["total"]
         limit = self.reduce_items(response=response, key=key, api=api, api_mock=api_mock)
-        test = response[key]
+        items = response[key][api.items_key]
 
-        results = await api.extend_items(response=test, key=api.collection_item_map.get(object_type, object_type))
+        results = await api.extend_items(
+            response=response, kind=object_type, key=api.collection_item_map.get(object_type, object_type)
+        )
 
         # assert extension to total
         assert len(results) == total
-        assert len(test[api.items_key]) == total
-        assert test[api.items_key] == results  # extension happened to input value and results match input
-        self.assert_item_types(results=test[api.items_key], object_type=object_type, key=key)
+        assert len(items) == total
+        assert items == results  # extension happened to input value and results match input
+        self.assert_item_types(results=items, object_type=object_type, key=key)
 
         # appropriate number of requests made (minus 1 for initial input)
-        requests = await api_mock.get_requests(url=test[self.url_key].split("?")[0])
+        requests = await api_mock.get_requests(url=URL(response[key][self.url_key]).with_query(None))
         assert len(requests) == api_mock.calculate_pages(limit=limit, total=total) - 1
+
+        self.assert_response_enriched_with_parent(object_type=object_type, key=key, response=response)
 
     @pytest.mark.parametrize("object_type", [
         RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM,
         # RemoteObjectType.SHOW, RemoteObjectType.AUDIOBOOK,  RemoteResponse types not yet implemented for these
     ], ids=idfn)
-    async def test_extend_items(
+    async def test_extend_items_on_response(
             self,
             object_type: RemoteObjectType,
             response: dict[str, Any],
@@ -649,6 +673,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
             key=key,
             object_type=object_type
         )
+
         if object_type in api.collection_item_map:
             self.assert_response_extended(actual=test, expected=original)
 

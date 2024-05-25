@@ -4,6 +4,7 @@ Implements endpoints for getting items from the Spotify API.
 import re
 from abc import ABC
 from collections.abc import Collection, Mapping, MutableMapping
+from copy import copy
 from itertools import batched
 from typing import Any
 
@@ -49,10 +50,13 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         def _get_href_from_result(r: dict[str, Any]) -> str:
             if "track_href" in r:
                 return r["track_href"]
-            return r[self.url_key]
+            return r.get(self.url_key, "")
 
         # take all parts of href path, excluding ID
         possible_urls = {"/".join(_get_href_from_result(result).split("/")[:-1]) for result in results}
+        possible_urls = {url for url in possible_urls if url}
+        if not possible_urls:
+            return
         if len(possible_urls) > 1:
             raise CacheError(
                 "Too many different types of results given. Given results must relate to the same repository type."
@@ -238,6 +242,35 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         if "limit" not in response:
             response["limit"] = int(URL(response["next"]).query.get("limit", 50))
 
+    def _enrich_with_parent_response(
+            self,
+            response: MutableMapping[str, Any],
+            key: str,
+            parent_key: RemoteObjectType | None,
+            parent_response: MutableMapping[str, Any]
+    ) -> None:
+        """
+        Some endpoints don't include parent response on child items.
+        This method adds the given ``parent_response`` back to the child ``response`` on the given ``key``.
+        """
+        if (
+                not parent_key
+                or isinstance(parent_key, str)
+                or parent_key == RemoteObjectType.PLAYLIST
+                or self.items_key in parent_response
+        ):
+            return
+
+        parent_key_name = self._get_key(parent_key).rstrip("s")
+        parent_response = {k: v for k, v in parent_response.items() if k != key}
+
+        if not parent_response:
+            return
+
+        for item in response[self.items_key]:
+            if parent_key_name not in item:
+                item[parent_key_name] = parent_response
+
     async def extend_items(
             self,
             response: MutableMapping[str, Any] | RemoteResponse,
@@ -258,10 +291,13 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         The user must call `refresh` manually after execution.
 
         :param response: A remote API JSON response for an items type endpoint
-            or a RemoteResponse which contains this response.
+            or a response/RemoteResponse which contains this response.
             Must include required keys:
             ``total`` and either ``next`` or ``href``, plus optional keys ``previous``, ``limit``, ``items`` etc.
-        :param kind: The type of response being extended. Optional, used only for logging.
+        :param kind: The type of response being extended.
+            If a RemoteObjectType is given, the method will attempt to enrich the items given
+            and returned with given response on the key associated with this kind. The function will only do this
+            if a parent response has been given and not an items block response.
         :param key: The type of response of the child objects. Used when selecting nested data for certain responses
             (e.g. user's followed artists).
         :param leave_bar: When a progress bar is displayed,
@@ -274,24 +310,31 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
 
         method = "GET"
 
+        parent_key = kind
+        parent_response = copy(response)
+
         key = self._get_key(key)
         response = response.get(key, response)
         if self.items_key not in response:
             response[self.items_key] = []
 
+        self._enrich_with_parent_response(
+            response=response, key=key, parent_key=parent_key, parent_response=parent_response
+        )
+
         if len(response[self.items_key]) == response["total"]:  # skip on fully extended response
-            url = response[self.url_key].split("?")[0]
+            url = URL(response[self.url_key]).with_query(None)
             self.handler.log("SKIP", url, message="Response already extended")
             return response[self.items_key]
 
         self._reformat_user_items_block(response)
 
-        kind = self._get_key(kind) or self.items_key
+        kind_name = self._get_key(kind) or self.items_key
         pages = (response["total"] - len(response[self.items_key])) / (response["limit"] or 1)
         bar = self.logger.get_iterator(
             initial=len(response[self.items_key]),
             total=response["total"],
-            desc=f"Extending {kind}".rstrip("s") if kind[0].islower() else kind,
+            desc=f"Extending {kind_name}".rstrip("s") if kind_name[0].islower() else kind_name,
             unit=key or self.items_key,
             leave=leave_bar,
             disable=pages < self._bar_threshold,
@@ -303,6 +346,11 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
 
             response_next = await self.handler.request(method=method, url=response["next"], log_message=log)
             response_next = response_next.get(key, response_next)
+            if self.items_key not in response_next:
+                self.logger.print_message(response)
+            self._enrich_with_parent_response(
+                response=response_next, key=key, parent_key=parent_key, parent_response=parent_response
+            )
 
             response[self.items_key].extend(response_next[self.items_key])
             response[self.url_key] = response_next[self.url_key]
@@ -313,12 +361,11 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
                 bar.update(len(response_next[self.items_key]))
 
         # cache child items
-        item_key = key.rstrip("s") if key else key
+        key = key.rstrip("s") if key else key
         results_to_cache = [
-            result[item_key] if item_key and item_key in result else result for result in response[self.items_key]
+            result[key] if key and key in result else result for result in response[self.items_key]
         ]
-        if all(self.url_key in result for result in results_to_cache):
-            await self._cache_results(method=method, results=results_to_cache)
+        await self._cache_results(method=method, results=results_to_cache)
 
         if tqdm is not None:  # TODO: drop me
             bar.close()
@@ -399,7 +446,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         for result in bar:
             if result[key_name].get("next") or ("next" not in result[key_name] and result[key_name].get(self.url_key)):
                 self.handler.log("INFO", url, message=f"Extending {key_name} on {unit}")
-                await self.extend_items(result[key_name], kind=kind, key=key, leave_bar=False)
+                await self.extend_items(result, kind=kind, key=key, leave_bar=False)
 
         self._merge_results_to_input(original=values, responses=results, ordered=True)
         self._refresh_responses(responses=values, skip_checks=False)
@@ -653,7 +700,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
             for album in results[id_][self.items_key]:  # add skeleton items block to album responses
                 album["tracks"] = {
                     self.url_key: self.format_next_url(
-                        url=album[self.url_key].split("?")[0] + "/tracks", offset=0, limit=50
+                        url=str(URL(album[self.url_key]).with_query(None)) + "/tracks", offset=0, limit=50
                     ),
                     "total": album["total_tracks"]
                 }

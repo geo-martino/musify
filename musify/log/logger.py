@@ -14,7 +14,7 @@ from musify.log import INFO_EXTRA, REPORT, STAT
 T = TypeVar("T")
 try:
     from tqdm.auto import tqdm
-    ProgressBarType = tqdm | Iterable[T]
+    ProgressBarType = Iterable[T] | tqdm
 except ImportError:
     tqdm = None
     ProgressBarType = Iterable[T]
@@ -73,6 +73,19 @@ class MusifyLogger(logging.Logger):
         """Log 'msg % args' with severity 'STAT'."""
         if self.isEnabledFor(STAT):
             self._log(STAT, msg, args, **kwargs)
+
+    def print_message(self, *values, sep=' ', end='\n') -> None:
+        """
+        Wrapper for print. Logs the given ``values`` to the INFO setting.
+        If there are no stdout handlers with a log level at least at INFO, also print this to the terminal.
+        This ensures the user sees the ``values`` always.
+        """
+        message = sep.join(values)
+        if message:
+            self.info(message + end)
+
+        if not self.stdout_handlers or any(h.level > logging.INFO for h in self.stdout_handlers):
+            print(*values, sep=sep, end=end)
 
     def print(self, level: int = logging.CRITICAL + 1) -> None:
         """Print a new line only when DEBUG < ``logger level`` <= ``level`` for all console handlers"""

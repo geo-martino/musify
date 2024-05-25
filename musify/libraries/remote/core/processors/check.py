@@ -281,7 +281,7 @@ class RemoteItemChecker(InputProcessor):
         current_input = "START"
         help_text = self._format_help_text(options=options, header=header)
 
-        print("\n" + help_text)
+        self.logger.print_message("\n" + help_text)
         while current_input != '':  # while user has not hit return only
             current_input = self._get_user_input(f"Enter ({page}/{total})")
             pl_name = next((
@@ -290,7 +290,7 @@ class RemoteItemChecker(InputProcessor):
             ), None)
 
             if current_input.casefold() == "h":  # print help text
-                print("\n" + help_text)
+                self.logger.print_message("\n" + help_text)
 
             elif current_input.casefold() == 's' or current_input.casefold() == 'q':  # quit/skip
                 self._quit = current_input.casefold() == 'q' or self._quit
@@ -301,13 +301,13 @@ class RemoteItemChecker(InputProcessor):
                 items = [item for item in self._playlist_name_collection[pl_name] if item.has_uri]
                 max_width = get_max_width(items)
 
-                print(f"\n\t\33[96mShowing items originally added to \33[94m{pl_name}\33[0m:\n")
+                self.logger.print_message(f"\n\t\33[96mShowing items originally added to \33[94m{pl_name}\33[0m:\n")
                 for i, item in enumerate(items, 1):
                     length = getattr(item, "length", 0)
                     self.api.print_item(
                         i=i, name=item.name, uri=item.uri, length=length, total=len(items), max_width=max_width
                     )
-                print()
+                self.logger.print_message()
 
             elif self.api.wrangler.validate_id_type(current_input):  # print URL/URI/ID result
                 await self._check_api()
@@ -442,7 +442,7 @@ class RemoteItemChecker(InputProcessor):
         self.matcher.log([name, f"Getting user input for {len(self._remaining)} items"])
         max_width = get_max_width({item.name for item in self._remaining})
 
-        print("\n" + help_text)
+        self.logger.print_message("\n" + help_text)
         for item in self._remaining.copy():
             while current_input is not None and item in self._remaining:  # while item not matched or skipped
                 self.matcher.log([name, f"{len(self._remaining):>6} remaining items"])
@@ -450,7 +450,7 @@ class RemoteItemChecker(InputProcessor):
                     current_input = self._get_user_input(align_string(item.name, max_width=max_width))
 
                 if current_input.casefold() == 'h':  # print help
-                    print("\n" + help_text)
+                    self.logger.print_message("\n" + help_text)
                 else:
                     current_input = self._match_item_to_input(name=name, item=item, current_input=current_input)
 
@@ -480,7 +480,7 @@ class RemoteItemChecker(InputProcessor):
             return
 
         elif current_input.casefold() == 'p' and hasattr(item, "path"):  # print item path
-            print(f"\33[96m{item.path}\33[0m")
+            self.logger.print_message(f"\33[96m{item.path}\33[0m")
 
         elif self.api.wrangler.validate_id_type(current_input):  # update URI and add item to switched list
             uri = self.api.wrangler.convert(

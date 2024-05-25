@@ -46,6 +46,8 @@ Added
    * :py:class:`.RequestHandler`
    * :py:class:`.CachedSession`
    * :py:class:`.RemoteAPI` & :py:class:`.SpotifyAPI`
+* Introduce print wrapper for logger and remove most bare ``print`` statements across package.
+* :py:meth:`.SpotifyAPI.extend_items` now enriches collection item responses with the parent collection response.
 
 Changed
 -------

@@ -34,7 +34,7 @@ class SQLiteTable[K: tuple[Any, ...], V: str](ResponseRepository[K, V]):
     #: The column under which a response's name is stored in the table
     name_column = "name"
     #: The column under which response data is stored in the table
-    data_column = "data"
+    data_column = "response"
     #: The column under which the response cache time is stored in the table
     cached_column = "cached_at"
     #: The column under which the response expiry time is stored in the table
@@ -85,6 +85,7 @@ class SQLiteTable[K: tuple[Any, ...], V: str](ResponseRepository[K, V]):
 
     async def __aexit__(self, __exc_type, __exc_value, __traceback) -> None:
         if self.connection.is_alive():
+            await self.commit()
             await self.connection.__aexit__(__exc_type, __exc_value, __traceback)
 
     async def commit(self) -> None:
@@ -334,6 +335,7 @@ class SQLiteCache(ResponseCache[SQLiteTable]):
 
     async def __aexit__(self, __exc_type, __exc_value, __traceback) -> None:
         if not self.closed:  # TODO: this shouldn't be needed?
+            await self.commit()
             await self.connection.__aexit__(__exc_type, __exc_value, __traceback)
             self.connection = None
 

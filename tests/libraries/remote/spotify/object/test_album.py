@@ -262,6 +262,11 @@ class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
     async def test_load_with_all_items(
             self, response_valid: dict[str, Any], item_key: str, api: SpotifyAPI, api_mock: SpotifyMock
     ):
+        # need to enrich mock response with parent data for filtering to work
+        parent_response = {k: v for k, v in response_valid.items() if k != "tracks"}
+        for item in response_valid[item_key][api.items_key]:
+            item["album"] = parent_response
+
         load_items = [SpotifyTrack(response) for response in response_valid[item_key][api.items_key]]
         await SpotifyAlbum.load(
             response_valid, api=api, items=load_items, extend_albums=True, extend_tracks=False, extend_features=False

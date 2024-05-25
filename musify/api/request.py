@@ -30,8 +30,8 @@ class RequestHandler(AsyncContextManager):
     Handles error responses and backoff on failed requests.
     See :py:class:`APIAuthoriser` for more info on which params to pass to authorise requests.
 
+    :param connector: When called, returns a new session to use when making requests.
     :param authoriser: The authoriser to use when authorising requests to the API.
-    :param session: The session to use when making requests.
     """
 
     __slots__ = ("logger", "_connector", "_session", "authoriser", "backoff_start", "backoff_factor", "backoff_count")
@@ -59,13 +59,15 @@ class RequestHandler(AsyncContextManager):
 
     @property
     def session(self) -> ClientSession:
-        """The :py:class:`ClientSession` object if exist and it is open."""
+        """The :py:class:`ClientSession` object if it exists and is open."""
         if not self.closed:
             return self._session
 
     @classmethod
     def create(cls, authoriser: APIAuthoriser | None = None, cache: ResponseCache | None = None, **session_kwargs):
+        """Create a new :py:class:`RequestHandler` with an appropriate session ``connector`` given the input kwargs"""
         def connector() -> ClientSession:
+            """Create an appropriate session ``connector`` given the input kwargs"""
             if cache is not None:
                 return CachedSession(cache=cache, **session_kwargs)
             return ClientSession(**session_kwargs)
@@ -143,6 +145,8 @@ class RequestHandler(AsyncContextManager):
         while True:
             async with self._request(method=method, url=url, **kwargs) as response:
                 if response is not None and response.status < 400:
+                    if "error" in (text := await response.text()):  # TODO: why is this allowing errors through?
+                        print(response.status, text)
                     data = await self._response_as_json(response)
                     break
 

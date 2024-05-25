@@ -199,12 +199,8 @@ class SpotifyMock(RemoteMock):
             album["artists"] = artists
 
             # ensure that the currently collected tracks have
-            album_reduced = {
-                k: v for k, v in album.items()
-                if k not in {"tracks", "copyrights", "external_ids", "genres", "label", "popularity"}
-            }
             for track in album["tracks"]["items"]:
-                track["album"] = deepcopy(album_reduced)
+                track.pop("album", None)
                 track["artists"] = deepcopy(artists)
 
         # ensure that track albums and artists relate to actual callable items
@@ -867,7 +863,6 @@ class SpotifyMock(RemoteMock):
                 "label": random_str(50, 100),
                 "popularity": randrange(0, 100)
             }
-
         return response
 
     def generate_album_tracks(
@@ -904,12 +899,8 @@ class SpotifyMock(RemoteMock):
         [item.pop("popularity", None) for item in items]
         items = [item | {"artists": artists, "track_number": i} for i, item in enumerate(items, current + 1)]
 
-        album_reduced = {
-            k: v for k, v in response.items()
-            if k not in {"tracks", "copyrights", "external_ids", "genres", "label", "popularity"}
-        }
         for item in items:
-            item["album"] = deepcopy(album_reduced)
+            item.pop("album", None)
             item["artists"] = deepcopy(artists)
 
         return items

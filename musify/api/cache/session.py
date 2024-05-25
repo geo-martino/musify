@@ -1,8 +1,8 @@
 import contextlib
 from http.client import InvalidURL
-from typing import Self
+from typing import Self, Any
 
-from aiohttp import ClientSession, ClientRequest
+from aiohttp import ClientSession, ClientRequest, payload
 from yarl import URL
 
 from musify.api.cache.backend.base import ResponseCache, ResponseRepository
@@ -36,12 +36,13 @@ class CachedSession(ClientSession):
         await self.cache.__aexit__(exc_type, exc_val, exc_tb)
 
     @contextlib.asynccontextmanager
-    async def request(self, method: str, url: str | URL, persist: bool = True, **kwargs):
+    async def request(self, method: str, url: str | URL, json: Any = None, persist: bool = True, **kwargs):
         """
         Perform HTTP request.
 
         :param method: HTTP request method (such as GET, POST, PUT, etc.)
         :param url: The URL to perform the request on.
+        :param json: A JSON serializable Python object to send in the body of the request.
         :param persist: Whether to persist responses returned from sending network requests i.e. non-cached responses.
         :return: Either the :py:class:`CachedResponse` if a response was found in the cache,
             or the :py:class:`ClientResponse` if the request was sent.
@@ -52,6 +53,9 @@ class CachedSession(ClientSession):
             raise InvalidURL(url) from e
 
         kwargs["headers"] = kwargs.get("headers", {}) | dict(self.headers)
+        if json is not None:
+            kwargs["data"] = payload.JsonPayload(json, dumps=self._json_serialize)
+
         req = ClientRequest(
             method=method,
             url=url,

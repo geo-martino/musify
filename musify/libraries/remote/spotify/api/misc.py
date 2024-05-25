@@ -42,7 +42,7 @@ class SpotifyAPIMisc(SpotifyAPIBase, ABC):
         while response.get("next") or i < response["total"]:  # loop through each page, printing data in blocks of 20
             if response.get("offset", 0) == 0:  # first page, show header
                 url_ext = self.wrangler.convert(id_, kind=kind, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL_EXT)
-                print(
+                self.logger.print_message(
                     f"\n\t\33[96mShowing tracks for {kind.name.lower()}\33[0m: "
                     f"\33[94m{name} \33[97m- {url_ext} \33[0m\n"
                 )
@@ -57,7 +57,7 @@ class SpotifyAPIMisc(SpotifyAPIBase, ABC):
 
             if response["next"]:
                 response = await self.handler.get(response["next"], params={"limit": limit})
-            print()
+            self.logger.print_message()
 
     ###########################################################################
     ## GET endpoints

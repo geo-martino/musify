@@ -284,11 +284,11 @@ class APIAuthoriser:
         socket_listener.settimeout(120)
         socket_listener.listen(1)
 
-        print(
+        self.logger.print_message(
             f"\33[1mOpening {self.name} in your browser. "
             f"Log in to {self.name}, authorise, and return here after \33[0m"
         )
-        print(f"\33[1mWaiting for code, timeout in {socket_listener.timeout} seconds... \33[0m")
+        self.logger.print_message(f"\33[1mWaiting for code, timeout in {socket_listener.timeout} seconds... \33[0m")
 
         # add redirect URI to auth_args and user_args
         redirect_uri = f"http://{self._user_auth_socket_address}:{self._user_auth_socket_port}/"
@@ -301,7 +301,7 @@ class APIAuthoriser:
         request, _ = socket_listener.accept()
 
         request.send(f"Code received! You may now close this window and return to {PROGRAM_NAME}...".encode("utf-8"))
-        print("\33[92;1mCode received!\33[0m")
+        self.logger.print_message("\33[92;1mCode received!\33[0m")
         socket_listener.close()
 
         # format out the access code from the returned response

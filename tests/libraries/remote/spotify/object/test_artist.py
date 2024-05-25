@@ -4,6 +4,7 @@ from random import randrange
 from typing import Any
 
 import pytest
+from yarl import URL
 
 from musify.api.exception import APIError
 from musify.libraries.remote.core.enum import RemoteObjectType
@@ -251,7 +252,7 @@ class TestSpotifyArtist(SpotifyCollectionLoaderTester):
         assert len(await api_mock.get_requests(url=f"{result.url}/{item_key}")) == expected
 
         for album in result.response[item_key][api.items_key]:
-            url = album["tracks"]["href"].split("?")[0]
+            url = URL(album["tracks"]["href"]).with_query(None)
             expected = api_mock.calculate_pages_from_response(album)
             assert len(await api_mock.get_requests(url=url)) == expected
 

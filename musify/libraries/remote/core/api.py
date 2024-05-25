@@ -222,7 +222,7 @@ class RemoteAPI(AsyncContextManager, ABC):
         :param total: The total number of items in the collection
         :param max_width: The maximum width to print names as. Any name lengths longer than this will be truncated.
         """
-        print(
+        self.logger.print_message(
             f"\t\33[92m{str(i).zfill(len(str(total)))} \33[0m- "
             f"\33[97m{align_string(name, max_width=max_width)} \33[0m| "
             f"\33[91m{str(int(length // 60)).zfill(2)}:{str(round(length % 60)).zfill(2)} \33[0m| "
