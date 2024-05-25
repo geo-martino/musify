@@ -84,7 +84,7 @@ class TestCachedSession:
         headers = {"Content-Type": "application/json"}
 
         key = repository.get_key_from_request(request)
-        assert await repository.contains(key)
+        assert not await repository.contains(key)
 
         requests_mock.get(request.url, body=await expected.text(), repeat=True)
 

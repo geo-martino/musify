@@ -307,7 +307,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         responses_remapped = {(method, id_): response for id_, response in list(responses.items())[:limit]}
         repository = api_cache.handler.session.cache.get_repository_from_url(url=url)
         await repository.save_responses(responses_remapped)
-        assert all(repository.contains((method, id_)) for id_ in id_list[:limit])
+        assert all([await repository.contains((method, id_)) for id_ in id_list[:limit]])
 
         results, found, not_found = await api_cache._get_items_from_cache(method=method, url=url, id_list=id_list)
         assert len(results) == len(found) == limit

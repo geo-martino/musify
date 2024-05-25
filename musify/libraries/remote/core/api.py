@@ -11,6 +11,7 @@ from typing import Any, Self, AsyncContextManager
 
 from musify.api.authorise import APIAuthoriser
 from musify.api.cache.backend.base import ResponseCache
+from musify.api.exception import CacheError
 from musify.api.request import RequestHandler
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
@@ -89,7 +90,11 @@ class RemoteAPI(AsyncContextManager, ABC):
     async def __aenter__(self) -> Self:
         await self.handler.__aenter__()
 
-        await self._setup_cache()
+        try:
+            await self._setup_cache()
+        except CacheError:
+            pass
+
         await self.load_user_data()
 
         return self

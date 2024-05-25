@@ -160,7 +160,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, ABC):
         assert name_new in library_test.playlists
         pl_new = library_test.playlists[name_new]
         assert len(pl_new) == len(backup_check[name_new])
-        assert library.api.handler.get(pl_new.url)  # new playlist was created and is callable
+        assert await library.api.handler.get(pl_new.url)  # new playlist was created and is callable
 
     @pytest.mark.slow
     async def test_restore(self, library: RemoteLibrary, collection_merge_items: list[RemoteTrack]):
@@ -244,7 +244,8 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, ABC):
         assert results[name_new].added == len(playlists_check[name_new])
         assert results[name_new].removed == 0
         assert results[name_new].unchanged == 0
-        assert library.api.handler.get(library_test.playlists[name_new].url)  # new playlist was created and is callable
+        # new playlist was created and is callable
+        assert await library.api.handler.get(library_test.playlists[name_new].url)
 
         url = library_test.playlists[name_new].url
         requests = await api_mock.get_requests(method="POST", url=re.compile(url))
