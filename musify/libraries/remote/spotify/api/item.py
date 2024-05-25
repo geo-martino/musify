@@ -357,7 +357,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
             response["next"] = response_next.get("next")
             response["previous"] = response_next.get("previous")
 
-            if tqdm is not None:  # TODO: drop me
+            if tqdm is not None:  # TODO: drop me when optimising
                 bar.update(len(response_next[self.items_key]))
 
         # cache child items
@@ -367,7 +367,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         ]
         await self._cache_results(method=method, results=results_to_cache)
 
-        if tqdm is not None:  # TODO: drop me
+        if tqdm is not None:  # TODO: drop me when optimising
             bar.close()
 
         return response[self.items_key]

@@ -33,7 +33,7 @@ def logger() -> MusifyLogger:
 def test_print(logger: MusifyLogger, capfd: pytest.CaptureFixture):
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.WARNING)
-    logging._handlers[handler.name] = handler
+    logging.root.addHandler(handler)
 
     logger.print(logging.ERROR)  # ERROR is above handler level
     assert capfd.readouterr().out == '\n'
@@ -76,7 +76,7 @@ def test_file_paths(logger: MusifyLogger):
 def test_getting_iterator_as_progress_bar(logger: MusifyLogger):
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.DEBUG)  # forces leave to be False
-    logging._handlers[handler.name] = handler
+    logging.root.addHandler(handler)
     logger._bars.clear()
 
     bar = logger.get_iterator(iterable=range(0, 50), initial=10, disable=True, file=sys.stderr)

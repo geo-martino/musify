@@ -50,13 +50,13 @@ class MusifyLogger(logging.Logger):
         return paths
 
     @property
-    def stdout_handlers(self) -> list[logging.StreamHandler]:
+    def stdout_handlers(self) -> set[logging.StreamHandler]:
         """Get a list of all :py:class:`logging.StreamHandler` handlers that log to stdout"""
-        console_handlers = []
-        for name in logging.getHandlerNames():
-            handler = logging.getHandlerByName(name)
+        console_handlers = set()
+        for handler in self.handlers + logging.root.handlers:
             if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stdout:
-                console_handlers.append(handler)
+                console_handlers.add(handler)
+
         return console_handlers
 
     def info_extra(self, msg, *args, **kwargs) -> None:
@@ -74,24 +74,24 @@ class MusifyLogger(logging.Logger):
         if self.isEnabledFor(STAT):
             self._log(STAT, msg, args, **kwargs)
 
-    def print_message(self, *values, sep=' ', end='\n') -> None:
-        """
-        Wrapper for print. Logs the given ``values`` to the INFO setting.
-        If there are no stdout handlers with a log level at least at INFO, also print this to the terminal.
-        This ensures the user sees the ``values`` always.
-        """
-        message = sep.join(values)
-        if message:
-            self.info(message + end)
-
-        if not self.stdout_handlers or any(h.level > logging.INFO for h in self.stdout_handlers):
-            print(*values, sep=sep, end=end)
-
     def print(self, level: int = logging.CRITICAL + 1) -> None:
         """Print a new line only when DEBUG < ``logger level`` <= ``level`` for all console handlers"""
         if not self.compact:
             if self.stdout_handlers and any(logging.DEBUG < h.level <= level for h in self.stdout_handlers):
                 print()
+
+    def print_message(self, *values, sep=' ', end='\n') -> None:
+        """
+        Wrapper for print. Logs the given ``values`` to the INFO setting.
+        If there are no stdout handlers with severity <= INFO, also print this to the terminal.
+        This ensures the user sees the ``values`` always.
+        """
+        message = sep.join(values)
+        if message:
+            self.info(message)
+
+        if not values or not self.stdout_handlers or all(h.level > logging.INFO for h in self.stdout_handlers):
+            print(*values, sep=sep, end=end)
 
     def get_iterator[T: Any](
             self,

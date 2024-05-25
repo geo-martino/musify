@@ -330,7 +330,6 @@ async def spotify_api(spotify_mock: SpotifyMock) -> SpotifyAPI:
     token = {"access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"}
     # disable any token tests by settings test_* kwargs as appropriate
     api = SpotifyAPI(token=token, test_args=None, test_expiry=0, test_condition=None)
-    api.handler.backoff_count = 1  # TODO: remove me
 
     async with api as a:
         yield a

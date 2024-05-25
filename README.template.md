@@ -59,9 +59,10 @@ For more detailed guides, check out the [documentation](https://{program_owner_u
 > Libraries log info about loaded objects to the custom `STAT` level.
 > ```python
 > import logging
+> import sys
 > from musify.log import STAT
 > 
-> logging.basicConfig(format="%(message)s", level=STAT)
+> logging.basicConfig(format="%(message)s", level=STAT, stream=sys.stdout)
 > ```
 
 ### Spotify
