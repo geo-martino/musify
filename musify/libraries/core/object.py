@@ -9,13 +9,13 @@ from collections.abc import Collection, Mapping, Iterable
 from copy import deepcopy
 from typing import Self
 
-from musify.core.base import MusifyItem
+from musify.core.base import MusifyItem, HasLength
 from musify.exception import MusifyTypeError
 from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.remote.core.enum import RemoteObjectType
 
 
-class Track(MusifyItem, ABC):
+class Track(MusifyItem, HasLength, ABC):
     """Represents a track including its metadata/tags/properties."""
 
     __slots__ = ()

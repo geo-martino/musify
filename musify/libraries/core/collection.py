@@ -8,7 +8,7 @@ from collections.abc import MutableSequence, Iterable, Mapping, Collection
 from dataclasses import dataclass
 from typing import Any, SupportsIndex, Self
 
-from musify.core.base import MusifyObject, MusifyItem
+from musify.core.base import MusifyObject, MusifyItem, HasLength
 from musify.core.enum import Field
 from musify.exception import MusifyTypeError, MusifyKeyError, MusifyAttributeError
 from musify.file.base import File
@@ -105,7 +105,7 @@ class RemoteURLEXTGetter(ItemGetterStrategy):
         return item.url_ext
 
 
-class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], ABC):
+class MusifyCollection[T: MusifyItem](MusifyObject, HasLength, MutableSequence[T], ABC):
     """Generic class for storing a collection of musify items."""
 
     __slots__ = ()

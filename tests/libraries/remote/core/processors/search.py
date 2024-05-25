@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Iterable, Callable, Awaitable
 from copy import copy
 from urllib.parse import unquote
@@ -19,7 +19,7 @@ from tests.libraries.local.track.utils import random_track, random_tracks
 from tests.libraries.remote.core.utils import RemoteMock
 
 
-class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
+class RemoteItemSearcherTester(PrettyPrinterTester, ABC):
     """Run generic tests for :py:class:`RemoteItemSearcher` implementations."""
 
     @pytest.fixture

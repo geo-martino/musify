@@ -1,4 +1,4 @@
-from abc import ABCMeta
+from abc import ABC
 from collections.abc import Iterable, Collection
 from random import randrange, sample
 
@@ -13,7 +13,7 @@ from tests.libraries.local.track.utils import random_tracks
 from tests.libraries.remote.spotify.api.mock import SpotifyMock
 
 
-class LocalCollectionTester(MusifyCollectionTester, metaclass=ABCMeta):
+class LocalCollectionTester(MusifyCollectionTester, ABC):
 
     @pytest.fixture
     def collection_merge_items(self) -> Iterable[LocalTrack]:

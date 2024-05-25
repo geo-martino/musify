@@ -3,7 +3,7 @@ The fundamental core classes for the entire package.
 """
 from __future__ import annotations
 
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Hashable
 from typing import Any
 
@@ -40,7 +40,7 @@ class MusifyObject(AttributePrinter):
         return self.name > other.name
 
 
-class MusifyItem(MusifyObject, Hashable, metaclass=ABCMeta):
+class MusifyItem(MusifyObject, Hashable, ABC):
     """Generic class for storing an item."""
 
     __slots__ = ()
@@ -76,7 +76,7 @@ class MusifyItem(MusifyObject, Hashable, metaclass=ABCMeta):
 
 
 # noinspection PyPropertyDefinition
-class MusifyItemSettable(MusifyItem, metaclass=ABCMeta):
+class MusifyItemSettable(MusifyItem, ABC):
     """Generic class for storing an item that can have select properties modified."""
 
     __slots__ = ()
@@ -92,3 +92,15 @@ class MusifyItemSettable(MusifyItem, metaclass=ABCMeta):
         raise NotImplementedError
 
     uri = property(lambda self: self._uri_getter(), lambda self, v: self._uri_setter(v))
+
+
+class HasLength(ABC):
+    """Simple protocol for an object which has a length"""
+
+    __slots__ = ()
+
+    @property
+    @abstractmethod
+    def length(self):
+        """Total duration of this object in seconds"""
+        raise NotImplementedError
