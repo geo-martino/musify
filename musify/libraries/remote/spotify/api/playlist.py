@@ -38,8 +38,8 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, ABC):
             playlist = playlist.response
 
         if isinstance(playlist, Mapping):
-            if "href" in playlist:
-                return playlist["href"]
+            if self.url_key in playlist:
+                return playlist[self.url_key]
             elif self.id_key in playlist:
                 return self.wrangler.convert(
                     playlist[self.id_key],
@@ -59,7 +59,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, ABC):
             return self.wrangler.convert(playlist, kind=RemoteObjectType.PLAYLIST, type_out=RemoteIDType.URL)
         except RemoteIDTypeError:
             playlists = await self.get_user_items(kind=RemoteObjectType.PLAYLIST)
-            playlists = {pl["name"]: pl["href"] for pl in playlists}
+            playlists = {pl["name"]: pl[self.url_key] for pl in playlists}
             if playlist not in playlists:
                 raise RemoteIDTypeError(
                     "Given playlist is not a valid URL/URI/ID and name not found in user's playlists",
@@ -87,7 +87,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, ABC):
             "public": public,
             "collaborative": collaborative,
         }
-        pl_url = (await self.handler.post(url, json=body))["href"]
+        pl_url = (await self.handler.post(url, json=body))[self.url_key]
 
         self.handler.log("DONE", url, message=f"Created playlist: '{name}' -> {pl_url}")
         return pl_url

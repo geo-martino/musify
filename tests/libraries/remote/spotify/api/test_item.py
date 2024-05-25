@@ -29,6 +29,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
     """Tester for item-type endpoints of :py:class:`SpotifyAPI`"""
 
     id_key = SpotifyAPI.id_key
+    url_key = SpotifyAPI.url_key
 
     @pytest.fixture(scope="class")
     def object_factory(self) -> SpotifyObjectFactory:
@@ -51,8 +52,9 @@ class TestSpotifyAPIItems(RemoteAPITester):
         ) as api:
             yield api
 
-    @staticmethod
-    def reduce_items(response: dict[str, Any], key: str, api: SpotifyAPI, api_mock: SpotifyMock, pages: int = 3) -> int:
+    def reduce_items(
+            self, response: dict[str, Any], key: str, api: SpotifyAPI, api_mock: SpotifyMock, pages: int = 3
+    ) -> int:
         """
         Some tests require the existing items in a given ``response``
         to be less than the total available items for that ``response``.
@@ -70,7 +72,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         assert len(response_items[api.items_key]) >= limit
 
         response_reduced = api_mock.format_items_block(
-            url=response_items["href"],
+            url=response_items[self.url_key],
             items=response_items[api.items_key][:limit],
             limit=limit,
             total=response_items["total"]
@@ -394,7 +396,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         self.assert_item_types(results=test[api.items_key], object_type=object_type, key=key)
 
         # appropriate number of requests made (minus 1 for initial input)
-        requests = await api_mock.get_requests(url=test["href"].split("?")[0])
+        requests = await api_mock.get_requests(url=test[self.url_key].split("?")[0])
         assert len(requests) == api_mock.calculate_pages(limit=limit, total=total) - 1
 
     @pytest.mark.parametrize("object_type", [
@@ -436,9 +438,9 @@ class TestSpotifyAPIItems(RemoteAPITester):
         response = response[key]
 
         if object_type == RemoteObjectType.PLAYLIST:
-            url = response[api_cache.items_key][0][key.rstrip("s")]["href"]
+            url = response[api_cache.items_key][0][key.rstrip("s")][self.url_key]
         else:
-            url = response[api_cache.items_key][0]["href"]
+            url = response[api_cache.items_key][0][self.url_key]
         repository = api_cache.handler.session.cache.get_repository_from_url(url=url)
         await repository.clear()
 
@@ -488,7 +490,10 @@ class TestSpotifyAPIItems(RemoteAPITester):
         }
         if object_type == RemoteObjectType.PLAYLIST:  # ensure items block is reduced for playlist responses as expected
             for response in responses.values():
-                response["tracks"] = {"href": response["tracks"]["href"], "total": response["tracks"]["total"]}
+                response["tracks"] = {
+                    self.url_key: response["tracks"][self.url_key],
+                    "total": response["tracks"]["total"]
+                }
 
         total = len(responses)
         limit = get_limit(total, max_limit=api_mock.limit_max, pages=3)
@@ -547,7 +552,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
 
         # just check that these don't fail
         await api.get_items(values=response["uri"])
-        await api.get_items(values=response["href"])
+        await api.get_items(values=response[self.url_key])
         await api.get_items(values=response["external_urls"]["spotify"])
 
     async def test_get_items_many_string(
@@ -738,7 +743,6 @@ class TestSpotifyAPIItems(RemoteAPITester):
                 extension=features[result[self.id_key]] if features else None,
                 extension_in_results=features_in_results
             )
-
             self._assert_extend_tracks_result(
                 result=result,
                 key="audio_analysis",
@@ -757,6 +761,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
     ):
         if extension:
             if extension_in_results:
+                result[key].pop("href", None)
                 assert result[key] == extension
             else:
                 assert key not in result
@@ -818,7 +823,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
 
         # just check that these don't fail
         await api.extend_tracks(values=response["uri"])
-        await api.extend_tracks(values=response["href"])
+        await api.extend_tracks(values=response[self.url_key])
         await api.extend_tracks(values=response["external_urls"]["spotify"])
 
     @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
@@ -947,12 +952,12 @@ class TestSpotifyAPIItems(RemoteAPITester):
             self,
             object_type: RemoteObjectType,
             response: dict[str, Any],
-            api: SpotifyAPI,
+            api_cache: SpotifyAPI,
             api_mock: SpotifyMock,
             object_factory: SpotifyObjectFactory,
     ):
-        results = await api.get_tracks(
-            values=random_id_type(id_=response[self.id_key], wrangler=api.wrangler, kind=RemoteObjectType.TRACK),
+        results = await api_cache.get_tracks(
+            values=random_id_type(id_=response[self.id_key], wrangler=api_cache.wrangler, kind=RemoteObjectType.TRACK),
             features=True,
             analysis=True
         )
@@ -961,7 +966,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         assert "audio_analysis" not in response
 
         test_response = deepcopy(response)
-        results = await api.get_tracks(values=test_response, features=True, analysis=True)
+        results = await api_cache.get_tracks(values=test_response, features=True, analysis=True)
         assert results[0] == test_response
         assert "audio_features" in test_response
         assert "audio_analysis" in test_response
@@ -970,7 +975,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
         test_object: SpotifyTrack = object_factory[object_type](response, skip_checks=True)
         assert test_object.bpm is None
 
-        await api.get_tracks(values=response, features=True, analysis=True)
+        await api_cache.get_tracks(values=response, features=True, analysis=True)
         assert "audio_features" in response
         assert "audio_analysis" in response
         assert test_object.bpm is not None

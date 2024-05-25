@@ -104,10 +104,10 @@ class SpotifyAPIMisc(SpotifyAPIBase, ABC):
             RemoteObjectType.AUDIOBOOK: "total_chapters"
         }
         for result in results:
-            if key in result and "href" in result[key] and "total" in result[key]:
+            if key in result and self.url_key in result[key] and "total" in result[key]:
                 continue
 
-            href = self.format_next_url(f"{result["href"]}/{key}", limit=50)
-            result[key] = {"href": href, "total": result.get(totals_key.get(kind), 0)}
+            href = self.format_next_url(f"{result[self.url_key]}/{key}", limit=50)
+            result[key] = {self.url_key: href, "total": result.get(totals_key.get(kind), 0)}
 
         return results

@@ -43,11 +43,16 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
     ###########################################################################
     async def _cache_results(self, method: str, results: list[dict[str, Any]]) -> None:
         """Persist ``results`` of a given ``method`` to the cache."""
-        if not isinstance(self.handler.session, CachedSession):
+        if not isinstance(self.handler.session, CachedSession) or not results:
             return
 
+        def _get_href_from_result(r: dict[str, Any]) -> str:
+            if "track_href" in r:
+                return r["track_href"]
+            return r[self.url_key]
+
         # take all parts of href path, excluding ID
-        possible_urls = {"/".join(result["href"].split("/")[:-1]) for result in results}
+        possible_urls = {"/".join(_get_href_from_result(result).split("/")[:-1]) for result in results}
         if len(possible_urls) > 1:
             raise CacheError(
                 "Too many different types of results given. Given results must relate to the same repository type."
@@ -140,14 +145,17 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         results: list[dict[str, Any]] = []
         log = f"{kind.title()}: {len(ids_not_cached):>5}"
         for id_ in bar:
+            href = f"{url}/{id_}"
             response = await self.handler.request(
-                method=method, url=f"{url}/{id_}", params=params, persist=False, log_message=log
+                method=method, url=href, params=params, persist=False, log_message=log
             )
             if self.id_key not in response:
                 response[self.id_key] = id_
+            if self.url_key not in response:
+                response[self.url_key] = href
+
             if key and key not in response:
                 raise APIError(f"Given key '{key}' not found in response keys: {list(response.keys())}")
-
             results.extend(response[key]) if key else results.append(response)
 
         await self._cache_results(method=method, results=results)
@@ -221,11 +229,10 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
     ###########################################################################
     ## GET endpoints
     ###########################################################################
-    @staticmethod
-    def _reformat_user_items_block(response: MutableMapping[str, Any]) -> None:
+    def _reformat_user_items_block(self, response: MutableMapping[str, Any]) -> None:
         """this usually happens on the items block of a current user's playlist"""
         if "next" not in response:
-            response["next"] = response["href"]
+            response["next"] = response[self.url_key]
         if "previous" not in response:
             response["previous"] = None
         if "limit" not in response:
@@ -273,7 +280,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
             response[self.items_key] = []
 
         if len(response[self.items_key]) == response["total"]:  # skip on fully extended response
-            url = response["href"].split("?")[0]
+            url = response[self.url_key].split("?")[0]
             self.handler.log("SKIP", url, message="Response already extended")
             return response[self.items_key]
 
@@ -298,7 +305,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
             response_next = response_next.get(key, response_next)
 
             response[self.items_key].extend(response_next[self.items_key])
-            response["href"] = response_next["href"]
+            response[self.url_key] = response_next[self.url_key]
             response["next"] = response_next.get("next")
             response["previous"] = response_next.get("previous")
 
@@ -310,7 +317,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         results_to_cache = [
             result[item_key] if item_key and item_key in result else result for result in response[self.items_key]
         ]
-        if all("href" in result for result in results_to_cache):
+        if all(self.url_key in result for result in results_to_cache):
             await self._cache_results(method=method, results=results_to_cache)
 
         if tqdm is not None:  # TODO: drop me
@@ -390,7 +397,7 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
         )
 
         for result in bar:
-            if result[key_name].get("next") or ("next" not in result[key_name] and result[key_name].get("href")):
+            if result[key_name].get("next") or ("next" not in result[key_name] and result[key_name].get(self.url_key)):
                 self.handler.log("INFO", url, message=f"Extending {key_name} on {unit}")
                 await self.extend_items(result[key_name], kind=kind, key=key, leave_bar=False)
 
@@ -645,7 +652,9 @@ class SpotifyAPIItems(SpotifyAPIBase, ABC):
 
             for album in results[id_][self.items_key]:  # add skeleton items block to album responses
                 album["tracks"] = {
-                    "href": self.format_next_url(url=album["href"].split("?")[0] + "/tracks", offset=0, limit=50),
+                    self.url_key: self.format_next_url(
+                        url=album[self.url_key].split("?")[0] + "/tracks", offset=0, limit=50
+                    ),
                     "total": album["total_tracks"]
                 }
 

@@ -56,7 +56,7 @@ SPOTIFY_API_AUTH_ARGS = {
         },
     },
     "test_args": {"url": "{url}/me"},
-    "test_condition": lambda r: "href" in r and "display_name" in r,
+    "test_condition": lambda r: SpotifyAPI.url_key in r and "display_name" in r,
     "test_expiry": 600,
     "token_key_path": ["access_token"],
     "header_extra": {"Accept": "application/json", "Content-Type": "application/json"},

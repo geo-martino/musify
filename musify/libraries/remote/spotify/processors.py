@@ -128,13 +128,16 @@ class SpotifyDataWrangler(RemoteDataWrangler):
         kind, id_ = cls._get_id(value=value, kind=kind, type_in=type_in)
 
         # reformat
-        item = kind.name.lower().rstrip('s')
-        if type_out == RemoteIDType.URL:
-            return f'{cls.url_api}/{item}s/{id_}'
-        elif type_out == RemoteIDType.URL_EXT:
-            return f'{cls.url_ext}/{item}/{id_}'
-        elif type_out == RemoteIDType.URI:
-            return f"spotify:{item}:{id_}"
+        if type_out != RemoteIDType.ID:
+            item = kind.name.lower().rstrip('s')
+            if type_out == RemoteIDType.URL:
+                return f'{cls.url_api}/{item}s/{id_}'
+            elif type_out == RemoteIDType.URL_EXT:
+                return f'{cls.url_ext}/{item}/{id_}'
+            elif type_out == RemoteIDType.URI:
+                return f"spotify:{item}:{id_}"
+            raise RemoteIDTypeError
+
         return id_
 
     @classmethod

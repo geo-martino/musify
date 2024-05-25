@@ -50,6 +50,8 @@ class RemoteAPI(AsyncContextManager, ABC):
     )
     #: The key to use when getting an ID from a response
     id_key = "id"
+    #: The key to use when getting the URL from a response
+    url_key = "href"
 
     @property
     @abstractmethod

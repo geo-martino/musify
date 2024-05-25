@@ -237,7 +237,6 @@ class ResponseCache[ST: ResponseRepository](MutableMapping[str, ST], Awaitable, 
         return await self
 
     def __repr__(self):
-        self.__aenter__()
         return repr(self._repositories)
 
     def __str__(self):
