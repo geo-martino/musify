@@ -202,7 +202,7 @@ class ResponseRepositoryTester(BaseResponseTester, ABC):
         assert not await repository.contains(key)
 
         await repository.save_response((key, value))
-        assert repository.contains(key)
+        assert await repository.contains(key)
         assert await repository.get_response(key) == value
 
     async def test_save_response_from_response(self, repository: ResponseRepository):
@@ -211,7 +211,7 @@ class ResponseRepositoryTester(BaseResponseTester, ABC):
         assert not await repository.contains(key)
 
         await repository.save_response(response)
-        assert repository.contains(key)
+        assert await repository.contains(key)
         assert await repository.get_response(key) == value
 
     async def test_save_response_fails_silently(self, repository: ResponseRepository):

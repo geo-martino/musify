@@ -60,7 +60,7 @@ class TestCachedSession:
         repository = choice(list(cache.values()))
 
         key, value = choice([(k, v) async for k, v in repository])
-        assert repository.contains(key)
+        assert await repository.contains(key)
 
         expected = tester.generate_response_from_item(repository.settings, key, value, session=session)
         request = expected.request_info
@@ -84,7 +84,7 @@ class TestCachedSession:
         headers = {"Content-Type": "application/json"}
 
         key = repository.get_key_from_request(request)
-        assert repository.contains(key)
+        assert await repository.contains(key)
 
         requests_mock.get(request.url, body=await expected.text(), repeat=True)
 
