@@ -89,11 +89,14 @@ class SQLiteTable[K: tuple[Any, ...], V: str](ResponseRepository[K, V]):
             await self.connection.__aexit__(__exc_type, __exc_value, __traceback)
 
     async def commit(self) -> None:
-        await self.connection.commit()
+        """Commit the transactions to the database."""
+        if self.connection.is_alive():
+            await self.connection.commit()
 
     async def close(self) -> None:
-        await self.commit()
-        await self.connection.close()
+        if self.connection.is_alive():
+            await self.commit()
+            await self.connection.close()
 
     @property
     def _primary_key_columns(self) -> Mapping[str, str]:
@@ -341,11 +344,13 @@ class SQLiteCache(ResponseCache[SQLiteTable]):
 
     async def commit(self):
         """Commit the transactions to the database."""
-        await self.connection.commit()
+        if self.connection.is_alive():
+            await self.connection.commit()
 
     async def close(self):
-        await self.commit()
-        await self.connection.close()
+        if self.connection.is_alive():
+            await self.commit()
+            await self.connection.close()
 
     def create_repository(self, settings: RequestSettings) -> SQLiteTable:
         if settings.name in self:
