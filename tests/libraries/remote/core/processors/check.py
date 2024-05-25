@@ -1,5 +1,5 @@
 import re
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from itertools import batched
 from random import randrange, choice
 
@@ -20,7 +20,7 @@ from tests.libraries.remote.spotify.utils import random_uri, random_uris
 from tests.utils import random_str, get_stdout
 
 
-class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
+class RemoteItemCheckerTester(PrettyPrinterTester, ABC):
     """Run generic tests for :py:class:`RemoteItemSearcher` implementations."""
 
     @pytest.fixture

@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from typing import Any
 
@@ -15,7 +15,7 @@ from tests.libraries.local.track.utils import random_tracks
 from tests.libraries.remote.core.utils import RemoteMock
 
 
-class RemoteCollectionTester(MusifyCollectionTester, metaclass=ABCMeta):
+class RemoteCollectionTester(MusifyCollectionTester, ABC):
 
     @abstractmethod
     def collection_merge_items(self, *args, **kwargs) -> Iterable[RemoteItem]:
@@ -60,7 +60,7 @@ class RemoteCollectionTester(MusifyCollectionTester, metaclass=ABCMeta):
             assert collection["this key does not exist"]
 
 
-class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, metaclass=ABCMeta):
+class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, ABC):
 
     @staticmethod
     def _get_payload_from_request(request: RequestCall) -> dict[str, Any] | None:

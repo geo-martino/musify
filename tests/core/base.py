@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 
 import pytest
 
@@ -7,7 +7,7 @@ from musify.core.printer import PrettyPrinter
 from tests.core.printer import PrettyPrinterTester
 
 
-class MusifyItemTester(PrettyPrinterTester, metaclass=ABCMeta):
+class MusifyItemTester(PrettyPrinterTester, ABC):
     """Run generic tests for :py:class:`MusifyItem` implementations"""
 
     @abstractmethod

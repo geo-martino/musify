@@ -2,7 +2,7 @@
 Base classes for all processors in this module. Also contains decorators for use in implementations.
 """
 import logging
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Mapping, Callable, Collection, Iterable, MutableSequence
 from functools import partial, update_wrapper
 from typing import Any, Optional
@@ -13,13 +13,13 @@ from musify.processors.exception import ProcessorLookupError
 from musify.utils import get_user_input, get_max_width, align_string
 
 
-class Processor(PrettyPrinter, metaclass=ABCMeta):
+class Processor(PrettyPrinter, ABC):
     """Generic base class for processors"""
 
     __slots__ = ()
 
 
-class InputProcessor(Processor, metaclass=ABCMeta):
+class InputProcessor(Processor, ABC):
     """
     Processor that gets user input as part of it processing.
 
@@ -81,7 +81,7 @@ class dynamicprocessormethod:
 
 
 # noinspection SpellCheckingInspection
-class DynamicProcessor(Processor, metaclass=ABCMeta):
+class DynamicProcessor(Processor, ABC):
     """
     Base class for implementations with :py:func:`dynamicprocessormethod` methods.
 
@@ -159,7 +159,7 @@ class DynamicProcessor(Processor, metaclass=ABCMeta):
         return self._processor_method(*args, **kwargs)
 
 
-class Filter[T](Processor, metaclass=ABCMeta):
+class Filter[T](Processor, ABC):
     """Base class for filtering down values based on some settings"""
 
     __slots__ = ("_transform",)
@@ -197,7 +197,7 @@ class Filter[T](Processor, metaclass=ABCMeta):
         return self.ready
 
 
-class FilterComposite[T](Filter[T], Collection[Filter], metaclass=ABCMeta):
+class FilterComposite[T](Filter[T], Collection[Filter], ABC):
     """Composite filter which filters based on many :py:class:`Filter` objects"""
 
     __slots__ = ("filters",)

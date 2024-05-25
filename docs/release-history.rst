@@ -80,6 +80,8 @@ Fixed
   to have lower case paths
 * :py:meth:`.RemoteLibrary.restore_playlists` now correctly handles the backup
   output from :py:meth:`.RemoteLibrary.backup_playlists`
+* Issue detecting stdout_handlers affecting :py:meth:`.MusifyLogger.print` and :py:meth:`.MusifyLogger.get_iterator`.
+  Now works as expected.
 
 Removed
 -------

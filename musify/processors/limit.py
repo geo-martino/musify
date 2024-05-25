@@ -6,7 +6,7 @@ from functools import reduce
 from operator import mul
 from random import shuffle
 
-from musify.core.base import MusifyItem
+from musify.core.base import MusifyItem, HasLength
 from musify.core.enum import MusifyEnum, Fields
 from musify.file.base import File
 from musify.libraries.core.object import Track
@@ -149,7 +149,7 @@ class ItemLimiter(DynamicProcessor):
         :raise ItemLimiterError: When the given limit type cannot be found
         """
         if 10 < self.kind.value < 20:
-            if getattr(item, "length", None) is None:  # TODO: there should be a better way of handling this...
+            if not isinstance(item, HasLength):
                 raise LimiterProcessorError("The given item cannot be limited on length as it does not have a length.")
 
             factors = (1, 60, 60, 24, 7)[:self.kind.value % 10]

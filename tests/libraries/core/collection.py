@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from copy import deepcopy
 from random import sample
@@ -17,7 +17,7 @@ from musify.libraries.remote.core.object import RemoteCollectionLoader
 from tests.core.printer import PrettyPrinterTester
 
 
-class MusifyCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
+class MusifyCollectionTester(PrettyPrinterTester, ABC):
     """
     Run generic tests for :py:class:`MusifyCollection` implementations.
     The collection must have 3 or more items and all items must be unique.
@@ -210,7 +210,7 @@ class MusifyCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert collection.intersection(other) == collection.items
 
 
-class PlaylistTester(MusifyCollectionTester, metaclass=ABCMeta):
+class PlaylistTester(MusifyCollectionTester, ABC):
 
     @abstractmethod
     def playlist(self, *args, **kwargs) -> Playlist:
@@ -291,7 +291,7 @@ class PlaylistTester(MusifyCollectionTester, metaclass=ABCMeta):
         assert playlist[initial_count:] == other.items
 
 
-class LibraryTester(MusifyCollectionTester, metaclass=ABCMeta):
+class LibraryTester(MusifyCollectionTester, ABC):
     """
     Run generic tests for :py:class:`Library` implementations.
     The collection must have 3 or more playlists and all playlists must be unique.
