@@ -49,6 +49,7 @@ Should you wish to take advantage of some or all of this functionality, install 
    pip install musify[bars]  # dependencies for displaying progress bars on longer running processes
    pip install musify[images]  # dependencies for processing images
    pip install musify[musicbee]  # dependencies for working with a local MusicBee library and its playlist types
+   pip install musify[sqlite]  # dependencies for working with a SQLite cache backend for caching API responses
 
    # or you may install any combination of these e.g.
    pip install musify[bars,images,musicbee]

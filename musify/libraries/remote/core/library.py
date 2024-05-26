@@ -452,7 +452,7 @@ class RemoteLibrary[
         log_kind = "adding new items only"
         if kind != "new":
             log_kind = 'all' if kind == 'refresh' else 'extra'
-            log_kind = f"clearing {log_kind} items from {self.api.source} playlist first"
+            log_kind = f"clearing {log_kind} items from each {self.api.source} playlist first"
         self.logger.info(
             f"\33[1;95m ->\33[1;97m Synchronising {len(playlists)} {self.api.source} playlists: {log_kind}"
             f"{f' and reloading stored playlists' if reload else ''} \33[0m"

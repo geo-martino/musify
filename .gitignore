@@ -149,3 +149,5 @@ _site
 .jekyll-cache
 .jekyll-metadata
 vendor
+
+test.py

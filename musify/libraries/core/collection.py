@@ -304,6 +304,9 @@ class MusifyCollection[T: MusifyItem](MusifyObject, HasLength, MutableSequence[T
         return items
 
     def __isub__(self, __items: Iterable[T]):
+        if not isinstance(__items, Iterable):
+            raise MusifyTypeError("You must provide an iterable object to use this functionality.")
+
         for item in __items:
             self.remove(item)
         return self
