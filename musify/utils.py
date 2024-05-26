@@ -264,7 +264,7 @@ def clean_kwargs(func: Callable, kwargs: dict[str, Any]) -> None:
             kwargs.pop(key)
 
 
-def required_modules_installed(modules: list, this: Any = None) -> bool:
+def required_modules_installed(modules: list, this: object = None) -> bool:
     """Check the required modules are installed, raise :py:class:`MusifyImportError` if not."""
     modules_installed = all(module is not None for module in modules)
     if not modules_installed and this is not None:
@@ -272,7 +272,6 @@ def required_modules_installed(modules: list, this: Any = None) -> bool:
         if isinstance(this, str):
             message = f"Cannot run {this}. Required modules: {", ".join(names)}"
         else:
-            # noinspection PyUnresolvedReferences
             message = f"Cannot create {this.__class__.__name__} object. Required modules: {", ".join(names)}"
 
         raise MusifyImportError(message)

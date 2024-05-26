@@ -37,7 +37,7 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
     """
 
     __slots__ = ("logger", "remote_wrangler")
-    __attributes_ignore__ = ("track_paths", "track_total")
+    __attributes_ignore__ = ("track_total", "last_modified")
 
     @staticmethod
     def _validate_item_type(items: Any | Iterable[Any]) -> bool:

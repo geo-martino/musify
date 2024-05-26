@@ -19,7 +19,7 @@ class Track(MusifyItem, HasLength, metaclass=ABCMeta):
     """Represents a track including its metadata/tags/properties."""
 
     __slots__ = ()
-    __attributes_ignore__ = "name"
+    __attributes_ignore__ = ("name",)
 
     # noinspection PyPropertyDefinition
     @classmethod
@@ -172,7 +172,7 @@ class Playlist[T: Track](MusifyCollection[T], metaclass=ABCMeta):
 
     __slots__ = ()
     __attributes_classes__ = MusifyCollection
-    __attributes_ignore__ = "items"
+    __attributes_ignore__ = ("items",)
 
     # noinspection PyPropertyDefinition
     @classmethod
@@ -293,7 +293,7 @@ class Library[T: Track](MusifyCollection[T], metaclass=ABCMeta):
 
     __slots__ = ()
     __attributes_classes__ = MusifyCollection
-    __attributes_ignore__ = "items"
+    __attributes_ignore__ = ("items",)
 
     @property
     @abstractmethod

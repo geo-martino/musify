@@ -90,7 +90,11 @@ class MusifyItemSettable(MusifyItem, metaclass=ABCMeta):
         """Set both the ``uri`` property and the ``has_uri`` property ."""
         raise NotImplementedError
 
-    uri = property(lambda self: self._uri_getter(), lambda self, v: self._uri_setter(v))
+    uri = property(
+        fget=lambda self: self._uri_getter(),
+        fset=lambda self, v: self._uri_setter(v),
+        doc="URI (Uniform Resource Indicator) is the unique identifier for this item."
+    )
 
 
 class HasLength(metaclass=ABCMeta):

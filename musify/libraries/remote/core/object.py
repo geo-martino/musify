@@ -42,7 +42,6 @@ class RemoteCollectionLoader[T: RemoteObject](RemoteCollection[T], RemoteObject,
 
     __slots__ = ()
     __attributes_classes__ = (RemoteObject, RemoteCollection)
-    __attributes_ignore__ = "_total"
 
     def __eq__(self, __collection: RemoteObject | MusifyCollection | Iterable[T]):
         if isinstance(__collection, RemoteObject):

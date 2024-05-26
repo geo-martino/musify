@@ -66,7 +66,7 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         "_play_count",
     )
     __attributes_classes__ = (Track, LocalItem)
-    __attributes_ignore__ = "tag_map"
+    __attributes_ignore__ = ("tag_map",)
 
     _load_on_init = True
 

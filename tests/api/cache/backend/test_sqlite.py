@@ -43,7 +43,6 @@ class SQLiteTester(BaseResponseTester):
 
         return key, value
 
-    # noinspection PyProtectedMember
     @classmethod
     def generate_response_from_item(
             cls, settings: RequestSettings, key: Any, value: Any, session: ClientSession = None
@@ -51,7 +50,6 @@ class SQLiteTester(BaseResponseTester):
         url = f"http://test.com/{settings.name}/{key[1]}"
         return cls._generate_response_from_item(url=url, key=key, value=value, session=session)
 
-    # noinspection PyProtectedMember
     @classmethod
     def generate_bad_response_from_item(
             cls, settings: RequestSettings, key: Any, value: Any, session: ClientSession = None
@@ -186,11 +184,6 @@ class TestSQLiteCache(SQLiteTester, ResponseCacheTester):
 
     @staticmethod
     def generate_response(settings: RequestSettings, session: ClientSession = None) -> ClientResponse:
-        key, value = TestSQLiteTable.generate_item(settings)
-        return TestSQLiteTable.generate_response_from_item(settings, key, value, session=session)
-
-    @staticmethod
-    def generate_repository(settings: RequestSettings, session: ClientSession = None) -> ClientResponse:
         key, value = TestSQLiteTable.generate_item(settings)
         return TestSQLiteTable.generate_response_from_item(settings, key, value, session=session)
 

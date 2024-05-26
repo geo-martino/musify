@@ -59,7 +59,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         "errors",
     )
     __attributes_classes__ = (Library, LocalCollection)
-    __attributes_ignore__ = "tracks_in_playlists"
+    __attributes_ignore__ = ("tracks_in_playlists",)
 
     # noinspection PyPropertyDefinition
     @classmethod
@@ -452,7 +452,6 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         if playlists is not None:
             tracks: Mapping[str, Mapping[str, Any]] = {track["path"]: track for track in self_json["tracks"]}
 
-            # noinspection PyProtectedMember
             def _get_playlist_json(pl: LocalPlaylist) -> tuple[str, dict[str, Any]]:
                 pl_attributes = pl._get_attributes()
                 pl_attributes["tracks"] = []

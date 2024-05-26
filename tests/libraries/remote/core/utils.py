@@ -107,7 +107,6 @@ class RemoteMock(aioresponses, ContextManager, metaclass=ABCMeta):
     def _get_match_from_method(actual: str, expected: str | None = None) -> bool:
         match = expected is None
         if not match:
-            # noinspection PyProtectedMember
             match = actual.upper() == expected.upper()
 
         return match

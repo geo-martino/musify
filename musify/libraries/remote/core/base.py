@@ -27,7 +27,7 @@ class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, AsyncContextManager, m
     @property
     @abstractmethod
     def uri(self) -> str:
-        """The URI of this item/collection."""
+        """URI (Uniform Resource Indicator) is the unique identifier for this item/collection."""
         raise NotImplementedError
 
     @property
