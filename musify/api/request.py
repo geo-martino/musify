@@ -50,7 +50,7 @@ class RequestHandler(AsyncContextManager):
         When the response gives a time to wait until (i.e. retry-after),
         the program will exit if this time is above this timeout (in seconds)
         """
-        return sum(self.backoff_start * self.backoff_factor ** i for i in range(self.backoff_count + 1))
+        return int(sum(self.backoff_start * self.backoff_factor ** i for i in range(self.backoff_count + 1)))
 
     @property
     def closed(self):
@@ -86,9 +86,9 @@ class RequestHandler(AsyncContextManager):
         self.authoriser = authoriser
 
         #: The initial backoff time for failed requests
-        self.backoff_start = 0.5
+        self.backoff_start = 0.2
         #: The factor by which to increase backoff time for failed requests i.e. backoff_start ** backoff_factor
-        self.backoff_factor = 1.5
+        self.backoff_factor = 1.932
         #: The maximum number of request attempts to make before giving up and raising an exception
         self.backoff_count = 10
 
@@ -144,7 +144,10 @@ class RequestHandler(AsyncContextManager):
 
         while True:
             async with self._request(method=method, url=url, **kwargs) as response:
-                if response is not None and response.status < 400:
+                if response is None:
+                    raise APIError("No response received")
+
+                if response.status < 400:
                     if "error" in (text := await response.text()):  # TODO: why is this allowing errors through?
                         print("NEW RESPONSE")
                         print(response.status, response.ok, id(response), response)
@@ -158,32 +161,29 @@ class RequestHandler(AsyncContextManager):
                         print("\n\n\n\n")
                     data = await self._response_as_json(response)
                     break
-                response: ClientResponse
-                waited = None
-                if response is not None:
-                    await self._log_response(response=response, method=method, url=url)
-                    await self._handle_unexpected_response(response=response)
-                    waited = await self._handle_wait_time(response=response)
-                    if "error" in (text := await response.text()):  # TODO: why is this allowing errors through?
-                        print("JUST AFTER WAIT")
-                        print(response.status, response.ok, id(response), response)
-                        print("<REQUEST INFO>", response.request_info)
-                        print("<REASON>", response.reason)
-                        print("<HISTORY>", response.history)
-                        print("<HEADERS>", response.headers)
-                        print("TEXT <<1>>", text)
-                        print("TEXT <<2>>", await response.text())
-                        print("JSON <<3>>", self._response_as_json(response))
-                        print("\n\n\n\n")
 
-                if not waited and backoff < self.backoff_final:  # exponential backoff
-                    self.logger.warning(f"Request failed: retrying in {backoff} seconds...")
-                    sleep(backoff)
-                    backoff *= self.backoff_factor
-                elif waited is False:  # max backoff exceeded
+                await self._log_response(response=response, method=method, url=url)
+                await self._handle_unexpected_response(response=response)
+                waited = await self._handle_wait_time(response=response)
+                if "error" in (text := await response.text()):  # TODO: why is this allowing errors through?
+                    print("JUST AFTER WAIT")
+                    print(response.status, response.ok, id(response), response)
+                    print("<REQUEST INFO>", response.request_info)
+                    print("<REASON>", response.reason)
+                    print("<HISTORY>", response.history)
+                    print("<HEADERS>", response.headers)
+                    print("TEXT <<1>>", text)
+                    print("TEXT <<2>>", await response.text())
+                    print("JSON <<3>>", self._response_as_json(response))
+                    print("\n\n\n\n")
+
+                if not waited and backoff > self.backoff_final:
                     raise APIError("Max retries exceeded")
-                elif waited is None:  # max backoff exceeded
-                    raise APIError("No response received")
+
+                # exponential backoff
+                self.logger.warning(f"Request failed: retrying in {backoff} seconds...")
+                sleep(backoff)
+                backoff *= self.backoff_factor
 
         return data
 
@@ -215,7 +215,6 @@ class RequestHandler(AsyncContextManager):
                 yield response
         except aiohttp.ClientError as ex:
             self.logger.warning(str(ex))
-            yield
 
     def log(
             self, method: str, url: str | URL, message: str | list = None, level: int = logging.DEBUG, **kwargs
@@ -275,12 +274,14 @@ class RequestHandler(AsyncContextManager):
 
         wait_time = int(response.headers["retry-after"])
         wait_str = (datetime.now() + timedelta(seconds=wait_time)).strftime("%Y-%m-%d %H:%M:%S")
-        self.logger.info(f"\33[91mRate limit exceeded. Retrying again at {wait_str}\33[0m")
 
         if wait_time > self.timeout:  # exception if too long
-            raise APIError(f"Rate limit exceeded and wait time is greater than timeout of {self.timeout} seconds")
+            raise APIError(
+                f"Rate limit exceeded and wait time is greater than timeout of {self.timeout} seconds. "
+                f"Retry again at {wait_str}"
+            )
 
-        # wait if time is short
+        self.logger.info(f"\33[93mRate limit exceeded. Retrying again at {wait_str}\33[0m")
         sleep(wait_time)
         return True
 
