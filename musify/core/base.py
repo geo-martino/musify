@@ -3,15 +3,14 @@ The fundamental core classes for the entire package.
 """
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-from collections.abc import Hashable
+from abc import ABCMeta, abstractmethod
 from typing import Any
 
 from musify.core.enum import TagField
 from musify.core.printer import AttributePrinter
 
 
-class MusifyObject(AttributePrinter):
+class MusifyObject(AttributePrinter, metaclass=ABCMeta):
     """Generic base class for any nameable and taggable object."""
 
     __slots__ = ("_clean_tags",)
@@ -40,7 +39,7 @@ class MusifyObject(AttributePrinter):
         return self.name > other.name
 
 
-class MusifyItem(MusifyObject, Hashable, ABC):
+class MusifyItem(MusifyObject, metaclass=ABCMeta):
     """Generic class for storing an item."""
 
     __slots__ = ()
@@ -76,7 +75,7 @@ class MusifyItem(MusifyObject, Hashable, ABC):
 
 
 # noinspection PyPropertyDefinition
-class MusifyItemSettable(MusifyItem, ABC):
+class MusifyItemSettable(MusifyItem, metaclass=ABCMeta):
     """Generic class for storing an item that can have select properties modified."""
 
     __slots__ = ()
@@ -91,10 +90,14 @@ class MusifyItemSettable(MusifyItem, ABC):
         """Set both the ``uri`` property and the ``has_uri`` property ."""
         raise NotImplementedError
 
-    uri = property(lambda self: self._uri_getter(), lambda self, v: self._uri_setter(v))
+    uri = property(
+        fget=lambda self: self._uri_getter(),
+        fset=lambda self, v: self._uri_setter(v),
+        doc="URI (Uniform Resource Indicator) is the unique identifier for this item."
+    )
 
 
-class HasLength(ABC):
+class HasLength(metaclass=ABCMeta):
     """Simple protocol for an object which has a length"""
 
     __slots__ = ()

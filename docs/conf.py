@@ -18,6 +18,7 @@ author = PROGRAM_OWNER_NAME
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
+# noinspection SpellCheckingInspection
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx_rtd_theme",
@@ -27,7 +28,9 @@ extensions = [
     "autodocsumm",
     "sphinxext.opengraph",
 ]
+# noinspection SpellCheckingInspection
 autodoc_member_order = "bysource"
+# noinspection SpellCheckingInspection
 autodoc_default_options = {
     "autosummary": True,
     "members": True,

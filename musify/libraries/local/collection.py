@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Collection, Iterable, Container
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -28,7 +28,7 @@ from musify.utils import get_most_common_values, to_collection, align_string, ge
 _max_str = "z" * 50
 
 
-class LocalCollection[T: LocalTrack](MusifyCollection[T], ABC):
+class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
     """
     Generic class for storing a collection of local tracks.
 
@@ -37,7 +37,7 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], ABC):
     """
 
     __slots__ = ("logger", "remote_wrangler")
-    __attributes_ignore__ = ("track_paths", "track_total")
+    __attributes_ignore__ = ("track_total", "last_modified")
 
     @staticmethod
     def _validate_item_type(items: Any | Iterable[Any]) -> bool:
@@ -170,7 +170,7 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], ABC):
             self.logger.print()
 
 
-class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], ABC):
+class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], metaclass=ABCMeta):
     """
     Generic class for storing and filtering on a collection of local tracks
     with methods for enriching the attributes of this object from the attributes of the collection of tracks

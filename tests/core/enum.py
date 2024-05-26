@@ -1,11 +1,11 @@
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 from collections.abc import Container
 
 from musify.core.base import MusifyObject
 from musify.core.enum import MusifyEnum, Fields, TagField, ALL_FIELDS, Field
 
 
-class EnumTester(ABC):
+class EnumTester(metaclass=ABCMeta):
     """Run generic tests for :py:class:`MusifyEnum` implementations"""
 
     @property
@@ -24,7 +24,7 @@ class EnumTester(ABC):
         assert self.cls.from_value(*all_enums, fail_on_many=False) == set(all_enums)
 
 
-class FieldTester(EnumTester, ABC):
+class FieldTester(EnumTester, metaclass=ABCMeta):
     """Run generic tests for :py:class:`Field` enum implementations"""
 
     @abstractmethod
@@ -64,7 +64,7 @@ class FieldTester(EnumTester, ABC):
             assert isinstance(getattr(reference_cls, name), property)
 
 
-class TagFieldTester(FieldTester, ABC):
+class TagFieldTester(FieldTester, metaclass=ABCMeta):
     """Run generic tests for :py:class:`TagField` enum implementations"""
 
     @property

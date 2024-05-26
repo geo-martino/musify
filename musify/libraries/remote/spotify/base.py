@@ -3,7 +3,7 @@ Core abstract classes for the :py:mod:`Spotify` module.
 
 These define the foundations of any Spotify object or item.
 """
-from abc import ABC
+from abc import ABCMeta
 
 from musify.libraries.remote.core.base import RemoteObject, RemoteItem
 from musify.libraries.remote.core.enum import RemoteObjectType
@@ -11,7 +11,7 @@ from musify.libraries.remote.core.exception import RemoteObjectTypeError, Remote
 from musify.libraries.remote.spotify.api import SpotifyAPI
 
 
-class SpotifyObject(RemoteObject[SpotifyAPI], ABC):
+class SpotifyObject(RemoteObject[SpotifyAPI], metaclass=ABCMeta):
     """Generic base class for Spotify-stored objects. Extracts key data from a Spotify API JSON response."""
 
     __slots__ = ()
@@ -53,7 +53,7 @@ class SpotifyObject(RemoteObject[SpotifyAPI], ABC):
             raise RemoteObjectTypeError("Response type invalid", kind=kind, value=self.response.get("type"))
 
 
-class SpotifyItem(SpotifyObject, RemoteItem, ABC):
+class SpotifyItem(SpotifyObject, RemoteItem, metaclass=ABCMeta):
     """Generic base class for Spotify-stored items. Extracts key data from a Spotify API JSON response."""
 
     __slots__ = ()

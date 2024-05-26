@@ -1,7 +1,7 @@
 """
 Implements all functionality pertaining to writing and deleting metadata/tags/properties for a :py:class:`LocalTrack`.
 """
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Collection, Callable
 from dataclasses import dataclass
 from typing import Any
@@ -26,7 +26,7 @@ class SyncResultTrack(Result):
     updated: Mapping[Tags, int]
 
 
-class TagWriter[T: mutagen.FileType](TagProcessor, ABC):
+class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
     """Functionality for updating and removing tags/metadata/properties from a mutagen object."""
 
     __slots__ = ()

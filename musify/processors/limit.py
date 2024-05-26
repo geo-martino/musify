@@ -153,7 +153,6 @@ class ItemLimiter(DynamicProcessor):
                 raise LimiterProcessorError("The given item cannot be limited on length as it does not have a length.")
 
             factors = (1, 60, 60, 24, 7)[:self.kind.value % 10]
-            # noinspection PyUnresolvedReferences
             return item.length / reduce(mul, factors, 1)
 
         elif 20 <= self.kind.value < 30:

@@ -93,6 +93,8 @@ Removed
 * ``use_cache`` parameter from all :py:class:`.RemoteAPI` related methods.
   Cache settings now handled by :py:class:`.ResponseCache`
 * ThreadPoolExecutor use on :py:class:`.RemoteItemSearcher`. Now uses asynchronous logic instead.
+* `last_modified` field as attribute to ignore when getting attributes
+  to print on `LocalCollection` to improve performance
 
 Documentation
 -------------

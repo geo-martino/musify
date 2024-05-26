@@ -1,7 +1,7 @@
 """
 The base processor definition for reading/manipulating tag data in an audio file.
 """
-from abc import ABC
+from abc import ABCMeta
 
 import mutagen
 
@@ -10,7 +10,7 @@ from musify.libraries.local.track.field import LocalTrackField
 from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
 
 
-class TagProcessor[T: mutagen.FileType](ABC):
+class TagProcessor[T: mutagen.FileType](metaclass=ABCMeta):
     """
     Base tag processor for reading/writing of tag metadata to a file.
 

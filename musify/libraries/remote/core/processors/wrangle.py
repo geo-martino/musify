@@ -1,7 +1,7 @@
 """
 Convert and validate remote ID and item types according to specific remote implementations.
 """
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping
 from typing import Any
 
@@ -11,7 +11,7 @@ from musify.libraries.remote.core.exception import RemoteObjectTypeError
 from musify.libraries.remote.core.types import APIInputValue
 
 
-class RemoteDataWrangler(ABC):
+class RemoteDataWrangler(metaclass=ABCMeta):
     """Convert and validate remote ID and item types according to specific remote implementations."""
 
     __slots__ = ()

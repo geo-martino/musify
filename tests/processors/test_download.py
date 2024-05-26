@@ -25,6 +25,7 @@ class TestItemDownloadHelper(PrettyPrinterTester):
     @pytest.fixture
     def download_helper(self) -> ItemDownloadHelper:
         """Yields a valid :py:class:`RemoteItemDownloadHelper` for the current remote source as a pytest.fixture."""
+        # noinspection SpellCheckingInspection
         sites = [
             "https://bandcamp.com/search?q={}&item_type=t",
             "https://uk.7digital.com/search?q={}&f=9%2C2",

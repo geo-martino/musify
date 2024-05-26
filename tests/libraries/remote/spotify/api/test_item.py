@@ -777,7 +777,6 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
             analysis={response[self.id_key]: analysis},
         )
 
-    # noinspection PyTestUnpassedFixture
     @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
     async def test_extend_tracks_many_mapping(
             self,
@@ -826,7 +825,6 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
         )
         assert test.bpm is not None
 
-    # noinspection PyTestUnpassedFixture
     @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
     async def test_extend_tracks_many_response(
             self,

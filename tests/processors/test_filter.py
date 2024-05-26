@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABCMeta
 from random import sample, shuffle, randrange
 
 import pytest
@@ -16,7 +16,7 @@ from tests.libraries.local.utils import path_track_all
 from tests.utils import random_str, path_resources
 
 
-class FilterTester(PrettyPrinterTester, ABC):
+class FilterTester(PrettyPrinterTester, metaclass=ABCMeta):
     pass
 
 
