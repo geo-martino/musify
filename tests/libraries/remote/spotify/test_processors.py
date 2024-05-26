@@ -34,7 +34,7 @@ def response(request, _api_mock: SpotifyMock) -> RemoteResponse:
     """Yields a :py:class:`RemoteResponse` for each of the :py:class:`SpotifyObjectFactory` remote response items"""
     factory = request.param
     response = choice(_api_mock.item_type_map[factory.__new__(factory).kind])
-    return factory(response, skip_checks=True)
+    return factory(deepcopy(response), skip_checks=True)
 
 
 def test_get_id_type(wrangler: SpotifyDataWrangler):

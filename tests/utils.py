@@ -1,13 +1,10 @@
 import datetime
-import re
 import string
 from os.path import join, dirname
 from pathlib import Path
 from random import choice, randrange, sample
 from typing import Any
 from uuid import uuid4
-
-import pytest
 
 from musify.core.enum import MusifyEnum
 
@@ -24,11 +21,6 @@ def idfn(value: Any) -> str | None:
     if isinstance(value, MusifyEnum):
         return value.name
     return value
-
-
-def get_stdout(capfd: pytest.CaptureFixture) -> str:
-    """Utility function which returns stdout from ``capfd`` with ANSI colour codes removed"""
-    return re.sub("\33.*?m", "", capfd.readouterr().out)
 
 
 def random_str(start: int = 30, stop: int = 50) -> str:
