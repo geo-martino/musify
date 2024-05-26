@@ -20,6 +20,7 @@ class BasicCollection[T: MusifyItem](MusifyCollection[T]):
     """
 
     __slots__ = ("_name", "_items")
+    __attributes_ignore__ = ("date_modified",)
 
     @staticmethod
     def _validate_item_type(items: Any | Iterable[Any]) -> bool:

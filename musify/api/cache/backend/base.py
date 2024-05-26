@@ -1,6 +1,6 @@
 import logging
-from abc import ABC, abstractmethod
-from collections.abc import MutableMapping, Callable, Collection, Hashable, AsyncIterable, Mapping, Awaitable
+from abc import ABCMeta, abstractmethod
+from collections.abc import MutableMapping, Callable, Collection, AsyncIterable, Mapping, Awaitable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Self, AsyncContextManager
@@ -21,7 +21,7 @@ DEFAULT_EXPIRE: timedelta = timedelta(weeks=1)
 
 
 @dataclass
-class RequestSettings(ABC):
+class RequestSettings(metaclass=ABCMeta):
     """Settings for a request type for a given endpoint to be used to configure a repository in the cache backend."""
     #: That name of the repository in the backend
     name: str
@@ -47,7 +47,7 @@ class RequestSettings(ABC):
         raise NotImplementedError
 
 
-class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], Awaitable, Hashable, ABC):
+class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], Awaitable, metaclass=ABCMeta):
     """
     Represents a repository in the backend cache, providing a dict-like interface
     for interacting with this repository.

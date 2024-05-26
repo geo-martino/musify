@@ -2,7 +2,7 @@
 Functionality relating to a generic remote library.
 """
 import logging
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, Mapping, Iterable
 from typing import Any, Literal, Self
 
@@ -30,7 +30,7 @@ type RestorePlaylistsType = (
 
 class RemoteLibrary[
     A: RemoteAPI, PL: RemotePlaylist, TR: RemoteTrack, AL: RemoteAlbum, AR: RemoteArtist
-](RemoteCollection[TR], Library[TR], ABC):
+](RemoteCollection[TR], Library[TR], metaclass=ABCMeta):
     """
     Represents a remote library, providing various methods for manipulating
     tracks and playlists across an entire remote library collection.

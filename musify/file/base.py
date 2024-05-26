@@ -1,8 +1,7 @@
 """
 Generic base classes and functions for file operations.
 """
-from abc import ABC, abstractmethod
-from collections.abc import Hashable
+from abc import ABCMeta, abstractmethod
 from datetime import datetime
 from glob import glob
 from os.path import splitext, basename, dirname, getsize, getmtime, getctime, exists, join
@@ -11,7 +10,7 @@ from typing import Any
 from musify.file.exception import InvalidFileType, FileDoesNotExistError
 
 
-class File(Hashable, ABC):
+class File(metaclass=ABCMeta):
     """Generic class for representing a file on a system."""
 
     __slots__ = ()

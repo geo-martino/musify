@@ -120,6 +120,7 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
 
         super().__init__(authoriser=authoriser, wrangler=wrangler, cache=cache)
 
+    # noinspection PyAsyncCall
     async def _setup_cache(self) -> None:
         if not isinstance(self.handler.session, CachedSession):
             return

@@ -2,7 +2,7 @@
 Implements all required non-items and non-playlist endpoints from the Spotify API.
 """
 import logging
-from abc import ABC
+from abc import ABCMeta
 from collections.abc import MutableMapping
 from typing import Any
 
@@ -12,7 +12,7 @@ from musify.types import Number
 from musify.utils import limit_value
 
 
-class SpotifyAPIMisc(SpotifyAPIBase, ABC):
+class SpotifyAPIMisc(SpotifyAPIBase, metaclass=ABCMeta):
 
     __slots__ = ()
 

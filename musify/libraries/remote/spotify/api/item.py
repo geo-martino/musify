@@ -2,7 +2,7 @@
 Implements endpoints for getting items from the Spotify API.
 """
 import re
-from abc import ABC
+from abc import ABCMeta
 from collections.abc import Collection, Mapping, MutableMapping
 from copy import copy
 from itertools import batched
@@ -26,7 +26,7 @@ except ImportError:
 ARTIST_ALBUM_TYPES = {"album", "single", "compilation", "appears_on"}
 
 
-class SpotifyAPIItems(SpotifyAPIBase, ABC):
+class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
 
     __slots__ = ()
 

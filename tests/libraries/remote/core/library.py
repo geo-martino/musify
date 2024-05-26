@@ -1,5 +1,5 @@
 import re
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, Mapping
 from copy import copy, deepcopy
 from random import choice
@@ -17,7 +17,7 @@ from tests.libraries.remote.core.object import RemoteCollectionTester
 from tests.libraries.remote.core.utils import RemoteMock
 
 
-class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, ABC):
+class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMeta):
 
     @abstractmethod
     def collection_merge_items(self, *args, **kwargs) -> list[RemoteTrack]:

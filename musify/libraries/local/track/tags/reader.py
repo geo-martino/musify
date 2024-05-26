@@ -2,7 +2,7 @@
 Implements all functionality pertaining to reading metadata/tags/properties for a :py:class:`LocalTrack`.
 """
 import re
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable
 from typing import Any
 
@@ -20,7 +20,7 @@ except ImportError:
     ImageType = None
 
 
-class TagReader[T: mutagen.FileType](TagProcessor, ABC):
+class TagReader[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
     """Functionality for reading tags/metadata/properties from a mutagen object."""
 
     __slots__ = ()

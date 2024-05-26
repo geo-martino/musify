@@ -1,5 +1,5 @@
 import sqlite3
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 from random import choice, randrange
 from typing import Any
 
@@ -17,7 +17,7 @@ REQUEST_SETTINGS = [
 ]
 
 
-class BaseResponseTester(ABC):
+class BaseResponseTester(metaclass=ABCMeta):
     """Base functionality for all test suites related to `api.cache` package."""
 
     @staticmethod
@@ -63,7 +63,7 @@ class BaseResponseTester(ABC):
         raise NotImplementedError
 
 
-class ResponseRepositoryTester(BaseResponseTester, ABC):
+class ResponseRepositoryTester(BaseResponseTester, metaclass=ABCMeta):
     """Run generic tests for :py:class:`ResponseRepository` implementations."""
 
     # noinspection PyArgumentList
@@ -305,7 +305,7 @@ class ResponseRepositoryTester(BaseResponseTester, ABC):
             assert not await repository.contains(key)
 
 
-class ResponseCacheTester(BaseResponseTester, ABC):
+class ResponseCacheTester(BaseResponseTester, metaclass=ABCMeta):
     """Run generic tests for :py:class:`ResponseCache` implementations."""
 
     # noinspection PyArgumentList
@@ -347,7 +347,8 @@ class ResponseCacheTester(BaseResponseTester, ABC):
         """Returns a repository for the given ``url`` from the given ``cache``."""
         raise NotImplementedError
 
-    async def test_init(self, cache: ResponseCache):
+    @staticmethod
+    async def test_init(cache: ResponseCache):
         assert cache.values()
         for repository in cache.values():
             assert await repository.count()

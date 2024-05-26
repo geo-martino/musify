@@ -1,5 +1,5 @@
 import re
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping
 from typing import Any, ContextManager
 
@@ -14,7 +14,7 @@ ALL_ID_TYPES = RemoteIDType.all()
 ALL_ITEM_TYPES = RemoteObjectType.all()
 
 
-class RemoteMock(aioresponses, ContextManager, ABC):
+class RemoteMock(aioresponses, ContextManager, metaclass=ABCMeta):
     """Generates responses and sets up Remote API requests mock"""
 
     range_start = 25

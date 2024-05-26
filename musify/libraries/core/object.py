@@ -4,7 +4,7 @@ The core abstract implementations of :py:class:`MusifyItem` and :py:class:`Musif
 from __future__ import annotations
 
 import datetime
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, Mapping, Iterable
 from copy import deepcopy
 from typing import Self
@@ -15,7 +15,7 @@ from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.remote.core.enum import RemoteObjectType
 
 
-class Track(MusifyItem, HasLength, ABC):
+class Track(MusifyItem, HasLength, metaclass=ABCMeta):
     """Represents a track including its metadata/tags/properties."""
 
     __slots__ = ()
@@ -167,7 +167,7 @@ class Track(MusifyItem, HasLength, ABC):
         raise NotImplementedError
 
 
-class Playlist[T: Track](MusifyCollection[T], ABC):
+class Playlist[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     """A playlist of items and their derived properties/objects."""
 
     __slots__ = ()
@@ -288,7 +288,7 @@ class Playlist[T: Track](MusifyCollection[T], ABC):
         return self
 
 
-class Library[T: Track](MusifyCollection[T], ABC):
+class Library[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     """A library of items and playlists and other object types."""
 
     __slots__ = ()
@@ -405,7 +405,7 @@ class Library[T: Track](MusifyCollection[T], ABC):
             self.playlists[name].merge(playlist, reference=reference.get(name))
 
 
-class Folder[T: Track](MusifyCollection[T], ABC):
+class Folder[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     """
     A folder of items and their derived properties/objects
     """
@@ -472,7 +472,7 @@ class Folder[T: Track](MusifyCollection[T], ABC):
         return sum(lengths) if lengths else None
 
 
-class Album[T: Track](MusifyCollection[T], ABC):
+class Album[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     """An album of items and their derived properties/objects."""
 
     __slots__ = ()
@@ -596,7 +596,7 @@ class Album[T: Track](MusifyCollection[T], ABC):
         raise NotImplementedError
 
 
-class Artist[T: (Track, Album)](MusifyCollection[T], ABC):
+class Artist[T: (Track, Album)](MusifyCollection[T], metaclass=ABCMeta):
     """An artist of items and their derived properties/objects."""
 
     __slots__ = ()
@@ -668,7 +668,7 @@ class Artist[T: (Track, Album)](MusifyCollection[T], ABC):
         raise NotImplementedError
 
 
-class Genre[T: Track](MusifyCollection[T], ABC):
+class Genre[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     """A genre of items and their derived properties/objects."""
 
     __slots__ = ()
