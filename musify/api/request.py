@@ -145,8 +145,6 @@ class RequestHandler(AsyncContextManager):
         while True:
             async with self._request(method=method, url=url, **kwargs) as response:
                 if response is not None and response.status < 400:
-                    if "error" in (text := await response.text()):  # TODO: why is this allowing errors through?
-                        print(response.status, response, id(response), text, await response.text())
                     data = await self._response_as_json(response)
                     break
 
@@ -155,8 +153,6 @@ class RequestHandler(AsyncContextManager):
                     await self._log_response(response=response, method=method, url=url)
                     await self._handle_unexpected_response(response=response)
                     waited = await self._handle_wait_time(response=response)
-                    if "error" in (text := await response.text()):  # TODO: why is this allowing errors through?
-                        print(response.status, response, id(response), text, await response.text())
 
                 if not waited and backoff < self.backoff_final:  # exponential backoff
                     self.logger.warning(f"Request failed: retrying in {backoff} seconds...")
