@@ -197,7 +197,7 @@ class TestSpotifyAPI(SpotifyAPIFixtures):
         parent_response = response
         assert key in parent_response
 
-        items = sample(api_mock.item_type_map[item_type], k=10)
+        items = deepcopy(sample(api_mock.item_type_map[item_type], k=10))
         for item in items:
             item.pop(parent_key, None)
         test = api_mock.format_items_block(url=parent_response[self.url_key], items=items)
@@ -397,7 +397,6 @@ class TestSpotifyAPI(SpotifyAPIFixtures):
     @pytest.fixture
     def special_repository(self, special_type: str, cache: ResponseCache, api_cache: SpotifyAPI) -> ResponseRepository:
         """The repository in the ``cache`` relating to the special object type under test"""
-        print(cache.keys())
         return cache[special_type]
 
     async def test_cache_responses_on_special_endpoints(

@@ -159,7 +159,6 @@ class SpotifyAPIBase(RemoteAPI, metaclass=ABCMeta):
             )
         results_mapped = {(method.upper(), result[self.id_key]): result for result in responses}
         url = next(iter(possible_urls))
-        print(url)
         repository: ResponseRepository = self.handler.session.cache.get_repository_from_url(url)
         if repository is not None:
             self.handler.log(

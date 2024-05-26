@@ -9,10 +9,11 @@ from musify.core.enum import Fields
 from musify.libraries.collection import BasicCollection
 from musify.libraries.local.track import LocalTrack
 from musify.processors.download import ItemDownloadHelper
+from tests.conftest import LogCapturer
 from tests.core.printer import PrettyPrinterTester
 from tests.libraries.local.track.utils import random_tracks
 from tests.libraries.remote.core.processors.utils import patch_input
-from tests.utils import random_str, get_stdout
+from tests.utils import random_str
 
 
 class TestItemDownloadHelper(PrettyPrinterTester):
@@ -79,7 +80,7 @@ class TestItemDownloadHelper(PrettyPrinterTester):
             download_helper: ItemDownloadHelper,
             collections: list[BasicCollection],
             mocker: MockerFixture,
-            capfd: pytest.CaptureFixture,
+            log_capturer: LogCapturer,
     ):
         def log_urls(url) -> None:
             """Log the opened URLs"""
@@ -93,23 +94,22 @@ class TestItemDownloadHelper(PrettyPrinterTester):
         pages_total = (total // download_helper.interval) + (total % download_helper.interval > 0)
         patch_input(values=["r", "", "title artist", "r", "title bad_tag", ""] + [""] * total, mocker=mocker)
 
-        download_helper.open_sites(collections)
+        with log_capturer(loggers=download_helper.logger):
+            download_helper.open_sites(collections)
         mocker.stopall()
-        capfd.close()
 
         # 3 extra for 2*r input + 1*<Fields> input
         assert len(urls) == (total + 3) * len(download_helper.urls)
 
-        stdout = get_stdout(capfd)  # removes colour codes
-        assert stdout.count("Enter one of the following") == pages_total * 2  # WORKAROUND: log + print issue in tests
-        assert stdout.count("Some fields were not recognised") == 1
+        assert log_capturer.text.count("Enter one of the following") == pages_total
+        assert log_capturer.text.count("Some fields were not recognised") == 1
 
     @staticmethod
     def test_pause_2(
             download_helper: ItemDownloadHelper,
             collections: list[BasicCollection[LocalTrack]],
             mocker: MockerFixture,
-            capfd: pytest.CaptureFixture,
+            log_capturer: LogCapturer,
     ):
         def log_urls(url) -> None:
             """Log the opened URLs"""
@@ -130,13 +130,12 @@ class TestItemDownloadHelper(PrettyPrinterTester):
 
         patch_input(values=["h", "artist", "h", "n title", "h", "", "h", "h"], mocker=mocker)
 
-        download_helper.open_sites(BasicCollection(name="test", items=test_items))
+        with log_capturer(loggers=download_helper.logger):
+            download_helper.open_sites(BasicCollection(name="test", items=test_items))
         mocker.stopall()
-        capfd.close()
 
         # 3 extra for 2*r input + 1*<Fields> input
         assert len(urls) == (2 * len(test_items) - 3) * len(download_helper.urls)
 
-        stdout = get_stdout(capfd)  # removes colour codes
-        assert stdout.count("Enter one of the following") == 4 * 2  # WORKAROUND: *2 log + print issue in tests
-        assert "Some fields were not recognised" not in stdout
+        assert log_capturer.text.count("Enter one of the following") == 4
+        assert "Some fields were not recognised" not in log_capturer.text

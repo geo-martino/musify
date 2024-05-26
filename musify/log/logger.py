@@ -90,7 +90,7 @@ class MusifyLogger(logging.Logger):
         if message:
             self.info(message)
 
-        if not values or not self.stdout_handlers or all(h.level > logging.INFO for h in self.stdout_handlers):
+        if not values or not self.stdout_handlers or all(h.level < logging.INFO for h in self.stdout_handlers):
             print(*values, sep=sep, end=end)
 
     def get_iterator[T: Any](
