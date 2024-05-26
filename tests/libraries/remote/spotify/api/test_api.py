@@ -400,7 +400,6 @@ class TestSpotifyAPI(SpotifyAPIFixtures):
     @pytest.fixture
     def special_repository(self, special_type: str, cache: ResponseCache, api_cache: SpotifyAPI) -> ResponseRepository:
         """The repository in the ``cache`` relating to the special object type under test"""
-        print(cache.keys())
         return cache[special_type]
 
     async def test_cache_responses_on_special_endpoints(

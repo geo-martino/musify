@@ -146,17 +146,35 @@ class RequestHandler(AsyncContextManager):
             async with self._request(method=method, url=url, **kwargs) as response:
                 if response is not None and response.status < 400:
                     if "error" in (text := await response.text()):  # TODO: why is this allowing errors through?
-                        print(response.status, response, id(response), text, await response.text())
+                        print("NEW RESPONSE")
+                        print(response.status, response.ok, id(response), response)
+                        print("<REQUEST INFO>", response.request_info)
+                        print("<REASON>", response.reason)
+                        print("<HISTORY>", response.history)
+                        print("<HEADERS>", response.headers)
+                        print("TEXT <<1>>", text)
+                        print("TEXT <<2>>", await response.text())
+                        print("JSON <<3>>", await response.json())
+                        print("\n\n\n\n")
                     data = await self._response_as_json(response)
                     break
-
+                response: ClientResponse
                 waited = None
                 if response is not None:
                     await self._log_response(response=response, method=method, url=url)
                     await self._handle_unexpected_response(response=response)
                     waited = await self._handle_wait_time(response=response)
                     if "error" in (text := await response.text()):  # TODO: why is this allowing errors through?
-                        print(response.status, response, id(response), text, await response.text())
+                        print("JUST AFTER WAIT")
+                        print(response.status, response.ok, id(response), response)
+                        print("<REQUEST INFO>", response.request_info)
+                        print("<REASON>", response.reason)
+                        print("<HISTORY>", response.history)
+                        print("<HEADERS>", response.headers)
+                        print("TEXT <<1>>", text)
+                        print("TEXT <<2>>", await response.text())
+                        print("JSON <<3>>", self._response_as_json(response))
+                        print("\n\n\n\n")
 
                 if not waited and backoff < self.backoff_final:  # exponential backoff
                     self.logger.warning(f"Request failed: retrying in {backoff} seconds...")
