@@ -49,7 +49,7 @@ def log_paths(tmp_path: Path) -> list[str]:
         path = join(tmp_path, dt_str + ".log")
         paths.append(path)
 
-        with open(path, 'w') as f:
+        with open(path, "w") as f:
             for _ in range(600):
                 f.write(choice(string.ascii_letters))
 
@@ -94,7 +94,7 @@ def test_current_time_file_handler_rotator_folders(tmp_path: Path):
         if i > 10:  # all folders with dt >10hrs will be empty
             continue
 
-        with open(join(path, random_str() + ".txt"), 'w') as f:
+        with open(join(path, random_str() + ".txt"), "w") as f:
             for _ in range(600):
                 f.write(choice(string.ascii_letters))
 

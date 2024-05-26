@@ -8,8 +8,6 @@ from urllib.parse import unquote
 import pytest
 from yarl import URL
 
-from musify.api.cache.backend.sqlite import SQLiteCache
-from musify.api.cache.session import CachedSession
 from musify.api.exception import APIError
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
@@ -18,77 +16,19 @@ from musify.libraries.remote.core.object import RemoteCollection
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.factory import SpotifyObjectFactory
 from musify.libraries.remote.spotify.object import SpotifyPlaylist, SpotifyAlbum, SpotifyTrack
-from tests.libraries.remote.core.api import RemoteAPITester
+from tests.libraries.remote.core.api import RemoteAPIItemTester
 from tests.libraries.remote.core.utils import ALL_ITEM_TYPES
 from tests.libraries.remote.spotify.api.mock import SpotifyMock
+from tests.libraries.remote.spotify.api.testers import SpotifyAPIFixtures
 from tests.libraries.remote.spotify.api.utils import get_limit, assert_calls
 from tests.libraries.remote.spotify.utils import random_ids, random_id, random_id_type, random_id_types
 from tests.utils import idfn, random_str
 
 
-class TestSpotifyAPIItems(RemoteAPITester):
+class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
     """Tester for item-type endpoints of :py:class:`SpotifyAPI`"""
 
-    id_key = SpotifyAPI.id_key
-    url_key = SpotifyAPI.url_key
     items_key = SpotifyAPI.items_key
-
-    @pytest.fixture(scope="class")
-    def object_factory(self) -> SpotifyObjectFactory:
-        """Yield the object factory for Spotify objects as a pytest.fixture."""
-        return SpotifyObjectFactory()
-
-    @pytest.fixture
-    def responses(self, _responses: dict[str, dict[str, Any]], key: str) -> dict[str, dict[str, Any]]:
-        return {id_: response for id_, response in _responses.items() if key is None or response[key]["total"] > 3}
-
-    @pytest.fixture(scope="class")
-    async def api_cache(self, api: SpotifyAPI) -> SpotifyAPI:
-        """Yield an authorised :py:class:`SpotifyAPI` object with a :py:class:`ResponseCache` configured."""
-        async with SpotifyAPI(
-                cache=SQLiteCache.connect_with_in_memory_db(),
-                token=api.handler.authoriser.token,
-                test_args=api.handler.authoriser.test_args,
-                test_expiry=api.handler.authoriser.test_expiry,
-                test_condition=api.handler.authoriser.test_condition,
-        ) as api:
-            yield api
-
-    def reduce_items(
-            self, response: dict[str, Any], key: str, api: SpotifyAPI, api_mock: SpotifyMock, pages: int = 3
-    ) -> int:
-        """
-        Some tests require the existing items in a given ``response``
-        to be less than the total available items for that ``response``.
-        This function reduces the existing items so that the given number of ``pages``
-        will be called when the test runs.
-
-        :return: The number of items expected in each page.
-        """
-        response_items = response[key]
-        limit = get_limit(
-            response_items["total"],
-            max_limit=min(len(response_items[api.items_key]) // 3, api_mock.limit_max),
-            pages=pages
-        )
-        assert len(response_items[api.items_key]) >= limit
-
-        response_reduced = api_mock.format_items_block(
-            url=response_items[self.url_key],
-            items=response_items[api.items_key][:limit],
-            limit=limit,
-            total=response_items["total"]
-        )
-
-        # assert ranges are valid for test to work and test value generated correctly
-        assert 0 < len(response_reduced[api.items_key]) <= limit
-        assert response_reduced["total"] == response_items["total"]
-        assert response_reduced["total"] > response_reduced["limit"]
-        assert response_reduced["total"] > len(response_reduced[api.items_key])
-
-        response[key] = response_reduced
-
-        return limit
 
     ###########################################################################
     ## Assertions
@@ -278,65 +218,8 @@ class TestSpotifyAPIItems(RemoteAPITester):
             await api.get_artist_albums(values=random_id(), types=("unknown", "invalid"))
 
     ###########################################################################
-    ## Cached-, Multi-, Batched-, and Extend tests for each supported item type
+    ## Multi-, Batched-, and Extend tests for each supported item type
     ###########################################################################
-
-    # noinspection PyTestUnpassedFixture
-    @pytest.mark.parametrize("object_type", [
-        RemoteObjectType.PLAYLIST,
-        RemoteObjectType.USER,
-    ], ids=idfn)
-    async def test_get_items_from_cache_skips(
-            self,
-            object_type: RemoteObjectType,
-            responses: dict[str, dict[str, Any]],
-            api: SpotifyAPI,
-            api_cache: SpotifyAPI,
-            api_mock: SpotifyMock
-    ):
-        url = f"{api.url}/{object_type.name.lower()}s"
-        id_list = list(responses.keys())
-
-        # skip when no cache present
-        assert not isinstance(api.handler.session, CachedSession) is None
-        assert await api._get_items_from_cache(method="GET", url=url, id_list=id_list) == ([], [], id_list)
-
-        # skip when no repository found
-        assert await api_cache._get_items_from_cache(method="GET", url=url, id_list=id_list) == ([], [], id_list)
-
-    # noinspection PyTestUnpassedFixture
-    @pytest.mark.parametrize("object_type", [
-        RemoteObjectType.TRACK,
-        RemoteObjectType.ALBUM,
-        RemoteObjectType.ARTIST,
-        RemoteObjectType.SHOW,
-        RemoteObjectType.EPISODE,
-        RemoteObjectType.AUDIOBOOK,
-        RemoteObjectType.CHAPTER,
-    ], ids=idfn)
-    async def test_get_items_from_cache(
-            self,
-            object_type: RemoteObjectType,
-            responses: dict[str, dict[str, Any]],
-            api_cache: SpotifyAPI,
-            api_mock: SpotifyMock
-    ):
-        url = f"{api_cache.url}/{object_type.name.lower()}s"
-        id_list = list(responses)
-        limit = len(responses) - 3
-        method = "GET"
-
-        responses_remapped = {(method, id_): response for id_, response in list(responses.items())[:limit]}
-        repository = api_cache.handler.session.cache.get_repository_from_url(url=url)
-        await repository.save_responses(responses_remapped)
-        assert all([await repository.contains((method, id_)) for id_ in id_list[:limit]])
-
-        results, found, not_found = await api_cache._get_items_from_cache(method=method, url=url, id_list=id_list)
-        assert len(results) == len(found) == limit
-        assert len(not_found) == len(responses) - limit
-        assert results == list(responses.values())[:limit]
-        api_mock.assert_not_called()
-
     async def test_get_items_multi(
             self,
             object_type: RemoteObjectType,
@@ -449,7 +332,7 @@ class TestSpotifyAPIItems(RemoteAPITester):
     @pytest.mark.parametrize("object_type", [
         RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM, RemoteObjectType.SHOW, RemoteObjectType.AUDIOBOOK
     ], ids=idfn)
-    async def test_extend_items_cache(
+    async def test_extend_items_caches(
             self,
             object_type: RemoteObjectType,
             response: dict[str, Any],

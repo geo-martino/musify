@@ -94,17 +94,27 @@ class MusicBee(LocalLibrary, File):
         if not exists(self._library_xml_path):
             raise FileDoesNotExistError(f"Cannot find MusicBee library at given path: {self._library_xml_path}")
 
-        self._library_xml_parser = XMLLibraryParser(self._library_xml_path, path_keys=self.xml_library_path_keys)
-        #: A map representation of the loaded XML library data
-        self.library_xml: dict[str, Any] = self._library_xml_parser.parse()
+        try:
+            self._library_xml_parser = XMLLibraryParser(self._library_xml_path, path_keys=self.xml_library_path_keys)
+            #: A map representation of the loaded XML library data
+            self.library_xml: dict[str, Any] = self._library_xml_parser.parse()
+        except etree.XMLSyntaxError as exc:
+            raise XMLReaderError(
+                f"Could not read from library file at {self._library_xml_path}. {exc}"
+            ) from exc
 
         self._settings_xml_path: str = join(musicbee_folder, self.xml_settings_path)
         if not exists(self._settings_xml_path):
             raise FileDoesNotExistError(f"Cannot find MusicBee settings at given path: {self._settings_xml_path}")
 
-        with open(self._settings_xml_path, "r", encoding="utf-8") as f:
-            #: A map representation of the loaded XML settings data
-            self.settings_xml: dict[str, Any] = xmltodict.parse(f.read())["ApplicationSettings"]
+        try:
+            with open(self._settings_xml_path, "r", encoding="utf-8") as f:
+                #: A map representation of the loaded XML settings data
+                self.settings_xml: dict[str, Any] = xmltodict.parse(f.read())["ApplicationSettings"]
+        except etree.XMLSyntaxError as exc:
+            raise XMLReaderError(
+                f"Could not read from settings file at {self._settings_xml_path}. {exc}"
+            ) from exc
 
         library_folders = []
         for path in to_collection(self.settings_xml.get("OrganisationMonitoredFolders", {}).get("string")):

@@ -7,19 +7,19 @@ from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
 from tests.libraries.remote.spotify.api.mock import SpotifyMock
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="package")
 def wrangler(spotify_wrangler: SpotifyDataWrangler):
     """Yields a :py:class:`SpotifyDataWrangler` for testing Spotify data wrangling"""
     return spotify_wrangler
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="package")
 def api(spotify_api: SpotifyAPI) -> SpotifyAPI:
     """Yield an authorised :py:class:`SpotifyAPI` object"""
     return spotify_api
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="package")
 def _api_mock(spotify_mock: SpotifyMock) -> SpotifyMock:
     """
     Yield an authorised and configured :py:class:`SpotifyMock` object with

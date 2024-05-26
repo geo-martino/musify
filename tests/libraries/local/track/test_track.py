@@ -48,7 +48,7 @@ def test_loaded_attributes_flac(track_flac: FLAC):
     assert track_flac.month == 3
     assert track_flac.day == 25
     assert track_flac.bpm == 120.12
-    assert track_flac.key == 'A'
+    assert track_flac.key == "A"
     assert track_flac.disc_number == 1
     assert track_flac.disc_total == 3
     assert track_flac.compilation
@@ -86,7 +86,7 @@ def test_loaded_attributes_mp3(track_mp3: MP3):
     assert track_mp3.month == 5
     assert track_mp3.day == 1
     assert track_mp3.bpm == 200.56
-    assert track_mp3.key == 'C'
+    assert track_mp3.key == "C"
     assert track_mp3.disc_number == 2
     assert track_mp3.disc_total == 3
     assert not track_mp3.compilation
@@ -124,7 +124,7 @@ def test_loaded_attributes_m4a(track_m4a: M4A):
     assert track_m4a.month == 12
     assert track_m4a.day is None
     assert track_m4a.bpm == 120.0
-    assert track_m4a.key == 'B'
+    assert track_m4a.key == "B"
     assert track_m4a.disc_number == 1
     assert track_m4a.disc_total == 2
     assert track_m4a.compilation
@@ -161,7 +161,7 @@ def test_loaded_attributes_wma(track_wma: WMA):
     assert track_wma.month is None
     assert track_wma.day is None
     assert track_wma.bpm == 200.56
-    assert track_wma.key == 'D'
+    assert track_wma.key == "D"
     assert track_wma.disc_number == 3
     assert track_wma.disc_total == 4
     assert not track_wma.compilation

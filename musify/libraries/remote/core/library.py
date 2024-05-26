@@ -180,7 +180,7 @@ class RemoteLibrary[
 
         self.logger.info(
             f"\33[1;95m  >\33[1;97m Getting {self._get_total_tracks(responses=responses)} "
-            f"{self.api.source} tracks from {len(responses)} playlists \33[0m"
+            f"tracks from {len(responses)} {self.api.source} playlists \33[0m"
         )
         await self.api.get_items(responses, kind=RemoteObjectType.PLAYLIST)
 
@@ -455,7 +455,7 @@ class RemoteLibrary[
             log_kind = f"clearing {log_kind} items from each {self.api.source} playlist first"
         self.logger.info(
             f"\33[1;95m ->\33[1;97m Synchronising {len(playlists)} {self.api.source} playlists: {log_kind}"
-            f"{f' and reloading stored playlists' if reload else ''} \33[0m"
+            f"{f" and reloading stored playlists" if reload else ""} \33[0m"
         )
 
         bar = self.logger.get_iterator(

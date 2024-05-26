@@ -142,7 +142,7 @@ class TestM3U(LocalPlaylistTester):
         assert pl.date_modified is not None
         assert pl.date_created is not None
 
-        with open(path_new, 'r') as f:
+        with open(path_new, "r") as f:
             paths = [line.strip() for line in f]
         assert paths == [track.path for track in pl.tracks]
 
@@ -164,7 +164,7 @@ class TestM3U(LocalPlaylistTester):
             # TODO: these assertions always fail on GitHub actions but not locally, why?
             assert pl.date_modified > original_dt_modified
 
-        with open(path_new, 'r') as f:
+        with open(path_new, "r") as f:
             paths = [line.strip() for line in f]
         assert paths == [track.path for track in pl.tracks]
 
@@ -223,6 +223,6 @@ class TestM3U(LocalPlaylistTester):
             assert pl.date_modified > new_dt_modified
             assert pl.date_created > original_dt_created
 
-        with open(pl.path, 'r') as f:
+        with open(pl.path, "r") as f:
             paths = [line.strip() for line in f]
         assert paths == path_mapper.unmap_many(pl.tracks, check_existence=False)

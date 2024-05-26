@@ -72,7 +72,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, Sp
             album_uris: set[str] = {track.response["album"]["uri"] for track in self.tracks}
             album_responses = await self.api.get_items(album_uris, kind=RemoteObjectType.ALBUM, extend=False)
             for album in album_responses:
-                album.pop("tracks")
+                album.pop("tracks", None)
 
             albums = {response["uri"]: response for response in album_responses}
             for track in self.tracks:

@@ -222,10 +222,9 @@ class SQLiteTable[K: tuple[Any, ...], V: str](ResponseRepository[K, V]):
     def serialize(self, value: Any) -> V | None:
         if isinstance(value, str):
             try:
-                json.loads(value)  # check it is a valid json value
+                value = json.loads(value)
             except json.decoder.JSONDecodeError:
                 return
-            return value
 
         return json.dumps(value, indent=2)
 

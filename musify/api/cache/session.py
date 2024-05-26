@@ -49,8 +49,8 @@ class CachedSession(ClientSession):
         """
         try:
             url = self._build_url(url)
-        except ValueError as e:
-            raise InvalidURL(url) from e
+        except ValueError as exc:
+            raise InvalidURL(url) from exc
 
         kwargs["headers"] = kwargs.get("headers", {}) | dict(self.headers)
         if json is not None:

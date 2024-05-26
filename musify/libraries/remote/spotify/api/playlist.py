@@ -89,7 +89,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, ABC):
         }
         pl_url = (await self.handler.post(url, json=body))[self.url_key]
 
-        self.handler.log("DONE", url, message=f"Created playlist: '{name}' -> {pl_url}")
+        self.handler.log("DONE", url, message=f"Created playlist: {name!r} -> {pl_url}")
         return pl_url
 
     async def add_to_playlist(

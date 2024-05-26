@@ -8,13 +8,13 @@ from tests.libraries.local.utils import path_track_all, path_track_flac, path_tr
 from tests.utils import path_resources
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="package")
 def remote_wrangler(spotify_wrangler: SpotifyDataWrangler) -> RemoteDataWrangler:
     """Yields a :py:class:`SpotifyDataWrangler` to use in tests"""
     yield spotify_wrangler
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="package")
 def path_mapper() -> PathStemMapper:
     """Yields a :py:class:`PathMapper` that can map paths from the test playlist files"""
     yield PathStemMapper(stem_map={"../": path_resources}, available_paths=path_track_all)

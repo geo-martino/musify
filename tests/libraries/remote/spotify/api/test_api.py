@@ -1,24 +1,24 @@
-from random import choice
+from copy import copy, deepcopy
+from random import choice, sample
+from typing import Any
 
 import pytest
+from yarl import URL
 
-from musify.api.cache.backend.base import ResponseCache
-from musify.api.cache.backend.sqlite import SQLiteCache
+from musify.api.cache.backend.base import ResponseCache, ResponseRepository
 from musify.api.cache.session import CachedSession
-from musify.api.exception import APIError
+from musify.api.exception import APIError, CacheError
+from musify.libraries.remote.core.enum import RemoteObjectType
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from tests.libraries.remote.spotify.api.mock import SpotifyMock
+from tests.libraries.remote.spotify.api.testers import SpotifyAPIFixtures
 from tests.libraries.remote.spotify.utils import random_id
-from tests.utils import random_str
+from tests.utils import random_str, idfn
 
 
-class TestSpotifyAPI:
+class TestSpotifyAPI(SpotifyAPIFixtures):
 
-    @pytest.fixture
-    async def cache(self) -> ResponseCache:
-        """Yields a valid :py:class:`ResponseCache` to use throughout tests in this suite as a pytest.fixture."""
-        async with SQLiteCache.connect_with_in_memory_db() as cache:
-            yield cache
+    items_key = SpotifyAPI.items_key
 
     def test_init(self, cache: ResponseCache):
         client_id = "CLIENT_ID"
@@ -90,6 +90,9 @@ class TestSpotifyAPI:
                 "tracks": f"{api.wrangler.url_api}/tracks/{random_id()}",
                 "artists": f"{api.wrangler.url_api}/artists?ids={",".join(random_id() for _ in range(10))}",
                 "albums": f"{api.wrangler.url_api}/albums?ids={",".join(random_id() for _ in range(50))}",
+                "audio_features":
+                    f"{api.wrangler.url_api}/audio-features?ids={",".join(random_id() for _ in range(10))}",
+                "audio_analysis": f"{api.wrangler.url_api}/audio-analysis/{random_id()}",
             }
             names_paginated = ["artist_albums", "album_tracks"]
             for name in names_paginated:
@@ -109,3 +112,308 @@ class TestSpotifyAPI:
             assert cache.get_repository_from_url(f"{api.wrangler.url_api}/search") is None
             assert cache.get_repository_from_url(f"{api.wrangler.url_api}/playlists/{random_id()}/followers") is None
             assert cache.get_repository_from_url(f"{api.wrangler.url_api}/users/{random_str(10, 30)}/playlists") is None
+
+    ###########################################################################
+    ## Utilities: Formatters
+    ###########################################################################
+    def test_format_key(self, api: SpotifyAPI):
+        object_type = RemoteObjectType.PLAYLIST
+        assert api._format_key(object_type) == "playlists"
+        assert api._format_key("playlists") == "playlists"
+        assert api._format_key("audio_feature") == "audio_features"
+        assert api._format_key(None) is None
+
+    def test_format_next_url(self, api: SpotifyAPI):
+        url = f"{api.wrangler.url_api}/tracks"
+        assert api.format_next_url(url, 15, 29) == f"{url}?offset=15&limit=29"
+
+        params = {"key1": "value1", "key2": "value2"}
+        url = str(URL(url).with_query(params))
+        assert api.format_next_url(url, 15, 29) == f"{url}&offset=15&limit=29"
+
+    def test_format_items_block(self, api: SpotifyAPI):
+        total = 100
+        params = {"offset": 22, "limit": 78}
+        url = str(URL(f"{api.wrangler.url_api}/tracks").with_query(params))
+        response = {self.url_key: url, "total": total}
+
+        api._format_items_block(response)
+        assert response["next"] == url
+        assert response["previous"] is None
+        assert "offset" not in response
+        assert response["limit"] == params["limit"]
+        assert response["total"] == total
+
+        response["next"] = "some random url"
+        response["previous"] = "some other random url"
+        response["offset"] = 200
+        response["limit"] = 10
+        response["total"] = 201
+
+        api._format_items_block(response)
+        assert response["next"] == "some random url"
+        assert response["previous"] == "some other random url"
+        assert response["offset"] == 200
+        assert response["limit"] == 10
+        assert response["total"] == 201
+
+    ###########################################################################
+    ## Utilities: Enrich responses
+    ###########################################################################
+    def test_enrich_with_identifiers(self, api: SpotifyAPI):
+        response = {}
+        id_ = random_id()
+        href = str(URL(f"{api.wrangler.url_api}/tracks").with_path(f"tracks/{random_id()}"))
+
+        api._enrich_with_identifiers(response=response, id_=id_, href=href)
+        assert response[self.id_key] == id_
+        assert response[self.url_key] == href
+
+        response[self.id_key] = "some random id"
+        response[self.url_key] = "some random url"
+
+        api._enrich_with_identifiers(response=response, id_=id_, href=href)
+        assert response[self.id_key] != id_
+        assert response[self.url_key] != href
+
+    @staticmethod
+    def assert_items_not_enriched_with_parent_response(items: list[dict[str, Any]], parent_key: str):
+        """Check no enrich happened"""
+        for item in items:
+            assert parent_key not in item
+
+    @pytest.mark.parametrize("object_type", [
+        RemoteObjectType.ALBUM, RemoteObjectType.SHOW, RemoteObjectType.AUDIOBOOK,
+    ], ids=idfn)
+    def test_enrich_with_parent_response(
+            self,
+            object_type: RemoteObjectType,
+            key: str,
+            response: dict[str, Any],
+            api: SpotifyAPI,
+            api_mock: SpotifyMock
+    ):
+        item_type = api.collection_item_map[object_type]
+        parent_key = object_type.name.lower()
+        parent_response = response
+        assert key in parent_response
+
+        items = sample(api_mock.item_type_map[item_type], k=10)
+        for item in items:
+            item.pop(parent_key, None)
+        test = api_mock.format_items_block(url=parent_response[self.url_key], items=items)
+
+        # skips on parent keys which are strings or invalid
+        api._enrich_with_parent_response(
+            response=test, key=key, parent_key=None, parent_response=parent_response
+        )
+        self.assert_items_not_enriched_with_parent_response(items, parent_key)
+        api._enrich_with_parent_response(
+            response=test, key=key, parent_key=parent_key, parent_response=parent_response
+        )
+        self.assert_items_not_enriched_with_parent_response(items, parent_key)
+
+        # skips on playlist responses
+        api._enrich_with_parent_response(
+            response=test, key=key, parent_key=RemoteObjectType.PLAYLIST, parent_response=parent_response
+        )
+        self.assert_items_not_enriched_with_parent_response(items, parent_key)
+
+        # skips because parent response is not correct format, expects it to not be items block
+        api._enrich_with_parent_response(
+            response=items[0],
+            key=key,
+            parent_key=object_type,
+            parent_response=api_mock.format_items_block(url=parent_response[self.url_key], items=[parent_response])
+        )
+        self.assert_items_not_enriched_with_parent_response(items, parent_key)
+
+        # skips because input response is not correct format, expects items block
+        api._enrich_with_parent_response(
+            response=items[0], key=key, parent_key=object_type, parent_response=parent_response
+        )
+        self.assert_items_not_enriched_with_parent_response(items, parent_key)
+
+        # skips on empty parent response after dropping key
+        api._enrich_with_parent_response(
+            response=items[0], key=key, parent_key=object_type, parent_response={key: "some random value"}
+        )
+        self.assert_items_not_enriched_with_parent_response(items, parent_key)
+
+        # with valid values
+        api._enrich_with_parent_response(
+            response=test, key=key, parent_key=object_type, parent_response=parent_response
+        )
+
+        for item in items:
+            assert item[parent_key] == {k: v for k, v in parent_response.items() if k != key}
+
+        # does not enrich when parent key already present
+        parent_response = copy(parent_response)
+        parent_response["new key"] = "new value"
+
+        api._enrich_with_parent_response(
+            response=test, key=key, parent_key=object_type, parent_response=parent_response
+        )
+        for item in items:
+            assert "new key" not in item[parent_key]
+            assert item[parent_key] != {k: v for k, v in parent_response.items() if k != key}
+
+    ###########################################################################
+    ## Utilities: Caching
+    ###########################################################################
+    # noinspection PyTestUnpassedFixture
+    @pytest.mark.parametrize("object_type", [
+        RemoteObjectType.PLAYLIST, RemoteObjectType.USER,
+    ], ids=idfn)
+    async def test_get_responses_from_cache_skips(
+            self,
+            object_type: RemoteObjectType,
+            responses: dict[str, dict[str, Any]],
+            api: SpotifyAPI,
+            api_cache: SpotifyAPI,
+            api_mock: SpotifyMock
+    ):
+        url = f"{api.url}/{object_type.name.lower()}s"
+        id_list = list(responses.keys())
+
+        # skip when no cache present
+        assert not isinstance(api.handler.session, CachedSession) is None
+        assert await api._get_responses_from_cache(method="GET", url=url, id_list=id_list) == ([], [], id_list)
+
+        # skip when no repository found
+        assert await api_cache._get_responses_from_cache(method="GET", url=url, id_list=id_list) == ([], [], id_list)
+
+    # noinspection PyTestUnpassedFixture
+    @pytest.mark.parametrize("object_type", [
+        RemoteObjectType.TRACK,
+        RemoteObjectType.ALBUM,
+        RemoteObjectType.ARTIST,
+        RemoteObjectType.SHOW,
+        RemoteObjectType.EPISODE,
+        RemoteObjectType.AUDIOBOOK,
+        RemoteObjectType.CHAPTER,
+    ], ids=idfn)
+    async def test_get_responses_from_cache(
+            self,
+            object_type: RemoteObjectType,
+            responses: dict[str, dict[str, Any]],
+            repository: ResponseRepository,
+            api_cache: SpotifyAPI,
+            api_mock: SpotifyMock
+    ):
+        url = f"{api_cache.url}/{object_type.name.lower()}s"
+        id_list = list(responses)
+        limit = len(responses) - 3
+        method = "GET"
+
+        responses_remapped = {(method, id_): response for id_, response in list(responses.items())[:limit]}
+        await repository.save_responses(responses_remapped)
+        assert all([await repository.contains((method, id_)) for id_ in id_list[:limit]])
+
+        results, found, not_found = await api_cache._get_responses_from_cache(method=method, url=url, id_list=id_list)
+        assert len(results) == len(found) == limit
+        assert len(not_found) == len(responses) - limit
+        assert results == list(responses.values())[:limit]
+
+        api_mock.assert_not_called()
+
+    @pytest.mark.parametrize("object_type", [
+        RemoteObjectType.TRACK,
+        RemoteObjectType.ALBUM,
+        RemoteObjectType.ARTIST,
+        RemoteObjectType.SHOW,
+        RemoteObjectType.EPISODE,
+        RemoteObjectType.AUDIOBOOK,
+    ], ids=idfn)
+    async def test_cache_responses_skips_and_fails(
+            self,
+            object_type: RemoteObjectType,
+            responses: dict[str, dict[str, Any]],
+            repository: ResponseRepository,
+            api: SpotifyAPI,
+            api_cache: SpotifyAPI,
+            api_mock: SpotifyMock
+    ):
+        # skips when no cache present i.e. handler does not contain a CachedSession
+        responses = list(responses.values())
+        await api._cache_responses(method="GET", responses=responses)
+        assert await repository.count() == 0
+
+        # user items usually don't contain a URL key in their base mapping, should skip
+        user_responses = deepcopy(sample(api_mock.item_type_map_user[object_type], k=10))
+        for response in user_responses:
+            response.pop(self.url_key, None)
+        await api_cache._cache_responses(method="GET", responses=user_responses)
+        assert await repository.count() == 0
+
+        # too many different types of responses given, should raise an error
+        other_object_type = choice([enum for enum in RemoteObjectType.all() if enum != object_type])
+        responses += deepcopy(sample(api_mock.item_type_map[other_object_type], k=10))
+        with pytest.raises(CacheError):
+            await api_cache._cache_responses(method="GET", responses=responses)
+
+    @pytest.mark.parametrize("object_type", [
+        RemoteObjectType.PLAYLIST, RemoteObjectType.USER,
+    ], ids=idfn)
+    async def test_cache_responses_skips_on_no_repository(
+            self,
+            object_type: RemoteObjectType,
+            responses: dict[str, dict[str, Any]],
+            repository: ResponseRepository,
+            api_cache: SpotifyAPI,
+    ):
+        responses = list(responses.values())
+        assert repository is None
+        await api_cache._cache_responses(method="GET", responses=responses)
+
+    @pytest.mark.parametrize("object_type", [
+        RemoteObjectType.TRACK,
+        RemoteObjectType.ALBUM,
+        RemoteObjectType.ARTIST,
+        RemoteObjectType.SHOW,
+        RemoteObjectType.EPISODE,
+        RemoteObjectType.AUDIOBOOK,
+        RemoteObjectType.CHAPTER,
+    ], ids=idfn)
+    async def test_cache_responses(
+            self,
+            object_type: RemoteObjectType,
+            responses: dict[str, dict[str, Any]],
+            repository: ResponseRepository,
+            api_cache: SpotifyAPI,
+    ):
+        responses = list(responses.values())
+        await api_cache._cache_responses(method="GET", responses=responses)
+        assert await repository.count() == len(responses)
+
+    @pytest.fixture(params=["audio_features", "audio_analysis"])
+    def special_type(self, request) -> str:
+        """Special object type keys to test"""
+        return request.param
+
+    @pytest.fixture
+    def special_responses(self, special_type: str, api_mock: SpotifyMock) -> dict[str, dict[str, Any]]:
+        """Responses for the special object type keys to test"""
+        return dict(deepcopy(sample(list(api_mock.audio_features.items()), k=10)))
+
+    @pytest.fixture
+    def special_repository(self, special_type: str, cache: ResponseCache, api_cache: SpotifyAPI) -> ResponseRepository:
+        """The repository in the ``cache`` relating to the special object type under test"""
+        print(cache.keys())
+        return cache[special_type]
+
+    async def test_cache_responses_on_special_endpoints(
+            self,
+            special_type: str,
+            special_responses: dict[str, dict[str, Any]],
+            special_repository: ResponseRepository,
+            api_cache: SpotifyAPI,
+    ):
+        for id_, response in special_responses.items():
+            path = f"{special_type.replace("_", "-")}/{id_}"
+            url = f"{api_cache.wrangler.url_api}/{path}"
+            response[self.url_key] = url
+
+        await api_cache._cache_responses(method="GET", responses=special_responses.values())
+        assert await special_repository.count() == len(special_responses)

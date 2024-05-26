@@ -145,7 +145,7 @@ class DynamicProcessor(Processor, ABC):
 
         name = self._processor_method_fmt(value)
         if name not in self.processor_methods:
-            raise ProcessorLookupError(f"'{value}' condition is not valid")
+            raise ProcessorLookupError(f"{value!r} condition is not valid")
 
         self._processor_name = name
 

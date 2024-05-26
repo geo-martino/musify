@@ -14,14 +14,24 @@ from musify.libraries.remote.core.factory import RemoteObjectFactory
 from tests.libraries.remote.core.utils import RemoteMock
 
 
-class RemoteAPITester(ABC):
-    """Run generic tests for :py:class:`RemoteAPI` implementations."""
+class RemoteAPIFixtures(ABC):
+    """Generic fixtures and properties for tests of :py:class:`RemoteAPI` implementations."""
 
     @property
     @abstractmethod
-    def id_key(self) -> str:
+    def _class(self) -> type[RemoteAPI]:
         """The key to use to get the ID of a response."""
         raise NotImplementedError
+
+    @property
+    def id_key(self) -> str:
+        """The key to use to get the ID of a response."""
+        return self._class.id_key
+
+    @property
+    def url_key(self) -> str:
+        """The key to use to get the URL of a response."""
+        return self._class.url_key
 
     @abstractmethod
     def object_factory(self) -> RemoteObjectFactory:
@@ -61,6 +71,9 @@ class RemoteAPITester(ABC):
         """For a given ``object_type``, determine the key of its sub objects if ``extend`` is True. None otherwise."""
         return api.collection_item_map[object_type].name.lower() + "s" if extend else None
 
+
+class RemoteAPIItemTester(ABC):
+    """Run generic tests for item methods of :py:class:`RemoteAPI` implementations."""
     ###########################################################################
     ## Assertions
     ###########################################################################

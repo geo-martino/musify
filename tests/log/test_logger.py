@@ -36,34 +36,34 @@ def test_print(logger: MusifyLogger, capfd: pytest.CaptureFixture):
     logging.root.addHandler(handler)
 
     logger.print(logging.ERROR)  # ERROR is above handler level
-    assert capfd.readouterr().out == '\n'
+    assert capfd.readouterr().out == "\n"
 
     logger.print(logging.WARNING)  # WARNING is at handler level
-    assert capfd.readouterr().out == '\n'
+    assert capfd.readouterr().out == "\n"
 
     logger.print(logging.INFO)  # INFO is below handler level
-    assert capfd.readouterr().out == ''
+    assert capfd.readouterr().out == ""
 
     # compact is True, never print lines
     logger.compact = True
 
     logger.print(logging.ERROR)
-    assert capfd.readouterr().out == ''
+    assert capfd.readouterr().out == ""
     logger.print(logging.WARNING)
-    assert capfd.readouterr().out == ''
+    assert capfd.readouterr().out == ""
     logger.print(logging.INFO)
-    assert capfd.readouterr().out == ''
+    assert capfd.readouterr().out == ""
 
     # compact False and handler is at DEBUG level, never print lines
     logger.compact = False
     handler.setLevel(logging.DEBUG)
 
     logger.print(logging.INFO)
-    assert capfd.readouterr().out == ''
+    assert capfd.readouterr().out == ""
     logger.print(logging.DEBUG)
-    assert capfd.readouterr().out == ''
+    assert capfd.readouterr().out == ""
     logger.print(0)
-    assert capfd.readouterr().out == ''
+    assert capfd.readouterr().out == ""
 
 
 def test_file_paths(logger: MusifyLogger):

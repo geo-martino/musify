@@ -76,7 +76,7 @@ def pytest_collection_modifyitems(items: list[pytest.Function]):
 # noinspection PyProtectedMember
 @pytest.hookimpl(tryfirst=True)
 def pytest_runtest_setup(item):
-    if hasattr(item, '_request'):
+    if hasattr(item, "_request"):
         item._request._fillfixtures = types.MethodType(
             fillfixtures(item._request._fillfixtures), item._request
         )
@@ -90,7 +90,7 @@ def fillfixtures(_fillfixtures):
         if fixturenames is None:
             fixturenames = request.fixturenames
 
-        if hasattr(item, 'callspec'):
+        if hasattr(item, "callspec"):
             for param, val in sorted_by_dependency(item.callspec.params, fixturenames):
                 if val is not None and is_lazy_fixture(val):
                     item.callspec.params[param] = request.getfixturevalue(val.name)
@@ -104,14 +104,14 @@ def fillfixtures(_fillfixtures):
 # noinspection PyUnusedLocal
 @pytest.hookimpl(tryfirst=True)
 def pytest_fixture_setup(fixturedef, request):
-    val = getattr(request, 'param', None)
+    val = getattr(request, "param", None)
     if is_lazy_fixture(val):
         request.param = request.getfixturevalue(val.name)
 
 
 # noinspection PyProtectedMember
 def pytest_runtest_call(item):
-    if hasattr(item, 'funcargs'):
+    if hasattr(item, "funcargs"):
         for arg, val in item.funcargs.items():
             if is_lazy_fixture(val):
                 item.funcargs[arg] = item._request.getfixturevalue(val.name)
@@ -167,7 +167,7 @@ def copy_metafunc(metafunc):
 
 # noinspection PyProtectedMember
 def normalize_call(callspec, metafunc, used_keys):
-    fm = metafunc.config.pluginmanager.get_plugin('funcmanage')
+    fm = metafunc.config.pluginmanager.get_plugin("funcmanage")
 
     used_keys = used_keys or set()
     keys = set(callspec.params.keys()) - used_keys

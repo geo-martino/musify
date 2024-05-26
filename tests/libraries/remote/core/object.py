@@ -21,7 +21,7 @@ class RemoteCollectionTester(MusifyCollectionTester, ABC):
     def collection_merge_items(self, *args, **kwargs) -> Iterable[RemoteItem]:
         raise NotImplementedError
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(scope="package")
     def collection_merge_invalid(self, *_, **__) -> Iterable[LocalTrack]:
         return random_tracks()
 

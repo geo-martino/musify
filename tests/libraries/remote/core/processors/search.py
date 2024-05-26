@@ -94,8 +94,8 @@ class RemoteItemSearcherTester(PrettyPrinterTester, ABC):
             raise AssertionError("Query string not found")
 
         # make these tags too long to query forcing them to return on results
-        item.artist = 'b' * 200
-        item.album = 'c' * 200
+        item.artist = "b" * 200
+        item.album = "c" * 200
         api_mock.reset()  # reset for new requests checks to work correctly
 
         results = await searcher._get_results(item=item, kind=RemoteObjectType.TRACK, settings=settings)

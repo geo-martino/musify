@@ -19,7 +19,7 @@ class LocalCollectionTester(MusifyCollectionTester, ABC):
     def collection_merge_items(self) -> Iterable[LocalTrack]:
         return random_tracks(randrange(5, 10))
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(scope="package")
     def collection_merge_invalid(self, spotify_mock: SpotifyMock) -> Collection[SpotifyTrack]:
         return tuple(SpotifyTrack(response) for response in sample(spotify_mock.tracks, k=5))
 

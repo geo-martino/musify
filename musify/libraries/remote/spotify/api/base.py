@@ -2,12 +2,17 @@
 Base functionality to be shared by all classes that implement :py:class:`RemoteAPI` functionality for Spotify.
 """
 from abc import ABC
+from collections.abc import Collection, MutableMapping, Iterable
 from typing import Any
 
 from yarl import URL
 
+from musify.api.cache.backend.base import ResponseRepository
+from musify.api.cache.session import CachedSession
+from musify.api.exception import CacheError
 from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.enum import RemoteObjectType
+from musify.utils import to_collection
 
 
 class SpotifyAPIBase(RemoteAPI, ABC):
@@ -18,8 +23,12 @@ class SpotifyAPIBase(RemoteAPI, ABC):
     #: The key to reference when extracting items from a collection
     items_key = "items"
 
+    ###########################################################################
+    ## Format values/responses
+    ###########################################################################
     @staticmethod
-    def _get_key(key: str | RemoteObjectType | None) -> str | None:
+    def _format_key(key: str | RemoteObjectType | None) -> str | None:
+        """Get the expected key in a response from a :py:class:`RemoteObjectType`"""
         if key is None:
             return
         if isinstance(key, RemoteObjectType):
@@ -37,3 +46,125 @@ class SpotifyAPIBase(RemoteAPI, ABC):
 
         url = url.with_query(params)
         return str(url)
+
+    def _format_items_block(self, response: MutableMapping[str, Any]) -> None:
+        """
+        Ensure items block has expected values for paginated extension.
+        This is usually needed on the items block of a current user's playlist.
+        """
+        if "next" not in response:
+            response["next"] = response[self.url_key]
+        if "previous" not in response:
+            response["previous"] = None
+        if "limit" not in response:
+            response["limit"] = int(URL(response["next"]).query.get("limit", 50))
+
+    ###########################################################################
+    ## Enrich/manipulate responses
+    ###########################################################################
+    def _enrich_with_identifiers(self, response: dict[str, Any], id_: str, href: str) -> None:
+        """Ensure key identifiers are present in the response."""
+        if self.id_key not in response:
+            response[self.id_key] = id_
+        if self.url_key not in response:
+            response[self.url_key] = href
+
+    def _enrich_with_parent_response(
+            self,
+            response: MutableMapping[str, Any],
+            key: str,
+            parent_key: str | RemoteObjectType | None,
+            parent_response: MutableMapping[str, Any]
+    ) -> None:
+        """
+        Some endpoints don't include parent response on child items.
+        This method adds the given ``parent_response`` back to the child ``response`` on the given ``key``.
+        """
+        if (
+                not parent_key
+                or isinstance(parent_key, str)
+                or parent_key == RemoteObjectType.PLAYLIST
+                or self.items_key not in response
+                or self.items_key in parent_response
+        ):
+            return
+
+        parent_key_name = self._format_key(parent_key).rstrip("s")
+        parent_response = {k: v for k, v in parent_response.items() if k != key}
+
+        if not parent_response:
+            return
+
+        for item in response[self.items_key]:
+            if parent_key_name not in item:
+                item[parent_key_name] = parent_response
+
+    def _sort_results(
+            self, results: list[dict[str, Any]], extension: list[dict[str, Any]], id_list: Collection[str]
+    ) -> None:
+        """Extend ``results`` with ``extension`` and sort by order of ``id_list``."""
+        if not extension:  # cache was not used
+            return
+
+        results += extension
+        id_list = to_collection(id_list)
+        results.sort(key=lambda result: id_list.index(result[self.id_key]))
+
+    ###########################################################################
+    ## Cache utilities
+    ###########################################################################
+    async def _get_responses_from_cache(
+            self, method: str, url: str | URL, id_list: Collection[str]
+    ) -> tuple[list[dict[str, Any]], Collection[str], Collection[str]]:
+        """
+        Attempt to find the given ``id_list`` in the cache of the request handler and return results.
+
+        :param url: The base API URL endpoint for the required requests.
+        :param id_list: List of IDs to append to the given URL.
+        :return: (Results from the cache, IDs found in the cache, IDs not found in the cache)
+        """
+        if not isinstance(self.handler.session, CachedSession):
+            self.handler.log("CACHE", url, message="Cache not configured, skipping...")
+            return [], [], id_list
+
+        repository = self.handler.session.cache.get_repository_from_url(url=url)
+        if repository is None:
+            self.handler.log("CACHE", url, message="No repository for this endpoint, skipping...")
+            return [], [], id_list
+
+        results = await repository.get_responses([(method.upper(), id_,) for id_ in id_list])
+        ids_found = {result[self.id_key] for result in results}
+        ids_not_found = {id_ for id_ in id_list if id_ not in ids_found}
+
+        self.handler.log(
+            method="CACHE",
+            url=url,
+            message=[f"Retrieved {len(results):>6} cached responses", f"{len(ids_not_found):>6} not found in cache"]
+        )
+        return results, ids_found, ids_not_found
+
+    async def _cache_responses(self, method: str, responses: Iterable[dict[str, Any]]) -> None:
+        """Persist ``results`` of a given ``method`` to the cache."""
+        if not isinstance(self.handler.session, CachedSession) or not responses:
+            return
+
+        # take all parts of href path, excluding ID
+        possible_urls = {"/".join(result.get(self.url_key, "").split("/")[:-1]) for result in responses}
+        possible_urls = {url for url in possible_urls if url}
+        if not possible_urls:
+            return
+        if len(possible_urls) > 1:
+            raise CacheError(
+                "Too many different types of results given. Given results must relate to the same repository type."
+            )
+        results_mapped = {(method.upper(), result[self.id_key]): result for result in responses}
+        url = next(iter(possible_urls))
+        print(url)
+        repository: ResponseRepository = self.handler.session.cache.get_repository_from_url(url)
+        if repository is not None:
+            self.handler.log(
+                method="CACHE",
+                url=url,
+                message=f"Caching {len(results_mapped)} to {repository.settings.name!r} repository",
+            )
+            await repository.save_responses({k: repository.serialize(v) for k, v in results_mapped.items()})

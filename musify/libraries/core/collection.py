@@ -40,7 +40,7 @@ class ItemGetterStrategy(ABC):
         try:
             return next(item for item in collection.items if str(self.get_value_from_item(item)) == self.key)
         except AttributeError:
-            raise MusifyAttributeError(f"Items in collection do not have the attribute '{self.name}'")
+            raise MusifyAttributeError(f"Items in collection do not have the attribute {self.name!r}")
         except StopIteration:
             raise MusifyKeyError(f"No matching item found for {self.name}: {self.key}")
 

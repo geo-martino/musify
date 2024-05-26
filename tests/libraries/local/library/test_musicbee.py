@@ -108,12 +108,12 @@ class TestMusicBee(LocalLibraryTester):
         # should load files in certain order, remove each file in reverse load order and test related exception
         settings_path_error = join(musicbee_folder, MusicBee.xml_settings_path)
         os.remove(settings_path_error)
-        with pytest.raises(FileDoesNotExistError, match=f".*{settings_path_error.replace('\\', '\\\\')}"):
+        with pytest.raises(FileDoesNotExistError, match=f".*{settings_path_error.replace("\\", "\\\\")}"):
             MusicBee(musicbee_folder=musicbee_folder)
 
         library_path_error = join(musicbee_folder, MusicBee.xml_library_path)
         os.remove(library_path_error)
-        with pytest.raises(FileDoesNotExistError, match=f".*{library_path_error.replace('\\', '\\\\')}"):
+        with pytest.raises(FileDoesNotExistError, match=f".*{library_path_error.replace("\\", "\\\\")}"):
             MusicBee(musicbee_folder=musicbee_folder)
 
     def test_init_no_playlists(self, musicbee_folder: str):
