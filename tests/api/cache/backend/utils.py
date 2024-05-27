@@ -33,10 +33,12 @@ class MockPaginatedRequestSettings(MockRequestSettings):
 
     @staticmethod
     def get_offset(url: str | URL) -> int:
+        """Extracts the offset for a paginated request from the given ``url``."""
         params = URL(url).query
         return int(params.get("offset", 0))
 
     @staticmethod
     def get_limit(url: str | URL) -> int:
+        """Extracts the limit for a paginated request from the given ``url``."""
         params = URL(url).query
         return int(params.get("limit", 0))

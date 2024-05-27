@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable
 from typing import Any
 from urllib.parse import unquote
@@ -13,7 +13,7 @@ from tests.libraries.remote.core.object import RemoteCollectionTester
 from tests.libraries.remote.spotify.api.mock import SpotifyMock
 
 
-class SpotifyCollectionLoaderTester(RemoteCollectionTester, ABC):
+class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
 
     @abstractmethod
     def collection_merge_items(self, *args, **kwargs) -> Iterable[SpotifyItem]:

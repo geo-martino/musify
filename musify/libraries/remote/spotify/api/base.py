@@ -1,7 +1,7 @@
 """
 Base functionality to be shared by all classes that implement :py:class:`RemoteAPI` functionality for Spotify.
 """
-from abc import ABC
+from abc import ABCMeta
 from collections.abc import Collection, MutableMapping, Iterable
 from typing import Any
 
@@ -15,7 +15,7 @@ from musify.libraries.remote.core.enum import RemoteObjectType
 from musify.utils import to_collection
 
 
-class SpotifyAPIBase(RemoteAPI, ABC):
+class SpotifyAPIBase(RemoteAPI, metaclass=ABCMeta):
     """Base functionality required for all endpoint functions for the Spotify API"""
 
     __slots__ = ()

@@ -3,7 +3,7 @@ The fundamental core collection classes for the entire package.
 """
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 from collections.abc import MutableSequence, Iterable, Mapping, Collection
 from dataclasses import dataclass
 from typing import Any, SupportsIndex, Self
@@ -19,7 +19,7 @@ from musify.types import UnitSequence
 
 
 @dataclass
-class ItemGetterStrategy(ABC):
+class ItemGetterStrategy(metaclass=ABCMeta):
     """Abstract base class for strategies relating to __getitem__ operations on a :py:class:`MusifyCollection`"""
 
     key: str
@@ -105,7 +105,7 @@ class RemoteURLEXTGetter(ItemGetterStrategy):
         return item.url_ext
 
 
-class MusifyCollection[T: MusifyItem](MusifyObject, HasLength, MutableSequence[T], ABC):
+class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], HasLength):
     """Generic class for storing a collection of musify items."""
 
     __slots__ = ()

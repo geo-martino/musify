@@ -2,14 +2,14 @@
 Just the core abstract class for the :py:mod:`Remote` module.
 Placed here separately to avoid circular import logic issues.
 """
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 from typing import Any
 
 from musify.core.base import MusifyObject
 from musify.libraries.remote.core.enum import RemoteObjectType
 
 
-class RemoteResponse(MusifyObject, ABC):
+class RemoteResponse(MusifyObject, metaclass=ABCMeta):
 
     __slots__ = ()
 

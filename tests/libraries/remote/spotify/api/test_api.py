@@ -77,7 +77,6 @@ class TestSpotifyAPI(SpotifyAPIFixtures):
             repository = choice(list(a.handler.session.cache.values()))
             await repository.count()  # just check this doesn't fail
 
-    # noinspection PyTestUnpassedFixture
     async def test_cache_repository_getter(self, cache: ResponseCache, api_mock: SpotifyMock):
         async with SpotifyAPI(
                 cache=cache,
@@ -262,7 +261,6 @@ class TestSpotifyAPI(SpotifyAPIFixtures):
     ###########################################################################
     ## Utilities: Caching
     ###########################################################################
-    # noinspection PyTestUnpassedFixture
     @pytest.mark.parametrize("object_type", [
         RemoteObjectType.PLAYLIST, RemoteObjectType.USER,
     ], ids=idfn)
@@ -284,7 +282,6 @@ class TestSpotifyAPI(SpotifyAPIFixtures):
         # skip when no repository found
         assert await api_cache._get_responses_from_cache(method="GET", url=url, id_list=id_list) == ([], [], id_list)
 
-    # noinspection PyTestUnpassedFixture
     @pytest.mark.parametrize("object_type", [
         RemoteObjectType.TRACK,
         RemoteObjectType.ALBUM,

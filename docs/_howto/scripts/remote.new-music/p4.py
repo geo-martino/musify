@@ -1,10 +1,10 @@
 from p3 import *
 
 from musify.libraries.remote.core.enum import RemoteObjectType
-from musify.libraries.remote.spotify.object import SpotifyAlbum
+from musify.libraries.remote.core.object import RemoteAlbum
 
 
-async def get_albums(library: RemoteLibrary, start: date, end: date) -> list[SpotifyAlbum]:
+async def get_albums(library: RemoteLibrary, start: date, end: date) -> list[RemoteAlbum]:
     """
     Get the albums that match the ``start`` and ``end`` date range from a given ``library``
     and get the tracks on those albums if needed.

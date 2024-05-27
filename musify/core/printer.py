@@ -2,7 +2,7 @@
 The fundamental core printer classes for the entire package.
 """
 import re
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, date
@@ -12,7 +12,7 @@ from musify.types import UnitIterable, JSON, DictJSON, JSON_VALUE
 from musify.utils import to_collection
 
 
-class PrettyPrinter(ABC):
+class PrettyPrinter(metaclass=ABCMeta):
     """Generic base class for pretty printing. Classes can inherit this class to gain pretty print functionality."""
 
     __slots__ = ()

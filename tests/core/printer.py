@@ -1,11 +1,11 @@
 import json
 import re
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 
 from musify.core.printer import PrettyPrinter
 
 
-class PrettyPrinterTester(ABC):
+class PrettyPrinterTester(metaclass=ABCMeta):
     """Run generic tests for :py:class:`PrettyPrinter` implementations"""
     dict_json_equal: bool = True
 

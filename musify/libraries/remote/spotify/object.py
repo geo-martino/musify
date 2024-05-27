@@ -3,7 +3,7 @@ Implements all :py:mod:`Remote` object types for Spotify.
 """
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable, MutableMapping, Mapping, Collection
 from copy import copy, deepcopy
 from datetime import datetime
@@ -251,7 +251,7 @@ class SpotifyTrack(SpotifyItem, RemoteTrack):
         self.__init__(response=response, api=self.api)
 
 
-class SpotifyCollectionLoader[T: SpotifyObject](RemoteCollectionLoader[T], SpotifyObject, ABC):
+class SpotifyCollectionLoader[T: SpotifyObject](RemoteCollectionLoader[T], SpotifyObject, metaclass=ABCMeta):
     """Generic class for storing a collection of Spotify objects that can be loaded from an API response."""
 
     __slots__ = ()
@@ -391,7 +391,7 @@ class SpotifyPlaylist(SpotifyCollectionLoader[SpotifyTrack], RemotePlaylist[Spot
     """
 
     __slots__ = ("_tracks",)
-    __attributes_ignore__ = "date_added"
+    __attributes_ignore__ = ("date_added",)
 
     @staticmethod
     def _validate_item_type(items: Any | Iterable[Any]) -> bool:

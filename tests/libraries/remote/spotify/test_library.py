@@ -84,7 +84,7 @@ class TestSpotifyLibrary(RemoteLibraryTester):
     ###########################################################################
     ## Enrich tests
     ###########################################################################
-    # noinspection PyMethodOverriding,PyTestUnpassedFixture
+    # noinspection PyTestUnpassedFixture
     @pytest.mark.slow
     async def test_enrich_tracks(self, library: SpotifyLibrary, api_mock: SpotifyMock, **kwargs):
         def validate_track_extras_not_enriched(t: SpotifyTrack) -> None:
@@ -179,7 +179,6 @@ class TestSpotifyLibrary(RemoteLibraryTester):
             assert len(album.response["tracks"]["items"]) == album.track_total
             assert len(album.tracks) == album.track_total
 
-    # noinspection PyMethodOverriding
     @pytest.mark.slow
     async def test_enrich_saved_artists(self, library: SpotifyLibrary, api_mock: SpotifyMock, **kwargs):
         # ensure artists are not enriched already

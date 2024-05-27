@@ -72,6 +72,7 @@ def test_file_paths(logger: MusifyLogger):
     assert [basename(path) for path in logger.file_paths] == ["test1.log", "test2.log"]
 
 
+# noinspection PyTypeChecker
 @pytest.mark.skipif(tqdm is None, reason="required modules not installed")
 def test_getting_iterator_as_progress_bar(logger: MusifyLogger):
     handler = logging.StreamHandler(sys.stdout)
@@ -79,7 +80,7 @@ def test_getting_iterator_as_progress_bar(logger: MusifyLogger):
     logging.root.addHandler(handler)
     logger._bars.clear()
 
-    bar = logger.get_iterator(iterable=range(0, 50), initial=10, disable=True, file=sys.stderr)
+    bar: tqdm = logger.get_iterator(iterable=range(0, 50), initial=10, disable=True, file=sys.stderr)
 
     assert bar.iterable == range(0, 50)
     assert bar.n == 10

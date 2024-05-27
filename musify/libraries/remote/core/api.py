@@ -4,7 +4,7 @@ The framework for interacting with a remote API.
 All methods that interact with the API should return raw, unprocessed responses.
 """
 import logging
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, MutableMapping, Mapping, Sequence
 from typing import Any, Self, AsyncContextManager
 
@@ -22,7 +22,7 @@ from musify.types import UnitSequence, JSON, UnitList
 from musify.utils import align_string, to_collection
 
 
-class RemoteAPI(AsyncContextManager, ABC):
+class RemoteAPI(AsyncContextManager, metaclass=ABCMeta):
     """
     Collection of endpoints for a remote API.
     See :py:class:`RequestHandler` and :py:class:`APIAuthoriser`

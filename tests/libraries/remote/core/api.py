@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable
 from copy import deepcopy
 from random import sample, choice
@@ -14,7 +14,7 @@ from musify.libraries.remote.core.factory import RemoteObjectFactory
 from tests.libraries.remote.core.utils import RemoteMock
 
 
-class RemoteAPIFixtures(ABC):
+class RemoteAPIFixtures(metaclass=ABCMeta):
     """Generic fixtures and properties for tests of :py:class:`RemoteAPI` implementations."""
 
     @property
@@ -72,7 +72,7 @@ class RemoteAPIFixtures(ABC):
         return api.collection_item_map[object_type].name.lower() + "s" if extend else None
 
 
-class RemoteAPIItemTester(ABC):
+class RemoteAPIItemTester(metaclass=ABCMeta):
     """Run generic tests for item methods of :py:class:`RemoteAPI` implementations."""
     ###########################################################################
     ## Assertions
