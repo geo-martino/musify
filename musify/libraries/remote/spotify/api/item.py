@@ -36,7 +36,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         """Determine the unit type to use in the progress bar"""
         if kind is None:
             kind = re.sub(r"[-_]+", " ", key) if key is not None else self.items_key
-        return kind.casefold().rstrip("s") + "s"
+        return kind.lower().rstrip("s") + "s"
 
     ###########################################################################
     ## GET helpers: Generic methods for getting items
@@ -612,7 +612,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         self._merge_results_to_input(original=values, responses=results_remapped, ordered=False, clear=False)
         self._refresh_responses(responses=values, skip_checks=True)
 
-        item_count = sum(len(result) for result in results.values())
+        item_count = sum(map(len, results.values()))
         self.handler.log(
             method="DONE",
             url=url.format(id="..."),

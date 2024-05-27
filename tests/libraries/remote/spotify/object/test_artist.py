@@ -92,7 +92,7 @@ class TestSpotifyArtist(SpotifyCollectionLoaderTester):
         assert_id_attributes(item=artist, response=original_response)
         assert len(artist.albums) == len(original_response["albums"]["items"])
         assert len(artist.artists) == len({art.name for album in artist.albums for art in album.artists})
-        assert len(artist.tracks) == artist.track_total == sum(len(album) for album in artist.albums)
+        assert len(artist.tracks) == artist.track_total == sum(map(len, artist.albums))
 
         assert artist.name == artist.artist
         assert artist.artist == original_response["name"]

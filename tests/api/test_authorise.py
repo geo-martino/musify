@@ -1,9 +1,7 @@
 import json
-import os
 import re
 import socket
 from datetime import datetime, timedelta
-from os.path import join
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote
@@ -84,9 +82,9 @@ class TestAPIAuthoriser:
         authoriser.token_file_path = None
         authoriser.save_token()
 
-        authoriser.token_file_path = join(tmp_path, "token.json")
+        authoriser.token_file_path = tmp_path.joinpath("token").with_suffix(".json")
         authoriser.save_token()
-        assert not os.path.exists(authoriser.token_file_path)
+        assert not authoriser.token_file_path.exists()
 
         authoriser.token = token
         authoriser.save_token()

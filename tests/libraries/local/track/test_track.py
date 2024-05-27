@@ -1,6 +1,5 @@
 from copy import copy, deepcopy
 from datetime import datetime, date
-from os.path import basename, dirname, splitext, getmtime
 from pathlib import Path
 
 import pytest
@@ -186,10 +185,10 @@ def test_loaded_attributes_common(track: LocalTrack):
     assert track.has_image
 
     # file properties
-    assert track.folder == basename(dirname(track.path))
-    assert track.filename == splitext(basename(track.path))[0]
+    assert track.folder == track.path.parent.stem
+    assert track.filename == track.path.stem
     assert track.type == track.__class__.__name__
-    assert track.date_modified == datetime.fromtimestamp(getmtime(track.path))
+    assert track.date_modified == datetime.fromtimestamp(track.path.stat().st_mtime)
 
     # library properties
     assert track.rating is None
@@ -218,10 +217,7 @@ class TestLocalTrack(MusifyItemTester):
         return track
 
     def test_does_not_load_other_supported_track_types(self, track: LocalTrack):
-        paths = [
-            path for path in path_track_all
-            if not all(path.casefold().endswith(ext) for ext in track.valid_extensions)
-        ]
+        paths = [path for path in path_track_all if not all(path == ext for ext in track.valid_extensions)]
         with pytest.raises(InvalidFileType):
             for path in paths:
                 track.__class__(path)
@@ -313,6 +309,8 @@ class TestLocalTrack(MusifyItemTester):
         assert track.uri == item_modified.uri
         assert track.album == item_modified.album
         assert track.rating == item_modified.rating
+
+    # TODO: add test for extracting an image from a LocalTrack
 
 
 class TestLocalTrackWriter:

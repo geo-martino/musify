@@ -1,6 +1,5 @@
 import datetime
 import string
-from os.path import join, dirname
 from pathlib import Path
 from random import choice, randrange, sample
 from typing import Any
@@ -8,11 +7,11 @@ from uuid import uuid4
 
 from musify.core.enum import MusifyEnum
 
-path_root = dirname(dirname(__file__))
-path_tests = dirname(__file__)
-path_resources = join(dirname(__file__), "__resources")
+path_tests = Path(__file__).parent
+path_root = path_tests.parent
+path_resources = path_tests.joinpath("__resources")
 
-path_txt = join(path_resources, "test.txt")
+path_txt = path_resources.joinpath("test").with_suffix(".txt")
 
 
 # noinspection SpellCheckingInspection
@@ -29,9 +28,9 @@ def random_str(start: int = 30, stop: int = 50) -> str:
     return "".join(choice(string.ascii_letters) for _ in range(range_))
 
 
-def random_file(tmp_path: Path, size: int | None = None) -> str:
+def random_file(tmp_path: Path, size: int | None = None) -> Path:
     """Generates a random file of a given ``size`` in bytes in the test cache folder and returns its path."""
-    path = join(tmp_path, str(uuid4()) + ".txt")
+    path = tmp_path.joinpath(str(uuid4())).with_suffix(".txt")
     with open(path, "w") as f:
         for _ in range(0, size or randrange(int(6*10e3), int(10e6))):
             f.write(choice(string.ascii_letters))

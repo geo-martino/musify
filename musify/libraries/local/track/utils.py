@@ -4,7 +4,7 @@ Utilities for operations on :py:class:`LocalTrack` types.
 Generally, this will contain global variables representing all supported audio file types
 and a utility function for loading the appropriate :py:class:`LocalTrack` type for a path based on its extension.
 """
-from os.path import splitext
+from pathlib import Path
 
 from musify.file.exception import InvalidFileType
 from musify.libraries.local.track import LocalTrack
@@ -18,7 +18,7 @@ TRACK_CLASSES = frozenset({FLAC, MP3, M4A, WMA})
 TRACK_FILETYPES = frozenset(filetype for c in TRACK_CLASSES for filetype in c.valid_extensions)
 
 
-def load_track(path: str, remote_wrangler: RemoteDataWrangler = None) -> LocalTrack:
+def load_track(path: str | Path, remote_wrangler: RemoteDataWrangler = None) -> LocalTrack:
     """
     Attempt to load a file from a given path, returning the appropriate :py:class:`LocalTrack` object
 
@@ -30,7 +30,7 @@ def load_track(path: str, remote_wrangler: RemoteDataWrangler = None) -> LocalTr
     :return: Loaded :py:class:`LocalTrack` object
     :raise InvalidFileType: If the file type is not supported.
     """
-    ext = splitext(path)[1].casefold()
+    ext = Path(path).suffix
     if ext not in TRACK_FILETYPES:
         raise InvalidFileType(ext, f"Not an accepted extension. Use only: {', '.join(TRACK_FILETYPES)}")
 

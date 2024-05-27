@@ -17,7 +17,7 @@ class TestPathMapper(PrettyPrinterTester):
 
     def test_map(self, obj: PathMapper):
         tracks = random_tracks(30) + [f"D:\\{random_str(5, 30)}\\{random_str(30, 50)}.MP3" for _ in range(20)]
-        expected = [track.path if isinstance(track, File) else track for track in tracks]
+        expected = [str(track.path) if isinstance(track, File) else track for track in tracks]
 
         # all mapping functions produce same results
         assert [obj.map(track, check_existence=False) for track in tracks] == expected
@@ -33,7 +33,8 @@ class TestPathMapper(PrettyPrinterTester):
         assert not obj.map_many(tracks, check_existence=True)
         assert not obj.unmap_many(tracks, check_existence=True)
 
-        assert set(obj.map_many(path_track_all | set(tracks), check_existence=True)) == path_track_all
+        result = set(obj.map_many(path_track_all | set(tracks), check_existence=True))
+        assert result == set(map(str, path_track_all))
 
 
 class TestPathStemMapper(PrettyPrinterTester):
@@ -52,7 +53,8 @@ class TestPathStemMapper(PrettyPrinterTester):
         assert not obj.map_many(available_paths, check_existence=True)
         assert not obj.unmap_many(available_paths, check_existence=True)
 
-        assert set(obj.map_many(path_track_all | set(available_paths), check_existence=True)) == path_track_all
+        result = set(obj.map_many(path_track_all | set(available_paths), check_existence=True))
+        assert result == set(map(str, path_track_all))
 
     def test_fixes_cases(self, obj: PathStemMapper):
         obj.stem_map.clear()

@@ -4,6 +4,7 @@ Processors that filter down objects and data types based on some given configura
 from __future__ import annotations
 
 from collections.abc import Collection, Sequence, Mapping
+from pathlib import Path
 from typing import Any, Self
 
 from musify.core.base import MusifyObject
@@ -12,7 +13,7 @@ from musify.processors.compare import Comparer
 from musify.types import UnitCollection
 
 
-class FilterDefinedList[T: str | MusifyObject](Filter[T], Collection[T]):
+class FilterDefinedList[T: str | Path | MusifyObject](Filter[T], Collection[T]):
 
     __slots__ = ("values",)
 

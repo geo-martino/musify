@@ -3,8 +3,7 @@ Generic base classes and functions for file operations.
 """
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
-from glob import glob
-from os.path import splitext, basename, dirname, getsize, getmtime, getctime, exists, join
+from pathlib import Path
 from typing import Any
 
 from musify.file.exception import InvalidFileType, FileDoesNotExistError
@@ -20,75 +19,76 @@ class File(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def path(self) -> str:
+    def path(self) -> Path:
         """The path to the file."""
         raise NotImplementedError
 
     @property
     def folder(self) -> str:
         """The parent folder of the file."""
-        return basename(dirname(self.path))
+        return self.path.parent.stem
 
     @property
     def filename(self) -> str:
         """The filename without extension."""
-        return splitext(basename(self.path))[0]
+        return self.path.stem
 
     @property
     def ext(self) -> str:
         """The file extension in lowercase."""
-        return splitext(self.path)[1].lower()
+        return self.path.suffix
 
     @property
     def size(self) -> int | None:
         """The size of the file in bytes"""
-        return getsize(self.path) if exists(self.path) else None
+        return self.path.stat().st_size if self.path.is_file() else None
 
     @property
     def date_created(self) -> datetime | None:
         """:py:class:`datetime` object representing when the file was created"""
-        return datetime.fromtimestamp(getctime(self.path)) if exists(self.path) else None
+        return datetime.fromtimestamp(self.path.stat().st_ctime) if self.path.is_file() else None
 
     @property
     def date_modified(self) -> datetime | None:
         """:py:class:`datetime` object representing when the file was last modified"""
-        return datetime.fromtimestamp(getmtime(self.path)) if exists(self.path) else None
+        return datetime.fromtimestamp(self.path.stat().st_mtime) if self.path.is_file() else None
 
     @classmethod
-    def _validate_type(cls, path: str) -> None:
+    def _validate_type(cls, path: Path) -> None:
         """Raises an exception if the ``path`` extension is not accepted"""
-        ext = splitext(path)[1].casefold()
-        if ext not in cls.valid_extensions:
+        if path.suffix not in cls.valid_extensions:
             raise InvalidFileType(
-                ext,
+                path.suffix,
                 f"Not an accepted {cls.__name__} file extension. "
                 f"Use only: {', '.join(cls.valid_extensions)}"
             )
 
     @staticmethod
-    def _validate_existence(path: str):
+    def _validate_existence(path: Path):
         """Raises an exception if there is no file at the given ``path``"""
-        if not path or not exists(path):
-            raise FileDoesNotExistError(f"File not found | {path}")
+        if not path.is_file():
+            raise FileDoesNotExistError(path)
 
     @classmethod
-    def get_filepaths(cls, folder: str) -> set[str]:
+    def get_filepaths(cls, folder: str | Path) -> set[Path]:
         """Get all files in a given folder that match this File object's valid filetypes recursively."""
-        paths: set[str] = set()
+        paths: set[Path] = set()
+        folder = Path(folder)
 
         for ext in cls.valid_extensions:
-            paths |= set(glob(join(folder, "**", f"*{ext}"), recursive=True, include_hidden=True))
+            paths |= set(folder.rglob(str(Path("**", f"*{ext}"))))
+            # paths |= set(folder.rglob(str(Path("**", f".*{ext}"))))
 
         # do not return paths in the recycle bin in Windows-based folders
-        return {path for path in paths if "$RECYCLE.BIN" not in path}
+        return {path for path in paths if "$RECYCLE.BIN" not in path.parts}
 
     @abstractmethod
-    def load(self, *args, **kwargs) -> Any:
+    async def load(self, *args, **kwargs) -> Any:
         """Load the file to this object"""
         raise NotImplementedError
 
     @abstractmethod
-    def save(self, dry_run: bool = True, *args, **kwargs) -> Any:
+    async def save(self, dry_run: bool = True, *args, **kwargs) -> Any:
         """
         Save this object to file.
 

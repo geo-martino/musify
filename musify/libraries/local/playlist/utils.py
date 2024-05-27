@@ -5,7 +5,7 @@ Generally, this will contain global variables representing all supported playlis
 and a utility function for loading the appropriate :py:class:`LocalPlaylist` type for a path based on its extension.
 """
 from collections.abc import Collection
-from os.path import splitext
+from pathlib import Path
 
 from musify.file.exception import InvalidFileType
 from musify.file.path_mapper import PathMapper
@@ -25,7 +25,7 @@ PLAYLIST_FILETYPES = frozenset(filetype for c in PLAYLIST_CLASSES for filetype i
 
 
 def load_playlist(
-        path: str,
+        path: str | Path,
         tracks: Collection[LocalTrack] = (),
         path_mapper: PathMapper = PathMapper(),
         remote_wrangler: RemoteDataWrangler = None,
@@ -48,7 +48,7 @@ def load_playlist(
     :return: Loaded :py:class:`LocalPlaylist` object
     :raise InvalidFileType: If the file type is not supported.
     """
-    ext = splitext(path)[1].casefold()
+    ext = Path(path).suffix
     if ext not in PLAYLIST_FILETYPES:
         raise InvalidFileType(ext, f"Not an accepted extension. Use only: {', '.join(PLAYLIST_FILETYPES)}")
 

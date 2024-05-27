@@ -7,6 +7,7 @@ import logging.handlers
 import os
 import sys
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Any, TypeVar
 
 from musify.log import INFO_EXTRA, REPORT, STAT
@@ -33,13 +34,13 @@ class MusifyLogger(logging.Logger):
     _bars: list[tqdm] = []
 
     @property
-    def file_paths(self) -> list[str]:
+    def file_paths(self) -> list[Path]:
         """Get a list of the paths of all file handlers for this logger"""
         def extract_paths(lggr: logging.Logger) -> None:
             """Extract file path from the handlers of the given ``lggr``"""
             for handler in lggr.handlers:
                 if isinstance(handler, logging.FileHandler) and handler.baseFilename not in paths:
-                    paths.append(handler.baseFilename)
+                    paths.append(Path(handler.baseFilename))
 
         paths = []
         logger = self

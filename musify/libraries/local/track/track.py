@@ -5,7 +5,7 @@ import datetime
 import os
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
-from os.path import join, exists, dirname
+from pathlib import Path
 from typing import Any, Self
 
 import mutagen
@@ -14,7 +14,7 @@ from musify.core.base import MusifyItem
 from musify.core.enum import TagMap
 from musify.exception import MusifyKeyError, MusifyAttributeError, MusifyTypeError, MusifyValueError
 from musify.field import TrackField
-from musify.file.exception import FileDoesNotExistError
+from musify.file.exception import FileDoesNotExistError, UnexpectedPathError
 from musify.libraries.core.object import Track
 from musify.libraries.local.base import LocalItem
 from musify.libraries.local.track.field import LocalTrackField as Tags
@@ -37,6 +37,8 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
     """
 
     __slots__ = (
+        # "_path",
+        # "_remote_wrangler",
         "_reader",
         "_writer",
         "_loaded",
@@ -67,8 +69,6 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
     )
     __attributes_classes__ = (Track, LocalItem)
     __attributes_ignore__ = ("tag_map",)
-
-    _load_on_init = True
 
     @property
     def name(self):
@@ -286,7 +286,7 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
 
     @property
     def path(self):
-        return self._reader.file.filename
+        return Path(self._reader.file.filename)
 
     @property
     def type(self):
@@ -355,8 +355,20 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         """Return a :py:class:`TagWriter` object for this track type"""
         raise NotImplementedError
 
-    def __init__(self, file: str | T, remote_wrangler: RemoteDataWrangler = None):
+    _load_on_init = True
+
+    def __init__(self, file: str | Path | T, remote_wrangler: RemoteDataWrangler = None):
         super().__init__()
+
+        # # TODO: move me back up
+        # self._path: Path = Path(file if isinstance(file, str | Path) else file.filename)
+        # self._validate_type(self._path)
+        #
+        # self._remote_wrangler = remote_wrangler
+
+        # self._loaded = False
+        # self._reader: TagReader | None = None
+        # self._writer: TagWriter | None = None
 
         self._title = None
         self._artist = None
@@ -387,28 +399,28 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
 
         self._loaded = False
 
-        file: T = self.load(file) if isinstance(file, str) else file
+        file: T = self.load(file) if isinstance(file, str | Path) else file
         self._reader = self._create_reader(file=file, tag_map=self.tag_map, remote_wrangler=remote_wrangler)
         self._writer = self._create_writer(file=file, tag_map=self.tag_map, remote_wrangler=remote_wrangler)
 
         if self._load_on_init:
             self.refresh()
 
-    def load(self, path: str | None = None) -> T:
+    def load(self, path: str | Path | None = None) -> T:
         """
         Load local file using mutagen from the given path or the path stored in the object's ``file``.
         Re-formats to case-sensitive system path if applicable.
 
-        :param path: The path to the file. If not given, use the stored ``file`` path.
+        :param path: The path to the file. If not given, use the stored file path.
         :return: Mutagen file object or None if load error.
         :raise FileDoesNotExistError: If the file cannot be found.
         :raise InvalidFileType: If the file type is not supported.
         """
-        path = path or self.path
+        path = Path(path) if path else self.path
         self._validate_type(path)
 
-        if not path or not exists(path):
-            raise FileDoesNotExistError(f"File not found | {path}")
+        if not path.is_file():
+            raise FileDoesNotExistError(path)
 
         return mutagen.File(path)
 
@@ -472,17 +484,22 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
             if hasattr(track, tag):
                 setattr(self, tag, deepcopy(track[tag]))
 
-    def extract_images_to_file(self, output_folder: str) -> int:
+    def extract_images_to_file(self, output_folder: str | Path) -> int:
         """Extract and save all embedded images from file. Returns the number of images extracted."""
         images = self._reader.read_images()
         if images is None:
             return False
+
+        output_folder = Path(output_folder)
+        if not output_folder.is_dir():
+            raise UnexpectedPathError(output_folder, "Given path must be a directory")
+
         count = 0
-
         for i, image in enumerate(images):
-            output_path = join(output_folder, self.filename + f"_{str(i).zfill(2)}" + image.format.lower())
-            os.makedirs(dirname(output_path), exist_ok=True)
+            output_path = output_folder.joinpath(self.filename + f"_{str(i).zfill(2)}")
+            output_path = output_path.with_suffix("." + image.format.lower().lstrip("."))
 
+            os.makedirs(output_path.parent, exist_ok=True)
             image.save(output_path)
             count += 1
 

@@ -104,7 +104,7 @@ class TestSpotifyTrack(MusifyItemTester):
         track.response["album"]["genres"] = new_genres_album
         assert track.genres == [g.title() for g in new_genres_album]
 
-        date_split = [int(v) for v in original_response["album"]["release_date"].split("-")]
+        date_split = list(map(int, original_response["album"]["release_date"].split("-")))
         assert track.year == date_split[0]
         if original_response["album"]["release_date_precision"] in {"month", "day"}:
             assert track.month == date_split[1]

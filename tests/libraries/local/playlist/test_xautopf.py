@@ -2,8 +2,6 @@ import os
 from collections.abc import Mapping
 from copy import deepcopy
 from datetime import datetime
-from glob import glob
-from os.path import join, splitext, basename, exists
 from pathlib import Path
 from random import randrange
 
@@ -50,10 +48,10 @@ class TestXAutoPF(LocalPlaylistTester):
     def test_load_playlist_bp_settings(self, tracks: list[LocalTrack], path_mapper: PathMapper):
         pl = XAutoPF(path=path_playlist_xautopf_bp, path_mapper=path_mapper)
 
-        assert pl.name == splitext(basename(path_playlist_xautopf_bp))[0]
+        assert pl.name == path_playlist_xautopf_bp.stem
         assert pl.description == "I am a description"
         assert pl.path == path_playlist_xautopf_bp
-        assert pl.ext == splitext(basename(path_playlist_xautopf_bp))[1]
+        assert pl.ext == path_playlist_xautopf_bp.suffix
         assert not pl.tracks
 
         # fine-grained processor settings are tested in class-specific tests
@@ -64,7 +62,7 @@ class TestXAutoPF(LocalPlaylistTester):
         assert pl.sorter
 
         pl.load(tracks)
-        assert [basename(track.path) for track in pl.tracks] == [basename(path_track_flac), basename(path_track_wma)]
+        assert [track.path.name for track in pl.tracks] == [path_track_flac.name, path_track_wma.name]
 
     def test_load_playlist_bp_tracks(self, tracks: list[LocalTrack], path_mapper: PathMapper):
         # prepare tracks to search through
@@ -91,10 +89,10 @@ class TestXAutoPF(LocalPlaylistTester):
     def test_load_playlist_ra_settings(self, path_mapper: PathMapper):
         pl = XAutoPF(path=path_playlist_xautopf_ra, tracks=random_tracks(20), path_mapper=path_mapper)
 
-        assert pl.name == splitext(basename(path_playlist_xautopf_ra))[0]
+        assert pl.name == path_playlist_xautopf_ra.stem
         assert pl.description is None
         assert pl.path == path_playlist_xautopf_ra
-        assert pl.ext == splitext(basename(path_playlist_xautopf_ra))[1]
+        assert pl.ext == path_playlist_xautopf_ra.suffix
 
         # fine-grained processor settings are tested in class-specific tests
         assert not pl.matcher.ready
@@ -130,9 +128,9 @@ class TestXAutoPF(LocalPlaylistTester):
         assert pl.tracks == tracks_expected
 
     def test_save_new_file(self, tmp_path: Path):
-        path = join(tmp_path, random_str() + ".xautopf")
+        path = tmp_path.joinpath(random_str()).with_suffix(".xautopf")
         pl = XAutoPF(path=path)
-        assert not exists(path)
+        assert not path.exists()
 
         # default values were assigned according to class attribute defaults
         for key, default in pl.default_xml["SmartPlaylist"].items():
@@ -151,9 +149,9 @@ class TestXAutoPF(LocalPlaylistTester):
         assert not pl.tracks  # no tracks given so no tracks loaded
 
         pl.save(dry_run=True)
-        assert not exists(path)
+        assert not path.exists()
         pl.save(dry_run=False)
-        assert exists(path)
+        assert path.is_file()
 
     @pytest.mark.parametrize("path", [path_playlist_xautopf_bp], indirect=["path"])
     def test_save_existing_file(self, tracks: list[LocalTrack], path: str, path_mapper: PathMapper, tmp_path: Path):
@@ -297,8 +295,8 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         assert comparer.condition == "contains"
         assert comparer._processor_method == comparer._contains
 
-    @pytest.mark.parametrize("path", [path for path in sorted(path_playlist_all) if path.endswith(".xautopf")])
-    def test_parse_comparer(self, path: str):
+    @pytest.mark.parametrize("path", [path for path in sorted(path_playlist_all) if path.suffix == ".xautopf"])
+    def test_parse_comparer(self, path: Path):
         parser = XMLPlaylistParser(path=path)
         parser.load()
         comparers = self.parse_comparers(parser)
@@ -326,13 +324,11 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         parser.load()
         matcher = parser.get_matcher()
 
-        assert set(matcher.include) == {
-            path_track_wma.casefold(), path_track_mp3.casefold(), path_track_flac.casefold()
-        }
+        assert set(matcher.include) == {path_track_wma, path_track_mp3, path_track_flac}
         assert set(matcher.exclude) == {
-            join(path_playlist_resources,  "exclude_me_2.mp3").casefold(),
-            path_track_mp3.casefold(),
-            join(path_playlist_resources, "exclude_me.flac").casefold(),
+            path_playlist_resources.joinpath("exclude_me_2.mp3"),
+            path_track_mp3,
+            path_playlist_resources.joinpath("exclude_me.flac"),
         }
 
         assert isinstance(matcher.comparers.comparers, dict)
@@ -598,7 +594,7 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
 def library() -> LocalLibrary:
     """Yields a loaded :py:class:`LocalLibrary` to supply tracks for manual checking of custom playlist files"""
     mapper = PathStemMapper({"../..": os.getenv("TEST_PL_LIBRARY", "")})
-    library = MusicBee(musicbee_folder=join(os.getenv("TEST_PL_LIBRARY"), "MusicBee"), path_mapper=mapper)
+    library = MusicBee(musicbee_folder=Path(os.getenv("TEST_PL_LIBRARY")).joinpath("MusicBee"), path_mapper=mapper)
     library.load_tracks()
     return library
 
@@ -610,12 +606,12 @@ def library() -> LocalLibrary:
     reason="Only runs when the test or marker is specified explicitly by the user",
 )
 @pytest.mark.parametrize("source,expected", [
-    (path, join(os.getenv("TEST_PL_COMPARISON", ""), f"{splitext(basename(path))[0]}.m3u"))
-    for path in glob(join(os.getenv("TEST_PL_SOURCE", ""), "**", "*.xautopf"), recursive=True)
+    (path, Path(os.getenv("TEST_PL_COMPARISON", "")).joinpath(path.stem).with_suffix(".m3u"))
+    for path in Path(os.getenv("TEST_PL_SOURCE", "")).rglob(str(Path("**", "*.xautopf")))
 ])
-def test_playlist_paths_manual(library: LocalLibrary, source: str, expected: str):
-    assert exists(source)
-    assert exists(expected)
+def test_playlist_paths_manual(library: LocalLibrary, source: Path, expected: Path):
+    assert source.is_file()
+    assert expected.is_file()
 
     pl = library.load_playlist(source)
 

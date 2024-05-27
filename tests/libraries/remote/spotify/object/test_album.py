@@ -112,7 +112,7 @@ class TestSpotifyAlbum(SpotifyCollectionLoaderTester):
         album.response["genres"] = new_genres
         assert album.genres == [g.title() for g in new_genres]
 
-        date_split = [int(v) for v in original_response["release_date"].split("-")]
+        date_split = list(map(int, original_response["release_date"].split("-")))
         assert album.year == date_split[0]
         if original_response["release_date_precision"] in {"month", "day"}:
             assert album.month == date_split[1]

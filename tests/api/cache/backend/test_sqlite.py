@@ -2,7 +2,6 @@ import contextlib
 import json
 import sqlite3
 from datetime import datetime, timedelta
-from os.path import join
 from pathlib import Path
 from random import randrange
 from tempfile import gettempdir
@@ -228,11 +227,11 @@ class TestSQLiteCache(SQLiteTester, ResponseCacheTester):
 
     async def test_connect_with_path(self, tmp_path: Path):
         fake_name = "not my real name"
-        path = join(tmp_path, "test")
+        path = tmp_path.joinpath("test")
         expire = timedelta(weeks=42)
 
         async with SQLiteCache.connect_with_path(path, cache_name=fake_name, expire=expire) as cache:
-            assert await self.get_db_path(cache) == path + ".sqlite"
+            assert await self.get_db_path(cache) == str(path.with_suffix(".sqlite"))
             assert cache.cache_name != fake_name
             assert cache.expire == expire
 
@@ -247,10 +246,10 @@ class TestSQLiteCache(SQLiteTester, ResponseCacheTester):
 
     async def test_connect_with_temp_db(self):
         name = "this is my real name"
-        path = join(gettempdir(), name)
+        path = Path(gettempdir(), name)
         expire = timedelta(weeks=42)
 
         async with SQLiteCache.connect_with_temp_db(name, expire=expire) as cache:
-            assert (await self.get_db_path(cache)).endswith(path + ".sqlite")
+            assert (await self.get_db_path(cache)).endswith(str(path.with_suffix(".sqlite")))
             assert cache.cache_name == name
             assert cache.expire == expire

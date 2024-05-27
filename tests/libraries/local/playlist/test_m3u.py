@@ -1,5 +1,4 @@
 import os
-from os.path import join, splitext, basename, exists
 from pathlib import Path
 from random import randrange
 
@@ -22,14 +21,14 @@ class TestM3U(LocalPlaylistTester):
         # needed to ensure __setitem__ check passes
         tracks = random_tracks(randrange(5, 20))
         tracks.append(random_track(cls=tracks[0].__class__))
-        playlist = M3U(path=join(tmp_path, "does_not_exist.m3u"), tracks=tracks)
+        playlist = M3U(path=tmp_path.joinpath("does_not_exist").with_suffix(".m3u"), tracks=tracks)
         return playlist
 
     @pytest.fixture(scope="class")
     def tracks_actual(self, tracks: list[LocalTrack]) -> list[LocalTrack]:
         """Yield list of all real LocalTracks present in the test playlist"""
         with open(path_playlist_m3u, "r") as f:
-            ext = [splitext(line.strip())[1] for line in f]
+            ext = [Path(line.strip()).suffix for line in f]
         return sorted([track for track in tracks if track.ext in ext], key=lambda x: ext.index(x.ext))
 
     @pytest.fixture(scope="class")
@@ -42,19 +41,19 @@ class TestM3U(LocalPlaylistTester):
             M3U(path=path_txt)
 
     def test_load_fake_file_with_no_tracks(self, tracks: list[LocalTrack], tmp_path: Path):
-        path_fake = join(tmp_path, "does_not_exist.m3u")
+        path_fake = tmp_path.joinpath("does_not_exist").with_suffix(".m3u")
 
         pl = M3U(path=path_fake)
         assert pl.path == path_fake
-        assert pl.name == splitext(basename(path_fake))[0]
-        assert pl.ext == splitext(basename(path_fake))[1]
+        assert pl.name == path_fake.stem
+        assert pl.ext == path_fake.suffix
         assert len(pl.tracks) == 0
 
         pl.load(tracks)
         assert pl.tracks == tracks
 
     def test_load_fake_file_with_fake_tracks(self, tracks: list[LocalTrack], tmp_path: Path):
-        path_fake = join(tmp_path, "does_not_exist.m3u")
+        path_fake = tmp_path.joinpath("does_not_exist").with_suffix(".m3u")
         tracks_random = random_tracks(30)
 
         pl = M3U(path=path_fake, tracks=tracks_random)
@@ -62,7 +61,7 @@ class TestM3U(LocalPlaylistTester):
         assert pl.tracks == tracks_random
 
         pl.load(tracks + tracks_random[:4])
-        assert pl.tracks == tracks_random[:4]
+        assert pl.tracks == tracks + tracks_random[:4]
 
     # noinspection PyTestUnpassedFixture
     def test_load_file_with_no_tracks(self, tracks_actual: list[LocalTrack], tracks_limited: list[LocalTrack]):
@@ -98,7 +97,7 @@ class TestM3U(LocalPlaylistTester):
         assert pl.tracks == tracks_actual
 
     def test_save_file_dry_run(self, tmp_path: Path):
-        path_new = join(tmp_path, "new_playlist.m3u")
+        path_new = tmp_path.joinpath("new_playlist").with_suffix(".m3u")
 
         # creates a new M3U file
         pl = M3U(path=path_new)
@@ -120,12 +119,12 @@ class TestM3U(LocalPlaylistTester):
         assert result.difference == len(tracks_random)
         assert result.final == len(tracks_random)
 
-        assert not exists(path_new)
+        assert not path_new.exists()
         assert pl.date_modified is None
         assert pl.date_created is None
 
     def test_save_new_file(self, tmp_path: Path):
-        path_new = join(tmp_path, "new_playlist.m3u")
+        path_new = tmp_path.joinpath("new_playlist").with_suffix(".m3u")
         tracks_random = random_tracks(30)
 
         pl = M3U(path=path_new, tracks=tracks_random)
@@ -138,13 +137,13 @@ class TestM3U(LocalPlaylistTester):
         assert result.difference == len(tracks_random)
         assert result.final == len(tracks_random)
 
-        assert exists(path_new)
+        assert path_new.exists()
         assert pl.date_modified is not None
         assert pl.date_created is not None
 
         with open(path_new, "r") as f:
             paths = [line.strip() for line in f]
-        assert paths == [track.path for track in pl.tracks]
+        assert paths == [str(track.path) for track in pl.tracks]
 
         original_dt_modified = pl.date_modified
 
@@ -166,7 +165,7 @@ class TestM3U(LocalPlaylistTester):
 
         with open(path_new, "r") as f:
             paths = [line.strip() for line in f]
-        assert paths == [track.path for track in pl.tracks]
+        assert paths == [str(track.path) for track in pl.tracks]
 
     @pytest.mark.parametrize("path", [path_playlist_m3u], indirect=["path"])
     def test_save_existing_file(
@@ -181,7 +180,7 @@ class TestM3U(LocalPlaylistTester):
 
         # ensure all loaded track path have absolute paths and will therefore undergo path mapping
         for track in tracks_actual:
-            assert not track.path.startswith(path_prefix)
+            assert not str(track.path).startswith(path_prefix)
 
         pl = M3U(path=path, path_mapper=path_mapper)
 
@@ -215,7 +214,7 @@ class TestM3U(LocalPlaylistTester):
 
         # change the name and save to new file
         pl.name = "New Playlist"
-        assert pl.path == join(tmp_path, "New Playlist" + pl.ext)
+        assert pl.path == tmp_path.joinpath("New Playlist").with_suffix(pl.ext)
         pl.save(dry_run=False)
 
         if not os.getenv("GITHUB_ACTIONS"):
@@ -225,4 +224,4 @@ class TestM3U(LocalPlaylistTester):
 
         with open(pl.path, "r") as f:
             paths = [line.strip() for line in f]
-        assert paths == path_mapper.unmap_many(pl.tracks, check_existence=False)
+        assert paths == list(map(str, path_mapper.unmap_many(pl.tracks, check_existence=False)))

@@ -4,7 +4,7 @@ The M3U implementation of a :py:class:`LocalPlaylist`.
 import os
 from collections.abc import Collection
 from dataclasses import dataclass
-from os.path import exists, dirname
+from pathlib import Path
 
 from musify.core.result import Result
 from musify.file.base import File
@@ -32,7 +32,7 @@ class SyncResultM3U(Result):
     final: int
 
 
-class M3U(LocalPlaylist[FilterDefinedList[str | File]]):
+class M3U(LocalPlaylist[FilterDefinedList[str | Path | File]]):
     """
     For reading and writing data from M3U playlist format.
     You must provide either a valid playlist path of a file that exists,
@@ -53,7 +53,7 @@ class M3U(LocalPlaylist[FilterDefinedList[str | File]]):
         For more info on this, see :py:class:`LocalTrack`.
     """
 
-    __slots__ = ("_original_paths", "_description")
+    __slots__ = ("_description",)
 
     valid_extensions = frozenset({".m3u"})
 
@@ -71,43 +71,44 @@ class M3U(LocalPlaylist[FilterDefinedList[str | File]]):
 
     def __init__(
             self,
-            path: str,
+            path: str | Path,
             tracks: Collection[LocalTrack] = (),
             path_mapper: PathMapper = PathMapper(),
             remote_wrangler: RemoteDataWrangler = None,
     ):
+        path = Path(path)
         self._validate_type(path)
 
-        if exists(path):  # load from file
+        path_list: list[Path] = []
+        if path.is_file():  # load from file
             with open(path, "r", encoding="utf-8") as file:
-                self._original_paths = path_mapper.map_many([line.strip() for line in file], check_existence=True)
-        else:  # generating a new M3U
-            self._original_paths = [track.path for track in tracks]
+                path_list = list(map(Path, path_mapper.map_many([line.strip() for line in file], check_existence=True)))
 
         self._description = None
         super().__init__(
             path=path,
-            matcher=FilterDefinedList(values=[path.casefold() for path in self._original_paths]),
+            matcher=FilterDefinedList(values=path_list),
             path_mapper=path_mapper,
             remote_wrangler=remote_wrangler
         )
-        self.matcher.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
+        self.matcher.transform = lambda x: Path(path_mapper.map(x, check_existence=False))
 
         self.load(tracks=tracks)
 
-    def _load_track(self, path: str) -> LocalTrack:
-        return load_track(path=self.path_mapper.map(path, check_existence=True), remote_wrangler=self.remote_wrangler)
+    def _load_track(self, path: str | Path) -> LocalTrack:
+        path = self.path_mapper.map(path, check_existence=True)
+        return load_track(path=path, remote_wrangler=self.remote_wrangler)
 
     def load(self, tracks: Collection[LocalTrack] = ()) -> list[LocalTrack]:
         if tracks:  # match paths from given tracks using the matcher
             self._match(tracks)
         else:  # use the paths in the matcher to load tracks from scratch
-            self.tracks = [self._load_track(path) for path in self._original_paths if path is not None]
+            self.tracks = [self._load_track(path) for path in self.matcher.values if path is not None]
 
         self._limit(ignore=self.matcher.values)
         self._sort()
 
-        self._original = self.tracks.copy() if exists(self._path) else []
+        self._original = self.tracks.copy() if self._path.is_file() else []
         return self.tracks
 
     def save(self, dry_run: bool = True, *_, **__) -> SyncResultM3U:
@@ -117,9 +118,8 @@ class M3U(LocalPlaylist[FilterDefinedList[str | File]]):
         :param dry_run: Run function, but do not modify the file on the disk.
         :return: The results of the sync as a :py:class:`SyncResultM3U` object.
         """
-        start_paths = {path.casefold() for path in self.path_mapper.unmap_many(self._original, check_existence=False)}
-        if dirname(self.path):
-            os.makedirs(dirname(self.path), exist_ok=True)
+        start_paths = set(map(Path, self.path_mapper.unmap_many(self._original, check_existence=False)))
+        os.makedirs(self.path.parent, exist_ok=True)
 
         if not dry_run:
             with open(self.path, "w", encoding="utf-8") as file:
@@ -130,9 +130,9 @@ class M3U(LocalPlaylist[FilterDefinedList[str | File]]):
             self._original = self.tracks.copy()  # update original tracks to newly saved tracks
 
             with open(self.path, "r", encoding="utf-8") as file:  # get list of paths that were saved for results
-                final_paths = {line.rstrip().casefold() for line in file if line.rstrip()}
+                final_paths = {Path(line.rstrip()) for line in file if line.rstrip()}
         else:  # use current list of tracks as a proxy of paths that were saved for results
-            final_paths = {track.path.casefold() for track in self._tracks}
+            final_paths = {track.path for track in self._tracks}
 
         return SyncResultM3U(
             start=len(start_paths),

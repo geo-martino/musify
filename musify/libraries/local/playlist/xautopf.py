@@ -4,7 +4,7 @@ The XAutoPF implementation of a :py:class:`LocalPlaylist`.
 from collections.abc import Collection, Mapping, Sequence
 from copy import deepcopy
 from dataclasses import dataclass
-from os.path import exists
+from pathlib import Path
 from typing import Any
 
 from musify.core.base import MusifyItem
@@ -123,7 +123,7 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
 
     def __init__(
             self,
-            path: str,
+            path: str | Path,
             tracks: Collection[LocalTrack] = (),
             path_mapper: PathMapper = PathMapper(),
             *_,
@@ -132,10 +132,11 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
         if xmltodict is None:
             raise MusifyImportError(f"Cannot create {self.__class__.__name__} object. Required modules: xmltodict")
 
-        self._validate_type(path)
+        path = Path(path)
+        self._validate_type(Path(path))
 
         self._parser = XMLPlaylistParser(path=path, path_mapper=path_mapper)
-        if exists(path):
+        if path.is_file():
             self._parser.load()
         else:  # this is a new playlist, assign default values to parser
             self._parser.xml = deepcopy(self.default_xml)
@@ -279,7 +280,7 @@ class XMLPlaylistParser(File, PrettyPrinter):
     default_group_by = "track"
 
     @property
-    def path(self) -> str:
+    def path(self) -> Path:
         return self._path
 
     @property
@@ -305,11 +306,11 @@ class XMLPlaylistParser(File, PrettyPrinter):
         else:
             self.xml_source.pop("Description", None)
 
-    def __init__(self, path: str, path_mapper: PathMapper = PathMapper()):
+    def __init__(self, path: str | Path, path_mapper: PathMapper = PathMapper()):
         if xmltodict is None:
             raise MusifyImportError(f"Cannot create {self.__class__.__name__} object. Required modules: xmltodict")
 
-        self._path = path
+        self._path = Path(path)
         #: Maps paths stored in the playlist file.
         self.path_mapper = path_mapper
         #: A map representation of the loaded XML playlist data
@@ -380,9 +381,9 @@ class XMLPlaylistParser(File, PrettyPrinter):
         """Initialise and return a :py:class:`FilterMatcher` object from loaded XML playlist data."""
         # tracks to include/exclude even if they meet/don't meet match compare conditions
         include_str: str = self.xml_source.get("ExceptionsInclude") or ""
-        include = self.path_mapper.map_many(set(include_str.split("|")), check_existence=True)
+        include = set(map(Path, self.path_mapper.map_many(set(include_str.split("|")), check_existence=True)))
         exclude_str: str = self.xml_source.get("Exceptions") or ""
-        exclude = self.path_mapper.map_many(set(exclude_str.split("|")), check_existence=True)
+        exclude = set(map(Path, self.path_mapper.map_many(set(exclude_str.split("|")), check_existence=True)))
 
         comparers: dict[Comparer, tuple[bool, FilterComparers]] = {}
         for condition in to_collection(self.xml_source["Conditions"]["Condition"]):
@@ -408,14 +409,14 @@ class XMLPlaylistParser(File, PrettyPrinter):
             if is_dummy_condition and len(c.expected) == 1 and not c.expected[0]:
                 comparers = {}
 
-        filter_include = FilterDefinedList[LocalTrack](values=[path.casefold() for path in include])
-        filter_exclude = FilterDefinedList[LocalTrack](values=[path.casefold() for path in exclude])
+        filter_include = FilterDefinedList[LocalTrack](values=include)
+        filter_exclude = FilterDefinedList[LocalTrack](values=exclude)
         filter_compare = FilterComparers[LocalTrack](
             comparers, match_all=self.xml_source["Conditions"]["@CombineMethod"] == "All"
         )
 
-        filter_include.transform = lambda x: self.path_mapper.map(x, check_existence=False).casefold()
-        filter_exclude.transform = lambda x: self.path_mapper.map(x, check_existence=False).casefold()
+        filter_include.transform = lambda x: Path(self.path_mapper.map(x, check_existence=False))
+        filter_exclude.transform = lambda x: Path(self.path_mapper.map(x, check_existence=False))
 
         group_by_value = self._pascal_to_snake(self.xml_smart_playlist["@GroupBy"])
         group_by = None if group_by_value == self.default_group_by else TagFields.from_name(group_by_value)[0]
@@ -479,7 +480,7 @@ class XMLPlaylistParser(File, PrettyPrinter):
             )
             return
 
-        items_mapped: Mapping[str, File] = {item.path.casefold(): item for item in items}
+        items_mapped: dict[Path, File] = {item.path: item for item in items}
 
         if matcher.comparers:
             # match again on current conditions to check for differences from original list
@@ -491,12 +492,12 @@ class XMLPlaylistParser(File, PrettyPrinter):
             # get the last played track as reference in case comparer is looking for the playing tracks as reference
             ItemSorter.sort_by_field(original, field=Fields.LAST_PLAYED, reverse=True)
 
-            matched_mapped = {
-                item.path.casefold(): item for item in matcher.comparers(original, reference=original[0])
+            matched_mapped: dict[Path, File] = {
+                item.path: item for item in matcher.comparers(original, reference=original[0])
             } if matcher.comparers.ready else {}
             # noinspection PyProtectedMember
             matched_mapped |= {
-                item.path.casefold(): item for item in matcher._get_group_by_results(original, matched_mapped.values())
+                item.path: item for item in matcher._get_group_by_results(original, matched_mapped.values())
             }
 
             # get new include/exclude paths based on the leftovers after matching on comparers and group_by settings

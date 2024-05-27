@@ -6,6 +6,7 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from collections.abc import MutableSequence, Iterable, Mapping, Collection
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, SupportsIndex, Self
 
 from musify.core.base import MusifyObject, MusifyItem, HasLength
@@ -19,10 +20,10 @@ from musify.types import UnitSequence
 
 
 @dataclass
-class ItemGetterStrategy(metaclass=ABCMeta):
+class ItemGetterStrategy[KT](metaclass=ABCMeta):
     """Abstract base class for strategies relating to __getitem__ operations on a :py:class:`MusifyCollection`"""
 
-    key: str
+    key: KT
 
     @property
     @abstractmethod
@@ -31,14 +32,14 @@ class ItemGetterStrategy(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def get_value_from_item(self, item: MusifyItem) -> str:
+    def get_value_from_item(self, item: MusifyItem) -> KT:
         """Retrieve the appropriate value from a given ``item`` for this ItemGetter type"""
         raise NotImplementedError
 
-    def get_item[T](self, collection: MusifyCollection[T]) -> T:
+    def get_item[IT](self, collection: MusifyCollection[IT]) -> IT:
         """Run this strategy and return the matched item from the given ``collection``"""
         try:
-            return next(item for item in collection.items if str(self.get_value_from_item(item)) == self.key)
+            return next(item for item in collection.items if self.get_value_from_item(item) == self.key)
         except AttributeError:
             raise MusifyAttributeError(f"Items in collection do not have the attribute {self.name!r}")
         except StopIteration:
@@ -61,7 +62,7 @@ class PathGetter(ItemGetterStrategy):
     def name(self) -> str:
         return "path"
 
-    def get_value_from_item(self, item: File) -> str:
+    def get_value_from_item(self, item: File) -> Path:
         return item.path
 
 
@@ -154,7 +155,7 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], HasLengt
 
     def copy(self) -> list[T]:
         """Return a shallow copy of the list of items in this collection"""
-        return [item for item in self.items]
+        return self.items.copy()
 
     def append(self, __item: T, allow_duplicates: bool = True) -> None:
         """Append one item to the items in this collection"""
@@ -312,7 +313,7 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], HasLengt
         return self
 
     def __getitem__(
-            self, __key: str | int | slice | MusifyItem | File | RemoteResponse
+            self, __key: str | int | slice | MusifyItem | Path | File | RemoteResponse
     ) -> T | list[T] | list[T, None, None]:
         """
         Returns the item in this collection by matching on a given index/Item/URI/ID/URL.
@@ -336,14 +337,16 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], HasLengt
                 caught_exceptions.append(ex)
 
         raise MusifyKeyError(
-            f"Key is invalid. The following errors were thrown: {", ".join(str(ex) for ex in caught_exceptions)}"
+            f"Key is invalid. The following errors were thrown: {", ".join(map(str, caught_exceptions))}"
         )
 
     @staticmethod
-    def __get_item_getters(__key: str | MusifyItem | File | RemoteResponse) -> list[ItemGetterStrategy]:
+    def __get_item_getters(__key: str | MusifyItem | Path | File | RemoteResponse) -> list[ItemGetterStrategy]:
         getters = []
         if isinstance(__key, File):
             getters.append(PathGetter(__key.path))
+        if isinstance(__key, Path):
+            getters.append(PathGetter(__key))
         if isinstance(__key, RemoteResponse):
             getters.append(RemoteIDGetter(__key.id))
         if isinstance(__key, MusifyItem) and __key.has_uri:

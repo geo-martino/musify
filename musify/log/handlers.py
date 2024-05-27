@@ -5,8 +5,7 @@ import logging.handlers
 import os
 import shutil
 from datetime import datetime
-from glob import glob
-from os.path import join, dirname, isfile, sep, isdir
+from pathlib import Path
 
 from musify.log import LOGGING_DT_FORMAT
 from musify.processors.time import TimeMapper
@@ -34,7 +33,7 @@ class CurrentTimeRotatingFileHandler(logging.handlers.BaseRotatingHandler):
 
     def __init__(
             self,
-            filename: str | None = None,
+            filename: str | Path | None = None,
             encoding: str | None = None,
             when: str | None = None,
             interval: int | None = None,
@@ -47,16 +46,15 @@ class CurrentTimeRotatingFileHandler(logging.handlers.BaseRotatingHandler):
         dt_str = self.dt.strftime(LOGGING_DT_FORMAT)
         if not filename:
             filename = "{}.log"
-        filename = filename.replace("\\", sep) if sep == "/" else filename.replace("/", sep)
-        self.filename = filename.format(dt_str) if "{}" in filename else filename
-        if dirname(self.filename):
-            os.makedirs(dirname(self.filename), exist_ok=True)
+
+        self.filename = Path(str(filename).format(dt_str) if "{}" in str(filename) else filename)
+        os.makedirs(self.filename.parent, exist_ok=True)
 
         self.delta = TimeMapper(when.lower())(interval) if when and interval else None
         self.count = count
 
         self.removed: list[datetime] = []  # datetime on the files that were removed
-        self.rotator(unformatted=filename, formatted=self.filename)
+        self.rotator(unformatted=str(filename), formatted=self.filename)
 
         super().__init__(filename=self.filename, mode="w", encoding=encoding, delay=delay, errors=errors)
 
@@ -66,18 +64,18 @@ class CurrentTimeRotatingFileHandler(logging.handlers.BaseRotatingHandler):
         """Always returns False. Rotation happens on __init__ and only needs to happen once."""
         return False
 
-    def rotator(self, unformatted: str, formatted: str):
+    def rotator(self, unformatted: str, formatted: Path):
         """
         Rotates the files in the folder on the given ``unformatted`` path.
         Removes files older than ``self.delta`` and the oldest files when number of files >= count
         until number of files <= count. ``formatted`` path is excluded from processing.
         """
-        folder = dirname(formatted)
+        folder = formatted.parent
         if not folder:
             return
 
         # get current files present and prefix+suffix to remove when processing
-        paths = tuple(f for f in glob(join(folder, "*")) if f != formatted)
+        paths = tuple(f for f in list(folder.glob("*")) if f != formatted)
         prefix = unformatted.split("{")[0] if "{" in unformatted and "}" in unformatted else ""
         suffix = unformatted.split("}")[1] if "{" in unformatted and "}" in unformatted else ""
 
@@ -85,7 +83,7 @@ class CurrentTimeRotatingFileHandler(logging.handlers.BaseRotatingHandler):
         for path in sorted(paths):
             too_many = self.count is not None and remaining >= self.count
 
-            dt_part = path.removeprefix(prefix).removesuffix(suffix)
+            dt_part = str(path).removeprefix(prefix).removesuffix(suffix)
             try:
                 dt_file = datetime.strptime(dt_part, LOGGING_DT_FORMAT)
                 too_old = self.delta is not None and dt_file < self.dt - self.delta
@@ -93,10 +91,10 @@ class CurrentTimeRotatingFileHandler(logging.handlers.BaseRotatingHandler):
                 dt_file = None
                 too_old = False
 
-            is_empty = isdir(path) and not glob(join(path, "*"))
+            is_empty = path.is_dir() and not list(path.glob("*"))
 
             if too_many or too_old or is_empty:
-                os.remove(path) if isfile(path) else shutil.rmtree(path)
+                os.remove(path) if path.is_file() else shutil.rmtree(path)
                 remaining -= 1
 
                 if dt_file and dt_file not in self.removed:

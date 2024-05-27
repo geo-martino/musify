@@ -25,7 +25,7 @@ class TestItemLimiter(PrettyPrinterTester):
             for track in tracks[(i-1)*10:i*10]:
                 track.album = f"album {i}"
                 track._reader.file.info.length = i * 60
-                track._reader.file.filename = random_file_path
+                track._reader.file.filename = str(random_file_path)
                 track.rating = i
 
                 if i != 1 and i != 5:
@@ -66,19 +66,19 @@ class TestItemLimiter(PrettyPrinterTester):
         limiter = ItemLimiter(limit=10, sorted_by="HighestRating")
         limiter(tracks)
         assert len(tracks) == 10
-        assert set(track.album for track in tracks) == {"album 5"}
+        assert {track.album for track in tracks} == {"album 5"}
 
     def test_limit_on_items_3(self, tracks: list[LocalTrack]):
         limiter = ItemLimiter(limit=20, sorted_by="most often played")
         limiter(tracks)
         assert len(tracks) == 20
-        assert set(track.album for track in tracks) == {"album 1", "album 3"}
+        assert {track.album for track in tracks} == {"album 1", "album 3"}
 
     def test_limit_on_items_4(self, tracks: list[LocalTrack]):
         limiter = ItemLimiter(limit=20, sorted_by="most often played")
         limiter.limit(tracks, ignore=[track for track in tracks if track.album == "album 5"])
         assert len(tracks) == 30
-        assert set(track.album for track in tracks) == {"album 1", "album 3", "album 5"}
+        assert {track.album for track in tracks} == {"album 1", "album 3", "album 5"}
 
     def test_limit_on_albums_1(self, tracks: list[LocalTrack]):
         limiter = ItemLimiter(limit=3, on=LimitType.ALBUMS)
@@ -89,13 +89,13 @@ class TestItemLimiter(PrettyPrinterTester):
         limiter = ItemLimiter(limit=2, on=LimitType.ALBUMS, sorted_by="least recently played")
         limiter.limit(tracks)
         assert len(tracks) == 20
-        assert set(track.album for track in tracks) == {"album 1", "album 5"}
+        assert {track.album for track in tracks} == {"album 1", "album 5"}
 
     def test_limit_on_albums_3(self, tracks: list[LocalTrack]):
         limiter = ItemLimiter(limit=2, on=LimitType.ALBUMS, sorted_by="least recently played")
         limiter.limit(tracks, ignore={track for track in tracks if track.album == "album 3"})
         assert len(tracks) == 30
-        assert set(track.album for track in tracks) == {"album 1", "album 3", "album 5"}
+        assert {track.album for track in tracks} == {"album 1", "album 3", "album 5"}
 
     def test_limit_on_seconds_1(self, tracks: list[LocalTrack]):
         limiter = ItemLimiter(limit=30, on=LimitType.MINUTES)

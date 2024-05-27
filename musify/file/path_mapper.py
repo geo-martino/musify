@@ -1,13 +1,16 @@
 """
 Operations relating to mapping and re-mapping of paths.
 """
+import os
 from collections.abc import Collection, Iterable
 from os import sep
-from os.path import exists
+from pathlib import Path
 from typing import Any
 
 from musify.core.printer import PrettyPrinter
 from musify.file.base import File
+
+type PathInputType = str | Path | File | None
 
 
 class PathMapper(PrettyPrinter):
@@ -18,7 +21,7 @@ class PathMapper(PrettyPrinter):
 
     __slots__ = ()
 
-    def map(self, value: str | File | None, check_existence: bool = False) -> str | None:
+    def map(self, value: PathInputType, check_existence: bool = False) -> str | None:
         """
         Map the given ``value`` by either extracting the path from a :py:class:`File` object,
         or returning the ``value`` as is, assuming it is a string.
@@ -28,16 +31,19 @@ class PathMapper(PrettyPrinter):
         :return: The path if ``check_existence`` is False, or if ``check_existence`` is True and path exists,
             None otherwise.
         """
-        path = value.path if isinstance(value, File) else value
-        if not check_existence or exists(path):
+        if not value:
+            return
+
+        path = str(value.path if isinstance(value, File) else value)
+        if not check_existence or os.path.exists(path):
             return path
 
-    def map_many(self, values: Collection[str | File | None], check_existence: bool = False) -> list[str]:
+    def map_many(self, values: Collection[PathInputType], check_existence: bool = False) -> list[str]:
         """Run :py:meth:`map` operation on many ``values`` only returning those values that are not None or empty."""
         paths = [self.map(value=value, check_existence=check_existence) for value in values]
         return [path for path in paths if path]
 
-    def unmap(self, value: str | File | None, check_existence: bool = False) -> str | None:
+    def unmap(self, value: PathInputType, check_existence: bool = False) -> str | None:
         """
         Map the given ``value`` by either extracting the path from a :py:class:`File` object,
         or returning the ``value`` as is, assuming it is a string.
@@ -47,11 +53,14 @@ class PathMapper(PrettyPrinter):
         :return: The path if ``check_existence`` is False, or if ``check_existence`` is True and path exists,
             None otherwise.
         """
-        path = value.path if isinstance(value, File) else value
-        if not check_existence or exists(path):
+        if not value:
+            return
+
+        path = str(value.path if isinstance(value, File) else value)
+        if not check_existence or os.path.exists(path):
             return path
 
-    def unmap_many(self, values: Collection[str | File | None], check_existence: bool = False) -> list[str]:
+    def unmap_many(self, values: Collection[PathInputType], check_existence: bool = False) -> list[str]:
         """Run :py:meth:`unmap` operation on many ``values`` only returning those values that are not None or empty."""
         paths = [self.unmap(value=value, check_existence=check_existence) for value in values]
         return [path for path in paths if path]
@@ -81,8 +90,8 @@ class PathStemMapper(PathMapper):
         return self._available_paths
 
     @available_paths.setter
-    def available_paths(self, values: Iterable[str]):
-        self._available_paths.update({path.casefold(): path for path in values})
+    def available_paths(self, values: Iterable[str | Path]):
+        self._available_paths.update({path.casefold(): path for path in map(str, values)})
 
     @property
     def stem_map(self) -> dict[str, str]:
@@ -94,9 +103,8 @@ class PathStemMapper(PathMapper):
         return self._stem_map
 
     @stem_map.setter
-    def stem_map(self, values: dict[str, str]):
-        self._stem_map.update(values)
-        self._stem_unmap.update({v: k for k, v in self._stem_map.items()})
+    def stem_map(self, values: dict[str | Path, str | Path]):
+        self._stem_map.update({str(k): str(v) for k, v in values.items()})
 
     @property
     def stem_unmap(self) -> dict[str, str]:
@@ -104,17 +112,18 @@ class PathStemMapper(PathMapper):
         A map of ``{<replacement stems>: <stem to be replaced>}`` i.e. just the opposite map of ``stem_map``.
         Assign new values to ``stem_map`` to update.
         """
-        return self._stem_unmap
+        return {v: k for k, v in self._stem_map.items()}
 
-    def __init__(self, stem_map: dict[str, str] | None = None, available_paths: Iterable[str] = ()):
+    def __init__(
+            self, stem_map: dict[str | Path, str | Path] | None = None, available_paths: Iterable[str | Path] = ()
+    ):
         self._stem_map: dict[str, str] = {}
-        self._stem_unmap: dict[str, str] = {}
         self._available_paths: dict[str, str] = {}
 
         self.stem_map = stem_map or {}
         self.available_paths = available_paths
 
-    def map(self, value: str | File | None, check_existence: bool = False) -> str | None:
+    def map(self, value: PathInputType, check_existence: bool = False) -> str | None:
         """
         Map the given value by replacing its stem according to stored ``stem_map``,
         correcting path separators according to the separators of the replacement stem,
@@ -125,7 +134,10 @@ class PathStemMapper(PathMapper):
         :return: The path if ``check_existence`` is False, or if ``check_existence`` is True and path exists,
             None otherwise.
         """
-        path = value.path if isinstance(value, File) else value
+        if not value:
+            return
+
+        path = str(value.path if isinstance(value, File) else value)
 
         seps = ()
         for stem, replacement in self.stem_map.items():
@@ -143,10 +155,10 @@ class PathStemMapper(PathMapper):
             path = path.replace(*seps)
 
         path = self.available_paths.get(path.casefold(), path)
-        if not check_existence or exists(path):
+        if not check_existence or os.path.exists(path):
             return path
 
-    def unmap(self, value: str | File | None, check_existence: bool = False) -> str | None:
+    def unmap(self, value: PathInputType, check_existence: bool = False) -> str | None:
         """
         Map the given value by replacing its stem according to stored ``stem_unmap``,
         correcting path separators according to the separators of the replacement stem,
@@ -157,7 +169,10 @@ class PathStemMapper(PathMapper):
         :return: The path if ``check_existence`` is False, or if ``check_existence`` is True and path exists,
             None otherwise.
         """
-        path = value.path if isinstance(value, File) else value
+        if not value:
+            return
+
+        path = str(value.path if isinstance(value, File) else value)
 
         seps = ()
         for stem, replacement in self.stem_unmap.items():
@@ -175,7 +190,7 @@ class PathStemMapper(PathMapper):
             path = path.replace(*seps)
 
         path = self.available_paths.get(path.casefold(), path)
-        if not check_existence or exists(path):
+        if not check_existence or os.path.exists(path):
             return path
 
     def as_dict(self) -> dict[str, Any]:

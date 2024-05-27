@@ -9,8 +9,7 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Collection, Iterable, Container
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from glob import glob
-from os.path import splitext, join, basename, exists, isdir
+from pathlib import Path
 from typing import Any
 
 from musify.core.enum import Fields, TagField, TagFields
@@ -277,13 +276,14 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
     def __init__(
             self,
             tracks: Collection[LocalTrack] = (),
-            name: str | None = None,
+            name: str | Path | None = None,
             remote_wrangler: RemoteDataWrangler = None
     ):
-        if len(tracks) == 0 and name is not None and exists(name) and isdir(name):
+        name = Path(name) if name else None
+        if len(tracks) == 0 and name is not None and name.is_dir():
             # name is path to a folder, load tracks in that folder
-            tracks = [load_track(path) for path in glob(join(name, "*")) if splitext(path)[1] in TRACK_FILETYPES]
-            name = basename(name)
+            tracks = [load_track(path) for path in name.glob("*") if path.suffix in TRACK_FILETYPES]
+            name = name.name
         super().__init__(tracks=tracks, name=name, remote_wrangler=remote_wrangler)
         self.tracks.sort(key=lambda x: x.filename or _max_str)
 

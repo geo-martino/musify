@@ -142,17 +142,17 @@ class TestRequestHandler:
 
             async with handler._request(method="GET", url=url, persist=True) as response:
                 assert await response.json() == expected_json
-            assert sum(len(reqs) for reqs in requests_mock.requests.values()) == 2
+            assert sum(map(len, requests_mock.requests.values())) == 2
             assert await repository.get_response(key)
 
             async with handler._request(method="GET", url=url) as response:
                 assert await response.json() == expected_json
-            assert sum(len(reqs) for reqs in requests_mock.requests.values()) == 2
+            assert sum(map(len, requests_mock.requests.values())) == 2
 
             await repository.clear()
             async with handler._request(method="GET", url=url) as response:
                 assert await response.json() == expected_json
-            assert sum(len(reqs) for reqs in requests_mock.requests.values()) == 3
+            assert sum(map(len, requests_mock.requests.values())) == 3
 
     async def test_request(self, request_handler: RequestHandler, requests_mock: aioresponses):
         def raise_error(*_, **__):
@@ -200,7 +200,7 @@ class TestRequestHandler:
 
         def callback(method: str, *_, **__) -> CallbackResult:
             """Modify mock response based on how many times backoff process has happened"""
-            if sum(len(reqs) for reqs in requests_mock.requests.values()) < backoff_limit:
+            if sum(map(len, requests_mock.requests.values())) < backoff_limit:
                 payload = {"error": {"message": "fail"}}
                 return CallbackResult(method=method, status=408, payload=payload)
 
@@ -209,4 +209,4 @@ class TestRequestHandler:
         requests_mock.patch(url, callback=callback, repeat=True)
         async with request_handler as handler:
             assert await handler.patch(url=url) == expected_json
-        assert sum(len(reqs) for reqs in requests_mock.requests.values()) == backoff_limit
+        assert sum(map(len, requests_mock.requests.values())) == backoff_limit
