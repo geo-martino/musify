@@ -147,41 +147,18 @@ class RequestHandler(AsyncContextManager):
                 if response is None:
                     raise APIError("No response received")
 
-                if response.status < 400:
-                    if "error" in (text := await response.text()):  # TODO: why is this allowing errors through?
-                        print("NEW RESPONSE")
-                        print(response.status, response.ok, id(response), response)
-                        print("<REQUEST INFO>", response.request_info)
-                        print("<REASON>", response.reason)
-                        print("<HISTORY>", response.history)
-                        print("<HEADERS>", response.headers)
-                        print("TEXT <<1>>", text)
-                        print("TEXT <<2>>", await response.text())
-                        print("JSON <<3>>", await response.json())
-                        print("\n\n\n\n")
-                    data = await self._response_as_json(response)
+                if response.ok and (data := await self._response_as_json(response)):
                     break
 
                 await self._log_response(response=response, method=method, url=url)
                 await self._handle_unexpected_response(response=response)
                 waited = await self._handle_wait_time(response=response)
-                if "error" in (text := await response.text()):  # TODO: why is this allowing errors through?
-                    print("JUST AFTER WAIT")
-                    print(response.status, response.ok, id(response), response)
-                    print("<REQUEST INFO>", response.request_info)
-                    print("<REASON>", response.reason)
-                    print("<HISTORY>", response.history)
-                    print("<HEADERS>", response.headers)
-                    print("TEXT <<1>>", text)
-                    print("TEXT <<2>>", await response.text())
-                    print("JSON <<3>>", self._response_as_json(response))
-                    print("\n\n\n\n")
 
                 if not waited and backoff > self.backoff_final:
                     raise APIError("Max retries exceeded")
 
                 # exponential backoff
-                self.logger.warning(f"Request failed: retrying in {backoff} seconds...")
+                self.logger.info_extra(f"Request failed: retrying in {backoff} seconds...")
                 sleep(backoff)
                 backoff *= self.backoff_factor
 
@@ -214,7 +191,7 @@ class RequestHandler(AsyncContextManager):
             async with self.session.request(method=method.upper(), url=url, **kwargs) as response:
                 yield response
         except aiohttp.ClientError as ex:
-            self.logger.warning(str(ex))
+            self.logger.debug(str(ex))
 
     def log(
             self, method: str, url: str | URL, message: str | list = None, level: int = logging.DEBUG, **kwargs
@@ -247,10 +224,16 @@ class RequestHandler(AsyncContextManager):
         response_headers = response.headers
         if isinstance(response.headers, Mapping):  # format headers if JSON
             response_headers = json.dumps(dict(response.headers), indent=2)
-        self.logger.warning(
-            f"\33[91m{method.upper():<7}: {url} | Code: {response.status} | Response text and headers follow:\n"
-            f"Response text:\n\t{(await response.text()).replace("\n", "\n\t")}\n"
-            f"Headers:\n\t{response_headers.replace("\n", "\n\t")}\33[0m"
+        self.log(
+            method=f"\33[91m{method.upper()}",
+            url=url,
+            messages=[
+                f"Status code: {response.status}",
+                "Response text and headers follow:\n"
+                f"Response text:\n\t{(await response.text()).replace("\n", "\n\t")}\n"
+                f"Headers:\n\t{response_headers.replace("\n", "\n\t")}"
+                f"\33[0m"
+            ]
         )
 
     async def _handle_unexpected_response(self, response: ClientResponse) -> bool:
@@ -281,7 +264,7 @@ class RequestHandler(AsyncContextManager):
                 f"Retry again at {wait_str}"
             )
 
-        self.logger.info(f"\33[93mRate limit exceeded. Retrying again at {wait_str}\33[0m")
+        self.logger.info_extra(f"\33[93mRate limit exceeded. Retrying again at {wait_str}\33[0m")
         sleep(wait_time)
         return True
 
