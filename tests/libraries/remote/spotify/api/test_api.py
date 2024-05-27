@@ -197,7 +197,7 @@ class TestSpotifyAPI(SpotifyAPIFixtures):
         parent_response = response
         assert key in parent_response
 
-        items = sample(api_mock.item_type_map[item_type], k=10)
+        items = deepcopy(sample(api_mock.item_type_map[item_type], k=10))
         for item in items:
             item.pop(parent_key, None)
         test = api_mock.format_items_block(url=parent_response[self.url_key], items=items)

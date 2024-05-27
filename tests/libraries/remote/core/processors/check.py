@@ -12,12 +12,13 @@ from musify.libraries.remote.core.enum import RemoteObjectType
 from musify.libraries.remote.core.object import RemotePlaylist
 from musify.libraries.remote.core.processors.check import RemoteItemChecker
 from tests.api.utils import path_token
+from tests.conftest import LogCapturer
 from tests.core.printer import PrettyPrinterTester
 from tests.libraries.local.track.utils import random_track, random_tracks
 from tests.libraries.remote.core.processors.utils import patch_input
 from tests.libraries.remote.core.utils import RemoteMock
 from tests.libraries.remote.spotify.utils import random_uri, random_uris
-from tests.utils import random_str, get_stdout
+from tests.utils import random_str
 
 
 class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
@@ -146,21 +147,20 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             setup_playlist_collection: tuple[RemotePlaylist, BasicCollection],
             mocker: MockerFixture,
             api_mock: RemoteMock,
-            capfd: pytest.CaptureFixture,
+            log_capturer: LogCapturer,
     ):
         pl, collection = setup_playlist_collection
         patch_input(["h", collection.name, pl.uri], mocker=mocker)
 
-        await checker._pause(page=1, total=1)
+        with log_capturer(loggers=[checker.logger, checker.api.logger]):
+            await checker._pause(page=1, total=1)
         mocker.stopall()
-        capfd.close()
 
-        stdout = get_stdout(capfd)  # removes colour codes
         # help text printed initially and reprinted on request
-        assert stdout.count("Enter one of the following") == 2 * 2  # WORKAROUND: *2 log + print issue in tests
-        assert "Input not recognised" not in stdout
-        assert f"Showing items originally added to {collection.name}" in stdout  # <Name of playlist> entered
-        assert f"Showing tracks for playlist: {pl.name}" in stdout  # <URL/URI> entered
+        assert log_capturer.text.count("Enter one of the following") == 2
+        assert "Input not recognised" not in log_capturer.text
+        assert f"Showing items originally added to {collection.name}" in log_capturer.text  # <Name of playlist> entered
+        assert f"Showing tracks for playlist: {pl.name}" in log_capturer.text
 
         pl_pages = api_mock.calculate_pages(limit=20, total=len(pl))
         assert len(await api_mock.get_requests(method="GET", url=re.compile(pl.url))) == pl_pages + 1
@@ -173,19 +173,18 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             checker: RemoteItemChecker,
             mocker: MockerFixture,
             api_mock: RemoteMock,
-            capfd: pytest.CaptureFixture,
+            log_capturer: LogCapturer,
     ):
         patch_input([random_str(10, 20), "u", "s"], mocker=mocker)
 
-        await checker._pause(page=1, total=1)
+        with log_capturer(loggers=checker.logger):
+            await checker._pause(page=1, total=1)
         mocker.stopall()
-        capfd.close()
 
-        stdout = get_stdout(capfd)
-        assert stdout.count("Enter one of the following") == 1 * 2  # WORKAROUND: *2 log + print issue in tests
-        assert stdout.count("Input not recognised") == 2
-        assert "Showing items originally added to" not in stdout
-        assert "Showing tracks for playlist" not in stdout
+        assert log_capturer.text.count("Enter one of the following") == 1
+        assert log_capturer.text.count("Input not recognised") == 2
+        assert "Showing items originally added to" not in log_capturer.text
+        assert "Showing tracks for playlist" not in log_capturer.text
 
         api_mock.assert_not_called()
 
@@ -197,19 +196,18 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             checker: RemoteItemChecker,
             mocker: MockerFixture,
             api_mock: RemoteMock,
-            capfd: pytest.CaptureFixture,
+            log_capturer: LogCapturer,
     ):
         patch_input(["q"], mocker=mocker)
 
-        await checker._pause(page=1, total=1)
+        with log_capturer(loggers=checker.logger):
+            await checker._pause(page=1, total=1)
         mocker.stopall()
-        capfd.close()
 
-        stdout = get_stdout(capfd)
-        assert stdout.count("Enter one of the following") == 1 * 2  # WORKAROUND: *2 log + print issue in tests
-        assert "Input not recognised" not in stdout
-        assert "Showing items originally added to" not in stdout
-        assert "Showing tracks for playlist" not in stdout
+        assert log_capturer.text.count("Enter one of the following") == 1
+        assert "Input not recognised" not in log_capturer.text
+        assert "Showing items originally added to" not in log_capturer.text
+        assert "Showing tracks for playlist" not in log_capturer.text
         api_mock.assert_not_called()
 
         assert not checker._skip
@@ -240,22 +238,21 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             checker: RemoteItemChecker,
             remaining: list[LocalTrack],
             mocker: MockerFixture,
-            capfd: pytest.CaptureFixture,
+            log_capturer: LogCapturer,
     ):
         # anything after 'ua' will be ignored
         values = ["u", "p", "h", "n", "", "zzzz", "n", "h", "u", "p", "ua", random_str(10, 20), "s", "q"]
         expected = values[-3:]  # stops after 'ua'
         patch_input(values, mocker=mocker)
 
-        checker._match_to_input(name="test")
+        with log_capturer(loggers=checker.logger):
+            checker._match_to_input(name="test")
         mocker.stopall()
-        capfd.close()
 
         assert values == expected
 
-        stdout = get_stdout(capfd)
-        assert stdout.count("Enter one of the following") == 3 * 2  # WORKAROUND: *2 log + print issue in tests
-        assert stdout.count("Input not recognised") == 1
+        assert log_capturer.text.count("Enter one of the following") == 3
+        assert log_capturer.text.count("Input not recognised") == 1
 
         assert not checker._skip
         assert not checker._quit
@@ -263,26 +260,26 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert not checker._switched
 
         # marked as unavailable
-        assert remaining[0].path not in stdout
+        assert remaining[0].path not in log_capturer.text
         assert remaining[0].uri is None
         assert not remaining[0].has_uri
 
         # skipped
-        assert remaining[1].path in stdout
+        assert remaining[1].path in log_capturer.text
         assert remaining[1].uri is None
         assert remaining[1].has_uri is None
 
         # skipped
-        assert remaining[2].path not in stdout
+        assert remaining[2].path not in log_capturer.text
         assert remaining[2].uri is None
         assert remaining[2].has_uri is None
 
         # marked as unavailable
-        assert remaining[3].path not in stdout
+        assert remaining[3].path not in log_capturer.text
         assert remaining[3].uri is None
         assert not remaining[3].has_uri
 
-        assert remaining[4].path in stdout
+        assert remaining[4].path in log_capturer.text
         for item in remaining[4:]:  # 'ua' triggered, marked as unavailable
             assert item.uri is None
             assert not item.has_uri
@@ -293,26 +290,25 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             checker: RemoteItemChecker,
             remaining: list[LocalTrack],
             mocker: MockerFixture,
-            capfd: pytest.CaptureFixture,
+            log_capturer: LogCapturer,
     ):
         # anything after 'na...' will be ignored
         uri_list = random_uris(kind=RemoteObjectType.TRACK, start=5, stop=5)
         # noinspection SpellCheckingInspection
         patch_input(["p", "p", "p", *uri_list, "naaaaaaa", "r"], mocker=mocker)
 
-        checker._match_to_input(name="test")
+        with log_capturer(loggers=checker.logger):
+            checker._match_to_input(name="test")
         mocker.stopall()
-        capfd.close()
 
-        stdout = get_stdout(capfd)
-        assert stdout.count("Enter one of the following") == 1 * 2  # WORKAROUND: *2 log + print issue in tests
+        assert log_capturer.text.count("Enter one of the following") == 1
         assert not checker._skip
         assert not checker._quit
         assert not checker._remaining
         assert checker._switched == remaining[:len(uri_list)]
 
         # results of each command on the remaining items
-        assert stdout.count(remaining[0].path) == 3 * 2  # WORKAROUND: *2 log + print issue in tests
+        assert log_capturer.text.count(remaining[0].path) == 3
         for uri, item in zip(uri_list, remaining[:len(uri_list)]):  # uri_list
             assert item.uri == uri
             assert item.has_uri
@@ -326,17 +322,16 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             checker: RemoteItemChecker,
             remaining: list[LocalTrack],
             mocker: MockerFixture,
-            capfd: pytest.CaptureFixture,
+            log_capturer: LogCapturer,
     ):
         # anything after 'r' will be ignored
         patch_input(["u", "u", "u", "r", "q"], mocker=mocker)
 
-        checker._match_to_input(name="test")
+        with log_capturer(loggers=checker.logger):
+            checker._match_to_input(name="test")
         mocker.stopall()
-        capfd.close()
 
-        stdout = get_stdout(capfd)
-        assert stdout.count("Enter one of the following") == 1 * 2  # WORKAROUND: *2 log + print issue in tests
+        assert log_capturer.text.count("Enter one of the following") == 1
         assert not checker._skip
         assert not checker._quit
         assert checker._remaining == remaining[3:]  # returned early before checking all remaining
@@ -351,17 +346,16 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             checker: RemoteItemChecker,
             remaining: list[LocalTrack],
             mocker: MockerFixture,
-            capfd: pytest.CaptureFixture,
+            log_capturer: LogCapturer,
     ):
         # anything after 's' will be ignored
         patch_input(["s", "q"], mocker=mocker)
 
-        checker._match_to_input(name="test")
+        with log_capturer(loggers=checker.logger):
+            checker._match_to_input(name="test")
         mocker.stopall()
-        capfd.close()
 
-        stdout = get_stdout(capfd)
-        assert stdout.count("Enter one of the following") == 1 * 2  # WORKAROUND: *2 log + print issue in tests
+        assert log_capturer.text.count("Enter one of the following") == 1
         assert checker._skip
         assert not checker._quit
         assert not checker._remaining
@@ -376,17 +370,16 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             checker: RemoteItemChecker,
             remaining: list[LocalTrack],
             mocker: MockerFixture,
-            capfd: pytest.CaptureFixture,
+            log_capturer: LogCapturer,
     ):
         # anything after 'q' will be ignored
         patch_input(["q", "s"], mocker=mocker)
 
-        checker._match_to_input(name="test")
+        with log_capturer(loggers=checker.logger):
+            checker._match_to_input(name="test")
         mocker.stopall()
-        capfd.close()
 
-        stdout = get_stdout(capfd)
-        assert stdout.count("Enter one of the following") == 1 * 2  # WORKAROUND: *2 log + print issue in tests
+        assert log_capturer.text.count("Enter one of the following") == 1
         assert not checker._skip
         assert checker._quit
         assert not checker._remaining
@@ -496,7 +489,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             setup_playlist_collection: tuple[RemotePlaylist, BasicCollection],
             remaining: list[LocalTrack],
             mocker: MockerFixture,
-            capfd: pytest.CaptureFixture,
+            log_capturer: LogCapturer,
             api_mock: RemoteMock,
     ):
         pl, collection = setup_playlist_collection
@@ -516,17 +509,16 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         checker._skip = False
         checker._playlist_name_collection["do not run"] = collection
 
-        await checker._check_uri()
+        with log_capturer(loggers=checker.logger):
+            await checker._check_uri()
         mocker.stopall()
-        capfd.close()
 
         assert not checker._quit
         assert not checker._skip  # skip triggered by input, but should still hold initial value
         assert not checker._switched
         assert not checker._remaining
 
-        stdout = get_stdout(capfd)
-        assert "do not run" not in stdout  # skip triggered, 2nd collection should not be processed
+        assert "do not run" not in log_capturer.text  # skip triggered, 2nd collection should not be processed
 
         for uri, item in zip(uri_list, remaining[:len(uri_list)]):  # uri_list
             assert item.uri == uri

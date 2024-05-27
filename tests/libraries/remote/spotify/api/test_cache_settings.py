@@ -1,3 +1,4 @@
+from copy import deepcopy
 from random import choice
 
 import pytest
@@ -17,12 +18,12 @@ class TestSpotifyRequestSettings:
 
     def test_core_getters(self, settings: SpotifyRequestSettings, api_mock: SpotifyMock):
         for responses in api_mock.item_type_map.values():
-            response = choice(responses)
+            response = deepcopy(choice(responses))
             name = response["display_name"] if response["type"] == "user" else response["name"]
             assert settings.get_name(response) == name
             assert settings.get_key(response["href"]) == (response["id"],)
 
-        response = choice(api_mock.user_tracks)
+        response = deepcopy(choice(api_mock.user_tracks))
         assert settings.get_name(response) is None
 
         url = f"{SpotifyDataWrangler.url_api}/me/tracks"

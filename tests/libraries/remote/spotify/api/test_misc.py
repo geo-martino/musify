@@ -1,3 +1,4 @@
+import re
 from copy import deepcopy
 from typing import Any
 from urllib.parse import unquote
@@ -7,8 +8,9 @@ import pytest
 from musify.libraries.remote.core.enum import RemoteObjectType as ObjectType
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
+from tests.conftest import LogCapturer
 from tests.libraries.remote.spotify.api.mock import SpotifyMock
-from tests.utils import idfn, get_stdout, random_str
+from tests.utils import idfn, random_str
 
 
 class TestSpotifyAPIMisc:
@@ -99,18 +101,25 @@ class TestSpotifyAPIMisc:
         ObjectType.PLAYLIST, ObjectType.ALBUM,  ObjectType.SHOW, ObjectType.AUDIOBOOK,
     ], ids=idfn)
     async def test_pretty_print_uris(
-            self, kind: ObjectType, api: SpotifyAPI, api_mock: SpotifyMock, capfd: pytest.CaptureFixture
+            self,
+            kind: ObjectType,
+            api: SpotifyAPI,
+            api_mock: SpotifyMock,
+            log_capturer: LogCapturer,
+            capfd: pytest.CaptureFixture
     ):
         key = api.collection_item_map.get(kind, kind).name.lower() + "s"
         source = deepcopy(next(item for item in api_mock.item_type_map[kind] if item[key]["total"] > 50))
 
-        await api.print_collection(value=source)
-        stdout = get_stdout(capfd)
+        with log_capturer(loggers=api.logger):
+            await api.print_collection(value=source)
+
+        stdout = "\n".join(re.sub("\33.*?m", "", capfd.readouterr().out).strip().splitlines())
 
         # printed in blocks
-        blocks = [block for block in stdout.strip().split("\n\n") if SpotifyDataWrangler.url_ext in block]
-        assert len(blocks) - 1 == api_mock.total_requests  # WORKAROUND: -1 log + print issue in tests
+        blocks = [block for block in stdout.split("\n\n\n")[1].split("\n\n") if SpotifyDataWrangler.url_ext in block]
+        assert len(blocks) == api_mock.total_requests
 
         # lines printed = total tracks + 1 extra for title
-        lines = [line for line in stdout.strip().split("\n") if SpotifyDataWrangler.url_ext in line]
-        assert len(lines) // 2 == source[key]["total"] + 1  # WORKAROUND: //2 log + print issue in tests
+        lines = [line for line in log_capturer.text.split("\n") if SpotifyDataWrangler.url_ext in line]
+        assert len(lines) == source[key]["total"] + 1
