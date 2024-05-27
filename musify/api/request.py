@@ -192,6 +192,7 @@ class RequestHandler(AsyncContextManager):
                 yield response
         except aiohttp.ClientError as ex:
             self.logger.debug(str(ex))
+            yield
 
     def log(
             self, method: str, url: str | URL, message: str | list = None, level: int = logging.DEBUG, **kwargs
