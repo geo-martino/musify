@@ -52,7 +52,7 @@ def test_get_max_width():
     assert get_max_width(values, min_width=5, max_width=50) == 31  # +1 for trailing space
     assert get_max_width(values, min_width=50, max_width=100) == 50
 
-    assert get_max_width([]) == 0
+    assert get_max_width([], min_width=10) == 10
 
 
 def test_align_string_truncate_left():

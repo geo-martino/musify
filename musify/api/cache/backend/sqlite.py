@@ -330,19 +330,27 @@ class SQLiteCache(ResponseCache[SQLiteTable]):
         return self._connect().__await__()
 
     async def __aexit__(self, __exc_type, __exc_value, __traceback) -> None:
-        if not self.closed:  # TODO: this shouldn't be needed?
-            await self.commit()
-            await self.connection.__aexit__(__exc_type, __exc_value, __traceback)
-            self.connection = None
+        if self.closed:
+            return
+
+        await self.commit()
+        await self.connection.__aexit__(__exc_type, __exc_value, __traceback)
+        self.connection = None
 
     async def commit(self):
         """Commit the transactions to the database."""
+        if self.closed:
+            return
+
         try:
             await self.connection.commit()
         except ValueError:
             pass
 
     async def close(self):
+        if self.closed:
+            return
+
         try:
             await self.commit()
             await self.connection.close()

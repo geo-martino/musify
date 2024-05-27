@@ -106,7 +106,7 @@ def get_max_width(values: Collection[Any], min_width: int = 15, max_width: int =
     Uses width as would be seen in a fixed-width font taking into account characters with varying widths.
     """
     if len(values) == 0:
-        return 0
+        return min_width
     max_len = unicode_len(max(map(str, values), key=unicode_len))
     return limit_value(value=max_len + 1, floor=min_width, ceil=max_width)
 
