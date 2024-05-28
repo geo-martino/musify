@@ -6,6 +6,7 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, date
+from pathlib import Path
 from typing import Any
 
 from musify.types import UnitIterable, JSON, DictJSON, JSON_VALUE
@@ -82,7 +83,7 @@ class PrettyPrinter(metaclass=ABCMeta):
             return cls._to_json(value, pool=pool)
         elif isinstance(value, PrettyPrinter):
             return value._to_json(value._json_attributes(), pool=pool)
-        elif isinstance(value, (datetime, date)):
+        elif isinstance(value, (datetime, date, Path)):
             return str(value)
 
         return value
@@ -100,7 +101,7 @@ class PrettyPrinter(metaclass=ABCMeta):
     def _to_str(cls, attributes: Mapping[str, Any], indent: int = 2, increment: int = 2) -> list[str]:
         if len(attributes) == 0:
             return []
-        max_key_width = max(len(str(attr_key)) for attr_key in attributes) + 1  # +1 for space after key
+        max_key_width = max(map(len, map(str, attributes))) + 1  # +1 for space after key
         max_key_width += max_key_width % increment
         max_val_width = cls._max_val_width - max_key_width
 

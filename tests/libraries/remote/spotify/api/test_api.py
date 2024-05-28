@@ -1,4 +1,5 @@
 from copy import copy, deepcopy
+from pathlib import Path
 from random import choice, sample
 from typing import Any
 
@@ -38,7 +39,7 @@ class TestSpotifyAPI(SpotifyAPIFixtures):
         assert api.handler.authoriser.name == api.wrangler.source
         assert api.handler.authoriser.user_args["params"]["client_id"] == client_id
         assert api.handler.authoriser.user_args["params"]["scope"] == " ".join(scopes)
-        assert api.handler.authoriser.token_file_path == token_file_path
+        assert api.handler.authoriser.token_file_path == Path(token_file_path)
 
     async def test_context_management(self, cache: ResponseCache, api_mock: SpotifyMock):
         api = SpotifyAPI(

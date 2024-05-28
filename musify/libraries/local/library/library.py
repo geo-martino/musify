@@ -2,10 +2,11 @@
 The core, basic library implementation which is just a simple set of folders.
 """
 import itertools
+import functools
+import os
 from collections.abc import Collection, Mapping, Iterable
 from concurrent.futures import ThreadPoolExecutor
-from functools import reduce
-from os.path import splitext, join, exists, basename, dirname
+from pathlib import Path
 from typing import Any
 
 from musify.core.result import Result
@@ -20,6 +21,7 @@ from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
 from musify.log import STAT
 from musify.processors.base import Filter
 from musify.processors.filter import FilterDefinedList
+from musify.processors.sort import ItemSorter
 from musify.types import UnitCollection, UnitIterable
 from musify.utils import align_string, get_max_width, to_collection
 
@@ -86,21 +88,20 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         return self._playlists
 
     @property
-    def library_folders(self) -> list[str]:
+    def library_folders(self) -> list[Path]:
         """Path to the library folder"""
         return self._library_folders
 
     @library_folders.setter
-    def library_folders(self, value: UnitCollection[str] | None):
+    def library_folders(self, folders: UnitCollection[str | Path] | None):
         """
         Sets the library folder path and generates a set of available and valid track paths in the folder.
         Skips settings if the given value is None.
         """
-        if value is None:
+        if folders is None:
             return
 
-        folders = [v.rstrip("\\/") for v in to_collection(value)]
-        self._library_folders: list[str] = [folder for folder in folders if exists(folder)]
+        self._library_folders: list[Path] = [folder for folder in map(Path, to_collection(folders)) if folder.exists()]
 
         self._track_paths = {
             path for folder in self._library_folders for cls in TRACK_CLASSES for path in cls.get_filepaths(folder)
@@ -109,35 +110,39 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             self.path_mapper.available_paths = self._track_paths
 
         self.logger.debug(
-            f"Set library folder(s): {", ".join(self.library_folders)} | {len(self._track_paths)} track paths found"
+            f"Set library folder(s): {", ".join(map(str, self.library_folders))} | "
+            f"{len(self._track_paths)} track paths found"
         )
 
     @property
-    def playlist_folder(self) -> str:
+    def playlist_folder(self) -> Path:
         """Path to the playlist folder"""
         return self._playlist_folder
 
     @playlist_folder.setter
-    def playlist_folder(self, value: str | None):
+    def playlist_folder(self, folder: str | Path | None):
         """
         Sets the playlist folder path and generates a set of available and valid playlists in the folder.
         Appends the library folder path if the given path is not valid. Skips settings if the given value is None.
         """
-        if value is None:
-            return
-        if not exists(value) and self.library_folders:
-            for folder in self.library_folders:
-                value = join(folder, value.lstrip("\\/"))
-                if exists(value):
-                    break
-        if not exists(value):
+        if folder is None:
             return
 
-        self._playlist_folder: str = value.rstrip("\\/")
+        folder = Path(folder)
+        if (not folder.is_dir() or not folder.is_absolute()) and self.library_folders:
+            for fldr in self.library_folders:
+                value = fldr.joinpath(folder)
+                if value.is_dir():
+                    folder = value
+                    break
+        if not folder.is_dir():
+            return
+
+        self._playlist_folder = folder
         self._playlist_paths = None
 
         playlists = {
-            splitext(basename(path.removeprefix(self._playlist_folder)))[0]: path
+            Path(str(path).removeprefix(str(self._playlist_folder))).stem: path
             for cls in PLAYLIST_CLASSES for path in cls.get_filepaths(self._playlist_folder)
         }
 
@@ -154,71 +159,71 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             if (pl_total - len(pl_filtered)) > 0 else f"{len(self._playlist_paths)} playlists found"
         ))
 
-    def _group_tracks_by_folder(self) -> itertools.groupby:
-        def get_relative_path(track: LocalTrack) -> str:
-            """Return path of a track relative to the library folders of this library"""
-            return str(dirname(reduce(
-                lambda path, folder: path.replace(folder, ""), self.library_folders, track.path
-            )).lstrip("\\/"))
-
-        return itertools.groupby(sorted(self.tracks, key=lambda track: track.path), get_relative_path)
-
     @property
     def folders(self) -> list[LocalFolder]:
         """
         Dynamically generate a set of folder collections from the tracks in this library.
         Folder collections are generated relevant to the library folder it is found in.
         """
-        def create_folder_collection(name: str, tracks: Collection[LocalTrack]) -> LocalFolder:
+        def get_relative_path(track: LocalTrack) -> Path:
+            """Return path of a track relative to the library folders of this library"""
+            path = functools.reduce(
+                lambda p, f: str(p).replace(str(f), ""), self.library_folders, str(track.path)
+            )
+            return Path(path.lstrip(os.path.sep)).parent
+
+        def create_folder_collection(path: Path, tracks: Collection[LocalTrack]) -> LocalFolder:
             """
             Create a :py:class:`LocalFolder` collection from the given ``tracks``,
             ensuring the collection has the exact given ``name``.
+
+            The LocalFolder filters the input tracks by the given name,
+            where it will match on ``track.folder`` == ``name``.
+            Given that ``track.folder`` is just the direct parent folder stem only,
+            We need to supply this stem folder on init and assign the full folder path back after.
             """
-            folder = LocalFolder(tracks=tracks, name=basename(name), remote_wrangler=self.remote_wrangler)
-            folder._name = name
+            folder = LocalFolder(tracks=tracks, name=path.name, remote_wrangler=self.remote_wrangler)
+            folder._name = str(path)
             return folder
 
-        grouped = self._group_tracks_by_folder()
-        collections = [create_folder_collection(name=name, tracks=list(group)) for name, group in grouped if name]
+        grouped = itertools.groupby(sorted(self.tracks, key=lambda track: track.path), get_relative_path)
+        collections = [create_folder_collection(path=path, tracks=list(group)) for path, group in grouped]
         return sorted(collections, key=lambda x: x.name)
-
-    def _group_tracks_by_field(self, field: LocalTrackField) -> itertools.groupby:
-        return itertools.groupby(self.tracks, key=lambda track: track[field.map(field)[0].name.lower()])
 
     @property
     def albums(self) -> list[LocalAlbum]:
         """Dynamically generate a set of album collections from the tracks in this library"""
-        grouped = self._group_tracks_by_field(LocalTrackField.ALBUM)
+        grouped = ItemSorter.group_by_field(items=self.tracks, field=LocalTrackField.ALBUM)
         collections = [
-            LocalAlbum(tracks=list(group), name=name, remote_wrangler=self.remote_wrangler)
-            for name, group in grouped if name
+            LocalAlbum(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
+            for name, group in grouped.items() if name
         ]
         return sorted(collections, key=lambda x: x.name)
 
     @property
     def artists(self) -> list[LocalArtist]:
         """Dynamically generate a set of artist collections from the tracks in this library"""
-        grouped = self._group_tracks_by_field(LocalTrackField.ARTIST)
+        grouped = ItemSorter.group_by_field(items=self.tracks, field=LocalTrackField.ARTISTS)
         collections = [
-            LocalArtist(tracks=list(group), name=name, remote_wrangler=self.remote_wrangler)
-            for name, group in grouped if name
+            LocalArtist(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
+            for name, group in grouped.items() if name
         ]
         return sorted(collections, key=lambda x: x.name)
 
     @property
     def genres(self) -> list[LocalGenres]:
         """Dynamically generate a set of genre collections from the tracks in this library"""
-        grouped = self._group_tracks_by_field(LocalTrackField.GENRES)
+        grouped = ItemSorter.group_by_field(items=self.tracks, field=LocalTrackField.GENRES)
         collections = [
-            LocalGenres(tracks=list(group), name=name, remote_wrangler=self.remote_wrangler)
-            for name, group in grouped if name
+            LocalGenres(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
+            for name, group in grouped.items() if name
         ]
         return sorted(collections, key=lambda x: x.name)
 
     def __init__(
             self,
-            library_folders: UnitCollection[str] | None = None,
-            playlist_folder: str | None = None,
+            library_folders: UnitCollection[str | Path] | None = None,
+            playlist_folder: str | Path | None = None,
             playlist_filter: Collection[str] | Filter[str] = (),
             path_mapper: PathMapper = PathMapper(),
             remote_wrangler: RemoteDataWrangler | None = None,
@@ -232,8 +237,8 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         #: Passed to playlist objects when loading playlists to map paths stored in the playlist file.
         self.path_mapper = path_mapper
 
-        self._library_folders: list[str] = []
-        self._track_paths: set[str] = set()
+        self._library_folders: list[Path] = []
+        self._track_paths: set[Path] = set()
         self.library_folders = library_folders
 
         if not isinstance(playlist_filter, Filter):
@@ -241,10 +246,10 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         #: :py:class:`Filter` to filter out the playlists loaded by name.
         self.playlist_filter: Filter[str] = playlist_filter
 
-        self._playlist_folder: str | None = None
+        self._playlist_folder: Path | None = None
         # playlist lowercase name mapped to its filepath for all accepted filetypes in playlist folder
-        self._playlist_paths: dict[str, str] = {}
-        self.playlist_folder: str | None = playlist_folder
+        self._playlist_paths: dict[str, Path] = {}
+        self.playlist_folder = playlist_folder
 
         self._tracks: list[LocalTrack] = []
         self._playlists: dict[str, LocalPlaylist] = {}
@@ -253,7 +258,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         self.errors: list[str] = []
         self.logger.debug(f"Setup {self.name} library: DONE\n")
 
-    def load(self) -> None:
+    async def load(self) -> None:
         """Loads all tracks and playlists in this library from scratch and log results."""
         self.logger.debug(f"Load {self.name} library: START")
         self.logger.info(
@@ -261,8 +266,8 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             f"{len(self._track_paths)} tracks and {len(self._playlist_paths)} playlists \33[0m"
         )
 
-        self.load_tracks()
-        self.load_playlists()
+        await self.load_tracks()
+        await self.load_playlists()
 
         self.logger.print(STAT)
         self.log_tracks()
@@ -282,7 +287,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     ###########################################################################
     ## Tracks
     ###########################################################################
-    def load_track(self, path: str) -> LocalTrack | None:
+    async def load_track(self, path: str | Path) -> LocalTrack | None:
         """
         Wrapper for :py:func:`load_track` which automatically loads the track at the given ``path``
         and assigns optional arguments using this library's attributes.
@@ -290,12 +295,12 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         Handles exceptions by logging paths which produce errors to internal list of ``errors``.
         """
         try:
-            return load_track(path=path, remote_wrangler=self.remote_wrangler)
+            return await load_track(path=path, remote_wrangler=self.remote_wrangler)
         except MusifyError as ex:
             self.logger.debug(f"Load error for track: {path} - {ex}")
             self.errors.append(path)
 
-    def load_tracks(self) -> None:
+    async def load_tracks(self) -> None:
         """Load all tracks from all the valid paths in this library, replacing currently loaded tracks."""
         if not self._track_paths:
             return
@@ -305,12 +310,10 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             f"\33[1;95m  >\33[1;97m Extracting metadata and properties for {len(self._track_paths)} tracks \33[0m"
         )
 
-        with ThreadPoolExecutor(thread_name_prefix="track-loader") as executor:
-            tasks = executor.map(self.load_track, self._track_paths)
-            bar = self.logger.get_iterator(
-                tasks, desc="Loading tracks", unit="tracks", total=len(self._track_paths)
-            )
-            self._tracks = list(bar)
+        bar = self.logger.get_iterator(
+            self._track_paths, desc="Loading tracks", unit="tracks", total=len(self._track_paths)
+        )
+        self._tracks = [await self.load_track(path) for path in bar]
 
         self._log_errors("Could not load the following tracks")
         self.logger.debug(f"Load {self.name} tracks: DONE\n")
@@ -328,7 +331,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     ###########################################################################
     ## Playlists
     ###########################################################################
-    def load_playlist(self, path: str) -> LocalPlaylist:
+    async def load_playlist(self, path: str | Path) -> LocalPlaylist:
         """
         Wrapper for :py:func:`load_playlist` which automatically loads the playlist at the given ``path``
         and assigns optional arguments using this library's attributes.
@@ -336,14 +339,14 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         Handles exceptions by logging paths which produce errors to internal list of ``errors``.
         """
         try:
-            return load_playlist(
+            return await load_playlist(
                 path=path, tracks=self.tracks, path_mapper=self.path_mapper, remote_wrangler=self.remote_wrangler,
             )
         except MusifyError as ex:
             self.logger.debug(f"Load error for playlist: {path} - {ex}")
             self.errors.append(path)
 
-    def load_playlists(self) -> None:
+    async def load_playlists(self) -> None:
         """
         Load all playlists found in this library's ``playlist_folder``,
         filtered down using the ``playlist_filter`` if given, replacing currently loaded playlists.
@@ -359,12 +362,11 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             f"\33[1;95m  >\33[1;97m Loading playlist data for {len(self._playlist_paths)} playlists \33[0m"
         )
 
-        with ThreadPoolExecutor(thread_name_prefix="playlist-loader") as executor:
-            tasks = executor.map(self.load_playlist, self._playlist_paths.values())
-            bar = self.logger.get_iterator(
-                tasks, desc="Loading playlists", unit="playlists", total=len(self._playlist_paths)
-            )
-            self._playlists = {pl.name: pl for pl in sorted(bar, key=lambda x: x.name.casefold())}
+        bar = self.logger.get_iterator(
+            self._playlist_paths.values(), desc="Loading tracks", unit="tracks", total=len(self._playlist_paths)
+        )
+        playlists = [await self.load_playlist(path) for path in bar]
+        self._playlists = {pl.name: pl for pl in sorted(playlists, key=lambda x: x.name.casefold())}
 
         self._log_errors("Could not load the following playlists")
         self.logger.debug(f"Load {self.name} playlists: DONE\n")
@@ -382,25 +384,22 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
                 f"\33[1;94m{len(playlist):>6} total \33[0m"
             )
 
-    def save_playlists(self, dry_run: bool = True) -> dict[str, Result]:
+    async def save_playlists(self, dry_run: bool = True) -> dict[str, Result]:
         """
         For each Playlist in this Library, saves its associate tracks and its settings (if applicable) to file.
 
         :param dry_run: Run function, but do not modify the file on the disk.
         :return: A map of the playlist name to the results of its sync as a :py:class:`Result` object.
         """
-        with ThreadPoolExecutor(thread_name_prefix="playlist-saver") as executor:
-            futures = {name: executor.submit(pl.save, dry_run=dry_run) for name, pl in self.playlists.items()}
-            bar = self.logger.get_iterator(futures.items(), desc="Updating playlists", unit="playlists")
-
-            return dict(bar)
+        bar = self.logger.get_iterator(self.playlists.items(), desc="Updating tracks", unit="tracks")
+        return {name: await pl.save(dry_run=dry_run) for name, pl in bar}
 
     ###########################################################################
     ## Backup/restore
     ###########################################################################
     def restore_tracks(
             self,
-            backup: Iterable[Mapping[str, Any]] | Mapping[str, Mapping[str, Any]],
+            backup: Iterable[Mapping[str, Any]] | Mapping[str | Path, Mapping[str, Any]],
             tags: UnitIterable[LocalTrackField] = LocalTrackField.ALL
     ) -> int:
         """
@@ -412,14 +411,14 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         """
         tag_names = set(LocalTrackField.to_tags(tags))
         if isinstance(backup, Mapping):
-            backup = {path.casefold(): track_map for path, track_map in backup.items()}
+            backup = {Path(path): track_map for path, track_map in backup.items()}
         else:
-            backup = {track_map["path"].casefold(): track_map for track_map in backup}
-        backup: Mapping[str, Mapping[str, Any]]
+            backup = {Path(track_map["path"]): track_map for track_map in backup}
+        backup: Mapping[Path, Mapping[str, Any]]
 
         count = 0
         for track in self.tracks:
-            track_map = backup.get(track.path.casefold())
+            track_map = backup.get(track.path)
             if not track_map:
                 continue
 

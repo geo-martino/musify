@@ -7,17 +7,17 @@ import logging.handlers
 import os
 import sys
 from collections.abc import Iterable
-from typing import Any, TypeVar
+from pathlib import Path
+from typing import Any
 
 from musify.log import INFO_EXTRA, REPORT, STAT
 
-T = TypeVar("T")
 try:
     from tqdm.auto import tqdm
-    ProgressBarType = Iterable[T] | tqdm
 except ImportError:
     tqdm = None
-    ProgressBarType = Iterable[T]
+
+type ProgressBarType[T] = Iterable[T] | tqdm if tqdm is not None else Iterable[T]
 
 
 class MusifyLogger(logging.Logger):
@@ -33,13 +33,13 @@ class MusifyLogger(logging.Logger):
     _bars: list[tqdm] = []
 
     @property
-    def file_paths(self) -> list[str]:
+    def file_paths(self) -> list[Path]:
         """Get a list of the paths of all file handlers for this logger"""
         def extract_paths(lggr: logging.Logger) -> None:
             """Extract file path from the handlers of the given ``lggr``"""
             for handler in lggr.handlers:
                 if isinstance(handler, logging.FileHandler) and handler.baseFilename not in paths:
-                    paths.append(handler.baseFilename)
+                    paths.append(Path(handler.baseFilename))
 
         paths = []
         logger = self
@@ -98,7 +98,7 @@ class MusifyLogger(logging.Logger):
             iterable: Iterable[T] | None = None,
             total: T | int | None = None,
             **kwargs
-    ) -> ProgressBarType:
+    ) -> ProgressBarType[T]:
         """
         Returns an appropriately configured tqdm progress bar if installed.
         If not, returns the given ``iterable`` if given, or simply `range(total)`.

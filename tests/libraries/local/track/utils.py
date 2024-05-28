@@ -1,6 +1,5 @@
 import string
 from datetime import datetime
-from os.path import join
 from random import choice, randrange, randint
 
 import mutagen
@@ -25,6 +24,9 @@ class MutagenMock(mutagen.FileType):
         self.info = self.MutagenInfoMock()
         self.pictures = []
 
+    def clear_pictures(self):
+        self.pictures.clear()
+
 
 # noinspection PyProtectedMember
 def random_track[T: LocalTrack](cls: type[T] | None = None) -> T:
@@ -32,18 +34,24 @@ def random_track[T: LocalTrack](cls: type[T] | None = None) -> T:
     if cls is None:
         cls = choice(tuple(TRACK_CLASSES))
 
+    title = random_str(30, 50)
+    track_number = randrange(1, 20)
+
     file = MutagenMock()
     file.info.length = randint(30, 600)
 
-    cls._load = False
+    filename = f"{str(track_number).zfill(2)} - {title}"
+    ext = choice(tuple(cls.valid_extensions))
+    file.filename = str(path_track_resources.joinpath(random_str(30, 50)).with_name(filename).with_suffix(ext))
+
     track = cls(file=file, remote_wrangler=remote_wrangler)
     track._loaded = True
 
-    track.title = random_str(30, 50)
+    track.title = title
     track.artist = random_str(30, 50)
     track.album = random_str(30, 50)
     track.album_artist = random_str(30, 50)
-    track.track_number = randrange(1, 20)
+    track.track_number = track_number
     track.track_total = randint(track.track_number, 20)
     track.genres = random_genres()
     track.date = random_dt()
@@ -60,15 +68,11 @@ def random_track[T: LocalTrack](cls: type[T] | None = None) -> T:
     track.image_links = {}
     track.has_image = False
 
-    filename_ext = f"{str(track.track_number).zfill(2)} - {track.title}" + choice(tuple(track.valid_extensions))
-    track._reader.file.filename = join(path_track_resources, random_str(30, 50), filename_ext)
-
     track.date_added = datetime.now() - relativedelta(days=randrange(8, 20), hours=randrange(1, 24))
     track.last_played = datetime.now() - relativedelta(days=randrange(1, 6), hours=randrange(1, 24))
     track.play_count = randrange(200)
     track.rating = randrange(0, 100)
 
-    cls._load = True
     return track
 
 

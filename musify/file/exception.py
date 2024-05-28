@@ -1,6 +1,8 @@
 """
 Exceptions relating to file operations.
 """
+from pathlib import Path
+
 from musify.exception import MusifyError
 
 
@@ -12,8 +14,8 @@ class FileError(MusifyError):
     :param message: Explanation of the error.
     """
 
-    def __init__(self, file: str | None = None, message: str | None = None):
-        self.file = file
+    def __init__(self, file: str | Path | None = None, message: str | None = None):
+        self.file = Path(file)
         self.message = message
         formatted = f"{file} | {message}" if file else message
         super().__init__(formatted)
@@ -28,7 +30,6 @@ class InvalidFileType(FileError):
     """
 
     def __init__(self, filetype: str, message: str = "File type not recognised"):
-        self.filetype = filetype
         self.message = message
         super().__init__(file=filetype, message=message)
 
@@ -41,8 +42,21 @@ class FileDoesNotExistError(FileError, FileNotFoundError):
     :param message: Explanation of the error.
     """
 
-    def __init__(self, path: str, message: str = "File cannot be found"):
-        self.path = path
+    def __init__(self, path: str | Path, message: str = "File cannot be found"):
+        self.message = message
+        super().__init__(file=path, message=message)
+
+
+class UnexpectedPathError(FileError):
+    """
+    Exception raised when a path is invalid.
+    Usually raised when a directory is given when a file was expected and vice versa.
+
+    :param path: The path that caused the error.
+    :param message: Explanation of the error.
+    """
+
+    def __init__(self, path: str | Path, message: str = "Invalid path given"):
         self.message = message
         super().__init__(file=path, message=message)
 

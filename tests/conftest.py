@@ -4,7 +4,6 @@ import os
 import shutil
 import types
 from collections import defaultdict
-from os.path import join, basename, dirname, exists
 from pathlib import Path
 from typing import Any
 
@@ -31,8 +30,8 @@ from tests.utils import idfn
 @pytest.hookimpl
 def pytest_configure(config: pytest.Config):
     """Loads logging config"""
-    config_file = join(dirname(dirname(__file__)), "logging.yml")
-    if not exists(config_file):
+    config_file = Path(__file__).parent.with_stem("logging").with_suffix(".yml")
+    if not config_file.is_file():
         return
 
     with open(config_file, "r", encoding="utf-8") as file:
@@ -363,14 +362,15 @@ def path(request: pytest.FixtureRequest | SubRequest, tmp_path: Path) -> str:
         # noinspection PyProtectedMember
         src_path = request._pyfuncitem.callspec.params[request._parent_request.fixturename]
 
-    trg_path = join(tmp_path, basename(src_path))
+    src_path = Path(src_path)
+    trg_path = tmp_path.joinpath(src_path.name)
 
-    os.makedirs(dirname(trg_path), exist_ok=True)
+    os.makedirs(trg_path.parent, exist_ok=True)
     shutil.copyfile(src_path, trg_path)
 
     yield trg_path
 
-    shutil.rmtree(dirname(trg_path))
+    shutil.rmtree(trg_path.parent)
 
 
 @pytest.fixture(scope="session", params=ALL_ITEM_TYPES, ids=idfn)

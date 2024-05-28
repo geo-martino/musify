@@ -2,9 +2,9 @@
 Base implementation for the functionality of a local playlist.
 """
 from abc import ABCMeta, abstractmethod
-from collections.abc import Collection
-from datetime import datetime
-from os.path import dirname, join, getmtime, getctime, exists
+from collections.abc import Collection, Generator
+from pathlib import Path
+from typing import Any, Self
 
 from musify.core.result import Result
 from musify.file.base import File
@@ -18,7 +18,7 @@ from musify.processors.limit import ItemLimiter
 from musify.processors.sort import ItemSorter
 
 
-class LocalPlaylist[T: Filter[LocalTrack]](LocalCollection[LocalTrack], Playlist[LocalTrack], File, metaclass=ABCMeta):
+class LocalPlaylist[T: Filter[LocalTrack]](File, LocalCollection[LocalTrack], Playlist[LocalTrack], metaclass=ABCMeta):
     """
     Generic class for loading and manipulating local playlists.
 
@@ -53,7 +53,7 @@ class LocalPlaylist[T: Filter[LocalTrack]](LocalCollection[LocalTrack], Playlist
 
     @name.setter
     def name(self, value: str):
-        self._path = join(dirname(self._path), value + self.ext)
+        self._path = self.path.with_stem(value).with_suffix(self.ext)
 
     @property
     def tracks(self) -> list[LocalTrack]:
@@ -67,19 +67,9 @@ class LocalPlaylist[T: Filter[LocalTrack]](LocalCollection[LocalTrack], Playlist
     def path(self):
         return self._path
 
-    @property
-    def date_modified(self):
-        if self.path and exists(self.path):
-            return datetime.fromtimestamp(getmtime(self.path))
-
-    @property
-    def date_created(self):
-        if self.path and exists(self.path):
-            return datetime.fromtimestamp(getctime(self.path))
-
     def __init__(
             self,
-            path: str,
+            path: str | Path,
             matcher: T | None = None,
             limiter: ItemLimiter | None = None,
             sorter: ItemSorter | None = None,
@@ -88,7 +78,8 @@ class LocalPlaylist[T: Filter[LocalTrack]](LocalCollection[LocalTrack], Playlist
     ):
         super().__init__(remote_wrangler=remote_wrangler)
 
-        self._path: str = path
+        self._path: Path = Path(path)
+        self._validate_type(self._path)
 
         #: :py:class:`Filter` object to use for matching tracks.
         self.matcher = matcher
@@ -102,6 +93,9 @@ class LocalPlaylist[T: Filter[LocalTrack]](LocalCollection[LocalTrack], Playlist
         self._tracks: list[LocalTrack] = []
         self._original: list[LocalTrack] = []
 
+    def __await__(self) -> Generator[Any, None, Self]:
+        return self.load().__await__()
+
     def _match(self, tracks: Collection[LocalTrack] = (), reference: LocalTrack | None = None) -> None:
         if self.matcher is None or not tracks:
             return
@@ -113,7 +107,7 @@ class LocalPlaylist[T: Filter[LocalTrack]](LocalCollection[LocalTrack], Playlist
 
     def _limit(self, ignore: Collection[str | LocalTrack]) -> None:
         if self.limiter is not None and self.tracks is not None:
-            track_path_map = {track.path: track for track in self.tracks}
+            track_path_map = {str(track.path): track for track in self.tracks}
             ignore: set[LocalTrack] = {i if isinstance(i, LocalTrack) else track_path_map.get(i) for i in ignore}
             self.limiter(items=self.tracks, ignore=ignore)
 
@@ -122,17 +116,17 @@ class LocalPlaylist[T: Filter[LocalTrack]](LocalCollection[LocalTrack], Playlist
             self.sorter(items=self.tracks)
 
     @abstractmethod
-    def load(self, tracks: Collection[LocalTrack] = ()) -> list[LocalTrack]:
+    async def load(self, tracks: Collection[LocalTrack] = ()) -> Self:
         """
         Read the playlist file and update the tracks in this playlist instance.
 
         :param tracks: Available Tracks to search through for matches.
-        :return: Ordered list of tracks in this playlist
+        :return: Self
         """
         raise NotImplementedError
 
     @abstractmethod
-    def save(self, dry_run: bool = True, *args, **kwargs) -> Result:
+    async def save(self, dry_run: bool = True, *args, **kwargs) -> Result:
         """
         Write the tracks in this Playlist and its settings (if applicable) to file.
 

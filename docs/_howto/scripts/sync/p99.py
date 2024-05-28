@@ -1,7 +1,5 @@
 from p4 import *
 
-import asyncio
-
 from musify.libraries.remote.spotify.library import SpotifyLibrary
 
 remote_library = SpotifyLibrary(api=api)

@@ -13,8 +13,8 @@ from musify.core.enum import TagMap
 from musify.file.image import open_image, get_image_bytes
 from musify.libraries.local.exception import TagError
 from musify.libraries.local.track.field import LocalTrackField
-from musify.libraries.local.track.tags.reader import TagReader
-from musify.libraries.local.track.tags.writer import TagWriter
+# noinspection PyProtectedMember
+from musify.libraries.local.track._tags import TagReader, TagWriter
 from musify.libraries.local.track.track import LocalTrack
 
 try:
@@ -23,7 +23,7 @@ except ImportError:
     Image = None
 
 
-class MP3TagReader(TagReader[mutagen.mp3.MP3]):
+class _MP3TagReader(TagReader[mutagen.mp3.MP3]):
 
     __slots__ = ()
 
@@ -63,11 +63,11 @@ class MP3TagReader(TagReader[mutagen.mp3.MP3]):
         return [Image.open(BytesIO(value.data)) for value in values] if values is not None else None
 
 
-class MP3TagWriter(TagWriter[mutagen.mp3.MP3]):
+class _MP3TagWriter(TagWriter[mutagen.mp3.MP3]):
 
     __slots__ = ()
 
-    def delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:
+    def _delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:
         removed = False
 
         tag_ids = self.tag_map[tag_name]
@@ -163,7 +163,7 @@ class MP3TagWriter(TagWriter[mutagen.mp3.MP3]):
             return self.write_tag(tag_id, tag_value, dry_run)
 
 
-class MP3(LocalTrack[mutagen.mp3.MP3, MP3TagReader, MP3TagWriter]):
+class MP3(LocalTrack[mutagen.mp3.MP3, _MP3TagReader, _MP3TagWriter]):
 
     __slots__ = ()
 
@@ -190,10 +190,8 @@ class MP3(LocalTrack[mutagen.mp3.MP3, MP3TagReader, MP3TagWriter]):
         images=["APIC"],
     )
 
-    @staticmethod
-    def _create_reader(*args, **kwargs):
-        return MP3TagReader(*args, **kwargs)
+    def _create_reader(self, file: mutagen.mp3.MP3):
+        return _MP3TagReader(file, tag_map=self.tag_map, remote_wrangler=self._remote_wrangler)
 
-    @staticmethod
-    def _create_writer(*args, **kwargs):
-        return MP3TagWriter(*args, **kwargs)
+    def _create_writer(self, file: mutagen.mp3.MP3):
+        return _MP3TagWriter(file, tag_map=self.tag_map, remote_wrangler=self._remote_wrangler)

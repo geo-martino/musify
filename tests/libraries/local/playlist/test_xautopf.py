@@ -2,8 +2,6 @@ import os
 from collections.abc import Mapping
 from copy import deepcopy
 from datetime import datetime
-from glob import glob
-from os.path import join, splitext, basename, exists
 from pathlib import Path
 from random import randrange
 
@@ -36,24 +34,26 @@ from tests.utils import path_txt, path_resources, random_str
 class TestXAutoPF(LocalPlaylistTester):
 
     @pytest.fixture
-    def playlist(self) -> XAutoPF:
+    async def playlist(self) -> XAutoPF:
         # needed to ensure __setitem__ check passes
         tracks = random_tracks(randrange(5, 15))
         tracks.append(random_track(cls=tracks[0].__class__))
-        playlist = XAutoPF(path=path_playlist_xautopf_ra, tracks=tracks)
-        return playlist
 
-    def test_does_not_load_unsupported_files(self):
+        playlist = XAutoPF(path=path_playlist_xautopf_ra)
+        return await playlist.load(tracks=tracks)
+
+    def test_init_fails(self):
         with pytest.raises(InvalidFileType):
             XAutoPF(path=path_txt)
 
-    def test_load_playlist_bp_settings(self, tracks: list[LocalTrack], path_mapper: PathMapper):
+    async def test_load_playlist_bp_settings(self, tracks: list[LocalTrack], path_mapper: PathMapper):
         pl = XAutoPF(path=path_playlist_xautopf_bp, path_mapper=path_mapper)
+        await pl.load()
 
-        assert pl.name == splitext(basename(path_playlist_xautopf_bp))[0]
+        assert pl.name == path_playlist_xautopf_bp.stem
         assert pl.description == "I am a description"
         assert pl.path == path_playlist_xautopf_bp
-        assert pl.ext == splitext(basename(path_playlist_xautopf_bp))[1]
+        assert pl.ext == path_playlist_xautopf_bp.suffix
         assert not pl.tracks
 
         # fine-grained processor settings are tested in class-specific tests
@@ -63,12 +63,12 @@ class TestXAutoPF(LocalPlaylistTester):
         assert not pl.limiter_deduplication
         assert pl.sorter
 
-        pl.load(tracks)
-        assert [basename(track.path) for track in pl.tracks] == [basename(path_track_flac), basename(path_track_wma)]
+        await pl.load(tracks)
+        assert [track.path.name for track in pl.tracks] == [path_track_flac.name, path_track_wma.name]
 
-    def test_load_playlist_bp_tracks(self, tracks: list[LocalTrack], path_mapper: PathMapper):
+    async def test_load_playlist_bp_tracks(self, tracks: list[LocalTrack], path_mapper: PathMapper):
         # prepare tracks to search through
-        tracks_actual = tracks
+        tracks_actual = sorted(tracks)
         tracks = random_tracks(50)
         for i, track in enumerate(tracks[10:40]):
             track.album = "an album"
@@ -77,24 +77,29 @@ class TestXAutoPF(LocalPlaylistTester):
         for i, track in enumerate(tracks, 1):
             track.track_number = i
         tracks += tracks_actual
+        tracks_expected = [tracks_actual[0], tracks_actual[3]]
 
-        pl = XAutoPF(path=path_playlist_xautopf_bp, tracks=tracks_actual, path_mapper=path_mapper)
-        assert pl.tracks == tracks_actual[:2]
+        pl = XAutoPF(path=path_playlist_xautopf_bp, path_mapper=path_mapper)
+        await pl.load(tracks=tracks_actual)
+        assert pl.tracks == tracks_expected
 
-        pl = XAutoPF(path=path_playlist_xautopf_bp, tracks=tracks, path_mapper=path_mapper)
+        pl = XAutoPF(path=path_playlist_xautopf_bp, path_mapper=path_mapper)
+        await pl.load(tracks=tracks)
+
         assert len(pl.tracks) == 32
-        tracks_expected = tracks_actual[:2] + [
+        tracks_expected += [
             track for track in tracks if 20 < track.track_number < 30 or track.album == "an album"
         ]
         assert pl.tracks == sorted(tracks_expected, key=lambda t: t.track_number)
 
-    def test_load_playlist_ra_settings(self, path_mapper: PathMapper):
-        pl = XAutoPF(path=path_playlist_xautopf_ra, tracks=random_tracks(20), path_mapper=path_mapper)
+    async def test_load_playlist_ra_settings(self, path_mapper: PathMapper):
+        pl = XAutoPF(path=path_playlist_xautopf_ra, path_mapper=path_mapper)
+        await pl.load(tracks=random_tracks(20))
 
-        assert pl.name == splitext(basename(path_playlist_xautopf_ra))[0]
+        assert pl.name == path_playlist_xautopf_ra.stem
         assert pl.description is None
         assert pl.path == path_playlist_xautopf_ra
-        assert pl.ext == splitext(basename(path_playlist_xautopf_ra))[1]
+        assert pl.ext == path_playlist_xautopf_ra.suffix
 
         # fine-grained processor settings are tested in class-specific tests
         assert not pl.matcher.ready
@@ -103,36 +108,43 @@ class TestXAutoPF(LocalPlaylistTester):
         assert pl.limiter_deduplication
         assert pl.sorter
 
-    def test_load_playlist_ra_tracks(self, path_mapper: PathMapper):
+    async def test_load_playlist_ra_tracks(self, path_mapper: PathMapper):
         # prepare tracks to search through
         tracks = random_tracks(50)
         for i, track in enumerate(tracks):
             track.date_added = datetime.now().replace(minute=i)
 
-        pl = XAutoPF(path=path_playlist_xautopf_ra, tracks=tracks, path_mapper=path_mapper)
+        pl = XAutoPF(path=path_playlist_xautopf_ra, path_mapper=path_mapper)
+        await pl.load(tracks=tracks)
 
         limit = pl.limiter.limit_max
         assert len(pl.tracks) == limit
         tracks_expected = sorted(tracks, key=lambda t: t.date_added, reverse=True)[:limit]
         assert pl.tracks == sorted(tracks_expected, key=lambda t: t.date_added, reverse=True)
 
-    def test_limiter_deduplication(self):
+    async def test_limiter_deduplication(self):
         tracks = random_tracks(10)
 
-        pl = XAutoPF(path=path_playlist_xautopf_ra, tracks=tracks)
+        pl = XAutoPF(path=path_playlist_xautopf_ra)
+        await pl.load(tracks=tracks)
+
         limit = pl.limiter.limit_max
         tracks_expected = sorted(tracks, key=lambda t: t.date_added, reverse=True)[:limit]
         assert pl.limiter_deduplication
         assert pl.tracks == tracks_expected
 
-        pl = XAutoPF(path=path_playlist_xautopf_ra, tracks=tracks + tracks)
+        pl = XAutoPF(path=path_playlist_xautopf_ra)
+        await pl.load(tracks=tracks + tracks)
+
         assert pl.limiter_deduplication
         assert pl.tracks == tracks_expected
 
-    def test_save_new_file(self, tmp_path: Path):
-        path = join(tmp_path, random_str() + ".xautopf")
+    async def test_save_new_file(self, tmp_path: Path):
+        path = tmp_path.joinpath(random_str()).with_suffix(".xautopf")
         pl = XAutoPF(path=path)
-        assert not exists(path)
+        await pl.load()
+
+        assert not path.exists()
 
         # default values were assigned according to class attribute defaults
         for key, default in pl.default_xml["SmartPlaylist"].items():
@@ -150,13 +162,15 @@ class TestXAutoPF(LocalPlaylistTester):
 
         assert not pl.tracks  # no tracks given so no tracks loaded
 
-        pl.save(dry_run=True)
-        assert not exists(path)
-        pl.save(dry_run=False)
-        assert exists(path)
+        await pl.save(dry_run=True)
+        assert not path.exists()
+        await pl.save(dry_run=False)
+        assert path.is_file()
 
     @pytest.mark.parametrize("path", [path_playlist_xautopf_bp], indirect=["path"])
-    def test_save_existing_file(self, tracks: list[LocalTrack], path: str, path_mapper: PathMapper, tmp_path: Path):
+    async def test_save_existing_file(
+            self, tracks: list[LocalTrack], path: str, path_mapper: PathMapper, tmp_path: Path
+    ):
         # prepare tracks to search through
         tracks_actual = [track for track in tracks if track.path in [path_track_flac, path_track_wma]]
         tracks = random_tracks(50)
@@ -168,7 +182,8 @@ class TestXAutoPF(LocalPlaylistTester):
             track.track_number = i
         tracks += tracks_actual
 
-        pl = XAutoPF(path=path, tracks=tracks, path_mapper=path_mapper)
+        pl = XAutoPF(path=path, path_mapper=path_mapper)
+        await pl.load(tracks=tracks)
 
         assert pl.path == path
         assert len(pl.tracks) == 32
@@ -179,12 +194,14 @@ class TestXAutoPF(LocalPlaylistTester):
         # perform some operations on the playlist
         tracks_added = random_tracks(3)
         pl.tracks += tracks_added
+        # noinspection PyAsyncCall
         pl.tracks.pop(5)
+        # noinspection PyAsyncCall
         pl.tracks.pop(6)
         pl.tracks.remove(tracks_actual[0])
 
         # first test results on a dry run
-        result = pl.save(dry_run=True)
+        result = await pl.save(dry_run=True)
 
         assert result.start == 32
         assert result.start_included == 3
@@ -204,7 +221,7 @@ class TestXAutoPF(LocalPlaylistTester):
         assert pl._parser.xml == original_parser.xml
 
         pl.description = "new description"
-        pl.save(dry_run=False)
+        await pl.save(dry_run=False)
 
         if not os.getenv("GITHUB_ACTIONS"):
             # TODO: these assertions always fail on GitHub actions but not locally, why?
@@ -234,19 +251,19 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         yield PathStemMapper(stem_map={"../": path_resources}, available_paths=path_track_all)
 
     @pytest.mark.parametrize("path", [path_playlist_xautopf_bp], indirect=["path"])
-    def test_save(self, path: str):
+    async def test_save(self, path: str):
         parser = XMLPlaylistParser(path=path)
-        parser.load()
+        await parser.load()
 
         description = "i am a brand new description"
         parser.description = description
-        parser.save()
-        parser.load()
+        await parser.save()
+        await parser.load()
         assert parser.description != description
 
         parser.description = description
-        parser.save(dry_run=False)
-        parser.load()
+        await parser.save(dry_run=False)
+        await parser.load()
         assert parser.description == description
 
     ###########################################################################
@@ -258,9 +275,9 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         conditions = parser.xml_source["Conditions"]
         return [parser._get_comparer(condition) for condition in to_collection(conditions["Condition"])]
 
-    def test_get_comparer_bp(self):
+    async def test_get_comparer_bp(self):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_bp)
-        parser.load()
+        await parser.load()
         comparers = self.parse_comparers(parser)
 
         assert len(comparers) == 3
@@ -283,9 +300,9 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         assert comparers[2].condition == "less_than"
         assert comparers[2]._processor_method == comparers[2]._is_before
 
-    def test_get_comparer_ra(self):
+    async def test_get_comparer_ra(self):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_ra)
-        parser.load()
+        await parser.load()
         comparers = self.parse_comparers(parser)
 
         assert len(comparers) == 1
@@ -297,10 +314,10 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         assert comparer.condition == "contains"
         assert comparer._processor_method == comparer._contains
 
-    @pytest.mark.parametrize("path", [path for path in sorted(path_playlist_all) if path.endswith(".xautopf")])
-    def test_parse_comparer(self, path: str):
+    @pytest.mark.parametrize("path", [path for path in sorted(path_playlist_all) if path.suffix == ".xautopf"])
+    async def test_parse_comparer(self, path: Path):
         parser = XMLPlaylistParser(path=path)
-        parser.load()
+        await parser.load()
         comparers = self.parse_comparers(parser)
         conditions = to_collection(parser.xml_source["Conditions"]["Condition"], list)
 
@@ -321,18 +338,16 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
     ###########################################################################
     ## FilterMatcher parsing
     ###########################################################################
-    def test_get_matcher_bp(self, path_mapper: PathStemMapper):
+    async def test_get_matcher_bp(self, path_mapper: PathStemMapper):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_bp, path_mapper=path_mapper)
-        parser.load()
+        await parser.load()
         matcher = parser.get_matcher()
 
-        assert set(matcher.include) == {
-            path_track_wma.casefold(), path_track_mp3.casefold(), path_track_flac.casefold()
-        }
+        assert set(matcher.include) == {path_track_wma, path_track_mp3, path_track_flac}
         assert set(matcher.exclude) == {
-            join(path_playlist_resources,  "exclude_me_2.mp3").casefold(),
-            path_track_mp3.casefold(),
-            join(path_playlist_resources, "exclude_me.flac").casefold(),
+            path_playlist_resources.joinpath("exclude_me_2.mp3"),
+            path_track_mp3,
+            path_playlist_resources.joinpath("exclude_me.flac"),
         }
 
         assert isinstance(matcher.comparers.comparers, dict)
@@ -342,9 +357,9 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
 
         assert matcher.group_by == Fields.ALBUM
 
-    def test_get_matcher_ra(self, path_mapper: PathStemMapper):
+    async def test_get_matcher_ra(self, path_mapper: PathStemMapper):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_ra, path_mapper=path_mapper)
-        parser.load()
+        await parser.load()
         matcher = parser.get_matcher()
 
         assert len(matcher.include) == 0
@@ -357,9 +372,9 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
 
         assert matcher.group_by is None
 
-    def test_get_matcher_cm(self, path_mapper: PathStemMapper):
+    async def test_get_matcher_cm(self, path_mapper: PathStemMapper):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_cm, path_mapper=path_mapper)
-        parser.load()
+        await parser.load()
         matcher = parser.get_matcher()
 
         assert isinstance(matcher.comparers.comparers, Mapping)
@@ -415,11 +430,11 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
 
         assert matcher.group_by == Fields.ALBUM
 
-    def test_parse_matcher(self):
+    async def test_parse_matcher(self):
         parser_initial = XMLPlaylistParser(path=path_playlist_xautopf_ra)
         parser_final = XMLPlaylistParser(path=path_playlist_xautopf_cm)
-        parser_initial.load()
-        parser_final.load()
+        await parser_initial.load()
+        await parser_final.load()
 
         initial = parser_initial.get_matcher()
         final = parser_final.get_matcher()
@@ -444,14 +459,14 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
     ###########################################################################
     ## ItemLimiter parsing
     ###########################################################################
-    def test_get_limiter_bp(self):
+    async def test_get_limiter_bp(self):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_bp)
-        parser.load()
+        await parser.load()
         assert parser.get_limiter() is None
 
-    def test_get_limiter_ra(self):
+    async def test_get_limiter_ra(self):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_ra)
-        parser.load()
+        await parser.load()
         limiter = parser.get_limiter()
 
         assert limiter.limit_max == 20
@@ -459,11 +474,11 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         assert limiter.allowance == 1.25
         assert limiter._processor_method == limiter._most_recently_added
 
-    def test_parse_limiter(self):
+    async def test_parse_limiter(self):
         parser_initial = XMLPlaylistParser(path=path_playlist_xautopf_bp)
         parser_final = XMLPlaylistParser(path=path_playlist_xautopf_ra)
-        parser_initial.load()
-        parser_final.load()
+        await parser_initial.load()
+        await parser_final.load()
 
         initial = parser_initial.get_limiter()
         final = parser_final.get_limiter()
@@ -488,9 +503,9 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
     ###########################################################################
     ## ItemSorter parsing
     ###########################################################################
-    def test_get_sorter_bp(self):
+    async def test_get_sorter_bp(self):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_bp)
-        parser.load()
+        await parser.load()
 
         # shuffle settings not set as automatic order defined
         sorter = parser.get_sorter()
@@ -505,9 +520,9 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         assert sorter.shuffle_mode == ShuffleMode.RECENT_ADDED
         assert sorter.shuffle_weight == 0.5
 
-    def test_get_sorter_ra(self):
+    async def test_get_sorter_ra(self):
         parser = XMLPlaylistParser(path=path_playlist_xautopf_ra)
-        parser.load()
+        await parser.load()
 
         # shuffle settings not set as automatic order defined
         sorter = parser.get_sorter()
@@ -522,11 +537,11 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         assert sorter.shuffle_mode == ShuffleMode.DIFFERENT_ARTIST
         assert sorter.shuffle_weight == -0.2
 
-    def test_parse_sorter_defined(self):
+    async def test_parse_sorter_defined(self):
         parser_initial = XMLPlaylistParser(path=path_playlist_xautopf_bp)
         parser_final = XMLPlaylistParser(path=path_playlist_xautopf_cm)
-        parser_initial.load()
-        parser_final.load()
+        await parser_initial.load()
+        await parser_final.load()
 
         initial = parser_initial.get_sorter()
         final = parser_final.get_sorter()
@@ -542,11 +557,11 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
         assert parser_initial.xml_source["DefinedSort"] == parser_final.xml_source["DefinedSort"]
         assert parser_initial.xml_source["DefinedSort"]["@Id"] == "6"
 
-    def test_parse_sorter_fields(self):
+    async def test_parse_sorter_fields(self):
         parser_initial = XMLPlaylistParser(path=path_playlist_xautopf_bp)
         parser_final = XMLPlaylistParser(path=path_playlist_xautopf_ra)
-        parser_initial.load()
-        parser_final.load()
+        await parser_initial.load()
+        await parser_final.load()
 
         initial = parser_initial.get_sorter()
         final = parser_final.get_sorter()
@@ -565,11 +580,11 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
 
         assert parser_initial.xml_source["SortBy"] == parser_final.xml_source["SortBy"]
 
-    def test_parse_sorter_shuffle(self):
+    async def test_parse_sorter_shuffle(self):
         parser_initial = XMLPlaylistParser(path=path_playlist_xautopf_bp)
         parser_final = XMLPlaylistParser(path=path_playlist_xautopf_ra)
-        parser_initial.load()
-        parser_final.load()
+        await parser_initial.load()
+        await parser_final.load()
 
         # flip sorting to manual order to force function to set shuffle settings
         parser_initial.xml_source["SortBy"]["@Field"] = str(parser_initial.default_sort)
@@ -595,11 +610,11 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
 
 
 @pytest.fixture(scope="module")
-def library() -> LocalLibrary:
+async def library() -> LocalLibrary:
     """Yields a loaded :py:class:`LocalLibrary` to supply tracks for manual checking of custom playlist files"""
     mapper = PathStemMapper({"../..": os.getenv("TEST_PL_LIBRARY", "")})
-    library = MusicBee(musicbee_folder=join(os.getenv("TEST_PL_LIBRARY"), "MusicBee"), path_mapper=mapper)
-    library.load_tracks()
+    library = MusicBee(musicbee_folder=Path(os.getenv("TEST_PL_LIBRARY")).joinpath("MusicBee"), path_mapper=mapper)
+    await library.load_tracks()
     return library
 
 
@@ -610,14 +625,14 @@ def library() -> LocalLibrary:
     reason="Only runs when the test or marker is specified explicitly by the user",
 )
 @pytest.mark.parametrize("source,expected", [
-    (path, join(os.getenv("TEST_PL_COMPARISON", ""), f"{splitext(basename(path))[0]}.m3u"))
-    for path in glob(join(os.getenv("TEST_PL_SOURCE", ""), "**", "*.xautopf"), recursive=True)
+    (path, Path(os.getenv("TEST_PL_COMPARISON", "")).joinpath(path.stem).with_suffix(".m3u"))
+    for path in Path(os.getenv("TEST_PL_SOURCE", "")).rglob(str(Path("**", "*.xautopf")))
 ])
-def test_playlist_paths_manual(library: LocalLibrary, source: str, expected: str):
-    assert exists(source)
-    assert exists(expected)
+async def test_playlist_paths_manual(library: LocalLibrary, source: Path, expected: Path):
+    assert source.is_file()
+    assert expected.is_file()
 
-    pl = library.load_playlist(source)
+    pl = await library.load_playlist(source)
 
     with open(expected, "r", encoding="utf-8") as f:
         paths_expected = [library.path_mapper.map(line.strip()) for line in f]

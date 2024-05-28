@@ -66,8 +66,8 @@ class TestItemSorter(PrettyPrinterTester):
         assert ItemSorter.group_by_field(tracks) == {None: tracks}
 
         groups = ItemSorter.group_by_field(tracks, TrackField.KEY)
-        assert sorted(groups) == sorted(set(track.key for track in tracks))
-        assert sum(len(t) for t in groups.values()) == len(tracks)
+        assert sorted(groups) == sorted({track.key for track in tracks})
+        assert sum(map(len, groups.values())) == len(tracks)
 
     def test_shuffle_random(self, tracks: list[LocalTrack]):
         tracks_original = tracks.copy()

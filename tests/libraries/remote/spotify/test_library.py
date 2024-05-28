@@ -130,8 +130,8 @@ class TestSpotifyLibrary(RemoteLibraryTester):
             assert len(await api_mock.get_requests(url=track.response["album"]["href"] + "/tracks")) == 0
 
         # check requests
-        assert len(await api_mock.get_requests(url=library.api.url + "/artists")) == 0
-        req_albums = await api_mock.get_requests(url=library.api.url + "/albums")
+        assert len(await api_mock.get_requests(url=f"{library.api.url}/artists")) == 0
+        req_albums = await api_mock.get_requests(url=f"{library.api.url}/albums")
         req_album_ids = {id_ for url, _, _ in req_albums for id_ in unquote(url.query["ids"]).split(",")}
         assert req_album_ids == album_ids
 
@@ -157,8 +157,8 @@ class TestSpotifyLibrary(RemoteLibraryTester):
             validate_track_extras_not_enriched(track)
 
         # check requests
-        assert len(await api_mock.get_requests(url=library.api.url + "/albums")) == 0
-        req_artists = await api_mock.get_requests(url=library.api.url + "/artists")
+        assert len(await api_mock.get_requests(url=f"{library.api.url}/albums")) == 0
+        req_artists = await api_mock.get_requests(url=f"{library.api.url}/artists")
         req_artist_ids = {id_ for url, _, _ in req_artists for id_ in unquote(url.query["ids"]).split(",")}
         assert req_artist_ids == artist_ids
 

@@ -110,7 +110,7 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
             "client_id": client_id,
             "client_base64": base64.b64encode(f"{client_id}:{client_secret}".encode()).decode(),
             "scopes": " ".join(scopes),
-            "url": wrangler.url_api
+            "url": str(wrangler.url_api)
         }
         auth_kwargs = merge_maps(deepcopy(SPOTIFY_API_AUTH_ARGS), auth_kwargs, extend=False, overwrite=True)
         safe_format_map(auth_kwargs, format_map=format_map)

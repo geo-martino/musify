@@ -26,38 +26,13 @@ What's in this documentation
 * How to get started with contributing to Musify
 * Reference documentation
 
-.. _installation:
-
-Installation
-------------
-
-Install through pip using one of the following commands:
-
-.. code-block:: bash
-
-   pip install musify
-   # or
-   python -m pip install musify
-
-This package has various optional dependencies for optional functionality.
-Should you wish to take advantage of some or all of this functionality, install the optional dependencies as follows:
-
-.. code-block:: bash
-
-   pip install musify[all]  # installs all optional dependencies
-
-   pip install musify[bars]  # dependencies for displaying progress bars on longer running processes
-   pip install musify[images]  # dependencies for processing images
-   pip install musify[musicbee]  # dependencies for working with a local MusicBee library and its playlist types
-   pip install musify[sqlite]  # dependencies for working with a SQLite cache backend for caching API responses
-
-   # or you may install any combination of these e.g.
-   pip install musify[bars,images,musicbee]
+.. include:: howto.install.rst
 
 .. toctree::
    :maxdepth: 1
    :caption: 📜 How to...
 
+   howto.install
    howto.local.library.load
    howto.local.playlist.load-save
    howto.local.track.load-save
@@ -68,7 +43,7 @@ Should you wish to take advantage of some or all of this functionality, install 
    howto.reports
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: 🛠️ Project Info
 
    release-history

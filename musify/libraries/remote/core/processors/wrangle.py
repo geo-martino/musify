@@ -5,6 +5,8 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping
 from typing import Any
 
+from yarl import URL
+
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteObjectTypeError
@@ -33,13 +35,13 @@ class RemoteDataWrangler(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def url_api(self) -> str:
+    def url_api(self) -> URL:
         """The base URL of the API for this remote source"""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def url_ext(self) -> str:
+    def url_ext(self) -> URL:
         """The base URL of external links for this remote source"""
         raise NotImplementedError
 

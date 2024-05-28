@@ -217,7 +217,7 @@ class RequestHandler(AsyncContextManager):
         url_pad = next((pad for pad in url_pad_map if len(url) < pad), url_pad_map[-1])
 
         self.logger.log(
-            level=level, msg=f"{method.upper():<7}: {url:<{url_pad}} | {" | ".join(str(part) for part in log)}"
+            level=level, msg=f"{method.upper():<7}: {url:<{url_pad}} | {" | ".join(map(str, log))}"
         )
 
     async def _log_response(self, response: ClientResponse, method: str, url: str | URL) -> None:

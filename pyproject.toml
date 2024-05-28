@@ -27,18 +27,16 @@ dependencies = [
     "mutagen~=1.47",
     "aiohttp~=3.9",
     "python-dateutil~=2.9",
+    "Pillow~=10.3",
 ]
 
 [project.optional-dependencies]
 # optional functionality
 all = [
-    "musify[bars,images,musicbee,sqlite]",
+    "musify[bars,musicbee,sqlite]",
 ]
 bars = [
     "tqdm~=4.66",
-]
-images = [
-    "Pillow~=10.3",
 ]
 musicbee = [
     "xmltodict~=0.13",

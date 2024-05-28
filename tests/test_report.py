@@ -1,5 +1,4 @@
 from copy import copy
-from os.path import join
 from pathlib import Path
 from random import choice, randrange
 
@@ -37,7 +36,7 @@ def spotify_library(spotify_api: SpotifyAPI, spotify_mock: SpotifyMock) -> Spoti
 
 
 @pytest.fixture
-def local_library(
+async def local_library(
         spotify_library: SpotifyLibrary, spotify_wrangler: SpotifyDataWrangler, tmp_path: Path
 ) -> LocalLibrary:
     """Yields a :py:class:`LocalLibrary` of local tracks and playlists"""
@@ -46,9 +45,13 @@ def local_library(
 
     uri_tracks = {track.uri: track for track in library.tracks}
     for name, pl in spotify_library.playlists.items():
-        path = join(tmp_path, name + ".m3u")
+        path = tmp_path.joinpath(name).with_suffix(".m3u")
         tracks = [uri_tracks[track.uri] for track in pl]
-        library.playlists[name] = M3U(path=path, tracks=tracks)
+
+        playlist = M3U(path=path)
+        await playlist.load(tracks=tracks)
+        library.playlists[name] = playlist
+
         assert all(track in pl for track in library.playlists[name])
 
     return library
@@ -93,9 +96,9 @@ def test_report_playlist_differences(local_library: LocalLibrary, spotify_librar
                 added += 1
 
     report = report_playlist_differences(source=local_library, reference=spotify_library)
-    assert sum(len(items) for items in report["Source ✗ | Compare ✓"].values()) == extra_total
-    assert sum(len(items) for items in report["Source ✓ | Compare ✗"].values()) == missing_total
-    assert sum(len(items) for items in report["Items unavailable (no URI)"].values()) == unavailable_total
+    assert sum(map(len, report["Source ✗ | Compare ✓"].values())) == extra_total
+    assert sum(map(len, report["Source ✓ | Compare ✗"].values())) == missing_total
+    assert sum(map(len, report["Items unavailable (no URI)"].values())) == unavailable_total
 
 
 @pytest.mark.slow

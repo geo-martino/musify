@@ -30,6 +30,10 @@ IMAGE_SIZES: tuple[int, ...] = tuple([64, 160, 300, 320, 500, 640, 800, 1000])
 class SpotifyMock(RemoteMock):
     """Generates responses and sets up Spotify API requests mock"""
 
+    source = SpotifyDataWrangler.source
+    url_api = SpotifyDataWrangler.url_api
+    url_ext = SpotifyDataWrangler.url_ext
+
     range_start = 25
     range_stop = 50
     range_max = 200
@@ -224,7 +228,7 @@ class SpotifyMock(RemoteMock):
     ## Setup - requests
     ###########################################################################
     def setup_mock(self):
-        url_api = SpotifyDataWrangler.url_api
+        url_api = self.url_api
 
         self.setup_search_mock()
         self.get(
@@ -332,7 +336,7 @@ class SpotifyMock(RemoteMock):
             }
             return CallbackResult(method="GET", payload=payload)
 
-        url_search = f"{SpotifyDataWrangler.url_api}/search"
+        url_search = f"{self.url_api}/search"
         self.get(url=re.compile(url_search + r"\?"), callback=callback, repeat=True)
 
     def setup_items_mock(
@@ -353,7 +357,7 @@ class SpotifyMock(RemoteMock):
             payload = {req_kind: [deepcopy(id_map[i]) for i in id_list]}
             return CallbackResult(method="GET", payload=payload)
 
-        url_api = SpotifyDataWrangler.url_api
+        url_api = self.url_api
         url_items = f"{url_api}/{kind.name.lower()}s" if isinstance(kind, ObjectType) else f"{url_api}/{kind}"
 
         if batchable:  # item batched calls
@@ -427,19 +431,18 @@ class SpotifyMock(RemoteMock):
 
             return CallbackResult(method="POST", payload=payload)
 
-        url = f"{SpotifyDataWrangler.url_api}/users/{self.user_id}/playlists"
+        url = f"{self.url_api}/users/{self.user_id}/playlists"
         self.post(url=url, callback=callback, repeat=True)
 
     ###########################################################################
     ## Formatters
     ###########################################################################
-    @classmethod
     def format_items_block(
-            cls, url: str, items: list[dict[str, Any]], offset: int = 0, limit: int = 20, total: int = limit_max
+            self, url: str, items: list[dict[str, Any]], offset: int = 0, limit: int = 20, total: int = limit_max
     ) -> dict[str, Any]:
         """Format an items block response from a list of items and a URL base."""
         href = SpotifyAPI.format_next_url(url=url, offset=offset, limit=limit)
-        limit = min(max(limit, 1), cls.limit_max)  # limit must be between 1 and 50
+        limit = min(max(limit, 1), self.limit_max)  # limit must be between 1 and 50
 
         prev_offset = offset - limit
         prev_url = SpotifyAPI.format_next_url(url=url, offset=prev_offset, limit=limit) if prev_offset >= 0 else None
@@ -467,8 +470,7 @@ class SpotifyMock(RemoteMock):
     ###########################################################################
     ## Generators - helpers
     ###########################################################################
-    @classmethod
-    def _get_count(cls, response: Mapping[str, Any], key: str, total: int) -> int:
+    def _get_count(self, response: Mapping[str, Any], key: str, total: int) -> int:
         """
         Generate a value for the number of items to generate from the 'limit' key in the ``key`` of the ``response``
         or use the 'total' value minus the current number of items.
@@ -484,7 +486,7 @@ class SpotifyMock(RemoteMock):
 
         # force pagination testing when range > 1
         remaining = total - current
-        limit = max(min(response.get(key, {}).get("limit", remaining // randrange(1, 4)), cls.limit_max), 1)
+        limit = max(min(response.get(key, {}).get("limit", remaining // randrange(1, 4)), self.limit_max), 1)
         count = limit if limit < remaining else remaining
 
         if current + count > total:
@@ -542,15 +544,15 @@ class SpotifyMock(RemoteMock):
             "duration_ms": choice((duration_ms, {"totalMilliseconds": duration_ms})),
             "explicit": choice([True, False, None]),
             "external_ids": self.generate_external_ids(),
-            "external_urls": {SpotifyDataWrangler.source.lower(): f"{SpotifyDataWrangler.url_ext}/{kind}/{track_id}"},
-            "href": f"{SpotifyDataWrangler.url_api}/{kind}s/{track_id}",
+            "external_urls": {self.source.lower(): f"{self.url_ext}/{kind}/{track_id}"},
+            "href": f"{self.url_api}/{kind}s/{track_id}",
             "id": track_id,
             "name": random_str(30, 50),
             "popularity": randrange(0, 100),
             "preview_url": None,
             "track_number": randrange(1, 30),
             "type": kind,
-            "uri": f"{SpotifyDataWrangler.source.lower()}:{kind}:{track_id}",
+            "uri": f"{self.source.lower()}:{kind}:{track_id}",
             "is_local": False
         }
 
@@ -568,8 +570,7 @@ class SpotifyMock(RemoteMock):
 
         return response
 
-    @staticmethod
-    def generate_audio_features(track_id: str | None = None, duration_ms: int | None = None) -> dict[str, Any]:
+    def generate_audio_features(self, track_id: str | None = None, duration_ms: int | None = None) -> dict[str, Any]:
         """
         Return a randomly generated Spotify API response for a Track's audio features.
 
@@ -583,7 +584,7 @@ class SpotifyMock(RemoteMock):
         # noinspection SpellCheckingInspection
         return {
             "acousticness": random(),
-            "analysis_url": f"{SpotifyDataWrangler.url_api}/audio-analysis/{track_id}",
+            "analysis_url": f"{self.url_api}/audio-analysis/{track_id}",
             "danceability": random(),
             "duration_ms": duration_ms,
             "energy": random(),
@@ -596,9 +597,9 @@ class SpotifyMock(RemoteMock):
             "speechiness": random(),
             "tempo": random() * 100 + 50,
             "time_signature": randrange(3, 7),
-            "track_href": f"{SpotifyDataWrangler.url_api}/{kind}s/{track_id}",
+            "track_href": f"{self.url_api}/{kind}s/{track_id}",
             "type": "audio_features",
-            "uri": f"{SpotifyDataWrangler.source.lower()}:{kind}:{track_id}",
+            "uri": f"{self.source.lower()}:{kind}:{track_id}",
             "valence": random()
         }
 
@@ -615,8 +616,7 @@ class SpotifyMock(RemoteMock):
     ###########################################################################
     ## Generators - ARTIST
     ###########################################################################
-    @classmethod
-    def generate_artist(cls, properties: bool = True) -> dict[str, Any]:
+    def generate_artist(self, properties: bool = True) -> dict[str, Any]:
         """
         Return a randomly generated Spotify API response for an Artist.
 
@@ -626,18 +626,17 @@ class SpotifyMock(RemoteMock):
         artist_id = random_id()
 
         response = {
-            "external_urls": {SpotifyDataWrangler.source.lower(): f"{SpotifyDataWrangler.url_ext}/{kind}/{artist_id}"},
-            "href": f"{SpotifyDataWrangler.url_api}/{kind}s/{artist_id}",
+            "external_urls": {self.source.lower(): f"{self.url_ext}/{kind}/{artist_id}"},
+            "href": f"{self.url_api}/{kind}s/{artist_id}",
             "id": artist_id,
             "name": random_str(5, 30),
             "type": kind,
-            "uri": f"{SpotifyDataWrangler.source.lower()}:{kind}:{artist_id}"
+            "uri": f"{self.source.lower()}:{kind}:{artist_id}"
         }
 
-        return cls.extend_artist(response=response, properties=properties)
+        return self.extend_artist(response=response, properties=properties)
 
-    @classmethod
-    def extend_artist(cls, response: dict[str, Any], properties: bool = True) -> dict[str, Any]:
+    def extend_artist(self, response: dict[str, Any], properties: bool = True) -> dict[str, Any]:
         """
         Extend a given randomly generated Spotify API ``response`` for an Artist.
 
@@ -648,7 +647,7 @@ class SpotifyMock(RemoteMock):
             response |= {
                 "followers": {"href": None, "total": randrange(0, int(8e10))},
                 "genres": random_genres(),
-                "images": cls.generate_images(),
+                "images": self.generate_images(),
                 "popularity": randrange(0, 100)
             }
         return response
@@ -656,8 +655,7 @@ class SpotifyMock(RemoteMock):
     ###########################################################################
     ## Generators - USER
     ###########################################################################
-    @classmethod
-    def generate_user(cls) -> dict[str, Any]:
+    def generate_user(self) -> dict[str, Any]:
         """Return a randomly generated Spotify API response for a User."""
         kind = ObjectType.USER.name.lower()
         user_id = random_str(30, 50)
@@ -670,43 +668,41 @@ class SpotifyMock(RemoteMock):
                 "filter_enabled": choice([True, False]),
                 "filter_locked": choice([True, False])
             },
-            "external_urls": {SpotifyDataWrangler.source.lower(): f"{SpotifyDataWrangler.url_ext}/{kind}/{user_id}"},
+            "external_urls": {self.source.lower(): f"{self.url_ext}/{kind}/{user_id}"},
             "followers": {"href": None, "total": randrange(0, int(8e10))},
-            "href": f"{SpotifyDataWrangler.url_api}/{kind}s/{user_id}",
+            "href": f"{self.url_api}/{kind}s/{user_id}",
             "id": user_id,
-            "images": cls.generate_images(),
+            "images": self.generate_images(),
             "product": choice(["premium", "free", "open"]),
             "type": kind,
-            "uri": f"{SpotifyDataWrangler.source.lower()}:{kind}:{user_id}"
+            "uri": f"{self.source.lower()}:{kind}:{user_id}"
         }
 
         return response
 
-    @staticmethod
     def generate_owner(
-            user: Mapping[str, Any] | None = None, user_id: str | None = None, user_name: str | None = None
+            self, user: Mapping[str, Any] | None = None, user_id: str | None = None, user_name: str | None = None
     ) -> dict[str, Any]:
         """Return a randomly generated Spotify API response for an owner"""
         kind = ObjectType.USER.name.lower()
         user_id = user_id or str(uuid4())
         user_name = user_name or random_str(5, 30)
         ext_urls = user["external_urls"] if user else {
-            SpotifyDataWrangler.source.lower(): f"{SpotifyDataWrangler.url_ext}/{kind}/{user_id}"
+            self.source.lower(): f"{self.url_ext}/{kind}/{user_id}"
         }
 
         return {
             "display_name": user["display_name"] if user else user_name,
             "external_urls": ext_urls,
-            "href": user["href"] if user else f"{SpotifyDataWrangler.url_api}/{kind}s/{user_id}",
+            "href": user["href"] if user else f"{self.url_api}/{kind}s/{user_id}",
             "id": user["id"] if user else user_id,
             "type": user["type"] if user else kind,
-            "uri": user["uri"] if user else f"{SpotifyDataWrangler.source.lower()}:{kind}:{user_id}",
+            "uri": user["uri"] if user else f"{self.source.lower()}:{kind}:{user_id}",
         }
 
-    @classmethod
-    def generate_owner_from_api(cls, api: SpotifyAPI | None = None) -> dict[str, Any]:
+    def generate_owner_from_api(self, api: SpotifyAPI | None = None) -> dict[str, Any]:
         """Return an owner block from the properties of the given :py:class:`SpotifyAPI` object"""
-        return cls.generate_owner(user_id=api.user_id, user_name=api.user_name)
+        return self.generate_owner(user_id=api.user_id, user_name=api.user_name)
 
     ###########################################################################
     ## Generators - PLAYLIST
@@ -732,7 +728,7 @@ class SpotifyMock(RemoteMock):
         """
         kind = ObjectType.PLAYLIST.name.lower()
         playlist_id = random_id()
-        url = f"{SpotifyDataWrangler.url_api}/{kind}s/{playlist_id}"
+        url = f"{self.url_api}/{kind}s/{playlist_id}"
 
         item_count = item_count if item_count is not None else randrange(0, self.range_max)
         public = choice([True, False])
@@ -748,7 +744,7 @@ class SpotifyMock(RemoteMock):
             "collaborative": choice([True, False]) if not public else False,
             "description": random_str(20, 100),
             "external_urls": {
-                SpotifyDataWrangler.source.lower(): f"{SpotifyDataWrangler.url_ext}/{kind}/{playlist_id}"
+                self.source.lower(): f"{self.url_ext}/{kind}/{playlist_id}"
             },
             "followers": {"href": None, "total": randrange(0, int(8e10))},
             "href": url,
@@ -761,7 +757,7 @@ class SpotifyMock(RemoteMock):
             "snapshot_id": random_str(60, 60),
             "tracks": {"href": f"{url}/tracks", "total": item_count},
             "type": kind,
-            "uri": f"{SpotifyDataWrangler.source.lower()}:{kind}:{playlist_id}",
+            "uri": f"{self.source.lower()}:{kind}:{playlist_id}",
         }
 
         tracks = self.generate_playlist_tracks(response=response, use_stored=use_stored)
@@ -834,15 +830,15 @@ class SpotifyMock(RemoteMock):
             "album_type": choice((kind, "single", "compilation")),
             "total_tracks": track_count,
             "available_markets": sample(COUNTRY_CODES, k=randrange(1, 5)),
-            "external_urls": {SpotifyDataWrangler.source.lower(): f"{SpotifyDataWrangler.url_ext}/{kind}/{album_id}"},
-            "href": f"{SpotifyDataWrangler.url_api}/{kind}s/{album_id}",
+            "external_urls": {self.source.lower(): f"{self.url_ext}/{kind}/{album_id}"},
+            "href": f"{self.url_api}/{kind}s/{album_id}",
             "id": album_id,
             "images": self.generate_images(),
             "name": random_str(30, 50),
             "release_date": random_date_str(),
             "release_date_precision": choice(("day", "month", "year")),
             "type": kind,
-            "uri": f"{SpotifyDataWrangler.source.lower()}:{kind}:{album_id}",
+            "uri": f"{self.source.lower()}:{kind}:{album_id}",
         }
 
         if tracks:
@@ -927,8 +923,8 @@ class SpotifyMock(RemoteMock):
             "description": random_str(200, 500),
             "html_description": random_str(100, 200),
             "explicit": choice([True, False, None]),
-            "external_urls": {SpotifyDataWrangler.source.lower(): f"{SpotifyDataWrangler.url_ext}/{kind}/{show_id}"},
-            "href": f"{SpotifyDataWrangler.url_api}/{kind}s/{show_id}",
+            "external_urls": {self.source.lower(): f"{self.url_ext}/{kind}/{show_id}"},
+            "href": f"{self.url_api}/{kind}s/{show_id}",
             "id": show_id,
             "images": self.generate_images(),
             "is_externally_hosted": choice([True, False, None]),
@@ -937,7 +933,7 @@ class SpotifyMock(RemoteMock):
             "name": random_str(30, 50),
             "publisher": random_str(10, 30),
             "type": "show",
-            "uri": f"{SpotifyDataWrangler.source.lower()}:{kind}:{show_id}",
+            "uri": f"{self.source.lower()}:{kind}:{show_id}",
             "total_episodes": episode_count,
         }
 
@@ -968,8 +964,8 @@ class SpotifyMock(RemoteMock):
             "html_description": random_str(100, 200),
             "duration_ms": duration_ms,
             "explicit": choice([True, False, None]),
-            "external_urls": {SpotifyDataWrangler.source.lower(): f"{SpotifyDataWrangler.url_ext}/{kind}/{episode_id}"},
-            "href": f"{SpotifyDataWrangler.url_api}/{kind}s/{episode_id}",
+            "external_urls": {self.source.lower(): f"{self.url_ext}/{kind}/{episode_id}"},
+            "href": f"{self.url_api}/{kind}s/{episode_id}",
             "id": episode_id,
             "images": self.generate_images(),
             "is_externally_hosted": choice([True, False]),
@@ -984,7 +980,7 @@ class SpotifyMock(RemoteMock):
                 "resume_position_ms": randrange(0, duration_ms),
             },
             "type": "episode",
-            "uri": f"{SpotifyDataWrangler.source.lower()}:{kind}:{episode_id}",
+            "uri": f"{self.source.lower()}:{kind}:{episode_id}",
         }
 
         if isinstance(show, dict):
@@ -1054,9 +1050,9 @@ class SpotifyMock(RemoteMock):
             "edition": random_str(5, 20),
             "explicit": choice([True, False, None]),
             "external_urls": {
-                SpotifyDataWrangler.source.lower(): f"{SpotifyDataWrangler.url_ext}/{kind}/{audiobook_id}"
+                self.source.lower(): f"{self.url_ext}/{kind}/{audiobook_id}"
             },
-            "href": f"{SpotifyDataWrangler.url_api}/{kind}s/{audiobook_id}",
+            "href": f"{self.url_api}/{kind}s/{audiobook_id}",
             "id": audiobook_id,
             "images": self.generate_images(),
             "languages": sample(LANGUAGE_NAMES, k=randrange(1, 5)),
@@ -1065,7 +1061,7 @@ class SpotifyMock(RemoteMock):
             "narrators": [{"name": random_str(30, 50)} for _ in range(randrange(1, 10))],
             "publisher": random_str(10, 30),
             "type": "audiobook",
-            "uri": f"{SpotifyDataWrangler.source.lower()}:{kind}:{audiobook_id}",
+            "uri": f"{self.source.lower()}:{kind}:{audiobook_id}",
             "total_chapters": chapter_count,
         }
 
@@ -1098,8 +1094,8 @@ class SpotifyMock(RemoteMock):
             "html_description": random_str(100, 200),
             "duration_ms": duration_ms,
             "explicit": choice([True, False, None]),
-            "external_urls": {SpotifyDataWrangler.source.lower(): f"{SpotifyDataWrangler.url_ext}/{kind}/{chapter_id}"},
-            "href": f"{SpotifyDataWrangler.url_api}/{kind}s/{chapter_id}",
+            "external_urls": {self.source.lower(): f"{self.url_ext}/{kind}/{chapter_id}"},
+            "href": f"{self.url_api}/{kind}s/{chapter_id}",
             "id": chapter_id,
             "images": self.generate_images(),
             "is_playable": choice([True, False]),
@@ -1112,7 +1108,7 @@ class SpotifyMock(RemoteMock):
                 "resume_position_ms": randrange(0, duration_ms),
             },
             "type": "chapter",
-            "uri": f"{SpotifyDataWrangler.source.lower()}:{kind}:{chapter_id}",
+            "uri": f"{self.source.lower()}:{kind}:{chapter_id}",
         }
 
         if isinstance(audiobook, dict):

@@ -4,7 +4,6 @@ import json
 import os
 from collections.abc import Mapping, Callable, Generator
 from datetime import datetime, timedelta
-from os.path import splitext, dirname, join
 from pathlib import Path
 from tempfile import gettempdir
 from typing import Any, Self
@@ -254,10 +253,8 @@ class SQLiteCache(ResponseCache[SQLiteTable]):
         return self.connection is None or not self.connection.is_alive()
 
     @staticmethod
-    def _get_sqlite_path(path: str) -> str:
-        if not splitext(path)[1] == ".sqlite":  # add/replace extension if not given
-            path += ".sqlite"
-        return path
+    def _get_sqlite_path(path: Path) -> Path:
+        return path.with_suffix(".sqlite")
 
     @staticmethod
     def _clean_kwargs[T: dict](kwargs: T) -> T:
@@ -272,12 +269,11 @@ class SQLiteCache(ResponseCache[SQLiteTable]):
     @classmethod
     def connect_with_path(cls, path: str | Path, **kwargs) -> Self:
         """Connect with an SQLite DB at the given ``path`` and return an instantiated :py:class:`SQLiteResponseCache`"""
-        path = cls._get_sqlite_path(str(path))
-        if dirname(path):
-            os.makedirs(dirname(path), exist_ok=True)
+        path = cls._get_sqlite_path(Path(path))
+        os.makedirs(path.parent, exist_ok=True)
 
         return cls(
-            cache_name=path,
+            cache_name=str(path),
             connector=lambda: aiosqlite.connect(database=path),
             **cls._clean_kwargs(kwargs)
         )
@@ -294,7 +290,7 @@ class SQLiteCache(ResponseCache[SQLiteTable]):
     @classmethod
     def connect_with_temp_db(cls, name: str = f"{PROGRAM_NAME.lower()}_db.tmp", **kwargs) -> Self:
         """Connect with a temporary SQLite DB and return an instantiated :py:class:`SQLiteResponseCache`"""
-        path = cls._get_sqlite_path(join(gettempdir(), name))
+        path = cls._get_sqlite_path(Path(gettempdir(), name))
         return cls(
             cache_name=name,
             connector=lambda: aiosqlite.connect(database=path),

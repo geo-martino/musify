@@ -4,14 +4,15 @@ Reads library/settings files from MusicBee to load and enrich playlist/track etc
 """
 import hashlib
 import re
+import os
 from collections.abc import Iterable, Mapping, Sequence, Collection, Iterator
 from datetime import datetime
-from os.path import join, exists, normpath
+from pathlib import Path
 from typing import Any
 from urllib.parse import quote, unquote
 
 from musify.file.base import File
-from musify.file.exception import FileDoesNotExistError
+from musify.file.exception import FileDoesNotExistError, UnexpectedPathError
 from musify.file.path_mapper import PathMapper, PathStemMapper
 from musify.libraries.local.exception import MusicBeeIDError, XMLReaderError
 from musify.libraries.local.library.library import LocalLibrary
@@ -66,21 +67,21 @@ class MusicBee(LocalLibrary, File):
 
     valid_extensions = frozenset({".xml"})
     #: The path of the MusicBee library file relative the ``musicbee_folder`` provided on initialisation.
-    xml_library_path = "iTunes Music Library.xml"
+    xml_library_path = Path("iTunes Music Library.xml")
     #: A list of keys for the XML library that need to be processed as system paths.
     xml_library_path_keys = {"Location", "Music Folder"}
     #: The path of the MusicBee settings file relative the ``musicbee_folder`` provided on initialisation.
-    xml_settings_path = "MusicBeeLibrarySettings.ini"
+    xml_settings_path = Path("MusicBeeLibrarySettings.ini")
     #: The path to the playlists folder relative the ``musicbee_folder`` provided on initialisation.
-    playlists_path = "Playlists"
+    playlists_path = Path("Playlists")
 
     @property
-    def path(self) -> str:
+    def path(self) -> Path:
         return self._library_xml_path
 
     def __init__(
             self,
-            musicbee_folder: str,
+            musicbee_folder: str | Path,
             playlist_filter: Collection[str] | Filter[str] = (),
             path_mapper: PathMapper = PathMapper(),
             remote_wrangler: RemoteDataWrangler = None,
@@ -88,11 +89,13 @@ class MusicBee(LocalLibrary, File):
         required_modules_installed(REQUIRED_MODULES, self)
 
         #: The absolute path of the musicbee folder containing settings and library files.
-        self.musicbee_folder = musicbee_folder
+        self.musicbee_folder = Path(musicbee_folder)
+        if not self.musicbee_folder.is_dir():
+            raise UnexpectedPathError(self.musicbee_folder, "Given MusicBee folder must be a directory")
 
-        self._library_xml_path: str = join(musicbee_folder, self.xml_library_path)
-        if not exists(self._library_xml_path):
-            raise FileDoesNotExistError(f"Cannot find MusicBee library at given path: {self._library_xml_path}")
+        self._library_xml_path: Path = self.musicbee_folder.joinpath(self.xml_library_path)
+        if not self._library_xml_path.is_file():
+            raise FileDoesNotExistError(self._library_xml_path, "Cannot find MusicBee library file at this path")
 
         try:
             self._library_xml_parser = XMLLibraryParser(self._library_xml_path, path_keys=self.xml_library_path_keys)
@@ -103,9 +106,9 @@ class MusicBee(LocalLibrary, File):
                 f"Could not read from library file at {self._library_xml_path}. {exc}"
             ) from exc
 
-        self._settings_xml_path: str = join(musicbee_folder, self.xml_settings_path)
-        if not exists(self._settings_xml_path):
-            raise FileDoesNotExistError(f"Cannot find MusicBee settings at given path: {self._settings_xml_path}")
+        self._settings_xml_path: Path = self.musicbee_folder.joinpath(self.xml_settings_path)
+        if not self._settings_xml_path.is_file():
+            raise FileDoesNotExistError(self._settings_xml_path, "Cannot find MusicBee settings file at this path")
 
         try:
             with open(self._settings_xml_path, "r", encoding="utf-8") as f:
@@ -122,37 +125,37 @@ class MusicBee(LocalLibrary, File):
 
         super().__init__(
             library_folders=library_folders,
-            playlist_folder=join(self.musicbee_folder, self.playlists_path),
+            playlist_folder=self.musicbee_folder.joinpath(self.playlists_path),
             playlist_filter=playlist_filter,
             path_mapper=path_mapper,
             remote_wrangler=remote_wrangler,
         )
 
     def _get_track_from_xml_path(
-            self, track_xml: dict[str, Any], track_map: dict[str, LocalTrack]
+            self, track_xml: dict[str, Any], track_map: dict[Path, LocalTrack]
     ) -> LocalTrack | None:
         if track_xml["Track Type"] != "File":
             return
 
         path = track_xml["Location"]
-        prefixes = {*self.library_folders, self.library_xml["Music Folder"]}
+        prefixes = {*map(str, self.library_folders), self.library_xml["Music Folder"]}
         if isinstance(self.path_mapper, PathStemMapper):
             prefixes.update(self.path_mapper.stem_map.keys())
 
         for prefix in prefixes:
-            track = track_map.get(path.removeprefix(prefix).casefold(), track_map.get(path.removeprefix(prefix)))
+            track = track_map.get(Path(path.removeprefix(prefix)))
             if track is not None:
                 return track
 
         self.errors.append(path)
 
-    def load_tracks(self) -> None:
-        super().load_tracks()
+    async def load_tracks(self) -> None:
+        await super().load_tracks()
         self.logger.debug(f"Enrich {self.name} tracks: START")
 
         # need to remove library folders to allow match to be os agnostic
         track_map = {
-            track.path.removeprefix(folder).casefold(): track
+            Path(str(track.path).removeprefix(str(folder))): track
             for folder in self.library_folders for track in self.tracks
         }
 
@@ -169,7 +172,7 @@ class MusicBee(LocalLibrary, File):
         self._log_errors("Could not find a loaded track for these paths from the MusicBee library file")
         self.logger.debug(f"Enrich {self.name} tracks: DONE\n")
 
-    def save(self, dry_run: bool = True, *_, **__) -> dict[str, Any]:
+    async def save(self, dry_run: bool = True, *_, **__) -> dict[str, Any]:
         """
         Generate and save the XML library file for this MusicBee library.
 
@@ -179,7 +182,7 @@ class MusicBee(LocalLibrary, File):
         self.logger.debug(f"Save {self.name} library file: START")
         # need to remove library folders to allow match to be os agnostic
         track_map = {
-            track.path.removeprefix(folder).casefold(): track
+            Path(str(track.path).removeprefix(str(folder))): track
             for folder in self.library_folders for track in self.tracks
         }
         track_id_map: dict[LocalTrack, tuple[int, str]] = {}
@@ -218,7 +221,7 @@ class MusicBee(LocalLibrary, File):
             "Major Version": self.library_xml.get("Major Version", "1"),
             "Minor Version": self.library_xml.get("Minor Version", "1"),
             "Application Version": self.library_xml.get("Application Version", "1"),
-            "Music Folder": self.musicbee_folder,
+            "Music Folder": str(self.musicbee_folder),
             "Library Persistent ID":
                 self.library_xml.get("Library Persistent ID", self.generate_persistent_id(self.musicbee_folder)),
             "Tracks": dict(sorted(((id_, track) for id_, track in tracks.items()), key=lambda x: x[0])),
@@ -232,7 +235,7 @@ class MusicBee(LocalLibrary, File):
         return self.library_xml
 
     @staticmethod
-    def generate_persistent_id(value: str | None = None, id_: str | None = None) -> str:
+    def generate_persistent_id(value: str | Path | None = None, id_: str | None = None) -> str:
         """
         Generates a valid persistent ID from a given ``value``
         or validates a given persistent ID as given by ``id_``,
@@ -247,7 +250,7 @@ class MusicBee(LocalLibrary, File):
                 "You must provide either a persistent ID to validate or a value to generate a persistent ID from."
             )
 
-        id_ = id_ or hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
+        id_ = id_ or hashlib.sha256(str(value).encode("utf-8")).hexdigest()[:16]
         if len(id_) > 16:
             raise MusicBeeIDError(f"Persistent ID is >16-characters in length (length={len(id_)}): {id_}")
         return id_.upper()
@@ -302,7 +305,7 @@ class MusicBee(LocalLibrary, File):
             "Play Date UTC": track.last_played,
             "Play Count": track.play_count,
             "Track Type": "File",  # can also be 'URL' for streams
-            "Location": track.path,
+            "Location": str(track.path),
         }
 
         return {k: v for k, v in data.items() if v is not None}
@@ -361,11 +364,11 @@ class XMLLibraryParser:
     #: The string representation of the timestamp format when parsing.
     timestamp_format = "%Y-%m-%dT%H:%M:%SZ"
 
-    def __init__(self, path: str, path_keys: Iterable[str] | None = None):
+    def __init__(self, path: str | Path, path_keys: Iterable[str] | None = None):
         required_modules_installed(REQUIRED_MODULES, self)
 
         #: Path to the XML file.
-        self.path: str = path
+        self.path: Path = Path(path)
         #: A list of keys in the XML file that need to be processed as system paths.
         self.path_keys: frozenset[str] = frozenset(path_keys) if path_keys else frozenset()
         #: Stores the iterparse operator for parsing XML file
@@ -384,16 +387,16 @@ class XMLLibraryParser:
             return datetime.strptime(timestamp_str, cls.timestamp_format)
 
     @staticmethod
-    def to_xml_path(path: str) -> str:
+    def to_xml_path(path: str | Path) -> str:
         """Convert a standard system path to a file path as found in the MusicBee XML library file"""
-        return f"file://localhost/{quote(path.replace('\\', '/'), safe=':/!(),;@[]+')}"\
+        return f"file://localhost/{quote(str(path).replace('\\', '/'), safe=':/!(),;@[]+')}"\
             .replace("%26", "&#38;")\
             .replace("%27", "&#39;")
 
     @staticmethod
-    def from_xml_path(path: str) -> str:
+    def from_xml_path(path: str | Path) -> str:
         """Clean the file paths as found in the MusicBee XML library file to a standard system path"""
-        return normpath(unquote(path.removeprefix("file://localhost/")))
+        return os.path.normpath(unquote(str(path).removeprefix("file://localhost/")))
 
     def _iter_elements(self) -> Iterator[Element]:
         for event, element in self._iterparse:
@@ -510,7 +513,8 @@ class XMLLibraryParser:
 
             if isinstance(value, bool):
                 etree.SubElement(sub_element, str(value).lower())
-            elif isinstance(value, str):
+            elif isinstance(value, str | Path):
+                value = str(value)
                 if key in self.path_keys:
                     etree.SubElement(sub_element, "string").text = self.to_xml_path(value)
                 else:

@@ -13,7 +13,7 @@ tags = [
     LocalTrackField.IMAGES
 ]
 
-results = track.save(tags=tags, replace=True, dry_run=False)
+results = asyncio.run(track.save(tags=tags, replace=True, dry_run=False))
 
 # print a list of the tags that were saved
 print([tag.name for tag in results.updated])

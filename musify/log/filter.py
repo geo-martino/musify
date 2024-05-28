@@ -4,7 +4,7 @@ All logging filters specific to this package.
 import inspect
 import logging.handlers
 import re
-from os.path import join, splitext, split, basename
+from pathlib import Path
 
 from musify import PROGRAM_NAME
 
@@ -22,7 +22,7 @@ def format_full_func_name(record: logging.LogRecord, width: int = 40) -> None:
         record.pathname = last_call.filename
         record.lineno = last_call.lineno
         record.funcName = last_call.function
-        record.filename = basename(record.pathname)
+        record.filename = Path(record.pathname).name
         record.module = record.name.split(".")[-1]
 
     f_locals = last_call.frame.f_locals
@@ -33,12 +33,13 @@ def format_full_func_name(record: logging.LogRecord, width: int = 40) -> None:
     else:
         # is a valid and initialised object, extract the class name and determine path to call function from stack
         cls = f_locals["self"].__class__
-        path = join(splitext(inspect.getfile(cls))[0], cls.__name__, record.funcName.split(".")[-1])
+        path = Path(inspect.getfile(cls)).with_suffix("").joinpath(Path(cls.__name__, record.funcName.split(".")[-1]))
 
         folder = ""
         path_split = []
-        while not folder.casefold().startswith(PROGRAM_NAME.casefold()) and path:  # get relative path to sources root
-            path, folder = split(path)
+        while not folder.casefold().startswith(PROGRAM_NAME.casefold()):  # get relative path to sources root
+            folder = path.name
+            path = path.parent
             path_split.append(folder)
         path_split.append(PROGRAM_NAME.lower())
 

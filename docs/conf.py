@@ -3,7 +3,7 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 from datetime import datetime
-from os.path import dirname, basename
+from pathlib import Path
 
 from musify import MODULE_ROOT, PROGRAM_OWNER_NAME, PROGRAM_OWNER_USER, PROGRAM_NAME
 
@@ -76,7 +76,7 @@ html_context = dict(
     github_user=PROGRAM_OWNER_USER,
     github_repo=MODULE_ROOT,
     github_version="HEAD",
-    conf_py_path=f"/{basename(dirname(__file__))}/",
+    conf_py_path=f"/{Path(__file__).parent.name}/",
 )
 
 # -- OpenGraph configuration --------------------------------------------------

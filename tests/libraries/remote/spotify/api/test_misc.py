@@ -7,7 +7,6 @@ import pytest
 
 from musify.libraries.remote.core.enum import RemoteObjectType as ObjectType
 from musify.libraries.remote.spotify.api import SpotifyAPI
-from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
 from tests.conftest import LogCapturer
 from tests.libraries.remote.spotify.api.mock import SpotifyMock
 from tests.utils import idfn, random_str
@@ -117,9 +116,9 @@ class TestSpotifyAPIMisc:
         stdout = "\n".join(re.sub("\33.*?m", "", capfd.readouterr().out).strip().splitlines())
 
         # printed in blocks
-        blocks = [block for block in stdout.split("\n\n\n")[1].split("\n\n") if SpotifyDataWrangler.url_ext in block]
+        blocks = [block for block in stdout.split("\n\n\n")[1].split("\n\n") if str(api_mock.url_ext) in block]
         assert len(blocks) == api_mock.total_requests
 
         # lines printed = total tracks + 1 extra for title
-        lines = [line for line in log_capturer.text.split("\n") if SpotifyDataWrangler.url_ext in line]
+        lines = [line for line in log_capturer.text.split("\n") if str(api_mock.url_ext) in line]
         assert len(lines) == source[key]["total"] + 1

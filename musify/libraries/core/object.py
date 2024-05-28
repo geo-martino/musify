@@ -7,7 +7,10 @@ import datetime
 from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, Mapping, Iterable
 from copy import deepcopy
+from pathlib import Path
 from typing import Self
+
+from yarl import URL
 
 from musify.core.base import MusifyItem, HasLength
 from musify.exception import MusifyTypeError
@@ -143,7 +146,7 @@ class Track(MusifyItem, HasLength, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def image_links(self) -> dict[str, str]:
+    def image_links(self) -> dict[str, str | Path | URL]:
         """
         The images associated with the album this track is featured on in the form ``{<image name/type>: <image link>}``
         """
@@ -326,7 +329,7 @@ class Library[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     @property
     def tracks_in_playlists(self) -> set[T]:
         """All unique tracks from all playlists in this library"""
-        return set(track for pl in self.playlists.values() for track in pl)
+        return {track for pl in self.playlists.values() for track in pl}
 
     @property
     @abstractmethod
@@ -335,12 +338,12 @@ class Library[T: Track](MusifyCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def load(self):
+    async def load(self):
         """Implementations of this function should load all data for this library and log results."""
         raise NotImplementedError
 
     @abstractmethod
-    def load_tracks(self) -> None:
+    async def load_tracks(self) -> None:
         """
         Implementations of this function should load all tracks for this library
         and store them within the library object to be retrieved with property ``tracks``.
@@ -353,7 +356,7 @@ class Library[T: Track](MusifyCollection[T], metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def load_playlists(self) -> None:
+    async def load_playlists(self) -> None:
         """
         Implementations of this function should load all playlists for this library
         and store them within the library object to be retrieved with property ``playlists``.
@@ -711,8 +714,8 @@ class Genre[T: Track](MusifyCollection[T], metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def genres(self) -> list[str]:
-        """List of genres ordered by frequency of appearance on the tracks for this genre"""
+    def related_genres(self) -> list[str]:
+        """List of related genres ordered by frequency of appearance on the tracks for this genre"""
         raise NotImplementedError
 
     @property

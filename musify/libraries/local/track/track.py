@@ -4,22 +4,24 @@ Compositely combine reader and writer classes for metadata/tags/properties opera
 import datetime
 import os
 from abc import ABCMeta, abstractmethod
-from copy import deepcopy
-from os.path import join, exists, dirname
+from collections.abc import Generator
+from copy import deepcopy, copy
+from pathlib import Path
 from typing import Any, Self
 
 import mutagen
+from yarl import URL
 
 from musify.core.base import MusifyItem
 from musify.core.enum import TagMap
 from musify.exception import MusifyKeyError, MusifyAttributeError, MusifyTypeError, MusifyValueError
 from musify.field import TrackField
-from musify.file.exception import FileDoesNotExistError
+from musify.file.exception import FileDoesNotExistError, UnexpectedPathError
 from musify.libraries.core.object import Track
 from musify.libraries.local.base import LocalItem
 from musify.libraries.local.track.field import LocalTrackField as Tags
-from musify.libraries.local.track.tags.reader import TagReader
-from musify.libraries.local.track.tags.writer import TagWriter, SyncResultTrack
+# noinspection PyProtectedMember
+from musify.libraries.local.track._tags import TagReader, TagWriter, SyncResultTrack
 from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
 from musify.types import UnitIterable
 from musify.utils import to_collection
@@ -37,6 +39,8 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
     """
 
     __slots__ = (
+        "_path",
+        "_remote_wrangler",
         "_reader",
         "_writer",
         "_loaded",
@@ -67,8 +71,6 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
     )
     __attributes_classes__ = (Track, LocalItem)
     __attributes_ignore__ = ("tag_map",)
-
-    _load_on_init = True
 
     @property
     def name(self):
@@ -261,7 +263,7 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         return self._image_links
 
     @image_links.setter
-    def image_links(self, value: dict[str, str]):
+    def image_links(self, value: dict[str, str | Path | URL]):
         self._image_links = value
 
     @property
@@ -286,7 +288,7 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
 
     @property
     def path(self):
-        return self._reader.file.filename
+        return self._path
 
     @property
     def type(self):
@@ -343,20 +345,27 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
     def play_count(self, value: int | None):
         self._play_count = value
 
-    @staticmethod
     @abstractmethod
-    def _create_reader(*args, **kwargs) -> U:
+    def _create_reader(self, file: T) -> U:
         """Return a :py:class:`TagReader` object for this track type"""
         raise NotImplementedError
 
-    @staticmethod
     @abstractmethod
-    def _create_writer(*args, **kwargs) -> V:
+    def _create_writer(self, file: T) -> V:
         """Return a :py:class:`TagWriter` object for this track type"""
         raise NotImplementedError
 
-    def __init__(self, file: str | T, remote_wrangler: RemoteDataWrangler = None):
+    def __init__(self, file: str | Path | T, remote_wrangler: RemoteDataWrangler = None):
         super().__init__()
+
+        self._path: Path = Path(file if isinstance(file, str | Path) else file.filename)
+        self._validate_type(self._path)
+
+        self._remote_wrangler = remote_wrangler
+
+        self._loaded = False
+        self._reader: TagReader[T] | None = None
+        self._writer: TagWriter[T] | None = None
 
         self._title = None
         self._artist = None
@@ -385,32 +394,33 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         self._last_played = None
         self._play_count = None
 
-        self._loaded = False
-
-        file: T = self.load(file) if isinstance(file, str) else file
-        self._reader = self._create_reader(file=file, tag_map=self.tag_map, remote_wrangler=remote_wrangler)
-        self._writer = self._create_writer(file=file, tag_map=self.tag_map, remote_wrangler=remote_wrangler)
-
-        if self._load_on_init:
+        if isinstance(file, mutagen.FileType):
+            self._reader = self._create_reader(file)
+            self._writer = self._create_writer(file)
             self.refresh()
 
-    def load(self, path: str | None = None) -> T:
-        """
-        Load local file using mutagen from the given path or the path stored in the object's ``file``.
-        Re-formats to case-sensitive system path if applicable.
+    def __await__(self) -> Generator[Any, None, Self]:
+        return self.load().__await__()
 
-        :param path: The path to the file. If not given, use the stored ``file`` path.
-        :return: Mutagen file object or None if load error.
+    async def load(self) -> Self:
+        """
+        Load local file from scratch using mutagen from the path stored in this object.
+        Refreshes the metadata loaded into this object and returns self.
+
+        :return: Self.
         :raise FileDoesNotExistError: If the file cannot be found.
         :raise InvalidFileType: If the file type is not supported.
         """
-        path = path or self.path
-        self._validate_type(path)
+        if not self._path.is_file():
+            raise FileDoesNotExistError(self._path)
 
-        if not path or not exists(path):
-            raise FileDoesNotExistError(f"File not found | {path}")
+        file = mutagen.File(self.path)
+        self._reader = self._create_reader(file)
+        self._writer = self._create_writer(file)
 
-        return mutagen.File(path)
+        self.refresh()
+
+        return self
 
     def refresh(self) -> None:
         """Extract update tags for this object from the loaded mutagen object."""
@@ -430,11 +440,17 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         self.comments = self._reader.read_comments()
 
         self.uri = self._reader.read_uri()
-        self.has_image = self._reader.check_for_images()
+        if not self._loaded:
+            self.has_image = self._reader.check_for_images()
+
+        # to reduce memory usage, remove any embedded images from the loaded file
+        self._writer.delete_tags(Tags.IMAGES, dry_run=True)
 
         self._loaded = True
 
-    def save(self, tags: UnitIterable[Tags] = Tags.ALL, replace: bool = False, dry_run: bool = True) -> SyncResultTrack:
+    async def save(
+            self, tags: UnitIterable[Tags] = Tags.ALL, replace: bool = False, dry_run: bool = True
+    ) -> SyncResultTrack:
         """
         Update file's tags from given dictionary of tags.
 
@@ -446,12 +462,12 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         # reload the mutagen object in place to ensure comparison are being made against current data
         self._writer.file.load(self._writer.file.filename)
 
-        current = deepcopy(self)
+        current = copy(self)
         current.refresh()
 
         return self._writer.write(source=current, target=self, tags=tags, replace=replace, dry_run=dry_run)
 
-    def delete_tags(self, tags: UnitIterable[Tags] = (), dry_run: bool = True) -> SyncResultTrack:
+    async def delete_tags(self, tags: UnitIterable[Tags] = (), dry_run: bool = True) -> SyncResultTrack:
         """
         Remove tags from file.
 
@@ -472,19 +488,30 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
             if hasattr(track, tag):
                 setattr(self, tag, deepcopy(track[tag]))
 
-    def extract_images_to_file(self, output_folder: str) -> int:
-        """Extract and save all embedded images from file. Returns the number of images extracted."""
+    def extract_images_to_file(self, output_folder: str | Path) -> int:
+        """Reload the file, extract and save all embedded images from file. Returns the number of images extracted."""
+        self._reader.file = mutagen.File(self.path)
+        self._writer.file = self._reader.file
+
         images = self._reader.read_images()
         if images is None:
             return False
+
+        output_folder = Path(output_folder)
+        if not output_folder.is_dir():
+            raise UnexpectedPathError(output_folder, "Given path must be a directory")
+
         count = 0
-
         for i, image in enumerate(images):
-            output_path = join(output_folder, self.filename + f"_{str(i).zfill(2)}" + image.format.lower())
-            os.makedirs(dirname(output_path), exist_ok=True)
+            output_path = output_folder.joinpath(self.filename + f"_{str(i).zfill(2)}")
+            output_path = output_path.with_suffix("." + image.format.lower().lstrip("."))
 
+            os.makedirs(output_path.parent, exist_ok=True)
             image.save(output_path)
             count += 1
+
+        # to reduce memory usage, remove any embedded images from the loaded file
+        self._writer.delete_tags(Tags.IMAGES, dry_run=True)
 
         return count
 
@@ -506,20 +533,22 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
 
     def __copy__(self):
         """Copy object by reloading from the file object in memory"""
-        new = self.__class__(file=self._reader.file, remote_wrangler=self._reader.remote_wrangler)
+        new = self.__class__(file=self.path, remote_wrangler=self._reader.remote_wrangler)
+        new._reader = self._reader
+        new._writer = self._writer
 
-        if not self._reader.file.tags:  # file is not a real file, used in testing
+        if self._reader.file.tags:
+            new.refresh()
+            # image is deleted from loaded file on refresh in initial run
+            # set parameter manually here rather than rely on the 2nd refresh to set it
+            new.has_image = self.has_image
+            new.image_links = self.image_links
+        else:  # file is not a real file, used in testing. Set shallow copy of attributes manually
             keys = [key for key in LocalTrack.__slots__ if key.lstrip("_") in dir(self)]
             for key in keys:
-                setattr(new, key, getattr(self, key))
+                setattr(new, key, copy(getattr(self, key)))
 
         return new
-
-    def __deepcopy__(self, _: dict = None):
-        """Deepcopy object by reloading from the disk"""
-        # use path if file is a real file, use file object otherwise (when testing)
-        file = self._reader.file if not self._reader.file.tags else self.path
-        return self.__class__(file=file, remote_wrangler=self._reader.remote_wrangler)
 
     def __setitem__(self, key: str, value: Any):
         if not hasattr(self, key):
@@ -537,7 +566,7 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
                 f"Incorrect item given. Cannot merge with {other.__class__.__name__} as it is not a Track"
             )
 
-        self_copy = self.__deepcopy__()
+        self_copy = copy(self)
         self_copy.merge(other, tags=TrackField.ALL)
         return self_copy
 

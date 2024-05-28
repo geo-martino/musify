@@ -3,10 +3,10 @@ Handle API authorisation for requesting access tokens to an API.
 """
 import json
 import logging
-import os
 import socket
 from collections.abc import Callable, Mapping, Sequence, MutableMapping, Awaitable
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 from urllib.parse import unquote
 from webbrowser import open as webopen
@@ -139,7 +139,7 @@ class APIAuthoriser:
         test_condition: Callable[[str | Mapping[str, Any]], bool] | None = None,
         test_expiry: int = 0,
         token: Mapping[str, Any] | None = None,
-        token_file_path: str | None = None,
+        token_file_path: str | Path | None = None,
         token_key_path: Sequence[str] = ("access_token",),
         header_key: str = "Authorization",
         header_prefix: str | None = "Bearer ",
@@ -162,7 +162,7 @@ class APIAuthoriser:
 
         # store token
         self.token: Mapping[str, Any] | None = token
-        self.token_file_path: str | None = token_file_path
+        self.token_file_path: Path | None = Path(token_file_path) if token_file_path else None
         self.token_key_path: Sequence[str] = token_key_path
 
         # information for the final headers
@@ -187,7 +187,7 @@ class APIAuthoriser:
 
     def load_token(self) -> dict[str, Any] | None:
         """Load stored token from given path"""
-        if not self.token_file_path or not os.path.exists(self.token_file_path):
+        if not self.token_file_path or not self.token_file_path.exists():
             return self.token
 
         self.logger.debug("Saved access token found. Loading stored token...")

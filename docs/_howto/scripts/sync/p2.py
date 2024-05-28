@@ -20,7 +20,7 @@ async def sync_albums(albums: list[LocalAlbum], factory: RemoteObjectFactory) ->
                 local_track |= remote_track
 
                 # save the track here or...
-                local_track.save(replace=True, dry_run=False)
+                await local_track.save(replace=True, dry_run=False)
 
             # ...save all tracks on the album at once here
-            album.save_tracks(replace=True, dry_run=False)
+            await album.save_tracks(replace=True, dry_run=False)

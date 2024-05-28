@@ -1,4 +1,5 @@
 from abc import ABCMeta
+from pathlib import Path
 from random import sample, shuffle, randrange
 
 import pytest
@@ -14,6 +15,11 @@ from tests.core.printer import PrettyPrinterTester
 from tests.libraries.local.track.utils import random_tracks
 from tests.libraries.local.utils import path_track_all
 from tests.utils import random_str, path_resources
+
+
+def get_path(track: LocalTrack) -> Path:
+    """The key to sort on when making assertions in tests"""
+    return track.path
 
 
 class FilterTester(PrettyPrinterTester, metaclass=ABCMeta):
@@ -166,11 +172,6 @@ class TestFilterMatcher(FilterTester):
             ),
         )
 
-    @staticmethod
-    def sort_key(track: LocalTrack) -> str:
-        """The key to sort on when making assertions in tests"""
-        return track.path
-
     @pytest.fixture(scope="class")
     def tracks(self) -> list[LocalTrack]:
         """Yield a list of random LocalTracks to use for testing the :py:class:`LocalMatcher`"""
@@ -200,7 +201,7 @@ class TestFilterMatcher(FilterTester):
         tracks_include = sample([track for track in tracks if track not in tracks_album], 7)
 
         for i, track in enumerate(tracks_include):
-            track._reader.file.filename = include_paths[i]
+            track._path = Path(include_paths[i])
         return tracks_include
 
     @pytest.fixture(scope="class")
@@ -210,7 +211,7 @@ class TestFilterMatcher(FilterTester):
         tracks_exclude = sample(tracks_artist, 3) + sample(tracks_include, 2)
 
         for i, track in enumerate(tracks_exclude):
-            track._reader.file.filename = exclude_paths[i]
+            track._path = Path(exclude_paths[i])
         return tracks_exclude
 
     @pytest.fixture(scope="class")
@@ -230,11 +231,11 @@ class TestFilterMatcher(FilterTester):
             path_mapper: PathMapper
     ):
         matcher = FilterMatcher(
-            include=FilterDefinedList([track.path.casefold() for track in tracks_include]),
-            exclude=FilterDefinedList([track.path.casefold() for track in tracks_exclude]),
+            include=FilterDefinedList(list(map(get_path, tracks_include))),
+            exclude=FilterDefinedList(list(map(get_path, tracks_exclude))),
         )
-        matcher.include.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
-        matcher.exclude.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
+        matcher.include.transform = lambda x: Path(path_mapper.map(x, check_existence=False))
+        matcher.exclude.transform = lambda x: Path(path_mapper.map(x, check_existence=False))
         tracks_include_reduced = [track for track in tracks_include if track not in tracks_exclude]
 
         assert matcher(values=tracks) == tracks_include_reduced
@@ -251,16 +252,16 @@ class TestFilterMatcher(FilterTester):
     ):
         matcher = FilterMatcher(
             comparers=FilterComparers(comparers, match_all=False),
-            include=FilterDefinedList([track.path.casefold() for track in tracks_include]),
-            exclude=FilterDefinedList([track.path.casefold() for track in tracks_exclude]),
+            include=FilterDefinedList(list(map(get_path, tracks_include))),
+            exclude=FilterDefinedList(list(map(get_path, tracks_exclude))),
         )
-        matcher.include.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
-        matcher.exclude.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
+        matcher.include.transform = lambda x: Path(path_mapper.map(x, check_existence=False))
+        matcher.exclude.transform = lambda x: Path(path_mapper.map(x, check_existence=False))
         tracks_album_reduced = [track for track in tracks_album if track not in tracks_exclude]
         tracks_include_reduced = [track for track in tracks_include if track not in tracks_exclude]
 
-        matches = sorted(matcher(values=tracks), key=self.sort_key)
-        assert matches == sorted(tracks_album_reduced + tracks_include_reduced, key=self.sort_key)
+        matches = sorted(matcher(values=tracks), key=get_path)
+        assert matches == sorted(tracks_album_reduced + tracks_include_reduced, key=get_path)
 
     def test_filter_on_all_comparers(
             self,
@@ -274,17 +275,17 @@ class TestFilterMatcher(FilterTester):
     ):
         matcher = FilterMatcher(
             comparers=FilterComparers(comparers, match_all=True),
-            include=FilterDefinedList([track.path.casefold() for track in tracks_include]),
-            exclude=FilterDefinedList([track.path.casefold() for track in tracks_exclude]),
+            include=FilterDefinedList(list(map(get_path, tracks_include))),
+            exclude=FilterDefinedList(list(map(get_path, tracks_exclude))),
         )
-        matcher.include.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
-        matcher.exclude.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
+        matcher.include.transform = lambda x: Path(path_mapper.map(x, check_existence=False))
+        matcher.exclude.transform = lambda x: Path(path_mapper.map(x, check_existence=False))
 
         tracks_artist_reduced = [track for track in tracks_artist if track not in tracks_exclude]
         tracks_include_reduced = [track for track in tracks_include if track not in tracks_exclude]
 
-        matches = sorted(matcher(values=tracks), key=self.sort_key)
-        assert matches == sorted(tracks_artist_reduced + tracks_include_reduced, key=self.sort_key)
+        matches = sorted(matcher(values=tracks), key=get_path)
+        assert matches == sorted(tracks_artist_reduced + tracks_include_reduced, key=get_path)
 
     def test_extend_result_on_group_by_album(
             self,
@@ -295,20 +296,20 @@ class TestFilterMatcher(FilterTester):
     ):
         tracks_include = tracks_include.copy() + [tracks_album[0]]
         matcher = FilterMatcher(
-            include=FilterDefinedList([track.path.casefold() for track in tracks_include]),
+            include=FilterDefinedList(list(map(get_path, tracks_include))),
             group_by=TagFields.ALBUM
         )
-        matcher.include.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
+        matcher.include.transform = lambda x: Path(path_mapper.map(x, check_existence=False))
 
         result = matcher.process_to_result(values=tracks)
-        assert sorted(result.included, key=self.sort_key) == sorted(tracks_include, key=self.sort_key)
+        assert sorted(result.included, key=get_path) == sorted(tracks_include, key=get_path)
         assert not result.excluded
         assert not result.compared
         assert result.grouped
-        assert sorted(result.grouped, key=self.sort_key) == sorted(tracks_album[1:], key=self.sort_key)
+        assert sorted(result.grouped, key=get_path) == sorted(tracks_album[1:], key=get_path)
 
-        combined_expected = sorted(tracks_include + tracks_album[1:], key=self.sort_key)
-        assert sorted(result.combined, key=self.sort_key) == combined_expected
+        combined_expected = sorted(tracks_include + tracks_album[1:], key=get_path)
+        assert sorted(result.combined, key=get_path) == combined_expected
 
     def test_extend_result_on_group_by_artist(
             self,
@@ -319,17 +320,16 @@ class TestFilterMatcher(FilterTester):
     ):
         tracks_include = tracks_include.copy() + [tracks_artist[0]]
         matcher = FilterMatcher(
-            include=FilterDefinedList([track.path.casefold() for track in tracks_include]),
+            include=FilterDefinedList(list(map(get_path, tracks_include))),
             group_by=TagFields.ARTIST
         )
-        matcher.include.transform = lambda x: path_mapper.map(x, check_existence=False).casefold()
-
+        matcher.include.transform = lambda x: Path(path_mapper.map(x, check_existence=False))
         result = matcher.process_to_result(values=tracks)
-        assert sorted(result.included, key=self.sort_key) == sorted(tracks_include, key=self.sort_key)
+        assert sorted(result.included, key=get_path) == sorted(tracks_include, key=get_path)
         assert not result.excluded
         assert not result.compared
         assert result.grouped
-        assert sorted(result.grouped, key=self.sort_key) == sorted(tracks_artist[1:], key=self.sort_key)
+        assert sorted(result.grouped, key=get_path) == sorted(tracks_artist[1:], key=get_path)
 
-        combined_expected = sorted(tracks_include + tracks_artist[1:], key=self.sort_key)
-        assert sorted(result.combined, key=self.sort_key) == combined_expected
+        combined_expected = sorted(tracks_include + tracks_artist[1:], key=get_path)
+        assert sorted(result.combined, key=get_path) == combined_expected

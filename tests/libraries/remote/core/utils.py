@@ -56,7 +56,7 @@ class RemoteMock(aioresponses, ContextManager, metaclass=ABCMeta):
     @property
     def total_requests(self) -> int:
         """Returns the total number of requests made to this mock."""
-        return sum(len(reqs) for reqs in self.requests.values())
+        return sum(map(len, self.requests.values()))
 
     def reset(self) -> None:
         """Reset the log for the history of requests and responses for by this mock. Does not reset matches."""

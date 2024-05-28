@@ -4,8 +4,8 @@ The XAutoPF implementation of a :py:class:`LocalPlaylist`.
 from collections.abc import Collection, Mapping, Sequence
 from copy import deepcopy
 from dataclasses import dataclass
-from os.path import exists
-from typing import Any
+from pathlib import Path
+from typing import Any, Self
 
 from musify.core.base import MusifyItem
 from musify.core.enum import Fields, Field, TagFields
@@ -16,6 +16,7 @@ from musify.file.base import File
 from musify.file.path_mapper import PathMapper
 from musify.libraries.local.playlist.base import LocalPlaylist
 from musify.libraries.local.track import LocalTrack
+from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
 from musify.processors.compare import Comparer
 from musify.processors.exception import SorterProcessorError
 from musify.processors.filter import FilterDefinedList, FilterComparers
@@ -70,15 +71,12 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
     """
     For reading and writing data from MusicBee's auto-playlist format.
 
-    **Note**: You must provide a list of tracks to search on initialisation for this playlist type.
-
     :param path: Absolute path of the playlist.
-    :param tracks: Optional. Available Tracks to search through for matches.
-        If none are provided, no tracks will be loaded initially. In order to load the playlist in this case,
-        you will need to call :py:meth:`load` and provide some loaded tracks.
+        If the playlist ``path`` given does not exist, a new playlist will be created on :py:meth:`save`
     :param path_mapper: Optionally, provide a :py:class:`PathMapper` for paths stored in the playlist file.
         Useful if the playlist file contains relative paths and/or paths for other systems that need to be
         mapped to absolute, system-specific paths to be loaded and back again when saved.
+    :param remote_wrangler: Not used by this object.
     """
 
     __slots__ = ("_parser", "_limiter_deduplication")
@@ -123,39 +121,40 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
 
     def __init__(
             self,
-            path: str,
-            tracks: Collection[LocalTrack] = (),
+            path: str | Path,
             path_mapper: PathMapper = PathMapper(),
-            *_,
-            **__
+            remote_wrangler: RemoteDataWrangler = None
     ):
         if xmltodict is None:
             raise MusifyImportError(f"Cannot create {self.__class__.__name__} object. Required modules: xmltodict")
 
-        self._validate_type(path)
+        super().__init__(path=path, path_mapper=path_mapper, remote_wrangler=remote_wrangler)
 
-        self._parser = XMLPlaylistParser(path=path, path_mapper=path_mapper)
-        if exists(path):
-            self._parser.load()
+        self._parser: XMLPlaylistParser | None = None
+        self._limiter_deduplication: bool = False
+
+    async def load(self, tracks: Collection[LocalTrack] = ()) -> Self:
+        """
+        Read the playlist file and update the tracks in this playlist instance.
+
+        :param tracks: Available Tracks to search through for matches.
+            If no tracks are given, the playlist will be loaded empty.
+        :return: Self
+        """
+        self._parser = XMLPlaylistParser(path=self.path, path_mapper=self.path_mapper)
+        if self.path.is_file():
+            await self._parser.load()
         else:  # this is a new playlist, assign default values to parser
             self._parser.xml = deepcopy(self.default_xml)
             self._parser.parse_matcher()
             self._parser.parse_limiter()
             self._parser.parse_sorter()
 
-        self._limiter_deduplication: bool = self._parser.limiter_deduplication
+        self.matcher = self._parser.get_matcher()
+        self.limiter = self._parser.get_limiter()
+        self.sorter = self._parser.get_sorter()
+        self._limiter_deduplication = self._parser.limiter_deduplication
 
-        super().__init__(
-            path=path,
-            matcher=self._parser.get_matcher(),
-            limiter=self._parser.get_limiter(),
-            sorter=self._parser.get_sorter(),
-            path_mapper=self._parser.path_mapper,
-        )
-
-        self.load(tracks=tracks)
-
-    def load(self, tracks: Collection[LocalTrack] = ()) -> list[LocalTrack]:
         tracks_list = list(tracks)
         self.sorter.sort_by_field(tracks_list, field=Fields.LAST_PLAYED, reverse=True)
 
@@ -164,7 +163,8 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
         self._sort()
 
         self._original = self.tracks.copy()
-        return self.tracks
+
+        return self
 
     def _limit(self, ignore: Collection[LocalTrack]) -> None:
         if self.limiter is not None and self.tracks is not None and self.limiter_deduplication:
@@ -181,7 +181,7 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
             self.tracks = tracks_deduplicated
         super()._limit(ignore=ignore)
 
-    def save(self, dry_run: bool = True, *_, **__) -> SyncResultXAutoPF:
+    async def save(self, dry_run: bool = True, *_, **__) -> SyncResultXAutoPF:
         """
         Write the tracks in this Playlist and its settings (if applicable) to file.
 
@@ -196,7 +196,7 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
         parser.parse_exception_paths(self.matcher, items=self.tracks, original=self._original)
         parser.parse_limiter(self.limiter, deduplicate=self.limiter_deduplication)
         parser.parse_sorter(self.sorter)
-        parser.save(dry_run=dry_run)
+        await parser.save(dry_run=dry_run)
 
         if not dry_run:
             self._original = self.tracks.copy()
@@ -279,7 +279,7 @@ class XMLPlaylistParser(File, PrettyPrinter):
     default_group_by = "track"
 
     @property
-    def path(self) -> str:
+    def path(self) -> Path:
         return self._path
 
     @property
@@ -305,22 +305,22 @@ class XMLPlaylistParser(File, PrettyPrinter):
         else:
             self.xml_source.pop("Description", None)
 
-    def __init__(self, path: str, path_mapper: PathMapper = PathMapper()):
+    def __init__(self, path: str | Path, path_mapper: PathMapper = PathMapper()):
         if xmltodict is None:
             raise MusifyImportError(f"Cannot create {self.__class__.__name__} object. Required modules: xmltodict")
 
-        self._path = path
+        self._path = Path(path)
         #: Maps paths stored in the playlist file.
         self.path_mapper = path_mapper
         #: A map representation of the loaded XML playlist data
         self.xml: dict[str, Any] = {}
 
-    def load(self) -> None:
+    async def load(self) -> None:
         """Load ``xml`` object from the disk"""
         with open(self.path, "r", encoding="utf-8") as file:
             self.xml: dict[str, Any] = xmltodict.parse(file.read())
 
-    def save(self, dry_run: bool = True, *_, **__) -> None:
+    async def save(self, dry_run: bool = True, *_, **__) -> None:
         """Save ``xml`` object to the disk"""
         if dry_run:
             return
@@ -380,9 +380,9 @@ class XMLPlaylistParser(File, PrettyPrinter):
         """Initialise and return a :py:class:`FilterMatcher` object from loaded XML playlist data."""
         # tracks to include/exclude even if they meet/don't meet match compare conditions
         include_str: str = self.xml_source.get("ExceptionsInclude") or ""
-        include = self.path_mapper.map_many(set(include_str.split("|")), check_existence=True)
+        include = set(map(Path, self.path_mapper.map_many(set(include_str.split("|")), check_existence=True)))
         exclude_str: str = self.xml_source.get("Exceptions") or ""
-        exclude = self.path_mapper.map_many(set(exclude_str.split("|")), check_existence=True)
+        exclude = set(map(Path, self.path_mapper.map_many(set(exclude_str.split("|")), check_existence=True)))
 
         comparers: dict[Comparer, tuple[bool, FilterComparers]] = {}
         for condition in to_collection(self.xml_source["Conditions"]["Condition"]):
@@ -408,14 +408,14 @@ class XMLPlaylistParser(File, PrettyPrinter):
             if is_dummy_condition and len(c.expected) == 1 and not c.expected[0]:
                 comparers = {}
 
-        filter_include = FilterDefinedList[LocalTrack](values=[path.casefold() for path in include])
-        filter_exclude = FilterDefinedList[LocalTrack](values=[path.casefold() for path in exclude])
+        filter_include = FilterDefinedList[LocalTrack](values=include)
+        filter_exclude = FilterDefinedList[LocalTrack](values=exclude)
         filter_compare = FilterComparers[LocalTrack](
             comparers, match_all=self.xml_source["Conditions"]["@CombineMethod"] == "All"
         )
 
-        filter_include.transform = lambda x: self.path_mapper.map(x, check_existence=False).casefold()
-        filter_exclude.transform = lambda x: self.path_mapper.map(x, check_existence=False).casefold()
+        filter_include.transform = lambda x: Path(self.path_mapper.map(x, check_existence=False))
+        filter_exclude.transform = lambda x: Path(self.path_mapper.map(x, check_existence=False))
 
         group_by_value = self._pascal_to_snake(self.xml_smart_playlist["@GroupBy"])
         group_by = None if group_by_value == self.default_group_by else TagFields.from_name(group_by_value)[0]
@@ -479,7 +479,7 @@ class XMLPlaylistParser(File, PrettyPrinter):
             )
             return
 
-        items_mapped: Mapping[str, File] = {item.path.casefold(): item for item in items}
+        items_mapped: dict[Path, File] = {item.path: item for item in items}
 
         if matcher.comparers:
             # match again on current conditions to check for differences from original list
@@ -491,12 +491,12 @@ class XMLPlaylistParser(File, PrettyPrinter):
             # get the last played track as reference in case comparer is looking for the playing tracks as reference
             ItemSorter.sort_by_field(original, field=Fields.LAST_PLAYED, reverse=True)
 
-            matched_mapped = {
-                item.path.casefold(): item for item in matcher.comparers(original, reference=original[0])
+            matched_mapped: dict[Path, File] = {
+                item.path: item for item in matcher.comparers(original, reference=original[0])
             } if matcher.comparers.ready else {}
             # noinspection PyProtectedMember
             matched_mapped |= {
-                item.path.casefold(): item for item in matcher._get_group_by_results(original, matched_mapped.values())
+                item.path: item for item in matcher._get_group_by_results(original, matched_mapped.values())
             }
 
             # get new include/exclude paths based on the leftovers after matching on comparers and group_by settings

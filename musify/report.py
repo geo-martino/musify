@@ -101,7 +101,7 @@ def report_missing_tags(
     if isinstance(collections, LocalLibrary):
         collections = collections.albums
 
-    item_total = sum(len(collection) for collection in collections)
+    item_total = sum(map(len, collections))
     tag_names = _get_tag_names(logger=logger, tags=tags, item_total=item_total, match_all=match_all)
 
     missing: dict[str, dict[MusifyItem, tuple[str, ...]]] = {}
@@ -128,7 +128,7 @@ def report_missing_tags(
     missing_tags_all = {tag for items in missing.values() for tags in items.values() for tag in tags}
     tag_order = [field.name.lower() for field in ALL_FIELDS]
     logger.info(
-        f"    \33[94mFound {len({item for items in missing.values() for item in items})} items with "
+        f"    \33[94mFound {sum(map(len, missing.values()))} items with "
         f"{'all' if match_all else 'any'} missing tags\33[0m: \n"
         f"    \33[90m{', '.join(sorted(missing_tags_all, key=lambda x: tag_order.index(x)))}\33[0m"
     )

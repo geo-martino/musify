@@ -3,17 +3,17 @@ Implements all collection types for a local library.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import sys
 from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Collection, Iterable, Container
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from glob import glob
-from os.path import splitext, join, basename, exists, isdir
-from typing import Any
+from pathlib import Path
+from typing import Any, Self
 
 from musify.core.enum import Fields, TagField, TagFields
+from musify.file.exception import UnexpectedPathError
 from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.core.object import Track, Library, Folder, Album, Artist, Genre
 from musify.libraries.local.base import LocalItem
@@ -94,7 +94,7 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
         #: A :py:class:`RemoteDataWrangler` object for processing remote data
         self.remote_wrangler = remote_wrangler
 
-    def save_tracks(
+    async def save_tracks(
             self,
             tags: UnitIterable[LocalTrackField] = LocalTrackField.ALL,
             replace: bool = False,
@@ -108,14 +108,8 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
         :param dry_run: Run function, but do not modify the file on the disk.
         :return: A map of the :py:class:`LocalTrack` saved to its result as a :py:class:`SyncResultTrack` object
         """
-        with ThreadPoolExecutor(thread_name_prefix="track-saver") as executor:
-            futures = {
-                track: executor.submit(track.save, tags=tags, replace=replace, dry_run=dry_run)
-                for track in self.tracks
-            }
-            bar = self.logger.get_iterator(futures.items(), desc="Updating tracks", unit="tracks")
-
-            return {track: future.result() for track, future in bar if future.result().updated}
+        bar = self.logger.get_iterator(self.tracks, desc="Updating tracks", unit="tracks")
+        return {track: await track.save(tags=tags, replace=replace, dry_run=dry_run) for track in bar}
 
     def log_save_tracks_result(self, results: Mapping[LocalTrack, SyncResultTrack]) -> None:
         """Log stats from the results of a ``save_tracks`` operation"""
@@ -201,14 +195,11 @@ class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], metaclass=ABCMet
         """List of artists ordered by frequency of appearance on the tracks in this collection"""
         return get_most_common_values(track.artist for track in self.tracks if track.artist)
 
-    @property
-    def genres(self) -> list[str]:
-        """List of genres ordered by frequency of appearance on the tracks in this collection"""
-        genres = (genre for track in self.tracks for genre in (track.genres if track.genres else []))
-        return get_most_common_values(genres)
-
     def __init__(
-            self, tracks: Collection[LocalTrack], name: str | None = None, remote_wrangler: RemoteDataWrangler = None
+            self,
+            tracks: Collection[LocalTrack],
+            name: str | None = None,
+            remote_wrangler: RemoteDataWrangler = None
     ):
         super().__init__(remote_wrangler=remote_wrangler)
         if len(tracks) == 0:
@@ -270,6 +261,12 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
         return get_most_common_values(track.album for track in self.tracks if track.album)
 
     @property
+    def genres(self) -> list[str]:
+        """List of genres ordered by frequency of appearance on the tracks in this collection"""
+        genres = (genre for track in self.tracks for genre in (track.genres if track.genres else []))
+        return get_most_common_values(genres)
+
+    @property
     def compilation(self):
         """Folder is a compilation if over 50% of tracks are marked as compilation"""
         return (sum(track.compilation is True for track in self.tracks) / len(self.tracks)) > 0.5
@@ -280,12 +277,25 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
             name: str | None = None,
             remote_wrangler: RemoteDataWrangler = None
     ):
-        if len(tracks) == 0 and name is not None and exists(name) and isdir(name):
-            # name is path to a folder, load tracks in that folder
-            tracks = [load_track(path) for path in glob(join(name, "*")) if splitext(path)[1] in TRACK_FILETYPES]
-            name = basename(name)
         super().__init__(tracks=tracks, name=name, remote_wrangler=remote_wrangler)
         self.tracks.sort(key=lambda x: x.filename or _max_str)
+
+    @classmethod
+    async def load_folder(cls, path: str | Path | None, remote_wrangler: RemoteDataWrangler = None) -> Self:
+        """
+        Load tracks in a folder at the given ``path``.
+
+        :param path: The path of the folder to load.
+        :param remote_wrangler: Optionally, provide a :py:class:`RemoteDataWrangler` object
+            for processing URIs on tracks. If given, the wrangler can be used when calling __get_item__
+            to get an item from the collection from its URI.
+        """
+        if not path.is_dir():
+            raise UnexpectedPathError(path, "Path must be a directory")
+
+        # load tracks in the folder
+        tasks = asyncio.gather(*(load_track(p) for p in path.glob("*") if p.suffix in TRACK_FILETYPES))
+        return cls(tracks=await tasks, name=path.name, remote_wrangler=remote_wrangler)
 
 
 class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):
@@ -310,6 +320,12 @@ class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):
         """The most common artist on this album"""
         artists = get_most_common_values(artist for track in self.tracks if track.artist for artist in track.artists)
         return artists[0] if artists else None
+
+    @property
+    def genres(self) -> list[str]:
+        """List of genres ordered by frequency of appearance on the tracks in this collection"""
+        genres = (genre for track in self.tracks for genre in (track.genres if track.genres else []))
+        return get_most_common_values(genres)
 
     @property
     def date(self):
@@ -393,6 +409,12 @@ class LocalArtist(LocalCollectionFiltered[LocalTrack], Artist[LocalTrack]):
         return get_most_common_values(track.album for track in self.tracks if track.album)
 
     @property
+    def genres(self) -> list[str]:
+        """List of genres ordered by frequency of appearance on the tracks in this collection"""
+        genres = (genre for track in self.tracks for genre in (track.genres if track.genres else []))
+        return get_most_common_values(genres)
+
+    @property
     def rating(self):
         """Average rating of all tracks by this artist"""
         ratings = tuple(track.rating for track in self.tracks if track.rating is not None)
@@ -430,6 +452,11 @@ class LocalGenres(LocalCollectionFiltered[LocalTrack], Genre[LocalTrack]):
     @property
     def albums(self):
         return get_most_common_values(track.album for track in self.tracks if track.album)
+
+    @property
+    def related_genres(self) -> list[str]:
+        genres = (genre for track in self.tracks for genre in (track.genres if track.genres else []))
+        return get_most_common_values(genres)
 
     def __init__(
             self, tracks: Collection[LocalTrack], name: str | None = None, remote_wrangler: RemoteDataWrangler = None

@@ -260,26 +260,26 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert not checker._switched
 
         # marked as unavailable
-        assert remaining[0].path not in log_capturer.text
+        assert str(remaining[0].path) not in log_capturer.text
         assert remaining[0].uri is None
         assert not remaining[0].has_uri
 
         # skipped
-        assert remaining[1].path in log_capturer.text
+        assert str(remaining[1].path) in log_capturer.text
         assert remaining[1].uri is None
         assert remaining[1].has_uri is None
 
         # skipped
-        assert remaining[2].path not in log_capturer.text
+        assert str(remaining[2].path) not in log_capturer.text
         assert remaining[2].uri is None
         assert remaining[2].has_uri is None
 
         # marked as unavailable
-        assert remaining[3].path not in log_capturer.text
+        assert str(remaining[3].path) not in log_capturer.text
         assert remaining[3].uri is None
         assert not remaining[3].has_uri
 
-        assert remaining[4].path in log_capturer.text
+        assert str(remaining[4].path) in log_capturer.text
         for item in remaining[4:]:  # 'ua' triggered, marked as unavailable
             assert item.uri is None
             assert not item.has_uri
@@ -308,7 +308,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert checker._switched == remaining[:len(uri_list)]
 
         # results of each command on the remaining items
-        assert log_capturer.text.count(remaining[0].path) == 3
+        assert log_capturer.text.count(str(remaining[0].path)) == 3
         for uri, item in zip(uri_list, remaining[:len(uri_list)]):  # uri_list
             assert item.uri == uri
             assert item.has_uri
@@ -583,7 +583,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert not checker._final_skipped
 
         assert not result.switched
-        assert len(result.unavailable) == sum(len(collection) for collection in batch_1 + batch_2)
+        assert len(result.unavailable) == sum(map(len, batch_1 + batch_2))
         assert not result.skipped
 
         # all items in all collections in the 1st and 2nd batches were marked as unavailable

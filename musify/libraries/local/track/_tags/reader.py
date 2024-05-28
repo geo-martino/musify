@@ -8,7 +8,7 @@ from typing import Any
 
 import mutagen
 
-from musify.libraries.local.track.tags.base import TagProcessor
+from musify.libraries.local.track._tags.base import TagProcessor
 from musify.libraries.remote.core.enum import RemoteIDType
 from musify.utils import to_collection
 
@@ -164,7 +164,7 @@ class TagReader[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
     def read_comments(self) -> list[str] | None:
         """Extract comment tags from file"""
         values = self.read_tag(self.tag_map.comments)
-        return list({str(value) for value in values}) if values is not None else None
+        return set(map(str, values)) if values is not None else None
 
     def read_uri(self) -> str | None:
         """Extract data relating to remote URI value from file"""

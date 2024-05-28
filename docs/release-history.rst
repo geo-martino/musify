@@ -48,12 +48,16 @@ Added
    * :py:class:`.RemoteAPI` & :py:class:`.SpotifyAPI`
 * Introduce print wrapper for logger and remove most bare ``print`` statements across package.
 * :py:meth:`.SpotifyAPI.extend_items` now enriches collection item responses with the parent collection response.
+* ARTISTS field added to LocalTrackField
+* Add compatibility with ``yarl`` package for any logic which uses URL logic.
+* Add compatibility for pathlib.Path for any logic which uses path logic.
 
 Changed
 -------
 
 * :py:class:`.RequestHandler` now handles requests asynchronously. These changes to async calls have
   been implemented all the way on :py:class:`.RemoteAPI` and all other objects that depend on it.
+* All I/O operations on local libraries and their dependent objects now run asynchronously.
 * Dependency injection pattern for :py:class:`.RequestHandler`.
   Now takes :py:class:`.APIAuthoriser` and generator for :py:class:`.ClientSession` objects for instantiation
   instead of kwargs for :py:class:`.APIAuthoriser`.
@@ -64,13 +68,18 @@ Changed
 * Moved ``remote_wrangler`` attribute from :py:class:`.MusifyCollection` to :py:class:`.LocalCollection`.
   This attribute was only needed by :py:class:`.LocalCollection` branch of child classes.
 * Moved ``logger`` attribute from :py:class:`.Library` to :py:class:`.RemoteLibrary`.
-* Switch some dependencies to be optional for groups of operation: progress bars, images, musicbee, sqlite
+* Switch some dependencies to be optional for groups of operation: progress bars, musicbee, sqlite
 * Replace urllib usages with ``yarl`` package.
+* Replace all path logic to use pathlib.Path instead. All
 * :py:class:`.SpotifyAPI` now logs to the new central :py:meth:`.RequestHandler.log` method
   to help unify log formatting.
 * ``user_id`` and ``user_name`` now raise an error when called before setting ``user_data`` attribute.
   This is due to avoiding asynchronous calls in a property.
   It is therefore best to now enter the async context of the api to set these automatically.
+* Renamed :py:meth:`.LocalGenres.genres` to :py:meth:`.LocalGenres.related_genres`
+* Reduced scope of :py:meth:`.TagWriter._delete_tag` method to private
+* :py:class:`.LocalTrack` now removes any loaded embedded image from the mutagen file object.
+  This is to reduce memory usage when loading many of these objects.
 
 Fixed
 -----
@@ -84,6 +93,8 @@ Fixed
   output from :py:meth:`.RemoteLibrary.backup_playlists`
 * Issue detecting stdout_handlers affecting :py:meth:`.MusifyLogger.print` and :py:meth:`.MusifyLogger.get_iterator`.
   Now works as expected.
+* :py:meth:`.LocalLibrary.artists` now generates a :py:class:`.LocalArtist` object per individual artist
+  rather than on combined artists
 
 Removed
 -------
@@ -99,7 +110,8 @@ Removed
 Documentation
 -------------
 
-* Updated how-to section to reflect changes to underlying code
+* Updated how-to section to reflect implementation of async logic to underlying code
+* Created a how-to page for installation
 
 0.9.2
 =====

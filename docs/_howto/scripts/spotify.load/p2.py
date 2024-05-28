@@ -4,6 +4,7 @@ from musify.libraries.remote.spotify.object import SpotifyTrack, SpotifyAlbum, S
 
 
 async def load_playlist(api: SpotifyAPI) -> SpotifyPlaylist:
+    """Loads a playlist from the given ``api`` object"""
     # authorise the program to access your Spotify data in your web browser
     async with api as a:
         playlist = await SpotifyPlaylist.load("spotify:playlist:37i9dQZF1E4zg1xOOORiP1", api=a, extend_tracks=True)
@@ -11,6 +12,7 @@ async def load_playlist(api: SpotifyAPI) -> SpotifyPlaylist:
 
 
 async def load_tracks(api: SpotifyAPI) -> list[SpotifyTrack]:
+    """Loads some tracks from the given ``api`` object"""
     tracks = []
 
     # authorise the program to access your Spotify data in your web browser
@@ -28,6 +30,7 @@ async def load_tracks(api: SpotifyAPI) -> list[SpotifyTrack]:
 
 
 async def load_album(api: SpotifyAPI) -> SpotifyAlbum:
+    """Loads an album from the given ``api`` object"""
     # authorise the program to access your Spotify data in your web browser
     async with api as a:
         album = await SpotifyAlbum.load(
@@ -37,6 +40,7 @@ async def load_album(api: SpotifyAPI) -> SpotifyAlbum:
 
 
 async def load_artist(api: SpotifyAPI) -> SpotifyArtist:
+    """Loads an artist from the given ``api`` object"""
     # authorise the program to access your Spotify data in your web browser
     async with api as a:
         artist = await SpotifyArtist.load("1odSzdzUpm3ZEEb74GdyiS", api=a, extend_tracks=True)
@@ -44,6 +48,7 @@ async def load_artist(api: SpotifyAPI) -> SpotifyArtist:
 
 
 async def load_objects(api: SpotifyAPI) -> None:
+    """Loads multiple types of objects from the given ``api`` object and prints them"""
     playlist = await load_playlist(api)
     tracks = await load_tracks(api)
     album = await load_album(api)

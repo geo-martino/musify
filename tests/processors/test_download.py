@@ -51,7 +51,7 @@ class TestItemDownloadHelper(PrettyPrinterTester):
         assert len(download_helper.urls) > 1
         assert Fields.ALL in download_helper.fields or len(download_helper.fields) > 2
 
-        assert sum(len(coll.items) for coll in collections) > 3
+        assert sum(map(len, collections)) > 3
 
     @staticmethod
     @pytest.mark.slow
@@ -68,12 +68,12 @@ class TestItemDownloadHelper(PrettyPrinterTester):
         urls = []
         mocker.patch(f"{MODULE_ROOT}.processors.download.webopen", new=log_urls)
 
-        patch_input(values=[""] * sum(len(coll.items) for coll in collections), mocker=mocker)
+        patch_input(values=[""] * sum(map(len, collections)), mocker=mocker)
 
         download_helper.open_sites(collections)
         mocker.stopall()
 
-        assert len(urls) == sum(len(coll.items) for coll in collections) * len(download_helper.urls)
+        assert len(urls) == sum(map(len, collections)) * len(download_helper.urls)
 
     @staticmethod
     def test_pause_1(
@@ -90,7 +90,7 @@ class TestItemDownloadHelper(PrettyPrinterTester):
         urls = []
         mocker.patch(f"{MODULE_ROOT}.processors.download.webopen", new=log_urls)
 
-        total = sum(len(coll.items) for coll in collections)
+        total = sum(map(len, collections))
         pages_total = (total // download_helper.interval) + (total % download_helper.interval > 0)
         patch_input(values=["r", "", "title artist", "r", "title bad_tag", ""] + [""] * total, mocker=mocker)
 

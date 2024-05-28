@@ -1,7 +1,6 @@
 import logging
 import sys
 from copy import copy, deepcopy
-from os.path import basename
 
 import pytest
 
@@ -69,7 +68,7 @@ def test_print(logger: MusifyLogger, capfd: pytest.CaptureFixture):
 def test_file_paths(logger: MusifyLogger):
     logger.addHandler(logging.FileHandler(filename="test1.log", delay=True))
     logger.addHandler(logging.FileHandler(filename="test2.log", delay=True))
-    assert [basename(path) for path in logger.file_paths] == ["test1.log", "test2.log"]
+    assert [path.name for path in logger.file_paths] == ["test1.log", "test2.log"]
 
 
 # noinspection PyTypeChecker
