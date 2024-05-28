@@ -8,7 +8,6 @@ import logging
 import sys
 from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, Collection, Iterable, Container
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Self
@@ -95,7 +94,7 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
         #: A :py:class:`RemoteDataWrangler` object for processing remote data
         self.remote_wrangler = remote_wrangler
 
-    def save_tracks(
+    async def save_tracks(
             self,
             tags: UnitIterable[LocalTrackField] = LocalTrackField.ALL,
             replace: bool = False,
@@ -109,14 +108,8 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
         :param dry_run: Run function, but do not modify the file on the disk.
         :return: A map of the :py:class:`LocalTrack` saved to its result as a :py:class:`SyncResultTrack` object
         """
-        with ThreadPoolExecutor(thread_name_prefix="track-saver") as executor:
-            futures = {
-                track: executor.submit(track.save, tags=tags, replace=replace, dry_run=dry_run)
-                for track in self.tracks
-            }
-            bar = self.logger.get_iterator(futures.items(), desc="Updating tracks", unit="tracks")
-
-            return {track: future.result() for track, future in bar if future.result().updated}
+        bar = self.logger.get_iterator(self.tracks, desc="Updating tracks", unit="tracks")
+        return {track: await track.save(tags=tags, replace=replace, dry_run=dry_run) for track in bar}
 
     def log_save_tracks_result(self, results: Mapping[LocalTrack, SyncResultTrack]) -> None:
         """Log stats from the results of a ``save_tracks`` operation"""

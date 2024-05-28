@@ -1,7 +1,6 @@
 """
 The core, basic library implementation which is just a simple set of folders.
 """
-import asyncio
 import itertools
 from collections.abc import Collection, Mapping, Iterable
 from concurrent.futures import ThreadPoolExecutor
@@ -308,10 +307,10 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             f"\33[1;95m  >\33[1;97m Extracting metadata and properties for {len(self._track_paths)} tracks \33[0m"
         )
 
-        tasks = asyncio.gather(*map(self.load_track, self._track_paths))
-        self._tracks = next(iter(await self.logger.get_iterator(
-            tasks, desc="Loading tracks", unit="tracks", total=len(self._track_paths)
-        )))
+        bar = self.logger.get_iterator(
+            self._track_paths, desc="Loading tracks", unit="tracks", total=len(self._track_paths)
+        )
+        self._tracks = [await self.load_track(path) for path in bar]
 
         self._log_errors("Could not load the following tracks")
         self.logger.debug(f"Load {self.name} tracks: DONE\n")
@@ -360,10 +359,10 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             f"\33[1;95m  >\33[1;97m Loading playlist data for {len(self._playlist_paths)} playlists \33[0m"
         )
 
-        tasks = asyncio.gather(*map(self.load_playlist, self._playlist_paths.values()))
-        playlists = next(iter(await self.logger.get_iterator(
-            tasks, desc="Loading playlists", unit="playlists", total=len(self._playlist_paths)
-        )))
+        bar = self.logger.get_iterator(
+            self._playlist_paths.values(), desc="Loading tracks", unit="tracks", total=len(self._playlist_paths)
+        )
+        playlists = [await self.load_playlist(path) for path in bar]
         self._playlists = {pl.name: pl for pl in sorted(playlists, key=lambda x: x.name.casefold())}
 
         self._log_errors("Could not load the following playlists")
@@ -382,18 +381,15 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
                 f"\33[1;94m{len(playlist):>6} total \33[0m"
             )
 
-    def save_playlists(self, dry_run: bool = True) -> dict[str, Result]:
+    async def save_playlists(self, dry_run: bool = True) -> dict[str, Result]:
         """
         For each Playlist in this Library, saves its associate tracks and its settings (if applicable) to file.
 
         :param dry_run: Run function, but do not modify the file on the disk.
         :return: A map of the playlist name to the results of its sync as a :py:class:`Result` object.
         """
-        with ThreadPoolExecutor(thread_name_prefix="playlist-saver") as executor:
-            futures = {name: executor.submit(pl.save, dry_run=dry_run) for name, pl in self.playlists.items()}
-            bar = self.logger.get_iterator(futures.items(), desc="Updating playlists", unit="playlists")
-
-            return dict(bar)
+        bar = self.logger.get_iterator(self.playlists.items(), desc="Updating tracks", unit="tracks")
+        return {name: await pl.save(dry_run=dry_run) for name, pl in bar}
 
     ###########################################################################
     ## Backup/restore
