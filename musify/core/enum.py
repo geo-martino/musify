@@ -99,6 +99,7 @@ class Fields(Field):
     # tags/core properties
     TITLE = 65
     ARTIST = 32
+    ARTISTS = 108
     ALBUM = 30  # MusicBee album ignoring articles like 'the' and 'a' etc.
     ALBUM_ARTIST = 31
     TRACK_NUMBER = 86

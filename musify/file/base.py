@@ -26,7 +26,7 @@ class File(metaclass=ABCMeta):
     @property
     def folder(self) -> str:
         """The parent folder of the file."""
-        return self.path.parent.stem
+        return self.path.parent.name
 
     @property
     def filename(self) -> str:

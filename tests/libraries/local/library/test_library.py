@@ -20,7 +20,7 @@ class TestLocalLibrary(LocalLibraryTester):
 
     @pytest.fixture
     async def library(self) -> LocalLibrary:
-        library = LocalLibrary(library_folders=path_track_resources, playlist_folder=path_playlist_resources)
+        library = LocalLibrary(library_folders=path_resources, playlist_folder=path_playlist_resources)
         await library.load()
 
         # needed to ensure __setitem__ check passes
@@ -111,3 +111,9 @@ class TestLocalLibrary(LocalLibraryTester):
         await library.load()
 
         assert len(library.tracks) == len(library._track_paths) == len(path_track_all) + 2
+
+    def test_collection_creators(self, library: LocalLibrary):
+        assert len(library.folders) == len(set(track.folder for track in library.tracks))
+        assert len(library.albums) == len(set(track.album for track in library.tracks))
+        assert len(library.artists) == len(set(artist for track in library.tracks for artist in track.artists))
+        assert len(library.genres) == len(set(genre for track in library.tracks for genre in track.genres))

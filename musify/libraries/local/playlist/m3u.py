@@ -65,7 +65,10 @@ class M3U(LocalPlaylist[FilterDefinedList[str | Path | File]]):
         return {}
 
     def __init__(
-            self, path: str | Path, path_mapper: PathMapper = PathMapper(), remote_wrangler: RemoteDataWrangler = None,
+            self,
+            path: str | Path,
+            path_mapper: PathMapper = PathMapper(),
+            remote_wrangler: RemoteDataWrangler = None,
     ):
         super().__init__(path=path, path_mapper=path_mapper, remote_wrangler=remote_wrangler)
 

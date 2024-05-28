@@ -1,4 +1,5 @@
-from musify.libraries.local.track import MP3
+from p1_load import *
+
 from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
 
-track = MP3("<PATH TO AN MP3 TRACK>", remote_wrangler=SpotifyDataWrangler())
+track = asyncio.run(load_track("<PATH TO A TRACK>", remote_wrangler=SpotifyDataWrangler()))

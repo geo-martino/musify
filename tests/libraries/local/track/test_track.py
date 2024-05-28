@@ -2,17 +2,17 @@ from copy import copy
 from datetime import datetime, date
 from pathlib import Path
 
+import mutagen
 import pytest
 
 from musify.core.base import MusifyItem
 from musify.exception import MusifyKeyError
 from musify.file.exception import InvalidFileType, FileDoesNotExistError
-from musify.file.image import open_image, REQUIRED_MODULES as REQUIRED_IMAGE_MODULES
+from musify.file.image import open_image
 from musify.libraries.core.object import Track
 from musify.libraries.local.track import LocalTrack, load_track, FLAC, M4A, MP3, WMA, SyncResultTrack
 from musify.libraries.local.track.field import LocalTrackField
 from musify.libraries.remote.core.enum import RemoteObjectType
-from musify.utils import required_modules_installed
 from tests.core.base import MusifyItemTester
 from tests.libraries.local.utils import path_track_all, path_track_img, path_track_resources
 from tests.libraries.remote.spotify.utils import random_uri
@@ -185,7 +185,7 @@ def test_loaded_attributes_common(track: LocalTrack):
     assert track.has_image
 
     # file properties
-    assert track.folder == track.path.parent.stem
+    assert track.folder == track.path.parent.name
     assert track.filename == track.path.stem
     assert track.type == track.__class__.__name__
     assert track.date_modified == datetime.fromtimestamp(track.path.stat().st_mtime)
@@ -210,7 +210,6 @@ class TestLocalTrack(MusifyItemTester):
 
     @pytest.fixture
     def item_modified(self, track: LocalTrack) -> MusifyItem:
-        print(track._reader)
         track = copy(track)
         track.title = "new title"
         track.artist = "new artist"
@@ -350,6 +349,7 @@ class TestLocalTrackWriter:
         assert not actual.tag_map.disc_number or actual.disc_number == expected.disc_number, "disc_number"
         assert not actual.tag_map.disc_total or actual.disc_total == expected.disc_total, "disc_total"
         assert not actual.tag_map.compilation or actual.compilation == expected.compilation, "compilation"
+        assert not actual.tag_map.images or actual.has_image == expected.has_image, "images"
 
     async def test_clear_tags_dry_run(self, track: LocalTrack):
         track_update = track
@@ -521,27 +521,32 @@ class TestLocalTrackWriter:
     def get_update_image_test_track(track: LocalTrack) -> tuple[LocalTrack, LocalTrack]:
         """Load track and modify its tags for update tags tests"""
         track.image_links = {"cover front": path_track_img}
-        return track, copy(track)
+        track_copy = copy(track)
+
+        # assign back to ensure tests can load the original image to compare against
+        track._reader.file = mutagen.File(track.path)
+        track._writer.file = track._reader.file
+
+        return track, track_copy
 
     @staticmethod
     def assert_update_image_result(track: LocalTrack, image: Image, result: SyncResultTrack):
         """Check for expected results after non-dry_run operations to update LocalTrack images"""
         assert result.saved
 
+        images = track._reader.read_images()
         track.refresh()
         assert track.has_image
 
-        images = track._reader.read_images()
         if not isinstance(track, MP3):
             # MP3 tagging works slightly differently so more than one image will be saved
             assert len(images) == 1
         assert images[0].size == image.size
 
-    @pytest.mark.skipif(not required_modules_installed(REQUIRED_IMAGE_MODULES), reason="required modules not installed")
     async def test_update_image_dry_run(self, track: LocalTrack):
-        track_update, track_original = self.get_update_image_test_track(track)
+        track_original, track_update = self.get_update_image_test_track(track)
 
-        image_original = track_update._reader.read_images()[0]
+        image_original = track_original._reader.read_images()[0]
 
         # dry run, no updates should happen
         result = await track_update.save(tags=LocalTrackField.IMAGES, replace=False, dry_run=True)
@@ -550,13 +555,13 @@ class TestLocalTrackWriter:
         track_update.refresh()
         assert track_update.has_image == track_original.has_image
 
+        track_update._reader.file = mutagen.File(track_update.path)
         images = track_update._reader.read_images()
         assert len(images) == 1
         assert images[0].size == image_original.size
 
-    @pytest.mark.skipif(not required_modules_installed(REQUIRED_IMAGE_MODULES), reason="required modules not installed")
     async def test_update_image_no_replace(self, track: LocalTrack):
-        track_update, track_original = self.get_update_image_test_track(track)
+        track_original, track_update = self.get_update_image_test_track(track)
 
         # clear current image and update
         await track_update.delete_tags(LocalTrackField.IMAGES, dry_run=False)
@@ -565,9 +570,8 @@ class TestLocalTrackWriter:
         result = await track_update.save(tags=LocalTrackField.IMAGES, replace=False, dry_run=False)
         self.assert_update_image_result(track=track_update, image=open_image(path_track_img), result=result)
 
-    @pytest.mark.skipif(not required_modules_installed(REQUIRED_IMAGE_MODULES), reason="required modules not installed")
     async def test_update_image_with_replace(self, track: LocalTrack):
-        track_update, track_original = self.get_update_image_test_track(track)
+        track_original, track_update = self.get_update_image_test_track(track)
 
         result = await track_update.save(tags=LocalTrackField.IMAGES, replace=True, dry_run=False)
         self.assert_update_image_result(track=track_update, image=open_image(path_track_img), result=result)

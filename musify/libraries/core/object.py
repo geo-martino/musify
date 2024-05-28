@@ -7,7 +7,10 @@ import datetime
 from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, Mapping, Iterable
 from copy import deepcopy
+from pathlib import Path
 from typing import Self
+
+from yarl import URL
 
 from musify.core.base import MusifyItem, HasLength
 from musify.exception import MusifyTypeError
@@ -143,7 +146,7 @@ class Track(MusifyItem, HasLength, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def image_links(self) -> dict[str, str]:
+    def image_links(self) -> dict[str, str | Path | URL]:
         """
         The images associated with the album this track is featured on in the form ``{<image name/type>: <image link>}``
         """
@@ -711,8 +714,8 @@ class Genre[T: Track](MusifyCollection[T], metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def genres(self) -> list[str]:
-        """List of genres ordered by frequency of appearance on the tracks for this genre"""
+    def related_genres(self) -> list[str]:
+        """List of related genres ordered by frequency of appearance on the tracks for this genre"""
         raise NotImplementedError
 
     @property

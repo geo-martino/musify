@@ -21,7 +21,11 @@ You can create a playlist from scratch as follows:
 Load a playlist
 ---------------
 
-You can load a playlist as follows:
+You can load a playlist as per the blow code.
+
+If you already have some tracks loaded, and you want the playlist to only use those tracks instead of loading
+the tracks itself, you can pass these preloaded tracks to the playlist too. This will still load the playlist
+from the given file, but it will use the given track objects instead of loading and creating new ones.
 
 .. note::
    To be able to use the XAutoPF playlist type, you will need to have installed the ``musicbee`` optional dependencies.
@@ -34,14 +38,6 @@ You can load a playlist as follows:
 You can also just have Musify automatically determine the playlist type to load based on the file's extension:
 
 .. literalinclude:: _howto/scripts/local.playlist.load-save/p3.py
-   :language: Python
-   :lines: 3-
-
-If you already have some tracks loaded, and you want the playlist to only use those tracks instead of loading
-the tracks itself, you can pass these preloaded tracks to the playlist too.  This will still load the playlist
-from the given file, but it will use the given track objects instead of creating new ones.
-
-.. literalinclude:: _howto/scripts/local.playlist.load-save/p3_tracks.py
    :language: Python
    :lines: 3-
 
@@ -64,8 +60,8 @@ The following is an example for doing this with Spotify as the data source:
    :lines: 3-
 
 
-Modify the playlist
--------------------
+Modify and save the playlist
+----------------------------
 
 1. Add some tracks to the playlist:
 

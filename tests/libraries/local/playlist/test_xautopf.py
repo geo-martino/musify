@@ -194,7 +194,9 @@ class TestXAutoPF(LocalPlaylistTester):
         # perform some operations on the playlist
         tracks_added = random_tracks(3)
         pl.tracks += tracks_added
+        # noinspection PyAsyncCall
         pl.tracks.pop(5)
+        # noinspection PyAsyncCall
         pl.tracks.pop(6)
         pl.tracks.remove(tracks_actual[0])
 

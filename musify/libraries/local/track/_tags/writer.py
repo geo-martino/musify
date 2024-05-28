@@ -9,12 +9,11 @@ from typing import Any
 import mutagen
 
 from musify.core.result import Result
-from musify.file.image import REQUIRED_MODULES as REQUIRED_IMAGE_MODULES
 from musify.libraries.core.object import Track
 from musify.libraries.local.track.field import LocalTrackField as Tags
 from musify.libraries.local.track._tags.base import TagProcessor
 from musify.types import UnitIterable
-from musify.utils import to_collection, required_modules_installed
+from musify.utils import to_collection
 
 
 @dataclass(frozen=True)
@@ -48,7 +47,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         tag_names = set(Tags.to_tags(tags))
         removed = set()
         for tag_name in tag_names:
-            if self.delete_tag(tag_name, dry_run):
+            if self._delete_tag(tag_name, dry_run):
                 removed.update(Tags.from_name(tag_name))
 
         save = not dry_run and len(removed) > 0
@@ -58,7 +57,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         removed = sorted(removed, key=lambda x: Tags.all().index(x))
         return SyncResultTrack(saved=save, updated={u: 0 for u in removed})
 
-    def delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:
+    def _delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:
         """
         Remove a tag by its tag name.
 
@@ -77,10 +76,6 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
                 if not dry_run:
                     del self.file[tag_id]
                 removed = True
-
-        save = not dry_run and removed
-        if save:
-            self.file.save()
 
         return removed
 
@@ -599,10 +594,8 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
-        if not required_modules_installed(REQUIRED_IMAGE_MODULES):
-            return
-
         conditionals = {source.has_image is False and bool(target.image_links), replace and bool(target.image_links)}
+        print(source.has_image is False, bool(target.image_links), replace, bool(target.image_links))
 
         if any(conditionals) and self._write_images(track=target, dry_run=dry_run):
             return [i for i, c in enumerate(conditionals) if c][0]

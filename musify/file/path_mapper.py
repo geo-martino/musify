@@ -115,7 +115,9 @@ class PathStemMapper(PathMapper):
         return {v: k for k, v in self._stem_map.items()}
 
     def __init__(
-            self, stem_map: dict[str | Path, str | Path] | None = None, available_paths: Iterable[str | Path] = ()
+            self,
+            stem_map: dict[str | Path, str | Path] | None = None,
+            available_paths: Iterable[str | Path] = ()
     ):
         self._stem_map: dict[str, str] = {}
         self._available_paths: dict[str, str] = {}

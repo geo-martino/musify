@@ -67,7 +67,7 @@ class _MP3TagWriter(TagWriter[mutagen.mp3.MP3]):
 
     __slots__ = ()
 
-    def delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:
+    def _delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:
         removed = False
 
         tag_ids = self.tag_map[tag_name]

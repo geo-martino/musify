@@ -3,7 +3,9 @@ from p1 import *
 from musify.libraries.local.playlist import XAutoPF
 
 playlist = M3U("<PATH TO AN M3U PLAYLIST>")
-playlist = XAutoPF("<PATH TO AN XAUTOPF PLAYLIST>")
+asyncio.run(playlist.load())
 
-# pretty print information about this playlist
-print(playlist)
+# for some playlist types, you will need to provide
+# a list of tracks to choose from in order to load them
+playlist = XAutoPF("<PATH TO AN XAUTOPF PLAYLIST>")
+asyncio.run(playlist.load(tracks=tracks))

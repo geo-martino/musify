@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Self
 
 import mutagen
+from yarl import URL
 
 from musify.core.base import MusifyItem
 from musify.core.enum import TagMap
@@ -262,7 +263,7 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         return self._image_links
 
     @image_links.setter
-    def image_links(self, value: dict[str, str]):
+    def image_links(self, value: dict[str, str | Path | URL]):
         self._image_links = value
 
     @property
@@ -418,6 +419,7 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         self._writer = self._create_writer(file)
 
         self.refresh()
+
         return self
 
     def refresh(self) -> None:
@@ -438,7 +440,11 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         self.comments = self._reader.read_comments()
 
         self.uri = self._reader.read_uri()
-        self.has_image = self._reader.check_for_images()
+        if not self._loaded:
+            self.has_image = self._reader.check_for_images()
+
+        # to reduce memory usage, remove any embedded images from the loaded file
+        self._writer.delete_tags(Tags.IMAGES, dry_run=True)
 
         self._loaded = True
 
@@ -483,7 +489,10 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
                 setattr(self, tag, deepcopy(track[tag]))
 
     def extract_images_to_file(self, output_folder: str | Path) -> int:
-        """Extract and save all embedded images from file. Returns the number of images extracted."""
+        """Reload the file, extract and save all embedded images from file. Returns the number of images extracted."""
+        self._reader.file = mutagen.File(self.path)
+        self._writer.file = self._reader.file
+
         images = self._reader.read_images()
         if images is None:
             return False
@@ -500,6 +509,9 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
             os.makedirs(output_path.parent, exist_ok=True)
             image.save(output_path)
             count += 1
+
+        # to reduce memory usage, remove any embedded images from the loaded file
+        self._writer.delete_tags(Tags.IMAGES, dry_run=True)
 
         return count
 
@@ -527,6 +539,10 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
 
         if self._reader.file.tags:
             new.refresh()
+            # image is deleted from loaded file on refresh in initial run
+            # set parameter manually here rather than rely on the 2nd refresh to set it
+            new.has_image = self.has_image
+            new.image_links = self.image_links
         else:  # file is not a real file, used in testing. Set shallow copy of attributes manually
             keys = [key for key in LocalTrack.__slots__ if key.lstrip("_") in dir(self)]
             for key in keys:

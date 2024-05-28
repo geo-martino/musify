@@ -387,16 +387,16 @@ class XMLLibraryParser:
             return datetime.strptime(timestamp_str, cls.timestamp_format)
 
     @staticmethod
-    def to_xml_path(path: str) -> str:
+    def to_xml_path(path: str | Path) -> str:
         """Convert a standard system path to a file path as found in the MusicBee XML library file"""
-        return f"file://localhost/{quote(path.replace('\\', '/'), safe=':/!(),;@[]+')}"\
+        return f"file://localhost/{quote(str(path).replace('\\', '/'), safe=':/!(),;@[]+')}"\
             .replace("%26", "&#38;")\
             .replace("%27", "&#39;")
 
     @staticmethod
-    def from_xml_path(path: str) -> str:
+    def from_xml_path(path: str | Path) -> str:
         """Clean the file paths as found in the MusicBee XML library file to a standard system path"""
-        return os.path.normpath(unquote(path.removeprefix("file://localhost/")))
+        return os.path.normpath(unquote(str(path).removeprefix("file://localhost/")))
 
     def _iter_elements(self) -> Iterator[Element]:
         for event, element in self._iterparse:

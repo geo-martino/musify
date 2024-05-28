@@ -24,6 +24,9 @@ class MutagenMock(mutagen.FileType):
         self.info = self.MutagenInfoMock()
         self.pictures = []
 
+    def clear_pictures(self):
+        self.pictures.clear()
+
 
 # noinspection PyProtectedMember
 def random_track[T: LocalTrack](cls: type[T] | None = None) -> T:

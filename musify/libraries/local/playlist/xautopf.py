@@ -120,7 +120,10 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
         return {}
 
     def __init__(
-            self, path: str | Path, path_mapper: PathMapper = PathMapper(), remote_wrangler: RemoteDataWrangler = None
+            self,
+            path: str | Path,
+            path_mapper: PathMapper = PathMapper(),
+            remote_wrangler: RemoteDataWrangler = None
     ):
         if xmltodict is None:
             raise MusifyImportError(f"Cannot create {self.__class__.__name__} object. Required modules: xmltodict")

@@ -2,9 +2,10 @@
 The core, basic library implementation which is just a simple set of folders.
 """
 import itertools
+import functools
+import os
 from collections.abc import Collection, Mapping, Iterable
 from concurrent.futures import ThreadPoolExecutor
-from functools import reduce
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,7 @@ from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
 from musify.log import STAT
 from musify.processors.base import Filter
 from musify.processors.filter import FilterDefinedList
+from musify.processors.sort import ItemSorter
 from musify.types import UnitCollection, UnitIterable
 from musify.utils import align_string, get_max_width, to_collection
 
@@ -165,55 +167,56 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         """
         def get_relative_path(track: LocalTrack) -> Path:
             """Return path of a track relative to the library folders of this library"""
-            return Path(reduce(
-                lambda path, folder: str(path).replace(str(folder), ""), self.library_folders, str(track.path)
-            )).parent
+            path = functools.reduce(
+                lambda p, f: str(p).replace(str(f), ""), self.library_folders, str(track.path)
+            )
+            return Path(path.lstrip(os.path.sep)).parent
 
         def create_folder_collection(path: Path, tracks: Collection[LocalTrack]) -> LocalFolder:
             """
             Create a :py:class:`LocalFolder` collection from the given ``tracks``,
             ensuring the collection has the exact given ``name``.
+
+            The LocalFolder filters the input tracks by the given name,
+            where it will match on ``track.folder`` == ``name``.
+            Given that ``track.folder`` is just the direct parent folder stem only,
+            We need to supply this stem folder on init and assign the full folder path back after.
             """
             folder = LocalFolder(tracks=tracks, name=path.name, remote_wrangler=self.remote_wrangler)
-            folder._name = path
+            folder._name = str(path)
             return folder
 
         grouped = itertools.groupby(sorted(self.tracks, key=lambda track: track.path), get_relative_path)
-        collections = [
-            create_folder_collection(path=path, tracks=list(group)) for path, group in grouped if path.is_dir()
-        ]
+        collections = [create_folder_collection(path=path, tracks=list(group)) for path, group in grouped]
         return sorted(collections, key=lambda x: x.name)
-
-    def _group_tracks_by_field(self, field: LocalTrackField) -> itertools.groupby:
-        return itertools.groupby(self.tracks, key=lambda track: track[field.map(field)[0].name.lower()])
 
     @property
     def albums(self) -> list[LocalAlbum]:
         """Dynamically generate a set of album collections from the tracks in this library"""
-        grouped = self._group_tracks_by_field(LocalTrackField.ALBUM)
+        grouped = ItemSorter.group_by_field(items=self.tracks, field=LocalTrackField.ALBUM)
         collections = [
-            LocalAlbum(tracks=list(group), name=name, remote_wrangler=self.remote_wrangler)
-            for name, group in grouped if name
+            LocalAlbum(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
+            for name, group in grouped.items() if name
         ]
         return sorted(collections, key=lambda x: x.name)
 
     @property
     def artists(self) -> list[LocalArtist]:
         """Dynamically generate a set of artist collections from the tracks in this library"""
-        grouped = self._group_tracks_by_field(LocalTrackField.ARTIST)
+        grouped = ItemSorter.group_by_field(items=self.tracks, field=LocalTrackField.ARTISTS)
         collections = [
-            LocalArtist(tracks=list(group), name=name, remote_wrangler=self.remote_wrangler)
-            for name, group in grouped if name
+            LocalArtist(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
+            for name, group in grouped.items() if name
         ]
         return sorted(collections, key=lambda x: x.name)
 
     @property
     def genres(self) -> list[LocalGenres]:
         """Dynamically generate a set of genre collections from the tracks in this library"""
-        grouped = self._group_tracks_by_field(LocalTrackField.GENRES)
+        grouped = ItemSorter.group_by_field(items=self.tracks, field=LocalTrackField.GENRES)
         collections = [
-            LocalGenres(tracks=list(group), name=name, remote_wrangler=self.remote_wrangler)
-            for name, group in grouped if name
+            LocalGenres(tracks=group, name=name, remote_wrangler=self.remote_wrangler)
+            for name, group in grouped.items() if name
         ]
         return sorted(collections, key=lambda x: x.name)
 

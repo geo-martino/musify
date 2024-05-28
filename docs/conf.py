@@ -76,7 +76,7 @@ html_context = dict(
     github_user=PROGRAM_OWNER_USER,
     github_repo=MODULE_ROOT,
     github_version="HEAD",
-    conf_py_path=f"/{Path(__file__).parent.stem}/",
+    conf_py_path=f"/{Path(__file__).parent.name}/",
 )
 
 # -- OpenGraph configuration --------------------------------------------------

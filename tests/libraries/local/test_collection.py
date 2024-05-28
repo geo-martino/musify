@@ -262,7 +262,7 @@ class TestLocalGenres(LocalCollectionTester):
         assert sorted(genre.albums) == sorted({track.album for track in tracks_filtered if track.album})
         assert genre.track_total == len(genre.tracks)
         genres = {genre for track in tracks_filtered if track.genres for genre in track.genres}
-        assert sorted(genre.genres) == sorted(genres)
+        assert sorted(genre.related_genres) == sorted(genres)
 
         assert genre.last_added == sorted(tracks_filtered, key=lambda t: t.date_added, reverse=True)[0].date_added
         assert genre.last_played == sorted(tracks_filtered, key=lambda t: t.last_played, reverse=True)[0].last_played

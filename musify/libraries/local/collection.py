@@ -195,14 +195,11 @@ class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], metaclass=ABCMet
         """List of artists ordered by frequency of appearance on the tracks in this collection"""
         return get_most_common_values(track.artist for track in self.tracks if track.artist)
 
-    @property
-    def genres(self) -> list[str]:
-        """List of genres ordered by frequency of appearance on the tracks in this collection"""
-        genres = (genre for track in self.tracks for genre in (track.genres if track.genres else []))
-        return get_most_common_values(genres)
-
     def __init__(
-            self, tracks: Collection[LocalTrack], name: str | None = None, remote_wrangler: RemoteDataWrangler = None
+            self,
+            tracks: Collection[LocalTrack],
+            name: str | None = None,
+            remote_wrangler: RemoteDataWrangler = None
     ):
         super().__init__(remote_wrangler=remote_wrangler)
         if len(tracks) == 0:
@@ -234,8 +231,7 @@ class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], metaclass=ABCMet
         matched: list[LocalTrack] = []
         for track in tracks:
             value = track[self._tag_key]
-            print(self.name, value)
-            if isinstance(value, str | Path) and self.name == value:
+            if isinstance(value, str) and self.name == value:
                 matched.append(track)
             elif isinstance(value, Container) and self.name in value:
                 matched.append(track)
@@ -265,6 +261,12 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
         return get_most_common_values(track.album for track in self.tracks if track.album)
 
     @property
+    def genres(self) -> list[str]:
+        """List of genres ordered by frequency of appearance on the tracks in this collection"""
+        genres = (genre for track in self.tracks for genre in (track.genres if track.genres else []))
+        return get_most_common_values(genres)
+
+    @property
     def compilation(self):
         """Folder is a compilation if over 50% of tracks are marked as compilation"""
         return (sum(track.compilation is True for track in self.tracks) / len(self.tracks)) > 0.5
@@ -272,7 +274,7 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
     def __init__(
             self,
             tracks: Collection[LocalTrack] = (),
-            name: str | Path | None = None,
+            name: str | None = None,
             remote_wrangler: RemoteDataWrangler = None
     ):
         super().__init__(tracks=tracks, name=name, remote_wrangler=remote_wrangler)
@@ -293,7 +295,7 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
 
         # load tracks in the folder
         tasks = asyncio.gather(*(load_track(p) for p in path.glob("*") if p.suffix in TRACK_FILETYPES))
-        return cls(tracks=await tasks, name=path.stem, remote_wrangler=remote_wrangler)
+        return cls(tracks=await tasks, name=path.name, remote_wrangler=remote_wrangler)
 
 
 class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):
@@ -318,6 +320,12 @@ class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):
         """The most common artist on this album"""
         artists = get_most_common_values(artist for track in self.tracks if track.artist for artist in track.artists)
         return artists[0] if artists else None
+
+    @property
+    def genres(self) -> list[str]:
+        """List of genres ordered by frequency of appearance on the tracks in this collection"""
+        genres = (genre for track in self.tracks for genre in (track.genres if track.genres else []))
+        return get_most_common_values(genres)
 
     @property
     def date(self):
@@ -401,6 +409,12 @@ class LocalArtist(LocalCollectionFiltered[LocalTrack], Artist[LocalTrack]):
         return get_most_common_values(track.album for track in self.tracks if track.album)
 
     @property
+    def genres(self) -> list[str]:
+        """List of genres ordered by frequency of appearance on the tracks in this collection"""
+        genres = (genre for track in self.tracks for genre in (track.genres if track.genres else []))
+        return get_most_common_values(genres)
+
+    @property
     def rating(self):
         """Average rating of all tracks by this artist"""
         ratings = tuple(track.rating for track in self.tracks if track.rating is not None)
@@ -438,6 +452,11 @@ class LocalGenres(LocalCollectionFiltered[LocalTrack], Genre[LocalTrack]):
     @property
     def albums(self):
         return get_most_common_values(track.album for track in self.tracks if track.album)
+
+    @property
+    def related_genres(self) -> list[str]:
+        genres = (genre for track in self.tracks for genre in (track.genres if track.genres else []))
+        return get_most_common_values(genres)
 
     def __init__(
             self, tracks: Collection[LocalTrack], name: str | None = None, remote_wrangler: RemoteDataWrangler = None
