@@ -255,7 +255,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             response["previous"] = response_next.get("previous")
 
             if tqdm is not None:  # TODO: drop me when optimising
-                bar.update(len(response_next[self.items_key]))
+                bar.update(response_next["limit"])
 
         # cache child items
         key = key.rstrip("s") if key else key
@@ -598,7 +598,6 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         results: dict[str, dict[str, Any]] = {}
         for id_ in bar:
             results[id_] = await self.handler.get(url=url.format(id=id_), params=params)
-            # TODO: Why is "extending artist" sub-bar here not progressing after first 1 or 2 ticks?
             await self.extend_items(results[id_], kind="artist albums", key=key, leave_bar=False)
 
             for album in results[id_][self.items_key]:  # add skeleton items block to album responses

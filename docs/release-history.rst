@@ -95,6 +95,7 @@ Fixed
   Now works as expected.
 * :py:meth:`.LocalLibrary.artists` now generates a :py:class:`.LocalArtist` object per individual artist
   rather than on combined artists
+* Issue where :py:meth:`.SpotifyAPI.extend_items` did not show progress when extending some types of responses
 
 Removed
 -------
