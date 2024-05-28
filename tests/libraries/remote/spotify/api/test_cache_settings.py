@@ -5,7 +5,6 @@ import pytest
 
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.api.cache import SpotifyRequestSettings, SpotifyPaginatedRequestSettings
-from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
 from tests.libraries.remote.spotify.api.mock import SpotifyMock
 
 
@@ -26,7 +25,7 @@ class TestSpotifyRequestSettings:
         response = deepcopy(choice(api_mock.user_tracks))
         assert settings.get_name(response) is None
 
-        url = f"{SpotifyDataWrangler.url_api}/me/tracks"
+        url = f"{api_mock.url_api}/me/tracks"
         assert settings.get_key(url) == (None,)
 
     @pytest.fixture(scope="class")
@@ -46,6 +45,6 @@ class TestSpotifyRequestSettings:
             assert settings_paginated.get_offset(url) == response["offset"]
             assert settings_paginated.get_limit(url) == response["limit"]
 
-        url = f"{SpotifyDataWrangler.url_api}/me/tracks"
+        url = f"{api_mock.url_api}/me/tracks"
         assert settings_paginated.get_offset(url) == 0
         assert settings_paginated.get_limit(url) == 50

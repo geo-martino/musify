@@ -23,17 +23,17 @@ class SpotifyDataWrangler(RemoteDataWrangler):
 
     source = SOURCE_NAME
     unavailable_uri_dummy = "spotify:track:unavailable"
-    url_api = "https://api.spotify.com/v1"
-    url_ext = "https://open.spotify.com"
+    url_api = URL("https://api.spotify.com/v1")
+    url_ext = URL("https://open.spotify.com")
 
     @classmethod
     def get_id_type(cls, value: str, kind: RemoteObjectType | None = None) -> RemoteIDType:
-        value = value.strip().casefold()
+        value = str(value).strip().casefold()
         uri_split = value.split(':')
 
-        if value.startswith(cls.url_api):
+        if value.startswith(str(cls.url_api)):
             return RemoteIDType.URL
-        elif value.startswith(cls.url_ext):
+        elif value.startswith(str(cls.url_ext)):
             return RemoteIDType.URL_EXT
         elif len(uri_split) == RemoteIDType.URI.value and uri_split[0] == "spotify":  # URI
             if uri_split[1] == "user":
@@ -49,9 +49,9 @@ class SpotifyDataWrangler(RemoteDataWrangler):
         value = value.strip().casefold()
 
         if kind == RemoteIDType.URL:
-            return value.startswith(cls.url_api)
+            return value.startswith(str(cls.url_api))
         elif kind == RemoteIDType.URL_EXT:
-            return value.startswith(cls.url_ext)
+            return value.startswith(str(cls.url_ext))
         elif kind == RemoteIDType.URI:
             uri_split = value.split(':')
             if len(uri_split) != RemoteIDType.URI.value or uri_split[0] != "spotify":
@@ -79,8 +79,8 @@ class SpotifyDataWrangler(RemoteDataWrangler):
         value = value.strip()
         uri_check = value.split(':')
 
-        if value.startswith(cls.url_api) or value.startswith(cls.url_ext):  # open/API URL
-            value = value.removeprefix(cls.url_api if value.startswith(cls.url_api) else cls.url_ext)
+        if value.startswith(str(cls.url_api)) or value.startswith(str(cls.url_ext)):  # open/API URL
+            value = value.removeprefix(str(cls.url_api if value.startswith(str(cls.url_api)) else cls.url_ext))
             url_path = URL(value).path.split("/")
             for chunk in url_path:
                 try:

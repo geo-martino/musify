@@ -64,12 +64,13 @@ class CurrentTimeRotatingFileHandler(logging.handlers.BaseRotatingHandler):
         """Always returns False. Rotation happens on __init__ and only needs to happen once."""
         return False
 
-    def rotator(self, unformatted: str, formatted: Path):
+    def rotator(self, unformatted: str, formatted: str | Path):
         """
         Rotates the files in the folder on the given ``unformatted`` path.
         Removes files older than ``self.delta`` and the oldest files when number of files >= count
         until number of files <= count. ``formatted`` path is excluded from processing.
         """
+        formatted = Path(formatted)
         folder = formatted.parent
         if not folder:
             return

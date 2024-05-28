@@ -8,6 +8,7 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, MutableMapping, Mapping, Sequence
 from typing import Any, Self, AsyncContextManager
 
+from yarl import URL
 
 from musify.api.authorise import APIAuthoriser
 from musify.api.cache.backend.base import ResponseCache
@@ -66,7 +67,7 @@ class RemoteAPI(AsyncContextManager, metaclass=ABCMeta):
         raise NotImplementedError
 
     @property
-    def url(self) -> str:
+    def url(self) -> URL:
         """The base URL of the API"""
         return self.wrangler.url_api
 

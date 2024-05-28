@@ -11,7 +11,6 @@ from musify.libraries.remote.core.enum import RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteObjectTypeError
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.object import SpotifyAlbum, SpotifyArtist
-from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
 from tests.libraries.remote.spotify.api.mock import SpotifyMock
 from tests.libraries.remote.spotify.object.testers import SpotifyCollectionLoaderTester
 from tests.libraries.remote.spotify.utils import assert_id_attributes
@@ -50,7 +49,7 @@ class TestSpotifyArtist(SpotifyCollectionLoaderTester):
             album["total_tracks"] = 0
 
         items_block = api_mock.format_items_block(
-            url=f"{SpotifyDataWrangler.url_api}/artists/{artist["id"]}/albums", items=albums, total=len(albums)
+            url=f"{api_mock.url_api}/artists/{artist["id"]}/albums", items=albums, total=len(albums)
         )
         return artist | {"albums": items_block}
 
@@ -75,7 +74,7 @@ class TestSpotifyArtist(SpotifyCollectionLoaderTester):
             album["tracks"] = api_mock.format_items_block(url=album["href"], items=tracks, total=len(tracks))
 
         items_block = api_mock.format_items_block(
-            url=f"{SpotifyDataWrangler.url_api}/artists/{artist["id"]}/albums", items=albums, total=len(albums)
+            url=f"{api_mock.url_api}/artists/{artist["id"]}/albums", items=albums, total=len(albums)
         )
         return artist | {"albums": items_block}
 
