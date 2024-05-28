@@ -5,6 +5,7 @@ import os
 from collections.abc import Collection
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Self
 
 from musify.core.result import Result
 from musify.file.base import File
@@ -35,15 +36,9 @@ class SyncResultM3U(Result):
 class M3U(LocalPlaylist[FilterDefinedList[str | Path | File]]):
     """
     For reading and writing data from M3U playlist format.
-    You must provide either a valid playlist path of a file that exists,
-    or a list of tracks to use as this playlist's tracks.
-    You may also provide both to use and store the loaded tracks to this instance.
 
     :param path: Absolute path of the playlist.
-        If the playlist ``path`` given does not exist, the playlist instance will use all the tracks
-        given in ``tracks`` as the tracks in the playlist.
-    :param tracks: Optional. Available Tracks to search through for matches.
-        If no tracks are given, the playlist instance will load all the tracks from scratch according to its settings.
+        If the playlist ``path`` given does not exist, a new playlist will be created on :py:meth:`save`
     :param path_mapper: Optionally, provide a :py:class:`PathMapper` for paths stored in the playlist file.
         Useful if the playlist file contains relative paths and/or paths for other systems that need to be
         mapped to absolute, system-specific paths to be loaded and back again when saved.
@@ -70,48 +65,47 @@ class M3U(LocalPlaylist[FilterDefinedList[str | Path | File]]):
         return {}
 
     def __init__(
-            self,
-            path: str | Path,
-            tracks: Collection[LocalTrack] = (),
-            path_mapper: PathMapper = PathMapper(),
-            remote_wrangler: RemoteDataWrangler = None,
+            self, path: str | Path, path_mapper: PathMapper = PathMapper(), remote_wrangler: RemoteDataWrangler = None,
     ):
-        path = Path(path)
-        self._validate_type(path)
-
-        path_list: list[Path] = []
-        if path.is_file():  # load from file
-            with open(path, "r", encoding="utf-8") as file:
-                path_list = list(map(Path, path_mapper.map_many([line.strip() for line in file], check_existence=True)))
+        super().__init__(path=path, path_mapper=path_mapper, remote_wrangler=remote_wrangler)
 
         self._description = None
-        super().__init__(
-            path=path,
-            matcher=FilterDefinedList(values=path_list),
-            path_mapper=path_mapper,
-            remote_wrangler=remote_wrangler
-        )
-        self.matcher.transform = lambda x: Path(path_mapper.map(x, check_existence=False))
 
-        self.load(tracks=tracks)
-
-    def _load_track(self, path: str | Path) -> LocalTrack:
+    async def _load_track(self, path: str | Path) -> LocalTrack:
         path = self.path_mapper.map(path, check_existence=True)
-        return load_track(path=path, remote_wrangler=self.remote_wrangler)
+        return await load_track(path=path, remote_wrangler=self.remote_wrangler)
 
-    def load(self, tracks: Collection[LocalTrack] = ()) -> list[LocalTrack]:
+    async def load(self, tracks: Collection[LocalTrack] = ()) -> Self:
+        """
+        Read the playlist file and update the tracks in this playlist instance.
+
+        :param tracks: Available Tracks to search through for matches.
+            If no tracks are given, the playlist instance will load all the tracks
+            from scratch according to its settings.
+        :return: Self
+        """
+        path_list: list[Path] = []
+        if self.path.is_file():  # load from file
+            with open(self.path, "r", encoding="utf-8") as file:
+                paths_raw = self.path_mapper.map_many([line.strip() for line in file], check_existence=True)
+            path_list = list(map(Path, paths_raw))
+
+        self.matcher = FilterDefinedList(values=path_list)
+        self.matcher.transform = lambda x: Path(self.path_mapper.map(x, check_existence=False))
+
         if tracks:  # match paths from given tracks using the matcher
             self._match(tracks)
         else:  # use the paths in the matcher to load tracks from scratch
-            self.tracks = [self._load_track(path) for path in self.matcher.values if path is not None]
+            self.tracks = [await self._load_track(path) for path in self.matcher.values if path is not None]
 
         self._limit(ignore=self.matcher.values)
         self._sort()
 
         self._original = self.tracks.copy() if self._path.is_file() else []
-        return self.tracks
 
-    def save(self, dry_run: bool = True, *_, **__) -> SyncResultM3U:
+        return self
+
+    async def save(self, dry_run: bool = True, *_, **__) -> SyncResultM3U:
         """
         Write the tracks in this Playlist and its settings (if applicable) to file.
 

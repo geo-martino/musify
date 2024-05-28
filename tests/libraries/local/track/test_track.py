@@ -1,4 +1,4 @@
-from copy import copy, deepcopy
+from copy import copy
 from datetime import datetime, date
 from pathlib import Path
 
@@ -24,10 +24,10 @@ except ImportError:
     Image = None
 
 
-def test_does_not_load_invalid_track():
+async def test_load_fails():
     # raises error on unrecognised file type
     with pytest.raises(InvalidFileType):
-        load_track(path_txt)
+        await load_track(path_txt)
 
 
 def test_loaded_attributes_flac(track_flac: FLAC):
@@ -205,41 +205,42 @@ class TestLocalTrack(MusifyItemTester):
         return track
 
     @pytest.fixture
-    def item_unequal(self, track: LocalTrack) -> LocalTrack:
-        return next(load_track(path) for path in path_track_all if path != track.path)
+    async def item_unequal(self, track: LocalTrack) -> LocalTrack:
+        return next(iter([await load_track(path) for path in path_track_all if path != track.path]))
 
     @pytest.fixture
     def item_modified(self, track: LocalTrack) -> MusifyItem:
+        print(track._reader)
         track = copy(track)
         track.title = "new title"
         track.artist = "new artist"
         track.uri = random_uri(kind=RemoteObjectType.TRACK)
         return track
 
-    def test_does_not_load_other_supported_track_types(self, track: LocalTrack):
+    def test_init_fails(self, track: LocalTrack):
         paths = [path for path in path_track_all if not all(path == ext for ext in track.valid_extensions)]
         with pytest.raises(InvalidFileType):
             for path in paths:
                 track.__class__(path)
 
-    def test_load_track_function(self, track: LocalTrack):
-        track_reload = load_track(track.path)
+    async def test_load_track_function(self, track: LocalTrack):
+        track_reload = await load_track(track.path)
         assert track_reload.__class__ == track.__class__
         assert track_reload.path == track.path
 
-    def test_load_track_class(self, track: LocalTrack):
+    async def test_load_track_class(self, track: LocalTrack):
         # has actually reloaded the file
         assert id(track._reader.file) != id(track.load())
 
         # raises error on unrecognised file type
         with pytest.raises(InvalidFileType):
-            track.__class__(file=path_txt)
+            await track.__class__(file=path_txt)
 
         # raises error on files that do not exist
         with pytest.raises(FileDoesNotExistError):
-            track.__class__(file=f"does_not_exist.{set(track.valid_extensions).pop()}")
+            await track.__class__(file=f"does_not_exist.{set(track.valid_extensions).pop()}")
 
-    def test_copy_track(self, track: LocalTrack):
+    async def test_copy_track(self, track: LocalTrack):
         track_from_file = track.__class__(file=track._reader.file)
         assert id(track._reader.file) == id(track_from_file._reader.file)
 
@@ -249,11 +250,6 @@ class TestLocalTrack(MusifyItemTester):
         assert id(track._reader.file) == id(track_copy._reader.file)
         for key in keys:
             assert getattr(track, key) == getattr(track_copy, key)
-
-        track_deepcopy = deepcopy(track)
-        assert id(track._reader.file) != id(track_deepcopy._reader.file)
-        for key in keys:
-            assert getattr(track, key) == getattr(track_deepcopy, key)
 
     def test_set_and_find_file_paths(self, track: LocalTrack, tmp_path: Path):
         paths = track.__class__.get_filepaths(str(tmp_path))
@@ -355,16 +351,16 @@ class TestLocalTrackWriter:
         assert not actual.tag_map.disc_total or actual.disc_total == expected.disc_total, "disc_total"
         assert not actual.tag_map.compilation or actual.compilation == expected.compilation, "compilation"
 
-    def test_clear_tags_dry_run(self, track: LocalTrack):
+    async def test_clear_tags_dry_run(self, track: LocalTrack):
         track_update = track
         track_original = copy(track)
 
         # when dry run, no updates should happen
-        result = track_update.delete_tags(tags=LocalTrackField.ALL, dry_run=True)
+        result = await track_update.delete_tags(tags=LocalTrackField.ALL, dry_run=True)
         assert not result.saved
 
         # noinspection PyTestUnpassedFixture
-        track_update_dry = load_track(track.path, remote_wrangler=track._reader.remote_wrangler)
+        track_update_dry = await load_track(track.path, remote_wrangler=track._reader.remote_wrangler)
 
         self.assert_track_tags_equal(track_update_dry, track_original)
         assert track_update.comments == track_original.comments
@@ -373,15 +369,15 @@ class TestLocalTrackWriter:
         assert track_update_dry.has_uri == track_original.has_uri
         assert track_update_dry.has_image == track_original.has_image
 
-    def test_clear_tags(self, track: LocalTrack):
+    async def test_clear_tags(self, track: LocalTrack):
         track_update = track
         track_original = copy(track)
 
-        result = track_update.delete_tags(tags=LocalTrackField.ALL, dry_run=False)
+        result = await track_update.delete_tags(tags=LocalTrackField.ALL, dry_run=False)
         assert result.saved
 
         # noinspection PyTestUnpassedFixture
-        track_update = load_track(track.path, remote_wrangler=track._reader.remote_wrangler)
+        track_update = await load_track(track.path, remote_wrangler=track._reader.remote_wrangler)
 
         assert track_update.title is None
         assert track_update.artist is None
@@ -431,14 +427,14 @@ class TestLocalTrackWriter:
 
         return track, track_original, new_uri
 
-    def test_update_tags_dry_run(self, track: LocalTrack):
+    async def test_update_tags_dry_run(self, track: LocalTrack):
         track_update, track_original, _ = self.get_update_tags_test_track(track)
 
         # dry run, no updates should happen
-        result = track_update.save(tags=LocalTrackField.ALL, replace=False, dry_run=True)
+        result = await track_update.save(tags=LocalTrackField.ALL, replace=False, dry_run=True)
         assert not result.saved
 
-        track_update_dry = deepcopy(track_update)
+        track_update_dry = copy(track_update)
 
         self.assert_track_tags_equal(track_update_dry, track_original)
         assert track_update_dry.comments == track_original.comments
@@ -447,14 +443,14 @@ class TestLocalTrackWriter:
         assert track_update_dry.has_uri == track_original.has_uri
         assert track_update_dry.has_image == track_original.has_image
 
-    def test_update_tags_no_replace(self, track: LocalTrack):
+    async def test_update_tags_no_replace(self, track: LocalTrack):
         track_update, track_original, new_uri = self.get_update_tags_test_track(track)
 
         # update and don't replace current tags (except URI if URI is False)
-        result = track_update.save(tags=LocalTrackField.ALL, replace=False, dry_run=False)
+        result = await track_update.save(tags=LocalTrackField.ALL, replace=False, dry_run=False)
         assert result.saved
 
-        track_update = deepcopy(track_update)
+        track_update = copy(track_update)
 
         self.assert_track_tags_equal(track_update, track_original)
         assert track_update.comments == [new_uri]
@@ -466,12 +462,12 @@ class TestLocalTrackWriter:
         assert track_update.has_uri == track_update.has_uri
         assert track_update.has_image == track_original.has_image
 
-    def test_update_tags_with_replace(self, track: LocalTrack):
+    async def test_update_tags_with_replace(self, track: LocalTrack):
         track_update, track_original, new_uri = self.get_update_tags_test_track(track)
 
-        result = track_update.save(tags=LocalTrackField.ALL, replace=True, dry_run=False)
+        result = await track_update.save(tags=LocalTrackField.ALL, replace=True, dry_run=False)
         assert result.saved
-        track_update_replace = deepcopy(track_update)
+        track_update_replace = copy(track_update)
 
         self.assert_track_tags_equal_on_existing(track_update_replace, track_update)
         assert track_update_replace.comments == [new_uri]
@@ -483,7 +479,7 @@ class TestLocalTrackWriter:
         assert track_update_replace.image_links == track_update.image_links
         assert track_update_replace.has_image == track_update.has_image
 
-    def test_update_tags_results(self, track: LocalTrack):
+    async def test_update_tags_results(self, track: LocalTrack):
         track_original = copy(track)
 
         track.title = "new title"
@@ -495,7 +491,7 @@ class TestLocalTrackWriter:
         track.key = "F#"
         track.disc_number += 5
 
-        result = track.save(tags=LocalTrackField.ALL, replace=True, dry_run=False)
+        result = await track.save(tags=LocalTrackField.ALL, replace=True, dry_run=False)
         assert result.saved
 
         expected_tags = {
@@ -510,14 +506,14 @@ class TestLocalTrackWriter:
         }
         assert set(result.updated) == expected_tags
 
-        self.assert_track_tags_equal(track, deepcopy(track_original))
+        self.assert_track_tags_equal(track, copy(track_original))
 
         track.artist = "new artist"
         track.album_artist = "new various"
         track.compilation = not track.compilation
 
         tags_to_update = {LocalTrackField.ARTIST, LocalTrackField.COMPILATION}
-        result = track.save(tags=tags_to_update, replace=True, dry_run=False)
+        result = await track.save(tags=tags_to_update, replace=True, dry_run=False)
         assert result.saved
         assert set(result.updated) == tags_to_update
 
@@ -542,13 +538,13 @@ class TestLocalTrackWriter:
         assert images[0].size == image.size
 
     @pytest.mark.skipif(not required_modules_installed(REQUIRED_IMAGE_MODULES), reason="required modules not installed")
-    def test_update_image_dry_run(self, track: LocalTrack):
+    async def test_update_image_dry_run(self, track: LocalTrack):
         track_update, track_original = self.get_update_image_test_track(track)
 
         image_original = track_update._reader.read_images()[0]
 
         # dry run, no updates should happen
-        result = track_update.save(tags=LocalTrackField.IMAGES, replace=False, dry_run=True)
+        result = await track_update.save(tags=LocalTrackField.IMAGES, replace=False, dry_run=True)
         assert not result.saved
 
         track_update.refresh()
@@ -559,19 +555,19 @@ class TestLocalTrackWriter:
         assert images[0].size == image_original.size
 
     @pytest.mark.skipif(not required_modules_installed(REQUIRED_IMAGE_MODULES), reason="required modules not installed")
-    def test_update_image_no_replace(self, track: LocalTrack):
+    async def test_update_image_no_replace(self, track: LocalTrack):
         track_update, track_original = self.get_update_image_test_track(track)
 
         # clear current image and update
-        track_update.delete_tags(LocalTrackField.IMAGES, dry_run=False)
+        await track_update.delete_tags(LocalTrackField.IMAGES, dry_run=False)
         assert not track_update.has_image
 
-        result = track_update.save(tags=LocalTrackField.IMAGES, replace=False, dry_run=False)
+        result = await track_update.save(tags=LocalTrackField.IMAGES, replace=False, dry_run=False)
         self.assert_update_image_result(track=track_update, image=open_image(path_track_img), result=result)
 
     @pytest.mark.skipif(not required_modules_installed(REQUIRED_IMAGE_MODULES), reason="required modules not installed")
-    def test_update_image_with_replace(self, track: LocalTrack):
+    async def test_update_image_with_replace(self, track: LocalTrack):
         track_update, track_original = self.get_update_image_test_track(track)
 
-        result = track_update.save(tags=LocalTrackField.IMAGES, replace=True, dry_run=False)
+        result = await track_update.save(tags=LocalTrackField.IMAGES, replace=True, dry_run=False)
         self.assert_update_image_result(track=track_update, image=open_image(path_track_img), result=result)

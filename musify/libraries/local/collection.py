@@ -3,6 +3,7 @@ Implements all collection types for a local library.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import sys
 from abc import ABCMeta, abstractmethod
@@ -10,9 +11,10 @@ from collections.abc import Mapping, Collection, Iterable, Container
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 from musify.core.enum import Fields, TagField, TagFields
+from musify.file.exception import UnexpectedPathError
 from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.core.object import Track, Library, Folder, Album, Artist, Genre
 from musify.libraries.local.base import LocalItem
@@ -239,7 +241,8 @@ class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], metaclass=ABCMet
         matched: list[LocalTrack] = []
         for track in tracks:
             value = track[self._tag_key]
-            if isinstance(value, str) and self.name == value:
+            print(self.name, value)
+            if isinstance(value, str | Path) and self.name == value:
                 matched.append(track)
             elif isinstance(value, Container) and self.name in value:
                 matched.append(track)
@@ -279,13 +282,25 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
             name: str | Path | None = None,
             remote_wrangler: RemoteDataWrangler = None
     ):
-        name = Path(name) if name else None
-        if len(tracks) == 0 and name is not None and name.is_dir():
-            # name is path to a folder, load tracks in that folder
-            tracks = [load_track(path) for path in name.glob("*") if path.suffix in TRACK_FILETYPES]
-            name = name.name
         super().__init__(tracks=tracks, name=name, remote_wrangler=remote_wrangler)
         self.tracks.sort(key=lambda x: x.filename or _max_str)
+
+    @classmethod
+    async def load_folder(cls, path: str | Path | None, remote_wrangler: RemoteDataWrangler = None) -> Self:
+        """
+        Load tracks in a folder at the given ``path``.
+
+        :param path: The path of the folder to load.
+        :param remote_wrangler: Optionally, provide a :py:class:`RemoteDataWrangler` object
+            for processing URIs on tracks. If given, the wrangler can be used when calling __get_item__
+            to get an item from the collection from its URI.
+        """
+        if not path.is_dir():
+            raise UnexpectedPathError(path, "Path must be a directory")
+
+        # load tracks in the folder
+        tasks = asyncio.gather(*(load_track(p) for p in path.glob("*") if p.suffix in TRACK_FILETYPES))
+        return cls(tracks=await tasks, name=path.stem, remote_wrangler=remote_wrangler)
 
 
 class LocalAlbum(LocalCollectionFiltered[LocalTrack], Album[LocalTrack]):

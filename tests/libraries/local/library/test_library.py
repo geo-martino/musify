@@ -19,9 +19,9 @@ from tests.utils import path_resources
 class TestLocalLibrary(LocalLibraryTester):
 
     @pytest.fixture
-    def library(self) -> LocalLibrary:
+    async def library(self) -> LocalLibrary:
         library = LocalLibrary(library_folders=path_track_resources, playlist_folder=path_playlist_resources)
-        library.load()
+        await library.load()
 
         # needed to ensure __setitem__ check passes
         library.items.append(random_track(cls=library[0].__class__))
@@ -91,11 +91,11 @@ class TestLocalLibrary(LocalLibraryTester):
             path.stem: path for path in path_playlist_all
         }
 
-    def test_load(self, path_mapper: PathMapper):
+    async def test_load(self, path_mapper: PathMapper):
         library = LocalLibrary(
             library_folders=path_track_resources, playlist_folder=path_playlist_resources, path_mapper=path_mapper
         )
-        library.load()
+        await library.load()
         tracks = {track.path for track in library.tracks}
         playlists = {name: pl.path for name, pl in library.playlists.items()}
 
@@ -108,6 +108,6 @@ class TestLocalLibrary(LocalLibraryTester):
         assert library.last_modified == max(track.date_modified for track in library.tracks)
 
         library.library_folders = [path_track_resources, path_playlist_resources]
-        library.load()
+        await library.load()
 
         assert len(library.tracks) == len(library._track_paths) == len(path_track_all) + 2

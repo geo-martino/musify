@@ -149,8 +149,8 @@ class MusicBee(LocalLibrary, File):
 
         self.errors.append(path)
 
-    def load_tracks(self) -> None:
-        super().load_tracks()
+    async def load_tracks(self) -> None:
+        await super().load_tracks()
         self.logger.debug(f"Enrich {self.name} tracks: START")
 
         # need to remove library folders to allow match to be os agnostic
@@ -172,7 +172,7 @@ class MusicBee(LocalLibrary, File):
         self._log_errors("Could not find a loaded track for these paths from the MusicBee library file")
         self.logger.debug(f"Enrich {self.name} tracks: DONE\n")
 
-    def save(self, dry_run: bool = True, *_, **__) -> dict[str, Any]:
+    async def save(self, dry_run: bool = True, *_, **__) -> dict[str, Any]:
         """
         Generate and save the XML library file for this MusicBee library.
 

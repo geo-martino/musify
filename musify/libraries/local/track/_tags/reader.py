@@ -8,7 +8,7 @@ from typing import Any
 
 import mutagen
 
-from musify.libraries.local.track.tags.base import TagProcessor
+from musify.libraries.local.track._tags.base import TagProcessor
 from musify.libraries.remote.core.enum import RemoteIDType
 from musify.utils import to_collection
 

@@ -6,7 +6,7 @@ import logging.config
 import logging.handlers
 import os
 import sys
-from collections.abc import Iterable
+from collections.abc import Iterable, Awaitable
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -15,7 +15,7 @@ from musify.log import INFO_EXTRA, REPORT, STAT
 T = TypeVar("T")
 try:
     from tqdm.auto import tqdm
-    ProgressBarType = Iterable[T] | tqdm
+    ProgressBarType = Iterable[T] | tqdm | Awaitable[T]
 except ImportError:
     tqdm = None
     ProgressBarType = Iterable[T]
@@ -117,25 +117,39 @@ class MusifyLogger(logging.Logger):
             cols = 120
 
         # clear closed bars
-        self._bars = [bar for bar in self._bars if bar.n < bar.total]
+        self._bars = [bar for bar in self._bars if isinstance(bar, tqdm) and bar.n < bar.total]
 
         # determine the level of bar to generate and whether to leave the bar based on current active count
         position = kwargs.get("position", abs(min(bar.pos for bar in self._bars)) + 1 if self._bars else 0)
         leave_default = all(h.level > logging.DEBUG for h in self.stdout_handlers) and position == 0
         leave = kwargs["leave"] if kwargs.get("leave") is not None else leave_default
 
-        bar = tqdm(
-            iterable=iterable,
-            total=total,
-            leave=leave,
-            disable=self.disable_bars or kwargs.get("disable", False),
-            file=sys.stdout,
-            ncols=cols,
-            colour=kwargs.get("colour", "blue"),
-            smoothing=0.1,
-            position=position,
-            **{k: v for k, v in kwargs.items() if k not in preset_keys}
-        )
+        if isinstance(iterable, Awaitable):
+            bar = tqdm.gather(
+                iterable,
+                total=total,
+                leave=leave,
+                disable=self.disable_bars or kwargs.get("disable", False),
+                file=sys.stdout,
+                ncols=cols,
+                colour=kwargs.get("colour", "blue"),
+                smoothing=0.1,
+                position=position,
+                **{k: v for k, v in kwargs.items() if k not in preset_keys}
+            )
+        else:
+            bar = tqdm(
+                iterable=iterable,
+                total=total,
+                leave=leave,
+                disable=self.disable_bars or kwargs.get("disable", False),
+                file=sys.stdout,
+                ncols=cols,
+                colour=kwargs.get("colour", "blue"),
+                smoothing=0.1,
+                position=position,
+                **{k: v for k, v in kwargs.items() if k not in preset_keys}
+            )
         self._bars.append(bar)
         return bar
 

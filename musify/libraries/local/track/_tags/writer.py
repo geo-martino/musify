@@ -12,7 +12,7 @@ from musify.core.result import Result
 from musify.file.image import REQUIRED_MODULES as REQUIRED_IMAGE_MODULES
 from musify.libraries.core.object import Track
 from musify.libraries.local.track.field import LocalTrackField as Tags
-from musify.libraries.local.track.tags.base import TagProcessor
+from musify.libraries.local.track._tags.base import TagProcessor
 from musify.types import UnitIterable
 from musify.utils import to_collection, required_modules_installed
 
@@ -78,6 +78,10 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
                     del self.file[tag_id]
                 removed = True
 
+        save = not dry_run and removed
+        if save:
+            self.file.save()
+
         return removed
 
     def write(
@@ -134,7 +138,6 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
 
         return SyncResultTrack(saved=save, updated=updated)
 
-    @abstractmethod
     def write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool | None:
         """
         Generic method for updating a tag value in the file.

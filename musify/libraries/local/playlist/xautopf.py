@@ -5,7 +5,7 @@ from collections.abc import Collection, Mapping, Sequence
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 from musify.core.base import MusifyItem
 from musify.core.enum import Fields, Field, TagFields
@@ -16,6 +16,7 @@ from musify.file.base import File
 from musify.file.path_mapper import PathMapper
 from musify.libraries.local.playlist.base import LocalPlaylist
 from musify.libraries.local.track import LocalTrack
+from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
 from musify.processors.compare import Comparer
 from musify.processors.exception import SorterProcessorError
 from musify.processors.filter import FilterDefinedList, FilterComparers
@@ -70,15 +71,12 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
     """
     For reading and writing data from MusicBee's auto-playlist format.
 
-    **Note**: You must provide a list of tracks to search on initialisation for this playlist type.
-
     :param path: Absolute path of the playlist.
-    :param tracks: Optional. Available Tracks to search through for matches.
-        If none are provided, no tracks will be loaded initially. In order to load the playlist in this case,
-        you will need to call :py:meth:`load` and provide some loaded tracks.
+        If the playlist ``path`` given does not exist, a new playlist will be created on :py:meth:`save`
     :param path_mapper: Optionally, provide a :py:class:`PathMapper` for paths stored in the playlist file.
         Useful if the playlist file contains relative paths and/or paths for other systems that need to be
         mapped to absolute, system-specific paths to be loaded and back again when saved.
+    :param remote_wrangler: Not used by this object.
     """
 
     __slots__ = ("_parser", "_limiter_deduplication")
@@ -122,41 +120,38 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
         return {}
 
     def __init__(
-            self,
-            path: str | Path,
-            tracks: Collection[LocalTrack] = (),
-            path_mapper: PathMapper = PathMapper(),
-            *_,
-            **__
+            self, path: str | Path, path_mapper: PathMapper = PathMapper(), remote_wrangler: RemoteDataWrangler = None
     ):
         if xmltodict is None:
             raise MusifyImportError(f"Cannot create {self.__class__.__name__} object. Required modules: xmltodict")
 
-        path = Path(path)
-        self._validate_type(Path(path))
+        super().__init__(path=path, path_mapper=path_mapper, remote_wrangler=remote_wrangler)
 
-        self._parser = XMLPlaylistParser(path=path, path_mapper=path_mapper)
-        if path.is_file():
-            self._parser.load()
+        self._parser: XMLPlaylistParser | None = None
+        self._limiter_deduplication: bool = False
+
+    async def load(self, tracks: Collection[LocalTrack] = ()) -> Self:
+        """
+        Read the playlist file and update the tracks in this playlist instance.
+
+        :param tracks: Available Tracks to search through for matches.
+            If no tracks are given, the playlist will be loaded empty.
+        :return: Self
+        """
+        self._parser = XMLPlaylistParser(path=self.path, path_mapper=self.path_mapper)
+        if self.path.is_file():
+            await self._parser.load()
         else:  # this is a new playlist, assign default values to parser
             self._parser.xml = deepcopy(self.default_xml)
             self._parser.parse_matcher()
             self._parser.parse_limiter()
             self._parser.parse_sorter()
 
-        self._limiter_deduplication: bool = self._parser.limiter_deduplication
+        self.matcher = self._parser.get_matcher()
+        self.limiter = self._parser.get_limiter()
+        self.sorter = self._parser.get_sorter()
+        self._limiter_deduplication = self._parser.limiter_deduplication
 
-        super().__init__(
-            path=path,
-            matcher=self._parser.get_matcher(),
-            limiter=self._parser.get_limiter(),
-            sorter=self._parser.get_sorter(),
-            path_mapper=self._parser.path_mapper,
-        )
-
-        self.load(tracks=tracks)
-
-    def load(self, tracks: Collection[LocalTrack] = ()) -> list[LocalTrack]:
         tracks_list = list(tracks)
         self.sorter.sort_by_field(tracks_list, field=Fields.LAST_PLAYED, reverse=True)
 
@@ -165,7 +160,8 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
         self._sort()
 
         self._original = self.tracks.copy()
-        return self.tracks
+
+        return self
 
     def _limit(self, ignore: Collection[LocalTrack]) -> None:
         if self.limiter is not None and self.tracks is not None and self.limiter_deduplication:
@@ -182,7 +178,7 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
             self.tracks = tracks_deduplicated
         super()._limit(ignore=ignore)
 
-    def save(self, dry_run: bool = True, *_, **__) -> SyncResultXAutoPF:
+    async def save(self, dry_run: bool = True, *_, **__) -> SyncResultXAutoPF:
         """
         Write the tracks in this Playlist and its settings (if applicable) to file.
 
@@ -197,7 +193,7 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
         parser.parse_exception_paths(self.matcher, items=self.tracks, original=self._original)
         parser.parse_limiter(self.limiter, deduplicate=self.limiter_deduplication)
         parser.parse_sorter(self.sorter)
-        parser.save(dry_run=dry_run)
+        await parser.save(dry_run=dry_run)
 
         if not dry_run:
             self._original = self.tracks.copy()
@@ -316,12 +312,12 @@ class XMLPlaylistParser(File, PrettyPrinter):
         #: A map representation of the loaded XML playlist data
         self.xml: dict[str, Any] = {}
 
-    def load(self) -> None:
+    async def load(self) -> None:
         """Load ``xml`` object from the disk"""
         with open(self.path, "r", encoding="utf-8") as file:
             self.xml: dict[str, Any] = xmltodict.parse(file.read())
 
-    def save(self, dry_run: bool = True, *_, **__) -> None:
+    async def save(self, dry_run: bool = True, *_, **__) -> None:
         """Save ``xml`` object to the disk"""
         if dry_run:
             return

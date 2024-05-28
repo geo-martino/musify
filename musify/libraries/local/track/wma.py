@@ -12,8 +12,8 @@ import mutagen.id3
 
 from musify.core.enum import TagMap
 from musify.file.image import open_image, get_image_bytes
-from musify.libraries.local.track.tags.reader import TagReader
-from musify.libraries.local.track.tags.writer import TagWriter
+# noinspection PyProtectedMember
+from musify.libraries.local.track._tags import TagReader, TagWriter
 from musify.libraries.local.track.track import LocalTrack
 
 try:
@@ -23,7 +23,7 @@ except ImportError:
     UnidentifiedImageError = None
 
 
-class WMATagReader(TagReader[mutagen.asf.ASF]):
+class _WMATagReader(TagReader[mutagen.asf.ASF]):
 
     __slots__ = ()
 
@@ -81,7 +81,7 @@ class WMATagReader(TagReader[mutagen.asf.ASF]):
         return images
 
 
-class WMATagWriter(TagWriter[mutagen.asf.ASF]):
+class _WMATagWriter(TagWriter[mutagen.asf.ASF]):
 
     __slots__ = ()
 
@@ -126,7 +126,7 @@ class WMATagWriter(TagWriter[mutagen.asf.ASF]):
         return updated
 
 
-class WMA(LocalTrack[mutagen.asf.ASF, WMATagReader, WMATagWriter]):
+class WMA(LocalTrack[mutagen.asf.ASF, _WMATagReader, _WMATagWriter]):
 
     __slots__ = ()
 
@@ -151,10 +151,8 @@ class WMA(LocalTrack[mutagen.asf.ASF, WMATagReader, WMATagWriter]):
         images=["WM/Picture"],
     )
 
-    @staticmethod
-    def _create_reader(*args, **kwargs):
-        return WMATagReader(*args, **kwargs)
+    def _create_reader(self, file: mutagen.asf.ASF):
+        return _WMATagReader(file, tag_map=self.tag_map, remote_wrangler=self._remote_wrangler)
 
-    @staticmethod
-    def _create_writer(*args, **kwargs):
-        return WMATagWriter(*args, **kwargs)
+    def _create_writer(self, file: mutagen.asf.ASF):
+        return _WMATagWriter(file, tag_map=self.tag_map, remote_wrangler=self._remote_wrangler)

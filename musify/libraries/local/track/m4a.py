@@ -10,8 +10,8 @@ import mutagen.mp4
 
 from musify.core.enum import TagMap
 from musify.file.image import open_image, get_image_bytes
-from musify.libraries.local.track.tags.reader import TagReader
-from musify.libraries.local.track.tags.writer import TagWriter
+# noinspection PyProtectedMember
+from musify.libraries.local.track._tags import TagReader, TagWriter
 from musify.libraries.local.track.track import LocalTrack
 from musify.utils import to_collection
 
@@ -21,7 +21,7 @@ except ImportError:
     Image = None
 
 
-class M4ATagReader(TagReader[mutagen.mp4.MP4]):
+class _M4ATagReader(TagReader[mutagen.mp4.MP4]):
 
     __slots__ = ()
 
@@ -71,7 +71,7 @@ class M4ATagReader(TagReader[mutagen.mp4.MP4]):
         return [Image.open(BytesIO(bytes(value))) for value in values] if values is not None else None
 
 
-class M4ATagWriter(TagWriter[mutagen.mp4.MP4]):
+class _M4ATagWriter(TagWriter[mutagen.mp4.MP4]):
 
     __slots__ = ()
 
@@ -146,7 +146,7 @@ class M4ATagWriter(TagWriter[mutagen.mp4.MP4]):
         return updated
 
 
-class M4A(LocalTrack[mutagen.mp4.MP4, M4ATagReader, M4ATagWriter]):
+class M4A(LocalTrack[mutagen.mp4.MP4, _M4ATagReader, _M4ATagWriter]):
 
     __slots__ = ()
 
@@ -172,10 +172,8 @@ class M4A(LocalTrack[mutagen.mp4.MP4, M4ATagReader, M4ATagWriter]):
         images=["covr"],
     )
 
-    @staticmethod
-    def _create_reader(*args, **kwargs):
-        return M4ATagReader(*args, **kwargs)
+    def _create_reader(self, file: mutagen.mp4.MP4):
+        return _M4ATagReader(file, tag_map=self.tag_map, remote_wrangler=self._remote_wrangler)
 
-    @staticmethod
-    def _create_writer(*args, **kwargs):
-        return M4ATagWriter(*args, **kwargs)
+    def _create_writer(self, file: mutagen.mp4.MP4):
+        return _M4ATagWriter(file, tag_map=self.tag_map, remote_wrangler=self._remote_wrangler)

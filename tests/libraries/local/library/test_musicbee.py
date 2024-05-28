@@ -67,12 +67,13 @@ class TestMusicBee(LocalLibraryTester):
         shutil.rmtree(tmp_library_path)
 
     @pytest.fixture
-    def library(self, musicbee_folder: Path, path_mapper: PathMapper) -> LocalLibrary:
+    async def library(self, musicbee_folder: Path, path_mapper: PathMapper) -> LocalLibrary:
         library = MusicBee(musicbee_folder=musicbee_folder, path_mapper=path_mapper)
         assert library._library_xml_path == musicbee_folder.joinpath(library_xml_filename)
         assert library._settings_xml_path == musicbee_folder.joinpath(settings_xml_filename)
 
-        library.load()
+        await library.load()
+
         # needed to ensure __setitem__ check passes
         library.items.append(random_track(cls=library[0].__class__))
         return library
@@ -153,10 +154,10 @@ class TestMusicBee(LocalLibraryTester):
             path.stem for path in path_playlist_all if path != path_playlist_xautopf_bp
         }
 
-    def test_load(self, musicbee_folder: Path, path_mapper: PathMapper):
+    async def test_load(self, musicbee_folder: Path, path_mapper: PathMapper):
         MusicBee.xml_library_filename = library_xml_filename
         library = MusicBee(musicbee_folder=musicbee_folder, path_mapper=path_mapper)
-        library.load()
+        await library.load()
 
         assert len(library.tracks) == 6
         assert set(library.playlists) == {path.stem for path in path_playlist_all}
@@ -185,17 +186,17 @@ class TestMusicBee(LocalLibraryTester):
         assert track_wma.play_count == 200
 
     # noinspection PyTestUnpassedFixture
-    def test_save(self, musicbee_folder: Path, path_mapper: PathMapper, remote_wrangler: RemoteDataWrangler):
+    async def test_save(self, musicbee_folder: Path, path_mapper: PathMapper, remote_wrangler: RemoteDataWrangler):
         library = MusicBee(musicbee_folder=musicbee_folder, path_mapper=path_mapper, remote_wrangler=remote_wrangler)
         source_dt_modified = datetime.fromtimestamp(library_xml_filepath.stat().st_mtime)
         original_dt_modified = datetime.fromtimestamp(library._library_xml_parser.path.stat().st_mtime)
 
-        library.load()
-        library.save(dry_run=True)
+        await library.load()
+        await library.save(dry_run=True)
         assert datetime.fromtimestamp(library._library_xml_parser.path.stat().st_mtime) == original_dt_modified
         assert datetime.fromtimestamp(library_xml_filepath.stat().st_mtime) == source_dt_modified
 
-        library.save(dry_run=False)
+        await library.save(dry_run=False)
         assert datetime.fromtimestamp(library._library_xml_parser.path.stat().st_mtime) > original_dt_modified
         assert datetime.fromtimestamp(library_xml_filepath.stat().st_mtime) == source_dt_modified
 

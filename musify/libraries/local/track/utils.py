@@ -18,7 +18,7 @@ TRACK_CLASSES = frozenset({FLAC, MP3, M4A, WMA})
 TRACK_FILETYPES = frozenset(filetype for c in TRACK_CLASSES for filetype in c.valid_extensions)
 
 
-def load_track(path: str | Path, remote_wrangler: RemoteDataWrangler = None) -> LocalTrack:
+async def load_track(path: str | Path, remote_wrangler: RemoteDataWrangler = None) -> LocalTrack:
     """
     Attempt to load a file from a given path, returning the appropriate :py:class:`LocalTrack` object
 
@@ -35,4 +35,4 @@ def load_track(path: str | Path, remote_wrangler: RemoteDataWrangler = None) -> 
         raise InvalidFileType(ext, f"Not an accepted extension. Use only: {', '.join(TRACK_FILETYPES)}")
 
     cls = next(cls for cls in TRACK_CLASSES if ext in cls.valid_extensions)
-    return cls(file=path, remote_wrangler=remote_wrangler)
+    return await cls(file=path, remote_wrangler=remote_wrangler)

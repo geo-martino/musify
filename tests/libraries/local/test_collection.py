@@ -1,4 +1,5 @@
 from copy import copy
+from pathlib import Path
 
 import pytest
 
@@ -35,7 +36,7 @@ class TestLocalFolder(LocalCollectionTester):
         tracks = random_tracks(10)
 
         for i, track in enumerate(tracks[:7]):
-            track._reader.file.filename = f"/test/{self.name}/{random_str(30, 50)}{track.ext}"
+            track._path = Path(f"/test/{self.name}/{random_str(30, 50)}{track.ext}")
             track.compilation = i > 2
 
             if i % 2 == 0:
@@ -71,9 +72,9 @@ class TestLocalFolder(LocalCollectionTester):
         assert folder.play_count == sum(track.play_count for track in tracks_filtered if track.play_count)
 
     # noinspection PyTestUnpassedFixture
-    def test_empty_load(self):
+    async def test_empty_load(self):
         # load folder when no tracks given and only folder path given
-        collection = LocalFolder(name=path_track_resources)
+        collection = await LocalFolder.load_folder(path=path_track_resources)
         assert {track.path for track in collection} == path_track_all
 
 

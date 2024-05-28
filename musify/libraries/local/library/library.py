@@ -1,6 +1,7 @@
 """
 The core, basic library implementation which is just a simple set of folders.
 """
+import asyncio
 import itertools
 from collections.abc import Collection, Mapping, Iterable
 from concurrent.futures import ThreadPoolExecutor
@@ -255,7 +256,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         self.errors: list[str] = []
         self.logger.debug(f"Setup {self.name} library: DONE\n")
 
-    def load(self) -> None:
+    async def load(self) -> None:
         """Loads all tracks and playlists in this library from scratch and log results."""
         self.logger.debug(f"Load {self.name} library: START")
         self.logger.info(
@@ -263,8 +264,8 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             f"{len(self._track_paths)} tracks and {len(self._playlist_paths)} playlists \33[0m"
         )
 
-        self.load_tracks()
-        self.load_playlists()
+        await self.load_tracks()
+        await self.load_playlists()
 
         self.logger.print(STAT)
         self.log_tracks()
@@ -284,7 +285,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     ###########################################################################
     ## Tracks
     ###########################################################################
-    def load_track(self, path: str | Path) -> LocalTrack | None:
+    async def load_track(self, path: str | Path) -> LocalTrack | None:
         """
         Wrapper for :py:func:`load_track` which automatically loads the track at the given ``path``
         and assigns optional arguments using this library's attributes.
@@ -292,12 +293,12 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         Handles exceptions by logging paths which produce errors to internal list of ``errors``.
         """
         try:
-            return load_track(path=path, remote_wrangler=self.remote_wrangler)
+            return await load_track(path=path, remote_wrangler=self.remote_wrangler)
         except MusifyError as ex:
             self.logger.debug(f"Load error for track: {path} - {ex}")
             self.errors.append(path)
 
-    def load_tracks(self) -> None:
+    async def load_tracks(self) -> None:
         """Load all tracks from all the valid paths in this library, replacing currently loaded tracks."""
         if not self._track_paths:
             return
@@ -307,12 +308,10 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             f"\33[1;95m  >\33[1;97m Extracting metadata and properties for {len(self._track_paths)} tracks \33[0m"
         )
 
-        with ThreadPoolExecutor(thread_name_prefix="track-loader") as executor:
-            tasks = executor.map(self.load_track, self._track_paths)
-            bar = self.logger.get_iterator(
-                tasks, desc="Loading tracks", unit="tracks", total=len(self._track_paths)
-            )
-            self._tracks = list(bar)
+        tasks = asyncio.gather(*map(self.load_track, self._track_paths))
+        self._tracks = next(iter(await self.logger.get_iterator(
+            tasks, desc="Loading tracks", unit="tracks", total=len(self._track_paths)
+        )))
 
         self._log_errors("Could not load the following tracks")
         self.logger.debug(f"Load {self.name} tracks: DONE\n")
@@ -330,7 +329,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     ###########################################################################
     ## Playlists
     ###########################################################################
-    def load_playlist(self, path: str | Path) -> LocalPlaylist:
+    async def load_playlist(self, path: str | Path) -> LocalPlaylist:
         """
         Wrapper for :py:func:`load_playlist` which automatically loads the playlist at the given ``path``
         and assigns optional arguments using this library's attributes.
@@ -338,14 +337,14 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         Handles exceptions by logging paths which produce errors to internal list of ``errors``.
         """
         try:
-            return load_playlist(
+            return await load_playlist(
                 path=path, tracks=self.tracks, path_mapper=self.path_mapper, remote_wrangler=self.remote_wrangler,
             )
         except MusifyError as ex:
             self.logger.debug(f"Load error for playlist: {path} - {ex}")
             self.errors.append(path)
 
-    def load_playlists(self) -> None:
+    async def load_playlists(self) -> None:
         """
         Load all playlists found in this library's ``playlist_folder``,
         filtered down using the ``playlist_filter`` if given, replacing currently loaded playlists.
@@ -361,12 +360,11 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             f"\33[1;95m  >\33[1;97m Loading playlist data for {len(self._playlist_paths)} playlists \33[0m"
         )
 
-        with ThreadPoolExecutor(thread_name_prefix="playlist-loader") as executor:
-            tasks = executor.map(self.load_playlist, self._playlist_paths.values())
-            bar = self.logger.get_iterator(
-                tasks, desc="Loading playlists", unit="playlists", total=len(self._playlist_paths)
-            )
-            self._playlists = {pl.name: pl for pl in sorted(bar, key=lambda x: x.name.casefold())}
+        tasks = asyncio.gather(*map(self.load_playlist, self._playlist_paths.values()))
+        playlists = next(iter(await self.logger.get_iterator(
+            tasks, desc="Loading playlists", unit="playlists", total=len(self._playlist_paths)
+        )))
+        self._playlists = {pl.name: pl for pl in sorted(playlists, key=lambda x: x.name.casefold())}
 
         self._log_errors("Could not load the following playlists")
         self.logger.debug(f"Load {self.name} playlists: DONE\n")

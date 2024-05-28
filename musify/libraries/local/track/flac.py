@@ -11,8 +11,8 @@ import mutagen.id3
 from musify.core.enum import TagMap
 from musify.file.image import open_image, get_image_bytes
 from musify.libraries.local.track.field import LocalTrackField
-from musify.libraries.local.track.tags.reader import TagReader
-from musify.libraries.local.track.tags.writer import TagWriter
+# noinspection PyProtectedMember
+from musify.libraries.local.track._tags import TagReader, TagWriter
 from musify.libraries.local.track.track import LocalTrack
 
 try:
@@ -21,7 +21,7 @@ except ImportError:
     Image = None
 
 
-class FLACTagReader(TagReader[mutagen.flac.FLAC]):
+class _FLACTagReader(TagReader[mutagen.flac.FLAC]):
 
     __slots__ = ()
 
@@ -36,7 +36,7 @@ class FLACTagReader(TagReader[mutagen.flac.FLAC]):
         return len(self.file.pictures) > 0
 
 
-class FLACTagWriter(TagWriter[mutagen.flac.FLAC]):
+class _FLACTagWriter(TagWriter[mutagen.flac.FLAC]):
 
     __slots__ = ()
 
@@ -99,7 +99,7 @@ class FLACTagWriter(TagWriter[mutagen.flac.FLAC]):
         return removed
 
 
-class FLAC(LocalTrack[mutagen.flac.FLAC, FLACTagReader, FLACTagWriter]):
+class FLAC(LocalTrack[mutagen.flac.FLAC, _FLACTagReader, _FLACTagWriter]):
 
     __slots__ = ()
 
@@ -125,10 +125,8 @@ class FLAC(LocalTrack[mutagen.flac.FLAC, FLACTagReader, FLACTagWriter]):
         comments=["comment", "description"],
     )
 
-    @staticmethod
-    def _create_reader(*args, **kwargs):
-        return FLACTagReader(*args, **kwargs)
+    def _create_reader(self, file: mutagen.flac.FLAC):
+        return _FLACTagReader(file, tag_map=self.tag_map, remote_wrangler=self._remote_wrangler)
 
-    @staticmethod
-    def _create_writer(*args, **kwargs):
-        return FLACTagWriter(*args, **kwargs)
+    def _create_writer(self, file: mutagen.flac.FLAC):
+        return _FLACTagWriter(file, tag_map=self.tag_map, remote_wrangler=self._remote_wrangler)

@@ -24,7 +24,7 @@ PLAYLIST_CLASSES = frozenset(_playlist_classes)
 PLAYLIST_FILETYPES = frozenset(filetype for c in PLAYLIST_CLASSES for filetype in c.valid_extensions)
 
 
-def load_playlist(
+async def load_playlist(
         path: str | Path,
         tracks: Collection[LocalTrack] = (),
         path_mapper: PathMapper = PathMapper(),
@@ -53,4 +53,5 @@ def load_playlist(
         raise InvalidFileType(ext, f"Not an accepted extension. Use only: {', '.join(PLAYLIST_FILETYPES)}")
 
     cls = next(cls for cls in PLAYLIST_CLASSES if ext in cls.valid_extensions)
-    return cls(path=path, tracks=tracks, path_mapper=path_mapper, remote_wrangler=remote_wrangler)
+    playlist = cls(path=path, path_mapper=path_mapper, remote_wrangler=remote_wrangler)
+    return await playlist.load(tracks=tracks)

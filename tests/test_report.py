@@ -36,7 +36,7 @@ def spotify_library(spotify_api: SpotifyAPI, spotify_mock: SpotifyMock) -> Spoti
 
 
 @pytest.fixture
-def local_library(
+async def local_library(
         spotify_library: SpotifyLibrary, spotify_wrangler: SpotifyDataWrangler, tmp_path: Path
 ) -> LocalLibrary:
     """Yields a :py:class:`LocalLibrary` of local tracks and playlists"""
@@ -47,7 +47,11 @@ def local_library(
     for name, pl in spotify_library.playlists.items():
         path = tmp_path.joinpath(name).with_suffix(".m3u")
         tracks = [uri_tracks[track.uri] for track in pl]
-        library.playlists[name] = M3U(path=path, tracks=tracks)
+
+        playlist = M3U(path=path)
+        await playlist.load(tracks=tracks)
+        library.playlists[name] = playlist
+
         assert all(track in pl for track in library.playlists[name])
 
     return library

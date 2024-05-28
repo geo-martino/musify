@@ -21,27 +21,27 @@ def path_mapper() -> PathStemMapper:
 
 
 @pytest.fixture(params=[path_track_flac])
-def track_flac(path: str, remote_wrangler: RemoteDataWrangler) -> FLAC:
+async def track_flac(path: str, remote_wrangler: RemoteDataWrangler) -> FLAC:
     """Yields instantiated :py:class:`FLAC` objects for testing"""
-    return FLAC(file=path, remote_wrangler=remote_wrangler)
+    return await FLAC(file=path, remote_wrangler=remote_wrangler)
 
 
 @pytest.fixture(params=[path_track_mp3])
-def track_mp3(path: str, remote_wrangler: RemoteDataWrangler) -> MP3:
+async def track_mp3(path: str, remote_wrangler: RemoteDataWrangler) -> MP3:
     """Yields instantiated :py:class:`MP3` objects for testing"""
-    return MP3(file=path, remote_wrangler=remote_wrangler)
+    return await MP3(file=path, remote_wrangler=remote_wrangler)
 
 
 @pytest.fixture(params=[path_track_m4a])
-def track_m4a(path: str, remote_wrangler: RemoteDataWrangler) -> M4A:
+async def track_m4a(path: str, remote_wrangler: RemoteDataWrangler) -> M4A:
     """Yields instantiated :py:class:`M4A` objects for testing"""
-    return M4A(file=path, remote_wrangler=remote_wrangler)
+    return await M4A(file=path, remote_wrangler=remote_wrangler)
 
 
 @pytest.fixture(params=[path_track_wma])
-def track_wma(path: str, remote_wrangler: RemoteDataWrangler) -> WMA:
+async def track_wma(path: str, remote_wrangler: RemoteDataWrangler) -> WMA:
     """Yields instantiated :py:class:`WMA` objects for testing"""
-    return WMA(file=path, remote_wrangler=remote_wrangler)
+    return await WMA(file=path, remote_wrangler=remote_wrangler)
 
 
 # noinspection PyUnresolvedReferences

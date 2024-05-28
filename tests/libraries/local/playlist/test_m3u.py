@@ -17,12 +17,13 @@ from tests.utils import path_txt, path_resources
 class TestM3U(LocalPlaylistTester):
 
     @pytest.fixture
-    def playlist(self, tmp_path: Path) -> M3U:
+    async def playlist(self, tmp_path: Path) -> M3U:
         # needed to ensure __setitem__ check passes
         tracks = random_tracks(randrange(5, 20))
         tracks.append(random_track(cls=tracks[0].__class__))
-        playlist = M3U(path=tmp_path.joinpath("does_not_exist").with_suffix(".m3u"), tracks=tracks)
-        return playlist
+
+        playlist = M3U(path=tmp_path.joinpath("does_not_exist").with_suffix(".m3u"))
+        return await playlist.load(tracks=tracks)
 
     @pytest.fixture(scope="class")
     def tracks_actual(self, tracks: list[LocalTrack]) -> list[LocalTrack]:
@@ -36,11 +37,11 @@ class TestM3U(LocalPlaylistTester):
         """Yield list of real LocalTracks where some are present in the test playlist and some are not"""
         return tracks_actual[:-1] + [track for track in tracks if track not in tracks_actual]
 
-    def test_does_not_load_unsupported_files(self):
+    def test_init_fails(self):
         with pytest.raises(InvalidFileType):
             M3U(path=path_txt)
 
-    def test_load_fake_file_with_no_tracks(self, tracks: list[LocalTrack], tmp_path: Path):
+    async def test_load_fake_file_with_no_tracks(self, tracks: list[LocalTrack], tmp_path: Path):
         path_fake = tmp_path.joinpath("does_not_exist").with_suffix(".m3u")
 
         pl = M3U(path=path_fake)
@@ -49,54 +50,57 @@ class TestM3U(LocalPlaylistTester):
         assert pl.ext == path_fake.suffix
         assert len(pl.tracks) == 0
 
-        pl.load(tracks)
+        await pl.load(tracks)
         assert pl.tracks == tracks
 
-    def test_load_fake_file_with_fake_tracks(self, tracks: list[LocalTrack], tmp_path: Path):
+    async def test_load_fake_file_with_fake_tracks(self, tracks: list[LocalTrack], tmp_path: Path):
         path_fake = tmp_path.joinpath("does_not_exist").with_suffix(".m3u")
         tracks_random = random_tracks(30)
 
-        pl = M3U(path=path_fake, tracks=tracks_random)
+        pl = M3U(path=path_fake)
+        await pl.load(tracks=tracks_random)
         assert pl.path == path_fake
         assert pl.tracks == tracks_random
 
-        pl.load(tracks + tracks_random[:4])
+        await pl.load(tracks + tracks_random[:4])
         assert pl.tracks == tracks + tracks_random[:4]
 
     # noinspection PyTestUnpassedFixture
-    def test_load_file_with_no_tracks(self, tracks_actual: list[LocalTrack], tracks_limited: list[LocalTrack]):
+    async def test_load_file_with_no_tracks(self, tracks_actual: list[LocalTrack], tracks_limited: list[LocalTrack]):
         pl = M3U(path=path_playlist_m3u, path_mapper=PathStemMapper(stem_map={"../": path_resources}))
+        await pl.load()
 
         assert pl.path == path_playlist_m3u
         assert pl.tracks == tracks_actual
         assert [track.path for track in pl] == [track.path for track in tracks_actual]
 
         # reloads only with given tracks that match conditions i.e. paths to include
-        pl.load(tracks_limited)
+        await pl.load(tracks_limited)
         assert [track.path for track in pl] == [track.path for track in tracks_limited if track in tracks_actual]
         assert pl.tracks == [track for track in tracks_limited if track in tracks_actual]
 
         # ...and then reloads all tracks from disk that match conditions when no tracks are given
-        pl.load()
+        await pl.load()
         assert pl.tracks == tracks_actual
 
-    def test_load_file_with_tracks(
+    async def test_load_file_with_tracks(
             self, tracks_actual: list[LocalTrack], tracks_limited: list[LocalTrack], path_mapper: PathMapper
     ):
-        pl = M3U(path=path_playlist_m3u, tracks=tracks_limited, path_mapper=path_mapper)
+        pl = M3U(path=path_playlist_m3u, path_mapper=path_mapper)
+        await pl.load(tracks=tracks_limited)
 
         assert pl.path == path_playlist_m3u
         assert pl.tracks == [track for track in tracks_limited if track in tracks_actual]
 
         # reloads only with given tracks that match conditions i.e. paths to include
-        pl.load(tracks_limited[:1])
+        await pl.load(tracks_limited[:1])
         assert pl.tracks == tracks_limited[:1]
 
         # ...and then reloads all tracks from disk that match conditions when no tracks are given
-        pl.load()
+        await pl.load()
         assert pl.tracks == tracks_actual
 
-    def test_save_file_dry_run(self, tmp_path: Path):
+    async def test_save_file_dry_run(self, tmp_path: Path):
         path_new = tmp_path.joinpath("new_playlist").with_suffix(".m3u")
 
         # creates a new M3U file
@@ -106,11 +110,11 @@ class TestM3U(LocalPlaylistTester):
 
         # ...load the tracks
         tracks_random = random_tracks(30)
-        pl.load(tracks_random)
+        await pl.load(tracks_random)
         assert pl.tracks == tracks_random
 
         # ...save these loaded tracks as a dry run - no output
-        result = pl.save(dry_run=True)
+        result = await pl.save(dry_run=True)
 
         assert result.start == 0
         assert result.added == len(tracks_random)
@@ -123,12 +127,13 @@ class TestM3U(LocalPlaylistTester):
         assert pl.date_modified is None
         assert pl.date_created is None
 
-    def test_save_new_file(self, tmp_path: Path):
+    async def test_save_new_file(self, tmp_path: Path):
         path_new = tmp_path.joinpath("new_playlist").with_suffix(".m3u")
         tracks_random = random_tracks(30)
 
-        pl = M3U(path=path_new, tracks=tracks_random)
-        result = pl.save(dry_run=False)
+        pl = M3U(path=path_new)
+        await pl.load(tracks=tracks_random)
+        result = await pl.save(dry_run=False)
 
         assert result.start == 0
         assert result.added == len(tracks_random)
@@ -150,7 +155,7 @@ class TestM3U(LocalPlaylistTester):
         # ...remove some tracks and add some new ones
         tracks_random_new = random_tracks(15)
         pl.tracks = pl.tracks[:20] + tracks_random_new
-        result = pl.save(dry_run=False)
+        result = await pl.save(dry_run=False)
 
         assert result.start == len(tracks_random)
         assert result.added == len(tracks_random_new)
@@ -168,7 +173,7 @@ class TestM3U(LocalPlaylistTester):
         assert paths == [str(track.path) for track in pl.tracks]
 
     @pytest.mark.parametrize("path", [path_playlist_m3u], indirect=["path"])
-    def test_save_existing_file(
+    async def test_save_existing_file(
             self, tracks_actual: list[LocalTrack], path: str, path_mapper: PathStemMapper, tmp_path: Path
     ):
         path_prefix = list(path_mapper.stem_map)[0]
@@ -183,6 +188,7 @@ class TestM3U(LocalPlaylistTester):
             assert not str(track.path).startswith(path_prefix)
 
         pl = M3U(path=path, path_mapper=path_mapper)
+        await pl.load()
 
         assert pl.path == path
         assert pl.tracks == tracks_actual
@@ -191,7 +197,7 @@ class TestM3U(LocalPlaylistTester):
 
         tracks_random = random_tracks(10)
         pl.tracks = pl.tracks[:2] + tracks_random
-        result = pl.save(dry_run=False)
+        result = await pl.save(dry_run=False)
 
         assert result.start == 3
         assert result.added == len(tracks_random)
@@ -215,7 +221,7 @@ class TestM3U(LocalPlaylistTester):
         # change the name and save to new file
         pl.name = "New Playlist"
         assert pl.path == tmp_path.joinpath("New Playlist").with_suffix(pl.ext)
-        pl.save(dry_run=False)
+        await pl.save(dry_run=False)
 
         if not os.getenv("GITHUB_ACTIONS"):
             # TODO: these assertions always fail on GitHub actions but not locally, why?
