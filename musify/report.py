@@ -34,12 +34,28 @@ def report_playlist_differences(
     missing: dict[str, tuple[MusifyItem, ...]] = {}
     unavailable: dict[str, tuple[MusifyItem, ...]] = {}
 
-    source = source.playlists if isinstance(source, Library) else {pl.name: pl for pl in source}
-    reference = reference.playlists if isinstance(reference, Library) else {pl.name: pl for pl in reference}
-    max_width = get_max_width(source.keys())
+    log_message = "Reporting on playlist differences"
+    if isinstance(source, Library) and isinstance(reference, Library):
+        log_message += f" {source.source} and {reference.source} libraries"
 
-    logger.info("\33[1;95m ->\33[1;97m Reporting on differences between libraries \33[0m")
+    if isinstance(source, Library):
+        source_name = source.source
+        source = source.playlists
+    else:
+        source_name = "source"
+        source = {pl.name: pl for pl in source}
+
+    if isinstance(reference, Library):
+        reference_name = reference.source
+        reference = reference.playlists
+    else:
+        reference_name = "reference"
+        reference = {pl.name: pl for pl in reference}
+
+    max_width = get_max_width(source.keys())
+    logger.info(f"\33[1;95m ->\33[1;97m {log_message} \33[0m")
     logger.print()
+
     for name, pl_source in source.items():
         pl_reference = reference.get(name, [])
 
@@ -58,7 +74,8 @@ def report_playlist_differences(
             f"\33[92m{len(reference_extra):>6} extra \33[0m|"
             f"\33[91m{len(source_extra):>6} missing \33[0m|"
             f"\33[93m{len(source_no_uri) + len(reference_no_uri):>6} unavailable \33[0m|"
-            f"\33[94m{len(pl_source):>6} in source \33[0m"
+            f"\33[94m{f"{len(pl_source):>6} in {source_name}"} \33[0m|"
+            f"\33[96m{f"{len(pl_reference):>6} in {reference_name}"} \33[0m"
         )
 
     report: dict[str, dict[str, tuple[MusifyItem, ...]]] = {
@@ -72,7 +89,8 @@ def report_playlist_differences(
         f"\33[1;92m{sum(map(len, extra.values())):>6} extra \33[0m|"
         f"\33[1;91m{sum(map(len, missing.values())):>6} missing \33[0m|"
         f"\33[1;93m{sum(map(len, unavailable.values())):>6} unavailable \33[0m|"
-        f"\33[1;94m{len(source):>6} playlists \33[0m"
+        f"\33[1;94m{len(source):>6} {"playlists":<{len(f"in {source_name}")}} \33[0m|"
+        f"\33[1;96m{len(reference):>6} {"playlists":<{len(f"in {reference_name}")}} \33[0m"
     )
     logger.print(REPORT)
     logger.debug("Report library differences: DONE\n")

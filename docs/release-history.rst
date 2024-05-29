@@ -51,6 +51,8 @@ Added
 * ARTISTS field added to LocalTrackField
 * Add compatibility with ``yarl`` package for any logic which uses URL logic.
 * Add compatibility for pathlib.Path for any logic which uses path logic.
+* Extended logging on :py:func:`.report_playlist_differences`
+* ``source`` property on :py:class:`.Library`
 
 Changed
 -------
@@ -80,6 +82,8 @@ Changed
 * Reduced scope of :py:meth:`.TagWriter._delete_tag` method to private
 * :py:class:`.LocalTrack` now removes any loaded embedded image from the mutagen file object.
   This is to reduce memory usage when loading many of these objects.
+* Extend logging on :py:meth:`.LocalCollection.log_save_tracks_result` to show when no tags
+  have been or would be updated.
 
 Fixed
 -----

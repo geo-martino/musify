@@ -107,9 +107,11 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
         :param replace: Destructively replace tags in each file.
         :param dry_run: Run function, but do not modify the file on the disk.
         :return: A map of the :py:class:`LocalTrack` saved to its result as a :py:class:`SyncResultTrack` object
+            only for tracks that were saved or would have been saved in the case of a dry run.
         """
         bar = self.logger.get_iterator(self.tracks, desc="Updating tracks", unit="tracks")
-        return {track: await track.save(tags=tags, replace=replace, dry_run=dry_run) for track in bar}
+        results = {track: await track.save(tags=tags, replace=replace, dry_run=dry_run) for track in bar}
+        return {track: result for track, result in results.items() if result.saved or result.updated}
 
     def log_save_tracks_result(self, results: Mapping[LocalTrack, SyncResultTrack]) -> None:
         """Log stats from the results of a ``save_tracks`` operation"""
@@ -120,10 +122,13 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
 
         self.logger.stat("\33[1;96mSaved tags to the following tracks: \33[0m")
         for track, result in results.items():
+            saved = "\33[92mSAVED" if result.saved else "\33[91mNOT SAVED"
+            tags = ', '.join(tag.name for tag in result.updated.keys())
+            if not tags:
+                tags = "No tags updated"
             self.logger.stat(
-                f"\33[97m{align_string(track.path, max_width=max_width, truncate_left=True)} \33[0m| " +
-                ("\33[92mSAVED \33[0m| " if result.saved else "\33[91mNOT SAVED \33[0m| ") +
-                f"\33[94m{', '.join(tag.name for tag in result.updated.keys())} \33[0m"
+                f"\33[97m{align_string(track.path, max_width=max_width, truncate_left=True)} \33[0m| "
+                f"{saved} \33[0m| \33[94m{tags} \33[0m"
             )
 
     def merge_tracks(self, tracks: Collection[Track], tags: UnitIterable[TagField] = Fields.ALL) -> None:

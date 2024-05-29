@@ -304,6 +304,13 @@ class Library[T: Track](MusifyCollection[T], metaclass=ABCMeta):
         """The library name"""
         raise NotImplementedError
 
+    # noinspection PyPropertyDefinition
+    @classmethod
+    @property
+    def source(cls) -> str:
+        """The type of library loaded"""
+        return cls.__name__.replace("Library", "")
+
     @property
     def items(self):
         """The tracks in this collection"""
