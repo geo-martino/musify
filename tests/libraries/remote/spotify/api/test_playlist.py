@@ -11,13 +11,14 @@ from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteObjectTypeError, RemoteIDTypeError
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.object import SpotifyPlaylist
+from tests.libraries.remote.core.api import RemoteAPIPlaylistTester
 from tests.libraries.remote.core.utils import ALL_ITEM_TYPES
 from tests.libraries.remote.spotify.api.mock import SpotifyMock
 from tests.libraries.remote.spotify.utils import random_ids, random_id, random_id_type, random_id_types
 from tests.libraries.remote.spotify.utils import random_uris, random_api_urls, random_ext_urls
 
 
-class TestSpotifyAPIPlaylists:
+class TestSpotifyAPIPlaylists(RemoteAPIPlaylistTester):
     """Tester for playlist modification type endpoints of :py:class:`SpotifyAPI`"""
 
     @staticmethod
@@ -69,11 +70,11 @@ class TestSpotifyAPIPlaylists:
 
         _, _, response = next(iter(await api_mock.get_requests(url=url, response={"name": name})))
         body = await response.json()
-        assert body["name"] == name
-        assert PROGRAM_NAME in body["description"]
-        assert not body["public"]
-        assert body["collaborative"]
-        assert result.removeprefix(f"{api.url}/playlists/").strip("/")
+        assert body["name"] == result["name"] == name
+        assert PROGRAM_NAME in body["description"] and PROGRAM_NAME in result["description"]
+        assert not body["public"] and not result["public"]
+        assert body["collaborative"] and result["collaborative"]
+        assert result[api.url_key].removeprefix(f"{api.url}/playlists/").strip("/")
 
     async def test_add_to_playlist_input_validation_and_skips(self, api: SpotifyAPI, api_mock: SpotifyMock):
         url = f"{api.url}/playlists/{random_id()}"

@@ -19,11 +19,19 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
 
     __slots__ = ()
 
+    async def load_user_playlists(self) -> None:
+        """Load and store user playlists data for the currently authorised user in this API object"""
+        responses = await self.get_user_items(kind=RemoteObjectType.PLAYLIST)
+        self.user_playlist_data = {response["name"]: response for response in responses}
+
     async def get_playlist_url(self, playlist: str | Mapping[str, Any] | RemoteResponse) -> str:
         """
         Determine the type of the given ``playlist`` and return its API URL.
         If type cannot be determined, attempt to find the playlist in the
-        list of the currently authorised user's playlists.
+        list of the currently authorised user's loaded playlists.
+
+        If you find this method is giving unexpected results when giving the name of a playlist.
+        You may reload the currently loaded user's playlists by calling :py:meth:`load_user_playlists`
 
         :param playlist: One of the following to identify the playlist URL:
             - playlist URL/URI/ID,
@@ -58,26 +66,30 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
         try:
             return self.wrangler.convert(playlist, kind=RemoteObjectType.PLAYLIST, type_out=RemoteIDType.URL)
         except RemoteIDTypeError:
-            playlists = await self.get_user_items(kind=RemoteObjectType.PLAYLIST)
-            playlists = {pl["name"]: pl[self.url_key] for pl in playlists}
-            if playlist not in playlists:
+            if not self.user_playlist_data:
+                await self.load_user_playlists()
+
+            if playlist not in self.user_playlist_data:
                 raise RemoteIDTypeError(
                     "Given playlist is not a valid URL/URI/ID and name not found in user's playlists",
                     value=playlist
                 )
-            return playlists[playlist]
+
+            return self.user_playlist_data[playlist][self.url_key]
 
     ###########################################################################
     ## POST endpoints
     ###########################################################################
-    async def create_playlist(self, name: str, public: bool = True, collaborative: bool = False, *_, **__) -> str:
+    async def create_playlist(
+            self, name: str, public: bool = True, collaborative: bool = False, *_, **__
+    ) -> dict[str, Any]:
         """
         ``POST: /users/{user_id}/playlists`` - Create an empty playlist for the current user with the given name.
 
         :param name: Name of playlist to create.
         :param public: Set playlist availability as `public` if True and `private` if False.
         :param collaborative: Set playlist to collaborative i.e. other users may edit the playlist.
-        :return: API URL for playlist.
+        :return: API JSON response for the created playlist.
         """
         url = f"{self.url}/users/{self.user_id}/playlists"
 
@@ -87,10 +99,12 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             "public": public,
             "collaborative": collaborative,
         }
-        pl_url = (await self.handler.post(url, json=body))[self.url_key]
+        response = (await self.handler.post(url, json=body))
+        name = response["name"]
+        url = response[self.url_key]
 
-        self.handler.log("DONE", url, message=f"Created playlist: {name!r} -> {pl_url}")
-        return pl_url
+        self.handler.log("DONE", url, message=f"Created playlist: {name!r} -> {url}")
+        return response
 
     async def add_to_playlist(
             self,

@@ -89,6 +89,8 @@ class RemoteAPI(AsyncContextManager, metaclass=ABCMeta):
 
         #: Stores the loaded user data for the currently authorised user
         self.user_data: dict[str, Any] = {}
+        #: Stores the loaded user playlists data for the currently authorised user
+        self.user_playlist_data: dict[str, dict[str, Any]] = {}
 
     async def __aenter__(self) -> Self:
         await self.handler.__aenter__()
@@ -98,7 +100,8 @@ class RemoteAPI(AsyncContextManager, metaclass=ABCMeta):
         except CacheError:
             pass
 
-        await self.load_user_data()
+        await self.load_user()
+        await self.load_user_playlists()
 
         return self
 
@@ -130,9 +133,14 @@ class RemoteAPI(AsyncContextManager, metaclass=ABCMeta):
     ###########################################################################
     ## Misc helpers
     ###########################################################################
-    async def load_user_data(self) -> None:
-        """Load and store user data in this API object for the currently authorised user"""
+    async def load_user(self) -> None:
+        """Load and store user data for the currently authorised user in this API object"""
         self.user_data = await self.get_self()
+
+    @abstractmethod
+    async def load_user_playlists(self) -> None:
+        """Load and store user playlists data for the currently authorised user in this API object"""
+        raise NotImplementedError
 
     @staticmethod
     def _merge_results_to_input_mapping(
@@ -382,15 +390,39 @@ class RemoteAPI(AsyncContextManager, metaclass=ABCMeta):
         raise NotImplementedError
 
     ###########################################################################
-    ## Collection - POST endpoints
+    ## Playlist specific endpoints
     ###########################################################################
+    async def get_or_create_playlist(self, name: str, *args, **kwargs) -> dict[str, Any]:
+        """
+        Attempt to find the playlist with the given ``name`` and return it.
+        Otherwise, create a new playlist.
+
+        Any given args and kwargs are passed directly onto :py:meth:`create_playlist`
+        when a matching loaded playlist is not found.
+
+        When a playlist is created, persist the response back to the loaded playlists in this object.
+
+        :param name: The case-sensitive name of the playlist to get/create.
+        :return: API JSON response for the loaded/created playlist.
+        """
+        if not self.user_playlist_data:
+            await self.load_user_playlists()
+
+        response = self.user_playlist_data.get(name)
+        if response:
+            return response
+
+        response = await self.create_playlist(name, *args, **kwargs)
+        self.user_playlist_data[name] = response
+        return response
+
     @abstractmethod
-    async def create_playlist(self, name: str, *args, **kwargs) -> str:
+    async def create_playlist(self, name: str, *args, **kwargs) -> dict[str, Any]:
         """
         ``POST`` - Create an empty playlist for the current user with the given name.
 
         :param name: Name of playlist to create.
-        :return: API URL for playlist.
+        :return: API JSON response for the created playlist.
         """
         raise NotImplementedError
 
@@ -421,9 +453,6 @@ class RemoteAPI(AsyncContextManager, metaclass=ABCMeta):
         """
         raise NotImplementedError
 
-    ###########################################################################
-    ## Collection - DELETE endpoints
-    ###########################################################################
     @abstractmethod
     async def delete_playlist(self, playlist: str | Mapping[str, Any] | RemoteResponse) -> str:
         """

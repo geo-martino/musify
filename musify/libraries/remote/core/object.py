@@ -167,8 +167,8 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
         :param collaborative: Set playlist to collaborative i.e. other users may edit the playlist.
         :return: :py:class:`RemotePlaylist` object for the generated playlist.
         """
-        url = await api.create_playlist(name=name, public=public, collaborative=collaborative)
-        return cls(response=await api.handler.get(url), api=api)
+        response = await api.create_playlist(name=name, public=public, collaborative=collaborative)
+        return cls(response=response, api=api)
 
     async def delete(self) -> None:
         """

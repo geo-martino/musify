@@ -156,11 +156,11 @@ class RemoteItemChecker(InputProcessor):
         if not uris:
             return
 
-        url = await self.api.create_playlist(collection.name, public=False)
-        self._playlist_name_urls[collection.name] = url
+        response = await self.api.create_playlist(collection.name, public=False)
+        self._playlist_name_urls[collection.name] = response[self.api.url_key]
         self._playlist_name_collection[collection.name] = collection
 
-        await self.api.add_to_playlist(url, items=uris, skip_dupes=False)
+        await self.api.add_to_playlist(response, items=uris, skip_dupes=False)
 
     async def _delete_playlists(self) -> None:
         """Delete all temporary playlists stored and clear stored playlists and collections"""
