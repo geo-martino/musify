@@ -200,10 +200,10 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             When None, allow the logger to decide this setting.
         :return: API JSON responses for each item
         """
-        if not response:
-            return []
         if isinstance(response, RemoteResponse):
             response = response.response
+        if not response:
+            return []
 
         method = "GET"
 
@@ -604,14 +604,6 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             results[id_] = await self.handler.get(url=url.format(id=id_), params=params)
             await self.extend_items(results[id_], kind="artist albums", key=key, leave_bar=False)
 
-            for album in results[id_][self.items_key]:  # add skeleton items block to album responses
-                album["tracks"] = {
-                    self.url_key: self.format_next_url(
-                        url=str(URL(album[self.url_key]).with_query(None)) + "/tracks", offset=0, limit=50
-                    ),
-                    "total": album["total_tracks"]
-                }
-
         id_list = self.wrangler.extract_ids(values, kind=RemoteObjectType.ARTIST)
         await self.logger.get_asynchronous_iterator(
             map(_get_result, id_list),
@@ -619,6 +611,15 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             unit="artist",
             disable=len(id_list) < self._bar_threshold
         )
+
+        for result in results.values():  # add skeleton items block to album responses
+            for album in result[self.items_key]:
+                album["tracks"] = {
+                    self.url_key: self.format_next_url(
+                        url=str(URL(album[self.url_key]).with_query(None)) + "/tracks", offset=0, limit=50
+                    ),
+                    "total": album["total_tracks"]
+                }
 
         results_remapped = [{self.id_key: id_, "albums": result} for id_, result in results.items()]
         self._merge_results_to_input(original=values, responses=results_remapped, ordered=False, clear=False)

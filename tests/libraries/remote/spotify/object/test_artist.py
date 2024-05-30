@@ -251,9 +251,6 @@ class TestSpotifyArtist(SpotifyCollectionLoaderTester):
         assert len(await api_mock.get_requests(url=f"{result.url}/{item_key}")) == expected
 
         for album in result.response[item_key][api.items_key]:
-            print(album.keys())
-            print(len(album["tracks"]["items"]))
-            print({k: v for k, v in album["tracks"].items() if k != "items"})
             url = URL(album["tracks"]["href"]).with_query(None)
             expected = api_mock.calculate_pages_from_response(album)
             assert len(await api_mock.get_requests(url=url)) == expected
