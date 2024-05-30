@@ -30,10 +30,10 @@ def test_current_time_file_handler_namer(tmp_path: Path):
     handler = CurrentTimeRotatingFileHandler(filename=base_path, delay=True)
     assert handler.filename == Path(str(base_path).format(handler.dt.strftime(LOGGING_DT_FORMAT)))
 
-    base_parts[-1] = base_parts[-1].format(handler.dt.strftime(LOGGING_DT_FORMAT))
     sep = "\\" if os.path.sep == "/" else "/"
     assert sep not in str(handler.filename)
-    assert handler.filename.parts == tuple(base_parts)
+    base_parts[-1] = tuple(p for p in base_parts[-1].format(handler.dt.strftime(LOGGING_DT_FORMAT)) if p)
+    assert handler.filename.parts == base_parts
 
 
 @pytest.fixture
