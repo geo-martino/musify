@@ -33,8 +33,8 @@ def test_current_time_file_handler_namer(tmp_path: Path):
     sep = "\\" if os.path.sep == "/" else "/"
     assert sep not in str(handler.filename)
 
-    base_parts[-1] = tuple(p for p in base_parts[-1].format(handler.dt.strftime(LOGGING_DT_FORMAT)) if p)
-    assert handler.filename.parts == base_parts
+    base_parts[-1] = base_parts[-1].format(handler.dt.strftime(LOGGING_DT_FORMAT))
+    assert handler.filename.parts == tuple(p for p in base_parts if p)
 
 
 @pytest.fixture
