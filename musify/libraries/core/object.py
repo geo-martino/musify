@@ -260,14 +260,14 @@ class Playlist[T: Track](MusifyCollection[T], metaclass=ABCMeta):
             raise MusifyTypeError([type(i).__name__ for i in other])
 
         if reference is None:
-            self.extend(self.difference(other), allow_duplicates=False)
+            self.extend(self.outer_difference(other), allow_duplicates=False)
             return
 
         for item in reference:
             if item not in other and item in self:
                 self.remove(item)
 
-        self.extend(reference.difference(other), allow_duplicates=False)
+        self.extend(reference.outer_difference(other), allow_duplicates=False)
 
     def __or__(self, other: Playlist[T]) -> Self:
         if not isinstance(other, self.__class__):

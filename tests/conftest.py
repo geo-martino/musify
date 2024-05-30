@@ -400,4 +400,5 @@ async def spotify_api(spotify_mock: SpotifyMock) -> SpotifyAPI:
     api = SpotifyAPI(token=token, test_args=None, test_expiry=0, test_condition=None)
 
     async with api as a:
+        spotify_mock.reset()
         yield a

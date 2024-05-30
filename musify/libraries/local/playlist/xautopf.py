@@ -203,14 +203,14 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
 
         return SyncResultXAutoPF(
             start=initial_count,
-            start_included=len([p for p in initial.xml_source.get("ExceptionsInclude", "").split("|") if p]),
-            start_excluded=len([p for p in initial.xml_source.get("Exceptions", "").split("|") if p]),
+            start_included=sum(1 for p in initial.xml_source.get("ExceptionsInclude", "").split("|") if p),
+            start_excluded=sum(1 for p in initial.xml_source.get("Exceptions", "").split("|") if p),
             start_compared=len(initial.xml_source["Conditions"].get("Condition", [])),
             start_limiter=initial.xml_source["Limit"].get("@Enabled", "False") == "True",
             start_sorter=len(initial.xml_source.get("SortBy", initial.xml_source.get("DefinedSort", []))) > 0,
             final=len(self.tracks),
-            final_included=len([p for p in parser.xml_source.get("ExceptionsInclude", "").split("|") if p]),
-            final_excluded=len([p for p in parser.xml_source.get("Exceptions", "").split("|") if p]),
+            final_included=sum(1 for p in parser.xml_source.get("ExceptionsInclude", "").split("|") if p),
+            final_excluded=sum(1 for p in parser.xml_source.get("Exceptions", "").split("|") if p),
             final_compared=len(parser.xml_source["Conditions"].get("Condition", [])),
             final_limiter=parser.xml_source["Limit"].get("@Enabled", "False") == "True",
             final_sorter=len(parser.xml_source.get("SortBy", parser.xml_source.get("DefinedSort", []))) > 0,

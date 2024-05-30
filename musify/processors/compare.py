@@ -162,7 +162,7 @@ class Comparer(DynamicProcessor):
                 converted.append(exp.date())
             elif re.match(r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}", exp):
                 # value is a string representation of datetime
-                digits: list[int] = list(map(int, reversed(exp.split("/"))))
+                digits: list[int] = list(map(int, exp.split("/")[::-1]))
 
                 if len(str(digits[-1])) < 4:  # year is not fully qualified, add millennium part
                     this_millennium = str(date.today().year)[:2]

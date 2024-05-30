@@ -221,7 +221,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
 
     @staticmethod
     async def test_search_result_album(searcher: RemoteItemSearcher, search_album: LocalAlbum):
-        skip = len([item for item in search_album if item.has_uri is not None])
+        skip = sum(1 for item in search_album if item.has_uri is not None)
 
         result = await searcher._search_collection(search_album)
         assert len(result.matched) + len(result.unmatched) + len(result.skipped) == len(search_album)
@@ -247,7 +247,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         matchable = len(search_album) + len(search_items)
         search_album.items.extend(search_items)
         search_album.items.extend(unmatchable_items)
-        skip = len([item for item in search_album if item.has_uri is not None])
+        skip = sum(1 for item in search_album if item.has_uri is not None)
 
         result = await searcher._search_collection(search_album)
         assert len(result.matched) + len(result.unmatched) + len(result.skipped) == len(search_album)
@@ -275,7 +275,7 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
             api_mock: RemoteMock,
     ):
         search_collection = BasicCollection(name="test", items=search_items + unmatchable_items)
-        skip_album = len([item for item in search_album if item.has_uri is not None])
+        skip_album = sum(1 for item in search_album if item.has_uri is not None)
 
         results = await searcher([search_collection, search_album])
 

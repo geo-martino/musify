@@ -55,6 +55,7 @@ class TestSpotifyAPI(SpotifyAPIFixtures):
 
         async with api as a:
             assert a.user_id == api_mock.user_id
+            assert len(a.user_playlist_data) == len(api_mock.user_playlists)
 
             assert isinstance(a.handler.session, CachedSession)
             assert a.handler.session.cache.cache_name == cache.cache_name

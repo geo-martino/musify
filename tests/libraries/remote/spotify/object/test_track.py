@@ -206,4 +206,4 @@ class TestSpotifyTrack(MusifyItemTester):
 
         assert track.name == response_valid["name"]
         assert track.id == response_valid["id"]
-        assert track.url == response_valid["href"]
+        assert str(track.url) == response_valid["href"]

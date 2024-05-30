@@ -32,7 +32,9 @@ def logger() -> MusifyLogger:
 def test_print(logger: MusifyLogger, capfd: pytest.CaptureFixture):
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.WARNING)
-    logging.root.addHandler(handler)
+    logger.addHandler(handler)
+
+    assert logger.stdout_handlers
 
     logger.print(logging.ERROR)  # ERROR is above handler level
     assert capfd.readouterr().out == "\n"
@@ -74,9 +76,6 @@ def test_file_paths(logger: MusifyLogger):
 # noinspection PyTypeChecker
 @pytest.mark.skipif(tqdm is None, reason="required modules not installed")
 def test_getting_iterator_as_progress_bar(logger: MusifyLogger):
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(logging.DEBUG)  # forces leave to be False
-    logging.root.addHandler(handler)
     logger._bars.clear()
 
     bar: tqdm = logger.get_iterator(iterable=range(0, 50), initial=10, disable=True, file=sys.stderr)
@@ -84,11 +83,10 @@ def test_getting_iterator_as_progress_bar(logger: MusifyLogger):
     assert bar.iterable == range(0, 50)
     assert bar.n == 10
     assert bar.total == 50
-    assert not bar.leave
+    assert bar.leave
     assert bar.disable
     assert bar in logger._bars
 
-    handler.setLevel(logging.WARNING)
     logger.disable_bars = False
     bar = logger.get_iterator(
         iterable=range(0, 50),

@@ -4,13 +4,15 @@ Core abstract classes for the :py:mod:`Remote` module.
 These define the foundations of any remote object or item.
 """
 from abc import ABCMeta, abstractmethod
-from collections.abc import Mapping
 from typing import Any, Self, AsyncContextManager
+
+from yarl import URL
 
 from musify.api.exception import APIError
 from musify.core.base import MusifyItem
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.api import RemoteAPI
+from musify.libraries.remote.core.types import APIInputValueSingle
 
 
 class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, AsyncContextManager, metaclass=ABCMeta):
@@ -38,13 +40,13 @@ class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, AsyncContextManager, m
 
     @property
     @abstractmethod
-    def url(self) -> str:
+    def url(self) -> URL:
         """The API URL of this item/collection."""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def url_ext(self) -> str | None:
+    def url_ext(self) -> URL | None:
         """The external URL of this item/collection."""
         raise NotImplementedError
 
@@ -91,7 +93,7 @@ class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, AsyncContextManager, m
     @classmethod
     @abstractmethod
     async def load(
-            cls, value: str | Mapping[str, Any] | RemoteResponse, api: RemoteAPI, *args, **kwargs
+            cls, value: APIInputValueSingle[RemoteResponse], api: RemoteAPI, *args, **kwargs
     ) -> Self:
         """
         Generate a new object of this class,

@@ -235,7 +235,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         assert results[name_actual].removed == 0
         assert results[name_actual].unchanged == len(library.playlists[name_actual])
 
-        url = library_test.playlists[name_actual].url
+        url = str(library_test.playlists[name_actual].url)
         requests = await api_mock.get_requests(method="POST", url=re.compile(url))
         assert len(requests) > 0
 
@@ -247,7 +247,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         # new playlist was created and is callable
         assert await library.api.handler.get(library_test.playlists[name_new].url)
 
-        url = library_test.playlists[name_new].url
+        url = str(library_test.playlists[name_new].url)
         requests = await api_mock.get_requests(method="POST", url=re.compile(url))
         assert len(requests) > 0
 

@@ -157,7 +157,7 @@ class SpotifyMock(RemoteMock):
         self.albums.append(album)
 
         # ensure a certain minimum number of small albums
-        count = max(10 - len([album for album in self.albums if 2 < album["tracks"]["total"] <= self.limit_lower]), 0)
+        count = max(10 - sum(1 for album in self.albums if 2 < album["tracks"]["total"] <= self.limit_lower), 0)
         for _ in range(count):
             self.albums.append(self.generate_album(track_count=randrange(3, self.limit_lower)))
 
@@ -187,7 +187,7 @@ class SpotifyMock(RemoteMock):
     def setup_specific_conditions_user(self):
         """Some tests need items of certain size and properties. Set these up for user items here."""
         # ensure a certain minimum number of small user playlists
-        count = max(10 - len([pl for pl in self.user_playlists if self.limit_lower < pl["tracks"]["total"] <= 60]), 0)
+        count = max(10 - sum(1 for pl in self.user_playlists if self.limit_lower < pl["tracks"]["total"] <= 60), 0)
         for _ in range(count):
             pl = self.generate_playlist(owner=self.user, item_count=randrange(self.limit_lower + 1, 60))
             self.user_playlists.append(pl)
@@ -407,10 +407,11 @@ class SpotifyMock(RemoteMock):
             self.post(
                 url=re.compile(playlist["href"] + "/tracks"), payload={"snapshot_id": str(uuid4())}, repeat=True
             )
+            self.put(url=re.compile(playlist["href"] + "/followers"), repeat=True)
+            self.delete(url=re.compile(playlist["href"] + "/followers"), repeat=True)
             self.delete(
                 url=re.compile(playlist["href"] + "/tracks"), payload={"snapshot_id": str(uuid4())}, repeat=True
             )
-            self.delete(url=re.compile(playlist["href"]), payload={"snapshot_id": str(uuid4())}, repeat=True)
 
         def callback(_: str, json: dict[str, Any], **__) -> CallbackResult:
             """Process body and generate playlist response data"""
@@ -427,10 +428,17 @@ class SpotifyMock(RemoteMock):
 
             self.get(url=re.compile(payload["href"]), payload=payload, repeat=True)
             self.post(url=re.compile(payload["href"] + "/tracks"), payload={"snapshot_id": str(uuid4())}, repeat=True)
+            self.put(url=re.compile(payload["href"] + "/followers"), repeat=True)
+            self.delete(url=re.compile(payload["href"] + "/followers"), repeat=True)
             self.delete(url=re.compile(payload["href"] + "/tracks"), payload={"snapshot_id": str(uuid4())}, repeat=True)
+
+            # for some reason, spotify returns initial response for created playlists with different owner IDs
+            payload = deepcopy(payload)
+            payload["owner"] = self.generate_owner()
 
             return CallbackResult(method="POST", payload=payload)
 
+        # add new request matches when creating new playlists
         url = f"{self.url_api}/users/{self.user_id}/playlists"
         self.post(url=url, callback=callback, repeat=True)
 

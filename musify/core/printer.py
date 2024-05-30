@@ -9,6 +9,8 @@ from datetime import datetime, date
 from pathlib import Path
 from typing import Any
 
+from yarl import URL
+
 from musify.types import UnitIterable, JSON, DictJSON, JSON_VALUE
 from musify.utils import to_collection
 
@@ -83,7 +85,7 @@ class PrettyPrinter(metaclass=ABCMeta):
             return cls._to_json(value, pool=pool)
         elif isinstance(value, PrettyPrinter):
             return value._to_json(value._json_attributes(), pool=pool)
-        elif isinstance(value, (datetime, date, Path)):
+        elif isinstance(value, (datetime, date, Path, URL)):
             return str(value)
 
         return value

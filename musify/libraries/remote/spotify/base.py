@@ -5,6 +5,8 @@ These define the foundations of any Spotify object or item.
 """
 from abc import ABCMeta
 
+from yarl import URL
+
 from musify.libraries.remote.core.base import RemoteObject, RemoteItem
 from musify.libraries.remote.core.enum import RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteObjectTypeError, RemoteError
@@ -30,11 +32,12 @@ class SpotifyObject(RemoteObject[SpotifyAPI], metaclass=ABCMeta):
 
     @property
     def url(self):
-        return self.response["href"]
+        return URL(self.response["href"])
 
     @property
     def url_ext(self):
-        return self.response["external_urls"].get("spotify")
+        url = self.response["external_urls"].get("spotify")
+        return URL(url) if url else None
 
     def _check_type(self) -> None:
         """

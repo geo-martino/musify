@@ -100,7 +100,7 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
 
         assert result.name == response_valid["name"]
         assert result.id == response_valid["id"]
-        assert result.url == response_valid["href"]
+        assert str(result.url) == response_valid["href"]
 
         expected = api_mock.calculate_pages_from_response(result.response, item_key=item_key)
         if not isinstance(result, SpotifyArtist):
@@ -116,4 +116,4 @@ class SpotifyCollectionLoaderTester(RemoteCollectionTester, metaclass=ABCMeta):
 
         assert result.name == response_valid["name"]
         assert result.id == response_valid["id"]
-        assert result.url == response_valid["href"]
+        assert str(result.url) == response_valid["href"]

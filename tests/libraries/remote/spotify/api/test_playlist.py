@@ -11,13 +11,14 @@ from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteObjectTypeError, RemoteIDTypeError
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.object import SpotifyPlaylist
+from tests.libraries.remote.core.api import RemoteAPIPlaylistTester
 from tests.libraries.remote.core.utils import ALL_ITEM_TYPES
 from tests.libraries.remote.spotify.api.mock import SpotifyMock
 from tests.libraries.remote.spotify.utils import random_ids, random_id, random_id_type, random_id_types
 from tests.libraries.remote.spotify.utils import random_uris, random_api_urls, random_ext_urls
 
 
-class TestSpotifyAPIPlaylists:
+class TestSpotifyAPIPlaylists(RemoteAPIPlaylistTester):
     """Tester for playlist modification type endpoints of :py:class:`SpotifyAPI`"""
 
     @staticmethod
@@ -51,10 +52,10 @@ class TestSpotifyAPIPlaylists:
     ## Basic functionality
     ###########################################################################
     async def test_get_playlist_url(self, playlist_unique: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
-        assert await api.get_playlist_url(playlist=playlist_unique) == playlist_unique["href"]
-        assert await api.get_playlist_url(playlist=playlist_unique["name"]) == playlist_unique["href"]
+        assert await api.get_playlist_url(playlist=playlist_unique) == URL(playlist_unique["href"])
+        assert await api.get_playlist_url(playlist=playlist_unique["name"]) == URL(playlist_unique["href"])
         pl_object = SpotifyPlaylist(playlist_unique, skip_checks=True)
-        assert await api.get_playlist_url(playlist=pl_object) == playlist_unique["href"]
+        assert await api.get_playlist_url(playlist=pl_object) == URL(playlist_unique["href"])
 
         with pytest.raises(RemoteIDTypeError):
             await api.get_playlist_url("does not exist")
@@ -69,11 +70,17 @@ class TestSpotifyAPIPlaylists:
 
         _, _, response = next(iter(await api_mock.get_requests(url=url, response={"name": name})))
         body = await response.json()
-        assert body["name"] == name
-        assert PROGRAM_NAME in body["description"]
-        assert not body["public"]
-        assert body["collaborative"]
-        assert result.removeprefix(f"{api.url}/playlists/").strip("/")
+        assert body["name"] == result["name"] == name
+        assert PROGRAM_NAME in body["description"] and PROGRAM_NAME in result["description"]
+        assert not body["public"] and not result["public"]
+        assert body["collaborative"] and result["collaborative"]
+        assert result[api.url_key].removeprefix(f"{api.url}/playlists/").strip("/")
+
+        assert result["owner"]["display_name"] == api.user_name
+        assert result["owner"][api.id_key] == api.user_id
+        assert api.user_id in result["owner"]["uri"]
+        assert api.user_id in result["owner"][api.url_key]
+        assert api.user_id in result["owner"]["external_urls"][api.source.lower()]
 
     async def test_add_to_playlist_input_validation_and_skips(self, api: SpotifyAPI, api_mock: SpotifyMock):
         url = f"{api.url}/playlists/{random_id()}"
@@ -166,19 +173,34 @@ class TestSpotifyAPIPlaylists:
         assert len(uris) == len(id_list_new)
 
     ###########################################################################
+    ## PUT playlist operations
+    ###########################################################################
+    async def test_follow_playlist(self, playlist_unique: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
+        result = await api.follow_playlist(
+            random_id_type(id_=playlist_unique["id"], wrangler=api.wrangler, kind=RemoteObjectType.PLAYLIST)
+        )
+        assert result == URL(playlist_unique["href"] + "/followers")
+
+        result = await api.follow_playlist(playlist_unique)
+        assert result == URL(playlist_unique["href"] + "/followers")
+
+        result = await api.follow_playlist(SpotifyPlaylist(playlist_unique, skip_checks=True))
+        assert result == URL(playlist_unique["href"] + "/followers")
+
+    ###########################################################################
     ## DELETE playlist operations
     ###########################################################################
     async def test_delete_playlist(self, playlist_unique: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
         result = await api.delete_playlist(
             random_id_type(id_=playlist_unique["id"], wrangler=api.wrangler, kind=RemoteObjectType.PLAYLIST)
         )
-        assert result == playlist_unique["href"] + "/followers"
+        assert result == URL(playlist_unique["href"] + "/followers")
 
         result = await api.delete_playlist(playlist_unique)
-        assert result == playlist_unique["href"] + "/followers"
+        assert result == URL(playlist_unique["href"] + "/followers")
 
         result = await api.delete_playlist(SpotifyPlaylist(playlist_unique, skip_checks=True))
-        assert result == playlist_unique["href"] + "/followers"
+        assert result == URL(playlist_unique["href"] + "/followers")
 
     async def test_clear_from_playlist_input_validation_and_skips(self, api: SpotifyAPI, api_mock: SpotifyMock):
         url = f"{api.url}/playlists/{random_id()}"
@@ -232,7 +254,7 @@ class TestSpotifyAPIPlaylists:
 
         requests = await self._get_payloads_from_url_base(url=playlist["href"] + "/tracks", api_mock=api_mock)
         assert all("tracks" in body for body in requests)
-        assert len([uri["uri"] for req in requests for uri in req["tracks"]]) == len(id_list)
+        assert sum(len(req["tracks"]) for req in requests) == len(id_list)
 
         # check same results for other input types
         result = await api.clear_from_playlist(playlist=playlist, items=id_list, limit=limit)
@@ -252,4 +274,4 @@ class TestSpotifyAPIPlaylists:
 
         requests = await self._get_payloads_from_url_base(url=playlist["href"] + "/tracks", api_mock=api_mock)
         assert all("tracks" in body for body in requests)
-        assert len([uri["uri"] for body in requests for uri in body["tracks"]]) == total
+        assert sum(len(body["tracks"]) for body in requests) == total

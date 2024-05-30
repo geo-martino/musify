@@ -13,6 +13,7 @@ from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.object import RemoteCollectionLoader, RemoteTrack
 from musify.libraries.remote.core.object import RemotePlaylist, RemoteAlbum, RemoteArtist
+from musify.libraries.remote.core.types import APIInputValueSingle
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.base import SpotifyObject, SpotifyItem
 from musify.libraries.remote.spotify.exception import SpotifyCollectionError
@@ -203,7 +204,7 @@ class SpotifyTrack(SpotifyItem, RemoteTrack):
     @classmethod
     async def load(
             cls,
-            value: str | Mapping[str, Any] | RemoteResponse,
+            value: APIInputValueSingle[Self],
             api: SpotifyAPI,
             features: bool = False,
             analysis: bool = False,
@@ -329,7 +330,7 @@ class SpotifyCollectionLoader[T: SpotifyObject](RemoteCollectionLoader[T], Spoti
         return uri_matched, uri_missing
 
     @classmethod
-    async def _load_new(cls, value: str | Mapping[str, Any] | RemoteResponse, api: SpotifyAPI, *args, **kwargs) -> Self:
+    async def _load_new(cls, value: APIInputValueSingle[Self], api: SpotifyAPI, *args, **kwargs) -> Self:
         """
         Sets up a new object of the current class for the given ``value`` by calling ``__new__``
         and adding just enough attributes to the object to get :py:meth:`reload` to run.
@@ -349,7 +350,7 @@ class SpotifyCollectionLoader[T: SpotifyObject](RemoteCollectionLoader[T], Spoti
     @classmethod
     async def load(
             cls,
-            value: str | Mapping[str, Any] | RemoteResponse,
+            value: APIInputValueSingle[Self],
             api: SpotifyAPI,
             items: Iterable[T] = (),
             leave_bar: bool = True,

@@ -12,6 +12,7 @@ from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.enum import RemoteObjectType
 from musify.libraries.remote.core.factory import RemoteObjectFactory
 from tests.libraries.remote.core.utils import RemoteMock
+from tests.utils import random_str
 
 
 class RemoteAPIFixtures(metaclass=ABCMeta):
@@ -100,3 +101,22 @@ class RemoteAPIItemTester(metaclass=ABCMeta):
             for k, v in params.items():
                 assert k in url.query
                 assert unquote(url.query[k]) == params[k]
+
+
+class RemoteAPIPlaylistTester(metaclass=ABCMeta):
+    """Run generic tests for playlist methods of :py:class:`RemoteAPI` implementations."""
+
+    @staticmethod
+    async def test_get_or_create_playlist(api: RemoteAPI, api_mock: RemoteMock):
+        name = random_str()
+        assert name not in api.user_playlist_data
+
+        await api.get_or_create_playlist(name)
+        assert name in api.user_playlist_data
+        api_mock.assert_called_once()
+
+        assert len(api.user_playlist_data) > 1
+        name = choice([n for n in api.user_playlist_data if n != name])
+
+        await api.get_or_create_playlist(name)
+        api_mock.assert_called_once()  # does not call again for known names

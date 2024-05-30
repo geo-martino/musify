@@ -1,7 +1,7 @@
 import re
 from abc import ABCMeta, abstractmethod
 from itertools import batched
-from random import randrange, choice
+from random import randrange, choice, sample
 
 import pytest
 from pytest_mock import MockerFixture
@@ -34,32 +34,39 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def playlist_urls(self, *args, **kwargs) -> list[str]:
-        """Yields a list of URLs that will return valid responses from the api_mock as a pytest.fixture."""
+    def playlists(self, *args, **kwargs) -> list[RemotePlaylist]:
+        """Yields a list of fully extended user playlist objects from the api_mock as a pytest.fixture."""
         raise NotImplementedError
 
     @pytest.fixture
-    def collections(self, playlist_urls: list[str]) -> list[BasicCollection]:
+    def collections(self, playlists: list[RemotePlaylist]) -> list[BasicCollection]:
         """Yields many valid :py:class:`BasicCollection` of :py:class:`LocalTrack` as a pytest.fixture."""
-        count = randrange(6, len(playlist_urls))
+        count = randrange(6, len(playlists))
         return [BasicCollection(name=random_str(30, 50), items=random_tracks()) for _ in range(count)]
 
     @staticmethod
     @pytest.fixture
     async def setup_playlist_collection(
-            checker: RemoteItemChecker, playlist_urls: list[str]
+            checker: RemoteItemChecker, playlists: list[RemotePlaylist]
     ) -> tuple[RemotePlaylist, BasicCollection]:
         """Setups up checker, playlist, and collection for testing match_to_remote functionality"""
-        url = choice(playlist_urls)
-        pl = checker.factory.playlist(next(iter(await checker.api.get_items(url, extend=True))))
+        pl = choice(playlists)
         assert len(pl) > 10
         assert len({item.uri for item in pl}) == len(pl)  # all unique tracks
 
         collection = BasicCollection(name="test", items=pl.tracks.copy())
-        checker._playlist_name_urls = {collection.name: url}
-        checker._playlist_name_collection = {collection.name: collection}
+        checker._playlist_originals = {collection.name: pl}
+        checker._playlist_check_collections = {collection.name: collection}
 
         return pl, collection
+
+    # noinspection PyProtectedMember
+    @staticmethod
+    @pytest.fixture
+    def setup_empty_playlist_originals(checker: RemoteItemChecker) -> None:
+        """Clears all items in the originals playlist to ensure simpler checks on matching"""
+        for pl in checker._playlist_originals.values():
+            pl.clear()
 
     ###########################################################################
     ## Utilities
@@ -81,8 +88,8 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
 
         # does nothing when no URIs to add
         await checker._create_playlist(collection=collection)
-        assert not checker._playlist_name_urls
-        assert not checker._playlist_name_collection
+        assert not checker._playlist_originals
+        assert not checker._playlist_check_collections
         api_mock.assert_not_called()
 
         for item in collection:
@@ -90,15 +97,15 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
 
         await checker._create_playlist(collection=collection)
         assert checker.api.handler.authoriser.token is not None
-        assert collection.name in checker._playlist_name_urls
-        assert checker._playlist_name_collection[collection.name] == collection
+        assert collection.name in checker._playlist_originals
+        assert checker._playlist_check_collections[collection.name] == collection
         assert api_mock.total_requests >= 2
 
     @staticmethod
     async def test_delete_temp_playlists(
             checker: RemoteItemChecker,
             collections: list[BasicCollection],
-            playlist_urls: list[str],
+            playlists: list[RemotePlaylist],
             api_mock: RemoteMock,
             token_file_path: str
     ):
@@ -106,18 +113,33 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         checker.api.handler.authoriser.token = None
         checker.api.handler.authoriser.token_file_path = token_file_path
 
-        checker._playlist_name_urls = {collection.name: url for collection, url in zip(collections, playlist_urls)}
-        checker._playlist_name_collection = {collection.name: collection for collection in collections}
+        for pl in sample(playlists, k=len(playlists) // 2):
+            pl.clear()
+        playlists_to_delete = [pl for pl in playlists if len(pl) == 0]
+        playlists_to_keep = [pl for pl in playlists if pl not in playlists_to_delete]
+
+        assert playlists_to_delete
+        assert playlists_to_keep
+
+        checker._playlist_originals = {pl.name: pl for pl in playlists}
+        checker._playlist_check_collections = {collection.name: collection for collection in collections}
 
         await checker._delete_playlists()
-        assert checker.api.handler.authoriser.token is not None
-        assert not checker._playlist_name_urls
-        assert not checker._playlist_name_collection
-        assert len(await api_mock.get_requests(method="DELETE")) == min(len(playlist_urls), len(collections))
+        assert checker.api.handler.authoriser.token is not None  # re-authorised
+        assert not checker._playlist_originals
+        assert not checker._playlist_check_collections
+
+        for playlist in playlists_to_delete:
+            assert len(await api_mock.get_requests(method="DELETE", url=re.compile(str(playlist.url)))) == 1
+        for playlist in playlists_to_keep:
+            assert not await api_mock.get_requests(method="DELETE", url=re.compile(str(playlist.url)))
+            # there will be no items to add so this won't work in tests
+            # assert await api_mock.get_requests(method="POST", url=re.compile(str(playlist.url)))
 
     @staticmethod
-    def test_finalise(checker: RemoteItemChecker):
-        checker._skip = False
+    async def test_finalise(checker: RemoteItemChecker):
+
+        checker._started = True
         checker._remaining.extend(random_tracks(3))
         checker._switched.extend(random_tracks(2))
 
@@ -125,9 +147,9 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         checker._final_unavailable = unavailable = random_tracks(2)
         checker._final_skipped = skipped = random_tracks(3)
 
-        result = checker._finalise()
+        result = await checker.close()
 
-        assert checker._skip
+        assert not checker._started
         assert not checker._remaining
         assert not checker._switched
         assert not checker._final_switched
@@ -163,7 +185,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert f"Showing tracks for playlist: {pl.name}" in log_capturer.text
 
         pl_pages = api_mock.calculate_pages(limit=20, total=len(pl))
-        assert len(await api_mock.get_requests(method="GET", url=re.compile(pl.url))) == pl_pages + 1
+        assert len(await api_mock.get_requests(method="GET", url=re.compile(str(pl.url)))) == pl_pages + 1
 
         assert not checker._skip
         assert not checker._quit
@@ -396,6 +418,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
     async def test_match_to_remote_no_changes(
             checker: RemoteItemChecker,
             setup_playlist_collection: tuple[RemotePlaylist, BasicCollection],
+            setup_empty_playlist_originals: None,
             api_mock: RemoteMock
     ):
         pl, collection = setup_playlist_collection
@@ -406,11 +429,13 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert not checker._remaining
 
         pl_pages = api_mock.calculate_pages_from_response(pl.response)
-        assert len(await api_mock.get_requests(method="GET", url=re.compile(pl.url))) == pl_pages
+        assert len(await api_mock.get_requests(method="GET", url=re.compile(str(pl.url)))) == pl_pages
 
     @staticmethod
     async def test_match_to_remote_removed(
-            checker: RemoteItemChecker, setup_playlist_collection: tuple[RemotePlaylist, BasicCollection],
+            checker: RemoteItemChecker,
+            setup_playlist_collection: tuple[RemotePlaylist, BasicCollection],
+            setup_empty_playlist_originals: None,
     ):
         pl, collection = setup_playlist_collection
 
@@ -424,7 +449,9 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
 
     @staticmethod
     async def test_match_to_remote_added(
-            checker: RemoteItemChecker, setup_playlist_collection: tuple[RemotePlaylist, BasicCollection],
+            checker: RemoteItemChecker,
+            setup_playlist_collection: tuple[RemotePlaylist, BasicCollection],
+            setup_empty_playlist_originals: None,
     ):
         pl, collection = setup_playlist_collection
 
@@ -434,12 +461,15 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             collection.remove(item)
 
         await checker._match_to_remote(collection.name)
+
         assert not checker._switched
         assert not checker._remaining
 
     @staticmethod
     async def test_match_to_remote_switched(
-            checker: RemoteItemChecker, setup_playlist_collection: tuple[RemotePlaylist, BasicCollection],
+            checker: RemoteItemChecker,
+            setup_playlist_collection: tuple[RemotePlaylist, BasicCollection],
+            setup_empty_playlist_originals: None,
     ):
         pl, collection = setup_playlist_collection
 
@@ -450,13 +480,16 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             collection[i].uri = random_uri(kind=RemoteObjectType.TRACK)
 
         await checker._match_to_remote(collection.name)
+
         assert checker._switched == collection[:5]
         assert not checker._remaining
 
     @staticmethod
     @pytest.mark.slow
     async def test_match_to_remote_complex(
-            checker: RemoteItemChecker, setup_playlist_collection: tuple[RemotePlaylist, BasicCollection],
+            checker: RemoteItemChecker,
+            setup_playlist_collection: tuple[RemotePlaylist, BasicCollection],
+            setup_empty_playlist_originals: None,
     ):
         pl, collection = setup_playlist_collection
 
@@ -479,6 +512,56 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert checker._switched == collection[:5]
         assert checker._remaining == 2 * extra_tracks
 
+    @staticmethod
+    @pytest.mark.slow
+    async def test_match_to_remote_complex_with_non_empty_original(
+            checker: RemoteItemChecker,
+            setup_playlist_collection: tuple[RemotePlaylist, BasicCollection],
+    ):
+        pl, collection = setup_playlist_collection
+
+        # setup pl and collection such that there is an overlap of a few items between them
+        pl_response = pl.copy()
+        pl.clear()
+        pl.extend(pl_response[:len(pl_response) // 3 + 3])
+        assert len(checker._playlist_originals[collection.name]) == len(pl) < len(pl_response)
+
+        coll_items = collection.copy()
+        collection.clear()
+        collection.extend(coll_items[len(coll_items) // 3 - 3:])
+
+        # switch URIs for some collection items i.e. simulate tracks on remote playlist have been switched
+        items_switched = dict([(i, item) for i, item in enumerate(collection) if item not in pl][:3])
+        assert items_switched
+        for i, item in items_switched.items():
+            collection.items[i] = random_track()
+            collection[i] |= item
+            collection[i].uri = random_uri(kind=RemoteObjectType.TRACK)
+
+        # remove from collection i.e. simulate unmatchable tracks added to playlist
+        items_missing = dict([
+            (i, item) for i, item in enumerate(collection) if i not in items_switched and item not in pl
+        ][:2])
+        assert items_missing
+        for i, item in items_missing.items():
+            collection.items[i] = random_track()
+            collection[i] |= item
+            collection[i].uri = None
+
+        # these are the items that will show as removed
+        extra_tracks = [track for track in random_tracks(6) if track.has_uri]
+        collection.extend(extra_tracks)
+
+        expected_removed = [
+            item for i, item in enumerate(collection) if item not in pl_response and i not in items_switched
+        ]
+        assert expected_removed
+
+        await checker._match_to_remote(collection.name)
+
+        assert sorted(checker._switched) == sorted(items_switched.values())
+        assert sorted(checker._remaining) == sorted(expected_removed + list(items_missing.values()))
+
     ###########################################################################
     ## ``check_uri`` meta-step
     ###########################################################################
@@ -487,6 +570,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
     async def test_check_uri(
             checker: RemoteItemChecker,
             setup_playlist_collection: tuple[RemotePlaylist, BasicCollection],
+            setup_empty_playlist_originals: None,
             remaining: list[LocalTrack],
             mocker: MockerFixture,
             log_capturer: LogCapturer,
@@ -507,7 +591,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         uri_list = random_uris(kind=RemoteObjectType.TRACK, start=8, stop=8)
         patch_input([*uri_list, "r", "u", "u", "u", "n", "n", "n", "n", "s"], mocker=mocker)  # end on skip
         checker._skip = False
-        checker._playlist_name_collection["do not run"] = collection
+        checker._playlist_check_collections["do not run"] = collection
 
         with log_capturer(loggers=checker.logger):
             await checker._check_uri()
@@ -529,7 +613,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
 
         # called 2x: 1 initial, 1 after user inputs 'r'
         pl_pages = api_mock.calculate_pages_from_response(pl.response)
-        assert len(await api_mock.get_requests(method="GET", url=re.compile(pl.url))) == 2 * pl_pages
+        assert len(await api_mock.get_requests(method="GET", url=re.compile(str(pl.url)))) == 2 * pl_pages
 
         assert checker._final_switched == collection[:5] + remaining[:len(uri_list)]
         assert checker._final_unavailable == remaining[len(uri_list):len(uri_list) + 3]
@@ -543,7 +627,8 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
     async def test_check(
             checker: RemoteItemChecker,
             collections: list[BasicCollection],
-            playlist_urls: list[str],
+            playlists: list[RemotePlaylist],
+            setup_empty_playlist_originals: None,
             mocker: MockerFixture,
             api_mock: RemoteMock,
     ):
@@ -554,10 +639,14 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             nonlocal count
             count += 1
 
-            self._playlist_name_urls[collection.name] = playlist_name_urls[collection.name]
-            self._playlist_name_collection[collection.name] = collection
+            if collection.name not in playlist_originals:
+                pl = checker.factory.playlist(await checker.api.create_playlist(collection.name))
+                playlist_originals[collection.name] = pl
 
-        playlist_name_urls = {collection.name: url for collection, url in zip(collections, playlist_urls)}
+            self._playlist_originals[collection.name] = playlist_originals[collection.name]
+            self._playlist_check_collections[collection.name] = collection
+
+        playlist_originals = {pl.name: pl for pl in playlists}
         mocker.patch.object(RemoteItemChecker, "_create_playlist", new=add_collection)
 
         interval = len(collections) // 3
@@ -594,7 +683,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
 
         # deleted only the playlists in the first 2 batches
         requests = []
-        for url in (playlist_name_urls[collection.name] for collection in batch_1 + batch_2):
-            requests += await api_mock.get_requests(method="DELETE", url=re.compile(url))
+        for playlist in (playlist_originals[collection.name] for collection in batch_1 + batch_2):
+            requests += await api_mock.get_requests(method="DELETE", url=re.compile(str(playlist.url)))
 
         assert len(requests) == len(batch_1) + len(batch_2)
