@@ -2,14 +2,18 @@
 Implements endpoints for manipulating playlists with the Spotify API.
 """
 from abc import ABCMeta
-from collections.abc import Collection, Mapping
+from collections.abc import Sequence, Mapping
 from itertools import batched
 from typing import Any
 
+from yarl import URL
+
 from musify import PROGRAM_NAME, PROGRAM_URL
+from musify.api.exception import APIError
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteIDTypeError
+from musify.libraries.remote.core.types import APIInputValueSingle
 from musify.libraries.remote.spotify.api.base import SpotifyAPIBase
 from musify.utils import limit_value
 
@@ -24,7 +28,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
         responses = await self.get_user_items(kind=RemoteObjectType.PLAYLIST)
         self.user_playlist_data = {response["name"]: response for response in responses}
 
-    async def get_playlist_url(self, playlist: str | Mapping[str, Any] | RemoteResponse) -> str:
+    async def get_playlist_url(self, playlist: APIInputValueSingle[RemoteResponse]) -> URL:
         """
         Determine the type of the given ``playlist`` and return its API URL.
         If type cannot be determined, attempt to find the playlist in the
@@ -47,24 +51,28 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
 
         if isinstance(playlist, Mapping):
             if self.url_key in playlist:
-                return playlist[self.url_key]
+                url = playlist[self.url_key]
             elif self.id_key in playlist:
-                return self.wrangler.convert(
+                url = self.wrangler.convert(
                     playlist[self.id_key],
                     kind=RemoteObjectType.PLAYLIST,
                     type_in=RemoteIDType.ID,
                     type_out=RemoteIDType.URL
                 )
             elif "uri" in playlist:
-                return self.wrangler.convert(
+                url = self.wrangler.convert(
                     playlist["uri"],
                     kind=RemoteObjectType.PLAYLIST,
                     type_in=RemoteIDType.URI,
                     type_out=RemoteIDType.URL
                 )
+            else:
+                raise APIError(f"Could not determine URL from given input: {playlist}")
+
+            return URL(url)
 
         try:
-            return self.wrangler.convert(playlist, kind=RemoteObjectType.PLAYLIST, type_out=RemoteIDType.URL)
+            url = self.wrangler.convert(playlist, kind=RemoteObjectType.PLAYLIST, type_out=RemoteIDType.URL)
         except RemoteIDTypeError:
             if not self.user_playlist_data:
                 await self.load_user_playlists()
@@ -75,7 +83,9 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
                     value=playlist
                 )
 
-            return self.user_playlist_data[playlist][self.url_key]
+            url = self.user_playlist_data[playlist][self.url_key]
+
+        return URL(url)
 
     ###########################################################################
     ## POST endpoints
@@ -104,13 +114,26 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
         url = response[self.url_key]
         self.user_playlist_data[name] = response
 
+        # response from creating playlist gives back incorrect user info on 'owner' key, fix it
+        response["owner"]["display_name"] = self.user_name
+        response["owner"][self.id_key] = self.user_id
+        response["owner"]["uri"] = self.wrangler.convert(
+            self.user_id, kind=RemoteObjectType.USER, type_in=RemoteIDType.ID, type_out=RemoteIDType.URI
+        )
+        response["owner"][self.url_key] = self.wrangler.convert(
+            self.user_id, kind=RemoteObjectType.USER, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL
+        )
+        response["owner"]["external_urls"][self.source.lower()] = self.wrangler.convert(
+            self.user_id, kind=RemoteObjectType.USER, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL_EXT
+        )
+
         self.handler.log("DONE", url, message=f"Created playlist: {name!r} -> {url}")
         return response
 
     async def add_to_playlist(
             self,
-            playlist: str | Mapping[str, Any] | RemoteResponse,
-            items: Collection[str],
+            playlist: APIInputValueSingle[RemoteResponse],
+            items: Sequence[str],
             limit: int = 100,
             skip_dupes: bool = True
     ) -> int:
@@ -158,9 +181,17 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
         return len(uri_list)
 
     ###########################################################################
+    ## PUT endpoints
+    ###########################################################################
+    async def follow_playlist(self, playlist: APIInputValueSingle[RemoteResponse], *args, **kwargs) -> URL:
+        url = URL(f"{await self.get_playlist_url(playlist)}/followers")
+        await self.handler.put(url)
+        return url
+
+    ###########################################################################
     ## DELETE endpoints
     ###########################################################################
-    async def delete_playlist(self, playlist: str | Mapping[str, Any] | RemoteResponse) -> str:
+    async def delete_playlist(self, playlist: APIInputValueSingle[RemoteResponse]) -> URL:
         """
         ``DELETE: /playlists/{playlist_id}/followers`` - Unfollow a given playlist.
         WARNING: This function will destructively modify your remote playlists.
@@ -172,14 +203,14 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             - a RemoteResponse object representing a remote playlist.
         :return: API URL for playlist.
         """
-        url = f"{await self.get_playlist_url(playlist)}/followers"
+        url = URL(f"{await self.get_playlist_url(playlist)}/followers")
         await self.handler.delete(url)
         return url
 
     async def clear_from_playlist(
             self,
-            playlist: str | Mapping[str, Any] | RemoteResponse,
-            items: Collection[str] | None = None,
+            playlist: APIInputValueSingle[RemoteResponse],
+            items: Sequence[str] | None = None,
             limit: int = 100
     ) -> int:
         """

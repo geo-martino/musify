@@ -14,7 +14,7 @@ from musify.api.exception import APIError
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteObjectTypeError
-from musify.libraries.remote.core.types import APIInputValue
+from musify.libraries.remote.core.types import APIInputValueMulti
 from musify.libraries.remote.spotify.api.base import SpotifyAPIBase
 from musify.utils import limit_value
 
@@ -271,7 +271,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
 
     async def get_items(
             self,
-            values: APIInputValue,
+            values: APIInputValueMulti[RemoteResponse],
             kind: RemoteObjectType | None = None,
             limit: int = 50,
             extend: bool = True,
@@ -407,7 +407,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
     ###########################################################################
     async def extend_tracks(
             self,
-            values: APIInputValue,
+            values: APIInputValueMulti[RemoteResponse],
             features: bool = False,
             analysis: bool = False,
             limit: int = 50,
@@ -497,7 +497,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
 
     async def get_tracks(
             self,
-            values: APIInputValue,
+            values: APIInputValueMulti[RemoteResponse],
             features: bool = False,
             analysis: bool = False,
             limit: int = 50,
@@ -547,7 +547,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
     ## Artists GET endpoints methods
     ###########################################################################
     async def get_artist_albums(
-            self, values: APIInputValue, types: Collection[str] = (), limit: int = 50,
+            self, values: APIInputValueMulti[RemoteResponse], types: Collection[str] = (), limit: int = 50,
     ) -> dict[str, list[dict[str, Any]]]:
         """
         ``GET: /artists/{ID}/albums`` - Get all albums associated with the given artist/s.

@@ -147,7 +147,8 @@ class RequestHandler(AsyncContextManager):
                 if response is None:
                     raise APIError("No response received")
 
-                if response.ok and (data := await self._response_as_json(response)):
+                if response.ok:
+                    data = await self._response_as_json(response)
                     break
 
                 await self._log_response(response=response, method=method, url=url)
@@ -228,7 +229,7 @@ class RequestHandler(AsyncContextManager):
         self.log(
             method=f"\33[91m{method.upper()}",
             url=url,
-            messages=[
+            message=[
                 f"Status code: {response.status}",
                 "Response text and headers follow:\n"
                 f"Response text:\n\t{(await response.text()).replace("\n", "\n\t")}\n"

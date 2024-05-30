@@ -17,7 +17,7 @@ from musify.api.request import RequestHandler
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
-from musify.libraries.remote.core.types import APIInputValue
+from musify.libraries.remote.core.types import APIInputValueSingle, APIInputValueMulti
 from musify.log.logger import MusifyLogger
 from musify.types import UnitSequence, JSON, UnitList
 from musify.utils import align_string, to_collection
@@ -244,7 +244,7 @@ class RemoteAPI(AsyncContextManager, metaclass=ABCMeta):
     @abstractmethod
     async def print_collection(
             self,
-            value: str | Mapping[str, Any] | RemoteResponse | None = None,
+            value: APIInputValueSingle[RemoteResponse] | None = None,
             kind: RemoteIDType | None = None,
             limit: int = 20,
     ) -> None:
@@ -266,7 +266,7 @@ class RemoteAPI(AsyncContextManager, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_playlist_url(self, playlist: str | Mapping[str, Any] | RemoteResponse) -> str:
+    async def get_playlist_url(self, playlist: APIInputValueSingle[RemoteResponse]) -> URL:
         """
         Determine the type of the given ``playlist`` and return its API URL.
         If type cannot be determined, attempt to find the playlist in the
@@ -332,7 +332,7 @@ class RemoteAPI(AsyncContextManager, metaclass=ABCMeta):
     @abstractmethod
     async def get_items(
             self,
-            values: APIInputValue,
+            values: APIInputValueMulti[RemoteResponse],
             kind: RemoteObjectType | None = None,
             limit: int = 50,
             extend: bool = True,
@@ -367,7 +367,9 @@ class RemoteAPI(AsyncContextManager, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_tracks(self, values: APIInputValue, limit: int = 50, *args, **kwargs) -> list[dict[str, Any]]:
+    async def get_tracks(
+            self, values: APIInputValueMulti[RemoteResponse], limit: int = 50, *args, **kwargs
+    ) -> list[dict[str, Any]]:
         """
         Wrapper for :py:meth:`get_items` which only returns Track type responses.
         See :py:meth:`get_items` for more info.
@@ -394,28 +396,6 @@ class RemoteAPI(AsyncContextManager, metaclass=ABCMeta):
     ###########################################################################
     ## Playlist specific endpoints
     ###########################################################################
-    async def get_or_create_playlist(self, name: str, *args, **kwargs) -> dict[str, Any]:
-        """
-        Attempt to find the playlist with the given ``name`` and return it.
-        Otherwise, create a new playlist.
-
-        Any given args and kwargs are passed directly onto :py:meth:`create_playlist`
-        when a matching loaded playlist is not found.
-
-        When a playlist is created, persist the response back to the loaded playlists in this object.
-
-        :param name: The case-sensitive name of the playlist to get/create.
-        :return: API JSON response for the loaded/created playlist.
-        """
-        if not self.user_playlist_data:
-            await self.load_user_playlists()
-
-        response = self.user_playlist_data.get(name)
-        if response:
-            return response
-
-        return await self.create_playlist(name, *args, **kwargs)
-
     @abstractmethod
     async def create_playlist(self, name: str, *args, **kwargs) -> dict[str, Any]:
         """
@@ -429,8 +409,8 @@ class RemoteAPI(AsyncContextManager, metaclass=ABCMeta):
     @abstractmethod
     async def add_to_playlist(
             self,
-            playlist: str | Mapping[str, Any] | RemoteResponse,
-            items: Collection[str],
+            playlist: APIInputValueSingle[RemoteResponse],
+            items: Sequence[str],
             limit: int = 50,
             skip_dupes: bool = True
     ) -> int:
@@ -453,8 +433,43 @@ class RemoteAPI(AsyncContextManager, metaclass=ABCMeta):
         """
         raise NotImplementedError
 
+    async def get_or_create_playlist(self, name: str, *args, **kwargs) -> dict[str, Any]:
+        """
+        Attempt to find the playlist with the given ``name`` and return it.
+        Otherwise, create a new playlist.
+
+        Any given args and kwargs are passed directly onto :py:meth:`create_playlist`
+        when a matching loaded playlist is not found.
+
+        When a playlist is created, persist the response back to the loaded playlists in this object.
+
+        :param name: The case-sensitive name of the playlist to get/create.
+        :return: API JSON response for the loaded/created playlist.
+        """
+        if not self.user_playlist_data:
+            await self.load_user_playlists()
+
+        response = self.user_playlist_data.get(name)
+        if response:
+            return response
+
+        return await self.create_playlist(name, *args, **kwargs)
+
+    async def follow_playlist(self, playlist: APIInputValueSingle[RemoteResponse], *args, **kwargs) -> URL:
+        """
+        ``PUT`` - Follow a given playlist.
+
+        :param playlist: One of the following to identify the playlist to clear:
+            - playlist URL/URI/ID,
+            - the name of the playlist in the current user's playlists,
+            - the API response of a playlist.
+            - a RemoteResponse object representing a remote playlist.
+        :return: API URL for playlist.
+        """
+        raise NotImplementedError
+
     @abstractmethod
-    async def delete_playlist(self, playlist: str | Mapping[str, Any] | RemoteResponse) -> str:
+    async def delete_playlist(self, playlist: APIInputValueSingle[RemoteResponse]) -> URL:
         """
         ``DELETE`` - Unfollow/delete a given playlist.
         WARNING: This function will destructively modify your remote playlists.
@@ -471,7 +486,7 @@ class RemoteAPI(AsyncContextManager, metaclass=ABCMeta):
     @abstractmethod
     async def clear_from_playlist(
             self,
-            playlist: str | Mapping[str, Any] | RemoteResponse,
+            playlist: APIInputValueSingle[RemoteResponse],
             items: Collection[str] | None = None,
             limit: int = 100
     ) -> int:

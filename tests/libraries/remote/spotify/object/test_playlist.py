@@ -326,6 +326,10 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
         assert not pl.public
         assert pl.collaborative
 
+        # should be set in api.create_playlist method
+        assert pl.owner_id == api.user_id == api_mock.user_id
+        assert pl.writeable
+
     async def test_delete_playlist(self, response_valid: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
         names = [pl["name"] for pl in api_mock.user_playlists]
         response = next(deepcopy(pl) for pl in api_mock.user_playlists if names.count(pl["name"]) == 1)

@@ -9,9 +9,9 @@ from yarl import URL
 from musify.exception import MusifyEnumError
 from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.remote.core import RemoteResponse
-from musify.libraries.remote.core.api import APIInputValue
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
+from musify.libraries.remote.core.types import APIInputValueSingle, APIInputValueMulti
 from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
 from musify.libraries.remote.spotify import SOURCE_NAME
 from musify.utils import to_collection
@@ -69,7 +69,7 @@ class SpotifyDataWrangler(RemoteDataWrangler):
 
     @classmethod
     def _get_item_type(
-            cls, value: str | URL | Mapping[str, Any] | RemoteResponse, kind: RemoteObjectType | None = None
+            cls, value: APIInputValueSingle[RemoteResponse], kind: RemoteObjectType | None = None
     ) -> RemoteObjectType | None:
         if isinstance(value, RemoteResponse):
             return cls._get_item_type_from_response(value)
@@ -192,8 +192,8 @@ class SpotifyDataWrangler(RemoteDataWrangler):
         return kind, id_
 
     @classmethod
-    def extract_ids(cls, values: APIInputValue, kind: RemoteObjectType | None = None) -> list[str]:
-        def extract_id(value: str | URL | Mapping[str, Any] | RemoteResponse) -> str:
+    def extract_ids(cls, values: APIInputValueMulti[RemoteResponse], kind: RemoteObjectType | None = None) -> list[str]:
+        def extract_id(value: APIInputValueSingle[RemoteResponse]) -> str:
             """Extract an ID from a given ``value``"""
             if isinstance(value, str | URL):
                 return cls.convert(value, kind=kind, type_out=RemoteIDType.ID)

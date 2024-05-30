@@ -58,6 +58,7 @@ Added
 * Added :py:meth:`.MusifyCollection.outer_difference` method to cover the logic previously handled
   by the mislabelled :py:meth:`.MusifyCollection.outer_difference` method
 * :py:class:`.RemoteDataWrangler` and its implementations now handle URL objects from the ``yarl`` package
+* :py:meth:`.RemoteAPI.follow_playlist` method
 
 Changed
 -------
@@ -93,6 +94,8 @@ Changed
   when creating playlists to avoid creating many duplicate playlists which could have lead to playlist
   creation explosion in repeated uses. The processor also accounts for any items that may have existed
   in the playlist before it was run and discounts them from any matches.
+* :py:class:`.RemoteItemChecker` also uses the new :py:meth:`.RemoteAPI.follow_playlist` method
+  when creating playlists to ensure that a user is following the playlists it creates to avoid 'ghost playlist' issue.
 * :py:meth:`.SpotifyAPI.create_playlist` now returns the full response rather than just the URL of the playlist.
 
 Fixed

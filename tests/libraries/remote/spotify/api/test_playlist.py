@@ -52,10 +52,10 @@ class TestSpotifyAPIPlaylists(RemoteAPIPlaylistTester):
     ## Basic functionality
     ###########################################################################
     async def test_get_playlist_url(self, playlist_unique: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
-        assert await api.get_playlist_url(playlist=playlist_unique) == playlist_unique["href"]
-        assert await api.get_playlist_url(playlist=playlist_unique["name"]) == playlist_unique["href"]
+        assert await api.get_playlist_url(playlist=playlist_unique) == URL(playlist_unique["href"])
+        assert await api.get_playlist_url(playlist=playlist_unique["name"]) == URL(playlist_unique["href"])
         pl_object = SpotifyPlaylist(playlist_unique, skip_checks=True)
-        assert await api.get_playlist_url(playlist=pl_object) == playlist_unique["href"]
+        assert await api.get_playlist_url(playlist=pl_object) == URL(playlist_unique["href"])
 
         with pytest.raises(RemoteIDTypeError):
             await api.get_playlist_url("does not exist")
@@ -75,6 +75,12 @@ class TestSpotifyAPIPlaylists(RemoteAPIPlaylistTester):
         assert not body["public"] and not result["public"]
         assert body["collaborative"] and result["collaborative"]
         assert result[api.url_key].removeprefix(f"{api.url}/playlists/").strip("/")
+
+        assert result["owner"]["display_name"] == api.user_name
+        assert result["owner"][api.id_key] == api.user_id
+        assert api.user_id in result["owner"]["uri"]
+        assert api.user_id in result["owner"][api.url_key]
+        assert api.user_id in result["owner"]["external_urls"][api.source.lower()]
 
     async def test_add_to_playlist_input_validation_and_skips(self, api: SpotifyAPI, api_mock: SpotifyMock):
         url = f"{api.url}/playlists/{random_id()}"
@@ -167,19 +173,34 @@ class TestSpotifyAPIPlaylists(RemoteAPIPlaylistTester):
         assert len(uris) == len(id_list_new)
 
     ###########################################################################
+    ## PUT playlist operations
+    ###########################################################################
+    async def test_follow_playlist(self, playlist_unique: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
+        result = await api.follow_playlist(
+            random_id_type(id_=playlist_unique["id"], wrangler=api.wrangler, kind=RemoteObjectType.PLAYLIST)
+        )
+        assert result == URL(playlist_unique["href"] + "/followers")
+
+        result = await api.follow_playlist(playlist_unique)
+        assert result == URL(playlist_unique["href"] + "/followers")
+
+        result = await api.follow_playlist(SpotifyPlaylist(playlist_unique, skip_checks=True))
+        assert result == URL(playlist_unique["href"] + "/followers")
+
+    ###########################################################################
     ## DELETE playlist operations
     ###########################################################################
     async def test_delete_playlist(self, playlist_unique: dict[str, Any], api: SpotifyAPI, api_mock: SpotifyMock):
         result = await api.delete_playlist(
             random_id_type(id_=playlist_unique["id"], wrangler=api.wrangler, kind=RemoteObjectType.PLAYLIST)
         )
-        assert result == playlist_unique["href"] + "/followers"
+        assert result == URL(playlist_unique["href"] + "/followers")
 
         result = await api.delete_playlist(playlist_unique)
-        assert result == playlist_unique["href"] + "/followers"
+        assert result == URL(playlist_unique["href"] + "/followers")
 
         result = await api.delete_playlist(SpotifyPlaylist(playlist_unique, skip_checks=True))
-        assert result == playlist_unique["href"] + "/followers"
+        assert result == URL(playlist_unique["href"] + "/followers")
 
     async def test_clear_from_playlist_input_validation_and_skips(self, api: SpotifyAPI, api_mock: SpotifyMock):
         url = f"{api.url}/playlists/{random_id()}"

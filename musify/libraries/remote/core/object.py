@@ -6,10 +6,10 @@ Implements core :py:class:`MusifyItem` and :py:class:`MusifyCollection` classes 
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Self, Literal, Any
+from typing import Self, Literal
 
 from musify.api.exception import APIError
 from musify.core.base import MusifyItem
@@ -19,6 +19,7 @@ from musify.libraries.core.object import Track, Album, Playlist, Artist
 from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.base import RemoteObject, RemoteItem
 from musify.libraries.remote.core.exception import RemoteError
+from musify.libraries.remote.core.types import APIInputValueSingle
 from musify.utils import get_most_common_values
 
 
@@ -57,7 +58,7 @@ class RemoteCollectionLoader[T: RemoteObject](RemoteCollection[T], RemoteObject,
     @classmethod
     @abstractmethod
     async def load(
-            cls, value: str | Mapping[str, Any] | Self, api: RemoteAPI, items: Iterable[T] = (), *args, **kwargs
+            cls, value: APIInputValueSingle[Self], api: RemoteAPI, items: Iterable[T] = (), *args, **kwargs
     ) -> Self:
         """
         Generate a new object, calling all required endpoints to get a complete set of data for this item type.

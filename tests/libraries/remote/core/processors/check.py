@@ -137,8 +137,9 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             # assert await api_mock.get_requests(method="POST", url=re.compile(str(playlist.url)))
 
     @staticmethod
-    def test_finalise(checker: RemoteItemChecker):
-        checker._skip = False
+    async def test_finalise(checker: RemoteItemChecker):
+
+        checker._started = True
         checker._remaining.extend(random_tracks(3))
         checker._switched.extend(random_tracks(2))
 
@@ -146,9 +147,9 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         checker._final_unavailable = unavailable = random_tracks(2)
         checker._final_skipped = skipped = random_tracks(3)
 
-        result = checker._finalise()
+        result = await checker.close()
 
-        assert checker._skip
+        assert not checker._started
         assert not checker._remaining
         assert not checker._switched
         assert not checker._final_switched
