@@ -27,7 +27,7 @@ class SpotifyDataWrangler(RemoteDataWrangler):
     url_ext = URL("https://open.spotify.com")
 
     @classmethod
-    def get_id_type(cls, value: str, kind: RemoteObjectType | None = None) -> RemoteIDType:
+    def get_id_type(cls, value: str | URL, kind: RemoteObjectType | None = None) -> RemoteIDType:
         value = str(value).strip().casefold()
         uri_split = value.split(':')
 
@@ -45,8 +45,8 @@ class SpotifyDataWrangler(RemoteDataWrangler):
         raise RemoteIDTypeError(f"Could not determine ID type of given value: {value}")
 
     @classmethod
-    def validate_id_type(cls, value: str, kind: RemoteIDType = RemoteIDType.ALL) -> bool:
-        value = value.strip().casefold()
+    def validate_id_type(cls, value: str | URL, kind: RemoteIDType = RemoteIDType.ALL) -> bool:
+        value = str(value).strip().casefold()
 
         if kind == RemoteIDType.URL:
             return value.startswith(str(cls.url_api))
@@ -69,14 +69,14 @@ class SpotifyDataWrangler(RemoteDataWrangler):
 
     @classmethod
     def _get_item_type(
-            cls, value: str | Mapping[str, Any] | RemoteResponse, kind: RemoteObjectType | None = None
+            cls, value: str | URL | Mapping[str, Any] | RemoteResponse, kind: RemoteObjectType | None = None
     ) -> RemoteObjectType | None:
         if isinstance(value, RemoteResponse):
             return cls._get_item_type_from_response(value)
         if isinstance(value, Mapping):
             return cls._get_item_type_from_mapping(value)
 
-        value = value.strip()
+        value = str(value).strip()
         uri_check = value.split(':')
 
         if value.startswith(str(cls.url_api)) or value.startswith(str(cls.url_ext)):  # open/API URL
@@ -114,7 +114,7 @@ class SpotifyDataWrangler(RemoteDataWrangler):
     @classmethod
     def convert(
             cls,
-            value: str,
+            value: str | URL,
             kind: RemoteObjectType | None = None,
             type_in: RemoteIDType = RemoteIDType.ALL,
             type_out: RemoteIDType = RemoteIDType.ID
@@ -124,7 +124,7 @@ class SpotifyDataWrangler(RemoteDataWrangler):
         if type_in == RemoteIDType.ALL or not cls.validate_id_type(value, kind=type_in):
             type_in = cls.get_id_type(value, kind=kind)
 
-        value = value.strip()
+        value = str(value).strip()
         kind, id_ = cls._get_id(value=value, kind=kind, type_in=type_in)
 
         # reformat
@@ -142,9 +142,9 @@ class SpotifyDataWrangler(RemoteDataWrangler):
 
     @classmethod
     def _get_id(
-            cls, value: str, kind: RemoteObjectType | None = None, type_in: RemoteIDType = RemoteIDType.ALL
+            cls, value: str | URL, kind: RemoteObjectType | None = None, type_in: RemoteIDType = RemoteIDType.ALL
     ) -> tuple[RemoteObjectType, str]:
-        if type_in == RemoteIDType.URL_EXT or type_in == RemoteIDType.URL:
+        if isinstance(value, URL) or type_in == RemoteIDType.URL_EXT or type_in == RemoteIDType.URL:
             try:
                 kind, id_ = cls._get_id_from_url(value=value, kind=kind)
             except StopIteration:
@@ -164,7 +164,7 @@ class SpotifyDataWrangler(RemoteDataWrangler):
         return kind, id_
 
     @classmethod
-    def _get_id_from_url(cls, value: str, kind: RemoteObjectType | None = None) -> tuple[RemoteObjectType, str]:
+    def _get_id_from_url(cls, value: str | URL, kind: RemoteObjectType | None = None) -> tuple[RemoteObjectType, str]:
         url_path = URL(value).path.split("/")
         for chunk in url_path:
             try:
@@ -193,9 +193,9 @@ class SpotifyDataWrangler(RemoteDataWrangler):
 
     @classmethod
     def extract_ids(cls, values: APIInputValue, kind: RemoteObjectType | None = None) -> list[str]:
-        def extract_id(value: str | Mapping[str, Any] | RemoteResponse) -> str:
+        def extract_id(value: str | URL | Mapping[str, Any] | RemoteResponse) -> str:
             """Extract an ID from a given ``value``"""
-            if isinstance(value, str):
+            if isinstance(value, str | URL):
                 return cls.convert(value, kind=kind, type_out=RemoteIDType.ID)
             elif isinstance(value, Mapping) and "id" in value:
                 return value["id"]

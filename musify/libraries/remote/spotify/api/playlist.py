@@ -102,6 +102,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
         response = (await self.handler.post(url, json=body))
         name = response["name"]
         url = response[self.url_key]
+        self.user_playlist_data[name] = response
 
         self.handler.log("DONE", url, message=f"Created playlist: {name!r} -> {url}")
         return response

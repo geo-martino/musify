@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, SupportsIndex, Self
 
+from yarl import URL
+
 from musify.core.base import MusifyObject, MusifyItem, HasLength
 from musify.core.enum import Field
 from musify.exception import MusifyTypeError, MusifyKeyError, MusifyAttributeError
@@ -233,21 +235,29 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], HasLengt
         if reverse:
             self.items.reverse()
 
+    def intersection(self, other: Iterable[T]) -> list[T]:
+        """
+        Return the intersection between the items in this collection and an ``other`` collection as a new list.
+
+        (i.e. all items that are in both this collection and the ``other`` collection).
+        """
+        return [item for item in self if item in other]
+
     def difference(self, other: Iterable[T]) -> list[T]:
         """
         Return the difference between the items in this collection and an ``other`` collection as a new list.
 
         (i.e. all items that are in this collection but not the ``other`` collection).
         """
+        return [item for item in self if item not in other]
+
+    def outer_difference(self, other: Iterable[T]) -> list[T]:
+        """
+        Return the outer difference between the items in this collection and an ``other`` collection as a new list.
+
+        (i.e. all items that are in the ``other`` collection but not in this collection).
+        """
         return [item for item in other if item not in self]
-
-    def intersection(self, other: Iterable[T]) -> list[T]:
-        """
-        Return the difference between the items in this collection and an ``other`` collection as a new list.
-
-        (i.e. all items that are in both this collection and the ``other`` collection).
-        """
-        return [item for item in other if item in self]
 
     @staticmethod
     def _condense_attributes(attributes: dict[str, Any]) -> dict[str, Any]:
@@ -313,7 +323,7 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], HasLengt
         return self
 
     def __getitem__(
-            self, __key: str | int | slice | MusifyItem | Path | File | RemoteResponse
+            self, __key: str | int | slice | MusifyItem | Path | File | URL | RemoteResponse
     ) -> T | list[T] | list[T, None, None]:
         """
         Returns the item in this collection by matching on a given index/Item/URI/ID/URL.
@@ -341,7 +351,7 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], HasLengt
         )
 
     @staticmethod
-    def __get_item_getters(__key: str | MusifyItem | Path | File | RemoteResponse) -> list[ItemGetterStrategy]:
+    def __get_item_getters(__key: str | URL | MusifyItem | Path | File | RemoteResponse) -> list[ItemGetterStrategy]:
         getters = []
         if isinstance(__key, File):
             getters.append(PathGetter(__key.path))
@@ -351,6 +361,9 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], HasLengt
             getters.append(RemoteIDGetter(__key.id))
         if isinstance(__key, MusifyItem) and __key.has_uri:
             getters.append(RemoteURIGetter(__key.uri))
+        if isinstance(__key, URL):
+            getters.append(RemoteURLAPIGetter(__key))
+            getters.append(RemoteURLEXTGetter(__key))
         if isinstance(__key, MusifyObject):
             getters.append(NameGetter(__key.name))
         if isinstance(__key, str):

@@ -7,6 +7,8 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping
 from typing import Any, Self, AsyncContextManager
 
+from yarl import URL
+
 from musify.api.exception import APIError
 from musify.core.base import MusifyItem
 from musify.libraries.remote.core import RemoteResponse
@@ -38,13 +40,13 @@ class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, AsyncContextManager, m
 
     @property
     @abstractmethod
-    def url(self) -> str:
+    def url(self) -> URL:
         """The API URL of this item/collection."""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def url_ext(self) -> str | None:
+    def url_ext(self) -> URL | None:
         """The external URL of this item/collection."""
         raise NotImplementedError
 

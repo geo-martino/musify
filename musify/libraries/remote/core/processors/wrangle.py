@@ -87,7 +87,7 @@ class RemoteDataWrangler(metaclass=ABCMeta):
             of the input ``values``.
             Or when the list contains strings representing many differing remote object types or only IDs.
         """
-        if isinstance(values, str | Mapping | RemoteResponse):
+        if isinstance(values, str | URL | Mapping | RemoteResponse):
             return cls._get_item_type(value=values, kind=kind)
 
         if len(values) == 0:

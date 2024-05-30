@@ -53,6 +53,11 @@ Added
 * Add compatibility for pathlib.Path for any logic which uses path logic.
 * Extended logging on :py:func:`.report_playlist_differences`
 * ``source`` property on :py:class:`.Library`
+* :py:meth:`.RemoteAPI.get_or_create_playlist` method for only creating a playlist when it doesn't
+  already exist by name. Gets the existing playlist otherwise
+* Added :py:meth:`.MusifyCollection.outer_difference` method to cover the logic previously handled
+  by the mislabelled :py:meth:`.MusifyCollection.outer_difference` method
+* :py:class:`.RemoteDataWrangler` and its implementations now handle URL objects from the ``yarl`` package
 
 Changed
 -------
@@ -84,6 +89,11 @@ Changed
   This is to reduce memory usage when loading many of these objects.
 * Extend logging on :py:meth:`.LocalCollection.log_save_tracks_result` to show when no tags
   have been or would be updated.
+* :py:class:`.RemoteItemChecker` now uses the new :py:meth:`.RemoteAPI.get_or_create_playlist` method
+  when creating playlists to avoid creating many duplicate playlists which could have lead to playlist
+  creation explosion in repeated uses. The processor also accounts for any items that may have existed
+  in the playlist before it was run and discounts them from any matches.
+* :py:meth:`.SpotifyAPI.create_playlist` now returns the full response rather than just the URL of the playlist.
 
 Fixed
 -----
@@ -100,6 +110,7 @@ Fixed
 * :py:meth:`.LocalLibrary.artists` now generates a :py:class:`.LocalArtist` object per individual artist
   rather than on combined artists
 * Issue where :py:meth:`.SpotifyAPI.extend_items` did not show progress when extending some types of responses
+* Fixed logic in :py:meth:`.MusifyCollection.intersection` and :py:meth:`.MusifyCollection.difference`
 
 Removed
 -------

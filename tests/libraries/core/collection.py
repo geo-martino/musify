@@ -148,8 +148,8 @@ class MusifyCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
             collection: MusifyCollection, collection_merge_items: Iterable[MusifyItem]
     ):
         """:py:class:`MusifyCollection` dunder iterator and contains tests"""
-        assert len([item for item in collection]) == len(collection.items)
-        assert len([item for item in reversed(collection.items)]) == len(collection.items)
+        assert sum(1 for _ in collection) == len(collection.items)
+        assert sum(1 for _ in reversed(collection.items)) == len(collection.items)
         for i, item in enumerate(reversed(collection.items)):
             assert collection.items.index(item) == len(collection.items) - 1 - i
 
@@ -206,8 +206,9 @@ class MusifyCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
         difference = [item for item in collection_merge_items]
         other = collection.items + difference
 
-        assert collection.difference(other) == difference
         assert collection.intersection(other) == collection.items
+        assert collection.difference(other) == []
+        assert collection.outer_difference(other) == difference
 
 
 class PlaylistTester(MusifyCollectionTester, metaclass=ABCMeta):

@@ -252,9 +252,9 @@ class RemoteLibrary[
 
     def log_tracks(self) -> None:
         playlist_tracks = [track.uri for tracks in self.playlists.values() for track in tracks]
-        in_playlists = len([track for track in self.tracks if track.uri in playlist_tracks])
+        in_playlists = sum(1 for track in self.tracks if track.uri in playlist_tracks)
         album_tracks = [track.uri for tracks in self.albums for track in tracks]
-        in_albums = len([track for track in self.tracks if track.uri in album_tracks])
+        in_albums = sum(1 for track in self.tracks if track.uri in album_tracks)
 
         width = get_max_width(self.playlists, min_width=self._log_min_width)
         self.logger.stat(

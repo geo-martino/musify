@@ -378,9 +378,9 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         for name, playlist in self.playlists.items():
             self.logger.stat(
                 f"\33[97m{align_string(name, max_width=max_width)} \33[0m|"
-                f"\33[92m{len([t for t in playlist if t.has_uri]):>6} available \33[0m|"
-                f"\33[91m{len([t for t in playlist if t.has_uri is None]):>6} missing \33[0m|"
-                f"\33[93m{len([t for t in playlist if t.has_uri is False]):>6} unavailable \33[0m|"
+                f"\33[92m{sum(1 for t in playlist if t.has_uri):>6} available \33[0m|"
+                f"\33[91m{sum(1 for t in playlist if t.has_uri is None):>6} missing \33[0m|"
+                f"\33[93m{sum(1 for t in playlist if t.has_uri is False):>6} unavailable \33[0m|"
                 f"\33[1;94m{len(playlist):>6} total \33[0m"
             )
 

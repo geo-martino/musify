@@ -331,7 +331,7 @@ class TestSpotifyPlaylist(SpotifyCollectionLoaderTester, RemotePlaylistTester):
         response = next(deepcopy(pl) for pl in api_mock.user_playlists if names.count(pl["name"]) == 1)
         await api.extend_items(response=response, key=RemoteObjectType.TRACK)
         pl = SpotifyPlaylist(response=response, api=api)
-        url = pl.url
+        url = str(pl.url)
 
         await pl.delete()
         assert await api_mock.get_requests(url=url + "/followers")

@@ -5,7 +5,7 @@ All methods that interact with the API should return raw, unprocessed responses.
 """
 import logging
 from abc import ABCMeta, abstractmethod
-from collections.abc import Collection, MutableMapping, Mapping, Sequence
+from collections.abc import Collection, MutableMapping, Mapping, Sequence, Iterable
 from typing import Any, Self, AsyncContextManager
 
 from yarl import URL
@@ -212,6 +212,8 @@ class RemoteAPI(AsyncContextManager, metaclass=ABCMeta):
     def _refresh_responses(responses: Any, skip_checks: bool = False) -> None:
         if isinstance(responses, RemoteResponse):
             responses = [responses]
+        if not isinstance(responses, Iterable) or not any(isinstance(r, RemoteResponse) for r in responses):
+            return
 
         for response in responses:
             if isinstance(response, RemoteResponse):
@@ -412,9 +414,7 @@ class RemoteAPI(AsyncContextManager, metaclass=ABCMeta):
         if response:
             return response
 
-        response = await self.create_playlist(name, *args, **kwargs)
-        self.user_playlist_data[name] = response
-        return response
+        return await self.create_playlist(name, *args, **kwargs)
 
     @abstractmethod
     async def create_playlist(self, name: str, *args, **kwargs) -> dict[str, Any]:

@@ -233,7 +233,7 @@ class TestSpotifyAPIPlaylists(RemoteAPIPlaylistTester):
 
         requests = await self._get_payloads_from_url_base(url=playlist["href"] + "/tracks", api_mock=api_mock)
         assert all("tracks" in body for body in requests)
-        assert len([uri["uri"] for req in requests for uri in req["tracks"]]) == len(id_list)
+        assert sum(len(req["tracks"]) for req in requests) == len(id_list)
 
         # check same results for other input types
         result = await api.clear_from_playlist(playlist=playlist, items=id_list, limit=limit)
@@ -253,4 +253,4 @@ class TestSpotifyAPIPlaylists(RemoteAPIPlaylistTester):
 
         requests = await self._get_payloads_from_url_base(url=playlist["href"] + "/tracks", api_mock=api_mock)
         assert all("tracks" in body for body in requests)
-        assert len([uri["uri"] for body in requests for uri in body["tracks"]]) == total
+        assert sum(len(body["tracks"]) for body in requests) == total

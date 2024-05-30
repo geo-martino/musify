@@ -97,7 +97,7 @@ class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, metaclass=ABC
         pages = api_mock.calculate_pages_from_response(sync_playlist.response)
 
         requests = await api_mock.get_requests(method="GET", url=sync_playlist.url)
-        requests += await api_mock.get_requests(method="GET", url=sync_playlist.url + "/tracks")
+        requests += await api_mock.get_requests(method="GET", url=str(sync_playlist.url) + "/tracks")
 
         assert len(requests) == pages * count
 
@@ -135,8 +135,8 @@ class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, metaclass=ABC
         result_sync = await sync_playlist.sync(items=sync_items_extended, kind="sync", reload=False)
         assert result_sync.start == len(sync_playlist)
         assert result_sync.added == len(sync_items)
-        assert result_sync.removed == len([track.uri for track in sync_playlist if track.uri not in sync_uri])
-        assert result_sync.unchanged == len([track.uri for track in sync_playlist if track.uri in sync_uri])
+        assert result_sync.removed == sum(1 for track in sync_playlist if track.uri not in sync_uri)
+        assert result_sync.unchanged == sum(1 for track in sync_playlist if track.uri in sync_uri)
         assert result_sync.difference == len(sync_items) - result_sync.removed
         assert result_sync.final == result_sync.start + result_sync.difference
         api_mock.assert_not_called()
@@ -166,7 +166,7 @@ class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, metaclass=ABC
         assert result.difference == result.added
         assert result.final == result.start + result.difference
 
-        uri_add, uri_clear = await self.get_sync_uris(url=sync_playlist.url, api_mock=api_mock)
+        uri_add, uri_clear = await self.get_sync_uris(url=str(sync_playlist.url), api_mock=api_mock)
         assert uri_add == [track.uri for track in sync_items]
         assert uri_clear == []
 
@@ -186,7 +186,7 @@ class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, metaclass=ABC
         # assert result.difference == 0  # useless when mocking + reload
         # assert result.final == start  # useless when mocking + reload
 
-        uri_add, uri_clear = await self.get_sync_uris(url=sync_playlist.url, api_mock=api_mock)
+        uri_add, uri_clear = await self.get_sync_uris(url=str(sync_playlist.url), api_mock=api_mock)
         assert uri_add == [track.uri for track in sync_items]
         assert uri_clear == [track.uri for track in sync_playlist]
 
@@ -200,12 +200,12 @@ class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, metaclass=ABC
         sync_uri = {track.uri for track in sync_items_extended}
         assert result.start == len(sync_playlist)
         assert result.added == len(sync_items)
-        assert result.removed == len([track.uri for track in sync_playlist if track.uri not in sync_uri])
-        assert result.unchanged == len([track.uri for track in sync_playlist if track.uri in sync_uri])
+        assert result.removed == sum(1 for track in sync_playlist if track.uri not in sync_uri)
+        assert result.unchanged == sum(1 for track in sync_playlist if track.uri in sync_uri)
         assert result.difference == len(sync_items) - result.removed
         assert result.final == result.start + result.difference
 
-        uri_add, uri_clear = await self.get_sync_uris(url=sync_playlist.url, api_mock=api_mock)
+        uri_add, uri_clear = await self.get_sync_uris(url=str(sync_playlist.url), api_mock=api_mock)
         assert uri_add == [track.uri for track in sync_items]
         assert uri_clear == [track.uri for track in sync_playlist if track.uri not in sync_uri]
 

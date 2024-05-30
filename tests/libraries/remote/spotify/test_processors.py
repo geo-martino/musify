@@ -2,6 +2,7 @@ import inspect
 from copy import deepcopy
 from dataclasses import asdict
 from random import sample, choice
+from typing import Any
 
 import pytest
 
@@ -16,7 +17,7 @@ from musify.libraries.remote.core.processors.check import RemoteItemChecker
 from musify.libraries.remote.core.processors.search import SearchConfig, RemoteItemSearcher
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.factory import SpotifyObjectFactory
-from musify.libraries.remote.spotify.object import SpotifyTrack, SpotifyAlbum
+from musify.libraries.remote.spotify.object import SpotifyTrack, SpotifyAlbum, SpotifyPlaylist
 from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
 from musify.processors.match import CleanTagConfig, ItemMatcher
 from tests.libraries.local.track.utils import random_track
@@ -357,8 +358,18 @@ class TestSpotifyItemChecker(RemoteItemCheckerTester):
         return RemoteItemChecker(matcher=matcher, object_factory=SpotifyObjectFactory(api=api))
 
     @pytest.fixture(scope="class")
-    def playlist_urls(self, _api_mock: SpotifyMock) -> list[str]:
-        return [
-            pl["href"] for pl in _api_mock.user_playlists
-            if _api_mock.limit_lower < pl["tracks"]["total"] <= 60
-        ]
+    async def _playlist_responses(self, api: SpotifyAPI, _api_mock: SpotifyMock) -> list[dict[str, Any]]:
+        responses = []
+
+        for r in _api_mock.user_playlists:
+            if r["tracks"]["total"] > 60 or r["tracks"]["total"] <= _api_mock.limit_lower:
+                continue
+
+            await api.extend_items(response=r, kind=RemoteObjectType.PLAYLIST, key=RemoteObjectType.TRACK)
+            responses.append(r)
+
+        return responses
+
+    @pytest.fixture
+    def playlists(self, api: SpotifyAPI, _playlist_responses: list[dict[str, Any]]) -> list[SpotifyPlaylist]:
+        return [SpotifyPlaylist(deepcopy(r), api=api) for r in _playlist_responses]
