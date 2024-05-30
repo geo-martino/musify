@@ -407,7 +407,6 @@ class RemoteItemChecker(InputProcessor):
             item for item in source_valid if item not in remote_valid and item not in pl_original
         ] if not self._remaining else []
         missing = self._remaining or [item for item in source if item.has_uri is None]
-        discount = [item for item in remote if item in pl_original and item in source]
 
         if len(added) + len(removed) + len(missing) == 0:
             if len(source_valid) == len(remote_valid):
@@ -421,10 +420,12 @@ class RemoteItemChecker(InputProcessor):
                 if remote_counts.get(uri) != count:
                     missing.extend([item for item in source_valid if item.uri == uri])
 
+        discount = sum(1 for item in remote if item in pl_original and item in source)
         self.matcher.log([name, f"{len(added):>6} items added"])
         self.matcher.log([name, f"{len(removed):>6} items removed"])
         self.matcher.log([name, f"{len(missing):>6} items in source missing URI"])
-        self.matcher.log([name, f"{len(discount):>6} items discounted that were in the playlist originally"])
+        self.matcher.log([name, f"{len(pl_original):>6} items in the playlist at start"])
+        self.matcher.log([name, f"{discount:>6} discounted items from the source that were in the playlist at start"])
         self.matcher.log([name, f"{len(added) - len(removed):>6} total item changes"])
 
         remaining = removed + missing

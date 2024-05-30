@@ -194,7 +194,7 @@ class MusifyCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
         items = collection.items.copy()
 
         collection.reverse()
-        assert collection == list(reversed(items))
+        assert collection == items[::-1]
 
         collection.sort(reverse=True)
         assert collection == items

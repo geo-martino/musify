@@ -44,7 +44,7 @@ def format_full_func_name(record: logging.LogRecord, width: int = 40) -> None:
         path_split.append(PROGRAM_NAME.lower())
 
         # produce fully qualified path
-        path_split = list(reversed(path_split[:-1]))
+        path_split = path_split[:-1][::-1]
 
     # truncate long paths by taking first letters of each part until short enough
     path = ".".join(path_split)

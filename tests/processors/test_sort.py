@@ -38,21 +38,21 @@ class TestItemSorter(PrettyPrinterTester):
         ItemSorter.sort_by_field(tracks)
         assert tracks == tracks_original
         ItemSorter.sort_by_field(tracks, reverse=True)
-        assert tracks == list(reversed(tracks_original))
+        assert tracks == tracks_original[::-1]
 
     def test_sort_by_track_number(self, tracks: list[LocalTrack]):
         tracks_sorted = sorted(tracks, key=lambda t: t.track_number)
         ItemSorter.sort_by_field(tracks, field=TrackField.TRACK)
         assert tracks == tracks_sorted
         ItemSorter.sort_by_field(tracks, field=TrackField.TRACK, reverse=True)
-        assert tracks == list(reversed(tracks_sorted))
+        assert tracks == tracks_sorted[::-1]
 
     def test_sort_by_date_added(self, tracks: list[LocalTrack]):
         tracks_sorted = sorted(tracks, key=lambda t: t.date_added)
         ItemSorter.sort_by_field(tracks, field=LocalTrackField.DATE_ADDED)
         assert tracks == tracks_sorted
         ItemSorter.sort_by_field(tracks, field=LocalTrackField.DATE_ADDED, reverse=True)
-        assert tracks == list(reversed(tracks_sorted))
+        assert tracks == tracks_sorted[::-1]
 
     def test_sort_by_title_with_ignore_words(self, tracks: list[LocalTrack]):
         # sort on str, ignoring defined words like 'The' and 'A'
@@ -60,7 +60,7 @@ class TestItemSorter(PrettyPrinterTester):
         ItemSorter.sort_by_field(tracks, field=TrackField.TITLE)
         assert tracks == tracks_sorted
         ItemSorter.sort_by_field(tracks, field=TrackField.TITLE, reverse=True)
-        assert tracks == list(reversed(tracks_sorted))
+        assert tracks == tracks_sorted[::-1]
 
     def test_group_by_field(self, tracks: list[LocalTrack]):
         assert ItemSorter.group_by_field(tracks) == {None: tracks}
