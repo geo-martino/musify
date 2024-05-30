@@ -53,7 +53,9 @@ class MusifyLogger(logging.Logger):
     def stdout_handlers(self) -> set[logging.StreamHandler]:
         """Get a list of all :py:class:`logging.StreamHandler` handlers that log to stdout"""
         console_handlers = set()
-        for handler in self.handlers + logging.root.handlers:
+        for handler in self.handlers + list(logging.getHandlerNames()):
+            if isinstance(handler, str):
+                handler = logging.getHandlerByName(handler)
             if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stdout:
                 console_handlers.add(handler)
 
@@ -77,12 +79,6 @@ class MusifyLogger(logging.Logger):
     def print(self, level: int = logging.CRITICAL + 1) -> None:
         """Print a new line only when DEBUG < ``logger level`` <= ``level`` for all console handlers"""
         if not self.compact:
-            print(
-                level,
-                self.stdout_handlers,
-                [h.level for h in self.stdout_handlers],
-                [logging.DEBUG < h.level <= level for h in self.stdout_handlers]
-            )
             if self.stdout_handlers and any(logging.DEBUG < h.level <= level for h in self.stdout_handlers):
                 print()
 
@@ -126,7 +122,8 @@ class MusifyLogger(logging.Logger):
 
         # determine the level of bar to generate and whether to leave the bar based on current active count
         position = kwargs.get("position", abs(min(bar.pos for bar in self._bars)) + 1 if self._bars else 0)
-        leave_default = all(h.level > logging.DEBUG for h in self.stdout_handlers) and position == 0
+        leave_default = bool(self.stdout_handlers) or (h.level > logging.DEBUG for h in self.stdout_handlers)
+        leave_default = leave_default and position == 0
         leave = kwargs["leave"] if kwargs.get("leave") is not None else leave_default
 
         bar = tqdm(
