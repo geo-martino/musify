@@ -199,8 +199,8 @@ class TestSpotifyLibrary(RemoteLibraryTester):
                 assert len(album.tracks) == len(album.response["tracks"].get("items", [])) == 0
 
         # only album URLs were called
-        req_urls = [str(url.with_query(None)) for url, _, _ in await api_mock.get_requests()]
-        assert req_urls == [str(artist.url) + "/albums" for artist in library.artists]
+        req_urls = sorted(str(url.with_query(None)) for url, _, _ in await api_mock.get_requests())
+        assert req_urls == sorted(str(artist.url) + "/albums" for artist in library.artists)
 
         await library.enrich_saved_artists(tracks=True)
         for artist in library.artists:

@@ -200,6 +200,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             When None, allow the logger to decide this setting.
         :return: API JSON responses for each item
         """
+        if not response:
+            return []
         if isinstance(response, RemoteResponse):
             response = response.response
 
@@ -222,11 +224,10 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             )
             return response[self.items_key]
 
-        initial_url = URL(
-            response[self.url_key] if not response[self.items_key] else response.get("next", response[self.url_key])
-        )
+        initial_url_key = "next" if response[self.items_key] and response.get("next") else self.url_key
+        initial_url = URL(response[initial_url_key])
         limit = int(initial_url.query.get("limit", 50))
-        offset = int(initial_url.query.get("offset", 0))
+        offset = int(initial_url.query.get("offset", len(response.get(self.items_key, []))))
         total = int(response["total"])
 
         urls = []
@@ -244,7 +245,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         kind_name = self._format_key(kind) or self.items_key
         pages = (response["total"] - len(response[self.items_key])) / (response.get("limit", 1) or 1)
         results: list[dict[str, Any]] = await self.logger.get_asynchronous_iterator(
-            [_get_result(url) for url in urls],
+            map(_get_result, urls),
             initial=len(response[self.items_key]),
             total=response["total"],
             desc=f"Extending {kind_name}".rstrip("s") if kind_name[0].islower() else kind_name,
@@ -252,7 +253,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             leave=leave_bar,
             disable=pages < self._bar_threshold,
         )
-        results.sort(key=lambda r: r["offset"])  # tqdm doesn't execute in order, sort results
+        results.sort(key=lambda r: r.get("offset", 0))  # tqdm doesn't execute in order, sort results
 
         # assign block values to response from last result
         final_result = next(reversed(results))
@@ -592,18 +593,14 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             )
         self.wrangler.validate_item_type(values, kind=RemoteObjectType.ARTIST)
 
-        id_list = self.wrangler.extract_ids(values, kind=RemoteObjectType.ARTIST)
-        bar = self.logger.get_synchronous_iterator(
-            id_list, desc="Getting artist albums", unit="artist", disable=len(id_list) < self._bar_threshold
-        )
-
         params = {"limit": limit_value(limit, floor=1, ceil=50)}
         if types:
             params["include_groups"] = ",".join(set(types))
 
         key = RemoteObjectType.ALBUM
         results: dict[str, dict[str, Any]] = {}
-        for id_ in bar:
+
+        async def _get_result(id_: str) -> None:
             results[id_] = await self.handler.get(url=url.format(id=id_), params=params)
             await self.extend_items(results[id_], kind="artist albums", key=key, leave_bar=False)
 
@@ -614,6 +611,14 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
                     ),
                     "total": album["total_tracks"]
                 }
+
+        id_list = self.wrangler.extract_ids(values, kind=RemoteObjectType.ARTIST)
+        await self.logger.get_asynchronous_iterator(
+            map(_get_result, id_list),
+            desc="Getting artist albums",
+            unit="artist",
+            disable=len(id_list) < self._bar_threshold
+        )
 
         results_remapped = [{self.id_key: id_, "albums": result} for id_, result in results.items()]
         self._merge_results_to_input(original=values, responses=results_remapped, ordered=False, clear=False)

@@ -111,7 +111,7 @@ class MusifyLogger(logging.Logger):
         self._bars.append(bar)
         return bar
 
-    def get_asynchronous_iterator[T](self, tasks: list[Awaitable[T]], **kwargs) -> Awaitable[list[T]]:
+    def get_asynchronous_iterator[T](self, tasks: Iterable[Awaitable[T]], **kwargs) -> Awaitable[list[T]]:
         """
         Return an appropriately configured asynchronous tqdm progress bar if installed.
         If not, gather the given awaitable objects from *fs and return a coroutine.
