@@ -107,13 +107,11 @@ class MusifyLogger(logging.Logger):
         if tqdm is None:
             return iter(iterable) if iterable is not None else range(total)
 
-        bar = tqdm(iterable=iterable, **self._get_progress_bar_kwargs(total=total, **kwargs))
+        bar = tqdm(iterable=iterable, **self._get_tqdm_kwargs(total=total, **kwargs))
         self._bars.append(bar)
         return bar
 
-    def get_asynchronous_iterator[T](
-            self, awaitables: list[Awaitable[T]], **kwargs
-    ) -> Awaitable[list[T]]:
+    def get_asynchronous_iterator[T](self, tasks: list[Awaitable[T]], **kwargs) -> Awaitable[list[T]]:
         """
         Return an appropriately configured asynchronous tqdm progress bar if installed.
         If not, gather the given awaitable objects from *fs and return a coroutine.
@@ -122,11 +120,11 @@ class MusifyLogger(logging.Logger):
         For tqdm kwargs, see :py:class:`tqdm`
         """
         if tqdm is None:
-            return asyncio.gather(*awaitables)
+            return asyncio.gather(*tasks)
 
-        return tqdm.gather(*awaitables, **self._get_progress_bar_kwargs(**kwargs))
+        return tqdm.gather(*tasks, **self._get_tqdm_kwargs(**kwargs))
 
-    def _get_progress_bar_kwargs(self, **kwargs) -> dict[str, Any]:
+    def _get_tqdm_kwargs(self, **kwargs) -> dict[str, Any]:
         # noinspection SpellCheckingInspection
         preset_keys = ("leave", "disable", "file", "ncols", "colour", "smoothing")
 
@@ -136,9 +134,9 @@ class MusifyLogger(logging.Logger):
             cols = 120
 
         # adjust kwargs to defaults if needed
-        kwargs["position"] = self._get_iterator_param_position(**kwargs)
+        kwargs["position"] = self._get_tqdm_param_position(**kwargs)
         return dict(
-            leave=self._get_iterator_param_leave(**kwargs),
+            leave=self._get_tqdm_param_leave(**kwargs),
             disable=self.disable_bars or kwargs.get("disable", False),
             file=sys.stdout,
             ncols=cols,
@@ -147,7 +145,7 @@ class MusifyLogger(logging.Logger):
             **{k: v for k, v in kwargs.items() if k not in preset_keys}
         )
 
-    def _get_iterator_param_position(self, position: int = None, **__):
+    def _get_tqdm_param_position(self, position: int = None, **__):
         if position is not None:
             return position
 
@@ -158,7 +156,7 @@ class MusifyLogger(logging.Logger):
 
         return 0
 
-    def _get_iterator_param_leave(self, position: int, leave: bool = None, **__):
+    def _get_tqdm_param_leave(self, position: int, leave: bool = None, **__):
         if leave is not None:
             return leave
 
