@@ -310,7 +310,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             f"\33[1;95m  >\33[1;97m Extracting metadata and properties for {len(self._track_paths)} tracks \33[0m"
         )
 
-        bar = self.logger.get_iterator(
+        bar = self.logger.get_synchronous_iterator(
             self._track_paths, desc="Loading tracks", unit="tracks", total=len(self._track_paths)
         )
         self._tracks = [await self.load_track(path) for path in bar]
@@ -362,7 +362,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             f"\33[1;95m  >\33[1;97m Loading playlist data for {len(self._playlist_paths)} playlists \33[0m"
         )
 
-        bar = self.logger.get_iterator(
+        bar = self.logger.get_synchronous_iterator(
             self._playlist_paths.values(), desc="Loading tracks", unit="tracks", total=len(self._playlist_paths)
         )
         playlists = [await self.load_playlist(path) for path in bar]
@@ -391,7 +391,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         :param dry_run: Run function, but do not modify the file on the disk.
         :return: A map of the playlist name to the results of its sync as a :py:class:`Result` object.
         """
-        bar = self.logger.get_iterator(self.playlists.items(), desc="Updating tracks", unit="tracks")
+        bar = self.logger.get_synchronous_iterator(self.playlists.items(), desc="Updating tracks", unit="tracks")
         return {name: await pl.save(dry_run=dry_run) for name, pl in bar}
 
     ###########################################################################

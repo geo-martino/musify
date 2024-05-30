@@ -132,32 +132,6 @@ class TestSpotifyAPI(SpotifyAPIFixtures):
         url = str(URL(url).with_query(params))
         assert api.format_next_url(url, 15, 29) == f"{url}&offset=15&limit=29"
 
-    def test_format_items_block(self, api: SpotifyAPI):
-        total = 100
-        params = {"offset": 22, "limit": 78}
-        url = str(URL(f"{api.wrangler.url_api}/tracks").with_query(params))
-        response = {self.url_key: url, "total": total}
-
-        api._format_items_block(response)
-        assert response["next"] == url
-        assert response["previous"] is None
-        assert "offset" not in response
-        assert response["limit"] == params["limit"]
-        assert response["total"] == total
-
-        response["next"] = "some random url"
-        response["previous"] = "some other random url"
-        response["offset"] = 200
-        response["limit"] = 10
-        response["total"] = 201
-
-        api._format_items_block(response)
-        assert response["next"] == "some random url"
-        assert response["previous"] == "some other random url"
-        assert response["offset"] == 200
-        assert response["limit"] == 10
-        assert response["total"] == 201
-
     ###########################################################################
     ## Utilities: Enrich responses
     ###########################################################################

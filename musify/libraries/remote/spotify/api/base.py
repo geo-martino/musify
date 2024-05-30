@@ -47,18 +47,6 @@ class SpotifyAPIBase(RemoteAPI, metaclass=ABCMeta):
         url = url.with_query(params)
         return str(url)
 
-    def _format_items_block(self, response: MutableMapping[str, Any]) -> None:
-        """
-        Ensure items block has expected values for paginated extension.
-        This is usually needed on the items block of a current user's playlist.
-        """
-        if "next" not in response:
-            response["next"] = response[self.url_key]
-        if "previous" not in response:
-            response["previous"] = None
-        if "limit" not in response:
-            response["limit"] = int(URL(response["next"]).query.get("limit", 50))
-
     ###########################################################################
     ## Enrich/manipulate responses
     ###########################################################################

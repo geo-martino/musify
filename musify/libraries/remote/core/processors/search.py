@@ -218,7 +218,7 @@ class RemoteItemSearcher(Processor):
             f"Searching for matches on {self.api.source} for {len(collections)} {kind}s\33[0m"
         )
 
-        bar = self.logger.get_iterator(iterable=collections, desc="Searching", unit=f"{kind}s")
+        bar = self.logger.get_synchronous_iterator(collections, desc="Searching", unit=f"{kind}s")
         search_results = {coll.name: await self._search_collection(coll) for coll in bar}
 
         self.logger.print()

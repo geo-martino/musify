@@ -1,12 +1,13 @@
 """
 All classes and operations relating to the logger objects used throughout the entire package.
 """
+import asyncio
 import logging
 import logging.config
 import logging.handlers
 import os
 import sys
-from collections.abc import Iterable
+from collections.abc import Iterable, Awaitable
 from pathlib import Path
 from typing import Any
 
@@ -95,51 +96,76 @@ class MusifyLogger(logging.Logger):
         if not values or not self.stdout_handlers or all(h.level > logging.INFO for h in self.stdout_handlers):
             print(*values, sep=sep, end=end)
 
-    def get_iterator[T: Any](
-            self,
-            iterable: Iterable[T] | None = None,
-            total: T | int | None = None,
-            **kwargs
+    def get_synchronous_iterator[T: Any](
+            self, iterable: Iterable[T] | None = None, total: T | int | None = None, **kwargs
     ) -> ProgressBarType[T]:
         """
-        Returns an appropriately configured tqdm progress bar if installed.
-        If not, returns the given ``iterable`` if given, or simply `range(total)`.
-        For tqdm kwargs, see :py:class:`tqdm_std`
+        Return an appropriately configured tqdm progress bar if installed.
+        If not, return either the given ``iterable`` if given or simply ``range(total)``.
+        For tqdm kwargs, see :py:class:`tqdm`
         """
         if tqdm is None:
             return iter(iterable) if iterable is not None else range(total)
 
+        bar = tqdm(iterable=iterable, **self._get_progress_bar_kwargs(total=total, **kwargs))
+        self._bars.append(bar)
+        return bar
+
+    def get_asynchronous_iterator[T](
+            self, awaitables: list[Awaitable[T]], **kwargs
+    ) -> Awaitable[list[T]]:
+        """
+        Return an appropriately configured asynchronous tqdm progress bar if installed.
+        If not, gather the given awaitable objects from *fs and return a coroutine.
+
+        Note that tqdm does not preserve the order of the input awaitables and will return results in a random order.
+        For tqdm kwargs, see :py:class:`tqdm`
+        """
+        if tqdm is None:
+            return asyncio.gather(*awaitables)
+
+        return tqdm.gather(*awaitables, **self._get_progress_bar_kwargs(**kwargs))
+
+    def _get_progress_bar_kwargs(self, **kwargs) -> dict[str, Any]:
         # noinspection SpellCheckingInspection
-        preset_keys = ("leave", "disable", "file", "ncols", "colour", "smoothing", "position")
+        preset_keys = ("leave", "disable", "file", "ncols", "colour", "smoothing")
 
         try:
             cols = os.get_terminal_size().columns
         except OSError:
             cols = 120
 
-        # clear closed bars
-        self._bars = [bar for bar in self._bars if bar.n < bar.total]
-
-        # determine the level of bar to generate and whether to leave the bar based on current active count
-        position = kwargs.get("position", abs(min(bar.pos for bar in self._bars)) + 1 if self._bars else 0)
-        leave_default = bool(self.stdout_handlers) or (h.level > logging.DEBUG for h in self.stdout_handlers)
-        leave_default = leave_default and position == 0
-        leave = kwargs["leave"] if kwargs.get("leave") is not None else leave_default
-
-        bar = tqdm(
-            iterable=iterable,
-            total=total,
-            leave=leave,
+        # adjust kwargs to defaults if needed
+        kwargs["position"] = self._get_iterator_param_position(**kwargs)
+        return dict(
+            leave=self._get_iterator_param_leave(**kwargs),
             disable=self.disable_bars or kwargs.get("disable", False),
             file=sys.stdout,
             ncols=cols,
             colour=kwargs.get("colour", "blue"),
             smoothing=0.1,
-            position=position,
             **{k: v for k, v in kwargs.items() if k not in preset_keys}
         )
-        self._bars.append(bar)
-        return bar
+
+    def _get_iterator_param_position(self, position: int = None, **__):
+        if position is not None:
+            return position
+
+        # clear closed bars
+        self._bars = [bar for bar in self._bars if bar.n < bar.total]
+        if self._bars:
+            return abs(min(bar.pos for bar in self._bars)) + 1
+
+        return 0
+
+    def _get_iterator_param_leave(self, position: int, leave: bool = None, **__):
+        if leave is not None:
+            return leave
+
+        return all([
+            bool(self.stdout_handlers) or (h.level > logging.DEBUG for h in self.stdout_handlers),
+            position == 0
+        ])
 
     def __copy__(self):
         """Do not copy logger"""

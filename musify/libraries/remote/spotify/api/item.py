@@ -19,10 +19,9 @@ from musify.libraries.remote.spotify.api.base import SpotifyAPIBase
 from musify.utils import limit_value
 
 try:
-    import tqdm
+    from tqdm.auto import tqdm
 except ImportError:
     tqdm = None
-
 ARTIST_ALBUM_TYPES = {"album", "single", "compilation", "appears_on"}
 
 
@@ -72,8 +71,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             method=method, url=url, id_list=id_list
         )
 
-        bar = self.logger.get_iterator(
-            iterable=ids_not_cached,
+        bar = self.logger.get_synchronous_iterator(
+            ids_not_cached,
             desc=f"Getting {kind}",
             unit=kind,
             disable=len(ids_not_cached) < self._bar_threshold
@@ -133,8 +132,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         )
 
         id_chunks = list(batched(ids_not_cached, limit_value(limit, floor=1, ceil=50)))
-        bar = self.logger.get_iterator(
-            iterable=range(len(id_chunks)),
+        bar = self.logger.get_synchronous_iterator(
+            range(len(id_chunks)),
             desc=f"Getting {kind}",
             unit="pages",
             disable=len(id_chunks) < self._bar_threshold
@@ -214,20 +213,38 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         if self.items_key not in response:
             response[self.items_key] = []
 
-        self._enrich_with_parent_response(
-            response=response, key=key, parent_key=parent_key, parent_response=parent_response
-        )
-
         if len(response[self.items_key]) == response["total"]:  # skip on fully extended response
             url = URL(response[self.url_key]).with_query(None)
             self.handler.log("SKIP", url, message="Response already extended")
+
+            self._enrich_with_parent_response(
+                response=response, key=key, parent_key=parent_key, parent_response=parent_response
+            )
             return response[self.items_key]
 
-        self._format_items_block(response)
+        initial_url = URL(
+            response[self.url_key] if not response[self.items_key] else response.get("next", response[self.url_key])
+        )
+        limit = int(initial_url.query.get("limit", 50))
+        offset = int(initial_url.query.get("offset", 0))
+        total = int(response["total"])
+
+        urls = []
+        for offset in range(offset, total, limit):
+            params = dict(initial_url.query)
+            params |= {"limit": limit, "offset": offset}
+            urls.append(initial_url.with_query(params))
+
+        async def _get_result(request: URL) -> dict[str, Any]:
+            count = min(int(request.query["offset"]) + int(request.query["limit"]), response["total"])
+            log = f"{count:>6}/{response["total"]:<6} {key or self.items_key}"
+            r = await self.handler.request(method=method, url=request, log_message=log)
+            return r.get(key, r)
 
         kind_name = self._format_key(kind) or self.items_key
-        pages = (response["total"] - len(response[self.items_key])) / (response["limit"] or 1)
-        bar = self.logger.get_iterator(
+        pages = (response["total"] - len(response[self.items_key])) / (response.get("limit", 1) or 1)
+        results: list[dict[str, Any]] = await self.logger.get_asynchronous_iterator(
+            [_get_result(url) for url in urls],
             initial=len(response[self.items_key]),
             total=response["total"],
             desc=f"Extending {kind_name}".rstrip("s") if kind_name[0].islower() else kind_name,
@@ -235,27 +252,20 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             leave=leave_bar,
             disable=pages < self._bar_threshold,
         )
+        results.sort(key=lambda r: r["offset"])  # tqdm doesn't execute in order, sort results
 
-        while response.get("next"):  # loop through each page
-            log_count = min(len(response[self.items_key]) + response["limit"], response["total"])
-            log = f"{log_count:>6}/{response["total"]:<6} {key or self.items_key}"
+        # assign block values to response from last result
+        final_result = next(reversed(results))
+        response[self.url_key] = final_result[self.url_key]
+        response["offset"] = final_result.get("offset")
+        response["next"] = final_result.get("next")
+        response["previous"] = final_result.get("previous")
 
-            response_next = await self.handler.request(method=method, url=response["next"], log_message=log)
-            response_next = response_next.get(key, response_next)
-            if self.items_key not in response_next:
-                self.logger.print_message(response)
-
-            self._enrich_with_parent_response(
-                response=response_next, key=key, parent_key=parent_key, parent_response=parent_response
-            )
-
-            response[self.items_key].extend(response_next[self.items_key])
-            response[self.url_key] = response_next[self.url_key]
-            response["next"] = response_next.get("next")
-            response["previous"] = response_next.get("previous")
-
-            if tqdm is not None:  # TODO: drop me when optimising
-                bar.update(response_next["limit"])
+        # assign results back to original response and enrich the child items
+        response[self.items_key].extend(item for result in results for item in result[self.items_key])
+        self._enrich_with_parent_response(
+            response=response, key=key, parent_key=parent_key, parent_response=parent_response
+        )
 
         # cache child items
         key = key.rstrip("s") if key else key
@@ -263,9 +273,6 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             result[key] if key and key in result else result for result in response[self.items_key]
         ]
         await self._cache_responses(method=method, responses=results_to_cache)
-
-        if tqdm is not None:  # TODO: drop me when optimising
-            bar.close()
 
         return response[self.items_key]
 
@@ -336,8 +343,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             self.handler.log("DONE", url, message=f"Retrieved {len(results):>6} {unit}")
             return results
 
-        bar = self.logger.get_iterator(
-            iterable=results, desc=f"Extending {unit}", unit=unit, disable=len(id_list) < self._bar_threshold
+        bar = self.logger.get_synchronous_iterator(
+            results, desc=f"Extending {unit}", unit=unit, disable=len(id_list) < self._bar_threshold
         )
 
         for result in bar:
@@ -586,8 +593,8 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         self.wrangler.validate_item_type(values, kind=RemoteObjectType.ARTIST)
 
         id_list = self.wrangler.extract_ids(values, kind=RemoteObjectType.ARTIST)
-        bar = self.logger.get_iterator(
-            iterable=id_list, desc="Getting artist albums", unit="artist", disable=len(id_list) < self._bar_threshold
+        bar = self.logger.get_synchronous_iterator(
+            id_list, desc="Getting artist albums", unit="artist", disable=len(id_list) < self._bar_threshold
         )
 
         params = {"limit": limit_value(limit, floor=1, ceil=50)}

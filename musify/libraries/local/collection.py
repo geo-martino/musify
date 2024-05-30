@@ -109,7 +109,7 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
         :return: A map of the :py:class:`LocalTrack` saved to its result as a :py:class:`SyncResultTrack` object
             only for tracks that were saved or would have been saved in the case of a dry run.
         """
-        bar = self.logger.get_iterator(self.tracks, desc="Updating tracks", unit="tracks")
+        bar = self.logger.get_synchronous_iterator(self.tracks, desc="Updating tracks", unit="tracks")
         results = {track: await track.save(tags=tags, replace=replace, dry_run=dry_run) for track in bar}
         return {track: result for track, result in results.items() if result.saved or result.updated}
 
@@ -150,7 +150,7 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
                 f"Merging library of {len(self)} items with {len(tracks)} items on tags: "
                 f"{', '.join(tag_names)} \33[0m"
             )
-            tracks = self.logger.get_iterator(iterable=tracks, desc="Merging library", unit="tracks")
+            tracks = self.logger.get_synchronous_iterator(tracks, desc="Merging library", unit="tracks")
 
         tags = to_collection(tags)
         if Fields.IMAGES in tags or Fields.ALL in tags:

@@ -135,7 +135,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, Sp
             key = self.api.collection_item_map[kind]
 
             responses_albums = [album for artist in self.artists for album in artist.albums]
-            bar = self.logger.get_iterator(iterable=responses_albums, desc="Getting album tracks", unit="albums")
+            bar = self.logger.get_synchronous_iterator(responses_albums, desc="Getting album tracks", unit="albums")
             for album in bar:
                 await self.api.extend_items(album, kind=kind, key=key)
                 album.refresh(skip_checks=False)

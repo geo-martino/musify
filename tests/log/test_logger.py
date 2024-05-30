@@ -75,10 +75,10 @@ def test_file_paths(logger: MusifyLogger):
 
 # noinspection PyTypeChecker
 @pytest.mark.skipif(tqdm is None, reason="required modules not installed")
-def test_getting_iterator_as_progress_bar(logger: MusifyLogger):
+def test_getting_synchronous_iterator_as_progress_bar(logger: MusifyLogger):
     logger._bars.clear()
 
-    bar: tqdm = logger.get_iterator(iterable=range(0, 50), initial=10, disable=True, file=sys.stderr)
+    bar: tqdm = logger.get_synchronous_iterator(iterable=range(0, 50), initial=10, disable=True, file=sys.stderr)
 
     assert bar.iterable == range(0, 50)
     assert bar.n == 10
@@ -88,7 +88,7 @@ def test_getting_iterator_as_progress_bar(logger: MusifyLogger):
     assert bar in logger._bars
 
     logger.disable_bars = False
-    bar = logger.get_iterator(
+    bar = logger.get_synchronous_iterator(
         iterable=range(0, 50),
         initial=10,
         disable=False,
@@ -107,14 +107,14 @@ def test_getting_iterator_as_progress_bar(logger: MusifyLogger):
     assert bar.pos == -3
 
     # takes next available position
-    bar = logger.get_iterator(iterable=range(0, 50))
+    bar = logger.get_synchronous_iterator(iterable=range(0, 50))
     assert bar.pos == -4
 
     for bar in logger._bars:
         bar.n = bar.total
         bar.close()
 
-    bar = logger.get_iterator(
+    bar = logger.get_synchronous_iterator(
         total=50,
         disable=False,
         file=sys.stderr,

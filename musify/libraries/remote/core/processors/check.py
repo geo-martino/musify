@@ -220,7 +220,7 @@ class RemoteItemChecker(InputProcessor):
 
         total = len(collections)
         pages_total = (total // self.interval) + (total % self.interval > 0)
-        bar = self.logger.get_iterator(iter(collections), desc="Creating temp playlists", unit="playlists")
+        bar = self.logger.get_synchronous_iterator(iter(collections), desc="Creating temp playlists", unit="playlists")
 
         self._started = True
         self._skip = False
