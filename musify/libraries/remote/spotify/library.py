@@ -91,6 +91,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, Sp
 
         self.logger.debug(f"Enrich {self.api.source} tracks: DONE\n")
 
+    # TODO: optimise me
     async def enrich_saved_albums(self) -> None:
         """Extends the tracks data for currently loaded albums, getting all available tracks data for each album"""
         if not self.albums or all(len(album) == album.track_total for album in self.albums):
@@ -113,6 +114,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, Sp
 
         self.logger.debug(f"Enrich {self.api.source} artists: DONE\n")
 
+    # TODO: optimise me
     async def enrich_saved_artists(self, tracks: bool = False, types: Collection[str] = ()) -> None:
         """
         Gets all albums for current loaded following artists.

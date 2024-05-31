@@ -156,9 +156,9 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
         valid_limit = randrange(api_mock.limit_lower + 1, api_mock.limit_upper - 1)
 
         id_list_reduced = sample(id_list, k=api_mock.limit_lower)
-        await api._get_items_batched(url=url, id_list=id_list_reduced, key=key, limit=api_mock.limit_upper - 50)
-        await api._get_items_batched(url=url, id_list=id_list, key=key, limit=api_mock.limit_upper + 50)
-        await api._get_items_batched(url=url, id_list=id_list, key=key, limit=valid_limit)
+        await api._get_items(url=url, id_list=id_list_reduced, key=key, limit=api_mock.limit_upper - 50)
+        await api._get_items(url=url, id_list=id_list, key=key, limit=api_mock.limit_upper + 50)
+        await api._get_items(url=url, id_list=id_list, key=key, limit=valid_limit)
 
         for url, _, _ in await api_mock.get_requests(url=url):
             count = len(unquote(url.query["ids"]).split(","))
@@ -230,7 +230,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
         url = f"{api.url}/{object_type.name.lower()}s"
         params = {"key": "value"}
 
-        results = await api._get_items_multi(url=url, id_list=responses, params=params, key=None)
+        results = await api._get_items(url=url, id_list=responses, params=params, key=None, limit=1)
         requests = [url for url, _, _ in await api_mock.get_requests(url=url)]
 
         self.assert_item_types(results=results, key=object_type.name.lower())
@@ -261,13 +261,14 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
         url = f"{api.url}/{key}"
         params = {"key": "value"}
         limit = get_limit(responses, max_limit=api_mock.limit_max, pages=3)
+        assert limit > 1
 
-        results = await api._get_items_batched(url=url, id_list=responses, params=params, key=key, limit=limit)
+        results = await api._get_items(url=url, id_list=responses, params=params, key=key, limit=limit)
         requests = [url for url, _, _ in await api_mock.get_requests(url=url)]
 
         self.assert_item_types(results=results, key=object_type.name.lower())
         self.assert_get_items_results(results=results, expected=responses, object_type=object_type)
-        self.assert_params(requests=requests, params=params)
+        self.assert_params(requests=requests, params=[params])
 
         # appropriate number of requests were made for batched requests
         id_params = [{"ids": ",".join(ids)} for ids in batched(responses, limit)]

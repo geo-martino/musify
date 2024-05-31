@@ -207,6 +207,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
         await self.handler.delete(url)
         return url
 
+    # TODO: optimise me
     async def clear_from_playlist(
             self,
             playlist: APIInputValueSingle[RemoteResponse],

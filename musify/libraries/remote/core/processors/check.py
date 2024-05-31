@@ -170,6 +170,7 @@ class RemoteItemChecker(InputProcessor):
 
         await playlist.sync(items=items, kind="new", reload=False, dry_run=False)
 
+    # TODO: optimise me
     async def _delete_playlists(self) -> None:
         """Delete all temporary playlists stored and clear stored playlists and collections"""
         await self._check_api()
@@ -228,6 +229,7 @@ class RemoteItemChecker(InputProcessor):
 
         for page in range(1, pages_total + 1):
             try:
+                # TODO: optimise me
                 for count, collection in enumerate(bar, 1):
                     await self._create_playlist(collection=collection)
                     if count >= self.interval:

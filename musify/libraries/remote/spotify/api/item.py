@@ -1,6 +1,7 @@
 """
 Implements endpoints for getting items from the Spotify API.
 """
+import asyncio
 import re
 from abc import ABCMeta
 from collections.abc import Collection, Mapping, MutableMapping
@@ -16,7 +17,7 @@ from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteObjectTypeError
 from musify.libraries.remote.core.types import APIInputValueMulti
 from musify.libraries.remote.spotify.api.base import SpotifyAPIBase
-from musify.utils import limit_value
+from musify.utils import limit_value, to_collection
 
 try:
     from tqdm.auto import tqdm
@@ -40,79 +41,23 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
     ###########################################################################
     ## GET helpers: Generic methods for getting items
     ###########################################################################
-    async def _get_items_multi(
+    async def _get_items(
             self,
             url: str | URL,
             id_list: Collection[str],
-            params: Mapping[str, Any] | None = None,
-            key: str | None = None,
-            kind: str | None = None,
-            *_,
-            **__,
-    ) -> list[dict[str, Any]]:
-        """
-        Get responses from a given ``url`` appending an ID to each request from a given ``id_list``
-        i.e. ``URL`` or ``ID``.
-        This function executes each URL request individually for each ID i.e. ``URL`` or ``ID``.
-
-        :param url: The base API URL endpoint for the required requests.
-        :param id_list: List of IDs to append to the given URL.
-        :param params: Extra parameters to add to each request.
-        :param kind: The unit to use for logging. If None, determine from ``key`` or default to ``items``.
-        :param key: The key to reference from each response to get the list of required values.
-        :return: API JSON responses for each item at the given ``key``.
-        :raise APIError: When the given ``key`` is not in the API response.
-        """
-        method = "GET"
-        url = url.rstrip("/")
-        kind = self._get_unit(key=key, kind=kind)
-
-        results_cache, ids_cached, ids_not_cached = await self._get_responses_from_cache(
-            method=method, url=url, id_list=id_list
-        )
-
-        bar = self.logger.get_synchronous_iterator(
-            ids_not_cached,
-            desc=f"Getting {kind}",
-            unit=kind,
-            disable=len(ids_not_cached) < self._bar_threshold
-        )
-
-        results: list[dict[str, Any]] = []
-        log = f"{kind.title()}: {len(ids_not_cached):>5}"
-        for id_ in bar:
-            href = f"{url}/{id_}"
-            response = await self.handler.request(
-                method=method, url=href, params=params, persist=False, log_message=log
-            )
-            self._enrich_with_identifiers(response=response, id_=id_, href=href)
-
-            if key and key not in response:
-                raise APIError(f"Given key {key!r} not found in response keys: {list(response.keys())}")
-            results.extend(response[key]) if key else results.append(response)
-
-        await self._cache_responses(method=method, responses=results)
-        self._sort_results(results=results, extension=results_cache, id_list=id_list)
-
-        return results
-
-    async def _get_items_batched(
-            self,
-            url: str | URL,
-            id_list: Collection[str],
-            params: Mapping[str, Any] | None = None,
+            params: MutableMapping[str, Any] | None = None,
             key: str | None = None,
             kind: str | None = None,
             limit: int = 50,
-            *_,
-            **__,
     ) -> list[dict[str, Any]]:
         """
         Get responses from a given ``url`` appending an ID to each request from a given ``id_list``
         i.e. ``URL`` or ``ID``.
-        This function executes each URL request in batches of IDs based on the given ``batch_size``.
+
+        When limit == 1, this function executes each URL request individually for each ID i.e. ``URL`` or ``ID``.
+        Otherwise, it executes each URL request in batches of IDs based on the given ``limit`` size.
         It passes this chunked list of IDs to the request handler as a set of params in the form:
-        ``{<IDs>: '<comma separated string of IDs>'}``
+        ``{<ids>: '<comma separated string of IDs>'}``
 
         :param url: The base API URL endpoint for the required requests.
         :param id_list: List of IDs to append to the given URL.
@@ -120,52 +65,66 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         :param kind: The unit to use for logging. If None, determine from ``key`` or default to ``items``.
         :param key: The key to reference from each response to get the list of required values.
         :param limit: Size of each batch of IDs to get. This value will be limited to be between ``1`` and ``50``.
+            When limit is 1, requests will be made individually without any batching params configured.
         :return: API JSON responses for each item at the given ``key``.
         :raise APIError: When the given ``key`` is not in the API response.
         """
         method = "GET"
         url = url.rstrip("/")
         kind = self._get_unit(key=key, kind=kind)
+        params = params if params is not None else {}
 
-        results_cache, ids_cached, ids_not_cached = await self._get_responses_from_cache(
+        results, ids_cached, ids_not_cached = await self._get_responses_from_cache(
             method=method, url=url, id_list=id_list
         )
 
-        id_chunks = list(batched(ids_not_cached, limit_value(limit, floor=1, ceil=50)))
-        bar = self.logger.get_synchronous_iterator(
-            range(len(id_chunks)),
-            desc=f"Getting {kind}",
-            unit="pages",
-            disable=len(id_chunks) < self._bar_threshold
-        )
+        if limit == 1:
+            id_requests = ids_not_cached
+        else:
+            id_requests = list(batched(ids_not_cached, limit_value(limit, floor=1, ceil=50)))
 
-        results: list[dict[str, Any]] = []
-        params = params if params is not None else {}
-        for idx in bar:  # get responses in batches
-            id_chunk = id_chunks[idx]
-            params_chunk = params | {"ids": ",".join(id_chunk)}
-            log = f"{kind.title() + ':':<11} {len(results) + len(id_chunk):>6}/{len(ids_not_cached):<6}"
+        async def _get_result(i: int, id_: str | list[str]) -> dict[str, Any]:
+            nonlocal params
+
+            if isinstance(id_, str):  # single call
+                href = f"{url}/{id_}"
+                log = f"{kind.title()}: {len(ids_not_cached):>5}"
+            else:  # batched call
+                href = url
+                params |= {"ids": ",".join(id_)}
+                log = f"{kind.title() + ':':<11} {sum(map(len, id_requests[i:])):>6}/{len(ids_not_cached):<6}"
 
             response = await self.handler.request(
-                method=method, url=url, params=params_chunk, persist=False, log_message=log
+                method=method, url=href, params=params, persist=False, log_message=log
             )
             if key and key not in response:
                 raise APIError(f"Given key {key!r} not found in response keys: {list(response.keys())}")
 
-            results.extend(response[key]) if key else results.append(response)
+            if key:  # ensure identifiers are on each response so results can be sorted after execution
+                for i, r in zip(id_, response[key]):
+                    self._enrich_with_identifiers(response=r, id_=i, href=f"{url}/{i}")
+            else:
+                self._enrich_with_identifiers(response=response, id_=id_, href=f"{url}/{id_}")
 
-        for id_, result in zip(id_list, results):
-            href = f"{url}/{id_}"
-            self._enrich_with_identifiers(response=result, id_=id_, href=href)
+            return response
 
-        await self._cache_responses(method=method, responses=results)
-        self._sort_results(results=results, extension=results_cache, id_list=id_list)
+        responses = await self.logger.get_asynchronous_iterator(
+            (_get_result(i=i, id_=id_) for i, id_ in enumerate(id_requests)),
+            desc=f"Getting {kind}",
+            unit=kind if limit == 1 else "pages",
+            disable=len(id_requests) < self._bar_threshold
+        )
+        if key:
+            responses = [r for response in responses for r in response[key]]
+
+        await self._cache_responses(method=method, responses=responses)
+
+        id_list = tuple(id_list.keys()) if isinstance(id_list, Mapping) else to_collection(id_list)
+        results.extend(responses)
+        results.sort(key=lambda r: id_list.index(r[self.id_key]))
 
         return results
 
-    ###########################################################################
-    ## Core GET endpoint methods
-    ###########################################################################
     async def extend_items(
             self,
             response: MutableMapping[str, Any] | RemoteResponse,
@@ -225,6 +184,9 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             return response[self.items_key]
 
         initial_url_key = "next" if response[self.items_key] and response.get("next") else self.url_key
+        if not response.get(initial_url_key):
+            return []
+
         initial_url = URL(response[initial_url_key])
         limit = int(initial_url.query.get("limit", 50))
         offset = int(initial_url.query.get("offset", len(response.get(self.items_key, []))))
@@ -277,6 +239,9 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
 
         return response[self.items_key]
 
+    ###########################################################################
+    ## Core GET endpoint methods
+    ###########################################################################
     async def get_items(
             self,
             values: APIInputValueMulti[RemoteResponse],
@@ -330,11 +295,12 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         id_list = self.wrangler.extract_ids(values, kind=kind)
 
         if kind in {RemoteObjectType.USER, RemoteObjectType.PLAYLIST} or len(id_list) <= 1:
-            results = await self._get_items_multi(url=url, id_list=id_list, kind=unit)
-        else:
-            if kind == RemoteObjectType.ALBUM:
-                limit = limit_value(limit, floor=1, ceil=20)
-            results = await self._get_items_batched(url=url, id_list=id_list, key=unit, limit=limit)
+            limit = 1  # force non-batched calls
+        elif kind == RemoteObjectType.ALBUM:
+            limit = limit_value(limit, floor=1, ceil=20)
+        results = await self._get_items(
+            url=url, id_list=id_list, kind=unit, key=unit if limit > 1 else None, limit=limit
+        )
 
         key = self.collection_item_map.get(kind, kind)
         key_name = self._format_key(key)
@@ -344,14 +310,16 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             self.handler.log("DONE", url, message=f"Retrieved {len(results):>6} {unit}")
             return results
 
-        bar = self.logger.get_synchronous_iterator(
-            results, desc=f"Extending {unit}", unit=unit, disable=len(id_list) < self._bar_threshold
-        )
+        async def _get_result(result: dict[str, Any]) -> None:
+            self.handler.log("INFO", url, message=f"Extending {key_name} on {unit}")
+            await self.extend_items(result, kind=kind, key=key, leave_bar=False)
 
-        for result in bar:
-            if result[key_name].get("next") or ("next" not in result[key_name] and result[key_name].get(self.url_key)):
-                self.handler.log("INFO", url, message=f"Extending {key_name} on {unit}")
-                await self.extend_items(result, kind=kind, key=key, leave_bar=False)
+        await self.logger.get_asynchronous_iterator(
+            map(_get_result, results),
+            desc=f"Extending {unit}",
+            unit=unit,
+            disable=len(id_list) < self._bar_threshold
+        )
 
         self._merge_results_to_input(original=values, responses=results, ordered=True)
         self._refresh_responses(responses=values, skip_checks=False)
@@ -413,6 +381,54 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
     ###########################################################################
     ## Tracks GET endpoint methods
     ###########################################################################
+    async def get_tracks(
+            self,
+            values: APIInputValueMulti[RemoteResponse],
+            features: bool = False,
+            analysis: bool = False,
+            limit: int = 50,
+            *_,
+            **__,
+    ) -> list[dict[str, Any]]:
+        """
+        ``GET: /{kind}s`` + ``GET: /audio-features`` and/or ``GET: /audio-analysis``
+
+        Get track(s) info and any audio features/analysis.
+        Mostly just a wrapper for ``get_items`` and ``extend_tracks`` functions.
+
+        ``values`` may be:
+            * A string representing a URL/URI/ID of type 'track'.
+            * A MutableSequence of strings representing URLs/URIs/IDs of the type 'track'.
+            * A remote API JSON response for a track including:
+                - some items under an ``items`` key,
+                - a valid ID value under an ``id`` key.
+            * A MutableSequence of remote API JSON responses for a set of tracks including the same structure as above.
+            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
+              as described above.
+            * A Sequence of RemoteResponses as above.
+
+        If JSON response(s) given, this updates each response given by adding the results
+        under the ``audio_features`` and ``audio_analysis`` keys as appropriate.
+
+        :param values: The values representing some remote track/s. See description for allowed value types.
+        :param features: When True, get audio features.
+        :param analysis: When True, get audio analysis.
+        :param limit: Size of batches to request when getting audio features.
+            This value will be limited to be between ``1`` and ``50``.
+        :return: API JSON responses for each item, or the original response if the input ``values`` are API responses.
+        :raise RemoteObjectTypeError: Raised when the item types of the input ``values`` are not all tracks or IDs.
+        """
+        tracks = await self.get_items(values=values, kind=RemoteObjectType.TRACK, limit=limit)
+
+        # ensure that response are being assigned back to the original values if API response(s) given
+        if isinstance(values, Mapping | RemoteResponse):
+            tracks = [values]
+        elif isinstance(values, Collection) and all(isinstance(v, Mapping | RemoteResponse) for v in values):
+            tracks = values
+
+        await self.extend_tracks(values=tracks, features=features, analysis=analysis, limit=limit)
+        return tracks
+
     async def extend_tracks(
             self,
             values: APIInputValueMulti[RemoteResponse],
@@ -465,27 +481,24 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         if analysis:
             config["analysis"] = (f"{self.url}/audio-analysis", "audio_analysis", False)
 
-        results: list[dict[str, Any]]
-        if len(id_list) == 1:
-            id_ = id_list[0]
-            id_map = {self.id_key: id_}
+        async def _get_result(kind: str, url: str, key: str, batch: bool) -> dict[str, list[dict[str, Any]]]:
+            _key = key
+            _limit = limit
+            if not batch or len(id_list) <= 1:
+                _key = None
+                _limit = 1
 
-            result = id_map.copy()
-            for (url, key, _) in config.values():
-                result[key] = await self.handler.get(f"{url}/{id_}") | id_map.copy()
-            results = [result]
-        else:
-            results = []
-            for kind, (url, key, batch) in config.items():
-                method = self._get_items_batched if batch else self._get_items_multi
-                responses = await method(url=url, id_list=id_list, kind=kind, key=key if batch else None, limit=limit)
+            return {key: await self._get_items(url=url, id_list=id_list, kind=kind, key=_key, limit=_limit)}
+
+        results: list[dict[str, Any]] = []
+        results_map = await asyncio.gather(
+            *[_get_result(kind=kind, url=url, key=key, batch=batch) for kind, (url, key, batch) in config.items()]
+        )
+        for result_map in results_map:
+            for key, responses in result_map.items():
                 responses.sort(key=lambda response: id_list.index(response[self.id_key]))
                 responses = [{self.id_key: response[self.id_key], key: response} for response in responses]
-
-                if not results:
-                    results = responses
-                else:
-                    results = [result | response for result, response in zip(results, responses)]
+                results = responses if not results else [rs | rp for rs, rp in zip(results, responses)]
 
         self._merge_results_to_input(original=values, responses=results, ordered=False, clear=False)
         self._refresh_responses(responses=values, skip_checks=False)
@@ -502,54 +515,6 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         )
 
         return results
-
-    async def get_tracks(
-            self,
-            values: APIInputValueMulti[RemoteResponse],
-            features: bool = False,
-            analysis: bool = False,
-            limit: int = 50,
-            *_,
-            **__,
-    ) -> list[dict[str, Any]]:
-        """
-        ``GET: /{kind}s`` + ``GET: /audio-features`` and/or ``GET: /audio-analysis``
-
-        Get track(s) info and any audio features/analysis.
-        Mostly just a wrapper for ``get_items`` and ``extend_tracks`` functions.
-
-        ``values`` may be:
-            * A string representing a URL/URI/ID of type 'track'.
-            * A MutableSequence of strings representing URLs/URIs/IDs of the type 'track'.
-            * A remote API JSON response for a track including:
-                - some items under an ``items`` key,
-                - a valid ID value under an ``id`` key.
-            * A MutableSequence of remote API JSON responses for a set of tracks including the same structure as above.
-            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
-              as described above.
-            * A Sequence of RemoteResponses as above.
-
-        If JSON response(s) given, this updates each response given by adding the results
-        under the ``audio_features`` and ``audio_analysis`` keys as appropriate.
-
-        :param values: The values representing some remote track/s. See description for allowed value types.
-        :param features: When True, get audio features.
-        :param analysis: When True, get audio analysis.
-        :param limit: Size of batches to request when getting audio features.
-            This value will be limited to be between ``1`` and ``50``.
-        :return: API JSON responses for each item, or the original response if the input ``values`` are API responses.
-        :raise RemoteObjectTypeError: Raised when the item types of the input ``values`` are not all tracks or IDs.
-        """
-        tracks = await self.get_items(values=values, kind=RemoteObjectType.TRACK, limit=limit)
-
-        # ensure that response are being assigned back to the original values if API response(s) given
-        if isinstance(values, Mapping | RemoteResponse):
-            tracks = [values]
-        elif isinstance(values, Collection) and all(isinstance(v, Mapping | RemoteResponse) for v in values):
-            tracks = values
-
-        await self.extend_tracks(values=tracks, features=features, analysis=analysis, limit=limit)
-        return tracks
 
     ###########################################################################
     ## Artists GET endpoints methods

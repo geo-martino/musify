@@ -359,6 +359,7 @@ class RemoteLibrary[
         """
         return {name: [track.uri for track in pl] for name, pl in self.playlists.items()}
 
+    # TODO: optimise me
     async def restore_playlists(self, playlists: RestorePlaylistsType, dry_run: bool = True) -> None:
         """
         Restore playlists from a backup to loaded playlist objects.

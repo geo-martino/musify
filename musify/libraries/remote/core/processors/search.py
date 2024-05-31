@@ -4,6 +4,7 @@ Processor operations that search for and match given items with remote items.
 Searches for matches on remote APIs, matches the item to the best matching result from the query,
 and assigns the ID of the matched object back to the item.
 """
+import asyncio
 import logging
 from collections.abc import Mapping, Sequence, Iterable, Collection, Awaitable
 from dataclasses import dataclass, field
@@ -275,6 +276,7 @@ class RemoteItemSearcher(Processor):
 
         return item, result
 
+    # TODO: optimise me?
     async def _search_items[T: MusifyItemSettable](self, collection: Iterable[T]) -> None:
         """Search for matches on individual items in an item collection that have ``None`` on ``has_uri`` attribute"""
         for item in collection:
@@ -298,8 +300,7 @@ class RemoteItemSearcher(Processor):
 
         responses = await self._get_results(collection, kind=kind, settings=search_config)
         key = self.api.collection_item_map[kind]
-        for response in responses:
-            await self.api.extend_items(response, kind=kind, key=key)
+        await asyncio.gather(*[self.api.extend_items(response, kind=kind, key=key) for response in responses])
 
         # noinspection PyProtectedMember,PyTypeChecker
         # order to prioritise results that are closer to the item count of the input collection
@@ -317,6 +318,7 @@ class RemoteItemSearcher(Processor):
         if not result:
             return
 
+        # TODO: optimise me?
         # check all items in the collection have been matched
         # get matches on those that are still missing matches
         for item in collection:

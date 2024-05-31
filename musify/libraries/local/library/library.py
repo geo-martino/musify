@@ -300,6 +300,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             self.logger.debug(f"Load error for track: {path} - {ex}")
             self.errors.append(path)
 
+    # TODO: optimise me
     async def load_tracks(self) -> None:
         """Load all tracks from all the valid paths in this library, replacing currently loaded tracks."""
         if not self._track_paths:
@@ -346,6 +347,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             self.logger.debug(f"Load error for playlist: {path} - {ex}")
             self.errors.append(path)
 
+    # TODO: optimise me
     async def load_playlists(self) -> None:
         """
         Load all playlists found in this library's ``playlist_folder``,
@@ -384,6 +386,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
                 f"\33[1;94m{len(playlist):>6} total \33[0m"
             )
 
+    # TODO: optimise me
     async def save_playlists(self, dry_run: bool = True) -> dict[str, Result]:
         """
         For each Playlist in this Library, saves its associate tracks and its settings (if applicable) to file.

@@ -94,6 +94,7 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
         #: A :py:class:`RemoteDataWrangler` object for processing remote data
         self.remote_wrangler = remote_wrangler
 
+    # TODO: optimise me
     async def save_tracks(
             self,
             tags: UnitIterable[LocalTrackField] = LocalTrackField.ALL,
@@ -299,7 +300,7 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
             raise UnexpectedPathError(path, "Path must be a directory")
 
         # load tracks in the folder
-        tasks = asyncio.gather(*(load_track(p) for p in path.glob("*") if p.suffix in TRACK_FILETYPES))
+        tasks = asyncio.gather(*[load_track(p) for p in path.glob("*") if p.suffix in TRACK_FILETYPES])
         return cls(tracks=await tasks, name=path.name, remote_wrangler=remote_wrangler)
 
 

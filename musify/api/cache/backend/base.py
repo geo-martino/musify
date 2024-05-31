@@ -140,6 +140,7 @@ class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], Awaitable, metaclass=
         """Get the response relating to the given ``request`` from this repository if it exists."""
         raise NotImplementedError
 
+    # TODO: optimise me on sqlite backend
     async def get_responses(self, requests: Collection[RepositoryRequestType[K]]) -> list[V]:
         """
         Get the responses relating to the given ``requests`` from this repository if they exist.
@@ -164,6 +165,7 @@ class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], Awaitable, metaclass=
     async def _set_item_from_key_value_pair(self, __key: K, __value: Any) -> None:
         raise NotImplementedError
 
+    # TODO: optimise me on sqlite backend
     async def save_responses(self, responses: Mapping[K, V] | Collection[ClientResponse]) -> None:
         """
         Save the given ``responses`` to this repository if a key can be extracted from them.
@@ -185,6 +187,7 @@ class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], Awaitable, metaclass=
         """
         raise NotImplementedError
 
+    # TODO: optimise me on sqlite backend
     async def delete_responses(self, requests: Collection[RepositoryRequestType[K]]) -> int:
         """
         Delete the given ``requests`` from this repository if they exist.
