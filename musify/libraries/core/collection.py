@@ -94,7 +94,7 @@ class RemoteURLAPIGetter(ItemGetterStrategy):
     def name(self) -> str:
         return "API URL"
 
-    def get_value_from_item(self, item: RemoteObject) -> str:
+    def get_value_from_item(self, item: RemoteObject) -> URL:
         return item.url
 
 
@@ -104,7 +104,7 @@ class RemoteURLEXTGetter(ItemGetterStrategy):
     def name(self) -> str:
         return "external URL"
 
-    def get_value_from_item(self, item: RemoteObject) -> str:
+    def get_value_from_item(self, item: RemoteObject) -> URL:
         return item.url_ext
 
 
@@ -350,9 +350,12 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], HasLengt
             f"Key is invalid. The following errors were thrown: {", ".join(map(str, caught_exceptions))}"
         )
 
-    @staticmethod
-    def __get_item_getters(__key: str | URL | MusifyItem | Path | File | RemoteResponse) -> list[ItemGetterStrategy]:
+    @classmethod
+    def __get_item_getters(
+            cls, __key: str | URL | MusifyItem | Path | File | RemoteResponse
+    ) -> list[ItemGetterStrategy]:
         getters = []
+
         if isinstance(__key, File):
             getters.append(PathGetter(__key.path))
         if isinstance(__key, Path):
@@ -367,14 +370,32 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], HasLengt
         if isinstance(__key, MusifyObject):
             getters.append(NameGetter(__key.name))
         if isinstance(__key, str):
-            getters.extend([
-                RemoteIDGetter(__key),
-                RemoteURIGetter(__key),
-                RemoteURLAPIGetter(__key),
-                RemoteURLEXTGetter(__key),
-                PathGetter(__key),
-                NameGetter(__key),
-            ])
+            getters.extend(cls.__get_item_getters_str(__key))
+
+        return getters
+
+    @staticmethod
+    def __get_item_getters_str(__key: str) -> list[ItemGetterStrategy]:
+        getters = []
+
+        try:
+            url = URL(__key)
+            getters.append(RemoteURLAPIGetter(url))
+            getters.append(RemoteURLEXTGetter(url))
+        except TypeError:
+            pass
+
+        try:
+            path = Path(__key)
+            getters.append(PathGetter(path))
+        except TypeError:
+            pass
+
+        getters.extend([
+            RemoteIDGetter(__key),
+            RemoteURIGetter(__key),
+            NameGetter(__key),
+        ])
 
         return getters
 
