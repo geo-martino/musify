@@ -132,12 +132,12 @@ class M3U(LocalPlaylist[FilterDefinedList[str | Path | File]]):
             with open(self.path, "r", encoding="utf-8") as file:  # get list of paths that were saved for results
                 final_paths = {Path(line.rstrip()) for line in file if line.rstrip()}
         else:  # use current list of tracks as a proxy of paths that were saved for results
-            final_paths = {track.path for track in self._tracks}
+            final_paths = set(map(Path, self.path_mapper.unmap_many(self._tracks, check_existence=False)))
 
         return SyncResultM3U(
             start=len(start_paths),
             added=len(final_paths - start_paths),
-            removed=len(start_paths - final_paths),
+            removed=len(start_paths.difference(final_paths)),
             unchanged=len(start_paths.intersection(final_paths)),
             difference=len(final_paths) - len(start_paths),
             final=len(final_paths),

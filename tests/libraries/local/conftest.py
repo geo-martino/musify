@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from musify.file.path_mapper import PathStemMapper
@@ -21,25 +23,25 @@ def path_mapper() -> PathStemMapper:
 
 
 @pytest.fixture(params=[path_track_flac])
-async def track_flac(path: str, remote_wrangler: RemoteDataWrangler) -> FLAC:
+async def track_flac(path: Path, remote_wrangler: RemoteDataWrangler) -> FLAC:
     """Yields instantiated :py:class:`FLAC` objects for testing"""
     return await FLAC(file=path, remote_wrangler=remote_wrangler)
 
 
 @pytest.fixture(params=[path_track_mp3])
-async def track_mp3(path: str, remote_wrangler: RemoteDataWrangler) -> MP3:
+async def track_mp3(path: Path, remote_wrangler: RemoteDataWrangler) -> MP3:
     """Yields instantiated :py:class:`MP3` objects for testing"""
     return await MP3(file=path, remote_wrangler=remote_wrangler)
 
 
 @pytest.fixture(params=[path_track_m4a])
-async def track_m4a(path: str, remote_wrangler: RemoteDataWrangler) -> M4A:
+async def track_m4a(path: Path, remote_wrangler: RemoteDataWrangler) -> M4A:
     """Yields instantiated :py:class:`M4A` objects for testing"""
     return await M4A(file=path, remote_wrangler=remote_wrangler)
 
 
 @pytest.fixture(params=[path_track_wma])
-async def track_wma(path: str, remote_wrangler: RemoteDataWrangler) -> WMA:
+async def track_wma(path: Path, remote_wrangler: RemoteDataWrangler) -> WMA:
     """Yields instantiated :py:class:`WMA` objects for testing"""
     return await WMA(file=path, remote_wrangler=remote_wrangler)
 

@@ -19,7 +19,7 @@ from tests.libraries.remote.spotify.utils import random_uri
 from tests.utils import path_txt
 
 try:
-    from PIL.Image import Image
+    from PIL import Image
 except ImportError:
     Image = None
 
@@ -196,6 +196,8 @@ def test_loaded_attributes_common(track: LocalTrack):
     assert track.last_played is None
     assert track.play_count is None
 
+    assert not track._reader.read_images()  # images are always cleared to save memory
+
 
 class TestLocalTrack(MusifyItemTester):
     """Run generic tests for :py:class:`LocalTrack` implementations"""
@@ -305,7 +307,22 @@ class TestLocalTrack(MusifyItemTester):
         assert track.album == item_modified.album
         assert track.rating == item_modified.rating
 
-    # TODO: add test for extracting an image from a LocalTrack
+    def test_extract_images(self, track: LocalTrack, tmp_path: Path):
+        # all tracks have an embedded image
+        # images should be removed in refresh step, they should then be reloaded during extraction call
+        assert not track._reader.read_images()
+        assert track.has_image
+
+        def _get_paths():
+            img_extensions = {ex for ex, f in Image.registered_extensions().items() if f in Image.OPEN}
+            return [path for ext in img_extensions for path in tmp_path.glob(f"*{ext}")]
+
+        assert not _get_paths()
+        count = track.extract_images_to_file(tmp_path)
+        assert len(_get_paths()) == count > 0
+
+        # deletes loaded images again after running
+        assert not track._reader.read_images()
 
 
 class TestLocalTrackWriter:
@@ -530,7 +547,7 @@ class TestLocalTrackWriter:
         return track, track_copy
 
     @staticmethod
-    def assert_update_image_result(track: LocalTrack, image: Image, result: SyncResultTrack):
+    def assert_update_image_result(track: LocalTrack, image: Image.Image, result: SyncResultTrack):
         """Check for expected results after non-dry_run operations to update LocalTrack images"""
         assert result.saved
 

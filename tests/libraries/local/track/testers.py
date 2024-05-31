@@ -7,6 +7,7 @@ import pytest
 from musify.exception import MusifyKeyError
 from musify.libraries.local.collection import LocalCollection
 from musify.libraries.local.track import LocalTrack
+from musify.libraries.local.track.field import LocalTrackField
 from musify.libraries.remote.spotify.object import SpotifyTrack
 from tests.libraries.core.collection import MusifyCollectionTester
 from tests.libraries.local.track.utils import random_tracks
@@ -22,6 +23,13 @@ class LocalCollectionTester(MusifyCollectionTester, metaclass=ABCMeta):
     @pytest.fixture(scope="package")
     def collection_merge_invalid(self, spotify_mock: SpotifyMock) -> Collection[SpotifyTrack]:
         return tuple(SpotifyTrack(response) for response in sample(spotify_mock.tracks, k=5))
+
+    @staticmethod
+    def remove_fake_tracks(collection: LocalCollection) -> None:
+        """Remove any fake/generated tracks from the collection."""
+        tracks = collection.items.copy()
+        collection.clear()
+        collection.extend(track for track in tracks if track.path.exists())
 
     def test_collection_getitem_dunder_method(
             self, collection: LocalCollection, collection_merge_items: Iterable[LocalTrack]
@@ -52,6 +60,19 @@ class LocalCollectionTester(MusifyCollectionTester, metaclass=ABCMeta):
             assert collection[invalid_track.path]
         with pytest.raises(MusifyKeyError):
             assert collection[invalid_track.uri]
+
+    async def test_save_tracks(self, collection: LocalCollection):
+        self.remove_fake_tracks(collection)
+
+        for track in collection[:-2]:
+            track.title = "brand new title"
+            track.track_number = 22
+
+        results = await collection.save_tracks(replace=True, dry_run=True)
+
+        assert len(results) == len(collection[:-2])
+        assert all(not result.saved for result in results.values())
+        assert all(LocalTrackField.TITLE in result.updated for result in results.values())
 
     @staticmethod
     def test_merge_tracks(collection: LocalCollection, collection_merge_items: Collection[SpotifyTrack]):

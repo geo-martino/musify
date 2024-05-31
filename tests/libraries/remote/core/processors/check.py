@@ -1,6 +1,7 @@
 import re
 from abc import ABCMeta, abstractmethod
 from itertools import batched
+from pathlib import Path
 from random import randrange, choice, sample
 
 import pytest
@@ -72,12 +73,12 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
     ## Utilities
     ###########################################################################
     @pytest.fixture(params=[path_token])
-    def token_file_path(self, path: str) -> str:
+    def token_file_path(self, path: Path) -> Path:
         """Yield the temporary path for the token JSON file"""
         return path
 
     @staticmethod
-    async def test_make_temp_playlist(checker: RemoteItemChecker, api_mock: RemoteMock, token_file_path: str):
+    async def test_make_temp_playlist(checker: RemoteItemChecker, api_mock: RemoteMock, token_file_path: Path):
         # force auth test to fail and reload from token
         checker.api.handler.authoriser.token = None
         checker.api.handler.authoriser.token_file_path = token_file_path
@@ -107,7 +108,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             collections: list[BasicCollection],
             playlists: list[RemotePlaylist],
             api_mock: RemoteMock,
-            token_file_path: str
+            token_file_path: Path
     ):
         # force auth test to fail and reload from token
         checker.api.handler.authoriser.token = None

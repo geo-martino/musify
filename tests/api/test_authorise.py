@@ -36,7 +36,7 @@ class TestAPIAuthoriser:
         }
 
     @pytest.fixture(params=[path_token])
-    def token_file_path(self, path: str) -> str:
+    def token_file_path(self, path: Path) -> Path:
         """Yield the temporary path for the token JSON file"""
         return path
 
@@ -64,7 +64,7 @@ class TestAPIAuthoriser:
         assert authoriser.token == token
         assert authoriser.token_safe != token
 
-    def test_load_token(self, authoriser: APIAuthoriser, token_file_path: str):
+    def test_load_token(self, authoriser: APIAuthoriser, token_file_path: Path):
         # just check it doesn't fail when no path given
         authoriser.token = None
         authoriser.token_file_path = None
@@ -211,7 +211,7 @@ class TestAPIAuthoriser:
         authoriser.test_expiry = 2000
         assert not authoriser._test_expiry()
 
-    async def test_auth_new_token(self, token: dict[str, Any], token_file_path: str, requests_mock: aioresponses):
+    async def test_auth_new_token(self, token: dict[str, Any], token_file_path: Path, requests_mock: aioresponses):
         authoriser = APIAuthoriser(name="test", auth_args={"url": "http://localhost/auth"}, test_expiry=1000)
 
         response = {"access_token": "valid token", "expires_in": 3000, "refresh_token": "new_refresh"}
@@ -222,7 +222,7 @@ class TestAPIAuthoriser:
         assert authoriser.headers == expected_header
         assert authoriser.token["refresh_token"] == "new_refresh"
 
-    async def test_auth_load_and_token_valid(self, token_file_path: str, requests_mock: aioresponses):
+    async def test_auth_load_and_token_valid(self, token_file_path: Path, requests_mock: aioresponses):
         authoriser = APIAuthoriser(
             name="test",
             test_args={"url": "http://localhost/test"},
@@ -237,7 +237,7 @@ class TestAPIAuthoriser:
         expected_header = {"Authorization": f"Bearer {authoriser.token["access_token"]}"}
         assert authoriser.headers == expected_header
 
-    async def test_auth_force_load_and_token_valid(self, token_file_path: str):
+    async def test_auth_force_load_and_token_valid(self, token_file_path: Path):
         authoriser = APIAuthoriser(
             name="test",
             token={"this token": "is not valid"},
@@ -253,7 +253,7 @@ class TestAPIAuthoriser:
 
         assert authoriser.headers == expected_header | authoriser.header_extra
 
-    async def test_auth_force_new_and_no_args(self, token: dict[str, Any], token_file_path: str):
+    async def test_auth_force_new_and_no_args(self, token: dict[str, Any], token_file_path: Path):
         authoriser = APIAuthoriser(name="test", token=token, token_file_path=token_file_path)
 
         # force new despite being given token and token file path
@@ -261,7 +261,7 @@ class TestAPIAuthoriser:
             await authoriser.authorise(force_new=True)
 
     async def test_auth_new_token_and_no_refresh(
-            self, token: dict[str, Any], token_file_path: str, requests_mock: aioresponses
+            self, token: dict[str, Any], token_file_path: Path, requests_mock: aioresponses
     ):
         authoriser = APIAuthoriser(
             name="test",
@@ -276,7 +276,7 @@ class TestAPIAuthoriser:
         assert authoriser.headers == expected_header
 
     async def test_auth_new_token_and_refresh_valid(
-            self, token: dict[str, Any], token_file_path: str, requests_mock: aioresponses
+            self, token: dict[str, Any], token_file_path: Path, requests_mock: aioresponses
     ):
         authoriser = APIAuthoriser(
             name="test",
@@ -295,7 +295,7 @@ class TestAPIAuthoriser:
         assert authoriser.token["refresh_token"] == "new_refresh"
 
     async def test_auth_new_token_and_refresh_invalid(
-            self, token: dict[str, Any], token_file_path: str, requests_mock: aioresponses
+            self, token: dict[str, Any], token_file_path: Path, requests_mock: aioresponses
     ):
         authoriser = APIAuthoriser(
             name="test",

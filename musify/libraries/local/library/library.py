@@ -390,15 +390,15 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
                 f"\33[1;94m{len(playlist):>6} total \33[0m"
             )
 
-    async def save_playlists(self, dry_run: bool = True) -> dict[str, Result]:
+    async def save_playlists(self, dry_run: bool = True) -> dict[LocalPlaylist, Result]:
         """
         For each Playlist in this Library, saves its associate tracks and its settings (if applicable) to file.
 
         :param dry_run: Run function, but do not modify the file on the disk.
         :return: A map of the playlist name to the results of its sync as a :py:class:`Result` object.
         """
-        async def _save_playlist(pl: LocalPlaylist) -> tuple[str, Result]:
-            return pl.name, await pl.save(dry_run=dry_run)
+        async def _save_playlist(pl: LocalPlaylist) -> tuple[LocalPlaylist, Result]:
+            return pl, await pl.save(dry_run=dry_run)
         results = await self.logger.get_asynchronous_iterator(
             map(_save_playlist, self.playlists.values()), desc="Updating playlists", unit="tracks"
         )
@@ -407,7 +407,6 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     ###########################################################################
     ## Backup/restore
     ###########################################################################
-    # TODO: add test for this
     def restore_tracks(
             self, backup: RestoreTracksType, tags: UnitIterable[LocalTrackField] = LocalTrackField.ALL
     ) -> int:
