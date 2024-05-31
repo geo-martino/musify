@@ -404,7 +404,7 @@ async def spotify_api(spotify_mock: SpotifyMock) -> SpotifyAPI:
     api.handler.backoff_factor = 1
     api.handler.backoff_count = 10
     api.handler.wait_time = 0
-    api.handler.wait_interval = 0
+    api.handler.wait_increment = 0
 
     async with api as a:
         spotify_mock.reset()

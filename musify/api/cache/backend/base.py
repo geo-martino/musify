@@ -1,9 +1,9 @@
 import logging
 from abc import ABCMeta, abstractmethod
-from collections.abc import MutableMapping, Callable, Collection, AsyncIterable, Mapping, Awaitable
+from collections.abc import MutableMapping, Callable, Collection, AsyncIterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Self, AsyncContextManager
+from typing import Any, Self
 
 from dateutil.relativedelta import relativedelta
 from aiohttp import RequestInfo, ClientRequest, ClientResponse
@@ -47,7 +47,7 @@ class RequestSettings(metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], Awaitable, metaclass=ABCMeta):
+class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], metaclass=ABCMeta):
     """
     Represents a repository in the backend cache, providing a dict-like interface
     for interacting with this repository.
@@ -81,6 +81,10 @@ class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], Awaitable, metaclass=
 
         self.settings = settings
         self._expire = expire
+
+    @abstractmethod
+    def __await__(self) -> Self:
+        raise NotImplementedError
 
     def __hash__(self):
         return hash(self.settings.name)
@@ -194,7 +198,7 @@ class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], Awaitable, metaclass=
         return sum(results)
 
 
-class ResponseCache[ST: ResponseRepository](MutableMapping[str, ST], Awaitable, AsyncContextManager):
+class ResponseCache[ST: ResponseRepository](MutableMapping[str, ST], metaclass=ABCMeta):
     """
     Represents a backend cache of many repositories, providing a dict-like interface for interacting with them.
 
@@ -234,8 +238,16 @@ class ResponseCache[ST: ResponseRepository](MutableMapping[str, ST], Awaitable, 
 
         self._repositories: dict[str, ST] = {}
 
+    @abstractmethod
+    def __await__(self) -> Self:
+        raise NotImplementedError
+
     async def __aenter__(self) -> Self:
         return await self
+
+    @abstractmethod
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        raise NotImplementedError
 
     def __repr__(self):
         return repr(self._repositories)

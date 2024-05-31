@@ -4,7 +4,7 @@ Core abstract classes for the :py:mod:`Remote` module.
 These define the foundations of any remote object or item.
 """
 from abc import ABCMeta, abstractmethod
-from typing import Any, Self, AsyncContextManager
+from typing import Any, Self
 
 from yarl import URL
 
@@ -15,7 +15,7 @@ from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.types import APIInputValueSingle
 
 
-class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, AsyncContextManager, metaclass=ABCMeta):
+class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, metaclass=ABCMeta):
     """
     Generic base class for remote objects. Extracts key data from a remote API JSON response.
 

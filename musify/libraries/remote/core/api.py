@@ -6,7 +6,7 @@ All methods that interact with the API should return raw, unprocessed responses.
 import logging
 from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, MutableMapping, Mapping, Sequence, Iterable
-from typing import Any, Self, AsyncContextManager
+from typing import Any, Self
 
 from yarl import URL
 
@@ -23,7 +23,7 @@ from musify.types import UnitSequence, JSON, UnitList
 from musify.utils import align_string, to_collection
 
 
-class RemoteAPI(AsyncContextManager, metaclass=ABCMeta):
+class RemoteAPI(metaclass=ABCMeta):
     """
     Collection of endpoints for a remote API.
     See :py:class:`RequestHandler` and :py:class:`APIAuthoriser`
@@ -35,7 +35,7 @@ class RemoteAPI(AsyncContextManager, metaclass=ABCMeta):
         Repository and cachable request types can be set up by child classes.
     """
 
-    __slots__ = ("logger", "handler", "wrangler", "user_data")
+    __slots__ = ("logger", "handler", "wrangler", "user_data", "user_playlist_data")
 
     #: Map of :py:class:`RemoteObjectType` for remote collections
     #: to the  :py:class:`RemoteObjectType` of the items they hold

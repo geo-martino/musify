@@ -9,7 +9,7 @@ from collections.abc import Mapping, Callable
 from datetime import datetime, timedelta
 from http import HTTPStatus
 from time import sleep
-from typing import Any, AsyncContextManager, Self
+from typing import Any, Self
 from urllib.parse import unquote
 
 import aiohttp
@@ -24,7 +24,7 @@ from musify.log.logger import MusifyLogger
 from musify.utils import clean_kwargs
 
 
-class RequestHandler(AsyncContextManager):
+class RequestHandler:
     """
     Generic API request handler using cached responses for GET requests only.
     Caches GET responses for a maximum of 4 weeks by default.
@@ -35,7 +35,17 @@ class RequestHandler(AsyncContextManager):
     :param authoriser: The authoriser to use when authorising requests to the API.
     """
 
-    __slots__ = ("logger", "_connector", "_session", "authoriser", "backoff_start", "backoff_factor", "backoff_count")
+    __slots__ = (
+        "logger",
+        "_connector",
+        "_session",
+        "authoriser",
+        "backoff_start",
+        "backoff_factor",
+        "backoff_count",
+        "wait_time",
+        "wait_increment",
+    )
 
     @property
     def backoff_final(self) -> float:
@@ -95,8 +105,8 @@ class RequestHandler(AsyncContextManager):
 
         #: The initial time in seconds to wait after receiving a response from a request
         self.wait_time = 0
-        #: The interval by which to increase the wait time by after hitting a rate limit i.e. 429 response
-        self.wait_interval = 0.1
+        #: The amount to increase the wait time by each time a rate limit is hit i.e. 429 response
+        self.wait_increment = 0.1
 
     async def __aenter__(self) -> Self:
         if self.closed:
@@ -258,7 +268,7 @@ class RequestHandler(AsyncContextManager):
             raise APIError(message, response=response)
         elif response.status == 429:
             self.logger.debug(f"Rate limit hit. Increasing wait time between requests to {self.wait_time}")
-            self.wait_time += self.wait_interval
+            self.wait_time += self.wait_increment
 
         return error_message_found
 

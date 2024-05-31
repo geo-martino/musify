@@ -239,7 +239,7 @@ class SQLiteTable[K: tuple[Any, ...], V: str](ResponseRepository[K, V]):
 
 class SQLiteCache(ResponseCache[SQLiteTable]):
 
-    __slots__ = ("connection",)
+    __slots__ = ("_connector", "connection")
 
     # noinspection PyPropertyDefinition
     @classmethod
