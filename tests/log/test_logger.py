@@ -73,12 +73,65 @@ def test_file_paths(logger: MusifyLogger):
     assert [path.name for path in logger.file_paths] == ["test1.log", "test2.log"]
 
 
-# noinspection PyTypeChecker
 @pytest.mark.skipif(tqdm is None, reason="required modules not installed")
-def test_getting_iterator_as_progress_bar(logger: MusifyLogger):
+def test_tqdm_param_position(logger: MusifyLogger):
+    assert not logger._bars
+    assert logger._get_tqdm_param_position(2) == 2
+    assert logger._get_tqdm_param_position(9) == 9
+
+    # takes next available position when unfinished bars present
+    bar = logger.get_synchronous_iterator(iterable=range(0, 50), position=4)
+    assert bar.pos == -4
+    assert logger._get_tqdm_param_position() == 5
+    assert logger._bars
+
+    # clears bars
+    for bar in logger._bars:
+        bar.n = bar.total
+        bar.close()
+    assert logger._get_tqdm_param_position() == 0
+    assert not logger._bars
+
+
+@pytest.mark.skipif(tqdm is None, reason="required modules not installed")
+def test_tqdm_param_leave(logger: MusifyLogger):
+    assert logger._get_tqdm_param_leave(position=0)
+    assert not logger._get_tqdm_param_leave(position=2)
+    assert not logger._get_tqdm_param_leave(position=5)
+
+
+@pytest.mark.skipif(tqdm is None, reason="required modules not installed")
+def test_tqdm_kwargs(logger: MusifyLogger):
+    kwargs = dict(iterable=range(0, 50), initial=10, disable=True, file=sys.stderr)
+    kwargs_processed = logger._get_tqdm_kwargs(**kwargs)
+    assert kwargs_processed["initial"] == 10
+    assert kwargs_processed["disable"]
+
+    kwargs = dict(
+        iterable=range(0, 50),
+        initial=10,
+        disable=False,
+        file=sys.stderr,
+        ncols=500,
+        colour="blue",
+        smoothing=0.5,
+        position=3,
+    )
+    kwargs_processed = logger._get_tqdm_kwargs(**kwargs)
+    assert kwargs_processed["initial"] == 10
+    assert not kwargs_processed["disable"]
+    assert kwargs_processed["ncols"] != 500
+    assert kwargs_processed["colour"] == "blue"
+    assert kwargs_processed["smoothing"] != 0.5
+
+
+@pytest.mark.skipif(tqdm is None, reason="required modules not installed")
+def test_tqdm_iterator_synchronous(logger: MusifyLogger):
     logger._bars.clear()
 
-    bar: tqdm = logger.get_iterator(iterable=range(0, 50), initial=10, disable=True, file=sys.stderr)
+    bar: tqdm = logger.get_synchronous_iterator(
+        iterable=range(0, 50), initial=10, disable=True, file=sys.stderr
+    )
 
     assert bar.iterable == range(0, 50)
     assert bar.n == 10
@@ -87,8 +140,9 @@ def test_getting_iterator_as_progress_bar(logger: MusifyLogger):
     assert bar.disable
     assert bar in logger._bars
 
+    # adheres to disable_bars attribute
     logger.disable_bars = False
-    bar = logger.get_iterator(
+    bar = logger.get_synchronous_iterator(
         iterable=range(0, 50),
         initial=10,
         disable=False,
@@ -106,28 +160,20 @@ def test_getting_iterator_as_progress_bar(logger: MusifyLogger):
     assert bar.smoothing == 0.1
     assert bar.pos == -3
 
-    # takes next available position
-    bar = logger.get_iterator(iterable=range(0, 50))
-    assert bar.pos == -4
-
-    for bar in logger._bars:
-        bar.n = bar.total
-        bar.close()
-
-    bar = logger.get_iterator(
-        total=50,
-        disable=False,
-        file=sys.stderr,
-        ncols=500,
-        colour="blue",
-        smoothing=0.5,
-    )
-
-    assert logger._bars == [bar]
-    assert bar.leave
-    assert bar.pos == 0
-
     logger.disable_bars = True
+
+
+@pytest.mark.skipif(tqdm is None, reason="required modules not installed")
+async def test_tqdm_iterator_asynchronous(logger: MusifyLogger):
+    async def _task(i: int) -> int:
+        return i
+
+    # just check this runs
+    tasks = [_task(i) for i in range(10)]
+    results = await logger.get_asynchronous_iterator(tasks)
+
+    assert len(results) == len(tasks)
+    assert sorted(results) == [i for i in range(len(tasks))]
 
 
 def test_copy(logger: MusifyLogger):

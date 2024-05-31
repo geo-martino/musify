@@ -74,7 +74,7 @@ class SpotifyMock(RemoteMock):
             item_key = SpotifyAPI.collection_item_map[item_kind].name.lower() + "s"
 
         items_block = response.get(item_key, {})
-        return self.calculate_pages(limit=items_block.get("limit", 0), total=items_block.get("total", 0))
+        return self.calculate_pages(limit=items_block.get("limit", 50), total=items_block.get("total", 0))
 
     def __init__(self, **kwargs):
         super().__init__(case_sensitive=True, **{k: v for k, v in kwargs.items() if k != "case_sensitive"})

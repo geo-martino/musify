@@ -308,7 +308,7 @@ class MusicBee(LocalLibrary, File):
             "Location": str(track.path),
         }
 
-        return {k: v for k, v in data.items() if v is not None}
+        return dict(filter(lambda item: item[1] is not None, data.items()))
 
     @classmethod
     def playlist_to_xml(
@@ -347,7 +347,7 @@ class MusicBee(LocalLibrary, File):
             "Playlist Items": items,
         }
 
-        return {k: v for k, v in data.items() if v is not None}
+        return dict(filter(lambda item: item[1] is not None, data.items()))
 
 
 # noinspection PyProtectedMember

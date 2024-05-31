@@ -12,7 +12,6 @@ from musify.api.cache.session import CachedSession
 from musify.api.exception import CacheError
 from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.enum import RemoteObjectType
-from musify.utils import to_collection
 
 
 class SpotifyAPIBase(RemoteAPI, metaclass=ABCMeta):
@@ -46,18 +45,6 @@ class SpotifyAPIBase(RemoteAPI, metaclass=ABCMeta):
 
         url = url.with_query(params)
         return str(url)
-
-    def _format_items_block(self, response: MutableMapping[str, Any]) -> None:
-        """
-        Ensure items block has expected values for paginated extension.
-        This is usually needed on the items block of a current user's playlist.
-        """
-        if "next" not in response:
-            response["next"] = response[self.url_key]
-        if "previous" not in response:
-            response["previous"] = None
-        if "limit" not in response:
-            response["limit"] = int(URL(response["next"]).query.get("limit", 50))
 
     ###########################################################################
     ## Enrich/manipulate responses
@@ -98,17 +85,6 @@ class SpotifyAPIBase(RemoteAPI, metaclass=ABCMeta):
         for item in response[self.items_key]:
             if parent_key_name not in item:
                 item[parent_key_name] = parent_response
-
-    def _sort_results(
-            self, results: list[dict[str, Any]], extension: list[dict[str, Any]], id_list: Collection[str]
-    ) -> None:
-        """Extend ``results`` with ``extension`` and sort by order of ``id_list``."""
-        if not extension:  # cache was not used
-            return
-
-        results += extension
-        id_list = to_collection(id_list)
-        results.sort(key=lambda result: id_list.index(result[self.id_key]))
 
     ###########################################################################
     ## Cache utilities

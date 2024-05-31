@@ -252,10 +252,12 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             self.handler.log("SKIP", url, message="No tracks to clear")
             return 0
 
+        async def _delete_batch(batch: list[str]) -> None:
+            body = {"tracks": [{"uri": uri} for uri in batch]}
+            await self.handler.delete(url,  json=body, log_message=f"Clearing {len(uri_list):>3} tracks")
+
         limit = limit_value(limit, floor=1, ceil=100)
-        for uris in batched(uri_list, limit):  # clear in batches
-            body = {"tracks": [{"uri": uri} for uri in uris]}
-            await self.handler.delete(url, json=body, log_message=f"Clearing {len(uri_list):>3} tracks")
+        await self.logger.get_asynchronous_iterator(map(_delete_batch, batched(uri_list, limit)), disable=True)
 
         self.handler.log("DONE", url, message=f"Cleared {len(uri_list):>3} tracks")
         return len(uri_list)

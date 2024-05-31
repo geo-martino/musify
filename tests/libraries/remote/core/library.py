@@ -129,25 +129,8 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
     @staticmethod
     async def assert_restore(library: RemoteLibrary, backup: Any):
         """Run test and assertions on restore_playlists functionality for given input backup data type"""
-        backup_check: Mapping[str, list[str]]
-        if isinstance(backup, RemoteLibrary):  # get URIs from playlists in library
-            backup_check = {name: [track.uri for track in pl] for name, pl in backup.playlists.items()}
-        elif isinstance(backup, Mapping) and all(isinstance(v, MusifyItem) for vals in backup.values() for v in vals):
-            # get URIs from playlists in map values
-            backup_check = {name: [track.uri for track in pl] for name, pl in backup.items()}
-        elif isinstance(backup, Mapping):
-            # get URIs from playlists in collection
-            backup_check = {
-                name:
-                    [t["uri"] if isinstance(t, Mapping) else t for t in tracks["tracks"]]
-                    if isinstance(tracks, Mapping) else tracks
-                for name, tracks in backup.items()
-            }
-        elif isinstance(backup, Collection):
-            # get URIs from playlists in collection
-            backup_check = {pl.name: [track.uri for track in pl] for pl in backup}
-        else:
-            backup_check = backup
+        # noinspection PyProtectedMember
+        backup_check: Mapping[str, list[str]] = library._extract_playlists_from_backup(backup)
 
         name_actual = next(name for name in backup_check if name in library.playlists)
         name_new = next(name for name in backup_check if name not in library.playlists)

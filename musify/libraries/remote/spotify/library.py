@@ -103,8 +103,13 @@ class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, Sp
         kind = RemoteObjectType.ALBUM
         key = self.api.collection_item_map[kind]
 
+        await self.logger.get_asynchronous_iterator(
+            [self.api.extend_items(album, kind=kind, key=key) for album in self.albums],
+            desc="Getting saved album tracks",
+            unit="albums"
+        )
+
         for album in self.albums:
-            await self.api.extend_items(album, kind=kind, key=key)
             album.refresh(skip_checks=False)
 
             for track in album.tracks:  # add tracks from this album to the user's saved tracks
@@ -135,9 +140,12 @@ class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, Sp
             key = self.api.collection_item_map[kind]
 
             responses_albums = [album for artist in self.artists for album in artist.albums]
-            bar = self.logger.get_iterator(iterable=responses_albums, desc="Getting album tracks", unit="albums")
-            for album in bar:
-                await self.api.extend_items(album, kind=kind, key=key)
+            await self.logger.get_asynchronous_iterator(
+                [self.api.extend_items(album, kind=kind, key=key) for album in responses_albums],
+                desc="Getting album tracks",
+                unit="albums"
+            )
+            for album in responses_albums:
                 album.refresh(skip_checks=False)
 
         self.logger.debug(f"Enrich {self.api.source} artists: DONE\n")

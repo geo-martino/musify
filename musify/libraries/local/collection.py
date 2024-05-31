@@ -99,7 +99,7 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
             tags: UnitIterable[LocalTrackField] = LocalTrackField.ALL,
             replace: bool = False,
             dry_run: bool = True
-    ) -> dict[LocalTrack, SyncResultTrack]:
+    ) -> dict[T, SyncResultTrack]:
         """
         Saves the tags of all tracks in this collection. Use arguments from :py:func:`LocalTrack.save`
 
@@ -109,11 +109,14 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
         :return: A map of the :py:class:`LocalTrack` saved to its result as a :py:class:`SyncResultTrack` object
             only for tracks that were saved or would have been saved in the case of a dry run.
         """
-        bar = self.logger.get_iterator(self.tracks, desc="Updating tracks", unit="tracks")
-        results = {track: await track.save(tags=tags, replace=replace, dry_run=dry_run) for track in bar}
-        return {track: result for track, result in results.items() if result.saved or result.updated}
+        async def _save_track(track: T) -> tuple[T, SyncResultTrack]:
+            return track, await track.save(tags=tags, replace=replace, dry_run=dry_run)
+        results = await self.logger.get_asynchronous_iterator(
+            map(_save_track, self.tracks), desc="Updating tracks", unit="tracks"
+        )
+        return {track: result for track, result in results if result.saved or result.updated}
 
-    def log_save_tracks_result(self, results: Mapping[LocalTrack, SyncResultTrack]) -> None:
+    def log_save_tracks_result(self, results: Mapping[T, SyncResultTrack]) -> None:
         """Log stats from the results of a ``save_tracks`` operation"""
         if not results:
             return
@@ -150,14 +153,14 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
                 f"Merging library of {len(self)} items with {len(tracks)} items on tags: "
                 f"{', '.join(tag_names)} \33[0m"
             )
-            tracks = self.logger.get_iterator(iterable=tracks, desc="Merging library", unit="tracks")
+            tracks = self.logger.get_synchronous_iterator(tracks, desc="Merging library", unit="tracks")
 
         tags = to_collection(tags)
         if Fields.IMAGES in tags or Fields.ALL in tags:
             tag_names.append("image_links")
 
         for track in tracks:  # perform the merge
-            track_in_collection: LocalTrack = next((t for t in self.tracks if t == track), None)
+            track_in_collection: T = next((t for t in self.tracks if t == track), None)
             if not track_in_collection:  # skip if the item does not exist in this collection
                 continue
 
@@ -202,7 +205,7 @@ class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], metaclass=ABCMet
 
     def __init__(
             self,
-            tracks: Collection[LocalTrack],
+            tracks: Collection[T],
             name: str | None = None,
             remote_wrangler: RemoteDataWrangler = None
     ):
@@ -226,14 +229,14 @@ class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], metaclass=ABCMet
                 )
 
             self._name: str = names.pop()
-            self._tracks: list[LocalTrack] = to_collection(tracks, list)
+            self._tracks: list[T] = to_collection(tracks, list)
         else:  # match tracks with a tag equal to the given name for this collection
             self._name: str = name
-            self._tracks: list[LocalTrack] = self._get_matching_tracks(tracks)
+            self._tracks: list[T] = self._get_matching_tracks(tracks)
 
-    def _get_matching_tracks(self, tracks: Iterable[LocalTrack]) -> list[LocalTrack]:
+    def _get_matching_tracks(self, tracks: Iterable[T]) -> list[T]:
         """Get a list of tracks that match this collection's name"""
-        matched: list[LocalTrack] = []
+        matched: list[T] = []
         for track in tracks:
             value = track[self._tag_key]
             if isinstance(value, str) and self.name == value:
@@ -299,7 +302,7 @@ class LocalFolder(LocalCollectionFiltered[LocalTrack], Folder[LocalTrack]):
             raise UnexpectedPathError(path, "Path must be a directory")
 
         # load tracks in the folder
-        tasks = asyncio.gather(*(load_track(p) for p in path.glob("*") if p.suffix in TRACK_FILETYPES))
+        tasks = asyncio.gather(*[load_track(p) for p in path.glob("*") if p.suffix in TRACK_FILETYPES])
         return cls(tracks=await tasks, name=path.name, remote_wrangler=remote_wrangler)
 
 

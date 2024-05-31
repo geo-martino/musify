@@ -158,10 +158,10 @@ class RequestHandler(AsyncContextManager):
                 if not waited and backoff > self.backoff_final:
                     raise APIError("Max retries exceeded")
 
-                # exponential backoff
-                self.logger.info_extra(f"Request failed: retrying in {backoff} seconds...")
-                sleep(backoff)
-                backoff *= self.backoff_factor
+                if not waited:  # exponential backoff
+                    self.logger.info_extra(f"Request failed: retrying in {backoff} seconds...")
+                    sleep(backoff)
+                    backoff *= self.backoff_factor
 
         return data
 

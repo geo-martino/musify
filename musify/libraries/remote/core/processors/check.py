@@ -4,6 +4,7 @@ Processor operations that help a user to check whether the currently matched ID 
 Provides the user the ability to modify associated IDs using a Remote player as an interface for
 reviewing matches through temporary playlist creation.
 """
+import itertools
 import logging
 from collections import Counter
 from collections.abc import Sequence, Collection, Iterator, Awaitable
@@ -184,11 +185,15 @@ class RemoteItemChecker(InputProcessor):
             f"\33[93mDeleting {delete_count} temporary playlists and restoring {restore_count} playlists... \33[0m"
         )
 
-        for pl in self._playlist_originals.values():
+        async def _process_playlist(pl: RemotePlaylist) -> None:
             if len(pl) == 0:
                 await self.api.delete_playlist(pl)
             else:
                 await pl.sync(kind="sync", reload=False, dry_run=False)
+
+        await self.logger.get_asynchronous_iterator(
+            map(_process_playlist, self._playlist_originals.values()), disable=True
+        )
 
         self._playlist_originals.clear()
         self._playlist_check_collections.clear()
@@ -220,7 +225,9 @@ class RemoteItemChecker(InputProcessor):
 
         total = len(collections)
         pages_total = (total // self.interval) + (total % self.interval > 0)
-        bar = self.logger.get_iterator(iter(collections), desc="Creating temp playlists", unit="playlists")
+        bar = self.logger.get_synchronous_iterator(
+            iter(collections), total=len(collections), desc="Creating temp playlists", unit="playlists"
+        )
 
         self._started = True
         self._skip = False
@@ -228,14 +235,14 @@ class RemoteItemChecker(InputProcessor):
 
         for page in range(1, pages_total + 1):
             try:
-                for count, collection in enumerate(bar, 1):
-                    await self._create_playlist(collection=collection)
-                    if count >= self.interval:
-                        break
-
+                await self.logger.get_asynchronous_iterator(
+                    map(self._create_playlist, itertools.islice(bar, self.interval)), disable=True,
+                )
                 await self._pause(page=page, total=pages_total)
+
                 if not self._quit:  # still run if skip is True
                     await self._check_uri()
+
             except KeyboardInterrupt:
                 self.logger.error("User triggered exit with KeyboardInterrupt")
                 self._quit = True

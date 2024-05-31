@@ -218,7 +218,7 @@ class RemoteItemSearcher(Processor):
             f"Searching for matches on {self.api.source} for {len(collections)} {kind}s\33[0m"
         )
 
-        bar = self.logger.get_iterator(iterable=collections, desc="Searching", unit=f"{kind}s")
+        bar = self.logger.get_synchronous_iterator(collections, desc="Searching", unit=f"{kind}s")
         search_results = {coll.name: await self._search_collection(coll) for coll in bar}
 
         self.logger.print()
@@ -275,15 +275,20 @@ class RemoteItemSearcher(Processor):
 
         return item, result
 
-    async def _search_items[T: MusifyItemSettable](self, collection: Iterable[T]) -> None:
-        """Search for matches on individual items in an item collection that have ``None`` on ``has_uri`` attribute"""
-        for item in collection:
+    async def _search_items[T: MusifyItemSettable](self, collection: Iterable[T], **kwargs) -> None:
+        """
+        Search for matches on individual items in an item collection that have ``None`` on ``has_uri`` attribute.
+        kwargs are not required and are passed on to self._get_item_match.
+        """
+        async def _match(item: T) -> None:
             if item.has_uri is not None:
-                continue
+                return
 
-            item, match = await self._get_item_match(item)
+            item, match = await self._get_item_match(item, **kwargs)
             if match and match.has_uri:
                 item.uri = match.uri
+
+        await self.logger.get_asynchronous_iterator(map(_match, collection), disable=True)
 
     async def _search_collection_unit[T: MusifyItemSettable](self, collection: MusifyCollection[T]) -> None:
         """
@@ -298,8 +303,9 @@ class RemoteItemSearcher(Processor):
 
         responses = await self._get_results(collection, kind=kind, settings=search_config)
         key = self.api.collection_item_map[kind]
-        for response in responses:
-            await self.api.extend_items(response, kind=kind, key=key)
+        await self.logger.get_asynchronous_iterator(
+            (self.api.extend_items(response, kind=kind, key=key) for response in responses), disable=True
+        )
 
         # noinspection PyProtectedMember,PyTypeChecker
         # order to prioritise results that are closer to the item count of the input collection
@@ -319,13 +325,7 @@ class RemoteItemSearcher(Processor):
 
         # check all items in the collection have been matched
         # get matches on those that are still missing matches
-        for item in collection:
-            if item.has_uri is not None:
-                continue
-
-            item, match = await self._get_item_match(item, match_on=[Tag.TITLE], results=result.items)
-            if match and match.has_uri:
-                item.uri = match.uri
+        await self._search_items(collection, match_on=[Tag.TITLE], results=result.items)
 
     def as_dict(self) -> dict[str, Any]:
         return {
