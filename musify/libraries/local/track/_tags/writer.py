@@ -47,7 +47,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         tag_names = set(Tags.to_tags(tags))
         removed = set()
         for tag_name in tag_names:
-            if self._delete_tag(tag_name, dry_run):
+            if self._clear_tag(tag_name, dry_run):
                 removed.update(Tags.from_name(tag_name))
 
         save = not dry_run and len(removed) > 0
@@ -57,12 +57,12 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         removed = sorted(removed, key=lambda x: Tags.all().index(x))
         return SyncResultTrack(saved=save, updated={u: 0 for u in removed})
 
-    def _delete_tag(self, tag_name: str, dry_run: bool = True) -> bool:
+    def _clear_tag(self, tag_name: str, dry_run: bool = True) -> bool:
         """
-        Remove a tag by its tag name.
+        Remove a tag by its tag name from the loaded file object in memory.
 
         :param tag_name: Tag name as found in :py:class:`TagMap` to remove.
-        :param dry_run: Run function, but do not modify the file on the disk.
+        :param dry_run: Run function, but do not modify the loaded file in memory.
         :return: True if tag has been remove, False otherwise.
         """
         removed = False
@@ -76,6 +76,18 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
                 if not dry_run:
                     del self.file[tag_id]
                 removed = True
+
+        return removed
+
+    def clear_loaded_images(self) -> bool:
+        """
+        Clear the loaded embedded images for this track.
+        Does not alter the actual file in anyway, only the loaded object in memory.
+        """
+        tag_names = Tags.IMAGES.to_tag()
+        removed = False
+        for tag_name in tag_names:
+            removed = removed or self._clear_tag(tag_name, dry_run=False)
 
         return removed
 

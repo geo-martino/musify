@@ -1,6 +1,7 @@
 import inspect
 from copy import deepcopy
 from dataclasses import asdict
+from pathlib import Path
 from random import sample, choice
 from typing import Any
 
@@ -354,7 +355,7 @@ class TestSpotifyItemChecker(RemoteItemCheckerTester):
         return ItemMatcher()
 
     @pytest.fixture
-    def checker(self, matcher: ItemMatcher, api: SpotifyAPI, token_file_path: str) -> RemoteItemChecker:
+    def checker(self, matcher: ItemMatcher, api: SpotifyAPI, token_file_path: Path) -> RemoteItemChecker:
         api.handler.authoriser.token_file_path = token_file_path
         return RemoteItemChecker(matcher=matcher, object_factory=SpotifyObjectFactory(api=api))
 

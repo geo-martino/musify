@@ -444,7 +444,7 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
             self.has_image = self._reader.check_for_images()
 
         # to reduce memory usage, remove any embedded images from the loaded file
-        self._writer.delete_tags(Tags.IMAGES, dry_run=True)
+        self._writer.clear_loaded_images()
 
         self._loaded = True
 
@@ -490,12 +490,11 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
 
     def extract_images_to_file(self, output_folder: str | Path) -> int:
         """Reload the file, extract and save all embedded images from file. Returns the number of images extracted."""
-        self._reader.file = mutagen.File(self.path)
-        self._writer.file = self._reader.file
+        self._reader.file.load(self._reader.file.filename)
 
         images = self._reader.read_images()
         if images is None:
-            return False
+            return 0
 
         output_folder = Path(output_folder)
         if not output_folder.is_dir():
@@ -511,7 +510,7 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
             count += 1
 
         # to reduce memory usage, remove any embedded images from the loaded file
-        self._writer.delete_tags(Tags.IMAGES, dry_run=True)
+        self._writer.clear_loaded_images()
 
         return count
 

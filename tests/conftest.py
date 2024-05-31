@@ -351,7 +351,7 @@ def requests_mock():
 
 
 @pytest.fixture
-def path(request: pytest.FixtureRequest | SubRequest, tmp_path: Path) -> str:
+def path(request: pytest.FixtureRequest | SubRequest, tmp_path: Path) -> Path:
     """
     Copy the path of the source file to the test cache for this test and return the cache path.
     Deletes the test folder when test is done.

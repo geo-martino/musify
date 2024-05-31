@@ -91,6 +91,12 @@ class TestLocalLibrary(LocalLibraryTester):
             path.stem: path for path in path_playlist_all
         }
 
+    def test_collection_creators(self, library: LocalLibrary):
+        assert len(library.folders) == len(set(track.folder for track in library.tracks))
+        assert len(library.albums) == len(set(track.album for track in library.tracks))
+        assert len(library.artists) == len(set(artist for track in library.tracks for artist in track.artists))
+        assert len(library.genres) == len(set(genre for track in library.tracks for genre in track.genres))
+
     async def test_load(self, path_mapper: PathMapper):
         library = LocalLibrary(
             library_folders=path_track_resources, playlist_folder=path_playlist_resources, path_mapper=path_mapper
@@ -111,9 +117,3 @@ class TestLocalLibrary(LocalLibraryTester):
         await library.load()
 
         assert len(library.tracks) == len(library._track_paths) == len(path_track_all) + 2
-
-    def test_collection_creators(self, library: LocalLibrary):
-        assert len(library.folders) == len(set(track.folder for track in library.tracks))
-        assert len(library.albums) == len(set(track.album for track in library.tracks))
-        assert len(library.artists) == len(set(artist for track in library.tracks for artist in track.artists))
-        assert len(library.genres) == len(set(genre for track in library.tracks for genre in track.genres))

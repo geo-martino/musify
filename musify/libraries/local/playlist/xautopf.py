@@ -201,16 +201,21 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
         if not dry_run:
             self._original = self.tracks.copy()
 
+        def _get_paths_sum(psr: XMLPlaylistParser, key: str) -> int:
+            if not (value := psr.xml_source.get(key)):
+                return 0
+            return sum(1 for p in value.split("|") if p)
+
         return SyncResultXAutoPF(
             start=initial_count,
-            start_included=sum(1 for p in initial.xml_source.get("ExceptionsInclude", "").split("|") if p),
-            start_excluded=sum(1 for p in initial.xml_source.get("Exceptions", "").split("|") if p),
+            start_included=_get_paths_sum(initial, "ExceptionsInclude"),
+            start_excluded=_get_paths_sum(initial, "Exceptions"),
             start_compared=len(initial.xml_source["Conditions"].get("Condition", [])),
             start_limiter=initial.xml_source["Limit"].get("@Enabled", "False") == "True",
             start_sorter=len(initial.xml_source.get("SortBy", initial.xml_source.get("DefinedSort", []))) > 0,
             final=len(self.tracks),
-            final_included=sum(1 for p in parser.xml_source.get("ExceptionsInclude", "").split("|") if p),
-            final_excluded=sum(1 for p in parser.xml_source.get("Exceptions", "").split("|") if p),
+            final_included=_get_paths_sum(parser, "ExceptionsInclude"),
+            final_excluded=_get_paths_sum(parser, "Exceptions"),
             final_compared=len(parser.xml_source["Conditions"].get("Condition", [])),
             final_limiter=parser.xml_source["Limit"].get("@Enabled", "False") == "True",
             final_sorter=len(parser.xml_source.get("SortBy", parser.xml_source.get("DefinedSort", []))) > 0,
@@ -492,7 +497,7 @@ class XMLPlaylistParser(File, PrettyPrinter):
             ItemSorter.sort_by_field(original, field=Fields.LAST_PLAYED, reverse=True)
 
             matched_mapped: dict[Path, File] = {
-                item.path: item for item in matcher.comparers(original, reference=original[0])
+                item.path: item for item in matcher.comparers(original, reference=next(iter(original), None))
             } if matcher.comparers.ready else {}
             # noinspection PyProtectedMember
             matched_mapped |= {
