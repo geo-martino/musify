@@ -21,6 +21,9 @@ from musify.processors.sort import ShuffleMode, ItemSorter
 from musify.types import UnitSequence
 
 
+type ItemGetterTypes = str | URL | MusifyItem | Path | File | RemoteResponse
+
+
 @dataclass
 class ItemGetterStrategy[KT](metaclass=ABCMeta):
     """Abstract base class for strategies relating to __getitem__ operations on a :py:class:`MusifyCollection`"""
@@ -322,9 +325,7 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], HasLengt
             self.remove(item)
         return self
 
-    def __getitem__(
-            self, __key: str | int | slice | MusifyItem | Path | File | URL | RemoteResponse
-    ) -> T | list[T] | list[T, None, None]:
+    def __getitem__(self, __key: int | slice | ItemGetterTypes) -> T | list[T] | list[T, None, None]:
         """
         Returns the item in this collection by matching on a given index/Item/URI/ID/URL.
         If an :py:class:`MusifyItem` is given, the URI is extracted from this item
@@ -351,9 +352,7 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], HasLengt
         )
 
     @classmethod
-    def __get_item_getters(
-            cls, __key: str | URL | MusifyItem | Path | File | RemoteResponse
-    ) -> list[ItemGetterStrategy]:
+    def __get_item_getters(cls, __key: ItemGetterTypes) -> list[ItemGetterStrategy]:
         getters = []
 
         if isinstance(__key, File):
