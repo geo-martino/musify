@@ -302,7 +302,6 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             self.logger.debug(f"Load error for track: {path} - {ex}")
             self.errors.append(path)
 
-    # TODO: optimise me
     async def load_tracks(self) -> None:
         """Load all tracks from all the valid paths in this library, replacing currently loaded tracks."""
         if not self._track_paths:
@@ -313,10 +312,12 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             f"\33[1;95m  >\33[1;97m Extracting metadata and properties for {len(self._track_paths)} tracks \33[0m"
         )
 
-        bar = self.logger.get_synchronous_iterator(
-            self._track_paths, desc="Loading tracks", unit="tracks", total=len(self._track_paths)
+        self._tracks = await self.logger.get_asynchronous_iterator(
+            map(self.load_track, self._track_paths),
+            desc="Loading tracks",
+            unit="tracks",
+            total=len(self._track_paths)
         )
-        self._tracks = [await self.load_track(path) for path in bar]
 
         self._log_errors("Could not load the following tracks")
         self.logger.debug(f"Load {self.name} tracks: DONE\n")
@@ -349,7 +350,6 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             self.logger.debug(f"Load error for playlist: {path} - {ex}")
             self.errors.append(path)
 
-    # TODO: optimise me
     async def load_playlists(self) -> None:
         """
         Load all playlists found in this library's ``playlist_folder``,
@@ -366,10 +366,12 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             f"\33[1;95m  >\33[1;97m Loading playlist data for {len(self._playlist_paths)} playlists \33[0m"
         )
 
-        bar = self.logger.get_synchronous_iterator(
-            self._playlist_paths.values(), desc="Loading tracks", unit="tracks", total=len(self._playlist_paths)
+        playlists = await self.logger.get_asynchronous_iterator(
+            map(self.load_playlist, self._playlist_paths.values()),
+            desc="Loading tracks",
+            unit="tracks",
+            total=len(self._playlist_paths)
         )
-        playlists = [await self.load_playlist(path) for path in bar]
         self._playlists = {pl.name: pl for pl in sorted(playlists, key=lambda x: x.name.casefold())}
 
         self._log_errors("Could not load the following playlists")
@@ -388,7 +390,6 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
                 f"\33[1;94m{len(playlist):>6} total \33[0m"
             )
 
-    # TODO: optimise me
     async def save_playlists(self, dry_run: bool = True) -> dict[str, Result]:
         """
         For each Playlist in this Library, saves its associate tracks and its settings (if applicable) to file.
@@ -396,8 +397,12 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         :param dry_run: Run function, but do not modify the file on the disk.
         :return: A map of the playlist name to the results of its sync as a :py:class:`Result` object.
         """
-        bar = self.logger.get_synchronous_iterator(self.playlists.items(), desc="Updating tracks", unit="tracks")
-        return {name: await pl.save(dry_run=dry_run) for name, pl in bar}
+        async def _save_playlist(pl: LocalPlaylist) -> tuple[str, Result]:
+            return pl.name, await pl.save(dry_run=dry_run)
+        results = await self.logger.get_asynchronous_iterator(
+            map(_save_playlist, self.playlists.values()), desc="Updating playlists", unit="tracks"
+        )
+        return dict(results)
 
     ###########################################################################
     ## Backup/restore
