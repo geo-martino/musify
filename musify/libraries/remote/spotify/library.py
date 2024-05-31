@@ -91,7 +91,6 @@ class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, Sp
 
         self.logger.debug(f"Enrich {self.api.source} tracks: DONE\n")
 
-    # TODO: optimise me
     async def enrich_saved_albums(self) -> None:
         """Extends the tracks data for currently loaded albums, getting all available tracks data for each album"""
         if not self.albums or all(len(album) == album.track_total for album in self.albums):
@@ -104,8 +103,13 @@ class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, Sp
         kind = RemoteObjectType.ALBUM
         key = self.api.collection_item_map[kind]
 
+        await self.logger.get_asynchronous_iterator(
+            [self.api.extend_items(album, kind=kind, key=key) for album in self.albums],
+            desc="Getting saved album tracks",
+            unit="albums"
+        )
+
         for album in self.albums:
-            await self.api.extend_items(album, kind=kind, key=key)
             album.refresh(skip_checks=False)
 
             for track in album.tracks:  # add tracks from this album to the user's saved tracks
@@ -114,7 +118,6 @@ class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, Sp
 
         self.logger.debug(f"Enrich {self.api.source} artists: DONE\n")
 
-    # TODO: optimise me
     async def enrich_saved_artists(self, tracks: bool = False, types: Collection[str] = ()) -> None:
         """
         Gets all albums for current loaded following artists.
@@ -137,9 +140,12 @@ class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, Sp
             key = self.api.collection_item_map[kind]
 
             responses_albums = [album for artist in self.artists for album in artist.albums]
-            bar = self.logger.get_synchronous_iterator(responses_albums, desc="Getting album tracks", unit="albums")
-            for album in bar:
-                await self.api.extend_items(album, kind=kind, key=key)
+            await self.logger.get_asynchronous_iterator(
+                [self.api.extend_items(album, kind=kind, key=key) for album in responses_albums],
+                desc="Getting album tracks",
+                unit="albums"
+            )
+            for album in responses_albums:
                 album.refresh(skip_checks=False)
 
         self.logger.debug(f"Enrich {self.api.source} artists: DONE\n")

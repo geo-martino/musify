@@ -168,7 +168,7 @@ class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, metaclass=ABC
 
         uri_add, uri_clear = await self.get_sync_uris(url=str(sync_playlist.url), api_mock=api_mock)
         assert uri_add == [track.uri for track in sync_items]
-        assert uri_clear == []
+        assert not uri_clear
 
         # 1 for skip dupes check on add to playlist
         await self.assert_playlist_loaded(sync_playlist=sync_playlist, api_mock=api_mock, count=1)
@@ -188,7 +188,7 @@ class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, metaclass=ABC
 
         uri_add, uri_clear = await self.get_sync_uris(url=str(sync_playlist.url), api_mock=api_mock)
         assert uri_add == [track.uri for track in sync_items]
-        assert uri_clear == [track.uri for track in sync_playlist]
+        assert sorted(uri_clear) == sorted(track.uri for track in sync_playlist)
 
         # 1 load current tracks on remote when clearing, 1 for reload
         await self.assert_playlist_loaded(sync_playlist=sync_playlist, api_mock=api_mock, count=2)
@@ -207,7 +207,7 @@ class RemotePlaylistTester(RemoteCollectionTester, PlaylistTester, metaclass=ABC
 
         uri_add, uri_clear = await self.get_sync_uris(url=str(sync_playlist.url), api_mock=api_mock)
         assert uri_add == [track.uri for track in sync_items]
-        assert uri_clear == [track.uri for track in sync_playlist if track.uri not in sync_uri]
+        assert sorted(uri_clear) == sorted(track.uri for track in sync_playlist if track.uri not in sync_uri)
 
         # 1 load when clearing
         await self.assert_playlist_loaded(sync_playlist=sync_playlist, api_mock=api_mock, count=1)

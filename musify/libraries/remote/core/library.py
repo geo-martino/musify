@@ -359,7 +359,6 @@ class RemoteLibrary[
         """
         return {name: [track.uri for track in pl] for name, pl in self.playlists.items()}
 
-    # TODO: optimise me
     async def restore_playlists(self, playlists: RestorePlaylistsType, dry_run: bool = True) -> None:
         """
         Restore playlists from a backup to loaded playlist objects.
@@ -373,6 +372,38 @@ class RemoteLibrary[
         :param dry_run: When True, do not create playlists
             and just skip any playlists that are not already currently loaded.
         """
+        playlists = self._extract_playlists_from_input(playlists)
+        uri_tracks = {track.uri: track for track in self.tracks}
+        uri_get = [uri for uri_list in playlists.values() for uri in uri_list if uri not in uri_tracks]
+
+        if uri_get:
+            tracks_data = await self.api.get_tracks(uri_get, features=False)
+            tracks = list(map(self.factory.track, tracks_data))
+            uri_tracks |= {track.uri: track for track in tracks}
+
+        async def _get_playlist(n: str) -> PL | None:
+            pl = self.playlists.get(n)
+            if not pl and dry_run:  # skip on dry run
+                return
+            if not pl:  # new playlist given, create it on remote first
+                # noinspection PyArgumentList
+                pl = await self.factory.playlist.create(name=n)
+
+            return pl
+
+        results: list[PL] = await self.logger.get_asynchronous_iterator(map(_get_playlist, playlists), disable=True)
+        playlists_remote = {pl.name: pl for pl in results if pl is not None}
+
+        for name, uri_list in playlists.items():
+            playlist = playlists_remote.get(name)
+            if playlist is None:
+                continue
+
+            playlist._tracks = [uri_tracks.get(uri) for uri in uri_list]
+            self.playlists[name] = playlist
+
+    @staticmethod
+    def _extract_playlists_from_input(playlists: RestorePlaylistsType) -> Mapping[str, Iterable[str]]:
         if isinstance(playlists, Library):  # get URIs from playlists in library
             playlists = {name: [track.uri for track in pl] for name, pl in playlists.playlists.items()}
         elif (
@@ -392,26 +423,8 @@ class RemoteLibrary[
         elif isinstance(playlists, Collection):
             # get URIs from playlists in collection
             playlists = {pl.name: [track.uri for track in pl] for pl in playlists}
-        playlists: Mapping[str, Iterable[str]]
 
-        uri_tracks = {track.uri: track for track in self.tracks}
-        uri_get = [uri for uri_list in playlists.values() for uri in uri_list if uri not in uri_tracks]
-
-        if uri_get:
-            tracks_data = await self.api.get_tracks(uri_get, features=False)
-            tracks = list(map(self.factory.track, tracks_data))
-            uri_tracks |= {track.uri: track for track in tracks}
-
-        for name, uri_list in playlists.items():
-            playlist = self.playlists.get(name)
-            if not playlist and dry_run:  # skip on dry run
-                continue
-            if not playlist:  # new playlist given, create it on remote first
-                # noinspection PyArgumentList
-                playlist = await self.factory.playlist.create(name=name)
-
-            playlist._tracks = [uri_tracks.get(uri) for uri in uri_list]
-            self.playlists[name] = playlist
+        return playlists
 
     async def sync(
             self,
