@@ -17,7 +17,7 @@ from musify.log import STAT
 from musify.log.logger import MusifyLogger
 from musify.processors.base import Filter
 from musify.processors.filter import FilterDefinedList
-from musify.utils import align_string, get_max_width
+from musify.utils import align_string, get_max_width, to_collection
 
 type RestorePlaylistsType = (
         Library |
@@ -372,7 +372,7 @@ class RemoteLibrary[
         :param dry_run: When True, do not create playlists
             and just skip any playlists that are not already currently loaded.
         """
-        playlists = self._extract_playlists_from_input(playlists)
+        playlists = self._extract_playlists_from_backup(playlists)
         uri_tracks = {track.uri: track for track in self.tracks}
         uri_get = [uri for uri_list in playlists.values() for uri in uri_list if uri not in uri_tracks]
 
@@ -403,7 +403,7 @@ class RemoteLibrary[
             self.playlists[name] = playlist
 
     @staticmethod
-    def _extract_playlists_from_input(playlists: RestorePlaylistsType) -> Mapping[str, Iterable[str]]:
+    def _extract_playlists_from_backup(playlists: RestorePlaylistsType) -> Mapping[str, list[str]]:
         if isinstance(playlists, Library):  # get URIs from playlists in library
             playlists = {name: [track.uri for track in pl] for name, pl in playlists.playlists.items()}
         elif (
@@ -423,6 +423,8 @@ class RemoteLibrary[
         elif isinstance(playlists, Collection):
             # get URIs from playlists in collection
             playlists = {pl.name: [track.uri for track in pl] for pl in playlists}
+        else:
+            playlists = {name: to_collection(tracks, list) for name, tracks in playlists.items()}
 
         return playlists
 

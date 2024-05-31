@@ -25,6 +25,8 @@ from musify.processors.sort import ItemSorter
 from musify.types import UnitCollection, UnitIterable
 from musify.utils import align_string, get_max_width, to_collection
 
+type RestoreTracksType = Iterable[Mapping[str, Any]] | Mapping[str | Path, Mapping[str, Any]]
+
 
 class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     """
@@ -400,10 +402,9 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     ###########################################################################
     ## Backup/restore
     ###########################################################################
+    # TODO: add test for this
     def restore_tracks(
-            self,
-            backup: Iterable[Mapping[str, Any]] | Mapping[str | Path, Mapping[str, Any]],
-            tags: UnitIterable[LocalTrackField] = LocalTrackField.ALL
+            self, backup: RestoreTracksType, tags: UnitIterable[LocalTrackField] = LocalTrackField.ALL
     ) -> int:
         """
         Restore track tags from a backup to loaded track objects. This does not save the updated tags.
@@ -412,12 +413,8 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         :param tags: Set of tags to restore.
         :return: The number of tracks restored
         """
+        backup = self._extract_tracks_from_backup(backup)
         tag_names = set(LocalTrackField.to_tags(tags))
-        if isinstance(backup, Mapping):
-            backup = {Path(path): track_map for path, track_map in backup.items()}
-        else:
-            backup = {Path(track_map["path"]): track_map for track_map in backup}
-        backup: Mapping[Path, Mapping[str, Any]]
 
         count = 0
         for track in self.tracks:
@@ -431,6 +428,14 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             count += 1
 
         return count
+
+    @staticmethod
+    def _extract_tracks_from_backup(backup: RestoreTracksType) -> dict[Path, Mapping[str, Any]]:
+        if isinstance(backup, Mapping):
+            backup = {Path(path): track_map for path, track_map in backup.items()}
+        else:
+            backup = {Path(track_map["path"]): track_map for track_map in backup}
+        return backup
 
     def _get_attributes(self) -> dict[str, Any]:
         attributes_extra = {"remote_source": self.remote_wrangler.source if self.remote_wrangler else None}
