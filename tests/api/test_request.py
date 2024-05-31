@@ -93,7 +93,7 @@ class TestRequestHandler:
         response.status = 429
         for i in range(1, 5):
             await request_handler._handle_bad_response(response=response)
-            assert request_handler.wait_time == wait_initial + i * request_handler.wait_interval
+            assert request_handler.wait_time == wait_initial + i * request_handler.wait_increment
 
     async def test_rate_limit_handling(self, request_handler: RequestHandler, url: URL):
         # no header
@@ -203,7 +203,7 @@ class TestRequestHandler:
 
         # force wait time settings off to isolate backoff waiting only
         request_handler.wait_time = 0
-        request_handler.wait_interval = 0
+        request_handler.wait_increment = 0
 
         # force backoff settings to be short for testing purposes
         request_handler.backoff_start = 0.1
@@ -235,11 +235,11 @@ class TestRequestHandler:
         # set wait time settings and get expected total time
         wait_time = 0.1
         request_handler.wait_time = wait_time
-        request_handler.wait_interval = 0.2
+        request_handler.wait_increment = 0.2
 
         wait_total_expected = request_handler.wait_time
         while wait_time < wait_limit:
-            wait_time += request_handler.wait_interval
+            wait_time += request_handler.wait_increment
             wait_total_expected += wait_time
 
         def callback(method: str, *_, **__) -> CallbackResult:
