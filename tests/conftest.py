@@ -23,14 +23,14 @@ from musify.types import UnitCollection
 from musify.utils import to_collection
 from tests.libraries.remote.core.utils import ALL_ITEM_TYPES
 from tests.libraries.remote.spotify.api.mock import SpotifyMock
-from tests.utils import idfn
+from tests.utils import idfn, path_resources
 
 
 # noinspection PyUnusedLocal
 @pytest.hookimpl
 def pytest_configure(config: pytest.Config):
     """Loads logging config"""
-    config_file = Path(__file__).parent.with_stem("logging").with_suffix(".yml")
+    config_file = path_resources.joinpath("test_logging").with_suffix(".yml")
     if not config_file.is_file():
         return
 
@@ -398,6 +398,13 @@ async def spotify_api(spotify_mock: SpotifyMock) -> SpotifyAPI:
     token = {"access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"}
     # disable any token tests by settings test_* kwargs as appropriate
     api = SpotifyAPI(token=token, test_args=None, test_expiry=0, test_condition=None)
+
+    # force almost no backoff/wait settings
+    api.handler.backoff_start = 0.001
+    api.handler.backoff_factor = 1
+    api.handler.backoff_count = 10
+    api.handler.wait_time = 0
+    api.handler.wait_interval = 0
 
     async with api as a:
         spotify_mock.reset()

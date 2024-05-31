@@ -1,6 +1,7 @@
 """
 All operations relating to handling of requests to an API.
 """
+import asyncio
 import contextlib
 import json
 import logging
@@ -85,12 +86,17 @@ class RequestHandler(AsyncContextManager):
         #: The :py:class:`APIAuthoriser` object
         self.authoriser = authoriser
 
-        #: The initial backoff time for failed requests
+        #: The initial backoff time in seconds for failed requests
         self.backoff_start = 0.2
         #: The factor by which to increase backoff time for failed requests i.e. backoff_start ** backoff_factor
         self.backoff_factor = 1.932
         #: The maximum number of request attempts to make before giving up and raising an exception
         self.backoff_count = 10
+
+        #: The initial time in seconds to wait after receiving a response from a request
+        self.wait_time = 0
+        #: The interval by which to increase the wait time by after hitting a rate limit i.e. 429 response
+        self.wait_interval = 0.1
 
     async def __aenter__(self) -> Self:
         if self.closed:
@@ -148,17 +154,17 @@ class RequestHandler(AsyncContextManager):
                     raise APIError("No response received")
 
                 if response.ok:
-                    data = await self._response_as_json(response)
+                    data = await self._get_json_response(response)
                     break
 
                 await self._log_response(response=response, method=method, url=url)
-                await self._handle_unexpected_response(response=response)
-                waited = await self._handle_wait_time(response=response)
+                await self._handle_bad_response(response=response)
+                waited = await self._wait_for_rate_limit_timeout(response=response)
 
-                if not waited and backoff > self.backoff_final:
+                if not waited and (backoff > self.backoff_final or backoff == 0):
                     raise APIError("Max retries exceeded")
 
-                if not waited:  # exponential backoff
+                if not waited and backoff:  # exponential backoff
                     self.logger.info_extra(f"Request failed: retrying in {backoff} seconds...")
                     sleep(backoff)
                     backoff *= self.backoff_factor
@@ -191,6 +197,7 @@ class RequestHandler(AsyncContextManager):
         try:
             async with self.session.request(method=method.upper(), url=url, **kwargs) as response:
                 yield response
+                await asyncio.sleep(self.wait_time)
         except aiohttp.ClientError as ex:
             self.logger.debug(str(ex))
             yield
@@ -238,9 +245,9 @@ class RequestHandler(AsyncContextManager):
             ]
         )
 
-    async def _handle_unexpected_response(self, response: ClientResponse) -> bool:
-        """Handle bad response by extracting message and handling status codes that should raise an exception."""
-        message = (await self._response_as_json(response)).get("error", {}).get("message")
+    async def _handle_bad_response(self, response: ClientResponse) -> bool:
+        """Handle bad responses by extracting message and handling status codes that should raise an exception."""
+        message = (await self._get_json_response(response)).get("error", {}).get("message")
         error_message_found = message is not None
 
         if not error_message_found:
@@ -249,11 +256,14 @@ class RequestHandler(AsyncContextManager):
 
         if 400 <= response.status < 408:
             raise APIError(message, response=response)
+        elif response.status == 429:
+            self.logger.debug(f"Rate limit hit. Increasing wait time between requests to {self.wait_time}")
+            self.wait_time += self.wait_interval
 
         return error_message_found
 
-    async def _handle_wait_time(self, response: ClientResponse) -> bool:
-        """Handle when a wait time is included in the response headers."""
+    async def _wait_for_rate_limit_timeout(self, response: ClientResponse) -> bool:
+        """Handle rate limits when a 'retry-after' time is included in the response headers."""
         if "retry-after" not in response.headers:
             return False
 
@@ -271,7 +281,7 @@ class RequestHandler(AsyncContextManager):
         return True
 
     @staticmethod
-    async def _response_as_json(response: ClientResponse) -> dict[str, Any]:
+    async def _get_json_response(response: ClientResponse) -> dict[str, Any]:
         """Format the response to JSON and handle any errors"""
         try:
             data = await response.json()

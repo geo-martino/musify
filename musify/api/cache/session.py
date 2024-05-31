@@ -56,6 +56,8 @@ class CachedSession(ClientSession):
         if json is not None:
             kwargs["data"] = payload.JsonPayload(json, dumps=self._json_serialize)
 
+        drop_kwargs = ("allow_redirects",)
+
         req = ClientRequest(
             method=method,
             url=url,
@@ -63,7 +65,7 @@ class CachedSession(ClientSession):
             response_class=self._response_class,
             session=self,
             trust_env=self.trust_env,
-            **kwargs,
+            **{k: v for k, v in kwargs.items() if k not in drop_kwargs},
         )
 
         repository = self.cache.get_repository_from_requests(req.request_info)

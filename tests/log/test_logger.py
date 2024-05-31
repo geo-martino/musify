@@ -26,7 +26,9 @@ def logger() -> MusifyLogger:
     for handler in logger.handlers:
         logger.removeHandler(handler)
 
-    return logger
+    logger.disable_bars = False
+    yield logger
+    logger.disable_bars = True
 
 
 def test_print(logger: MusifyLogger, capfd: pytest.CaptureFixture):
@@ -117,6 +119,7 @@ def test_tqdm_kwargs(logger: MusifyLogger):
         smoothing=0.5,
         position=3,
     )
+
     kwargs_processed = logger._get_tqdm_kwargs(**kwargs)
     assert kwargs_processed["initial"] == 10
     assert not kwargs_processed["disable"]
@@ -141,7 +144,7 @@ def test_tqdm_iterator_synchronous(logger: MusifyLogger):
     assert bar in logger._bars
 
     # adheres to disable_bars attribute
-    logger.disable_bars = False
+    logger.disable_bars = True
     bar = logger.get_synchronous_iterator(
         iterable=range(0, 50),
         initial=10,
@@ -154,13 +157,10 @@ def test_tqdm_iterator_synchronous(logger: MusifyLogger):
     )
 
     assert not bar.leave
-    assert not bar.disable
-    assert bar.ncols == 120
-    assert bar.colour == "blue"
-    assert bar.smoothing == 0.1
-    assert bar.pos == -3
+    assert bar.disable
+    assert bar.pos == 0
 
-    logger.disable_bars = True
+    logger.disable_bars = False
 
 
 @pytest.mark.skipif(tqdm is None, reason="required modules not installed")

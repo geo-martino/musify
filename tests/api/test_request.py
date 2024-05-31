@@ -1,4 +1,5 @@
 import json
+from time import perf_counter
 from typing import Any
 
 import aiohttp
@@ -68,43 +69,50 @@ class TestRequestHandler:
             for k, v in handler.authoriser.headers.items():
                 assert handler.session.headers.get(k) == v
 
-    async def test_check_response_codes(self, request_handler: RequestHandler, url: URL):
+    async def test_bad_response_handling(self, request_handler: RequestHandler, url: URL):
         headers = {"Content-Type": "application/json"}
         request = ClientRequest(method="GET", url=url, headers=headers)
 
         # error message not found, no fail
         response = CachedResponse(request=request, data="")
         response.status = 201
-        assert not await request_handler._handle_unexpected_response(response=response)
+        assert not await request_handler._handle_bad_response(response=response)
 
         # error message found, no fail
         expected = {"error": {"message": "request failed"}}
         response = CachedResponse(request=request, data=json.dumps(expected))
-        assert await request_handler._handle_unexpected_response(response=response)
+        assert await request_handler._handle_bad_response(response=response)
 
         # error message not found, raises exception
         response.status = 400
         with pytest.raises(APIError):
-            await request_handler._handle_unexpected_response(response=response)
+            await request_handler._handle_bad_response(response=response)
 
-    async def test_check_for_wait_time(self, request_handler: RequestHandler, url: URL):
+        # increases wait time on responses with 'too many requests'
+        wait_initial = request_handler.wait_time
+        response.status = 429
+        for i in range(1, 5):
+            await request_handler._handle_bad_response(response=response)
+            assert request_handler.wait_time == wait_initial + i * request_handler.wait_interval
+
+    async def test_rate_limit_handling(self, request_handler: RequestHandler, url: URL):
         # no header
         request = ClientRequest(method="GET", url=URL("http://test.com"))
         response = CachedResponse(request, data="")
-        assert not await request_handler._handle_wait_time(response=response)
+        assert not await request_handler._wait_for_rate_limit_timeout(response=response)
 
         # expected key not in headers
         headers = {"header key": "header value"}
         request = ClientRequest(method="GET", url=url, headers=headers)
         response = CachedResponse(request, data="")
-        assert not await request_handler._handle_wait_time(response=response)
+        assert not await request_handler._wait_for_rate_limit_timeout(response=response)
 
         # expected key in headers and time is short
         headers = {"retry-after": "1"}
         request = ClientRequest(method="GET", url=url, headers=headers)
         response = CachedResponse(request, data="")
         assert request_handler.timeout >= 1
-        assert await request_handler._handle_wait_time(response=response)
+        assert await request_handler._wait_for_rate_limit_timeout(response=response)
 
         # expected key in headers and time too long
         headers = {"retry-after": "2000"}
@@ -112,16 +120,16 @@ class TestRequestHandler:
         response = CachedResponse(request, data="")
         assert request_handler.timeout < 2000
         with pytest.raises(APIError):
-            await request_handler._handle_wait_time(response=response)
+            await request_handler._wait_for_rate_limit_timeout(response=response)
 
-    async def test_response_as_json(self, request_handler: RequestHandler, url: URL):
+    async def test_get_json_response(self, request_handler: RequestHandler, url: URL):
         request = ClientRequest(method="GET", url=url, headers={"Content-Type": "application/json"})
         response = CachedResponse(request=request, data="simple text should not be returned")
-        assert await request_handler._response_as_json(response) == {}
+        assert await request_handler._get_json_response(response) == {}
 
         expected = {"key": "valid json"}
         response = CachedResponse(request=request, data=json.dumps(expected))
-        assert await request_handler._response_as_json(response) == expected
+        assert await request_handler._get_json_response(response) == expected
 
     # noinspection PyTestUnpassedFixture
     async def test_cache_usage(self, request_handler: RequestHandler, requests_mock: aioresponses):
@@ -193,6 +201,10 @@ class TestRequestHandler:
         expected_json = {"key": "value"}
         backoff_limit = 3
 
+        # force wait time settings off to isolate backoff waiting only
+        request_handler.wait_time = 0
+        request_handler.wait_interval = 0
+
         # force backoff settings to be short for testing purposes
         request_handler.backoff_start = 0.1
         request_handler.backoff_factor = 2
@@ -210,3 +222,38 @@ class TestRequestHandler:
         async with request_handler as handler:
             assert await handler.patch(url=url) == expected_json
         assert sum(map(len, requests_mock.requests.values())) == backoff_limit
+
+    async def test_wait_between_requests(self, request_handler: RequestHandler, requests_mock: aioresponses):
+        url = "http://localhost/test"
+        wait_limit = 0.6
+
+        # force backoff settings to be very low to isolate wait time waiting only
+        request_handler.backoff_start = 0.001
+        request_handler.backoff_factor = 1
+        request_handler.backoff_count = 10
+
+        # set wait time settings and get expected total time
+        wait_time = 0.1
+        request_handler.wait_time = wait_time
+        request_handler.wait_interval = 0.2
+
+        wait_total_expected = request_handler.wait_time
+        while wait_time < wait_limit:
+            wait_time += request_handler.wait_interval
+            wait_total_expected += wait_time
+
+        def callback(method: str, *_, **__) -> CallbackResult:
+            """Modify mock response based on current handler wait time settings"""
+            if request_handler.wait_time < wait_limit:
+                payload = {"error": {"message": "too many requests"}}
+                return CallbackResult(method=method, status=429, payload=payload)
+
+            return CallbackResult(method=method, status=200)
+
+        start_time = perf_counter()
+        requests_mock.head(url, callback=callback, repeat=True)
+        async with request_handler as handler:
+            await handler.head(url=url)
+
+        assert perf_counter() - start_time >= wait_total_expected
+        assert request_handler.wait_time > wait_limit

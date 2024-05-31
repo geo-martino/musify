@@ -116,7 +116,7 @@ class TestSpotifyAPIMisc:
         stdout = "\n".join(re.sub("\33.*?m", "", capfd.readouterr().out).strip().splitlines())
 
         # printed in blocks
-        blocks = [block for block in stdout.split("\n\n") if str(api_mock.url_ext) in block]
+        blocks = [block for block in stdout.split("\n\n\n")[-1].split("\n\n") if str(api_mock.url_ext) in block]
         assert len(blocks) == api_mock.total_requests
 
         # lines printed = total tracks + 1 extra for title
