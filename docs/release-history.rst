@@ -59,6 +59,9 @@ Added
   by the mislabelled :py:meth:`.MusifyCollection.outer_difference` method
 * :py:class:`.RemoteDataWrangler` and its implementations now handle URL objects from the ``yarl`` package
 * :py:meth:`.RemoteAPI.follow_playlist` method
+* Wait time logic for :py:class:`.RequestHandler`. This waits by a certain time after each request,
+  incrementing this wait time every time a 429 code is returned.
+  This allows better handling of rate limits, with the aim of preventing a lock out from a service.
 
 Changed
 -------
