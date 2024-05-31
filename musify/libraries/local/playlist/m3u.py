@@ -1,6 +1,7 @@
 """
 The M3U implementation of a :py:class:`LocalPlaylist`.
 """
+import asyncio
 import os
 from collections.abc import Collection
 from dataclasses import dataclass
@@ -99,7 +100,9 @@ class M3U(LocalPlaylist[FilterDefinedList[str | Path | File]]):
         if tracks:  # match paths from given tracks using the matcher
             self._match(tracks)
         else:  # use the paths in the matcher to load tracks from scratch
-            self.tracks = [await self._load_track(path) for path in self.matcher.values if path is not None]
+            self.tracks = await asyncio.gather(
+                *map(self._load_track, filter(lambda path: path is not None, self.matcher.values))
+            )
 
         self._limit(ignore=self.matcher.values)
         self._sort()

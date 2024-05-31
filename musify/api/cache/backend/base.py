@@ -140,14 +140,13 @@ class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], Awaitable, metaclass=
         """Get the response relating to the given ``request`` from this repository if it exists."""
         raise NotImplementedError
 
-    # TODO: optimise me on sqlite backend
     async def get_responses(self, requests: Collection[RepositoryRequestType[K]]) -> list[V]:
         """
         Get the responses relating to the given ``requests`` from this repository if they exist.
         Returns results unordered.
         """
-        results = [await self.get_response(request) for request in requests]
-        return [result for result in results if result is not None]
+        results = await self.logger.get_asynchronous_iterator(map(self.get_response, requests), disable=True)
+        return list(filter(lambda result: result is not None, results))
 
     async def save_response(self, response: Collection[K, V] | ClientResponse) -> None:
         """Save the given ``response`` to this repository if a key can be extracted from it. Safely fail if not"""
@@ -165,19 +164,18 @@ class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], Awaitable, metaclass=
     async def _set_item_from_key_value_pair(self, __key: K, __value: Any) -> None:
         raise NotImplementedError
 
-    # TODO: optimise me on sqlite backend
     async def save_responses(self, responses: Mapping[K, V] | Collection[ClientResponse]) -> None:
         """
         Save the given ``responses`` to this repository if a key can be extracted from them.
         Safely fail on those that can't.
         """
         if isinstance(responses, Mapping):
-            for key, value in responses.items():
-                await self._set_item_from_key_value_pair(key, value)
+            await self.logger.get_asynchronous_iterator(
+                (self._set_item_from_key_value_pair(key, value) for key, value in responses.items()), disable=True
+            )
             return
 
-        for response in responses:
-            await self.save_response(response)
+        await self.logger.get_asynchronous_iterator(map(self.save_response, responses), disable=True)
 
     @abstractmethod
     async def delete_response(self, request: RepositoryRequestType[K]) -> bool:
@@ -187,13 +185,13 @@ class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], Awaitable, metaclass=
         """
         raise NotImplementedError
 
-    # TODO: optimise me on sqlite backend
     async def delete_responses(self, requests: Collection[RepositoryRequestType[K]]) -> int:
         """
         Delete the given ``requests`` from this repository if they exist.
         Returns the number of the given ``requests`` deleted in the repository.
         """
-        return sum([await self.delete_response(request) for request in requests])
+        results = await self.logger.get_asynchronous_iterator(map(self.delete_response, requests), disable=True)
+        return sum(results)
 
 
 class ResponseCache[ST: ResponseRepository](MutableMapping[str, ST], Awaitable, AsyncContextManager):
