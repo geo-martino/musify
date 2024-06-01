@@ -149,8 +149,8 @@ class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], metaclass=ABCMeta):
         Get the responses relating to the given ``requests`` from this repository if they exist.
         Returns results unordered.
         """
-        results = await self.logger.get_asynchronous_iterator(map(self.get_response, requests), disable=True)
-        return list(filter(lambda result: result is not None, results))
+        bar = self.logger.get_asynchronous_iterator(map(self.get_response, requests), disable=True)
+        return list(filter(lambda result: result is not None, await bar))
 
     async def save_response(self, response: Collection[K, V] | ClientResponse) -> None:
         """Save the given ``response`` to this repository if a key can be extracted from it. Safely fail if not"""
@@ -194,8 +194,8 @@ class ResponseRepository[K, V](AsyncIterable[tuple[K, V]], metaclass=ABCMeta):
         Delete the given ``requests`` from this repository if they exist.
         Returns the number of the given ``requests`` deleted in the repository.
         """
-        results = await self.logger.get_asynchronous_iterator(map(self.delete_response, requests), disable=True)
-        return sum(results)
+        bar = self.logger.get_asynchronous_iterator(map(self.delete_response, requests), disable=True)
+        return sum(await bar)
 
 
 class ResponseCache[ST: ResponseRepository](MutableMapping[str, ST], metaclass=ABCMeta):

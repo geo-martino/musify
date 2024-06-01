@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from itertools import groupby
-from random import choice, randrange
+from random import choice, randrange, shuffle
 
 import pytest
 
@@ -30,6 +30,7 @@ class TestItemSorter(PrettyPrinterTester):
             track.disc_number = randrange(1, 3)
             track.date_added = track.date_added.replace(second=i)
 
+        shuffle(tracks)
         return tracks
 
     def test_sort_by_field_basic(self, tracks: list[LocalTrack]):

@@ -159,7 +159,7 @@ class RemoteItemSearcher(Processor):
             matched = len(result.matched)
             unmatched = len(result.unmatched)
             skipped = len(result.skipped)
-            total = total_matched + total_unmatched + total_skipped
+            total = matched + unmatched + skipped
 
             total_matched += matched
             total_unmatched += unmatched
@@ -218,8 +218,12 @@ class RemoteItemSearcher(Processor):
             f"Searching for matches on {self.api.source} for {len(collections)} {kind}s\33[0m"
         )
 
-        bar = self.logger.get_synchronous_iterator(collections, desc="Searching", unit=f"{kind}s")
-        search_results = {coll.name: await self._search_collection(coll) for coll in bar}
+        async def _get_result(coll: MusifyCollection[T]) -> tuple[str, ItemSearchResult]:
+            return coll.name, await self._search_collection(coll)
+
+        # WARNING: making this run asynchronously will break tqdm; bar will get stuck after 1-2 ticks
+        bar = self.logger.get_synchronous_iterator(collections, desc="Searching",  unit=f"{kind}s")
+        search_results = dict([await _get_result(coll) for coll in bar])
 
         self.logger.print()
         self._log_results(search_results)
@@ -304,7 +308,8 @@ class RemoteItemSearcher(Processor):
         responses = await self._get_results(collection, kind=kind, settings=search_config)
         key = self.api.collection_item_map[kind]
         await self.logger.get_asynchronous_iterator(
-            (self.api.extend_items(response, kind=kind, key=key) for response in responses), disable=True
+            (self.api.extend_items(response, kind=kind, key=key, leave_bar=False) for response in responses),
+            disable=True
         )
 
         # noinspection PyProtectedMember,PyTypeChecker

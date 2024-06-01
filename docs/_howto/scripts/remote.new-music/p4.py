@@ -12,14 +12,20 @@ async def get_albums(library: RemoteLibrary, start: date, end: date) -> list[Rem
     albums = [album for artist in library.artists for album in artist.albums if match_date(album, start, end)]
     albums_need_extend = [album for album in albums if len(album.tracks) < album.track_total]
 
-    if albums_need_extend:
-        kind = RemoteObjectType.ALBUM
-        key = api.collection_item_map[kind]
+    if not albums_need_extend:
+        return albums
 
-        bar = library.logger.get_synchronous_iterator(albums_need_extend, desc="Getting album tracks", unit="albums")
-        async with library:
-            for album in bar:
-                await api.extend_items(album.response, kind=kind, key=key)
-                album.refresh(skip_checks=False)
+    kind = RemoteObjectType.ALBUM
+    key = api.collection_item_map[kind]
+
+    async with library:
+        await library.logger.get_asynchronous_iterator(
+            (api.extend_items(album.response, kind=kind, key=key) for album in albums),
+            desc="Getting album tracks",
+            unit="albums"
+        )
+
+    for album in albums:
+        album.refresh(skip_checks=False)
 
     return albums

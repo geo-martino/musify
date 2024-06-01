@@ -312,12 +312,14 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             f"\33[1;95m  >\33[1;97m Extracting metadata and properties for {len(self._track_paths)} tracks \33[0m"
         )
 
-        self._tracks = await self.logger.get_asynchronous_iterator(
-            map(self.load_track, self._track_paths),
+        # WARNING: making this run asynchronously will break tqdm; bar will get stuck after 1-2 ticks
+        bar = self.logger.get_synchronous_iterator(
+            self._track_paths,
             desc="Loading tracks",
             unit="tracks",
             total=len(self._track_paths)
         )
+        self._tracks = [await self.load_track(path) for path in bar]
 
         self._log_errors("Could not load the following tracks")
         self.logger.debug(f"Load {self.name} tracks: DONE\n")
@@ -366,13 +368,16 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             f"\33[1;95m  >\33[1;97m Loading playlist data for {len(self._playlist_paths)} playlists \33[0m"
         )
 
-        playlists = await self.logger.get_asynchronous_iterator(
-            map(self.load_playlist, self._playlist_paths.values()),
+        # WARNING: making this run asynchronously will break tqdm; bar will get stuck after 1-2 ticks
+        bar = self.logger.get_synchronous_iterator(
+            self._playlist_paths.values(),
             desc="Loading tracks",
             unit="tracks",
             total=len(self._playlist_paths)
         )
-        self._playlists = {pl.name: pl for pl in sorted(playlists, key=lambda x: x.name.casefold())}
+        self._playlists = {
+            pl.name: pl for pl in sorted([await self.load_playlist(pl) for pl in bar], key=lambda x: x.name.casefold())
+        }
 
         self._log_errors("Could not load the following playlists")
         self.logger.debug(f"Load {self.name} playlists: DONE\n")
@@ -399,10 +404,12 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         """
         async def _save_playlist(pl: LocalPlaylist) -> tuple[LocalPlaylist, Result]:
             return pl, await pl.save(dry_run=dry_run)
-        results = await self.logger.get_asynchronous_iterator(
-            map(_save_playlist, self.playlists.values()), desc="Updating playlists", unit="tracks"
+
+        # WARNING: making this run asynchronously will break tqdm; bar will get stuck after 1-2 ticks
+        bar = self.logger.get_synchronous_iterator(
+            self.playlists.values(), desc="Updating playlists", unit="tracks"
         )
-        return dict(results)
+        return dict([await _save_playlist(pl) for pl in bar])
 
     ###########################################################################
     ## Backup/restore

@@ -87,6 +87,7 @@ class RemoteCollectionLoader[T: RemoteObject](RemoteCollection[T], RemoteObject,
         """
         if self._total != len(self.items):
             raise RemoteError(
+                f"{self.name} | "
                 "The total items available in the response does not equal the total item count for this collection. "
                 "Make sure the given collection response contains the right number of item responses: "
                 f"{self._total} != {len(self.items)}"

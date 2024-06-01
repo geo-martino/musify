@@ -26,6 +26,7 @@ type RestorePlaylistsType = (
         Mapping[str, Iterable[str]] |
         Mapping[str, Iterable[Mapping[str, Any]]]
 )
+type SyncPlaylistsType = Library | Mapping[str, Collection[MusifyItem]] | Collection[Playlist] | None
 
 
 class RemoteLibrary[
@@ -391,8 +392,8 @@ class RemoteLibrary[
 
             return pl
 
-        results: list[PL] = await self.logger.get_asynchronous_iterator(map(_get_playlist, playlists), disable=True)
-        playlists_remote = {pl.name: pl for pl in results if pl is not None}
+        bar = self.logger.get_asynchronous_iterator(map(_get_playlist, playlists), disable=True)
+        playlists_remote: dict[str, PL] = {pl.name: pl for pl in await bar if pl is not None}
 
         for name, uri_list in playlists.items():
             playlist = playlists_remote.get(name)
@@ -430,7 +431,7 @@ class RemoteLibrary[
 
     async def sync(
             self,
-            playlists: Library | Mapping[str, Iterable[MusifyItem]] | Collection[Playlist] | None = None,
+            playlists: SyncPlaylistsType = None,
             kind: Literal["new", "refresh", "sync"] = "new",
             reload: bool = True,
             dry_run: bool = True
@@ -456,14 +457,7 @@ class RemoteLibrary[
         """
         self.logger.debug(f"Sync {self.api.source} playlists: START")
 
-        if not playlists:  # use the playlists as stored in this library object
-            playlists = self.playlists
-        elif isinstance(playlists, Library):  # get map of playlists from the given library
-            playlists = playlists.playlists
-        elif isinstance(playlists, Collection) and all(isinstance(pl, Playlist) for pl in playlists):
-            # reformat list to map
-            playlists = {pl.name: pl for pl in playlists}
-        playlists: Mapping[str, Iterable[MusifyItem]]
+        playlists = self._extract_playlists_for_sync(playlists)
 
         log_kind = "adding new items only"
         if kind != "new":
@@ -474,25 +468,40 @@ class RemoteLibrary[
             f"{f" and reloading stored playlists" if reload else ""} \33[0m"
         )
 
-        bar = self.logger.get_synchronous_iterator(
-            playlists.items(), desc=f"Synchronising {self.api.source}", unit="playlists"
-        )
-        results = {}
-        for name, pl in bar:  # synchronise playlists
+        async def _sync_playlist(name: str, pl: Collection[MusifyItem]) -> tuple[str, SyncResultRemotePlaylist]:
             if name not in self.playlists:  # new playlist given, create it on remote first
                 if dry_run:
-                    results[name] = SyncResultRemotePlaylist(
+                    result = SyncResultRemotePlaylist(
                         start=0, added=len(pl), removed=0, unchanged=0, difference=len(pl), final=len(pl)
                     )
-                    continue
+                    return name, result
 
                 # noinspection PyArgumentList
                 self.playlists[name] = await self.factory.playlist.create(name=name)
-            results[name] = await self.playlists[name].sync(items=pl, kind=kind, reload=reload, dry_run=dry_run)
+
+            return name, await self.playlists[name].sync(items=pl, kind=kind, reload=reload, dry_run=dry_run)
+
+        bar = self.logger.get_asynchronous_iterator(
+            [_sync_playlist(name, pl) for name, pl in playlists.items()],
+            desc=f"Synchronising {self.api.source}",
+            unit="playlists"
+        )
+        results = dict(await bar)
 
         self.logger.print()
         self.logger.debug(f"Sync {self.api.source} playlists: DONE\n")
         return results
+
+    def _extract_playlists_for_sync(self, playlists: SyncPlaylistsType) -> Mapping[str, Collection[MusifyItem]]:
+        if not playlists:  # use the playlists as stored in this library object
+            playlists = self.playlists
+        elif isinstance(playlists, Library):  # get map of playlists from the given library
+            playlists = playlists.playlists
+        elif isinstance(playlists, Collection) and all(isinstance(pl, Playlist) for pl in playlists):
+            # reformat list to map
+            playlists = {pl.name: pl for pl in playlists}
+
+        return playlists
 
     def log_sync(self, results: SyncResultRemotePlaylist | Mapping[str, SyncResultRemotePlaylist]) -> None:
         """Log stats from the results of a ``sync`` operation"""

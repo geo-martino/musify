@@ -43,7 +43,7 @@ class SpotifyAPIMisc(SpotifyAPIBase, metaclass=ABCMeta):
             if response.get("offset", 0) == 0:  # first page, show header
                 url_ext = self.wrangler.convert(id_, kind=kind, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL_EXT)
                 self.logger.print_message(
-                    f"\n\t\33[96mShowing tracks for {kind.name.lower()}\33[0m: "
+                    f"\n\33[96mShowing tracks for {kind.name.lower()}\33[0m: "
                     f"\33[94m{name} \33[97m- {url_ext} \33[0m\n"
                 )
 

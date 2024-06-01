@@ -91,7 +91,7 @@ def test_tqdm_param_position(logger: MusifyLogger):
     for bar in logger._bars:
         bar.n = bar.total
         bar.close()
-    assert logger._get_tqdm_param_position() == 0
+    assert logger._get_tqdm_param_position() is None
     assert not logger._bars
 
 
