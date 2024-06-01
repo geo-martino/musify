@@ -536,7 +536,7 @@ class SpotifyPlaylist(SpotifyCollectionLoader[SpotifyTrack], RemotePlaylist[Spot
         self.__init__(response=response, api=self.api, skip_checks=skip_checks)
 
     def _get_track_uris_from_api_response(self) -> list[str]:
-        return [track["track"]["uri"] for track in self.response["tracks"]["items"]]
+        return [track["track"]["uri"] for track in self.response["tracks"].get("items", [])]
 
 
 class SpotifyAlbum(RemoteAlbum[SpotifyTrack], SpotifyCollectionLoader[SpotifyTrack]):

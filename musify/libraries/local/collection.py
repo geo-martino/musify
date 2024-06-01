@@ -111,10 +111,13 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
         """
         async def _save_track(track: T) -> tuple[T, SyncResultTrack]:
             return track, await track.save(tags=tags, replace=replace, dry_run=dry_run)
-        results = await self.logger.get_asynchronous_iterator(
-            map(_save_track, self.tracks), desc="Updating tracks", unit="tracks"
+
+        # WARNING: making this run asynchronously will break tqdm; bar will get stuck after 1-2 ticks
+        bar = self.logger.get_synchronous_iterator(
+            self.tracks, desc="Updating tracks", unit="tracks"
         )
-        return {track: result for track, result in results if result.saved or result.updated}
+        results = dict([await _save_track(track) for track in bar])
+        return {track: result for track, result in results.items() if result.saved or result.updated}
 
     def log_save_tracks_result(self, results: Mapping[T, SyncResultTrack]) -> None:
         """Log stats from the results of a ``save_tracks`` operation"""

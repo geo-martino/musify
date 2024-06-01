@@ -81,7 +81,7 @@ class TestRequestHandler:
         # error message found, no fail
         expected = {"error": {"message": "request failed"}}
         response = CachedResponse(request=request, data=json.dumps(expected))
-        assert await request_handler._handle_bad_response(response=response)
+        assert not await request_handler._handle_bad_response(response=response)
 
         # error message not found, raises exception
         response.status = 400
@@ -92,7 +92,7 @@ class TestRequestHandler:
         wait_initial = request_handler.wait_time
         response.status = 429
         for i in range(1, 5):
-            await request_handler._handle_bad_response(response=response)
+            assert await request_handler._handle_bad_response(response=response)
             assert request_handler.wait_time == wait_initial + i * request_handler.wait_increment
 
     async def test_rate_limit_handling(self, request_handler: RequestHandler, url: URL):

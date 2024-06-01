@@ -234,7 +234,7 @@ class RemoteAPI(metaclass=ABCMeta):
         :param max_width: The maximum width to print names as. Any name lengths longer than this will be truncated.
         """
         self.logger.print_message(
-            f"\t\33[92m{str(i).zfill(len(str(total)))} \33[0m- "
+            f"\33[92m{str(i).zfill(len(str(total)))} \33[0m- "
             f"\33[97m{align_string(name, max_width=max_width)} \33[0m| "
             f"\33[91m{str(int(length // 60)).zfill(2)}:{str(round(length % 60)).zfill(2)} \33[0m| "
             f"\33[93m{uri} \33[0m- "
@@ -311,6 +311,7 @@ class RemoteAPI(metaclass=ABCMeta):
             response: MutableMapping[str, Any] | RemoteResponse,
             kind: RemoteObjectType | str | None = None,
             key: RemoteObjectType | None = None,
+            leave_bar: bool | None = None,
     ) -> list[dict[str, Any]]:
         """
         Extend the items for a given API ``response``.
@@ -325,6 +326,9 @@ class RemoteAPI(metaclass=ABCMeta):
         :param response: A remote API JSON response for an items type endpoint.
         :param kind: The type of response being extended. Optional, used only for logging.
         :param key: The type of response of the child objects.
+        :param leave_bar: When a progress bar is displayed,
+            toggle whether this bar should continue to be displayed after the operation is finished.
+            When None, allow the logger to decide this setting.
         :return: API JSON responses for each item
         """
         raise NotImplementedError

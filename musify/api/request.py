@@ -168,16 +168,19 @@ class RequestHandler:
                     break
 
                 await self._log_response(response=response, method=method, url=url)
-                await self._handle_bad_response(response=response)
+                handled = await self._handle_bad_response(response=response)
                 waited = await self._wait_for_rate_limit_timeout(response=response)
 
-                if not waited and (backoff > self.backoff_final or backoff == 0):
+                if handled or waited:
+                    continue
+
+                if backoff > self.backoff_final or backoff == 0:
                     raise APIError("Max retries exceeded")
 
-                if not waited and backoff:  # exponential backoff
-                    self.logger.info_extra(f"Request failed: retrying in {backoff} seconds...")
-                    sleep(backoff)
-                    backoff *= self.backoff_factor
+                # exponential backoff
+                self.log(method=method, url=url, message=f"Request failed: retrying in {backoff} seconds...")
+                sleep(backoff)
+                backoff *= self.backoff_factor
 
         return data
 
@@ -257,20 +260,28 @@ class RequestHandler:
 
     async def _handle_bad_response(self, response: ClientResponse) -> bool:
         """Handle bad responses by extracting message and handling status codes that should raise an exception."""
-        message = (await self._get_json_response(response)).get("error", {}).get("message")
-        error_message_found = message is not None
-
-        if not error_message_found:
+        error_message = (await self._get_json_response(response)).get("error", {}).get("message")
+        if error_message is None:
             status = HTTPStatus(response.status)
-            message = f"{status.phrase} | {status.description}"
+            error_message = f"{status.phrase} | {status.description}"
 
-        if 400 <= response.status < 408:
-            raise APIError(message, response=response)
+        handled = False
+
+        def _log_bad_response(message: str) -> None:
+            self.logger.debug(f"Status code: {response.status} | {error_message} | {message}")
+
+        if response.status == 401:
+            _log_bad_response("Re-authorising...")
+            await self.authorise()
+            handled = True
         elif response.status == 429:
-            self.logger.debug(f"Rate limit hit. Increasing wait time between requests to {self.wait_time}")
             self.wait_time += self.wait_increment
+            _log_bad_response(f"Rate limit hit. Increasing wait time between requests to {self.wait_time}")
+            handled = True
+        elif response.status == 400 <= response.status < 408:
+            raise APIError(error_message, response=response)
 
-        return error_message_found
+        return handled
 
     async def _wait_for_rate_limit_timeout(self, response: ClientResponse) -> bool:
         """Handle rate limits when a 'retry-after' time is included in the response headers."""

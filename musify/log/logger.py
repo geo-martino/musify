@@ -145,7 +145,7 @@ class MusifyLogger(logging.Logger):
             **{k: v for k, v in kwargs.items() if k not in preset_keys}
         )
 
-    def _get_tqdm_param_position(self, position: int = None, **__):
+    def _get_tqdm_param_position(self, position: int = None, **__) -> int | None:
         if position is not None:
             return position
 
@@ -154,15 +154,13 @@ class MusifyLogger(logging.Logger):
         if self._bars:
             return abs(min(bar.pos for bar in self._bars)) + 1
 
-        return 0
-
-    def _get_tqdm_param_leave(self, position: int, leave: bool = None, **__):
+    def _get_tqdm_param_leave(self, position: int | None, leave: bool = None, **__) -> bool:
         if leave is not None:
             return leave
 
         return all([
             bool(self.stdout_handlers) or (h.level > logging.DEBUG for h in self.stdout_handlers),
-            position == 0
+            position is None or position == 0
         ])
 
     def __copy__(self):

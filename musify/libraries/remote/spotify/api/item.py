@@ -490,11 +490,11 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             return {key: await self._get_items(url=url, id_list=id_list, kind=kind, key=_key, limit=_limit)}
 
         results: list[dict[str, Any]] = []
-        results_map = await self.logger.get_asynchronous_iterator(
+        bar = self.logger.get_asynchronous_iterator(
             (_get_result(kind=kind, url=url, key=key, batch=batch) for kind, (url, key, batch) in config.items()),
             disable=True,
         )
-        for result_map in results_map:
+        for result_map in await bar:
             for key, responses in result_map.items():
                 responses.sort(key=lambda response: id_list.index(response[self.id_key]))
                 responses = [{self.id_key: response[self.id_key], key: response} for response in responses]
