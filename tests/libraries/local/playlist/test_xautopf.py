@@ -21,12 +21,12 @@ from musify.processors.filter import FilterComparers
 from musify.processors.limit import LimitType
 from musify.processors.sort import ShuffleMode
 from musify.utils import to_collection, required_modules_installed
-from tests.core.printer import PrettyPrinterTester
 from tests.libraries.local.playlist.testers import LocalPlaylistTester
 from tests.libraries.local.track.utils import random_track, random_tracks
 from tests.libraries.local.utils import path_playlist_resources, path_playlist_all
 from tests.libraries.local.utils import path_playlist_xautopf_ra, path_playlist_xautopf_bp, path_playlist_xautopf_cm
 from tests.libraries.local.utils import path_track_all, path_track_mp3, path_track_flac, path_track_wma
+from tests.testers import PrettyPrinterTester
 from tests.utils import path_txt, path_resources, random_str
 
 

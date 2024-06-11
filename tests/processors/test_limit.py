@@ -5,8 +5,8 @@ import pytest
 
 from musify.libraries.local.track import LocalTrack
 from musify.processors.limit import ItemLimiter, LimitType
-from tests.core.printer import PrettyPrinterTester
 from tests.libraries.local.track.utils import random_tracks
+from tests.testers import PrettyPrinterTester
 from tests.utils import random_file
 
 

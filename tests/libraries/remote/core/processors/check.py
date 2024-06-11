@@ -14,11 +14,11 @@ from musify.libraries.remote.core.object import RemotePlaylist
 from musify.processors.check import RemoteItemChecker
 from tests.api.utils import path_token
 from tests.conftest import LogCapturer
-from tests.core.printer import PrettyPrinterTester
 from tests.libraries.local.track.utils import random_track, random_tracks
 from tests.libraries.remote.core.processors.utils import patch_input
 from tests.libraries.remote.core.utils import RemoteMock
 from tests.libraries.remote.spotify.utils import random_uri, random_uris
+from tests.testers import PrettyPrinterTester
 from tests.utils import random_str
 
 

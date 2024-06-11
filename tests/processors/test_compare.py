@@ -7,8 +7,8 @@ from musify.libraries.local.track import MP3, M4A, FLAC
 from musify.libraries.local.track.field import LocalTrackField
 from musify.processors.compare import Comparer
 from musify.processors.exception import ComparerError, ProcessorLookupError
-from tests.core.printer import PrettyPrinterTester
 from tests.libraries.local.track.utils import random_track
+from tests.testers import PrettyPrinterTester
 
 
 class TestComparer(PrettyPrinterTester):

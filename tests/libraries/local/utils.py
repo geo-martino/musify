@@ -7,7 +7,6 @@ from musify.libraries.remote.spotify.wrangle import SpotifyDataWrangler
 from musify.utils import required_modules_installed
 from tests.utils import path_resources
 
-
 path_track_resources = path_resources.joinpath("track")
 path_track_all: set[Path] = {path for c in TRACK_CLASSES for path in c.get_filepaths(path_track_resources)}
 path_track_flac = path_track_resources.joinpath("NOISE_FLaC").with_suffix(".flac")

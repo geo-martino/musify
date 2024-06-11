@@ -7,14 +7,14 @@ from typing import Any
 import pytest
 
 from musify.base import MusifyItem
-from musify.printer import PrettyPrinter
 from musify.exception import MusifyTypeError
 from musify.libraries.collection import BasicCollection
 from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.core.object import Library, Playlist, Track
 from musify.libraries.remote.core.library import RemoteLibrary
 from musify.libraries.remote.core.object import RemoteCollectionLoader
-from tests.core.printer import PrettyPrinterTester
+from musify.printer import PrettyPrinter
+from tests.testers import PrettyPrinterTester
 
 
 class MusifyCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):

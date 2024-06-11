@@ -13,9 +13,9 @@ from musify.libraries.core.object import Track
 from musify.libraries.local.track import LocalTrack, load_track, FLAC, M4A, MP3, WMA, SyncResultTrack
 from musify.libraries.local.track.field import LocalTrackField
 from musify.libraries.remote.core.enum import RemoteObjectType
-from tests.core.base import MusifyItemTester
 from tests.libraries.local.utils import path_track_all, path_track_img, path_track_resources
 from tests.libraries.remote.spotify.utils import random_uri
+from tests.testers import MusifyItemTester
 from tests.utils import path_txt
 
 try:

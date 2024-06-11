@@ -10,9 +10,9 @@ from musify.libraries.collection import BasicCollection
 from musify.libraries.local.track import LocalTrack
 from musify.processors.download import ItemDownloadHelper
 from tests.conftest import LogCapturer
-from tests.core.printer import PrettyPrinterTester
 from tests.libraries.local.track.utils import random_tracks
 from tests.libraries.remote.core.processors.utils import patch_input
+from tests.testers import PrettyPrinterTester
 from tests.utils import random_str
 
 

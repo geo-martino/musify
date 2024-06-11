@@ -14,9 +14,9 @@ from musify.libraries.local.collection import LocalAlbum
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.remote.core.enum import RemoteObjectType
 from musify.processors.search import RemoteItemSearcher, SearchConfig
-from tests.core.printer import PrettyPrinterTester
 from tests.libraries.local.track.utils import random_track, random_tracks
 from tests.libraries.remote.core.utils import RemoteMock
+from tests.testers import PrettyPrinterTester
 
 
 class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):

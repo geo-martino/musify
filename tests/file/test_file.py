@@ -4,9 +4,9 @@ import pytest
 
 from musify.file.base import File
 from musify.file.path_mapper import PathMapper, PathStemMapper
-from tests.core.printer import PrettyPrinterTester
 from tests.libraries.local.track.utils import random_tracks
 from tests.libraries.local.utils import path_track_all
+from tests.testers import PrettyPrinterTester
 from tests.utils import random_str
 
 

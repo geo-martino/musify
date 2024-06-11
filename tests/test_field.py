@@ -5,7 +5,7 @@ from musify.field import TrackField
 from musify.libraries.core.object import Track, Playlist, Folder, Artist, Album
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.local.track.field import LocalTrackField
-from tests.core.enum import FieldTester, TagFieldTester
+from tests.testers import FieldTester, TagFieldTester
 
 
 class TestTrackField(TagFieldTester):

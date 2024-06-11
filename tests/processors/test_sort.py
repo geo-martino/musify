@@ -9,8 +9,8 @@ from musify.libraries.local.track import LocalTrack
 from musify.libraries.local.track.field import LocalTrackField
 from musify.processors.sort import ItemSorter, ShuffleMode
 from musify.utils import strip_ignore_words
-from tests.core.printer import PrettyPrinterTester
 from tests.libraries.local.track.utils import random_tracks
+from tests.testers import PrettyPrinterTester
 
 
 class TestItemSorter(PrettyPrinterTester):

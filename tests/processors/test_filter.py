@@ -11,9 +11,9 @@ from musify.libraries.local.track.field import LocalTrackField
 from musify.processors.compare import Comparer
 from musify.processors.filter import FilterDefinedList, FilterComparers, FilterIncludeExclude
 from musify.processors.filter_matcher import FilterMatcher
-from tests.core.printer import PrettyPrinterTester
 from tests.libraries.local.track.utils import random_tracks
 from tests.libraries.local.utils import path_track_all
+from tests.testers import PrettyPrinterTester
 from tests.utils import random_str, path_resources
 
 
