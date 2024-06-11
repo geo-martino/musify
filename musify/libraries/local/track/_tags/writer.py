@@ -431,7 +431,9 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
             source_bpm < 30 < target_bpm,
             replace and source_bpm != target_bpm
         ]
-        print(source.name, conditionals)
+        if source.name == "When I Look at You":
+            print(source.name, conditionals, source.bpm, target.bpm, replace)
+
         if any(conditionals) and self._write_bpm(track=target, dry_run=dry_run):
             return [i for i, c in enumerate(conditionals) if c][0]
 
@@ -617,7 +619,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         conditionals = [source.has_image is False and bool(target.image_links), replace and bool(target.image_links)]
 
         if any(conditionals):
-            print(source.name, conditionals)
+            print(source.name, conditionals, source.has_image, target.image_links, replace)
 
         if any(conditionals) and self._write_images(track=target, dry_run=dry_run):
             return [i for i, c in enumerate(conditionals) if c][0]
