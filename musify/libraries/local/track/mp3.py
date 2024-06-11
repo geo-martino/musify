@@ -83,11 +83,7 @@ class _MP3TagWriter(TagWriter[mutagen.mp3.MP3]):
 
         return removed
 
-    def write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
-        result = super().write_tag(tag_id=tag_id, tag_value=tag_value, dry_run=dry_run)
-        if result is not None:
-            return result
-
+    def _write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
         if not dry_run:
             self.file[tag_id] = getattr(mutagen.id3, tag_id)(3, text=str(tag_value))
         return True

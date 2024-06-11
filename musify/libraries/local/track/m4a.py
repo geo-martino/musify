@@ -75,11 +75,7 @@ class _M4ATagWriter(TagWriter[mutagen.mp4.MP4]):
 
     __slots__ = ()
 
-    def write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
-        result = super().write_tag(tag_id=tag_id, tag_value=tag_value, dry_run=dry_run)
-        if result is not None:
-            return result
-
+    def _write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
         if not dry_run:
             if tag_id.startswith("----:com.apple.iTunes"):
                 self.file[tag_id] = [
@@ -113,7 +109,8 @@ class _M4ATagWriter(TagWriter[mutagen.mp4.MP4]):
         return date, year, month, day
 
     def _write_bpm(self, track: LocalTrack, dry_run: bool = True) -> bool:
-        return self.write_tag(next(iter(self.tag_map.bpm), None), int(track.bpm), dry_run)
+        bpm = int(track.bpm) if track.bpm is not None else None
+        return self.write_tag(next(iter(self.tag_map.bpm), None), bpm, dry_run)
 
     def _write_disc(self, track: LocalTrack, dry_run: bool = True) -> bool:
         tag_id = next(iter(self.tag_map.disc_number), None)

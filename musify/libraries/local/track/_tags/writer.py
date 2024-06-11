@@ -159,10 +159,17 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
             return False
 
         if tag_value is None:
-            remove = not dry_run and tag_id in self.file and self.file[tag_id]
-            if remove:
+            if not dry_run and tag_id in self.file and self.file[tag_id] is not None:
                 del self.file[tag_id]
-            return remove
+                return True
+            return False
+
+        return self._write_tag(tag_id=tag_id, tag_value=tag_value, dry_run=dry_run)
+
+    @abstractmethod
+    def _write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
+        """Implementation of tag writer specific to this file type."""
+        raise NotImplementedError
 
     def write_title(self, source: Track, target: Track, replace: bool = False, dry_run: bool = True) -> int | None:
         """
@@ -176,10 +183,10 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
-        conditionals = {
+        conditionals = [
             source.title is None and target.title is not None,
             replace and source.title != target.title
-        }
+        ]
         if any(conditionals) and self._write_title(track=target, dry_run=dry_run):
             return [i for i, c in enumerate(conditionals) if c][0]
 
@@ -204,10 +211,10 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
-        conditionals = {
+        conditionals = [
             source.artist is None and target.artist is not None,
             replace and source.artist != target.artist
-        }
+        ]
         if any(conditionals) and self._write_artist(track=target, dry_run=dry_run):
             return [i for i, c in enumerate(conditionals) if c][0]
 
@@ -232,10 +239,10 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
-        conditionals = {
+        conditionals = [
             source.album is None and target.album is not None,
             replace and source.album != target.album
-        }
+        ]
         if any(conditionals) and self._write_album(track=target, dry_run=dry_run):
             return [i for i, c in enumerate(conditionals) if c][0]
 
@@ -262,10 +269,10 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
-        conditionals = {
+        conditionals = [
             source.album_artist is None and target.album_artist is not None,
             replace and source.album_artist != target.album_artist
-        }
+        ]
         if any(conditionals) and self._write_album_artist(track=target, dry_run=dry_run):
             return [i for i, c in enumerate(conditionals) if c][0]
 
@@ -290,11 +297,11 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
-        conditionals = {
+        conditionals = [
             source.track_number is None and source.track_total is None and
             (target.track_number is not None or target.track_total is not None),
             replace and (source.track_number != target.track_number or source.track_total != target.track_total)
-        }
+        ]
         if any(conditionals) and self._write_track(track=target, dry_run=dry_run):
             return [i for i, c in enumerate(conditionals) if c][0]
 
@@ -331,7 +338,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
-        conditionals = {source.genres is None and bool(target.genres), replace and source.genres != target.genres}
+        conditionals = [source.genres is None and bool(target.genres), replace and source.genres != target.genres]
         if any(conditionals) and self._write_genres(track=target, dry_run=dry_run):
             return [i for i, c in enumerate(conditionals) if c][0]
 
@@ -360,10 +367,10 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         """
         # date is just a composite of year + month + day, can safely ignore this in the conditionals
         values_exist = any({target.year is not None, target.month is not None, target.day is not None})
-        conditionals = {
+        conditionals = [
             source.year is None and source.month is None and source.day is None and values_exist,
             replace and (source.year != target.year or source.month != target.month or source.day != target.day)
-        }
+        ]
 
         if not any(conditionals):
             return
@@ -419,11 +426,11 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         source_bpm = int(source.bpm if source.bpm is not None else 0)
         target_bpm = int(target.bpm if target.bpm is not None else 0)
 
-        conditionals = {
+        conditionals = [
             source.bpm is None and target.bpm is not None and target_bpm > 30,
             source_bpm < 30 < target_bpm,
             replace and source_bpm != target_bpm
-        }
+        ]
         if any(conditionals) and self._write_bpm(track=target, dry_run=dry_run):
             return [i for i, c in enumerate(conditionals) if c][0]
 
@@ -448,7 +455,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
-        conditionals = {source.key is None and target.key is not None, replace and source.key != target.key}
+        conditionals = [source.key is None and target.key is not None, replace and source.key != target.key]
 
         if any(conditionals) and self._write_key(track=target, dry_run=dry_run):
             return [i for i, c in enumerate(conditionals) if c][0]
@@ -474,11 +481,11 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
-        conditionals = {
+        conditionals = [
             source.disc_number is None and source.disc_total is None and
             (target.disc_number is not None or target.disc_total is not None),
             replace and (source.disc_number != target.disc_number or source.disc_total != target.disc_total)
-        }
+        ]
         if any(conditionals) and self._write_disc(track=target, dry_run=dry_run):
             return [i for i, c in enumerate(conditionals) if c][0]
 
@@ -518,10 +525,10 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
-        conditionals = {
+        conditionals = [
             source.compilation is None and target.compilation is not None,
             replace and source.compilation != target.compilation
-        }
+        ]
         if any(conditionals) and self._write_compilation(track=target, dry_run=dry_run):
             return [i for i, c in enumerate(conditionals) if c][0]
 
@@ -546,10 +553,10 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
-        conditionals = {
+        conditionals = [
             source.comments is None and bool(target.comments),
             replace and source.comments != target.comments
-        }
+        ]
         if any(conditionals) and self._write_comments(track=target, dry_run=dry_run):
             return [i for i, c in enumerate(conditionals) if c][0]
 
@@ -578,7 +585,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         if not self.remote_wrangler:
             return
 
-        conditionals = {source.uri != target.uri or source.has_uri != target.has_uri}
+        conditionals = [source.uri != target.uri or source.has_uri != target.has_uri]
 
         if any(conditionals) and self._write_uri(track=target, dry_run=dry_run):
             return [i for i, c in enumerate(conditionals) if c][0]
@@ -606,7 +613,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         :return: The index number of the conditional that was met to warrant updating the file's tags.
             None if none of the conditions were met.
         """
-        conditionals = {source.has_image is False and bool(target.image_links), replace and bool(target.image_links)}
+        conditionals = [source.has_image is False and bool(target.image_links), replace and bool(target.image_links)]
 
         if any(conditionals) and self._write_images(track=target, dry_run=dry_run):
             return [i for i, c in enumerate(conditionals) if c][0]

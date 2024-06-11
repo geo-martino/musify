@@ -19,11 +19,6 @@ class LocalLibraryTester(LibraryTester, LocalCollectionTester, metaclass=ABCMeta
 
         results = await library.save_playlists(dry_run=True)
 
-        for pl, result in results.items():
-            print(pl.name, result)
-        for pl in playlists:
-            print(pl.name, len(pl))
-
         assert len(results) == len(library.playlists)
         for pl, result in results.items():
             if pl not in playlists:

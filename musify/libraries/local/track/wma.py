@@ -85,11 +85,7 @@ class _WMATagWriter(TagWriter[mutagen.asf.ASF]):
 
     __slots__ = ()
 
-    def write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
-        result = super().write_tag(tag_id=tag_id, tag_value=tag_value, dry_run=dry_run)
-        if result is not None:
-            return result
-
+    def _write_tag(self, tag_id: str | None, tag_value: Any, dry_run: bool = True) -> bool:
         if not dry_run:
             if isinstance(tag_value, (list, set, tuple)):
                 if all(isinstance(v, mutagen.asf.ASFByteArrayAttribute) for v in tag_value):

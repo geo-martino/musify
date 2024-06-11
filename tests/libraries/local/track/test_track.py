@@ -1,6 +1,7 @@
 from copy import copy
 from datetime import datetime, date
 from pathlib import Path
+from random import choice
 
 import mutagen
 import pytest
@@ -337,10 +338,18 @@ class TestLocalTrackWriter:
         assert actual.track_number == expected.track_number, "track_number"
         assert actual.track_total == expected.track_total, "track_total"
         assert actual.genres == expected.genres, "genres"
+
         assert actual.date == expected.date, "date"
         assert actual.year == expected.year, "year"
-        assert actual.month == expected.month, "month"
-        assert actual.day == expected.day, "day"
+        if actual.year is not None:
+            assert actual.month == expected.month, "month"
+        else:
+            assert actual.month is None
+        if actual.year is not None and actual.month is not None:
+            assert actual.day == expected.day, "day"
+        else:
+            assert actual.day is None
+
         assert actual.bpm == expected.bpm, "bpm"
         assert actual.key == expected.key, "key"
         assert actual.disc_number == expected.disc_number, "disc_number"
@@ -503,8 +512,12 @@ class TestLocalTrackWriter:
         track.album = "new album artist"
         track.track_number += 2
         track.genres = ["Big Band", "Swing"]
-        track.year += 10
-        track.bpm += 10
+        if choice([True, False]):
+            track.year = None
+            track.bpm += 10
+        else:
+            track.year += 10
+            track.bpm = None
         track.key = "F#"
         track.disc_number += 5
 
@@ -523,7 +536,7 @@ class TestLocalTrackWriter:
         }
         assert set(result.updated) == expected_tags
 
-        self.assert_track_tags_equal(track, copy(track_original))
+        self.assert_track_tags_equal(copy(track_original), track)
 
         track.artist = "new artist"
         track.album_artist = "new various"
