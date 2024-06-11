@@ -59,7 +59,7 @@ test = [
     "pytest-mock~=3.14",
     "aioresponses~=0.7",
     "pyyaml~=6.0",
-    "pycountry~=23.12",
+    "pycountry>=23.12,<25.0",
 ]
 docs = [
     "musify[build]",
