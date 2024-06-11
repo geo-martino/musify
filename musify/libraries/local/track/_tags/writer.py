@@ -615,6 +615,9 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         """
         conditionals = [source.has_image is False and bool(target.image_links), replace and bool(target.image_links)]
 
+        if any(conditionals):
+            print(source.name, conditionals)
+
         if any(conditionals) and self._write_images(track=target, dry_run=dry_run):
             return [i for i, c in enumerate(conditionals) if c][0]
 
