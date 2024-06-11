@@ -7,9 +7,9 @@ from itertools import batched
 from typing import Any
 from webbrowser import open as webopen
 
-from musify.core.base import MusifyItem
-from musify.core.enum import Field, Fields
+from musify.base import MusifyItem
 from musify.exception import MusifyEnumError
+from musify.field import Field, Fields
 from musify.libraries.core.collection import MusifyCollection
 from musify.processors.base import InputProcessor
 from musify.types import UnitIterable

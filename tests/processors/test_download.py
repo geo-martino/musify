@@ -5,7 +5,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from musify import MODULE_ROOT
-from musify.core.enum import Fields
+from musify.field import Fields
 from musify.libraries.collection import BasicCollection
 from musify.libraries.local.track import LocalTrack
 from musify.processors.download import ItemDownloadHelper

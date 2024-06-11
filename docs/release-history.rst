@@ -104,6 +104,9 @@ Changed
 * Moved :py:class:`.RemoteDataWrangler` up a level to `musify.libraries.remote.core`.
 * Deleted `musify.libraries.remote.core.processors` package.
 * Renamed `musify.libraries.remote.spotify.processors` module to `musify.libraries.remote.spotify.wrangle`.
+* Removed logger filters and handlers. Moved to CLI repo.
+* Moved `musify.logger` module to `musify` base package.
+* Restructured contents of `musify.core` package to modules in `musify` base package.
 
 Fixed
 -----

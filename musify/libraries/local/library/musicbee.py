@@ -3,8 +3,8 @@ An implementation of :py:class:`LocalLibrary` for the MusicBee library manager.
 Reads library/settings files from MusicBee to load and enrich playlist/track etc. data.
 """
 import hashlib
-import re
 import os
+import re
 from collections.abc import Iterable, Mapping, Sequence, Collection, Iterator
 from datetime import datetime
 from pathlib import Path

@@ -6,7 +6,7 @@ from typing import Any
 
 from dateutil.relativedelta import relativedelta
 
-from musify.core.printer import PrettyPrinter
+from musify.printer import PrettyPrinter
 from musify.processors.base import DynamicProcessor, dynamicprocessormethod
 
 

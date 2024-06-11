@@ -11,15 +11,14 @@ from typing import Any, SupportsIndex, Self
 
 from yarl import URL
 
-from musify.core.base import MusifyObject, MusifyItem, HasLength
-from musify.core.enum import Field
+from musify.base import MusifyObject, MusifyItem, HasLength
 from musify.exception import MusifyTypeError, MusifyKeyError, MusifyAttributeError
+from musify.field import Field
 from musify.file.base import File
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.base import RemoteObject
 from musify.processors.sort import ShuffleMode, ItemSorter
 from musify.types import UnitSequence
-
 
 type ItemGetterTypes = str | URL | MusifyItem | Path | File | RemoteResponse
 

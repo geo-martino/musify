@@ -6,7 +6,7 @@ from collections.abc import Collection, Generator
 from pathlib import Path
 from typing import Any, Self
 
-from musify.core.result import Result
+from musify.base import Result
 from musify.file.base import File
 from musify.file.path_mapper import PathMapper
 from musify.libraries.core.object import Playlist

@@ -9,16 +9,15 @@ from collections.abc import Mapping, Sequence, Iterable, Collection, Awaitable
 from dataclasses import dataclass, field
 from typing import Any, Self
 
-from musify.core.base import MusifyObject, MusifyItemSettable
-from musify.core.enum import TagField, TagFields as Tag
-from musify.core.result import Result
+from musify.base import MusifyObject, MusifyItemSettable, Result
 from musify.exception import MusifyAttributeError
+from musify.field import TagField, TagFields as Tag
 from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.enum import RemoteObjectType
 from musify.libraries.remote.core.factory import RemoteObjectFactory
-from musify.log import REPORT
-from musify.log.logger import MusifyLogger
+from musify.logger import MusifyLogger
+from musify.logger import REPORT
 from musify.processors.base import Processor
 from musify.processors.match import ItemMatcher
 from musify.types import UnitIterable

@@ -5,7 +5,7 @@ from random import choice, randrange, sample
 from typing import Any
 from uuid import uuid4
 
-from musify.core.enum import MusifyEnum
+from musify.enum import MusifyEnum
 
 path_tests = Path(__file__).parent
 path_root = path_tests.parent

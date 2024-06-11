@@ -5,7 +5,6 @@ import shutil
 import types
 from collections import defaultdict
 from pathlib import Path
-from typing import Any
 
 import pytest
 import yaml
@@ -18,7 +17,7 @@ from musify import MODULE_ROOT
 from musify.libraries.remote.core.enum import RemoteObjectType
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.wrangle import SpotifyDataWrangler
-from musify.log.logger import MusifyLogger
+from musify.logger import MusifyLogger
 from musify.types import UnitCollection
 from musify.utils import to_collection
 from tests.libraries.remote.core.utils import ALL_ITEM_TYPES
@@ -40,18 +39,6 @@ def pytest_configure(config: pytest.Config):
     log_config.pop("compact", False)
     MusifyLogger.disable_bars = True
     MusifyLogger.compact = True
-
-    def remove_file_handler(c: dict[str, Any]) -> None:
-        """Remove all config for file handlers"""
-        for k, v in c.items():
-            if k == "handlers" and isinstance(v, list) and "file" in v:
-                v.pop(v.index("file"))
-            elif k == "handlers" and isinstance(v, dict) and "file" in v:
-                v.pop("file")
-            elif isinstance(v, dict):
-                remove_file_handler(v)
-
-    remove_file_handler(log_config)
 
     for formatter in log_config["formatters"].values():  # ensure ANSI colour codes in format are recognised
         formatter["format"] = formatter["format"].replace(r"\33", "\33")

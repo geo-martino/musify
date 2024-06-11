@@ -9,11 +9,11 @@ from concurrent.futures import ThreadPoolExecutor, Future, Executor
 from dataclasses import dataclass, field
 from typing import Any
 
-from musify.core.base import MusifyObject
-from musify.core.enum import TagField, TagFields as Tag, ALL_TAG_FIELDS
-from musify.core.printer import PrettyPrinter
+from musify.base import MusifyObject
+from musify.field import TagField, TagFields as Tag, ALL_TAG_FIELDS
 from musify.libraries.core.collection import MusifyCollection
-from musify.log.logger import MusifyLogger
+from musify.logger import MusifyLogger
+from musify.printer import PrettyPrinter
 from musify.processors.base import Processor
 from musify.types import UnitIterable
 from musify.utils import limit_value, to_collection

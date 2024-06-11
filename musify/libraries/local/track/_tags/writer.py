@@ -8,10 +8,10 @@ from typing import Any
 
 import mutagen
 
-from musify.core.result import Result
+from musify.base import Result
 from musify.libraries.core.object import Track
-from musify.libraries.local.track.field import LocalTrackField as Tags
 from musify.libraries.local.track._tags.base import TagProcessor
+from musify.libraries.local.track.field import LocalTrackField as Tags
 from musify.types import UnitIterable
 from musify.utils import to_collection
 

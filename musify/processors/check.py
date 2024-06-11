@@ -13,19 +13,18 @@ from dataclasses import dataclass, field
 from typing import Any, Self
 
 from musify import PROGRAM_NAME
-from musify.core.base import MusifyItemSettable
-from musify.core.enum import Fields
-from musify.core.result import Result
+from musify.base import MusifyItemSettable, Result
+from musify.field import Fields
 from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.factory import RemoteObjectFactory
 from musify.libraries.remote.core.object import RemotePlaylist
-from musify.processors.search import RemoteItemSearcher
-from musify.log import REPORT
-from musify.log.logger import MusifyLogger
+from musify.logger import MusifyLogger
+from musify.logger import REPORT
 from musify.processors.base import InputProcessor
 from musify.processors.match import ItemMatcher
+from musify.processors.search import RemoteItemSearcher
 from musify.utils import get_max_width, align_string
 
 try:

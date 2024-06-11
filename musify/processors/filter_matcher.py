@@ -8,9 +8,9 @@ from collections.abc import Collection
 from dataclasses import field, dataclass
 from typing import Any
 
-from musify.core.enum import TagField
-from musify.core.result import Result
-from musify.log.logger import MusifyLogger
+from musify.base import Result
+from musify.field import TagField
+from musify.logger import MusifyLogger
 from musify.processors.base import Filter, FilterComposite
 from musify.processors.filter import FilterComparers, FilterDefinedList
 

@@ -7,7 +7,7 @@ from random import randrange
 
 import pytest
 
-from musify.core.enum import Fields
+from musify.field import Fields
 from musify.file.exception import InvalidFileType
 from musify.file.path_mapper import PathMapper, PathStemMapper
 from musify.libraries.local.library import MusicBee, LocalLibrary

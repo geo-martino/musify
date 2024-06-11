@@ -5,8 +5,8 @@ from urllib.parse import unquote
 
 import pytest
 
-from musify.core.base import MusifyItemSettable
-from musify.core.enum import TagFields as Tag
+from musify.base import MusifyItemSettable
+from musify.field import TagFields as Tag
 from musify.libraries.collection import BasicCollection
 from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.core.object import Album

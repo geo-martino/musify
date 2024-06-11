@@ -12,7 +12,7 @@ from typing import Self
 
 from yarl import URL
 
-from musify.core.base import MusifyItem, HasLength
+from musify.base import MusifyItem, HasLength
 from musify.exception import MusifyTypeError
 from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.remote.core.enum import RemoteObjectType

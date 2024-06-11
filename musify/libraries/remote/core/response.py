@@ -5,7 +5,7 @@ Placed here separately to avoid circular import logic issues.
 from abc import ABCMeta, abstractmethod
 from typing import Any
 
-from musify.core.base import MusifyObject
+from musify.base import MusifyObject
 from musify.libraries.remote.core.enum import RemoteObjectType
 
 

@@ -4,7 +4,7 @@ from random import sample, shuffle, randrange
 
 import pytest
 
-from musify.core.enum import TagFields
+from musify.field import TagFields
 from musify.file.path_mapper import PathStemMapper, PathMapper
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.local.track.field import LocalTrackField

@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from musify.core.enum import TagFields as Tag
+from musify.field import TagFields as Tag
 from musify.exception import MusifyEnumError
 from musify.libraries.local.collection import LocalAlbum
 from musify.libraries.local.track import LocalTrack

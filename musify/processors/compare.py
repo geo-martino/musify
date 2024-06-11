@@ -8,8 +8,8 @@ from functools import reduce
 from operator import mul
 from typing import Any
 
-from musify.core.base import MusifyItem
-from musify.core.enum import Field
+from musify.base import MusifyItem
+from musify.field import Field
 from musify.processors.base import DynamicProcessor, dynamicprocessormethod
 from musify.processors.exception import ComparerError
 from musify.processors.time import TimeMapper

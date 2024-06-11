@@ -1,8 +1,9 @@
 from abc import ABCMeta, abstractmethod
 from collections.abc import Container
 
-from musify.core.base import MusifyObject
-from musify.core.enum import MusifyEnum, Fields, TagField, ALL_FIELDS, Field
+from musify.base import MusifyObject
+from musify.enum import MusifyEnum
+from musify.field import Fields, TagField, ALL_FIELDS, Field
 
 
 class EnumTester(metaclass=ABCMeta):

@@ -6,7 +6,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Collection
 from typing import Any
 
-from musify.core.base import MusifyItem
+from musify.base import MusifyItem
 from musify.libraries.core.collection import MusifyCollection
 from musify.utils import to_collection
 

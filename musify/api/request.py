@@ -20,7 +20,7 @@ from musify.api.authorise import APIAuthoriser
 from musify.api.cache.backend import ResponseCache
 from musify.api.cache.session import CachedSession
 from musify.api.exception import APIError, RequestError
-from musify.log.logger import MusifyLogger
+from musify.logger import MusifyLogger
 from musify.utils import clean_kwargs
 
 

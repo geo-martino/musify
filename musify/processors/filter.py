@@ -7,7 +7,7 @@ from collections.abc import Collection, Sequence, Mapping
 from pathlib import Path
 from typing import Any, Self
 
-from musify.core.base import MusifyObject
+from musify.base import MusifyObject
 from musify.processors.base import Filter, FilterComposite
 from musify.processors.compare import Comparer
 from musify.types import UnitCollection
