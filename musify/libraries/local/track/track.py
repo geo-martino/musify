@@ -519,9 +519,9 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         return self._get_attributes() | attributes_extra
 
     def __hash__(self):
-        # TODO: why doesn't this get inherited correctly from File superclass.
-        #  If you remove this, tests will fail with error 'un-hashable type' for all subclasses of LocalTrack.
-        #  LocalTrack should be inheriting __hash__ from File superclass
+        # If a class overrides __eq__, it must override __hash__ alongside it.
+        # https://stackoverflow.com/questions/74664008/python-typeerror-unhashable-type-when-inheriting-from-subclass-with-hash
+        # https://github.com/python/cpython/issues/46488
         return super().__hash__()
 
     def __eq__(self, item: MusifyItem):
