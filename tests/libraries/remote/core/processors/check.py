@@ -11,7 +11,7 @@ from musify.libraries.collection import BasicCollection
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.remote.core.enum import RemoteObjectType
 from musify.libraries.remote.core.object import RemotePlaylist
-from musify.libraries.remote.core.processors.check import RemoteItemChecker
+from musify.processors.check import RemoteItemChecker
 from tests.api.utils import path_token
 from tests.conftest import LogCapturer
 from tests.core.printer import PrettyPrinterTester

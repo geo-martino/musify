@@ -16,7 +16,7 @@ from musify.api.exception import CacheError
 from musify.api.request import RequestHandler
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
-from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
+from musify.libraries.remote.core.wrangle import RemoteDataWrangler
 from musify.libraries.remote.core.types import APIInputValueSingle, APIInputValueMulti
 from musify.log.logger import MusifyLogger
 from musify.types import UnitSequence, JSON, UnitList

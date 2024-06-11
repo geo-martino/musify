@@ -21,7 +21,7 @@ from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.factory import RemoteObjectFactory
 from musify.libraries.remote.core.object import RemotePlaylist
-from musify.libraries.remote.core.processors.search import RemoteItemSearcher
+from musify.processors.search import RemoteItemSearcher
 from musify.log import REPORT
 from musify.log.logger import MusifyLogger
 from musify.processors.base import InputProcessor

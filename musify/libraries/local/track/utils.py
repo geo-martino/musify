@@ -12,7 +12,7 @@ from musify.libraries.local.track.flac import FLAC
 from musify.libraries.local.track.m4a import M4A
 from musify.libraries.local.track.mp3 import MP3
 from musify.libraries.local.track.wma import WMA
-from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
+from musify.libraries.remote.core.wrangle import RemoteDataWrangler
 
 TRACK_CLASSES = frozenset({FLAC, MP3, M4A, WMA})
 TRACK_FILETYPES = frozenset(filetype for c in TRACK_CLASSES for filetype in c.valid_extensions)

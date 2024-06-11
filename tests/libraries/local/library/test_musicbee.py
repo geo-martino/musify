@@ -10,7 +10,7 @@ from musify.file.path_mapper import PathMapper
 from musify.libraries.local.library import LocalLibrary, MusicBee
 from musify.libraries.local.library.musicbee import XMLLibraryParser, REQUIRED_MODULES
 from musify.libraries.local.track import LocalTrack
-from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
+from musify.libraries.remote.core.wrangle import RemoteDataWrangler
 from musify.processors.filter import FilterIncludeExclude, FilterDefinedList
 from musify.utils import required_modules_installed
 from tests.libraries.local.library.testers import LocalLibraryTester

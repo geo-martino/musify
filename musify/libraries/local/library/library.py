@@ -17,7 +17,7 @@ from musify.libraries.local.collection import LocalCollection, LocalFolder, Loca
 from musify.libraries.local.playlist import PLAYLIST_CLASSES, LocalPlaylist, load_playlist
 from musify.libraries.local.track import TRACK_CLASSES, LocalTrack, load_track
 from musify.libraries.local.track.field import LocalTrackField
-from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
+from musify.libraries.remote.core.wrangle import RemoteDataWrangler
 from musify.log import STAT
 from musify.processors.base import Filter
 from musify.processors.filter import FilterDefinedList

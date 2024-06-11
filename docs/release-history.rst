@@ -100,6 +100,10 @@ Changed
 * :py:class:`.RemoteItemChecker` also uses the new :py:meth:`.RemoteAPI.follow_playlist` method
   when creating playlists to ensure that a user is following the playlists it creates to avoid 'ghost playlist' issue.
 * :py:meth:`.SpotifyAPI.create_playlist` now returns the full response rather than just the URL of the playlist.
+* Moved :py:class:`.RemoteItemChecker` and :py:class:`.RemoteItemSearcher` to `musify.processors` package.
+* Moved :py:class:`.RemoteDataWrangler` up a level to `musify.libraries.remote.core`.
+* Deleted `musify.libraries.remote.core.processors` package.
+* Renamed `musify.libraries.remote.spotify.processors` module to `musify.libraries.remote.spotify.wrangle`.
 
 Fixed
 -----

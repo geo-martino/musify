@@ -18,7 +18,7 @@ from musify.libraries.local.exception import MusicBeeIDError, XMLReaderError
 from musify.libraries.local.library.library import LocalLibrary
 from musify.libraries.local.playlist import LocalPlaylist
 from musify.libraries.local.track import LocalTrack
-from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
+from musify.libraries.remote.core.wrangle import RemoteDataWrangler
 from musify.processors.base import Filter
 from musify.types import Number
 from musify.utils import to_collection, required_modules_installed

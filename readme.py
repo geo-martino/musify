@@ -6,7 +6,7 @@ from musify.libraries.local.track import TRACK_FILETYPES
 from musify.libraries.local.playlist import PLAYLIST_FILETYPES
 from musify.libraries.local.library import LIBRARY_CLASSES, LocalLibrary
 from musify.utils import SafeDict
-from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
+from musify.libraries.remote.spotify.wrangle import SpotifyDataWrangler
 
 SRC_FILENAME = "README.template.md"
 TRG_FILENAME = SRC_FILENAME.replace(".template", "")

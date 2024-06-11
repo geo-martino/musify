@@ -22,7 +22,7 @@ from musify.libraries.local.base import LocalItem
 from musify.libraries.local.track.field import LocalTrackField as Tags
 # noinspection PyProtectedMember
 from musify.libraries.local.track._tags import TagReader, TagWriter, SyncResultTrack
-from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
+from musify.libraries.remote.core.wrangle import RemoteDataWrangler
 from musify.types import UnitIterable
 from musify.utils import to_collection
 

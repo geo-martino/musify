@@ -17,7 +17,7 @@ from aioresponses import aioresponses
 from musify import MODULE_ROOT
 from musify.libraries.remote.core.enum import RemoteObjectType
 from musify.libraries.remote.spotify.api import SpotifyAPI
-from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
+from musify.libraries.remote.spotify.wrangle import SpotifyDataWrangler
 from musify.log.logger import MusifyLogger
 from musify.types import UnitCollection
 from musify.utils import to_collection

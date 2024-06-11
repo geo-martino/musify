@@ -13,7 +13,7 @@ from musify.file.base import File
 from musify.file.path_mapper import PathMapper
 from musify.libraries.local.playlist.base import LocalPlaylist
 from musify.libraries.local.track import LocalTrack, load_track
-from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
+from musify.libraries.remote.core.wrangle import RemoteDataWrangler
 from musify.processors.filter import FilterDefinedList
 
 
