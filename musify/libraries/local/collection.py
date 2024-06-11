@@ -167,12 +167,10 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
             if not track_in_collection:  # skip if the item does not exist in this collection
                 continue
 
-            print(track, track_in_collection, tag_names)
             for tag in tag_names:  # merge on each tag
                 if hasattr(track, tag):
                     track_in_collection[tag] = track[tag]
 
-            print(track_in_collection)
         if isinstance(self, Library | LocalCollection):
             self.logger.print()
 

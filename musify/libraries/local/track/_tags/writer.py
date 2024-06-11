@@ -371,13 +371,11 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
             source.year is None and source.month is None and source.day is None and values_exist,
             replace and (source.year != target.year or source.month != target.month or source.day != target.day)
         ]
-        print(conditionals)
 
         if not any(conditionals):
             return
 
         date, year, month, day = self._write_date(track=target, dry_run=dry_run)
-        print(date, year, month, day)
 
         updated = {}
         condition = [i for i, c in enumerate(conditionals) if c][0]
