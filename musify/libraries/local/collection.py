@@ -175,7 +175,7 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
                     track_in_collection[tag] = track[tag]
 
             if track.name == "When I Look at You":
-                print(track)
+                print(track_in_collection)
 
         if isinstance(self, Library | LocalCollection):
             self.logger.print()
