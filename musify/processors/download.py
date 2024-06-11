@@ -5,6 +5,7 @@ import re
 from collections.abc import Iterable, Collection
 from itertools import batched
 from typing import Any
+from urllib.parse import quote
 from webbrowser import open as webopen
 
 from musify.base import MusifyItem
@@ -78,7 +79,7 @@ class ItemDownloadHelper(InputProcessor):
                 value = " ".join(value)
             query_parts.append(str(value))
 
-        query = " ".join(query_parts)
+        query = quote(" ".join(query_parts))
         if not query:
             self.logger.debug(f"Could not get query for item: {item.name}")
             return False
