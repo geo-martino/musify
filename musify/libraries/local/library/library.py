@@ -280,7 +280,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
     def _log_errors(self, message: str = "Could not load") -> None:
         """Log paths which had some error while loading"""
-        errors = tuple(f"\33[91m{e}\33[0m" for e in self.errors)
+        errors = tuple(f"\33[91m{e}\33[0m" for e in sorted(self.errors))
         if len(errors) > 0:
             self.logger.warning(f"\33[97m{message}: \33[0m\n\t- {"\n\t- ".join(errors)} ")
             self.logger.print()
