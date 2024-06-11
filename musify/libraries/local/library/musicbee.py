@@ -132,7 +132,7 @@ class MusicBee(LocalLibrary, File):
         )
 
     def _get_track_from_xml_path(
-            self, track_xml: dict[str, Any], track_map: dict[Path, LocalTrack]
+            self, track_xml: dict[str, Any], track_map: dict[str, LocalTrack]
     ) -> LocalTrack | None:
         if track_xml["Track Type"] != "File":
             return
@@ -143,27 +143,34 @@ class MusicBee(LocalLibrary, File):
             prefixes.update(self.path_mapper.stem_map.keys())
 
         for prefix in prefixes:
-            track = track_map.get(Path(path.removeprefix(prefix)))
+            track = track_map.get(path.removeprefix(prefix).casefold())
             if track is not None:
                 return track
 
         self.errors.append(path)
 
-    async def load_tracks(self) -> None:
-        await super().load_tracks()
-        self.logger.debug(f"Enrich {self.name} tracks: START")
-
+    def _map_track_to_xml(self) -> dict[LocalTrack, dict[str, Any]]:
         # need to remove library folders to allow match to be os agnostic
         track_map = {
-            Path(str(track.path).removeprefix(str(folder))): track
+            str(track.path).removeprefix(str(folder)).casefold(): track
             for folder in self.library_folders for track in self.tracks
         }
+        track_xml_map: dict[LocalTrack, dict[str, Any]] = {}
 
         for track_xml in self.library_xml["Tracks"].values():
             track = self._get_track_from_xml_path(track_xml=track_xml, track_map=track_map)
             if track is None:
                 continue
 
+            track_xml_map[track] = track_xml
+
+        return track_xml_map
+
+    async def load_tracks(self) -> None:
+        await super().load_tracks()
+        self.logger.debug(f"Enrich {self.name} tracks: START")
+
+        for track, track_xml in self._map_track_to_xml().items():
             track.rating = int(track_xml.get("Rating")) if track_xml.get("Rating") is not None else None
             track.date_added = track_xml.get("Date Added")
             track.last_played = track_xml.get("Play Date UTC")
@@ -180,19 +187,11 @@ class MusicBee(LocalLibrary, File):
         :return: Map representation of the saved XML file.
         """
         self.logger.debug(f"Save {self.name} library file: START")
-        # need to remove library folders to allow match to be os agnostic
-        track_map = {
-            Path(str(track.path).removeprefix(str(folder))): track
-            for folder in self.library_folders for track in self.tracks
+
+        track_id_map: dict[LocalTrack, tuple[int, str]] = {
+            track: (track_xml["Track ID"], track_xml["Persistent ID"])
+            for track, track_xml in self._map_track_to_xml().items()
         }
-        track_id_map: dict[LocalTrack, tuple[int, str]] = {}
-
-        for track_xml in self.library_xml["Tracks"].values():
-            track = self._get_track_from_xml_path(track_xml=track_xml, track_map=track_map)
-            if track is None:
-                continue
-
-            track_id_map[track] = (track_xml["Track ID"], track_xml["Persistent ID"])
 
         self._log_errors("Could not find a loaded track for these paths from the MusicBee library file")
 
