@@ -102,9 +102,7 @@ Changed
 * :py:meth:`.SpotifyAPI.create_playlist` now returns the full response rather than just the URL of the playlist.
 * Moved :py:class:`.RemoteItemChecker` and :py:class:`.RemoteItemSearcher` to `musify.processors` package.
 * Moved :py:class:`.RemoteDataWrangler` up a level to `musify.libraries.remote.core`.
-* Deleted `musify.libraries.remote.core.processors` package.
 * Renamed `musify.libraries.remote.spotify.processors` module to `musify.libraries.remote.spotify.wrangle`.
-* Removed logger filters and handlers. Moved to CLI repo.
 * Moved `musify.logger` module to `musify` base package.
 * Restructured contents of `musify.core` package to modules in `musify` base package.
 
@@ -135,6 +133,8 @@ Removed
 * ThreadPoolExecutor use on :py:class:`.RemoteItemSearcher`. Now uses asynchronous logic instead.
 * `last_modified` field as attribute to ignore when getting attributes
   to print on `LocalCollection` to improve performance
+* Removed logger filters and handlers. Moved to CLI repo.
+* Deleted `musify.libraries.remote.core.processors` package.
 
 Documentation
 -------------
