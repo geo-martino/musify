@@ -4,8 +4,8 @@ from collections.abc import Collection
 
 from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.remote.core.factory import RemoteObjectFactory
-from musify.libraries.remote.core.processors.search import RemoteItemSearcher
-from musify.libraries.remote.core.processors.check import RemoteItemChecker
+from musify.processors.search import RemoteItemSearcher
+from musify.processors.check import RemoteItemChecker
 from musify.processors.match import ItemMatcher
 
 

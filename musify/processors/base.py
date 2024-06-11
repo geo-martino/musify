@@ -7,8 +7,8 @@ from collections.abc import Mapping, Callable, Collection, Iterable, MutableSequ
 from functools import partial, update_wrapper
 from typing import Any, Optional
 
-from musify.core.printer import PrettyPrinter
-from musify.log.logger import MusifyLogger
+from musify.logger import MusifyLogger
+from musify.printer import PrettyPrinter
 from musify.processors.exception import ProcessorLookupError
 from musify.utils import get_user_input, get_max_width, align_string
 

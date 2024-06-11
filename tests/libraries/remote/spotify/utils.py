@@ -3,9 +3,9 @@ from random import choice, randrange
 from typing import Any
 
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
-from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
+from musify.libraries.remote.core.wrangle import RemoteDataWrangler
 from musify.libraries.remote.spotify.base import SpotifyObject
-from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
+from musify.libraries.remote.spotify.wrangle import SpotifyDataWrangler
 from tests.libraries.remote.core.utils import ALL_ID_TYPES
 from tests.utils import random_str
 

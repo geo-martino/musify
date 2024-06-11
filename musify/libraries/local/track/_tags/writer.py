@@ -8,10 +8,10 @@ from typing import Any
 
 import mutagen
 
-from musify.core.result import Result
+from musify.base import Result
 from musify.libraries.core.object import Track
-from musify.libraries.local.track.field import LocalTrackField as Tags
 from musify.libraries.local.track._tags.base import TagProcessor
+from musify.libraries.local.track.field import LocalTrackField as Tags
 from musify.types import UnitIterable
 from musify.utils import to_collection
 
@@ -82,7 +82,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
     def clear_loaded_images(self) -> bool:
         """
         Clear the loaded embedded images for this track.
-        Does not alter the actual file in anyway, only the loaded object in memory.
+        Does not alter the actual file in any way, only the loaded object in memory.
         """
         tag_names = Tags.IMAGES.to_tag()
         removed = False

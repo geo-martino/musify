@@ -11,14 +11,25 @@ from collections.abc import Iterable, Awaitable
 from pathlib import Path
 from typing import Any
 
-from musify.log import INFO_EXTRA, REPORT, STAT
-
 try:
     from tqdm.auto import tqdm
 except ImportError:
     tqdm = None
 
 type ProgressBarType[T] = Iterable[T] | tqdm if tqdm is not None else Iterable[T]
+
+
+INFO_EXTRA = logging.INFO - 1
+logging.addLevelName(INFO_EXTRA, "INFO_EXTRA")
+logging.INFO_EXTRA = INFO_EXTRA
+
+REPORT = logging.INFO - 3
+logging.addLevelName(REPORT, "REPORT")
+logging.REPORT = REPORT
+
+STAT = logging.DEBUG + 3
+logging.addLevelName(STAT, "STAT")
+logging.STAT = STAT
 
 
 class MusifyLogger(logging.Logger):

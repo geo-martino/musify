@@ -13,7 +13,7 @@ from yarl import URL
 
 from musify.libraries.remote.core.enum import RemoteObjectType as ObjectType
 from musify.libraries.remote.spotify.api import SpotifyAPI
-from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
+from musify.libraries.remote.spotify.wrangle import SpotifyDataWrangler
 from tests.libraries.remote.core.utils import RemoteMock
 from tests.libraries.remote.spotify.utils import random_id
 from tests.utils import random_str, random_date_str, random_dt, random_genres

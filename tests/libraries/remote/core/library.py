@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from musify.core.base import MusifyItem
+from musify.base import MusifyItem
 from musify.libraries.core.object import Playlist
 from musify.libraries.remote.core.library import RemoteLibrary
 from musify.libraries.remote.core.object import RemoteTrack

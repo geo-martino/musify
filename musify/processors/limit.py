@@ -6,8 +6,9 @@ from functools import reduce
 from operator import mul
 from random import shuffle
 
-from musify.core.base import MusifyItem, HasLength
-from musify.core.enum import MusifyEnum, Fields
+from musify.base import MusifyItem, HasLength
+from musify.enum import MusifyEnum
+from musify.field import Fields
 from musify.file.base import File
 from musify.libraries.core.object import Track
 from musify.processors.base import DynamicProcessor, dynamicprocessormethod

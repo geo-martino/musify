@@ -2,8 +2,8 @@ from abc import ABCMeta, abstractmethod
 
 import pytest
 
-from musify.core.base import MusifyItem
-from musify.core.printer import PrettyPrinter
+from musify.base import MusifyItem
+from musify.printer import PrettyPrinter
 from tests.core.printer import PrettyPrinterTester
 
 

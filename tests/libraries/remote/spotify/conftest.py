@@ -3,7 +3,7 @@ from copy import copy
 import pytest
 
 from musify.libraries.remote.spotify.api import SpotifyAPI
-from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
+from musify.libraries.remote.spotify.wrangle import SpotifyDataWrangler
 from tests.libraries.remote.spotify.api.mock import SpotifyMock
 
 

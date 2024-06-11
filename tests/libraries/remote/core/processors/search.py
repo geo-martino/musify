@@ -5,15 +5,15 @@ from urllib.parse import unquote
 
 import pytest
 
-from musify.core.base import MusifyItemSettable
-from musify.core.enum import TagFields as Tag
+from musify.base import MusifyItemSettable
+from musify.field import TagFields as Tag
 from musify.libraries.collection import BasicCollection
 from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.core.object import Album
 from musify.libraries.local.collection import LocalAlbum
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.remote.core.enum import RemoteObjectType
-from musify.libraries.remote.core.processors.search import RemoteItemSearcher, SearchConfig
+from musify.processors.search import RemoteItemSearcher, SearchConfig
 from tests.core.printer import PrettyPrinterTester
 from tests.libraries.local.track.utils import random_track, random_tracks
 from tests.libraries.remote.core.utils import RemoteMock

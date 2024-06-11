@@ -8,11 +8,11 @@ import mutagen
 import mutagen.flac
 import mutagen.id3
 
-from musify.core.enum import TagMap
+from musify.field import TagMap
 from musify.file.image import open_image, get_image_bytes
-from musify.libraries.local.track.field import LocalTrackField
 # noinspection PyProtectedMember
 from musify.libraries.local.track._tags import TagReader, TagWriter
+from musify.libraries.local.track.field import LocalTrackField
 from musify.libraries.local.track.track import LocalTrack
 
 try:

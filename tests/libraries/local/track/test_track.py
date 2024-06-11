@@ -5,7 +5,7 @@ from pathlib import Path
 import mutagen
 import pytest
 
-from musify.core.base import MusifyItem
+from musify.base import MusifyItem
 from musify.exception import MusifyKeyError
 from musify.file.exception import InvalidFileType, FileDoesNotExistError
 from musify.file.image import open_image

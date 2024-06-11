@@ -2,7 +2,7 @@ import json
 import re
 from abc import ABCMeta, abstractmethod
 
-from musify.core.printer import PrettyPrinter
+from musify.printer import PrettyPrinter
 
 
 class PrettyPrinterTester(metaclass=ABCMeta):

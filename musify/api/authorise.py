@@ -16,7 +16,7 @@ from yarl import URL
 
 from musify import PROGRAM_NAME
 from musify.api.exception import APIError
-from musify.log.logger import MusifyLogger
+from musify.logger import MusifyLogger
 
 
 class APIAuthoriser:

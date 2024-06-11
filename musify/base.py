@@ -4,12 +4,22 @@ The fundamental core classes for the entire package.
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
+from dataclasses import dataclass
 from typing import Any
 
-from musify.core.enum import TagField
-from musify.core.printer import AttributePrinter
+from musify.field import TagField
+from musify.printer import AttributePrinter
 
 
+@dataclass(frozen=True)
+class Result(metaclass=ABCMeta):
+    """Stores the results of an operation"""
+    pass
+
+
+###########################################################################
+## Core item/object types
+###########################################################################
 class MusifyObject(AttributePrinter, metaclass=ABCMeta):
     """Generic base class for any nameable and taggable object."""
 

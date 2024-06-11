@@ -8,7 +8,7 @@ from typing import Any
 import mutagen
 import mutagen.mp4
 
-from musify.core.enum import TagMap
+from musify.field import TagMap
 from musify.file.image import open_image, get_image_bytes
 # noinspection PyProtectedMember
 from musify.libraries.local.track._tags import TagReader, TagWriter

@@ -6,13 +6,13 @@ from collections.abc import Collection, Generator
 from pathlib import Path
 from typing import Any, Self
 
-from musify.core.result import Result
+from musify.base import Result
 from musify.file.base import File
 from musify.file.path_mapper import PathMapper
 from musify.libraries.core.object import Playlist
 from musify.libraries.local.collection import LocalCollection
 from musify.libraries.local.track import LocalTrack
-from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
+from musify.libraries.remote.core.wrangle import RemoteDataWrangler
 from musify.processors.base import Filter
 from musify.processors.limit import ItemLimiter
 from musify.processors.sort import ItemSorter

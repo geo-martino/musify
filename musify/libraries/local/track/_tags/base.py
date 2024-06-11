@@ -5,9 +5,9 @@ from abc import ABCMeta
 
 import mutagen
 
-from musify.core.enum import TagMap
+from musify.field import TagMap
 from musify.libraries.local.track.field import LocalTrackField
-from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
+from musify.libraries.remote.core.wrangle import RemoteDataWrangler
 
 
 class TagProcessor[T: mutagen.FileType](metaclass=ABCMeta):

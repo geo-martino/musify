@@ -13,6 +13,9 @@ from musify.exception import MusifyTypeError, MusifyImportError
 from musify.types import Number
 
 
+###########################################################################
+## Extended primitives
+###########################################################################
 class SafeDict(dict):
     """Extends dict to ignore missing keys when using format_map operations"""
 

@@ -3,7 +3,7 @@ from pathlib import Path
 from musify.libraries.local.playlist import PLAYLIST_CLASSES, XAutoPF
 from musify.libraries.local.playlist.xautopf import REQUIRED_MODULES as REQUIRED_XAUTOPF_MODULES
 from musify.libraries.local.track import TRACK_CLASSES
-from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
+from musify.libraries.remote.spotify.wrangle import SpotifyDataWrangler
 from musify.utils import required_modules_installed
 from tests.utils import path_resources
 

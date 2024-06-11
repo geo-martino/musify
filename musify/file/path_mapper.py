@@ -7,8 +7,8 @@ from os import sep
 from pathlib import Path
 from typing import Any
 
-from musify.core.printer import PrettyPrinter
 from musify.file.base import File
+from musify.printer import PrettyPrinter
 
 type PathInputType = str | Path | File | None
 

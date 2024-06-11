@@ -1,6 +1,6 @@
 import pytest
 
-from musify.core.enum import TagFields as Tag
+from musify.field import TagFields as Tag
 from musify.libraries.local.track import LocalTrack
 from musify.processors.match import ItemMatcher, CleanTagConfig
 from tests.core.printer import PrettyPrinterTester

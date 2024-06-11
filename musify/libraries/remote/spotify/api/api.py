@@ -18,7 +18,7 @@ from musify.libraries.remote.spotify.api.cache import SpotifyRequestSettings, Sp
 from musify.libraries.remote.spotify.api.item import SpotifyAPIItems
 from musify.libraries.remote.spotify.api.misc import SpotifyAPIMisc
 from musify.libraries.remote.spotify.api.playlist import SpotifyAPIPlaylists
-from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
+from musify.libraries.remote.spotify.wrangle import SpotifyDataWrangler
 from musify.utils import safe_format_map, merge_maps
 
 URL_AUTH = "https://accounts.spotify.com"

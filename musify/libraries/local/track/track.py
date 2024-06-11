@@ -12,17 +12,17 @@ from typing import Any, Self
 import mutagen
 from yarl import URL
 
-from musify.core.base import MusifyItem
-from musify.core.enum import TagMap
+from musify.base import MusifyItem
 from musify.exception import MusifyKeyError, MusifyAttributeError, MusifyTypeError, MusifyValueError
+from musify.field import TagMap
 from musify.field import TrackField
 from musify.file.exception import FileDoesNotExistError, UnexpectedPathError
 from musify.libraries.core.object import Track
 from musify.libraries.local.base import LocalItem
-from musify.libraries.local.track.field import LocalTrackField as Tags
 # noinspection PyProtectedMember
 from musify.libraries.local.track._tags import TagReader, TagWriter, SyncResultTrack
-from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
+from musify.libraries.local.track.field import LocalTrackField as Tags
+from musify.libraries.remote.core.wrangle import RemoteDataWrangler
 from musify.types import UnitIterable
 from musify.utils import to_collection
 

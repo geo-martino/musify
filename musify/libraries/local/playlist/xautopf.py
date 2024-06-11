@@ -7,16 +7,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Self
 
-from musify.core.base import MusifyItem
-from musify.core.enum import Fields, Field, TagFields
-from musify.core.printer import PrettyPrinter
-from musify.core.result import Result
+from musify.base import MusifyItem, Result
 from musify.exception import FieldError, MusifyImportError
+from musify.field import Fields, Field, TagFields
 from musify.file.base import File
 from musify.file.path_mapper import PathMapper
 from musify.libraries.local.playlist.base import LocalPlaylist
 from musify.libraries.local.track import LocalTrack
-from musify.libraries.remote.core.processors.wrangle import RemoteDataWrangler
+from musify.libraries.remote.core.wrangle import RemoteDataWrangler
+from musify.printer import PrettyPrinter
 from musify.processors.compare import Comparer
 from musify.processors.exception import SorterProcessorError
 from musify.processors.filter import FilterDefinedList, FilterComparers

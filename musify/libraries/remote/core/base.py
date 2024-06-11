@@ -9,7 +9,7 @@ from typing import Any, Self
 from yarl import URL
 
 from musify.api.exception import APIError
-from musify.core.base import MusifyItem
+from musify.base import MusifyItem
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.types import APIInputValueSingle

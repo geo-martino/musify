@@ -3,7 +3,7 @@ The fundamental core enum classes for the :py:mod:`Remote` module.
 
 Represents ID and item types.
 """
-from musify.core.enum import MusifyEnum
+from musify.enum import MusifyEnum
 
 
 class RemoteIDType(MusifyEnum):

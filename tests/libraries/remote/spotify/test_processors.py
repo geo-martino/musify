@@ -7,19 +7,19 @@ from typing import Any
 
 import pytest
 
-from musify.core.enum import TagFields as Tag
+from musify.field import TagFields as Tag
 from musify.exception import MusifyEnumError
 from musify.libraries.local.collection import LocalAlbum
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.remote.core.base import RemoteResponse
 from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
-from musify.libraries.remote.core.processors.check import RemoteItemChecker
-from musify.libraries.remote.core.processors.search import SearchConfig, RemoteItemSearcher
+from musify.processors.check import RemoteItemChecker
+from musify.processors.search import SearchConfig, RemoteItemSearcher
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.factory import SpotifyObjectFactory
 from musify.libraries.remote.spotify.object import SpotifyTrack, SpotifyAlbum, SpotifyPlaylist
-from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
+from musify.libraries.remote.spotify.wrangle import SpotifyDataWrangler
 from musify.processors.match import CleanTagConfig, ItemMatcher
 from tests.libraries.local.track.utils import random_track
 from tests.libraries.remote.core.processors.check import RemoteItemCheckerTester

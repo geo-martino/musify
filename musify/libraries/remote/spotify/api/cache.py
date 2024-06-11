@@ -5,7 +5,7 @@ from yarl import URL
 from musify.api.cache.backend.base import RequestSettings
 from musify.libraries.remote.core.enum import RemoteIDType
 from musify.libraries.remote.core.exception import RemoteObjectTypeError
-from musify.libraries.remote.spotify.processors import SpotifyDataWrangler
+from musify.libraries.remote.spotify.wrangle import SpotifyDataWrangler
 
 
 class SpotifyRequestSettings(RequestSettings):

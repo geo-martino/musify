@@ -1,7 +1,7 @@
 """
 The core Field enum for a :py:class:`LocalTrack` representing all possible tags/metadata/properties.
 """
-from musify.core.enum import TagFields, Fields
+from musify.field import TagFields, Fields
 from musify.field import TrackFieldMixin
 
 

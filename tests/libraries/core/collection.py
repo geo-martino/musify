@@ -6,8 +6,8 @@ from typing import Any
 
 import pytest
 
-from musify.core.base import MusifyItem
-from musify.core.printer import PrettyPrinter
+from musify.base import MusifyItem
+from musify.printer import PrettyPrinter
 from musify.exception import MusifyTypeError
 from musify.libraries.collection import BasicCollection
 from musify.libraries.core.collection import MusifyCollection
