@@ -1,3 +1,5 @@
+from p0 import *
+
 from collections.abc import Collection
 
 from musify.libraries.core.collection import MusifyCollection
