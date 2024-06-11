@@ -172,6 +172,7 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
                 if hasattr(track, tag):
                     track_in_collection[tag] = track[tag]
 
+            print(track_in_collection)
         if isinstance(self, Library | LocalCollection):
             self.logger.print()
 
