@@ -257,6 +257,8 @@ class TrackFieldMixin(TagField):
             return [cls.TRACK_NUMBER, cls.TRACK_TOTAL]
         elif enum == cls.DISC:
             return [cls.DISC_NUMBER, cls.DISC_TOTAL]
+        elif enum == cls.DATE:
+            return [cls.DATE, cls.YEAR, cls.MONTH, cls.DAY]
         return [enum]
 
 
@@ -272,7 +274,10 @@ class TrackField(TrackFieldMixin):
     TRACK_NUMBER = TagFields.TRACK_NUMBER.value
     TRACK_TOTAL = TagFields.TRACK_TOTAL.value
     GENRES = TagFields.GENRES.value
+    DATE = TagFields.DATE.value
     YEAR = TagFields.YEAR.value
+    MONTH = TagFields.MONTH.value
+    DAY = TagFields.DAY.value
     BPM = TagFields.BPM.value
     KEY = TagFields.KEY.value
     DISC = TagFields.DISC_NUMBER.value + 500
