@@ -257,7 +257,6 @@ For more detailed guides, check out the [documentation](https://{program_owner_u
    ```
    
    #### MusicBee
-   > [!NOTE]
    > You will need to install the `musicbee` optional dependency to work with MusicBee objects.
    > [Read the docs](https://geo-martino.github.io/musify/howto.install.html) for more info.
    ```python
