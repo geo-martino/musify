@@ -47,7 +47,7 @@ jobs:
       matrix:
         os: [ ubuntu-latest ]
         name: [ 🐧 Linux ]
-        python-version: [ 3.12 ]
+        python-version: [ 3.12, 3.13 ]
         include:
           - os: windows-latest
             name: 🪟 Windows
