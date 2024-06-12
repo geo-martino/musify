@@ -424,6 +424,14 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
 
     def refresh(self) -> None:
         """Extract update tags for this object from the loaded mutagen object."""
+        self._refresh()
+
+        # to reduce memory usage, remove any embedded images from the loaded file
+        self._writer.clear_loaded_images()
+
+        self._loaded = True
+
+    def _refresh(self):
         self.title = self._reader.read_title()
         self.artist = self._reader.read_artist()
         self.album = self._reader.read_album()
@@ -443,11 +451,6 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         if not self._loaded:
             self.has_image = self._reader.check_for_images()
 
-        # to reduce memory usage, remove any embedded images from the loaded file
-        self._writer.clear_loaded_images()
-
-        self._loaded = True
-
     async def save(
             self, tags: UnitIterable[Tags] = Tags.ALL, replace: bool = False, dry_run: bool = True
     ) -> SyncResultTrack:
@@ -459,13 +462,16 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         :param dry_run: Run function, but do not modify the file on the disk.
         :return: List of tags that have been updated.
         """
-        # reload the mutagen object in place to ensure comparison are being made against current data
-        self._writer.file.load(self._writer.file.filename)
-
+        # copy and reload the mutagen object to ensure comparison are being made against current data
         current = copy(self)
-        current.refresh()
+        current._writer.file.load(current._writer.file.filename)
+        current._refresh()
 
-        return self._writer.write(source=current, target=self, tags=tags, replace=replace, dry_run=dry_run)
+        result = self._writer.write(source=current, target=self, tags=tags, replace=replace, dry_run=dry_run)
+
+        # to reduce memory usage, remove any embedded images from the loaded file
+        current._writer.clear_loaded_images()
+        return result
 
     async def delete_tags(self, tags: UnitIterable[Tags] = (), dry_run: bool = True) -> SyncResultTrack:
         """
@@ -537,7 +543,7 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         new._writer = self._writer
 
         if self._reader.file.tags:
-            new.refresh()
+            new._refresh()
             # image is deleted from loaded file on refresh in initial run
             # set parameter manually here rather than rely on the 2nd refresh to set it
             new.has_image = self.has_image
@@ -547,6 +553,17 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
             for key in keys:
                 setattr(new, key, copy(getattr(self, key)))
 
+        return new
+
+    def __deepcopy__(self, _: dict = None):
+        """Deepcopy object by reloading from the file on disk and refreshing loaded metadata from it."""
+        new = self.__class__(file=self.path, remote_wrangler=self._reader.remote_wrangler)
+
+        file = mutagen.File(self.path) if self._reader.file.tags else self._reader.file
+        new._reader = self._create_reader(file)
+        new._writer = self._create_writer(file)
+
+        new.refresh()
         return new
 
     def __setitem__(self, key: str, value: Any):
