@@ -49,6 +49,10 @@ pip install musify
 python -m pip install musify
 ```
 
+There are alo optional dependencies that you may install for optional functionality. 
+For the current list of optional dependency groups, [read the docs](https://geo-martino.github.io/musify/howto.install.html)
+
+
 ## Quick Guides
 
 These quick guides will help you get set up and going with Musify in just a few minutes.
@@ -253,6 +257,10 @@ For more detailed guides, check out the [documentation](https://geo-martino.gith
    ```
    
    #### MusicBee
+   > [!NOTE]
+   > You will need to install the `musicbee` optional dependency to work with MusicBee objects.
+   > [Read the docs](https://geo-martino.github.io/musify/howto.install.html) for more info.
+   > ```
    ```python
    from musify.libraries.local.library import MusicBee
    
