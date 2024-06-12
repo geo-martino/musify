@@ -431,6 +431,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
             source_bpm < 30 < target_bpm,
             replace and source_bpm != target_bpm
         ]
+
         if any(conditionals) and self._write_bpm(track=target, dry_run=dry_run):
             return [i for i, c in enumerate(conditionals) if c][0]
 

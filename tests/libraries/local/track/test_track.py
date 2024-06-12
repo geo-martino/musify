@@ -1,4 +1,4 @@
-from copy import copy
+from copy import copy, deepcopy
 from datetime import datetime, date
 from pathlib import Path
 from random import choice
@@ -248,10 +248,18 @@ class TestLocalTrack(MusifyItemTester):
 
         keys = [key for key in track.__slots__ if key.lstrip("_") in dir(track)]
 
+        track.title = "fake title 1"
         track_copy = copy(track)
         assert id(track._reader.file) == id(track_copy._reader.file)
+        assert id(track._writer.file) == id(track_copy._writer.file)
+        assert track_copy.title != track.title
         for key in keys:
             assert getattr(track, key) == getattr(track_copy, key)
+
+        track_deepcopy = deepcopy(track)
+        assert id(track._reader.file) != id(track_deepcopy._reader.file)
+        assert id(track._writer.file) != id(track_deepcopy._writer.file)
+        assert track_deepcopy.title != track.title
 
     def test_set_and_find_file_paths(self, track: LocalTrack, tmp_path: Path):
         paths = track.__class__.get_filepaths(str(tmp_path))
@@ -460,14 +468,14 @@ class TestLocalTrackWriter:
         result = await track_update.save(tags=LocalTrackField.ALL, replace=False, dry_run=True)
         assert not result.saved
 
-        track_update_dry = copy(track_update)
+        track_on_disk = deepcopy(track_update)
 
-        self.assert_track_tags_equal(track_update_dry, track_original)
-        assert track_update_dry.comments == track_original.comments
+        self.assert_track_tags_equal(track_on_disk, track_original)
+        assert track_on_disk.comments == track_original.comments
 
-        assert track_update_dry.uri == track_original.uri
-        assert track_update_dry.has_uri == track_original.has_uri
-        assert track_update_dry.has_image == track_original.has_image
+        assert track_on_disk.uri == track_original.uri
+        assert track_on_disk.has_uri == track_original.has_uri
+        assert track_on_disk.has_image == track_original.has_image
 
     async def test_update_tags_no_replace(self, track: LocalTrack):
         track_update, track_original, new_uri = self.get_update_tags_test_track(track)
@@ -476,34 +484,35 @@ class TestLocalTrackWriter:
         result = await track_update.save(tags=LocalTrackField.ALL, replace=False, dry_run=False)
         assert result.saved
 
-        track_update = copy(track_update)
+        track_on_disk = deepcopy(track_update)
 
-        self.assert_track_tags_equal(track_update, track_original)
-        assert track_update.comments == [new_uri]
+        self.assert_track_tags_equal(track_on_disk, track_original)
+        assert track_on_disk.comments == [new_uri]
 
         if new_uri == track._reader.unavailable_uri_dummy:
-            assert track_update.uri is None
+            assert track_on_disk.uri is None
         else:
-            assert track_update.uri == new_uri
-        assert track_update.has_uri == track_update.has_uri
-        assert track_update.has_image == track_original.has_image
+            assert track_on_disk.uri == new_uri
+        assert track_on_disk.has_uri == track_on_disk.has_uri
+        assert track_on_disk.has_image == track_original.has_image
 
     async def test_update_tags_with_replace(self, track: LocalTrack):
         track_update, track_original, new_uri = self.get_update_tags_test_track(track)
 
         result = await track_update.save(tags=LocalTrackField.ALL, replace=True, dry_run=False)
         assert result.saved
-        track_update_replace = copy(track_update)
 
-        self.assert_track_tags_equal_on_existing(track_update_replace, track_update)
-        assert track_update_replace.comments == [new_uri]
+        track_on_disk = deepcopy(track_update)
+
+        self.assert_track_tags_equal_on_existing(track_on_disk, track_update)
+        assert track_on_disk.comments == [new_uri]
 
         if new_uri == track._reader.unavailable_uri_dummy:
             assert track_update.uri is None
         else:
             assert track_update.uri == new_uri
-        assert track_update_replace.image_links == track_update.image_links
-        assert track_update_replace.has_image == track_update.has_image
+        assert track_on_disk.image_links == track_update.image_links
+        assert track_on_disk.has_image == track_update.has_image
 
     async def test_update_tags_results(self, track: LocalTrack):
         track_original = copy(track)
@@ -563,10 +572,10 @@ class TestLocalTrackWriter:
     def assert_update_image_result(track: LocalTrack, image: Image.Image, result: SyncResultTrack):
         """Check for expected results after non-dry_run operations to update LocalTrack images"""
         assert result.saved
+        assert deepcopy(track).has_image
 
+        track._reader.file = mutagen.File(track.path)
         images = track._reader.read_images()
-        track.refresh()
-        assert track.has_image
 
         if not isinstance(track, MP3):
             # MP3 tagging works slightly differently so more than one image will be saved
@@ -582,8 +591,8 @@ class TestLocalTrackWriter:
         result = await track_update.save(tags=LocalTrackField.IMAGES, replace=False, dry_run=True)
         assert not result.saved
 
-        track_update.refresh()
-        assert track_update.has_image == track_original.has_image
+        track_on_disk = deepcopy(track_update)
+        assert track_on_disk.has_image == track_original.has_image
 
         track_update._reader.file = mutagen.File(track_update.path)
         images = track_update._reader.read_images()
