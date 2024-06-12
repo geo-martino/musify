@@ -8,6 +8,7 @@ from musify.exception import MusifyEnumError
 from musify.utils import unique_list
 
 
+# TEST
 class MusifyEnum(IntEnum):
     """Generic class for :py:class:`IntEnum` implementations for the entire package."""
 
