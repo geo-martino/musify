@@ -432,6 +432,7 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         self._loaded = True
 
     def _refresh(self):
+        """Simply refresh the metadata from file without any post-processing."""
         self.title = self._reader.read_title()
         self.artist = self._reader.read_artist()
         self.album = self._reader.read_album()
