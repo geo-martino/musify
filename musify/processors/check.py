@@ -172,8 +172,6 @@ class RemoteItemChecker(InputProcessor):
 
     async def _delete_playlists(self) -> None:
         """Delete all temporary playlists stored and clear stored playlists and collections"""
-        await self._check_api()
-
         # assume all empty original playlists were temp playlists and delete them, restore the others
         delete_count = sum(1 for pl in self._playlist_originals.values() if len(pl) == 0)
         restore_count = sum(1 for pl in self._playlist_originals.values() if len(pl) > 0)
@@ -190,6 +188,7 @@ class RemoteItemChecker(InputProcessor):
             else:
                 await pl.sync(kind="sync", reload=False, dry_run=False)
 
+        await self._check_api()
         await self.logger.get_asynchronous_iterator(
             map(_process_playlist, self._playlist_originals.values()), disable=True
         )

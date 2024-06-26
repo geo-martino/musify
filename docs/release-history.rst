@@ -36,11 +36,13 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 
 Added
 -----
-* Expanded error message on comparer processor lookup exception.
+* Expanded error message on :py:class:`.DynamicProcessor` processor lookup exception.
 
 Fixed
 -----
 * Bug in MusicBee XMLLibraryParser which would not read 'Playlists' keys
+* Moved 'check api' logic later when deleting playlists in :py:class:`.RemoteItemChecker`
+  to ensure API is not checked on close when checker has not actually run
 
 1.0.1
 =====
