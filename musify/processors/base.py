@@ -137,17 +137,18 @@ class DynamicProcessor(Processor, metaclass=ABCMeta):
 
     def _set_processor_name(self, value: str | None, fail_on_empty: bool = True):
         """Verifies and sets the condition name"""
+        formatted_processor_names = map(lambda x: x.lstrip("_"), self.processor_methods)
+
         if value is None:
             if not fail_on_empty:
                 self._processor_name = None
                 return
-            raise ProcessorLookupError(f"No condition given. Choose from: {", ".join(self.processor_methods)}")
+            raise ProcessorLookupError(f"No condition given. Choose from: {", ".join(formatted_processor_names)}")
 
         name = self._processor_method_fmt(value)
         if name not in self.processor_methods:
             raise ProcessorLookupError(
-                f"{value!r} condition is not valid. "
-                f"Choose from: {", ".join(map(lambda x: x.lstrip("_"), self.processor_methods))}"
+                f"{value!r} condition is not valid. Choose from: {", ".join(formatted_processor_names)}"
             )
 
         self._processor_name = name
