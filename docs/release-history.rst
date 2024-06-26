@@ -31,6 +31,20 @@ Release History
 The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
+1.0.2
+=====
+
+Fixed
+-----
+* Bug in MusicBee XMLLibraryParser which would not read 'Playlists' keys
+
+1.0.1
+=====
+
+Documentation
+-------------
+* Mark release as stable/production
+
 1.0.0
 =====
 

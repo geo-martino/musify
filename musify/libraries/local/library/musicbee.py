@@ -101,7 +101,7 @@ class MusicBee(LocalLibrary, File):
             self._library_xml_parser = XMLLibraryParser(self._library_xml_path, path_keys=self.xml_library_path_keys)
             #: A map representation of the loaded XML library data
             self.library_xml: dict[str, Any] = self._library_xml_parser.parse()
-        except etree.XMLSyntaxError as exc:
+        except (etree.XMLSyntaxError, XMLReaderError) as exc:
             raise XMLReaderError(
                 f"Could not read from library file at {self._library_xml_path}. {exc}"
             ) from exc
@@ -114,7 +114,7 @@ class MusicBee(LocalLibrary, File):
             with open(self._settings_xml_path, "r", encoding="utf-8") as f:
                 #: A map representation of the loaded XML settings data
                 self.settings_xml: dict[str, Any] = xmltodict.parse(f.read())["ApplicationSettings"]
-        except etree.XMLSyntaxError as exc:
+        except (etree.XMLSyntaxError, XMLReaderError) as exc:
             raise XMLReaderError(
                 f"Could not read from settings file at {self._settings_xml_path}. {exc}"
             ) from exc
@@ -433,8 +433,10 @@ class XMLLibraryParser:
             return self._parse_array(elem)
         elif peek is not None:
             raise XMLReaderError(f"Unrecognised element: {element.tag}, {element.text}, {peek.tag}, {peek.text}")
-        else:
+        elif element is not None:
             raise XMLReaderError(f"Unrecognised element: {element.tag}, {element.text}")
+        else:
+            raise XMLReaderError(f"Unrecognised element: {elem.tag}, {elem.text}")
 
     def _parse_array(self, element: Element | None = None) -> list[Any]:
         array = []
@@ -447,15 +449,15 @@ class XMLLibraryParser:
                 break
 
             peek = elem.getnext()
-            if elem is not None and elem.tag == "key":
+            if elem.tag == "key":
                 next_elem = next(self._iter_elements())
                 value = self._parse_value(value=next_elem.text, tag=next_elem.tag, parent=elem.text)
                 array.append({elem.text: value} | self._parse_dict())
             elif peek is None and element is not None:
                 value = self._parse_value(value=elem.text, tag=elem.tag, parent=element.text)
                 array.append({element.text: value} | self._parse_dict())
-            else:
-                array.append(self._parse_element())
+            elif elem.tag != "plist":
+                array.append(self._parse_element(elem))
 
         return array
 
