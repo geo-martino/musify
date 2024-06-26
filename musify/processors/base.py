@@ -146,7 +146,8 @@ class DynamicProcessor(Processor, metaclass=ABCMeta):
         name = self._processor_method_fmt(value)
         if name not in self.processor_methods:
             raise ProcessorLookupError(
-                f"{value!r} condition is not valid. Choose from: {", ".join(self.processor_methods)}"
+                f"{value!r} condition is not valid. "
+                f"Choose from: {", ".join(map(lambda x: x.lstrip("_"), self.processor_methods))}"
             )
 
         self._processor_name = name
