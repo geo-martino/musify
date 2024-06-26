@@ -34,6 +34,10 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 1.0.2
 =====
 
+Added
+-----
+* Expanded error message on comparer processor lookup exception.
+
 Fixed
 -----
 * Bug in MusicBee XMLLibraryParser which would not read 'Playlists' keys

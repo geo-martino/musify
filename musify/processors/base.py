@@ -141,11 +141,13 @@ class DynamicProcessor(Processor, metaclass=ABCMeta):
             if not fail_on_empty:
                 self._processor_name = None
                 return
-            raise ProcessorLookupError("No condition given")
+            raise ProcessorLookupError(f"No condition given. Choose from: {", ".join(self.processor_methods)}")
 
         name = self._processor_method_fmt(value)
         if name not in self.processor_methods:
-            raise ProcessorLookupError(f"{value!r} condition is not valid")
+            raise ProcessorLookupError(
+                f"{value!r} condition is not valid. Choose from: {", ".join(self.processor_methods)}"
+            )
 
         self._processor_name = name
 
