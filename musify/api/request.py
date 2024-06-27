@@ -44,10 +44,11 @@ class RequestHandler:
         "backoff_start",
         "backoff_factor",
         "backoff_count",
-        "_initial_backoff_logged",
+        "_backoff_start_logged",
         "wait_time",
         "wait_increment",
         "wait_max",
+        "_wait_start_logged",
     )
 
     @property
@@ -102,7 +103,7 @@ class RequestHandler:
         self.backoff_factor = 1.932
         #: The maximum number of request attempts to make before giving up and raising an exception
         self.backoff_count = 10
-        self._initial_backoff_logged = False
+        self._backoff_start_logged = False
 
         #: The initial time in seconds to wait after receiving a response from a request
         self.wait_time = 0
@@ -110,6 +111,8 @@ class RequestHandler:
         self.wait_increment = 0.1
         #: The maximum time in seconds that the wait time can be incremented to
         self.wait_max = 1
+        self._wait_start_logged = False
+
 
     async def __aenter__(self) -> Self:
         if self.closed:
@@ -182,12 +185,12 @@ class RequestHandler:
                     raise APIError("Max retries exceeded")
 
                 # exponential backoff
-                self._log_initial_backoff()
+                self._log_backoff_start()
                 self.log(method=method, url=url, message=f"Request failed: retrying in {backoff} seconds...")
                 await asyncio.sleep(backoff)
                 backoff *= self.backoff_factor
 
-        self._initial_backoff_logged = False
+        self._backoff_start_logged = False
         return data
 
     @contextlib.asynccontextmanager
@@ -248,15 +251,15 @@ class RequestHandler:
             return int(error_status) < 400
         return response.ok
 
-    def _log_initial_backoff(self) -> None:
-        if self._initial_backoff_logged:
+    def _log_backoff_start(self) -> None:
+        if self._backoff_start_logged:
             return
 
         self.logger.info_extra(
             "\33[93mRequest failed: retrying using backoff strategy. "
             f"Will retry request {self.backoff_count} more times and timeout in {self.timeout} seconds...\33[0m"
         )
-        self._initial_backoff_logged = True
+        self._backoff_start_logged = True
 
     async def _log_response(self, response: ClientResponse, method: str, url: str | URL) -> None:
         """Log the method, URL, response text, and response headers."""
@@ -324,8 +327,13 @@ class RequestHandler:
                 f"Retry again at {wait_str}"
             )
 
-        self.logger.info_extra(f"\33[93mRate limit exceeded. Retrying again at {wait_str}\33[0m")
-        sleep(wait_time)
+        if not self._wait_start_logged:
+            self.logger.info_extra(f"\33[93mRate limit exceeded. Retrying again at {wait_str}\33[0m")
+            self._wait_start_logged = True
+
+        await asyncio.sleep(wait_time)
+        self._wait_start_logged = False
+
         return True
 
     @staticmethod

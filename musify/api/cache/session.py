@@ -83,7 +83,7 @@ class CachedSession(ClientSession):
 
         yield response
 
-        if persist and repository is not None and not isinstance(response, CachedResponse):
+        if persist and repository is not None and response.ok and not isinstance(response, CachedResponse):
             await repository.save_response(response)
 
     async def _get_cached_response(
