@@ -41,6 +41,10 @@ Added
 * ``wait_max`` time to cap wait time between requests for :py:class:`.RequestHandler`
 * Add log on :py:class:`.CachedSession` for when either a `cache hit` or a `HTTP request` happens.
 
+Removed
+-------
+* ``limiter_deduplication`` attribute from print output on :py:class:`.XAutoPF`
+
 Fixed
 -----
 * Bug in MusicBee XMLLibraryParser which would not read 'Playlists' keys.
