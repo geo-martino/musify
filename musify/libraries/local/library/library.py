@@ -371,8 +371,8 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         # WARNING: making this run asynchronously will break tqdm; bar will get stuck after 1-2 ticks
         bar = self.logger.get_synchronous_iterator(
             self._playlist_paths.values(),
-            desc="Loading tracks",
-            unit="tracks",
+            desc="Loading playlists",
+            unit="playlists",
             total=len(self._playlist_paths)
         )
         self._playlists = {
