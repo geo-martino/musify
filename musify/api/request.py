@@ -8,7 +8,6 @@ import logging
 from collections.abc import Mapping, Callable
 from datetime import datetime, timedelta
 from http import HTTPStatus
-from time import sleep
 from typing import Any, Self
 from urllib.parse import unquote
 
@@ -113,7 +112,6 @@ class RequestHandler:
         self.wait_max = 1
         self._wait_start_logged = False
 
-
     async def __aenter__(self) -> Self:
         if self.closed:
             self._session = self._connector()
@@ -175,7 +173,7 @@ class RequestHandler:
                 if handled or waited:
                     continue
 
-                if await self._response_is_ok(response):
+                if response.ok:
                     data = await self._get_json_response(response)
                     break
 
@@ -244,13 +242,6 @@ class RequestHandler:
 
         self.logger.log(level=level, msg=format_url_log(method=method, url=url, messages=log))
 
-    async def _response_is_ok(self, response: ClientResponse) -> bool:
-        response_json = await self._get_json_response(response)
-        error_status = response_json.get("error", {}).get("status")
-        if error_status:
-            return int(error_status) < 400
-        return response.ok
-
     def _log_backoff_start(self) -> None:
         if self._backoff_start_logged:
             return
@@ -285,9 +276,7 @@ class RequestHandler:
     async def _handle_bad_response(self, response: ClientResponse) -> bool:
         """Handle bad responses by extracting message and handling status codes that should raise an exception."""
         response_json = await self._get_json_response(response)
-
         error_message = response_json.get("error", {}).get("message")
-        error_status = int(response_json.get("error", {}).get("status", 0))
         if error_message is None:
             status = HTTPStatus(error_status or response.status)
             error_message = f"{status.phrase} | {status.description}"
@@ -297,11 +286,11 @@ class RequestHandler:
         def _log_bad_response(message: str) -> None:
             self.logger.debug(f"Status code: {response.status} | {error_message} | {message}")
 
-        if response.status == 401 or error_status == 401:
+        if response.status == 401:
             _log_bad_response("Re-authorising...")
             await self.authorise()
             handled = True
-        elif response.status == 429 or error_status == 429:
+        elif response.status == 429:
             if self.wait_time < self.wait_max:
                 self.wait_time += self.wait_increment
                 _log_bad_response(f"Rate limit hit. Increasing wait time between requests to {self.wait_time}s")
