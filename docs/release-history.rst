@@ -47,6 +47,8 @@ Fixed
 * Moved 'check api' logic later when deleting playlists in :py:class:`.RemoteItemChecker`
   to ensure API is not checked on close when checker has not actually run.
 * :py:class:`.RequestHandler` now also handles bad responses even if response is OK.
+* :py:class:`.RequestHandler` now handles wait and backoff logic asynchronously.
+
 
 1.0.1
 =====
