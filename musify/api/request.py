@@ -278,7 +278,7 @@ class RequestHandler:
         response_json = await self._get_json_response(response)
         error_message = response_json.get("error", {}).get("message")
         if error_message is None:
-            status = HTTPStatus(error_status or response.status)
+            status = HTTPStatus(response.status)
             error_message = f"{status.phrase} | {status.description}"
 
         handled = False
