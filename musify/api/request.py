@@ -16,6 +16,7 @@ import aiohttp
 from aiohttp import ClientResponse, ClientSession
 from yarl import URL
 
+from musify.api._utils import format_url_log
 from musify.api.authorise import APIAuthoriser
 from musify.api.cache.backend import ResponseCache
 from musify.api.cache.session import CachedSession
@@ -238,13 +239,7 @@ class RequestHandler:
         if message:
             log.append(message) if isinstance(message, str) else log.extend(message)
 
-        url = str(url.with_query(None))
-        url_pad_map = [30, 40, 70, 100]
-        url_pad = next((pad for pad in url_pad_map if len(url) < pad), url_pad_map[-1])
-
-        self.logger.log(
-            level=level, msg=f"{method.upper():<7}: {url:<{url_pad}} | {" | ".join(map(str, log))}"
-        )
+        self.logger.log(level=level, msg=format_url_log(method=method, url=url, messages=log))
 
     async def _response_is_ok(self, response: ClientResponse) -> bool:
         response_json = await self._get_json_response(response)

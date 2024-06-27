@@ -1,12 +1,15 @@
 import contextlib
+import logging
 from http.client import InvalidURL
 from typing import Self, Any
 
 from aiohttp import ClientSession, ClientRequest, payload
 from yarl import URL
 
+from musify.api._utils import format_url_log
 from musify.api.cache.backend.base import ResponseCache, ResponseRepository
 from musify.api.cache.response import CachedResponse
+from musify.logger import MusifyLogger
 
 ClientSession.__init_subclass__ = lambda *_, **__: _  # WORKAROUND: disables inheritance warning
 
@@ -22,6 +25,10 @@ class CachedSession(ClientSession):
 
     def __init__(self, cache: ResponseCache, **kwargs):
         super().__init__(**kwargs)
+
+        # noinspection PyTypeChecker
+        #: The :py:class:`MusifyLogger` for this  object
+        self.logger: MusifyLogger = logging.getLogger(__name__)
 
         #: The cache to use when attempting to return a cached response.
         self.cache = cache
@@ -70,6 +77,7 @@ class CachedSession(ClientSession):
 
         repository = self.cache.get_repository_from_requests(req.request_info)
         response = await self._get_cached_response(req, repository=repository)
+        self._log_cache_hit(request=req, response=response)
         if response is None:
             response = await super().request(method=method, url=url, **kwargs)
 
@@ -93,3 +101,7 @@ class CachedSession(ClientSession):
             data = repository.serialize(data)
 
         return CachedResponse(request=request, data=data)
+
+    def _log_cache_hit(self, request: ClientRequest, response: CachedResponse | None) -> None:
+        message = "CACHE HIT" if isinstance(response, CachedResponse) else "HTTP REQUEST"
+        self.logger.debug(format_url_log(method="CACHE", url=request.url, messages=message))
