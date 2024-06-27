@@ -585,7 +585,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
             factory({k: v for k, v in response.items() if k not in self.update_keys[object_type]}, skip_checks=True)
             for response in responses.values()
         ]
-        for orig, ts in zip(original, test):
+        for orig, ts in zip(original, test, strict=True):
             self.assert_different(orig.response, ts.response, key)
 
         results = await api.get_items(values=test)
@@ -597,7 +597,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
             object_type=object_type
         )
         if object_type in api.collection_item_map:
-            for orig, ts in zip(original, test):
+            for orig, ts in zip(original, test, strict=True):
                 self.assert_response_extended(actual=ts, expected=orig)
 
     ###########################################################################

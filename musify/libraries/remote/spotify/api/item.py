@@ -100,7 +100,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
                 raise APIError(f"Given key {key!r} not found in response keys: {list(response.keys())}")
 
             if key:  # ensure identifiers are on each response so results can be sorted after execution
-                for i, r in zip(id_, response[key]):
+                for i, r in zip(id_, response[key], strict=True):
                     self._enrich_with_identifiers(response=r, id_=i, href=f"{url}/{i}")
             else:
                 self._enrich_with_identifiers(response=response, id_=id_, href=f"{url}/{id_}")
@@ -497,8 +497,9 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         for result_map in await bar:
             for key, responses in result_map.items():
                 responses.sort(key=lambda response: id_list.index(response[self.id_key]))
-                responses = [{self.id_key: response[self.id_key], key: response} for response in responses]
-                results = responses if not results else [rs | rp for rs, rp in zip(results, responses)]
+                responses = ({self.id_key: response[self.id_key], key: response} for response in responses)
+                results = list(responses) if not results \
+                    else [rs | rp for rs, rp in zip(results, responses, strict=True)]
 
         self._merge_results_to_input(original=values, responses=results, ordered=False, clear=False)
         self._refresh_responses(responses=values, skip_checks=False)

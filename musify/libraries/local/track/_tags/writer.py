@@ -188,7 +188,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
             replace and source.title != target.title
         ]
         if any(conditionals) and self._write_title(track=target, dry_run=dry_run):
-            return [i for i, c in enumerate(conditionals) if c][0]
+            return next(i for i, c in enumerate(conditionals) if c)
 
     def _write_title(self, track: Track, dry_run: bool = True) -> bool:
         """
@@ -216,7 +216,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
             replace and source.artist != target.artist
         ]
         if any(conditionals) and self._write_artist(track=target, dry_run=dry_run):
-            return [i for i, c in enumerate(conditionals) if c][0]
+            return next(i for i, c in enumerate(conditionals) if c)
 
     def _write_artist(self, track: Track, dry_run: bool = True) -> bool:
         """
@@ -244,7 +244,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
             replace and source.album != target.album
         ]
         if any(conditionals) and self._write_album(track=target, dry_run=dry_run):
-            return [i for i, c in enumerate(conditionals) if c][0]
+            return next(i for i, c in enumerate(conditionals) if c)
 
     def _write_album(self, track: Track, dry_run: bool = True) -> bool:
         """
@@ -274,7 +274,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
             replace and source.album_artist != target.album_artist
         ]
         if any(conditionals) and self._write_album_artist(track=target, dry_run=dry_run):
-            return [i for i, c in enumerate(conditionals) if c][0]
+            return next(i for i, c in enumerate(conditionals) if c)
 
     def _write_album_artist(self, track: Track, dry_run: bool = True) -> bool:
         """
@@ -303,7 +303,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
             replace and (source.track_number != target.track_number or source.track_total != target.track_total)
         ]
         if any(conditionals) and self._write_track(track=target, dry_run=dry_run):
-            return [i for i, c in enumerate(conditionals) if c][0]
+            return next(i for i, c in enumerate(conditionals) if c)
 
     def _write_track(self, track: Track, dry_run: bool = True) -> bool:
         """
@@ -340,7 +340,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         """
         conditionals = [source.genres is None and bool(target.genres), replace and source.genres != target.genres]
         if any(conditionals) and self._write_genres(track=target, dry_run=dry_run):
-            return [i for i, c in enumerate(conditionals) if c][0]
+            return next(i for i, c in enumerate(conditionals) if c)
 
     def _write_genres(self, track: Track, dry_run: bool = True) -> bool:
         """
@@ -378,7 +378,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         date, year, month, day = self._write_date(track=target, dry_run=dry_run)
 
         updated = {}
-        condition = [i for i, c in enumerate(conditionals) if c][0]
+        condition = next(i for i, c in enumerate(conditionals) if c)
         if date:
             updated[Tags.DATE] = condition
         if year:
@@ -433,7 +433,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         ]
 
         if any(conditionals) and self._write_bpm(track=target, dry_run=dry_run):
-            return [i for i, c in enumerate(conditionals) if c][0]
+            return next(i for i, c in enumerate(conditionals) if c)
 
     def _write_bpm(self, track: Track, dry_run: bool = True) -> bool:
         """
@@ -459,7 +459,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         conditionals = [source.key is None and target.key is not None, replace and source.key != target.key]
 
         if any(conditionals) and self._write_key(track=target, dry_run=dry_run):
-            return [i for i, c in enumerate(conditionals) if c][0]
+            return next(i for i, c in enumerate(conditionals) if c)
 
     def _write_key(self, track: Track, dry_run: bool = True) -> bool:
         """
@@ -488,7 +488,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
             replace and (source.disc_number != target.disc_number or source.disc_total != target.disc_total)
         ]
         if any(conditionals) and self._write_disc(track=target, dry_run=dry_run):
-            return [i for i, c in enumerate(conditionals) if c][0]
+            return next(i for i, c in enumerate(conditionals) if c)
 
     def _write_disc(self, track: Track, dry_run: bool = True) -> bool:
         """
@@ -531,7 +531,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
             replace and source.compilation != target.compilation
         ]
         if any(conditionals) and self._write_compilation(track=target, dry_run=dry_run):
-            return [i for i, c in enumerate(conditionals) if c][0]
+            return next(i for i, c in enumerate(conditionals) if c)
 
     def _write_compilation(self, track: Track, dry_run: bool = True) -> bool:
         """
@@ -559,7 +559,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
             replace and source.comments != target.comments
         ]
         if any(conditionals) and self._write_comments(track=target, dry_run=dry_run):
-            return [i for i, c in enumerate(conditionals) if c][0]
+            return next(i for i, c in enumerate(conditionals) if c)
 
     def _write_comments(self, track: Track, dry_run: bool = True) -> bool:
         """
@@ -589,7 +589,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         conditionals = [source.uri != target.uri or source.has_uri != target.has_uri]
 
         if any(conditionals) and self._write_uri(track=target, dry_run=dry_run):
-            return [i for i, c in enumerate(conditionals) if c][0]
+            return next(i for i, c in enumerate(conditionals) if c)
 
     def _write_uri(self, track: Track, dry_run: bool = True) -> bool:
         """
@@ -617,7 +617,7 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         conditionals = [source.has_image is False and bool(target.image_links), replace and bool(target.image_links)]
 
         if any(conditionals) and self._write_images(track=target, dry_run=dry_run):
-            return [i for i, c in enumerate(conditionals) if c][0]
+            return next(i for i, c in enumerate(conditionals) if c)
 
     @abstractmethod
     def _write_images(self, track: Track, dry_run: bool = True) -> bool:

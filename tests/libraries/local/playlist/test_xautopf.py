@@ -331,8 +331,7 @@ class TestXMLPlaylistParser(PrettyPrinterTester):
 
         assert parser._get_xml_from_comparer() is not None  # default value is given
 
-        assert len(comparers) == len(conditions)
-        for comparer, condition in zip(comparers, conditions):
+        for comparer, condition in zip(comparers, conditions, strict=True):
             assert parser._get_xml_from_comparer(comparer) == condition
 
     ###########################################################################
