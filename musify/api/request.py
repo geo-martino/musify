@@ -112,7 +112,6 @@ class RequestHandler:
         self.wait_max = 1
         self._wait_start_logged = False
 
-
     async def __aenter__(self) -> Self:
         if self.closed:
             self._session = self._connector()
