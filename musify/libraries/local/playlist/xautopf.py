@@ -79,6 +79,7 @@ class XAutoPF(LocalPlaylist[AutoMatcher]):
     """
 
     __slots__ = ("_parser", "_limiter_deduplication")
+    __attributes_ignore__ = ("limiter_deduplication",)
 
     valid_extensions = frozenset({".xautopf"})
 
