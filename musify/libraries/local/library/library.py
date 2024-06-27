@@ -475,7 +475,8 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
                 pl_attributes["tracks"] = []
 
                 pl_json = pl._to_json(pl_attributes, pool=True)
-                pl_json["tracks"] = [tracks.get(track.path) for track in pl]
+                pl_json["tracks"] = [tracks.get(str(track.path)) for track in pl]
+                assert all(pl_json["tracks"])
 
                 return pl.name, pl_json
 

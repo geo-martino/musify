@@ -59,9 +59,6 @@ class PrettyPrinter(metaclass=ABCMeta):
     def _to_json(cls, attributes: JSON, pool: bool = False) -> dict[str, JSON_VALUE]:
         def _get_json_key_value(attribute: tuple[Any, Any]) -> tuple[str, JSON_VALUE | list[Future[JSON_VALUE]]]:
             key, value = attribute
-            if key == "tracks" and isinstance(value, list) and len(value) < 100:
-                print(cls.name)
-                print(value, cls._get_json_value(value=value), sep="---------", end="\n=============\n\n")
             return str(key), cls._get_json_value(value=value)
 
         if not pool:
