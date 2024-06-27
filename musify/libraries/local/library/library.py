@@ -469,16 +469,14 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
         if playlists is not None:
             tracks: Mapping[str, Mapping[str, Any]] = {track["path"]: track for track in self_json["tracks"]}
+            tracks = {}
 
             def _get_playlist_json(pl: LocalPlaylist) -> tuple[str, dict[str, Any]]:
                 pl_attributes = pl._get_attributes()
                 pl_attributes["tracks"] = []
 
                 pl_json = pl._to_json(pl_attributes, pool=True)
-                assert len(pl_json["tracks"]) == len(pl)
-                pl_json["tracks"] = [
-                    tracks.get(str(track.path), track_pl) for track, track_pl in zip(pl, pl_json["tracks"])
-                ]
+                pl_json["tracks"] = [tracks.get(str(track.path), str(track.path)) for track in pl]
 
                 return pl.name, pl_json
 
