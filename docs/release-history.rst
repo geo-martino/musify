@@ -48,6 +48,8 @@ Fixed
   to ensure API is not checked on close when checker has not actually run.
 * :py:class:`.RequestHandler` now also handles bad responses even if response is OK.
 * :py:class:`.RequestHandler` now handles wait and backoff logic asynchronously.
+* Tracks on playlists from the JSON output of :py:class:`.LocalLibrary` now display correctly.
+  Previously showed 'null' for every track.
 
 
 1.0.1
