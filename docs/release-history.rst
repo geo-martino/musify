@@ -37,19 +37,22 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 Added
 -----
 * Expanded error message on :py:class:`.DynamicProcessor` processor lookup exception.
+* Improved logging of bad responses on :py:class:`.RequestHandler`
+* ``wait_max`` time to cap wait time between requests for :py:class:`.RequestHandler`
 
 Fixed
 -----
-* Bug in MusicBee XMLLibraryParser which would not read 'Playlists' keys
+* Bug in MusicBee XMLLibraryParser which would not read 'Playlists' keys.
 * Moved 'check api' logic later when deleting playlists in :py:class:`.RemoteItemChecker`
-  to ensure API is not checked on close when checker has not actually run
+  to ensure API is not checked on close when checker has not actually run.
+* :py:class:`.RequestHandler` now also handles bad responses even if response is OK.
 
 1.0.1
 =====
 
 Documentation
 -------------
-* Mark release as stable/production
+* Mark release as stable/production.
 
 1.0.0
 =====

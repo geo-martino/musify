@@ -180,9 +180,15 @@ class TestRequestHandler:
             requests_mock.get(url, payload=expected_json)
             assert await handler.request(method="GET", url=url) == expected_json
 
-            # ignore headers on good status code
+            # still process wait time on good status code
             requests_mock.post(url, status=200, headers={"retry-after": "2000"}, payload=expected_json)
-            assert await handler.request(method="POST", url=url) == expected_json
+            with pytest.raises(APIError):
+                assert await handler.request(method="POST", url=url) == expected_json
+
+            # still handles bad response on good status code
+            requests_mock.post(url, status=200, headers={"error": {"status": 404}}, payload=expected_json)
+            with pytest.raises(APIError):
+                assert await handler.request(method="PATCH", url=url) == expected_json
 
             # fail on long wait time
             requests_mock.put(url, status=429, headers={"retry-after": "2000"})
@@ -223,7 +229,7 @@ class TestRequestHandler:
             assert await handler.patch(url=url) == expected_json
         assert sum(map(len, requests_mock.requests.values())) == backoff_limit
 
-    async def test_wait_between_requests(self, request_handler: RequestHandler, requests_mock: aioresponses):
+    async def test_wait_time_is_incremented(self, request_handler: RequestHandler, requests_mock: aioresponses):
         url = "http://localhost/test"
         wait_limit = 0.6
 
@@ -236,6 +242,7 @@ class TestRequestHandler:
         wait_time = 0.1
         request_handler.wait_time = wait_time
         request_handler.wait_increment = 0.2
+        request_handler.wait_max = 999
 
         wait_total_expected = request_handler.wait_time
         while wait_time < wait_limit:
@@ -257,3 +264,31 @@ class TestRequestHandler:
 
         assert perf_counter() - start_time >= wait_total_expected
         assert request_handler.wait_time > wait_limit
+
+    async def test_wait_time_is_capped(self, request_handler: RequestHandler, requests_mock: aioresponses):
+        url = "http://localhost/test"
+
+        # does not increment wait time past the max allowed time
+        wait_time = 0.1
+        request_handler.wait_time = wait_time
+        request_handler.wait_increment = 0.2
+        request_handler.wait_max = request_handler.wait_time + (request_handler.wait_increment * 2)
+
+        count = 0
+
+        def callback(method: str, *_, **__) -> CallbackResult:
+            """Modify mock response based on current handler wait time settings"""
+            nonlocal count
+
+            if count < 5:
+                count += 1
+                payload = {"error": {"message": "too many requests"}}
+                return CallbackResult(method=method, status=429, payload=payload)
+
+            return CallbackResult(method=method, status=200)
+
+        requests_mock.get(url, callback=callback, repeat=True)
+        async with request_handler as handler:
+            await handler.get(url=url)
+
+        assert request_handler.wait_time == request_handler.wait_max

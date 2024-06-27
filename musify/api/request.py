@@ -43,8 +43,10 @@ class RequestHandler:
         "backoff_start",
         "backoff_factor",
         "backoff_count",
+        "_initial_backoff_logged",
         "wait_time",
         "wait_increment",
+        "wait_max",
     )
 
     @property
@@ -57,10 +59,7 @@ class RequestHandler:
 
     @property
     def timeout(self) -> int:
-        """
-        When the response gives a time to wait until (i.e. retry-after),
-        the program will exit if this time is above this timeout (in seconds)
-        """
+        """The cumulative sum of all backoff intervals up to the final backoff time"""
         return int(sum(self.backoff_start * self.backoff_factor ** i for i in range(self.backoff_count + 1)))
 
     @property
@@ -102,11 +101,14 @@ class RequestHandler:
         self.backoff_factor = 1.932
         #: The maximum number of request attempts to make before giving up and raising an exception
         self.backoff_count = 10
+        self._initial_backoff_logged = False
 
         #: The initial time in seconds to wait after receiving a response from a request
         self.wait_time = 0
-        #: The amount to increase the wait time by each time a rate limit is hit i.e. 429 response
+        #: The amount in seconds to increase the wait time by each time a rate limit is hit i.e. 429 response
         self.wait_increment = 0.1
+        #: The maximum time in seconds that the wait time can be incremented to
+        self.wait_max = 1
 
     async def __aenter__(self) -> Self:
         if self.closed:
@@ -163,25 +165,28 @@ class RequestHandler:
                 if response is None:
                     raise APIError("No response received")
 
-                if response.ok:
-                    data = await self._get_json_response(response)
-                    break
-
-                await self._log_response(response=response, method=method, url=url)
                 handled = await self._handle_bad_response(response=response)
                 waited = await self._wait_for_rate_limit_timeout(response=response)
 
                 if handled or waited:
                     continue
 
+                if await self._response_is_ok(response):
+                    data = await self._get_json_response(response)
+                    break
+
+                await self._log_response(response=response, method=method, url=url)
+
                 if backoff > self.backoff_final or backoff == 0:
                     raise APIError("Max retries exceeded")
 
                 # exponential backoff
+                self._log_initial_backoff()
                 self.log(method=method, url=url, message=f"Request failed: retrying in {backoff} seconds...")
-                sleep(backoff)
+                await asyncio.sleep(backoff)
                 backoff *= self.backoff_factor
 
+        self._initial_backoff_logged = False
         return data
 
     @contextlib.asynccontextmanager
@@ -241,6 +246,23 @@ class RequestHandler:
             level=level, msg=f"{method.upper():<7}: {url:<{url_pad}} | {" | ".join(map(str, log))}"
         )
 
+    async def _response_is_ok(self, response: ClientResponse) -> bool:
+        response_json = await self._get_json_response(response)
+        error_status = response_json.get("error", {}).get("status")
+        if error_status:
+            return int(error_status) < 400
+        return response.ok
+
+    def _log_initial_backoff(self) -> None:
+        if self._initial_backoff_logged:
+            return
+
+        self.logger.info_extra(
+            "\33[93mRequest failed: retrying using backoff strategy. "
+            f"Will retry request {self.backoff_count} more times and timeout in {self.timeout} seconds...\33[0m"
+        )
+        self._initial_backoff_logged = True
+
     async def _log_response(self, response: ClientResponse, method: str, url: str | URL) -> None:
         """Log the method, URL, response text, and response headers."""
         response_headers = response.headers
@@ -258,11 +280,18 @@ class RequestHandler:
             ]
         )
 
+    # TODO: Separate responsibility of handling specific status codes to implementations of a generic abstraction,
+    #  and have this handling dependency injected for this handler.
+    #  This doesn't follow SOLID very well;
+    #  would need to modify function directly to implement handling of new status codes.
     async def _handle_bad_response(self, response: ClientResponse) -> bool:
         """Handle bad responses by extracting message and handling status codes that should raise an exception."""
-        error_message = (await self._get_json_response(response)).get("error", {}).get("message")
+        response_json = await self._get_json_response(response)
+
+        error_message = response_json.get("error", {}).get("message")
+        error_status = int(response_json.get("error", {}).get("status", 0))
         if error_message is None:
-            status = HTTPStatus(response.status)
+            status = HTTPStatus(error_status or response.status)
             error_message = f"{status.phrase} | {status.description}"
 
         handled = False
@@ -270,15 +299,18 @@ class RequestHandler:
         def _log_bad_response(message: str) -> None:
             self.logger.debug(f"Status code: {response.status} | {error_message} | {message}")
 
-        if response.status == 401:
+        if response.status == 401 or error_status == 401:
             _log_bad_response("Re-authorising...")
             await self.authorise()
             handled = True
-        elif response.status == 429:
-            self.wait_time += self.wait_increment
-            _log_bad_response(f"Rate limit hit. Increasing wait time between requests to {self.wait_time}")
-            handled = True
-        elif response.status == 400 <= response.status < 408:
+        elif response.status == 429 or error_status == 429:
+            if self.wait_time < self.wait_max:
+                self.wait_time += self.wait_increment
+                _log_bad_response(f"Rate limit hit. Increasing wait time between requests to {self.wait_time}s")
+                handled = True
+            else:
+                _log_bad_response(f"Rate limit hit and wait time already at maximum of {self.wait_time}s")
+        elif 400 <= response.status < 408:
             raise APIError(error_message, response=response)
 
         return handled
