@@ -41,6 +41,10 @@ Added
 * ``wait_max`` time to cap wait time between requests for :py:class:`.RequestHandler`
 * Add log on :py:class:`.CachedSession` for when either a `cache hit` or a `HTTP request` happens.
 
+Removed
+-------
+* ``limiter_deduplication`` attribute from print output on :py:class:`.XAutoPF`
+
 Fixed
 -----
 * Bug in MusicBee XMLLibraryParser which would not read 'Playlists' keys.
@@ -48,6 +52,8 @@ Fixed
   to ensure API is not checked on close when checker has not actually run.
 * :py:class:`.RequestHandler` now also handles bad responses even if response is OK.
 * :py:class:`.RequestHandler` now handles wait and backoff logic asynchronously.
+* Tracks on playlists from the JSON output of :py:class:`.LocalLibrary` now display correctly.
+  Previously showed 'null' for every track.
 
 
 1.0.1
