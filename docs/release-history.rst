@@ -31,6 +31,7 @@ Release History
 The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
+
 1.1.0
 =====
 
@@ -39,6 +40,9 @@ Changed
 * :py:class:`.ItemDownloadHelper` only ever takes the first field when the singular name of a field is given
   and many values are available for that field. e.g. only ever takes the first artist when multiple artists are present
   and the requested field is 'artist' and not 'artists'
+* :py:class:`.RemoteCollectionLoader` now inherits from :py:class:`.MusifyItem` interface.
+  The class already implemented all necessary methods for this interface and was always designed
+  to be an implementation of the :py:class:`.MusifyItem` interface.
 
 
 1.0.2
@@ -71,6 +75,7 @@ Fixed
 Documentation
 -------------
 * Mark release as stable/production.
+
 
 1.0.0
 =====
@@ -182,6 +187,7 @@ Documentation
 
 * Updated how-to section to reflect implementation of async logic to underlying code
 * Created a how-to page for installation
+
 
 0.9.2
 =====

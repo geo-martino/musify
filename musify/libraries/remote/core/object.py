@@ -37,7 +37,7 @@ class RemoteCollection[T: RemoteObject](MusifyCollection[T], metaclass=ABCMeta):
     __attributes_ignore__ = ("items", "track_total")
 
 
-class RemoteCollectionLoader[T: RemoteObject](RemoteCollection[T], RemoteObject, metaclass=ABCMeta):
+class RemoteCollectionLoader[T: RemoteObject](RemoteCollection[T], RemoteItem, metaclass=ABCMeta):
     """Generic class for storing a collection of remote objects that can be loaded from an API response."""
 
     __slots__ = ()

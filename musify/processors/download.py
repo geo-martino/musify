@@ -8,7 +8,7 @@ from typing import Any
 from urllib.parse import quote
 from webbrowser import open as webopen
 
-from musify.base import MusifyItem
+from musify.base import MusifyItem, MusifyObject
 from musify.exception import MusifyEnumError
 from musify.field import Field, Fields
 from musify.libraries.core.collection import MusifyCollection
@@ -76,8 +76,11 @@ class ItemDownloadHelper(InputProcessor):
 
             if isinstance((value_many := getattr(item, field_name + "s", None)), (list, tuple)):
                 value = next(iter(value_many))
-            if isinstance(value, (tuple, set, list, dict)):
-                value = " ".join(value)
+
+            if isinstance(value, MusifyObject):
+                value = value.name
+            elif isinstance(value, (tuple, set, list, dict)):
+                value = " ".join(v.name if isinstance(v, MusifyObject) else v for v in value)
 
             query_parts.append(str(value))
 
