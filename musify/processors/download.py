@@ -71,12 +71,14 @@ class ItemDownloadHelper(InputProcessor):
         query_parts = []
         for field in fields:
             field_name = field.name.lower()
-            if not hasattr(item, field_name) or getattr(item, field_name) is None:
+            if (value := getattr(item, field_name, None)) is None:
                 continue
 
-            value = getattr(item, field_name)
+            if isinstance((value_many := getattr(item, field_name + "s", None)), (list, tuple)):
+                value = next(iter(value_many))
             if isinstance(value, (tuple, set, list, dict)):
                 value = " ".join(value)
+
             query_parts.append(str(value))
 
         query = quote(" ".join(query_parts))

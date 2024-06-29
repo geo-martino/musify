@@ -31,6 +31,16 @@ Release History
 The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
+1.1.0
+=====
+
+Changed
+-------
+* :py:class:`.ItemDownloadHelper` only ever takes the first field when the singular name of a field is given
+  and many values are available for that field. e.g. only ever takes the first artist when multiple artists are present
+  and the requested field is 'artist' and not 'artists'
+
+
 1.0.2
 =====
 

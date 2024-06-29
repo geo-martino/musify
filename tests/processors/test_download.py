@@ -1,5 +1,7 @@
+import itertools
 from copy import copy
 from random import sample, randrange
+from urllib.parse import unquote
 
 import pytest
 from pytest_mock import MockerFixture
@@ -37,19 +39,21 @@ class TestItemDownloadHelper(PrettyPrinterTester):
         ]
         return ItemDownloadHelper(
             urls=sample(sites, k=randrange(2, len(sites))),
-            fields=Fields.ALL,
+            fields=[Fields.TITLE, Fields.ARTIST],
             interval=1,
         )
 
     @pytest.fixture
     def collections(self) -> list[BasicCollection[LocalTrack]]:
         """Yields many valid :py:class:`BasicCollection` of :py:class:`RemoteItem` as a pytest.fixture."""
-        return [BasicCollection(name=random_str(30, 50), items=random_tracks()) for _ in range(randrange(3, 10))]
+        collections = [BasicCollection(name=random_str(30, 50), items=random_tracks()) for _ in range(randrange(3, 10))]
+        assert any(len(track.artists) > 1 for coll in collections for track in coll)
+        return collections
 
     @staticmethod
     def test_valid_setup(download_helper: ItemDownloadHelper, collections: list[BasicCollection]):
         assert len(download_helper.urls) > 1
-        assert Fields.ALL in download_helper.fields or len(download_helper.fields) > 2
+        assert Fields.ALL in download_helper.fields or len(download_helper.fields) >= 2
 
         assert sum(map(len, collections)) > 3
 
@@ -57,7 +61,7 @@ class TestItemDownloadHelper(PrettyPrinterTester):
     @pytest.mark.slow
     def test_opened_urls(
             download_helper: ItemDownloadHelper,
-            collections: list[BasicCollection],
+            collections: list[BasicCollection[LocalTrack]],
             mocker: MockerFixture,
     ):
         def log_urls(url) -> None:
@@ -74,6 +78,21 @@ class TestItemDownloadHelper(PrettyPrinterTester):
         mocker.stopall()
 
         assert len(urls) == sum(map(len, collections)) * len(download_helper.urls)
+
+        urls_batched = itertools.batched(urls, len(download_helper.urls))
+        for collection in collections:
+            for track in collection:
+                for url in next(urls_batched):
+                    url = unquote(url)
+                    assert track.title in url
+                    assert track.artists[0] in url
+
+                    # only ever takes the first field when the singular name of a field is given
+                    # and many values are available for that field
+                    # e.g. only ever takes the first artist when multiple artists are present
+                    # and the requested field is just 'artist' not 'artists'
+                    if len(track.artists) > 1:
+                        assert track.artist not in url
 
     @staticmethod
     def test_pause_1(

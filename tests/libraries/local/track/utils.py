@@ -48,7 +48,7 @@ def random_track[T: LocalTrack](cls: type[T] | None = None) -> T:
     track._loaded = True
 
     track.title = title
-    track.artist = random_str(30, 50)
+    track.artists = [random_str(30, 50) for _ in range(randrange(1, 3))]
     track.album = random_str(30, 50)
     track.album_artist = random_str(30, 50)
     track.track_number = track_number
