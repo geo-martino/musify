@@ -8,7 +8,7 @@ name = "musify"
 authors = [
   { name="George Martin Marino", email="gm.engineer+musify@pm.me" },
 ]
-description = "Synchronise your music library to local or remote libraries"
+description = "A Swiss Army knife for programmatic music library management"
 readme = "README.md"
 license-files = { paths = ["LICENSE"] }
 requires-python = ">=3.12"
