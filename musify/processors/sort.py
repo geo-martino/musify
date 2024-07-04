@@ -9,11 +9,10 @@ from random import shuffle
 from typing import Any
 
 from musify.base import MusifyItem
-from musify.enum import MusifyEnum
 from musify.field import Field
 from musify.processors.base import Processor
 from musify.processors.exception import SorterProcessorError
-from musify.types import UnitSequence, UnitIterable, Number
+from musify.types import UnitSequence, UnitIterable, Number, MusifyEnum
 from musify.utils import flatten_nested, strip_ignore_words, to_collection, limit_value
 
 

@@ -1,6 +1,6 @@
 from p3 import *
 
-from musify.libraries.remote.core.enum import RemoteObjectType
+from musify.libraries.remote.core.types import RemoteObjectType
 from musify.libraries.remote.core.object import RemoteAlbum
 
 

@@ -10,16 +10,16 @@ from typing import Any, Self
 
 from yarl import URL
 
-from musify.api.authorise import APIAuthoriser
-from musify.api.cache.backend.base import ResponseCache
-from musify.api.exception import CacheError
-from musify.api.request import RequestHandler
+from aiorequestful.authorise import APIAuthoriser
+from aiorequestful.cache.backend.base import ResponseCache
+from aiorequestful.exception import CacheError
+from aiorequestful.request import RequestHandler
+from aiorequestful.types import ImmutableJSON
 from musify.libraries.remote.core import RemoteResponse
-from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
-from musify.libraries.remote.core.types import APIInputValueSingle, APIInputValueMulti
+from musify.libraries.remote.core.types import APIInputValueSingle, APIInputValueMulti, RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.wrangle import RemoteDataWrangler
 from musify.logger import MusifyLogger
-from musify.types import UnitSequence, JSON, UnitList
+from musify.types import UnitSequence, UnitList
 from musify.utils import align_string, to_collection
 
 
@@ -152,8 +152,8 @@ class RemoteAPI(metaclass=ABCMeta):
 
     def _merge_results_to_input(
             self,
-            original: UnitSequence[JSON] | UnitSequence[RemoteResponse],
-            responses: UnitList[JSON],
+            original: UnitSequence[ImmutableJSON] | UnitSequence[RemoteResponse],
+            responses: UnitList[ImmutableJSON],
             ordered: bool = True,
             clear: bool = True,
     ) -> None:
@@ -320,7 +320,7 @@ class RemoteAPI(metaclass=ABCMeta):
 
         Updates the value of the ``items`` key in-place by extending the value of the ``items`` key with new results.
 
-        If a :py:class:`RemoteResponse`, this function will not refresh itself with the new response.
+        If a :py:class:`RemoteResponse`, this function will not refresh it with the new response.
         The user must call `refresh` manually after execution.
 
         :param response: A remote API JSON response for an items type endpoint.

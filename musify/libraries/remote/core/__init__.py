@@ -7,4 +7,4 @@ with some implementations for the handling of this data.
 Also defines abstract classes to represent objects derived from the types of
 responses that can be returned by the API.
 """
-from .response import RemoteResponse
+from ._response import RemoteResponse

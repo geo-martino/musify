@@ -53,14 +53,14 @@ What's in this documentation
    :maxdepth: 1
    :caption: 📖 Reference
 
-   musify.api
-   musify.core
    musify.file
    musify.libraries
-   musify.log
    musify.processors
+   musify.base
    musify.exception
    musify.field
+   musify.logger
+   musify.printer
    musify.report
    musify.types
    musify.utils

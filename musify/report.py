@@ -54,7 +54,7 @@ def report_playlist_differences(
 
     max_width = get_max_width(source.keys())
     logger.info(f"\33[1;95m ->\33[1;97m {log_message} \33[0m")
-    logger.print()
+    logger.print_line()
 
     for name, pl_source in source.items():
         pl_reference = reference.get(name, [])
@@ -92,7 +92,7 @@ def report_playlist_differences(
         f"\33[1;94m{len(source):>6} {"playlists":<{len(f"in {source_name}")}} \33[0m|"
         f"\33[1;96m{len(reference):>6} {"playlists":<{len(f"in {reference_name}")}} \33[0m"
     )
-    logger.print(REPORT)
+    logger.print_line(REPORT)
     logger.debug("Report library differences: DONE\n")
     return report
 
@@ -150,7 +150,7 @@ def report_missing_tags(
         f"{'all' if match_all else 'any'} missing tags\33[0m: \n"
         f"    \33[90m{', '.join(sorted(missing_tags_all, key=lambda x: tag_order.index(x)))}\33[0m"
     )
-    logger.print()
+    logger.print_line()
     logger.debug("Report missing tags: DONE\n")
     return missing
 
@@ -181,13 +181,13 @@ def _log_missing_tags(logger: MusifyLogger, missing: dict[str, dict[MusifyItem, 
     all_keys = {item.name for items in missing.values() for item in items}
     max_width = get_max_width(all_keys)
 
-    logger.print(REPORT)
+    logger.print_line(REPORT)
     logger.report("\33[1;94mFound the following missing items by collection: \33[0m")
-    logger.print(REPORT)
+    logger.print_line(REPORT)
 
     for name, result in missing.items():
         logger.report(f"\33[1;91m -> {name} \33[0m")
         for item, tags in result.items():
             n = align_string(item.name, max_width=max_width)
             logger.report(f"\33[96m{n} \33[0m| \33[93m{', '.join(tags)} \33[0m")
-        logger.print(REPORT)
+        logger.print_line(REPORT)

@@ -9,7 +9,7 @@ from typing import Any, Literal, Self
 from musify.base import MusifyItem
 from musify.libraries.core.object import Track, Library, Playlist
 from musify.libraries.remote.core.api import RemoteAPI
-from musify.libraries.remote.core.enum import RemoteObjectType
+from musify.libraries.remote.core.types import RemoteObjectType
 from musify.libraries.remote.core.factory import RemoteObjectFactory
 from musify.libraries.remote.core.object import RemoteCollection, SyncResultRemotePlaylist
 from musify.libraries.remote.core.object import RemoteTrack, RemotePlaylist, RemoteArtist, RemoteAlbum
@@ -142,9 +142,9 @@ class RemoteLibrary[
         load_tracks = await self.api.get_tracks(load_uris, features=True)
         self.items.extend(map(self.factory.track, load_tracks))
 
-        self.logger.print(STAT)
+        self.logger.print_line(STAT)
         self.log_tracks()
-        self.logger.print()
+        self.logger.print_line()
         self.logger.debug(f"Extend {self.api.source} tracks data: DONE\n")
 
     async def load(self) -> None:
@@ -157,13 +157,13 @@ class RemoteLibrary[
         await self.load_saved_albums()
         await self.load_saved_artists()
 
-        self.logger.print(STAT)
+        self.logger.print_line(STAT)
         self.log_playlists()
         self.log_tracks()
         self.log_albums()
         self.log_artists()
 
-        self.logger.print()
+        self.logger.print_line()
         self.logger.debug(f"Load {self.api.source} library: DONE\n")
 
     ###########################################################################
@@ -488,7 +488,7 @@ class RemoteLibrary[
         )
         results = dict(await bar)
 
-        self.logger.print()
+        self.logger.print_line()
         self.logger.debug(f"Sync {self.api.source} playlists: DONE\n")
         return results
 

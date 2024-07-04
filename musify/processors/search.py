@@ -14,7 +14,7 @@ from musify.exception import MusifyAttributeError
 from musify.field import TagField, TagFields as Tag
 from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.remote.core.api import RemoteAPI
-from musify.libraries.remote.core.enum import RemoteObjectType
+from musify.libraries.remote.core.types import RemoteObjectType
 from musify.libraries.remote.core.factory import RemoteObjectFactory
 from musify.logger import MusifyLogger
 from musify.logger import REPORT
@@ -184,7 +184,7 @@ class RemoteItemSearcher(Processor):
             f"\33[93m{total_skipped:>6} skipped \33[0m| "
             f"\33[97m{total_all:>6} total \33[0m"
         )
-        self.logger.print(REPORT)
+        self.logger.print_line(REPORT)
 
     @staticmethod
     def _determine_remote_object_type(obj: MusifyObject) -> RemoteObjectType:
@@ -224,7 +224,7 @@ class RemoteItemSearcher(Processor):
         bar = self.logger.get_synchronous_iterator(collections, desc="Searching",  unit=f"{kind}s")
         search_results = dict([await _get_result(coll) for coll in bar])
 
-        self.logger.print()
+        self.logger.print_line()
         self._log_results(search_results)
         self.logger.debug("Searching: DONE\n")
         return search_results

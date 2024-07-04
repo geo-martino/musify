@@ -7,9 +7,8 @@ from collections.abc import Mapping
 from yarl import URL
 
 from musify.libraries.remote.core import RemoteResponse
-from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteObjectTypeError
-from musify.libraries.remote.core.types import APIInputValueSingle, APIInputValueMulti
+from musify.libraries.remote.core.types import APIInputValueSingle, APIInputValueMulti, RemoteIDType, RemoteObjectType
 
 
 class RemoteDataWrangler(metaclass=ABCMeta):

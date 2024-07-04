@@ -16,7 +16,6 @@ from musify.exception import MusifyTypeError, MusifyKeyError, MusifyAttributeErr
 from musify.field import Field
 from musify.file.base import File
 from musify.libraries.remote.core import RemoteResponse
-from musify.libraries.remote.core.base import RemoteObject
 from musify.processors.sort import ShuffleMode, ItemSorter
 from musify.types import UnitSequence
 
@@ -96,7 +95,7 @@ class RemoteURLAPIGetter(ItemGetterStrategy):
     def name(self) -> str:
         return "API URL"
 
-    def get_value_from_item(self, item: RemoteObject) -> URL:
+    def get_value_from_item(self, item: RemoteResponse) -> URL:
         return item.url
 
 
@@ -106,7 +105,7 @@ class RemoteURLEXTGetter(ItemGetterStrategy):
     def name(self) -> str:
         return "external URL"
 
-    def get_value_from_item(self, item: RemoteObject) -> URL:
+    def get_value_from_item(self, item: RemoteResponse) -> URL:
         return item.url_ext
 
 
@@ -329,8 +328,8 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], HasLengt
         Returns the item in this collection by matching on a given index/Item/URI/ID/URL.
         If an :py:class:`MusifyItem` is given, the URI is extracted from this item
         and the matching Item from this collection is returned.
-        If a :py:class:`RemoteObject` is given, the ID is extracted from this object
-        and the matching RemoteObject from this collection is returned.
+        If a :py:class:`RemoteResponse` is given, the ID is extracted from this object
+        and the matching RemoteResponse from this collection is returned.
         """
         if isinstance(__key, int) or isinstance(__key, slice):  # simply index the list or items
             return self.items[__key]

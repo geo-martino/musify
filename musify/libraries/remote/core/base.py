@@ -8,11 +8,11 @@ from typing import Any, Self
 
 from yarl import URL
 
-from musify.api.exception import APIError
 from musify.base import MusifyItem
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.api import RemoteAPI
-from musify.libraries.remote.core.types import APIInputValueSingle
+from musify.libraries.remote.core.exception import APIError
+from musify.libraries.remote.core.types import APIInputValueSingle, RemoteObjectType
 
 
 class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, metaclass=ABCMeta):
@@ -54,6 +54,12 @@ class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, metaclass=ABCMeta):
     def response(self) -> dict[str, Any]:
         """The API response for this object"""
         return self._response
+
+    # noinspection PyPropertyDefinition,PyMethodParameters
+    @property
+    @abstractmethod
+    def kind(cls) -> RemoteObjectType:
+        raise NotImplementedError
 
     def __init__(self, response: dict[str, Any], api: T = None, skip_checks: bool = False):
         super().__init__()

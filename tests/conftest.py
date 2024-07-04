@@ -14,7 +14,7 @@ from _pytest.logging import LogCaptureHandler, _remove_ansi_escape_sequences
 from aioresponses import aioresponses
 
 from musify import MODULE_ROOT
-from musify.libraries.remote.core.enum import RemoteObjectType
+from musify.libraries.remote.core.types import RemoteObjectType
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.wrangle import SpotifyDataWrangler
 from musify.logger import MusifyLogger

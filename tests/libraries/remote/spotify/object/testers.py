@@ -5,7 +5,7 @@ from urllib.parse import unquote
 
 import pytest
 
-from musify.libraries.remote.core.enum import RemoteObjectType
+from musify.libraries.remote.core.types import RemoteObjectType
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.base import SpotifyItem, SpotifyObject
 from musify.libraries.remote.spotify.object import SpotifyCollectionLoader, SpotifyArtist

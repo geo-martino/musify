@@ -2,7 +2,7 @@ from collections.abc import Iterable
 from random import choice, randrange
 from typing import Any
 
-from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
+from musify.libraries.remote.core.types import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.wrangle import RemoteDataWrangler
 from musify.libraries.remote.spotify.base import SpotifyObject
 from musify.libraries.remote.spotify.wrangle import SpotifyDataWrangler

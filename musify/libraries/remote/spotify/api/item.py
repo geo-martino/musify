@@ -10,11 +10,9 @@ from typing import Any
 
 from yarl import URL
 
-from musify.api.exception import APIError
 from musify.libraries.remote.core import RemoteResponse
-from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
-from musify.libraries.remote.core.exception import RemoteObjectTypeError
-from musify.libraries.remote.core.types import APIInputValueMulti
+from musify.libraries.remote.core.exception import APIError, RemoteObjectTypeError
+from musify.libraries.remote.core.types import APIInputValueMulti, RemoteIDType, RemoteObjectType
 from musify.libraries.remote.spotify.api.base import SpotifyAPIBase
 from musify.utils import limit_value, to_collection
 
@@ -140,7 +138,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
 
         If a cache has been configured for this API, will also persist the items in any collection to the cache.
 
-        If a :py:class:`RemoteResponse`, this function will not refresh itself with the new response.
+        If a :py:class:`RemoteResponse`, this function will not refresh it with the new response.
         The user must call `refresh` manually after execution.
 
         :param response: A remote API JSON response for an items type endpoint

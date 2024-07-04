@@ -12,7 +12,7 @@ from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.core.object import Album
 from musify.libraries.local.collection import LocalAlbum
 from musify.libraries.local.track import LocalTrack
-from musify.libraries.remote.core.enum import RemoteObjectType
+from musify.libraries.remote.core.types import RemoteObjectType
 from musify.processors.search import RemoteItemSearcher, SearchConfig
 from tests.libraries.local.track.utils import random_track, random_tracks
 from tests.libraries.remote.core.utils import RemoteMock
@@ -82,11 +82,11 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert len(results) == settings.result_count
         assert len(requests) == 1
 
-        expected = [str(item.clean_tags.get(key)) for key in settings.search_fields_1]
+        expected = " ".join(str(item.clean_tags.get(key)) for key in settings.search_fields_1)
         found = False
         url, _, _ = next(iter(requests))
         for k, v in url.query.items():
-            if expected == unquote(v).split():
+            if expected == unquote(v):
                 found = True
                 break
 

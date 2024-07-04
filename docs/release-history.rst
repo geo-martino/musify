@@ -43,6 +43,17 @@ Changed
 * :py:class:`.RemoteCollectionLoader` now inherits from :py:class:`.MusifyItem` interface.
   The class already implemented all necessary methods for this interface and was always designed
   to be an implementation of the :py:class:`.MusifyItem` interface.
+* Rename ``print`` method on :py:class:`.MusifyLogger` to :py:meth:`.MusifyLogger.print_line`
+
+Removed
+-------
+* Implementation of REST API handling including all cache + authorisation implementations.
+  Separated this off to a `new package <https://github.com/geo-martino/aiorequestful>`_.
+* Moved all enum definitions to ``types`` modules and removed all ``enum`` modules.
+
+Documentation
+-------------
+* Fix references to non-existent packages + add missing packages in API reference index
 
 
 1.0.2

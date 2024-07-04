@@ -7,9 +7,8 @@ from typing import Any
 import pytest
 
 from musify import PROGRAM_NAME
-from musify.api.exception import APIError
-from musify.libraries.remote.core.enum import RemoteObjectType
-from musify.libraries.remote.core.exception import RemoteObjectTypeError, RemoteError
+from musify.libraries.remote.core.types import RemoteObjectType
+from musify.libraries.remote.core.exception import RemoteError, APIError, RemoteObjectTypeError
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.exception import SpotifyCollectionError
 from musify.libraries.remote.spotify.object import SpotifyPlaylist, SpotifyTrack

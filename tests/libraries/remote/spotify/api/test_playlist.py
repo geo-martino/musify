@@ -7,7 +7,7 @@ from aioresponses.core import RequestCall
 from yarl import URL
 
 from musify import PROGRAM_NAME
-from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
+from musify.libraries.remote.core.types import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteObjectTypeError, RemoteIDTypeError
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.object import SpotifyPlaylist

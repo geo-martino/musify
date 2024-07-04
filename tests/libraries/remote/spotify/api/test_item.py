@@ -8,11 +8,10 @@ from urllib.parse import unquote
 import pytest
 from yarl import URL
 
-from musify.api.exception import APIError
 from musify.libraries.remote.core import RemoteResponse
-from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
-from musify.libraries.remote.core.exception import RemoteObjectTypeError
+from musify.libraries.remote.core.exception import APIError, RemoteObjectTypeError
 from musify.libraries.remote.core.object import RemoteCollection
+from musify.libraries.remote.core.types import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.factory import SpotifyObjectFactory
 from musify.libraries.remote.spotify.object import SpotifyPlaylist, SpotifyAlbum, SpotifyTrack

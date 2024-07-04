@@ -6,8 +6,7 @@ from collections.abc import Sequence
 from dataclasses import field, dataclass
 from typing import Self
 
-from musify.enum import MusifyEnum
-from musify.types import UnitIterable
+from musify.types import UnitIterable, MusifyEnum
 
 
 class Field(MusifyEnum):

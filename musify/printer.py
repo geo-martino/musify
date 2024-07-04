@@ -11,7 +11,8 @@ from typing import Any
 
 from yarl import URL
 
-from musify.types import UnitIterable, JSON, DictJSON, JSON_VALUE
+from aiorequestful.types import ImmutableJSON, JSON, JSON_VALUE
+from musify.types import UnitIterable
 from musify.utils import to_collection
 
 
@@ -51,12 +52,12 @@ class PrettyPrinter(metaclass=ABCMeta):
     def _json_attributes(self):
         return self.as_dict()
 
-    def json(self) -> DictJSON:
+    def json(self) -> JSON:
         """Return a dictionary representation of the key attributes of this object that is safe to output to JSON"""
         return self._to_json(self._json_attributes())
 
     @classmethod
-    def _to_json(cls, attributes: JSON, pool: bool = False) -> dict[str, JSON_VALUE]:
+    def _to_json(cls, attributes: ImmutableJSON, pool: bool = False) -> JSON:
         def _get_json_key_value(attribute: tuple[Any, Any]) -> tuple[str, JSON_VALUE | list[Future[JSON_VALUE]]]:
             key, value = attribute
             return str(key), cls._get_json_value(value=value)
