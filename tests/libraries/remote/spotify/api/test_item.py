@@ -109,9 +109,9 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
     @staticmethod
     def assert_response_extended[T: RemoteResponse](actual: T, expected: T):
         """
-        Check that a :py:class:`RemoteObject` has been refreshed
+        Check that a :py:class:`RemoteResponse` has been refreshed
         by asserting that the items in its collection have been extended.
-        Ignores any RemoteObject that is not also a :py:class:`MusifyCollection`
+        Ignores any RemoteResponse that is not also a :py:class:`MusifyCollection`
         """
         if not isinstance(actual, RemoteCollection):
             return
@@ -308,7 +308,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
 
     @pytest.mark.parametrize("object_type", [
         RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM,
-        # RemoteObjectType.SHOW, RemoteObjectType.AUDIOBOOK,  RemoteObject types not yet implemented for these
+        # RemoteObjectType.SHOW, RemoteObjectType.AUDIOBOOK,  RemoteResponse types not yet implemented for these
     ], ids=idfn)
     async def test_extend_items_on_response(
             self,
@@ -529,7 +529,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
 
     @pytest.mark.parametrize("object_type", [
         RemoteObjectType.TRACK, RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM,
-        # other RemoteObject types not yet implemented/do not provide expected results
+        # other RemoteResponse types not yet implemented/do not provide expected results
     ], ids=idfn)
     async def test_get_items_single_response(
             self,
@@ -563,7 +563,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
     # noinspection PyTestUnpassedFixture
     @pytest.mark.parametrize("object_type", [
         RemoteObjectType.TRACK, RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM,
-        # other RemoteObject types not yet implemented/do not provide expected results
+        # other RemoteResponse types not yet implemented/do not provide expected results
     ], ids=idfn)
     async def test_get_items_many_response(
             self,

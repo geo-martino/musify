@@ -33,7 +33,7 @@ from tests.utils import random_str
     f for f in asdict(SpotifyObjectFactory()).values() if inspect.isclass(f) and issubclass(f, RemoteResponse)
 ])
 def response(request, _api_mock: SpotifyMock) -> RemoteResponse:
-    """Yields a :py:class:`RemoteObject` for each of the :py:class:`SpotifyObjectFactory` remote response items"""
+    """Yields a :py:class:`RemoteResponse` for each of the :py:class:`SpotifyObjectFactory` remote response items"""
     factory = request.param
     response = choice(_api_mock.item_type_map[factory.__new__(factory).kind])
     return factory(deepcopy(response), skip_checks=True)
@@ -80,7 +80,7 @@ def test_get_item_type(wrangler: SpotifyDataWrangler, object_type: RemoteObjectT
     kind_str = choice([kind_str, kind_str.upper(), kind_str.lower()])
     assert wrangler.get_item_type({"type": kind_str}) == object_type
 
-    # RemoteObject
+    # RemoteResponse
     kind_str = "".join(choice([char.upper(), char.lower()]) for char in object_type.name)
     kind_str = choice([kind_str, kind_str.upper(), kind_str.lower()])
     assert wrangler.get_item_type({"type": kind_str}) == object_type

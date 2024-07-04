@@ -3,7 +3,6 @@ Core abstract classes for the :py:mod:`Remote` module.
 
 These define the foundations of any remote object or item.
 """
-from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from typing import Any, Self
 
@@ -26,12 +25,6 @@ class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, metaclass=ABCMeta):
 
     __slots__ = ("_response", "api")
     __attributes_ignore__ = ("response", "api")
-
-    @property
-    @abstractmethod
-    def id(self) -> str:
-        """The ID of this item/collection."""
-        raise NotImplementedError
 
     @property
     @abstractmethod
@@ -66,15 +59,6 @@ class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, metaclass=ABCMeta):
     @property
     @abstractmethod
     def kind(cls) -> RemoteObjectType:
-        """The type of remote object this class represents"""
-        raise NotImplementedError
-
-    @abstractmethod
-    def refresh(self, skip_checks: bool = False) -> None:
-        """
-        Refresh this object by updating from the stored API response.
-        Useful for updating stored variables after making changes to the stored API response manually.
-        """
         raise NotImplementedError
 
     def __init__(self, response: dict[str, Any], api: T = None, skip_checks: bool = False):
@@ -115,7 +99,7 @@ class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, metaclass=ABCMeta):
     @classmethod
     @abstractmethod
     async def load(
-            cls, value: APIInputValueSingle[Self], api: RemoteAPI, *args, **kwargs
+            cls, value: APIInputValueSingle[RemoteResponse], api: RemoteAPI, *args, **kwargs
     ) -> Self:
         """
         Generate a new object of this class,

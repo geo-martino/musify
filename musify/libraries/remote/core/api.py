@@ -425,7 +425,7 @@ class RemoteAPI(metaclass=ABCMeta):
             - playlist URL/URI/ID,
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
-            - a RemoteObject object representing a remote playlist.
+            - a RemoteResponse object representing a remote playlist.
         :param items: List of URLs/URIs/IDs of the tracks to add.
         :param limit: Size of each batch of IDs to add. This value will be limited to be between ``1`` and ``50``.
         :param skip_dupes: Skip duplicates.
@@ -467,7 +467,7 @@ class RemoteAPI(metaclass=ABCMeta):
             - playlist URL/URI/ID,
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
-            - a RemoteObject object representing a remote playlist.
+            - a RemoteResponse object representing a remote playlist.
         :return: API URL for playlist.
         """
         raise NotImplementedError
@@ -482,7 +482,7 @@ class RemoteAPI(metaclass=ABCMeta):
             - playlist URL/URI/ID,
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
-            - a RemoteObject object representing a remote playlist.
+            - a RemoteResponse object representing a remote playlist.
         :return: API URL for playlist.
         """
         raise NotImplementedError
@@ -502,7 +502,7 @@ class RemoteAPI(metaclass=ABCMeta):
             - playlist URL/URI/ID,
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
-            - a RemoteObject object representing a remote playlist.
+            - a RemoteResponse object representing a remote playlist.
         :param items: List of URLs/URIs/IDs of the tracks to remove. If None, clear all songs from the playlist.
         :param limit: Size of each batch of IDs to clear in a single request.
             This value will be limited to be between ``1`` and ``100``.
