@@ -232,7 +232,7 @@ class TestLocalTrack(MusifyItemTester):
 
     async def test_load_track_class(self, track: LocalTrack):
         # has actually reloaded the file
-        assert id(track._reader.file) != id(track.load())
+        assert id(track._reader.file) != id(await track.load())
 
         # raises error on unrecognised file type
         with pytest.raises(InvalidFileType):
