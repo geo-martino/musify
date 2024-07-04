@@ -82,11 +82,11 @@ class RemoteItemSearcherTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert len(results) == settings.result_count
         assert len(requests) == 1
 
-        expected = [str(item.clean_tags.get(key)) for key in settings.search_fields_1]
+        expected = " ".join(str(item.clean_tags.get(key)) for key in settings.search_fields_1)
         found = False
         url, _, _ = next(iter(requests))
         for k, v in url.query.items():
-            if expected == unquote(v).split():
+            if expected == unquote(v):
                 found = True
                 break
 
