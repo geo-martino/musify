@@ -142,7 +142,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
         The user must call `refresh` manually after execution.
 
         :param response: A remote API JSON response for an items type endpoint
-            or a response/RemoteObject which contains this response.
+            or a response/RemoteResponse which contains this response.
             Must include required keys:
             ``total`` and either ``next`` or ``href``, plus optional keys ``previous``, ``limit``, ``items`` etc.
         :param kind: The type of response being extended.

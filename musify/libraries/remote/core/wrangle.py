@@ -113,7 +113,7 @@ class RemoteDataWrangler(metaclass=ABCMeta):
         ``value`` may be:
             * A string representing a URL/URI/ID.
             * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
-            * A RemoteObject containing a remote API JSON response with the same structure as above.
+            * A RemoteResponse containing a remote API JSON response with the same structure as above.
 
         :param value: The value representing some remote collection. See description for allowed value types.
         :param kind: The :py:class:`RemoteObjectType` to use as backup if the value is found to be an ID.

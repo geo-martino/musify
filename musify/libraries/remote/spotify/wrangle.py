@@ -98,7 +98,7 @@ class SpotifyDataWrangler(RemoteDataWrangler):
         response_kind = cls._get_item_type_from_mapping(value.response)
         if value.kind != response_kind:
             raise RemoteObjectTypeError(
-                f"RemoteObject kind != actual response kind: {value.kind} != {response_kind}"
+                f"RemoteResponse kind != actual response kind: {value.kind} != {response_kind}"
             )
         return value.kind
 
