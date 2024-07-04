@@ -15,7 +15,7 @@ from yarl import URL
 from musify.base import MusifyItem, HasLength
 from musify.exception import MusifyTypeError
 from musify.libraries.core.collection import MusifyCollection
-from musify.libraries.remote.core.enum import RemoteObjectType
+from musify.libraries.remote.core.types import RemoteObjectType
 
 
 class Track(MusifyItem, HasLength, metaclass=ABCMeta):

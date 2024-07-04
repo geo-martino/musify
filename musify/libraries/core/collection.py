@@ -15,12 +15,11 @@ from musify.base import MusifyObject, MusifyItem, HasLength
 from musify.exception import MusifyTypeError, MusifyKeyError, MusifyAttributeError
 from musify.field import Field
 from musify.file.base import File
-from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.base import RemoteObject
 from musify.processors.sort import ShuffleMode, ItemSorter
 from musify.types import UnitSequence
 
-type ItemGetterTypes = str | URL | MusifyItem | Path | File | RemoteResponse
+type ItemGetterTypes = str | URL | MusifyItem | Path | File | RemoteObject
 
 
 @dataclass
@@ -76,7 +75,7 @@ class RemoteIDGetter(ItemGetterStrategy):
     def name(self) -> str:
         return "remote ID"
 
-    def get_value_from_item(self, item: RemoteResponse) -> str:
+    def get_value_from_item(self, item: RemoteObject) -> str:
         return item.id
 
 
@@ -86,7 +85,7 @@ class RemoteURIGetter(ItemGetterStrategy):
     def name(self) -> str:
         return "URI"
 
-    def get_value_from_item(self, item: MusifyItem | RemoteResponse) -> str:
+    def get_value_from_item(self, item: MusifyItem | RemoteObject) -> str:
         return item.uri
 
 
@@ -358,7 +357,7 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], HasLengt
             getters.append(PathGetter(__key.path))
         if isinstance(__key, Path):
             getters.append(PathGetter(__key))
-        if isinstance(__key, RemoteResponse):
+        if isinstance(__key, RemoteObject):
             getters.append(RemoteIDGetter(__key.id))
         if isinstance(__key, MusifyItem) and __key.has_uri:
             getters.append(RemoteURIGetter(__key.uri))

@@ -10,10 +10,10 @@ from copy import deepcopy
 from yarl import URL
 
 from musify import PROGRAM_NAME
-from musify.api.authorise import APIAuthoriser
-from musify.api.cache.backend.base import ResponseCache, ResponseRepository
-from musify.api.cache.session import CachedSession
-from musify.api.exception import APIError
+from aiorequestful.authorise import APIAuthoriser
+from aiorequestful.cache.backend.base import ResponseCache, ResponseRepository
+from aiorequestful.cache.session import CachedSession
+from musify.libraries.remote.core.exception import APIError
 from musify.libraries.remote.spotify.api.cache import SpotifyRequestSettings, SpotifyPaginatedRequestSettings
 from musify.libraries.remote.spotify.api.item import SpotifyAPIItems
 from musify.libraries.remote.spotify.api.misc import SpotifyAPIMisc

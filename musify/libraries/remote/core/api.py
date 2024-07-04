@@ -10,16 +10,16 @@ from typing import Any, Self
 
 from yarl import URL
 
-from musify.api.authorise import APIAuthoriser
-from musify.api.cache.backend.base import ResponseCache
-from musify.api.exception import CacheError
-from musify.api.request import RequestHandler
+from aiorequestful.authorise import APIAuthoriser
+from aiorequestful.cache.backend.base import ResponseCache
+from aiorequestful.exception import CacheError
+from aiorequestful.request import RequestHandler
+from aiorequestful.types import ImmutableJSON
 from musify.libraries.remote.core import RemoteResponse
-from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
-from musify.libraries.remote.core.types import APIInputValueSingle, APIInputValueMulti
+from musify.libraries.remote.core.types import APIInputValueSingle, APIInputValueMulti, RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.wrangle import RemoteDataWrangler
 from musify.logger import MusifyLogger
-from musify.types import UnitSequence, JSON, UnitList
+from musify.types import UnitSequence, UnitList
 from musify.utils import align_string, to_collection
 
 
@@ -152,8 +152,8 @@ class RemoteAPI(metaclass=ABCMeta):
 
     def _merge_results_to_input(
             self,
-            original: UnitSequence[JSON] | UnitSequence[RemoteResponse],
-            responses: UnitList[JSON],
+            original: UnitSequence[ImmutableJSON] | UnitSequence[RemoteResponse],
+            responses: UnitList[ImmutableJSON],
             ordered: bool = True,
             clear: bool = True,
     ) -> None:
@@ -255,7 +255,7 @@ class RemoteAPI(metaclass=ABCMeta):
         ``value`` may be:
             * A string representing a URL/URI/ID.
             * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
-            * A RemoteResponse representing some remote collection of items.
+            * A RemoteObject representing some remote collection of items.
 
         :param value: The value representing some remote collection. See description for allowed value types.
         :param kind: When an ID is provided, give the kind of ID this is here.
@@ -320,7 +320,7 @@ class RemoteAPI(metaclass=ABCMeta):
 
         Updates the value of the ``items`` key in-place by extending the value of the ``items`` key with new results.
 
-        If a :py:class:`RemoteResponse`, this function will not refresh itself with the new response.
+        If a :py:class:`RemoteObject`, this function will not refresh itself with the new response.
         The user must call `refresh` manually after execution.
 
         :param response: A remote API JSON response for an items type endpoint.
@@ -349,13 +349,13 @@ class RemoteAPI(metaclass=ABCMeta):
             * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
             * A remote API JSON response for a collection.
             * A MutableSequence of remote API JSON responses for a collection.
-            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
+            * A RemoteObject of the appropriate type for this RemoteAPI which holds a valid API JSON response
               as described above.
-            * A Sequence of RemoteResponses as above.
+            * A Sequence of RemoteObjects as above.
 
         If JSON response(s) given, this updates each response given by merging with the new response.
 
-        If :py:class:`RemoteResponse` values are given, this function will call `refresh` on them.
+        If :py:class:`RemoteObject` values are given, this function will call `refresh` on them.
 
         :param values: The values representing some remote objects. See description for allowed value types.
             These items must all be of the same type of item i.e. all tracks OR all artists etc.
@@ -425,7 +425,7 @@ class RemoteAPI(metaclass=ABCMeta):
             - playlist URL/URI/ID,
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
-            - a RemoteResponse object representing a remote playlist.
+            - a RemoteObject object representing a remote playlist.
         :param items: List of URLs/URIs/IDs of the tracks to add.
         :param limit: Size of each batch of IDs to add. This value will be limited to be between ``1`` and ``50``.
         :param skip_dupes: Skip duplicates.
@@ -467,7 +467,7 @@ class RemoteAPI(metaclass=ABCMeta):
             - playlist URL/URI/ID,
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
-            - a RemoteResponse object representing a remote playlist.
+            - a RemoteObject object representing a remote playlist.
         :return: API URL for playlist.
         """
         raise NotImplementedError
@@ -482,7 +482,7 @@ class RemoteAPI(metaclass=ABCMeta):
             - playlist URL/URI/ID,
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
-            - a RemoteResponse object representing a remote playlist.
+            - a RemoteObject object representing a remote playlist.
         :return: API URL for playlist.
         """
         raise NotImplementedError
@@ -502,7 +502,7 @@ class RemoteAPI(metaclass=ABCMeta):
             - playlist URL/URI/ID,
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
-            - a RemoteResponse object representing a remote playlist.
+            - a RemoteObject object representing a remote playlist.
         :param items: List of URLs/URIs/IDs of the tracks to remove. If None, clear all songs from the playlist.
         :param limit: Size of each batch of IDs to clear in a single request.
             This value will be limited to be between ``1`` and ``100``.

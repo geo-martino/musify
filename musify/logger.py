@@ -88,7 +88,7 @@ class MusifyLogger(logging.Logger):
         if self.isEnabledFor(STAT):
             self._log(STAT, msg, args, **kwargs)
 
-    def print(self, level: int = logging.CRITICAL + 1) -> None:
+    def print_line(self, level: int = logging.CRITICAL + 1) -> None:
         """Print a new line only when DEBUG < ``logger level`` <= ``level`` for all console handlers"""
         if not self.compact:
             if self.stdout_handlers and any(logging.DEBUG < h.level <= level for h in self.stdout_handlers):

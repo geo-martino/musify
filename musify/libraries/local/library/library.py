@@ -234,7 +234,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
 
         self.logger.debug(f"Setup {self.name} library: START")
         self.logger.info(f"\33[1;95m ->\33[1;97m Setting up {self.name} library \33[0m")
-        self.logger.print()
+        self.logger.print_line()
 
         #: Passed to playlist objects when loading playlists to map paths stored in the playlist file.
         self.path_mapper = path_mapper
@@ -271,11 +271,11 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         await self.load_tracks()
         await self.load_playlists()
 
-        self.logger.print(STAT)
+        self.logger.print_line(STAT)
         self.log_tracks()
         self.log_playlists()
 
-        self.logger.print()
+        self.logger.print_line()
         self.logger.debug(f"Load {self.name} library: DONE\n")
 
     def _log_errors(self, message: str = "Could not load") -> None:
@@ -283,7 +283,7 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         errors = tuple(f"\33[91m{e}\33[0m" for e in sorted(self.errors))
         if len(errors) > 0:
             self.logger.warning(f"\33[97m{message}: \33[0m\n\t- {"\n\t- ".join(errors)} ")
-            self.logger.print()
+            self.logger.print_line()
         self.errors.clear()
 
     ###########################################################################

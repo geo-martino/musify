@@ -7,11 +7,11 @@ from typing import Any
 
 from yarl import URL
 
-from musify.api.cache.backend.base import ResponseRepository
-from musify.api.cache.session import CachedSession
-from musify.api.exception import CacheError
+from aiorequestful.cache.backend.base import ResponseRepository
+from aiorequestful.cache.session import CachedSession
+from aiorequestful.exception import CacheError
 from musify.libraries.remote.core.api import RemoteAPI
-from musify.libraries.remote.core.enum import RemoteObjectType
+from musify.libraries.remote.core.types import RemoteObjectType
 
 
 class SpotifyAPIBase(RemoteAPI, metaclass=ABCMeta):

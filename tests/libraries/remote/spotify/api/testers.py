@@ -2,10 +2,10 @@ from typing import Any
 
 import pytest
 
-from musify.api.cache.backend import ResponseCache, SQLiteCache
-from musify.api.cache.backend.base import ResponseRepository
+from aiorequestful.cache.backend import ResponseCache, SQLiteCache
+from aiorequestful.cache.backend.base import ResponseRepository
 from musify.libraries.remote.core.api import RemoteAPI
-from musify.libraries.remote.core.enum import RemoteObjectType
+from musify.libraries.remote.core.types import RemoteObjectType
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.factory import SpotifyObjectFactory
 from tests.libraries.remote.core.api import RemoteAPIFixtures

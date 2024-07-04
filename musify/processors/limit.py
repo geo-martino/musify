@@ -7,7 +7,7 @@ from operator import mul
 from random import shuffle
 
 from musify.base import MusifyItem, HasLength
-from musify.enum import MusifyEnum
+from musify.types import MusifyEnum
 from musify.field import Fields
 from musify.file.base import File
 from musify.libraries.core.object import Track

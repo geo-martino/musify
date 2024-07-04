@@ -9,7 +9,7 @@ import pytest
 from yarl import URL
 
 from musify.libraries.remote.core.api import RemoteAPI
-from musify.libraries.remote.core.enum import RemoteObjectType
+from musify.libraries.remote.core.types import RemoteObjectType
 from musify.libraries.remote.core.factory import RemoteObjectFactory
 from tests.libraries.remote.core.utils import RemoteMock
 from tests.utils import random_str

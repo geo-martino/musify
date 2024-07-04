@@ -9,7 +9,7 @@ from functools import partial
 
 from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.base import RemoteObject
-from musify.libraries.remote.core.enum import RemoteObjectType
+from musify.libraries.remote.core.types import RemoteObjectType
 from musify.libraries.remote.core.object import RemoteTrack, RemoteAlbum, RemotePlaylist, RemoteArtist
 
 

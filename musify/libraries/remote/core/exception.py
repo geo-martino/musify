@@ -4,11 +4,15 @@ Exceptions relating to remote operations.
 from typing import Any
 
 from musify.exception import MusifyError
-from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
+from musify.libraries.remote.core.types import RemoteIDType, RemoteObjectType
 
 
 class RemoteError(MusifyError):
     """Exception raised for remote errors"""
+
+
+class APIError(RemoteError):
+    """Exception raised for REST API errors"""
 
 
 ###########################################################################

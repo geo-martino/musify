@@ -5,8 +5,7 @@ from typing import Any
 
 import pytest
 
-from musify.api.exception import APIError
-from musify.libraries.remote.core.exception import RemoteObjectTypeError
+from musify.libraries.remote.core.exception import APIError, RemoteObjectTypeError
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.object import SpotifyTrack
 from musify.types import Number

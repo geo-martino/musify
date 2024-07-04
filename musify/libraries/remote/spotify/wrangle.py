@@ -9,9 +9,8 @@ from yarl import URL
 from musify.exception import MusifyEnumError
 from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.remote.core import RemoteResponse
-from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
-from musify.libraries.remote.core.types import APIInputValueSingle, APIInputValueMulti
+from musify.libraries.remote.core.types import APIInputValueSingle, APIInputValueMulti, RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.wrangle import RemoteDataWrangler
 from musify.libraries.remote.spotify import SOURCE_NAME
 from musify.utils import to_collection
@@ -99,7 +98,7 @@ class SpotifyDataWrangler(RemoteDataWrangler):
         response_kind = cls._get_item_type_from_mapping(value.response)
         if value.kind != response_kind:
             raise RemoteObjectTypeError(
-                f"RemoteResponse kind != actual response kind: {value.kind} != {response_kind}"
+                f"RemoteObject kind != actual response kind: {value.kind} != {response_kind}"
             )
         return value.kind
 

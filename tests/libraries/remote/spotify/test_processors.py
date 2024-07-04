@@ -11,8 +11,8 @@ from musify.exception import MusifyEnumError
 from musify.field import TagFields as Tag
 from musify.libraries.local.collection import LocalAlbum
 from musify.libraries.local.track import LocalTrack
-from musify.libraries.remote.core.base import RemoteResponse
-from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
+from musify.libraries.remote.core import RemoteResponse
+from musify.libraries.remote.core.types import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.factory import SpotifyObjectFactory
@@ -33,7 +33,7 @@ from tests.utils import random_str
     f for f in asdict(SpotifyObjectFactory()).values() if inspect.isclass(f) and issubclass(f, RemoteResponse)
 ])
 def response(request, _api_mock: SpotifyMock) -> RemoteResponse:
-    """Yields a :py:class:`RemoteResponse` for each of the :py:class:`SpotifyObjectFactory` remote response items"""
+    """Yields a :py:class:`RemoteObject` for each of the :py:class:`SpotifyObjectFactory` remote response items"""
     factory = request.param
     response = choice(_api_mock.item_type_map[factory.__new__(factory).kind])
     return factory(deepcopy(response), skip_checks=True)
@@ -80,7 +80,7 @@ def test_get_item_type(wrangler: SpotifyDataWrangler, object_type: RemoteObjectT
     kind_str = choice([kind_str, kind_str.upper(), kind_str.lower()])
     assert wrangler.get_item_type({"type": kind_str}) == object_type
 
-    # RemoteResponse
+    # RemoteObject
     kind_str = "".join(choice([char.upper(), char.lower()]) for char in object_type.name)
     kind_str = choice([kind_str, kind_str.upper(), kind_str.lower()])
     assert wrangler.get_item_type({"type": kind_str}) == object_type

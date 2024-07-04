@@ -17,7 +17,7 @@ from musify.base import MusifyItemSettable, Result
 from musify.field import Fields
 from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.remote.core.api import RemoteAPI
-from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
+from musify.libraries.remote.core.types import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.factory import RemoteObjectFactory
 from musify.libraries.remote.core.object import RemotePlaylist
 from musify.logger import MusifyLogger
@@ -261,14 +261,14 @@ class RemoteItemChecker(InputProcessor):
             self._reset()
             return
 
-        self.logger.print()
+        self.logger.print_line()
         self.logger.report(
             f"\33[1;96mCHECK TOTALS \33[0m| "
             f"\33[94m{len(self._final_switched):>5} switched  \33[0m| "
             f"\33[91m{len(self._final_unavailable):>5} unavailable \33[0m| "
             f"\33[93m{len(self._final_skipped):>5} skipped \33[0m"
         )
-        self.logger.print(REPORT)
+        self.logger.print_line(REPORT)
 
         result = ItemCheckResult(
             switched=self._final_switched, unavailable=self._final_unavailable, skipped=self._final_skipped

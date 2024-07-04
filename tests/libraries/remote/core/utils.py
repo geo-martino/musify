@@ -8,7 +8,7 @@ from aioresponses import aioresponses
 from aioresponses.core import RequestCall
 from yarl import URL
 
-from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
+from musify.libraries.remote.core.types import RemoteIDType, RemoteObjectType
 
 ALL_ID_TYPES = RemoteIDType.all()
 ALL_ITEM_TYPES = RemoteObjectType.all()

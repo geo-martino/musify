@@ -1,10 +1,9 @@
 """
 Generic utility functions and classes which can be used throughout the entire package.
 """
-import inspect
 import re
 from collections import Counter
-from collections.abc import Iterable, Collection, MutableSequence, Mapping, MutableMapping, Callable
+from collections.abc import Iterable, Collection, MutableSequence, Mapping, MutableMapping
 from typing import Any
 
 import unicodedata
@@ -190,18 +189,6 @@ def to_collection[T: (list, set, tuple)](data: Any, cls: type[T] = tuple) -> T |
     raise MusifyTypeError(f"Unable to convert data to {cls.__name__} (data={data})")
 
 
-def unique_list(value: Iterable[Any]) -> list[Any]:
-    """
-    Returns a copy of the given ``value`` that contains only unique elements.
-    Useful for producing unique lists whilst preserving order.
-    """
-    unique = []
-    for item in value:
-        if item not in unique:
-            unique.append(item)
-    return unique
-
-
 ###########################################################################
 ## Mapping
 ###########################################################################
@@ -257,14 +244,6 @@ def get_most_common_values(values: Iterable[Any]) -> list[Any]:
 def get_user_input(text: str | None = None) -> str:
     """Print formatted dialog with optional text and get the user's input."""
     return input(f"\33[93m{text}\33[0m | ").strip()
-
-
-def clean_kwargs(func: Callable, kwargs: dict[str, Any]) -> None:
-    """Clean ``kwargs`` by removing any kwarg not in the signature of the given ``func``."""
-    signature = inspect.signature(func).parameters
-    for key in list(kwargs):
-        if key not in signature:
-            kwargs.pop(key)
 
 
 def required_modules_installed(modules: list, this: object = None) -> bool:

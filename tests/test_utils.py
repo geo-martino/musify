@@ -4,7 +4,7 @@ import pytest
 
 from musify.exception import MusifyTypeError
 from musify.utils import flatten_nested, merge_maps, get_most_common_values, unicode_len
-from musify.utils import limit_value, to_collection, unique_list
+from musify.utils import limit_value, to_collection
 from musify.utils import strip_ignore_words, safe_format_map, get_max_width, align_string
 
 
@@ -204,13 +204,6 @@ def test_to_collection():
         to_collection(1, str)
         to_collection([1, 2, 3], bool)
         to_collection({1, 2, 3, 4}, float)
-
-
-def test_unique_list():
-    test = [5, 5, 1, 2, 6, 2, 2, 3, 7, 3, 3, 2, 3, 7, 8, 3, 2, 6, 1, 2, 7, 8, 1, 5]
-    result = unique_list(test)
-    assert len(result) == len(set(test))
-    assert result == [5, 1, 2, 6, 3, 7, 8]
 
 
 ###########################################################################

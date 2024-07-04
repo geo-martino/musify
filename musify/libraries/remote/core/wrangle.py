@@ -7,9 +7,8 @@ from collections.abc import Mapping
 from yarl import URL
 
 from musify.libraries.remote.core import RemoteResponse
-from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteObjectTypeError
-from musify.libraries.remote.core.types import APIInputValueSingle, APIInputValueMulti
+from musify.libraries.remote.core.types import APIInputValueSingle, APIInputValueMulti, RemoteIDType, RemoteObjectType
 
 
 class RemoteDataWrangler(metaclass=ABCMeta):
@@ -76,9 +75,9 @@ class RemoteDataWrangler(metaclass=ABCMeta):
             * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
             * A remote API JSON response for a collection including a valid item type value under a ``type`` key.
             * A MutableSequence of remote API JSON responses for a collection including the same structure as above.
-            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
+            * A RemoteObject of the appropriate type for this RemoteAPI which holds a valid API JSON response
               as described above.
-            * A Sequence of RemoteResponses as above.
+            * A Sequence of RemoteObjects as above.
 
         :param values: The values representing some remote objects. See description for allowed value types.
             These items must all be of the same type of item to pass i.e. all tracks OR all artists etc.
@@ -114,7 +113,7 @@ class RemoteDataWrangler(metaclass=ABCMeta):
         ``value`` may be:
             * A string representing a URL/URI/ID.
             * A remote API JSON response for a collection with a valid ID value under an ``id`` key.
-            * A RemoteResponse containing a remote API JSON response with the same structure as above.
+            * A RemoteObject containing a remote API JSON response with the same structure as above.
 
         :param value: The value representing some remote collection. See description for allowed value types.
         :param kind: The :py:class:`RemoteObjectType` to use as backup if the value is found to be an ID.
@@ -136,9 +135,9 @@ class RemoteDataWrangler(metaclass=ABCMeta):
             * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
             * A remote API JSON response for a collection including a valid item type value under a ``type`` key.
             * A MutableSequence of remote API JSON responses for a collection including the same structure as above.
-            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
+            * A RemoteObject of the appropriate type for this RemoteAPI which holds a valid API JSON response
               as described above.
-            * A Sequence of RemoteResponses as above.
+            * A Sequence of RemoteObjects as above.
 
         :param values: The values representing some remote objects. See description for allowed value types.
             These items must all be of the same type of item to pass i.e. all tracks OR all artists etc.
@@ -189,9 +188,9 @@ class RemoteDataWrangler(metaclass=ABCMeta):
                 - a valid ID value under an ``id`` key,
                 - a valid item type value under a ``type`` key if ``kind`` is None.
             * A MutableSequence of remote API JSON responses for a collection including the same structure as above.
-            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
+            * A RemoteObject of the appropriate type for this RemoteAPI which holds a valid API JSON response
               as described above.
-            * A Sequence of RemoteResponses as above.
+            * A Sequence of RemoteObjects as above.
 
         :param values: The values representing some remote objects. See description for allowed value types.
             These items may be of mixed item types e.g. some tracks AND some artists.

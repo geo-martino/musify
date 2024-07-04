@@ -6,7 +6,7 @@ from abc import ABCMeta
 from collections.abc import MutableMapping
 from typing import Any
 
-from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
+from musify.libraries.remote.core.types import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.spotify.api.base import SpotifyAPIBase
 from musify.types import Number
 from musify.utils import limit_value

@@ -1,3 +1,5 @@
+from typing import Any
+
 from p1 import *
 
 import asyncio
@@ -8,7 +10,7 @@ with open(path, "r") as file:
     backup = json.load(file)
 
 
-async def restore_remote_library(library: RemoteLibrary, backup) -> None:
+async def restore_remote_library(library: RemoteLibrary, backup: dict[str, Any]) -> None:
     """Restore the playlists in a remote ``library`` from the given ``backup``"""
     async with library:
         await library.restore_playlists(backup["playlists"])

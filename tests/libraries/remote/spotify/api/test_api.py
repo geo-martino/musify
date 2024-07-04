@@ -6,10 +6,11 @@ from typing import Any
 import pytest
 from yarl import URL
 
-from musify.api.cache.backend.base import ResponseCache, ResponseRepository
-from musify.api.cache.session import CachedSession
-from musify.api.exception import APIError, CacheError
-from musify.libraries.remote.core.enum import RemoteObjectType
+from aiorequestful.cache.backend.base import ResponseCache, ResponseRepository
+from aiorequestful.cache.session import CachedSession
+from aiorequestful.exception import CacheError
+from musify.libraries.remote.core.exception import APIError
+from musify.libraries.remote.core.types import RemoteObjectType
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from tests.libraries.remote.spotify.api.mock import SpotifyMock
 from tests.libraries.remote.spotify.api.testers import SpotifyAPIFixtures

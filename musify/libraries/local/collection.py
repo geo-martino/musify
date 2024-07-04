@@ -172,7 +172,7 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
                     track_in_collection[tag] = track[tag]
 
         if isinstance(self, Library | LocalCollection):
-            self.logger.print()
+            self.logger.print_line()
 
 
 class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], metaclass=ABCMeta):

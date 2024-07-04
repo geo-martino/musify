@@ -5,13 +5,16 @@ from random import choice, randrange, sample
 from typing import Any
 from uuid import uuid4
 
-from musify.enum import MusifyEnum
+from musify.types import MusifyEnum
 
 path_tests = Path(__file__).parent
 path_root = path_tests.parent
 path_resources = path_tests.joinpath("__resources")
 
 path_txt = path_resources.joinpath("test").with_suffix(".txt")
+
+path_api_resources = path_resources.joinpath("api")
+path_token = path_api_resources.joinpath("token").with_suffix(".json")
 
 
 # noinspection SpellCheckingInspection

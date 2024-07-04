@@ -36,34 +36,34 @@ def test_print(logger: MusifyLogger, capfd: pytest.CaptureFixture):
 
     assert logger.stdout_handlers
 
-    logger.print(logging.ERROR)  # ERROR is above handler level
+    logger.print_line(logging.ERROR)  # ERROR is above handler level
     assert capfd.readouterr().out == "\n"
 
-    logger.print(logging.WARNING)  # WARNING is at handler level
+    logger.print_line(logging.WARNING)  # WARNING is at handler level
     assert capfd.readouterr().out == "\n"
 
-    logger.print(logging.INFO)  # INFO is below handler level
+    logger.print_line(logging.INFO)  # INFO is below handler level
     assert capfd.readouterr().out == ""
 
     # compact is True, never print lines
     logger.compact = True
 
-    logger.print(logging.ERROR)
+    logger.print_line(logging.ERROR)
     assert capfd.readouterr().out == ""
-    logger.print(logging.WARNING)
+    logger.print_line(logging.WARNING)
     assert capfd.readouterr().out == ""
-    logger.print(logging.INFO)
+    logger.print_line(logging.INFO)
     assert capfd.readouterr().out == ""
 
     # compact False and handler is at DEBUG level, never print lines
     logger.compact = False
     handler.setLevel(logging.DEBUG)
 
-    logger.print(logging.INFO)
+    logger.print_line(logging.INFO)
     assert capfd.readouterr().out == ""
-    logger.print(logging.DEBUG)
+    logger.print_line(logging.DEBUG)
     assert capfd.readouterr().out == ""
-    logger.print(0)
+    logger.print_line(0)
     assert capfd.readouterr().out == ""
 
 

@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from musify.libraries.remote.core.enum import RemoteObjectType
+from musify.libraries.remote.core.types import RemoteObjectType
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.api.item import ARTIST_ALBUM_TYPES
 from musify.libraries.remote.spotify.object import SpotifyArtist

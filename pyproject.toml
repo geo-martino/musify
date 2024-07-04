@@ -25,7 +25,7 @@ classifiers = [
 ]
 dependencies = [
     "mutagen~=1.47",
-    "aiohttp~=3.9",
+    "aiorequestful~=0.1",
     "python-dateutil~=2.9",
     "Pillow~=10.3",
 ]
@@ -43,7 +43,7 @@ musicbee = [
     "lxml~=5.2",
 ]
 sqlite = [
-    "aiosqlite~=0.20",
+    "aiorequestful[sqlite]~=0.1",
 ]
 
 # dev dependencies
@@ -88,6 +88,9 @@ Issues = "https://github.com/geo-martino/musify/issues"
 
 [tool.hatch.version]
 source = "versioningit"
+
+[tool.versioningit]
+default-version = "0.0.0"
 
 [tool.versioningit.format]
 # WORKAROUND: commits for actual production releases keep getting identified as dirty and/or with distance

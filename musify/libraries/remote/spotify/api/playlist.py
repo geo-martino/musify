@@ -9,11 +9,9 @@ from typing import Any
 from yarl import URL
 
 from musify import PROGRAM_NAME, PROGRAM_URL
-from musify.api.exception import APIError
 from musify.libraries.remote.core import RemoteResponse
-from musify.libraries.remote.core.enum import RemoteIDType, RemoteObjectType
-from musify.libraries.remote.core.exception import RemoteIDTypeError
-from musify.libraries.remote.core.types import APIInputValueSingle
+from musify.libraries.remote.core.exception import APIError, RemoteIDTypeError
+from musify.libraries.remote.core.types import APIInputValueSingle, RemoteIDType, RemoteObjectType
 from musify.libraries.remote.spotify.api.base import SpotifyAPIBase
 from musify.utils import limit_value
 
@@ -41,7 +39,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             - playlist URL/URI/ID,
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
-            - a RemoteResponse object representing a remote playlist.
+            - a RemoteObject object representing a remote playlist.
         :return: The playlist URL.
         :raise RemoteIDTypeError: Raised when the function cannot determine the item type of
             the input ``playlist``. Or when it does not recognise the type of the input ``playlist`` parameter.
@@ -144,7 +142,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             - playlist URL/URI/ID,
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
-            - a RemoteResponse object representing a remote playlist.
+            - a RemoteObject object representing a remote playlist.
         :param items: List of URLs/URIs/IDs of the tracks to add.
         :param limit: Size of each batch of IDs to add. This value will be limited to be between ``1`` and ``100``.
         :param skip_dupes: Skip duplicates.
@@ -200,7 +198,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             - playlist URL/URI/ID,
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
-            - a RemoteResponse object representing a remote playlist.
+            - a RemoteObject object representing a remote playlist.
         :return: API URL for playlist.
         """
         url = URL(f"{await self.get_playlist_url(playlist)}/followers")
@@ -221,7 +219,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             - playlist URL/URI/ID,
             - the name of the playlist in the current user's playlists,
             - the API response of a playlist.
-            - a RemoteResponse object representing a remote playlist.
+            - a RemoteObject object representing a remote playlist.
         :param items: List of URLs/URIs/IDs of the tracks to remove. If None, clear all songs from the playlist.
         :param limit: Size of each batch of IDs to clear in a single request.
             This value will be limited to be between ``1`` and ``100``.
