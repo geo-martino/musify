@@ -15,11 +15,11 @@ from musify.base import MusifyObject, MusifyItem, HasLength
 from musify.exception import MusifyTypeError, MusifyKeyError, MusifyAttributeError
 from musify.field import Field
 from musify.file.base import File
-from musify.libraries.remote.core.base import RemoteObject
+from musify.libraries.remote.core import RemoteResponse
 from musify.processors.sort import ShuffleMode, ItemSorter
 from musify.types import UnitSequence
 
-type ItemGetterTypes = str | URL | MusifyItem | Path | File | RemoteObject
+type ItemGetterTypes = str | URL | MusifyItem | Path | File | RemoteResponse
 
 
 @dataclass
@@ -75,7 +75,7 @@ class RemoteIDGetter(ItemGetterStrategy):
     def name(self) -> str:
         return "remote ID"
 
-    def get_value_from_item(self, item: RemoteObject) -> str:
+    def get_value_from_item(self, item: RemoteResponse) -> str:
         return item.id
 
 
@@ -85,7 +85,7 @@ class RemoteURIGetter(ItemGetterStrategy):
     def name(self) -> str:
         return "URI"
 
-    def get_value_from_item(self, item: MusifyItem | RemoteObject) -> str:
+    def get_value_from_item(self, item: MusifyItem | RemoteResponse) -> str:
         return item.uri
 
 
@@ -95,7 +95,7 @@ class RemoteURLAPIGetter(ItemGetterStrategy):
     def name(self) -> str:
         return "API URL"
 
-    def get_value_from_item(self, item: RemoteObject) -> URL:
+    def get_value_from_item(self, item: RemoteResponse) -> URL:
         return item.url
 
 
@@ -105,7 +105,7 @@ class RemoteURLEXTGetter(ItemGetterStrategy):
     def name(self) -> str:
         return "external URL"
 
-    def get_value_from_item(self, item: RemoteObject) -> URL:
+    def get_value_from_item(self, item: RemoteResponse) -> URL:
         return item.url_ext
 
 
@@ -328,8 +328,8 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], HasLengt
         Returns the item in this collection by matching on a given index/Item/URI/ID/URL.
         If an :py:class:`MusifyItem` is given, the URI is extracted from this item
         and the matching Item from this collection is returned.
-        If a :py:class:`RemoteObject` is given, the ID is extracted from this object
-        and the matching RemoteObject from this collection is returned.
+        If a :py:class:`RemoteResponse` is given, the ID is extracted from this object
+        and the matching RemoteResponse from this collection is returned.
         """
         if isinstance(__key, int) or isinstance(__key, slice):  # simply index the list or items
             return self.items[__key]
@@ -357,7 +357,7 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], HasLengt
             getters.append(PathGetter(__key.path))
         if isinstance(__key, Path):
             getters.append(PathGetter(__key))
-        if isinstance(__key, RemoteObject):
+        if isinstance(__key, RemoteResponse):
             getters.append(RemoteIDGetter(__key.id))
         if isinstance(__key, MusifyItem) and __key.has_uri:
             getters.append(RemoteURIGetter(__key.uri))

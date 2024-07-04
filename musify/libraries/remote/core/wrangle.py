@@ -75,9 +75,9 @@ class RemoteDataWrangler(metaclass=ABCMeta):
             * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
             * A remote API JSON response for a collection including a valid item type value under a ``type`` key.
             * A MutableSequence of remote API JSON responses for a collection including the same structure as above.
-            * A RemoteObject of the appropriate type for this RemoteAPI which holds a valid API JSON response
+            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
               as described above.
-            * A Sequence of RemoteObjects as above.
+            * A Sequence of RemoteResponses as above.
 
         :param values: The values representing some remote objects. See description for allowed value types.
             These items must all be of the same type of item to pass i.e. all tracks OR all artists etc.
@@ -135,9 +135,9 @@ class RemoteDataWrangler(metaclass=ABCMeta):
             * A MutableSequence of strings representing URLs/URIs/IDs of the same type.
             * A remote API JSON response for a collection including a valid item type value under a ``type`` key.
             * A MutableSequence of remote API JSON responses for a collection including the same structure as above.
-            * A RemoteObject of the appropriate type for this RemoteAPI which holds a valid API JSON response
+            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
               as described above.
-            * A Sequence of RemoteObjects as above.
+            * A Sequence of RemoteResponses as above.
 
         :param values: The values representing some remote objects. See description for allowed value types.
             These items must all be of the same type of item to pass i.e. all tracks OR all artists etc.
@@ -188,9 +188,9 @@ class RemoteDataWrangler(metaclass=ABCMeta):
                 - a valid ID value under an ``id`` key,
                 - a valid item type value under a ``type`` key if ``kind`` is None.
             * A MutableSequence of remote API JSON responses for a collection including the same structure as above.
-            * A RemoteObject of the appropriate type for this RemoteAPI which holds a valid API JSON response
+            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
               as described above.
-            * A Sequence of RemoteObjects as above.
+            * A Sequence of RemoteResponses as above.
 
         :param values: The values representing some remote objects. See description for allowed value types.
             These items may be of mixed item types e.g. some tracks AND some artists.

@@ -138,7 +138,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
 
         If a cache has been configured for this API, will also persist the items in any collection to the cache.
 
-        If a :py:class:`RemoteObject`, this function will not refresh itself with the new response.
+        If a :py:class:`RemoteResponse`, this function will not refresh it with the new response.
         The user must call `refresh` manually after execution.
 
         :param response: A remote API JSON response for an items type endpoint
@@ -257,14 +257,14 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
                 - a valid ID value under an ``id`` key,
                 - a valid item type value under a ``type`` key if ``kind`` is None.
             * A MutableSequence of remote API JSON responses for a collection including the same structure as above.
-            * A RemoteObject of the appropriate type for this RemoteAPI which holds a valid API JSON response
+            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
               as described above.
-            * A Sequence of RemoteObjects as above.
+            * A Sequence of RemoteResponses as above.
 
         If JSON response(s) given, this update each response given by merging with the new response
         and replacing the ``items`` with the new results.
 
-        If :py:class:`RemoteObject` values are given, this function will call `refresh` on them.
+        If :py:class:`RemoteResponse` values are given, this function will call `refresh` on them.
 
         :param values: The values representing some remote objects. See description for allowed value types.
             These items must all be of the same type of item i.e. all tracks OR all artists etc.
@@ -400,9 +400,9 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
                 - some items under an ``items`` key,
                 - a valid ID value under an ``id`` key.
             * A MutableSequence of remote API JSON responses for a set of tracks including the same structure as above.
-            * A RemoteObject of the appropriate type for this RemoteAPI which holds a valid API JSON response
+            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
               as described above.
-            * A Sequence of RemoteObjects as above.
+            * A Sequence of RemoteResponses as above.
 
         If JSON response(s) given, this updates each response given by adding the results
         under the ``audio_features`` and ``audio_analysis`` keys as appropriate.
@@ -443,14 +443,14 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
                 - some items under an ``items`` key,
                 - a valid ID value under an ``id`` key.
             * A MutableSequence of remote API JSON responses for a set of tracks including the same structure as above.
-            * A RemoteObject of the appropriate type for this RemoteAPI which holds a valid API JSON response
+            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
               as described above.
-            * A Sequence of RemoteObjects as above.
+            * A Sequence of RemoteResponses as above.
 
         If JSON response(s) given, this updates each response given by adding the results
         under the ``audio_features`` and ``audio_analysis`` keys as appropriate.
 
-        If :py:class:`RemoteObject` values are given, this function will call `refresh` on them.
+        If :py:class:`RemoteResponse` values are given, this function will call `refresh` on them.
 
         :param values: The values representing some remote track/s. See description for allowed value types.
         :param features: When True, get audio features.
@@ -529,13 +529,13 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             * A MutableSequence of strings representing URLs/URIs/IDs of the type 'artist'.
             * A remote API JSON response for an artist including a valid ID value under an ``id`` key.
             * A MutableSequence of remote API JSON responses for a set of artists including the same structure as above.
-            * A RemoteObject of the appropriate type for this RemoteAPI which holds a valid API JSON response
+            * A RemoteResponse of the appropriate type for this RemoteAPI which holds a valid API JSON response
               as described above.
-            * A Sequence of RemoteObjects as above.
+            * A Sequence of RemoteResponses as above.
 
         If JSON response(s) given, this updates each response given by adding the results under the ``albums`` key.
 
-        If :py:class:`RemoteObject` values are given, this function will call `refresh` on them.
+        If :py:class:`RemoteResponse` values are given, this function will call `refresh` on them.
 
         :param values: The values representing some remote artist/s. See description for allowed value types.
         :param types: The types of albums to return. Select from ``{"album", "single", "compilation", "appears_on"}``.
