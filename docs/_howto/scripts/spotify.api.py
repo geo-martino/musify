@@ -3,7 +3,7 @@ from musify.libraries.remote.spotify.api import SpotifyAPI
 api = SpotifyAPI(
     client_id="<YOUR CLIENT ID>",
     client_secret="<YOUR CLIENT SECRET>",
-    scopes=[
+    scope=[
         "user-library-read",
         "user-follow-read",
         "playlist-read-collaborative",

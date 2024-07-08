@@ -79,8 +79,8 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
     @staticmethod
     async def test_make_temp_playlist(checker: RemoteItemChecker, api_mock: RemoteMock, token_file_path: Path):
         # force auth test to fail and reload from token
-        checker.api.handler.authoriser.token = None
-        checker.api.handler.authoriser.token_file_path = token_file_path
+        checker.api.handler.authoriser.response_handler.response = None
+        checker.api.handler.authoriser.response_handler.file_path = token_file_path
 
         collection = BasicCollection(name=random_str(30, 50), items=random_tracks())
         for item in collection:
@@ -96,7 +96,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             item.uri = random_uri()
 
         await checker._create_playlist(collection=collection)
-        assert checker.api.handler.authoriser.token is not None
+        assert checker.api.handler.authoriser.response_handler.response is not None
         assert collection.name in checker._playlist_originals
         assert checker._playlist_check_collections[collection.name] == collection
         assert api_mock.total_requests >= 2
@@ -110,8 +110,8 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
             token_file_path: Path
     ):
         # force auth test to fail and reload from token
-        checker.api.handler.authoriser.token = None
-        checker.api.handler.authoriser.token_file_path = token_file_path
+        checker.api.handler.authoriser.response_handler.response = None
+        checker.api.handler.authoriser.response_handler.file_path = token_file_path
 
         for pl in sample(playlists, k=len(playlists) // 2):
             pl.clear()
@@ -125,7 +125,7 @@ class RemoteItemCheckerTester(PrettyPrinterTester, metaclass=ABCMeta):
         checker._playlist_check_collections = {collection.name: collection for collection in collections}
 
         await checker._delete_playlists()
-        assert checker.api.handler.authoriser.token is not None  # re-authorised
+        assert checker.api.handler.authoriser.response_handler.response is not None  # re-authorised
         assert not checker._playlist_originals
         assert not checker._playlist_check_collections
 

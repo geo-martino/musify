@@ -29,7 +29,7 @@ def logger() -> MusifyLogger:
     logger.disable_bars = True
 
 
-def test_print(logger: MusifyLogger, capfd: pytest.CaptureFixture):
+def test_print_line(logger: MusifyLogger, capfd: pytest.CaptureFixture):
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.WARNING)
     logger.addHandler(handler)

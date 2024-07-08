@@ -91,7 +91,7 @@ For more detailed guides, check out the [documentation](https://geo-martino.gith
     spotify_api = SpotifyAPI(
         client_id="<YOUR CLIENT ID>",
         client_secret="<YOUR CLIENT SECRET>",
-        scopes=[
+        scope=[
             "user-library-read",
             "user-follow-read",
             "playlist-read-collaborative",

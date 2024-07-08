@@ -8,13 +8,13 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import Collection, MutableMapping, Mapping, Sequence, Iterable
 from typing import Any, Self
 
-from yarl import URL
-
-from aiorequestful.authorise import APIAuthoriser
+from aiorequestful.auth import Authoriser
 from aiorequestful.cache.backend.base import ResponseCache
 from aiorequestful.exception import CacheError
 from aiorequestful.request import RequestHandler
 from aiorequestful.types import ImmutableJSON
+from yarl import URL
+
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.types import APIInputValueSingle, APIInputValueMulti, RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.wrangle import RemoteDataWrangler
@@ -26,7 +26,7 @@ from musify.utils import align_string, to_collection
 class RemoteAPI(metaclass=ABCMeta):
     """
     Collection of endpoints for a remote API.
-    See :py:class:`RequestHandler` and :py:class:`APIAuthoriser`
+    See :py:class:`RequestHandler` and :py:class:`Authoriser`
     for more info on which params to pass to authorise and execute requests.
 
     :param wrangler: The :py:class:`RemoteDataWrangler` for this API type.
@@ -76,7 +76,7 @@ class RemoteAPI(metaclass=ABCMeta):
         """The name of the API service"""
         return self.wrangler.source
 
-    def __init__(self, authoriser: APIAuthoriser, wrangler: RemoteDataWrangler, cache: ResponseCache | None = None):
+    def __init__(self, authoriser: Authoriser, wrangler: RemoteDataWrangler, cache: ResponseCache | None = None):
         # noinspection PyTypeChecker
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
@@ -113,17 +113,14 @@ class RemoteAPI(metaclass=ABCMeta):
         """Set up the repositories and repository getter on the self.handler.session's cache."""
         raise NotImplementedError
 
-    async def authorise(self, force_load: bool = False, force_new: bool = False) -> Self:
+    async def authorise(self) -> Self:
         """
         Main method for authorisation, tests/refreshes/reauthorises as needed
 
-        :param force_load: Reloads the token even if it's already been loaded into the object.
-            Ignored when force_new is True.
-        :param force_new: Ignore saved/loaded token and generate new token.
         :return: Self.
         :raise APIError: If the token cannot be validated.
         """
-        await self.handler.authorise(force_load=force_load, force_new=force_new)
+        await self.handler.authorise()
         return self
 
     async def close(self) -> None:

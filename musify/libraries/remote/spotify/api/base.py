@@ -5,11 +5,11 @@ from abc import ABCMeta
 from collections.abc import Collection, MutableMapping, Iterable
 from typing import Any
 
-from yarl import URL
-
 from aiorequestful.cache.backend.base import ResponseRepository
 from aiorequestful.cache.session import CachedSession
 from aiorequestful.exception import CacheError
+from yarl import URL
+
 from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.types import RemoteObjectType
 

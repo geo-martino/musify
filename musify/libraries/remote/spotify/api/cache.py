@@ -1,8 +1,8 @@
 from typing import Any
 
+from aiorequestful.cache.backend.base import RequestSettings
 from yarl import URL
 
-from aiorequestful.cache.backend.base import RequestSettings
 from musify.libraries.remote.core.types import RemoteIDType
 from musify.libraries.remote.core.exception import RemoteObjectTypeError
 from musify.libraries.remote.spotify.wrangle import SpotifyDataWrangler

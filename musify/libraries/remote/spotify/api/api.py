@@ -3,64 +3,23 @@ Mixin for all implementations of :py:class:`RemoteAPI` for the Spotify API.
 
 Also includes the default arguments to be used when requesting authorisation from the Spotify API.
 """
-import base64
-from collections.abc import Iterable
-from copy import deepcopy
+from pathlib import Path
 
-from yarl import URL
-
-from musify import PROGRAM_NAME
-from aiorequestful.authorise import APIAuthoriser
+from aiohttp import ClientResponse
+from aiorequestful.auth import AuthRequest
+from aiorequestful.auth.oauth2 import AuthorisationCodeFlow
 from aiorequestful.cache.backend.base import ResponseCache, ResponseRepository
 from aiorequestful.cache.session import CachedSession
+from aiorequestful.types import Method
+from yarl import URL
+
 from musify.libraries.remote.core.exception import APIError
 from musify.libraries.remote.spotify.api.cache import SpotifyRequestSettings, SpotifyPaginatedRequestSettings
 from musify.libraries.remote.spotify.api.item import SpotifyAPIItems
 from musify.libraries.remote.spotify.api.misc import SpotifyAPIMisc
 from musify.libraries.remote.spotify.api.playlist import SpotifyAPIPlaylists
 from musify.libraries.remote.spotify.wrangle import SpotifyDataWrangler
-from musify.utils import safe_format_map, merge_maps
-
-URL_AUTH = "https://accounts.spotify.com"
-
-# user authenticated access with scopes
-SPOTIFY_API_AUTH_ARGS = {
-    "auth_args": {
-        "url": f"{URL_AUTH}/api/token",
-        "data": {
-            "grant_type": "authorization_code",
-        },
-        "headers": {
-            "content-type": "application/x-www-form-urlencoded",
-            "Authorization": "Basic {client_base64}"
-        },
-    },
-    "user_args": {
-        "url": f"{URL_AUTH}/authorize",
-        "params": {
-            "client_id": "{client_id}",
-            "response_type": "code",
-            "state": PROGRAM_NAME,
-            "scope": "{scopes}",
-            "show_dialog": False,
-        },
-    },
-    "refresh_args": {
-        "url": f"{URL_AUTH}/api/token",
-        "data": {
-            "grant_type": "refresh_token",
-        },
-        "headers": {
-            "content-type": "application/x-www-form-urlencoded",
-            "Authorization": "Basic {client_base64}"
-        },
-    },
-    "test_args": {"url": "{url}/me"},
-    "test_condition": lambda r: SpotifyAPI.url_key in r and "display_name" in r,
-    "test_expiry": 600,
-    "token_key_path": ["access_token"],
-    "header_extra": {"Accept": "application/json", "Content-Type": "application/json"},
-}
+from musify.types import UnitIterable
 
 
 class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
@@ -69,9 +28,9 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
 
     :param client_id: The client ID to use when authorising requests.
     :param client_secret: The client secret to use when authorising requests.
-    :param scopes: The scopes to request access to.
+    :param scope: The scopes to request access to.
     :param cache: When given, attempt to use this cache for certain request types before calling the API.
-    :param auth_kwargs: Optionally, provide kwargs to use when instantiating the :py:class:`APIAuthoriser`.
+    :param auth_kwargs: Optionally, provide kwargs to use when instantiating the :py:class:`Authoriser`.
     """
 
     __slots__ = ()
@@ -96,29 +55,52 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
             )
         return self.user_data["display_name"]
 
+    _url_auth = URL.build(scheme="https", host="accounts.spotify.com")
+
     def __init__(
             self,
             client_id: str | None = None,
             client_secret: str | None = None,
-            scopes: Iterable[str] = (),
+            scope: UnitIterable[str] = (),
             cache: ResponseCache | None = None,
-            **auth_kwargs
+            token_file_path: str | Path = None,
     ):
         wrangler = SpotifyDataWrangler()
+        authoriser = AuthorisationCodeFlow.create_with_encoded_credentials(
+            service_name=wrangler.source,
+            user_request_url=self._url_auth.with_path("authorize"),
+            token_request_url=self._url_auth.with_path("api/token"),
+            refresh_request_url=self._url_auth.with_path("api/token"),
+            client_id=client_id,
+            client_secret=client_secret,
+            scope=scope,
+        )
 
-        format_map = {
-            "client_id": client_id,
-            "client_base64": base64.b64encode(f"{client_id}:{client_secret}".encode()).decode(),
-            "scopes": " ".join(scopes),
-            "url": str(wrangler.url_api)
+        if not hasattr(authoriser.token_request, "headers"):
+            authoriser.token_request.headers = {}
+        authoriser.token_request.headers["content-type"] = "application/x-www-form-urlencoded"
+
+        if not hasattr(authoriser.refresh_request, "headers"):
+            authoriser.refresh_request.headers = {}
+        authoriser.refresh_request.headers["content-type"] = "application/x-www-form-urlencoded"
+
+        if token_file_path:
+            authoriser.response_handler.file_path = Path(token_file_path)
+        authoriser.response_handler.additional_headers = {
+            "Accept": "application/json", "Content-Type": "application/json"
         }
-        auth_kwargs = merge_maps(deepcopy(SPOTIFY_API_AUTH_ARGS), auth_kwargs, extend=False, overwrite=True)
-        safe_format_map(auth_kwargs, format_map=format_map)
 
-        auth_kwargs.pop("name", None)
-        authoriser = APIAuthoriser(name=wrangler.source, **auth_kwargs)
+        authoriser.response_tester.request = AuthRequest(
+            method=Method.GET, url=wrangler.url_api.joinpath("me")
+        )
+        authoriser.response_tester.response_test = self._response_test
+        authoriser.response_tester.max_expiry = 600
 
         super().__init__(authoriser=authoriser, wrangler=wrangler, cache=cache)
+
+    async def _response_test(self, response: ClientResponse) -> bool:
+        r = await response.json()
+        return self.url_key in r and "display_name" in r
 
     # noinspection PyAsyncCall
     async def _setup_cache(self) -> None:

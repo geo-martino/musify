@@ -9,9 +9,9 @@ from datetime import datetime, date
 from pathlib import Path
 from typing import Any
 
+from aiorequestful.types import ImmutableJSON, JSON, JSON_VALUE
 from yarl import URL
 
-from aiorequestful.types import ImmutableJSON, JSON, JSON_VALUE
 from musify.types import UnitIterable
 from musify.utils import to_collection
 

@@ -11,7 +11,6 @@ import yaml
 from _pytest.fixtures import SubRequest
 # noinspection PyProtectedMember
 from _pytest.logging import LogCaptureHandler, _remove_ansi_escape_sequences
-from aioresponses import aioresponses
 
 from musify import MODULE_ROOT
 from musify.libraries.remote.core.types import RemoteObjectType
@@ -331,13 +330,6 @@ def log_capturer() -> LogCapturer:
 
 
 @pytest.fixture
-def requests_mock():
-    """Yields an initialised :py:class:`aioresponses` object for mocking aiohttp requests as a pytest.fixture."""
-    with aioresponses() as m:
-        yield m
-
-
-@pytest.fixture
 def path(request: pytest.FixtureRequest | SubRequest, tmp_path: Path) -> Path:
     """
     Copy the path of the source file to the test cache for this test and return the cache path.
@@ -384,7 +376,10 @@ async def spotify_api(spotify_mock: SpotifyMock) -> SpotifyAPI:
     """Yield an authorised :py:class:`SpotifyAPI` object"""
     token = {"access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"}
     # disable any token tests by settings test_* kwargs as appropriate
-    api = SpotifyAPI(token=token, test_args=None, test_expiry=0, test_condition=None)
+    api = SpotifyAPI()
+    api.handler.authoriser.response_handler.response = token
+    api.handler.authoriser.response_tester.response_test = None
+    api.handler.authoriser.response_tester.max_expiry = 0
 
     # force almost no backoff/wait settings
     api.handler.backoff_start = 0.001

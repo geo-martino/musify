@@ -1,9 +1,9 @@
 from typing import Any
 
 import pytest
-
 from aiorequestful.cache.backend import ResponseCache, SQLiteCache
 from aiorequestful.cache.backend.base import ResponseRepository
+
 from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.types import RemoteObjectType
 from musify.libraries.remote.spotify.api import SpotifyAPI
@@ -40,15 +40,12 @@ class SpotifyAPIFixtures(RemoteAPIFixtures):
     @pytest.fixture
     async def api_cache(self, api: SpotifyAPI, cache: ResponseCache, api_mock: SpotifyMock) -> SpotifyAPI:
         """Yield an authorised :py:class:`SpotifyAPI` object with a :py:class:`ResponseCache` configured."""
-        async with SpotifyAPI(
-                cache=cache,
-                token=api.handler.authoriser.token,
-                test_args=api.handler.authoriser.test_args,
-                test_expiry=api.handler.authoriser.test_expiry,
-                test_condition=api.handler.authoriser.test_condition,
-        ) as api:
+        api_cache = SpotifyAPI(cache=cache)
+        api_cache.handler.authoriser.response_handler = api.handler.authoriser.response_handler
+
+        async with api_cache as a:
             api_mock.reset()  # entering context calls '/me' endpoint, reset to avoid issues asserting request counts
-            yield api
+            yield a
 
     @pytest.fixture
     def responses(self, _responses: dict[str, dict[str, Any]], key: str) -> dict[str, dict[str, Any]]:
