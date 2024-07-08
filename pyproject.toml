@@ -43,7 +43,7 @@ musicbee = [
     "lxml~=5.2",
 ]
 sqlite = [
-    "aiorequestful[sqlite]~=0.1",
+    "aiorequestful[sqlite]~=0.2",
 ]
 
 # dev dependencies
