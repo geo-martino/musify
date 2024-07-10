@@ -38,16 +38,6 @@ class SpotifyAPIFixtures(RemoteAPIFixtures):
         return cache.get_repository_from_url(response[self.url_key])
 
     @pytest.fixture
-    async def api_cache(self, api: SpotifyAPI, cache: ResponseCache, api_mock: SpotifyMock) -> SpotifyAPI:
-        """Yield an authorised :py:class:`SpotifyAPI` object with a :py:class:`ResponseCache` configured."""
-        api_cache = SpotifyAPI(cache=cache)
-        api_cache.handler.authoriser.response_handler = api.handler.authoriser.response_handler
-
-        async with api_cache as a:
-            api_mock.reset()  # entering context calls '/me' endpoint, reset to avoid issues asserting request counts
-            yield a
-
-    @pytest.fixture
     def responses(self, _responses: dict[str, dict[str, Any]], key: str) -> dict[str, dict[str, Any]]:
         return {id_: response for id_, response in _responses.items() if key is None or response[key]["total"] > 3}
 

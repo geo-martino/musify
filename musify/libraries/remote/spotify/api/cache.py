@@ -26,11 +26,10 @@ class SpotifyRepositorySettings(ResponseRepositorySettings):
             pass
         return (None,)
 
-    @staticmethod
-    def get_name(response: dict[str, Any]) -> str | None:
-        if response.get("type") == "user":
-            return response["display_name"]
-        return response.get("name")
+    def get_name(self, payload: dict[str, Any]) -> str | None:
+        if payload.get("type") == "user":
+            return payload["display_name"]
+        return payload.get("name")
 
 
 class SpotifyPaginatedRepositorySettings(SpotifyRepositorySettings):

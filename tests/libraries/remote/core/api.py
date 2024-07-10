@@ -6,6 +6,7 @@ from typing import Any
 from urllib.parse import unquote
 
 import pytest
+from aiorequestful.cache.backend import ResponseCache
 from yarl import URL
 
 from musify.libraries.remote.core.api import RemoteAPI
@@ -38,6 +39,17 @@ class RemoteAPIFixtures(metaclass=ABCMeta):
     def object_factory(self) -> RemoteObjectFactory:
         """Yield the object factory for objects of this remote service type as a pytest.fixture."""
         raise NotImplementedError
+
+    @pytest.fixture
+    async def api_cache(self, api: RemoteAPI, cache: ResponseCache, api_mock: RemoteMock) -> RemoteAPI:
+        """Yield an authorised :py:class:`RemoteAPI` object with a :py:class:`ResponseCache` configured."""
+        api_cache = api.__class__(cache=cache)
+        api_cache.handler.authoriser.response_handler = api.handler.authoriser.response_handler
+
+        async with api_cache as a:
+            # entering context sometimes makes HTTP calls, reset to avoid issues asserting request counts
+            api_mock.reset()
+            yield a
 
     @pytest.fixture
     def _responses(self, object_type: RemoteObjectType, api_mock: RemoteMock) -> dict[str, dict[str, Any]]:
@@ -73,7 +85,7 @@ class RemoteAPIFixtures(metaclass=ABCMeta):
         return api.collection_item_map[object_type].name.lower() + "s" if extend else None
 
 
-class RemoteAPIItemTester(metaclass=ABCMeta):
+class RemoteAPIItemTester(RemoteAPIFixtures, metaclass=ABCMeta):
     """Run generic tests for item methods of :py:class:`RemoteAPI` implementations."""
     ###########################################################################
     ## Assertions
@@ -101,6 +113,16 @@ class RemoteAPIItemTester(metaclass=ABCMeta):
             for k, v in params.items():
                 assert k in url.query
                 assert unquote(url.query[k]) == params[k]
+
+    def test_context_management(self, api_cache: RemoteAPI):
+        session = api_cache.handler.session
+
+        assert session.cache.values()
+        for repository in session.cache.values():
+            assert repository.settings.payload_handler == api_cache.handler.payload_handler
+
+        assert api_cache.user_data
+        assert api_cache.user_playlist_data
 
 
 class RemoteAPIPlaylistTester(metaclass=ABCMeta):

@@ -11,6 +11,7 @@ from typing import Any, Self
 from aiorequestful.auth import Authoriser
 from aiorequestful.cache.backend.base import ResponseCache
 from aiorequestful.cache.exception import CacheError
+from aiorequestful.cache.session import CachedSession
 from aiorequestful.request.handler import RequestHandler
 from aiorequestful.response.payload import JSONPayloadHandler
 from aiorequestful.types import ImmutableJSON, JSON
@@ -87,7 +88,7 @@ class RemoteAPI[A: Authoriser](metaclass=ABCMeta):
 
         #: The :py:class:`RequestHandler` for handling authorised requests to the API
         self.handler: RequestHandler[A, JSON] = RequestHandler.create(
-            authoriser=authoriser, cache=cache, payload_handler=JSONPayloadHandler(),
+            authoriser=authoriser, cache=cache, payload_handler=JSONPayloadHandler(indent=2),
         )
 
         #: Stores the loaded user data for the currently authorised user
@@ -102,6 +103,12 @@ class RemoteAPI[A: Authoriser](metaclass=ABCMeta):
             await self._setup_cache()
         except CacheError:
             pass
+
+        if isinstance(self.handler.session, CachedSession):
+            for repository in self.handler.session.cache.values():
+                # all repositories must use the same payload handler as the request handler
+                # for it to function correctly
+                repository.settings.payload_handler = self.handler.payload_handler
 
         await self.load_user()
         await self.load_user_playlists()

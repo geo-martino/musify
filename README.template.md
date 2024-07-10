@@ -49,7 +49,7 @@ pip install {program_name_lower}
 python -m pip install {program_name_lower}
 ```
 
-There are alo optional dependencies that you may install for optional functionality. 
+There are optional dependencies that you may install for optional functionality. 
 For the current list of optional dependency groups, [read the docs](https://{program_owner_user}.github.io/{program_name_lower}/howto.install.html)
 
 
