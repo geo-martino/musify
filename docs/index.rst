@@ -21,7 +21,7 @@ Features
 What's in this documentation
 ----------------------------
 
-* How to guides on getting started with Musify and other key functionality of the package
+* How-to guides on getting started with Musify and other key functionality of the package
 * Release history
 * How to get started with contributing to Musify
 * Reference documentation

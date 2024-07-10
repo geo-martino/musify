@@ -481,7 +481,4 @@ Fixed
 0.7.0
 =====
 
-Added
------
-
 Initial release! 🎉
