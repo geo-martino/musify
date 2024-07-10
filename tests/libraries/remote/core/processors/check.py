@@ -9,8 +9,8 @@ from pytest_mock import MockerFixture
 
 from musify.libraries.collection import BasicCollection
 from musify.libraries.local.track import LocalTrack
-from musify.libraries.remote.core.types import RemoteObjectType
 from musify.libraries.remote.core.object import RemotePlaylist
+from musify.libraries.remote.core.types import RemoteObjectType
 from musify.processors.check import RemoteItemChecker
 from tests.conftest import LogCapturer
 from tests.libraries.local.track.utils import random_track, random_tracks

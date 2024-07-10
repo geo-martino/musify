@@ -6,8 +6,8 @@ from typing import Any
 import pytest
 from yarl import URL
 
-from musify.libraries.remote.core.types import RemoteObjectType
 from musify.libraries.remote.core.exception import APIError, RemoteObjectTypeError
+from musify.libraries.remote.core.types import RemoteObjectType
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.object import SpotifyAlbum, SpotifyArtist
 from tests.libraries.remote.spotify.api.mock import SpotifyMock

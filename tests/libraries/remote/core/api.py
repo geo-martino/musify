@@ -10,8 +10,8 @@ from aiorequestful.cache.backend import ResponseCache
 from yarl import URL
 
 from musify.libraries.remote.core.api import RemoteAPI
-from musify.libraries.remote.core.types import RemoteObjectType
 from musify.libraries.remote.core.factory import RemoteObjectFactory
+from musify.libraries.remote.core.types import RemoteObjectType
 from tests.libraries.remote.core.utils import RemoteMock
 from tests.utils import random_str
 

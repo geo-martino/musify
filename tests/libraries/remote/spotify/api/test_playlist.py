@@ -3,13 +3,13 @@ from random import randrange, sample
 from typing import Any
 
 import pytest
-from aioresponses.core import RequestCall
 from aiorequestful.types import URLInput
+from aioresponses.core import RequestCall
 from yarl import URL
 
 from musify import PROGRAM_NAME
-from musify.libraries.remote.core.types import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteObjectTypeError, RemoteIDTypeError
+from musify.libraries.remote.core.types import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.object import SpotifyPlaylist
 from tests.libraries.remote.core.api import RemoteAPIPlaylistTester

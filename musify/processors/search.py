@@ -14,8 +14,8 @@ from musify.exception import MusifyAttributeError
 from musify.field import TagField, TagFields as Tag
 from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.remote.core.api import RemoteAPI
-from musify.libraries.remote.core.types import RemoteObjectType
 from musify.libraries.remote.core.factory import RemoteObjectFactory
+from musify.libraries.remote.core.types import RemoteObjectType
 from musify.logger import MusifyLogger
 from musify.logger import REPORT
 from musify.processors.base import Processor

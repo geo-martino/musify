@@ -4,9 +4,9 @@ from collections.abc import Mapping
 from typing import Any, ContextManager
 
 from aiohttp import ClientResponse
+from aiorequestful.types import URLInput
 from aioresponses import aioresponses
 from aioresponses.core import RequestCall
-from aiorequestful.types import URLInput
 from yarl import URL
 
 from musify.libraries.remote.core.types import RemoteIDType, RemoteObjectType

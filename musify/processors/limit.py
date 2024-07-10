@@ -7,13 +7,13 @@ from operator import mul
 from random import shuffle
 
 from musify.base import MusifyItem, HasLength
-from musify.types import MusifyEnum
 from musify.field import Fields
 from musify.file.base import File
 from musify.libraries.core.object import Track
 from musify.processors.base import DynamicProcessor, dynamicprocessormethod
 from musify.processors.exception import LimiterProcessorError
 from musify.processors.sort import ItemSorter
+from musify.types import MusifyEnum
 
 
 class LimitType(MusifyEnum):

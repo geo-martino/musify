@@ -9,10 +9,10 @@ from typing import Any, Literal, Self
 from musify.base import MusifyItem
 from musify.libraries.core.object import Track, Library, Playlist
 from musify.libraries.remote.core.api import RemoteAPI
-from musify.libraries.remote.core.types import RemoteObjectType
 from musify.libraries.remote.core.factory import RemoteObjectFactory
 from musify.libraries.remote.core.object import RemoteCollection, SyncResultRemotePlaylist
 from musify.libraries.remote.core.object import RemoteTrack, RemotePlaylist, RemoteArtist, RemoteAlbum
+from musify.libraries.remote.core.types import RemoteObjectType
 from musify.logger import MusifyLogger
 from musify.logger import STAT
 from musify.processors.base import Filter

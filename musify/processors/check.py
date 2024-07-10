@@ -17,9 +17,9 @@ from musify.base import MusifyItemSettable, Result
 from musify.field import Fields
 from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.remote.core.api import RemoteAPI
-from musify.libraries.remote.core.types import RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.factory import RemoteObjectFactory
 from musify.libraries.remote.core.object import RemotePlaylist
+from musify.libraries.remote.core.types import RemoteIDType, RemoteObjectType
 from musify.logger import MusifyLogger
 from musify.logger import REPORT
 from musify.processors.base import InputProcessor

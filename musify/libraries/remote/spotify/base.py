@@ -8,8 +8,8 @@ from abc import ABCMeta
 from yarl import URL
 
 from musify.libraries.remote.core.base import RemoteObject, RemoteItem
-from musify.libraries.remote.core.types import RemoteObjectType
 from musify.libraries.remote.core.exception import RemoteObjectTypeError, RemoteError
+from musify.libraries.remote.core.types import RemoteObjectType
 from musify.libraries.remote.spotify.api import SpotifyAPI
 
 

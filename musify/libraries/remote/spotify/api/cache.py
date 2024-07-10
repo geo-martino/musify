@@ -5,8 +5,8 @@ from aiorequestful.cache.backend.base import ResponseRepositorySettings
 from aiorequestful.types import MethodInput, URLInput
 from yarl import URL
 
-from musify.libraries.remote.core.types import RemoteIDType
 from musify.libraries.remote.core.exception import RemoteObjectTypeError
+from musify.libraries.remote.core.types import RemoteIDType
 from musify.libraries.remote.spotify.wrangle import SpotifyDataWrangler
 
 
