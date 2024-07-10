@@ -4,12 +4,13 @@ All type hints to use throughout the module.
 from collections.abc import Mapping, MutableMapping
 from typing import Any
 
+from aiorequestful.types import URLInput
 from yarl import URL
 
 from musify.libraries.remote.core import RemoteResponse
 from musify.types import UnitMutableSequence, UnitSequence, MusifyEnum
 
-type APIInputValueSingle[T: RemoteResponse] = str | URL | Mapping[str, Any] | T
+type APIInputValueSingle[T: RemoteResponse] = URLInput | Mapping[str, Any] | T
 type APIInputValueMulti[T: RemoteResponse] = (
         UnitSequence[str] |
         UnitMutableSequence[URL] |

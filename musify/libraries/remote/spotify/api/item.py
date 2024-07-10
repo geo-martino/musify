@@ -8,6 +8,7 @@ from copy import copy
 from itertools import batched
 from typing import Any
 
+from aiorequestful.types import URLInput
 from yarl import URL
 
 from musify.libraries.remote.core import RemoteResponse
@@ -40,7 +41,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
     ###########################################################################
     async def _get_items(
             self,
-            url: str | URL,
+            url: URLInput,
             id_list: Collection[str],
             params: MutableMapping[str, Any] | None = None,
             key: str | None = None,

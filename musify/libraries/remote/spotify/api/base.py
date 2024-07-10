@@ -9,6 +9,7 @@ from aiorequestful.auth.oauth2 import OAuth2Authoriser
 from aiorequestful.cache.backend.base import ResponseRepository
 from aiorequestful.cache.exception import CacheError
 from aiorequestful.cache.session import CachedSession
+from aiorequestful.types import URLInput
 from yarl import URL
 
 from musify.libraries.remote.core.api import RemoteAPI
@@ -36,7 +37,7 @@ class SpotifyAPIBase(RemoteAPI[OAuth2Authoriser], metaclass=ABCMeta):
         return key.lower().rstrip("s") + "s"
 
     @staticmethod
-    def format_next_url(url: str | URL, offset: int = 0, limit: int = 20) -> str:
+    def format_next_url(url: URLInput, offset: int = 0, limit: int = 20) -> str:
         """Format a `next` style URL for looping through API pages"""
         url = URL(url)
 
@@ -91,7 +92,7 @@ class SpotifyAPIBase(RemoteAPI[OAuth2Authoriser], metaclass=ABCMeta):
     ## Cache utilities
     ###########################################################################
     async def _get_responses_from_cache(
-            self, method: str, url: str | URL, id_list: Collection[str]
+            self, method: str, url: URLInput, id_list: Collection[str]
     ) -> tuple[list[dict[str, Any]], Collection[str], Collection[str]]:
         """
         Attempt to find the given ``id_list`` in the cache of the request handler and return results.

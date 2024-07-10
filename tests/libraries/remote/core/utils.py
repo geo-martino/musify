@@ -6,6 +6,7 @@ from typing import Any, ContextManager
 from aiohttp import ClientResponse
 from aioresponses import aioresponses
 from aioresponses.core import RequestCall
+from aiorequestful.types import URLInput
 from yarl import URL
 
 from musify.libraries.remote.core.types import RemoteIDType, RemoteObjectType
@@ -84,7 +85,7 @@ class RemoteMock(aioresponses, ContextManager, metaclass=ABCMeta):
     async def get_requests(
             self,
             method: str | None = None,
-            url: str | URL | re.Pattern[str] | None = None,  # matches given after params have been stripped
+            url: URLInput | re.Pattern[str] | None = None,  # matches given after params have been stripped
             params: dict[str, Any] | None = None,
             response: dict[str, Any] | None = None
     ) -> list[tuple[URL, RequestCall, ClientResponse | None]]:
@@ -112,11 +113,11 @@ class RemoteMock(aioresponses, ContextManager, metaclass=ABCMeta):
         return match
 
     @staticmethod
-    def _get_match_from_url(actual: str | URL, expected: str | URL | re.Pattern[str] | None = None) -> bool:
+    def _get_match_from_url(actual: URLInput, expected: URLInput | re.Pattern[str] | None = None) -> bool:
         match = expected is None
         if not match:
             actual = str(URL(actual).with_query(None))
-            if isinstance(expected, str | URL):
+            if isinstance(expected, URLInput):
                 match = actual == str(URL(expected).with_query(None))
             elif isinstance(expected, re.Pattern):
                 match = bool(expected.search(actual))
@@ -135,7 +136,7 @@ class RemoteMock(aioresponses, ContextManager, metaclass=ABCMeta):
         return match
 
     async def _get_match_from_expected_response(
-            self, actual: str | URL, expected: dict[str, Any] | None = None
+            self, actual: URLInput, expected: dict[str, Any] | None = None
     ) -> bool:
         match = expected is None
         if not match:
@@ -151,7 +152,7 @@ class RemoteMock(aioresponses, ContextManager, metaclass=ABCMeta):
 
         return match
 
-    def _get_response_from_url(self, url: str | URL) -> ClientResponse | None:
+    def _get_response_from_url(self, url: URLInput) -> ClientResponse | None:
         response = None
         for response in self._responses:
             if str(response.url) == url:

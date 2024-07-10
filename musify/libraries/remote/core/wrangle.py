@@ -4,6 +4,7 @@ Convert and validate remote ID and item types according to specific remote imple
 from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping
 
+from aiorequestful.types import URLInput
 from yarl import URL
 
 from musify.libraries.remote.core import RemoteResponse
@@ -87,7 +88,7 @@ class RemoteDataWrangler(metaclass=ABCMeta):
             of the input ``values``.
             Or when the list contains strings representing many differing remote object types or only IDs.
         """
-        if isinstance(values, str | URL | Mapping | RemoteResponse):
+        if isinstance(values, URLInput | Mapping | RemoteResponse):
             return cls._get_item_type(value=values, kind=kind)
 
         if len(values) == 0:

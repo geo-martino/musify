@@ -4,6 +4,7 @@ Convert and validate Spotify ID and item types.
 from collections.abc import Mapping
 from typing import Any
 
+from aiorequestful.types import URLInput
 from yarl import URL
 
 from musify.exception import MusifyEnumError
@@ -26,7 +27,7 @@ class SpotifyDataWrangler(RemoteDataWrangler):
     url_ext = URL("https://open.spotify.com")
 
     @classmethod
-    def get_id_type(cls, value: str | URL, kind: RemoteObjectType | None = None) -> RemoteIDType:
+    def get_id_type(cls, value: URLInput, kind: RemoteObjectType | None = None) -> RemoteIDType:
         value = str(value).strip().casefold()
         uri_split = value.split(':')
 
@@ -44,7 +45,7 @@ class SpotifyDataWrangler(RemoteDataWrangler):
         raise RemoteIDTypeError(f"Could not determine ID type of given value: {value}")
 
     @classmethod
-    def validate_id_type(cls, value: str | URL, kind: RemoteIDType = RemoteIDType.ALL) -> bool:
+    def validate_id_type(cls, value: URLInput, kind: RemoteIDType = RemoteIDType.ALL) -> bool:
         value = str(value).strip().casefold()
 
         if kind == RemoteIDType.URL:
@@ -113,7 +114,7 @@ class SpotifyDataWrangler(RemoteDataWrangler):
     @classmethod
     def convert(
             cls,
-            value: str | URL,
+            value: URLInput,
             kind: RemoteObjectType | None = None,
             type_in: RemoteIDType = RemoteIDType.ALL,
             type_out: RemoteIDType = RemoteIDType.ID
@@ -141,7 +142,7 @@ class SpotifyDataWrangler(RemoteDataWrangler):
 
     @classmethod
     def _get_id(
-            cls, value: str | URL, kind: RemoteObjectType | None = None, type_in: RemoteIDType = RemoteIDType.ALL
+            cls, value: URLInput, kind: RemoteObjectType | None = None, type_in: RemoteIDType = RemoteIDType.ALL
     ) -> tuple[RemoteObjectType, str]:
         if isinstance(value, URL) or type_in == RemoteIDType.URL_EXT or type_in == RemoteIDType.URL:
             try:
@@ -163,7 +164,7 @@ class SpotifyDataWrangler(RemoteDataWrangler):
         return kind, id_
 
     @classmethod
-    def _get_id_from_url(cls, value: str | URL, kind: RemoteObjectType | None = None) -> tuple[RemoteObjectType, str]:
+    def _get_id_from_url(cls, value: URLInput, kind: RemoteObjectType | None = None) -> tuple[RemoteObjectType, str]:
         url_path = URL(value).path.split("/")
         for chunk in url_path:
             try:
@@ -194,7 +195,7 @@ class SpotifyDataWrangler(RemoteDataWrangler):
     def extract_ids(cls, values: APIInputValueMulti[RemoteResponse], kind: RemoteObjectType | None = None) -> list[str]:
         def extract_id(value: APIInputValueSingle[RemoteResponse]) -> str:
             """Extract an ID from a given ``value``"""
-            if isinstance(value, str | URL):
+            if isinstance(value, URLInput):
                 return cls.convert(value, kind=kind, type_out=RemoteIDType.ID)
             elif isinstance(value, Mapping) and "id" in value:
                 return value["id"]

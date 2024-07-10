@@ -4,6 +4,7 @@ from typing import Any
 
 import pytest
 from aioresponses.core import RequestCall
+from aiorequestful.types import URLInput
 from yarl import URL
 
 from musify import PROGRAM_NAME
@@ -42,7 +43,7 @@ class TestSpotifyAPIPlaylists(RemoteAPIPlaylistTester):
         return request.kwargs.get("body", request.kwargs.get("json"))
 
     @classmethod
-    async def _get_payloads_from_url_base(cls, url: str | URL, api_mock: SpotifyMock) -> list[dict[str, Any]]:
+    async def _get_payloads_from_url_base(cls, url: URLInput, api_mock: SpotifyMock) -> list[dict[str, Any]]:
         return [
             cls._get_payload_from_request(req) for _, req, _ in await api_mock.get_requests(url=url)
             if cls._get_payload_from_request(req)
