@@ -381,12 +381,9 @@ async def spotify_api(spotify_mock: SpotifyMock) -> SpotifyAPI:
     api.handler.authoriser.response_tester.response_test = None
     api.handler.authoriser.response_tester.max_expiry = 0
 
-    # force almost no backoff/wait settings
-    api.handler.backoff_start = 0.001
-    api.handler.backoff_factor = 1
-    api.handler.backoff_count = 10
-    api.handler.wait_time = 0
-    api.handler.wait_increment = 0
+    # force no backoff/wait settings
+    api.handler.wait_timer = None
+    api.handler.retry_timer = None
 
     async with api as a:
         spotify_mock.reset()

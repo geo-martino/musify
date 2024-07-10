@@ -5,8 +5,8 @@ from typing import Any
 
 import pytest
 from aiorequestful.cache.backend.base import ResponseCache, ResponseRepository
+from aiorequestful.cache.exception import CacheError
 from aiorequestful.cache.session import CachedSession
-from aiorequestful.exception import CacheError
 from yarl import URL
 
 from musify.libraries.remote.core.exception import APIError

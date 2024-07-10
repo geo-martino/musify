@@ -1,8 +1,8 @@
 """
 All type hints to use throughout the module.
 """
-from collections.abc import MutableMapping
-from typing import Any, Mapping
+from collections.abc import Mapping, MutableMapping
+from typing import Any
 
 from yarl import URL
 

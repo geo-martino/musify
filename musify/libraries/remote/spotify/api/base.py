@@ -5,16 +5,17 @@ from abc import ABCMeta
 from collections.abc import Collection, MutableMapping, Iterable
 from typing import Any
 
+from aiorequestful.auth.oauth2 import OAuth2Authoriser
 from aiorequestful.cache.backend.base import ResponseRepository
+from aiorequestful.cache.exception import CacheError
 from aiorequestful.cache.session import CachedSession
-from aiorequestful.exception import CacheError
 from yarl import URL
 
 from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.types import RemoteObjectType
 
 
-class SpotifyAPIBase(RemoteAPI, metaclass=ABCMeta):
+class SpotifyAPIBase(RemoteAPI[OAuth2Authoriser], metaclass=ABCMeta):
     """Base functionality required for all endpoint functions for the Spotify API"""
 
     __slots__ = ()

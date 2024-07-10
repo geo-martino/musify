@@ -10,9 +10,10 @@ from typing import Any, Self
 
 from aiorequestful.auth import Authoriser
 from aiorequestful.cache.backend.base import ResponseCache
-from aiorequestful.exception import CacheError
-from aiorequestful.request import RequestHandler
-from aiorequestful.types import ImmutableJSON
+from aiorequestful.cache.exception import CacheError
+from aiorequestful.request.handler import RequestHandler
+from aiorequestful.response.payload import JSONPayloadHandler
+from aiorequestful.types import ImmutableJSON, JSON
 from yarl import URL
 
 from musify.libraries.remote.core import RemoteResponse
@@ -23,7 +24,7 @@ from musify.types import UnitSequence, UnitList
 from musify.utils import align_string, to_collection
 
 
-class RemoteAPI(metaclass=ABCMeta):
+class RemoteAPI[A: Authoriser](metaclass=ABCMeta):
     """
     Collection of endpoints for a remote API.
     See :py:class:`RequestHandler` and :py:class:`Authoriser`
@@ -76,7 +77,7 @@ class RemoteAPI(metaclass=ABCMeta):
         """The name of the API service"""
         return self.wrangler.source
 
-    def __init__(self, authoriser: Authoriser, wrangler: RemoteDataWrangler, cache: ResponseCache | None = None):
+    def __init__(self, authoriser: A, wrangler: RemoteDataWrangler, cache: ResponseCache | None = None):
         # noinspection PyTypeChecker
         #: The :py:class:`MusifyLogger` for this  object
         self.logger: MusifyLogger = logging.getLogger(__name__)
@@ -85,7 +86,9 @@ class RemoteAPI(metaclass=ABCMeta):
         self.wrangler = wrangler
 
         #: The :py:class:`RequestHandler` for handling authorised requests to the API
-        self.handler = RequestHandler.create(authoriser=authoriser, cache=cache)
+        self.handler: RequestHandler[A, JSON] = RequestHandler.create(
+            authoriser=authoriser, cache=cache, payload_handler=JSONPayloadHandler(),
+        )
 
         #: Stores the loaded user data for the currently authorised user
         self.user_data: dict[str, Any] = {}

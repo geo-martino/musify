@@ -3,6 +3,7 @@ Mixin for all implementations of :py:class:`RemoteAPI` for the Spotify API.
 
 Also includes the default arguments to be used when requesting authorisation from the Spotify API.
 """
+from http import HTTPMethod
 from pathlib import Path
 
 from aiohttp import ClientResponse
@@ -10,7 +11,6 @@ from aiorequestful.auth import AuthRequest
 from aiorequestful.auth.oauth2 import AuthorisationCodeFlow
 from aiorequestful.cache.backend.base import ResponseCache, ResponseRepository
 from aiorequestful.cache.session import CachedSession
-from aiorequestful.types import Method
 from yarl import URL
 
 from musify.libraries.remote.core.exception import APIError
@@ -30,7 +30,7 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
     :param client_secret: The client secret to use when authorising requests.
     :param scope: The scopes to request access to.
     :param cache: When given, attempt to use this cache for certain request types before calling the API.
-    :param auth_kwargs: Optionally, provide kwargs to use when instantiating the :py:class:`Authoriser`.
+    :param token_file_path: Optionally, provide a path to save/load a response token.
     """
 
     __slots__ = ()
@@ -91,7 +91,7 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
         }
 
         authoriser.response_tester.request = AuthRequest(
-            method=Method.GET, url=wrangler.url_api.joinpath("me")
+            method=HTTPMethod.GET, url=wrangler.url_api.joinpath("me")
         )
         authoriser.response_tester.response_test = self._response_test
         authoriser.response_tester.max_expiry = 600
