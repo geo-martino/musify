@@ -39,13 +39,13 @@ class TestSpotifyAPI(SpotifyAPIFixtures):
         assert api.handler.authoriser.service_name == api.wrangler.source
         assert api.handler.authoriser.user_request.params["client_id"] == client_id
         assert api.handler.authoriser.user_request.params["scope"] == " ".join(scopes)
-        assert api.handler.authoriser.response_handler.file_path == Path(token_file_path)
+        assert api.handler.authoriser.response.file_path == Path(token_file_path)
 
     async def test_context_management(self, cache: ResponseCache, api_mock: SpotifyMock):
         api = SpotifyAPI(cache=cache)
-        api.handler.authoriser.response_handler.response = {
+        api.handler.authoriser.response.replace({
             "access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"
-        }
+        })
 
         with pytest.raises(APIError):
             assert api.user_id
@@ -78,9 +78,9 @@ class TestSpotifyAPI(SpotifyAPIFixtures):
 
     async def test_cache_repository_getter(self, cache: ResponseCache, api_mock: SpotifyMock):
         api = SpotifyAPI(cache=cache)
-        api.handler.authoriser.response_handler.response = {
+        api.handler.authoriser.response.replace({
             "access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"
-        }
+        })
         async with api as a:
             name_url_map = {
                 "tracks": f"{a.wrangler.url_api}/tracks/{random_id()}",

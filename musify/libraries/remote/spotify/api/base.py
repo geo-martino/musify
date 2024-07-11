@@ -142,6 +142,6 @@ class SpotifyAPIBase(RemoteAPI[OAuth2Authoriser], metaclass=ABCMeta):
             self.handler.log(
                 method="CACHE",
                 url=url,
-                message=f"Caching {len(results_mapped)} to {repository.settings.name!r} repository",
+                message=f"Caching {len(results_mapped)} responses to {repository.settings.name!r} repository",
             )
             await repository.save_responses({k: await repository.serialize(v) for k, v in results_mapped.items()})

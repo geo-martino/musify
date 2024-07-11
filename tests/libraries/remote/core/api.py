@@ -44,7 +44,7 @@ class RemoteAPIFixtures(metaclass=ABCMeta):
     async def api_cache(self, api: RemoteAPI, cache: ResponseCache, api_mock: RemoteMock) -> RemoteAPI:
         """Yield an authorised :py:class:`RemoteAPI` object with a :py:class:`ResponseCache` configured."""
         api_cache = api.__class__(cache=cache)
-        api_cache.handler.authoriser.response_handler = api.handler.authoriser.response_handler
+        api_cache.handler.authoriser.response = api.handler.authoriser.response
 
         async with api_cache as a:
             # entering context sometimes makes HTTP calls, reset to avoid issues asserting request counts

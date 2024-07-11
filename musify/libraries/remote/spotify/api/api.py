@@ -86,16 +86,16 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
         authoriser.refresh_request.headers["content-type"] = "application/x-www-form-urlencoded"
 
         if token_file_path:
-            authoriser.response_handler.file_path = Path(token_file_path)
-        authoriser.response_handler.additional_headers = {
+            authoriser.response.file_path = Path(token_file_path)
+        authoriser.response.additional_headers = {
             "Accept": "application/json", "Content-Type": "application/json"
         }
 
-        authoriser.response_tester.request = AuthRequest(
+        authoriser.tester.request = AuthRequest(
             method=HTTPMethod.GET, url=wrangler.url_api.joinpath("me")
         )
-        authoriser.response_tester.response_test = self._response_test
-        authoriser.response_tester.max_expiry = 600
+        authoriser.tester.response_test = self._response_test
+        authoriser.tester.max_expiry = 600
 
         super().__init__(authoriser=authoriser, wrangler=wrangler, cache=cache)
 

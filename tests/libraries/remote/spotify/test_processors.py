@@ -356,8 +356,8 @@ class TestSpotifyItemChecker(RemoteItemCheckerTester):
 
     @pytest.fixture
     def checker(self, matcher: ItemMatcher, api: SpotifyAPI, token_file_path: Path) -> RemoteItemChecker:
-        api.handler.authoriser.response_handler.file_path = token_file_path
-        api.handler.authoriser.response_tester.max_expiry = 0
+        api.handler.authoriser.response.file_path = token_file_path
+        api.handler.authoriser.tester.max_expiry = 0
 
         return RemoteItemChecker(matcher=matcher, object_factory=SpotifyObjectFactory(api=api))
 
