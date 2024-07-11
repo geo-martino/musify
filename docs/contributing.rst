@@ -10,12 +10,12 @@ Setup your development environment
 2. Go to the `GitHub repository <https://github.com/geo-martino/musify>`_ and fork the project by clicking
    **Fork** in the top left:
 
-   .. image:: _images/contributing/musify_fork.png
+   .. image:: _images/contributing/fork.png
 
 3. Go to the page of your GitHub account's fork of Musify and
    `clone the repository <https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository>`_:
 
-   .. image:: _images/contributing/musify_clone.png
+   .. image:: _images/contributing/clone.png
 
 4. In a terminal, navigate to the directory of the cloned project and create a virtual environment for Musify:
 
@@ -65,14 +65,14 @@ Submitting your changes for review
 2. Add any changes you made to the :ref:`release-history`.
 3. Go to your forked repository and open a pull request for your branch.
 
-   .. image:: _images/contributing/musify_pr_new.png
+   .. image:: _images/contributing/pr_new.png
 
-   .. image:: _images/contributing/musify_pr_create1.png
+   .. image:: _images/contributing/pr_create1.png
 
 4. Add a title, a motivation for your changes, and the changes you have made.
    This can just be a copy-paste from your release history notes.
 
-   .. image:: _images/contributing/musify_pr_create2.png
+   .. image:: _images/contributing/pr_create2.png
 
 5. Wait for a review and make any necessary changes.
 6. Have your changes committed 🎉
