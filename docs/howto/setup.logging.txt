@@ -4,5 +4,5 @@ Set up logging
 Set up logging to ensure you can see all info reported by the later operations.
 Libraries log info about loaded objects to the custom ``STAT`` level.
 
-.. literalinclude:: _howto/scripts/setup.py
+.. literalinclude:: scripts/setup.py
    :language: Python

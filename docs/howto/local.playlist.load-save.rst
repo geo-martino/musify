@@ -7,7 +7,7 @@ In this example, you will:
    * Modify the tracks in a playlist and save the changes to the file
 
 
-.. include:: _howto/setup.logging.txt
+.. include:: setup.logging.txt
 
 
 Create a playlist
@@ -15,7 +15,7 @@ Create a playlist
 
 You can create a playlist from scratch as follows:
 
-.. literalinclude:: _howto/scripts/local.playlist.load-save/p1.py
+.. literalinclude:: scripts/local.playlist.load-save/p1.py
    :language: Python
 
 Load a playlist
@@ -31,13 +31,13 @@ from the given file, but it will use the given track objects instead of loading 
    To be able to use the XAutoPF playlist type, you will need to have installed the ``musicbee`` optional dependencies.
    See :ref:`installation` for more details.
 
-.. literalinclude:: _howto/scripts/local.playlist.load-save/p2.py
+.. literalinclude:: scripts/local.playlist.load-save/p2.py
    :language: Python
    :lines: 3-
 
 You can also just have Musify automatically determine the playlist type to load based on the file's extension:
 
-.. literalinclude:: _howto/scripts/local.playlist.load-save/p3.py
+.. literalinclude:: scripts/local.playlist.load-save/p3.py
    :language: Python
    :lines: 3-
 
@@ -45,7 +45,7 @@ There may also be cases where the files in the file need mapping to be loaded e.
 contained in the playlist file are relative paths.
 You may give the playlist object a :py:class:`.PathMapper` or :py:class:`.PathStemMapper` to handle this.
 
-.. literalinclude:: _howto/scripts/local.playlist.load-save/p3_mapper.py
+.. literalinclude:: scripts/local.playlist.load-save/p3_mapper.py
    :language: Python
    :lines: 3-
 
@@ -55,7 +55,7 @@ to the playlist object for the relevant music streaming source.
 
 The following is an example for doing this with Spotify as the data source:
 
-.. literalinclude:: _howto/scripts/local.playlist.load-save/p3_wrangler.py
+.. literalinclude:: scripts/local.playlist.load-save/p3_wrangler.py
    :language: Python
    :lines: 3-
 
@@ -65,12 +65,12 @@ Modify and save the playlist
 
 1. Add some tracks to the playlist:
 
-   .. literalinclude:: _howto/scripts/local.playlist.load-save/p4.py
+   .. literalinclude:: scripts/local.playlist.load-save/p4.py
       :language: Python
       :lines: 3-
 
 2. Save the playlist:
 
-   .. literalinclude:: _howto/scripts/local.playlist.load-save/p5.py
+   .. literalinclude:: scripts/local.playlist.load-save/p5.py
       :language: Python
       :lines: 3-

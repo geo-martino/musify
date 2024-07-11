@@ -44,7 +44,7 @@ typehints_defaults = "braces"
 typehints_use_rtype = False
 
 templates_path = ["_templates"]
-exclude_patterns = ["_build", "musify.rst"]
+exclude_patterns = ["_build", "reference/musify.rst"]
 
 suppress_warnings = [
     "sphinx_autodoc_typehints.forward_reference",

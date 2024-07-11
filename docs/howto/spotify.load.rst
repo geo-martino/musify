@@ -8,7 +8,7 @@ In this example, you will:
    * Add some tracks to a playlist
 
 
-.. include:: _howto/setup.logging.txt
+.. include:: setup.logging.txt
 
 
 Set up the Spotify API
@@ -27,7 +27,7 @@ Set up the Spotify API
       See Spotify Web API documentation for more information about
       `scopes <https://developer.spotify.com/documentation/web-api/concepts/scopes>`_
 
-   .. literalinclude:: _howto/scripts/spotify.api.py
+   .. literalinclude:: scripts/spotify.api.py
       :language: Python
 
 
@@ -36,25 +36,25 @@ Load your library
 
 1. Define helper functions for loading your library data:
 
-   .. literalinclude:: _howto/scripts/spotify.load/p1.py
+   .. literalinclude:: scripts/spotify.load/p1.py
       :language: Python
       :lines: 3-
 
 2. Define helper functions for loading some Spotify objects using any of the supported identifiers:
 
-   .. literalinclude:: _howto/scripts/spotify.load/p2.py
+   .. literalinclude:: scripts/spotify.load/p2.py
       :language: Python
       :lines: 3-
 
 3. Define helper function for adding some tracks to a playlist in your library, synchronising with Spotify,
    and logging the results:
 
-   .. literalinclude:: _howto/scripts/spotify.load/p3.py
+   .. literalinclude:: scripts/spotify.load/p3.py
       :language: Python
       :lines: 3-
 
 4. Run the program:
 
-   .. literalinclude:: _howto/scripts/spotify.load/p99.py
+   .. literalinclude:: scripts/spotify.load/p99.py
       :language: Python
       :lines: 3-

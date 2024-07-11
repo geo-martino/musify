@@ -11,7 +11,7 @@ In this example, you will:
    Just modify the imports and classes as required.
 
 
-.. include:: _howto/setup.logging.txt
+.. include:: setup.logging.txt
 
 
 Sync data
@@ -19,7 +19,7 @@ Sync data
 
 1. Define a helper function to search for tracks and check the results:
 
-   .. literalinclude:: _howto/scripts/sync/p1.py
+   .. literalinclude:: scripts/sync/p1.py
       :language: Python
       :lines: 3-
 
@@ -29,28 +29,28 @@ Sync data
    .. note::
       By default, URIs are saved to the ``comments`` tag.
 
-   .. literalinclude:: _howto/scripts/sync/p2.py
+   .. literalinclude:: scripts/sync/p2.py
       :language: Python
       :lines: 3-
 
 3. Define a helper function to sync the local playlist with a remote playlist
    once all tracks in a playlist have URIs assigned:
 
-   .. literalinclude:: _howto/scripts/sync/p3.py
+   .. literalinclude:: scripts/sync/p3.py
       :language: Python
       :lines: 3-
 
 4. Set up and load a remote API object and local library with a wrangler attached:
 
-   .. literalinclude:: _howto/scripts/spotify.api.py
+   .. literalinclude:: scripts/spotify.api.py
       :language: Python
 
-   .. literalinclude:: _howto/scripts/sync/p4.py
+   .. literalinclude:: scripts/sync/p4.py
       :language: Python
       :lines: 3-
 
 4. Set up the remote library and run the program:
 
-   .. literalinclude:: _howto/scripts/sync/p99.py
+   .. literalinclude:: scripts/sync/p99.py
       :language: Python
       :lines: 3-

@@ -26,44 +26,44 @@ What's in this documentation
 * How to get started with contributing to Musify
 * Reference documentation
 
-.. include:: howto.install.rst
+.. include:: howto/install.rst
    :start-after: :
 
 .. toctree::
    :maxdepth: 1
    :caption: 📜 How to...
 
-   howto.install
-   howto.local.library.load
-   howto.local.playlist.load-save
-   howto.local.track.load-save
-   howto.spotify.load
-   howto.library.backup-restore
-   howto.sync
-   howto.remote.new-music
-   howto.reports
+   howto/install
+   howto/local.library.load
+   howto/local.playlist.load-save
+   howto/local.track.load-save
+   howto/spotify.load
+   howto/library.backup-restore
+   howto/sync
+   howto/remote.new-music
+   howto/reports
 
 .. toctree::
    :maxdepth: 1
    :caption: 🛠️ Project Info
 
-   release-history
-   contributing
+   info/release-history
+   info/contributing
 
 .. toctree::
    :maxdepth: 1
    :caption: 📖 Reference
 
-   musify.file
-   musify.libraries
-   musify.processors
-   musify.base
-   musify.exception
-   musify.field
-   musify.logger
-   musify.printer
-   musify.report
-   musify.types
-   musify.utils
+   reference/musify.file
+   reference/musify.libraries
+   reference/musify.processors
+   reference/musify.base
+   reference/musify.exception
+   reference/musify.field
+   reference/musify.logger
+   reference/musify.printer
+   reference/musify.report
+   reference/musify.types
+   reference/musify.utils
 
    genindex

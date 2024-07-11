@@ -17,8 +17,8 @@ help:
 
 rebuild-html: Makefile
 	@$(SPHINXBUILD) -M clean "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-	@rm -f docs/"$(PROJECTNAME)"*.rst
-	@sphinx-apidoc -o "$(SOURCEDIR)" ./"$(PROJECTNAME)" -d 4 --force --module-first --separate --no-toc -t "$(SOURCEDIR)"/_templates
+	@rm -f "$(SOURCEDIR)"/reference/"$(PROJECTNAME)"*.rst
+	@sphinx-apidoc -o "$(SOURCEDIR)"/reference ./"$(PROJECTNAME)" -d 4 --force --module-first --separate --no-toc -t "$(SOURCEDIR)"/_templates
 	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 	@$(SPHINXBUILD) -b linkcheck "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
