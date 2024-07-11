@@ -138,7 +138,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
         library_test = deepcopy(library)
         await library_test.restore_playlists(playlists=backup, dry_run=False)
         assert len(library_test.playlists[name_actual]) == len(backup_check[name_actual])
-        # TODO: why does this occasionally fail?
+        # TODO: why does this very infrequently fail?
         assert len(library_test.playlists[name_actual]) != len(library.playlists[name_actual])
 
         assert name_new in library_test.playlists
