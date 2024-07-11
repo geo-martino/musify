@@ -48,7 +48,7 @@ exclude_patterns = ["_build", "musify.rst"]
 
 suppress_warnings = [
     "sphinx_autodoc_typehints.forward_reference",
-    # TODO: sphinx_autodoc_typehints.forward_reference not yet supported.
+    # TODO: 'sphinx_autodoc_typehints.forward_reference' not yet supported.
     #  See https://github.com/tox-dev/sphinx-autodoc-typehints/pull/433/files
     "sphinx.ext.inheritance_diagram",
     # TODO: Suppress 'WARNING: No classes found for inheritance diagram'
