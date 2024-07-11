@@ -20,8 +20,8 @@ author = PROGRAM_OWNER_NAME
 
 # noinspection SpellCheckingInspection
 extensions = [
-    "sphinx.ext.autodoc",
     "sphinx_rtd_theme",
+    "sphinx.ext.autodoc",
     "sphinx.ext.graphviz",
     "sphinx.ext.inheritance_diagram",
     "sphinx_autodoc_typehints",
@@ -44,12 +44,14 @@ typehints_defaults = "braces"
 typehints_use_rtype = False
 
 templates_path = ["_templates"]
-exclude_patterns = ["_build"]
+exclude_patterns = ["_build", "musify.rst"]
 
 suppress_warnings = [
-    # TODO: figure out how to suppress warnings for the following warnings:
-    #  - WARNING: No classes found for inheritance diagram
-    #  - WARNING: Cannot resolve forward reference in type annotations of ...: name 'T' is not defined
+    "sphinx_autodoc_typehints.forward_reference",
+    # TODO: sphinx_autodoc_typehints.forward_reference not yet supported.
+    #  See https://github.com/tox-dev/sphinx-autodoc-typehints/pull/433/files
+    "sphinx.ext.inheritance_diagram",
+    # TODO: Suppress 'WARNING: No classes found for inheritance diagram'
 ]
 
 

@@ -125,7 +125,7 @@ class MusifyLogger(logging.Logger):
     def get_asynchronous_iterator[T](self, tasks: Iterable[Awaitable[T]], **kwargs) -> Awaitable[list[T]]:
         """
         Return an appropriately configured asynchronous tqdm progress bar if installed.
-        If not, gather the given awaitable objects from *fs and return a coroutine.
+        If not, gather the given awaitable objects from ``tasks`` and return a coroutine.
 
         Note that tqdm does not preserve the order of the input awaitables and will return results in a random order.
         For tqdm kwargs, see :py:class:`tqdm`
