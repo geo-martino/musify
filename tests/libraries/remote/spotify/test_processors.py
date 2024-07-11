@@ -354,6 +354,7 @@ class TestSpotifyItemChecker(RemoteItemCheckerTester):
         """Yields a valid :py:class:`ItemMatcher` as a pytest.fixture."""
         return ItemMatcher()
 
+    # noinspection PyTestUnpassedFixture
     @pytest.fixture
     def checker(self, matcher: ItemMatcher, api: SpotifyAPI, token_file_path: Path) -> RemoteItemChecker:
         api.handler.authoriser.response.file_path = token_file_path

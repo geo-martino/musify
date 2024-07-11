@@ -6,8 +6,6 @@ These define the foundations of any remote object or item.
 from abc import ABCMeta, abstractmethod
 from typing import Any, Self
 
-from yarl import URL
-
 from musify.base import MusifyItem
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.api import RemoteAPI
@@ -36,18 +34,6 @@ class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, metaclass=ABCMeta):
     @abstractmethod
     def has_uri(self) -> bool:
         """Does this item/collection have a valid URI that is not a local URI."""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def url(self) -> URL:
-        """The API URL of this item/collection."""
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def url_ext(self) -> URL | None:
-        """The external URL of this item/collection."""
         raise NotImplementedError
 
     @property

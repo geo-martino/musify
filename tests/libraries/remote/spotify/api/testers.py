@@ -1,7 +1,7 @@
 from typing import Any
 
 import pytest
-from aiorequestful.cache.backend import ResponseCache, SQLiteCache
+from aiorequestful.cache.backend import ResponseCache
 from aiorequestful.cache.backend.base import ResponseRepository
 
 from musify.libraries.remote.core.api import RemoteAPI
@@ -23,12 +23,6 @@ class SpotifyAPIFixtures(RemoteAPIFixtures):
     def object_factory(self) -> SpotifyObjectFactory:
         """Yield the object factory for Spotify objects as a pytest.fixture."""
         return SpotifyObjectFactory()
-
-    @pytest.fixture
-    async def cache(self) -> ResponseCache:
-        """Yields a valid :py:class:`ResponseCache` to use throughout tests in this suite as a pytest.fixture."""
-        async with SQLiteCache.connect_with_in_memory_db() as cache:
-            yield cache
 
     @pytest.fixture
     async def repository(

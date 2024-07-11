@@ -105,10 +105,11 @@ class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):
 
     # noinspection PyAsyncCall
     async def _setup_cache(self) -> None:
-        if not isinstance(self.handler.session, CachedSession):
+        session = self.handler.session
+        if not isinstance(session, CachedSession):
             return
 
-        cache = self.handler.session.cache
+        cache = session.cache
         cache.repository_getter = self._get_cache_repository
 
         cache.create_repository(SpotifyRepositorySettings(name="tracks"))

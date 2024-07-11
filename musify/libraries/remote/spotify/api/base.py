@@ -5,7 +5,7 @@ from abc import ABCMeta
 from collections.abc import Collection, MutableMapping, Iterable
 from typing import Any
 
-from aiorequestful.auth.oauth2 import OAuth2Authoriser
+from aiorequestful.auth.oauth2 import AuthorisationCodeFlow
 from aiorequestful.cache.backend.base import ResponseRepository
 from aiorequestful.cache.exception import CacheError
 from aiorequestful.cache.session import CachedSession
@@ -16,7 +16,7 @@ from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.types import RemoteObjectType
 
 
-class SpotifyAPIBase(RemoteAPI[OAuth2Authoriser], metaclass=ABCMeta):
+class SpotifyAPIBase(RemoteAPI[AuthorisationCodeFlow], metaclass=ABCMeta):
     """Base functionality required for all endpoint functions for the Spotify API"""
 
     __slots__ = ()
@@ -101,11 +101,12 @@ class SpotifyAPIBase(RemoteAPI[OAuth2Authoriser], metaclass=ABCMeta):
         :param id_list: List of IDs to append to the given URL.
         :return: (Results from the cache, IDs found in the cache, IDs not found in the cache)
         """
-        if not isinstance(self.handler.session, CachedSession):
+        session = self.handler.session
+        if not isinstance(session, CachedSession):
             self.handler.log("CACHE", url, message="Cache not configured, skipping...")
             return [], [], id_list
 
-        repository = self.handler.session.cache.get_repository_from_url(url=url)
+        repository = session.cache.get_repository_from_url(url=url)
         if repository is None:
             self.handler.log("CACHE", url, message="No repository for this endpoint, skipping...")
             return [], [], id_list
@@ -123,7 +124,8 @@ class SpotifyAPIBase(RemoteAPI[OAuth2Authoriser], metaclass=ABCMeta):
 
     async def _cache_responses(self, method: str, responses: Iterable[dict[str, Any]]) -> None:
         """Persist ``results`` of a given ``method`` to the cache."""
-        if not isinstance(self.handler.session, CachedSession) or not responses:
+        session = self.handler.session
+        if not isinstance(session, CachedSession) or not responses:
             return
 
         # take all parts of href path, excluding ID
@@ -137,7 +139,7 @@ class SpotifyAPIBase(RemoteAPI[OAuth2Authoriser], metaclass=ABCMeta):
             )
         results_mapped = {(method.upper(), result[self.id_key]): result for result in responses}
         url = next(iter(possible_urls))
-        repository: ResponseRepository = self.handler.session.cache.get_repository_from_url(url)
+        repository: ResponseRepository = session.cache.get_repository_from_url(url)
         if repository is not None:
             self.handler.log(
                 method="CACHE",

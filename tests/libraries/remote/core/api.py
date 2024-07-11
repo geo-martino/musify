@@ -6,7 +6,7 @@ from typing import Any
 from urllib.parse import unquote
 
 import pytest
-from aiorequestful.cache.backend import ResponseCache
+from aiorequestful.cache.backend import ResponseCache, SQLiteCache
 from yarl import URL
 
 from musify.libraries.remote.core.api import RemoteAPI
@@ -40,6 +40,13 @@ class RemoteAPIFixtures(metaclass=ABCMeta):
         """Yield the object factory for objects of this remote service type as a pytest.fixture."""
         raise NotImplementedError
 
+    @pytest.fixture
+    async def cache(self) -> ResponseCache:
+        """Yields a valid :py:class:`ResponseCache` to use throughout tests in this suite as a pytest.fixture."""
+        async with SQLiteCache.connect_with_in_memory_db() as cache:
+            yield cache
+
+    # noinspection PyTestUnpassedFixture
     @pytest.fixture
     async def api_cache(self, api: RemoteAPI, cache: ResponseCache, api_mock: RemoteMock) -> RemoteAPI:
         """Yield an authorised :py:class:`RemoteAPI` object with a :py:class:`ResponseCache` configured."""
@@ -114,11 +121,10 @@ class RemoteAPIItemTester(RemoteAPIFixtures, metaclass=ABCMeta):
                 assert k in url.query
                 assert unquote(url.query[k]) == params[k]
 
-    def test_context_management(self, api_cache: RemoteAPI):
-        session = api_cache.handler.session
-
-        assert session.cache.values()
-        for repository in session.cache.values():
+    @staticmethod
+    def test_context_management(api_cache: RemoteAPI, cache: ResponseCache):
+        assert cache.values()
+        for repository in cache.values():
             assert repository.settings.payload_handler == api_cache.handler.payload_handler
 
         assert api_cache.user_data

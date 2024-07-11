@@ -104,8 +104,9 @@ class RemoteAPI[A: Authoriser](metaclass=ABCMeta):
         except CacheError:
             pass
 
-        if isinstance(self.handler.session, CachedSession):
-            for repository in self.handler.session.cache.values():
+        session = self.handler.session
+        if isinstance(session, CachedSession):
+            for repository in session.cache.values():
                 # all repositories must use the same payload handler as the request handler
                 # for it to function correctly
                 repository.settings.payload_handler = self.handler.payload_handler

@@ -64,13 +64,8 @@ class TestItemDownloadHelper(PrettyPrinterTester):
             collections: list[BasicCollection[LocalTrack]],
             mocker: MockerFixture,
     ):
-        def log_urls(url) -> None:
-            """Log the opened URLs"""
-            nonlocal urls
-            urls.append(url)
-
         urls = []
-        mocker.patch(f"{MODULE_ROOT}.processors.download.webopen", new=log_urls)
+        mocker.patch(f"{MODULE_ROOT}.processors.download.webopen", new=urls.append)
 
         patch_input(values=[""] * sum(map(len, collections)), mocker=mocker)
 

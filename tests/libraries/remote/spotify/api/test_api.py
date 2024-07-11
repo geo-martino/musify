@@ -22,6 +22,7 @@ class TestSpotifyAPI(SpotifyAPIFixtures):
 
     items_key = SpotifyAPI.items_key
 
+    # noinspection PyTestUnpassedFixture
     def test_init(self, cache: ResponseCache):
         client_id = "CLIENT_ID"
         client_secret = "CLIENT_SECRET"
@@ -41,6 +42,7 @@ class TestSpotifyAPI(SpotifyAPIFixtures):
         assert api.handler.authoriser.user_request.params["scope"] == " ".join(scopes)
         assert api.handler.authoriser.response.file_path == Path(token_file_path)
 
+    # noinspection PyTestUnpassedFixture
     async def test_context_management(self, cache: ResponseCache, api_mock: SpotifyMock):
         api = SpotifyAPI(cache=cache)
         api.handler.authoriser.response.replace({
@@ -76,6 +78,7 @@ class TestSpotifyAPI(SpotifyAPIFixtures):
             repository = choice(list(a.handler.session.cache.values()))
             await repository.count()  # just check this doesn't fail
 
+    # noinspection PyTestUnpassedFixture
     async def test_cache_repository_getter(self, cache: ResponseCache, api_mock: SpotifyMock):
         api = SpotifyAPI(cache=cache)
         api.handler.authoriser.response.replace({
