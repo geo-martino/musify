@@ -29,10 +29,10 @@ Supporting local and music streaming service (remote) libraries.
   * [Spotify](#spotify)
   * [Local](#local)
 * [Currently Supported](#currently-supported)
+* [Motivation and Aims](#motivation-and-aims)
 * [Release History](#release-history)
-* [Contributing](#contributing)
-* [Motivation & Aims](#aims)
-* [Author Notes](#notes)
+* [Contributing and Reporting Issues](#contributing-and-reporting-issues)
+* [Author Notes](#author-notes)
 
 > [!NOTE]  
 > This readme provides a brief overview of the program. 
@@ -375,20 +375,7 @@ For more detailed guides, check out the [documentation](https://geo-martino.gith
 - **Local Libraries**: `MusicBee`
 
 
-## Release History
-
-For change and release history, 
-check out the [documentation](https://geo-martino.github.io/musify/release-history.html).
-
-
-## Contributing
-
-For info on how to contribute to Musify, 
-check out the [documentation](https://geo-martino.github.io/musify/contributing.html).
-
-
-<a id="aims"></a>
-## Motivations & Aims
+## Motivation and Aims
 
 The key aim of this package is to provide a seamless framework for interoperability between all types of music 
 libraries whether local or remote. </br>
@@ -419,8 +406,22 @@ and instead return to a culture of nurturing talent by providing artists with a 
 on the work of their craft. One can dream.
 
 
-<a id="notes"></a>
-## Author notes, contributions, and reporting issues
+## Release History
+
+For change and release history, 
+check out the [documentation](https://geo-martino.github.io/musify/release-history.html).
+
+
+## Contributing and Reporting Issues
+
+If you have any suggestions, wish to contribute, or have any issues to report, please do let me know 
+via the issues tab or make a new pull request with your new feature for review. 
+
+For more info on how to contribute to Musify, 
+check out the [documentation](https://geo-martino.github.io/musify/contributing.html).
+
+
+## Author notes
 
 I initially developed this program for my own use so that I can share my local playlists with friends online. 
 I have always maintained my own local library well and never saw the need to switch to music 
@@ -430,6 +431,4 @@ this project to be one that aims to break down the barriers between listening ex
 The ultimate aim being to make managing a local library as easy as any of the major music streaming services, 
 allowing users the same conveniences while compensating artists fairly for their work.
 
-If you have any suggestions, wish to contribute, or have any issues to report, please do let me know 
-via the issues tab or make a new pull request with your new feature for review. 
-Otherwise, I hope you enjoy using Musify!
+I hope you enjoy using Musify!
