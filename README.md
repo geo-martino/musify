@@ -50,7 +50,7 @@ python -m pip install musify
 ```
 
 There are optional dependencies that you may install for optional functionality. 
-For the current list of optional dependency groups, [read the docs](https://geo-martino.github.io/musify/howto.install.html)
+For the current list of optional dependency groups, [read the docs](https://geo-martino.github.io/musify/howto/install.html)
 
 
 ## Quick Guides
@@ -409,7 +409,7 @@ on the work of their craft. One can dream.
 ## Release History
 
 For change and release history, 
-check out the [documentation](https://geo-martino.github.io/musify/release-history.html).
+check out the [documentation](https://geo-martino.github.io/musify/info/release-history.html).
 
 
 ## Contributing and Reporting Issues
@@ -418,7 +418,7 @@ If you have any suggestions, wish to contribute, or have any issues to report, p
 via the issues tab or make a new pull request with your new feature for review. 
 
 For more info on how to contribute to Musify, 
-check out the [documentation](https://geo-martino.github.io/musify/contributing.html).
+check out the [documentation](https://geo-martino.github.io/musify/info/contributing.html).
 
 
 ## Author notes
