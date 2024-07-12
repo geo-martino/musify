@@ -27,6 +27,7 @@ extensions = [
     "sphinx_autodoc_typehints",
     "autodocsumm",
     "sphinxext.opengraph",
+    "sphinx_new_tab_link",
 ]
 # noinspection SpellCheckingInspection
 autodoc_member_order = "bysource"

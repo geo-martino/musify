@@ -70,6 +70,7 @@ docs = [
     "autodocsumm~=0.2",
     "sphinxext-opengraph~=0.9",
     "matplotlib~=3.9",
+    "sphinx-new-tab-link~=0.5",
 ]
 dev = [
     "musify[test,docs]",
