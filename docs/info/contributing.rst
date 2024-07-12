@@ -40,7 +40,7 @@ Create a new branch in your local git project and commit changes to this branch 
 
 All tests are located within ``./tests``.
 If you make any changes to the functionality of the package, you **must** either modify or add new tests for these changes.
-To run tests, you must have installed either the ``test`` or ``dev`` optional dependencies and run ``pytest`` i.e.:
+To run tests, you must have installed either the ``test`` or ``dev`` optional dependencies and run ``pytest`` e.g.:
 
 .. code-block:: bash
 

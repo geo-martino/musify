@@ -12,7 +12,7 @@ from aiorequestful.auth import Authoriser
 from aiorequestful.cache.backend.base import ResponseCache
 from aiorequestful.cache.exception import CacheError
 from aiorequestful.cache.session import CachedSession
-from aiorequestful.request.handler import RequestHandler
+from aiorequestful.request import RequestHandler
 from aiorequestful.response.payload import JSONPayloadHandler
 from aiorequestful.types import ImmutableJSON, JSON
 from yarl import URL

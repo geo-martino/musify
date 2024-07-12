@@ -66,4 +66,11 @@ What's in this documentation
    reference/musify.types
    reference/musify.utils
 
+.. raw:: html
+
+   <hr>
+
+.. toctree::
+   :maxdepth: 1
+
    genindex
