@@ -25,7 +25,7 @@ classifiers = [
 ]
 dependencies = [
     "mutagen~=1.47",
-    "aiorequestful~=0.6",
+    "aiorequestful~=1.0",
     "python-dateutil~=2.9",
     "Pillow~=10.3",
 ]
@@ -43,7 +43,7 @@ musicbee = [
     "lxml~=5.2",
 ]
 sqlite = [
-    "aiorequestful[sqlite]~=0.6",
+    "aiorequestful[sqlite]~=1.0",
 ]
 
 # dev dependencies
