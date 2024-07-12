@@ -49,6 +49,7 @@ What's in this documentation
 
    info/release-history
    info/contributing
+   info/licence
 
 .. toctree::
    :maxdepth: 1
