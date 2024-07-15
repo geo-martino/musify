@@ -64,7 +64,7 @@ For more detailed guides, check out the [documentation](https://geo-martino.gith
 > ```python
 > import logging
 > import sys
-> from musify.log import STAT
+> from musify.logger import STAT
 > 
 > logging.basicConfig(format="%(message)s", level=STAT, stream=sys.stdout)
 > ```
