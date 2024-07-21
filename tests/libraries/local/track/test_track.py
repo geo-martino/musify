@@ -262,8 +262,20 @@ class TestLocalTrack(MusifyItemTester):
         assert track_deepcopy.title != track.title
 
     def test_set_and_find_file_paths(self, track: LocalTrack, tmp_path: Path):
+        # add some files with bad names
+        ext = next(iter(track.valid_extensions))
+        tmp_path.joinpath("._bad_filename").with_suffix(ext).touch(exist_ok=True)
+        tmp_path.joinpath(".bad_filename").with_suffix(ext).touch(exist_ok=True)
+
+        # add some files in folders with names
+        hidden_folder = tmp_path.joinpath(".good_folder")
+        hidden_folder.mkdir(exist_ok=True)
+        hidden_folder_file_path = hidden_folder.joinpath("good_file").with_suffix(ext)
+        hidden_folder_file_path.touch(exist_ok=True)
+
         paths = track.__class__.get_filepaths(str(tmp_path))
-        assert paths == {track.path}
+        assert paths == {track.path, hidden_folder_file_path}
+
         assert len(track.__class__.get_filepaths(path_track_resources)) == 1
 
     def test_setitem_dunder_method(self, track: LocalTrack):

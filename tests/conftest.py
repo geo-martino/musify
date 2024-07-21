@@ -1,6 +1,5 @@
 import copy
 import logging.config
-import os
 import shutil
 import types
 from collections import defaultdict
@@ -344,7 +343,7 @@ def path(request: pytest.FixtureRequest | SubRequest, tmp_path: Path) -> Path:
     src_path = Path(src_path)
     trg_path = tmp_path.joinpath(src_path.name)
 
-    os.makedirs(trg_path.parent, exist_ok=True)
+    trg_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(src_path, trg_path)
 
     yield trg_path

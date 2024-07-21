@@ -76,7 +76,7 @@ class File(metaclass=ABCMeta):
         folder = Path(folder)
 
         for ext in cls.valid_extensions:
-            paths |= set(folder.rglob(str(Path("**", f"*{ext}"))))
+            paths |= set(folder.rglob(str(Path("**", f"[!.]*{ext}"))))
             # paths |= set(folder.rglob(str(Path("**", f".*{ext}"))))
 
         # do not return paths in the recycle bin in Windows-based folders

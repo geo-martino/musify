@@ -2,7 +2,6 @@
 Compositely combine reader and writer classes for metadata/tags/properties operations on Track files.
 """
 import datetime
-import os
 from abc import ABCMeta, abstractmethod
 from collections.abc import Generator
 from copy import deepcopy, copy
@@ -512,7 +511,7 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
             output_path = output_folder.joinpath(self.filename + f"_{str(i).zfill(2)}")
             output_path = output_path.with_suffix("." + image.format.lower().lstrip("."))
 
-            os.makedirs(output_path.parent, exist_ok=True)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
             image.save(output_path)
             count += 1
 

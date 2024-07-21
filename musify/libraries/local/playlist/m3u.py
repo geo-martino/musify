@@ -2,7 +2,6 @@
 The M3U implementation of a :py:class:`LocalPlaylist`.
 """
 import asyncio
-import os
 from collections.abc import Collection
 from dataclasses import dataclass
 from pathlib import Path
@@ -119,7 +118,7 @@ class M3U(LocalPlaylist[FilterDefinedList[str | Path | File]]):
         :return: The results of the sync as a :py:class:`SyncResultM3U` object.
         """
         start_paths = set(map(Path, self.path_mapper.unmap_many(self._original, check_existence=False)))
-        os.makedirs(self.path.parent, exist_ok=True)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
 
         if not dry_run:
             with open(self.path, "w", encoding="utf-8") as file:

@@ -1,4 +1,4 @@
-.. Add log for your proposed changes here.
+`.. Add log for your proposed changes here.
 
    The versions shall be listed in descending order with the latest release first.
 
@@ -31,6 +31,14 @@ Release History
 The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
+
+1.1.2
+=====
+
+Changed
+-------
+* :py:meth:`.File.get_filepaths` now ignores hidden files.
+* Replace os.makedirs with Pathlib implementation of ``mkdir``q everywhere.
 
 1.1.1
 =====
@@ -490,3 +498,4 @@ Fixed
 =====
 
 Initial release! 🎉
+`

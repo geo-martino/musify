@@ -40,7 +40,7 @@ class TestMusicBee(LocalLibraryTester):
         tmp_library_path = tmp_path.joinpath(path_library_resources.relative_to(path_tests))
 
         trg_path = tmp_library_path.joinpath(library_xml_filename)
-        os.makedirs(trg_path.parent, exist_ok=True)
+        trg_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(library_xml_filepath, trg_path)
 
         with open(trg_path, "r") as f:
@@ -49,7 +49,7 @@ class TestMusicBee(LocalLibraryTester):
             f.write(data)
 
         trg_path = tmp_library_path.joinpath(settings_xml_filename)
-        os.makedirs(trg_path.parent, exist_ok=True)
+        trg_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(settings_xml_filepath, trg_path)
 
         with open(trg_path, "r") as f:
