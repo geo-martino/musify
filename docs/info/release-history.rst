@@ -1,4 +1,4 @@
-`.. Add log for your proposed changes here.
+.. Add log for your proposed changes here.
 
    The versions shall be listed in descending order with the latest release first.
 
@@ -32,13 +32,23 @@ The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
 
+1.1.3
+=====
+
+Fixed
+-----
+* When given an empty :py:class:`.M3U` playlist file, produces expected result i.e. an empty playlist.
+  Previously always added all given tracks to playlist when calling :py:meth:`.M3U.load`
+
+
 1.1.2
 =====
 
 Changed
 -------
 * :py:meth:`.File.get_filepaths` now ignores hidden files.
-* Replace os.makedirs with Pathlib implementation of ``mkdir``q everywhere.
+* Replace os.makedirs with Pathlib implementation of ``mkdir`` everywhere.
+
 
 1.1.1
 =====
@@ -498,4 +508,3 @@ Fixed
 =====
 
 Initial release! 🎉
-`

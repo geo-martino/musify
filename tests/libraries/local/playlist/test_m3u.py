@@ -41,6 +41,17 @@ class TestM3U(LocalPlaylistTester):
         with pytest.raises(InvalidFileType):
             M3U(path=path_txt)
 
+    async def test_load_from_empty_file_with_tracks(self, tracks: list[LocalTrack], tmp_path: Path):
+        path = tmp_path.joinpath("test").with_suffix(".m3u")
+        path.touch(exist_ok=True)
+
+        pl = M3U(path=path)
+        await pl.load(tracks=tracks)
+
+        assert not pl
+        assert not pl.tracks
+        assert not pl._original
+
     async def test_load_fake_file_with_no_tracks(self, tracks: list[LocalTrack], tmp_path: Path):
         path_fake = tmp_path.joinpath("does_not_exist").with_suffix(".m3u")
 

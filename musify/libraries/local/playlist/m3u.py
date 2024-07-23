@@ -93,6 +93,11 @@ class M3U(LocalPlaylist[FilterDefinedList[str | Path | File]]):
                 paths_raw = self.path_mapper.map_many([line.strip() for line in file], check_existence=True)
             path_list = list(map(Path, paths_raw))
 
+            if not path_list:  # empty playlist file
+                self.clear()
+                self._original = []
+                return self
+
         self.matcher = FilterDefinedList(values=path_list)
         self.matcher.transform = lambda x: Path(self.path_mapper.map(x, check_existence=False))
 
