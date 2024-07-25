@@ -31,6 +31,17 @@ Release History
 The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
+
+1.1.5
+=====
+
+Fixed
+-----
+* Bug in escaping of '&' characters when export :py:class:`.XAutoPF` playlists with the :py:class:`.XMLPlaylistParser`.
+  Was previously escaping multiple times when already escaped e.g. '&amp;' > '&amp;amp;'.
+  Now correctly skips already occurrences of '&'.
+
+
 1.1.4
 =====
 
