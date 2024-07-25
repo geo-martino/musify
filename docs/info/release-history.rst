@@ -38,7 +38,7 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 Fixed
 -----
 * Bug in escaping of '&' characters when export :py:class:`.XAutoPF` playlists with the :py:class:`.XMLPlaylistParser`.
-  Was previously escaping multiple times when already escaped e.g. '&amp;' > '&amp;amp;'.
+  Was previously escaping multiple times when already escaped e.g. '&amp;amp;' > '&amp;amp;amp;'.
   Now correctly skips already occurrences of '&'.
 
 
