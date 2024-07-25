@@ -1,11 +1,14 @@
 from collections.abc import Iterable
-from random import randrange
+from copy import deepcopy
+from pathlib import Path
+from random import randrange, sample
 
 import pytest
 
+from musify.base import MusifyItem
 from musify.file.path_mapper import PathMapper, PathStemMapper
 from musify.libraries.local.library import LocalLibrary
-from musify.libraries.local.playlist import PLAYLIST_CLASSES
+from musify.libraries.local.playlist import PLAYLIST_CLASSES, LocalPlaylist
 from musify.libraries.local.track import LocalTrack
 from musify.processors.filter import FilterDefinedList, FilterIncludeExclude
 from tests.libraries.local.library.testers import LocalLibraryTester
@@ -117,3 +120,53 @@ class TestLocalLibrary(LocalLibraryTester):
         await library.load()
 
         assert len(library.tracks) == len(library._track_paths) == len(path_track_all) + 2
+
+    @pytest.fixture
+    def merge_playlists_updated_paths(
+            self, library: LocalLibrary, collection_merge_items: Iterable[MusifyItem], tmp_path: Path
+    ) -> list[LocalPlaylist]:
+        """Set of new playlists with updated paths to merge with the given ``library``"""
+        playlists = sample(list(library.playlists.values()), k=2)
+        for pl in playlists:
+            pl.path = tmp_path.joinpath("path/to/playlists").joinpath(pl.path.name)
+            library.playlists.pop(pl.name)
+
+        assert all(pl.name not in library.playlists for pl in playlists)
+        return playlists
+
+    def test_merge_playlists_updates_no_parent(
+            self, library: LocalLibrary, merge_playlists_updated_paths: list[LocalPlaylist]
+    ):
+        print([pl.name for pl in merge_playlists_updated_paths])
+        # paths update using just filename
+        self.assert_merge_playlists(
+            library, test=merge_playlists_updated_paths, new_playlists=merge_playlists_updated_paths
+        )
+
+        for pl in merge_playlists_updated_paths:
+            assert not str(pl.path).startswith(str(library.playlist_folder))  # did not modify original playlist
+
+            pl_lib = library.playlists[pl.name]
+            print(str(pl_lib.path), str(library.playlist_folder))
+            assert str(pl_lib.path).startswith(str(library.playlist_folder))
+            assert str(pl_lib.path.relative_to(library.playlist_folder)) == pl.path.name
+
+    def test_merge_playlists_updates_with_parent(
+            self, library: LocalLibrary, merge_playlists_updated_paths: list[LocalPlaylist], tmp_path: Path
+    ):
+        # paths updated replacing on library stem path
+        test = deepcopy(library)
+        test.playlists.clear()
+        test.playlists.update({pl.name: pl for pl in merge_playlists_updated_paths})
+        test.playlist_folder = tmp_path
+        assert library.playlist_folder != test.playlist_folder
+
+        self.assert_merge_playlists(library=library, test=test, new_playlists=merge_playlists_updated_paths)
+
+        for pl in merge_playlists_updated_paths:
+            assert not str(pl.path).startswith(str(library.playlist_folder))  # did not modify original playlist
+
+            pl_lib = library.playlists[pl.name]
+            assert str(pl_lib.path).startswith(str(library.playlist_folder))
+            assert str(pl_lib.path.relative_to(library.playlist_folder)) != pl.path.name
+            assert pl_lib.path.relative_to(library.playlist_folder) == pl.path.relative_to(tmp_path)

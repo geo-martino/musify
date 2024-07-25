@@ -20,7 +20,7 @@ def format_readme():
         "program_owner_user": PROGRAM_OWNER_USER,
     }
     format_map_code = {
-        "local_sources": sorted(cls.name for cls in LIBRARY_CLASSES if cls != LocalLibrary),
+        "local_sources": sorted(cls.source for cls in LIBRARY_CLASSES if cls != LocalLibrary),
         "remote_sources": [SpotifyDataWrangler.source],
         "track_filetypes": sorted(TRACK_FILETYPES),
         "playlist_filetypes": sorted(PLAYLIST_FILETYPES),

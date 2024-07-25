@@ -291,6 +291,9 @@ class Playlist[T: Track](MusifyCollection[T], metaclass=ABCMeta):
         return self
 
 
+type LibraryMergeType[T] = Library[T] | Collection[Playlist[T]] | Mapping[str, Playlist[T]]
+
+
 class Library[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     """A library of items and playlists and other object types."""
 
@@ -375,11 +378,7 @@ class Library[T: Track](MusifyCollection[T], metaclass=ABCMeta):
         """Log stats on currently loaded playlists"""
         raise NotImplementedError
 
-    def merge_playlists(
-            self,
-            playlists: Library[T] | Collection[Playlist[T]] | Mapping[str, Playlist[T]],
-            reference: Library[T] | Collection[Playlist[T]] | Mapping[str, Playlist[T]] | None = None,
-    ) -> None:
+    def merge_playlists(self, playlists: LibraryMergeType[T], reference: LibraryMergeType[T] | None = None) -> None:
         """
         Merge playlists from given list/map/library to this library.
 
@@ -392,9 +391,7 @@ class Library[T: Track](MusifyCollection[T], metaclass=ABCMeta):
             this playlist based on the reference. Useful for using this function as a synchronizer
             where the reference refers to the playlist at the previous sync.
         """
-        def get_playlists_map(
-                value: Library[T] | Collection[Playlist[T]] | Mapping[str, Playlist[T]]
-        ) -> Mapping[str, Playlist[T]]:
+        def get_playlists_map(value: LibraryMergeType[T]) -> Mapping[str, Playlist[T]]:
             """Reformat the input playlist values to map"""
             if isinstance(value, Mapping):
                 return value
@@ -409,7 +406,7 @@ class Library[T: Track](MusifyCollection[T], metaclass=ABCMeta):
 
         for name, playlist in playlists.items():
             if name not in self.playlists:
-                self.playlists[name] = playlist
+                self.playlists[name] = deepcopy(playlist)
                 continue
 
             self.playlists[name].merge(playlist, reference=reference.get(name))

@@ -31,6 +31,19 @@ Release History
 The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
+1.1.4
+=====
+
+Added
+-----
+* :py:class:`.LocalPlaylist` now allows setting of the ``path`` property
+* :py:class:`.LocalLibrary` now allows setting of the ``name`` property. Added ``name`` as an init parameter too.
+
+Changed
+-------
+* :py:meth:`.LocalLibrary.merge_playlists` now updates the path of new playlists added to the library to be relative
+  to the library's ``playlist_folder``
+
 
 1.1.3
 =====

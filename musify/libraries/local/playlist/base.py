@@ -67,6 +67,10 @@ class LocalPlaylist[T: Filter[LocalTrack]](File, LocalCollection[LocalTrack], Pl
     def path(self):
         return self._path
 
+    @path.setter
+    def path(self, value: str | Path):
+        self._path = Path(value)
+
     def __init__(
             self,
             path: str | Path,

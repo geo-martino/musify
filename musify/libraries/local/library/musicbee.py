@@ -53,6 +53,7 @@ class MusicBee(LocalLibrary, File):
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
         The wrangler is also used when loading tracks to allow them to process URI tags.
         For more info on this, see :py:class:`LocalTrack`.
+    :param name: A name to assign to this library.
     """
 
     __slots__ = (
@@ -85,6 +86,7 @@ class MusicBee(LocalLibrary, File):
             playlist_filter: Collection[str] | Filter[str] = (),
             path_mapper: PathMapper = PathMapper(),
             remote_wrangler: RemoteDataWrangler = None,
+            name: str = None,
     ):
         required_modules_installed(REQUIRED_MODULES, self)
 
@@ -129,6 +131,7 @@ class MusicBee(LocalLibrary, File):
             playlist_filter=playlist_filter,
             path_mapper=path_mapper,
             remote_wrangler=remote_wrangler,
+            name=name,
         )
 
     def _get_track_from_xml_path(
