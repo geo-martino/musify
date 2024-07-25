@@ -1,7 +1,6 @@
 """
 The XAutoPF implementation of a :py:class:`LocalPlaylist`.
 """
-import re
 from collections.abc import Collection, Mapping, Sequence
 from copy import deepcopy
 from dataclasses import dataclass
@@ -519,13 +518,12 @@ class XMLPlaylistParser(File, PrettyPrinter):
         include_items = tuple(items_mapped[path] for path in matcher.include if path in items_mapped)
         exclude_items = tuple(matched_mapped[path] for path in matcher.exclude if path in matched_mapped)
 
-        amp_pattern = re.compile('&(?!amp;)')
         if len(include_items) > 0:
             include_paths = self.path_mapper.unmap_many(include_items, check_existence=False)
-            self.xml_source["ExceptionsInclude"] = amp_pattern.sub("&amp;", "|".join(include_paths))
+            self.xml_source["ExceptionsInclude"] = "|".join(include_paths)
         if len(exclude_items) > 0:
             exclude_paths = self.path_mapper.unmap_many(exclude_items, check_existence=False)
-            self.xml_source["Exceptions"] = amp_pattern.sub("&amp;", "|".join(exclude_paths))
+            self.xml_source["Exceptions"] = "|".join(exclude_paths)
 
     def get_limiter(self) -> ItemLimiter | None:
         """Initialise and return a :py:class:`ItemLimiter` object from loaded XML playlist data."""

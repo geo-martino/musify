@@ -32,6 +32,15 @@ The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
 
+1.1.6
+=====
+
+Fixed
+-----
+* Remove '&' character handling in :py:class:`.XMLPlaylistParser`. Was being handled twice as it is already
+  handled by the ``xmltodict`` package.
+
+
 1.1.5
 =====
 
