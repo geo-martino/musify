@@ -63,7 +63,7 @@ test = [
 ]
 docs = [
     "musify[build]",
-    "sphinx~=7.4",
+    "sphinx>=7.4,<9.0",
     "renku_sphinx_theme",
     "graphviz~=0.20",
     "sphinx-autodoc-typehints~=2.2",
