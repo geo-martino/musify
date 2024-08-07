@@ -383,11 +383,16 @@ class XMLPlaylistParser(File, PrettyPrinter):
 
     def get_matcher(self) -> AutoMatcher:
         """Initialise and return a :py:class:`FilterMatcher` object from loaded XML playlist data."""
-        # tracks to include/exclude even if they meet/don't meet match compare conditions
-        include_str: str = self.xml_source.get("ExceptionsInclude") or ""
-        include = set(map(Path, self.path_mapper.map_many(set(include_str.split("|")), check_existence=True)))
-        exclude_str: str = self.xml_source.get("Exceptions") or ""
-        exclude = set(map(Path, self.path_mapper.map_many(set(exclude_str.split("|")), check_existence=True)))
+        def get_exceptions(key: str) -> set[Path]:
+            """Get exception paths from XML to include/exclude even if they meet/don't meet match compare conditions"""
+            if not (raw_str := self.xml_source.get(key)):
+                return set()
+
+            paths = set(raw_str.split("|"))
+            return set(map(Path, self.path_mapper.map_many(paths, check_existence=True)))
+
+        include = get_exceptions("ExceptionsInclude")
+        exclude = get_exceptions("Exceptions")
 
         comparers: dict[Comparer, tuple[bool, FilterComparers]] = {}
         for condition in to_collection(self.xml_source["Conditions"]["Condition"]):
@@ -515,10 +520,10 @@ class XMLPlaylistParser(File, PrettyPrinter):
 
         if len(include_items) > 0:
             include_paths = self.path_mapper.unmap_many(include_items, check_existence=False)
-            self.xml_source["ExceptionsInclude"] = "|".join(include_paths).replace("&", "&amp;")
+            self.xml_source["ExceptionsInclude"] = "|".join(include_paths)
         if len(exclude_items) > 0:
             exclude_paths = self.path_mapper.unmap_many(exclude_items, check_existence=False)
-            self.xml_source["Exceptions"] = "|".join(exclude_paths).replace("&", "&amp;")
+            self.xml_source["Exceptions"] = "|".join(exclude_paths)
 
     def get_limiter(self) -> ItemLimiter | None:
         """Initialise and return a :py:class:`ItemLimiter` object from loaded XML playlist data."""

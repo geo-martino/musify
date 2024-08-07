@@ -32,6 +32,39 @@ The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
 
+1.1.6
+=====
+
+Fixed
+-----
+* Remove '&' character handling in :py:class:`.XMLPlaylistParser`. Was being handled twice as it is already
+  handled by the ``xmltodict`` package.
+
+
+1.1.5
+=====
+
+Fixed
+-----
+* Bug in escaping of '&' characters when export :py:class:`.XAutoPF` playlists with the :py:class:`.XMLPlaylistParser`.
+  Was previously escaping multiple times when already escaped e.g. '&amp;amp;' > '&amp;amp;amp;'.
+  Now correctly skips already occurrences of '&'.
+
+
+1.1.4
+=====
+
+Added
+-----
+* :py:class:`.LocalPlaylist` now allows setting of the ``path`` property
+* :py:class:`.LocalLibrary` now allows setting of the ``name`` property. Added ``name`` as an init parameter too.
+
+Changed
+-------
+* :py:meth:`.LocalLibrary.merge_playlists` now updates the path of new playlists added to the library to be relative
+  to the library's ``playlist_folder``
+
+
 1.1.3
 =====
 

@@ -12,7 +12,7 @@ from typing import Any
 from musify.base import Result
 from musify.exception import MusifyError
 from musify.file.path_mapper import PathMapper, PathStemMapper
-from musify.libraries.core.object import Library
+from musify.libraries.core.object import Library, LibraryMergeType
 from musify.libraries.local.collection import LocalCollection, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from musify.libraries.local.playlist import PLAYLIST_CLASSES, LocalPlaylist, load_playlist
 from musify.libraries.local.track import TRACK_CLASSES, LocalTrack, load_track
@@ -49,9 +49,11 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
         If given, the wrangler can be used when calling __get_item__ to get an item from the collection from its URI.
         The wrangler is also used when loading tracks to allow them to process URI tags.
         For more info on this, see :py:class:`LocalTrack`.
+    :param name: A name to assign to this library.
     """
 
     __slots__ = (
+        "_name",
         "_library_folders",
         "_playlist_folder",
         "playlist_filter",
@@ -65,12 +67,13 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     __attributes_classes__ = (Library, LocalCollection)
     __attributes_ignore__ = ("tracks_in_playlists",)
 
-    # noinspection PyPropertyDefinition
-    @classmethod
     @property
-    def name(cls) -> str:
-        """The type of library loaded"""
-        return str(cls.source)
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str):
+        self._name = value
 
     # noinspection PyPropertyDefinition
     @classmethod
@@ -229,8 +232,11 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             playlist_filter: Collection[str] | Filter[str] = (),
             path_mapper: PathMapper = PathMapper(),
             remote_wrangler: RemoteDataWrangler | None = None,
+            name: str = None,
     ):
         super().__init__(remote_wrangler=remote_wrangler)
+
+        self._name: str = name if name else self.source
 
         self.logger.debug(f"Setup {self.name} library: START")
         self.logger.info(f"\33[1;95m ->\33[1;97m Setting up {self.name} library \33[0m")
@@ -410,6 +416,24 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             self.playlists.values(), desc="Updating playlists", unit="tracks"
         )
         return dict([await _save_playlist(pl) for pl in bar])
+
+    def merge_playlists(
+            self, playlists: LibraryMergeType[LocalTrack], reference: LibraryMergeType[LocalTrack] | None = None
+    ) -> None:
+        current_names = set(self.playlists)
+
+        super().merge_playlists(playlists=playlists, reference=reference)
+
+        for pl in self.playlists.values():
+            if pl.name in current_names:
+                continue
+
+            if isinstance(playlists, LocalLibrary):
+                rel_path = pl.path.relative_to(playlists.playlist_folder)
+            else:
+                rel_path = pl.path.name
+
+            pl.path = self.playlist_folder.joinpath(rel_path)
 
     ###########################################################################
     ## Backup/restore
