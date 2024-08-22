@@ -7,6 +7,7 @@ from pathlib import Path
 
 from musify import MODULE_ROOT, PROGRAM_OWNER_NAME, PROGRAM_OWNER_USER, PROGRAM_NAME
 
+
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
@@ -82,9 +83,11 @@ html_context = dict(
     conf_py_path=f"/{Path(__file__).parent.name}/",
 )
 
+
 # -- OpenGraph configuration --------------------------------------------------
 
 ogp_site_url = f"https://{PROGRAM_OWNER_USER}.github.io/{PROGRAM_NAME.lower()}/"
+
 
 # -- GraphViz configuration --------------------------------------------------
 # https://graphviz.org/doc/info/attrs.html
