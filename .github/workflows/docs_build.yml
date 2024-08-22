@@ -40,7 +40,6 @@ jobs:
         run: |
           sudo apt install graphviz
           pip install -e '.[docs]'
-          pip install 
 
       - name: 🏗️ Sphinx build
         run: |
