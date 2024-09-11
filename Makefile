@@ -15,10 +15,14 @@ LINKCHECKDIR  = docs/_linkcheck
 help:
 	$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
+linkcheck: Makefile
+	@$(SPHINXBUILD) -b linkcheck "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
 rebuild-html: Makefile
 	@$(SPHINXBUILD) -M clean "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 	@rm -f "$(SOURCEDIR)"/reference/"$(PROJECTNAME)"*.rst
-	@sphinx-apidoc -o "$(SOURCEDIR)"/reference ./"$(PROJECTNAME)" -d 4 --force --module-first --separate --no-toc -t "$(SOURCEDIR)"/_templates
+	@sphinx-apidoc -o "$(SOURCEDIR)"/reference ./"$(PROJECTNAME)" -d 4 --force \
+	  --module-first --separate --no-toc -t "$(SOURCEDIR)"/_templates
 	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 	@$(SPHINXBUILD) -b linkcheck "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 

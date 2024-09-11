@@ -43,7 +43,8 @@ jobs:
 
       - name: 🏗️ Sphinx build
         run: |
-          make rebuild-html
+          make html
+          make linkcheck
 
       - name: 📦 Upload build artifacts
         uses: actions/upload-pages-artifact@v3
