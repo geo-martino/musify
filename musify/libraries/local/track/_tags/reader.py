@@ -131,7 +131,10 @@ class TagReader[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
     def read_bpm(self) -> float | None:
         """Extract BPM tags from file"""
         values = self.read_tag(self.tag_map.bpm)
-        return float(values[0]) if values is not None else None
+        try:
+            return float(values[0]) if values is not None else None
+        except ValueError:
+            return None
 
     def read_key(self) -> str | None:
         """Extract key tags from file"""
@@ -159,7 +162,10 @@ class TagReader[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
     def read_compilation(self) -> bool | None:
         """Extract compilation tags from file"""
         values = self.read_tag(self.tag_map.compilation)
-        return bool(int(values[0])) if values is not None else None
+        try:
+            return bool(int(values[0])) if values is not None else None
+        except ValueError:
+            return None
 
     def read_comments(self) -> list[str] | None:
         """Extract comment tags from file"""

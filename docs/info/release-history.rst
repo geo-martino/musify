@@ -32,6 +32,13 @@ The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
 
+1.1.7
+=====
+
+Fixed
+-----
+* Handle bad values for bpm and compilation in :py:class:`.TagReader` by returning ``None``.
+
 1.1.6
 =====
 
