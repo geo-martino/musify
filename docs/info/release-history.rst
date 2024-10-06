@@ -32,6 +32,14 @@ The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
 
+1.1.8
+=====
+
+Fixed
+-----
+* Bug in :py:class:`.RemoteItemChecker` that tries to remove items from the `added` list when they are not present
+  whilst trying to match items to remote playlist.
+
 1.1.7
 =====
 

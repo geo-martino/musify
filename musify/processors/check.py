@@ -449,7 +449,8 @@ class RemoteItemChecker(InputProcessor):
 
             item.uri = match.uri
 
-            added.remove(match)
+            if match in added:
+                added.remove(match)
             removed.remove(item) if item in removed else missing.remove(item)
             self._switched.append(match)
 
