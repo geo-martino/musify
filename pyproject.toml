@@ -113,4 +113,4 @@ markers = [
     "manual: marks tests to be run only when manually directed to by the developer",
 ]
 asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope="function"
+asyncio_default_fixture_loop_scope = "session"

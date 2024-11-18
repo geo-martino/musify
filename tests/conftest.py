@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import logging.config
 import shutil
@@ -21,6 +22,16 @@ from musify.utils import to_collection
 from tests.libraries.remote.core.utils import ALL_ITEM_TYPES
 from tests.libraries.remote.spotify.api.mock import SpotifyMock
 from tests.utils import idfn, path_resources
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
 
 
 # noinspection PyUnusedLocal
