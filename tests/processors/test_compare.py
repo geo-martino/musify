@@ -54,7 +54,7 @@ class TestComparer(PrettyPrinterTester):
         track_1 = random_track()
         track_2 = random_track()
 
-        comparer = Comparer(condition="StartsWith", field=TrackField.ALBUM)
+        comparer = Comparer(condition="StartsWith", field=TrackField.ALBUM, reference_required=True)
         assert comparer._expected is None
         assert not comparer._converted
 
