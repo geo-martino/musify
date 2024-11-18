@@ -26,6 +26,7 @@ class Comparer(DynamicProcessor):
         Types of the values in this list are automatically converted to the type of the item field's value.
     :param field: The field to match on.
     :param reference_required: When True, a reference object of type ``T`` must be passed to the ``compare`` method.
+        When False, reference files given to the ``compare`` method will be ignored.
         An exception will be raised if this is True and reference object is not passed.
     """
 
@@ -97,13 +98,12 @@ class Comparer(DynamicProcessor):
         else:
             actual = item
 
-        if reference is None:
-            # convert the expected values to the same type as the actual value if not yet converted
+        if self.reference_required:  # use the values from the reference as the expected values
+            expected = to_collection(reference[tag_name], list)
+        else:  # convert the expected values to the same type as the actual value if not yet converted
             if not self._converted:
                 self._convert_expected(actual)
             expected = self.expected
-        else:  # use the values from the reference as the expected values
-            expected = to_collection(reference[tag_name], list)
 
         if expected:  # special on-the-fly conversions for datetime values
             if isinstance(actual, datetime) and not isinstance(expected[0], datetime):
