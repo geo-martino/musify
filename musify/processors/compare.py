@@ -199,6 +199,8 @@ class Comparer(DynamicProcessor):
 
     @dynamicprocessormethod
     def _is(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
+        if expected is None:
+            return False
         return value == expected[0]
 
     @dynamicprocessormethod
@@ -207,15 +209,19 @@ class Comparer(DynamicProcessor):
 
     @dynamicprocessormethod("greater_than", "in_the_last")
     def _is_after(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
-        return value > expected[0] if value is not None and expected[0] is not None else False
+        if value is None or expected is None or expected[0] is None:
+            return False
+        return value > expected[0]
 
     @dynamicprocessormethod("less_than", "not_in_the_last")
     def _is_before(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
-        return value < expected[0] if value is not None and expected[0] is not None else False
+        if value is None or expected is None or expected[0] is None:
+            return False
+        return value < expected[0]
 
     @dynamicprocessormethod
     def _is_in(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
-        return value in expected
+        return expected is not None and value in expected
 
     @dynamicprocessormethod
     def _is_not_in(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
@@ -223,7 +229,9 @@ class Comparer(DynamicProcessor):
 
     @dynamicprocessormethod
     def _in_range(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
-        return expected[0] <= value <= expected[1] if value is not None and expected[0] is not None else False
+        if value is None or expected is None or expected[0] is None or expected[1] is None:
+            return False
+        return expected[0] <= value <= expected[1]
 
     @dynamicprocessormethod
     def _not_in_range(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
@@ -239,15 +247,21 @@ class Comparer(DynamicProcessor):
 
     @dynamicprocessormethod
     def _starts_with(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
-        return value.startswith(str(expected[0])) if value is not None and expected[0] is not None else False
+        if value is None or expected is None or expected[0] is None:
+            return False
+        return value.startswith(str(expected[0]))
 
     @dynamicprocessormethod
     def _ends_with(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
-        return value.endswith(str(expected[0])) if value is not None and expected[0] is not None else False
+        if value is None or expected is None or expected[0] is None:
+            return False
+        return value.endswith(str(expected[0]))
 
     @dynamicprocessormethod
     def _contains(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
-        return str(expected[0]) in value if value is not None and expected[0] is not None else False
+        if value is None or expected is None or expected[0] is None:
+            return False
+        return str(expected[0]) in value
 
     @dynamicprocessormethod
     def _does_not_contain(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
@@ -255,11 +269,13 @@ class Comparer(DynamicProcessor):
 
     @dynamicprocessormethod
     def _matches_reg_ex(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
-        return bool(re.search(str(expected[0]), value)) if value is not None and expected[0] is not None else False
+        if value is None or expected is None or expected[0] is None:
+            return False
+        return bool(re.search(str(expected[0]), value))
 
     @dynamicprocessormethod
     def _matches_reg_ex_ignore_case(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
-        if value is not None and expected[0] is not None:
+        if value is None or expected is None or expected[0] is None:
             return False
         return bool(re.search(str(expected[0]), str(value), flags=re.I))
 

@@ -32,11 +32,19 @@ The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
 
+1.1.10
+======
+
+Fixed
+-----
+* Bug in :py:class:`.Comparer` methods which caused them to fail on invalid expected values
+
+
 1.1.9
 =====
 
 Changed
------
+-------
 * :py:class:`.Comparer` now correctly ignores the reference track given when the ``reference_required`` flag is False.
 
 Fixed
