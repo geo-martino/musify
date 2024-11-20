@@ -171,3 +171,5 @@ class MusifyItemTester(PrettyPrinterTester, metaclass=ABCMeta):
     def test_getitem_dunder_method(item: MusifyItem):
         assert item["name"] == item.name
         assert item["uri"] == item.uri
+        assert item[Fields.NAME] == item.name
+        assert item[Fields.URI] == item.uri

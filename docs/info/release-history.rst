@@ -32,6 +32,20 @@ The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
 
+1.2.0
+=====
+
+Added
+-----
+* Can now get tags from any :py:class:`.MusifyItem` and set tags on any :py:class:`.LocalTrack`
+  using the :py:class:`.Field` enums
+
+Changed
+-------
+* Track number zero fill amount is now calculated from the track total value
+  when writing track tags on :py:class:`.LocalTrack`
+
+
 1.1.10
 ======
 

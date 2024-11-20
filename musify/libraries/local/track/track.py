@@ -20,7 +20,7 @@ from musify.libraries.core.object import Track
 from musify.libraries.local.base import LocalItem
 # noinspection PyProtectedMember
 from musify.libraries.local.track._tags import TagReader, TagWriter, SyncResultTrack
-from musify.libraries.local.track.field import LocalTrackField as Tags
+from musify.libraries.local.track.field import LocalTrackField as Tags, LocalTrackField
 from musify.libraries.remote.core.wrangle import RemoteDataWrangler
 from musify.types import UnitIterable
 from musify.utils import to_collection
@@ -102,8 +102,10 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         return self._artist.split(self.tag_sep) if self._artist else []
 
     @artists.setter
-    def artists(self, value: list[str]):
-        self._artist = self.tag_sep.join(value)
+    def artists(self, value: list[str | None]):
+        if value:
+            value = self.tag_sep.join(value)
+        self._artist = value
 
     @property
     def album(self):
@@ -566,7 +568,13 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         new.refresh()
         return new
 
-    def __setitem__(self, key: str, value: Any):
+    def __setitem__(self, key: str | LocalTrackField, value: Any):
+        if isinstance(key, LocalTrackField):
+            try:
+                key = next(iter(sorted(key.to_tag())))
+            except StopIteration:
+                key = key.name.lower()
+
         if not hasattr(self, key):
             raise MusifyKeyError(f"Given key is not a valid attribute of this item: {key}")
 
