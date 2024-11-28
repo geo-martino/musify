@@ -200,6 +200,10 @@ class Filter[T](Processor, metaclass=ABCMeta):
     def __bool__(self):
         return self.ready
 
+    @abstractmethod
+    def __eq__(self, item: Any):
+        raise NotImplementedError
+
 
 class FilterComposite[T](Filter[T], Collection[Filter], metaclass=ABCMeta):
     """Composite filter which filters based on many :py:class:`Filter` objects"""
@@ -241,3 +245,6 @@ class FilterComposite[T](Filter[T], Collection[Filter], metaclass=ABCMeta):
 
     def __contains__(self, item: Any):
         return item in self.filters
+
+    def __eq__(self, item: Any):
+        return isinstance(item, self.__class__) and self.filters == item.filters

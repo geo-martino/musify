@@ -6,7 +6,7 @@ from collections.abc import Container
 import pytest
 
 from musify.base import MusifyObject, MusifyItem
-from musify.field import Fields, TagField, ALL_FIELDS, Field
+from musify.field import Fields, TagField, ALL_FIELDS, Field, TagFields
 from musify.printer import PrettyPrinter
 from musify.types import MusifyEnum
 
@@ -171,5 +171,5 @@ class MusifyItemTester(PrettyPrinterTester, metaclass=ABCMeta):
     def test_getitem_dunder_method(item: MusifyItem):
         assert item["name"] == item.name
         assert item["uri"] == item.uri
-        assert item[Fields.NAME] == item.name
-        assert item[Fields.URI] == item.uri
+        assert item[TagFields.NAME] == item.name
+        assert item[TagFields.URI] == item.uri

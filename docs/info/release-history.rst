@@ -39,11 +39,16 @@ Added
 -----
 * Can now get tags from any :py:class:`.MusifyItem` and set tags on any :py:class:`.LocalTrack`
   using the :py:class:`.Field` enums
+* Equality comparison methods to all implementations of :py:class:`.Filter`
+* :py:class:`.BasicLocalCollection` for creating and managing arbitrary local collections
+* :py:class:`.MusifyEnum` now displayed correctly when outputting to ``json`` on :py:class:`.PrettyPrinter` objects
 
 Changed
 -------
 * Track number zero fill amount is now calculated from the track total value
   when writing track tags on :py:class:`.LocalTrack`
+* Simplified ``dict`` output from :py:class:`.FilterComparers`
+* Field names displayed as lower case in ``dict`` output on relevant :py:class:`.PrettyPrinter` implementations
 
 
 1.1.10

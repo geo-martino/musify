@@ -14,6 +14,7 @@ from typing import Any, Self
 
 from musify.field import Fields, TagField, TagFields
 from musify.file.exception import UnexpectedPathError
+from musify.libraries.collection import BasicCollection
 from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.core.object import Track, Library, Folder, Album, Artist, Genre
 from musify.libraries.local.base import LocalItem
@@ -173,6 +174,37 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
 
         if isinstance(self, Library | LocalCollection):
             self.logger.print_line()
+
+
+class BasicLocalCollection[T: LocalTrack](LocalCollection[T]):
+
+    __slots__ = ("_name", "_tracks")
+
+    @staticmethod
+    def _validate_item_type(items: Any | Iterable[Any]) -> bool:
+        if isinstance(items, Iterable):
+            return all(isinstance(item, MusifyItem) for item in items)
+        return isinstance(items, MusifyItem)
+
+    @property
+    def name(self):
+        """The name of this collection"""
+        return self._name
+
+    @property
+    def tracks(self) -> list[T]:
+        return self._tracks
+
+    @property
+    def length(self):
+        lengths = {getattr(item, "length", None) for item in self.items}
+        return sum({length for length in lengths if length}) if lengths else None
+
+    def __init__(self, name: str, tracks: Collection[T], remote_wrangler: RemoteDataWrangler = None):
+        super().__init__(remote_wrangler=remote_wrangler)
+        self._name = name
+        self._tracks = to_collection(tracks, list)
+
 
 
 class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], metaclass=ABCMeta):

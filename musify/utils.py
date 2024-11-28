@@ -4,7 +4,7 @@ Generic utility functions and classes which can be used throughout the entire pa
 import re
 from collections import Counter
 from collections.abc import Iterable, Collection, MutableSequence, Mapping, MutableMapping
-from typing import Any
+from typing import Any, TypeVar
 
 import unicodedata
 
@@ -169,7 +169,11 @@ def limit_value(value: Number, floor: Number = 1, ceil: Number = 50) -> Number:
 ###########################################################################
 ## Collection
 ###########################################################################
-def to_collection[T: (list, set, tuple)](data: Any, cls: type[T] = tuple) -> T | None:
+UT = TypeVar("UT")
+CollT = UT | list[UT] | tuple[UT] | set[UT]
+
+
+def to_collection[T: Any](data: T | CollT, cls: type[CollT] = tuple) -> T | CollT | None:
     """
     Safely turn any object into a collection of a given type ``T``.
 

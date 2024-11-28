@@ -41,7 +41,7 @@ class BasicCollection[T: MusifyItem](MusifyCollection[T]):
         lengths = {getattr(item, "length", None) for item in self.items}
         return sum({length for length in lengths if length}) if lengths else None
 
-    def __init__(self, name: str, items: Collection[T]):
-        super().__init__()
+    def __init__(self, name: str, items: Collection[T], *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._name = name
         self._items = to_collection(items, list)
