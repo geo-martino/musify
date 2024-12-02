@@ -13,6 +13,19 @@ from musify.exception import MusifyTypeError, MusifyImportError
 
 
 ###########################################################################
+## Properties
+###########################################################################
+# noinspection PyPep8Naming
+class classproperty:
+    """Set an immutable class property with this decorator"""
+    def __init__(self, func):
+        self.fget = func
+
+    def __get__(self, instance, owner):
+        return self.fget(owner)
+
+
+###########################################################################
 ## Extended primitives
 ###########################################################################
 class SafeDict(dict):

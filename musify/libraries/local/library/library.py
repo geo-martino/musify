@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any
 
 from aiorequestful.types import UnitCollection, UnitIterable
-from jaraco.classes.properties import classproperty
 
 from musify.base import Result
 from musify.exception import MusifyError
@@ -25,7 +24,7 @@ from musify.logger import STAT
 from musify.processors.base import Filter
 from musify.processors.filter import FilterDefinedList
 from musify.processors.sort import ItemSorter
-from musify.utils import align_string, get_max_width, to_collection
+from musify.utils import align_string, get_max_width, to_collection, classproperty
 
 type RestoreTracksType = Iterable[Mapping[str, Any]] | Mapping[str | Path, Mapping[str, Any]]
 

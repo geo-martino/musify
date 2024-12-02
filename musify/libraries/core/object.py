@@ -10,13 +10,13 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Self
 
-from jaraco.classes.properties import classproperty
 from yarl import URL
 
 from musify.base import MusifyItem, HasLength
 from musify.exception import MusifyTypeError
 from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.remote.core.types import RemoteObjectType
+from musify.utils import classproperty
 
 
 class Track(MusifyItem, HasLength, metaclass=ABCMeta):
