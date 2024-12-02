@@ -179,7 +179,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
             self._enrich_with_parent_response(
                 response=response, key=key, parent_key=parent_key, parent_response=parent_response
             )
-            return response[self.items_key]
+            return [item for item in response[self.items_key] if item]
 
         initial_url_key = "next" if response[self.items_key] and response.get("next") else self.url_key
         if not response.get(initial_url_key):
@@ -224,6 +224,7 @@ class SpotifyAPIItems(SpotifyAPIBase, metaclass=ABCMeta):
 
         # assign results back to original response and enrich the child items
         response[self.items_key].extend(item for result in results for item in result[self.items_key])
+        response[self.items_key] = [item for item in response[self.items_key] if item]
         self._enrich_with_parent_response(
             response=response, key=key, parent_key=parent_key, parent_response=parent_response
         )

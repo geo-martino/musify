@@ -55,6 +55,10 @@ Changed
 * Simplified ``dict`` output from :py:class:`.FilterComparers`
 * Field names displayed as lower case in ``dict`` output on relevant :py:class:`.PrettyPrinter` implementations
 
+Fixed
+-----
+* Drop ``null`` responses from Spotify API which cause bugs in execution logic
+
 
 1.1.10
 ======
