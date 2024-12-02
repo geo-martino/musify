@@ -167,7 +167,7 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], HasLengt
         if allow_duplicates or __item not in self.items:
             self.items.append(__item)
 
-    def extend(self, __items: Iterable[T], allow_duplicates: bool = True) -> None:
+    def extend(self, __items: Collection[T], allow_duplicates: bool = True) -> None:
         """Append many items to the items in this collection"""
         if not self._validate_item_type(__items):
             raise MusifyTypeError([type(i).__name__ for i in __items])

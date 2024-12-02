@@ -38,7 +38,7 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 Added
 -----
 * Can now get tags from any :py:class:`.MusifyItem` and set tags on any :py:class:`.LocalTrack`
-  using the :py:class:`.Field` enums
+  using the relevant :py:class:`.Field` enums
 * Equality comparison methods to all implementations of :py:class:`.Filter`
 * :py:class:`.BasicLocalCollection` for creating and managing arbitrary local collections
 * :py:class:`.MusifyEnum` now displayed correctly when outputting to ``json`` on :py:class:`.PrettyPrinter` objects

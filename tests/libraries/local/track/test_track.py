@@ -278,10 +278,27 @@ class TestLocalTrack(MusifyItemTester):
 
         assert len(track.__class__.get_filepaths(path_track_resources)) == 1
 
+    def test_getitem_dunder_method_on_mapped_field(self, track: LocalTrack):
+        assert track[LocalTrackField.TRACK] == track.track_number
+        assert track[LocalTrackField.DISC] == track.disc_number
+        assert track[LocalTrackField.DATE] == track.date
+
     def test_setitem_dunder_method(self, track: LocalTrack):
-        assert track.uri != "new_uri"
-        track["uri"] = "new_uri"
-        assert track.uri == "new_uri"
+        new_uri = "new_uri"
+        assert track.uri != new_uri
+        track["uri"] = new_uri
+        assert track.uri == new_uri
+
+        new_artist = "artist name"
+        assert track.artist != new_artist
+        track[LocalTrackField.ARTIST] = new_artist
+        assert track.artist == new_artist
+
+        # LocalTrackField.TRACK gives back multiple tags, ensure it sets the track_number only
+        new_track_number = track.track_number * 2
+        assert track.track_number != new_track_number
+        track[LocalTrackField.TRACK] = new_track_number
+        assert track.track_number == new_track_number
 
         with pytest.raises(MusifyKeyError):
             track["bad key"] = "value"

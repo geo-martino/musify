@@ -2,7 +2,7 @@
 Processor making comparisons between objects and data types.
 """
 import re
-from collections.abc import Sequence
+from collections.abc import Sequence, Hashable
 from datetime import datetime, date
 from functools import reduce
 from operator import mul
@@ -17,7 +17,7 @@ from musify.types import UnitSequence
 from musify.utils import to_collection
 
 
-class Comparer(DynamicProcessor):
+class Comparer(DynamicProcessor, Hashable):
     """
     Compares an item or object with another item, object or a given set of expected values to find a match.
 

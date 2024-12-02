@@ -245,6 +245,3 @@ class FilterComposite[T](Filter[T], Collection[Filter], metaclass=ABCMeta):
 
     def __contains__(self, item: Any):
         return item in self.filters
-
-    def __eq__(self, item: Any):
-        return isinstance(item, self.__class__) and self.filters == item.filters

@@ -3,13 +3,36 @@ from pathlib import Path
 
 import pytest
 
-from musify.libraries.local.collection import LocalFolder, LocalAlbum, LocalArtist, LocalGenres
+from musify.libraries.local.collection import BasicLocalCollection, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from musify.libraries.local.exception import LocalCollectionError
 from musify.libraries.local.track import LocalTrack
 from tests.libraries.local.track.testers import LocalCollectionTester
 from tests.libraries.local.track.utils import random_track, random_tracks
 from tests.libraries.local.utils import path_track_resources, path_track_all
 from tests.utils import random_str
+
+
+class TestBasicLocalCollection(LocalCollectionTester):
+
+    @pytest.fixture
+    def collection(self, tracks: list[LocalTrack]) -> BasicLocalCollection:
+        coll = BasicLocalCollection(name=random_str(), tracks=copy(tracks))
+        # needed to ensure __setitem__ check passes
+        coll.tracks.append(random_track(cls=tracks[0].__class__))
+        return coll
+
+    @pytest.fixture(scope="class")
+    def tracks(self) -> list[LocalTrack]:
+        """
+        Yield a list of random LocalTracks with certain properties set to
+        pass the filter test for this :py:class:`LocalCollection`
+        """
+        return random_tracks(10)
+
+    def test_properties(self, tracks: list[LocalTrack], collection: BasicLocalCollection):
+        assert all(track in collection for track in tracks)
+
+
 
 
 class TestLocalFolder(LocalCollectionTester):

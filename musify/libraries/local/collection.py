@@ -180,12 +180,6 @@ class BasicLocalCollection[T: LocalTrack](LocalCollection[T]):
 
     __slots__ = ("_name", "_tracks")
 
-    @staticmethod
-    def _validate_item_type(items: Any | Iterable[Any]) -> bool:
-        if isinstance(items, Iterable):
-            return all(isinstance(item, MusifyItem) for item in items)
-        return isinstance(items, MusifyItem)
-
     @property
     def name(self):
         """The name of this collection"""
