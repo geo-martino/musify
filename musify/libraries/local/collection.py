@@ -12,6 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Self
 
+from aiorequestful.types import UnitCollection, UnitIterable
+
 from musify.field import Fields, TagField, TagFields
 from musify.file.exception import UnexpectedPathError
 from musify.libraries.core.collection import MusifyCollection
@@ -22,7 +24,6 @@ from musify.libraries.local.track import LocalTrack, SyncResultTrack, load_track
 from musify.libraries.local.track.field import LocalTrackField
 from musify.libraries.remote.core.wrangle import RemoteDataWrangler
 from musify.logger import MusifyLogger
-from musify.types import UnitCollection, UnitIterable
 from musify.utils import get_most_common_values, to_collection, align_string, get_max_width
 
 _max_str = "z" * 50

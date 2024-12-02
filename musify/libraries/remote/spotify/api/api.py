@@ -11,7 +11,7 @@ from aiorequestful.auth.oauth2 import AuthorisationCodeFlow
 from aiorequestful.auth.utils import AuthRequest
 from aiorequestful.cache.backend.base import ResponseCache, ResponseRepository
 from aiorequestful.cache.session import CachedSession
-from aiorequestful.types import URLInput
+from aiorequestful.types import UnitIterable, URLInput
 from yarl import URL
 
 from musify.libraries.remote.core.exception import APIError
@@ -20,7 +20,6 @@ from musify.libraries.remote.spotify.api.item import SpotifyAPIItems
 from musify.libraries.remote.spotify.api.misc import SpotifyAPIMisc
 from musify.libraries.remote.spotify.api.playlist import SpotifyAPIPlaylists
 from musify.libraries.remote.spotify.wrangle import SpotifyDataWrangler
-from musify.types import UnitIterable
 
 
 class SpotifyAPI(SpotifyAPIMisc, SpotifyAPIItems, SpotifyAPIPlaylists):

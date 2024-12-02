@@ -11,13 +11,13 @@ import yaml
 from _pytest.fixtures import SubRequest
 # noinspection PyProtectedMember
 from _pytest.logging import LogCaptureHandler, _remove_ansi_escape_sequences
+from aiorequestful.types import UnitCollection
 
 from musify import MODULE_ROOT
 from musify.libraries.remote.core.types import RemoteObjectType
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.wrangle import SpotifyDataWrangler
 from musify.logger import MusifyLogger
-from musify.types import UnitCollection
 from musify.utils import to_collection
 from tests.libraries.remote.core.utils import ALL_ITEM_TYPES
 from tests.libraries.remote.spotify.api.mock import SpotifyMock

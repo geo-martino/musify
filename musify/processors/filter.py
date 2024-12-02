@@ -7,10 +7,11 @@ from collections.abc import Collection, Sequence, Mapping
 from pathlib import Path
 from typing import Any, Self
 
+from aiorequestful.types import UnitCollection
+
 from musify.base import MusifyObject
 from musify.processors.base import Filter, FilterComposite
 from musify.processors.compare import Comparer
-from musify.types import UnitCollection
 
 
 class FilterDefinedList[T: str | Path | MusifyObject](Filter[T], Collection[T]):

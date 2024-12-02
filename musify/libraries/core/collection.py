@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, SupportsIndex, Self
 
+from aiorequestful.types import UnitSequence
 from yarl import URL
 
 from musify.base import MusifyObject, MusifyItem, HasLength
@@ -17,7 +18,6 @@ from musify.field import Field
 from musify.file.base import File
 from musify.libraries.remote.core import RemoteResponse
 from musify.processors.sort import ShuffleMode, ItemSorter
-from musify.types import UnitSequence
 
 type ItemGetterTypes = str | URL | MusifyItem | Path | File | RemoteResponse
 

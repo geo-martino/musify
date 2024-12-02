@@ -7,12 +7,12 @@ from dataclasses import dataclass
 from typing import Any
 
 import mutagen
+from aiorequestful.types import UnitIterable
 
 from musify.base import Result
 from musify.libraries.core.object import Track
 from musify.libraries.local.track._tags.base import TagProcessor
 from musify.libraries.local.track.field import LocalTrackField as Tags
-from musify.types import UnitIterable
 from musify.utils import to_collection
 
 

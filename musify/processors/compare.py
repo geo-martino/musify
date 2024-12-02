@@ -8,12 +8,13 @@ from functools import reduce
 from operator import mul
 from typing import Any
 
+from aiorequestful.types import UnitSequence
+
 from musify.base import MusifyItem
 from musify.field import Field
 from musify.processors.base import DynamicProcessor, dynamicprocessormethod
 from musify.processors.exception import ComparerError
 from musify.processors.time import TimeMapper
-from musify.types import UnitSequence
 from musify.utils import to_collection
 
 

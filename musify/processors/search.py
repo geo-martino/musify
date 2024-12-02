@@ -9,6 +9,8 @@ from collections.abc import Mapping, Sequence, Iterable, Collection, Awaitable
 from dataclasses import dataclass, field
 from typing import Any, Self
 
+from aiorequestful.types import UnitIterable
+
 from musify.base import MusifyObject, MusifyItemSettable, Result
 from musify.exception import MusifyAttributeError
 from musify.field import TagField, TagFields as Tag
@@ -20,7 +22,6 @@ from musify.logger import MusifyLogger
 from musify.logger import REPORT
 from musify.processors.base import Processor
 from musify.processors.match import ItemMatcher
-from musify.types import UnitIterable
 from musify.utils import align_string, get_max_width
 
 
