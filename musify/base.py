@@ -7,7 +7,7 @@ from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from typing import Any
 
-from musify.field import TagField, Field
+from musify.field import TagField
 from musify.printer import AttributePrinter
 
 

@@ -2,7 +2,6 @@
 Core abstract classes for the :py:mod:`Local` module.
 """
 from abc import ABCMeta
-from pathlib import Path
 
 from musify.base import MusifyItemSettable
 from musify.file.base import File

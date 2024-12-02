@@ -2,11 +2,10 @@
 Generic utility functions and classes which can be used throughout the entire package.
 """
 import re
+import unicodedata
 from collections import Counter
 from collections.abc import Iterable, Collection, MutableSequence, Mapping, MutableMapping
 from typing import Any, TypeVar
-
-import unicodedata
 
 from musify.exception import MusifyTypeError, MusifyImportError
 from musify.types import Number

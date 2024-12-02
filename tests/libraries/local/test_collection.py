@@ -33,8 +33,6 @@ class TestBasicLocalCollection(LocalCollectionTester):
         assert all(track in collection for track in tracks)
 
 
-
-
 class TestLocalFolder(LocalCollectionTester):
 
     name = "folder name"

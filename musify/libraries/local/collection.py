@@ -14,7 +14,6 @@ from typing import Any, Self
 
 from musify.field import Fields, TagField, TagFields
 from musify.file.exception import UnexpectedPathError
-from musify.libraries.collection import BasicCollection
 from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.core.object import Track, Library, Folder, Album, Artist, Genre
 from musify.libraries.local.base import LocalItem
@@ -198,7 +197,6 @@ class BasicLocalCollection[T: LocalTrack](LocalCollection[T]):
         super().__init__(remote_wrangler=remote_wrangler)
         self._name = name
         self._tracks = to_collection(tracks, list)
-
 
 
 class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], metaclass=ABCMeta):
