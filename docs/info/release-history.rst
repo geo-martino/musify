@@ -58,6 +58,7 @@ Changed
 Fixed
 -----
 * Drop ``null`` responses from Spotify API which cause bugs in execution logic
+* Bug in :py:meth:`.LocalLibrary.load_tracks` that would cause it to store ``None`` when the track could not be loaded
 
 
 1.1.10

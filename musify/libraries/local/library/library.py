@@ -325,7 +325,8 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
             unit="tracks",
             total=len(self._track_paths)
         )
-        self._tracks = [await self.load_track(path) for path in bar]
+        tracks = (await self.load_track(path) for path in bar)
+        self._tracks = [track for track in tracks if track is not None]
 
         self._log_errors("Could not load the following tracks")
         self.logger.debug(f"Load {self.name} tracks: DONE\n")
