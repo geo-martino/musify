@@ -1,6 +1,7 @@
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
+from copy import deepcopy
 from pathlib import Path
-from random import sample, shuffle, randrange
+from random import sample, shuffle, randrange, choice
 
 import pytest
 
@@ -8,6 +9,7 @@ from musify.field import TagFields
 from musify.file.path_mapper import PathStemMapper, PathMapper
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.local.track.field import LocalTrackField
+from musify.processors.base import Filter
 from musify.processors.compare import Comparer
 from musify.processors.filter import FilterDefinedList, FilterComparers, FilterIncludeExclude
 from musify.processors.filter_matcher import FilterMatcher
@@ -23,7 +25,9 @@ def get_path(track: LocalTrack) -> Path:
 
 
 class FilterTester(PrettyPrinterTester, metaclass=ABCMeta):
-    pass
+    @abstractmethod
+    def test_equality(self, obj: Filter):
+        raise NotImplementedError
 
 
 class TestFilterDefinedList(FilterTester):
@@ -31,6 +35,15 @@ class TestFilterDefinedList(FilterTester):
     @pytest.fixture
     def obj(self) -> FilterDefinedList:
         return FilterDefinedList(values=[random_str(30, 50) for _ in range(20)])
+
+    def test_equality(self, obj: FilterDefinedList):
+        assert obj == deepcopy(obj)
+
+        new_filter = FilterDefinedList(values=deepcopy(obj.values))
+        assert obj == new_filter
+
+        new_filter.values = deepcopy(list(obj.values)[len(obj.values) // 2])
+        assert obj != new_filter
 
     def test_filter(self):
         values = [random_str(30, 50) for _ in range(20)]
@@ -73,6 +86,16 @@ class TestFilterComparers(FilterTester):
             track.artist = "artist name"
 
         return tracks
+
+    def test_equality(self, obj: FilterComparers):
+        obj.match_all = choice([True, False])
+        assert obj == deepcopy(obj)
+
+        new_filter = FilterComparers(comparers=deepcopy(obj.comparers), match_all=obj.match_all)
+        assert obj == new_filter
+
+        new_filter.match_all = not obj.match_all
+        assert obj != new_filter
 
     def test_filter(self, comparers: list[Comparer], tracks: list[LocalTrack]):
         assert FilterComparers().process(tracks) == tracks
@@ -142,6 +165,16 @@ class TestFilterIncludeExclude(FilterTester):
             include=FilterDefinedList(include_values),
             exclude=FilterDefinedList(include_values[:10] + [random_str(30, 50) for _ in range(20)]),
         )
+
+    def test_equality(self, obj: FilterIncludeExclude):
+        assert obj == deepcopy(obj)
+
+        new_filter = FilterIncludeExclude(include=deepcopy(obj.include), exclude=deepcopy(obj.exclude))
+        assert obj == new_filter
+
+        new_filter.include = deepcopy(obj.exclude)
+        new_filter.exclude = deepcopy(obj.include)
+        assert obj != new_filter
 
     def test_filter(self, obj: FilterIncludeExclude):
         assert obj(obj.include.values) == obj.include.values[10:20]
@@ -218,6 +251,20 @@ class TestFilterMatcher(FilterTester):
     def path_mapper(self) -> PathStemMapper:
         """Yields a :py:class:`PathMapper` that can map paths from the test playlist files"""
         yield PathStemMapper(stem_map={"../": path_resources}, available_paths=path_track_all)
+
+    def test_equality(self, obj: FilterMatcher):
+        assert obj == deepcopy(obj)
+
+        new_filter = FilterMatcher(
+            comparers=deepcopy(obj.comparers),
+            include=deepcopy(obj.include),
+            exclude=deepcopy(obj.exclude)
+        )
+        assert obj == new_filter
+
+        new_filter.include = deepcopy(obj.exclude)
+        new_filter.exclude = deepcopy(obj.include)
+        assert obj != new_filter
 
     def test_filter_empty(self, tracks_include: list[LocalTrack], tracks_exclude: list[LocalTrack]):
         assert FilterMatcher().process(values=tracks_include) == tracks_include

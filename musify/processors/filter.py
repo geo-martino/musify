@@ -7,10 +7,11 @@ from collections.abc import Collection, Sequence, Mapping
 from pathlib import Path
 from typing import Any, Self
 
+from aiorequestful.types import UnitCollection
+
 from musify.base import MusifyObject
 from musify.processors.base import Filter, FilterComposite
 from musify.processors.compare import Comparer
-from musify.types import UnitCollection
 
 
 class FilterDefinedList[T: str | Path | MusifyObject](Filter[T], Collection[T]):
@@ -50,6 +51,9 @@ class FilterDefinedList[T: str | Path | MusifyObject](Filter[T], Collection[T]):
 
     def __contains__(self, item: Any):
         return item in self.values
+
+    def __eq__(self, item: Any):
+        return isinstance(item, self.__class__) and self.values == item.values
 
 
 class FilterComparers[T: str | MusifyObject](Filter[T]):
@@ -116,7 +120,17 @@ class FilterComparers[T: str | MusifyObject](Filter[T]):
         return matches
 
     def as_dict(self) -> dict[str, Any]:
-        return {"comparers": self.comparers, "match_all": self.match_all}
+        if all(not sub_filter.ready for _, sub_filter in self.comparers.values()):
+            comparers = list(self.comparers.keys())
+        else:
+            comparers = self.comparers
+        return {"comparers": comparers, "match_all": self.match_all}
+
+    def __eq__(self, item: Any):
+        return isinstance(item, self.__class__) and all((
+            self.comparers == item.comparers,
+            self.match_all == item.match_all
+        ))
 
 
 ###########################################################################
@@ -144,3 +158,9 @@ class FilterIncludeExclude[T: Any, U: Filter, V: Filter](FilterComposite[T]):
 
     def as_dict(self) -> dict[str, Any]:
         return {"include": self.include, "exclude": self.exclude}
+
+    def __eq__(self, item: Any):
+        return isinstance(item, self.__class__) and all((
+            self.include == item.include,
+            self.exclude == item.exclude
+        ))

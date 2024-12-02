@@ -9,6 +9,8 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
+from aiorequestful.types import UnitCollection, UnitIterable
+
 from musify.base import Result
 from musify.exception import MusifyError
 from musify.file.path_mapper import PathMapper, PathStemMapper
@@ -22,8 +24,7 @@ from musify.logger import STAT
 from musify.processors.base import Filter
 from musify.processors.filter import FilterDefinedList
 from musify.processors.sort import ItemSorter
-from musify.types import UnitCollection, UnitIterable
-from musify.utils import align_string, get_max_width, to_collection
+from musify.utils import align_string, get_max_width, to_collection, classproperty
 
 type RestoreTracksType = Iterable[Mapping[str, Any]] | Mapping[str | Path, Mapping[str, Any]]
 
@@ -75,9 +76,8 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     def name(self, value: str):
         self._name = value
 
-    # noinspection PyPropertyDefinition
-    @classmethod
-    @property
+    # noinspection PyMethodParameters
+    @classproperty
     def source(cls) -> str:
         """The type of local library loaded"""
         return cls.__name__.replace("Library", "")

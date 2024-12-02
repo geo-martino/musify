@@ -115,6 +115,14 @@ class FilterMatcher[T: Any, U: Filter, V: Filter, X: FilterComparers](FilterComp
             and any(item[tag_name] in tag_values for tag_name in tag_names if hasattr(item, tag_name))
         )
 
+    def __eq__(self, item: Any):
+        return isinstance(item, self.__class__) and all((
+            self.comparers == item.comparers,
+            self.include == item.include,
+            self.exclude == item.exclude,
+            self.group_by == item.group_by,
+        ))
+
     def as_dict(self):
         return {
             "include": self.include,

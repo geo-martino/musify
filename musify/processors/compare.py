@@ -2,22 +2,23 @@
 Processor making comparisons between objects and data types.
 """
 import re
-from collections.abc import Sequence
+from collections.abc import Sequence, Hashable
 from datetime import datetime, date
 from functools import reduce
 from operator import mul
 from typing import Any
+
+from aiorequestful.types import UnitSequence
 
 from musify.base import MusifyItem
 from musify.field import Field
 from musify.processors.base import DynamicProcessor, dynamicprocessormethod
 from musify.processors.exception import ComparerError
 from musify.processors.time import TimeMapper
-from musify.types import UnitSequence
 from musify.utils import to_collection
 
 
-class Comparer(DynamicProcessor):
+class Comparer(DynamicProcessor, Hashable):
     """
     Compares an item or object with another item, object or a given set of expected values to find a match.
 
@@ -271,7 +272,7 @@ class Comparer(DynamicProcessor):
     def _matches_reg_ex(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
         if value is None or expected is None or expected[0] is None:
             return False
-        return bool(re.search(str(expected[0]), value))
+        return bool(re.search(str(expected[0]), str(value)))
 
     @dynamicprocessormethod
     def _matches_reg_ex_ignore_case(self, value: Any | None, expected: Sequence[Any] | None) -> bool:
@@ -283,6 +284,19 @@ class Comparer(DynamicProcessor):
         return {
             "condition": self.condition,
             "expected": self.expected,
-            "field": self.field.name if self.field else None,
+            "field": self.field.name.lower() if self.field else None,
             "reference_required": self.reference_required,
         }
+
+    def __hash__(self):
+        return hash((
+            self.condition, tuple(self.expected or ()), self.field or "", self.reference_required
+        ))
+
+    def __eq__(self, item: Any):
+        return isinstance(item, self.__class__) and all((
+            self.condition == item.condition,
+            self.expected == item.expected,
+            self.field == item.field,
+            self.reference_required == item.reference_required,
+        ))

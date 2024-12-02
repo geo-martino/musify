@@ -17,7 +17,7 @@ from musify.libraries.remote.core.types import RemoteObjectType
 from tests.libraries.local.utils import path_track_all, path_track_img, path_track_resources
 from tests.libraries.remote.spotify.utils import random_uri
 from tests.testers import MusifyItemTester
-from tests.utils import path_txt
+from tests.utils import path_txt, random_str
 
 try:
     from PIL import Image
@@ -278,16 +278,71 @@ class TestLocalTrack(MusifyItemTester):
 
         assert len(track.__class__.get_filepaths(path_track_resources)) == 1
 
+    def test_getitem_dunder_method_on_mapped_field(self, track: LocalTrack):
+        assert track[LocalTrackField.TRACK] == track.track_number
+        assert track[LocalTrackField.DISC] == track.disc_number
+        assert track[LocalTrackField.DATE] == track.date
+
     def test_setitem_dunder_method(self, track: LocalTrack):
-        assert track.uri != "new_uri"
-        track["uri"] = "new_uri"
-        assert track.uri == "new_uri"
+        new_uri = "new_uri"
+        assert track.uri != new_uri
+        track["uri"] = new_uri
+        assert track.uri == new_uri
+
+        new_artist = "artist name"
+        assert track.artist != new_artist
+        track[LocalTrackField.ARTIST] = new_artist
+        assert track.artist == new_artist
+
+        # LocalTrackField.TRACK gives back multiple tags, ensure it sets the track_number only
+        new_track_number = track.track_number * 2
+        assert track.track_number != new_track_number
+        track[LocalTrackField.TRACK] = new_track_number
+        assert track.track_number == new_track_number
 
         with pytest.raises(MusifyKeyError):
             track["bad key"] = "value"
 
         with pytest.raises(AttributeError):
             track["name"] = "cannot set name"
+
+    async def test_move(self, track: LocalTrack, tmp_path: Path):
+        old_path = track.path
+        new_path = tmp_path.joinpath("folder", "subfolder", track.path.name)
+        assert old_path != new_path
+        assert old_path.is_file()
+        assert not new_path.is_file()
+
+        await track.move(new_path)
+
+        assert track.path == new_path
+        assert track._reader.file.filename == str(new_path)
+        assert track._writer.file.filename == str(new_path)
+
+        assert not old_path.is_file()
+        assert new_path.is_file()
+
+    async def test_rename(self, track: LocalTrack, tmp_path: Path):
+        old_path = track.path
+        new_path = tmp_path.parent.joinpath("folder", "subfolder", random_str()).with_suffix(track.ext)
+        expected = old_path.with_stem(new_path.stem)
+
+        assert old_path != new_path
+        assert old_path.parent != new_path.parent
+        assert old_path.is_file()
+        assert not new_path.is_file()
+        assert not expected.is_file()
+
+        await track.rename(new_path)
+
+        assert track.path != new_path
+        assert track.path == expected
+        assert track._reader.file.filename == str(expected)
+        assert track._writer.file.filename == str(expected)
+
+        assert not old_path.is_file()
+        assert not new_path.is_file()
+        assert expected.is_file()
 
     def test_merge(self, track: LocalTrack, item_modified: Track):
         assert track.title != item_modified.title
@@ -397,6 +452,9 @@ class TestLocalTrackWriter:
         assert not actual.tag_map.compilation or actual.compilation == expected.compilation, "compilation"
         assert not actual.tag_map.images or actual.has_image == expected.has_image, "images"
 
+    ###########################################################################
+    ## Clear tags
+    ###########################################################################
     async def test_clear_tags_dry_run(self, track: LocalTrack):
         track_update = track
         track_original = copy(track)
@@ -447,6 +505,9 @@ class TestLocalTrackWriter:
         assert track.has_uri == track_original.has_uri
         assert not track_update.has_image
 
+    ###########################################################################
+    ## Update standard tags
+    ###########################################################################
     @staticmethod
     def get_update_tags_test_track(track: LocalTrack) -> tuple[LocalTrack, LocalTrack, str]:
         """Load track and modify its tags for update tags tests"""
@@ -568,6 +629,9 @@ class TestLocalTrackWriter:
         assert result.saved
         assert set(result.updated) == tags_to_update
 
+    ###########################################################################
+    ## Update images
+    ###########################################################################
     @staticmethod
     def get_update_image_test_track(track: LocalTrack) -> tuple[LocalTrack, LocalTrack]:
         """Load track and modify its tags for update tags tests"""
@@ -626,3 +690,51 @@ class TestLocalTrackWriter:
 
         result = await track_update.save(tags=LocalTrackField.IMAGES, replace=True, dry_run=False)
         self.assert_update_image_result(track=track_update, image=open_image(path_track_img), result=result)
+
+    ###########################################################################
+    ## Deferred file move
+    ###########################################################################
+    @pytest.fixture
+    def old_path(self, track: LocalTrack) -> Path:
+        return track.path
+
+    @pytest.fixture
+    def new_path(self, track: LocalTrack, tmp_path: Path) -> Path:
+        new_path = tmp_path.joinpath("folder", "subfolder", random_str()).with_suffix(track.ext)
+
+        assert track.path.is_file()
+        assert not new_path.is_file()
+        assert track.path != new_path
+
+        return new_path
+
+    @pytest.fixture
+    def track_with_staged_path(self, track: LocalTrack, old_path: Path, new_path: Path) -> LocalTrack:
+        track.path = new_path
+        assert track.path == old_path
+        assert old_path.is_file()
+        assert not new_path.is_file()
+
+        return track
+
+    async def test_move_file_on_save_dry_run(self, track_with_staged_path: LocalTrack, old_path: Path, new_path: Path):
+        tags = choice([LocalTrackField.PATH, LocalTrackField.FOLDER, LocalTrackField.FILENAME, LocalTrackField.ALL])
+        result = await track_with_staged_path.save(tags=tags, replace=choice([True, False]), dry_run=True)
+
+        assert track_with_staged_path.path == old_path
+        assert old_path.is_file()
+        assert not new_path.is_file()
+
+        assert not result.saved
+        assert set(result.updated) == {LocalTrackField.PATH}
+
+    async def test_move_file_on_save(self, track_with_staged_path: LocalTrack, old_path: Path, new_path: Path):
+        tags = choice([LocalTrackField.PATH, LocalTrackField.FOLDER, LocalTrackField.FILENAME, LocalTrackField.ALL])
+        result = await track_with_staged_path.save(tags=tags, replace=choice([True, False]), dry_run=False)
+
+        assert track_with_staged_path.path == new_path
+        assert not old_path.is_file()
+        assert new_path.is_file()
+
+        assert result.saved
+        assert set(result.updated) == {LocalTrackField.PATH}

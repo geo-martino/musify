@@ -8,12 +8,13 @@ from typing import Any
 from urllib.parse import quote
 from webbrowser import open as webopen
 
+from aiorequestful.types import UnitIterable
+
 from musify.base import MusifyItem, MusifyObject
 from musify.exception import MusifyEnumError
 from musify.field import Field, Fields
 from musify.libraries.core.collection import MusifyCollection
 from musify.processors.base import InputProcessor
-from musify.types import UnitIterable
 from musify.utils import to_collection
 
 

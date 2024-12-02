@@ -12,6 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Self
 
+from aiorequestful.types import UnitCollection, UnitIterable
+
 from musify.field import Fields, TagField, TagFields
 from musify.file.exception import UnexpectedPathError
 from musify.libraries.core.collection import MusifyCollection
@@ -22,7 +24,6 @@ from musify.libraries.local.track import LocalTrack, SyncResultTrack, load_track
 from musify.libraries.local.track.field import LocalTrackField
 from musify.libraries.remote.core.wrangle import RemoteDataWrangler
 from musify.logger import MusifyLogger
-from musify.types import UnitCollection, UnitIterable
 from musify.utils import get_most_common_values, to_collection, align_string, get_max_width
 
 _max_str = "z" * 50
@@ -173,6 +174,30 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
 
         if isinstance(self, Library | LocalCollection):
             self.logger.print_line()
+
+
+class BasicLocalCollection[T: LocalTrack](LocalCollection[T]):
+
+    __slots__ = ("_name", "_tracks")
+
+    @property
+    def name(self):
+        """The name of this collection"""
+        return self._name
+
+    @property
+    def tracks(self) -> list[T]:
+        return self._tracks
+
+    @property
+    def length(self):
+        lengths = {getattr(item, "length", None) for item in self.items}
+        return sum({length for length in lengths if length}) if lengths else None
+
+    def __init__(self, name: str, tracks: Collection[T], remote_wrangler: RemoteDataWrangler = None):
+        super().__init__(remote_wrangler=remote_wrangler)
+        self._name = name
+        self._tracks = to_collection(tracks, list)
 
 
 class LocalCollectionFiltered[T: LocalItem](LocalCollection[T], metaclass=ABCMeta):

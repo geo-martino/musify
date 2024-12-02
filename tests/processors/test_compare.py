@@ -1,4 +1,6 @@
+from copy import deepcopy
 from datetime import datetime, date, timedelta
+from random import choice
 
 import pytest
 
@@ -49,6 +51,21 @@ class TestComparer(PrettyPrinterTester):
         assert comparer._expected == [".mp3", ".flac"]
         assert comparer.condition == "is"
         assert comparer._processor_method == comparer._is
+
+    def test_equality(self, obj: Comparer):
+        assert obj == deepcopy(obj)
+
+        new_filter = Comparer(
+            condition=obj.condition,
+            expected=deepcopy(obj.expected),
+            field=obj.field,
+            reference_required=obj.reference_required
+        )
+        assert obj == new_filter
+
+        while new_filter.field == obj.field:
+            new_filter.field = choice(obj.field.all())
+        assert obj != new_filter
 
     def test_compare_with_reference(self):
         track_1 = random_track()

@@ -1,19 +1,11 @@
 """
 All core type hints to use throughout the entire package.
 """
-from collections.abc import Iterable, Sequence, MutableSequence, Collection
+from collections.abc import Iterable
 from enum import IntEnum
 from typing import Self, Any
 
 from musify.exception import MusifyEnumError
-
-type UnitIterable[T] = T | Iterable[T]
-type UnitCollection[T] = T | Collection[T]
-type UnitSequence[T] = T | Sequence[T]
-type UnitMutableSequence[T] = T | MutableSequence[T]
-type UnitList[T] = T | list[T]
-
-Number = int | float
 
 
 class MusifyEnum(IntEnum):

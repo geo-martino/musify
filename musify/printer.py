@@ -9,10 +9,10 @@ from datetime import datetime, date
 from pathlib import Path
 from typing import Any
 
-from aiorequestful.types import ImmutableJSON, JSON, JSON_VALUE
+from aiorequestful.types import UnitIterable, ImmutableJSON, JSON, JSON_VALUE
 from yarl import URL
 
-from musify.types import UnitIterable
+from musify.types import MusifyEnum
 from musify.utils import to_collection
 
 
@@ -86,6 +86,8 @@ class PrettyPrinter(metaclass=ABCMeta):
             return cls._to_json(value, pool=pool)
         elif isinstance(value, PrettyPrinter):
             return value._to_json(value._json_attributes(), pool=pool)
+        elif isinstance(value, MusifyEnum):
+            return value.name.lower()
         elif isinstance(value, (datetime, date, Path, URL)):
             return str(value)
 

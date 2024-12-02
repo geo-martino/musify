@@ -200,6 +200,10 @@ class Filter[T](Processor, metaclass=ABCMeta):
     def __bool__(self):
         return self.ready
 
+    @abstractmethod
+    def __eq__(self, item: Any):
+        raise NotImplementedError
+
 
 class FilterComposite[T](Filter[T], Collection[Filter], metaclass=ABCMeta):
     """Composite filter which filters based on many :py:class:`Filter` objects"""

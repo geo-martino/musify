@@ -8,11 +8,13 @@ from datetime import datetime
 from random import shuffle
 from typing import Any
 
+from aiorequestful.types import UnitSequence, UnitIterable, Number
+
 from musify.base import MusifyItem
 from musify.field import Field
 from musify.processors.base import Processor
 from musify.processors.exception import SorterProcessorError
-from musify.types import UnitSequence, UnitIterable, Number, MusifyEnum
+from musify.types import MusifyEnum
 from musify.utils import flatten_nested, strip_ignore_words, to_collection, limit_value
 
 
@@ -235,7 +237,7 @@ class ItemSorter(Processor):
     def as_dict(self):
         fields = None
         if isinstance(self.sort_fields, Mapping):
-            fields = {field.name: "desc" if r else "asc" for field, r in self.sort_fields.items()}
+            fields = {field.name.lower(): "desc" if r else "asc" for field, r in self.sort_fields.items()}
 
         return {
             "sort_fields": fields,

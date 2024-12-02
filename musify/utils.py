@@ -2,14 +2,27 @@
 Generic utility functions and classes which can be used throughout the entire package.
 """
 import re
+import unicodedata
 from collections import Counter
 from collections.abc import Iterable, Collection, MutableSequence, Mapping, MutableMapping
-from typing import Any
+from typing import Any, TypeVar
 
-import unicodedata
+from aiorequestful.types import Number
 
 from musify.exception import MusifyTypeError, MusifyImportError
-from musify.types import Number
+
+
+###########################################################################
+## Properties
+###########################################################################
+# noinspection PyPep8Naming
+class classproperty:
+    """Set an immutable class property with this decorator"""
+    def __init__(self, func):
+        self.fget = func
+
+    def __get__(self, instance, owner):
+        return self.fget(owner)
 
 
 ###########################################################################
@@ -169,7 +182,11 @@ def limit_value(value: Number, floor: Number = 1, ceil: Number = 50) -> Number:
 ###########################################################################
 ## Collection
 ###########################################################################
-def to_collection[T: (list, set, tuple)](data: Any, cls: type[T] = tuple) -> T | None:
+UT = TypeVar("UT")
+CollT = UT | list[UT] | tuple[UT] | set[UT]
+
+
+def to_collection[T: Any](data: T | CollT, cls: type[CollT] = tuple) -> T | CollT | None:
     """
     Safely turn any object into a collection of a given type ``T``.
 

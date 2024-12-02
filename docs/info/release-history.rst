@@ -32,6 +32,30 @@ The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
 
+1.2.0
+=====
+
+Added
+-----
+* Can now get tags from any :py:class:`.MusifyItem` and set tags on any :py:class:`.LocalTrack`
+  using the relevant :py:class:`.Field` enums
+* Equality comparison methods to all implementations of :py:class:`.Filter`
+* :py:class:`.BasicLocalCollection` for creating and managing arbitrary local collections
+* :py:class:`.MusifyEnum` now displayed correctly when outputting to ``json`` on :py:class:`.PrettyPrinter` objects
+* :py:meth:`.LocalTrack.move` and :py:meth:`.LocalTrack.rename` methods to handle moving the file on the disk.
+* Set the ``path`` and ``filename`` properties on a :py:class:`.LocalTrack` to defer the movement of a file on the disk.
+  Setting a new path in this way does not immediately move a file.
+  Instead, the file will be moved when :py:meth:`.LocalTrack.save` is called with a ``path`` type
+  tag field as an argument.
+
+Changed
+-------
+* Track number zero fill amount is now calculated from the track total value
+  when writing track tags on :py:class:`.LocalTrack`
+* Simplified ``dict`` output from :py:class:`.FilterComparers`
+* Field names displayed as lower case in ``dict`` output on relevant :py:class:`.PrettyPrinter` implementations
+
+
 1.1.10
 ======
 

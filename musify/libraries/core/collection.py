@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, SupportsIndex, Self
 
+from aiorequestful.types import UnitSequence
 from yarl import URL
 
 from musify.base import MusifyObject, MusifyItem, HasLength
@@ -17,7 +18,6 @@ from musify.field import Field
 from musify.file.base import File
 from musify.libraries.remote.core import RemoteResponse
 from musify.processors.sort import ShuffleMode, ItemSorter
-from musify.types import UnitSequence
 
 type ItemGetterTypes = str | URL | MusifyItem | Path | File | RemoteResponse
 
@@ -167,7 +167,7 @@ class MusifyCollection[T: MusifyItem](MusifyObject, MutableSequence[T], HasLengt
         if allow_duplicates or __item not in self.items:
             self.items.append(__item)
 
-    def extend(self, __items: Iterable[T], allow_duplicates: bool = True) -> None:
+    def extend(self, __items: Collection[T], allow_duplicates: bool = True) -> None:
         """Append many items to the items in this collection"""
         if not self._validate_item_type(__items):
             raise MusifyTypeError([type(i).__name__ for i in __items])

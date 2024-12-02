@@ -79,8 +79,13 @@ class MusifyItem(MusifyObject, metaclass=ABCMeta):
     def __ne__(self, item: MusifyItem):
         return not self.__eq__(item)
 
-    def __getitem__(self, key: str) -> Any:
+    def __getitem__(self, key: str | TagField) -> Any:
         """Get the value of a given attribute key"""
+        if isinstance(key, TagField):
+            try:
+                key = next(iter(sorted(key.to_tag())))
+            except StopIteration:
+                key = key.name.lower()
         return getattr(self, key)
 
 

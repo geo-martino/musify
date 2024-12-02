@@ -6,7 +6,9 @@ from collections.abc import Sequence
 from dataclasses import field, dataclass
 from typing import Self
 
-from musify.types import UnitIterable, MusifyEnum
+from aiorequestful.types import UnitIterable
+
+from musify.types import MusifyEnum
 
 
 class Field(MusifyEnum):

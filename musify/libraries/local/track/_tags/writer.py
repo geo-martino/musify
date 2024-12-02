@@ -2,17 +2,17 @@
 Implements all functionality pertaining to writing and deleting metadata/tags/properties for a :py:class:`LocalTrack`.
 """
 from abc import ABCMeta, abstractmethod
-from collections.abc import Mapping, Collection, Callable
+from collections.abc import Mapping, Collection, Callable, MutableMapping
 from dataclasses import dataclass
 from typing import Any
 
 import mutagen
+from aiorequestful.types import UnitIterable
 
 from musify.base import Result
 from musify.libraries.core.object import Track
 from musify.libraries.local.track._tags.base import TagProcessor
 from musify.libraries.local.track.field import LocalTrackField as Tags
-from musify.types import UnitIterable
 from musify.utils import to_collection
 
 
@@ -22,7 +22,7 @@ class SyncResultTrack(Result):
     #: Were changes to the file on the disk made.
     saved: bool
     #: Map of the tag updated and the index of the condition it satisfied to be updated.
-    updated: Mapping[Tags, int]
+    updated: MutableMapping[Tags, int]
 
 
 class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
@@ -114,6 +114,8 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         tags: set[Tags] = to_collection(tags, set)
         if Tags.ALL in tags:
             tags = set(Tags.all(only_tags=True))
+        else:
+            tags = {tag for tag in tags if tag in set(Tags.all(only_tags=True))}
 
         if any(f in tags for f in {Tags.TRACK, Tags.TRACK_NUMBER, Tags.TRACK_TOTAL}):
             tags -= {Tags.TRACK_NUMBER, Tags.TRACK_TOTAL}
@@ -316,14 +318,18 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         tag_id_number = next(iter(self.tag_map.track_number), None)
         tag_id_total = next(iter(self.tag_map.track_total), None)
 
-        if tag_id_number != tag_id_total and track.track_total is not None:
-            number_updated = self.write_tag(tag_id_number, str(track.track_number).zfill(2), dry_run)
-            total_updated = self.write_tag(tag_id_total, str(track.track_total).zfill(2), dry_run)
+        zero_fill = len(str(track.track_total)) if track.track_total is not None else 1
+        track_number = str(track.track_number).zfill(zero_fill)
+        track_total = str(track.track_total) if track.track_total is not None else None
+
+        if tag_id_number != tag_id_total and track_total is not None:
+            number_updated = self.write_tag(tag_id_number, track_number, dry_run)
+            total_updated = self.write_tag(tag_id_total, track_total, dry_run)
             return number_updated or total_updated
-        elif track.track_total is not None:
-            tag_value = self.num_sep.join([str(track.track_number).zfill(2), str(track.track_total).zfill(2)])
+        elif track_total is not None:
+            tag_value = self.num_sep.join([track_number, track_total])
         else:
-            tag_value = str(track.track_number).zfill(2)
+            tag_value = track_number
 
         return self.write_tag(tag_id_number, tag_value, dry_run)
 
@@ -500,16 +506,19 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         """
         tag_id_number = next(iter(self.tag_map.disc_number), None)
         tag_id_total = next(iter(self.tag_map.disc_total), None)
-        fill = len(str(track.disc_total)) if track.disc_total is not None else 1
 
-        if tag_id_number != tag_id_total and track.disc_total is not None:
-            number_updated = self.write_tag(tag_id_number, str(track.disc_number).zfill(fill), dry_run)
-            total_updated = self.write_tag(tag_id_total, str(track.disc_total).zfill(fill), dry_run)
+        zero_fill = len(str(track.disc_total)) if track.disc_total is not None else 1
+        disc_number = str(track.disc_number).zfill(zero_fill)
+        disc_total = str(track.disc_total) if track.disc_total is not None else None
+
+        if tag_id_number != tag_id_total and disc_total is not None:
+            number_updated = self.write_tag(tag_id_number, disc_number, dry_run)
+            total_updated = self.write_tag(tag_id_total, disc_total, dry_run)
             return number_updated or total_updated
-        elif track.disc_total is not None:
-            tag_value = self.num_sep.join([str(track.disc_number).zfill(fill), str(track.disc_total).zfill(fill)])
+        elif disc_total is not None:
+            tag_value = self.num_sep.join([disc_number, disc_total])
         else:
-            tag_value = str(track.disc_number).zfill(fill)
+            tag_value = disc_number
 
         return self.write_tag(tag_id_number, tag_value, dry_run)
 

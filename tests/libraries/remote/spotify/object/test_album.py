@@ -6,12 +6,12 @@ from random import randrange
 from typing import Any
 
 import pytest
+from aiorequestful.types import Number
 
 from musify.libraries.remote.core.exception import RemoteError, APIError, RemoteObjectTypeError
 from musify.libraries.remote.core.types import RemoteObjectType
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.object import SpotifyAlbum, SpotifyTrack
-from musify.types import Number
 from tests.libraries.remote.spotify.api.mock import SpotifyMock
 from tests.libraries.remote.spotify.object.testers import SpotifyCollectionLoaderTester
 from tests.libraries.remote.spotify.utils import assert_id_attributes

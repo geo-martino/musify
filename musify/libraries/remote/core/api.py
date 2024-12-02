@@ -14,14 +14,13 @@ from aiorequestful.cache.exception import CacheError
 from aiorequestful.cache.session import CachedSession
 from aiorequestful.request import RequestHandler
 from aiorequestful.response.payload import JSONPayloadHandler
-from aiorequestful.types import ImmutableJSON, JSON
+from aiorequestful.types import UnitSequence, UnitList, ImmutableJSON, JSON
 from yarl import URL
 
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.types import APIInputValueSingle, APIInputValueMulti, RemoteIDType, RemoteObjectType
 from musify.libraries.remote.core.wrangle import RemoteDataWrangler
 from musify.logger import MusifyLogger
-from musify.types import UnitSequence, UnitList
 from musify.utils import align_string, to_collection
 
 

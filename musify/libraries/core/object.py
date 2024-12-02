@@ -16,6 +16,7 @@ from musify.base import MusifyItem, HasLength
 from musify.exception import MusifyTypeError
 from musify.libraries.core.collection import MusifyCollection
 from musify.libraries.remote.core.types import RemoteObjectType
+from musify.utils import classproperty
 
 
 class Track(MusifyItem, HasLength, metaclass=ABCMeta):
@@ -24,9 +25,8 @@ class Track(MusifyItem, HasLength, metaclass=ABCMeta):
     __slots__ = ()
     __attributes_ignore__ = ("name",)
 
-    # noinspection PyPropertyDefinition
-    @classmethod
-    @property
+    # noinspection PyMethodParameters
+    @classproperty
     def kind(cls) -> RemoteObjectType:
         """The type of remote object associated with this class"""
         return RemoteObjectType.TRACK
@@ -177,9 +177,8 @@ class Playlist[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     __attributes_classes__ = MusifyCollection
     __attributes_ignore__ = ("items",)
 
-    # noinspection PyPropertyDefinition
-    @classmethod
-    @property
+    # noinspection PyMethodParameters
+    @classproperty
     def kind(cls) -> RemoteObjectType:
         """The type of remote object associated with this class"""
         return RemoteObjectType.PLAYLIST
@@ -307,9 +306,8 @@ class Library[T: Track](MusifyCollection[T], metaclass=ABCMeta):
         """The library name"""
         raise NotImplementedError
 
-    # noinspection PyPropertyDefinition
-    @classmethod
-    @property
+    # noinspection PyMethodParameters
+    @classproperty
     def source(cls) -> str:
         """The type of library loaded"""
         return cls.__name__.replace("Library", "")
@@ -486,9 +484,8 @@ class Album[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     __attributes_classes__ = MusifyCollection
     __attributes_ignore__ = ("name", "items")
 
-    # noinspection PyPropertyDefinition
-    @classmethod
-    @property
+    # noinspection PyMethodParameters
+    @classproperty
     def kind(cls) -> RemoteObjectType:
         """The type of remote object associated with this class"""
         return RemoteObjectType.ALBUM
@@ -610,9 +607,8 @@ class Artist[T: (Track, Album)](MusifyCollection[T], metaclass=ABCMeta):
     __attributes_classes__ = MusifyCollection
     __attributes_ignore__ = ("name", "items")
 
-    # noinspection PyPropertyDefinition
-    @classmethod
-    @property
+    # noinspection PyMethodParameters
+    @classproperty
     def kind(cls) -> RemoteObjectType:
         """The type of remote object associated with this class"""
         return RemoteObjectType.ARTIST
