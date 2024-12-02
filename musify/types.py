@@ -1,7 +1,7 @@
 """
 All core type hints to use throughout the entire package.
 """
-from collections.abc import Iterable, Sequence, MutableSequence, Collection
+from collections.abc import Iterable
 from enum import IntEnum
 from typing import Self, Any
 
