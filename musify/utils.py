@@ -7,8 +7,9 @@ from collections import Counter
 from collections.abc import Iterable, Collection, MutableSequence, Mapping, MutableMapping
 from typing import Any, TypeVar
 
+from aiorequestful.types import Number
+
 from musify.exception import MusifyTypeError, MusifyImportError
-from musify.types import Number
 
 
 ###########################################################################

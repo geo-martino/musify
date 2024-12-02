@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from aiorequestful.types import UnitCollection, UnitIterable
+from jaraco.classes.properties import classproperty
 
 from musify.base import Result
 from musify.exception import MusifyError
@@ -76,9 +77,8 @@ class LocalLibrary(LocalCollection[LocalTrack], Library[LocalTrack]):
     def name(self, value: str):
         self._name = value
 
-    # noinspection PyPropertyDefinition
-    @classmethod
-    @property
+    # noinspection PyMethodParameters
+    @classproperty
     def source(cls) -> str:
         """The type of local library loaded"""
         return cls.__name__.replace("Library", "")
