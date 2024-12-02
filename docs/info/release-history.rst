@@ -42,6 +42,11 @@ Added
 * Equality comparison methods to all implementations of :py:class:`.Filter`
 * :py:class:`.BasicLocalCollection` for creating and managing arbitrary local collections
 * :py:class:`.MusifyEnum` now displayed correctly when outputting to ``json`` on :py:class:`.PrettyPrinter` objects
+* :py:meth:`.LocalTrack.move` and :py:meth:`.LocalTrack.rename` methods to handle moving the file on the disk.
+* Set the ``path`` and ``filename`` properties on a :py:class:`.LocalTrack` to defer the movement of a file on the disk.
+  Setting a new path in this way does not immediately move a file.
+  Instead, the file will be moved when :py:meth:`.LocalTrack.save` is called with a ``path`` type
+  tag field as an argument.
 
 Changed
 -------

@@ -47,14 +47,12 @@ jobs:
       matrix:
         os: [ ubuntu-latest ]
         name: [ 🐧 Linux ]
-        python-version: [ 3.12 ]
+        python-version: [ 3.12, 3.13 ]
         include:
           - os: windows-latest
             name: 🪟 Windows
-            python-version: 3.12
           - os: macos-latest
             name: 🍎 Mac
-            python-version: 3.12
     steps:
       - name: 🛒 Checkout
         uses: actions/checkout@v4

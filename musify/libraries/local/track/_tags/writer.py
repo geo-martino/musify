@@ -2,7 +2,7 @@
 Implements all functionality pertaining to writing and deleting metadata/tags/properties for a :py:class:`LocalTrack`.
 """
 from abc import ABCMeta, abstractmethod
-from collections.abc import Mapping, Collection, Callable
+from collections.abc import Mapping, Collection, Callable, MutableMapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -22,7 +22,7 @@ class SyncResultTrack(Result):
     #: Were changes to the file on the disk made.
     saved: bool
     #: Map of the tag updated and the index of the condition it satisfied to be updated.
-    updated: Mapping[Tags, int]
+    updated: MutableMapping[Tags, int]
 
 
 class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
@@ -114,6 +114,8 @@ class TagWriter[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         tags: set[Tags] = to_collection(tags, set)
         if Tags.ALL in tags:
             tags = set(Tags.all(only_tags=True))
+        else:
+            tags = {tag for tag in tags if tag in set(Tags.all(only_tags=True))}
 
         if any(f in tags for f in {Tags.TRACK, Tags.TRACK_NUMBER, Tags.TRACK_TOTAL}):
             tags -= {Tags.TRACK_NUMBER, Tags.TRACK_TOTAL}

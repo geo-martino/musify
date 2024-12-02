@@ -39,6 +39,7 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
 
     __slots__ = (
         "_path",
+        "_new_path",
         "_remote_wrangler",
         "_reader",
         "_writer",
@@ -291,6 +292,20 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
     def path(self):
         return self._path
 
+    @path.setter
+    def path(self, value: str | Path):
+        self._new_path = Path(value)
+
+    @property
+    def filename(self):
+        return super().filename
+
+    @filename.setter
+    def filename(self, value: str | Path):
+        if isinstance(value, Path):
+            value = value.stem
+        self._new_path = self.path.with_stem(value)
+
     @property
     def type(self):
         """The type of audio file of this track"""
@@ -360,6 +375,7 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         super().__init__()
 
         self._path: Path = Path(file if isinstance(file, str | Path) else file.filename)
+        self._new_path = self._path
         self._validate_type(self._path)
 
         self._remote_wrangler = remote_wrangler
@@ -471,9 +487,46 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
 
         result = self._writer.write(source=current, target=self, tags=tags, replace=replace, dry_run=dry_run)
 
+        path_fields = (Tags.PATH, Tags.FOLDER, Tags.FILENAME)
+        if tags == LocalTrackField.ALL or any((field in to_collection(tags) for field in path_fields)):
+            if self._new_path != self.path:
+                if not dry_run:
+                    await self.move(self._new_path)
+                result = SyncResultTrack(saved=result.saved or not dry_run, updated=result.updated | {Tags.PATH: 0})
+
         # to reduce memory usage, remove any embedded images from the loaded file
         current._writer.clear_loaded_images()
         return result
+
+    async def move(self, path: str | Path) -> None:
+        """
+        Move the file on the drive.
+
+        Updates the path properties of this object to represent the new file path.
+        Creates parent directories at the new location if necessary.
+
+        :param path: The path to move the file to.
+        """
+        path.parent.mkdir(parents=True, exist_ok=True)
+        self._path = self.path.rename(path)
+        self._reader.file.filename = str(self.path)
+        self._writer.file.filename = str(self.path)
+
+    async def rename(self, filename: str | Path) -> None:
+        """
+        Rename the file on the drive.
+
+        Updates the path properties of this object to represent the new file path.
+        Creates parent directories at the new location if necessary.
+
+        :param filename: The filename to move the file to.
+            Argument may be a path from which the filename will be extracted.
+        """
+        if isinstance(filename, Path):
+            filename = filename.stem
+
+        path = self.path.with_stem(filename)
+        await self.move(path)
 
     async def delete_tags(self, tags: UnitIterable[Tags] = (), dry_run: bool = True) -> SyncResultTrack:
         """
