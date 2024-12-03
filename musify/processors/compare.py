@@ -135,29 +135,37 @@ class Comparer(DynamicProcessor, Hashable):
 
     def _convert_expected_to_int(self) -> None:
         """Convert expected values to integers"""
-        converted: list[int] = []
+        converted: list[int | None] = []
         for exp in self.expected:
             if isinstance(exp, str) and ":" in exp:
                 # value is a string representation of time
                 exp = self._get_seconds(exp)
-            converted.append(int(exp))
+            if exp is not None:
+                exp = int(exp)
+
+            converted.append(exp)
         self._expected = converted
 
     def _convert_expected_to_float(self) -> None:
         """Convert expected values to floats"""
-        converted: list[float] = []
+        converted: list[float | None] = []
         for exp in self.expected:
             if isinstance(exp, str) and ":" in exp:
                 # value is a string representation of time
                 exp = self._get_seconds(exp)
-            converted.append(float(exp))
+            if exp is not None:
+                exp = float(exp)
+
+            converted.append(exp)
         self._expected = converted
 
     def _convert_expected_to_datetime(self) -> None:
         """Convert expected values to :py:class:`datetime` objects"""
-        converted: list[date] = []
+        converted: list[date | None] = []
 
         for exp in self.expected:
+            if exp is None:
+                converted.append(exp)
             if isinstance(exp, datetime):
                 converted.append(exp.date())
             elif re.match(r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}", exp):

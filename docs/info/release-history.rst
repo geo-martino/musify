@@ -43,6 +43,8 @@ Fixed
 -----
 * Paths are now sanitised when assigning ``filename`` to :py:class:`.LocalTrack`
 * :py:class:`.Comparer` no longer needs an expected value set for methods which do not use it
+* :py:class:`.Comparer` handles null values in expected values as needed
+
 
 
 1.2.0
