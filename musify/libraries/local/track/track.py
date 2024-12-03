@@ -296,7 +296,8 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
     @path.setter
     def path(self, value: str | Path):
         if isinstance(value, str):
-            value = re.sub(r"[<>:\"|?*]", "-", value)
+            value = Path(re.sub(r"[<>:\"|?*]", "-", value))
+            value = value.with_stem(value.stem.strip("-"))
         self._new_path = Path(value)
 
     @property
