@@ -118,7 +118,7 @@ class Comparer(DynamicProcessor, Hashable):
 
     def _convert_expected(self, value: Any) -> None:
         """Driver for converting expected values to the same type as given value"""
-        if self._converted:
+        if self._converted or value is None:
             return
 
         if isinstance(value, int):
