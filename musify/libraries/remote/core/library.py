@@ -139,7 +139,7 @@ class RemoteLibrary[
             f"with {len(load_uris)} additional tracks \33[0m"
         )
 
-        load_tracks = await self.api.get_tracks(load_uris, features=True)
+        load_tracks = await self.api.get_tracks(load_uris)
         self.items.extend(map(self.factory.track, load_tracks))
 
         self.logger.print_line(STAT)
@@ -378,7 +378,7 @@ class RemoteLibrary[
         uri_get = [uri for uri_list in playlists.values() for uri in uri_list if uri not in uri_tracks]
 
         if uri_get:
-            tracks_data = await self.api.get_tracks(uri_get, features=False)
+            tracks_data = await self.api.get_tracks(uri_get)
             tracks = list(map(self.factory.track, tracks_data))
             uri_tracks |= {track.uri: track for track in tracks}
 

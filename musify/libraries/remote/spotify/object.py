@@ -521,7 +521,7 @@ class SpotifyPlaylist(SpotifyCollectionLoader[SpotifyTrack], RemotePlaylist[Spot
         item_key = item_kind.name.lower() + "s"
         tracks = [item["track"] for item in response.get(item_key, {}).get(api.items_key, [])]
         if tracks and extend_features:
-            await api.extend_tracks(tracks, limit=response[item_key]["limit"], features=True)
+            await api.extend_tracks(tracks, limit=response[item_key]["limit"])
 
         return not extend_tracks
 
