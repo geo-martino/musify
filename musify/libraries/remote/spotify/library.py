@@ -76,7 +76,8 @@ class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, Sp
 
             albums = {response["uri"]: response for response in album_responses}
             for track in self.tracks:
-                track.response["album"] = albums[track.response["album"]["uri"]]
+                if album := albums.get(track.response["album"]["uri"]):
+                    track.response["album"] = album
 
         if artists:
             artist_uris: set[str] = {artist["uri"] for track in self.tracks for artist in track.response["artists"]}
@@ -84,7 +85,7 @@ class SpotifyLibrary(RemoteLibrary[SpotifyAPI, SpotifyPlaylist, SpotifyTrack, Sp
 
             artists = {response["uri"]: response for response in artist_responses}
             for track in self.tracks:
-                track.response["artists"] = [artists[artist["uri"]] for artist in track.response["artists"]]
+                track.response["artists"] = [artists.get(artist["uri"], artist) for artist in track.response["artists"]]
 
         for track in self.tracks:
             track.refresh(skip_checks=False)  # tracks are popped from albums so checks should skip by default anyway
