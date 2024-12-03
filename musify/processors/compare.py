@@ -104,7 +104,7 @@ class Comparer(DynamicProcessor, Hashable):
         if self.reference_required:  # use the values from the reference as the expected values
             expected = to_collection(reference[tag_name], list)
         else:  # convert the expected values to the same type as the actual value if not yet converted
-            if not self._converted:
+            if not self._converted and self.expected is not None:
                 self._convert_expected(actual)
             expected = self.expected
 
@@ -118,9 +118,6 @@ class Comparer(DynamicProcessor, Hashable):
 
     def _convert_expected(self, value: Any) -> None:
         """Driver for converting expected values to the same type as given value"""
-        if self._converted or value is None:
-            return
-
         if isinstance(value, int):
             self._convert_expected_to_int()
             self._converted = True
