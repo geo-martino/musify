@@ -92,13 +92,14 @@ class ItemSorter(Processor):
 
         # get sort key based on value type
         if isinstance(example_value, datetime):  # key converts datetime to floats
-            def sort_key(t: MusifyItem) -> float:
-                """Get the sort key for timestamp tags from the given ``t``"""
-                value = t[tag_name]
+            def sort_key(it: MusifyItem) -> float:
+                """Get the sort key for timestamp tags from the given ``it``"""
+                value = it[tag_name]
                 return value.timestamp() if value is not None else 0.0
         elif isinstance(example_value, str):  # key strips ignore words from string
-            def sort_key(t: MusifyItem) -> tuple[bool, str]:
-                not_special_start, value = strip_ignore_words(t[tag_name], words=ignore_words)
+            def sort_key(it: MusifyItem) -> tuple[bool, str]:
+                """Get the sort key for string tags from the given ``it``"""
+                not_special_start, value = strip_ignore_words(it[tag_name], words=ignore_words)
                 return not_special_start, value.casefold()
         else:
             sort_key: Callable[[MusifyItem], object] = lambda t: t[tag_name] if t[tag_name] else 0

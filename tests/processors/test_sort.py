@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from itertools import groupby
-from random import choice, randrange, shuffle
+from random import choice, randrange, shuffle, sample
 
 import pytest
 
@@ -56,11 +56,18 @@ class TestItemSorter(PrettyPrinterTester):
         assert tracks == tracks_sorted[::-1]
 
     def test_sort_by_title_with_ignore_words(self, tracks: list[LocalTrack]):
-        # sort on str, ignoring defined words like 'The' and 'A'
-        tracks_sorted = sorted(tracks, key=lambda t: strip_ignore_words(t.title))
-        ItemSorter.sort_by_field(tracks, field=TrackField.TITLE)
+        ignore_words = ("This", "and", "that")
+        for track in sample(tracks, k=len(tracks) // 2):
+            track.title = f"{choice(ignore_words)} {track.title}"
+
+        def _sort_key(t: LocalTrack) -> tuple[bool, str]:
+            not_special_start, value = strip_ignore_words(t.title, words=ignore_words)
+            return not_special_start, value.lower()
+
+        tracks_sorted = sorted(tracks, key=_sort_key)
+        ItemSorter.sort_by_field(tracks, field=TrackField.TITLE, ignore_words=ignore_words)
         assert tracks == tracks_sorted
-        ItemSorter.sort_by_field(tracks, field=TrackField.TITLE, reverse=True)
+        ItemSorter.sort_by_field(tracks, field=TrackField.TITLE, reverse=True, ignore_words=ignore_words)
         assert tracks == tracks_sorted[::-1]
 
     def test_group_by_field(self, tracks: list[LocalTrack]):
@@ -71,15 +78,20 @@ class TestItemSorter(PrettyPrinterTester):
         assert sum(map(len, groups.values())) == len(tracks)
 
     def test_shuffle_random(self, tracks: list[LocalTrack]):
+
         tracks_original = tracks.copy()
         ItemSorter().sort(tracks)
         assert tracks == tracks_original
         ItemSorter(shuffle_mode=ShuffleMode.RANDOM).sort(tracks)
         assert tracks != tracks_original
 
+        def _sort_key(t: LocalTrack) -> tuple[bool, str]:
+            not_special_start, value = strip_ignore_words(t.title)
+            return not_special_start, value.lower()
+
         # shuffle settings ignored when ``fields`` are defined
         ItemSorter(fields=TrackField.TITLE, shuffle_mode=ShuffleMode.RANDOM).sort(tracks)
-        assert tracks == sorted(tracks, key=lambda t: strip_ignore_words(t.title))
+        assert tracks == sorted(tracks, key=_sort_key)
 
     def test_shuffle_rating(self, tracks: list[LocalTrack]):
         assert tracks != sorted(tracks, key=lambda t: t.rating, reverse=True)
