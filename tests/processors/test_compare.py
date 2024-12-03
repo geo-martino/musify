@@ -67,6 +67,16 @@ class TestComparer(PrettyPrinterTester):
             new_filter.field = choice(obj.field.all())
         assert obj != new_filter
 
+    def test_compare_on_no_expected_value(self):
+        comparer = Comparer(condition="is null", field=LocalTrackField.DISC_TOTAL)
+        track = random_track()
+        track.disc_total = None
+
+        assert comparer.compare(track)
+
+        comparer = Comparer(condition="is not null", field=LocalTrackField.DISC_TOTAL)
+        assert not comparer.compare(track)
+
     def test_compare_with_reference(self):
         track_1 = random_track()
         track_2 = random_track()

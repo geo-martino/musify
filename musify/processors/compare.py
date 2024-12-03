@@ -1,6 +1,7 @@
 """
 Processor making comparisons between objects and data types.
 """
+import inspect
 import re
 from collections.abc import Sequence, Hashable
 from datetime import datetime, date
@@ -89,7 +90,8 @@ class Comparer(DynamicProcessor, Hashable):
 
         if reference is None and self.reference_required:
             raise ComparerError("A reference is required for this instance of Comparer")
-        if reference is None and not self.expected:
+        signature = inspect.getfullargspec(self._processor_method)
+        if reference is None and "expected" in signature.args and not self.expected:
             raise ComparerError("No comparative item given and no expected values set")
 
         tag_name = None
