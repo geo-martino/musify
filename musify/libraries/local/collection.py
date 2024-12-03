@@ -120,8 +120,13 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
         results = dict([await _save_track(track) for track in bar])
         return {track: result for track, result in results.items() if result.saved or result.updated}
 
-    def log_save_tracks_result(self, results: Mapping[T, SyncResultTrack]) -> None:
-        """Log stats from the results of a ``save_tracks`` operation"""
+    def log_save_tracks_result(self, results: Mapping[T, SyncResultTrack], log_values: bool = False) -> None:
+        """
+        Log stats from the results of a ``save_tracks`` operation
+
+        :param results: The results to log.
+        :param log_values: Log the values of the track's tags.
+        """
         if not results:
             return
 
@@ -130,9 +135,14 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
         self.logger.stat("\33[1;96mSaved tags to the following tracks: \33[0m")
         for track, result in results.items():
             saved = "\33[92mSAVED" if result.saved else "\33[91mNOT SAVED"
-            tags = ', '.join(tag.name for tag in result.updated.keys())
+            if log_values:
+                tags = ' | '.join(f"\33[94m{tag.name}\33[97m=\33[34m{track[tag]}" for tag in result.updated)
+            else:
+                tags = "\33[94m" + ', '.join(tag.name for tag in result.updated)
+
             if not tags:
                 tags = "No tags updated"
+
             self.logger.stat(
                 f"\33[97m{align_string(track.path, max_width=max_width, truncate_left=True)} \33[0m| "
                 f"{saved} \33[0m| \33[94m{tags} \33[0m"
