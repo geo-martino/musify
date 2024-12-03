@@ -97,8 +97,9 @@ class ItemSorter(Processor):
                 value = t[tag_name]
                 return value.timestamp() if value is not None else 0.0
         elif isinstance(example_value, str):  # key strips ignore words from string
-            type sort_type = Callable[[MusifyItem], (bool, str)]
-            sort_key: sort_type = lambda t: strip_ignore_words(t[tag_name], words=ignore_words)
+            def sort_key(t: MusifyItem) -> tuple[bool, str]:
+                not_special_start, value = strip_ignore_words(t[tag_name], words=ignore_words)
+                return not_special_start, value.casefold()
         else:
             sort_key: Callable[[MusifyItem], object] = lambda t: t[tag_name] if t[tag_name] else 0
 

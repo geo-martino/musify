@@ -39,6 +39,7 @@ Changed
 -------
 * Drop replacement characters from ends of filename when assigning ``path`` to :py:class:`.LocalTrack`
 * May now define custom ignore words when sorting string values using the :py:class:`.ItemSorter`
+* :py:class:`.ItemSorter` ignore case when sorting string values
 
 Fixed
 -----
