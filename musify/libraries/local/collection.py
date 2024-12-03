@@ -155,7 +155,7 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
             self.logger.info(
                 f"\33[1;95m  >\33[1;97m "
                 f"Merging library of {len(self)} items with {len(tracks)} items on tags: "
-                f"{', '.join(tag_names)} \33[0m"
+                f"\33[0;90m{', '.join(tag_names)}\33[0m"
             )
             tracks = self.logger.get_synchronous_iterator(tracks, desc="Merging library", unit="tracks")
 

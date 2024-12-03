@@ -2,6 +2,7 @@
 Compositely combine reader and writer classes for metadata/tags/properties operations on Track files.
 """
 import datetime
+import re
 from abc import ABCMeta, abstractmethod
 from collections.abc import Generator
 from copy import deepcopy, copy
@@ -294,6 +295,8 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
 
     @path.setter
     def path(self, value: str | Path):
+        if isinstance(value, str):
+            value = re.sub(r"[<>:\"|?*]", "-", value)
         self._new_path = Path(value)
 
     @property
@@ -304,7 +307,8 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
     def filename(self, value: str | Path):
         if isinstance(value, Path):
             value = value.stem
-        self._new_path = self.path.with_stem(value)
+        value = re.sub(r"[/\\]", "-", str(value))
+        self.path = self.path.with_stem(value)
 
     @property
     def type(self):
