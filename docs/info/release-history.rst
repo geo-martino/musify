@@ -31,6 +31,13 @@ Release History
 The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
+1.2.1
+=====
+
+Fixed
+-----
+* Paths are now sanitised when assigning ``filename`` to :py:class:`.LocalTrack`
+
 
 1.2.0
 =====
