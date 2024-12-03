@@ -46,7 +46,6 @@ Fixed
 * :py:class:`.Comparer` handles null values in expected values as needed
 
 
-
 1.2.0
 =====
 
