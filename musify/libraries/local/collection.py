@@ -137,8 +137,10 @@ class LocalCollection[T: LocalTrack](MusifyCollection[T], metaclass=ABCMeta):
             saved = "\33[92mSAVED" if result.saved else "\33[91mNOT SAVED"
             if log_values:
                 tags = ' | '.join(
-                    f"\33[94m{tag.name}\33[97m=\33[34m{track[tag]}" for tag in result.updated
-                    if tag != LocalTrackField.PATH
+                    "\33[94m" + (
+                        f"{tag.name}\33[97m=\33[34m{track[tag]}" if tag != LocalTrackField.PATH else tag.name
+                    ) + "\33[0m"
+                    for tag in result.updated
                 )
             else:
                 tags = "\33[94m" + ', '.join(tag.name for tag in result.updated)
